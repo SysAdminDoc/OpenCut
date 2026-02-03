@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OpenCut</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app">
+
+        <!-- Header -->
+        <header class="header">
+            <div class="header-left">
+                <span class="logo">OPENCUT</span>
+                <span class="version">v0.3.0</span>
+            </div>
+            <div class="header-right">
+                <button class="icon-btn" id="shortcutsHelpBtn" title="Keyboard shortcuts (?)">?</button>
+                <div class="conn-status" id="connStatus" title="Backend status">
+                    <span class="conn-dot" id="connDot"></span>
+                    <span class="conn-label" id="connLabel">Offline</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Alert Banner -->
+        <div class="alert-banner hidden" id="alertBanner">
+            <span class="alert-text" id="alertText"></span>
+            <button class="alert-dismiss" id="alertDismiss">&times;</button>
+        </div>
+
+        <!-- Keyboard Shortcuts Overlay -->
+        <div class="shortcuts-overlay hidden" id="shortcutsOverlay">
+            <div class="shortcuts-panel">
+                <div class="shortcuts-title">Keyboard Shortcuts</div>
+                <div class="sc-group">
+                    <div class="sc-row"><kbd>Space</kbd><span>Preview audio at selected segment</span></div>
+                    <div class="sc-row"><kbd>E</kbd><span>Toggle selected segment on/off</span></div>
+                    <div class="sc-row"><kbd>A</kbd> / <kbd>D</kbd><span>Select prev / next segment</span></div>
+                    <div class="sc-row"><kbd>M</kbd><span>Merge selected with next segment</span></div>
+                    <div class="sc-row"><kbd>S</kbd><span>Split selected segment at midpoint</span></div>
+                </div>
+                <div class="sc-group">
+                    <div class="sc-row"><kbd>Ctrl+Z</kbd><span>Undo segment edit</span></div>
+                    <div class="sc-row"><kbd>Ctrl+Y</kbd><span>Redo segment edit</span></div>
+                    <div class="sc-row"><kbd>?</kbd><span>Toggle this help panel</span></div>
+                    <div class="sc-row"><kbd>Esc</kbd><span>Close this panel / deselect</span></div>
+                </div>
+                <button class="btn-outline" id="closeShortcutsBtn" style="width:100%;margin-top:8px">Close</button>
+            </div>
+        </div>
+
+        <!-- Hidden audio element for previews -->
+        <audio id="previewAudio" preload="none"></audio>
+
+        <!-- Main Content -->
+        <main class="main">
+
+            <!-- SECTION: Clip Selection -->
+            <section class="section" id="clipSection">
+                <div class="section-header">
+                    <span class="section-title">Media</span>
+                    <button class="link-btn" id="refreshClipsBtn" title="Rescan project">Refresh</button>
+                </div>
+                <select class="clip-select" id="clipSelect">
+                    <option value="" disabled selected>Loading project media...</option>
+                </select>
+                <div class="file-info hidden" id="fileInfoBox">
+                    <div class="file-name" id="fileNameDisplay"></div>
+                    <div class="file-meta" id="fileMetaDisplay"></div>
+                </div>
+                <div class="btn-row">
+                    <button class="btn-text" id="useSelectionBtn">Use Timeline Selection</button>
+                    <span class="btn-divider">|</span>
+                    <button class="btn-text" id="browseFileBtn">Browse File...</button>
+                    <span class="btn-divider">|</span>
+                    <button class="btn-text" id="batchBtn" title="Process all project clips">Batch All</button>
+                </div>
+            </section>
+
+            <!-- SECTION: Action Tabs -->
+            <section class="section" id="actionSection">
+                <div class="tabs" id="tabBar">
+                    <button class="tab active" data-tab="silence">Silence</button>
+                    <button class="tab" data-tab="fillers">Fillers</button>
+                    <button class="tab" data-tab="captions">Captions<span class="tab-badge hidden" id="captionsBadge" title="Whisper not installed">!</span></button>
+                    <button class="tab" data-tab="full">Full Edit</button>
+                </div>
+                <div class="tab-panel active" id="panel-silence">
+                    <div class="form-group">
+                        <label>Preset</label>
+                        <select id="silencePreset">
+                            <option value="youtube" selected>YouTube (-28dB, 0.4s)</option>
+                            <option value="default">Default (-30dB, 0.5s)</option>
+                            <option value="aggressive">Aggressive (-25dB, 0.3s)</option>
+                            <option value="conservative">Conservative (-40dB, 1.0s)</option>
+                            <option value="podcast">Podcast (-35dB, 0.75s)</option>
+                            <option value="">Custom...</option>
+                        </select>
+                    </div>
+                    <div class="custom-settings hidden" id="customSilenceSettings">
+                        <div class="form-group">
+                            <label>Noise Threshold</label>
+                            <div class="slider-row">
+                                <input type="range" id="threshold" min="-60" max="-10" value="-30" step="1">
+                                <span class="slider-val" id="thresholdVal">-30 dB</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Min Silence Length</label>
+                            <div class="slider-row">
+                                <input type="range" id="minDuration" min="0.1" max="3.0" value="0.5" step="0.1">
+                                <span class="slider-val" id="minDurationVal">0.5s</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Padding (before / after)</label>
+                            <div class="input-pair">
+                                <input type="number" id="padBefore" value="0.1" min="0" max="2" step="0.05">
+                                <span>/</span>
+                                <input type="number" id="padAfter" value="0.1" min="0" max="2" step="0.05">
+                                <span class="unit">sec</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button class="btn-primary" id="runSilenceBtn" disabled>Remove Silences</button>
+                </div>
+                <div class="tab-panel" id="panel-fillers">
+                    <div class="form-group"><label>Whisper Model</label>
+                        <select id="fillerModel">
+                            <option value="tiny">Tiny (fastest)</option>
+                            <option value="base" selected>Base (balanced)</option>
+                            <option value="small">Small (accurate)</option>
+                            <option value="medium">Medium (best)</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Remove These Fillers</label>
+                        <div class="filler-checks" id="fillerChecks">
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="um" checked> um / umm</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="uh" checked> uh / uhh</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="er" checked> er / err</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="ah" checked> ah</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="hm" checked> hmm</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="like" checked> like</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="so"> so</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="you know" checked> you know</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="i mean" checked> I mean</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="basically" checked> basically</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="actually"> actually</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="literally" checked> literally</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="kind of"> kind of</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="sort of"> sort of</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="right"> right</label>
+                            <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="well"> well</label>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Custom Words <span class="hint-inline">(comma-separated)</span></label>
+                        <input type="text" id="fillerCustom" placeholder="e.g. whatever, totally, honestly" style="width:100%;box-sizing:border-box;padding:6px 8px;background:var(--bg-1);border:1px solid var(--border);border-radius:var(--radius);color:var(--text);font:inherit;font-size:12px">
+                    </div>
+                    <label class="checkbox-row"><input type="checkbox" id="fillerSilence" checked> Also remove silences</label>
+                    <button class="btn-primary" id="runFillersBtn" disabled>Clean Filler Words</button>
+                    <div class="hint hidden" id="fillersHint">
+                        Requires Whisper. Install from the Captions tab.
+                    </div>
+                </div>
+                <div class="tab-panel" id="panel-captions">
+                    <div class="form-group"><label>Mode</label>
+                        <select id="captionMode">
+                            <option value="styled" selected>Styled Overlay (video)</option>
+                            <option value="srt">SRT / VTT (text file)</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Model</label>
+                        <select id="captionModel">
+                            <option value="tiny">Tiny (fastest)</option>
+                            <option value="base" selected>Base (balanced)</option>
+                            <option value="small">Small (good)</option>
+                            <option value="medium">Medium (great)</option>
+                            <option value="large-v3">Large v3 (best)</option>
+                            <option value="turbo">Turbo (fast + great)</option>
+                        </select>
+                    </div>
+                    <div class="form-group"><label>Language</label>
+                        <select id="captionLang">
+                            <option value="">Auto-detect</option><option value="en">English</option>
+                            <option value="es">Spanish</option><option value="fr">French</option>
+                            <option value="de">German</option><option value="ja">Japanese</option>
+                            <option value="ko">Korean</option><option value="zh">Chinese</option>
+                            <option value="pt">Portuguese</option>
+                        </select>
+                    </div>
+
+                    <!-- SRT-only options -->
+                    <div id="srtOptions" class="hidden">
+                        <div class="form-group"><label>Format</label>
+                            <select id="captionFormat">
+                                <option value="srt">SRT</option><option value="vtt">WebVTT</option>
+                                <option value="json">JSON (word-level)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Styled caption options -->
+                    <div id="styledOptions">
+                        <div class="form-group"><label>Style</label>
+                            <select id="captionStyle">
+                                <option value="youtube_bold">YouTube Bold</option>
+                                <option value="clean_modern">Clean Modern</option>
+                                <option value="neon_pop">Neon Pop</option>
+                                <option value="minimal">Minimal</option>
+                                <option value="boxed">Boxed</option>
+                                <option value="cinematic">Cinematic</option>
+                            </select>
+                        </div>
+                        <!-- Style preview -->
+                        <div class="style-preview" id="stylePreview">
+                            <div class="style-preview-bg">
+                                <span class="sp-word" id="spW1">This</span>
+                                <span class="sp-word" id="spW2">is</span>
+                                <span class="sp-word sp-highlight" id="spW3">how</span>
+                                <span class="sp-word" id="spW4">your</span>
+                                <span class="sp-word sp-action" id="spW5">captions</span>
+                                <span class="sp-word" id="spW6">look</span>
+                            </div>
+                            <div class="sp-legend">
+                                <span class="sp-legend-item"><span class="sp-dot sp-dot-hl"></span> Current word</span>
+                                <span class="sp-legend-item"><span class="sp-dot sp-dot-act"></span> Action word</span>
+                            </div>
+                        </div>
+                        <label class="checkbox-row"><input type="checkbox" id="captionWordHighlight" checked> Word-by-word highlight</label>
+                        <label class="checkbox-row"><input type="checkbox" id="captionAutoAction" checked> Auto-detect action words</label>
+                        <div class="form-group">
+                            <label>Custom Action Words <span class="hint-inline">(comma-separated)</span></label>
+                            <input type="text" id="actionWordsInput" placeholder="e.g. amazing, subscribe, click" class="text-input">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" id="runCaptionsBtn" disabled>Generate Captions</button>
+                    <div class="hint hidden" id="captionsHint">
+                        Whisper not installed.
+                        <button class="btn-install" id="installWhisperBtn">Install Whisper Now</button>
+                        <div class="install-alt">Or manually: <code>pip install faster-whisper</code></div>
+                    </div>
+                </div>
+                <div class="tab-panel" id="panel-full">
+                    <div class="form-group"><label>Preset</label>
+                        <select id="fullPreset">
+                            <option value="youtube" selected>YouTube</option><option value="default">Default</option>
+                            <option value="aggressive">Aggressive</option><option value="conservative">Conservative</option>
+                            <option value="podcast">Podcast</option>
+                        </select>
+                    </div>
+                    <label class="checkbox-row"><input type="checkbox" id="fullZoom" checked> Auto Zoom</label>
+                    <label class="checkbox-row"><input type="checkbox" id="fullCaptions" checked> Captions (SRT)</label>
+                    <label class="checkbox-row"><input type="checkbox" id="fullFillers"> Remove Filler Words</label>
+                    <button class="btn-primary" id="runFullBtn" disabled>Run Full Pipeline</button>
+                </div>
+            </section>
+
+            <!-- SECTION: Progress -->
+            <section class="section hidden" id="progressSection">
+                <div class="progress-header">
+                    <div class="progress-track"><div class="progress-fill" id="progressBar"></div></div>
+                    <span class="progress-elapsed" id="progressElapsed"></span>
+                </div>
+                <div class="progress-row">
+                    <span class="progress-label" id="progressLabel">Starting...</span>
+                    <button class="btn-cancel hidden" id="cancelBtn" title="Cancel processing">Cancel</button>
+                </div>
+            </section>
+
+            <!-- SECTION: Results -->
+            <section class="section hidden" id="resultsSection">
+                <div class="results-card" id="resultsCard">
+                    <div class="results-title" id="resultsTitle">Complete</div>
+                    <div class="results-stats" id="resultsStats"></div>
+                    <div class="results-path" id="resultsPath" title="Output file path"></div>
+                    <div class="results-actions">
+                        <button class="btn-success" id="editTimelineBtn">Edit in Timeline</button>
+                        <button class="btn-outline" id="importBtn" title="Import XML">Import XML</button>
+                        <button class="btn-accent" id="importCaptionsBtn" style="display:none" title="Import captions to Premiere timeline">Import Captions</button>
+                        <button class="btn-outline" id="newJobBtn" style="display:none">New Job</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: Waveform + Segment Editor -->
+            <section class="section hidden" id="waveformSection">
+                <div class="section-header">
+                    <span class="section-title">Waveform</span>
+                    <span class="waveform-hint" id="waveformHint">Click segments to toggle</span>
+                </div>
+                <div class="waveform-wrap" id="waveformWrap">
+                    <canvas id="waveformCanvas"></canvas>
+                    <div class="waveform-loading hidden" id="waveformLoading">Analyzing audio...</div>
+                    <div class="preview-indicator hidden" id="previewIndicator">Playing...</div>
+                </div>
+                <div class="segment-toolbar">
+                    <span class="segment-count" id="segmentCount">0 segments</span>
+                    <span class="segment-spacer"></span>
+                    <button class="tool-btn" id="undoBtn" title="Undo (Ctrl+Z)" disabled>Undo</button>
+                    <button class="tool-btn" id="redoBtn" title="Redo (Ctrl+Y)" disabled>Redo</button>
+                    <span class="btn-divider">|</span>
+                    <button class="tool-btn" id="mergeBtn" title="Merge with next (M)" disabled>Merge</button>
+                    <button class="tool-btn" id="splitBtn" title="Split at midpoint (S)" disabled>Split</button>
+                    <span class="btn-divider">|</span>
+                    <button class="link-btn" id="enableAllBtn">All On</button>
+                    <button class="link-btn" id="disableAllBtn">All Off</button>
+                </div>
+                <div class="segment-list" id="segmentList"></div>
+
+                <!-- Export section -->
+                <div class="export-video-section" id="exportVideoSection">
+                    <div class="export-divider"></div>
+                    <div class="export-header">Export</div>
+                    <div class="export-tabs">
+                        <button class="etab active" data-etype="video">Video</button>
+                        <button class="etab" data-etype="audio">Audio Only</button>
+                    </div>
+                    <!-- Video export -->
+                    <div class="export-panel active" id="epanel-video">
+                        <div class="export-row">
+                            <div class="form-group" style="flex:1;margin-bottom:0">
+                                <label>Quality</label>
+                                <select id="exportQuality">
+                                    <option value="high">High (CRF 18)</option>
+                                    <option value="medium" selected>Medium (CRF 23)</option>
+                                    <option value="low">Low (CRF 28)</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="flex:1;margin-bottom:0">
+                                <label>Format</label>
+                                <select id="exportFormat">
+                                    <option value="mp4" selected>MP4</option>
+                                    <option value="mov">MOV</option>
+                                    <option value="mkv">MKV</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn-export" id="exportVideoBtn">Export Video</button>
+                    </div>
+                    <!-- Audio-only export -->
+                    <div class="export-panel" id="epanel-audio">
+                        <div class="export-row">
+                            <div class="form-group" style="flex:1;margin-bottom:0">
+                                <label>Format</label>
+                                <select id="audioExportFormat">
+                                    <option value="mp3" selected>MP3</option>
+                                    <option value="wav">WAV</option>
+                                    <option value="flac">FLAC</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button class="btn-export" id="exportAudioBtn">Export Audio</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SECTION: Batch -->
+            <section class="section hidden" id="batchSection">
+                <div class="section-header">
+                    <span class="section-title">Batch Processing</span>
+                    <button class="link-btn" id="cancelBatchBtn">Cancel</button>
+                </div>
+                <div class="batch-overall">
+                    <div class="progress-header">
+                        <div class="progress-track"><div class="progress-fill" id="batchProgressBar"></div></div>
+                        <span class="batch-counter" id="batchCounter">0/0</span>
+                    </div>
+                    <div class="batch-status" id="batchStatusLabel">Preparing...</div>
+                </div>
+                <div class="batch-list" id="batchList"></div>
+                <button class="btn-outline" id="closeBatchBtn" style="display:none;margin-top:8px;width:100%">Close</button>
+            </section>
+
+        </main>
+    </div>
+    <script src="CSInterface.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
