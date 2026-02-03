@@ -11,7 +11,16 @@ Remove silences, generate captions, auto-zoom on emphasis, strip filler words, r
 
 > Free, open-source alternative to [AutoCut](https://www.autocut.com), [FireCut](https://firecut.co), and [TimeBolt](https://www.timebolt.io).
 
-<img width="1352" height="496" alt="2026-02-03 14_19_32-Adobe Premiere - C__Users_--_Documents_Adobe_Premiere Pro_26 0_dds prproj _" src="https://github.com/user-attachments/assets/c3cccb31-26ce-442b-862f-a34aea55e52f" />
+<img width="100%" alt="OpenCut in Premiere Pro" src="https://github.com/user-attachments/assets/c3cccb31-26ce-442b-862f-a34aea55e52f" />
+
+<table>
+  <tr>
+    <td><img alt="Silence Removal" src="https://github.com/user-attachments/assets/8d379376-12e5-4e95-8880-e9a6c463a8f7" width="200" /></td>
+    <td><img alt="Captions" src="https://github.com/user-attachments/assets/c7d9d0fd-4a90-42b3-b630-4014a9a46006" width="200" /></td>
+    <td><img alt="Filler Words" src="https://github.com/user-attachments/assets/02bd2619-95ec-4afe-ab41-61b8e19a4c6a" width="200" /></td>
+    <td><img alt="Diarize" src="https://github.com/user-attachments/assets/c8f55ee8-2089-4228-a150-e247563178af" width="200" /></td>
+  </tr>
+</table>
 
 ---
 
