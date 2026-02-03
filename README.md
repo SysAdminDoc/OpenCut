@@ -4,6 +4,9 @@
 
 Remove silences, generate captions, automate podcast multicam switching, and add dynamic zoom. Works as a **panel inside Premiere Pro** or from the **command line**. Exports Premiere Pro XML for non-destructive editing.
 
+<img width="1352" height="496" alt="2026-02-03 14_19_32-Adobe Premiere - C__Users_--_Documents_Adobe_Premiere Pro_26 0_dds prproj _" src="https://github.com/user-attachments/assets/c3cccb31-26ce-442b-862f-a34aea55e52f" />
+
+
 > Open-source alternative to [AutoCut](https://www.autocut.com), [FireCut](https://firecut.co), and [TimeBolt](https://www.timebolt.io).
 
 ---
