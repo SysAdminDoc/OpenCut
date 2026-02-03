@@ -1,0 +1,71 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "opencut"
+version = "0.1.0"
+description = "Open source video editing automation for Premiere Pro - remove silences, generate captions, podcast multicam, and more"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.9"
+authors = [
+    {name = "OpenCut Contributors"},
+]
+keywords = ["video-editing", "premiere-pro", "silence-removal", "captions", "whisper", "ffmpeg", "podcast"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Multimedia :: Video",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+
+dependencies = [
+    "click>=8.0",
+    "rich>=13.0",
+    "flask>=3.0",
+    "flask-cors>=4.0",
+]
+
+[project.optional-dependencies]
+captions = [
+    "faster-whisper>=1.0",
+]
+captions-full = [
+    "whisperx>=3.0",
+]
+captions-openai = [
+    "openai-whisper>=20231117",
+]
+diarize = [
+    "pyannote.audio>=3.1",
+]
+all = [
+    "faster-whisper>=1.0",
+    "pyannote.audio>=3.1",
+]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov>=4.0",
+    "ruff>=0.1",
+]
+
+[project.scripts]
+opencut = "opencut.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/opencut/opencut"
+Repository = "https://github.com/opencut/opencut"
+Issues = "https://github.com/opencut/opencut/issues"
+
+[tool.setuptools.packages.find]
+include = ["opencut*"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py39"
