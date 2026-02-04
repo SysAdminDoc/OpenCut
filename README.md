@@ -1,7 +1,7 @@
 # <img width="48" height="48" alt="ChatGPT Image Feb 3, 2026, 03_15_28 PM-48x48" src="https://github.com/user-attachments/assets/19d60483-f302-4843-8e9f-c656835711e3" /> OpenCut
 
 
-**Open-source video editing automation for Adobe Premiere Pro.**
+**Open-source video editing automation for Adobe Premiere Pro.** [ROADMAP extending featureset planned](https://github.com/SysAdminDoc/OpenCut/blob/main/OpenCut-Roadmap.md)
 
 [![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
