@@ -1,22 +1,16 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v0.3.0
-   - SSE job tracking (polling fallback)
-   - Waveform visualization + segment toggling
-   - Undo/Redo for segment edits
-   - Keyboard shortcuts
-   - Merge/Split segments
-   - Audio preview playback
-   - Audio-only export
-   - Batch processing
+   OpenCut CEP Panel - Main Controller v1.0.0
+   7-Tab Professional Toolkit
    ============================================================ */
 (function () {
     "use strict";
 
     var BACKEND = "http://127.0.0.1:5679";
+    var BACKEND_BASE_PORT = 5679;
+    var BACKEND_MAX_PORT = 5689;
     var POLL_MS = 700;
     var HEALTH_MS = 4000;
     var SSE_OK = typeof EventSource !== "undefined";
-    var UNDO_MAX = 50;
 
     // ---- Core State ----
     var cs = null;
@@ -37,34 +31,35 @@
     var jobStartTime = 0;
     var elapsedTimer = null;
     var activeStream = null;
+    var transcriptData = null; // stored transcript for editing/export
+    var voiceInstalled = false; // whether Qwen3-TTS is available
+    var rembgInstalled = false;
+    var rifeInstalled = false;
+    var esrganInstalled = false;
+    var batchFiles = [];
+    var batchJobId = null;
+    var batchPollTimer = null;
+    var workflowSteps = [];
+    var activeWatcherId = null;
+    var cloneRefAudioPath = ""; // reference audio path for cloning
+    var voiceProfiles = []; // cached voice profiles list
 
-    // ---- Waveform / Segment State ----
-    var allSegments = [];
-    var waveformPeaks = null;
-    var waveformDuration = 0;
-    var waveformMaxRms = 0;
-    var segmentsModified = false;
-    var selectedSegIdx = -1;
-
-    // ---- Undo / Redo ----
-    var undoStack = [];
-    var redoStack = [];
-
-    // ---- Batch State ----
-    var batchRunning = false;
-    var batchCancel = false;
-    var batchResults = [];
+    // ---- Style Preview CSS Map (loaded from backend) ----
+    var stylePreviewMap = {};
 
     // ---- DOM ----
     var el = {};
     function $(id) { return document.getElementById(id); }
 
     function initDOM() {
+        // Header
         el.connDot = $("connDot");
         el.connLabel = $("connLabel");
         el.alertBanner = $("alertBanner");
         el.alertText = $("alertText");
         el.alertDismiss = $("alertDismiss");
+
+        // Clip
         el.clipSelect = $("clipSelect");
         el.fileInfoBox = $("fileInfoBox");
         el.fileNameDisplay = $("fileNameDisplay");
@@ -72,8 +67,8 @@
         el.refreshClipsBtn = $("refreshClipsBtn");
         el.useSelectionBtn = $("useSelectionBtn");
         el.browseFileBtn = $("browseFileBtn");
-        el.batchBtn = $("batchBtn");
-        el.actionSection = $("actionSection");
+
+        // Cut tab
         el.silencePreset = $("silencePreset");
         el.customSilenceSettings = $("customSilenceSettings");
         el.threshold = $("threshold");
@@ -82,32 +77,271 @@
         el.minDurationVal = $("minDurationVal");
         el.padBefore = $("padBefore");
         el.padAfter = $("padAfter");
-        el.captionModel = $("captionModel");
-        el.captionLang = $("captionLang");
-        el.captionFormat = $("captionFormat");
-        el.captionMode = $("captionMode");
-        el.captionStyle = $("captionStyle");
-        el.srtOptions = $("srtOptions");
-        el.styledOptions = $("styledOptions");
-        el.stylePreview = $("stylePreview");
-        el.captionWordHighlight = $("captionWordHighlight");
-        el.captionAutoAction = $("captionAutoAction");
-        el.actionWordsInput = $("actionWordsInput");
-        el.captionsHint = $("captionsHint");
-        el.captionsBadge = $("captionsBadge");
-        el.fullPreset = $("fullPreset");
-        el.fullZoom = $("fullZoom");
-        el.fullCaptions = $("fullCaptions");
-        el.fullFillers = $("fullFillers");
+        el.runSilenceBtn = $("runSilenceBtn");
         el.fillerModel = $("fillerModel");
         el.fillerChecks = $("fillerChecks");
         el.fillerCustom = $("fillerCustom");
         el.fillerSilence = $("fillerSilence");
         el.fillersHint = $("fillersHint");
-        el.runSilenceBtn = $("runSilenceBtn");
         el.runFillersBtn = $("runFillersBtn");
-        el.runCaptionsBtn = $("runCaptionsBtn");
+        el.fullPreset = $("fullPreset");
+        el.fullZoom = $("fullZoom");
+        el.fullCaptions = $("fullCaptions");
+        el.fullFillers = $("fullFillers");
         el.runFullBtn = $("runFullBtn");
+
+        // Captions tab
+        el.captionModel = $("captionModel");
+        el.captionLang = $("captionLang");
+        el.captionStyle = $("captionStyle");
+        el.stylePreview = $("stylePreview");
+        el.captionWordHighlight = $("captionWordHighlight");
+        el.captionAutoAction = $("captionAutoAction");
+        el.captionAutoEmoji = $("captionAutoEmoji");
+        el.actionWordsInput = $("actionWordsInput");
+        el.runStyledCaptionsBtn = $("runStyledCaptionsBtn");
+        el.captionsHint = $("captionsHint");
+        el.installWhisperBtn = $("installWhisperBtn");
+        el.subModel = $("subModel");
+        el.subLang = $("subLang");
+        el.subFormat = $("subFormat");
+        el.runSubtitleBtn = $("runSubtitleBtn");
+        el.transcriptModel = $("transcriptModel");
+        el.runTranscriptBtn = $("runTranscriptBtn");
+        el.transcriptEditor = $("transcriptEditor");
+        el.transcriptInfo = $("transcriptInfo");
+        el.transcriptSegments = $("transcriptSegments");
+        el.transcriptExportFormat = $("transcriptExportFormat");
+        el.exportTranscriptBtn = $("exportTranscriptBtn");
+
+        // Audio tab
+        el.denoiseMethod = $("denoiseMethod");
+        el.denoiseMethodDesc = $("denoiseMethodDesc");
+        el.denoiseStrength = $("denoiseStrength");
+        el.denoiseStrengthVal = $("denoiseStrengthVal");
+        el.runDenoiseBtn = $("runDenoiseBtn");
+        el.isolateMethod = $("isolateMethod");
+        el.isolateMethodDesc = $("isolateMethodDesc");
+        el.stemOptions = $("stemOptions");
+        el.stemVocals = $("stemVocals");
+        el.stemDrums = $("stemDrums");
+        el.stemBass = $("stemBass");
+        el.stemOther = $("stemOther");
+        el.runIsolateBtn = $("runIsolateBtn");
+        el.eqPreset = $("eqPreset");
+        el.eqPresetDesc = $("eqPresetDesc");
+        el.runEqBtn = $("runEqBtn");
+        el.musicSelect = $("musicSelect");
+        el.duckLevel = $("duckLevel");
+        el.duckLevelVal = $("duckLevelVal");
+        el.duckAttack = $("duckAttack");
+        el.duckAttackVal = $("duckAttackVal");
+        el.duckRelease = $("duckRelease");
+        el.duckReleaseVal = $("duckReleaseVal");
+        el.runDuckBtn = $("runDuckBtn");
+        el.normalizePreset = $("normalizePreset");
+        el.loudnessMeter = $("loudnessMeter");
+        el.meterLUFS = $("meterLUFS");
+        el.meterTP = $("meterTP");
+        el.meterLRA = $("meterLRA");
+        el.measureLoudnessBtn = $("measureLoudnessBtn");
+        el.runNormalizeBtn = $("runNormalizeBtn");
+        el.beatSensitivity = $("beatSensitivity");
+        el.beatSensitivityVal = $("beatSensitivityVal");
+        el.runBeatsBtn = $("runBeatsBtn");
+        el.beatResults = $("beatResults");
+        el.bpmValue = $("bpmValue");
+        el.beatCount = $("beatCount");
+        el.beatConfidence = $("beatConfidence");
+        el.audioEffect = $("audioEffect");
+        el.runEffectBtn = $("runEffectBtn");
+
+        // Video tab
+        el.sceneThreshold = $("sceneThreshold");
+        el.sceneThresholdVal = $("sceneThresholdVal");
+        el.minSceneLen = $("minSceneLen");
+        el.minSceneLenVal = $("minSceneLenVal");
+        el.runScenesBtn = $("runScenesBtn");
+        el.sceneResults = $("sceneResults");
+        el.sceneCount = $("sceneCount");
+        el.avgSceneLen = $("avgSceneLen");
+        el.ytChapters = $("ytChapters");
+        el.ytChaptersText = $("ytChaptersText");
+        el.copyChaptersBtn = $("copyChaptersBtn");
+        // Speed
+        el.speedPreset = $("speedPreset");
+        el.speedMode = $("speedMode");
+        el.speedQuality = $("speedQuality");
+        el.runSpeedRampBtn = $("runSpeedRampBtn");
+        // Reframe
+        el.reframeAspect = $("reframeAspect");
+        el.reframeFaceDetect = $("reframeFaceDetect");
+        el.runReframeBtn = $("runReframeBtn");
+        // Color
+        el.colorPreset = $("colorPreset");
+        el.colorIntensity = $("colorIntensity");
+        el.colorIntensityVal = $("colorIntensityVal");
+        el.runColorBtn = $("runColorBtn");
+        // Chroma
+        el.chromaColor = $("chromaColor");
+        el.chromaSimilarity = $("chromaSimilarity");
+        el.chromaSimilarityVal = $("chromaSimilarityVal");
+        el.chromaBlend = $("chromaBlend");
+        el.chromaBlendVal = $("chromaBlendVal");
+        el.chromaBgMode = $("chromaBgMode");
+        el.runChromaBtn = $("runChromaBtn");
+        // BG Removal
+        el.bgInstallHint = $("bgInstallHint");
+        el.bgModel = $("bgModel");
+        el.bgMode = $("bgMode");
+        el.runBgRemoveBtn = $("runBgRemoveBtn");
+        el.installRembgBtn = $("installRembgBtn");
+        // Slow-Mo
+        el.slowmoInstallHint = $("slowmoInstallHint");
+        el.slowmoMultiplier = $("slowmoMultiplier");
+        el.slowmoScale = $("slowmoScale");
+        el.runSlowmoBtn = $("runSlowmoBtn");
+        el.installRifeBtn = $("installRifeBtn");
+        // Upscale
+        el.upscaleInstallHint = $("upscaleInstallHint");
+        el.upscaleModel = $("upscaleModel");
+        el.upscaleScale = $("upscaleScale");
+        el.runUpscaleBtn = $("runUpscaleBtn");
+        el.installEsrganBtn = $("installEsrganBtn");
+
+        // Voice tab - TTS
+        el.ttsSpeaker = $("ttsSpeaker");
+        el.ttsText = $("ttsText");
+        el.ttsLanguage = $("ttsLanguage");
+        el.ttsEmotion = $("ttsEmotion");
+        el.ttsSpeed = $("ttsSpeed");
+        el.ttsSpeedVal = $("ttsSpeedVal");
+        el.ttsQuality = $("ttsQuality");
+        el.runTtsBtn = $("runTtsBtn");
+        el.voiceHint = $("voiceHint");
+        el.installVoiceBtn = $("installVoiceBtn");
+        el.voicePreviewCard = $("voicePreviewCard");
+        el.voicePreviewAudio = $("voicePreviewAudio");
+        el.voicePreviewDuration = $("voicePreviewDuration");
+        el.voicePreviewModel = $("voicePreviewModel");
+
+        // Voice tab - Clone
+        el.cloneSource = $("cloneSource");
+        el.cloneSourceInfo = $("cloneSourceInfo");
+        el.cloneRefText = $("cloneRefText");
+        el.cloneText = $("cloneText");
+        el.cloneLanguage = $("cloneLanguage");
+        el.runCloneBtn = $("runCloneBtn");
+        el.voiceProfilesList = $("voiceProfilesList");
+        el.profileName = $("profileName");
+        el.saveProfileBtn = $("saveProfileBtn");
+
+        // Voice tab - Design
+        el.designDescription = $("designDescription");
+        el.designText = $("designText");
+        el.designLanguage = $("designLanguage");
+        el.runDesignBtn = $("runDesignBtn");
+
+        // Voice tab - Replace
+        el.replaceOriginal = $("replaceOriginal");
+        el.replaceNew = $("replaceNew");
+        el.replaceLanguage = $("replaceLanguage");
+        el.runReplaceBtn = $("runReplaceBtn");
+
+        // Export tab
+        el.expTranscriptFormat = $("expTranscriptFormat");
+        el.expModel = $("expModel");
+        el.runExpTranscriptBtn = $("runExpTranscriptBtn");
+        // Platform export
+        el.platformPreset = $("platformPreset");
+        el.platformInfo = $("platformInfo");
+        el.platformRes = $("platformRes");
+        el.platformAspect = $("platformAspect");
+        el.platformLimit = $("platformLimit");
+        el.runPlatformExportBtn = $("runPlatformExportBtn");
+        // Custom render
+        el.renderVideoCodec = $("renderVideoCodec");
+        el.renderResolution = $("renderResolution");
+        el.renderCrf = $("renderCrf");
+        el.renderCrfVal = $("renderCrfVal");
+        el.renderAudioCodec = $("renderAudioCodec");
+        el.runCustomRenderBtn = $("runCustomRenderBtn");
+        // Thumbnail
+        el.thumbMode = $("thumbMode");
+        el.thumbTimestampGroup = $("thumbTimestampGroup");
+        el.thumbTimestamp = $("thumbTimestamp");
+        el.thumbCountGroup = $("thumbCountGroup");
+        el.thumbCount = $("thumbCount");
+        el.thumbCountVal = $("thumbCountVal");
+        el.runThumbBtn = $("runThumbBtn");
+        // Burn-in
+        el.burninSubPath = $("burninSubPath");
+        el.browseBurninSubBtn = $("browseBurninSubBtn");
+        el.burninFontSize = $("burninFontSize");
+        el.burninFontSizeVal = $("burninFontSizeVal");
+        el.burninPosition = $("burninPosition");
+        el.burninFontColor = $("burninFontColor");
+        el.runBurninBtn = $("runBurninBtn");
+        // Extras - Watermark
+        el.watermarkText = $("watermarkText");
+        el.watermarkPosition = $("watermarkPosition");
+        el.watermarkOpacity = $("watermarkOpacity");
+        el.watermarkOpacityVal = $("watermarkOpacityVal");
+        el.runWatermarkBtn = $("runWatermarkBtn");
+        // Extras - GIF
+        el.gifStart = $("gifStart");
+        el.gifDuration = $("gifDuration");
+        el.gifWidth = $("gifWidth");
+        el.runGifBtn = $("runGifBtn");
+        // Extras - Audio Extract
+        el.audioExtractCodec = $("audioExtractCodec");
+        el.audioExtractNormalize = $("audioExtractNormalize");
+        el.runAudioExtractBtn = $("runAudioExtractBtn");
+        // Batch - Queue
+        el.batchFolder = $("batchFolder");
+        el.browseBatchFolderBtn = $("browseBatchFolderBtn");
+        el.batchFileCount = $("batchFileCount");
+        el.batchFileList = $("batchFileList");
+        el.batchPreset = $("batchPreset");
+        el.runBatchBtn = $("runBatchBtn");
+        el.batchProgress = $("batchProgress");
+        el.batchProgressFill = $("batchProgressFill");
+        el.batchProgressText = $("batchProgressText");
+        el.cancelBatchBtn = $("cancelBatchBtn");
+        el.batchResults = $("batchResults");
+        el.batchResultsList = $("batchResultsList");
+        // Batch - Workflow
+        el.workflowOpSelect = $("workflowOpSelect");
+        el.addWorkflowStepBtn = $("addWorkflowStepBtn");
+        el.workflowStepsList = $("workflowStepsList");
+        el.runWorkflowBtn = $("runWorkflowBtn");
+        el.clearWorkflowBtn = $("clearWorkflowBtn");
+        // Batch - Watch
+        el.watchFolder = $("watchFolder");
+        el.browseWatchFolderBtn = $("browseWatchFolderBtn");
+        el.watchPreset = $("watchPreset");
+        el.startWatchBtn = $("startWatchBtn");
+        el.stopWatchBtn = $("stopWatchBtn");
+        el.watchStatus = $("watchStatus");
+        el.watchStatusText = $("watchStatusText");
+        el.watchProcessedCount = $("watchProcessedCount");
+        // Batch - Inspect
+        el.runInspectBtn = $("runInspectBtn");
+        el.inspectResults = $("inspectResults");
+        el.inspectFile = $("inspectFile");
+        el.inspectContainer = $("inspectContainer");
+        el.inspectVideo = $("inspectVideo");
+        el.inspectAudio = $("inspectAudio");
+        el.inspectChapters = $("inspectChapters");
+
+        // Settings tab
+        el.whisperStatusText = $("whisperStatusText");
+        el.settingsInstallWhisperBtn = $("settingsInstallWhisperBtn");
+        el.gpuName = $("gpuName");
+        el.gpuVram = $("gpuVram");
+        el.backendPort = $("backendPort");
+
+        // Progress / Results
         el.progressSection = $("progressSection");
         el.progressBar = $("progressBar");
         el.progressLabel = $("progressLabel");
@@ -118,278 +352,163 @@
         el.resultsTitle = $("resultsTitle");
         el.resultsStats = $("resultsStats");
         el.resultsPath = $("resultsPath");
-        el.editTimelineBtn = $("editTimelineBtn");
-        el.importBtn = $("importBtn");
-        el.importCaptionsBtn = $("importCaptionsBtn");
         el.newJobBtn = $("newJobBtn");
-        el.installWhisperBtn = $("installWhisperBtn");
-        // Waveform
-        el.waveformSection = $("waveformSection");
-        el.waveformCanvas = $("waveformCanvas");
-        el.waveformWrap = $("waveformWrap");
-        el.waveformLoading = $("waveformLoading");
-        el.waveformHint = $("waveformHint");
-        el.previewIndicator = $("previewIndicator");
-        el.segmentCount = $("segmentCount");
-        el.segmentList = $("segmentList");
-        el.enableAllBtn = $("enableAllBtn");
-        el.disableAllBtn = $("disableAllBtn");
-        // Toolbar
-        el.undoBtn = $("undoBtn");
-        el.redoBtn = $("redoBtn");
-        el.mergeBtn = $("mergeBtn");
-        el.splitBtn = $("splitBtn");
-        // Export
-        el.exportVideoSection = $("exportVideoSection");
-        el.exportVideoBtn = $("exportVideoBtn");
-        el.exportAudioBtn = $("exportAudioBtn");
-        el.exportQuality = $("exportQuality");
-        el.exportFormat = $("exportFormat");
-        el.audioExportFormat = $("audioExportFormat");
-        // Batch
-        el.batchSection = $("batchSection");
-        el.batchProgressBar = $("batchProgressBar");
-        el.batchCounter = $("batchCounter");
-        el.batchStatusLabel = $("batchStatusLabel");
-        el.batchList = $("batchList");
-        el.cancelBatchBtn = $("cancelBatchBtn");
-        el.closeBatchBtn = $("closeBatchBtn");
-        // Shortcuts
-        el.shortcutsOverlay = $("shortcutsOverlay");
-        el.shortcutsHelpBtn = $("shortcutsHelpBtn");
-        el.closeShortcutsBtn = $("closeShortcutsBtn");
-        // Audio preview
-        el.previewAudio = $("previewAudio");
     }
 
     // ================================================================
-    // CSInterface / ExtendScript Bridge
+    // CEP / Premiere Interface
     // ================================================================
     function initCSInterface() {
         try { cs = new CSInterface(); inPremiere = true; }
         catch (e) { cs = null; inPremiere = false; }
     }
 
-    function jsx(script, cb) {
-        if (cs) cs.evalScript(script, function (r) { if (cb) cb(r); });
-        else if (cb) cb("null");
+    function jsx(script, callback) {
+        if (!cs) { if (callback) callback(null); return; }
+        cs.evalScript(script, function (result) { if (callback) callback(result); });
     }
 
     // ================================================================
     // Backend Communication
     // ================================================================
-    function api(method, path, data, cb, timeout) {
+    function api(method, path, body, callback, timeout) {
         var xhr = new XMLHttpRequest();
         xhr.open(method, BACKEND + path, true);
+        xhr.timeout = timeout || 15000;
         xhr.setRequestHeader("Content-Type", "application/json");
-        xhr.timeout = timeout || 30000;
         xhr.onload = function () {
-            try { cb(null, JSON.parse(xhr.responseText), xhr.status); }
-            catch (e) { cb(e, null, xhr.status); }
+            try { callback(null, JSON.parse(xhr.responseText)); }
+            catch (e) { callback(e, null); }
         };
-        xhr.onerror = function () { cb(new Error("Connection failed"), null, 0); };
-        xhr.ontimeout = function () { cb(new Error("Timeout"), null, 0); };
-        xhr.send(data ? JSON.stringify(data) : null);
+        xhr.onerror = function () { callback(new Error("Network error"), null); };
+        xhr.ontimeout = function () { callback(new Error("Timeout"), null); };
+        xhr.send(body ? JSON.stringify(body) : null);
     }
+
+    // ================================================================
+    // Health Check
+    // ================================================================
+    var portScanPending = false;
 
     function checkHealth() {
         api("GET", "/health", null, function (err, data) {
-            var wasConnected = connected;
-            connected = !err && data && data.status === "ok";
-            updateConnectionUI();
+            var ok = !err && data && data.status === "ok";
+            if (ok) {
+                connected = true;
+                el.connDot.className = "conn-dot on";
+                el.connLabel.textContent = "Connected";
+                if (data.capabilities) capabilities = data.capabilities;
+                el.backendPort.textContent = BACKEND.replace("http://127.0.0.1:", "Port ");
+                updateButtons();
+                return;
+            }
+            if (!portScanPending) { portScanPending = true; scanForServer(); }
+        }, 2000);
+    }
+
+    function scanForServer() {
+        var found = false;
+        var checked = 0;
+        var total = BACKEND_MAX_PORT - BACKEND_BASE_PORT + 1;
+
+        for (var p = BACKEND_BASE_PORT; p <= BACKEND_MAX_PORT; p++) {
+            (function (port) {
+                var testUrl = "http://127.0.0.1:" + port;
+                var xhr = new XMLHttpRequest();
+                xhr.open("GET", testUrl + "/health", true);
+                xhr.timeout = 1500;
+                xhr.onload = function () {
+                    checked++;
+                    if (found) return;
+                    try {
+                        var data = JSON.parse(xhr.responseText);
+                        if (data.status === "ok") {
+                            found = true;
+                            BACKEND = testUrl;
+                            connected = true;
+                            el.connDot.className = "conn-dot on";
+                            el.connLabel.textContent = "Connected" + (port !== BACKEND_BASE_PORT ? " (:" + port + ")" : "");
+                            el.backendPort.textContent = "Port " + port;
+                            if (data.capabilities) capabilities = data.capabilities;
+                            updateButtons();
+                            portScanPending = false;
+                        }
+                    } catch (e) {}
+                    if (checked >= total && !found) finishScan();
+                };
+                xhr.onerror = xhr.ontimeout = function () {
+                    checked++;
+                    if (checked >= total && !found) finishScan();
+                };
+                xhr.send();
+            })(p);
+        }
+
+        function finishScan() {
+            portScanPending = false;
+            connected = false;
+            el.connDot.className = "conn-dot off";
+            el.connLabel.textContent = "Disconnected";
             updateButtons();
-            if (connected && !wasConnected) {
-                api("GET", "/capabilities", null, function (e2, caps) {
-                    if (!e2 && caps) { capabilities = caps; updateCapabilities(); }
-                });
-                hideAlert();
-            }
-            if (!connected && !backendStartAttempted) {
+            if (!backendStartAttempted && inPremiere) {
                 backendStartAttempted = true;
-                tryStartBackend();
+                jsx("startOpenCutBackend()", function () {});
             }
-        });
-    }
-
-    function updateConnectionUI() {
-        el.connDot.className = "conn-dot" + (connected ? " ok" : (!backendStartAttempted ? "" : " wait"));
-        el.connLabel.textContent = connected ? "Connected" : "Connecting...";
-    }
-
-    function updateCapabilities() {
-        if (!capabilities.captions) {
-            el.captionsHint.classList.remove("hidden");
-            if (el.captionsBadge) el.captionsBadge.classList.remove("hidden");
-        } else {
-            el.captionsHint.classList.add("hidden");
-            if (el.captionsBadge) el.captionsBadge.classList.add("hidden");
-        }
-    }
-
-    function tryStartBackend() {
-        if (!inPremiere) {
-            showAlert("Backend not running. Start with Start-OpenCut.bat or run: opencut server");
-            return;
-        }
-        try {
-            var child_process = require("child_process");
-            var cmds = ["python", "python3", "py"];
-            var ok = false;
-            for (var i = 0; i < cmds.length && !ok; i++) {
-                try {
-                    var proc = child_process.spawn(cmds[i], ["-m", "opencut.server"], {
-                        detached: true, stdio: "ignore", windowsHide: true
-                    });
-                    proc.unref(); ok = true;
-                } catch (e) {}
-            }
-            if (!ok) showAlert("Could not auto-start backend. Run Start-OpenCut.bat manually.");
-        } catch (e) {
-            showAlert("Start the backend server: double-click Start-OpenCut.bat");
         }
     }
 
     // ================================================================
-    // Project Media Scanning
+    // Project Media
     // ================================================================
     function scanProjectMedia() {
-        if (!inPremiere) {
-            el.clipSelect.innerHTML = '<option value="" disabled selected>Not in Premiere - use Browse</option>';
-            return;
-        }
-        el.clipSelect.innerHTML = '<option value="" disabled selected>Scanning project...</option>';
-        jsx("getProjectFolder()", function (folder) {
-            if (folder && folder !== "null" && folder !== "undefined" && folder !== "") projectFolder = folder;
+        if (!inPremiere) return;
+        jsx("getProjectMedia()", function (result) {
+            if (!result || result === "null" || result === "undefined") return;
+            try {
+                var data = JSON.parse(result);
+                projectMedia = data.media || [];
+                projectFolder = data.projectFolder || "";
+                var html = '<option value="">-- Select a clip --</option>';
+                for (var i = 0; i < projectMedia.length; i++) {
+                    var m = projectMedia[i];
+                    html += '<option value="' + esc(m.path) + '" data-name="' + esc(m.name) + '">' + esc(m.name) + '</option>';
+                }
+                el.clipSelect.innerHTML = html;
+                populateMusicSelect();
+            } catch (e) {}
         });
-
-        // First ping to check if ExtendScript host is loaded
-        jsx("ocPing()", function (pong) {
-            if (pong === "pong") {
-                // Host is loaded, scan normally
-                jsx("getAllProjectMedia()", _parseMediaResult);
-            } else {
-                // Host not loaded - try to reload then scan
-                _tryReloadHost(function () {
-                    jsx("ocPing()", function (pong2) {
-                        if (pong2 === "pong") {
-                            jsx("getAllProjectMedia()", _parseMediaResult);
-                        } else {
-                            el.clipSelect.innerHTML = '<option value="" disabled selected>ExtendScript not loaded (restart panel)</option>';
-                            showAlert("Host script failed to load. Try: Window > Extensions > OpenCut to re-open.");
-                        }
-                    });
-                });
-            }
-        });
-    }
-
-    function _parseMediaResult(result) {
-        if (!result || result === "null" || result === "undefined") {
-            el.clipSelect.innerHTML = '<option value="" disabled selected>No project open</option>';
-            return;
-        }
-
-        // Check for EvalScript error (function not found)
-        if (typeof result === "string" && result.indexOf("EvalScript error") !== -1) {
-            _tryReloadHost(function () {
-                jsx("getAllProjectMedia()", function (retryResult) {
-                    _parseMediaResultInner(retryResult);
-                });
-            });
-            return;
-        }
-
-        _parseMediaResultInner(result);
-    }
-
-    function _parseMediaResultInner(result) {
-        if (!result || result === "null" || result === "undefined") {
-            el.clipSelect.innerHTML = '<option value="" disabled selected>No project open</option>';
-            return;
-        }
-        try {
-            var data = JSON.parse(result);
-            if (data.error) {
-                el.clipSelect.innerHTML = '<option value="" disabled selected>' + esc(data.error) + '</option>';
-                return;
-            }
-            projectMedia = data;
-            if (data.length === 0) {
-                el.clipSelect.innerHTML = '<option value="" disabled selected>No media in project (import files first)</option>';
-                return;
-            }
-            var html = '<option value="" disabled selected>Select a clip (' + data.length + ' found)</option>';
-            for (var i = 0; i < data.length; i++) {
-                var item = data[i];
-                var label = item.name;
-                if (item.duration > 0) label += "  (" + fmtDur(item.duration) + ")";
-                html += '<option value="' + item.path.replace(/&/g, "&amp;").replace(/"/g, "&quot;") + '" data-name="' + esc(item.name) + '">' + esc(label) + '</option>';
-            }
-            el.clipSelect.innerHTML = html;
-            hideAlert();
-        } catch (e) {
-            var truncated = String(result).substring(0, 120);
-            el.clipSelect.innerHTML = '<option value="" disabled selected>Scan error</option>';
-            showAlert("Media scan returned unexpected data: " + truncated);
-        }
-    }
-
-    /** Try to manually reload the host script if it failed to auto-load */
-    function _tryReloadHost(cb) {
-        if (!cs) { if (cb) cb(); return; }
-        try {
-            var extPath = cs.getSystemPath(SystemPath.EXTENSION);
-            var hostPath = extPath + "/host/index.jsx";
-            cs.evalScript('$.evalFile("' + hostPath.replace(/\\/g, "/") + '")', function () {
-                if (cb) setTimeout(cb, 300);
-            });
-        } catch (e) {
-            if (cb) cb();
-        }
     }
 
     function useTimelineSelection() {
-        if (!inPremiere) { showAlert("Not running inside Premiere Pro"); return; }
-        jsx("getSelectedClips()", function (result) {
-            if (!result || result === "null" || result === "undefined") { showAlert("Could not read selection."); return; }
+        if (!inPremiere) return;
+        jsx("getTimelineSelection()", function (result) {
+            if (!result || result === "null") { showAlert("No clip selected in timeline."); return; }
             try {
                 var data = JSON.parse(result);
-                if (data.error) { showAlert(data.error === "nothing_selected" ? "No clip selected." : "Error: " + data.error); return; }
-                if (data.length > 0) {
-                    selectFile(data[0].path, data[0].name);
-                    for (var i = 0; i < el.clipSelect.options.length; i++) {
-                        if (el.clipSelect.options[i].value === data[0].path) { el.clipSelect.selectedIndex = i; break; }
-                    }
-                    hideAlert();
-                }
-            } catch (e) { showAlert("Error reading selection: " + e.message); }
+                if (data.path) selectFile(data.path, data.name || data.path.split(/[/\\]/).pop());
+                else showAlert("Could not get clip path.");
+            } catch (e) { showAlert("Could not read selection."); }
         });
     }
 
     function browseForFile() {
         if (inPremiere) {
-            jsx("browseForFile()", function (r) {
-                if (r && r !== "null" && r !== "undefined") selectFile(r, r.split(/[/\\]/).pop());
+            jsx("browseForFile()", function (result) {
+                if (result && result !== "null" && result !== "undefined" && result.length > 3) {
+                    selectFile(result, result.split(/[/\\]/).pop());
+                }
             });
-        } else {
-            var path = prompt("Enter file path:");
-            if (path) selectFile(path, path.split(/[/\\]/).pop());
         }
     }
 
-    // ================================================================
-    // File Selection
-    // ================================================================
     function selectFile(path, name) {
-        if (!path) return;
-        path = path.replace(/^["'\s]+|["'\s]+$/g, "").trim();
-        if (!path) return;
         selectedPath = path;
         selectedName = name || path.split(/[/\\]/).pop();
-        el.fileNameDisplay.textContent = selectedName;
-        el.fileMetaDisplay.textContent = "Loading info...";
         el.fileInfoBox.classList.remove("hidden");
+        el.fileNameDisplay.textContent = selectedName;
+        el.fileMetaDisplay.textContent = "Loading...";
         updateButtons();
+
         if (connected) {
             api("POST", "/info", { filepath: path }, function (err, data) {
                 if (!err && data && !data.error) {
@@ -400,1279 +519,1652 @@
                     if (meta) el.fileMetaDisplay.textContent = meta;
                 } else { el.fileMetaDisplay.textContent = path; }
             });
-        } else { el.fileMetaDisplay.textContent = path; }
+        }
     }
 
+    // ================================================================
+    // Tab Navigation
+    // ================================================================
+    function setupNavTabs() {
+        // Main nav tabs
+        var navBtns = document.querySelectorAll(".nav-tab");
+        for (var i = 0; i < navBtns.length; i++) {
+            navBtns[i].addEventListener("click", function () {
+                var target = this.getAttribute("data-nav");
+                // Deactivate all
+                var all = document.querySelectorAll(".nav-tab");
+                for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
+                var panels = document.querySelectorAll(".nav-panel");
+                for (var j = 0; j < panels.length; j++) panels[j].classList.remove("active");
+                // Activate target
+                this.classList.add("active");
+                var panel = $("panel-" + target);
+                if (panel) panel.classList.add("active");
+                // Load settings info on first visit
+                if (target === "settings") loadSettingsInfo();
+                if (target === "voice") { checkVoiceStatus(); loadVoiceProfiles(); }
+                if (target === "video") { checkRembgStatus(); checkRifeStatus(); checkEsrganStatus(); }
+            });
+        }
+
+        // Sub-tabs (generic handler for all sub-tab groups)
+        var subTabContainers = document.querySelectorAll(".sub-tabs");
+        for (var i = 0; i < subTabContainers.length; i++) {
+            (function (container) {
+                var btns = container.querySelectorAll(".sub-tab");
+                var parent = container.parentElement;
+                for (var j = 0; j < btns.length; j++) {
+                    btns[j].addEventListener("click", function () {
+                        var target = this.getAttribute("data-sub");
+                        // Deactivate siblings
+                        var siblings = container.querySelectorAll(".sub-tab");
+                        for (var k = 0; k < siblings.length; k++) siblings[k].classList.remove("active");
+                        var panels = parent.querySelectorAll(".sub-panel");
+                        for (var k = 0; k < panels.length; k++) panels[k].classList.remove("active");
+                        // Activate
+                        this.classList.add("active");
+                        var panel = $("sub-" + target);
+                        if (panel) panel.classList.add("active");
+                    });
+                }
+            })(subTabContainers[i]);
+        }
+    }
+
+    // ================================================================
+    // Button State
+    // ================================================================
     function updateButtons() {
-        var ready = connected && selectedPath && !currentJob && !batchRunning;
-        el.runSilenceBtn.disabled = !ready;
-        el.runFillersBtn.disabled = !ready || !capabilities.captions;
-        el.runCaptionsBtn.disabled = !ready || !capabilities.captions;
-        el.runFullBtn.disabled = !ready;
-        el.batchBtn.disabled = !connected || batchRunning || !!currentJob;
-        // Show/hide filler hint based on whisper availability
-        if (capabilities.captions) {
-            el.fillersHint.classList.add("hidden");
+        var canRun = connected && selectedPath;
+
+        // Cut tab
+        el.runSilenceBtn.disabled = !canRun;
+        el.runFillersBtn.disabled = !canRun;
+        el.runFullBtn.disabled = !canRun;
+
+        // Captions tab
+        el.runStyledCaptionsBtn.disabled = !canRun;
+        el.runSubtitleBtn.disabled = !canRun;
+        el.runTranscriptBtn.disabled = !canRun;
+
+        // Audio tab
+        el.runDenoiseBtn.disabled = !canRun;
+        el.runIsolateBtn.disabled = !canRun;
+        el.runEqBtn.disabled = !canRun;
+        el.runDuckBtn.disabled = !(canRun && el.musicSelect && el.musicSelect.value);
+        el.measureLoudnessBtn.disabled = !canRun;
+        el.runNormalizeBtn.disabled = !canRun;
+        el.runBeatsBtn.disabled = !canRun;
+        el.runEffectBtn.disabled = !canRun;
+
+        // Video tab
+        el.runScenesBtn.disabled = !canRun;
+        el.runSpeedRampBtn.disabled = !canRun;
+        el.runReframeBtn.disabled = !canRun;
+        el.runColorBtn.disabled = !canRun;
+        el.runChromaBtn.disabled = !canRun;
+        el.runBgRemoveBtn.disabled = !(canRun && rembgInstalled);
+        el.runSlowmoBtn.disabled = !(canRun && rifeInstalled);
+        el.runUpscaleBtn.disabled = !(canRun && esrganInstalled);
+
+        // AI install hints
+        if (connected && !rembgInstalled) { el.bgInstallHint.classList.remove("hidden"); }
+        else { el.bgInstallHint.classList.add("hidden"); }
+        if (connected && !rifeInstalled) { el.slowmoInstallHint.classList.remove("hidden"); }
+        else { el.slowmoInstallHint.classList.add("hidden"); }
+        if (connected && !esrganInstalled) { el.upscaleInstallHint.classList.remove("hidden"); }
+        else { el.upscaleInstallHint.classList.add("hidden"); }
+
+        // Voice tab
+        var canVoice = connected && voiceInstalled;
+        var hasText = canVoice;  // text check happens in run functions
+        el.runTtsBtn.disabled = !canVoice;
+        el.runCloneBtn.disabled = !canVoice;
+        el.runDesignBtn.disabled = !canVoice;
+        el.runReplaceBtn.disabled = !(canRun && voiceInstalled);
+
+        // Voice hints
+        if (connected && !voiceInstalled) {
+            el.voiceHint.classList.remove("hidden");
         } else {
+            el.voiceHint.classList.add("hidden");
+        }
+
+        // Export tab
+        el.runExpTranscriptBtn.disabled = !canRun;
+        el.runPlatformExportBtn.disabled = !canRun;
+        el.runCustomRenderBtn.disabled = !canRun;
+        el.runThumbBtn.disabled = !canRun;
+        el.runBurninBtn.disabled = !(canRun && el.burninSubPath.value);
+        el.runWatermarkBtn.disabled = !canRun;
+        el.runGifBtn.disabled = !canRun;
+        el.runAudioExtractBtn.disabled = !canRun;
+        // Batch tab
+        el.runBatchBtn.disabled = !(batchFiles.length > 0);
+        el.runWorkflowBtn.disabled = !(canRun && workflowSteps.length > 0);
+        el.startWatchBtn.disabled = !el.watchFolder.value;
+        el.runInspectBtn.disabled = !canRun;
+
+        // Whisper hints
+        if (capabilities.captions === false) {
+            el.captionsHint.classList.remove("hidden");
             el.fillersHint.classList.remove("hidden");
+        } else {
+            el.captionsHint.classList.add("hidden");
+            el.fillersHint.classList.add("hidden");
         }
-        updateToolbar();
-    }
-
-    function updateToolbar() {
-        el.undoBtn.disabled = undoStack.length === 0;
-        el.redoBtn.disabled = redoStack.length === 0;
-        var hasSel = selectedSegIdx >= 0 && selectedSegIdx < allSegments.length;
-        el.mergeBtn.disabled = !hasSel || selectedSegIdx >= allSegments.length - 1;
-        el.splitBtn.disabled = !hasSel;
     }
 
     // ================================================================
-    // SSE Job Tracking (with polling fallback)
+    // Job Execution & Tracking
     // ================================================================
-    function trackJob(jobId, callbacks) {
-        var cb = callbacks || {};
-        stopTracking();
+    function startJob(endpoint, payload) {
+        if (currentJob) return;
 
-        function handleUpdate(job) {
-            if (cb.onProgress) cb.onProgress(job);
-            if (job.status === "complete") { stopTracking(); if (cb.onComplete) cb.onComplete(job); }
-            else if (job.status === "error") { stopTracking(); if (cb.onError) cb.onError(job); }
-            else if (job.status === "cancelled") { stopTracking(); if (cb.onCancelled) cb.onCancelled(job); }
-        }
+        el.progressSection.classList.remove("hidden");
+        el.resultsSection.classList.add("hidden");
+        el.progressBar.style.width = "0%";
+        el.progressLabel.textContent = "Starting...";
+        el.cancelBtn.classList.remove("hidden");
+        jobStartTime = Date.now();
+        el.progressElapsed.textContent = "0s";
+        elapsedTimer = setInterval(function () {
+            var s = Math.floor((Date.now() - jobStartTime) / 1000);
+            el.progressElapsed.textContent = s + "s";
+        }, 1000);
 
-        if (SSE_OK) {
-            try {
-                var es = new EventSource(BACKEND + "/stream/" + jobId);
-                activeStream = es;
-                es.onmessage = function (event) {
-                    try { handleUpdate(JSON.parse(event.data)); } catch (e) {}
-                };
-                es.onerror = function () {
-                    es.close(); activeStream = null;
-                    _pollFallback(jobId, handleUpdate);
-                };
+        api("POST", endpoint, payload, function (err, data) {
+            if (err || !data || data.error) {
+                showAlert(data ? data.error : "Failed to start job");
+                hideProgress();
                 return;
-            } catch (e) {}
-        }
-        _pollFallback(jobId, handleUpdate);
+            }
+            currentJob = data.job_id;
+
+            if (SSE_OK) {
+                trackJobSSE(data.job_id);
+            } else {
+                trackJobPoll(data.job_id);
+            }
+        });
     }
 
-    function _pollFallback(jobId, handler) {
-        if (pollTimer) clearInterval(pollTimer);
+    function trackJobSSE(jobId) {
+        if (activeStream) { activeStream.close(); activeStream = null; }
+        var es = new EventSource(BACKEND + "/stream/" + jobId);
+        activeStream = es;
+
+        es.onmessage = function (e) {
+            try {
+                var job = JSON.parse(e.data);
+                updateProgress(job);
+                if (job.status === "complete" || job.status === "error" || job.status === "cancelled") {
+                    es.close();
+                    activeStream = null;
+                    onJobDone(job);
+                }
+            } catch (ex) {}
+        };
+        es.onerror = function () {
+            es.close();
+            activeStream = null;
+            // Fallback to polling
+            trackJobPoll(jobId);
+        };
+    }
+
+    function trackJobPoll(jobId) {
         pollTimer = setInterval(function () {
             api("GET", "/status/" + jobId, null, function (err, job) {
-                if (!err && job) handler(job);
+                if (err || !job) return;
+                updateProgress(job);
+                if (job.status === "complete" || job.status === "error" || job.status === "cancelled") {
+                    clearInterval(pollTimer);
+                    pollTimer = null;
+                    onJobDone(job);
+                }
             });
         }, POLL_MS);
     }
 
-    function stopTracking() {
-        if (activeStream) { try { activeStream.close(); } catch (e) {} activeStream = null; }
-        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+    function updateProgress(job) {
+        el.progressBar.style.width = (job.progress || 0) + "%";
+        el.progressLabel.textContent = job.message || "Processing...";
+    }
+
+    function onJobDone(job) {
+        currentJob = null;
+        if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+
+        if (job.status === "error") {
+            el.progressBar.style.width = "100%";
+            el.progressBar.style.background = "var(--error-dim)";
+            el.progressLabel.textContent = "Error: " + (job.error || "Unknown error");
+            el.cancelBtn.classList.add("hidden");
+            setTimeout(function () {
+                el.progressBar.style.background = "";
+                hideProgress();
+            }, 5000);
+            return;
+        }
+
+        if (job.status === "cancelled") {
+            hideProgress();
+            return;
+        }
+
+        // Success
+        hideProgress();
+        showResults(job);
+
+        // Auto-import XML into Premiere
+        if (job.result) {
+            var xmlPath = job.result.xml_path;
+            if (xmlPath && inPremiere) {
+                jsx('importXMLToProject("' + esc(xmlPath) + '")', function () {});
+                lastXmlPath = xmlPath;
+            }
+            var overlayPath = job.result.overlay_path;
+            if (overlayPath && inPremiere) {
+                jsx('importOverlayToProject("' + esc(overlayPath) + '")', function () {});
+                lastOverlayPath = overlayPath;
+            }
+        }
+    }
+
+    function hideProgress() {
+        el.progressSection.classList.add("hidden");
+        el.cancelBtn.classList.add("hidden");
         if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
     }
 
-    // ================================================================
-    // Job Execution
-    // ================================================================
-    function runJob(endpoint, payload) {
-        if (projectFolder) payload.output_dir = projectFolder;
-        currentJob = null;
-        el.resultsSection.classList.add("hidden");
-        el.waveformSection.classList.add("hidden");
-        el.progressSection.classList.remove("hidden");
-        el.progressBar.style.width = "0%";
-        el.progressBar.className = "progress-fill";
-        el.progressLabel.textContent = "Starting...";
-        el.cancelBtn.classList.remove("hidden");
-        jobStartTime = Date.now();
-        updateElapsed();
-        elapsedTimer = setInterval(updateElapsed, 1000);
-        updateButtons();
+    function showResults(job) {
+        el.resultsSection.classList.remove("hidden");
+        el.resultsTitle.textContent = "Complete";
+        el.resultsTitle.style.color = "var(--success)";
 
-        api("POST", endpoint, payload, function (err, data) {
-            if (err || !data || data.error) {
-                jobError(data ? data.error : (err ? err.message : "Unknown error"));
-                return;
-            }
-            currentJob = data.job_id;
-            trackJob(data.job_id, {
-                onProgress: function (job) {
-                    el.progressBar.style.width = (job.progress || 0) + "%";
-                    el.progressLabel.textContent = job.message || "";
-                },
-                onComplete: function (job) {
-                    currentJob = null;
-                    el.progressBar.style.width = "100%";
-                    el.progressBar.classList.add("done");
-                    el.cancelBtn.classList.add("hidden");
-                    showResults(job.result);
-                    updateButtons();
-                },
-                onError: function (job) {
-                    currentJob = null;
-                    el.cancelBtn.classList.add("hidden");
-                    jobError(job.error || "Processing failed");
-                    updateButtons();
-                },
-                onCancelled: function () {
-                    currentJob = null;
-                    el.cancelBtn.classList.add("hidden");
-                    el.progressBar.style.width = "0%";
-                    el.progressLabel.textContent = "Cancelled";
-                    updateButtons();
-                }
-            });
-        });
-    }
+        var stats = "";
+        var r = job.result || {};
 
-    function updateElapsed() {
-        if (!jobStartTime) return;
-        var sec = Math.floor((Date.now() - jobStartTime) / 1000);
-        el.progressElapsed.textContent = Math.floor(sec / 60) + ":" + (sec % 60 < 10 ? "0" : "") + (sec % 60);
+        if (r.summary) {
+            stats += r.summary + "<br>";
+        }
+        if (r.segments !== undefined) {
+            stats += r.segments + " segments";
+        }
+        if (r.filler_stats) {
+            stats += " | " + r.filler_stats.removed_fillers + " fillers removed (" + r.filler_stats.total_filler_time.toFixed(1) + "s)";
+        }
+        if (r.caption_segments !== undefined) {
+            stats += " | " + r.caption_segments + " captions, " + (r.words || 0) + " words";
+        }
+        if (r.style) {
+            stats += " | Style: " + r.style;
+        }
+        if (r.bpm) {
+            stats += "BPM: " + r.bpm.toFixed(0) + " | " + r.total_beats + " beats";
+        }
+        if (r.total_scenes) {
+            stats += "Scenes: " + r.total_scenes + " | Avg: " + r.avg_scene_length + "s";
+        }
+
+        el.resultsStats.innerHTML = stats || "Processing complete.";
+        el.resultsPath.textContent = r.xml_path || r.output_path || r.overlay_path || "";
     }
 
     function cancelJob() {
-        if (!currentJob) return;
-        api("POST", "/cancel/" + currentJob, null, function () {});
-    }
-
-    function jobError(msg) {
-        el.progressBar.style.width = "100%";
-        el.progressBar.classList.add("err");
-        el.progressLabel.textContent = "Error: " + msg;
-        el.cancelBtn.classList.add("hidden");
-        stopTracking();
-        el.resultsSection.classList.remove("hidden");
-        el.resultsCard.className = "results-card fail";
-        el.resultsTitle.className = "results-title fail";
-        el.resultsTitle.textContent = "Error";
-        el.resultsStats.innerHTML = '<span class="stat-k" style="grid-column:1/-1;color:var(--error)">' + esc(msg) + '</span>';
-        el.resultsPath.textContent = "";
-        el.editTimelineBtn.style.display = "none";
-        el.importBtn.style.display = "none";
-        el.importCaptionsBtn.style.display = "none";
-        el.newJobBtn.style.display = "";
-        currentJob = null;
-        updateButtons();
+        if (currentJob) {
+            api("POST", "/cancel/" + currentJob, {}, function () {});
+        }
     }
 
     // ================================================================
-    // Results Display
+    // Run Functions (one per action button)
     // ================================================================
-    function showResults(result) {
-        if (!result) return;
-        el.resultsSection.classList.remove("hidden");
-        el.resultsCard.className = "results-card ok";
-        el.resultsTitle.className = "results-title ok";
 
-        lastXmlPath = result.xml_path || "";
-
-        // Track caption output path (from /captions or /full-edit with captions)
-        var outPath = result.output_path || "";
-        if (outPath && /\.(srt|vtt)$/i.test(outPath)) {
-            lastCaptionPath = outPath;
-        } else if (result.srt_path) {
-            lastCaptionPath = result.srt_path;
+    // --- CUT TAB ---
+    function runSilence() {
+        var preset = el.silencePreset.value;
+        var payload = { filepath: selectedPath, output_dir: projectFolder };
+        if (preset) {
+            payload.preset = preset;
         } else {
-            lastCaptionPath = "";
+            payload.threshold = parseFloat(el.threshold.value);
+            payload.min_duration = parseFloat(el.minDuration.value);
+            payload.padding_before = parseFloat(el.padBefore.value);
+            payload.padding_after = parseFloat(el.padAfter.value);
         }
-
-        // Track styled caption overlay path
-        lastOverlayPath = result.overlay_path || "";
-
-        var segsRaw = result.segments_data || [];
-        allSegments = [];
-        for (var i = 0; i < segsRaw.length; i++) {
-            allSegments.push({ start: segsRaw[i].start, end: segsRaw[i].end, enabled: true });
-        }
-        segmentsModified = false;
-        selectedSegIdx = -1;
-        undoStack = [];
-        redoStack = [];
-
-        renderResultsStats(result);
-
-        var outFile = lastXmlPath || result.overlay_path || result.output_path || result.srt_path || "";
-        el.resultsPath.textContent = outFile;
-        el.resultsPath.title = outFile;
-
-        el.editTimelineBtn.style.display = (allSegments.length > 0 && inPremiere) ? "" : "none";
-        el.importBtn.style.display = lastXmlPath ? "" : "none";
-        el.importCaptionsBtn.style.display = ((lastCaptionPath || lastOverlayPath) && inPremiere) ? "" : "none";
-        // Update button text based on what type of caption
-        if (lastOverlayPath) {
-            el.importCaptionsBtn.textContent = "Import Overlay";
-        } else {
-            el.importCaptionsBtn.textContent = "Import Captions";
-        }
-        el.newJobBtn.style.display = "";
-
-        if (allSegments.length > 0 && selectedPath) {
-            fetchWaveform();
-        } else {
-            el.waveformSection.classList.add("hidden");
-        }
+        startJob("/silence", payload);
     }
 
-    function renderResultsStats(result) {
-        var html = "";
-        if (result && result.summary) {
-            el.resultsTitle.textContent = result.summary.reduction_percent.toFixed(0) + "% shorter";
-            html += stat("Original", fmtDur(result.summary.original_duration));
-            html += stat("Kept", fmtDur(result.summary.kept_duration));
-            html += stat("Removed", fmtDur(result.summary.removed_duration));
-            html += stat("Segments", getEnabledSegments().length + " / " + allSegments.length);
-        } else if (result) {
-            el.resultsTitle.textContent = "Processing complete";
-        }
-        if (result && result.zoom_events) html += stat("Zoom points", result.zoom_events);
-        if (result && result.caption_segments) html += stat("Captions", result.caption_segments + " segments");
-        if (result && result.language) html += stat("Language", result.language);
-        if (result && result.words) html += stat("Words", result.words);
-        // Styled overlay stats
-        if (result && result.overlay_path) {
-            if (result.style) html += stat("Style", result.style.replace(/_/g, " "));
-            if (result.action_words_found) html += stat("Action words", result.action_words_found);
-            if (result.frames_rendered) html += stat("Frames", result.frames_rendered);
-        }
-        // Filler word stats
-        if (result && result.filler_stats) {
-            var fs = result.filler_stats;
-            html += stat("Fillers found", fs.total_fillers + " (" + fs.filler_percentage + "% of words)");
-            html += stat("Filler time", fs.total_filler_time.toFixed(1) + "s removed");
-            // Show top filler breakdown
-            if (fs.breakdown && fs.breakdown.length > 0) {
-                var topFillers = [];
-                for (var fi = 0; fi < Math.min(fs.breakdown.length, 5); fi++) {
-                    var fb = fs.breakdown[fi];
-                    topFillers.push('"' + fb.word + '" x' + fb.count);
-                }
-                html += stat("Top fillers", topFillers.join(", "));
-            }
-        }
-        if (jobStartTime) {
-            var elapsed = Math.floor((Date.now() - jobStartTime) / 1000);
-            html += stat("Processed in", Math.floor(elapsed / 60) + "m " + (elapsed % 60) + "s");
-        }
-        el.resultsStats.innerHTML = html;
-    }
+    function runFillers() {
+        var checks = el.fillerChecks.querySelectorAll("input:checked");
+        var removeKeys = [];
+        for (var i = 0; i < checks.length; i++) removeKeys.push(checks[i].getAttribute("data-filler"));
+        var customRaw = el.fillerCustom.value.trim();
+        var custom = customRaw ? customRaw.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : [];
 
-    function refreshResultsStatsFromSegments() {
-        if (!allSegments.length) return;
-        var enabled = getEnabledSegments();
-        var kept = 0;
-        for (var i = 0; i < enabled.length; i++) kept += enabled[i].end - enabled[i].start;
-        el.resultsTitle.textContent = enabled.length + " of " + allSegments.length + " segments kept";
-        var html = "";
-        html += stat("Kept duration", fmtDur(kept));
-        html += stat("Segments", enabled.length + " / " + allSegments.length);
-        if (segmentsModified) html += '<span class="stat-k" style="grid-column:1/-1;color:var(--warning);font-size:9px;margin-top:4px">Modified - re-export to apply</span>';
-        el.resultsStats.innerHTML = html;
-    }
-
-    function stat(k, v) {
-        return '<span class="stat-k">' + esc(k) + '</span><span class="stat-v">' + esc(String(v)) + '</span>';
-    }
-
-    function getEnabledSegments() {
-        var out = [];
-        for (var i = 0; i < allSegments.length; i++) {
-            if (allSegments[i].enabled) out.push({ start: allSegments[i].start, end: allSegments[i].end });
-        }
-        return out;
-    }
-
-    function resetForNewJob() {
-        el.resultsSection.classList.add("hidden");
-        el.waveformSection.classList.add("hidden");
-        el.progressSection.classList.add("hidden");
-        el.progressBar.style.width = "0%";
-        el.progressBar.className = "progress-fill";
-        el.progressLabel.textContent = "";
-        el.progressElapsed.textContent = "";
-        lastXmlPath = "";
-        lastCaptionPath = "";
-        lastOverlayPath = "";
-        allSegments = [];
-        waveformPeaks = null;
-        segmentsModified = false;
-        selectedSegIdx = -1;
-        undoStack = [];
-        redoStack = [];
-        currentJob = null;
-        jobStartTime = 0;
-        updateButtons();
-    }
-
-    // ================================================================
-    // Undo / Redo
-    // ================================================================
-    function pushUndo() {
-        undoStack.push(JSON.stringify(allSegments));
-        if (undoStack.length > UNDO_MAX) undoStack.shift();
-        redoStack = [];
-        updateToolbar();
-    }
-
-    function doUndo() {
-        if (undoStack.length === 0) return;
-        redoStack.push(JSON.stringify(allSegments));
-        allSegments = JSON.parse(undoStack.pop());
-        segmentsModified = true;
-        afterSegmentChange();
-    }
-
-    function doRedo() {
-        if (redoStack.length === 0) return;
-        undoStack.push(JSON.stringify(allSegments));
-        allSegments = JSON.parse(redoStack.pop());
-        segmentsModified = true;
-        afterSegmentChange();
-    }
-
-    function afterSegmentChange() {
-        if (selectedSegIdx >= allSegments.length) selectedSegIdx = allSegments.length - 1;
-        renderWaveform();
-        buildSegmentList();
-        refreshResultsStatsFromSegments();
-        updateToolbar();
-    }
-
-    // ================================================================
-    // Waveform Visualization
-    // ================================================================
-    function fetchWaveform() {
-        el.waveformSection.classList.remove("hidden");
-        el.waveformLoading.classList.remove("hidden");
-        el.waveformHint.textContent = "Loading...";
-        var numPeaks = Math.min(Math.max(200, el.waveformWrap.clientWidth || 300), 600);
-
-        api("POST", "/waveform", { filepath: selectedPath, peaks: numPeaks }, function (err, data) {
-            el.waveformLoading.classList.add("hidden");
-            if (err || !data || data.error) {
-                el.waveformHint.textContent = "Could not load waveform";
-                return;
-            }
-            waveformPeaks = data.peaks || [];
-            waveformDuration = data.duration || 0;
-            waveformMaxRms = data.max_rms || 1;
-            el.waveformHint.textContent = "Click to toggle | Space to preview";
-            renderWaveform();
-            buildSegmentList();
-        }, 60000);
-    }
-
-    function renderWaveform() {
-        var canvas = el.waveformCanvas;
-        var ctx = canvas.getContext("2d");
-        var wrap = el.waveformWrap;
-        var w = wrap.clientWidth || 300;
-        var h = 72;
-        var dpr = window.devicePixelRatio || 1;
-
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
-        canvas.style.width = w + "px";
-        canvas.style.height = h + "px";
-        ctx.scale(dpr, dpr);
-
-        ctx.fillStyle = "#111114";
-        ctx.fillRect(0, 0, w, h);
-        if (!waveformPeaks || waveformPeaks.length === 0) return;
-
-        var barW = w / waveformPeaks.length;
-        var centerY = h / 2;
-
-        for (var i = 0; i < waveformPeaks.length; i++) {
-            var pk = waveformPeaks[i];
-            var norm = waveformMaxRms > 0 ? pk.r / waveformMaxRms : 0;
-            var barH = Math.max(1, norm * (h * 0.88));
-            var x = i * barW;
-            var t = pk.t;
-
-            var inSeg = false, segEnabled = true, segIdx = -1;
-            for (var s = 0; s < allSegments.length; s++) {
-                if (t >= allSegments[s].start && t < allSegments[s].end) {
-                    inSeg = true;
-                    segEnabled = allSegments[s].enabled;
-                    segIdx = s;
-                    break;
-                }
-            }
-
-            if (inSeg && segEnabled && segIdx === selectedSegIdx)
-                ctx.fillStyle = "#80d8ff";
-            else if (inSeg && segEnabled)
-                ctx.fillStyle = "#4fc3f7";
-            else if (inSeg && !segEnabled)
-                ctx.fillStyle = "#333340";
-            else
-                ctx.fillStyle = "#1e1012";
-
-            ctx.fillRect(x, centerY - barH / 2, Math.max(barW - 0.3, 0.5), barH);
-        }
-
-        // Segment boundary lines
-        if (waveformDuration > 0) {
-            ctx.lineWidth = 1;
-            for (var s2 = 0; s2 < allSegments.length; s2++) {
-                var seg = allSegments[s2];
-                var sx = (seg.start / waveformDuration) * w;
-                ctx.strokeStyle = seg.enabled ? "rgba(79,195,247,0.25)" : "rgba(80,80,80,0.25)";
-                ctx.beginPath(); ctx.moveTo(sx, 0); ctx.lineTo(sx, h); ctx.stroke();
-            }
-        }
-    }
-
-    function buildSegmentList() {
-        var html = "";
-        for (var i = 0; i < allSegments.length; i++) {
-            var seg = allSegments[i];
-            var dur = (seg.end - seg.start).toFixed(2);
-            var cls = seg.enabled ? "" : " disabled";
-            if (i === selectedSegIdx) cls += " selected";
-            html += '<label class="seg-item' + cls + '" data-idx="' + i + '">' +
-                '<input type="checkbox"' + (seg.enabled ? " checked" : "") + ' data-idx="' + i + '">' +
-                '<span class="seg-time">' + fmtTime(seg.start) + ' - ' + fmtTime(seg.end) + '</span>' +
-                '<span class="seg-dur">' + dur + 's</span>' +
-                '</label>';
-        }
-        el.segmentList.innerHTML = html;
-        el.segmentCount.textContent = getEnabledSegments().length + " / " + allSegments.length + " segments";
-    }
-
-    // ================================================================
-    // Segment Editing
-    // ================================================================
-    function toggleSegment(index) {
-        if (index < 0 || index >= allSegments.length) return;
-        pushUndo();
-        allSegments[index].enabled = !allSegments[index].enabled;
-        segmentsModified = true;
-        afterSegmentChange();
-    }
-
-    function setAllSegments(enabled) {
-        pushUndo();
-        for (var i = 0; i < allSegments.length; i++) allSegments[i].enabled = enabled;
-        segmentsModified = true;
-        afterSegmentChange();
-    }
-
-    function selectSegment(index) {
-        selectedSegIdx = (index === selectedSegIdx) ? -1 : index;
-        renderWaveform();
-        buildSegmentList();
-        updateToolbar();
-        // Scroll into view
-        if (selectedSegIdx >= 0) {
-            var item = el.segmentList.querySelector('[data-idx="' + selectedSegIdx + '"]');
-            if (item) item.scrollIntoView({ block: "nearest" });
-        }
-    }
-
-    function mergeWithNext() {
-        if (selectedSegIdx < 0 || selectedSegIdx >= allSegments.length - 1) return;
-        pushUndo();
-        var a = allSegments[selectedSegIdx];
-        var b = allSegments[selectedSegIdx + 1];
-        // Merge: keep from a.start to b.end, inherit enabled from either
-        allSegments[selectedSegIdx] = {
-            start: a.start,
-            end: b.end,
-            enabled: a.enabled || b.enabled
-        };
-        allSegments.splice(selectedSegIdx + 1, 1);
-        segmentsModified = true;
-        afterSegmentChange();
-    }
-
-    function splitSegment() {
-        if (selectedSegIdx < 0 || selectedSegIdx >= allSegments.length) return;
-        var seg = allSegments[selectedSegIdx];
-        var mid = (seg.start + seg.end) / 2;
-        if (seg.end - seg.start < 0.1) return; // too short to split
-        pushUndo();
-        var first = { start: seg.start, end: mid, enabled: seg.enabled };
-        var second = { start: mid, end: seg.end, enabled: seg.enabled };
-        allSegments.splice(selectedSegIdx, 1, first, second);
-        segmentsModified = true;
-        afterSegmentChange();
-    }
-
-    // ================================================================
-    // Audio Preview
-    // ================================================================
-    function previewSegment(index) {
-        if (index < 0 || index >= allSegments.length) return;
-        if (!connected || !selectedPath) return;
-
-        var seg = allSegments[index];
-        var centerTime = seg.start;
-        var duration = Math.min(3, seg.end - seg.start + 0.5);
-
-        el.previewIndicator.classList.remove("hidden");
-
-        api("POST", "/preview-audio", {
+        startJob("/fillers", {
             filepath: selectedPath,
-            time: centerTime + duration / 2,
-            duration: duration
-        }, function (err, data) {
-            if (err || !data || data.error) {
-                el.previewIndicator.classList.add("hidden");
-                return;
-            }
-            el.previewAudio.src = BACKEND + data.url;
-            el.previewAudio.play().catch(function () {});
-        }, 15000);
-
-        el.previewAudio.onended = function () {
-            el.previewIndicator.classList.add("hidden");
-        };
-        el.previewAudio.onerror = function () {
-            el.previewIndicator.classList.add("hidden");
-        };
-        // Auto-hide after timeout
-        setTimeout(function () {
-            el.previewIndicator.classList.add("hidden");
-        }, 5000);
+            output_dir: projectFolder,
+            model: el.fillerModel.value,
+            remove_fillers: removeKeys,
+            custom_words: custom,
+            remove_silence: el.fillerSilence.checked,
+        });
     }
 
-    // ================================================================
-    // Export (Video + Audio-Only)
-    // ================================================================
-    function exportVideo() { _doExport(false); }
-    function exportAudio() { _doExport(true); }
+    function runFull() {
+        startJob("/full", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            preset: el.fullPreset.value,
+            skip_zoom: !el.fullZoom.checked,
+            skip_captions: !el.fullCaptions.checked,
+            remove_fillers: el.fullFillers.checked,
+        });
+    }
 
-    function _doExport(audioOnly) {
-        var segments = getEnabledSegments();
-        if (!connected || !selectedPath || segments.length === 0) {
-            showAlert("No segments available to export.");
-            return;
-        }
+    // --- CAPTIONS TAB ---
+    function runStyledCaptions() {
+        var actionWords = el.actionWordsInput.value.trim();
+        var custom = actionWords ? actionWords.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : [];
 
+        startJob("/styled-captions", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            style: el.captionStyle.value,
+            model: el.captionModel.value,
+            language: el.captionLang.value || null,
+            action_words: custom,
+            auto_detect_energy: el.captionAutoAction.checked,
+        });
+    }
+
+    function runSubtitle() {
+        startJob("/captions", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            model: el.subModel.value,
+            language: el.subLang.value || null,
+            format: el.subFormat.value,
+            word_timestamps: true,
+        });
+    }
+
+    function runTranscript() {
+        startJob("/transcript", {
+            filepath: selectedPath,
+            model: el.transcriptModel.value,
+        });
+    }
+
+    function exportEditedTranscript() {
+        if (!transcriptData) return;
+
+        api("POST", "/transcript/export", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            segments: transcriptData.segments,
+            format: el.transcriptExportFormat.value,
+            language: transcriptData.language || "en",
+        }, function (err, data) {
+            if (!err && data && data.output_path) {
+                showAlert("Exported to: " + data.output_path.split(/[/\\]/).pop());
+            } else {
+                showAlert("Export failed: " + (data ? data.error : "Unknown error"));
+            }
+        });
+    }
+
+    // --- AUDIO TAB ---
+    function runDenoise() {
+        startJob("/audio/denoise", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            method: el.denoiseMethod.value,
+            strength: parseFloat(el.denoiseStrength.value),
+        });
+    }
+
+    function runIsolate() {
+        var method = el.isolateMethod.value;
         var payload = {
             filepath: selectedPath,
-            segments: segments,
+            output_dir: projectFolder,
+            method: method,
         };
-        if (projectFolder) payload.output_dir = projectFolder;
-
-        if (audioOnly) {
-            payload.audio_only = true;
-            payload.audio_format = el.audioExportFormat.value;
-        } else {
-            payload.quality = el.exportQuality.value;
-            payload.output_format = el.exportFormat.value;
+        
+        if (method === "demucs") {
+            // Collect selected stems
+            var stems = [];
+            if (el.stemVocals.checked) stems.push("vocals");
+            if (el.stemDrums.checked) stems.push("drums");
+            if (el.stemBass.checked) stems.push("bass");
+            if (el.stemOther.checked) stems.push("other");
+            if (stems.length > 0) payload.stems = stems;
         }
+        
+        startJob("/audio/isolate", payload);
+    }
 
-        var btn = audioOnly ? el.exportAudioBtn : el.exportVideoBtn;
-        var label = audioOnly ? "Audio" : "Video";
-        btn.disabled = true;
-        btn.textContent = "Exporting...";
-        el.progressSection.classList.remove("hidden");
-        el.progressBar.style.width = "0%";
-        el.progressBar.className = "progress-fill";
-        el.progressLabel.textContent = "Starting " + label.toLowerCase() + " export...";
-        el.cancelBtn.classList.remove("hidden");
-        jobStartTime = Date.now();
-        updateElapsed();
-        elapsedTimer = setInterval(updateElapsed, 1000);
-
-        api("POST", "/export-video", payload, function (err, data) {
-            if (err || !data || data.error) {
-                _resetExBtn(btn, label);
-                el.progressSection.classList.add("hidden");
-                stopTracking();
-                showAlert("Export failed: " + (data ? data.error : (err ? err.message : "Unknown error")));
-                return;
-            }
-            currentJob = data.job_id;
-            trackJob(data.job_id, {
-                onProgress: function (job) {
-                    el.progressBar.style.width = (job.progress || 0) + "%";
-                    el.progressLabel.textContent = job.message || "";
-                },
-                onComplete: function (job) {
-                    currentJob = null;
-                    el.progressBar.style.width = "100%";
-                    el.progressBar.classList.add("done");
-                    el.cancelBtn.classList.add("hidden");
-                    _resetExBtn(btn, label);
-                    updateButtons();
-                    if (job.result) {
-                        var r = job.result;
-                        el.resultsTitle.textContent = label + " exported!";
-                        var h = "";
-                        h += stat("Output", r.output_path ? r.output_path.split(/[/\\]/).pop() : "");
-                        if (r.duration) h += stat("Duration", fmtDur(r.duration));
-                        if (r.file_size_mb) h += stat("File size", r.file_size_mb + " MB");
-                        if (r.segments) h += stat("Segments", r.segments);
-                        if (jobStartTime) {
-                            var elapsed = Math.floor((Date.now() - jobStartTime) / 1000);
-                            h += stat("Rendered in", Math.floor(elapsed / 60) + "m " + (elapsed % 60) + "s");
-                        }
-                        el.resultsStats.innerHTML = h;
-                        el.resultsPath.textContent = r.output_path || "";
-                    }
-                },
-                onError: function (job) {
-                    currentJob = null; _resetExBtn(btn, label);
-                    el.cancelBtn.classList.add("hidden");
-                    el.progressBar.style.width = "100%";
-                    el.progressBar.classList.add("err");
-                    el.progressLabel.textContent = "Export error: " + (job.error || "Failed");
-                    updateButtons();
-                },
-                onCancelled: function () {
-                    currentJob = null; _resetExBtn(btn, label);
-                    el.cancelBtn.classList.add("hidden");
-                    el.progressBar.style.width = "0%";
-                    el.progressLabel.textContent = "Cancelled";
-                    updateButtons();
-                }
-            });
+    function runEq() {
+        startJob("/audio/eq", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            preset: el.eqPreset.value,
         });
     }
 
-    function _resetExBtn(btn, label) {
-        btn.disabled = false;
-        btn.textContent = "Export " + label;
-    }
-
-    // ================================================================
-    // Edit Timeline / Import XML
-    // ================================================================
-    function editTimeline() {
-        var segments = getEnabledSegments();
-        if (!segments.length || !selectedPath) return;
-        if (!inPremiere) { showAlert("Not in Premiere Pro."); return; }
-
-        var segJson = JSON.stringify(segments).replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-        var pathEsc = selectedPath.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-
-        el.editTimelineBtn.disabled = true;
-        el.editTimelineBtn.textContent = "Creating sequence...";
-
-        jsx("applyEditsToTimeline('" + segJson + "', '" + pathEsc + "')", function (result) {
-            el.editTimelineBtn.disabled = false;
-            el.editTimelineBtn.textContent = "Edit in Timeline";
-            try {
-                var data = JSON.parse(result);
-                if (data.success) {
-                    el.resultsTitle.textContent = data.sequenceName || "Timeline created!";
-                    el.editTimelineBtn.style.display = "none";
-                    el.importBtn.style.display = "none";
-                    hideAlert();
-                } else {
-                    showAlert("Direct edit failed: " + (data.error || "Unknown") + ". Try Import XML.");
-                }
-            } catch (e) {
-                showAlert("Direct edit failed: " + e.message);
-            }
-        });
-    }
-
-    function importXml() {
-        if (!lastXmlPath) return;
-        if (!inPremiere) { showAlert("Not in Premiere Pro. XML saved to: " + lastXmlPath); return; }
-
-        function doImport(xmlPath) {
-            var escaped = xmlPath.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-            jsx("importAndOpenXml('" + escaped + "')", function (result) {
-                try {
-                    var data = JSON.parse(result);
-                    if (data.success) {
-                        el.resultsTitle.textContent = "Imported!" + (data.sequenceName ? " " + data.sequenceName : "");
-                        el.importBtn.style.display = "none";
-                    } else { showAlert("Import failed: " + (data.error || "Unknown")); }
-                } catch (e) {
-                    showAlert("Import failed. Try File > Import and select: " + xmlPath);
-                }
-            });
-        }
-
-        if (segmentsModified) {
-            el.importBtn.disabled = true;
-            el.importBtn.textContent = "Regenerating...";
-            api("POST", "/regenerate", { filepath: selectedPath, segments: getEnabledSegments(), output_dir: projectFolder || "" }, function (err, data) {
-                el.importBtn.disabled = false;
-                el.importBtn.textContent = "Import XML";
-                if (!err && data && data.xml_path) {
-                    lastXmlPath = data.xml_path;
-                    segmentsModified = false;
-                    doImport(data.xml_path);
-                } else {
-                    showAlert("XML regeneration failed. Importing original.");
-                    doImport(lastXmlPath);
-                }
-            });
-        } else {
-            doImport(lastXmlPath);
-        }
-    }
-
-    // ================================================================
-    // Import Captions to Timeline
-    // ================================================================
-    function importCaptions() {
-        // Determine what to import: overlay video or SRT/VTT
-        var importPath = lastOverlayPath || lastCaptionPath;
-        var isOverlay = !!lastOverlayPath;
-
-        if (!importPath) return;
-        if (!inPremiere) {
-            showAlert("Not in Premiere Pro. File saved to: " + importPath);
+    function runDuck() {
+        if (!el.musicSelect.value) {
+            showAlert("Please select a music track");
             return;
         }
+        startJob("/audio/duck", {
+            filepath: selectedPath,
+            music_filepath: el.musicSelect.value,
+            output_dir: projectFolder,
+            duck_level: parseFloat(el.duckLevel.value),
+            attack_ms: parseFloat(el.duckAttack.value),
+            release_ms: parseFloat(el.duckRelease.value),
+        });
+    }
 
-        var btnLabel = isOverlay ? "Import Overlay" : "Import Captions";
-        el.importCaptionsBtn.disabled = true;
-        el.importCaptionsBtn.textContent = "Importing...";
+    function measureLoudness() {
+        el.loudnessMeter.classList.remove("hidden");
+        el.meterLUFS.textContent = "Measuring...";
+        el.meterTP.textContent = "--";
+        el.meterLRA.textContent = "--";
 
-        var escaped = importPath.replace(/\\/g, "\\\\").replace(/'/g, "\\'");
-        var jsxFunc = isOverlay
-            ? "importCaptionOverlay('" + escaped + "')"
-            : "importCaptions('" + escaped + "')";
-
-        jsx(jsxFunc, function (result) {
-            el.importCaptionsBtn.disabled = false;
-
-            if (!result || result === "null" || result === "undefined") {
-                el.importCaptionsBtn.textContent = btnLabel;
-                showAlert("Could not import. Try File > Import manually.");
-                return;
-            }
-
-            try {
-                var data = JSON.parse(result);
-                if (data.success) {
-                    el.importCaptionsBtn.textContent = "Imported!";
-                    el.importCaptionsBtn.style.background = "#4caf50";
-                    var msg = data.message || "";
-                    if (data.addedToTimeline || data.trackIndex) {
-                        hideAlert();
-                        if (msg) showAlert(msg);
-                    } else {
-                        showAlert(msg || "Imported to project. Drag onto timeline to use.");
-                    }
-                    setTimeout(function () {
-                        el.importCaptionsBtn.textContent = btnLabel;
-                        el.importCaptionsBtn.style.background = "";
-                    }, 3000);
-                } else {
-                    el.importCaptionsBtn.textContent = btnLabel;
-                    showAlert(data.error || "Import failed.");
-                }
-            } catch (e) {
-                el.importCaptionsBtn.textContent = btnLabel;
-                showAlert("Import error. File saved to: " + importPath);
+        api("POST", "/audio/measure", { filepath: selectedPath }, function (err, data) {
+            if (!err && data && !data.error) {
+                el.meterLUFS.textContent = data.integrated_lufs.toFixed(1) + " LUFS";
+                el.meterTP.textContent = data.true_peak_dbtp.toFixed(1) + " dBTP";
+                el.meterLRA.textContent = data.loudness_range_lu.toFixed(1) + " LU";
+            } else {
+                el.meterLUFS.textContent = "Error";
             }
         });
     }
 
-    // ================================================================
-    // Install Whisper
-    // ================================================================
-    function installWhisper() {
-        if (!connected) { showAlert("Backend not connected."); return; }
-        el.installWhisperBtn.disabled = true;
-        el.installWhisperBtn.textContent = "Installing...";
-
-        api("POST", "/install-whisper", { backend: "faster-whisper" }, function (err, data) {
-            if (err || !data || data.error) {
-                el.installWhisperBtn.disabled = false;
-                el.installWhisperBtn.textContent = "Install Whisper Now";
-                showAlert("Failed: " + (data ? data.error : (err ? err.message : "Unknown error")));
-                return;
-            }
-            trackJob(data.job_id, {
-                onProgress: function (job) {
-                    // Truncate long messages to fit button
-                    var msg = job.message || "Installing...";
-                    if (msg.length > 40) msg = msg.substring(0, 37) + "...";
-                    el.installWhisperBtn.textContent = msg;
-                },
-                onComplete: function (job) {
-                    el.installWhisperBtn.textContent = "Installed!";
-                    el.installWhisperBtn.style.background = "#4caf50";
-                    // Check if it used a fallback backend
-                    if (job.result && job.result.backend && job.result.backend !== "faster-whisper") {
-                        showAlert("Installed " + job.result.backend + " as fallback (faster-whisper unavailable)");
-                    }
-                    api("GET", "/capabilities", null, function (e2, caps) {
-                        if (!e2 && caps) { capabilities = caps; updateCapabilities(); updateButtons(); }
-                    });
-                    setTimeout(function () {
-                        el.captionsHint.classList.add("hidden");
-                        if (el.captionsBadge) el.captionsBadge.classList.add("hidden");
-                    }, 2000);
-                },
-                onError: function (job) {
-                    el.installWhisperBtn.disabled = false;
-                    el.installWhisperBtn.textContent = "Retry Install";
-                    el.installWhisperBtn.style.background = "";
-                    // Show truncated error in alert (the full error can be very long)
-                    var errMsg = job.error || "Unknown error";
-                    if (errMsg.length > 300) errMsg = errMsg.substring(0, 300) + "...";
-                    showAlert(errMsg);
-                }
-            });
-        }, 300000); // 5 minute timeout for install
+    function runNormalize() {
+        startJob("/audio/normalize", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            preset: el.normalizePreset.value,
+        });
     }
 
-    // ================================================================
-    // Batch Processing
-    // ================================================================
-    function startBatch() {
-        var clips = [];
-        for (var i = 0; i < projectMedia.length; i++) {
-            if (projectMedia[i].path) clips.push(projectMedia[i]);
-        }
-        if (clips.length === 0) { showAlert("No clips in project to process."); return; }
+    function runBeats() {
+        el.beatResults.classList.add("hidden");
+        startJob("/audio/beats", {
+            filepath: selectedPath,
+            sensitivity: parseFloat(el.beatSensitivity.value),
+        });
+    }
 
-        batchRunning = true; batchCancel = false; batchResults = [];
-        updateButtons();
+    function runEffect() {
+        startJob("/audio/effects/apply", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            effect: el.audioEffect.value,
+        });
+    }
 
-        el.actionSection.classList.add("hidden");
-        el.resultsSection.classList.add("hidden");
-        el.waveformSection.classList.add("hidden");
-        el.progressSection.classList.add("hidden");
-        el.batchSection.classList.remove("hidden");
-        el.closeBatchBtn.style.display = "none";
-        el.cancelBatchBtn.style.display = "";
+    // --- VOICE TAB ---
+    function runTts() {
+        var text = el.ttsText.value.trim();
+        if (!text) { showAlert("Please enter text to generate speech."); return; }
 
-        var html = "";
-        for (var j = 0; j < clips.length; j++) {
-            html += '<div class="batch-item pending" id="batch-' + j + '">' +
-                '<span class="batch-icon">-</span>' +
-                '<span class="batch-name">' + esc(clips[j].name) + '</span>' +
-                '<span class="batch-info"></span></div>';
-        }
-        el.batchList.innerHTML = html;
-        el.batchCounter.textContent = "0/" + clips.length;
-        el.batchProgressBar.style.width = "0%";
-        el.batchProgressBar.className = "progress-fill";
+        startJob("/voice/generate", {
+            mode: "tts",
+            text: text,
+            speaker: el.ttsSpeaker.value,
+            language: el.ttsLanguage.value,
+            emotion: el.ttsEmotion.value,
+            speed: parseFloat(el.ttsSpeed.value),
+            quality: el.ttsQuality.value,
+            output_dir: projectFolder,
+        });
+    }
 
-        var idx = 0;
-        function processNext() {
-            if (batchCancel || idx >= clips.length) { batchDone(clips.length); return; }
-            var clip = clips[idx];
-            var row = $("batch-" + idx);
-            if (row) { row.className = "batch-item active"; row.querySelector(".batch-icon").textContent = "~"; }
-            el.batchStatusLabel.textContent = "Processing: " + clip.name;
-            el.batchCounter.textContent = idx + "/" + clips.length;
-            el.batchProgressBar.style.width = ((idx / clips.length) * 100).toFixed(0) + "%";
+    function runClone() {
+        var text = el.cloneText.value.trim();
+        if (!text) { showAlert("Please enter text to generate."); return; }
+        if (!cloneRefAudioPath) { showAlert("Please select a reference audio file."); return; }
 
-            var payload = { filepath: clip.path };
-            var preset = el.silencePreset.value;
-            if (preset) payload.preset = preset;
-            else {
-                payload.threshold = parseFloat(el.threshold.value);
-                payload.min_duration = parseFloat(el.minDuration.value);
-                payload.padding_before = parseFloat(el.padBefore.value);
-                payload.padding_after = parseFloat(el.padAfter.value);
+        startJob("/voice/generate", {
+            mode: "clone",
+            text: text,
+            ref_audio: cloneRefAudioPath,
+            ref_text: el.cloneRefText.value.trim(),
+            language: el.cloneLanguage.value,
+            quality: el.ttsQuality.value,
+            output_dir: projectFolder,
+        });
+    }
+
+    function runDesign() {
+        var text = el.designText.value.trim();
+        var desc = el.designDescription.value.trim();
+        if (!text) { showAlert("Please enter text to generate."); return; }
+        if (!desc) { showAlert("Please describe the voice you want."); return; }
+
+        startJob("/voice/generate", {
+            mode: "design",
+            text: text,
+            voice_description: desc,
+            language: el.designLanguage.value,
+            output_dir: projectFolder,
+        });
+    }
+
+    function runReplace() {
+        var orig = el.replaceOriginal.value.trim();
+        var repl = el.replaceNew.value.trim();
+        if (!orig || !repl) { showAlert("Both original and replacement text are required."); return; }
+
+        startJob("/voice/replace", {
+            filepath: selectedPath,
+            original_text: orig,
+            replacement_text: repl,
+            language: el.replaceLanguage.value,
+            quality: el.ttsQuality.value,
+            output_dir: projectFolder,
+        });
+    }
+
+    function installVoice() {
+        showAlert("Installing Qwen3-TTS... This may take several minutes.");
+        startJob("/voice/install", {});
+    }
+
+    function checkVoiceStatus() {
+        api("GET", "/voice/check", null, function (err, data) {
+            if (!err && data) {
+                voiceInstalled = !!data.installed;
+                updateButtons();
             }
-            if (projectFolder) payload.output_dir = projectFolder;
+        });
+    }
 
-            api("POST", "/silence", payload, function (err, data) {
-                if (err || !data || data.error) {
-                    batchResults.push({ name: clip.name, error: true });
-                    if (row) { row.className = "batch-item error"; row.querySelector(".batch-icon").textContent = "x"; row.querySelector(".batch-info").textContent = "Failed"; }
-                    idx++; processNext();
-                    return;
-                }
-                trackJob(data.job_id, {
-                    onProgress: function (job) { if (row) row.querySelector(".batch-info").textContent = (job.progress || 0) + "%"; },
-                    onComplete: function (job) {
-                        var info = "";
-                        if (job.result && job.result.summary) info = job.result.summary.reduction_percent.toFixed(0) + "% shorter";
-                        batchResults.push({ name: clip.name, info: info });
-                        if (row) { row.className = "batch-item done"; row.querySelector(".batch-icon").textContent = "ok"; row.querySelector(".batch-info").textContent = info; }
-                        idx++; processNext();
-                    },
-                    onError: function () {
-                        batchResults.push({ name: clip.name, error: true });
-                        if (row) { row.className = "batch-item error"; row.querySelector(".batch-icon").textContent = "x"; row.querySelector(".batch-info").textContent = "Error"; }
-                        idx++; processNext();
-                    },
-                    onCancelled: function () { batchCancel = true; idx++; processNext(); }
+    function loadVoiceProfiles() {
+        api("GET", "/voice/profiles", null, function (err, data) {
+            if (!err && data && data.profiles) {
+                voiceProfiles = data.profiles;
+                renderVoiceProfiles(data.profiles);
+                // Add profiles to clone source dropdown
+                updateCloneSourceOptions(data.profiles);
+            }
+        });
+    }
+
+    function renderVoiceProfiles(profiles) {
+        if (!profiles || profiles.length === 0) {
+            el.voiceProfilesList.innerHTML = '<p class="card-desc">No saved profiles yet.</p>';
+            return;
+        }
+        var html = "";
+        for (var i = 0; i < profiles.length; i++) {
+            var p = profiles[i];
+            html += '<div class="voice-profile-item" data-id="' + esc(p.id) + '">'
+                + '<div class="vp-info">'
+                + '<span class="vp-name">' + esc(p.name) + '</span>'
+                + '<span class="vp-meta">' + esc(p.language) + ' | ' + (p.duration_seconds || 0).toFixed(1) + 's</span>'
+                + '</div>'
+                + '<div class="vp-actions">'
+                + '<button class="btn-xs vp-use" data-id="' + esc(p.id) + '" data-audio="' + esc(p.ref_audio_path) + '" data-text="' + esc(p.ref_text) + '">Use</button>'
+                + '<button class="btn-xs btn-danger vp-delete" data-id="' + esc(p.id) + '">Del</button>'
+                + '</div>'
+                + '</div>';
+        }
+        el.voiceProfilesList.innerHTML = html;
+
+        // Bind profile actions
+        var useBtns = el.voiceProfilesList.querySelectorAll(".vp-use");
+        for (var i = 0; i < useBtns.length; i++) {
+            useBtns[i].addEventListener("click", function () {
+                cloneRefAudioPath = this.getAttribute("data-audio");
+                el.cloneRefText.value = this.getAttribute("data-text") || "";
+                el.cloneSourceInfo.textContent = "Using profile: " + this.closest(".voice-profile-item").querySelector(".vp-name").textContent;
+                updateButtons();
+            });
+        }
+        var delBtns = el.voiceProfilesList.querySelectorAll(".vp-delete");
+        for (var i = 0; i < delBtns.length; i++) {
+            delBtns[i].addEventListener("click", function () {
+                var pid = this.getAttribute("data-id");
+                api("DELETE", "/voice/profiles/" + pid, null, function (err) {
+                    if (!err) loadVoiceProfiles();
                 });
             });
         }
-        processNext();
     }
 
-    function batchDone(total) {
-        batchRunning = false; updateButtons();
-        el.cancelBatchBtn.style.display = "none";
-        el.closeBatchBtn.style.display = "";
-        var ok = 0, fail = 0;
-        for (var i = 0; i < batchResults.length; i++) { if (batchResults[i].error) fail++; else ok++; }
-        el.batchProgressBar.style.width = "100%";
-        el.batchProgressBar.className = "progress-fill" + (fail > 0 ? "" : " done");
-        el.batchCounter.textContent = batchResults.length + "/" + total;
-        el.batchStatusLabel.textContent = batchCancel
-            ? "Cancelled. " + ok + " done, " + fail + " failed."
-            : "Done! " + ok + " completed" + (fail > 0 ? ", " + fail + " failed" : "");
+    function updateCloneSourceOptions(profiles) {
+        var html = '<option value="" disabled selected>Select source...</option>'
+            + '<option value="browse">Browse for audio file...</option>'
+            + '<option value="selected">Use selected clip</option>';
+        for (var i = 0; i < profiles.length; i++) {
+            html += '<option value="profile:' + esc(profiles[i].id) + '">Profile: ' + esc(profiles[i].name) + '</option>';
+        }
+        el.cloneSource.innerHTML = html;
+    }
+
+    function saveVoiceProfile() {
+        var name = el.profileName.value.trim();
+        if (!name) { showAlert("Please enter a profile name."); return; }
+        if (!cloneRefAudioPath) { showAlert("No reference audio selected."); return; }
+
+        api("POST", "/voice/profiles", {
+            name: name,
+            ref_audio: cloneRefAudioPath,
+            ref_text: el.cloneRefText.value.trim(),
+            language: el.cloneLanguage.value,
+        }, function (err, data) {
+            if (!err && data && data.profile) {
+                showAlert("Profile saved: " + name);
+                el.profileName.value = "";
+                loadVoiceProfiles();
+            } else {
+                showAlert("Failed to save profile: " + (data ? data.error : "Error"));
+            }
+        });
+    }
+
+    function showVoicePreview(outputPath, duration, model) {
+        el.voicePreviewCard.classList.remove("hidden");
+        el.voicePreviewAudio.src = BACKEND + "/voice/preview/" + encodeURIComponent(outputPath);
+        el.voicePreviewDuration.textContent = (duration || 0).toFixed(1) + "s";
+        el.voicePreviewModel.textContent = model || "";
+    }
+
+    // --- VIDEO TAB ---
+    function runScenes() {
+        el.sceneResults.classList.add("hidden");
+        startJob("/video/scenes", {
+            filepath: selectedPath,
+            threshold: parseFloat(el.sceneThreshold.value),
+            min_scene_length: parseFloat(el.minSceneLen.value),
+        });
+    }
+
+    function runSpeedRamp() {
+        startJob("/video/speed-ramp", {
+            input: selectedPath,
+            preset: el.speedPreset.value,
+            mode: el.speedMode.value,
+            quality: el.speedQuality.value,
+            output_dir: projectFolder,
+        });
+    }
+
+    function runReframe() {
+        startJob("/video/reframe", {
+            input: selectedPath,
+            target_aspect: el.reframeAspect.value,
+            face_detection: el.reframeFaceDetect.checked,
+            output_dir: projectFolder,
+        });
+    }
+
+    function runColor() {
+        startJob("/video/lut", {
+            input: selectedPath,
+            preset: el.colorPreset.value,
+            intensity: parseFloat(el.colorIntensity.value),
+            output_dir: projectFolder,
+        });
+    }
+
+    function runChromaKey() {
+        startJob("/video/chroma-key", {
+            input: selectedPath,
+            key_color: el.chromaColor.value,
+            similarity: parseFloat(el.chromaSimilarity.value),
+            blend: parseFloat(el.chromaBlend.value),
+            bg_mode: el.chromaBgMode.value,
+            output_dir: projectFolder,
+        });
+    }
+
+    function runBgRemove() {
+        startJob("/video/bg-remove", {
+            input: selectedPath,
+            model: el.bgModel.value,
+            bg_mode: el.bgMode.value,
+            output_dir: projectFolder,
+        });
+    }
+
+    function installRembg() {
+        startJob("/video/bg-install", {});
+    }
+
+    function runSlowmo() {
+        startJob("/video/slowmo", {
+            input: selectedPath,
+            multiplier: parseInt(el.slowmoMultiplier.value),
+            scale: parseFloat(el.slowmoScale.value),
+            output_dir: projectFolder,
+        });
+    }
+
+    function installRife() {
+        startJob("/video/slowmo-install", {});
+    }
+
+    function runUpscale() {
+        startJob("/video/upscale", {
+            input: selectedPath,
+            model: el.upscaleModel.value,
+            scale: parseInt(el.upscaleScale.value),
+            output_dir: projectFolder,
+        });
+    }
+
+    function installEsrgan() {
+        startJob("/video/upscale-install", {});
+    }
+
+    function checkRembgStatus() {
+        fetch(BACKEND + "/video/bg-check").then(function (r) { return r.json(); }).then(function (d) {
+            rembgInstalled = d.installed;
+            updateButtons();
+        }).catch(function () {});
+    }
+
+    function checkRifeStatus() {
+        fetch(BACKEND + "/video/slowmo-check").then(function (r) { return r.json(); }).then(function (d) {
+            rifeInstalled = d.installed;
+            updateButtons();
+        }).catch(function () {});
+    }
+
+    function checkEsrganStatus() {
+        fetch(BACKEND + "/video/upscale-check").then(function (r) { return r.json(); }).then(function (d) {
+            esrganInstalled = d.installed;
+            updateButtons();
+        }).catch(function () {});
+    }
+
+    // --- EXPORT TAB ---
+    function runExpTranscript() {
+        var fmt = el.expTranscriptFormat.value;
+        if (fmt === "plain" || fmt === "timestamped") {
+            startJob("/transcript", {
+                filepath: selectedPath,
+                model: el.expModel.value,
+            });
+        } else {
+            startJob("/captions", {
+                filepath: selectedPath,
+                output_dir: projectFolder,
+                model: el.expModel.value,
+                format: fmt,
+                word_timestamps: true,
+            });
+        }
+    }
+
+    // --- EXPORT TAB: Platform ---
+    function runPlatformExport() {
+        startJob("/export/render", {
+            input: selectedPath,
+            preset: el.platformPreset.value,
+            output_dir: projectFolder,
+        });
+    }
+
+    function updatePlatformInfo() {
+        var presetInfo = {
+            youtube_1080: { res: "1920x1080", aspect: "16:9", limit: "" },
+            youtube_4k:   { res: "3840x2160", aspect: "16:9", limit: "" },
+            shorts:       { res: "1080x1920", aspect: "9:16", limit: "60s max" },
+            tiktok:       { res: "1080x1920", aspect: "9:16", limit: "10m max" },
+            instagram_reels: { res: "1080x1920", aspect: "9:16", limit: "90s max" },
+            instagram_feed:  { res: "1080x1350", aspect: "4:5", limit: "60s max" },
+            instagram_square: { res: "1080x1080", aspect: "1:1", limit: "60s max" },
+            twitter:      { res: "1280x720", aspect: "16:9", limit: "2m20s max" },
+            linkedin:     { res: "1920x1080", aspect: "16:9", limit: "10m max" },
+            podcast_video: { res: "1920x1080", aspect: "16:9", limit: "" },
+            podcast_audio: { res: "Audio only", aspect: "MP3", limit: "" },
+        };
+        var info = presetInfo[el.platformPreset.value] || {};
+        el.platformRes.textContent = info.res || "";
+        el.platformAspect.textContent = info.aspect || "";
+        el.platformLimit.textContent = info.limit || "";
+    }
+
+    // --- EXPORT TAB: Custom Render ---
+    function runCustomRender() {
+        startJob("/export/render", {
+            input: selectedPath,
+            video_codec: el.renderVideoCodec.value,
+            audio_codec: el.renderAudioCodec.value,
+            resolution: el.renderResolution.value,
+            crf: parseInt(el.renderCrf.value),
+            output_dir: projectFolder,
+        });
+    }
+
+    // --- EXPORT TAB: Thumbnail ---
+    function runThumbnail() {
+        var mode = el.thumbMode.value;
+        var actualMode = mode === "single_ts" ? "single" : mode;
+        var ts = mode === "single_ts" ? parseFloat(el.thumbTimestamp.value) : -1;
+        startJob("/export/thumbnail", {
+            input: selectedPath,
+            mode: actualMode,
+            timestamp: ts,
+            count: parseInt(el.thumbCount.value),
+            output_dir: projectFolder,
+        });
+    }
+
+    function updateThumbMode() {
+        var mode = el.thumbMode.value;
+        el.thumbTimestampGroup.classList.toggle("hidden", mode !== "single_ts");
+        el.thumbCountGroup.classList.toggle("hidden", mode !== "multi");
+    }
+
+    // --- EXPORT TAB: Burn-In ---
+    function runBurnin() {
+        if (!el.burninSubPath.value) { showAlert("Select a subtitle file first"); return; }
+        startJob("/export/burn-subs", {
+            input: selectedPath,
+            subtitle_path: el.burninSubPath.value,
+            font_size: parseInt(el.burninFontSize.value),
+            position: el.burninPosition.value,
+            font_color: el.burninFontColor.value,
+            output_dir: projectFolder,
+        });
+    }
+
+    function browseBurninSub() {
+        if (inPremiere) {
+            jsx("browseForFile()", function (result) {
+                if (result && result !== "null" && result.length > 3) {
+                    el.burninSubPath.value = result;
+                    updateButtons();
+                }
+            });
+        }
+    }
+
+    // --- EXPORT TAB: Watermark ---
+    function runWatermark() {
+        startJob("/export/watermark", {
+            input: selectedPath,
+            watermark_type: "text",
+            text: el.watermarkText.value || "WATERMARK",
+            position: el.watermarkPosition.value,
+            opacity: parseFloat(el.watermarkOpacity.value),
+            output_dir: projectFolder,
+        });
+    }
+
+    // --- EXPORT TAB: GIF ---
+    function runGif() {
+        startJob("/export/gif", {
+            input: selectedPath,
+            start: parseFloat(el.gifStart.value),
+            duration: parseFloat(el.gifDuration.value),
+            width: parseInt(el.gifWidth.value),
+            output_dir: projectFolder,
+        });
+    }
+
+    // --- EXPORT TAB: Audio Extract ---
+    function runAudioExtract() {
+        startJob("/export/audio-extract", {
+            input: selectedPath,
+            codec: el.audioExtractCodec.value,
+            normalize: el.audioExtractNormalize.checked,
+            output_dir: projectFolder,
+        });
+    }
+
+    // ================================================================
+    // BATCH & WORKFLOW
+    // ================================================================
+
+    function browseBatchFolder() {
+        if (inPremiere) {
+            jsx("browseForFolder()", function (result) {
+                if (result && result !== "null" && result.length > 2) {
+                    el.batchFolder.value = result;
+                    scanBatchFolder(result);
+                }
+            });
+        }
+    }
+
+    function scanBatchFolder(folder) {
+        fetch(API + "/batch/scan", {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({folder: folder}),
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            batchFiles = (data.files || []).map(function (f) { return f.path; });
+            el.batchFileCount.textContent = batchFiles.length;
+            el.batchFileList.innerHTML = batchFiles.slice(0, 50).map(function (fp) {
+                var name = fp.split(/[\\/]/).pop();
+                return '<div class="batch-file-item">' + name + '</div>';
+            }).join("");
+            if (batchFiles.length > 50) {
+                el.batchFileList.innerHTML += '<div class="batch-file-item dim">...and ' + (batchFiles.length - 50) + ' more</div>';
+            }
+            updateButtons();
+        })
+        .catch(function (e) { showAlert("Scan failed: " + e.message); });
+    }
+
+    function runBatch() {
+        if (batchFiles.length === 0) return;
+        el.batchProgress.classList.remove("hidden");
+        el.batchResults.classList.add("hidden");
+        el.batchProgressFill.style.width = "0%";
+        el.batchProgressText.textContent = "0 / " + batchFiles.length;
+
+        fetch(API + "/batch/start", {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                files: batchFiles,
+                preset: el.batchPreset.value,
+                output_dir: projectFolder,
+            }),
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.error) { showAlert(data.error); return; }
+            batchJobId = data.job_id;
+            pollBatchStatus();
+        })
+        .catch(function (e) { showAlert("Batch start failed: " + e.message); });
+    }
+
+    function pollBatchStatus() {
+        if (!batchJobId) return;
+        batchPollTimer = setInterval(function () {
+            fetch(API + "/batch/status/" + batchJobId)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                var pct = data.progress_pct || 0;
+                el.batchProgressFill.style.width = pct + "%";
+                el.batchProgressText.textContent = data.completed + " / " + data.total;
+
+                if (data.status === "done" || data.status === "error" || data.status === "cancelled") {
+                    clearInterval(batchPollTimer);
+                    batchPollTimer = null;
+                    showBatchResults(data);
+                }
+            })
+            .catch(function () {});
+        }, 2000);
+    }
+
+    function showBatchResults(data) {
+        el.batchResults.classList.remove("hidden");
+        var html = "";
+        (data.items || []).forEach(function (item) {
+            var icon = item.status === "done" ? "OK" : "ERR";
+            var cls = item.status === "done" ? "batch-item-ok" : "batch-item-err";
+            html += '<div class="batch-result-item ' + cls + '">';
+            html += '<span class="batch-result-icon">' + icon + '</span>';
+            html += '<span class="batch-result-file">' + item.file + '</span>';
+            html += '<span class="batch-result-msg">' + (item.message || item.error || "") + '</span>';
+            html += '</div>';
+        });
+        el.batchResultsList.innerHTML = html;
+        showAlert("Batch complete: " + data.completed + "/" + data.total + " files processed");
     }
 
     function cancelBatch() {
-        batchCancel = true;
-        if (currentJob) api("POST", "/cancel/" + currentJob, null, function () {});
+        if (batchJobId) {
+            fetch(API + "/batch/cancel/" + batchJobId, {method: "POST"});
+            if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
+        }
     }
 
-    function closeBatch() {
-        el.batchSection.classList.add("hidden");
-        el.actionSection.classList.remove("hidden");
-        batchRunning = false;
+    // --- Workflow Builder ---
+    function addWorkflowStep() {
+        var op = el.workflowOpSelect.value;
+        workflowSteps.push({operation: op, params: {}});
+        renderWorkflowSteps();
         updateButtons();
     }
 
-    // ================================================================
-    // Keyboard Shortcuts
-    // ================================================================
-    function handleKeyDown(e) {
-        // Ignore if typing in an input/select
-        var tag = (e.target.tagName || "").toLowerCase();
-        if (tag === "input" || tag === "textarea" || tag === "select") return;
+    function removeWorkflowStep(index) {
+        workflowSteps.splice(index, 1);
+        renderWorkflowSteps();
+        updateButtons();
+    }
 
-        var key = e.key;
-        var ctrl = e.ctrlKey || e.metaKey;
+    function clearWorkflow() {
+        workflowSteps = [];
+        renderWorkflowSteps();
+        updateButtons();
+    }
 
-        if (ctrl && key === "z") { e.preventDefault(); doUndo(); return; }
-        if (ctrl && (key === "y" || (e.shiftKey && key === "Z"))) { e.preventDefault(); doRedo(); return; }
+    function renderWorkflowSteps() {
+        var html = "";
+        workflowSteps.forEach(function (step, i) {
+            html += '<div class="workflow-step-item">';
+            html += '<span class="workflow-step-num">' + (i + 1) + '</span>';
+            html += '<span class="workflow-step-name">' + step.operation.replace(/_/g, " ") + '</span>';
+            html += '<button class="btn-xs" onclick="window._removeWfStep(' + i + ')">X</button>';
+            html += '</div>';
+        });
+        el.workflowStepsList.innerHTML = html || '<div class="dim">No steps added yet</div>';
+    }
+    window._removeWfStep = removeWorkflowStep;
 
-        if (key === "Escape") {
-            if (!el.shortcutsOverlay.classList.contains("hidden")) {
-                el.shortcutsOverlay.classList.add("hidden");
+    function runWorkflow() {
+        if (!selectedPath || workflowSteps.length === 0) return;
+        startJob("/batch/start", {
+            files: [selectedPath],
+            steps: workflowSteps,
+            output_dir: projectFolder,
+        });
+    }
+
+    // --- Watch Folder ---
+    function browseWatchFolder() {
+        if (inPremiere) {
+            jsx("browseForFolder()", function (result) {
+                if (result && result !== "null" && result.length > 2) {
+                    el.watchFolder.value = result;
+                    updateButtons();
+                }
+            });
+        }
+    }
+
+    function startWatch() {
+        var folder = el.watchFolder.value;
+        if (!folder) return;
+        fetch(API + "/batch/watch/start", {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({
+                folder: folder,
+                preset: el.watchPreset.value,
+                output_dir: "",
+            }),
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.error) { showAlert(data.error); return; }
+            activeWatcherId = data.watcher_id;
+            el.watchStatus.classList.remove("hidden");
+            el.stopWatchBtn.classList.remove("hidden");
+            el.startWatchBtn.disabled = true;
+            el.watchStatusText.textContent = "Watching: " + folder.split(/[\\/]/).pop();
+        })
+        .catch(function (e) { showAlert("Watch failed: " + e.message); });
+    }
+
+    function stopWatch() {
+        if (activeWatcherId) {
+            fetch(API + "/batch/watch/stop/" + activeWatcherId, {method: "POST"});
+            activeWatcherId = null;
+            el.watchStatus.classList.add("hidden");
+            el.stopWatchBtn.classList.add("hidden");
+            el.startWatchBtn.disabled = false;
+        }
+    }
+
+    // --- Media Inspector ---
+    function runInspect() {
+        if (!selectedPath) return;
+        el.inspectResults.classList.add("hidden");
+        fetch(API + "/batch/inspect", {
+            method: "POST", headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({filepath: selectedPath}),
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (data) {
+            if (data.error) { showAlert(data.error); return; }
+            el.inspectResults.classList.remove("hidden");
+            // File info
+            var f = data.file || {};
+            el.inspectFile.innerHTML = '<div class="inspect-title">File</div>' +
+                inspRow("Name", f.name) + inspRow("Size", f.size_mb + " MB") + inspRow("Extension", f.extension);
+            // Container
+            var c = data.container || {};
+            el.inspectContainer.innerHTML = '<div class="inspect-title">Container</div>' +
+                inspRow("Format", c.format_long || c.format) + inspRow("Duration", formatTime(c.duration)) +
+                inspRow("Bitrate", c.bitrate_str) + inspRow("Streams", c.streams);
+            // Video
+            if (data.video) {
+                var v = data.video;
+                el.inspectVideo.innerHTML = '<div class="inspect-title">Video</div>' +
+                    inspRow("Codec", v.codec_long_name || v.codec_name) + inspRow("Resolution", v.resolution) +
+                    inspRow("FPS", v.fps) + inspRow("Bitrate", v.bitrate_str) +
+                    inspRow("Pixel Format", v.pixel_format) + inspRow("Color Space", v.color_space || "N/A") +
+                    inspRow("Bit Depth", v.bit_depth || "N/A") + inspRow("DAR", v.display_aspect_ratio);
             } else {
-                selectedSegIdx = -1;
-                renderWaveform();
-                buildSegmentList();
-                updateToolbar();
+                el.inspectVideo.innerHTML = "";
             }
-            return;
-        }
-
-        if (key === "?" || key === "/") {
-            e.preventDefault();
-            el.shortcutsOverlay.classList.toggle("hidden");
-            return;
-        }
-
-        // The rest only apply when waveform section is visible
-        if (el.waveformSection.classList.contains("hidden")) return;
-
-        if (key === " ") {
-            e.preventDefault();
-            if (selectedSegIdx >= 0) previewSegment(selectedSegIdx);
-            return;
-        }
-        if (key === "e" || key === "E") {
-            if (selectedSegIdx >= 0) toggleSegment(selectedSegIdx);
-            return;
-        }
-        if (key === "a" || key === "A") {
-            if (allSegments.length > 0) selectSegment(Math.max(0, selectedSegIdx - 1));
-            return;
-        }
-        if (key === "d" || key === "D") {
-            if (allSegments.length > 0) selectSegment(Math.min(allSegments.length - 1, selectedSegIdx + 1));
-            return;
-        }
-        if (key === "m" || key === "M") { mergeWithNext(); return; }
-        if (key === "s" || key === "S") {
-            if (!ctrl) { splitSegment(); return; }
-        }
+            // Audio
+            if (data.audio) {
+                var a = data.audio;
+                el.inspectAudio.innerHTML = '<div class="inspect-title">Audio</div>' +
+                    inspRow("Codec", a.codec_long_name || a.codec_name) + inspRow("Sample Rate", a.sample_rate + " Hz") +
+                    inspRow("Channels", a.channels + " (" + (a.channel_layout || "?") + ")") +
+                    inspRow("Bitrate", a.bitrate_str) + inspRow("Sample Format", a.sample_format || "N/A");
+            } else {
+                el.inspectAudio.innerHTML = "";
+            }
+            // Chapters
+            if (data.chapters && data.chapters.length > 0) {
+                var chHtml = '<div class="inspect-title">Chapters (' + data.chapters.length + ')</div>';
+                data.chapters.forEach(function (ch) {
+                    chHtml += inspRow(formatTime(ch.start) + " - " + formatTime(ch.end), ch.title);
+                });
+                el.inspectChapters.innerHTML = chHtml;
+            } else {
+                el.inspectChapters.innerHTML = "";
+            }
+        })
+        .catch(function (e) { showAlert("Inspect failed: " + e.message); });
     }
 
-    // ================================================================
-    // Shortcuts Overlay
-    // ================================================================
-    function toggleShortcuts() {
-        el.shortcutsOverlay.classList.toggle("hidden");
+    function inspRow(label, value) {
+        return '<div class="inspect-row"><span class="inspect-label">' + label + '</span><span class="inspect-value">' + (value || "") + '</span></div>';
     }
 
-    // ================================================================
-    // Alerts
-    // ================================================================
-    function showAlert(msg) { el.alertText.textContent = msg; el.alertBanner.classList.remove("hidden"); }
-    function hideAlert() { el.alertBanner.classList.add("hidden"); }
-
-    // ================================================================
-    // Utilities
-    // ================================================================
-    function fmtDur(sec) {
-        if (!sec || sec <= 0) return "0:00";
-        var h = Math.floor(sec / 3600);
-        var m = Math.floor((sec % 3600) / 60);
-        var s = (sec % 60).toFixed(1);
-        if (h > 0) return h + ":" + (m < 10 ? "0" : "") + m + ":" + (parseFloat(s) < 10 ? "0" : "") + s;
-        return m + ":" + (parseFloat(s) < 10 ? "0" : "") + s;
-    }
-
-    function fmtTime(sec) {
+    function formatTime(sec) {
+        if (!sec) return "0:00";
         var m = Math.floor(sec / 60);
-        var s = (sec % 60).toFixed(2);
-        return m + ":" + (parseFloat(s) < 10 ? "0" : "") + s;
+        var s = Math.floor(sec % 60);
+        var h = Math.floor(m / 60);
+        if (h > 0) return h + ":" + String(m % 60).padStart(2, "0") + ":" + String(s).padStart(2, "0");
+        return m + ":" + String(s).padStart(2, "0");
+    }
+    // Override onJobDone to handle special result types
+    var _origOnJobDone = onJobDone;
+    onJobDone = function (job) {
+        // Handle transcript result for editor
+        if (job.type === "transcript" && job.status === "complete" && job.result) {
+            transcriptData = job.result;
+            renderTranscriptEditor(job.result);
+        }
+
+        // Handle beat results
+        if (job.type === "beats" && job.status === "complete" && job.result) {
+            el.beatResults.classList.remove("hidden");
+            el.bpmValue.textContent = job.result.bpm.toFixed(0);
+            el.beatCount.textContent = job.result.total_beats;
+            el.beatConfidence.textContent = (job.result.confidence * 100).toFixed(0) + "%";
+        }
+
+        // Handle scene results
+        if (job.type === "scenes" && job.status === "complete" && job.result) {
+            el.sceneResults.classList.remove("hidden");
+            el.sceneCount.textContent = job.result.total_scenes;
+            el.avgSceneLen.textContent = job.result.avg_scene_length + "s";
+            if (job.result.youtube_chapters) {
+                el.ytChapters.classList.remove("hidden");
+                el.ytChaptersText.value = job.result.youtube_chapters;
+            }
+        }
+
+        // Handle voice generation results - show preview player
+        if (job.type === "voice-generate" && job.status === "complete" && job.result) {
+            showVoicePreview(
+                job.result.output_path,
+                job.result.duration_seconds,
+                job.result.model_used
+            );
+        }
+
+        // Handle voice replace results
+        if (job.type === "voice-replace" && job.status === "complete" && job.result) {
+            showVoicePreview(
+                job.result.output_path,
+                job.result.duration_seconds,
+                ""
+            );
+        }
+
+        // Handle voice install completion
+        if (job.type === "install-voice" && job.status === "complete") {
+            voiceInstalled = true;
+            updateButtons();
+            showAlert("Qwen3-TTS installed successfully!");
+        }
+
+        // Handle video AI install completions
+        if (job.type === "install-rembg" && job.status === "complete") {
+            rembgInstalled = true;
+            updateButtons();
+            showAlert("rembg installed successfully!");
+        }
+        if (job.type === "install-rife" && job.status === "complete") {
+            rifeInstalled = true;
+            updateButtons();
+            showAlert("RIFE installed successfully!");
+        }
+        if (job.type === "install-esrgan" && job.status === "complete") {
+            esrganInstalled = true;
+            updateButtons();
+            showAlert("Real-ESRGAN installed successfully!");
+        }
+
+        _origOnJobDone(job);
+    };
+
+    // ================================================================
+    // Transcript Editor
+    // ================================================================
+    function renderTranscriptEditor(data) {
+        el.transcriptEditor.classList.remove("hidden");
+        el.transcriptInfo.textContent = data.word_count + " words | " + data.segments.length + " segments | " + (data.language || "en");
+
+        var html = "";
+        for (var i = 0; i < data.segments.length; i++) {
+            var seg = data.segments[i];
+            var timeStr = fmtDur(seg.start) + " - " + fmtDur(seg.end);
+            html += '<div class="transcript-seg" data-idx="' + i + '">'
+                + '<div class="transcript-seg-time">' + timeStr + '</div>'
+                + '<textarea class="transcript-seg-text" data-idx="' + i + '" rows="1">' + esc(seg.text) + '</textarea>'
+                + '</div>';
+        }
+        el.transcriptSegments.innerHTML = html;
+
+        // Auto-resize textareas
+        var textareas = el.transcriptSegments.querySelectorAll(".transcript-seg-text");
+        for (var i = 0; i < textareas.length; i++) {
+            autoResize(textareas[i]);
+            textareas[i].addEventListener("input", function () {
+                autoResize(this);
+                var idx = parseInt(this.getAttribute("data-idx"));
+                if (transcriptData && transcriptData.segments[idx]) {
+                    transcriptData.segments[idx].text = this.value;
+                }
+            });
+        }
     }
 
-    function esc(str) {
-        return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    function autoResize(textarea) {
+        textarea.style.height = "auto";
+        textarea.style.height = textarea.scrollHeight + "px";
     }
 
     // ================================================================
-    // Event Binding
+    // Style Preview
     // ================================================================
-    function bindEvents() {
-        // Action tabs
-        var tabs = document.querySelectorAll(".tab");
-        for (var i = 0; i < tabs.length; i++) {
-            tabs[i].addEventListener("click", function () {
-                for (var j = 0; j < tabs.length; j++) tabs[j].classList.remove("active");
-                this.classList.add("active");
-                var panels = document.querySelectorAll(".tab-panel");
-                for (var k = 0; k < panels.length; k++) panels[k].classList.remove("active");
-                $("panel-" + this.getAttribute("data-tab")).classList.add("active");
-            });
-        }
+    function loadStylePreview() {
+        api("GET", "/caption-styles", null, function (err, data) {
+            if (!err && data && data.styles) {
+                for (var i = 0; i < data.styles.length; i++) {
+                    var s = data.styles[i];
+                    stylePreviewMap[s.name] = s.preview_css || "";
+                }
+                updateStylePreview();
+            }
+        });
+    }
 
-        // Export tabs
-        var etabs = document.querySelectorAll(".etab");
-        for (var ei = 0; ei < etabs.length; ei++) {
-            etabs[ei].addEventListener("click", function () {
-                for (var j = 0; j < etabs.length; j++) etabs[j].classList.remove("active");
-                this.classList.add("active");
-                var ep = document.querySelectorAll(".export-panel");
-                for (var k = 0; k < ep.length; k++) ep[k].classList.remove("active");
-                $("epanel-" + this.getAttribute("data-etype")).classList.add("active");
-            });
+    function updateStylePreview() {
+        var styleName = el.captionStyle.value;
+        var css = stylePreviewMap[styleName] || "";
+        var previewBg = el.stylePreview.querySelector(".style-preview-bg");
+        if (previewBg) {
+            previewBg.style.cssText = ""; // Reset
+            if (css) {
+                // Apply CSS to each word
+                var words = previewBg.querySelectorAll(".sp-word");
+                for (var i = 0; i < words.length; i++) {
+                    words[i].style.cssText = css;
+                }
+                // Highlight color for current word
+                var hlWord = previewBg.querySelector(".sp-highlight");
+                if (hlWord) {
+                    hlWord.style.cssText = css;
+                    hlWord.style.color = "#ffe600";
+                    hlWord.style.transform = "scale(1.1)";
+                }
+                // Action color
+                var actWord = previewBg.querySelector(".sp-action");
+                if (actWord) {
+                    actWord.style.cssText = css;
+                    actWord.style.color = "#ff3232";
+                    actWord.style.transform = "scale(1.05)";
+                }
+            }
         }
+    }
 
-        el.alertDismiss.addEventListener("click", hideAlert);
-        el.clipSelect.addEventListener("change", function () {
-            var opt = this.options[this.selectedIndex];
-            if (opt && opt.value) selectFile(opt.value, opt.getAttribute("data-name") || opt.textContent);
+    // ================================================================
+    // Settings Info
+    // ================================================================
+    var settingsLoaded = false;
+
+    function loadSettingsInfo() {
+        if (settingsLoaded) return;
+        settingsLoaded = true;
+
+        // Whisper status
+        api("GET", "/health", null, function (err, data) {
+            if (!err && data) {
+                if (data.capabilities && data.capabilities.captions) {
+                    el.whisperStatusText.textContent = "Installed (" + (data.capabilities.whisper_backend || "unknown") + ")";
+                    el.whisperStatusText.style.color = "var(--success)";
+                } else {
+                    el.whisperStatusText.textContent = "Not installed";
+                    el.whisperStatusText.style.color = "var(--error)";
+                }
+            }
         });
 
-        el.refreshClipsBtn.addEventListener("click", scanProjectMedia);
-        el.useSelectionBtn.addEventListener("click", useTimelineSelection);
-        el.browseFileBtn.addEventListener("click", browseForFile);
+        // GPU info
+        api("GET", "/system/gpu", null, function (err, data) {
+            if (!err && data) {
+                el.gpuName.textContent = data.available ? data.name : "None detected";
+                el.gpuVram.textContent = data.available ? (data.vram_mb / 1024).toFixed(1) + " GB" : "--";
+            }
+        });
+    }
 
+    function installWhisper() {
+        showAlert("Installing faster-whisper... This may take a minute.");
+        api("POST", "/install-whisper", { backend: "faster-whisper" }, function (err, data) {
+            if (!err && data && data.success) {
+                showAlert("Whisper installed successfully! Refresh the panel.");
+                setTimeout(checkHealth, 2000);
+            } else {
+                showAlert("Install failed: " + (data ? data.error : "Network error"));
+            }
+        }, 120000);
+    }
+
+    // ================================================================
+    // Slider Handlers
+    // ================================================================
+    function setupSliders() {
+        // Silence sliders
         el.threshold.addEventListener("input", function () { el.thresholdVal.textContent = this.value + " dB"; });
-        el.minDuration.addEventListener("input", function () { el.minDurationVal.textContent = parseFloat(this.value).toFixed(1) + "s"; });
+        el.minDuration.addEventListener("input", function () { el.minDurationVal.textContent = this.value + "s"; });
         el.silencePreset.addEventListener("change", function () {
-            if (this.value === "") el.customSilenceSettings.classList.remove("hidden");
-            else el.customSilenceSettings.classList.add("hidden");
+            el.customSilenceSettings.classList.toggle("hidden", this.value !== "");
         });
 
-        el.runSilenceBtn.addEventListener("click", function () {
-            var payload = { filepath: selectedPath };
-            var preset = el.silencePreset.value;
-            if (preset) payload.preset = preset;
-            else {
-                payload.threshold = parseFloat(el.threshold.value);
-                payload.min_duration = parseFloat(el.minDuration.value);
-                payload.padding_before = parseFloat(el.padBefore.value);
-                payload.padding_after = parseFloat(el.padAfter.value);
-            }
-            runJob("/silence", payload);
-        });
+        // Audio sliders
+        el.denoiseStrength.addEventListener("input", function () { el.denoiseStrengthVal.textContent = this.value; });
+        el.beatSensitivity.addEventListener("input", function () { el.beatSensitivityVal.textContent = this.value; });
+        
+        // Ducking sliders
+        el.duckLevel.addEventListener("input", function () { el.duckLevelVal.textContent = this.value + " dB"; });
+        el.duckAttack.addEventListener("input", function () { el.duckAttackVal.textContent = this.value; });
+        el.duckRelease.addEventListener("input", function () { el.duckReleaseVal.textContent = this.value; });
 
-        el.runCaptionsBtn.addEventListener("click", function () {
-            if (el.captionMode.value === "styled") {
-                // Styled overlay mode
-                var actionWords = [];
-                var awStr = (el.actionWordsInput.value || "").trim();
-                if (awStr) {
-                    var awParts = awStr.split(",");
-                    for (var k = 0; k < awParts.length; k++) {
-                        var aw = awParts[k].trim();
-                        if (aw) actionWords.push(aw);
-                    }
-                }
-                runJob("/styled-captions", {
-                    filepath: selectedPath,
-                    model: el.captionModel.value,
-                    language: el.captionLang.value || null,
-                    style: el.captionStyle.value,
-                    auto_detect_energy: el.captionAutoAction.checked,
-                    action_words: actionWords
-                });
-            } else {
-                // SRT/VTT text file mode
-                runJob("/captions", {
-                    filepath: selectedPath,
-                    model: el.captionModel.value,
-                    language: el.captionLang.value || null,
-                    format: el.captionFormat.value,
-                    word_timestamps: true
-                });
-            }
-        });
+        // Video sliders
+        el.sceneThreshold.addEventListener("input", function () { el.sceneThresholdVal.textContent = parseFloat(this.value).toFixed(2); });
+        el.minSceneLen.addEventListener("input", function () { el.minSceneLenVal.textContent = this.value + "s"; });
 
-        // Caption mode toggle: show/hide styled vs SRT options
-        el.captionMode.addEventListener("change", function () {
-            if (this.value === "styled") {
-                el.styledOptions.classList.remove("hidden");
-                el.srtOptions.classList.add("hidden");
-            } else {
-                el.styledOptions.classList.add("hidden");
-                el.srtOptions.classList.remove("hidden");
-            }
-        });
-
-        // Style preview update
-        el.captionStyle.addEventListener("change", updateStylePreview);
-        function updateStylePreview() {
-            var previewBg = el.stylePreview.querySelector(".style-preview-bg");
-            // Remove all sp- classes
-            var classes = previewBg.className.split(" ");
-            for (var ci = classes.length - 1; ci >= 0; ci--) {
-                if (classes[ci].indexOf("sp-") === 0 && classes[ci] !== "sp-word"
-                    && classes[ci] !== "sp-highlight" && classes[ci] !== "sp-action") {
-                    previewBg.classList.remove(classes[ci]);
-                }
-            }
-            previewBg.className = "style-preview-bg sp-" + el.captionStyle.value;
-        }
-        updateStylePreview();
-
-        el.runFillersBtn.addEventListener("click", function () {
-            // Collect selected filler types
-            var removeFillers = [];
-            var checks = el.fillerChecks.querySelectorAll("input[data-filler]");
-            for (var i = 0; i < checks.length; i++) {
-                if (checks[i].checked) removeFillers.push(checks[i].getAttribute("data-filler"));
-            }
-            // Custom words
-            var customWords = [];
-            var customStr = (el.fillerCustom.value || "").trim();
-            if (customStr) {
-                var parts = customStr.split(",");
-                for (var j = 0; j < parts.length; j++) {
-                    var w = parts[j].trim();
-                    if (w) customWords.push(w);
-                }
-            }
-
-            runJob("/fillers", {
-                filepath: selectedPath,
-                model: el.fillerModel.value,
-                include_context_fillers: true,
-                remove_fillers: removeFillers,
-                custom_words: customWords,
-                remove_silence: el.fillerSilence.checked,
-                silence_preset: "youtube"
-            });
-        });
-
-        el.runFullBtn.addEventListener("click", function () {
-            var payload = {
-                filepath: selectedPath,
-                preset: el.fullPreset.value,
-                skip_captions: !el.fullCaptions.checked,
-                skip_zoom: !el.fullZoom.checked,
-                remove_fillers: el.fullFillers.checked
+        // Voice sliders
+        el.ttsSpeed.addEventListener("input", function () { el.ttsSpeedVal.textContent = parseFloat(this.value).toFixed(1) + "x"; });
+        
+        // Denoise method descriptions
+        el.denoiseMethod.addEventListener("change", function () {
+            var descs = {
+                "afftdn": "Adaptive FFT-based noise reduction using FFmpeg.",
+                "highpass": "Simple bandpass filter for rumble and hiss removal.",
+                "deepfilter": "AI-powered DeepFilterNet3 for high-quality noise reduction. Downloads model on first use (~40MB)."
             };
-            runJob("/full", payload);
+            el.denoiseMethodDesc.textContent = descs[this.value] || "";
         });
-
-        el.editTimelineBtn.addEventListener("click", editTimeline);
-        el.importBtn.addEventListener("click", importXml);
-        el.importCaptionsBtn.addEventListener("click", importCaptions);
-        el.cancelBtn.addEventListener("click", cancelJob);
-        el.newJobBtn.addEventListener("click", resetForNewJob);
-        el.installWhisperBtn.addEventListener("click", installWhisper);
-        el.exportVideoBtn.addEventListener("click", exportVideo);
-        el.exportAudioBtn.addEventListener("click", exportAudio);
-
-        // Waveform click: select or toggle
-        el.waveformCanvas.addEventListener("click", function (e) {
-            if (!waveformPeaks || waveformDuration <= 0) return;
-            var rect = el.waveformCanvas.getBoundingClientRect();
-            var x = e.clientX - rect.left;
-            var t = (x / rect.width) * waveformDuration;
-            for (var i = 0; i < allSegments.length; i++) {
-                if (t >= allSegments[i].start && t < allSegments[i].end) {
-                    if (e.shiftKey) {
-                        toggleSegment(i);
-                    } else {
-                        selectSegment(i);
-                    }
-                    break;
-                }
+        
+        // Isolate method UI toggle
+        el.isolateMethod.addEventListener("change", function () {
+            var isDemucs = this.value === "demucs";
+            el.stemOptions.classList.toggle("hidden", !isDemucs);
+            var descs = {
+                "bandpass": "Emphasize voice frequencies and reduce background using bandpass filtering.",
+                "demucs": "AI-powered Demucs v4 for high-quality stem separation. Downloads model on first use (~80MB)."
+            };
+            el.isolateMethodDesc.textContent = descs[this.value] || "";
+        });
+        
+        // EQ preset descriptions
+        el.eqPreset.addEventListener("change", function () {
+            var descs = {
+                "voice_enhance": "Clarity and presence for speech",
+                "podcast_voice": "Warm, clear voice for podcasts",
+                "broadcast": "Professional broadcast EQ",
+                "bass_boost": "Enhanced low-end frequencies",
+                "treble_boost": "Enhanced high-end frequencies",
+                "warmth": "Add analog warmth to audio",
+                "presence": "Boost vocal presence and clarity",
+                "telephone": "Lo-fi telephone/radio effect"
+            };
+            el.eqPresetDesc.textContent = descs[this.value] || "";
+        });
+        
+        // Music select for ducking
+        el.musicSelect.addEventListener("change", function () {
+            updateButtons();
+        });
+    }
+    
+    function populateMusicSelect() {
+        // Populate the music track select with project media
+        if (!projectMedia || projectMedia.length === 0) return;
+        
+        var html = '<option value="" disabled selected>Select music file...</option>';
+        for (var i = 0; i < projectMedia.length; i++) {
+            var m = projectMedia[i];
+            if (m.path && m.path !== selectedPath) {
+                var name = m.name || m.path.split(/[/\\]/).pop();
+                html += '<option value="' + esc(m.path) + '">' + esc(name) + '</option>';
             }
-        });
+        }
+        el.musicSelect.innerHTML = html;
+    }
 
-        // Double-click waveform: preview
-        el.waveformCanvas.addEventListener("dblclick", function (e) {
-            if (!waveformPeaks || waveformDuration <= 0) return;
-            var rect = el.waveformCanvas.getBoundingClientRect();
-            var t = ((e.clientX - rect.left) / rect.width) * waveformDuration;
-            for (var i = 0; i < allSegments.length; i++) {
-                if (t >= allSegments[i].start && t < allSegments[i].end) {
-                    previewSegment(i);
-                    break;
-                }
-            }
-        });
+    // ================================================================
+    // Utility
+    // ================================================================
+    function showAlert(msg) {
+        el.alertText.textContent = msg;
+        el.alertBanner.classList.remove("hidden");
+        setTimeout(function () { el.alertBanner.classList.add("hidden"); }, 6000);
+    }
 
-        // Segment list
-        el.segmentList.addEventListener("change", function (e) {
-            var idx = e.target.getAttribute("data-idx");
-            if (idx !== null) toggleSegment(parseInt(idx, 10));
-        });
-        el.segmentList.addEventListener("click", function (e) {
-            var item = e.target.closest(".seg-item");
-            if (!item) return;
-            var idx = parseInt(item.getAttribute("data-idx"), 10);
-            // Only select if not clicking the checkbox
-            if (e.target.tagName !== "INPUT") {
-                e.preventDefault();
-                selectSegment(idx);
-            }
-        });
+    function esc(s) {
+        if (!s) return "";
+        return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    }
 
-        el.enableAllBtn.addEventListener("click", function () { setAllSegments(true); });
-        el.disableAllBtn.addEventListener("click", function () { setAllSegments(false); });
-
-        // Toolbar
-        el.undoBtn.addEventListener("click", doUndo);
-        el.redoBtn.addEventListener("click", doRedo);
-        el.mergeBtn.addEventListener("click", mergeWithNext);
-        el.splitBtn.addEventListener("click", splitSegment);
-
-        // Batch
-        el.batchBtn.addEventListener("click", startBatch);
-        el.cancelBatchBtn.addEventListener("click", cancelBatch);
-        el.closeBatchBtn.addEventListener("click", closeBatch);
-
-        // Shortcuts
-        el.shortcutsHelpBtn.addEventListener("click", toggleShortcuts);
-        el.closeShortcutsBtn.addEventListener("click", toggleShortcuts);
-        el.shortcutsOverlay.addEventListener("click", function (e) {
-            if (e.target === el.shortcutsOverlay) toggleShortcuts();
-        });
-
-        // Global keyboard
-        document.addEventListener("keydown", handleKeyDown);
+    function fmtDur(s) {
+        if (!s && s !== 0) return "--";
+        var m = Math.floor(s / 60);
+        var sec = Math.floor(s % 60);
+        return m + ":" + (sec < 10 ? "0" : "") + sec;
     }
 
     // ================================================================
     // Init
     // ================================================================
-    function init() {
-        initDOM();
+    document.addEventListener("DOMContentLoaded", function () {
         initCSInterface();
-        bindEvents();
+        initDOM();
+        setupNavTabs();
+        setupSliders();
+
+        // Event listeners - Clip selection
+        el.clipSelect.addEventListener("change", function () {
+            var opt = this.options[this.selectedIndex];
+            if (opt.value) selectFile(opt.value, opt.getAttribute("data-name") || opt.value.split(/[/\\]/).pop());
+        });
+        el.refreshClipsBtn.addEventListener("click", scanProjectMedia);
+        el.useSelectionBtn.addEventListener("click", useTimelineSelection);
+        el.browseFileBtn.addEventListener("click", browseForFile);
+
+        // Cut tab buttons
+        el.runSilenceBtn.addEventListener("click", runSilence);
+        el.runFillersBtn.addEventListener("click", runFillers);
+        el.runFullBtn.addEventListener("click", runFull);
+
+        // Captions tab buttons
+        el.runStyledCaptionsBtn.addEventListener("click", runStyledCaptions);
+        el.runSubtitleBtn.addEventListener("click", runSubtitle);
+        el.runTranscriptBtn.addEventListener("click", runTranscript);
+        el.exportTranscriptBtn.addEventListener("click", exportEditedTranscript);
+        el.installWhisperBtn.addEventListener("click", installWhisper);
+        el.captionStyle.addEventListener("change", updateStylePreview);
+
+        // Audio tab buttons
+        el.runDenoiseBtn.addEventListener("click", runDenoise);
+        el.runIsolateBtn.addEventListener("click", runIsolate);
+        el.runEqBtn.addEventListener("click", runEq);
+        el.runDuckBtn.addEventListener("click", runDuck);
+        el.measureLoudnessBtn.addEventListener("click", measureLoudness);
+        el.runNormalizeBtn.addEventListener("click", runNormalize);
+        el.runBeatsBtn.addEventListener("click", runBeats);
+        el.runEffectBtn.addEventListener("click", runEffect);
+
+        // Video tab buttons
+        el.runScenesBtn.addEventListener("click", runScenes);
+        el.copyChaptersBtn.addEventListener("click", function () {
+            var text = el.ytChaptersText.value;
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(function () { showAlert("Copied to clipboard!"); });
+            } else {
+                el.ytChaptersText.select();
+                document.execCommand("copy");
+                showAlert("Copied to clipboard!");
+            }
+        });
+        el.runSpeedRampBtn.addEventListener("click", runSpeedRamp);
+        el.runReframeBtn.addEventListener("click", runReframe);
+        el.runColorBtn.addEventListener("click", runColor);
+        el.runChromaBtn.addEventListener("click", runChromaKey);
+        el.runBgRemoveBtn.addEventListener("click", runBgRemove);
+        el.installRembgBtn.addEventListener("click", installRembg);
+        el.runSlowmoBtn.addEventListener("click", runSlowmo);
+        el.installRifeBtn.addEventListener("click", installRife);
+        el.runUpscaleBtn.addEventListener("click", runUpscale);
+        el.installEsrganBtn.addEventListener("click", installEsrgan);
+
+        // Video slider feedback
+        el.colorIntensity.addEventListener("input", function () { el.colorIntensityVal.textContent = parseFloat(this.value).toFixed(2); });
+        el.chromaSimilarity.addEventListener("input", function () { el.chromaSimilarityVal.textContent = parseFloat(this.value).toFixed(2); });
+        el.chromaBlend.addEventListener("input", function () { el.chromaBlendVal.textContent = parseFloat(this.value).toFixed(2); });
+
+        // Voice tab buttons
+        el.runTtsBtn.addEventListener("click", runTts);
+        el.runCloneBtn.addEventListener("click", runClone);
+        el.runDesignBtn.addEventListener("click", runDesign);
+        el.runReplaceBtn.addEventListener("click", runReplace);
+        el.installVoiceBtn.addEventListener("click", installVoice);
+        el.saveProfileBtn.addEventListener("click", saveVoiceProfile);
+
+        // Clone source selection
+        el.cloneSource.addEventListener("change", function () {
+            var val = this.value;
+            if (val === "browse") {
+                if (inPremiere) {
+                    jsx("browseForFile()", function (result) {
+                        if (result && result !== "null" && result.length > 3) {
+                            cloneRefAudioPath = result;
+                            el.cloneSourceInfo.textContent = "File: " + result.split(/[/\\]/).pop();
+                            updateButtons();
+                        }
+                    });
+                }
+            } else if (val === "selected") {
+                if (selectedPath) {
+                    cloneRefAudioPath = selectedPath;
+                    el.cloneSourceInfo.textContent = "Using: " + selectedName;
+                    updateButtons();
+                } else {
+                    showAlert("No clip selected.");
+                }
+            } else if (val.indexOf("profile:") === 0) {
+                var pid = val.replace("profile:", "");
+                for (var i = 0; i < voiceProfiles.length; i++) {
+                    if (voiceProfiles[i].id === pid) {
+                        cloneRefAudioPath = voiceProfiles[i].ref_audio_path;
+                        el.cloneRefText.value = voiceProfiles[i].ref_text || "";
+                        el.cloneSourceInfo.textContent = "Profile: " + voiceProfiles[i].name;
+                        updateButtons();
+                        break;
+                    }
+                }
+            }
+        });
+
+        // Export tab buttons
+        el.runExpTranscriptBtn.addEventListener("click", runExpTranscript);
+        el.runPlatformExportBtn.addEventListener("click", runPlatformExport);
+        el.runCustomRenderBtn.addEventListener("click", runCustomRender);
+        el.runThumbBtn.addEventListener("click", runThumbnail);
+        el.runBurninBtn.addEventListener("click", runBurnin);
+        el.browseBurninSubBtn.addEventListener("click", browseBurninSub);
+        el.runWatermarkBtn.addEventListener("click", runWatermark);
+        el.runGifBtn.addEventListener("click", runGif);
+        el.runAudioExtractBtn.addEventListener("click", runAudioExtract);
+
+        // Export slider/select feedback
+        el.platformPreset.addEventListener("change", updatePlatformInfo);
+        el.renderCrf.addEventListener("input", function () { el.renderCrfVal.textContent = this.value; });
+        el.thumbMode.addEventListener("change", updateThumbMode);
+        el.thumbCount.addEventListener("input", function () { el.thumbCountVal.textContent = this.value; });
+        el.burninFontSize.addEventListener("input", function () { el.burninFontSizeVal.textContent = this.value; });
+        el.watermarkOpacity.addEventListener("input", function () { el.watermarkOpacityVal.textContent = parseFloat(this.value).toFixed(2); });
+        updatePlatformInfo();
+        updateThumbMode();
+
+        // Batch tab buttons
+        el.browseBatchFolderBtn.addEventListener("click", browseBatchFolder);
+        el.runBatchBtn.addEventListener("click", runBatch);
+        el.cancelBatchBtn.addEventListener("click", cancelBatch);
+        el.addWorkflowStepBtn.addEventListener("click", addWorkflowStep);
+        el.clearWorkflowBtn.addEventListener("click", clearWorkflow);
+        el.runWorkflowBtn.addEventListener("click", runWorkflow);
+        el.browseWatchFolderBtn.addEventListener("click", browseWatchFolder);
+        el.startWatchBtn.addEventListener("click", startWatch);
+        el.stopWatchBtn.addEventListener("click", stopWatch);
+        el.runInspectBtn.addEventListener("click", runInspect);
+        renderWorkflowSteps();
+
+        // Settings tab buttons
+        el.settingsInstallWhisperBtn.addEventListener("click", installWhisper);
+
+        // Progress / Results
+        el.cancelBtn.addEventListener("click", cancelJob);
+        el.newJobBtn.addEventListener("click", function () {
+            el.resultsSection.classList.add("hidden");
+        });
+
+        // Alert dismiss
+        el.alertDismiss.addEventListener("click", function () {
+            el.alertBanner.classList.add("hidden");
+        });
+
+        // Health check loop
         checkHealth();
         healthTimer = setInterval(checkHealth, HEALTH_MS);
-        setTimeout(scanProjectMedia, 800);
-    }
 
-    if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", init);
-    else init();
+        // Scan project media
+        scanProjectMedia();
+
+        // Load style preview data
+        loadStylePreview();
+
+        // Check voice lab status
+        checkVoiceStatus();
+        loadVoiceProfiles();
+
+        // Check video AI tool status
+        checkRembgStatus();
+        checkRifeStatus();
+        checkEsrganStatus();
+    });
+
 })();
