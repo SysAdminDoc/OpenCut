@@ -9,7 +9,8 @@
 
 > Open-source AI-powered video editing automation for Adobe Premiere Pro. Remove silences, generate styled captions, denoise audio, clone voices, apply cinematic color grades, upscale footage, batch-process entire folders, and export for any platform — all from a single panel inside Premiere.
 
-![Screenshot](screenshot.png)
+<img width="100%" alt="OpenCut in Premiere Pro" src="https://github.com/user-attachments/assets/c3cccb31-26ce-442b-862f-a34aea55e52f" />
+
 
 ---
 
