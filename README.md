@@ -1,394 +1,445 @@
-# <img width="48" height="48" alt="ChatGPT Image Feb 3, 2026, 03_15_28 PM-48x48" src="https://github.com/user-attachments/assets/19d60483-f302-4843-8e9f-c656835711e3" /> OpenCut
+# OpenCut
 
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
+![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
+![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
+![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2022+-9999FF?logo=adobepremierepro&logoColor=white)
+![Status](https://img.shields.io/badge/status-active-success)
 
-**Open-source video editing automation for Adobe Premiere Pro.** [ROADMAP extending featureset planned](https://github.com/SysAdminDoc/OpenCut/blob/main/OpenCut-Roadmap.md)
+> Open-source AI-powered video editing automation for Adobe Premiere Pro. Remove silences, generate styled captions, denoise audio, clone voices, apply cinematic color grades, upscale footage, batch-process entire folders, and export for any platform — all from a single panel inside Premiere.
 
-[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Premiere Pro 2023+](https://img.shields.io/badge/Premiere%20Pro-2023%2B-9999FF.svg)](https://www.adobe.com/products/premiere.html)
-
-Remove silences, generate captions, auto-zoom on emphasis, strip filler words, render styled caption overlays, and automate podcast multicam switching — all from a **panel inside Premiere Pro** or the **command line**. Non-destructive editing via Premiere Pro XML or direct timeline integration.
-
-> Free, open-source alternative to [AutoCut](https://www.autocut.com), [FireCut](https://firecut.co), and [TimeBolt](https://www.timebolt.io).
-
-<img width="100%" alt="OpenCut in Premiere Pro" src="https://github.com/user-attachments/assets/c3cccb31-26ce-442b-862f-a34aea55e52f" />
-
-<table>
-  <tr>
-    <td><img alt="Silence Removal" src="https://github.com/user-attachments/assets/8d379376-12e5-4e95-8880-e9a6c463a8f7" width="200" /></td>
-    <td><img alt="Captions" src="https://github.com/user-attachments/assets/c7d9d0fd-4a90-42b3-b630-4014a9a46006" width="200" /></td>
-    <td><img alt="Filler Words" src="https://github.com/user-attachments/assets/02bd2619-95ec-4afe-ab41-61b8e19a4c6a" width="200" /></td>
-    <td><img alt="Diarize" src="https://github.com/user-attachments/assets/c8f55ee8-2089-4228-a150-e247563178af" width="200" /></td>
-  </tr>
-</table>
-
----
-
-## Table of Contents
-
-- [Quick Start](#quick-start)
-- [Features](#features)
-- [Command Line Usage](#command-line-usage)
-- [Presets](#presets)
-- [Whisper Model Guide](#whisper-model-guide)
-- [Architecture](#architecture)
-- [Manual Installation](#manual-installation)
-- [Uninstall](#uninstall)
-- [Contributing](#contributing)
-- [License](#license)
-- [Credits](#credits)
+![Screenshot](screenshot.png)
 
 ---
 
 ## Quick Start
 
+### One-Line Install (Windows)
+
+```powershell
+irm https://raw.githubusercontent.com/opencut/opencut/main/Install.ps1 | iex
+```
+
+### Manual Install
+
+```bash
+git clone https://github.com/opencut/opencut.git
+cd opencut
+pip install -e ".[all]"
+```
+
+Then install the Premiere Pro panel:
+
+```bat
+Install.bat
+```
+
+Restart Premiere Pro and open the panel via **Window > Extensions > OpenCut**.
+
 ### Prerequisites
 
-| Requirement | Notes |
-|-------------|-------|
-| **Windows 10/11** | macOS/Linux CLI works, but the CEP panel is Windows-focused |
-| **Python 3.9+** | [Download](https://www.python.org/downloads/) — check **"Add Python to PATH"** |
-| **Premiere Pro 2023+** | Version 23.0 or newer for the panel; CLI works without Premiere |
-
-### Install
-
-```
-1. Download or clone this repository
-2. Double-click Install.bat
-3. Click "Yes" if prompted by UAC
-```
-
-The installer handles everything automatically:
-
-- Installs **FFmpeg** via winget (or chocolatey as fallback)
-- Installs all **Python dependencies** in editable mode
-- Optionally installs **Whisper** for caption generation (with multiple fallback strategies if Rust/tokenizers fail)
-- Copies the **CEP extension** into Premiere Pro's extensions directory
-- Sets the **PlayerDebugMode** registry key for unsigned extensions (CSXS 7–12)
-- Creates a **desktop shortcut** and `Start-OpenCut.bat` launcher
-
-### Usage
-
-1. **Double-click `Start-OpenCut.bat`** (or the desktop shortcut) to start the backend server
-2. Open **Premiere Pro**
-3. Go to **Window → Extensions → OpenCut**
-4. Select a clip in the Project panel or drop a file into the OpenCut panel
-5. Choose your settings and click a feature button (e.g., **Remove Silences**)
-6. When processing completes, click **Edit in Timeline** to apply directly, or **Import XML** for a new sequence
+- Windows 10/11
+- Python 3.9 or newer
+- Adobe Premiere Pro 2022 or newer
+- FFmpeg on PATH ([download](https://ffmpeg.org/download.html))
+- NVIDIA GPU recommended for AI features (CUDA 11.8+)
 
 ---
 
 ## Features
 
-### Silence Removal
+OpenCut is organized into 8 tabs with 35 sub-tabs, powered by 81 server endpoints and 16 core processing modules.
 
-Detects and removes silent sections from your footage using FFmpeg's `silencedetect` filter. Configurable threshold, minimum duration, and padding give you precise control over how aggressively cuts are made.
+### Cut — Intelligent Editing
 
-- Adjustable noise threshold (dB), minimum silence length, and before/after padding
-- Five built-in presets for common workflows (YouTube, podcast, interview, etc.)
-- Exports FCP 7 XML for Premiere Pro import, or applies edits directly to the timeline via ExtendScript
-- Dry-run mode to preview what would be cut before committing
+| Feature | Description |
+|---------|-------------|
+| Silence Detection | Find and remove dead air with configurable threshold (dB), minimum duration, and padding |
+| Filler Word Removal | Detect "um", "uh", "like", "you know" and custom words using Whisper transcription |
+| Full Analysis | Combined silence + filler detection in a single pass |
 
-### Caption Generation
+### Captions — Subtitle Generation
 
-AI-powered transcription using OpenAI's Whisper models. Supports three backends with automatic detection and graceful fallback:
+| Feature | Description |
+|---------|-------------|
+| Whisper Transcription | Word-level timestamps via faster-whisper, whisperx, or openai-whisper |
+| Styled Captions | Animated caption overlays with 12 preset styles (Hormozi, Ali Abdaal, MrBeast, Neon Pop, Typewriter, etc.) |
+| Subtitle Export | SRT, VTT, ASS formats with speaker labels |
+| Transcript Export | Plain text, timestamped, SRT, VTT, ASS, JSON |
+| Emoji Mapping | Auto-insert contextual emoji into caption text |
+| Speaker Diarization | Multi-speaker identification via pyannote.audio |
 
-| Backend | Install | Speed | Notes |
-|---------|---------|-------|-------|
-| **faster-whisper** | `pip install faster-whisper` | Fastest | Recommended default; CTranslate2-based |
-| **openai-whisper** | `pip install openai-whisper` | Medium | Official reference implementation |
-| **whisperx** | `pip install whisperx` | Fast | Best word-level timestamp alignment |
+### Audio Suite — Professional Audio Processing
 
-- Model sizes from `tiny` (39 MB) to `large-v3` (1.5 GB) — choose your speed/accuracy tradeoff
-- Word-level timestamps for precise subtitle alignment
-- Auto language detection or explicit language selection
-- Exports to **SRT**, **VTT**, or **JSON**
-- On-demand Whisper installation from the Premiere panel (no terminal required) with 4 fallback strategies for tokenizers/Rust issues
+| Feature | Description |
+|---------|-------------|
+| AI Denoise | DeepFilterNet-powered noise reduction (light / moderate / aggressive) |
+| Vocal Isolation | Demucs stem separation — extract vocals, drums, bass, or other |
+| Loudness Normalization | EBU R128 targeting with presets for broadcast (-23 LUFS), streaming (-14), podcast (-16), YouTube (-13) |
+| Parametric EQ | 8 presets: Voice Clarity, Warm Vocals, Bass Boost, Podcast Standard, De-Ess, Telephone, and more |
+| Beat Detection | BPM analysis and beat-marker placement on the Premiere timeline |
+| Audio Effects | Reverb, echo, chorus, flanger, phaser, distortion, lo-fi, radio, underwater, telephone — 12 creative effects |
+| Audio Ducking | Auto-duck music under speech with configurable threshold, reduction amount, and attack/release |
+| Crossfade | 6 crossfade types between clips on the timeline |
 
-### Styled Caption Overlays
+### Voice Lab — AI Voice Synthesis
 
-Render animated caption overlays as transparent video files (QuickTime Animation with alpha) that layer directly on top of your footage in Premiere.
+| Feature | Description |
+|---------|-------------|
+| Text-to-Speech | Qwen3-TTS with 14 preset voices (narrators, characters, accents) |
+| Voice Cloning | Clone any voice from a reference audio sample + transcript |
+| Voice Profiles | Save and manage reusable voice configurations |
+| Voice Design | Describe a voice in natural language and generate it |
+| Dialogue Replace | Replace spoken words in-place while preserving timing |
 
-Six visual presets are included:
+### Video Intelligence — AI-Powered Visual Processing
 
-| Preset | Style |
-|--------|-------|
-| **YouTube Bold** | Impact font, yellow highlight, thick black stroke |
-| **Clean Modern** | Arial, cyan highlight, semi-transparent background box |
-| **Neon Pop** | Arial Black, green highlight, purple neon glow |
-| **Minimal** | Thin stroke, subtle shadow, understated |
-| **Boxed** | Dark background panel, yellow highlight, no stroke |
-| **Cinematic** | Georgia serif, warm tones, letterbox-friendly positioning |
+| Feature | Description |
+|---------|-------------|
+| Color Grading | 8 cinematic LUT presets (Cinematic, Vintage, Teal & Orange, Film Noir, Bleach Bypass, etc.) with intensity control |
+| Chroma Key | GPU-accelerated green/blue screen removal with spill suppression and edge refinement |
+| AI Background Removal | rembg-powered subject isolation with transparent or solid-color backgrounds |
+| AI Slow Motion | RIFE frame interpolation — 2x, 4x, or 8x slow motion from standard footage |
+| AI Upscaling | Real-ESRGAN super-resolution — upscale to 2x or 4x (720p to 4K) |
+| Auto-Reframe | Intelligent crop for aspect ratio conversion (16:9, 9:16, 4:5, 1:1, 4:3, 21:9) with face detection |
+| Scene Detection | Content-aware scene boundary detection with configurable threshold |
+| Speed Ramping | 6 presets: Smooth Slow, Impact Hit, Timelapse, Pulse, Dramatic Entry, Rewind |
 
-Each preset supports word-by-word highlight animation and automatic action word emphasis (detected via audio energy peaks and keyword matching). Overlays are rendered with Pillow and composited into transparent MOV files via FFmpeg.
+### Export & Publish — Multi-Platform Delivery
 
-### Filler Word Removal
+| Feature | Description |
+|---------|-------------|
+| Platform Presets | One-click export for YouTube (1080p/4K/Shorts), TikTok, Instagram (Reels/Feed/Square), Twitter/X, LinkedIn, Podcast |
+| Custom Render | Full codec control — H.264, H.265, VP9, ProRes with CRF or bitrate mode |
+| Thumbnail Extraction | Auto best-frame, specific timestamp, multi-frame, or 3x3 contact sheet |
+| Subtitle Burn-In | Hardcode SRT/VTT/ASS subtitles with font, color, position, and outline styling |
+| Watermark | Text or image overlay with position, opacity, and scale controls |
+| GIF Export | Two-pass palette-optimized GIF with bayer dithering |
+| Audio Extraction | MP3, AAC, FLAC, WAV, Opus with optional loudness normalization |
 
-Detects and removes 40+ filler words and phrases from your recordings using Whisper's word-level timestamps. Includes hesitation sounds (`um`, `uh`, `er`, `ah`, `hm`) and verbal fillers (`like`, `so`, `basically`, `you know`, `I mean`, `kind of`, `sort of`, etc.).
+### Batch & Workflow — Automation at Scale
 
-- **Context-aware filtering** — distinguishes safe fillers (always remove) from context-dependent ones (only remove at sentence boundaries or in filler clusters)
-- **Custom word support** — add your own filler words or phrases
-- **Integrates with silence removal** — filler-word gaps are merged into the silence removal pass for seamless edits
+| Feature | Description |
+|---------|-------------|
+| Batch Queue | Process entire folders through any workflow with progress tracking and cancellation |
+| Workflow Chains | Chain multiple operations sequentially — output of each step feeds the next |
+| 6 Workflow Presets | YouTube Ready, Podcast Clean, Social Vertical, Archive Master, Quick GIF, Full Clean & Grade |
+| Watch Folder | Monitor a directory and auto-process new files as they appear |
+| Media Inspector | Full ffprobe analysis — codecs, streams, color metadata, bitrates, chapters |
+| Folder Scanner | Recursive media file discovery with size and format metadata |
 
-### Speaker Diarization (Podcast Multicam)
+### Settings
 
-Identifies who is speaking when using [pyannote.audio](https://github.com/pyannote/pyannote-audio), then generates automatic camera switch events for multicam podcast editing.
-
-- Auto-detect or specify the number of speakers
-- Maps speakers to camera angles for multicam sequences
-- Per-speaker duration analysis
-- Minimum segment duration to prevent rapid switching
-- Requires a free [HuggingFace token](https://huggingface.co/settings/tokens) for model access
-
-### Auto Zoom
-
-Analyzes audio energy to find emphasis points and generates zoom keyframes that add visual punch to talking-head content.
-
-- Configurable max zoom scale, in/out duration, and minimum interval between zooms
-- Energy threshold controls sensitivity
-- Keyframes export into the Premiere XML timeline
-
-### Edit in Timeline
-
-Instead of the traditional XML import workflow (which can trigger Premiere's "Locate Media" dialog if file paths don't match exactly), OpenCut can build the edited sequence directly inside Premiere using ExtendScript. This creates a new sequence with your speech segments placed on the timeline, referencing media already in your project — no relinking needed.
-
-### Additional Panel Features
-
-- **Waveform visualization** — audio waveform data for timeline scrubbing previews
-- **Audio preview** — generate and play back preview clips of specific time ranges
-- **Job management** — long-running tasks run in background threads with real-time progress via SSE streaming; jobs can be cancelled
-- **Capabilities detection** — the panel auto-detects which optional backends (Whisper, pyannote) are installed and shows/hides features accordingly
+| Feature | Description |
+|---------|-------------|
+| Whisper Backend | Choose between faster-whisper, whisperx, or openai-whisper; configure model size |
+| GPU Status | CUDA availability and VRAM detection |
+| Server Health | Backend connection status and version info |
 
 ---
 
-## Command Line Usage
+## How It Works
 
-The CLI works independently of Premiere Pro — useful for batch processing, scripting, and headless servers.
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                        Adobe Premiere Pro                            │
+│                                                                      │
+│  ┌────────────────────────────┐     ┌─────────────────────────────┐  │
+│  │     CEP Panel (HTML/JS)    │────>│    ExtendScript (JSX)       │  │
+│  │                            │     │                             │  │
+│  │  8 tabs, 35 sub-tabs       │     │  Timeline manipulation      │  │
+│  │  Dark theme UI              │     │  Marker placement           │  │
+│  │  Real-time status updates   │<────│  Clip import/export         │  │
+│  └─────────────┬──────────────┘     └─────────────────────────────┘  │
+│                │ HTTP (localhost:5679)                                │
+└────────────────┼─────────────────────────────────────────────────────┘
+                 │
+  ┌──────────────▼──────────────┐
+  │    Flask Backend Server      │
+  │    81 REST API endpoints     │
+  │                              │
+  │  ┌────────────────────────┐  │
+  │  │   16 Core Modules      │  │
+  │  │                        │  │
+  │  │  audio.py        190L  │  │     ┌─────────────────────────┐
+  │  │  audio_suite.py 1408L  │──────>│  AI Models               │
+  │  │  batch.py        681L  │  │     │                         │
+  │  │  captions.py     367L  │  │     │  Whisper (speech-to-text)│
+  │  │  color.py        334L  │  │     │  DeepFilterNet (denoise) │
+  │  │  diarize.py      218L  │  │     │  Demucs (stem split)     │
+  │  │  export.py      1072L  │  │     │  Qwen3-TTS (voice synth) │
+  │  │  fillers.py      323L  │  │     │  rembg (bg removal)      │
+  │  │  reframe.py      545L  │  │     │  RIFE (frame interp)     │
+  │  │  scene_detect.py 308L  │  │     │  Real-ESRGAN (upscale)   │
+  │  │  silence.py      260L  │  │     │  pyannote (diarization)  │
+  │  │  speed_ramp.py   695L  │  │     └─────────────────────────┘
+  │  │  styled_captions 930L  │  │
+  │  │  video_fx.py    1211L  │  │     ┌─────────────────────────┐
+  │  │  voice_lab.py    874L  │──────>│  FFmpeg                  │
+  │  │  zoom.py         111L  │  │     │                         │
+  │  └────────────────────────┘  │     │  Encoding / Decoding     │
+  │                              │     │  Filtering / Muxing      │
+  │  Async job queue + progress  │     │  Analysis / Probing      │
+  │  Background thread workers   │     └─────────────────────────┘
+  └──────────────────────────────┘
+```
+
+The panel sends HTTP requests to a local Flask server running on port 5679. The server delegates work to 16 specialized core modules which call AI models and FFmpeg for processing. Results are sent back and applied to the Premiere Pro timeline via ExtendScript (JSX). Long-running operations use an async job queue with real-time progress streaming.
+
+---
+
+## Platform Export Presets
+
+| Platform | Resolution | Aspect | Codec | Audio | Max Duration |
+|----------|-----------|--------|-------|-------|-------------|
+| YouTube 1080p | 1920x1080 | 16:9 | H.264 CRF 18 | AAC 192k | None |
+| YouTube 4K | 3840x2160 | 16:9 | H.264 CRF 16 | AAC 256k | None |
+| YouTube Shorts | 1080x1920 | 9:16 | H.264 CRF 20 | AAC 128k | 60s |
+| TikTok | 1080x1920 | 9:16 | H.264 CRF 20 | AAC 128k | 10m |
+| Instagram Reels | 1080x1920 | 9:16 | H.264 CRF 20 | AAC 128k | 90s |
+| Instagram Feed | 1080x1350 | 4:5 | H.264 CRF 20 | AAC 128k | 60s |
+| Instagram Square | 1080x1080 | 1:1 | H.264 CRF 20 | AAC 128k | 60s |
+| Twitter/X | 1280x720 | 16:9 | H.264 CRF 22 | AAC 128k | 2m 20s |
+| LinkedIn | 1920x1080 | 16:9 | H.264 CRF 20 | AAC 192k | 10m |
+| Podcast Video | 1920x1080 | 16:9 | H.264 CRF 23 | AAC 192k | None |
+| Podcast Audio | Audio-only | — | — | MP3 192k | None |
+
+---
+
+## Workflow Presets
+
+| Preset | Steps | Description |
+|--------|-------|-------------|
+| YouTube Ready | Denoise > Normalize (-14 LUFS) > YouTube 1080p Export | Quick publish pipeline |
+| Podcast Clean | Denoise > Silence Remove > Normalize (-16 LUFS) > MP3 Export | Podcast post-production |
+| Social Vertical | Reframe 9:16 > Cinematic Color > TikTok Export | Long-form to short-form conversion |
+| Archive Master | Light Denoise > ProRes/FLAC Export | Lossless archival |
+| Quick GIF | Auto Thumbnail > 5s GIF @ 480px | Preview asset generation |
+| Full Clean & Grade | Denoise > Voice EQ > Normalize > Cinematic Color > YouTube 1080p | Complete production pipeline |
+
+---
+
+## Configuration
+
+### Optional Dependencies
+
+OpenCut installs only core dependencies by default. AI features are installed on-demand via the Settings tab or manually:
 
 ```bash
-# Remove silences (exports Premiere XML)
-opencut silence video.mp4
+# Captions (pick one)
+pip install "opencut[captions]"       # faster-whisper (recommended)
+pip install "opencut[captions-full]"  # whisperx (best word-level timestamps)
 
-# Use a preset
-opencut silence video.mp4 --preset aggressive
+# Speaker diarization
+pip install "opencut[diarize]"
 
-# Custom silence settings
-opencut silence video.mp4 -t -25 -d 0.3 --padding-before 0.08
+# AI audio (denoise + stem separation)
+pip install "opencut[audio-ai]"
 
-# Generate captions
-opencut captions video.mp4 --model small --language en
+# AI video (background removal, upscaling)
+pip install "opencut[video-ai]"
 
-# Full pipeline (silence + captions + zoom)
-opencut full video.mp4 --preset youtube
-
-# Podcast workflow (silence + diarization)
-opencut podcast video.mp4 --speakers 2
-
-# Show media info (duration, codec, resolution, etc.)
-opencut info video.mp4
-
-# Dry run — analyze without exporting
-opencut silence video.mp4 --dry-run
-
-# Custom output path and sequence name
-opencut silence video.mp4 -o "~/Desktop/my_edit.xml" --name "Final Cut"
+# Everything
+pip install "opencut[all]"
 ```
 
----
+### Voice Lab (Qwen3-TTS)
 
-## Presets
+The Voice Lab auto-downloads the Qwen3-TTS model (~2 GB) on first use. Requires an NVIDIA GPU with at least 4 GB VRAM.
 
-| Preset | Threshold | Min Silence | Padding | Best For |
-|--------|-----------|-------------|---------|----------|
-| `default` | -30 dB | 0.5s | 0.1s | General use |
-| `aggressive` | -25 dB | 0.3s | 0.05s | Fast-paced YouTube, shorts |
-| `conservative` | -40 dB | 1.0s | 0.2s | Interviews, quiet rooms |
-| `podcast` | -35 dB | 0.75s | 0.15s | Conversations, 2-speaker default |
-| `youtube` | -28 dB | 0.4s | 0.08s | YouTube with small Whisper model + 1.2x zoom |
+### Server Configuration
 
-Use presets from the CLI with `--preset <name>` or select them in the Premiere panel dropdown.
-
----
-
-## Whisper Model Guide
-
-| Model | Download | Speed | Accuracy | VRAM |
-|-------|----------|-------|----------|------|
-| `tiny` | 39 MB | Fastest | Basic | ~1 GB |
-| `base` | 74 MB | Fast | Good *(default)* | ~1 GB |
-| `small` | 244 MB | Medium | Very good | ~2 GB |
-| `medium` | 769 MB | Slow | Excellent | ~5 GB |
-| `large-v3` | 1.5 GB | Slowest | Best | ~10 GB |
-| `turbo` | 809 MB | Fast | Near-best | ~6 GB |
-
-Whisper runs on CPU if no GPU is available (slower but works). For `faster-whisper`, a CUDA-compatible GPU with the appropriate cuDNN libraries provides the best performance.
-
----
-
-## Architecture
-
-```
-Install.bat / Install.ps1           ← Double-click to install everything
-Start-OpenCut.bat                   ← Launches the backend server
-Uninstall.bat                       ← Clean removal
-
-opencut/                             Python Package
-├── server.py                        Flask API on localhost:5679
-├── cli.py                           Click-based CLI with Rich console output
-├── __main__.py                      python -m opencut entry point
-├── core/
-│   ├── silence.py                   FFmpeg silencedetect → speech segments
-│   ├── captions.py                  Whisper transcription (3 backends)
-│   ├── styled_captions.py           Pillow + FFmpeg caption overlay renderer
-│   ├── fillers.py                   Filler word detection + context-aware removal
-│   ├── diarize.py                   pyannote speaker diarization → camera switches
-│   ├── zoom.py                      Audio energy → zoom keyframes
-│   └── audio.py                     PCM extraction, RMS energy analysis
-├── export/
-│   ├── premiere.py                  FCP 7 XML timeline generation
-│   └── srt.py                       SRT / VTT / JSON subtitle export
-└── utils/
-    ├── config.py                    Dataclass configs + 5 presets
-    └── media.py                     ffprobe metadata wrapper
-
-extension/com.opencut.panel/         CEP Extension (Premiere Pro Panel)
-├── CSXS/manifest.xml                Extension manifest (Premiere 2019+ / v13–99)
-├── client/
-│   ├── index.html                   Panel UI (dark theme)
-│   ├── main.js                      Backend communication, job polling, SSE
-│   ├── style.css                    Dark theme matching Premiere's UI
-│   └── CSInterface.js               Adobe CEP library
-└── host/
-    └── index.jsx                    ExtendScript (ES3) — file browse, XML import,
-                                     direct timeline editing, caption/overlay import
-```
-
-### How It Works
-
-```
-┌─────────────────────────────┐
-│  Premiere Pro                │
-│  ┌───────────────────────┐  │
-│  │  OpenCut Panel (CEP)  │  │  HTTP / JSON
-│  │  index.html + main.js │──────────────────┐
-│  └───────────────────────┘  │               │
-│           │                  │               ▼
-│           │ ExtendScript     │     ┌──────────────────┐
-│           ▼                  │     │  Flask Backend    │
-│  ┌───────────────────────┐  │     │  localhost:5679   │
-│  │  host/index.jsx       │  │     │                   │
-│  │  - Import XML         │  │     │  ├─ FFmpeg        │
-│  │  - Edit in Timeline   │  │     │  ├─ Whisper       │
-│  │  - Import captions    │  │     │  ├─ pyannote      │
-│  │  - Import overlay     │  │     │  └─ Pillow        │
-│  └───────────────────────┘  │     └──────────────────┘
-└─────────────────────────────┘              │
-                                             ▼
-                                    ┌──────────────────┐
-                                    │  Output Files     │
-                                    │  ├─ .xml (timeline)│
-                                    │  ├─ .srt / .vtt   │
-                                    │  └─ .mov (overlay) │
-                                    └──────────────────┘
-```
-
-### API Endpoints
-
-| Endpoint | Method | Description |
-|----------|--------|-------------|
-| `/health` | GET | Server health check |
-| `/capabilities` | GET | Detect installed backends (Whisper, pyannote) |
-| `/info` | POST | Media file metadata via ffprobe |
-| `/silence` | POST | Silence detection + XML/timeline export |
-| `/captions` | POST | Whisper transcription → SRT/VTT/JSON |
-| `/styled-captions` | POST | Rendered caption overlay → transparent MOV |
-| `/caption-styles` | GET | List available caption style presets |
-| `/fillers` | POST | Filler word detection + removal |
-| `/full` | POST | Combined pipeline (silence + captions + zoom) |
-| `/install-whisper` | POST | On-demand Whisper installation with fallbacks |
-| `/waveform` | POST | Audio waveform data for visualization |
-| `/preview-audio` | POST | Generate audio preview for a time range |
-| `/regenerate` | POST | Re-process with different settings |
-| `/export-video` | POST | Render edited video directly |
-| `/status/<job_id>` | GET | Job progress polling |
-| `/stream/<job_id>` | GET | SSE real-time progress stream |
-| `/cancel/<job_id>` | POST | Cancel a running job |
-| `/jobs` | GET | List all active/completed jobs |
-
----
-
-## Manual Installation
-
-If you prefer not to use the one-click installer:
+The backend defaults to `localhost:5679`. Override with:
 
 ```bash
-# 1. Install FFmpeg
-winget install Gyan.FFmpeg
+opencut --host 0.0.0.0 --port 8080
+```
 
-# 2. Clone and install the Python package
+Or run directly:
+
+```bash
+python -m opencut --port 5679
+```
+
+---
+
+## Project Structure
+
+```
+opencut/
+├── opencut/
+│   ├── __init__.py              # Package metadata (version)
+│   ├── __main__.py              # Entry point
+│   ├── cli.py                   # CLI interface (click)
+│   ├── server.py                # Flask server, 81 endpoints (4,602 lines)
+│   ├── core/
+│   │   ├── audio.py             # Basic audio analysis
+│   │   ├── audio_suite.py       # Denoise, EQ, normalize, isolate, effects, ducking
+│   │   ├── batch.py             # Batch queue, workflow chains, watch folder, inspector
+│   │   ├── captions.py          # Whisper transcription + word timestamps
+│   │   ├── color.py             # LUT generation + color grading
+│   │   ├── diarize.py           # Speaker diarization (pyannote)
+│   │   ├── export.py            # Platform presets, render, thumbnail, GIF, watermark
+│   │   ├── fillers.py           # Filler word detection
+│   │   ├── reframe.py           # Aspect ratio conversion + face detection
+│   │   ├── scene_detect.py      # Scene boundary detection
+│   │   ├── silence.py           # Silence detection
+│   │   ├── speed_ramp.py        # Speed ramping presets
+│   │   ├── styled_captions.py   # 12 animated caption styles
+│   │   ├── video_fx.py          # Chroma key, bg remove, slow-mo, upscale
+│   │   ├── voice_lab.py         # TTS, cloning, voice design, dialogue replace
+│   │   └── zoom.py              # Ken Burns / zoom effects
+│   ├── export/
+│   │   ├── premiere.py          # Premiere Pro XML generation
+│   │   └── srt.py               # SRT file handling
+│   └── utils/
+│       ├── config.py            # Configuration management
+│       └── media.py             # Media file utilities
+├── extension/
+│   └── com.opencut.panel/
+│       ├── CSXS/manifest.xml    # CEP extension manifest
+│       ├── client/
+│       │   ├── index.html       # Panel UI (1,437 lines)
+│       │   ├── main.js          # Panel logic (2,170 lines)
+│       │   ├── style.css        # Dark theme styles (762 lines)
+│       │   └── CSInterface.js   # Adobe CEP library
+│       └── host/
+│           └── index.jsx        # ExtendScript bridge to Premiere
+├── build/
+│   ├── build.ps1                # Windows build script
+│   ├── installer.iss            # Inno Setup installer config
+│   └── opencut.spec             # PyInstaller spec
+├── Install.bat                  # One-click installer
+├── Install.ps1                  # PowerShell installer
+├── Uninstall.bat                # Clean uninstall
+├── pyproject.toml               # Package config
+├── requirements.txt             # Core dependencies
+└── tests/
+    └── test_core.py             # Test suite
+```
+
+---
+
+## API Reference
+
+The server exposes 81 REST endpoints organized by feature area. All long-running operations return a `job_id` for async status polling.
+
+### Core Endpoints
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/health` | Server health check |
+| GET | `/info` | Server version, capabilities, GPU status |
+| GET | `/status/<job_id>` | Poll async job progress |
+| POST | `/cancel/<job_id>` | Cancel a running job |
+| GET | `/jobs` | List all jobs |
+| GET | `/stream/<job_id>` | SSE progress stream |
+
+### Cut & Analysis (6 endpoints)
+
+`/silence`, `/fillers`, `/full`, `/captions`, `/transcript`, `/transcript/export`
+
+### Audio Suite (15 endpoints)
+
+`/audio/denoise`, `/audio/isolate`, `/audio/normalize`, `/audio/measure`, `/audio/beats`, `/audio/effects`, `/audio/effects/apply`, `/audio/eq`, `/audio/eq-presets`, `/audio/duck`, `/audio/ducking-keyframes`, `/audio/crossfade`, `/audio/crossfade-types`, `/audio/stems`, `/audio/loudness-presets`
+
+### Voice Lab (10 endpoints)
+
+`/voice/check`, `/voice/install`, `/voice/generate`, `/voice/replace`, `/voice/speakers`, `/voice/profiles` (GET/POST/DELETE), `/voice/unload`, `/voice/preview/<path>`
+
+### Video Intelligence (15 endpoints)
+
+`/video/scenes`, `/video/speed-presets`, `/video/speed-ramp`, `/video/lut`, `/video/lut-validate`, `/video/chroma-key`, `/video/bg-check`, `/video/bg-install`, `/video/bg-remove`, `/video/slowmo-check`, `/video/slowmo-install`, `/video/slowmo`, `/video/upscale-check`, `/video/upscale-install`, `/video/upscale`, `/video/reframe-presets`, `/video/reframe`, `/video/fx-capabilities`
+
+### Export & Publish (8 endpoints)
+
+`/export/platform-presets`, `/export/render`, `/export/thumbnail`, `/export/burn-subs`, `/export/watermark`, `/export/gif`, `/export/audio-extract`
+
+### Batch & Workflow (12 endpoints)
+
+`/batch/capabilities`, `/batch/inspect`, `/batch/scan`, `/batch/workflow-presets`, `/batch/start`, `/batch/status/<id>`, `/batch/cancel/<id>`, `/batch/jobs`, `/batch/watch/start`, `/batch/watch/stop/<id>`, `/batch/watch/status/<id>`, `/batch/watch/list`
+
+---
+
+## FAQ / Troubleshooting
+
+**The panel shows "Cannot connect to server"**
+Make sure the backend is running. Open a terminal and run `python -m opencut`. The panel connects to `localhost:5679` by default.
+
+**Whisper / captions aren't working**
+Install a Whisper backend: `pip install faster-whisper`. You can also install from the Settings tab inside the panel.
+
+**AI features are slow**
+Most AI operations (denoise, upscale, slow-motion, TTS) benefit significantly from an NVIDIA GPU. CPU fallback works but is 5-20x slower depending on the operation.
+
+**Voice Lab says "model not found"**
+Qwen3-TTS downloads automatically on first use (~2 GB). Ensure you have internet access and sufficient disk space.
+
+**Background removal / upscaling won't start**
+These features require separate model downloads. Use the install buttons in the Video tab to download rembg, RIFE, or Real-ESRGAN models.
+
+**FFmpeg not found**
+Install FFmpeg and ensure it's on your system PATH. Download from [ffmpeg.org](https://ffmpeg.org/download.html) or install via `choco install ffmpeg` / `winget install ffmpeg`.
+
+**Panel doesn't appear in Premiere Pro**
+Run `Install.bat` as Administrator, then restart Premiere Pro. The panel should appear under **Window > Extensions > OpenCut**. If not, enable unsigned extensions by setting `PlayerDebugMode=1` in the CEP debug registry key (the installer does this automatically).
+
+---
+
+## Development
+
+```bash
+# Clone and install in dev mode
 git clone https://github.com/opencut/opencut.git
 cd opencut
-pip install -e .
-
-# 3. (Optional) Install Whisper for captions
-pip install faster-whisper
-
-# 4. (Optional) Install pyannote for speaker diarization
-pip install pyannote.audio
-
-# 5. Copy the CEP extension to Adobe's extensions folder
-xcopy /E /I "extension\com.opencut.panel" "%APPDATA%\Adobe\CEP\extensions\com.opencut.panel"
-
-# 6. Enable unsigned extensions (PowerShell as admin)
-# Repeat for each CSXS version your Premiere uses (typically CSXS.11 or CSXS.12)
-New-Item -Path "HKCU:\Software\Adobe\CSXS.12" -Force
-Set-ItemProperty -Path "HKCU:\Software\Adobe\CSXS.12" -Name "PlayerDebugMode" -Value "1"
-
-# 7. Start the backend server
-python -m opencut.server
-
-# 8. Open Premiere Pro → Window → Extensions → OpenCut
-```
-
----
-
-## Uninstall
-
-Double-click `Uninstall.bat`, or run:
-
-```powershell
-.\Install.ps1 -Uninstall
-```
-
-This removes the CEP extension, registry keys, desktop shortcut, and launcher. Your Python packages are left intact (uninstall with `pip uninstall opencut` if desired).
-
----
-
-## Contributing
-
-```bash
-# Clone the repo
-git clone https://github.com/opencut/opencut.git
-cd opencut
-
-# Install with dev dependencies
-pip install -e ".[dev]"
+pip install -e ".[dev,all]"
 
 # Run tests
 pytest tests/
+
+# Start server in debug mode
+python -m opencut --debug
 
 # Lint
 ruff check opencut/
 ```
 
-### Project Notes
+### Build Installer (Windows)
 
-- The Flask server uses **CORS** because CEP panels run with a `null` origin
-- Long-running tasks execute in **background threads** with progress via SSE streaming or polling
-- **FCP 7 XML** format is used instead of FCPXML for maximum Premiere compatibility
-- ExtendScript files **must use ES3 syntax** — no `let`, `const`, arrow functions, or template literals
-- Whisper backend auto-detection order: `whisperx` → `faster-whisper` → `openai-whisper`
-- Logs are written to `~/.opencut/server.log`
+```powershell
+cd build
+.\build.ps1
+```
+
+This creates a standalone executable via PyInstaller and an Inno Setup installer.
+
+---
+
+## Stats
+
+| Metric | Value |
+|--------|-------|
+| Total source lines | 18,499 |
+| Server endpoints | 81 |
+| Core modules | 16 |
+| Panel tabs | 8 |
+| Panel sub-tabs | 35 |
+| Action buttons | 36 |
+| AI models supported | 8 |
+| Platform export presets | 11 |
+| Workflow presets | 6 |
+| Audio effects | 12 |
+| Caption styles | 12 |
+| Color grade presets | 8 |
+
+---
+
+## Contributing
+
+Issues and pull requests are welcome. Please open an issue first for major changes.
+
+Areas where contributions would be especially valuable: DaVinci Resolve support, additional AI models, localization, and cross-platform testing.
 
 ---
 
@@ -398,14 +449,4 @@ ruff check opencut/
 
 ---
 
-## Credits
-
-Built on the shoulders of:
-
-- [FFmpeg](https://ffmpeg.org) — media processing backbone
-- [OpenAI Whisper](https://github.com/openai/whisper) — speech recognition
-- [faster-whisper](https://github.com/SYSTRAN/faster-whisper) — CTranslate2-accelerated Whisper inference
-- [whisperx](https://github.com/m-bain/whisperX) — word-level timestamp alignment
-- [pyannote.audio](https://github.com/pyannote/pyannote-audio) — speaker diarization
-- [Rich](https://github.com/Textualize/rich) — beautiful CLI output
-- [auto-editor](https://github.com/WyattBlue/auto-editor) — inspiration and XML format reference
+Built with FFmpeg, Whisper, PyTorch, and a lot of Python.
