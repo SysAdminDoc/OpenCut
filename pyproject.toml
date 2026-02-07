@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencut"
-version = "0.1.0"
+version = "1.0.0"
 description = "Open source video editing automation for Premiere Pro - remove silences, generate captions, podcast multicam, and more"
 readme = "README.md"
 license = {text = "MIT"}
@@ -45,9 +45,24 @@ captions-openai = [
 diarize = [
     "pyannote.audio>=3.1",
 ]
+audio-ai = [
+    "deepfilternet>=0.5",
+    "demucs>=4.0",
+]
+video-ai = [
+    "rembg[cli]>=2.0",
+    "onnxruntime>=1.16",
+    "realesrgan>=0.3",
+    "basicsr>=1.4",
+    "Pillow>=10.0",
+]
 all = [
     "faster-whisper>=1.0",
     "pyannote.audio>=3.1",
+    "deepfilternet>=0.5",
+    "demucs>=4.0",
+    "rembg[cli]>=2.0",
+    "onnxruntime>=1.16",
 ]
 dev = [
     "pytest>=7.0",
