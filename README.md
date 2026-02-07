@@ -18,7 +18,7 @@
 ### One-Line Install (Windows)
 
 ```powershell
-irm https://raw.githubusercontent.com/opencut/opencut/main/Install.ps1 | iex
+irm https://raw.githubusercontent.com/SysAdminDoc/OpenCut/refs/heads/main/Install.ps1 | iex
 ```
 
 ### Manual Install
