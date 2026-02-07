@@ -615,11 +615,11 @@ function _findOrCreateBin(binName) {
 
 
 /**
- * Import a styled caption overlay video (.mov with alpha) and place it
- * on a video track above the existing content in the active sequence.
+ * Import a styled caption overlay video (.mov with alpha) into the
+ * project panel so the user can drag it onto V2+ above their video.
  *
  * @param {string} overlayPath - Full path to the transparent .mov file
- * @returns {string} JSON: {success, trackIndex, message} or {error}
+ * @returns {string} JSON: {success, message} or {error}
  */
 function importCaptionOverlay(overlayPath) {
     _ocLog("importCaptionOverlay: " + overlayPath);
@@ -629,79 +629,184 @@ function importCaptionOverlay(overlayPath) {
         return JSON.stringify({ error: "Overlay file not found: " + overlayPath });
     }
 
-    var seq = null;
-    try { seq = app.project.activeSequence; } catch (e) {}
-    if (!seq) {
-        return JSON.stringify({ error: "No active sequence. Open or create a sequence first." });
-    }
-
-    // Import the overlay into the project
+    // Check if already imported
     var overlayItem = _findProjectItemByPath(app.project.rootItem, overlayPath, 0);
-    if (!overlayItem) {
-        var captionBin = _findOrCreateBin("OpenCut Captions");
-        var targetBin = captionBin || app.project.rootItem;
-        try {
-            app.project.importFiles([overlayPath], false, targetBin, false);
-            overlayItem = _findProjectItemByPath(app.project.rootItem, overlayPath, 0);
-        } catch (e) {
-            return JSON.stringify({ error: "Import failed: " + e.toString() });
-        }
-    }
-
-    if (!overlayItem) {
-        return JSON.stringify({ error: "Could not import overlay video." });
-    }
-
-    // Find the topmost available video track (or create one above existing content)
-    var numTracks = seq.videoTracks.numTracks;
-    var targetTrack = null;
-    var targetIdx = -1;
-
-    // Look for an empty track above track 0
-    for (var t = numTracks - 1; t >= 1; t--) {
-        if (seq.videoTracks[t].clips.numItems === 0) {
-            targetTrack = seq.videoTracks[t];
-            targetIdx = t;
-            break;
-        }
-    }
-
-    // If no empty track, use the highest numbered track
-    if (!targetTrack) {
-        targetIdx = numTracks - 1;
-        if (targetIdx < 1) targetIdx = 1;
-        // Prefer track above any content
-        if (targetIdx < numTracks) {
-            targetTrack = seq.videoTracks[targetIdx];
-        }
-    }
-
-    if (!targetTrack) {
-        return JSON.stringify({ error: "No video track available for overlay." });
-    }
-
-    // Insert at the beginning of the timeline
-    try {
-        targetTrack.insertClip(overlayItem, "0");
+    if (overlayItem) {
         return JSON.stringify({
             success: true,
-            trackIndex: targetIdx + 1,
-            message: "Caption overlay added to V" + (targetIdx + 1)
+            message: "Caption overlay ready in project panel (OpenCut Overlays bin). Drag it onto V2 above your video."
         });
+    }
+
+    // Import into an OpenCut Overlays bin
+    var overlayBin = _findOrCreateBin("OpenCut Overlays");
+    var targetBin = overlayBin || app.project.rootItem;
+    try {
+        // importFiles returns undefined in many Premiere versions, so
+        // we don't rely on the return value. If it throws, we catch it.
+        app.project.importFiles([overlayPath], false, targetBin, false);
     } catch (e) {
-        // Try overwriteClip as fallback
+        return JSON.stringify({ error: "Import failed: " + e.toString() });
+    }
+
+    // Verify it actually imported by searching for it
+    overlayItem = _findProjectItemByPath(app.project.rootItem, overlayPath, 0);
+    if (overlayItem) {
+        return JSON.stringify({
+            success: true,
+            message: "Caption overlay imported! Find it in the OpenCut Overlays bin and drag it onto V2 above your video."
+        });
+    }
+
+    // If we can't find it by path, check the bin for the most recent item
+    if (overlayBin) {
         try {
-            targetTrack.overwriteClip(overlayItem, "0");
-            return JSON.stringify({
-                success: true,
-                trackIndex: targetIdx + 1,
-                message: "Caption overlay added to V" + (targetIdx + 1)
-            });
-        } catch (e2) {
-            return JSON.stringify({
-                error: "Could not place overlay on timeline: " + e2.toString()
-                    + ". Drag it from the project panel manually."
-            });
+            var numItems = overlayBin.children.numItems;
+            if (numItems > 0) {
+                return JSON.stringify({
+                    success: true,
+                    message: "Caption overlay imported to OpenCut Overlays bin. Drag it onto V2 above your video."
+                });
+            }
+        } catch (e2) {}
+    }
+
+    return JSON.stringify({
+        error: "Import may have failed. Check the OpenCut Overlays bin, or try File > Import and select: " + overlayPath
+    });
+}
+
+
+/**
+ * Attempt to start the OpenCut backend server from Premiere.
+ * Priority order:
+ *   1. Installed exe (from OpenCut installer) via registry path
+ *   2. Exe in known install location (%LOCALAPPDATA%\OpenCut\)
+ *   3. Fall back to python -m opencut.server (dev mode)
+ *
+ * Kills any existing server first via PID file + port kill.
+ *
+ * @returns {string} JSON: {success, message} or {error}
+ */
+function startOpenCutBackend() {
+    _ocLog("startOpenCutBackend called");
+
+    var isWindows = ($.os.indexOf("Windows") !== -1);
+
+    // --- Try to find the installed exe ---
+    var exePath = "";
+
+    if (isWindows) {
+        // Check registry for install path (set by Inno Setup)
+        try {
+            var wsh = new ActiveXObject("WScript.Shell");
+            var regPath = wsh.RegRead("HKCU\\Software\\OpenCut\\InstallPath");
+            if (regPath) {
+                var candidate = regPath + "\\opencut-server.exe";
+                if (new File(candidate).exists) {
+                    exePath = candidate;
+                    _ocLog("Found exe via registry: " + exePath);
+                }
+            }
+        } catch (e) {
+            _ocLog("Registry lookup failed (normal if not installed): " + e.toString());
+        }
+
+        // Check default install location
+        if (!exePath) {
+            try {
+                var localAppData = $.getenv("LOCALAPPDATA");
+                if (localAppData) {
+                    var candidate2 = localAppData + "\\OpenCut\\opencut-server.exe";
+                    if (new File(candidate2).exists) {
+                        exePath = candidate2;
+                        _ocLog("Found exe at default location: " + exePath);
+                    }
+                }
+            } catch (e2) {}
         }
     }
+
+    var launched = false;
+
+    if (isWindows) {
+        // ---- WINDOWS ----
+        // Build a batch file that kills old server, then launches new
+        var bat = new File(Folder.temp.fsName + "/opencut_start.bat");
+        bat.open("w");
+        bat.writeln("@echo off");
+        bat.writeln("setlocal");
+        // Kill via PID file
+        bat.writeln('set "PIDFILE=%USERPROFILE%\\.opencut\\server.pid"');
+        bat.writeln('if exist "%PIDFILE%" (');
+        bat.writeln('    set /p OLDPID=<"%PIDFILE%"');
+        bat.writeln('    if defined OLDPID (');
+        bat.writeln('        taskkill /F /T /PID %OLDPID% >nul 2>&1');
+        bat.writeln('    )');
+        bat.writeln('    del "%PIDFILE%" >nul 2>&1');
+        bat.writeln(')');
+        // Kill anything holding port 5679
+        bat.writeln('for /f "tokens=5" %%a in (\'netstat -ano -p TCP ^| findstr ":5679 " ^| findstr "LISTENING"\') do (');
+        bat.writeln('    taskkill /F /T /PID %%a >nul 2>&1');
+        bat.writeln(')');
+        bat.writeln("timeout /t 1 /nobreak >nul 2>&1");
+
+        if (exePath) {
+            // Launch the installed exe
+            bat.writeln('"' + exePath + '"');
+        } else {
+            // Fall back to python -m (dev mode)
+            var pythonCmds = ["python", "python3", "py"];
+            for (var i = 0; i < pythonCmds.length; i++) {
+                bat.writeln(pythonCmds[i] + ' -m opencut.server 2>nul && goto :done');
+            }
+            bat.writeln(":done");
+        }
+
+        bat.close();
+
+        try {
+            bat.execute();
+            launched = true;
+            _ocLog("Launched via bat" + (exePath ? " (exe)" : " (python fallback)"));
+        } catch (e3) {
+            _ocLog("Bat launch failed: " + e3.toString());
+        }
+    } else {
+        // ---- macOS / Linux ----
+        var sh = new File(Folder.temp.fsName + "/opencut_start.sh");
+        sh.open("w");
+        sh.writeln("#!/bin/bash");
+        // Kill via PID file
+        sh.writeln('PIDFILE="$HOME/.opencut/server.pid"');
+        sh.writeln('if [ -f "$PIDFILE" ]; then');
+        sh.writeln('    OLDPID=$(head -1 "$PIDFILE" 2>/dev/null)');
+        sh.writeln('    [ -n "$OLDPID" ] && kill -9 "$OLDPID" 2>/dev/null');
+        sh.writeln('    rm -f "$PIDFILE"');
+        sh.writeln('fi');
+        // Kill anything on port 5679
+        sh.writeln('for PID in $(lsof -ti :5679 2>/dev/null); do kill -9 "$PID" 2>/dev/null; done');
+        sh.writeln("sleep 1");
+        // Launch
+        sh.writeln("nohup python3 -m opencut.server > /dev/null 2>&1 &");
+        sh.close();
+
+        try {
+            var chmodF = new File(Folder.temp.fsName + "/opencut_chmod.sh");
+            chmodF.open("w");
+            chmodF.writeln("#!/bin/bash");
+            chmodF.writeln('chmod +x "' + sh.fsName + '" && "' + sh.fsName + '"');
+            chmodF.close();
+            chmodF.execute();
+            launched = true;
+            _ocLog("Launched via sh (python)");
+        } catch (e4) {
+            _ocLog("Sh launch failed: " + e4.toString());
+        }
+    }
+
+    if (launched) {
+        return JSON.stringify({ success: true, message: "Backend launch attempted" + (exePath ? " (installed)" : " (dev)") });
+    }
+    return JSON.stringify({ error: "Could not launch backend. Start manually: python -m opencut.server" });
 }

@@ -10,15 +10,18 @@ Generates transparent video overlays with styled captions including:
 Uses Pillow for text rendering and FFmpeg for video assembly.
 """
 
+import logging
 import math
 import os
 import struct
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from .captions import CaptionSegment, TranscriptionResult, Word
+
+logger = logging.getLogger("opencut.styled_captions")
 
 # ---------------------------------------------------------------------------
 # Style definitions
@@ -147,6 +150,158 @@ STYLES: Dict[str, CaptionStyle] = {
         line_spacing=1.5,
         preview_css="font-family:Georgia,'Times New Roman',serif;color:#dcdcd2;text-shadow:3px 3px 5px rgba(0,0,0,0.7);letter-spacing:0.5px",
     ),
+
+    # ---- Phase 2 Styles ----
+
+    "glow": CaptionStyle(
+        name="glow",
+        label="Glow",
+        font_name="Arial Black",
+        font_file="ariblk.ttf",
+        font_size=56,
+        text_color=(255, 255, 255, 255),
+        highlight_color=(0, 230, 255, 255),
+        action_color=(255, 50, 150, 255),
+        stroke_color=(0, 180, 255, 80),
+        stroke_width=4,
+        shadow_color=(0, 150, 255, 120),
+        shadow_offset=(0, 0),
+        margin_bottom=80,
+        preview_css="font-family:'Arial Black',Arial,sans-serif;color:#fff;text-shadow:0 0 10px rgba(0,180,255,0.8),0 0 20px rgba(0,180,255,0.5),0 0 40px rgba(0,180,255,0.3);-webkit-text-stroke:1px rgba(0,180,255,0.3)",
+    ),
+    "karaoke": CaptionStyle(
+        name="karaoke",
+        label="Karaoke",
+        font_name="Impact",
+        font_file="impact.ttf",
+        font_size=60,
+        text_color=(200, 200, 220, 255),
+        highlight_color=(255, 50, 200, 255),
+        action_color=(255, 220, 50, 255),
+        stroke_color=(0, 0, 0, 255),
+        stroke_width=3,
+        bg_color=(0, 0, 0, 180),
+        bg_padding=(20, 10),
+        bg_radius=6,
+        margin_bottom=70,
+        preview_css="font-family:Impact,sans-serif;color:#c8c8dc;-webkit-text-stroke:2px #000;background:rgba(0,0,0,0.7);padding:4px 12px;border-radius:4px",
+    ),
+    "outline": CaptionStyle(
+        name="outline",
+        label="Outline",
+        font_name="Arial Bold",
+        font_file="arialbd.ttf",
+        font_size=58,
+        text_color=(0, 0, 0, 0),
+        highlight_color=(255, 255, 255, 255),
+        action_color=(255, 100, 100, 255),
+        stroke_color=(255, 255, 255, 255),
+        stroke_width=3,
+        margin_bottom=80,
+        preview_css="font-family:Arial,Helvetica,sans-serif;font-weight:700;color:transparent;-webkit-text-stroke:2px #fff;letter-spacing:1px",
+    ),
+    "gradient_fire": CaptionStyle(
+        name="gradient_fire",
+        label="Fire Gradient",
+        font_name="Impact",
+        font_file="impact.ttf",
+        font_size=60,
+        text_color=(255, 200, 50, 255),
+        highlight_color=(255, 80, 0, 255),
+        action_color=(255, 30, 30, 255),
+        stroke_color=(100, 0, 0, 255),
+        stroke_width=3,
+        shadow_color=(255, 100, 0, 80),
+        shadow_offset=(0, 2),
+        margin_bottom=80,
+        preview_css="font-family:Impact,sans-serif;color:#ffc832;-webkit-text-stroke:2px #640000;text-shadow:0 2px 8px rgba(255,100,0,0.5),0 0 20px rgba(255,50,0,0.3)",
+    ),
+    "typewriter": CaptionStyle(
+        name="typewriter",
+        label="Typewriter",
+        font_name="Courier New",
+        font_file="cour.ttf",
+        font_size=44,
+        text_color=(220, 220, 200, 255),
+        highlight_color=(255, 255, 255, 255),
+        action_color=(100, 255, 100, 255),
+        stroke_color=(0, 0, 0, 0),
+        stroke_width=0,
+        bg_color=(20, 20, 15, 220),
+        bg_padding=(24, 12),
+        bg_radius=2,
+        margin_bottom=60,
+        line_spacing=1.4,
+        preview_css="font-family:'Courier New',Courier,monospace;color:#dcdcc8;background:rgba(20,20,15,0.85);padding:6px 14px;border-radius:2px;letter-spacing:0.5px",
+    ),
+    "bounce": CaptionStyle(
+        name="bounce",
+        label="Bounce",
+        font_name="Arial Black",
+        font_file="ariblk.ttf",
+        font_size=62,
+        text_color=(255, 255, 255, 255),
+        highlight_color=(255, 230, 0, 255),
+        action_color=(0, 255, 150, 255),
+        stroke_color=(0, 0, 0, 255),
+        stroke_width=4,
+        margin_bottom=80,
+        preview_css="font-family:'Arial Black',Arial,sans-serif;color:#fff;-webkit-text-stroke:3px #000;text-shadow:4px 4px 0 #000",
+    ),
+    "comic": CaptionStyle(
+        name="comic",
+        label="Comic",
+        font_name="Comic Sans MS",
+        font_file="comic.ttf",
+        font_size=52,
+        text_color=(30, 30, 30, 255),
+        highlight_color=(255, 50, 50, 255),
+        action_color=(0, 100, 255, 255),
+        stroke_color=(0, 0, 0, 0),
+        stroke_width=0,
+        bg_color=(255, 255, 240, 240),
+        bg_padding=(24, 14),
+        bg_radius=16,
+        margin_bottom=70,
+        preview_css="font-family:'Comic Sans MS',cursive,sans-serif;color:#1e1e1e;background:rgba(255,255,240,0.94);padding:6px 14px;border-radius:10px;border:2px solid #222",
+    ),
+    "subtitle_classic": CaptionStyle(
+        name="subtitle_classic",
+        label="Classic Subtitle",
+        font_name="Arial",
+        font_file="arial.ttf",
+        font_size=42,
+        text_color=(255, 255, 255, 255),
+        highlight_color=(255, 255, 100, 255),
+        action_color=(255, 150, 80, 255),
+        stroke_color=(0, 0, 0, 255),
+        stroke_width=2,
+        shadow_color=(0, 0, 0, 160),
+        shadow_offset=(1, 1),
+        margin_bottom=40,
+        line_spacing=1.3,
+        max_width_pct=0.90,
+        preview_css="font-family:Arial,Helvetica,sans-serif;color:#fff;text-shadow:1px 1px 2px rgba(0,0,0,0.8),-1px -1px 2px rgba(0,0,0,0.8);font-size:0.85em",
+    ),
+    "news_ticker": CaptionStyle(
+        name="news_ticker",
+        label="News Ticker",
+        font_name="Arial Bold",
+        font_file="arialbd.ttf",
+        font_size=38,
+        text_color=(255, 255, 255, 255),
+        highlight_color=(255, 220, 0, 255),
+        action_color=(255, 80, 80, 255),
+        stroke_color=(0, 0, 0, 0),
+        stroke_width=0,
+        bg_color=(180, 20, 20, 230),
+        bg_padding=(28, 10),
+        bg_radius=0,
+        margin_bottom=30,
+        max_width_pct=1.0,
+        line_spacing=1.2,
+        preview_css="font-family:Arial,Helvetica,sans-serif;font-weight:700;color:#fff;background:rgba(180,20,20,0.9);padding:4px 16px;font-size:0.8em;text-transform:uppercase;letter-spacing:1px",
+    ),
 }
 
 DEFAULT_STYLE = "youtube_bold"
@@ -155,22 +310,16 @@ DEFAULT_STYLE = "youtube_bold"
 # Action word detection
 # ---------------------------------------------------------------------------
 
-# Common emphasis / action words
 _ACTION_KEYWORDS: Set[str] = {
-    # Exclamations & emphasis
     "amazing", "awesome", "incredible", "insane", "crazy", "unbelievable",
     "massive", "huge", "enormous", "epic", "legendary", "ultimate",
     "absolutely", "completely", "totally", "exactly", "definitely",
     "perfect", "fantastic", "brilliant", "stunning", "gorgeous",
-    # Strong verbs
     "crush", "smash", "destroy", "explode", "launch", "blast",
     "dominate", "transform", "revolutionize", "skyrocket",
-    # Negative emphasis
     "never", "worst", "terrible", "horrible", "disaster",
     "impossible", "ridiculous", "outrageous",
-    # Quantifiers
     "everything", "nothing", "always", "million", "billion",
-    # Common YouTube emphasis
     "free", "secret", "hack", "trick", "game-changer", "breakthrough",
     "important", "critical", "essential", "key", "crucial",
 }
@@ -181,17 +330,7 @@ def detect_action_words_by_energy(
     words: List[Word],
     threshold: float = 1.6,
 ) -> Set[int]:
-    """
-    Detect action words by comparing per-word audio energy to the average.
-
-    Args:
-        filepath: Path to the media file.
-        words: List of Word objects with timestamps.
-        threshold: RMS multiplier above mean to flag as action.
-
-    Returns:
-        Set of word indices that are action words.
-    """
+    """Detect action words by comparing per-word audio energy to the average."""
     if not words:
         return set()
 
@@ -201,14 +340,12 @@ def detect_action_words_by_energy(
     except Exception:
         return set()
 
-    # Convert to samples
     n_samples = len(pcm_bytes) // 2
     if n_samples == 0:
         return set()
 
     samples = struct.unpack(f"<{n_samples}h", pcm_bytes)
 
-    # Compute RMS for each word
     word_rms = []
     for w in words:
         s_start = max(0, int(w.start * sr))
@@ -227,12 +364,7 @@ def detect_action_words_by_energy(
     if mean_rms < 0.001:
         return set()
 
-    action_indices = set()
-    for i, rms in enumerate(word_rms):
-        if rms > mean_rms * threshold:
-            action_indices.add(i)
-
-    return action_indices
+    return {i for i, rms in enumerate(word_rms) if rms > mean_rms * threshold}
 
 
 def get_action_word_indices(
@@ -241,21 +373,9 @@ def get_action_word_indices(
     use_keywords: bool = True,
     energy_indices: Optional[Set[int]] = None,
 ) -> Set[int]:
-    """
-    Combine multiple methods to identify action word indices.
-
-    Args:
-        all_words: Flat list of all Word objects.
-        custom_words: User-specified action words.
-        use_keywords: Whether to use the built-in keyword list.
-        energy_indices: Word indices flagged by energy analysis.
-
-    Returns:
-        Set of word indices that should be styled as action words.
-    """
+    """Combine keyword list, custom words, and energy analysis for action words."""
     result = set()
 
-    # Build lookup set
     keywords = set()
     if use_keywords:
         keywords.update(_ACTION_KEYWORDS)
@@ -263,13 +383,11 @@ def get_action_word_indices(
         for cw in custom_words:
             keywords.add(cw.strip().lower())
 
-    # Check each word
     for i, w in enumerate(all_words):
         norm = w.text.strip().lower().strip(".,!?;:\"'()-")
         if norm in keywords:
             result.add(i)
 
-    # Merge energy-detected indices
     if energy_indices:
         result.update(energy_indices)
 
@@ -316,7 +434,6 @@ def find_font(filename: str) -> Optional[str]:
     if filename in _font_cache:
         return _font_cache[filename]
 
-    # Check direct path
     if os.path.isfile(filename):
         _font_cache[filename] = filename
         return filename
@@ -342,16 +459,34 @@ def _load_font(style: "CaptionStyle", size_override: Optional[int] = None):
     # Try the style's font file
     font_path = find_font(style.font_file)
     if font_path:
-        return ImageFont.truetype(font_path, size)
+        try:
+            return ImageFont.truetype(font_path, size)
+        except Exception:
+            pass
 
-    # Try common fallbacks
-    for fallback in ["arialbd.ttf", "arial.ttf", "DejaVuSans-Bold.ttf", "DejaVuSans.ttf"]:
+    # Try common fallbacks (Windows and Linux names)
+    for fallback in [
+        "arialbd.ttf", "arial.ttf", "ARIALBD.TTF", "ARIAL.TTF",
+        "DejaVuSans-Bold.ttf", "DejaVuSans.ttf",
+        "LiberationSans-Bold.ttf", "LiberationSans-Regular.ttf",
+        "segoeui.ttf", "SEGOEUI.TTF",
+    ]:
         fp = find_font(fallback)
         if fp:
-            return ImageFont.truetype(fp, size)
+            try:
+                return ImageFont.truetype(fp, size)
+            except Exception:
+                continue
 
-    # Last resort: Pillow default
-    return ImageFont.load_default()
+    # Last resort: Pillow default (bitmap, small but won't crash)
+    logger.warning(
+        f"Could not find font '{style.font_file}' or any fallback. "
+        f"Using Pillow default font. Searched: {_get_font_dirs()}"
+    )
+    try:
+        return ImageFont.truetype("arial", size)
+    except Exception:
+        return ImageFont.load_default()
 
 
 # ---------------------------------------------------------------------------
@@ -366,9 +501,31 @@ class WordLayout:
     y: float
     width: float
     line_idx: int
-    word_idx: int       # Global word index (for action word lookup)
+    word_idx: int
     is_highlight: bool
     is_action: bool
+
+
+def _font_getlength(font, text: str) -> float:
+    """Version-safe font width measurement."""
+    try:
+        return font.getlength(text)
+    except AttributeError:
+        try:
+            return font.getsize(text)[0]
+        except AttributeError:
+            return len(text) * 10
+
+
+def _font_metrics(font):
+    """Version-safe font metrics."""
+    try:
+        return font.getmetrics()
+    except AttributeError:
+        try:
+            return (font.getsize("Ay")[1], 4)
+        except AttributeError:
+            return (20, 4)
 
 
 def layout_caption_text(
@@ -382,23 +539,17 @@ def layout_caption_text(
     action_indices: Optional[Set[int]] = None,
     global_offset: int = 0,
 ) -> List[WordLayout]:
-    """
-    Calculate word positions for a caption, with line wrapping and centering.
-
-    Returns:
-        List of WordLayout for each word.
-    """
+    """Calculate word positions for a caption, with line wrapping and centering."""
     if not words:
         return []
 
     act = action_indices or set()
 
-    # Measure each word
-    space_width = font.getlength(" ")
-    word_widths = [font.getlength(w) for w in words]
+    space_width = _font_getlength(font, " ")
+    word_widths = [_font_getlength(font, w) for w in words]
 
     # Wrap into lines
-    lines: List[List[int]] = [[]]  # Each line is a list of word indices
+    lines: List[List[int]] = [[]]
     line_widths: List[float] = [0.0]
 
     for i, (w, ww) in enumerate(zip(words, word_widths)):
@@ -411,18 +562,14 @@ def layout_caption_text(
         lines[-1].append(i)
         line_widths[-1] += ww
 
-    # Get font height
-    ascent, descent = font.getmetrics()
+    ascent, descent = _font_metrics(font)
     line_height = int((ascent + descent) * line_spacing)
-
-    # Calculate total text block height
     total_height = line_height * len(lines)
 
-    # Position lines from y_base upward
     results = []
     for line_num, (line_indices, lw) in enumerate(zip(lines, line_widths)):
         y = y_base - total_height + (line_num * line_height)
-        x_start = (video_width - lw) / 2  # Center the line
+        x_start = (video_width - lw) / 2
         x = x_start
 
         for local_idx, word_idx in enumerate(line_indices):
@@ -462,12 +609,11 @@ def render_frame(
         return img
 
     # Draw background box if style has one
-    if style.bg_color[3] > 0 and layouts:
-        # Calculate bounding box of all words
+    if style.bg_color[3] > 0:
         min_x = min(wl.x for wl in layouts) - style.bg_padding[0]
         max_x = max(wl.x + wl.width for wl in layouts) + style.bg_padding[0]
         min_y = min(wl.y for wl in layouts) - style.bg_padding[1]
-        ascent, descent = font.getmetrics()
+        ascent, descent = _font_metrics(font)
         max_y = max(wl.y for wl in layouts) + ascent + descent + style.bg_padding[1]
 
         try:
@@ -476,16 +622,13 @@ def render_frame(
                 radius=style.bg_radius,
                 fill=style.bg_color,
             )
-        except AttributeError:
-            # Pillow < 8.2 fallback
+        except (AttributeError, TypeError):
             draw.rectangle(
                 [(int(min_x), int(min_y)), (int(max_x), int(max_y))],
                 fill=style.bg_color,
             )
 
-    # Draw each word
     for wl in layouts:
-        # Determine color
         if wl.is_action:
             color = style.action_color
         elif wl.is_highlight:
@@ -499,31 +642,77 @@ def render_frame(
         if style.shadow_color[3] > 0:
             sx = x + style.shadow_offset[0]
             sy = y + style.shadow_offset[1]
-            # For glow effect (offset 0,0), draw multiple blurred passes
             if style.shadow_offset == (0, 0):
                 for dx in range(-2, 3):
                     for dy in range(-2, 3):
-                        draw.text(
-                            (sx + dx, sy + dy), wl.text, font=font,
-                            fill=style.shadow_color,
-                        )
+                        draw.text((sx + dx, sy + dy), wl.text,
+                                  font=font, fill=style.shadow_color)
             else:
-                draw.text(
-                    (sx, sy), wl.text, font=font,
-                    fill=style.shadow_color,
-                )
+                draw.text((sx, sy), wl.text, font=font,
+                          fill=style.shadow_color)
 
         # Main text with stroke
         if style.stroke_width > 0:
-            draw.text(
-                (x, y), wl.text, font=font, fill=color,
-                stroke_width=style.stroke_width,
-                stroke_fill=style.stroke_color,
-            )
+            try:
+                draw.text(
+                    (x, y), wl.text, font=font, fill=color,
+                    stroke_width=style.stroke_width,
+                    stroke_fill=style.stroke_color,
+                )
+            except TypeError:
+                # Pillow < 8.0: stroke_width not supported, fake it
+                sw = style.stroke_width
+                for dx in range(-sw, sw + 1):
+                    for dy in range(-sw, sw + 1):
+                        if dx != 0 or dy != 0:
+                            draw.text((x + dx, y + dy), wl.text,
+                                      font=font, fill=style.stroke_color)
+                draw.text((x, y), wl.text, font=font, fill=color)
         else:
             draw.text((x, y), wl.text, font=font, fill=color)
 
     return img
+
+
+# ---------------------------------------------------------------------------
+# Pillow bootstrap
+# ---------------------------------------------------------------------------
+
+def _ensure_pillow():
+    """Make sure Pillow is importable, installing if needed."""
+    try:
+        from PIL import Image  # noqa: F401
+        return True
+    except ImportError:
+        pass
+
+    import sys
+    logger.info("Pillow not found, installing...")
+    try:
+        subprocess.check_call(
+            [sys.executable, "-m", "pip", "install", "Pillow", "--quiet"],
+            timeout=120,
+        )
+    except Exception as e:
+        logger.error(f"Failed to install Pillow: {e}")
+        raise RuntimeError(
+            "Pillow is required for styled captions. "
+            "Install it manually: pip install Pillow"
+        ) from e
+
+    # CRITICAL: invalidate Python's import cache so it finds the new package
+    import importlib
+    importlib.invalidate_caches()
+
+    try:
+        from PIL import Image  # noqa: F401
+        logger.info("Pillow installed and imported successfully")
+        return True
+    except ImportError as e:
+        raise RuntimeError(
+            "Pillow was installed but cannot be imported. "
+            "Restart the OpenCut server and try again."
+        ) from e
 
 
 # ---------------------------------------------------------------------------
@@ -539,23 +728,15 @@ def render_styled_caption_video(
     fps: float = 30.0,
     action_indices: Optional[Set[int]] = None,
     total_duration: Optional[float] = None,
+    on_progress: Optional[Callable[[int, str], None]] = None,
 ) -> dict:
     """
     Render a transparent video overlay with styled, word-highlighted captions.
 
-    Args:
-        transcription: Whisper transcription with word-level timestamps.
-        output_path: Output video path (.mov).
-        style_name: Name of the style preset.
-        video_width: Video width in pixels.
-        video_height: Video height in pixels.
-        fps: Frame rate.
-        action_indices: Set of global word indices to style as action words.
-        total_duration: Total overlay duration. If None, uses last caption end + 1s.
-
-    Returns:
-        Dict with output_path, frames_rendered, duration.
+    Uses FFmpeg rawvideo pipe for reliability (no temp files, no concat quirks).
+    Output is PNG codec in MOV container for universal alpha support.
     """
+    _ensure_pillow()
     from PIL import Image
 
     style = STYLES.get(style_name, STYLES[DEFAULT_STYLE])
@@ -567,7 +748,7 @@ def render_styled_caption_video(
 
     # Flatten all words with global indices
     all_words_flat = []
-    seg_word_map = []  # (seg_idx, word_indices_in_flat_list)
+    seg_word_map = []  # (seg_start_global, seg_end_global)
     for seg in transcription.segments:
         start_idx = len(all_words_flat)
         for w in seg.words:
@@ -581,134 +762,155 @@ def render_styled_caption_video(
         else:
             total_duration = 1.0
 
-    # Create temp directory for frames
-    tmp_dir = tempfile.mkdtemp(prefix="opencut_captions_")
-    concat_lines = ["ffconcat version 1.0"]
-    frames_rendered = 0
+    total_frames = max(1, int(total_duration * fps))
 
-    def _save_frame(img, duration_sec):
-        nonlocal frames_rendered, concat_lines
-        if duration_sec < 0.001:
-            return
-        fname = f"frame_{frames_rendered:06d}.png"
-        fpath = os.path.join(tmp_dir, fname)
-        img.save(fpath, "PNG")
-        concat_lines.append(f"file '{fname}'")
-        concat_lines.append(f"duration {duration_sec:.6f}")
-        frames_rendered += 1
+    # -------------------------------------------------------------------
+    # Pre-build timeline of visual states:
+    #   (start_time, end_time, seg_idx, highlight_local_idx)
+    #   seg_idx = -1 means blank (no caption visible)
+    #   highlight_local_idx = -1 means show segment, no word highlighted
+    # -------------------------------------------------------------------
+    states = []
 
-    # Generate frames for each segment
     prev_end = 0.0
-
     for seg_idx, seg in enumerate(transcription.segments):
-        seg_start_global, seg_end_global = seg_word_map[seg_idx]
+        # Blank gap before segment
+        if seg.start > prev_end + 0.001:
+            states.append((prev_end, seg.start, -1, -1))
 
-        # Gap before this segment (transparent)
-        gap = seg.start - prev_end
-        if gap > 0.01:
-            blank = Image.new("RGBA", video_size, (0, 0, 0, 0))
-            _save_frame(blank, gap)
-
-        # If no word-level timestamps, render entire segment as one frame
         if not seg.words:
-            words_text = seg.text.strip().split()
-            layouts = layout_caption_text(
-                words_text, font, max_text_width, video_width, y_base,
-                style.line_spacing, highlight_idx=-1,
-                action_indices=act, global_offset=seg_start_global,
-            )
-            frame = render_frame(layouts, style, video_size, font)
-            _save_frame(frame, seg.end - seg.start)
-            prev_end = seg.end
-            continue
-
-        # Word-by-word highlighting
-        words_text = [w.text for w in seg.words]
-        seg_time = seg.start
-
-        for w_local, word_obj in enumerate(seg.words):
-            # Gap between segment start / previous word end and this word
-            word_gap = word_obj.start - seg_time
-            if word_gap > 0.01:
-                # Show caption with no highlight during the gap
-                layouts = layout_caption_text(
-                    words_text, font, max_text_width, video_width, y_base,
-                    style.line_spacing, highlight_idx=-1,
-                    action_indices=act, global_offset=seg_start_global,
-                )
-                frame = render_frame(layouts, style, video_size, font)
-                _save_frame(frame, word_gap)
-
-            # Render with this word highlighted
-            word_dur = word_obj.end - word_obj.start
-            if word_dur < 0.01:
-                word_dur = 0.05
-
-            layouts = layout_caption_text(
-                words_text, font, max_text_width, video_width, y_base,
-                style.line_spacing, highlight_idx=w_local,
-                action_indices=act, global_offset=seg_start_global,
-            )
-            frame = render_frame(layouts, style, video_size, font)
-            _save_frame(frame, word_dur)
-
-            seg_time = word_obj.end
-
-        # Gap between last word end and segment end
-        tail = seg.end - seg_time
-        if tail > 0.01:
-            layouts = layout_caption_text(
-                words_text, font, max_text_width, video_width, y_base,
-                style.line_spacing, highlight_idx=-1,
-                action_indices=act, global_offset=seg_start_global,
-            )
-            frame = render_frame(layouts, style, video_size, font)
-            _save_frame(frame, tail)
+            states.append((seg.start, seg.end, seg_idx, -1))
+        else:
+            seg_time = seg.start
+            for w_local, word_obj in enumerate(seg.words):
+                if word_obj.start > seg_time + 0.001:
+                    states.append((seg_time, word_obj.start, seg_idx, -1))
+                w_end = max(word_obj.end, word_obj.start + 0.01)
+                states.append((word_obj.start, w_end, seg_idx, w_local))
+                seg_time = w_end
+            if seg.end > seg_time + 0.001:
+                states.append((seg_time, seg.end, seg_idx, -1))
 
         prev_end = seg.end
 
-    # Final gap to fill total duration
-    final_gap = total_duration - prev_end
-    if final_gap > 0.01:
-        blank = Image.new("RGBA", video_size, (0, 0, 0, 0))
-        _save_frame(blank, final_gap)
+    if total_duration > prev_end + 0.001:
+        states.append((prev_end, total_duration, -1, -1))
 
-    # Repeat last frame (FFmpeg concat quirk)
-    if frames_rendered > 0:
-        last_fname = f"frame_{frames_rendered - 1:06d}.png"
-        concat_lines.append(f"file '{last_fname}'")
+    # -------------------------------------------------------------------
+    # Pre-render each unique visual state to raw RGBA bytes
+    # -------------------------------------------------------------------
+    blank_bytes = bytes(video_width * video_height * 4)  # all zeros = transparent
 
-    # Write concat file
-    concat_path = os.path.join(tmp_dir, "concat.txt")
-    with open(concat_path, "w") as f:
-        f.write("\n".join(concat_lines))
+    rendered_states = []
+    for si, (t0, t1, seg_idx, hl_local) in enumerate(states):
+        if seg_idx < 0:
+            rendered_states.append(blank_bytes)
+            continue
 
-    # Assemble video with FFmpeg
+        seg = transcription.segments[seg_idx]
+        seg_start_global = seg_word_map[seg_idx][0]
+        words_text = ([w.text for w in seg.words]
+                      if seg.words else seg.text.strip().split())
+
+        layouts = layout_caption_text(
+            words_text, font, max_text_width, video_width, y_base,
+            style.line_spacing, highlight_idx=hl_local,
+            action_indices=act, global_offset=seg_start_global,
+        )
+        frame = render_frame(layouts, style, video_size, font)
+        rendered_states.append(frame.tobytes("raw", "RGBA"))
+
+    logger.info(
+        f"Styled captions: {len(states)} visual states pre-rendered, "
+        f"{total_frames} frames to encode at {fps}fps"
+    )
+    if on_progress:
+        on_progress(65, f"Encoding {total_frames} frames...")
+
+    # -------------------------------------------------------------------
+    # Pipe raw RGBA frames to FFmpeg
+    # -------------------------------------------------------------------
     cmd = [
         "ffmpeg", "-hide_banner", "-loglevel", "warning", "-y",
-        "-f", "concat", "-safe", "0", "-i", concat_path,
-        "-c:v", "qtrle",
-        "-pix_fmt", "argb",
+        "-f", "rawvideo",
+        "-pix_fmt", "rgba",
+        "-s", f"{video_width}x{video_height}",
         "-r", str(fps),
+        "-i", "pipe:0",
+        "-c:v", "png",
+        "-pix_fmt", "rgba",
         output_path,
     ]
-    subprocess.run(cmd, check=True, timeout=600)
 
-    # Clean up temp frames (keep the MOV)
-    for fname in os.listdir(tmp_dir):
-        fpath = os.path.join(tmp_dir, fname)
-        try:
-            os.remove(fpath)
-        except OSError:
-            pass
+    logger.info(f"FFmpeg command: {' '.join(cmd)}")
+
+    proc = subprocess.Popen(
+        cmd,
+        stdin=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    )
+
+    state_idx = 0
+    frames_written = 0
+    last_pct = -1
+
     try:
-        os.rmdir(tmp_dir)
-    except OSError:
+        for frame_num in range(total_frames):
+            t = frame_num / fps
+
+            # Advance state pointer
+            while (state_idx < len(states) - 1
+                   and t >= states[state_idx][1] - 0.0001):
+                state_idx += 1
+
+            proc.stdin.write(rendered_states[state_idx])
+            frames_written += 1
+
+            # Progress callback every 5%
+            if on_progress and total_frames > 0:
+                pct = int(frame_num * 100 / total_frames)
+                if pct != last_pct and pct % 5 == 0:
+                    last_pct = pct
+                    on_progress(
+                        65 + int(pct * 0.30),
+                        f"Encoding frame {frame_num}/{total_frames}",
+                    )
+
+    except BrokenPipeError:
+        logger.warning("FFmpeg pipe closed early")
+    finally:
+        try:
+            proc.stdin.close()
+        except Exception:
+            pass
+
+    stderr_out = b""
+    try:
+        stderr_out = proc.stderr.read()
+    except Exception:
         pass
+    proc.wait()
+
+    if proc.returncode != 0:
+        err_msg = stderr_out.decode("utf-8", errors="replace").strip()
+        logger.error(f"FFmpeg failed (rc={proc.returncode}): {err_msg}")
+        raise RuntimeError(f"FFmpeg encoding failed: {err_msg or 'unknown error'}")
+
+    if not os.path.isfile(output_path) or os.path.getsize(output_path) < 100:
+        raise RuntimeError(
+            f"Output file missing or empty: {output_path}. "
+            f"FFmpeg stderr: {stderr_out.decode('utf-8', errors='replace')}"
+        )
+
+    file_size_mb = os.path.getsize(output_path) / (1024 * 1024)
+    logger.info(
+        f"Styled caption overlay: {output_path} "
+        f"({file_size_mb:.1f}MB, {frames_written} frames, {total_duration:.1f}s)"
+    )
 
     return {
         "output_path": output_path,
-        "frames_rendered": frames_rendered,
+        "frames_rendered": frames_written,
         "duration": total_duration,
         "style": style_name,
     }

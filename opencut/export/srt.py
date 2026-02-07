@@ -130,6 +130,123 @@ def export_json(
     return output_path
 
 
+def export_ass(
+    result: TranscriptionResult,
+    output_path: str,
+    style_name: str = "Default",
+    font_name: str = "Arial",
+    font_size: int = 48,
+    primary_color: str = "&H00FFFFFF",
+    highlight_color: str = "&H0000FFFF",
+    outline_color: str = "&H00000000",
+    back_color: str = "&H80000000",
+    outline_width: int = 2,
+    shadow_depth: int = 1,
+    alignment: int = 2,
+    margin_v: int = 60,
+    video_width: int = 1920,
+    video_height: int = 1080,
+    karaoke: bool = True,
+) -> str:
+    """
+    Export transcription as ASS (Advanced SubStation Alpha) subtitle file
+    with optional word-by-word karaoke timing using \\kf tags.
+
+    ASS color format: &HAABBGGRR (hex, alpha-blue-green-red)
+
+    Args:
+        result: Transcription result from Whisper.
+        output_path: Output file path.
+        style_name: Name for the subtitle style.
+        font_name: Font face name.
+        font_size: Font size in pixels.
+        primary_color: ASS color for normal text.
+        highlight_color: ASS color for karaoke highlight fill.
+        outline_color: ASS color for text outline.
+        back_color: ASS color for shadow/background.
+        outline_width: Outline thickness.
+        shadow_depth: Shadow distance.
+        alignment: Numpad-style alignment (2=bottom center).
+        margin_v: Vertical margin in pixels.
+        video_width: Video width for PlayResX.
+        video_height: Video height for PlayResY.
+        karaoke: If True, use \\kf tags for word-by-word highlight.
+
+    Returns:
+        Path to the generated ASS file.
+    """
+    # ASS header
+    lines = [
+        "[Script Info]",
+        "ScriptType: v4.00+",
+        f"PlayResX: {video_width}",
+        f"PlayResY: {video_height}",
+        "WrapStyle: 0",
+        "ScaledBorderAndShadow: yes",
+        "YCbCr Matrix: TV.709",
+        "Title: OpenCut Captions",
+        "",
+        "[V4+ Styles]",
+        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding",
+        f"Style: {style_name},{font_name},{font_size},{primary_color},{highlight_color},{outline_color},{back_color},-1,0,0,0,100,100,0,0,1,{outline_width},{shadow_depth},{alignment},40,40,{margin_v},1",
+        "",
+        "[Events]",
+        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text",
+    ]
+
+    entries = _split_segments(result.segments, 42, 2)
+
+    for entry in entries:
+        start_tc = _format_ass_time(entry.start)
+        end_tc = _format_ass_time(entry.end)
+
+        if karaoke and entry.words and len(entry.words) > 1:
+            # Build karaoke line with \kf tags
+            # \kf = smooth fill from left to right over duration
+            karaoke_parts = []
+            for w in entry.words:
+                # Duration in centiseconds (ASS \kf unit)
+                dur_cs = max(1, int((w.end - w.start) * 100))
+                word_text = w.text.strip()
+                if not word_text:
+                    continue
+                # Add space before word (except first)
+                if karaoke_parts:
+                    word_text = " " + word_text
+                karaoke_parts.append(f"{{\\kf{dur_cs}}}{word_text}")
+
+            text = "".join(karaoke_parts)
+        else:
+            text = entry.text.strip()
+
+        lines.append(
+            f"Dialogue: 0,{start_tc},{end_tc},{style_name},,0,0,0,,{text}"
+        )
+
+    with open(output_path, "w", encoding="utf-8-sig") as f:
+        f.write("\n".join(lines))
+
+    return output_path
+
+
+def _format_ass_time(seconds: float) -> str:
+    """Format seconds as ASS timecode: H:MM:SS.cc (centiseconds)."""
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    centis = int((seconds % 1) * 100)
+    return f"{hours}:{minutes:02d}:{secs:02d}.{centis:02d}"
+
+
+def rgb_to_ass_color(r: int, g: int, b: int, a: int = 0) -> str:
+    """
+    Convert RGBA (0-255) to ASS color format &HAABBGGRR.
+    Note: ASS alpha is inverted (0=opaque, 255=transparent).
+    """
+    ass_alpha = 255 - a if a < 255 else 0
+    return f"&H{ass_alpha:02X}{b:02X}{g:02X}{r:02X}"
+
+
 def _format_srt_time(seconds: float) -> str:
     """Format seconds as SRT timecode: HH:MM:SS,mmm."""
     hours = int(seconds // 3600)
