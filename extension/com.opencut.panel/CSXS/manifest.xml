@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    Version="12.0"
+    ExtensionBundleId="com.opencut.panel"
+    ExtensionBundleVersion="0.7.0"
+    ExtensionBundleName="OpenCut">
+
+    <ExtensionList>
+        <Extension Id="com.opencut.panel.main" Version="0.7.0" />
+    </ExtensionList>
+
+    <ExecutionEnvironment>
+        <HostList>
+            <!-- Premiere Pro CC 2019 (v13.0) through 2026+ -->
+            <Host Name="PPRO" Version="[13.0,99.9]" />
+        </HostList>
+        <LocaleList>
+            <Locale Code="All" />
+        </LocaleList>
+        <RequiredRuntimeList>
+            <RequiredRuntime Name="CSXS" Version="9.0" />
+        </RequiredRuntimeList>
+    </ExecutionEnvironment>
+
+    <DispatchInfoList>
+        <Extension Id="com.opencut.panel.main">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./client/index.html</MainPath>
+                    <ScriptPath>./host/index.jsx</ScriptPath>
+                    <CEFCommandLine>
+                        <Parameter>--enable-nodejs</Parameter>
+                        <Parameter>--mixed-context</Parameter>
+                        <Parameter>--allow-file-access-from-files</Parameter>
+                    </CEFCommandLine>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>true</AutoVisible>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>OpenCut</Menu>
+                    <Icons>
+                        <Icon Type="Normal">./client/icon.png</Icon>
+                        <Icon Type="RollOver">./client/icon.png</Icon>
+                        <Icon Type="DarkNormal">./client/icon.png</Icon>
+                        <Icon Type="DarkRollOver">./client/icon.png</Icon>
+                    </Icons>
+                    <Geometry>
+                        <Size>
+                            <Height>680</Height>
+                            <Width>320</Width>
+                        </Size>
+                        <MinSize>
+                            <Height>350</Height>
+                            <Width>260</Width>
+                        </MinSize>
+                        <MaxSize>
+                            <Height>1200</Height>
+                            <Width>600</Width>
+                        </MaxSize>
+                    </Geometry>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+    </DispatchInfoList>
+
+</ExtensionManifest>

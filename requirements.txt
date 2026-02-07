@@ -1,0 +1,13 @@
+# Core (required)
+click>=8.0
+rich>=13.0
+flask>=3.0
+flask-cors>=4.0
+
+# Captions - install ONE of these:
+# faster-whisper>=1.0          # Recommended: fastest inference
+# openai-whisper>=20231117     # Reference implementation
+# whisperx>=3.0                # Best word-level timestamps
+
+# Speaker Diarization (podcast editing):
+# pyannote.audio>=3.1          # Requires HuggingFace token
