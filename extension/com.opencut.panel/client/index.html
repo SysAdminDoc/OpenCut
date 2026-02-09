@@ -1,0 +1,1987 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>OpenCut</title>
+    <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB6ElEQVR4nMWXUU4CMRCG/5nsBSQrmCgiGM/gITiGb8aoT8YoMb6qxMTEB/UcchsJECNqqGcYH7aF0i24xWXpy26myXzt/PO3u7R3MIKQAAQI6ycBYEmeU3EBWM+TQBhO3OTR8wQnns4feSZlyXCy83PBcIBF7PxcMNzkFxPnFcBNXIQALrLhfHFeJXxSgRXBQeK64H/wr8sahcCFYbsgh50jDG65IDv843pLufDPi+3O13mtIyKv32e1Tla4kIBDdw4Aw6uqGraqykA2bgZN2CMjXBjg4LJbw0C+z3eo0u433fhfcExckF3z1E4JKN/1RAgo3yeLGJ3WO/Pg0O/aBYENZ1fA03DrD72kEnPgjgvCut2Myu0g9nX76KSuAOyro4bylX16UYJoEatN79DR3Bo/h7sKANZe3mKxym7nj0JPOACotPuxD66O68peQOm5G7uau/mj4OPVaO+x2hj81I1d/X1wIQFttt6TqzGns91ntVlwEIjzvFgC4bYL8oXP09yVmxeBq9MGuXCZY7VZcOuLKHDncCHZGi4tt5i7IKzspceuLKq5DdcVKFZzN39UVLe78LEEq4DDHFw0+S+gIsuu85PlAkkWEQAPsdosOFgQOZME/ceyLM1tuL4NU2VPHTJ5aj4VZ+AX8o+DeqiKjVUAAAAASUVORK5CYII=">
+    <link rel="stylesheet" href="style.css">
+    <script>
+        // Apply saved theme immediately to prevent flash
+        try {
+            var s = JSON.parse(localStorage.getItem("opencut_settings") || "{}");
+            if (s.theme && s.theme !== "cyberpunk") document.documentElement.setAttribute("data-theme", s.theme);
+        } catch (e) {}
+    </script>
+</head>
+<body>
+    <div class="app">
+
+        <!-- ===== HEADER ===== -->
+        <header class="header">
+            <div class="header-left">
+                <img class="logo-mark" width="18" height="18" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAA9ElEQVR4nK3UwUrDQBDG8f/M+gKBxkspePAkvXj14tmjIHr1IBT0Ij6G3kSkHnqQPoNeamNBT+JjTIekNNmkmsP+2GX5MbM7LPJcqLKVKFAiEPG5vt0T8vM1iWIoE9V/j6UpqNw4O2hIqD7L/wGhTqkIWRhKvEqRB56qiMgePkIhsn+YriVNDSSJUF0r2ppNswk0KZi5e5PvXcfpfYd/rJ42ex8RJXCJcqd+22ren5cAxdtm1N6/6oOoiOLVY0Qixvsg/5dcjvEupF3PbRp5JJHOdSMXJ7IasiWZxctOBUrngCzuJPGij/+TIYhclkfSBuCMOAFmNwJ0F6s0yQAAAABJRU5ErkJggg==" alt="OpenCut">
+                <span class="logo-text">Open<span class="logo-accent">Cut</span></span>
+                <span class="version">v1.0.0-beta</span>
+            </div>
+            <div class="header-right">
+                <button class="header-btn" id="refreshAllBtn" title="Refresh connection and capabilities">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
+                </button>
+                <div class="conn-status" id="connStatus" title="Backend status">
+                    <span class="conn-dot" id="connDot"></span>
+                    <span class="conn-label" id="connLabel">Offline</span>
+                </div>
+            </div>
+        </header>
+
+        <!-- Processing Banner (always visible when job active, no scrolling needed) -->
+        <div class="processing-banner hidden" id="processingBanner">
+            <div class="processing-inner">
+                <div class="processing-spinner"></div>
+                <span class="processing-msg" id="processingMsg">Processing...</span>
+            </div>
+            <div class="processing-right">
+                <span class="processing-elapsed" id="processingElapsed">0s</span>
+                <button class="processing-cancel" id="processingCancel" title="Cancel">Cancel</button>
+            </div>
+            <div class="processing-track"><div class="processing-fill" id="processingFill"></div></div>
+        </div>
+
+        <!-- Alert Banner -->
+        <div class="alert-banner hidden" id="alertBanner">
+            <div class="alert-inner">
+                <svg class="alert-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                <span class="alert-text" id="alertText"></span>
+            </div>
+            <button class="alert-dismiss" id="alertDismiss">&times;</button>
+        </div>
+
+        <!-- ===== MAIN NAV TABS ===== -->
+        <nav class="nav-tabs" id="navTabs">
+            <button class="nav-tab active" data-nav="cut" title="Cut & Clean">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5a2.5 2.5 0 00-1.47 4.53L6.47 8 2.53 9.97A2.5 2.5 0 104 14.5a2.5 2.5 0 001.47-4.53L7.44 8.99 13.5 12V4L7.44 7.01 5.47 5.97A2.5 2.5 0 004 1.5zM2.5 4a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm0 8a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"/></svg>
+                <span>Cut</span>
+            </button>
+            <button class="nav-tab" data-nav="captions" title="Captions & Subtitles">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6.5L2 14.5V12H2a2 2 0 01-2-2V2zm4 3a.5.5 0 000 1h4a.5.5 0 000-1H4zm0 2.5a.5.5 0 000 1h8a.5.5 0 000-1H4z"/></svg>
+                <span>Captions</span>
+            </button>
+            <button class="nav-tab" data-nav="audio" title="Audio Suite">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1v14l-4-4H0V5h2l4-4zm7.07 1.93a.75.75 0 00-1.06 1.06 5.5 5.5 0 010 7.78.75.75 0 001.06 1.06 7 7 0 000-9.9zm-2.12 2.12a.75.75 0 00-1.06 1.06 2.5 2.5 0 010 3.54.75.75 0 001.06 1.06 4 4 0 000-5.66z"/></svg>
+                <span>Audio</span>
+            </button>
+            <button class="nav-tab" data-nav="video" title="Video Tools">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 3a2 2 0 012-2h8a2 2 0 012 2v4l4-2v6l-4-2v4a2 2 0 01-2 2H2a2 2 0 01-2-2V3z"/></svg>
+                <span>Video</span>
+            </button>
+            <button class="nav-tab" data-nav="export" title="Export & Publish">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8.5 1a.5.5 0 00-1 0v5.793L5.854 5.146a.5.5 0 10-.708.708l2.5 2.5a.5.5 0 00.708 0l2.5-2.5a.5.5 0 00-.708-.708L8.5 6.793V1zM2 10a2 2 0 00-2 2v1a2 2 0 002 2h12a2 2 0 002-2v-1a2 2 0 00-2-2h-3.5a.5.5 0 010-1H14a3 3 0 013 3v1a3 3 0 01-3 3H2a3 3 0 01-3-3v-1a3 3 0 013-3h3.5a.5.5 0 010 1H2z"/></svg>
+                <span>Export</span>
+            </button>
+            <button class="nav-tab" data-nav="settings" title="Settings">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 001.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.084.303a.96.96 0 001.187 1.187l.303-.084c.961-.275 1.65.918.931 1.613l-.211.205a.96.96 0 00.434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 00-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.303-.084a.96.96 0 00-1.187 1.187l.084.303c.275.961-.918 1.65-1.613.931l-.205-.211a.96.96 0 00-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 00-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.084-.303a.96.96 0 00-1.187-1.187l-.303.084c-.961.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 00-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071A.96.96 0 001.39 4.22l-.211-.205c-.719-.695-.03-1.888.931-1.613l.303.084a.96.96 0 001.187-1.187l-.084-.303C3.241.035 4.434-.654 5.13.065l.205.211A.96.96 0 006.997.71l.071-.286zM8 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
+                <span>Settings</span>
+            </button>
+        </nav>
+
+        <!-- ===== MAIN CONTENT ===== -->
+        <main class="main">
+
+            <!-- MEDIA SELECTION (persistent across all tabs) -->
+            <section class="card" id="clipSection">
+                <div class="card-header">
+                    <div class="card-title">
+                        <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" opacity="0.5"><path d="M2 3a1 1 0 011-1h4.586a1 1 0 01.707.293l.707.707H13a1 1 0 011 1v8a1 1 0 01-1 1H3a1 1 0 01-1-1V3z"/></svg>
+                        Media
+                    </div>
+                    <button class="link-btn" id="refreshClipsBtn" title="Rescan project">
+                        <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
+                        Refresh
+                    </button>
+                </div>
+                <select class="clip-select" id="clipSelect">
+                    <option value="" disabled selected>Loading project media...</option>
+                </select>
+                <div class="file-info hidden" id="fileInfoBox">
+                    <div class="file-name" id="fileNameDisplay"></div>
+                    <div class="file-meta" id="fileMetaDisplay"></div>
+                </div>
+                <div class="btn-row">
+                    <button class="btn-text" id="useSelectionBtn">Use Timeline Selection</button>
+                    <span class="btn-sep"></span>
+                    <button class="btn-text" id="browseFileBtn">Browse File...</button>
+                </div>
+            </section>
+
+            <!-- ======== TAB: CUT ======== -->
+            <div class="nav-panel active" id="panel-cut">
+                <div class="sub-tabs" id="cutSubTabs">
+                    <button class="sub-tab active" data-sub="silence">Silence</button>
+                    <button class="sub-tab" data-sub="fillers">Fillers</button>
+                    <button class="sub-tab" data-sub="full">Full Edit</button>
+                </div>
+
+                <div class="sub-panel active" id="sub-silence">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Preset</label>
+                            <select id="silencePreset">
+                                <option value="youtube" selected>YouTube (-28dB, 0.4s)</option>
+                                <option value="default">Default (-30dB, 0.5s)</option>
+                                <option value="aggressive">Aggressive (-25dB, 0.3s)</option>
+                                <option value="conservative">Conservative (-40dB, 1.0s)</option>
+                                <option value="podcast">Podcast (-35dB, 0.75s)</option>
+                                <option value="">Custom...</option>
+                            </select>
+                        </div>
+                        <div class="custom-settings hidden" id="customSilenceSettings">
+                            <div class="form-group">
+                                <label>Noise Threshold</label>
+                                <div class="slider-row">
+                                    <input type="range" id="threshold" min="-60" max="-10" value="-30" step="1">
+                                    <span class="slider-val" id="thresholdVal">-30 dB</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Min Silence Length</label>
+                                <div class="slider-row">
+                                    <input type="range" id="minDuration" min="0.1" max="3.0" value="0.5" step="0.1">
+                                    <span class="slider-val" id="minDurationVal">0.5s</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Padding (before / after)</label>
+                                <div class="input-pair">
+                                    <input type="number" id="padBefore" value="0.1" min="0" max="2" step="0.05">
+                                    <span>/</span>
+                                    <input type="number" id="padAfter" value="0.1" min="0" max="2" step="0.05">
+                                    <span class="unit">sec</span>
+                                </div>
+                            </div>
+                        </div>
+                        <button class="btn-primary" id="runSilenceBtn" disabled>Remove Silences</button>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-fillers">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Whisper Model</label>
+                            <select id="fillerModel">
+                                <option value="tiny">Tiny (fastest)</option>
+                                <option value="base" selected>Base (balanced)</option>
+                                <option value="small">Small (accurate)</option>
+                                <option value="medium">Medium (best)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Remove These Fillers</label>
+                            <div class="filler-checks" id="fillerChecks">
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="um" checked> um / umm</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="uh" checked> uh / uhh</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="er" checked> er / err</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="ah" checked> ah</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="hm" checked> hmm</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="like" checked> like</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="so"> so</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="you know" checked> you know</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="i mean" checked> i mean</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="basically" checked> basically</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="actually"> actually</label>
+                                <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="right"> right</label>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Custom <span class="hint-inline">(comma-separated)</span></label>
+                            <input type="text" id="fillerCustom" placeholder="e.g. whatever, totally, honestly" class="text-input">
+                        </div>
+                        <label class="checkbox-row"><input type="checkbox" id="fillerSilence" checked> Also remove silences</label>
+                        <button class="btn-primary" id="runFillersBtn" disabled>Clean Filler Words</button>
+                        <div class="hint hidden" id="fillersHint">Requires Whisper. Install from Settings tab.</div>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-full">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Preset</label>
+                            <select id="fullPreset">
+                                <option value="youtube" selected>YouTube</option>
+                                <option value="default">Default</option>
+                                <option value="aggressive">Aggressive</option>
+                                <option value="conservative">Conservative</option>
+                                <option value="podcast">Podcast</option>
+                            </select>
+                        </div>
+                        <label class="checkbox-row"><input type="checkbox" id="fullZoom" checked> Auto Zoom</label>
+                        <label class="checkbox-row"><input type="checkbox" id="fullCaptions" checked> Captions (SRT)</label>
+                        <label class="checkbox-row"><input type="checkbox" id="fullFillers"> Remove Filler Words</label>
+                        <button class="btn-primary" id="runFullBtn" disabled>Run Full Pipeline</button>
+                    </section>
+                </div>
+            </div>
+
+            <!-- ======== TAB: CAPTIONS ======== -->
+            <div class="nav-panel" id="panel-captions">
+                <div class="sub-tabs" id="captionSubTabs">
+                    <button class="sub-tab active" data-sub="cap-styled">Styled</button>
+                    <button class="sub-tab" data-sub="cap-subtitle">Subtitle</button>
+                    <button class="sub-tab" data-sub="cap-transcript">Transcript</button>
+                    <button class="sub-tab" data-sub="cap-translate">Translate</button>
+                    <button class="sub-tab" data-sub="cap-karaoke">Karaoke</button>
+                    <button class="sub-tab" data-sub="cap-burnin">Burn-in</button>
+                    <button class="sub-tab" data-sub="cap-animated">Animated</button>
+                </div>
+
+                <div class="sub-panel active" id="sub-cap-styled">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select id="captionModel">
+                                <option value="tiny">Tiny (fastest)</option>
+                                <option value="base" selected>Base (balanced)</option>
+                                <option value="small">Small (good)</option>
+                                <option value="medium">Medium (great)</option>
+                                <option value="large-v3">Large v3 (best)</option>
+                                <option value="turbo">Turbo (fast + great)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Language</label>
+                            <select id="captionLang">
+                                <option value="">Auto-detect</option>
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="zh">Chinese</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="it">Italian</option>
+                                <option value="ru">Russian</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Style</label>
+                            <select id="captionStyle">
+                                <optgroup label="Popular">
+                                    <option value="youtube_bold" selected>YouTube Bold</option>
+                                    <option value="clean_modern">Clean Modern</option>
+                                    <option value="neon_pop">Neon Pop</option>
+                                    <option value="minimal">Minimal</option>
+                                </optgroup>
+                                <optgroup label="Classic">
+                                    <option value="boxed">Boxed</option>
+                                    <option value="cinematic">Cinematic</option>
+                                    <option value="subtitle_classic">Classic Subtitle</option>
+                                </optgroup>
+                                <optgroup label="Creative">
+                                    <option value="glow">Glow</option>
+                                    <option value="karaoke">Karaoke</option>
+                                    <option value="outline">Outline</option>
+                                    <option value="gradient_fire">Fire Gradient</option>
+                                    <option value="bounce">Bounce</option>
+                                    <option value="comic">Comic</option>
+                                    <option value="typewriter">Typewriter</option>
+                                    <option value="news_ticker">News Ticker</option>
+                                </optgroup>
+                                <optgroup label="Platform">
+                                    <option value="instagram_stories">Instagram Stories</option>
+                                    <option value="netflix">Netflix</option>
+                                    <option value="documentary">Documentary</option>
+                                    <option value="sports">Sports</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="style-preview" id="stylePreview">
+                            <div class="style-preview-bg">
+                                <span class="sp-word" id="spW1">This</span>
+                                <span class="sp-word" id="spW2">is</span>
+                                <span class="sp-word sp-highlight" id="spW3">how</span>
+                                <span class="sp-word" id="spW4">your</span>
+                                <span class="sp-word sp-action" id="spW5">captions</span>
+                                <span class="sp-word" id="spW6">look</span>
+                            </div>
+                            <div class="sp-legend">
+                                <span class="sp-legend-item"><span class="sp-dot sp-dot-hl"></span> Current word</span>
+                                <span class="sp-legend-item"><span class="sp-dot sp-dot-act"></span> Action word</span>
+                            </div>
+                        </div>
+                        <label class="checkbox-row"><input type="checkbox" id="captionWordHighlight" checked> Word-by-word highlight</label>
+                        <label class="checkbox-row"><input type="checkbox" id="captionAutoAction" checked> Auto-detect action words</label>
+                        <label class="checkbox-row"><input type="checkbox" id="captionAutoEmoji"> Auto-insert emoji</label>
+                        <div class="form-group">
+                            <label>Custom Action Words <span class="hint-inline">(comma-separated)</span></label>
+                            <input type="text" id="actionWordsInput" placeholder="e.g. amazing, subscribe, click" class="text-input">
+                        </div>
+                        <button class="btn-primary" id="runStyledCaptionsBtn" disabled>Generate Styled Captions</button>
+                        <div class="hint hidden" id="captionsHint">
+                            Whisper not installed.
+                            <button class="btn-install" id="installWhisperBtn">Install Whisper Now</button>
+                            <div class="install-alt">Or manually: <code>pip install faster-whisper</code></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-cap-subtitle">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select id="subModel">
+                                <option value="tiny">Tiny (fastest)</option>
+                                <option value="base" selected>Base (balanced)</option>
+                                <option value="small">Small (good)</option>
+                                <option value="medium">Medium (great)</option>
+                                <option value="large-v3">Large v3 (best)</option>
+                                <option value="turbo">Turbo (fast + great)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Language</label>
+                            <select id="subLang">
+                                <option value="">Auto-detect</option>
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="zh">Chinese</option>
+                                <option value="pt">Portuguese</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Format</label>
+                            <select id="subFormat">
+                                <option value="srt">SRT (SubRip)</option>
+                                <option value="vtt">WebVTT</option>
+                                <option value="ass">ASS (Karaoke)</option>
+                                <option value="json">JSON (Word-level)</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" id="runSubtitleBtn" disabled>Export Subtitles</button>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-cap-transcript">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select id="transcriptModel">
+                                <option value="tiny">Tiny (fastest)</option>
+                                <option value="base" selected>Base (balanced)</option>
+                                <option value="small">Small (good)</option>
+                                <option value="medium">Medium (great)</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" id="runTranscriptBtn" disabled>Transcribe</button>
+                        <div class="transcript-editor hidden" id="transcriptEditor">
+                            <div class="transcript-header">
+                                <span class="transcript-info" id="transcriptInfo"></span>
+                                <div class="transcript-actions">
+                                    <select id="transcriptExportFormat" class="inline-select">
+                                        <option value="srt">SRT</option>
+                                        <option value="vtt">VTT</option>
+                                        <option value="ass">ASS</option>
+                                        <option value="json">JSON</option>
+                                    </select>
+                                    <button class="btn-sm" id="exportTranscriptBtn">Export</button>
+                                </div>
+                            </div>
+                            <div class="transcript-segments" id="transcriptSegments"></div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- TRANSLATE CAPTIONS -->
+                <div class="sub-panel" id="sub-cap-translate">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
+                                Caption Translation
+                            </div>
+                        </div>
+                        <p class="card-desc">Translate captions to 200+ languages using Meta's NLLB model. Runs offline, ~1.2GB model download on first use.</p>
+
+                        <div class="form-group">
+                            <label>Step 1: Transcribe (if needed)</label>
+                            <select id="translateModel">
+                                <option value="tiny">Tiny (fastest)</option>
+                                <option value="base" selected>Base (balanced)</option>
+                                <option value="small">Small (good)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Source Language</label>
+                            <select id="translateSourceLang">
+                                <option value="en" selected>English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="ja">Japanese</option>
+                                <option value="zh">Chinese</option>
+                                <option value="ko">Korean</option>
+                                <option value="ru">Russian</option>
+                                <option value="ar">Arabic</option>
+                                <option value="hi">Hindi</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Target Language</label>
+                            <select id="translateTargetLang">
+                                <option value="es" selected>Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="ja">Japanese</option>
+                                <option value="zh">Chinese (Simplified)</option>
+                                <option value="ko">Korean</option>
+                                <option value="ru">Russian</option>
+                                <option value="ar">Arabic</option>
+                                <option value="hi">Hindi</option>
+                                <option value="nl">Dutch</option>
+                                <option value="pl">Polish</option>
+                                <option value="sv">Swedish</option>
+                                <option value="tr">Turkish</option>
+                                <option value="th">Thai</option>
+                                <option value="vi">Vietnamese</option>
+                                <option value="id">Indonesian</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Output Format</label>
+                            <select id="translateFormat">
+                                <option value="srt" selected>SRT</option>
+                                <option value="vtt">VTT</option>
+                                <option value="ass">ASS</option>
+                            </select>
+                        </div>
+
+                        <button class="btn-primary" id="runTranslateBtn" disabled>Transcribe &amp; Translate</button>
+
+                        <div class="hint hidden" id="translateHint">
+                            NLLB translation model not installed.
+                            <button class="btn-install" id="installNllbBtn">Install NLLB</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- KARAOKE CAPTIONS -->
+                <div class="sub-panel" id="sub-cap-karaoke">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
+                                Karaoke Captions
+                            </div>
+                        </div>
+                        <p class="card-desc">Generate word-by-word karaoke-style captions with smooth fill/wipe animation. Uses WhisperX for precise word timing, exports ASS subtitles.</p>
+
+                        <div class="form-group">
+                            <label>Whisper Model</label>
+                            <select id="karaokeModel">
+                                <option value="tiny">Tiny (fastest)</option>
+                                <option value="base" selected>Base (balanced)</option>
+                                <option value="small">Small (best timing)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Font</label>
+                            <select id="karaokeFont">
+                                <option value="Arial" selected>Arial</option>
+                                <option value="Impact">Impact</option>
+                                <option value="Helvetica">Helvetica</option>
+                                <option value="Verdana">Verdana</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Font Size</label>
+                            <div class="slider-row">
+                                <input type="range" id="karaokeFontSize" min="24" max="96" value="48" step="4">
+                                <span class="slider-val" id="karaokeFontSizeVal">48</span>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="karaokeDiarize">
+                            Enable speaker labels (requires HuggingFace token)
+                        </label>
+
+                        <button class="btn-primary" id="runKaraokeBtn" disabled>Generate Karaoke</button>
+
+                        <div class="hint hidden" id="karaokeHint">
+                            WhisperX not installed (required for word-level timing).
+                            <button class="btn-install" id="installWhisperxBtn">Install WhisperX</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- CAPTION BURN-IN -->
+                <div class="sub-panel" id="sub-cap-burnin">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="15" x2="17" y2="15"/><line x1="7" y1="18" x2="14" y2="18"/></svg>
+                                Caption Burn-in
+                            </div>
+                        </div>
+                        <p class="card-desc">Hardcode captions directly into video pixels. Use when the target player doesn't support soft subtitles. Generates ASS then renders via FFmpeg.</p>
+
+                        <div class="form-group">
+                            <label>Burn-in Style</label>
+                            <select id="burninStyle">
+                                <option value="default">Default White</option>
+                                <option value="bold_yellow">Bold Yellow</option>
+                                <option value="boxed_dark">Dark Box</option>
+                                <option value="neon_cyan">Neon Cyan</option>
+                                <option value="cinematic_serif">Cinematic Serif</option>
+                                <option value="top_center">Top Center</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Whisper Model</label>
+                            <select id="burninModel">
+                                <option value="tiny">Tiny (fastest)</option>
+                                <option value="base" selected>Base (balanced)</option>
+                                <option value="small">Small (accurate)</option>
+                            </select>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="burninAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runBurninBtn" disabled>Burn Captions into Video</button>
+                    </section>
+                </div>
+
+                <!-- ANIMATED CAPTIONS -->
+                <div class="sub-panel" id="sub-cap-animated">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Animated Captions</div></div>
+                        <p class="card-desc">CapCut/Submagic-style word-by-word animated captions. Transcribes with WhisperX, then renders animated overlays via Pillow.</p>
+                        <div class="form-group"><label>Animation</label>
+                            <select id="animCapPreset"><option value="pop">Pop (CapCut style)</option><option value="fade">Fade</option><option value="slide_up">Slide Up</option><option value="typewriter">Typewriter</option><option value="bounce">Bounce</option><option value="glow">Glow</option><option value="highlight_box">Highlight Box</option></select></div>
+                        <div class="form-group"><label>Font Size</label><div class="slider-row"><input type="range" id="animCapFontSize" min="28" max="96" value="56" step="2"><span class="slider-val" id="animCapFontSizeVal">56</span></div></div>
+                        <div class="form-group"><label>Words Per Line</label><div class="slider-row"><input type="range" id="animCapWpl" min="2" max="10" value="6" step="1"><span class="slider-val" id="animCapWplVal">6</span></div></div>
+                        <div class="form-group"><label>Whisper Model</label>
+                            <select id="animCapModel"><option value="tiny">Tiny (fastest)</option><option value="base" selected>Base (balanced)</option><option value="small">Small (accurate)</option></select></div>
+                        <button class="btn-primary" id="runAnimCapBtn" disabled>Render Animated Captions</button>
+                    </section>
+                </div>
+            </div>
+
+            <!-- ======== TAB: AUDIO ======== -->
+            <div class="nav-panel" id="panel-audio">
+                <div class="sub-tabs" id="audioSubTabs">
+                    <button class="sub-tab active" data-sub="aud-separate">Separate</button>
+                    <button class="sub-tab" data-sub="aud-denoise">Denoise</button>
+                    <button class="sub-tab" data-sub="aud-pro">Pro FX</button>
+                    <button class="sub-tab" data-sub="aud-normalize">Normalize</button>
+                    <button class="sub-tab" data-sub="aud-beats">Beats</button>
+                    <button class="sub-tab" data-sub="aud-effects">Effects</button>
+                    <button class="sub-tab" data-sub="aud-tts">TTS</button>
+                    <button class="sub-tab" data-sub="aud-sfx">SFX</button>
+                    <button class="sub-tab" data-sub="aud-duck">Duck</button>
+                    <button class="sub-tab" data-sub="aud-musicai">Music AI</button>
+                </div>
+
+                <div class="sub-panel active" id="sub-aud-separate">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
+                                AI Stem Separation
+                            </div>
+                        </div>
+                        <p class="card-desc">Separate audio into individual stems using Meta's Demucs AI model. Extract vocals, remove music, or isolate instruments.</p>
+                        
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select id="separateModel">
+                                <option value="htdemucs" selected>HTDemucs (recommended)</option>
+                                <option value="htdemucs_ft">HTDemucs Fine-Tuned (best quality)</option>
+                                <option value="htdemucs_6s">HTDemucs 6-Stem (piano/guitar)</option>
+                                <option value="mdx_extra">MDX Extra (fast)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Output Stems</label>
+                            <div class="stem-checks">
+                                <label class="stem-check"><input type="checkbox" id="stemVocals" checked><span class="stem-icon">🎤</span> Vocals</label>
+                                <label class="stem-check"><input type="checkbox" id="stemInstrumental" checked><span class="stem-icon">🎵</span> Instrumental</label>
+                                <label class="stem-check"><input type="checkbox" id="stemDrums"><span class="stem-icon">🥁</span> Drums</label>
+                                <label class="stem-check"><input type="checkbox" id="stemBass"><span class="stem-icon">🎸</span> Bass</label>
+                                <label class="stem-check"><input type="checkbox" id="stemOther"><span class="stem-icon">🎹</span> Other</label>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Output Format</label>
+                            <select id="separateFormat">
+                                <option value="wav" selected>WAV (lossless)</option>
+                                <option value="mp3">MP3 (320kbps)</option>
+                                <option value="flac">FLAC (lossless compressed)</option>
+                            </select>
+                        </div>
+                        
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="separateImport" checked>
+                            Auto-import stems to project
+                        </label>
+                        
+                        <button class="btn-primary" id="runSeparateBtn" disabled>Separate Audio</button>
+                        
+                        <div class="hint hidden" id="separateHint">
+                            Demucs not installed.
+                            <button class="btn-install" id="installDemucsBtn">Install Demucs</button>
+                            <div class="install-alt">Or manually: <code>pip install demucs</code></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-aud-denoise">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Method</label>
+                            <select id="denoiseMethod">
+                                <option value="afftdn" selected>FFT Denoise (recommended)</option>
+                                <option value="bandpass">Bandpass Filter</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Strength</label>
+                            <div class="slider-row">
+                                <input type="range" id="denoiseStrength" min="0.1" max="1.0" value="0.7" step="0.1">
+                                <span class="slider-val" id="denoiseStrengthVal">0.7</span>
+                            </div>
+                        </div>
+                        <button class="btn-primary" id="runDenoiseBtn" disabled>Remove Noise</button>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-aud-pro">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+                                Studio Effects (Pedalboard)
+                            </div>
+                        </div>
+                        <p class="card-desc">Professional audio effects powered by Spotify's Pedalboard engine. 300x faster than pySoX.</p>
+
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="proFxCategory">
+                                <option value="preset">Presets (one-click chains)</option>
+                                <option value="dynamics">Dynamics</option>
+                                <option value="eq">EQ / Filters</option>
+                                <option value="spatial">Spatial / Time</option>
+                                <option value="character">Character / Distortion</option>
+                                <option value="pitch">Pitch</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Effect</label>
+                            <select id="proFxEffect">
+                                <!-- Populated dynamically from category -->
+                            </select>
+                        </div>
+
+                        <div id="proFxParams">
+                            <!-- Dynamic params inserted here by JS -->
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="proFxAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runProFxBtn" disabled>Apply Effect</button>
+
+                        <div class="hint hidden" id="proFxHint">
+                            Pedalboard not installed.
+                            <button class="btn-install" id="installPedalboardBtn">Install Pedalboard</button>
+                            <div class="install-alt">Or: <code>pip install pedalboard</code></div>
+                        </div>
+                    </section>
+
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/></svg>
+                                AI Noise Reduction (DeepFilterNet)
+                            </div>
+                        </div>
+                        <p class="card-desc">Broadcast-grade AI speech enhancement. Runs real-time on CPU, &lt;10MB model. Ideal for podcast/voiceover cleanup.</p>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="deepFilterAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runDeepFilterBtn" disabled>AI Denoise</button>
+
+                        <div class="hint hidden" id="deepFilterHint">
+                            DeepFilterNet not installed.
+                            <button class="btn-install" id="installDeepFilterBtn">Install DeepFilterNet</button>
+                            <div class="install-alt">Or: <code>pip install deepfilternet</code></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-aud-normalize">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Platform Preset</label>
+                            <select id="normalizePreset">
+                                <option value="youtube" selected>YouTube (-14 LUFS)</option>
+                                <option value="podcast">Podcast (-16 LUFS)</option>
+                                <option value="broadcast">Broadcast (-23 LUFS)</option>
+                                <option value="spotify">Spotify (-14 LUFS)</option>
+                                <option value="apple_podcasts">Apple Podcasts (-16 LUFS)</option>
+                                <option value="tiktok">TikTok (-14 LUFS)</option>
+                            </select>
+                        </div>
+                        <div class="loudness-meter hidden" id="loudnessMeter">
+                            <div class="meter-row"><span class="meter-label">Integrated</span><span class="meter-value" id="meterLUFS">-- LUFS</span></div>
+                            <div class="meter-row"><span class="meter-label">True Peak</span><span class="meter-value" id="meterTP">-- dBTP</span></div>
+                            <div class="meter-row"><span class="meter-label">Range</span><span class="meter-value" id="meterLRA">-- LU</span></div>
+                        </div>
+                        <div class="btn-row-split">
+                            <button class="btn-outline btn-half" id="measureLoudnessBtn" disabled>Measure</button>
+                            <button class="btn-primary btn-half" id="runNormalizeBtn" disabled>Normalize</button>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-aud-beats">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Sensitivity</label>
+                            <div class="slider-row">
+                                <input type="range" id="beatSensitivity" min="0.1" max="1.0" value="0.5" step="0.1">
+                                <span class="slider-val" id="beatSensitivityVal">0.5</span>
+                            </div>
+                        </div>
+                        <button class="btn-primary" id="runBeatsBtn" disabled>Detect Beats</button>
+                        <div class="beat-results hidden" id="beatResults">
+                            <div class="stat-grid">
+                                <div class="stat-item"><span class="stat-value" id="bpmValue">--</span><span class="stat-label">BPM</span></div>
+                                <div class="stat-item"><span class="stat-value" id="beatCount">--</span><span class="stat-label">Beats</span></div>
+                                <div class="stat-item"><span class="stat-value" id="beatConfidence">--</span><span class="stat-label">Confidence</span></div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-aud-effects">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Effect</label>
+                            <select id="audioEffect">
+                                <option value="reverb">Reverb (Room)</option>
+                                <option value="echo">Echo</option>
+                                <option value="pitch_up">Pitch Up</option>
+                                <option value="pitch_down">Pitch Down</option>
+                                <option value="bass_boost">Bass Boost</option>
+                                <option value="treble_boost">Treble Boost</option>
+                                <option value="telephone">Telephone</option>
+                                <option value="radio">Radio</option>
+                                <option value="slow_mo">Slow-Mo Voice</option>
+                                <option value="chipmunk">Chipmunk</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" id="runEffectBtn" disabled>Apply Effect</button>
+                    </section>
+                </div>
+
+                <!-- TEXT-TO-SPEECH -->
+                <div class="sub-panel" id="sub-aud-tts">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
+                                Voice Generation (TTS)
+                            </div>
+                        </div>
+                        <p class="card-desc">Generate voiceovers and narration. Edge TTS uses Microsoft's free online service (400+ voices, 75+ languages). Kokoro runs offline.</p>
+
+                        <div class="form-group">
+                            <label>Engine</label>
+                            <select id="ttsEngine">
+                                <option value="edge" selected>Edge TTS (online, free)</option>
+                                <option value="kokoro">Kokoro (offline, 350MB)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Voice</label>
+                            <select id="ttsVoice">
+                                <option value="en-US-AriaNeural">Aria (US Female)</option>
+                                <option value="en-US-GuyNeural">Guy (US Male)</option>
+                                <option value="en-US-JennyNeural">Jenny (US Female)</option>
+                                <option value="en-US-RogerNeural">Roger (US Male, Narration)</option>
+                                <option value="en-GB-SoniaNeural">Sonia (UK Female)</option>
+                                <option value="en-GB-RyanNeural">Ryan (UK Male)</option>
+                                <option value="es-MX-DaliaNeural">Dalia (Spanish Female)</option>
+                                <option value="fr-FR-DeniseNeural">Denise (French Female)</option>
+                                <option value="de-DE-KatjaNeural">Katja (German Female)</option>
+                                <option value="ja-JP-NanamiNeural">Nanami (Japanese Female)</option>
+                                <option value="zh-CN-XiaoxiaoNeural">Xiaoxiao (Chinese Female)</option>
+                                <option value="ko-KR-SunHiNeural">Sun-Hi (Korean Female)</option>
+                                <option value="pt-BR-FranciscaNeural">Francisca (Portuguese Female)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Speed</label>
+                            <div class="slider-row">
+                                <input type="range" id="ttsRate" min="-50" max="100" value="0" step="5">
+                                <span class="slider-val" id="ttsRateVal">+0%</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Text</label>
+                            <textarea id="ttsText" rows="4" placeholder="Enter text to speak..." style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;resize:vertical;"></textarea>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="ttsAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runTtsBtn">Generate Speech</button>
+
+                        <div class="hint hidden" id="ttsHint">
+                            Edge TTS not installed.
+                            <button class="btn-install" id="installEdgeTtsBtn">Install Edge TTS</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- SFX GENERATOR -->
+                <div class="sub-panel" id="sub-aud-sfx">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
+                                SFX &amp; Tone Generator
+                            </div>
+                        </div>
+                        <p class="card-desc">Synthesize sound effects and tones using FFmpeg. No dependencies needed.</p>
+
+                        <div class="form-group">
+                            <label>Generator</label>
+                            <select id="sfxType">
+                                <option value="sfx" selected>Sound Effects</option>
+                                <option value="tone">Tone Generator</option>
+                            </select>
+                        </div>
+
+                        <!-- SFX params -->
+                        <div id="sfxPresetParams">
+                            <div class="form-group">
+                                <label>SFX Preset</label>
+                                <select id="sfxPreset">
+                                    <option value="swoosh">Swoosh (transition)</option>
+                                    <option value="impact">Impact (bass hit)</option>
+                                    <option value="rise">Rise / Riser</option>
+                                    <option value="drop">Drop (bass)</option>
+                                    <option value="click">Click (UI)</option>
+                                    <option value="beep">Beep (alert)</option>
+                                    <option value="white_noise">White Noise</option>
+                                    <option value="countdown_tick">Countdown Tick</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Tone params -->
+                        <div id="sfxToneParams" class="hidden">
+                            <div class="form-group">
+                                <label>Waveform</label>
+                                <select id="toneWaveform">
+                                    <option value="sine">Sine</option>
+                                    <option value="square">Square</option>
+                                    <option value="sawtooth">Sawtooth</option>
+                                    <option value="triangle">Triangle</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Frequency (Hz)</label>
+                                <div class="slider-row">
+                                    <input type="range" id="toneFreq" min="40" max="8000" value="440" step="10">
+                                    <span class="slider-val" id="toneFreqVal">440</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Duration (sec)</label>
+                            <div class="slider-row">
+                                <input type="range" id="sfxDuration" min="0.1" max="10" value="1.0" step="0.1">
+                                <span class="slider-val" id="sfxDurationVal">1.0</span>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="sfxAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runSfxBtn">Generate</button>
+                    </section>
+                </div>
+
+                <!-- AUDIO DUCKING -->
+                <div class="sub-panel" id="sub-aud-duck">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>
+                                Audio Ducking
+                            </div>
+                        </div>
+                        <p class="card-desc">Auto-lower background music when speech is detected. Uses FFmpeg sidechain compression. Select the video/voice clip above, then provide a music file path below.</p>
+
+                        <div class="form-group">
+                            <label>Music File Path</label>
+                            <input type="text" id="duckMusicPath" placeholder="/path/to/background_music.mp3" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Music Volume (base)</label>
+                            <div class="slider-row">
+                                <input type="range" id="duckMusicVol" min="0.05" max="1.0" value="0.25" step="0.05">
+                                <span class="slider-val" id="duckMusicVolVal">0.25</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Duck Amount</label>
+                            <div class="slider-row">
+                                <input type="range" id="duckAmount" min="0.1" max="1.0" value="0.7" step="0.05">
+                                <span class="slider-val" id="duckAmountVal">0.7</span>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="duckAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runDuckBtn" disabled>Add Music with Ducking</button>
+                    </section>
+                </div>
+
+                <!-- MUSIC AI (MusicGen) -->
+                <div class="sub-panel" id="sub-aud-musicai">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">AI Music Generation</div></div>
+                        <p class="card-desc">Generate music from text descriptions via Meta's MusicGen. Requires AudioCraft + CUDA GPU (1.2-13GB VRAM).</p>
+                        <div class="form-group"><label>Prompt</label>
+                            <textarea id="musicAiPrompt" rows="3" placeholder="upbeat electronic dance music with driving bassline and synth arpeggios" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;resize:vertical;"></textarea></div>
+                        <div class="form-group"><label>Model</label>
+                            <select id="musicAiModel"><option value="small" selected>Small (300M, 1.2GB)</option><option value="medium">Medium (1.5B, 6GB)</option><option value="large">Large (3.3B, 13GB)</option></select></div>
+                        <div class="form-group"><label>Duration (sec)</label><div class="slider-row"><input type="range" id="musicAiDur" min="5" max="30" value="10" step="1"><span class="slider-val" id="musicAiDurVal">10</span></div></div>
+                        <div class="form-group"><label>Temperature</label><div class="slider-row"><input type="range" id="musicAiTemp" min="0.5" max="1.5" value="1.0" step="0.05"><span class="slider-val" id="musicAiTempVal">1.0</span></div></div>
+                        <label class="checkbox-row"><input type="checkbox" id="musicAiAutoImport" checked>Auto-import result to project</label>
+                        <button class="btn-primary" id="runMusicAiBtn">Generate Music</button>
+                    </section>
+                </div>
+            </div>
+
+            <!-- ======== TAB: VIDEO ======== -->
+            <div class="nav-panel" id="panel-video">
+                <div class="sub-tabs" id="videoSubTabs">
+                    <button class="sub-tab active" data-sub="vid-effects">Effects</button>
+                    <button class="sub-tab" data-sub="vid-ai">AI Tools</button>
+                    <button class="sub-tab" data-sub="vid-face">Face</button>
+                    <button class="sub-tab" data-sub="vid-style">Style</button>
+                    <button class="sub-tab" data-sub="vid-watermark">Watermark</button>
+                    <button class="sub-tab" data-sub="vid-scenes">Scenes</button>
+                    <button class="sub-tab" data-sub="vid-speed">Speed</button>
+                    <button class="sub-tab" data-sub="vid-lut">LUTs</button>
+                    <button class="sub-tab" data-sub="vid-chroma">Chroma</button>
+                    <button class="sub-tab" data-sub="vid-transition">Transitions</button>
+                    <button class="sub-tab" data-sub="vid-particles">Particles</button>
+                    <button class="sub-tab" data-sub="vid-titles">Titles</button>
+                    <button class="sub-tab" data-sub="vid-upscale">Upscale</button>
+                    <button class="sub-tab" data-sub="vid-color">Color</button>
+                    <button class="sub-tab" data-sub="vid-remove">Remove</button>
+                    <button class="sub-tab" data-sub="vid-faceswap">Face AI</button>
+                </div>
+
+                <!-- VIDEO EFFECTS (FFmpeg-based, always available) -->
+                <div class="sub-panel active" id="sub-vid-effects">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20 14.5 14.5 0 000-20"/><path d="M2 12h20"/></svg>
+                                Video Effects
+                            </div>
+                        </div>
+                        <p class="card-desc">FFmpeg-based effects applied directly to video. No AI models required.</p>
+
+                        <div class="form-group">
+                            <label>Effect</label>
+                            <select id="vfxSelect">
+                                <option value="stabilize">Stabilize Video</option>
+                                <option value="vignette">Vignette</option>
+                                <option value="film_grain">Film Grain</option>
+                                <option value="letterbox">Letterbox (Cinematic Bars)</option>
+                                <option value="chromakey">Chromakey (Green Screen)</option>
+                                <option value="lut">Apply LUT (.cube)</option>
+                                <option value="color_match">Auto Color Normalize</option>
+                            </select>
+                        </div>
+
+                        <!-- Stabilize params -->
+                        <div class="vfx-params" id="vfxParams-stabilize">
+                            <div class="form-group">
+                                <label>Smoothing</label>
+                                <div class="slider-row">
+                                    <input type="range" id="vfxStabSmoothing" min="3" max="30" value="10" step="1">
+                                    <span class="slider-val" id="vfxStabSmoothingVal">10</span>
+                                </div>
+                                <span class="hint-inline">Higher = smoother camera, more crop</span>
+                            </div>
+                            <div class="form-group">
+                                <label>Zoom (%)</label>
+                                <div class="slider-row">
+                                    <input type="range" id="vfxStabZoom" min="0" max="20" value="0" step="1">
+                                    <span class="slider-val" id="vfxStabZoomVal">0%</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Vignette params -->
+                        <div class="vfx-params hidden" id="vfxParams-vignette">
+                            <div class="form-group">
+                                <label>Intensity</label>
+                                <div class="slider-row">
+                                    <input type="range" id="vfxVignetteIntensity" min="0.1" max="1.0" value="0.5" step="0.1">
+                                    <span class="slider-val" id="vfxVignetteIntensityVal">0.5</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Film Grain params -->
+                        <div class="vfx-params hidden" id="vfxParams-film_grain">
+                            <div class="form-group">
+                                <label>Grain Intensity</label>
+                                <div class="slider-row">
+                                    <input type="range" id="vfxGrainIntensity" min="0.1" max="1.0" value="0.5" step="0.1">
+                                    <span class="slider-val" id="vfxGrainIntensityVal">0.5</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Letterbox params -->
+                        <div class="vfx-params hidden" id="vfxParams-letterbox">
+                            <div class="form-group">
+                                <label>Aspect Ratio</label>
+                                <select id="vfxLetterboxAspect">
+                                    <option value="2.39:1">2.39:1 (Anamorphic)</option>
+                                    <option value="2.00:1">2.00:1 (Univisium)</option>
+                                    <option value="1.85:1">1.85:1 (Widescreen)</option>
+                                    <option value="4:3">4:3 (Classic TV)</option>
+                                    <option value="1:1">1:1 (Square)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Chromakey params -->
+                        <div class="vfx-params hidden" id="vfxParams-chromakey">
+                            <div class="form-group">
+                                <label>Key Color</label>
+                                <select id="vfxChromakeyColor">
+                                    <option value="0x00FF00">Green Screen</option>
+                                    <option value="0x0000FF">Blue Screen</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Similarity</label>
+                                <div class="slider-row">
+                                    <input type="range" id="vfxChromakeySim" min="0.05" max="0.8" value="0.3" step="0.05">
+                                    <span class="slider-val" id="vfxChromakeySimVal">0.30</span>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>Blend</label>
+                                <div class="slider-row">
+                                    <input type="range" id="vfxChromakeyBlend" min="0.0" max="0.5" value="0.1" step="0.05">
+                                    <span class="slider-val" id="vfxChromakeyBlendVal">0.10</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- LUT params -->
+                        <div class="vfx-params hidden" id="vfxParams-lut">
+                            <div class="form-group">
+                                <label>LUT File Path</label>
+                                <input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube">
+                            </div>
+                            <div class="form-group">
+                                <label>Intensity</label>
+                                <div class="slider-row">
+                                    <input type="range" id="vfxLutIntensity" min="0.1" max="1.0" value="1.0" step="0.1">
+                                    <span class="slider-val" id="vfxLutIntensityVal">1.0</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Color match params (none needed) -->
+                        <div class="vfx-params hidden" id="vfxParams-color_match"></div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="vfxAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runVfxBtn" disabled>Apply Effect</button>
+                    </section>
+                </div>
+
+                <!-- VIDEO AI TOOLS -->
+                <div class="sub-panel" id="sub-vid-ai">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+                                AI Video Tools
+                            </div>
+                        </div>
+                        <p class="card-desc">AI-powered video processing. Models download on first use.</p>
+
+                        <div class="form-group">
+                            <label>Tool</label>
+                            <select id="vidAiTool">
+                                <option value="upscale">AI Upscale (Real-ESRGAN)</option>
+                                <option value="rembg">AI Background Removal</option>
+                                <option value="interpolate">AI Frame Interpolation</option>
+                                <option value="denoise">AI Video Denoise</option>
+                            </select>
+                        </div>
+
+                        <!-- Upscale params -->
+                        <div class="vidai-params" id="vidAiParams-upscale">
+                            <div class="form-group">
+                                <label>Scale</label>
+                                <select id="vidAiUpscaleScale">
+                                    <option value="2">2x</option>
+                                    <option value="4">4x</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Model</label>
+                                <select id="vidAiUpscaleModel">
+                                    <option value="realesrgan-x4plus">General (Real-ESRGAN)</option>
+                                    <option value="realesrgan-x4plus-anime">Anime / Cartoon</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Background removal params -->
+                        <div class="vidai-params hidden" id="vidAiParams-rembg">
+                            <div class="form-group">
+                                <label>Model</label>
+                                <select id="vidAiRembgModel">
+                                    <option value="u2net">U2Net (general, fast)</option>
+                                    <option value="u2net_human_seg">U2Net Human (people)</option>
+                                    <option value="isnet-general-use">ISNet (general)</option>
+                                    <option value="birefnet-general">BiRefNet (best quality)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Background</label>
+                                <select id="vidAiRembgBg">
+                                    <option value="">Transparent (ProRes 4444)</option>
+                                    <option value="#000000">Black</option>
+                                    <option value="#FFFFFF">White</option>
+                                    <option value="#00FF00">Green</option>
+                                </select>
+                            </div>
+                            <label class="checkbox-row">
+                                <input type="checkbox" id="vidAiRembgAlpha">
+                                Export alpha matte only (grayscale)
+                            </label>
+                        </div>
+
+                        <!-- Frame interpolation params -->
+                        <div class="vidai-params hidden" id="vidAiParams-interpolate">
+                            <div class="form-group">
+                                <label>Multiplier</label>
+                                <select id="vidAiInterpMultiplier">
+                                    <option value="2">2x (e.g. 30fps -> 60fps)</option>
+                                    <option value="4">4x (e.g. 30fps -> 120fps)</option>
+                                    <option value="8">8x (extreme slow-mo)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Video denoise params -->
+                        <div class="vidai-params hidden" id="vidAiParams-denoise">
+                            <div class="form-group">
+                                <label>Method</label>
+                                <select id="vidAiDenoiseMethod">
+                                    <option value="nlmeans">NL-Means (best quality)</option>
+                                    <option value="hqdn3d">HQDN3D (fast)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Strength</label>
+                                <div class="slider-row">
+                                    <input type="range" id="vidAiDenoiseStrength" min="0.1" max="1.0" value="0.5" step="0.1">
+                                    <span class="slider-val" id="vidAiDenoiseStrengthVal">0.5</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="vidAiAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runVidAiBtn" disabled>Run AI Tool</button>
+
+                        <div class="hint hidden" id="vidAiHint">
+                            <span id="vidAiHintText">AI model not installed.</span>
+                            <button class="btn-install" id="installVidAiBtn">Install Now</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- FACE BLUR / AUTO-CENSOR -->
+                <div class="sub-panel" id="sub-vid-face">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M3 21v-2a7 7 0 0114 0v2"/></svg>
+                                Face Blur / Auto-Censor
+                            </div>
+                        </div>
+                        <p class="card-desc">Auto-detect and blur all faces in video using MediaPipe AI (468-point face mesh). Falls back to OpenCV Haar cascades if needed.</p>
+
+                        <div class="form-group">
+                            <label>Blur Method</label>
+                            <select id="faceBlurMethod">
+                                <option value="gaussian">Gaussian Blur</option>
+                                <option value="pixelate">Pixelate (Mosaic)</option>
+                                <option value="black">Black Box</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Blur Strength</label>
+                            <div class="slider-row">
+                                <input type="range" id="faceBlurStrength" min="11" max="101" value="51" step="10">
+                                <span class="slider-val" id="faceBlurStrengthVal">51</span>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Detector</label>
+                            <select id="faceDetector">
+                                <option value="mediapipe">MediaPipe (best, requires install)</option>
+                                <option value="haar">OpenCV Haar (no install needed)</option>
+                            </select>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="faceBlurAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runFaceBlurBtn" disabled>Blur Faces</button>
+
+                        <div class="hint hidden" id="faceHint">
+                            MediaPipe not installed. Using OpenCV Haar fallback.
+                            <button class="btn-install" id="installMediapipeBtn">Install MediaPipe</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- STYLE TRANSFER -->
+                <div class="sub-panel" id="sub-vid-style">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                AI Style Transfer
+                            </div>
+                        </div>
+                        <p class="card-desc">Apply artistic painting styles to your video using neural networks. Models download on first use (~6MB each).</p>
+
+                        <div class="form-group">
+                            <label>Style</label>
+                            <select id="styleModel">
+                                <option value="candy">Candy (bright, colorful)</option>
+                                <option value="mosaic">Mosaic (stained glass)</option>
+                                <option value="rain_princess">Rain Princess (impressionist)</option>
+                                <option value="udnie">Udnie (abstract cubist)</option>
+                                <option value="starry_night">Starry Night (Van Gogh)</option>
+                                <option value="the_scream">The Scream (Munch)</option>
+                                <option value="la_muse">La Muse (expressionist)</option>
+                                <option value="pointilism">Pointilism (dotted)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Style Intensity</label>
+                            <div class="slider-row">
+                                <input type="range" id="styleIntensity" min="0.1" max="1.0" value="1.0" step="0.1">
+                                <span class="slider-val" id="styleIntensityVal">1.0</span>
+                            </div>
+                            <span class="hint-inline">Lower = subtle blend with original</span>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="styleAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runStyleBtn" disabled>Apply Style</button>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-vid-watermark">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="4" y1="4" x2="20" y2="20"/></svg>
+                                AI Watermark Removal
+                            </div>
+                        </div>
+                        <p class="card-desc">Remove watermarks from videos and images using Florence-2 detection and LaMA inpainting. Works with AI-generated content (Sora, Runway, etc).</p>
+                        
+                        <div class="form-group">
+                            <label>Detection Sensitivity</label>
+                            <div class="slider-row">
+                                <input type="range" id="wmMaxBbox" min="5" max="30" value="10" step="1">
+                                <span class="slider-val" id="wmMaxBboxVal">10%</span>
+                            </div>
+                            <span class="hint-inline">Max watermark size as % of image</span>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>Detection Prompt</label>
+                            <input type="text" id="wmPrompt" class="text-input" value="watermark" placeholder="watermark, logo, text overlay">
+                        </div>
+                        
+                        <div class="form-group hidden" id="wmVideoOptions">
+                            <label>Video Frame Skip</label>
+                            <div class="slider-row">
+                                <input type="range" id="wmFrameSkip" min="1" max="10" value="3" step="1">
+                                <span class="slider-val" id="wmFrameSkipVal">3</span>
+                            </div>
+                            <span class="hint-inline">Detect every N frames (faster processing)</span>
+                        </div>
+                        
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="wmTransparent">
+                            Make watermark area transparent (PNG only)
+                        </label>
+                        
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="wmPreview">
+                            Preview detection only (no removal)
+                        </label>
+                        
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="wmAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+                        
+                        <button class="btn-primary" id="runWatermarkBtn" disabled>Remove Watermark</button>
+                        
+                        <div class="hint hidden" id="watermarkHint">
+                            Watermark remover not installed.
+                            <button class="btn-install" id="installWatermarkBtn">Install Now</button>
+                            <div class="install-alt">Requires: <code>pip install transformers simple-lama-inpainting</code></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-vid-scenes">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Sensitivity</label>
+                            <div class="slider-row">
+                                <input type="range" id="sceneThreshold" min="0.1" max="0.8" value="0.3" step="0.05">
+                                <span class="slider-val" id="sceneThresholdVal">0.30</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Min Scene Length</label>
+                            <div class="slider-row">
+                                <input type="range" id="minSceneLen" min="0.5" max="10" value="2.0" step="0.5">
+                                <span class="slider-val" id="minSceneLenVal">2.0s</span>
+                            </div>
+                        </div>
+                        <button class="btn-primary" id="runScenesBtn" disabled>Detect Scenes</button>
+                        <div class="scene-results hidden" id="sceneResults">
+                            <div class="stat-grid">
+                                <div class="stat-item"><span class="stat-value" id="sceneCount">--</span><span class="stat-label">Scenes</span></div>
+                                <div class="stat-item"><span class="stat-value" id="avgSceneLen">--</span><span class="stat-label">Avg Length</span></div>
+                            </div>
+                            <div class="yt-chapters hidden" id="ytChapters">
+                                <label>YouTube Chapters</label>
+                                <textarea class="text-area" id="ytChaptersText" rows="4" readonly></textarea>
+                                <button class="btn-sm" id="copyChaptersBtn">Copy to Clipboard</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-vid-speed">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                Speed &amp; Ramp
+                            </div>
+                        </div>
+                        <p class="card-desc">Constant speed change, reverse playback, or keyframe-based speed ramps with easing presets.</p>
+
+                        <div class="form-group">
+                            <label>Mode</label>
+                            <select id="speedMode">
+                                <option value="constant">Constant Speed</option>
+                                <option value="reverse">Reverse Playback</option>
+                                <option value="preset">Speed Ramp Preset</option>
+                            </select>
+                        </div>
+
+                        <!-- Constant speed params -->
+                        <div id="speedConstantParams">
+                            <div class="form-group">
+                                <label>Speed Multiplier</label>
+                                <div class="slider-row">
+                                    <input type="range" id="speedMultiplier" min="0.25" max="8" value="2" step="0.25">
+                                    <span class="slider-val" id="speedMultiplierVal">2x</span>
+                                </div>
+                            </div>
+                            <label class="checkbox-row">
+                                <input type="checkbox" id="speedMaintainPitch">
+                                Maintain audio pitch
+                            </label>
+                        </div>
+
+                        <!-- Ramp preset params -->
+                        <div id="speedRampParams" class="hidden">
+                            <div class="form-group">
+                                <label>Ramp Preset</label>
+                                <select id="speedRampPreset">
+                                    <option value="dramatic_slowmo">Dramatic Slow-Mo</option>
+                                    <option value="speed_up_middle">Speed Up Middle</option>
+                                    <option value="ramp_up">Accelerate</option>
+                                    <option value="ramp_down">Decelerate</option>
+                                    <option value="pulse">Pulse</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="speedAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runSpeedBtn" disabled>Apply Speed</button>
+                    </section>
+                </div>
+
+                <!-- LUT LIBRARY -->
+                <div class="sub-panel" id="sub-vid-lut">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>
+                                Color LUTs
+                            </div>
+                        </div>
+                        <p class="card-desc">Apply cinematic color grading via mathematically-generated .cube LUTs. 10 built-in looks + support for custom .cube files.</p>
+
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="lutCategory">
+                                <option value="all">All</option>
+                                <option value="cinematic">Cinematic</option>
+                                <option value="film">Film</option>
+                                <option value="bw">Black &amp; White</option>
+                                <option value="creative">Creative</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>LUT</label>
+                            <select id="lutSelect">
+                                <option value="teal_orange">Teal &amp; Orange</option>
+                                <option value="vintage_warm">Vintage Warm</option>
+                                <option value="cool_desaturate">Cool Desaturated</option>
+                                <option value="high_contrast_bw">High Contrast B&amp;W</option>
+                                <option value="sepia">Sepia</option>
+                                <option value="cyberpunk">Cyberpunk</option>
+                                <option value="bleach_bypass">Bleach Bypass</option>
+                                <option value="golden_hour">Golden Hour</option>
+                                <option value="moonlight">Moonlight</option>
+                                <option value="cross_process">Cross Process</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Intensity</label>
+                            <div class="slider-row">
+                                <input type="range" id="lutIntensity" min="0.1" max="1.0" value="1.0" step="0.05">
+                                <span class="slider-val" id="lutIntensityVal">1.0</span>
+                            </div>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="lutAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runLutBtn" disabled>Apply LUT</button>
+                    </section>
+                </div>
+
+                <!-- CHROMAKEY -->
+                <div class="sub-panel" id="sub-vid-chroma">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Chromakey &amp; Compositing</div></div>
+                        <p class="card-desc">Green/blue screen removal, PiP overlay, and blend modes. Select a foreground clip above.</p>
+                        <div class="form-group"><label>Mode</label>
+                            <select id="chromaMode"><option value="chromakey">Green/Blue Screen</option><option value="pip">Picture-in-Picture</option><option value="blend">Blend Mode</option></select></div>
+                        <div id="chromakeyParams">
+                            <div class="form-group"><label>Key Color</label>
+                                <select id="chromaColor"><option value="green">Green</option><option value="blue">Blue</option><option value="red">Red</option></select></div>
+                            <div class="form-group"><label>Background Path</label>
+                                <input type="text" id="chromaBgPath" placeholder="/path/to/background.mp4" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                            <div class="form-group"><label>Tolerance</label><div class="slider-row"><input type="range" id="chromaTol" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="chromaTolVal">0.5</span></div></div>
+                        </div>
+                        <div id="pipParams" class="hidden">
+                            <div class="form-group"><label>PiP Video Path</label>
+                                <input type="text" id="pipPath" placeholder="/path/to/pip_video.mp4" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                            <div class="form-group"><label>Position</label>
+                                <select id="pipPosition"><option value="bottom_right">Bottom Right</option><option value="bottom_left">Bottom Left</option><option value="top_right">Top Right</option><option value="top_left">Top Left</option><option value="center">Center</option></select></div>
+                            <div class="form-group"><label>Scale</label><div class="slider-row"><input type="range" id="pipScale" min="0.1" max="0.6" value="0.25" step="0.05"><span class="slider-val" id="pipScaleVal">0.25</span></div></div>
+                        </div>
+                        <div id="blendParams" class="hidden">
+                            <div class="form-group"><label>Overlay Path</label>
+                                <input type="text" id="blendOverlay" placeholder="/path/to/overlay.mp4" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                            <div class="form-group"><label>Blend Mode</label>
+                                <select id="blendMode"><option value="overlay">Overlay</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="softlight">Soft Light</option><option value="hardlight">Hard Light</option><option value="difference">Difference</option><option value="addition">Addition</option><option value="dodge">Dodge</option><option value="burn">Burn</option></select></div>
+                            <div class="form-group"><label>Opacity</label><div class="slider-row"><input type="range" id="blendOpacity" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="blendOpacityVal">0.5</span></div></div>
+                        </div>
+                        <button class="btn-primary" id="runChromaBtn" disabled>Apply</button>
+                    </section>
+                </div>
+
+                <!-- TRANSITIONS -->
+                <div class="sub-panel" id="sub-vid-transition">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Transitions</div></div>
+                        <p class="card-desc">34 FFmpeg xfade transitions between clips. Select a clip above, provide a second clip path.</p>
+                        <div class="form-group"><label>Second Clip Path</label>
+                            <input type="text" id="transClipB" placeholder="/path/to/clip_b.mp4" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                        <div class="form-group"><label>Transition</label>
+                            <select id="transType"><option value="fade">Crossfade</option><option value="wipeleft">Wipe Left</option><option value="wiperight">Wipe Right</option><option value="slideleft">Slide Left</option><option value="slideright">Slide Right</option><option value="circlecrop">Circle Crop</option><option value="circleopen">Circle Open</option><option value="dissolve">Dissolve</option><option value="pixelize">Pixelize</option><option value="diagtl">Diagonal TL</option><option value="radial">Radial</option><option value="zoomin">Zoom In</option><option value="fadeblack">Fade Black</option><option value="fadewhite">Fade White</option><option value="smoothleft">Smooth Left</option><option value="squeezeh">Squeeze H</option></select></div>
+                        <div class="form-group"><label>Duration (sec)</label><div class="slider-row"><input type="range" id="transDur" min="0.3" max="3.0" value="1.0" step="0.1"><span class="slider-val" id="transDurVal">1.0</span></div></div>
+                        <button class="btn-primary" id="runTransBtn" disabled>Apply Transition</button>
+                    </section>
+                </div>
+
+                <!-- PARTICLES -->
+                <div class="sub-panel" id="sub-vid-particles">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Particle Effects</div></div>
+                        <p class="card-desc">Overlay procedural particle effects on video. 7 presets rendered via Pillow + FFmpeg.</p>
+                        <div class="form-group"><label>Preset</label>
+                            <select id="particlePreset"><option value="confetti">Confetti</option><option value="sparkles">Sparkles</option><option value="snow">Snow</option><option value="rain">Rain</option><option value="fire_embers">Fire Embers</option><option value="smoke">Smoke</option><option value="bubbles">Bubbles</option></select></div>
+                        <div class="form-group"><label>Density</label><div class="slider-row"><input type="range" id="particleDensity" min="0.3" max="3.0" value="1.0" step="0.1"><span class="slider-val" id="particleDensityVal">1.0</span></div></div>
+                        <button class="btn-primary" id="runParticlesBtn" disabled>Apply Particles</button>
+                    </section>
+                </div>
+
+                <!-- TITLES / MOTION GRAPHICS -->
+                <div class="sub-panel" id="sub-vid-titles">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Titles &amp; Motion Graphics</div></div>
+                        <p class="card-desc">Animated title cards and overlays. Rendered via FFmpeg drawtext.</p>
+                        <div class="form-group"><label>Title Text</label>
+                            <input type="text" id="titleText" placeholder="Your Title Here" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                        <div class="form-group"><label>Subtitle</label>
+                            <input type="text" id="titleSubtext" placeholder="Optional subtitle" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                        <div class="form-group"><label>Preset</label>
+                            <select id="titlePreset"><option value="fade_center">Fade Center</option><option value="slide_left">Slide From Left</option><option value="typewriter">Typewriter</option><option value="lower_third">Lower Third</option><option value="countdown">Countdown</option><option value="kinetic_bounce">Kinetic Bounce</option></select></div>
+                        <div class="form-group"><label>Duration (sec)</label><div class="slider-row"><input type="range" id="titleDur" min="1" max="15" value="5" step="0.5"><span class="slider-val" id="titleDurVal">5</span></div></div>
+                        <div class="form-group"><label>Font Size</label><div class="slider-row"><input type="range" id="titleFontSize" min="24" max="150" value="72" step="2"><span class="slider-val" id="titleFontSizeVal">72</span></div></div>
+                        <button class="btn-primary" id="runTitleOverlayBtn" disabled>Overlay on Video</button>
+                        <button class="btn-secondary" id="runTitleCardBtn">Render Title Card</button>
+                    </section>
+                </div>
+
+                <!-- PRO UPSCALE -->
+                <div class="sub-panel" id="sub-vid-upscale">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Pro Upscaling</div></div>
+                        <p class="card-desc">AI-powered video upscaling. Lanczos (fast, CPU), Real-ESRGAN (balanced, GPU), Video2x (premium, temporal).</p>
+                        <div class="form-group"><label>Quality Preset</label>
+                            <select id="upscalePreset"><option value="fast">Fast (Lanczos)</option><option value="balanced">Balanced (Real-ESRGAN)</option><option value="premium_v2x">Premium (Video2x)</option></select></div>
+                        <div class="form-group"><label>Scale</label>
+                            <select id="upscaleScale"><option value="2" selected>2x</option><option value="3">3x</option><option value="4">4x</option></select></div>
+                        <button class="btn-primary" id="runUpscaleBtn" disabled>Upscale Video</button>
+                    </section>
+                </div>
+
+                <!-- COLOR CORRECTION -->
+                <div class="sub-panel" id="sub-vid-color">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Color Correction</div></div>
+                        <p class="card-desc">Professional color controls: exposure, contrast, saturation, temperature, lift/gamma/gain.</p>
+                        <div class="form-group"><label>Exposure</label><div class="slider-row"><input type="range" id="ccExposure" min="-3" max="3" value="0" step="0.1"><span class="slider-val" id="ccExposureVal">0</span></div></div>
+                        <div class="form-group"><label>Contrast</label><div class="slider-row"><input type="range" id="ccContrast" min="0.5" max="2.0" value="1.0" step="0.05"><span class="slider-val" id="ccContrastVal">1.0</span></div></div>
+                        <div class="form-group"><label>Saturation</label><div class="slider-row"><input type="range" id="ccSaturation" min="0" max="3.0" value="1.0" step="0.05"><span class="slider-val" id="ccSaturationVal">1.0</span></div></div>
+                        <div class="form-group"><label>Temperature</label><div class="slider-row"><input type="range" id="ccTemp" min="-1" max="1" value="0" step="0.05"><span class="slider-val" id="ccTempVal">0</span></div></div>
+                        <div class="form-group"><label>Shadows</label><div class="slider-row"><input type="range" id="ccShadows" min="-1" max="1" value="0" step="0.05"><span class="slider-val" id="ccShadowsVal">0</span></div></div>
+                        <div class="form-group"><label>Highlights</label><div class="slider-row"><input type="range" id="ccHighlights" min="-1" max="1" value="0" step="0.05"><span class="slider-val" id="ccHighlightsVal">0</span></div></div>
+                        <button class="btn-primary" id="runColorBtn" disabled>Apply Color Correction</button>
+                    </section>
+                </div>
+
+                <!-- OBJECT/WATERMARK REMOVAL -->
+                <div class="sub-panel" id="sub-vid-remove">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Object &amp; Watermark Removal</div></div>
+                        <p class="card-desc">Remove watermarks/logos via FFmpeg delogo (fast) or LaMA AI inpainting (quality). Specify the region coordinates.</p>
+                        <div class="form-group"><label>Method</label>
+                            <select id="removeMethod"><option value="delogo">Delogo (FFmpeg, fast)</option><option value="lama">LaMA (AI inpainting)</option></select></div>
+                        <div class="form-group"><label>Region X</label><input type="number" id="removeX" value="0" min="0" style="width:60px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;padding:4px;"></div>
+                        <div class="form-group"><label>Region Y</label><input type="number" id="removeY" value="0" min="0" style="width:60px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;padding:4px;"></div>
+                        <div class="form-group"><label>Width</label><input type="number" id="removeW" value="200" min="10" style="width:60px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;padding:4px;"></div>
+                        <div class="form-group"><label>Height</label><input type="number" id="removeH" value="50" min="10" style="width:60px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;padding:4px;"></div>
+                        <button class="btn-primary" id="runRemoveBtn" disabled>Remove</button>
+                    </section>
+                </div>
+
+                <!-- FACE SWAP / ENHANCE -->
+                <div class="sub-panel" id="sub-vid-faceswap">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Face AI</div></div>
+                        <p class="card-desc">AI face enhancement (GFPGAN) and face swapping (InsightFace). GPU recommended.</p>
+                        <div class="form-group"><label>Mode</label>
+                            <select id="faceAiMode"><option value="enhance">Face Enhancement (GFPGAN)</option><option value="swap">Face Swap (InsightFace)</option></select></div>
+                        <div id="faceSwapParams" class="hidden">
+                            <div class="form-group"><label>Reference Face Image</label>
+                                <input type="text" id="faceRefPath" placeholder="/path/to/face_reference.jpg" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                        </div>
+                        <button class="btn-primary" id="runFaceAiBtn" disabled>Run Face AI</button>
+                    </section>
+                </div>
+            </div>
+
+            <!-- ======== TAB: EXPORT ======== -->
+            <div class="nav-panel" id="panel-export">
+                <div class="sub-tabs" id="exportSubTabs">
+                    <button class="sub-tab active" data-sub="exp-transcript">Transcript</button>
+                    <button class="sub-tab" data-sub="exp-platform">Presets</button>
+                    <button class="sub-tab" data-sub="exp-thumbnail">Thumbnails</button>
+                    <button class="sub-tab" data-sub="exp-batch">Batch</button>
+                </div>
+
+                <div class="sub-panel active" id="sub-exp-transcript">
+                    <section class="card">
+                        <div class="form-group">
+                            <label>Export Format</label>
+                            <select id="expTranscriptFormat">
+                                <option value="plain">Plain Text</option>
+                                <option value="timestamped">Timestamped Text</option>
+                                <option value="srt">SRT Subtitles</option>
+                                <option value="vtt">WebVTT Subtitles</option>
+                                <option value="ass">ASS (Karaoke)</option>
+                                <option value="json">JSON (Full Data)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select id="expModel">
+                                <option value="tiny">Tiny (fastest)</option>
+                                <option value="base" selected>Base (balanced)</option>
+                                <option value="small">Small (accurate)</option>
+                                <option value="medium">Medium (best)</option>
+                            </select>
+                        </div>
+                        <button class="btn-primary" id="runExpTranscriptBtn" disabled>Export Transcript</button>
+                    </section>
+                </div>
+
+                <!-- EXPORT PRESETS -->
+                <div class="sub-panel" id="sub-exp-platform">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                                Platform Export Presets
+                            </div>
+                        </div>
+                        <p class="card-desc">One-click export optimized for each platform's format, resolution, codec, and file size requirements.</p>
+
+                        <div class="form-group">
+                            <label>Category</label>
+                            <select id="exportPresetCategory">
+                                <option value="youtube">YouTube</option>
+                                <option value="social">Social Media</option>
+                                <option value="audio">Podcast / Audio</option>
+                                <option value="archive">Professional / Archive</option>
+                                <option value="web">Web / GIF</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Preset</label>
+                            <select id="exportPresetSelect">
+                                <!-- Populated by JS -->
+                            </select>
+                        </div>
+
+                        <div class="hint-inline" id="exportPresetDesc"></div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="exportPresetAutoImport" checked>
+                            Auto-import result to project
+                        </label>
+
+                        <button class="btn-primary" id="runExportPresetBtn" disabled>Export</button>
+                    </section>
+                </div>
+
+                <!-- AUTO-THUMBNAILS -->
+                <div class="sub-panel" id="sub-exp-thumbnail">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+                                Auto-Thumbnails
+                            </div>
+                        </div>
+                        <p class="card-desc">AI-scored thumbnail candidates from your video. Scores frames on sharpness, color, contrast, face presence, and composition.</p>
+
+                        <div class="form-group">
+                            <label>Number of Candidates</label>
+                            <select id="thumbCount">
+                                <option value="3">3</option>
+                                <option value="5" selected>5</option>
+                                <option value="10">10</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Resolution</label>
+                            <select id="thumbWidth">
+                                <option value="1920">1920px (Full HD)</option>
+                                <option value="1280">1280px (HD)</option>
+                                <option value="640">640px (Web)</option>
+                            </select>
+                        </div>
+
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="thumbUseFaces" checked>
+                            Boost frames with faces
+                        </label>
+
+                        <button class="btn-primary" id="runThumbBtn" disabled>Generate Thumbnails</button>
+                    </section>
+                </div>
+
+                <!-- BATCH PROCESSING -->
+                <div class="sub-panel" id="sub-exp-batch">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
+                                Batch Processing
+                            </div>
+                        </div>
+                        <p class="card-desc">Apply the same operation to multiple files. Add files from your project bin, pick an operation, and run.</p>
+
+                        <div class="form-group">
+                            <label>Operation</label>
+                            <select id="batchOperation">
+                                <option value="denoise">Audio Denoise</option>
+                                <option value="normalize">Audio Normalize</option>
+                                <option value="stabilize">Video Stabilize</option>
+                                <option value="face_blur">Face Blur</option>
+                                <option value="vignette">Add Vignette</option>
+                                <option value="film_grain">Add Film Grain</option>
+                                <option value="letterbox">Add Letterbox</option>
+                                <option value="style_transfer">Style Transfer</option>
+                                <option value="export_preset">Export Preset</option>
+                            </select>
+                        </div>
+
+                        <p class="card-desc">Select files from the clip picker above, then click "Run Batch" to process all selected clips with the chosen operation.</p>
+
+                        <button class="btn-primary" id="runBatchBtn" disabled>Run Batch (All Clips)</button>
+
+                        <div class="hidden" id="batchResults">
+                            <div class="batch-status" id="batchStatusText"></div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- ======== TAB: SETTINGS ======== -->
+            <div class="nav-panel" id="panel-settings">
+                <section class="card">
+                    <div class="card-header"><div class="card-title">Whisper AI</div></div>
+                    <div class="settings-row" id="whisperStatus">
+                        <span class="settings-label">Status</span>
+                        <span class="settings-value" id="whisperStatusText">Checking...</span>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Device</span>
+                        <span class="settings-value" id="whisperDeviceText">--</span>
+                    </div>
+                    <div class="form-group" style="margin-top: 10px;">
+                        <label>Default Model</label>
+                        <select id="settingsDefaultModel">
+                            <option value="tiny">Tiny - Fastest, lower accuracy</option>
+                            <option value="base" selected>Base - Good balance</option>
+                            <option value="small">Small - Better accuracy</option>
+                            <option value="medium">Medium - High accuracy</option>
+                            <option value="large-v3">Large v3 - Best accuracy</option>
+                            <option value="turbo">Turbo - Fast + accurate</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-row" style="margin: 10px 0;">
+                        <input type="checkbox" id="whisperCpuMode">
+                        <label for="whisperCpuMode">Force CPU Mode (bypass GPU)</label>
+                    </div>
+                    <p class="hint" style="margin: 4px 0 12px 0; font-size: 10px;">Enable CPU mode if transcription hangs or you see CUDA errors.</p>
+                    <div class="btn-row" style="gap: 6px;">
+                        <button class="btn-outline btn-sm" id="settingsInstallWhisperBtn">Install</button>
+                        <button class="btn-outline btn-sm" id="settingsReinstallWhisperBtn">Reinstall</button>
+                        <button class="btn-outline btn-sm" id="settingsClearCacheBtn">Clear Cache</button>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header"><div class="card-title">Preferences</div></div>
+                    <div class="form-group">
+                        <label>Theme</label>
+                        <select id="settingsTheme">
+                            <option value="cyberpunk">Cyberpunk Neon</option>
+                            <option value="midnight">Midnight OLED</option>
+                            <option value="catppuccin">Catppuccin Mocha</option>
+                            <option value="github">GitHub Dark</option>
+                            <option value="stealth">Stealth</option>
+                            <option value="ember">Ember</option>
+                        </select>
+                    </div>
+                    <div class="checkbox-row" style="margin: 6px 0;">
+                        <input type="checkbox" id="settingsAutoImport" checked>
+                        <label for="settingsAutoImport">Auto-import sequence after processing</label>
+                    </div>
+                    <div class="checkbox-row" style="margin: 6px 0;">
+                        <input type="checkbox" id="settingsAutoOpen" checked>
+                        <label for="settingsAutoOpen">Auto-open imported sequences</label>
+                    </div>
+                    <div class="checkbox-row" style="margin: 6px 0;">
+                        <input type="checkbox" id="settingsShowNotifications" checked>
+                        <label for="settingsShowNotifications">Show completion notifications</label>
+                    </div>
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label>Output Directory</label>
+                        <select id="settingsOutputDir">
+                            <option value="source" selected>Same as source file</option>
+                            <option value="project">Project folder</option>
+                            <option value="custom">Custom location...</option>
+                        </select>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header"><div class="card-title">System</div></div>
+                    <div class="settings-row">
+                        <span class="settings-label">GPU</span>
+                        <span class="settings-value" id="gpuName">Checking...</span>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">VRAM</span>
+                        <span class="settings-value" id="gpuVram">--</span>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Backend</span>
+                        <span class="settings-value" id="backendPort">--</span>
+                    </div>
+                    <div class="btn-row" style="margin-top: 10px;">
+                        <button class="btn-outline btn-sm" id="restartBackendBtn">Restart Backend</button>
+                        <button class="btn-outline btn-sm" id="openLogsBtn">View Logs</button>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header"><div class="card-title">About OpenCut</div></div>
+                    <div class="settings-row">
+                        <span class="settings-label">Version</span>
+                        <span class="settings-value">1.0.0-beta</span>
+                    </div>
+                    <div class="about-links">
+                        <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>
+                        <span class="about-sep">|</span>
+                        <a href="https://github.com/SysAdminDoc/opencut/issues" class="about-link" target="_blank">Report Bug</a>
+                        <span class="about-sep">|</span>
+                        <a href="https://github.com/SysAdminDoc/opencut/wiki" class="about-link" target="_blank">Wiki</a>
+                    </div>
+                </section>
+            </div>
+
+
+            <!-- ======== PROGRESS ======== -->
+            <section class="card hidden" id="progressSection">
+                <div class="progress-header">
+                    <div class="progress-track"><div class="progress-fill" id="progressBar"></div></div>
+                    <span class="progress-elapsed" id="progressElapsed"></span>
+                </div>
+                <div class="progress-row">
+                    <span class="progress-label" id="progressLabel">Starting...</span>
+                    <button class="btn-cancel hidden" id="cancelBtn" title="Cancel processing">Cancel</button>
+                </div>
+            </section>
+
+            <!-- ======== RESULTS ======== -->
+            <section class="card hidden" id="resultsSection">
+                <div class="results-card" id="resultsCard">
+                    <div class="results-title" id="resultsTitle">Complete</div>
+                    <div class="results-stats" id="resultsStats"></div>
+                    <div class="results-path" id="resultsPath" title="Output file path"></div>
+                    <div class="results-actions">
+                        <button class="btn-outline" id="newJobBtn">New Job</button>
+                        <button class="btn-outline btn-retry hidden" id="retryJobBtn">Retry</button>
+                    </div>
+                </div>
+            </section>
+
+        </main>
+    </div>
+    <script src="CSInterface.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>
