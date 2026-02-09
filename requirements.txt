@@ -1,0 +1,37 @@
+# OpenCut v1.0.0-beta Requirements
+# Install: pip install -r requirements.txt
+# For GPU: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
+
+# === CORE (required) ===
+click>=8.0
+rich>=13.0
+flask>=3.0
+flask-cors>=4.0
+
+# === STANDARD (recommended) ===
+faster-whisper>=1.0
+opencv-python-headless>=4.8
+Pillow>=10.0
+numpy>=1.24
+librosa>=0.10
+pydub>=0.25
+noisereduce>=3.0
+deep-translator>=1.11
+scenedetect[opencv]>=0.6
+
+# === AUDIO (optional) ===
+# demucs>=4.0              # Stem separation (~1.5GB with models)
+# pedalboard>=0.9          # Pro audio FX chain
+# edge-tts>=6.1            # Text-to-speech (requires internet)
+
+# === AI/ML (optional, GPU recommended) ===
+# realesrgan>=0.3          # AI upscaling (~67MB model)
+# rembg>=2.0               # Background removal (~170MB model)
+# gfpgan>=1.3              # Face enhancement (~330MB model)
+# insightface>=0.7         # Face detection/swap
+# onnxruntime-gpu>=1.16    # GPU inference for InsightFace
+# audiocraft>=1.0          # MusicGen AI music (1.2-13GB models)
+
+# === ADVANCED (optional) ===
+# whisperx>=3.0            # Word-level timestamps + alignment
+# pyannote.audio>=3.1      # Speaker diarization (needs HuggingFace token)
