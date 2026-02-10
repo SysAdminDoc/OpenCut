@@ -6,9 +6,7 @@
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2023+-9999FF?logo=adobepremierepro&logoColor=white)
 
-> A free, open-source Premiere Pro extension that brings AI-powered video editing automation, caption generation, audio processing, and visual effects -- all running locally on your machine.
-
-![Screenshot](docs/screenshot.png)
+> A free, open-source Premiere Pro extension that brings AI-powered video editing automation, caption generation, audio processing, and visual effects -- all running locally on your machine. This project aims to replace all of the leading paid Premiere extensions and products on the market.
 
 ## Quick Start
 
