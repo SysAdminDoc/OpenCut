@@ -30,6 +30,7 @@ external_hiddenimports = [
     'flask_cors',
     'click',
     'rich',
+    'soundfile',
 ]
 
 # Filter to only actually installed packages
