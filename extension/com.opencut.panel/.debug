@@ -2,7 +2,7 @@
 <ExtensionList>
     <Extension Id="com.opencut.panel.main">
         <HostList>
-            <Host Name="PPRO" Port="8078" />
+            <Host Name="PPRO" Port="8842"/>
         </HostList>
     </Extension>
 </ExtensionList>
