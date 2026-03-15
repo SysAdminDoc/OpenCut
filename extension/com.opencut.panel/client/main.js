@@ -1039,6 +1039,8 @@
                     html += '<option value="' + esc(m.path) + '" data-name="' + esc(m.name) + '">' + esc(m.name) + '</option>';
                 }
                 el.clipSelect.innerHTML = html;
+                populateRecentFiles();
+                refreshClipDropdown();
             } catch (e) {}
         });
     }
@@ -1132,6 +1134,18 @@
             group.appendChild(opt);
         }
         el.clipSelect.appendChild(group);
+        refreshClipDropdown();
+    }
+
+    function refreshClipDropdown() {
+        if (el.clipSelect.parentNode) {
+            var oldDd = el.clipSelect.parentNode.querySelector(".custom-dropdown");
+            if (oldDd) {
+                oldDd.parentNode.removeChild(oldDd);
+                delete el.clipSelect.dataset.customized;
+                createCustomDropdown(el.clipSelect);
+            }
+        }
     }
 
     function selectFile(path, name) {
