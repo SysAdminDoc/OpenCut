@@ -2,11 +2,11 @@
 <ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    Version="7.0"
                    ExtensionBundleId="com.opencut.panel"
-                   ExtensionBundleVersion="1.0.0"
+                   ExtensionBundleVersion="1.2.0"
                    ExtensionBundleName="OpenCut">
 
     <ExtensionList>
-        <Extension Id="com.opencut.panel.main" Version="1.0.0" />
+        <Extension Id="com.opencut.panel.main" Version="1.2.0" />
     </ExtensionList>
 
     <ExecutionEnvironment>
@@ -41,12 +41,12 @@
                     <Menu>OpenCut</Menu>
                     <Geometry>
                         <Size>
-                            <Height>600</Height>
-                            <Width>400</Width>
+                            <Height>700</Height>
+                            <Width>520</Width>
                         </Size>
                         <MinSize>
                             <Height>400</Height>
-                            <Width>300</Width>
+                            <Width>400</Width>
                         </MinSize>
                     </Geometry>
                     <Icons>
