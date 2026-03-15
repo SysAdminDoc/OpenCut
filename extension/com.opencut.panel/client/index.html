@@ -132,6 +132,9 @@
 
         <!-- ===== MAIN CONTENT ===== -->
         <main class="main">
+            <div class="server-status-banner hidden" id="serverStatusBanner">
+                <span id="serverStatusMsg">Server disconnected. Reconnecting...</span>
+            </div>
 
             <!-- MEDIA SELECTION (persistent across all tabs) -->
             <section class="card" id="clipSection">
@@ -148,6 +151,18 @@
                 <select class="clip-select" id="clipSelect">
                     <option value="" disabled selected>Loading project media...</option>
                 </select>
+                <div class="clip-preview-row" id="clipPreviewRow">
+                    <div class="clip-thumb" id="clipThumb"></div>
+                    <div class="clip-meta" id="clipMeta">
+                        <span id="clipMetaRes"></span>
+                        <span id="clipMetaDur"></span>
+                        <span id="clipMetaSize"></span>
+                    </div>
+                </div>
+                <div class="recent-clips-row">
+                    <button class="btn-sm btn-ghost" id="recentClipsBtn" title="Recent clips">Recent</button>
+                    <div class="recent-clips-dropdown hidden" id="recentClipsDropdown"></div>
+                </div>
                 <div class="file-info hidden" id="fileInfoBox">
                     <div class="file-name" id="fileNameDisplay"></div>
                     <div class="file-meta" id="fileMetaDisplay"></div>
@@ -169,6 +184,7 @@
                     <button class="sub-tab active" data-sub="silence">Silence</button>
                     <button class="sub-tab" data-sub="fillers">Fillers</button>
                     <button class="sub-tab" data-sub="full">Full Edit</button>
+                    <button class="sub-tab" data-sub="trim">Trim</button>
                 </div>
 
                 <div class="sub-panel active" id="sub-silence">
@@ -273,6 +289,50 @@
                         <label class="checkbox-row"><input type="checkbox" id="fullCaptions" checked> Captions (SRT)</label>
                         <label class="checkbox-row"><input type="checkbox" id="fullFillers"> Remove Filler Words</label>
                         <button class="btn-primary" id="runFullBtn" disabled>Run Full Pipeline</button>
+                    </section>
+                </div>
+
+                <!-- TRIM -->
+                <div class="sub-panel" id="sub-trim">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
+                                Trim Clip
+                            </div>
+                        </div>
+                        <p class="card-desc">Set in/out points to extract a portion of your clip. Use timecodes or seconds.</p>
+
+                        <div class="form-group">
+                            <label>Start Time</label>
+                            <input type="text" id="trimStart" placeholder="00:00:00" value="00:00:00">
+                            <span class="hint-inline">HH:MM:SS or seconds (e.g. 5.5)</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label>End Time</label>
+                            <input type="text" id="trimEnd" placeholder="00:00:30" value="00:00:30">
+                            <span class="hint-inline">HH:MM:SS or seconds</span>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mode</label>
+                            <select id="trimMode">
+                                <option value="copy">Stream Copy (instant, frame-approximate)</option>
+                                <option value="reencode">Re-encode (precise, slower)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="trimQualityGroup">
+                            <label>Quality</label>
+                            <select id="trimQuality">
+                                <option value="high" selected>High (CRF 18)</option>
+                                <option value="medium">Medium (CRF 23)</option>
+                                <option value="low">Low (CRF 28)</option>
+                            </select>
+                        </div>
+
+                        <button class="btn-primary" id="runTrimBtn" disabled>Trim Clip</button>
                     </section>
                 </div>
             </div>
@@ -1086,6 +1146,8 @@
                     <button class="sub-tab" data-sub="vid-transition">Transitions</button>
                     <button class="sub-tab" data-sub="vid-particles">Particles</button>
                     <button class="sub-tab" data-sub="vid-titles">Titles</button>
+                    <button class="sub-tab" data-sub="vid-reframe">Reframe</button>
+                    <button class="sub-tab" data-sub="vid-merge">Merge</button>
                     <button class="sub-tab" data-sub="vid-upscale">Upscale</button>
                     <button class="sub-tab" data-sub="vid-color">Color</button>
                     <button class="sub-tab" data-sub="vid-remove">Remove</button>
@@ -1703,6 +1765,130 @@
                     </section>
                 </div>
 
+                <!-- REFRAME / RESIZE FOR PHONE -->
+                <div class="sub-panel" id="sub-vid-reframe">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
+                                Reframe for Phone / Social
+                            </div>
+                        </div>
+                        <p class="card-desc">Resize and crop video to fit vertical (TikTok, Shorts, Reels), square, or custom dimensions. Smart crop keeps the important center content.</p>
+
+                        <div class="form-group">
+                            <label>Target Format</label>
+                            <select id="reframePreset">
+                                <option value="tiktok">TikTok / Shorts (1080×1920, 9:16)</option>
+                                <option value="instagram_reel">Instagram Reel / Story (1080×1920, 9:16)</option>
+                                <option value="instagram_post">Instagram Post (1080×1080, 1:1)</option>
+                                <option value="instagram_land">Instagram Landscape (1080×566)</option>
+                                <option value="youtube">YouTube 1080p (1920×1080, 16:9)</option>
+                                <option value="youtube_4k">YouTube 4K (3840×2160, 16:9)</option>
+                                <option value="square">Square (1080×1080, 1:1)</option>
+                                <option value="custom">Custom Dimensions</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group hidden" id="reframeCustomDims">
+                            <label>Width × Height</label>
+                            <div style="display:flex;gap:8px;align-items:center;">
+                                <input type="number" id="reframeCustomW" min="16" max="7680" value="1080" style="width:80px;">
+                                <span>×</span>
+                                <input type="number" id="reframeCustomH" min="16" max="7680" value="1920" style="width:80px;">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Resize Mode</label>
+                            <select id="reframeMode">
+                                <option value="crop">Crop (fill frame, cut edges)</option>
+                                <option value="pad">Pad (fit inside, add bars)</option>
+                                <option value="stretch">Stretch (distort to fit)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group" id="reframeCropPosGroup">
+                            <label>Crop Position</label>
+                            <select id="reframeCropPos">
+                                <option value="center" selected>Center</option>
+                                <option value="top">Top</option>
+                                <option value="bottom">Bottom</option>
+                                <option value="left">Left</option>
+                                <option value="right">Right</option>
+                            </select>
+                            <span class="hint-inline">Where to anchor the crop</span>
+                        </div>
+
+                        <div class="form-group hidden" id="reframePadColorGroup">
+                            <label>Bar Color</label>
+                            <select id="reframePadColor">
+                                <option value="black" selected>Black</option>
+                                <option value="white">White</option>
+                                <option value="0x111111">Dark Gray</option>
+                                <option value="0x1a1a2e">Dark Navy</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Quality</label>
+                            <select id="reframeQuality">
+                                <option value="high" selected>High (CRF 18)</option>
+                                <option value="medium">Medium (CRF 23)</option>
+                                <option value="low">Low (CRF 28)</option>
+                            </select>
+                        </div>
+
+                        <div class="hint-inline" id="reframeInfo"></div>
+
+                        <button class="btn-primary" id="runReframeBtn" disabled>Reframe Video</button>
+                    </section>
+                </div>
+
+                <!-- MERGE / CONCATENATE -->
+                <div class="sub-panel" id="sub-vid-merge">
+                    <section class="card">
+                        <div class="card-header">
+                            <div class="card-title">
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                                Merge / Concatenate Clips
+                            </div>
+                        </div>
+                        <p class="card-desc">Join multiple clips into a single video file. Add clips using the batch picker or drag and drop.</p>
+
+                        <div class="form-group">
+                            <label>Merge Files</label>
+                            <div class="merge-file-list" id="mergeFileList">
+                                <div class="hint" style="padding:8px 12px;">No files added. Use batch picker or drop files.</div>
+                            </div>
+                            <div style="display:flex;gap:6px;margin-top:6px;">
+                                <button class="btn-sm btn-secondary" id="mergeAddCurrentBtn">Add Current Clip</button>
+                                <button class="btn-sm btn-secondary" id="mergeAddAllBtn">Add All Project Media</button>
+                                <button class="btn-sm btn-ghost" id="mergeClearBtn">Clear</button>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Mode</label>
+                            <select id="mergeMode">
+                                <option value="concat_demux">Fast (stream copy, same codec only)</option>
+                                <option value="concat_filter">Re-encode (different codecs/resolutions OK)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label>Quality</label>
+                            <select id="mergeQuality">
+                                <option value="high" selected>High (CRF 18)</option>
+                                <option value="medium">Medium (CRF 23)</option>
+                                <option value="low">Low (CRF 28)</option>
+                            </select>
+                        </div>
+
+                        <button class="btn-primary" id="runMergeBtn" disabled>Merge Clips</button>
+                    </section>
+                </div>
+
                 <!-- PRO UPSCALE -->
                 <div class="sub-panel" id="sub-vid-upscale">
                     <section class="card">
@@ -2212,6 +2398,15 @@
             </section>
 
         </main>
+
+        <!-- Command Palette -->
+        <div class="command-palette-overlay hidden" id="commandPaletteOverlay">
+            <div class="command-palette">
+                <input type="text" id="commandPaletteInput" placeholder="Search operations... (e.g. denoise, reframe, captions)" autocomplete="off" spellcheck="false">
+                <div class="command-palette-results" id="commandPaletteResults"></div>
+                <div class="command-palette-hint">Navigate with arrow keys, Enter to select, Esc to close</div>
+            </div>
+        </div>
 
         <!-- Side-by-Side Preview Modal -->
         <div class="preview-modal hidden" id="previewModal">

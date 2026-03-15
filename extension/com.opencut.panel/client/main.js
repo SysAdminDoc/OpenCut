@@ -669,6 +669,20 @@
         el.upscaleScale = $("upscaleScale");
         el.runUpscaleBtn = $("runUpscaleBtn");
 
+        // Reframe
+        el.reframePreset = $("reframePreset");
+        el.reframeCustomDims = $("reframeCustomDims");
+        el.reframeCustomW = $("reframeCustomW");
+        el.reframeCustomH = $("reframeCustomH");
+        el.reframeMode = $("reframeMode");
+        el.reframeCropPosGroup = $("reframeCropPosGroup");
+        el.reframeCropPos = $("reframeCropPos");
+        el.reframePadColorGroup = $("reframePadColorGroup");
+        el.reframePadColor = $("reframePadColor");
+        el.reframeQuality = $("reframeQuality");
+        el.reframeInfo = $("reframeInfo");
+        el.runReframeBtn = $("runReframeBtn");
+
         // Color Correction
         el.ccExposure = $("ccExposure"); el.ccExposureVal = $("ccExposureVal");
         el.ccContrast = $("ccContrast"); el.ccContrastVal = $("ccContrastVal");
@@ -852,6 +866,44 @@
         el.settingsLang = $("settingsLang");
         // Time estimate
         el.processingEstimate = $("processingEstimate");
+
+        // v1.3.0 - Clip Preview
+        el.clipPreviewRow = $("clipPreviewRow");
+        el.clipThumb = $("clipThumb");
+        el.clipMeta = $("clipMeta");
+        el.clipMetaRes = $("clipMetaRes");
+        el.clipMetaDur = $("clipMetaDur");
+        el.clipMetaSize = $("clipMetaSize");
+
+        // v1.3.0 - Recent Clips
+        el.recentClipsBtn = $("recentClipsBtn");
+        el.recentClipsDropdown = $("recentClipsDropdown");
+
+        // v1.3.0 - Command Palette
+        el.commandPaletteOverlay = $("commandPaletteOverlay");
+        el.commandPaletteInput = $("commandPaletteInput");
+        el.commandPaletteResults = $("commandPaletteResults");
+
+        // v1.3.0 - Trim
+        el.trimStart = $("trimStart");
+        el.trimEnd = $("trimEnd");
+        el.trimMode = $("trimMode");
+        el.trimQuality = $("trimQuality");
+        el.trimQualityGroup = $("trimQualityGroup");
+        el.runTrimBtn = $("runTrimBtn");
+
+        // v1.3.0 - Merge
+        el.mergeFileList = $("mergeFileList");
+        el.mergeAddCurrentBtn = $("mergeAddCurrentBtn");
+        el.mergeAddAllBtn = $("mergeAddAllBtn");
+        el.mergeClearBtn = $("mergeClearBtn");
+        el.mergeMode = $("mergeMode");
+        el.mergeQuality = $("mergeQuality");
+        el.runMergeBtn = $("runMergeBtn");
+
+        // v1.3.0 - Server Status
+        el.serverStatusBanner = $("serverStatusBanner");
+        el.serverStatusMsg = $("serverStatusMsg");
     }
 
     // ================================================================
@@ -1088,10 +1140,12 @@
         lastTranscriptSegments = loadCachedTranscript(path);
         transcriptData = null;
         addRecentFile(path, selectedName);
+        addRecentClip(path);
         el.fileInfoBox.classList.remove("hidden");
         el.fileNameDisplay.textContent = selectedName;
         el.fileMetaDisplay.innerHTML = '<span class="skeleton skeleton-wide"></span>';
         updateButtons();
+        updateClipPreview();
 
         if (connected) {
             api("POST", "/info", { filepath: path }, function (err, data) {
@@ -1226,6 +1280,7 @@
         el.runTransBtn.disabled = !canRun;
         el.runParticlesBtn.disabled = !canRun;
         el.runTitleOverlayBtn.disabled = !canRun;
+        el.runReframeBtn.disabled = !canRun;
         el.runUpscaleBtn.disabled = !canRun;
         el.runColorBtn.disabled = !canRun;
         el.runRemoveBtn.disabled = !canRun;
@@ -1238,6 +1293,10 @@
         // v1.2.0 buttons
         if (el.loadWaveformBtn) el.loadWaveformBtn.disabled = !canRun;
         if (el.previewVfxBtn) el.previewVfxBtn.disabled = !canRun;
+
+        // v1.3.0 buttons
+        if (el.runTrimBtn) el.runTrimBtn.disabled = !canRun;
+        if (el.runMergeBtn) el.runMergeBtn.disabled = _mergeFiles.length < 2;
 
         // Whisper hints
         if (capabilities.captions === false) {
@@ -1456,6 +1515,9 @@
         lastJobEndpoint = endpoint;
         lastJobPayload = payload;
 
+        // Show time estimate based on historical data
+        fetchTimeEstimate(endpoint.replace(/^\//, "").replace(/\//g, "_"));
+
         jobStartTime = Date.now();
         elapsedTimer = setInterval(function () {
             var s = Math.floor((Date.now() - jobStartTime) / 1000);
@@ -1626,6 +1688,11 @@
             var outputPath = job.result.output_path;
             if (outputPath && !overlayPath && !xmlPath) {
                 var ext = outputPath.toLowerCase().split(".").pop();
+                // Show audio preview for generated audio files (TTS, SFX, music)
+                if ((ext === "wav" || ext === "mp3" || ext === "flac" || ext === "ogg") &&
+                    (lastJobEndpoint && (lastJobEndpoint.indexOf("tts") !== -1 || lastJobEndpoint.indexOf("sfx") !== -1 || lastJobEndpoint.indexOf("music") !== -1))) {
+                    showAudioPreview(outputPath);
+                }
                 // Caption files (SRT, VTT, ASS) - import to caption track
                 if (ext === "srt" || ext === "vtt" || ext === "ass") {
                     jsx('importCaptions("' + escPath(outputPath) + '")', function (result) {
@@ -2582,6 +2649,49 @@
     }
 
     // --- PRO UPSCALE ---
+    // --- REFRAME ---
+    var _reframeDims = {
+        tiktok: [1080, 1920], instagram_reel: [1080, 1920], instagram_post: [1080, 1080],
+        instagram_land: [1080, 566], youtube: [1920, 1080], youtube_4k: [3840, 2160],
+        youtube_short: [1080, 1920], twitter: [1920, 1080], square: [1080, 1080]
+    };
+
+    function updateReframeUI() {
+        var preset = el.reframePreset.value;
+        var isCustom = preset === "custom";
+        el.reframeCustomDims.classList.toggle("hidden", !isCustom);
+        var mode = el.reframeMode.value;
+        el.reframeCropPosGroup.classList.toggle("hidden", mode !== "crop");
+        el.reframePadColorGroup.classList.toggle("hidden", mode !== "pad");
+        // Show info
+        if (!isCustom && _reframeDims[preset]) {
+            var d = _reframeDims[preset];
+            el.reframeInfo.textContent = "Output: " + d[0] + " × " + d[1] + " px";
+        } else if (isCustom) {
+            el.reframeInfo.textContent = "Output: " + (el.reframeCustomW.value || "?") + " × " + (el.reframeCustomH.value || "?") + " px";
+        }
+    }
+
+    function runReframe() {
+        var preset = el.reframePreset.value;
+        var w, h;
+        if (preset === "custom") {
+            w = parseInt(el.reframeCustomW.value) || 1080;
+            h = parseInt(el.reframeCustomH.value) || 1920;
+        } else {
+            var d = _reframeDims[preset] || [1080, 1920];
+            w = d[0]; h = d[1];
+        }
+        startJob("/video/reframe", {
+            filepath: selectedPath, output_dir: projectFolder,
+            width: w, height: h,
+            mode: el.reframeMode.value,
+            position: el.reframeCropPos.value,
+            bg_color: el.reframePadColor.value,
+            quality: el.reframeQuality.value
+        });
+    }
+
     function runUpscale() {
         startJob("/video/upscale/run", { filepath: selectedPath, output_dir: projectFolder,
             preset: el.upscalePreset.value, scale: parseInt(el.upscaleScale.value) });
@@ -4183,13 +4293,12 @@
         if (el.wizardCloseBtn) {
             el.wizardCloseBtn.addEventListener("click", function () {
                 el.wizardOverlay.classList.add("hidden");
-                if (el.wizardDontShow && el.wizardDontShow.checked) {
-                    try {
-                        var s = JSON.parse(localStorage.getItem("opencut_settings") || "{}");
-                        s.wizardDismissed = true;
-                        localStorage.setItem("opencut_settings", JSON.stringify(s));
-                    } catch (e) {}
-                }
+                // Always dismiss permanently — wizard is one-time onboarding
+                try {
+                    var s = JSON.parse(localStorage.getItem("opencut_settings") || "{}");
+                    s.wizardDismissed = true;
+                    localStorage.setItem("opencut_settings", JSON.stringify(s));
+                } catch (e) {}
             });
         }
     }
@@ -4236,7 +4345,7 @@
                 var item = data[i];
                 var div = document.createElement("div");
                 div.className = "output-item";
-                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + item.name + '</div><div class="output-item-meta">' + item.size_mb + ' MB &mdash; ' + item.type + '</div></div><div class="output-item-actions"><button class="btn-sm" data-path="' + item.path.replace(/"/g, '&quot;') + '">Import</button></div>';
+                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + esc(item.name) + '</div><div class="output-item-meta">' + esc(item.size_mb) + ' MB &mdash; ' + esc(item.type) + '</div></div><div class="output-item-actions"><button class="btn-sm" data-path="' + item.path.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">Import</button></div>';
                 div.querySelector(".btn-sm").addEventListener("click", function () {
                     var p = this.dataset.path;
                     if (inPremiere && cs) {
@@ -4566,6 +4675,374 @@
     // ================================================================
 
     // ================================================================
+    // v1.3.0 - Clip Preview Thumbnail
+    // ================================================================
+    function updateClipPreview() {
+        if (!el.clipPreviewRow) return;
+        if (!selectedPath) {
+            el.clipPreviewRow.classList.add("hidden");
+            return;
+        }
+        el.clipPreviewRow.classList.remove("hidden");
+        el.clipThumb.innerHTML = '<div class="clip-thumb-loading"></div>';
+        el.clipMetaRes.textContent = "";
+        el.clipMetaDur.textContent = "";
+        el.clipMetaSize.textContent = "";
+        // Fetch thumbnail
+        api("POST", "/video/preview-frame", { file: selectedPath, timestamp: "00:00:01", width: 160 }, function(err, data) {
+            if (err || !data || !data.image) {
+                el.clipThumb.innerHTML = '<div class="clip-thumb-none">No Preview</div>';
+                return;
+            }
+            el.clipThumb.innerHTML = '<img src="data:image/jpeg;base64,' + data.image + '" alt="preview">';
+        });
+        // Fetch metadata via probe
+        api("POST", "/audio/waveform", { file: selectedPath, samples: 1 }, function(err, data) {
+            if (!err && data && data.duration) {
+                var dur = Math.round(data.duration);
+                var m = Math.floor(dur / 60);
+                var s = dur % 60;
+                el.clipMetaDur.textContent = m + ":" + (s < 10 ? "0" : "") + s;
+            }
+        });
+    }
+
+    // ================================================================
+    // v1.3.0 - Recent Clips Dropdown
+    // ================================================================
+    var _recentClips = [];
+    var MAX_RECENT = 10;
+
+    function loadRecentClips() {
+        try {
+            _recentClips = JSON.parse(localStorage.getItem("opencut_recent_clips") || "[]");
+        } catch(e) { _recentClips = []; }
+    }
+
+    function saveRecentClips() {
+        try { localStorage.setItem("opencut_recent_clips", JSON.stringify(_recentClips)); } catch(e) {}
+    }
+
+    function addRecentClip(path) {
+        if (!path) return;
+        var idx = _recentClips.indexOf(path);
+        if (idx !== -1) _recentClips.splice(idx, 1);
+        _recentClips.unshift(path);
+        if (_recentClips.length > MAX_RECENT) _recentClips = _recentClips.slice(0, MAX_RECENT);
+        saveRecentClips();
+    }
+
+    function showRecentClips() {
+        if (!el.recentClipsDropdown) return;
+        loadRecentClips();
+        if (_recentClips.length === 0) {
+            el.recentClipsDropdown.innerHTML = '<div class="hint" style="padding:8px 12px;">No recent clips.</div>';
+        } else {
+            var html = "";
+            for (var i = 0; i < _recentClips.length; i++) {
+                var name = _recentClips[i].split(/[/\\]/).pop();
+                html += '<div class="recent-clip-item" data-path="' + _recentClips[i].replace(/"/g, '&quot;') + '">' + esc(name) + '</div>';
+            }
+            el.recentClipsDropdown.innerHTML = html;
+        }
+        el.recentClipsDropdown.classList.toggle("hidden");
+    }
+
+    // ================================================================
+    // v1.3.0 - Command Palette
+    // ================================================================
+    var _commandIndex = [
+        {name: "Silence Removal", tab: "cut", sub: "silence", keywords: "silence remove cut clean"},
+        {name: "Filler Words", tab: "cut", sub: "fillers", keywords: "filler um uh like words"},
+        {name: "Trim Clip", tab: "cut", sub: "trim", keywords: "trim cut crop in out point"},
+        {name: "Styled Captions", tab: "captions", sub: "cap-styled", keywords: "caption subtitle style burn"},
+        {name: "Transcribe", tab: "captions", sub: "cap-transcript", keywords: "transcribe whisper speech text"},
+        {name: "Translate", tab: "captions", sub: "cap-translate", keywords: "translate language"},
+        {name: "Stem Separation", tab: "audio", sub: "aud-separate", keywords: "separate stems vocals drums bass demucs"},
+        {name: "Denoise", tab: "audio", sub: "aud-denoise", keywords: "denoise noise reduce clean"},
+        {name: "Normalize", tab: "audio", sub: "aud-normalize", keywords: "normalize loudness lufs volume"},
+        {name: "Text to Speech", tab: "audio", sub: "aud-tts", keywords: "tts voice speech generate"},
+        {name: "Music AI", tab: "audio", sub: "aud-musicai", keywords: "music generate ai musicgen"},
+        {name: "Sound Effects", tab: "audio", sub: "aud-sfx", keywords: "sfx sound effect tone"},
+        {name: "Audio Duck", tab: "audio", sub: "aud-duck", keywords: "duck ducking lower music dialogue"},
+        {name: "Video Effects", tab: "video", sub: "vid-effects", keywords: "stabilize vignette grain letterbox"},
+        {name: "Reframe", tab: "video", sub: "vid-reframe", keywords: "reframe resize phone tiktok shorts vertical portrait"},
+        {name: "Merge Clips", tab: "video", sub: "vid-merge", keywords: "merge concatenate join combine clips"},
+        {name: "Speed / Ramp", tab: "video", sub: "vid-speed", keywords: "speed slow fast ramp reverse"},
+        {name: "Chroma Key", tab: "video", sub: "vid-chroma", keywords: "chroma green screen key"},
+        {name: "Transitions", tab: "video", sub: "vid-transition", keywords: "transition fade wipe slide"},
+        {name: "Upscale", tab: "video", sub: "vid-upscale", keywords: "upscale enhance resolution ai"},
+        {name: "Color Correction", tab: "video", sub: "vid-color", keywords: "color correct grade exposure contrast"},
+        {name: "LUTs", tab: "video", sub: "vid-lut", keywords: "lut color grade cinematic film look"},
+        {name: "Face AI", tab: "video", sub: "vid-faceswap", keywords: "face swap enhance gfpgan"},
+        {name: "Remove Object", tab: "video", sub: "vid-remove", keywords: "remove watermark object logo"},
+        {name: "Titles", tab: "video", sub: "vid-titles", keywords: "title text overlay lower third"},
+        {name: "Export Presets", tab: "export", sub: "exp-platform", keywords: "export platform youtube tiktok instagram"},
+        {name: "Thumbnails", tab: "export", sub: "exp-thumbnail", keywords: "thumbnail extract frame"},
+        {name: "Batch Processing", tab: "export", sub: "exp-batch", keywords: "batch process multiple files"}
+    ];
+
+    var _paletteSelectedIdx = 0;
+    var _paletteResults = [];
+
+    function openCommandPalette() {
+        if (!el.commandPaletteOverlay) return;
+        el.commandPaletteOverlay.classList.remove("hidden");
+        el.commandPaletteInput.value = "";
+        renderPaletteResults("");
+        setTimeout(function() { el.commandPaletteInput.focus(); }, 50);
+    }
+
+    function closeCommandPalette() {
+        if (el.commandPaletteOverlay) el.commandPaletteOverlay.classList.add("hidden");
+    }
+
+    function renderPaletteResults(query) {
+        _paletteResults = [];
+        var q = query.toLowerCase().trim();
+        for (var i = 0; i < _commandIndex.length; i++) {
+            var item = _commandIndex[i];
+            if (!q || item.name.toLowerCase().indexOf(q) !== -1 || item.keywords.indexOf(q) !== -1) {
+                _paletteResults.push(item);
+            }
+        }
+        _paletteSelectedIdx = 0;
+        var html = "";
+        for (var j = 0; j < _paletteResults.length; j++) {
+            html += '<div class="command-palette-item' + (j === 0 ? ' selected' : '') + '" data-idx="' + j + '" data-tab="' + _paletteResults[j].tab + '" data-sub="' + _paletteResults[j].sub + '">' + esc(_paletteResults[j].name) + ' <span class="command-palette-tab">' + esc(_paletteResults[j].tab) + '</span></div>';
+        }
+        if (_paletteResults.length === 0) {
+            html = '<div class="command-palette-empty">No matching operations</div>';
+        }
+        el.commandPaletteResults.innerHTML = html;
+    }
+
+    function executePaletteItem(tab, sub) {
+        closeCommandPalette();
+        navigateToTab(tab, sub);
+    }
+
+    function paletteNavigate(dir) {
+        if (!_paletteResults.length) return;
+        var items = el.commandPaletteResults.querySelectorAll(".command-palette-item");
+        if (items[_paletteSelectedIdx]) items[_paletteSelectedIdx].classList.remove("selected");
+        _paletteSelectedIdx += dir;
+        if (_paletteSelectedIdx < 0) _paletteSelectedIdx = _paletteResults.length - 1;
+        if (_paletteSelectedIdx >= _paletteResults.length) _paletteSelectedIdx = 0;
+        if (items[_paletteSelectedIdx]) {
+            items[_paletteSelectedIdx].classList.add("selected");
+            items[_paletteSelectedIdx].scrollIntoView({ block: "nearest" });
+        }
+    }
+
+    function paletteExecuteSelected() {
+        if (_paletteResults.length > 0 && _paletteResults[_paletteSelectedIdx]) {
+            var item = _paletteResults[_paletteSelectedIdx];
+            executePaletteItem(item.tab, item.sub);
+        }
+    }
+
+    function initCommandPalette() {
+        if (!el.commandPaletteOverlay) return;
+
+        el.commandPaletteInput.addEventListener("input", function() {
+            renderPaletteResults(this.value);
+        });
+
+        el.commandPaletteInput.addEventListener("keydown", function(e) {
+            if (e.key === "ArrowDown") { e.preventDefault(); paletteNavigate(1); }
+            else if (e.key === "ArrowUp") { e.preventDefault(); paletteNavigate(-1); }
+            else if (e.key === "Enter") { e.preventDefault(); paletteExecuteSelected(); }
+            else if (e.key === "Escape") { e.preventDefault(); closeCommandPalette(); }
+        });
+
+        el.commandPaletteOverlay.addEventListener("click", function(e) {
+            if (e.target === el.commandPaletteOverlay) closeCommandPalette();
+        });
+
+        el.commandPaletteResults.addEventListener("click", function(e) {
+            var item = e.target.closest(".command-palette-item");
+            if (item) {
+                executePaletteItem(item.getAttribute("data-tab"), item.getAttribute("data-sub"));
+            }
+        });
+
+        // Ctrl+K to open
+        document.addEventListener("keydown", function(e) {
+            if (e.ctrlKey && e.key === "k") {
+                var tag = e.target.tagName;
+                if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable) return;
+                e.preventDefault();
+                openCommandPalette();
+            }
+        });
+    }
+
+    // ================================================================
+    // v1.3.0 - Sub-Tab Filter (persistence infrastructure)
+    // ================================================================
+    function initSubTabFilter() {
+        var hidden = {};
+        try { hidden = JSON.parse(localStorage.getItem("opencut_hidden_tabs") || "{}"); } catch(e) {}
+        var allSubs = document.querySelectorAll(".sub-tab");
+        for (var i = 0; i < allSubs.length; i++) {
+            var key = allSubs[i].dataset.sub;
+            if (hidden[key]) allSubs[i].style.display = "none";
+        }
+    }
+
+    // ================================================================
+    // v1.3.0 - Audio Waveform Buttons (denoise/normalize)
+    // ================================================================
+    function addAudioWaveformButtons() {
+        var btns = ["runDenoiseBtn", "runNormalizeBtn"];
+        for (var i = 0; i < btns.length; i++) {
+            var parent = document.getElementById(btns[i]);
+            if (!parent) continue;
+            parent = parent.parentNode;
+            if (parent.querySelector(".waveform-audio-btn")) continue;
+            var btn = document.createElement("button");
+            btn.className = "btn-outline btn-sm waveform-audio-btn";
+            btn.textContent = "Preview Waveform";
+            btn.style.marginBottom = "6px";
+            btn.addEventListener("click", function() {
+                if (el.loadWaveformBtn) el.loadWaveformBtn.click();
+            });
+            parent.insertBefore(btn, parent.querySelector(".btn-primary"));
+        }
+    }
+
+    // ================================================================
+    // v1.3.0 - Trim Handler
+    // ================================================================
+    function runTrim() {
+        var mode = el.trimMode ? el.trimMode.value : "reencode";
+        var payload = {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            start: el.trimStart ? el.trimStart.value.trim() || "00:00:00" : "00:00:00",
+            end: el.trimEnd ? el.trimEnd.value.trim() || "00:00:30" : "00:00:30",
+            quality: mode === "copy" ? "copy" : (el.trimQuality ? el.trimQuality.value : "medium")
+        };
+        startJob("/video/trim", payload);
+    }
+
+    // ================================================================
+    // v1.3.0 - Merge Handler
+    // ================================================================
+    var _mergeFiles = [];
+
+    function renderMergeFiles() {
+        if (!el.mergeFileList) return;
+        if (_mergeFiles.length === 0) {
+            el.mergeFileList.innerHTML = '<div class="hint" style="padding:8px 12px;">No files added.</div>';
+            if (el.runMergeBtn) el.runMergeBtn.disabled = true;
+            return;
+        }
+        var html = "";
+        for (var i = 0; i < _mergeFiles.length; i++) {
+            var name = _mergeFiles[i].split(/[/\\]/).pop();
+            html += '<div class="merge-file-item"><span class="merge-file-name">' + esc(name) + '</span><button class="btn-ghost btn-xs merge-file-remove" data-idx="' + i + '">&times;</button></div>';
+        }
+        el.mergeFileList.innerHTML = html;
+        if (el.runMergeBtn) el.runMergeBtn.disabled = _mergeFiles.length < 2;
+        // Wire remove buttons
+        var removeBtns = el.mergeFileList.querySelectorAll(".merge-file-remove");
+        for (var j = 0; j < removeBtns.length; j++) {
+            removeBtns[j].addEventListener("click", function() {
+                _mergeFiles.splice(parseInt(this.dataset.idx), 1);
+                renderMergeFiles();
+            });
+        }
+    }
+
+    function runMerge() {
+        if (_mergeFiles.length < 2) { showToast("Need at least 2 files to merge", "error"); return; }
+        startJob("/video/merge", {
+            files: _mergeFiles,
+            output_dir: projectFolder,
+            mode: el.mergeMode ? el.mergeMode.value : "concat",
+            quality: el.mergeQuality ? el.mergeQuality.value : "medium"
+        });
+    }
+
+    // ================================================================
+    // v1.3.0 - Per-Operation Presets
+    // ================================================================
+    function saveOperationPreset(opName) {
+        var settings = {};
+        var activePanel = document.querySelector(".sub-panel:not(.hidden):not([style*='display: none'])");
+        if (!activePanel) activePanel = document.querySelector(".sub-panel.active");
+        if (!activePanel) return;
+        var inputs = activePanel.querySelectorAll("input, select");
+        for (var i = 0; i < inputs.length; i++) {
+            if (!inputs[i].id) continue;
+            if (inputs[i].type === "checkbox") {
+                settings[inputs[i].id] = inputs[i].checked;
+            } else {
+                settings[inputs[i].id] = inputs[i].value;
+            }
+        }
+        var all = {};
+        try { all = JSON.parse(localStorage.getItem("opencut_op_presets") || "{}"); } catch(e) {}
+        all[opName] = settings;
+        try { localStorage.setItem("opencut_op_presets", JSON.stringify(all)); } catch(e) {}
+        showToast("Preset saved for " + opName, "success");
+    }
+
+    function loadOperationPreset(opName) {
+        var all = {};
+        try { all = JSON.parse(localStorage.getItem("opencut_op_presets") || "{}"); } catch(e) {}
+        var settings = all[opName];
+        if (!settings) { showToast("No saved preset for " + opName, "info"); return; }
+        for (var id in settings) {
+            var el2 = document.getElementById(id);
+            if (!el2) continue;
+            if (el2.type === "checkbox") {
+                el2.checked = settings[id];
+            } else {
+                el2.value = settings[id];
+            }
+            // Trigger change event for sliders etc
+            var evt = document.createEvent("Event");
+            evt.initEvent("change", true, true);
+            el2.dispatchEvent(evt);
+        }
+        showToast("Preset loaded for " + opName, "success");
+    }
+
+    // ================================================================
+    // v1.3.0 - Server Health Ping
+    // ================================================================
+    var _serverOnline = true;
+    var _healthCheckInterval = null;
+
+    function initHealthCheck() {
+        _healthCheckInterval = setInterval(function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", BACKEND + "/health", true);
+            xhr.timeout = 5000;
+            xhr.onload = function() {
+                if (!_serverOnline) {
+                    _serverOnline = true;
+                    if (el.serverStatusBanner) el.serverStatusBanner.classList.add("hidden");
+                    showToast("Server reconnected", "success");
+                }
+            };
+            xhr.onerror = xhr.ontimeout = function() {
+                if (_serverOnline) {
+                    _serverOnline = false;
+                    if (el.serverStatusBanner) {
+                        el.serverStatusBanner.classList.remove("hidden");
+                        if (el.serverStatusMsg) el.serverStatusMsg.textContent = "Server disconnected. Reconnecting...";
+                    }
+                }
+            };
+            xhr.send();
+        }, 10000);
+    }
+
+    // ================================================================
     // Init
     // ================================================================
     document.addEventListener("DOMContentLoaded", function () {
@@ -4696,6 +5173,12 @@
         el.runParticlesBtn.addEventListener("click", runParticles);
         el.runTitleOverlayBtn.addEventListener("click", runTitleOverlay);
         el.runTitleCardBtn.addEventListener("click", runTitleCard);
+        el.runReframeBtn.addEventListener("click", runReframe);
+        el.reframePreset.addEventListener("change", updateReframeUI);
+        el.reframeMode.addEventListener("change", updateReframeUI);
+        el.reframeCustomW.addEventListener("input", updateReframeUI);
+        el.reframeCustomH.addEventListener("input", updateReframeUI);
+        updateReframeUI();
         el.runUpscaleBtn.addEventListener("click", runUpscale);
         el.runColorBtn.addEventListener("click", runColor);
         el.runRemoveBtn.addEventListener("click", runRemove);
@@ -4703,6 +5186,48 @@
         el.faceAiMode.addEventListener("change", showFaceAiParams);
         el.runAnimCapBtn.addEventListener("click", runAnimCap);
         el.runMusicAiBtn.addEventListener("click", runMusicAi);
+
+        // v1.3.0 - Trim
+        if (el.runTrimBtn) el.runTrimBtn.addEventListener("click", runTrim);
+        if (el.trimMode) el.trimMode.addEventListener("change", function() {
+            if (el.trimQualityGroup) {
+                el.trimQualityGroup.style.display = this.value === "copy" ? "none" : "";
+            }
+        });
+
+        // v1.3.0 - Merge
+        if (el.mergeAddCurrentBtn) el.mergeAddCurrentBtn.addEventListener("click", function() {
+            if (selectedPath && _mergeFiles.indexOf(selectedPath) === -1) {
+                _mergeFiles.push(selectedPath);
+                renderMergeFiles();
+            }
+        });
+        if (el.mergeAddAllBtn) el.mergeAddAllBtn.addEventListener("click", function() {
+            for (var i = 0; i < projectMedia.length; i++) {
+                if (_mergeFiles.indexOf(projectMedia[i].path) === -1) {
+                    _mergeFiles.push(projectMedia[i].path);
+                }
+            }
+            renderMergeFiles();
+        });
+        if (el.mergeClearBtn) el.mergeClearBtn.addEventListener("click", function() {
+            _mergeFiles = [];
+            renderMergeFiles();
+        });
+        if (el.runMergeBtn) el.runMergeBtn.addEventListener("click", runMerge);
+
+        // v1.3.0 - Recent Clips
+        if (el.recentClipsBtn) el.recentClipsBtn.addEventListener("click", showRecentClips);
+        if (el.recentClipsDropdown) el.recentClipsDropdown.addEventListener("click", function(e) {
+            var item = e.target.closest(".recent-clip-item");
+            if (item) {
+                var path = item.getAttribute("data-path");
+                if (path) {
+                    selectFile(path, path.split(/[/\\]/).pop());
+                    el.recentClipsDropdown.classList.add("hidden");
+                }
+            }
+        });
 
         // Export tab buttons
         el.runExpTranscriptBtn.addEventListener("click", runExpTranscript);
@@ -4802,6 +5327,14 @@
         initWorkflowBuilder();
         initCollapsibleCards();
         initI18n();
+
+        // v1.3.0 inits
+        loadRecentClips();
+        initCommandPalette();
+        initSubTabFilter();
+        addAudioWaveformButtons();
+        initHealthCheck();
+        renderMergeFiles();
     });
 
 })();
