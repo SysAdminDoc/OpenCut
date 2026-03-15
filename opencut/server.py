@@ -1518,7 +1518,8 @@ def audio_separate():
             # Extract audio if video file
             video_exts = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v'}
             file_ext = os.path.splitext(filepath)[1].lower()
-            
+            temp_audio = None
+
             if file_ext in video_exts:
                 with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
                     temp_audio = tmp.name
@@ -1623,10 +1624,6 @@ def audio_separate():
                         
                         output_paths.append(out_path)
             
-            # Cleanup temp audio if we extracted from video
-            if file_ext in video_exts and os.path.exists(temp_audio):
-                os.unlink(temp_audio)
-            
             _update_job(
                 job_id, status="complete", progress=100,
                 message=f"Separation complete! {len(output_paths)} stems exported.",
@@ -1638,6 +1635,13 @@ def audio_separate():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
             logger.exception("Audio separation error")
+        finally:
+            # Cleanup temp audio extracted from video
+            try:
+                if file_ext in video_exts and temp_audio and os.path.exists(temp_audio):
+                    os.unlink(temp_audio)
+            except OSError:
+                pass
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -2177,7 +2181,10 @@ def video_watermark():
                             '-shortest',
                             out_path
                         ], check=True, capture_output=True)
-                        os.unlink(temp_video)
+                        try:
+                            os.unlink(temp_video)
+                        except OSError:
+                            pass
                     except Exception:
                         # No ffmpeg or no audio, just rename
                         import shutil
@@ -2214,6 +2221,12 @@ def video_watermark():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
             logger.exception("Watermark removal error")
+            # Cleanup leaked temp video file
+            try:
+                if temp_video and os.path.exists(temp_video):
+                    os.unlink(temp_video)
+            except (OSError, NameError):
+                pass
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -2332,21 +2345,6 @@ def video_scenes():
             jobs[job_id]["_thread"] = thread
     return jsonify({"job_id": job_id, "status": "running"})
 
-
-# ---------------------------------------------------------------------------
-# Speed Ramp Presets
-# ---------------------------------------------------------------------------
-@app.route("/video/speed-presets", methods=["GET"])
-def speed_presets():
-    """Return available speed ramp presets."""
-    try:
-        try:
-            from .core.scene_detect import SPEED_RAMP_PRESETS
-        except ImportError:
-            from opencut.core.scene_detect import SPEED_RAMP_PRESETS
-        return jsonify({"presets": SPEED_RAMP_PRESETS})
-    except Exception as e:
-        return _safe_error(e)
 
 
 # ---------------------------------------------------------------------------
@@ -3002,7 +3000,9 @@ def export_video():
                 ]
 
                 if video_codec == "copy":
-                    cmd.extend(["-c:v", "libx264", "-crf", crf, "-preset", "fast"])
+                    # Stream copy is incompatible with filter_complex concat;
+                    # use low-CRF libx264 for near-lossless re-encode
+                    cmd.extend(["-c:v", "libx264", "-crf", "18", "-preset", "fast"])
                 elif video_codec == "libx264":
                     cmd.extend(["-c:v", "libx264", "-crf", crf, "-preset", "fast"])
                 elif video_codec == "libx265":
