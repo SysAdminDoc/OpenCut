@@ -98,6 +98,22 @@ Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Launcher.vbs"""; Descripti
 const
   EnvironmentKey = 'Environment';
 
+// --- Kill OpenCut server processes ---
+
+procedure KillOpenCutProcesses();
+var
+  ResultCode: Integer;
+begin
+  // Kill all OpenCut-Server.exe processes
+  Exec('taskkill.exe', '/F /IM OpenCut-Server.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Kill any wscript running our launcher
+  Exec('taskkill.exe', '/F /FI "WINDOWTITLE eq OpenCut*"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Kill python server if running from source
+  Exec('cmd.exe', '/c for /f "tokens=5" %a in (''netstat -ano ^| findstr :5679 ^| findstr LISTENING'') do taskkill /F /PID %a', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Brief pause to let processes die
+  Sleep(500);
+end;
+
 // --- PATH management for bundled FFmpeg ---
 
 procedure AddToPath(Dir: string);
@@ -188,6 +204,14 @@ begin
   DirectoryCopy(ExtSrc, ExtDest);
 end;
 
+// --- Pre-install: kill server before upgrading ---
+
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+begin
+  KillOpenCutProcesses();
+  Result := '';
+end;
+
 // --- Post-install hooks ---
 
 procedure CurStepChanged(CurStep: TSetupStep);
@@ -206,20 +230,61 @@ end;
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
-  ExtPath: string;
+  ExtPath, ConfigDir, StartupShortcut: string;
+  ResultCode: Integer;
 begin
   if CurUninstallStep = usUninstall then
   begin
-    // Remove CEP extension
+    // Kill running server processes first
+    KillOpenCutProcesses();
+
+    // Remove CEP extension from Adobe folder
     ExtPath := ExpandConstant('{userappdata}\Adobe\CEP\extensions\com.opencut.panel');
     if DirExists(ExtPath) then
       DelTree(ExtPath, True, True, True);
+
     // Remove FFmpeg from user PATH
     RemoveFromPath(ExpandConstant('{app}\ffmpeg'));
+
+    // Remove OpenCut config directory (~/.opencut)
+    ConfigDir := ExpandConstant('{userappdata}\..\..\.opencut');
+    if DirExists(ConfigDir) then
+      DelTree(ConfigDir, True, True, True);
+
+    // Remove startup shortcut (in case autostart was selected)
+    StartupShortcut := ExpandConstant('{userstartup}\OpenCut.lnk');
+    if FileExists(StartupShortcut) then
+      DeleteFile(StartupShortcut);
+
+    // Remove desktop shortcut
+    if FileExists(ExpandConstant('{autodesktop}\OpenCut.lnk')) then
+      DeleteFile(ExpandConstant('{autodesktop}\OpenCut.lnk'));
+
+    // Broadcast environment change so PATH update takes effect immediately
+    Exec('cmd.exe', '/c setx OPENCUT_UNINSTALLED ""', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   end;
 end;
 
 [UninstallDelete]
+; Remove entire install directory and all contents
+Type: filesandordirs; Name: "{app}"
+; CEP extension (redundant with code above, but belt-and-suspenders)
 Type: filesandordirs; Name: "{userappdata}\Adobe\CEP\extensions\com.opencut.panel"
+; Config directory
+Type: filesandordirs; Name: "{%USERPROFILE}\.opencut"
+; Logs
 Type: filesandordirs; Name: "{app}\logs"
+; FFmpeg
 Type: filesandordirs; Name: "{app}\ffmpeg"
+; Server
+Type: filesandordirs; Name: "{app}\server"
+; Extension copy
+Type: filesandordirs; Name: "{app}\extension"
+; Desktop shortcut
+Type: files; Name: "{autodesktop}\OpenCut.lnk"
+; Startup shortcut
+Type: files; Name: "{userstartup}\OpenCut.lnk"
+
+[UninstallRun]
+; Kill server before uninstall files are removed
+Filename: "taskkill.exe"; Parameters: "/F /IM OpenCut-Server.exe"; Flags: runhidden; RunOnceId: "KillServer"
