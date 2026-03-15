@@ -1480,6 +1480,10 @@
         startJob(step.endpoint, step.payload);
     }
 
+    // Job done listener registry (must be declared before any addJobDoneListener calls)
+    var jobDoneListeners = [];
+    function addJobDoneListener(fn) { jobDoneListeners.push(fn); }
+
     // Listener: auto-advance workflow queue on job completion
     addJobDoneListener(function (job) {
         if (workflowActive && job.status === "complete" && workflowQueue.length > 0) {
@@ -1608,9 +1612,6 @@
         el.processingFill.style.width = pct;
         el.processingMsg.textContent = msg;
     }
-
-    var jobDoneListeners = [];
-    function addJobDoneListener(fn) { jobDoneListeners.push(fn); }
 
     function onJobDone(job) {
         currentJob = null;
@@ -5060,7 +5061,6 @@
     // Init
     // ================================================================
     document.addEventListener("DOMContentLoaded", function () {
-        try {
         initCSInterface();
         initDOM();
         setupNavTabs();
@@ -5350,10 +5350,6 @@
         addAudioWaveformButtons();
         initHealthCheck();
         renderMergeFiles();
-        } catch (initErr) {
-            console.error("OpenCut init error:", initErr);
-            document.body.innerHTML = '<div style="color:#ff4444;padding:20px;font-family:monospace;white-space:pre-wrap;">OpenCut Init Error:\n' + initErr.message + '\n\n' + initErr.stack + '</div>';
-        }
     });
 
 })();
