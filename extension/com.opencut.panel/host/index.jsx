@@ -599,7 +599,9 @@ function applyEditsToTimeline(segmentsJson, mediaPath) {
  */
 function _findProjectItemByPath(parent, targetPath, depth) {
     if (depth > 10) return null;
-    for (var i = 0; i < parent.children.numItems; i++) {
+    var numChildren = 0;
+    try { numChildren = parent.children.numItems; } catch (e) { return null; }
+    for (var i = 0; i < numChildren; i++) {
         var item = parent.children[i];
         try {
             if (item.type === 2) {
@@ -609,7 +611,7 @@ function _findProjectItemByPath(parent, targetPath, depth) {
             } else {
                 var p = "";
                 try { p = item.getMediaPath(); } catch (e) { _ocLog(e.toString()); }
-                if (p && p === targetPath) return item;
+                if (p && p.toLowerCase() === targetPath.toLowerCase()) return item;
             }
         } catch (e) { _ocLog(e.toString()); }
     }
@@ -842,7 +844,7 @@ function importFilesToProject(filePathsJson, binName) {
     if (!binName) binName = "OpenCut Output";
 
     var paths = [];
-    try { paths = eval("(" + filePathsJson + ")"); } catch (e) {
+    try { paths = JSON.parse(filePathsJson); } catch (e) {
         return JSON.stringify({ error: "Invalid JSON: " + e.toString() });
     }
 

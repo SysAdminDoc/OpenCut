@@ -1326,12 +1326,14 @@
     // ================================================================
     // Job Execution & Tracking
     // ================================================================
+    var jobStarting = false;
+
     function startJob(endpoint, payload) {
-        if (currentJob) {
+        if (currentJob || jobStarting) {
             showAlert("A job is already running. Wait for it to finish or cancel it.");
             return;
         }
-        if (!selectedPath && payload && !payload.filepath) {
+        if (!selectedPath && payload && !payload.filepath && !payload.no_input) {
             showAlert("Select a clip first.");
             return;
         }
@@ -1352,6 +1354,7 @@
 
         // Lock the entire UI
         document.body.classList.add("job-active");
+        jobStarting = true;
 
         // Track for retry
         lastJobEndpoint = endpoint;
@@ -1366,6 +1369,7 @@
         }, 1000);
 
         api("POST", endpoint, payload, function (err, data) {
+            jobStarting = false;
             if (err || !data || data.error) {
                 showAlert(data ? data.error : "Failed to start job");
                 hideProgress();
@@ -2254,7 +2258,7 @@
             { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
         ],
         social_ready: [
-            { endpoint: "/cut/silence", payload: { threshold: -35, min_silence: 0.4, pad_before: 0.1, pad_after: 0.1 }, label: "Removing silence..." },
+            { endpoint: "/silence", payload: { threshold: -35, min_silence: 0.4, pad_before: 0.1, pad_after: 0.1 }, label: "Removing silence..." },
             { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
         ],
     };
@@ -2296,6 +2300,7 @@
             voice: el.ttsVoice.value,
             rate: rateStr,
             output_dir: projectFolder,
+            no_input: true,
         });
     }
 
@@ -2323,12 +2328,14 @@
                 waveform: el.toneWaveform.value,
                 volume: 0.5,
                 output_dir: projectFolder,
+                no_input: true,
             });
         } else {
             startJob("/audio/gen/sfx", {
                 preset: el.sfxPreset.value,
                 duration: parseFloat(el.sfxDuration.value),
                 output_dir: projectFolder,
+                no_input: true,
             });
         }
     }
@@ -2473,7 +2480,7 @@
     function runTitleCard() {
         var t = el.titleText.value.trim();
         if (!t) { showAlert("Enter title text."); return; }
-        startJob("/video/title/render", { text: t, output_dir: projectFolder,
+        startJob("/video/title/render", { text: t, output_dir: projectFolder, no_input: true,
             preset: el.titlePreset.value, duration: parseFloat(el.titleDur.value),
             font_size: parseInt(el.titleFontSize.value), subtitle: el.titleSubtext.value.trim() });
     }
@@ -2544,7 +2551,7 @@
     function runMusicAi() {
         var prompt = el.musicAiPrompt.value.trim();
         if (!prompt) { showAlert("Enter a music prompt."); return; }
-        startJob("/audio/music-ai/generate", { prompt: prompt, output_dir: projectFolder,
+        startJob("/audio/music-ai/generate", { prompt: prompt, output_dir: projectFolder, no_input: true,
             model: el.musicAiModel.value, duration: parseFloat(el.musicAiDur.value),
             temperature: parseFloat(el.musicAiTemp.value) });
     }
@@ -3113,6 +3120,7 @@
     function refreshAll() {
         el.refreshAllBtn.classList.add("spinning");
         settingsLoaded = false;
+        capabilitiesLoaded = false;
         checkHealth();
         scanProjectMedia();
         loadStylePreview();
@@ -3228,7 +3236,10 @@
             if (!item) return;
             var theme = item.getAttribute("data-theme");
             applyTheme(theme);
-            if (el.settingsTheme) el.settingsTheme.value = theme;
+            if (el.settingsTheme) {
+                el.settingsTheme.value = theme;
+                if (el.settingsTheme._customDropdown) el.settingsTheme._customDropdown.updateText();
+            }
             saveLocalSettings();
             el.themeMenu.classList.remove("open");
         });
