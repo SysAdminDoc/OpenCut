@@ -21,7 +21,7 @@
             <div class="header-left">
                 <img class="logo-mark" width="18" height="18" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAA9ElEQVR4nK3UwUrDQBDG8f/M+gKBxkspePAkvXj14tmjIHr1IBT0Ij6G3kSkHnqQPoNeamNBT+JjTIekNNmkmsP+2GX5MbM7LPJcqLKVKFAiEPG5vt0T8vM1iWIoE9V/j6UpqNw4O2hIqD7L/wGhTqkIWRhKvEqRB56qiMgePkIhsn+YriVNDSSJUF0r2ppNswk0KZi5e5PvXcfpfYd/rJ42ex8RJXCJcqd+22ren5cAxdtm1N6/6oOoiOLVY0Qixvsg/5dcjvEupF3PbRp5JJHOdSMXJ7IasiWZxctOBUrngCzuJPGij/+TIYhclkfSBuCMOAFmNwJ0F6s0yQAAAABJRU5ErkJggg==" alt="OpenCut">
                 <span class="logo-text">Open<span class="logo-accent">Cut</span></span>
-                <span class="version">v1.0.0</span>
+                <span class="version">v1.1.0</span>
             </div>
             <div class="header-right">
                 <button class="header-btn" id="refreshAllBtn" title="Refresh connection and capabilities">
@@ -58,6 +58,15 @@
             <button class="job-history-toggle" id="jobHistoryToggle" title="Toggle job history">History (0)</button>
         </div>
         <div class="job-history" id="jobHistory"></div>
+
+        <!-- Job Queue -->
+        <div class="job-queue-bar hidden" id="jobQueueBar">
+            <div class="queue-info">
+                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" opacity="0.6"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                <span id="queueStatusText">Queue: 0 jobs</span>
+            </div>
+            <button class="btn-sm" id="clearQueueBtn">Clear</button>
+        </div>
 
         <!-- Alert Banner -->
         <div class="alert-banner hidden" id="alertBanner" role="alert" aria-live="assertive">
@@ -406,6 +415,12 @@
                                     </select>
                                     <button class="btn-sm" id="exportTranscriptBtn">Export</button>
                                 </div>
+                            </div>
+                            <div class="transcript-search" id="transcriptSearch">
+                                <input type="text" id="transcriptSearchInput" class="text-input" placeholder="Search transcript...">
+                                <span class="transcript-search-count" id="transcriptSearchCount"></span>
+                                <button class="btn-sm" id="transcriptSearchPrev" title="Previous">&uarr;</button>
+                                <button class="btn-sm" id="transcriptSearchNext" title="Next">&darr;</button>
                             </div>
                             <div class="transcript-segments" id="transcriptSegments"></div>
                         </div>
@@ -1974,10 +1989,75 @@
                 </section>
 
                 <section class="card">
+                    <div class="card-header">
+                        <div class="card-title">Presets</div>
+                    </div>
+                    <div class="form-group">
+                        <label>Save Current Settings</label>
+                        <div class="preset-save-row">
+                            <input type="text" id="presetNameInput" class="text-input" placeholder="My Preset Name">
+                            <button class="btn-sm" id="savePresetBtn">Save</button>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Load Preset</label>
+                        <select id="presetSelect">
+                            <option value="" disabled selected>No presets saved</option>
+                        </select>
+                    </div>
+                    <div class="btn-row" style="gap: 6px;">
+                        <button class="btn-outline btn-sm" id="loadPresetBtn">Load</button>
+                        <button class="btn-outline btn-sm" id="deletePresetBtn">Delete</button>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header">
+                        <div class="card-title">AI Models</div>
+                        <button class="link-btn" id="refreshModelsBtn" title="Refresh model list">
+                            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
+                            Refresh
+                        </button>
+                    </div>
+                    <div class="model-list" id="modelList">
+                        <div class="hint">Click refresh to scan for models.</div>
+                    </div>
+                    <div class="settings-row" style="margin-top: 8px;">
+                        <span class="settings-label">Total Size</span>
+                        <span class="settings-value" id="modelsTotalSize">--</span>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header">
+                        <div class="card-title">GPU Recommendation</div>
+                    </div>
+                    <div id="gpuRecContent">
+                        <button class="btn-outline btn-sm" id="getGpuRecBtn">Get Recommendation</button>
+                    </div>
+                    <div class="gpu-rec hidden" id="gpuRecResults">
+                        <div class="settings-row">
+                            <span class="settings-label">Recommended Model</span>
+                            <span class="settings-value" id="gpuRecModel">--</span>
+                        </div>
+                        <div class="settings-row">
+                            <span class="settings-label">Quality</span>
+                            <span class="settings-value" id="gpuRecQuality">--</span>
+                        </div>
+                        <div class="settings-row">
+                            <span class="settings-label">Device</span>
+                            <span class="settings-value" id="gpuRecDevice">--</span>
+                        </div>
+                        <div class="gpu-rec-notes" id="gpuRecNotes"></div>
+                        <button class="btn-outline btn-sm" id="applyGpuRecBtn" style="margin-top: 8px;">Apply Recommendations</button>
+                    </div>
+                </section>
+
+                <section class="card">
                     <div class="card-header"><div class="card-title">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.0.0-beta</span>
+                        <span class="settings-value">1.1.0</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>
