@@ -2,7 +2,7 @@
 ; Installs the OpenCut backend + CEP extension for Premiere Pro
 
 #define MyAppName "OpenCut"
-#define MyAppVersion "0.6.5"
+#define MyAppVersion "1.0.0"
 #define MyAppPublisher "SysAdminDoc"
 #define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
 
