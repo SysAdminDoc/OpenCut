@@ -41,6 +41,8 @@
     // ============================================================
     // CUSTOM DROPDOWN SYSTEM - Inline Panel Dropdowns
     // ============================================================
+    var dropdownGlobalListenersAdded = false;
+
     function initCustomDropdowns() {
         var selects = document.querySelectorAll('select:not(.no-custom)');
         for (var i = 0; i < selects.length; i++) {
@@ -48,20 +50,21 @@
             if (select.dataset.customized) continue;
             createCustomDropdown(select);
         }
-        
-        // Close dropdowns when clicking outside
-        document.addEventListener('click', function(e) {
-            if (!e.target.closest('.custom-dropdown')) {
-                closeAllDropdowns();
-            }
-        });
-        
-        // Close on escape key
-        document.addEventListener('keydown', function(e) {
-            if (e.key === 'Escape') {
-                closeAllDropdowns();
-            }
-        });
+
+        // Register global listeners only once
+        if (!dropdownGlobalListenersAdded) {
+            dropdownGlobalListenersAdded = true;
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.custom-dropdown')) {
+                    closeAllDropdowns();
+                }
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    closeAllDropdowns();
+                }
+            });
+        }
     }
     
     function createCustomDropdown(select) {
@@ -182,6 +185,8 @@
         
         function closeDropdown() {
             wrapper.classList.remove('open');
+            var focused = dropdown.querySelector('.custom-dropdown-item.focused');
+            if (focused) focused.classList.remove('focused');
         }
         
         function positionDropdown() {
@@ -207,14 +212,76 @@
         }
         
         trigger.addEventListener('click', toggleDropdown);
+
+        var typeSearchBuffer = '';
+        var typeSearchTimer = null;
+
         trigger.addEventListener('keydown', function(e) {
+            var isOpen = wrapper.classList.contains('open');
+
             if (e.key === 'Enter' || e.key === ' ') {
                 e.preventDefault();
-                toggleDropdown(e);
-            } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                e.preventDefault();
-                if (!wrapper.classList.contains('open')) {
+                if (isOpen) {
+                    // Select the focused item
+                    var focused = dropdown.querySelector('.custom-dropdown-item.focused');
+                    if (focused) focused.click();
+                    else closeDropdown();
+                } else {
                     toggleDropdown(e);
+                }
+                return;
+            }
+
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeDropdown();
+                return;
+            }
+
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (!isOpen) {
+                    toggleDropdown(e);
+                    return;
+                }
+                var items = dropdown.querySelectorAll('.custom-dropdown-item:not(.disabled)');
+                if (!items.length) return;
+                var focusedIdx = -1;
+                for (var fi = 0; fi < items.length; fi++) {
+                    if (items[fi].classList.contains('focused')) { focusedIdx = fi; break; }
+                }
+                // Clear old focus
+                if (focusedIdx >= 0) items[focusedIdx].classList.remove('focused');
+                // Calculate new index
+                if (e.key === 'ArrowDown') {
+                    focusedIdx = (focusedIdx + 1) % items.length;
+                } else {
+                    focusedIdx = focusedIdx <= 0 ? items.length - 1 : focusedIdx - 1;
+                }
+                items[focusedIdx].classList.add('focused');
+                items[focusedIdx].scrollIntoView({ block: 'nearest' });
+                return;
+            }
+
+            // Type-to-search: match visible option text
+            if (e.key.length === 1 && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                e.preventDefault();
+                typeSearchBuffer += e.key.toLowerCase();
+                if (typeSearchTimer) clearTimeout(typeSearchTimer);
+                typeSearchTimer = setTimeout(function () { typeSearchBuffer = ''; }, 600);
+
+                if (!isOpen) toggleDropdown(e);
+
+                var items = dropdown.querySelectorAll('.custom-dropdown-item:not(.disabled)');
+                for (var ti = 0; ti < items.length; ti++) {
+                    if (items[ti].textContent.toLowerCase().indexOf(typeSearchBuffer) === 0) {
+                        // Clear old focus
+                        var oldFocus = dropdown.querySelector('.custom-dropdown-item.focused');
+                        if (oldFocus) oldFocus.classList.remove('focused');
+                        items[ti].classList.add('focused');
+                        items[ti].scrollIntoView({ block: 'nearest' });
+                        break;
+                    }
                 }
             }
         });
@@ -320,6 +387,8 @@
         el.transcriptSegments = $("transcriptSegments");
         el.transcriptExportFormat = $("transcriptExportFormat");
         el.exportTranscriptBtn = $("exportTranscriptBtn");
+        el.transcriptUndoBtn = $("transcriptUndoBtn");
+        el.transcriptRedoBtn = $("transcriptRedoBtn");
 
         // Audio tab - Separation
         el.separateModel = $("separateModel");
@@ -489,6 +558,10 @@
         el.runBatchBtn = $("runBatchBtn");
         el.batchResults = $("batchResults");
         el.batchStatusText = $("batchStatusText");
+
+        // Workflow presets
+        el.workflowPreset = $("workflowPreset");
+        el.runWorkflowBtn = $("runWorkflowBtn");
 
         // Audio tab - TTS
         el.ttsEngine = $("ttsEngine");
@@ -676,6 +749,17 @@
         el.processingElapsed = $("processingElapsed");
         el.processingCancel = $("processingCancel");
         el.processingFill = $("processingFill");
+
+        // Drop zone
+        el.dropZone = $("dropZone");
+
+        // Theme toggle
+        el.themeToggleBtn = $("themeToggleBtn");
+        el.themeMenu = $("themeMenu");
+
+        // Job history
+        el.jobHistoryToggle = $("jobHistoryToggle");
+        el.jobHistory = $("jobHistory");
     }
 
     // ================================================================
@@ -708,6 +792,18 @@
         xhr.send(body ? JSON.stringify(body) : null);
     }
 
+    // Wrapper: api call with button spinner feedback
+    function apiWithSpinner(btn, method, path, body, callback, timeout) {
+        var origText = btn.textContent;
+        btn.disabled = true;
+        btn.textContent = "Working...";
+        api(method, path, body, function (err, data) {
+            btn.disabled = false;
+            btn.textContent = origText;
+            callback(err, data);
+        }, timeout);
+    }
+
     // ================================================================
     // Health Check
     // ================================================================
@@ -723,6 +819,7 @@
                 if (data.capabilities) capabilities = data.capabilities;
                 el.backendPort.textContent = BACKEND.replace("http://127.0.0.1:", "Port ");
                 updateButtons();
+                loadCapabilities();
                 return;
             }
             if (!portScanPending) { portScanPending = true; scanForServer(); }
@@ -754,6 +851,7 @@
                             el.backendPort.textContent = "Port " + port;
                             if (data.capabilities) capabilities = data.capabilities;
                             updateButtons();
+                            loadCapabilities();
                             portScanPending = false;
                         }
                     } catch (e) {}
@@ -823,12 +921,84 @@
         }
     }
 
+    function browseForInput(targetId) {
+        if (inPremiere) {
+            jsx("browseForFile()", function (result) {
+                if (result && result !== "null" && result !== "undefined" && result.length > 3) {
+                    var input = document.getElementById(targetId);
+                    if (input) input.value = result;
+                }
+            });
+        }
+    }
+
+    function getTranscriptCacheKey(filepath) {
+        return "opencut_transcript_" + filepath.replace(/[^a-zA-Z0-9]/g, "_");
+    }
+
+    function cacheTranscriptSegments(filepath, segments) {
+        try {
+            var key = getTranscriptCacheKey(filepath);
+            localStorage.setItem(key, JSON.stringify(segments));
+        } catch (e) { /* quota exceeded or unavailable */ }
+    }
+
+    function loadCachedTranscript(filepath) {
+        try {
+            var key = getTranscriptCacheKey(filepath);
+            var data = localStorage.getItem(key);
+            if (data) return JSON.parse(data);
+        } catch (e) {}
+        return null;
+    }
+
+    var RECENT_FILES_KEY = "opencut_recent_files";
+    var MAX_RECENT_FILES = 10;
+
+    function addRecentFile(path, name) {
+        try {
+            var recent = JSON.parse(localStorage.getItem(RECENT_FILES_KEY) || "[]");
+            // Remove if already exists
+            recent = recent.filter(function (r) { return r.path !== path; });
+            recent.unshift({ path: path, name: name });
+            if (recent.length > MAX_RECENT_FILES) recent = recent.slice(0, MAX_RECENT_FILES);
+            localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(recent));
+        } catch (e) {}
+    }
+
+    function getRecentFiles() {
+        try {
+            return JSON.parse(localStorage.getItem(RECENT_FILES_KEY) || "[]");
+        } catch (e) { return []; }
+    }
+
+    function populateRecentFiles() {
+        var recent = getRecentFiles();
+        if (!recent.length) return;
+        // Check if optgroup already exists
+        var existing = el.clipSelect.querySelector('optgroup[label="Recent Files"]');
+        if (existing) existing.parentNode.removeChild(existing);
+        var group = document.createElement("optgroup");
+        group.label = "Recent Files";
+        for (var i = 0; i < recent.length; i++) {
+            var opt = document.createElement("option");
+            opt.value = recent[i].path;
+            opt.textContent = recent[i].name;
+            opt.setAttribute("data-name", recent[i].name);
+            group.appendChild(opt);
+        }
+        el.clipSelect.appendChild(group);
+    }
+
     function selectFile(path, name) {
         selectedPath = path;
         selectedName = name || path.split(/[/\\]/).pop();
+        lastTranscriptSegments = loadCachedTranscript(path);
+        transcriptData = null;
+        addRecentFile(path, selectedName);
         el.fileInfoBox.classList.remove("hidden");
         el.fileNameDisplay.textContent = selectedName;
-        el.fileMetaDisplay.textContent = "Loading...";
+        el.fileMetaDisplay.innerHTML = '<span class="skeleton skeleton-wide"></span>';
         updateButtons();
 
         if (connected) {
@@ -836,8 +1006,16 @@
                 if (!err && data && !data.error) {
                     var meta = "";
                     if (data.duration) meta += fmtDur(data.duration);
-                    if (data.video) meta += " | " + data.video.width + "x" + data.video.height + " @ " + data.video.fps.toFixed(2) + " fps";
-                    if (data.audio) meta += " | " + (data.audio.sample_rate / 1000).toFixed(1) + " kHz";
+                    if (data.video) {
+                        meta += " | " + data.video.width + "x" + data.video.height + " @ " + data.video.fps.toFixed(2) + " fps";
+                        if (data.video.codec) meta += " (" + data.video.codec + ")";
+                    }
+                    if (data.audio) {
+                        meta += " | " + (data.audio.sample_rate / 1000).toFixed(1) + " kHz";
+                        if (data.audio.codec) meta += " (" + data.audio.codec + ")";
+                    }
+                    if (data.file_size_mb) meta += " | " + data.file_size_mb.toFixed(1) + " MB";
+                    if (lastTranscriptSegments) meta += " | Transcript cached";
                     if (meta) el.fileMetaDisplay.textContent = meta;
                 } else { el.fileMetaDisplay.textContent = path; }
             });
@@ -855,11 +1033,15 @@
                 var target = this.getAttribute("data-nav");
                 // Deactivate all
                 var all = document.querySelectorAll(".nav-tab");
-                for (var j = 0; j < all.length; j++) all[j].classList.remove("active");
+                for (var j = 0; j < all.length; j++) {
+                    all[j].classList.remove("active");
+                    all[j].removeAttribute("aria-current");
+                }
                 var panels = document.querySelectorAll(".nav-panel");
                 for (var j = 0; j < panels.length; j++) panels[j].classList.remove("active");
                 // Activate target
                 this.classList.add("active");
+                this.setAttribute("aria-current", "true");
                 var panel = $("panel-" + target);
                 if (panel) panel.classList.add("active");
                 // Load settings info on first visit
@@ -937,6 +1119,7 @@
         el.runExportPresetBtn.disabled = !canRun;
         el.runThumbBtn.disabled = !canRun;
         el.runBatchBtn.disabled = !canRun;
+        el.runWorkflowBtn.disabled = !canRun;
 
         // Caption burn-in
         el.runBurninBtn.disabled = !canRun;
@@ -1046,6 +1229,101 @@
     }
 
     // ================================================================
+    // Dynamic Capability Loading
+    // ================================================================
+    var capabilitiesLoaded = false;
+
+    function loadCapabilities() {
+        if (capabilitiesLoaded) return;
+        capabilitiesLoaded = true;
+
+        // Fetch translation languages
+        api("GET", "/captions/enhanced/capabilities", null, function (err, data) {
+            if (err || !data || data.error) return;
+            if (data.languages && typeof data.languages === "object") {
+                var keys = Object.keys(data.languages);
+                if (keys.length > 0) {
+                    populateDropdown(el.translateSourceLang, data.languages, "en");
+                    populateDropdown(el.translateTargetLang, data.languages, "es");
+                }
+            }
+        });
+
+        // Fetch video AI capabilities
+        api("GET", "/video/ai/capabilities", null, function (err, data) {
+            if (err || !data || data.error) return;
+            if (data.gpu_name) {
+                el.connLabel.textContent = "Connected (" + data.gpu_name + ")";
+            }
+        });
+    }
+
+    function populateDropdown(selectEl, langMap, defaultVal) {
+        var currentVal = selectEl.value || defaultVal;
+        selectEl.innerHTML = "";
+        var codes = Object.keys(langMap).sort(function (a, b) {
+            return langMap[a].localeCompare(langMap[b]);
+        });
+        for (var i = 0; i < codes.length; i++) {
+            var opt = document.createElement("option");
+            opt.value = codes[i];
+            opt.textContent = langMap[codes[i]];
+            if (codes[i] === currentVal) opt.selected = true;
+            selectEl.appendChild(opt);
+        }
+        // Re-init custom dropdown if it was already created
+        if (selectEl.parentNode) {
+            var oldDropdown = selectEl.parentNode.querySelector(".custom-dropdown");
+            if (oldDropdown) {
+                oldDropdown.parentNode.removeChild(oldDropdown);
+                delete selectEl.dataset.customized;
+                createCustomDropdown(selectEl);
+            }
+        }
+    }
+
+    // ================================================================
+    // Workflow Queue (multi-step job chains)
+    // ================================================================
+    var workflowQueue = [];
+    var workflowActive = false;
+
+    function runWorkflow(steps) {
+        // steps: [{endpoint, payload, label}, ...]
+        if (!steps || !steps.length) return;
+        workflowQueue = steps.slice();
+        workflowActive = true;
+        jobStepTotal = workflowQueue.length;
+        jobStepCurrent = 0;
+        runNextWorkflowStep();
+    }
+
+    function runNextWorkflowStep() {
+        if (!workflowQueue.length) {
+            workflowActive = false;
+            jobStepCurrent = 0;
+            jobStepTotal = 0;
+            return;
+        }
+        var step = workflowQueue.shift();
+        jobStepCurrent++;
+        if (step.label) showAlert("Step " + jobStepCurrent + "/" + jobStepTotal + ": " + step.label);
+        startJob(step.endpoint, step.payload);
+    }
+
+    // Listener: auto-advance workflow queue on job completion
+    addJobDoneListener(function (job) {
+        if (workflowActive && job.status === "complete" && workflowQueue.length > 0) {
+            runNextWorkflowStep();
+            return true; // handled — skip default result display until final step
+        }
+        if (workflowActive && (job.status === "error" || job.status === "cancelled")) {
+            workflowQueue = [];
+            workflowActive = false;
+        }
+    });
+
+    // ================================================================
     // Job Execution & Tracking
     // ================================================================
     function startJob(endpoint, payload) {
@@ -1059,8 +1337,9 @@
         }
 
         // Show persistent processing banner
+        var stepPrefix = (jobStepTotal > 1) ? "Step " + jobStepCurrent + "/" + jobStepTotal + ": " : "";
         el.processingBanner.classList.remove("hidden");
-        el.processingMsg.textContent = "Starting...";
+        el.processingMsg.textContent = stepPrefix + "Starting...";
         el.processingFill.style.width = "0%";
         el.processingElapsed.textContent = "0s";
 
@@ -1068,7 +1347,7 @@
         el.progressSection.classList.remove("hidden");
         el.resultsSection.classList.add("hidden");
         el.progressBar.style.width = "0%";
-        el.progressLabel.textContent = "Starting...";
+        el.progressLabel.textContent = stepPrefix + "Starting...";
         el.cancelBtn.classList.remove("hidden");
 
         // Lock the entire UI
@@ -1143,6 +1422,9 @@
     function updateProgress(job) {
         var pct = (job.progress || 0) + "%";
         var msg = job.message || "Processing...";
+        if (jobStepTotal > 1) {
+            msg = "Step " + jobStepCurrent + "/" + jobStepTotal + ": " + msg;
+        }
         el.progressBar.style.width = pct;
         el.progressLabel.textContent = msg;
         // Sync to persistent banner
@@ -1150,9 +1432,17 @@
         el.processingMsg.textContent = msg;
     }
 
+    var jobDoneListeners = [];
+    function addJobDoneListener(fn) { jobDoneListeners.push(fn); }
+
     function onJobDone(job) {
         currentJob = null;
         if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+
+        // Dispatch to registered listeners; if any returns true, it handled the job
+        for (var li = 0; li < jobDoneListeners.length; li++) {
+            if (jobDoneListeners[li](job) === true) return;
+        }
 
         if (job.status === "error") {
             hideProgress();
@@ -1161,7 +1451,7 @@
             el.resultsTitle.textContent = "Error";
             el.resultsTitle.removeAttribute("style");
             el.resultsTitle.setAttribute("data-state", "error");
-            el.resultsStats.innerHTML = job.error || job.message || "Unknown error";
+            el.resultsStats.textContent = job.error || job.message || "Unknown error";
             el.resultsPath.textContent = "";
             // Show retry button if we have a last job to retry
             if (lastJobEndpoint) {
@@ -1301,7 +1591,7 @@
         var r = job.result || {};
 
         if (r.summary) {
-            stats += r.summary + "<br>";
+            stats += esc(r.summary) + "<br>";
         }
         if (r.segments !== undefined) {
             stats += r.segments + " segments";
@@ -1313,17 +1603,17 @@
             stats += (stats ? " | " : "") + r.caption_segments + " captions, " + (r.words || 0) + " words";
         }
         if (r.style) {
-            stats += " | Style: " + r.style;
+            stats += " | Style: " + esc(r.style);
         }
         // Audio results
         if (r.effect && !r.method) {
-            stats += (stats ? "<br>" : "") + "Effect applied: " + r.effect;
+            stats += (stats ? "<br>" : "") + "Effect applied: " + esc(r.effect);
         }
         if (r.method && r.strength !== undefined) {
-            stats += (stats ? "<br>" : "") + "Denoise: " + r.method + " (" + (r.strength * 100).toFixed(0) + "% strength)";
+            stats += (stats ? "<br>" : "") + "Denoise: " + esc(r.method) + " (" + (r.strength * 100).toFixed(0) + "% strength)";
         }
         if (r.preset && r.target_loudness !== undefined) {
-            stats += (stats ? "<br>" : "") + "Normalized to " + r.target_loudness.toFixed(1) + " LUFS (" + r.preset + ")";
+            stats += (stats ? "<br>" : "") + "Normalized to " + r.target_loudness.toFixed(1) + " LUFS (" + esc(r.preset) + ")";
             if (r.input_loudness !== undefined) {
                 stats += " | Was: " + r.input_loudness.toFixed(1) + " LUFS";
             }
@@ -1339,7 +1629,7 @@
             var stemNames = [];
             for (var i = 0; i < r.output_paths.length; i++) {
                 var fname = r.output_paths[i].split(/[/\\]/).pop();
-                stemNames.push(fname);
+                stemNames.push(esc(fname));
             }
             stats += (stats ? "<br>" : "") + r.output_paths.length + " stems: " + stemNames.join(", ");
         }
@@ -1435,6 +1725,7 @@
     function runTranscript() {
         startJob("/transcript", {
             filepath: selectedPath,
+            output_dir: projectFolder,
             model: el.transcriptModel.value,
         });
     }
@@ -1493,16 +1784,16 @@
     
     function installDemucs() {
         el.separateHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing Demucs... This may take a few minutes.</span>';
-        api("POST", "/demucs/install", {}, function(err, data) {
+        apiWithSpinner(el.installDemucsBtn, "POST", "/demucs/install", {}, function(err, data) {
             if (err || (data && data.error)) {
-                el.separateHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + (data ? data.error : 'Unknown error') + '</span>';
+                el.separateHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(data ? data.error : 'Unknown error') + '</span>';
             } else {
                 el.separateHint.classList.add("hidden");
                 capabilities.separation = true;
                 updateButtons();
                 showAlert("Demucs installed successfully!");
             }
-        });
+        }, 300000);
     }
 
     function measureLoudness() {
@@ -1511,7 +1802,7 @@
         el.meterTP.textContent = "--";
         el.meterLRA.textContent = "--";
 
-        api("POST", "/audio/measure", { filepath: selectedPath }, function (err, data) {
+        apiWithSpinner(el.measureLoudnessBtn, "POST", "/audio/measure", { filepath: selectedPath }, function (err, data) {
             if (!err && data && !data.error) {
                 el.meterLUFS.textContent = data.integrated_lufs.toFixed(1) + " LUFS";
                 el.meterTP.textContent = data.true_peak_dbtp.toFixed(1) + " dBTP";
@@ -1562,22 +1853,23 @@
     
     function installWatermark() {
         el.watermarkHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing watermark remover... This may take several minutes.</span>';
-        api("POST", "/watermark/install", {}, function(err, data) {
+        apiWithSpinner(el.installWatermarkBtn, "POST", "/watermark/install", {}, function(err, data) {
             if (err || (data && data.error)) {
-                el.watermarkHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + (data ? data.error : 'Unknown error') + '</span>';
+                el.watermarkHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(data ? data.error : 'Unknown error') + '</span>';
             } else {
                 el.watermarkHint.classList.add("hidden");
                 capabilities.watermark_removal = true;
                 updateButtons();
                 showAlert("Watermark remover installed successfully!");
             }
-        });
+        }, 300000);
     }
     
     function runScenes() {
         el.sceneResults.classList.add("hidden");
         startJob("/video/scenes", {
             filepath: selectedPath,
+            output_dir: projectFolder,
             threshold: parseFloat(el.sceneThreshold.value),
             min_scene_length: parseFloat(el.minSceneLen.value),
         });
@@ -1791,33 +2083,34 @@
 
     // --- CAPTION TRANSLATION ---
     var lastTranscriptSegments = null;
+    var pendingBurnin = false;
+    var pendingAnimCap = false;
+    var pendingTranslate = false;
+    var jobStepCurrent = 0;
+    var jobStepTotal = 0;
 
     function runTranslate() {
-        // First transcribe, then translate
-        if (!lastTranscriptSegments) {
-            // Need to transcribe first - use the captions endpoint
-            showAlert("Transcribing first, then translating...");
-            api("POST", "/transcript", {
+        if (lastTranscriptSegments) {
+            // We have segments from a previous transcription, translate them
+            startJob("/captions/translate", {
                 filepath: selectedPath,
-                model: el.translateModel.value,
-            }, function (err, data) {
-                // Wait for job completion - this is handled by startJob
+                segments: lastTranscriptSegments,
+                source_lang: el.translateSourceLang.value,
+                target_lang: el.translateTargetLang.value,
+                format: el.translateFormat.value,
+                output_dir: projectFolder,
             });
-            // For now, just start the transcription job which will store segments
+        } else {
+            // Need to transcribe first, then auto-chain into translation
+            showAlert("Step 1/2: Transcribing first, then translating...");
+            pendingTranslate = true;
+            jobStepCurrent = 1;
+            jobStepTotal = 2;
             startJob("/transcript", {
                 filepath: selectedPath,
                 model: el.translateModel.value,
             });
-            return;
         }
-        // We have segments, translate them
-        startJob("/captions/translate", {
-            filepath: selectedPath,
-            segments: lastTranscriptSegments,
-            source_lang: el.translateSourceLang.value,
-            target_lang: el.translateTargetLang.value,
-            format: el.translateFormat.value,
-        });
     }
 
     function installNllb() {
@@ -1829,6 +2122,7 @@
     function runKaraoke() {
         startJob("/captions/whisperx", {
             filepath: selectedPath,
+            output_dir: projectFolder,
             model: el.karaokeModel.value,
             diarize: el.karaokeDiarize.checked,
         });
@@ -1927,16 +2221,63 @@
             var pollInterval = setInterval(function () {
                 api("GET", "/batch/" + batchId, null, function (e2, d2) {
                     if (e2 || !d2) return;
+                    var res = d2.results || {};
                     el.batchStatusText.textContent =
-                        "Batch " + d2.status + ": " + d2.completed + "/" + d2.total +
-                        " (" + d2.results.success + " ok, " + d2.results.failed + " failed)";
+                        "Batch " + d2.status + ": " + (d2.completed || 0) + "/" + (d2.total || 0) +
+                        " (" + (res.success || 0) + " ok, " + (res.failed || 0) + " failed)";
                     if (d2.status !== "running") {
                         clearInterval(pollInterval);
-                        showAlert("Batch complete: " + d2.results.success + " succeeded");
+                        showAlert("Batch complete: " + (res.success || 0) + " succeeded");
                     }
                 });
             }, 2000);
         });
+    }
+
+    // --- WORKFLOW PRESETS ---
+    var WORKFLOW_PRESETS = {
+        clean_audio: [
+            { endpoint: "/audio/denoise", payload: { method: "rnnoise" }, label: "Denoising audio..." },
+            { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
+        ],
+        subtitle_pipeline: [
+            { endpoint: "/transcript", payload: { model: "base" }, label: "Transcribing..." },
+            { endpoint: "/transcript/export", payload: { format: "srt" }, label: "Exporting subtitles..." },
+        ],
+        translate_pipeline: [
+            { endpoint: "/transcript", payload: { model: "base" }, label: "Transcribing..." },
+            // Translation is handled by chaining via pendingTranslate
+        ],
+        pro_video: [
+            { endpoint: "/video/fx/apply", payload: { effect: "stabilize", params: { smoothing: 10, zoom: 0 } }, label: "Stabilizing video..." },
+            { endpoint: "/audio/denoise", payload: { method: "rnnoise" }, label: "Denoising audio..." },
+            { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
+        ],
+        social_ready: [
+            { endpoint: "/cut/silence", payload: { threshold: -35, min_silence: 0.4, pad_before: 0.1, pad_after: 0.1 }, label: "Removing silence..." },
+            { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
+        ],
+    };
+
+    function runWorkflowPreset() {
+        var presetKey = el.workflowPreset.value;
+        var preset = WORKFLOW_PRESETS[presetKey];
+        if (!preset || !preset.length) {
+            showAlert("Unknown workflow preset.");
+            return;
+        }
+        // Inject filepath and output_dir into each step
+        var steps = [];
+        for (var i = 0; i < preset.length; i++) {
+            var step = { endpoint: preset[i].endpoint, label: preset[i].label };
+            var p = {};
+            for (var k in preset[i].payload) { p[k] = preset[i].payload[k]; }
+            p.filepath = selectedPath;
+            p.output_dir = projectFolder;
+            step.payload = p;
+            steps.push(step);
+        }
+        runWorkflow(steps);
     }
 
     // --- TTS VOICE GENERATION ---
@@ -1994,11 +2335,25 @@
 
     // --- CAPTION BURN-IN ---
     function runBurnin() {
-        startJob("/transcript", {
-            filepath: selectedPath,
-            model: el.burninModel.value,
-        });
-        showAlert("Transcribing first, then burn-in will be available. Use the segments from the transcript to burn in captions.");
+        if (lastTranscriptSegments) {
+            // We have segments, burn them in directly
+            startJob("/captions/burnin/segments", {
+                filepath: selectedPath,
+                segments: lastTranscriptSegments,
+                style: el.burninStyle.value,
+                output_dir: projectFolder,
+            });
+        } else {
+            // Transcribe first
+            showAlert("Step 1/2: Transcribing first, then burning in captions...");
+            pendingBurnin = true;
+            jobStepCurrent = 1;
+            jobStepTotal = 2;
+            startJob("/transcript", {
+                filepath: selectedPath,
+                model: el.burninModel.value,
+            });
+        }
     }
 
     // --- SPEED / RAMP ---
@@ -2161,12 +2516,28 @@
 
     // --- ANIMATED CAPTIONS ---
     function runAnimCap() {
-        startJob("/transcript", {
-            filepath: selectedPath,
-            model: el.animCapModel.value,
-            word_level: true,
-        });
-        showAlert("Transcribing with word-level timing first. Once complete, animated captions will render.");
+        if (lastTranscriptSegments && lastTranscriptSegments.length > 0 && lastTranscriptSegments[0].words) {
+            // We have word-level segments, render directly
+            startJob("/captions/animated/render", {
+                filepath: selectedPath,
+                word_segments: extractWordSegments(lastTranscriptSegments),
+                animation: el.animCapPreset.value,
+                font_size: parseInt(el.animCapFontSize.value),
+                max_words: parseInt(el.animCapWpl.value),
+                output_dir: projectFolder,
+            });
+        } else {
+            // Transcribe first with word-level timing
+            showAlert("Step 1/2: Transcribing with word-level timing first...");
+            pendingAnimCap = true;
+            jobStepCurrent = 1;
+            jobStepTotal = 2;
+            startJob("/transcript", {
+                filepath: selectedPath,
+                model: el.animCapModel.value,
+                word_level: true,
+            });
+        }
     }
 
     // --- AI MUSIC GENERATION ---
@@ -2199,26 +2570,90 @@
     }
 
     // ================================================================
-    // Extended Job Result Handling
+    // Extended Job Result Handling (via addJobDoneListener)
     // ================================================================
-    // Override onJobDone to handle special result types
-    var _origOnJobDone = onJobDone;
-    onJobDone = function (job) {
-        // Handle transcript result for editor
-        if (job.type === "transcript" && job.status === "complete" && job.result) {
-            transcriptData = job.result;
-            renderTranscriptEditor(job.result);
+
+    // Listener: Clear pending chain flags on error/cancel
+    addJobDoneListener(function (job) {
+        if (job.status === "error" || job.status === "cancelled") {
+            pendingBurnin = false;
+            pendingAnimCap = false;
+            pendingTranslate = false;
+            jobStepCurrent = 0;
+            jobStepTotal = 0;
+        }
+    });
+
+    // Listener: Handle transcript results — chaining and editor
+    addJobDoneListener(function (job) {
+        if (job.type !== "transcript" || job.status !== "complete" || !job.result) return;
+
+        transcriptData = job.result;
+        if (job.result.segments) {
+            lastTranscriptSegments = job.result.segments;
+            if (selectedPath) cacheTranscriptSegments(selectedPath, job.result.segments);
+        }
+        renderTranscriptEditor(job.result);
+
+        // Chain into burn-in if pending
+        if (pendingBurnin && job.result.segments) {
+            pendingBurnin = false;
+            jobStepCurrent = 2;
+            showAlert("Step 2/2: Burning in captions...");
+            startJob("/captions/burnin/segments", {
+                filepath: selectedPath,
+                segments: job.result.segments,
+                style: el.burninStyle.value,
+                output_dir: projectFolder,
+            });
+            return true; // handled — skip default onJobDone behavior
         }
 
-        // Handle beat results
+        // Chain into animated captions if pending
+        if (pendingAnimCap && job.result.segments) {
+            pendingAnimCap = false;
+            jobStepCurrent = 2;
+            showAlert("Step 2/2: Rendering animated captions...");
+            startJob("/captions/animated/render", {
+                filepath: selectedPath,
+                word_segments: extractWordSegments(job.result.segments),
+                animation: el.animCapPreset.value,
+                font_size: parseInt(el.animCapFontSize.value),
+                max_words: parseInt(el.animCapWpl.value),
+                output_dir: projectFolder,
+            });
+            return true;
+        }
+
+        // Chain into translation if pending
+        if (pendingTranslate && job.result.segments) {
+            pendingTranslate = false;
+            jobStepCurrent = 2;
+            showAlert("Step 2/2: Translating captions...");
+            startJob("/captions/translate", {
+                filepath: selectedPath,
+                segments: job.result.segments,
+                source_lang: el.translateSourceLang.value,
+                target_lang: el.translateTargetLang.value,
+                format: el.translateFormat.value,
+                output_dir: projectFolder,
+            });
+            return true;
+        }
+    });
+
+    // Listener: Handle beat detection results
+    addJobDoneListener(function (job) {
         if (job.type === "beats" && job.status === "complete" && job.result) {
             el.beatResults.classList.remove("hidden");
             el.bpmValue.textContent = job.result.bpm.toFixed(0);
             el.beatCount.textContent = job.result.total_beats;
             el.beatConfidence.textContent = (job.result.confidence * 100).toFixed(0) + "%";
         }
+    });
 
-        // Handle scene results
+    // Listener: Handle scene detection results
+    addJobDoneListener(function (job) {
         if (job.type === "scenes" && job.status === "complete" && job.result) {
             el.sceneResults.classList.remove("hidden");
             el.sceneCount.textContent = job.result.total_scenes;
@@ -2228,16 +2663,90 @@
                 el.ytChaptersText.value = job.result.youtube_chapters;
             }
         }
+    });
 
-        _origOnJobDone(job);
-    };
+    // Listener: Reset step counters after final job (only if no chain/workflow pending)
+    addJobDoneListener(function (job) {
+        if (!pendingBurnin && !pendingAnimCap && !pendingTranslate && !workflowActive) {
+            jobStepCurrent = 0;
+            jobStepTotal = 0;
+        }
+    });
 
     // ================================================================
     // Transcript Editor
     // ================================================================
+    // ---- Transcript Undo/Redo ----
+    var transcriptHistory = [];
+    var transcriptHistoryIdx = -1;
+    var MAX_TRANSCRIPT_HISTORY = 30;
+
+    function snapshotTranscript() {
+        if (!transcriptData || !transcriptData.segments) return;
+        var snap = [];
+        for (var i = 0; i < transcriptData.segments.length; i++) {
+            snap.push(transcriptData.segments[i].text);
+        }
+        // Trim redo stack
+        if (transcriptHistoryIdx < transcriptHistory.length - 1) {
+            transcriptHistory = transcriptHistory.slice(0, transcriptHistoryIdx + 1);
+        }
+        transcriptHistory.push(snap);
+        if (transcriptHistory.length > MAX_TRANSCRIPT_HISTORY) {
+            transcriptHistory.shift();
+        }
+        transcriptHistoryIdx = transcriptHistory.length - 1;
+        updateUndoRedoButtons();
+    }
+
+    function restoreTranscriptSnapshot(snap) {
+        if (!transcriptData || !transcriptData.segments) return;
+        for (var i = 0; i < snap.length && i < transcriptData.segments.length; i++) {
+            transcriptData.segments[i].text = snap[i];
+        }
+        // Re-render segment textareas
+        var textareas = el.transcriptSegments.querySelectorAll(".transcript-seg-text");
+        for (var i = 0; i < textareas.length && i < snap.length; i++) {
+            textareas[i].value = snap[i];
+            autoResize(textareas[i]);
+        }
+        if (lastTranscriptSegments) {
+            for (var i = 0; i < snap.length && i < lastTranscriptSegments.length; i++) {
+                lastTranscriptSegments[i].text = snap[i];
+            }
+        }
+    }
+
+    function undoTranscript() {
+        if (transcriptHistoryIdx <= 0) return;
+        transcriptHistoryIdx--;
+        restoreTranscriptSnapshot(transcriptHistory[transcriptHistoryIdx]);
+        updateUndoRedoButtons();
+    }
+
+    function redoTranscript() {
+        if (transcriptHistoryIdx >= transcriptHistory.length - 1) return;
+        transcriptHistoryIdx++;
+        restoreTranscriptSnapshot(transcriptHistory[transcriptHistoryIdx]);
+        updateUndoRedoButtons();
+    }
+
+    function updateUndoRedoButtons() {
+        el.transcriptUndoBtn.disabled = transcriptHistoryIdx <= 0;
+        el.transcriptRedoBtn.disabled = transcriptHistoryIdx >= transcriptHistory.length - 1;
+    }
+
+    var editDebounceTimer = null;
+
     function renderTranscriptEditor(data) {
+        // Clear any pending debounce from previous render
+        if (editDebounceTimer) { clearTimeout(editDebounceTimer); editDebounceTimer = null; }
+
         el.transcriptEditor.classList.remove("hidden");
-        el.transcriptInfo.textContent = data.word_count + " words | " + data.segments.length + " segments | " + (data.language || "en");
+        var wordCount = data.word_count || 0;
+        var segCount = data.segments ? data.segments.length : 0;
+        el.transcriptInfo.textContent = wordCount + " words | " + segCount + " segments | " + (data.language || "en");
+        if (!data.segments || !data.segments.length) return;
 
         var html = "";
         for (var i = 0; i < data.segments.length; i++) {
@@ -2250,18 +2759,26 @@
         }
         el.transcriptSegments.innerHTML = html;
 
-        // Auto-resize textareas
+        // Auto-resize textareas and wire up undo snapshots
         var textareas = el.transcriptSegments.querySelectorAll(".transcript-seg-text");
         for (var i = 0; i < textareas.length; i++) {
             autoResize(textareas[i]);
             textareas[i].addEventListener("input", function () {
                 autoResize(this);
                 var idx = parseInt(this.getAttribute("data-idx"));
-                if (transcriptData && transcriptData.segments[idx]) {
+                if (idx >= 0 && transcriptData && idx < transcriptData.segments.length) {
                     transcriptData.segments[idx].text = this.value;
                 }
+                // Debounced snapshot for undo history
+                if (editDebounceTimer) clearTimeout(editDebounceTimer);
+                editDebounceTimer = setTimeout(function () { snapshotTranscript(); }, 500);
             });
         }
+
+        // Reset history and take initial snapshot
+        transcriptHistory = [];
+        transcriptHistoryIdx = -1;
+        snapshotTranscript();
     }
 
     function autoResize(textarea) {
@@ -2626,11 +3143,167 @@
         return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     }
 
+    function extractWordSegments(segments) {
+        var words = [];
+        for (var i = 0; i < segments.length; i++) {
+            if (segments[i].words) {
+                for (var j = 0; j < segments[i].words.length; j++) {
+                    words.push(segments[i].words[j]);
+                }
+            }
+        }
+        return words;
+    }
+
     function fmtDur(s) {
         if (!s && s !== 0) return "--";
         var m = Math.floor(s / 60);
         var sec = Math.floor(s % 60);
         return m + ":" + (sec < 10 ? "0" : "") + sec;
+    }
+
+    // ================================================================
+    // Drop Zone
+    // ================================================================
+    function initDropZone() {
+        if (!el.dropZone) return;
+        var dz = el.dropZone;
+
+        dz.addEventListener("dragover", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dz.classList.add("drag-over");
+        });
+        dz.addEventListener("dragleave", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dz.classList.remove("drag-over");
+        });
+        dz.addEventListener("drop", function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            dz.classList.remove("drag-over");
+            var files = e.dataTransfer && e.dataTransfer.files;
+            if (files && files.length > 0) {
+                var f = files[0];
+                var path = f.path || f.name;
+                if (path) selectFile(path, f.name || path.split(/[/\\]/).pop());
+            }
+        });
+        dz.addEventListener("click", function () {
+            browseForFile();
+        });
+    }
+
+    // ================================================================
+    // Theme Quick Toggle
+    // ================================================================
+    var THEME_LIST = [
+        { value: "cyberpunk", label: "Cyberpunk Neon" },
+        { value: "midnight", label: "Midnight OLED" },
+        { value: "catppuccin", label: "Catppuccin Mocha" },
+        { value: "github", label: "GitHub Dark" },
+        { value: "stealth", label: "Stealth" },
+        { value: "ember", label: "Ember" }
+    ];
+
+    function initThemeToggle() {
+        if (!el.themeToggleBtn || !el.themeMenu) return;
+        // Build menu items
+        var html = "";
+        for (var i = 0; i < THEME_LIST.length; i++) {
+            html += '<button class="theme-menu-item" data-theme="' + THEME_LIST[i].value + '">' + THEME_LIST[i].label + '</button>';
+        }
+        el.themeMenu.innerHTML = html;
+
+        el.themeToggleBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            var isOpen = el.themeMenu.classList.contains("open");
+            el.themeMenu.classList.toggle("open");
+            if (!isOpen) updateThemeMenuActive();
+        });
+
+        el.themeMenu.addEventListener("click", function (e) {
+            var item = e.target.closest(".theme-menu-item");
+            if (!item) return;
+            var theme = item.getAttribute("data-theme");
+            applyTheme(theme);
+            if (el.settingsTheme) el.settingsTheme.value = theme;
+            saveLocalSettings();
+            el.themeMenu.classList.remove("open");
+        });
+
+        document.addEventListener("click", function () {
+            el.themeMenu.classList.remove("open");
+        });
+    }
+
+    function updateThemeMenuActive() {
+        var current = el.settingsTheme ? el.settingsTheme.value : "cyberpunk";
+        var items = el.themeMenu.querySelectorAll(".theme-menu-item");
+        for (var i = 0; i < items.length; i++) {
+            if (items[i].getAttribute("data-theme") === current) {
+                items[i].classList.add("active");
+            } else {
+                items[i].classList.remove("active");
+            }
+        }
+    }
+
+    // ================================================================
+    // Job History
+    // ================================================================
+    var jobHistoryList = [];
+    var MAX_JOB_HISTORY = 50;
+
+    function addJobHistory(job) {
+        if (!job || !job.type) return;
+        jobHistoryList.unshift({
+            type: job.type,
+            status: job.status || "complete",
+            message: job.message || "",
+            time: new Date().toLocaleTimeString()
+        });
+        if (jobHistoryList.length > MAX_JOB_HISTORY) jobHistoryList.pop();
+        renderJobHistory();
+    }
+
+    function renderJobHistory() {
+        if (!el.jobHistory || !el.jobHistoryToggle) return;
+        el.jobHistoryToggle.textContent = "History (" + jobHistoryList.length + ")";
+        var html = "";
+        for (var i = 0; i < jobHistoryList.length; i++) {
+            var h = jobHistoryList[i];
+            var statusClass = h.status === "complete" ? "complete" : (h.status === "cancelled" ? "cancelled" : "error");
+            html += '<div class="job-history-item">' +
+                '<span style="display:flex;align-items:center"><span class="job-history-status ' + statusClass + '"></span>' +
+                esc(h.type) + '</span>' +
+                '<span>' + esc(h.time) + '</span></div>';
+        }
+        el.jobHistory.innerHTML = html;
+    }
+
+    function initJobHistory() {
+        if (!el.jobHistoryToggle || !el.jobHistory) return;
+        el.jobHistoryToggle.addEventListener("click", function () {
+            el.jobHistory.classList.toggle("open");
+        });
+
+        // Add listener to record finished jobs
+        addJobDoneListener(function (job) {
+            addJobHistory(job);
+        });
+    }
+
+    // ================================================================
+    // Escape to Cancel
+    // ================================================================
+    function initEscapeCancel() {
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && currentJob && !e.defaultPrevented) {
+                cancelJob();
+            }
+        });
     }
 
     // ================================================================
@@ -2663,6 +3336,8 @@
         el.runSubtitleBtn.addEventListener("click", runSubtitle);
         el.runTranscriptBtn.addEventListener("click", runTranscript);
         el.exportTranscriptBtn.addEventListener("click", exportEditedTranscript);
+        el.transcriptUndoBtn.addEventListener("click", undoTranscript);
+        el.transcriptRedoBtn.addEventListener("click", redoTranscript);
         el.installWhisperBtn.addEventListener("click", installWhisper);
         el.captionStyle.addEventListener("change", updateStylePreview);
 
@@ -2732,6 +3407,7 @@
 
         // Batch button
         el.runBatchBtn.addEventListener("click", runBatch);
+        el.runWorkflowBtn.addEventListener("click", runWorkflowPreset);
 
         // TTS buttons
         el.runTtsBtn.addEventListener("click", runTts);
@@ -2809,6 +3485,14 @@
             }
         });
 
+        // Browse buttons for path inputs
+        var browseBtns = document.querySelectorAll(".btn-browse");
+        for (var i = 0; i < browseBtns.length; i++) {
+            browseBtns[i].addEventListener("click", function () {
+                browseForInput(this.getAttribute("data-target"));
+            });
+        }
+
         // Alert dismiss
         el.alertDismiss.addEventListener("click", function () {
             el.alertBanner.classList.add("hidden");
@@ -2818,8 +3502,9 @@
         checkHealth();
         healthTimer = setInterval(checkHealth, HEALTH_MS);
 
-        // Scan project media
+        // Scan project media and populate recent files
         scanProjectMedia();
+        populateRecentFiles();
 
         // Load style preview data
         loadStylePreview();
@@ -2832,6 +3517,12 @@
 
         // Load export presets
         loadExportPresets();
+
+        // New features
+        initDropZone();
+        initThemeToggle();
+        initJobHistory();
+        initEscapeCancel();
     });
 
 })();

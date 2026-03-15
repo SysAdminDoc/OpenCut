@@ -27,7 +27,13 @@
                 <button class="header-btn" id="refreshAllBtn" title="Refresh connection and capabilities">
                     <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
                 </button>
-                <div class="conn-status" id="connStatus" title="Backend status">
+                <div class="theme-toggle" id="themeToggle">
+                    <button class="theme-toggle-btn" id="themeToggleBtn" title="Switch theme">
+                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 01.5.5v1a.5.5 0 01-1 0v-1A.5.5 0 018 1zm0 11a.5.5 0 01.5.5v1a.5.5 0 01-1 0v-1A.5.5 0 018 12zm7-4a.5.5 0 01-.5.5h-1a.5.5 0 010-1h1a.5.5 0 01.5.5zM4 8a.5.5 0 01-.5.5h-1a.5.5 0 010-1h1A.5.5 0 014 8zm9.354-4.354a.5.5 0 010 .708l-.707.707a.5.5 0 11-.707-.707l.707-.707a.5.5 0 01.708 0zM4.06 11.94a.5.5 0 010 .708l-.707.707a.5.5 0 11-.707-.707l.707-.707a.5.5 0 01.708 0zm9.18.708a.5.5 0 01-.708 0l-.707-.707a.5.5 0 01.707-.708l.707.708a.5.5 0 010 .707zM4.06 4.06a.5.5 0 01-.708 0l-.707-.707a.5.5 0 01.707-.708l.707.708a.5.5 0 010 .707zM8 5a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                    </button>
+                    <div class="theme-menu" id="themeMenu"></div>
+                </div>
+                <div class="conn-status" id="connStatus" title="Backend status" role="status" aria-live="polite">
                     <span class="conn-dot" id="connDot"></span>
                     <span class="conn-label" id="connLabel">Offline</span>
                 </div>
@@ -35,7 +41,7 @@
         </header>
 
         <!-- Processing Banner (always visible when job active, no scrolling needed) -->
-        <div class="processing-banner hidden" id="processingBanner">
+        <div class="processing-banner hidden" id="processingBanner" role="status" aria-live="polite">
             <div class="processing-inner">
                 <div class="processing-spinner"></div>
                 <span class="processing-msg" id="processingMsg">Processing...</span>
@@ -47,18 +53,24 @@
             <div class="processing-track"><div class="processing-fill" id="processingFill"></div></div>
         </div>
 
+        <!-- Job History -->
+        <div class="job-history-bar">
+            <button class="job-history-toggle" id="jobHistoryToggle" title="Toggle job history">History (0)</button>
+        </div>
+        <div class="job-history" id="jobHistory"></div>
+
         <!-- Alert Banner -->
-        <div class="alert-banner hidden" id="alertBanner">
+        <div class="alert-banner hidden" id="alertBanner" role="alert" aria-live="assertive">
             <div class="alert-inner">
                 <svg class="alert-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
                 <span class="alert-text" id="alertText"></span>
             </div>
-            <button class="alert-dismiss" id="alertDismiss">&times;</button>
+            <button class="alert-dismiss" id="alertDismiss" title="Dismiss alert">&times;</button>
         </div>
 
         <!-- ===== MAIN NAV TABS ===== -->
-        <nav class="nav-tabs" id="navTabs">
-            <button class="nav-tab active" data-nav="cut" title="Cut & Clean">
+        <nav class="nav-tabs" id="navTabs" aria-label="Main navigation">
+            <button class="nav-tab active" data-nav="cut" title="Cut & Clean" aria-current="true">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5a2.5 2.5 0 00-1.47 4.53L6.47 8 2.53 9.97A2.5 2.5 0 104 14.5a2.5 2.5 0 001.47-4.53L7.44 8.99 13.5 12V4L7.44 7.01 5.47 5.97A2.5 2.5 0 004 1.5zM2.5 4a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm0 8a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"/></svg>
                 <span>Cut</span>
             </button>
@@ -105,6 +117,10 @@
                 <div class="file-info hidden" id="fileInfoBox">
                     <div class="file-name" id="fileNameDisplay"></div>
                     <div class="file-meta" id="fileMetaDisplay"></div>
+                </div>
+                <div class="drop-zone" id="dropZone">
+                    <div class="drop-zone-icon">&#128193;</div>
+                    <div class="drop-zone-text">Drop media file here</div>
                 </div>
                 <div class="btn-row">
                     <button class="btn-text" id="useSelectionBtn">Use Timeline Selection</button>
@@ -380,6 +396,8 @@
                             <div class="transcript-header">
                                 <span class="transcript-info" id="transcriptInfo"></span>
                                 <div class="transcript-actions">
+                                    <button class="btn-sm btn-secondary" id="transcriptUndoBtn" disabled title="Undo">&#8630;</button>
+                                    <button class="btn-sm btn-secondary" id="transcriptRedoBtn" disabled title="Redo">&#8631;</button>
                                     <select id="transcriptExportFormat" class="inline-select">
                                         <option value="srt">SRT</option>
                                         <option value="vtt">VTT</option>
@@ -859,7 +877,7 @@
 
                         <div class="form-group">
                             <label>Text</label>
-                            <textarea id="ttsText" rows="4" placeholder="Enter text to speak..." style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;resize:vertical;"></textarea>
+                            <textarea id="ttsText" rows="4" placeholder="Enter text to speak..."></textarea>
                         </div>
 
                         <label class="checkbox-row">
@@ -962,7 +980,7 @@
 
                         <div class="form-group">
                             <label>Music File Path</label>
-                            <input type="text" id="duckMusicPath" placeholder="/path/to/background_music.mp3" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;">
+                            <div class="path-input-row"><input type="text" id="duckMusicPath" class="text-input" placeholder="/path/to/background_music.mp3"><button class="btn-browse" data-target="duckMusicPath">Browse</button></div>
                         </div>
 
                         <div class="form-group">
@@ -996,7 +1014,7 @@
                         <div class="card-header"><div class="card-title">AI Music Generation</div></div>
                         <p class="card-desc">Generate music from text descriptions via Meta's MusicGen. Requires AudioCraft + CUDA GPU (1.2-13GB VRAM).</p>
                         <div class="form-group"><label>Prompt</label>
-                            <textarea id="musicAiPrompt" rows="3" placeholder="upbeat electronic dance music with driving bassline and synth arpeggios" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;resize:vertical;"></textarea></div>
+                            <textarea id="musicAiPrompt" rows="3" placeholder="upbeat electronic dance music with driving bassline and synth arpeggios"></textarea></div>
                         <div class="form-group"><label>Model</label>
                             <select id="musicAiModel"><option value="small" selected>Small (300M, 1.2GB)</option><option value="medium">Medium (1.5B, 6GB)</option><option value="large">Large (3.3B, 13GB)</option></select></div>
                         <div class="form-group"><label>Duration (sec)</label><div class="slider-row"><input type="range" id="musicAiDur" min="5" max="30" value="10" step="1"><span class="slider-val" id="musicAiDurVal">10</span></div></div>
@@ -1136,7 +1154,7 @@
                         <div class="vfx-params hidden" id="vfxParams-lut">
                             <div class="form-group">
                                 <label>LUT File Path</label>
-                                <input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube">
+                                <div class="path-input-row"><input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube"><button class="btn-browse" data-target="vfxLutPath">Browse</button></div>
                             </div>
                             <div class="form-group">
                                 <label>Intensity</label>
@@ -1573,19 +1591,19 @@
                             <div class="form-group"><label>Key Color</label>
                                 <select id="chromaColor"><option value="green">Green</option><option value="blue">Blue</option><option value="red">Red</option></select></div>
                             <div class="form-group"><label>Background Path</label>
-                                <input type="text" id="chromaBgPath" placeholder="/path/to/background.mp4" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                                <div class="path-input-row"><input type="text" id="chromaBgPath" class="text-input" placeholder="/path/to/background.mp4"><button class="btn-browse" data-target="chromaBgPath">Browse</button></div></div>
                             <div class="form-group"><label>Tolerance</label><div class="slider-row"><input type="range" id="chromaTol" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="chromaTolVal">0.5</span></div></div>
                         </div>
                         <div id="pipParams" class="hidden">
                             <div class="form-group"><label>PiP Video Path</label>
-                                <input type="text" id="pipPath" placeholder="/path/to/pip_video.mp4" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                                <div class="path-input-row"><input type="text" id="pipPath" class="text-input" placeholder="/path/to/pip_video.mp4"><button class="btn-browse" data-target="pipPath">Browse</button></div></div>
                             <div class="form-group"><label>Position</label>
                                 <select id="pipPosition"><option value="bottom_right">Bottom Right</option><option value="bottom_left">Bottom Left</option><option value="top_right">Top Right</option><option value="top_left">Top Left</option><option value="center">Center</option></select></div>
                             <div class="form-group"><label>Scale</label><div class="slider-row"><input type="range" id="pipScale" min="0.1" max="0.6" value="0.25" step="0.05"><span class="slider-val" id="pipScaleVal">0.25</span></div></div>
                         </div>
                         <div id="blendParams" class="hidden">
                             <div class="form-group"><label>Overlay Path</label>
-                                <input type="text" id="blendOverlay" placeholder="/path/to/overlay.mp4" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                                <div class="path-input-row"><input type="text" id="blendOverlay" class="text-input" placeholder="/path/to/overlay.mp4"><button class="btn-browse" data-target="blendOverlay">Browse</button></div></div>
                             <div class="form-group"><label>Blend Mode</label>
                                 <select id="blendMode"><option value="overlay">Overlay</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="softlight">Soft Light</option><option value="hardlight">Hard Light</option><option value="difference">Difference</option><option value="addition">Addition</option><option value="dodge">Dodge</option><option value="burn">Burn</option></select></div>
                             <div class="form-group"><label>Opacity</label><div class="slider-row"><input type="range" id="blendOpacity" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="blendOpacityVal">0.5</span></div></div>
@@ -1600,7 +1618,7 @@
                         <div class="card-header"><div class="card-title">Transitions</div></div>
                         <p class="card-desc">34 FFmpeg xfade transitions between clips. Select a clip above, provide a second clip path.</p>
                         <div class="form-group"><label>Second Clip Path</label>
-                            <input type="text" id="transClipB" placeholder="/path/to/clip_b.mp4" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                            <div class="path-input-row"><input type="text" id="transClipB" class="text-input" placeholder="/path/to/clip_b.mp4"><button class="btn-browse" data-target="transClipB">Browse</button></div></div>
                         <div class="form-group"><label>Transition</label>
                             <select id="transType"><option value="fade">Crossfade</option><option value="wipeleft">Wipe Left</option><option value="wiperight">Wipe Right</option><option value="slideleft">Slide Left</option><option value="slideright">Slide Right</option><option value="circlecrop">Circle Crop</option><option value="circleopen">Circle Open</option><option value="dissolve">Dissolve</option><option value="pixelize">Pixelize</option><option value="diagtl">Diagonal TL</option><option value="radial">Radial</option><option value="zoomin">Zoom In</option><option value="fadeblack">Fade Black</option><option value="fadewhite">Fade White</option><option value="smoothleft">Smooth Left</option><option value="squeezeh">Squeeze H</option></select></div>
                         <div class="form-group"><label>Duration (sec)</label><div class="slider-row"><input type="range" id="transDur" min="0.3" max="3.0" value="1.0" step="0.1"><span class="slider-val" id="transDurVal">1.0</span></div></div>
@@ -1626,9 +1644,9 @@
                         <div class="card-header"><div class="card-title">Titles &amp; Motion Graphics</div></div>
                         <p class="card-desc">Animated title cards and overlays. Rendered via FFmpeg drawtext.</p>
                         <div class="form-group"><label>Title Text</label>
-                            <input type="text" id="titleText" placeholder="Your Title Here" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                            <input type="text" id="titleText" class="text-input" placeholder="Your Title Here"></div>
                         <div class="form-group"><label>Subtitle</label>
-                            <input type="text" id="titleSubtext" placeholder="Optional subtitle" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                            <input type="text" id="titleSubtext" class="text-input" placeholder="Optional subtitle"></div>
                         <div class="form-group"><label>Preset</label>
                             <select id="titlePreset"><option value="fade_center">Fade Center</option><option value="slide_left">Slide From Left</option><option value="typewriter">Typewriter</option><option value="lower_third">Lower Third</option><option value="countdown">Countdown</option><option value="kinetic_bounce">Kinetic Bounce</option></select></div>
                         <div class="form-group"><label>Duration (sec)</label><div class="slider-row"><input type="range" id="titleDur" min="1" max="15" value="5" step="0.5"><span class="slider-val" id="titleDurVal">5</span></div></div>
@@ -1673,10 +1691,10 @@
                         <p class="card-desc">Remove watermarks/logos via FFmpeg delogo (fast) or LaMA AI inpainting (quality). Specify the region coordinates.</p>
                         <div class="form-group"><label>Method</label>
                             <select id="removeMethod"><option value="delogo">Delogo (FFmpeg, fast)</option><option value="lama">LaMA (AI inpainting)</option></select></div>
-                        <div class="form-group"><label>Region X</label><input type="number" id="removeX" value="0" min="0" style="width:60px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;padding:4px;"></div>
-                        <div class="form-group"><label>Region Y</label><input type="number" id="removeY" value="0" min="0" style="width:60px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;padding:4px;"></div>
-                        <div class="form-group"><label>Width</label><input type="number" id="removeW" value="200" min="10" style="width:60px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;padding:4px;"></div>
-                        <div class="form-group"><label>Height</label><input type="number" id="removeH" value="50" min="10" style="width:60px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:4px;padding:4px;"></div>
+                        <div class="form-group"><label>Region X</label><input type="number" id="removeX" value="0" min="0" style="width:60px;"></div>
+                        <div class="form-group"><label>Region Y</label><input type="number" id="removeY" value="0" min="0" style="width:60px;"></div>
+                        <div class="form-group"><label>Width</label><input type="number" id="removeW" value="200" min="10" style="width:60px;"></div>
+                        <div class="form-group"><label>Height</label><input type="number" id="removeH" value="50" min="10" style="width:60px;"></div>
                         <button class="btn-primary" id="runRemoveBtn" disabled>Remove</button>
                     </section>
                 </div>
@@ -1690,7 +1708,7 @@
                             <select id="faceAiMode"><option value="enhance">Face Enhancement (GFPGAN)</option><option value="swap">Face Swap (InsightFace)</option></select></div>
                         <div id="faceSwapParams" class="hidden">
                             <div class="form-group"><label>Reference Face Image</label>
-                                <input type="text" id="faceRefPath" placeholder="/path/to/face_reference.jpg" style="width:100%;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:6px;padding:8px;font-size:12px;"></div>
+                                <div class="path-input-row"><input type="text" id="faceRefPath" class="text-input" placeholder="/path/to/face_reference.jpg"><button class="btn-browse" data-target="faceRefPath">Browse</button></div></div>
                         </div>
                         <button class="btn-primary" id="runFaceAiBtn" disabled>Run Face AI</button>
                     </section>
@@ -1843,6 +1861,24 @@
                         <div class="hidden" id="batchResults">
                             <div class="batch-status" id="batchStatusText"></div>
                         </div>
+                    </section>
+
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Workflow Presets</div></div>
+                        <p class="card-desc">Run a multi-step pipeline on the selected clip. Each step runs automatically after the previous one finishes.</p>
+
+                        <div class="form-group">
+                            <label>Preset</label>
+                            <select id="workflowPreset">
+                                <option value="clean_audio">Clean Audio (Denoise + Normalize)</option>
+                                <option value="subtitle_pipeline">Subtitle Pipeline (Transcribe + Export SRT)</option>
+                                <option value="translate_pipeline">Translate Pipeline (Transcribe + Translate)</option>
+                                <option value="pro_video">Pro Video (Stabilize + Denoise Audio + Normalize)</option>
+                                <option value="social_ready">Social Ready (Silence Remove + Normalize + Burn-in Captions)</option>
+                            </select>
+                        </div>
+
+                        <button class="btn-primary" id="runWorkflowBtn" disabled>Run Workflow</button>
                     </section>
                 </div>
             </div>

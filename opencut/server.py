@@ -119,7 +119,7 @@ def _save_whisper_settings(settings: dict):
 
 
 app = Flask(__name__)
-CORS(app, origins=["*"])  # CEP panels use null origin
+CORS(app, origins=["null", "file://"])  # CEP panels use null origin; file:// for local dev
 
 # ---------------------------------------------------------------------------
 # Job tracking
@@ -127,11 +127,22 @@ CORS(app, origins=["*"])  # CEP panels use null origin
 jobs = {}
 job_lock = threading.Lock()
 JOB_MAX_AGE = 3600  # Auto-clean jobs older than 1 hour
+MAX_CONCURRENT_JOBS = 50  # Prevent job spam / DOS
+MAX_BATCH_FILES = 100  # Max files per batch request
+
+
+def _safe_error(e, context=""):
+    """Log the real exception and return a generic error response."""
+    logger.exception("Internal error%s: %s", f" in {context}" if context else "", e)
+    return jsonify({"error": "An internal error occurred. Check server logs for details."}), 500
 
 
 def _new_job(job_type: str, filepath: str) -> str:
     job_id = str(uuid.uuid4())[:8]
     with job_lock:
+        running = sum(1 for j in jobs.values() if j.get("status") == "running")
+        if running >= MAX_CONCURRENT_JOBS:
+            raise RuntimeError("Too many concurrent jobs. Please wait for existing jobs to finish.")
         jobs[job_id] = {
             "id": job_id,
             "type": job_type,
@@ -185,13 +196,19 @@ def _resolve_output_dir(filepath: str, requested_dir: str = "") -> str:
     # Try requested directory first
     if requested_dir:
         requested_dir = requested_dir.strip().strip('"').strip("'")
-        if os.path.isdir(requested_dir):
+        # Resolve to absolute path and block obvious traversal
+        requested_dir = os.path.realpath(requested_dir)
+        if ".." in os.path.normpath(requested_dir).split(os.sep):
+            logger.warning(f"Path traversal attempt blocked: {requested_dir}")
+            requested_dir = ""
+        elif os.path.isdir(requested_dir):
             return requested_dir
-        try:
-            os.makedirs(requested_dir, exist_ok=True)
-            return requested_dir
-        except OSError:
-            pass
+        else:
+            try:
+                os.makedirs(requested_dir, exist_ok=True)
+                return requested_dir
+            except OSError:
+                pass
 
     # Try source file's directory
     source_dir = os.path.dirname(os.path.abspath(filepath))
@@ -402,7 +419,7 @@ def media_info():
             }
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 # ---------------------------------------------------------------------------
@@ -1076,7 +1093,7 @@ def export_edited_transcript():
 
         return jsonify({"output_path": out_path, "format": sub_format})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 # ---------------------------------------------------------------------------
@@ -1467,6 +1484,9 @@ def audio_separate():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     model = data.get("model", "htdemucs")
+    allowed_models = {"htdemucs", "htdemucs_ft", "htdemucs_6s", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q"}
+    if model not in allowed_models:
+        return jsonify({"error": f"Unknown model: {model}. Allowed: {', '.join(sorted(allowed_models))}"}), 400
     stems = data.get("stems", ["vocals", "no_vocals"])
     output_format = data.get("format", "wav")
     auto_import = data.get("auto_import", True)
@@ -1539,9 +1559,9 @@ def audio_separate():
                             pct_str = line.split('%')[0].strip().split()[-1]
                             pct = int(float(pct_str))
                             _update_job(job_id, progress=15 + int(pct * 0.7), message=f"Separating audio... {pct}%")
-                        except:
+                        except (ValueError, IndexError):
                             pass
-                
+
                 process.wait()
                 if process.returncode != 0:
                     raise Exception("Demucs separation failed")
@@ -1656,7 +1676,7 @@ def install_demucs():
     except subprocess.TimeoutExpired:
         return jsonify({"error": "Installation timed out. Please install manually: pip install demucs"}), 500
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 # ---------------------------------------------------------------------------
@@ -1753,7 +1773,7 @@ def audio_measure():
             "loudness_range_lu": info.input_lra,
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 # ---------------------------------------------------------------------------
@@ -1822,7 +1842,7 @@ def audio_effects_list():
             from opencut.core.audio_suite import get_available_effects
         return jsonify({"effects": get_available_effects()})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/audio/effects/apply", methods=["POST"])
@@ -1898,7 +1918,7 @@ def loudness_presets():
             })
         return jsonify({"presets": presets})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 # ---------------------------------------------------------------------------
@@ -2155,7 +2175,7 @@ def video_watermark():
                             out_path
                         ], check=True, capture_output=True)
                         os.unlink(temp_video)
-                    except:
+                    except Exception:
                         # No ffmpeg or no audio, just rename
                         import shutil
                         shutil.move(temp_video, out_path)
@@ -2238,7 +2258,7 @@ def install_watermark():
     except subprocess.TimeoutExpired:
         return jsonify({"error": "Installation timed out. Please install manually."}), 500
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 # ---------------------------------------------------------------------------
@@ -2323,7 +2343,7 @@ def speed_presets():
             from opencut.core.scene_detect import SPEED_RAMP_PRESETS
         return jsonify({"presets": SPEED_RAMP_PRESETS})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 # ---------------------------------------------------------------------------
@@ -2411,7 +2431,7 @@ def stream_job(job_id):
     resp.headers["Cache-Control"] = "no-cache"
     resp.headers["Connection"] = "keep-alive"
     resp.headers["X-Accel-Buffering"] = "no"
-    resp.headers["Access-Control-Allow-Origin"] = "*"
+    resp.headers["Access-Control-Allow-Origin"] = "null"
     return resp
 
 
@@ -2540,6 +2560,9 @@ def install_whisper():
                     elif actual_backend == "openai-whisper":
                         verify_cmd = [sys.executable, "-c", "import whisper; print('ok')"]
                     else:
+                        if actual_backend not in allowed:
+                            last_error = f"Unknown backend: {actual_backend}"
+                            continue
                         verify_cmd = [sys.executable, "-c", f"import {actual_backend}; print('ok')"]
 
                 verify = _sp.run(verify_cmd, capture_output=True, text=True, timeout=30)
@@ -3313,7 +3336,7 @@ def video_fx_list():
             from opencut.core.video_fx import get_available_video_effects
         return jsonify({"effects": get_available_video_effects()})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/fx/apply", methods=["POST"])
@@ -3429,7 +3452,7 @@ def video_ai_capabilities():
             from opencut.core.video_ai import get_ai_capabilities
         return jsonify(get_ai_capabilities())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/ai/upscale", methods=["POST"])
@@ -3693,7 +3716,7 @@ def audio_pro_effects():
             "available": check_pedalboard_available(),
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/audio/pro/apply", methods=["POST"])
@@ -3852,7 +3875,7 @@ def face_capabilities():
             from opencut.core.face_tools import check_face_tools_available
         return jsonify(check_face_tools_available())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/face/detect", methods=["POST"])
@@ -3873,7 +3896,7 @@ def face_detect():
         result = detect_faces_in_frame(filepath, detector=detector)
         return jsonify(result)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/face/blur", methods=["POST"])
@@ -3970,7 +3993,7 @@ def style_list():
             from opencut.core.style_transfer import get_available_styles
         return jsonify({"styles": get_available_styles()})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/style/apply", methods=["POST"])
@@ -4047,7 +4070,7 @@ def captions_enhanced_capabilities():
             "languages": TRANSLATION_LANGUAGES,
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/captions/whisperx", methods=["POST"])
@@ -4214,7 +4237,7 @@ def captions_convert():
         out = convert_subtitle_format(filepath, output_format=target_format)
         return jsonify({"output_path": out})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/captions/enhanced/install", methods=["POST"])
@@ -4280,7 +4303,7 @@ def export_presets_list():
             "categories": get_preset_categories(),
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/export/preset", methods=["POST"])
@@ -4401,6 +4424,8 @@ def batch_create():
         return jsonify({"error": "No operation specified"}), 400
     if not filepaths:
         return jsonify({"error": "No files specified"}), 400
+    if len(filepaths) > MAX_BATCH_FILES:
+        return jsonify({"error": f"Too many files. Maximum is {MAX_BATCH_FILES}."}), 400
 
     try:
         try:
@@ -4449,7 +4474,7 @@ def batch_create():
 
         return jsonify({"batch_id": batch_id, "status": "running", "total": batch.total})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/batch/<batch_id>", methods=["GET"])
@@ -4465,7 +4490,7 @@ def batch_status(batch_id):
             return jsonify({"error": "Batch not found"}), 404
         return jsonify(batch.summary)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/batch/<batch_id>/cancel", methods=["POST"])
@@ -4480,7 +4505,7 @@ def batch_cancel(batch_id):
             return jsonify({"status": "cancelled"})
         return jsonify({"error": "Batch not found"}), 404
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/batch/list", methods=["GET"])
@@ -4493,7 +4518,7 @@ def batch_list():
             from opencut.core.batch_process import list_batches
         return jsonify({"batches": list_batches()})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 def _execute_batch_item(operation, filepath, params, on_progress):
@@ -4618,7 +4643,7 @@ def tts_voices():
             },
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/audio/tts/generate", methods=["POST"])
@@ -4782,7 +4807,7 @@ def audio_gen_capabilities():
             from opencut.core.music_gen import get_audio_generators
         return jsonify(get_audio_generators())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/audio/gen/tone", methods=["POST"])
@@ -4887,7 +4912,7 @@ def audio_gen_silence():
         out = generate_silence(duration=duration, output_dir=output_dir or tempfile.gettempdir())
         return jsonify({"output_path": out})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 # ---------------------------------------------------------------------------
@@ -4903,7 +4928,7 @@ def burnin_styles():
             from opencut.core.caption_burnin import get_burnin_styles
         return jsonify({"styles": get_burnin_styles()})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/captions/burnin/file", methods=["POST"])
@@ -5021,7 +5046,7 @@ def speed_ramp_presets():
             "easings": list(EASING_FUNCTIONS.keys()),
         })
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/speed/change", methods=["POST"])
@@ -5379,7 +5404,7 @@ def lut_list():
             from opencut.core.lut_library import get_lut_list
         return jsonify({"luts": get_lut_list()})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/lut/apply", methods=["POST"])
@@ -5568,7 +5593,7 @@ def animated_caption_presets():
             from opencut.core.animated_captions import get_animation_presets
         return jsonify({"presets": get_animation_presets()})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/captions/animated/render", methods=["POST"])
@@ -5614,7 +5639,7 @@ def removal_capabilities():
             from opencut.core.object_removal import get_removal_capabilities
         return jsonify(get_removal_capabilities())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/remove/watermark", methods=["POST"])
@@ -5664,7 +5689,7 @@ def title_presets():
             from opencut.core.motion_graphics import get_title_presets
         return jsonify({"presets": get_title_presets()})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/title/render", methods=["POST"])
@@ -5742,7 +5767,7 @@ def transitions_list():
             from opencut.core.transitions_3d import get_transition_list
         return jsonify({"transitions": get_transition_list()})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/transitions/apply", methods=["POST"])
@@ -5789,7 +5814,7 @@ def transitions_join():
             except ImportError:
                 from opencut.core.transitions_3d import join_with_transitions
             def _p(pct, msg): _update_job(job_id, progress=pct, message=msg)
-            d = data.get("output_dir", "") or os.path.dirname(clips[0])
+            d = _resolve_output_dir(clips[0], data.get("output_dir", ""))
             out = join_with_transitions(clips, output_dir=d,
                                          transition=data.get("transition", "fade"),
                                          duration=data.get("duration", 1.0),
@@ -5815,7 +5840,7 @@ def particle_presets():
             from opencut.core.particles import get_particle_presets
         return jsonify({"presets": get_particle_presets()})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/particles/apply", methods=["POST"])
@@ -5858,7 +5883,7 @@ def face_capabilities():
             from opencut.core.face_swap import get_face_capabilities
         return jsonify(get_face_capabilities())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/face/enhance", methods=["POST"])
@@ -5925,7 +5950,7 @@ def upscale_capabilities():
             from opencut.core.upscale_pro import get_upscale_capabilities
         return jsonify(get_upscale_capabilities())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/upscale/run", methods=["POST"])
@@ -5967,7 +5992,7 @@ def color_capabilities():
             from opencut.core.color_management import get_color_capabilities
         return jsonify(get_color_capabilities())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/video/color/correct", methods=["POST"])
@@ -6070,7 +6095,7 @@ def music_ai_capabilities():
             from opencut.core.music_ai import get_music_ai_capabilities
         return jsonify(get_music_ai_capabilities())
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return _safe_error(e)
 
 
 @app.route("/audio/music-ai/generate", methods=["POST"])
