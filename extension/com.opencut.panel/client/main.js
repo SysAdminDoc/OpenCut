@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.1.0
+   OpenCut CEP Panel - Main Controller v1.2.0
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -792,6 +792,66 @@
         el.transcriptSearchCount = $("transcriptSearchCount");
         el.transcriptSearchPrev = $("transcriptSearchPrev");
         el.transcriptSearchNext = $("transcriptSearchNext");
+
+        // v1.2.0 elements
+        // Waveform
+        el.waveformContainer = $("waveformContainer");
+        el.waveformCanvas = $("waveformCanvas");
+        el.waveformThreshold = $("waveformThreshold");
+        el.loadWaveformBtn = $("loadWaveformBtn");
+        // Favorites
+        el.favoritesBar = $("favoritesBar");
+        el.favoritesItems = $("favoritesItems");
+        // Preview modal
+        el.previewModal = $("previewModal");
+        el.previewModalClose = $("previewModalClose");
+        el.previewOriginal = $("previewOriginal");
+        el.previewProcessed = $("previewProcessed");
+        el.previewRefreshBtn = $("previewRefreshBtn");
+        el.previewTimestamp = $("previewTimestamp");
+        el.previewVfxBtn = $("previewVfxBtn");
+        // Audio preview
+        el.audioPreview = $("audioPreview");
+        el.audioPreviewClose = $("audioPreviewClose");
+        el.audioPreviewPlayer = $("audioPreviewPlayer");
+        // Context menu
+        el.contextMenu = $("contextMenu");
+        // Wizard
+        el.wizardOverlay = $("wizardOverlay");
+        el.wizardCloseBtn = $("wizardCloseBtn");
+        el.wizardDontShow = $("wizardDontShow");
+        // Output browser
+        el.outputBrowser = $("outputBrowser");
+        el.outputBrowserToggle = $("outputBrowserToggle");
+        el.outputBrowserClose = $("outputBrowserClose");
+        el.outputBrowserList = $("outputBrowserList");
+        el.refreshOutputsBtn = $("refreshOutputsBtn");
+        // Batch multi-select
+        el.batchFileList = $("batchFileList");
+        el.batchAddSelectedBtn = $("batchAddSelectedBtn");
+        el.batchAddAllBtn = $("batchAddAllBtn");
+        el.batchClearBtn = $("batchClearBtn");
+        // Dep dashboard
+        el.depGrid = $("depGrid");
+        el.refreshDepsBtn = $("refreshDepsBtn");
+        // Settings import/export
+        el.exportSettingsBtn = $("exportSettingsBtn");
+        el.importSettingsBtn = $("importSettingsBtn");
+        el.importSettingsFile = $("importSettingsFile");
+        // Workflow builder
+        el.customWorkflowName = $("customWorkflowName");
+        el.workflowStepList = $("workflowStepList");
+        el.workflowStepSelect = $("workflowStepSelect");
+        el.workflowAddStepBtn = $("workflowAddStepBtn");
+        el.saveCustomWorkflowBtn = $("saveCustomWorkflowBtn");
+        el.runCustomWorkflowBtn = $("runCustomWorkflowBtn");
+        el.savedWorkflowSelect = $("savedWorkflowSelect");
+        el.loadCustomWorkflowBtn = $("loadCustomWorkflowBtn");
+        el.deleteCustomWorkflowBtn = $("deleteCustomWorkflowBtn");
+        // i18n
+        el.settingsLang = $("settingsLang");
+        // Time estimate
+        el.processingEstimate = $("processingEstimate");
     }
 
     // ================================================================
@@ -1174,6 +1234,10 @@
 
         // Export tab
         el.runExpTranscriptBtn.disabled = !canRun;
+
+        // v1.2.0 buttons
+        if (el.loadWaveformBtn) el.loadWaveformBtn.disabled = !canRun;
+        if (el.previewVfxBtn) el.previewVfxBtn.disabled = !canRun;
 
         // Whisper hints
         if (capabilities.captions === false) {
@@ -3825,6 +3889,679 @@
     }
 
     // ================================================================
+    // Waveform Preview
+    // ================================================================
+    var _waveformData = null;
+
+    function initWaveform() {
+        if (!el.loadWaveformBtn) return;
+        el.loadWaveformBtn.addEventListener("click", function () {
+            if (!selectedPath) return;
+            el.loadWaveformBtn.textContent = "Loading...";
+            el.loadWaveformBtn.disabled = true;
+            api("POST", "/audio/waveform", { file: selectedPath, samples: 500 }, function (err, data) {
+                el.loadWaveformBtn.textContent = "Preview Waveform";
+                el.loadWaveformBtn.disabled = !selectedPath;
+                if (err || !data || !data.peaks) {
+                    showToast("Failed to load waveform", "error");
+                    return;
+                }
+                _waveformData = data;
+                if (el.waveformContainer) el.waveformContainer.classList.remove("hidden");
+                drawWaveform(data.peaks);
+                updateThresholdLine();
+            });
+        });
+        // Drag threshold line
+        if (el.waveformThreshold) {
+            var dragging = false;
+            el.waveformThreshold.addEventListener("mousedown", function (e) { dragging = true; e.preventDefault(); });
+            document.addEventListener("mousemove", function (e) {
+                if (!dragging || !el.waveformContainer) return;
+                var rect = el.waveformCanvas.getBoundingClientRect();
+                var y = Math.max(0, Math.min(e.clientY - rect.top, rect.height));
+                var amplitude = 1 - (y / rect.height);
+                // Convert to dB: 20 * log10(amplitude), range -60 to 0
+                var db = amplitude > 0 ? Math.round(20 * Math.log10(amplitude)) : -60;
+                db = Math.max(-60, Math.min(-10, db));
+                var thresholdSlider = document.getElementById("threshold");
+                if (thresholdSlider) {
+                    thresholdSlider.value = db;
+                    var valSpan = document.getElementById("thresholdVal");
+                    if (valSpan) valSpan.textContent = db + " dB";
+                }
+                updateThresholdLine();
+            });
+            document.addEventListener("mouseup", function () { dragging = false; });
+        }
+    }
+
+    function drawWaveform(peaks) {
+        var canvas = el.waveformCanvas;
+        if (!canvas) return;
+        var ctx = canvas.getContext("2d");
+        var w = canvas.width;
+        var h = canvas.height;
+        ctx.clearRect(0, 0, w, h);
+        // Background
+        ctx.fillStyle = "rgba(0, 0, 0, 0.3)";
+        ctx.fillRect(0, 0, w, h);
+        // Draw bars
+        var barW = w / peaks.length;
+        for (var i = 0; i < peaks.length; i++) {
+            var val = peaks[i];
+            var barH = val * h;
+            // Color based on amplitude
+            var hue = val > 0.5 ? 0 : val > 0.2 ? 60 : 180;
+            ctx.fillStyle = "hsla(" + hue + ", 80%, 60%, 0.8)";
+            ctx.fillRect(i * barW, h - barH, Math.max(1, barW - 0.5), barH);
+        }
+    }
+
+    function updateThresholdLine() {
+        if (!el.waveformThreshold || !el.waveformCanvas) return;
+        var thresholdSlider = document.getElementById("threshold");
+        var db = thresholdSlider ? parseInt(thresholdSlider.value) : -30;
+        // Convert dB to amplitude: 10^(dB/20)
+        var amplitude = Math.pow(10, db / 20);
+        var h = el.waveformCanvas.height;
+        var y = h - (amplitude * h);
+        el.waveformThreshold.style.top = y + "px";
+    }
+
+    // ================================================================
+    // Favorites / Pinned Operations
+    // ================================================================
+    var _favorites = [];
+    var _favoriteOps = {
+        "silence": { label: "Remove Silences", tab: "cut", sub: "silence", btn: "runSilenceBtn" },
+        "fillers": { label: "Clean Fillers", tab: "cut", sub: "fillers", btn: "runFillersBtn" },
+        "styled_captions": { label: "Styled Captions", tab: "captions", sub: "cap-styled", btn: "runStyledCaptionsBtn" },
+        "transcribe": { label: "Transcribe", tab: "captions", sub: "cap-transcript", btn: "runTranscriptBtn" },
+        "denoise": { label: "Denoise Audio", tab: "audio", sub: "aud-denoise", btn: "runDenoiseBtn" },
+        "normalize": { label: "Normalize", tab: "audio", sub: "aud-normalize", btn: "runNormalizeBtn" },
+        "separate": { label: "Stem Separate", tab: "audio", sub: "aud-separate", btn: "runSeparateBtn" },
+        "stabilize": { label: "Stabilize Video", tab: "video", sub: "vid-effects", btn: "runVfxBtn" },
+        "face_blur": { label: "Face Blur", tab: "video", sub: "vid-face", btn: "runFaceBlurBtn" },
+        "export": { label: "Export Preset", tab: "export", sub: "exp-platform", btn: "runExportPresetBtn" },
+    };
+
+    function initFavorites() {
+        // Load from backend
+        api("GET", "/favorites", null, function (err, data) {
+            if (!err && data && Array.isArray(data)) _favorites = data;
+            renderFavorites();
+        });
+    }
+
+    function renderFavorites() {
+        if (!el.favoritesItems || !el.favoritesBar) return;
+        el.favoritesItems.innerHTML = "";
+        if (_favorites.length === 0) {
+            el.favoritesBar.classList.add("hidden");
+            return;
+        }
+        el.favoritesBar.classList.remove("hidden");
+        for (var i = 0; i < _favorites.length; i++) {
+            var favId = _favorites[i];
+            var op = _favoriteOps[favId];
+            if (!op) continue;
+            var chip = document.createElement("div");
+            chip.className = "fav-chip";
+            chip.dataset.fav = favId;
+            chip.innerHTML = '<span>' + op.label + '</span><span class="fav-chip-remove">&times;</span>';
+            // Click to navigate
+            (function (fId, o) {
+                chip.querySelector("span:first-child").addEventListener("click", function () {
+                    navigateToTab(o.tab, o.sub);
+                });
+                chip.querySelector(".fav-chip-remove").addEventListener("click", function (e) {
+                    e.stopPropagation();
+                    _favorites = _favorites.filter(function (f) { return f !== fId; });
+                    saveFavorites();
+                    renderFavorites();
+                });
+            })(favId, op);
+            el.favoritesItems.appendChild(chip);
+        }
+    }
+
+    function navigateToTab(tab, sub) {
+        // Click the main tab
+        var navBtn = document.querySelector('.nav-tab[data-nav="' + tab + '"]');
+        if (navBtn) navBtn.click();
+        // Then click sub-tab
+        if (sub) {
+            setTimeout(function () {
+                var subBtn = document.querySelector('.sub-tab[data-sub="' + sub + '"]');
+                if (subBtn) subBtn.click();
+            }, 50);
+        }
+    }
+
+    function addFavorite(favId) {
+        if (_favorites.indexOf(favId) !== -1) return;
+        _favorites.push(favId);
+        saveFavorites();
+        renderFavorites();
+        showToast("Added to favorites: " + (_favoriteOps[favId] || {}).label, "success");
+    }
+
+    function saveFavorites() {
+        api("POST", "/favorites/save", { favorites: _favorites }, function () {});
+    }
+
+    // ================================================================
+    // Side-by-Side Preview
+    // ================================================================
+    function initPreviewModal() {
+        if (el.previewModalClose) {
+            el.previewModalClose.addEventListener("click", function () {
+                if (el.previewModal) el.previewModal.classList.add("hidden");
+            });
+        }
+        if (el.previewRefreshBtn) {
+            el.previewRefreshBtn.addEventListener("click", function () {
+                loadPreviewFrame();
+            });
+        }
+        if (el.previewVfxBtn) {
+            el.previewVfxBtn.addEventListener("click", function () {
+                if (!selectedPath) return;
+                loadPreviewFrame();
+            });
+        }
+    }
+
+    function loadPreviewFrame() {
+        if (!selectedPath) return;
+        var ts = el.previewTimestamp ? el.previewTimestamp.value : "00:00:01";
+        // Load original frame
+        api("POST", "/video/preview-frame", { file: selectedPath, timestamp: ts }, function (err, data) {
+            if (err || !data || !data.image) return;
+            if (el.previewOriginal) el.previewOriginal.src = "data:image/jpeg;base64," + data.image;
+            if (el.previewProcessed) el.previewProcessed.src = "data:image/jpeg;base64," + data.image;
+            if (el.previewModal) el.previewModal.classList.remove("hidden");
+        });
+    }
+
+    // ================================================================
+    // Audio Preview Player
+    // ================================================================
+    function initAudioPreview() {
+        if (el.audioPreviewClose) {
+            el.audioPreviewClose.addEventListener("click", function () {
+                if (el.audioPreview) el.audioPreview.classList.add("hidden");
+                if (el.audioPreviewPlayer) {
+                    el.audioPreviewPlayer.pause();
+                    el.audioPreviewPlayer.src = "";
+                }
+            });
+        }
+    }
+
+    function showAudioPreview(filePath) {
+        if (!el.audioPreview || !el.audioPreviewPlayer) return;
+        el.audioPreviewPlayer.src = BACKEND + "/file?path=" + encodeURIComponent(filePath);
+        el.audioPreview.classList.remove("hidden");
+        el.audioPreviewPlayer.play();
+    }
+
+    // ================================================================
+    // Right-Click Context Menu
+    // ================================================================
+    function initContextMenu() {
+        if (!el.contextMenu) return;
+        // Show on clip select right-click
+        var clipSelect = document.querySelector(".clip-select");
+        if (clipSelect) {
+            clipSelect.addEventListener("contextmenu", function (e) {
+                if (!selectedPath) return;
+                e.preventDefault();
+                el.contextMenu.style.left = e.clientX + "px";
+                el.contextMenu.style.top = e.clientY + "px";
+                el.contextMenu.classList.remove("hidden");
+            });
+        }
+        // Handle menu item clicks
+        var items = el.contextMenu.querySelectorAll(".context-menu-item");
+        for (var i = 0; i < items.length; i++) {
+            items[i].addEventListener("click", function () {
+                var action = this.dataset.action;
+                el.contextMenu.classList.add("hidden");
+                if (action === "favorite") {
+                    // Determine current active operation
+                    var activeTab = document.querySelector(".nav-tab.active");
+                    var activeSub = document.querySelector(".sub-tab.active");
+                    if (activeTab && activeSub) {
+                        var favId = activeSub.dataset.sub;
+                        // Map sub-tab to favorite ID
+                        var subToFav = { "silence": "silence", "fillers": "fillers", "cap-styled": "styled_captions", "cap-transcript": "transcribe", "aud-denoise": "denoise", "aud-normalize": "normalize", "aud-separate": "separate", "vid-effects": "stabilize", "vid-face": "face_blur", "exp-platform": "export" };
+                        if (subToFav[favId]) addFavorite(subToFav[favId]);
+                    }
+                } else {
+                    var actionToNav = {
+                        "silence": ["cut", "silence"],
+                        "transcribe": ["captions", "cap-transcript"],
+                        "denoise": ["audio", "aud-denoise"],
+                        "normalize": ["audio", "aud-normalize"],
+                        "stabilize": ["video", "vid-effects"],
+                        "export": ["export", "exp-platform"]
+                    };
+                    var nav = actionToNav[action];
+                    if (nav) navigateToTab(nav[0], nav[1]);
+                }
+            });
+        }
+        // Hide on click outside
+        document.addEventListener("click", function (e) {
+            if (!e.target.closest(".context-menu")) {
+                el.contextMenu.classList.add("hidden");
+            }
+        });
+    }
+
+    // ================================================================
+    // First-Run Wizard
+    // ================================================================
+    function initWizard() {
+        if (!el.wizardOverlay) return;
+        // Check if user has dismissed the wizard before
+        try {
+            var settings = JSON.parse(localStorage.getItem("opencut_settings") || "{}");
+            if (settings.wizardDismissed) return;
+        } catch (e) {}
+        // Show wizard
+        el.wizardOverlay.classList.remove("hidden");
+        // Animate steps
+        var steps = el.wizardOverlay.querySelectorAll(".wizard-step");
+        for (var i = 1; i < steps.length; i++) {
+            (function (idx) {
+                setTimeout(function () { steps[idx].classList.add("active"); }, idx * 400);
+            })(i);
+        }
+        if (el.wizardCloseBtn) {
+            el.wizardCloseBtn.addEventListener("click", function () {
+                el.wizardOverlay.classList.add("hidden");
+                if (el.wizardDontShow && el.wizardDontShow.checked) {
+                    try {
+                        var s = JSON.parse(localStorage.getItem("opencut_settings") || "{}");
+                        s.wizardDismissed = true;
+                        localStorage.setItem("opencut_settings", JSON.stringify(s));
+                    } catch (e) {}
+                }
+            });
+        }
+    }
+
+    // ================================================================
+    // Output Browser
+    // ================================================================
+    var _outputBrowserOpen = false;
+
+    function initOutputBrowser() {
+        if (el.outputBrowserToggle) {
+            el.outputBrowserToggle.addEventListener("click", function () {
+                _outputBrowserOpen = !_outputBrowserOpen;
+                if (el.outputBrowser) {
+                    el.outputBrowser.classList.toggle("hidden", !_outputBrowserOpen);
+                }
+                if (_outputBrowserOpen) refreshOutputs();
+            });
+        }
+        if (el.outputBrowserClose) {
+            el.outputBrowserClose.addEventListener("click", function () {
+                _outputBrowserOpen = false;
+                if (el.outputBrowser) el.outputBrowser.classList.add("hidden");
+            });
+        }
+        if (el.refreshOutputsBtn) {
+            el.refreshOutputsBtn.addEventListener("click", refreshOutputs);
+        }
+    }
+
+    function refreshOutputs() {
+        api("GET", "/outputs/recent", null, function (err, data) {
+            if (err || !data) return;
+            if (el.outputBrowserToggle) {
+                el.outputBrowserToggle.textContent = "Outputs (" + data.length + ")";
+            }
+            if (!el.outputBrowserList) return;
+            el.outputBrowserList.innerHTML = "";
+            if (data.length === 0) {
+                el.outputBrowserList.innerHTML = '<div class="hint" style="padding: 8px 12px;">No recent outputs.</div>';
+                return;
+            }
+            for (var i = 0; i < data.length; i++) {
+                var item = data[i];
+                var div = document.createElement("div");
+                div.className = "output-item";
+                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + item.name + '</div><div class="output-item-meta">' + item.size_mb + ' MB &mdash; ' + item.type + '</div></div><div class="output-item-actions"><button class="btn-sm" data-path="' + item.path.replace(/"/g, '&quot;') + '">Import</button></div>';
+                div.querySelector(".btn-sm").addEventListener("click", function () {
+                    var p = this.dataset.path;
+                    if (inPremiere && cs) {
+                        cs.evalScript('autoImportResult("' + p.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '", "output")');
+                        showToast("Imported: " + p.split(/[/\\]/).pop(), "success");
+                    }
+                });
+                el.outputBrowserList.appendChild(div);
+            }
+        });
+    }
+
+    // ================================================================
+    // Batch Multi-Select File Picker
+    // ================================================================
+    var _batchFiles = [];
+
+    function initBatchPicker() {
+        if (el.batchAddSelectedBtn) {
+            el.batchAddSelectedBtn.addEventListener("click", function () {
+                if (!selectedPath) { showToast("No clip selected", "error"); return; }
+                if (_batchFiles.indexOf(selectedPath) !== -1) return;
+                _batchFiles.push(selectedPath);
+                renderBatchFiles();
+            });
+        }
+        if (el.batchAddAllBtn) {
+            el.batchAddAllBtn.addEventListener("click", function () {
+                for (var i = 0; i < projectMedia.length; i++) {
+                    var p = projectMedia[i].path || projectMedia[i];
+                    if (_batchFiles.indexOf(p) === -1) _batchFiles.push(p);
+                }
+                renderBatchFiles();
+            });
+        }
+        if (el.batchClearBtn) {
+            el.batchClearBtn.addEventListener("click", function () {
+                _batchFiles = [];
+                renderBatchFiles();
+            });
+        }
+    }
+
+    function renderBatchFiles() {
+        if (!el.batchFileList) return;
+        if (_batchFiles.length === 0) {
+            el.batchFileList.innerHTML = '<div class="hint">No files added. Use "Add Selected" or drag files.</div>';
+            return;
+        }
+        el.batchFileList.innerHTML = "";
+        for (var i = 0; i < _batchFiles.length; i++) {
+            var item = document.createElement("div");
+            item.className = "batch-file-item";
+            var name = _batchFiles[i].split(/[/\\]/).pop();
+            item.innerHTML = '<span>' + (i + 1) + '. ' + name + '</span><button class="batch-file-remove" data-idx="' + i + '">&times;</button>';
+            item.querySelector(".batch-file-remove").addEventListener("click", function () {
+                var idx = parseInt(this.dataset.idx);
+                _batchFiles.splice(idx, 1);
+                renderBatchFiles();
+            });
+            el.batchFileList.appendChild(item);
+        }
+    }
+
+    // ================================================================
+    // Dependency Health Dashboard
+    // ================================================================
+    function initDepDashboard() {
+        if (el.refreshDepsBtn) {
+            el.refreshDepsBtn.addEventListener("click", refreshDeps);
+        }
+    }
+
+    function refreshDeps() {
+        if (!el.depGrid) return;
+        el.depGrid.innerHTML = '<div class="hint">Checking dependencies...</div>';
+        api("GET", "/system/dependencies", null, function (err, data) {
+            if (err || !data) {
+                el.depGrid.innerHTML = '<div class="hint">Failed to check dependencies.</div>';
+                return;
+            }
+            el.depGrid.innerHTML = "";
+            var keys = Object.keys(data);
+            for (var i = 0; i < keys.length; i++) {
+                var name = keys[i];
+                var info = data[name];
+                var div = document.createElement("div");
+                div.className = "dep-item";
+                div.innerHTML = '<span class="dep-dot ' + (info.installed ? "installed" : "missing") + '"></span>' +
+                    '<span class="dep-name">' + name + '</span>' +
+                    '<span class="dep-version">' + (info.installed ? (info.version || "OK").toString().substring(0, 12) : "missing") + '</span>';
+                el.depGrid.appendChild(div);
+            }
+        });
+    }
+
+    // ================================================================
+    // Settings Import / Export
+    // ================================================================
+    function initSettingsIO() {
+        if (el.exportSettingsBtn) {
+            el.exportSettingsBtn.addEventListener("click", function () {
+                api("GET", "/settings/export", null, function (err, data) {
+                    if (err || !data) { showToast("Export failed", "error"); return; }
+                    // Also include localStorage settings
+                    try { data.localStorage = JSON.parse(localStorage.getItem("opencut_settings") || "{}"); } catch (e) {}
+                    var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+                    var url = URL.createObjectURL(blob);
+                    var a = document.createElement("a");
+                    a.href = url;
+                    a.download = "opencut_settings_" + new Date().toISOString().slice(0, 10) + ".json";
+                    a.click();
+                    URL.revokeObjectURL(url);
+                    showToast("Settings exported", "success");
+                });
+            });
+        }
+        if (el.importSettingsBtn && el.importSettingsFile) {
+            el.importSettingsBtn.addEventListener("click", function () {
+                el.importSettingsFile.click();
+            });
+            el.importSettingsFile.addEventListener("change", function () {
+                var file = this.files[0];
+                if (!file) return;
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        var data = JSON.parse(e.target.result);
+                        api("POST", "/settings/import", data, function (err, result) {
+                            if (err) { showToast("Import failed", "error"); return; }
+                            if (data.localStorage) {
+                                localStorage.setItem("opencut_settings", JSON.stringify(data.localStorage));
+                                loadLocalSettings();
+                            }
+                            showToast("Settings imported: " + (result.imported || []).join(", "), "success");
+                            if (typeof initPresets === "function") initPresets();
+                        });
+                    } catch (ex) {
+                        showToast("Invalid settings file", "error");
+                    }
+                };
+                reader.readAsText(file);
+                this.value = "";
+            });
+        }
+    }
+
+    // ================================================================
+    // Custom Workflow Builder
+    // ================================================================
+    var _workflowSteps = [];
+
+    function initWorkflowBuilder() {
+        if (el.workflowAddStepBtn) {
+            el.workflowAddStepBtn.addEventListener("click", function () {
+                var sel = el.workflowStepSelect;
+                if (!sel) return;
+                _workflowSteps.push({
+                    endpoint: sel.value,
+                    label: sel.options[sel.selectedIndex].textContent
+                });
+                renderWorkflowSteps();
+            });
+        }
+        if (el.saveCustomWorkflowBtn) {
+            el.saveCustomWorkflowBtn.addEventListener("click", function () {
+                var name = el.customWorkflowName ? el.customWorkflowName.value.trim() : "";
+                if (!name) { showToast("Enter a workflow name", "error"); return; }
+                if (_workflowSteps.length === 0) { showToast("Add at least one step", "error"); return; }
+                api("POST", "/workflows/save", { name: name, steps: _workflowSteps }, function (err) {
+                    if (err) { showToast("Save failed", "error"); return; }
+                    showToast("Workflow saved: " + name, "success");
+                    refreshSavedWorkflows();
+                });
+            });
+        }
+        if (el.loadCustomWorkflowBtn) {
+            el.loadCustomWorkflowBtn.addEventListener("click", function () {
+                var sel = el.savedWorkflowSelect;
+                if (!sel || !sel.value) return;
+                api("GET", "/workflows/list", null, function (err, data) {
+                    if (err || !data) return;
+                    for (var i = 0; i < data.length; i++) {
+                        if (data[i].name === sel.value) {
+                            _workflowSteps = data[i].steps || [];
+                            if (el.customWorkflowName) el.customWorkflowName.value = data[i].name;
+                            renderWorkflowSteps();
+                            break;
+                        }
+                    }
+                });
+            });
+        }
+        if (el.deleteCustomWorkflowBtn) {
+            el.deleteCustomWorkflowBtn.addEventListener("click", function () {
+                var sel = el.savedWorkflowSelect;
+                if (!sel || !sel.value) return;
+                api("POST", "/workflows/delete", { name: sel.value }, function (err) {
+                    if (!err) {
+                        showToast("Workflow deleted", "success");
+                        refreshSavedWorkflows();
+                    }
+                });
+            });
+        }
+        if (el.runCustomWorkflowBtn) {
+            el.runCustomWorkflowBtn.addEventListener("click", function () {
+                if (_workflowSteps.length === 0 || !selectedPath) return;
+                // Queue each step
+                for (var i = 0; i < _workflowSteps.length; i++) {
+                    addToQueue(_workflowSteps[i].endpoint, { file: selectedPath });
+                }
+                showToast("Queued " + _workflowSteps.length + " workflow steps", "success");
+            });
+        }
+        refreshSavedWorkflows();
+    }
+
+    function renderWorkflowSteps() {
+        if (!el.workflowStepList) return;
+        if (_workflowSteps.length === 0) {
+            el.workflowStepList.innerHTML = '<div class="hint">Add steps to build a custom workflow.</div>';
+            if (el.runCustomWorkflowBtn) el.runCustomWorkflowBtn.disabled = true;
+            return;
+        }
+        if (el.runCustomWorkflowBtn) el.runCustomWorkflowBtn.disabled = false;
+        el.workflowStepList.innerHTML = "";
+        for (var i = 0; i < _workflowSteps.length; i++) {
+            var item = document.createElement("div");
+            item.className = "workflow-step-item";
+            item.innerHTML = '<span class="workflow-step-num">' + (i + 1) + '</span><span>' + _workflowSteps[i].label + '</span><button class="workflow-step-remove" data-idx="' + i + '">&times;</button>';
+            item.querySelector(".workflow-step-remove").addEventListener("click", function () {
+                var idx = parseInt(this.dataset.idx);
+                _workflowSteps.splice(idx, 1);
+                renderWorkflowSteps();
+            });
+            el.workflowStepList.appendChild(item);
+        }
+    }
+
+    function refreshSavedWorkflows() {
+        api("GET", "/workflows/list", null, function (err, data) {
+            if (err || !data || !el.savedWorkflowSelect) return;
+            el.savedWorkflowSelect.innerHTML = "";
+            if (data.length === 0) {
+                el.savedWorkflowSelect.innerHTML = '<option value="" disabled selected>No custom workflows</option>';
+                return;
+            }
+            for (var i = 0; i < data.length; i++) {
+                var opt = document.createElement("option");
+                opt.value = data[i].name;
+                opt.textContent = data[i].name + " (" + (data[i].steps || []).length + " steps)";
+                el.savedWorkflowSelect.appendChild(opt);
+            }
+        });
+    }
+
+    // ================================================================
+    // Collapsible Cards
+    // ================================================================
+    function initCollapsibleCards() {
+        var headers = document.querySelectorAll("[data-collapsible]");
+        for (var i = 0; i < headers.length; i++) {
+            headers[i].addEventListener("click", function () {
+                this.classList.toggle("collapsed");
+                // Find the next sibling content (everything after header in the card)
+                var card = this.closest(".card");
+                if (!card) return;
+                var children = card.children;
+                var afterHeader = false;
+                for (var j = 0; j < children.length; j++) {
+                    if (children[j] === this) { afterHeader = true; continue; }
+                    if (afterHeader) {
+                        children[j].style.display = this.classList.contains("collapsed") ? "none" : "";
+                    }
+                }
+            });
+        }
+    }
+
+    // ================================================================
+    // Job Time Estimates
+    // ================================================================
+    function fetchTimeEstimate(jobType) {
+        if (!el.processingEstimate) return;
+        // Get file duration from file info
+        var fileDuration = 0;
+        var metaEl = document.getElementById("fileMetaDisplay");
+        if (metaEl) {
+            var match = (metaEl.textContent || "").match(/(\d+\.?\d*)\s*s/);
+            if (match) fileDuration = parseFloat(match[1]);
+        }
+        api("POST", "/system/estimate-time", { type: jobType, file_duration: fileDuration }, function (err, data) {
+            if (err || !data || !data.estimate_seconds) {
+                el.processingEstimate.textContent = "";
+                return;
+            }
+            var secs = Math.round(data.estimate_seconds);
+            if (secs > 60) {
+                el.processingEstimate.textContent = Math.floor(secs / 60) + "m " + (secs % 60) + "s est.";
+            } else {
+                el.processingEstimate.textContent = secs + "s est.";
+            }
+        });
+    }
+
+    // ================================================================
+    // i18n / Localization (placeholder framework)
+    // ================================================================
+    var _translations = {};
+    var _currentLang = "en";
+
+    function initI18n() {
+        if (el.settingsLang) {
+            el.settingsLang.addEventListener("change", function () {
+                _currentLang = this.value;
+                saveLocalSettings();
+                if (_currentLang !== "en") {
+                    showToast("Language support coming soon. UI will remain in English for now.", "info");
+                }
+            });
+        }
+    }
+
+    // ================================================================
     // Enhanced Job History (with re-run and details)
     // ================================================================
 
@@ -4052,6 +4789,19 @@
         initQueue();
         initTranscriptSearch();
         initPremiereThemeSync();
+        initWaveform();
+        initFavorites();
+        initPreviewModal();
+        initAudioPreview();
+        initContextMenu();
+        initWizard();
+        initOutputBrowser();
+        initBatchPicker();
+        initDepDashboard();
+        initSettingsIO();
+        initWorkflowBuilder();
+        initCollapsibleCards();
+        initI18n();
     });
 
 })();

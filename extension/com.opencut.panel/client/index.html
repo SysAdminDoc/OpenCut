@@ -21,7 +21,7 @@
             <div class="header-left">
                 <img class="logo-mark" width="18" height="18" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAA9ElEQVR4nK3UwUrDQBDG8f/M+gKBxkspePAkvXj14tmjIHr1IBT0Ij6G3kSkHnqQPoNeamNBT+JjTIekNNmkmsP+2GX5MbM7LPJcqLKVKFAiEPG5vt0T8vM1iWIoE9V/j6UpqNw4O2hIqD7L/wGhTqkIWRhKvEqRB56qiMgePkIhsn+YriVNDSSJUF0r2ppNswk0KZi5e5PvXcfpfYd/rJ42ex8RJXCJcqd+22ren5cAxdtm1N6/6oOoiOLVY0Qixvsg/5dcjvEupF3PbRp5JJHOdSMXJ7IasiWZxctOBUrngCzuJPGij/+TIYhclkfSBuCMOAFmNwJ0F6s0yQAAAABJRU5ErkJggg==" alt="OpenCut">
                 <span class="logo-text">Open<span class="logo-accent">Cut</span></span>
-                <span class="version">v1.1.0</span>
+                <span class="version">v1.2.0</span>
             </div>
             <div class="header-right">
                 <button class="header-btn" id="refreshAllBtn" title="Refresh connection and capabilities">
@@ -48,6 +48,7 @@
             </div>
             <div class="processing-right">
                 <span class="processing-elapsed" id="processingElapsed">0s</span>
+                <span class="processing-estimate" id="processingEstimate"></span>
                 <button class="processing-cancel" id="processingCancel" title="Cancel">Cancel</button>
             </div>
             <div class="processing-track"><div class="processing-fill" id="processingFill"></div></div>
@@ -66,6 +67,21 @@
                 <span id="queueStatusText">Queue: 0 jobs</span>
             </div>
             <button class="btn-sm" id="clearQueueBtn">Clear</button>
+        </div>
+
+        <!-- Output Browser -->
+        <div class="output-browser hidden" id="outputBrowser">
+            <div class="output-browser-header">
+                <span>Recent Outputs</span>
+                <div style="display:flex;gap:4px;">
+                    <button class="btn-sm" id="refreshOutputsBtn" title="Refresh">Refresh</button>
+                    <button class="output-browser-close" id="outputBrowserClose">&times;</button>
+                </div>
+            </div>
+            <div class="output-browser-list" id="outputBrowserList"></div>
+        </div>
+        <div class="output-toggle-bar">
+            <button class="job-history-toggle" id="outputBrowserToggle" title="Toggle output browser">Outputs (0)</button>
         </div>
 
         <!-- Alert Banner -->
@@ -104,6 +120,15 @@
                 <span>Settings</span>
             </button>
         </nav>
+
+        <!-- Favorites Quick Access Bar -->
+        <div class="favorites-bar hidden" id="favoritesBar">
+            <div class="favorites-label">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
+                Favorites
+            </div>
+            <div class="favorites-items" id="favoritesItems"></div>
+        </div>
 
         <!-- ===== MAIN CONTENT ===== -->
         <main class="main">
@@ -163,14 +188,14 @@
                             <div class="form-group">
                                 <label>Noise Threshold</label>
                                 <div class="slider-row">
-                                    <input type="range" id="threshold" min="-60" max="-10" value="-30" step="1">
+                                    <input type="range" id="threshold" min="-60" max="-10" value="-30" step="1" title="Audio level below which is considered silence (lower = more sensitive)">
                                     <span class="slider-val" id="thresholdVal">-30 dB</span>
                                 </div>
                             </div>
                             <div class="form-group">
                                 <label>Min Silence Length</label>
                                 <div class="slider-row">
-                                    <input type="range" id="minDuration" min="0.1" max="3.0" value="0.5" step="0.1">
+                                    <input type="range" id="minDuration" min="0.1" max="3.0" value="0.5" step="0.1" title="Minimum length of silence to remove (shorter = more aggressive)">
                                     <span class="slider-val" id="minDurationVal">0.5s</span>
                                 </div>
                             </div>
@@ -184,6 +209,12 @@
                                 </div>
                             </div>
                         </div>
+                        <div class="waveform-container hidden" id="waveformContainer">
+                            <canvas id="waveformCanvas" class="waveform-canvas" width="500" height="100"></canvas>
+                            <div class="waveform-threshold" id="waveformThreshold"></div>
+                            <div class="waveform-label">Waveform &mdash; drag threshold line to adjust</div>
+                        </div>
+                        <button class="btn-outline btn-sm" id="loadWaveformBtn" disabled style="margin-bottom: 8px;">Preview Waveform</button>
                         <button class="btn-primary" id="runSilenceBtn" disabled>Remove Silences</button>
                     </section>
                 </div>
@@ -709,7 +740,7 @@
 
                 <div class="sub-panel" id="sub-aud-pro">
                     <section class="card">
-                        <div class="card-header">
+                        <div class="card-header" data-collapsible="true">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
                                 Studio Effects (Pedalboard)
@@ -808,7 +839,7 @@
                         <div class="form-group">
                             <label>Sensitivity</label>
                             <div class="slider-row">
-                                <input type="range" id="beatSensitivity" min="0.1" max="1.0" value="0.5" step="0.1">
+                                <input type="range" id="beatSensitivity" min="0.1" max="1.0" value="0.5" step="0.1" title="How sensitive beat detection is (lower = fewer but stronger beats)">
                                 <span class="slider-val" id="beatSensitivityVal">0.5</span>
                             </div>
                         </div>
@@ -1152,7 +1183,7 @@
                             <div class="form-group">
                                 <label>Similarity</label>
                                 <div class="slider-row">
-                                    <input type="range" id="vfxChromakeySim" min="0.05" max="0.8" value="0.3" step="0.05">
+                                    <input type="range" id="vfxChromakeySim" min="0.05" max="0.8" value="0.3" step="0.05" title="How similar a color must be to the key color to be removed">
                                     <span class="slider-val" id="vfxChromakeySimVal">0.30</span>
                                 </div>
                             </div>
@@ -1183,6 +1214,7 @@
                         <!-- Color match params (none needed) -->
                         <div class="vfx-params hidden" id="vfxParams-color_match"></div>
 
+                        <button class="btn-outline btn-sm" id="previewVfxBtn" disabled style="margin-bottom: 6px;">Preview Effect</button>
                         <label class="checkbox-row">
                             <input type="checkbox" id="vfxAutoImport" checked>
                             Auto-import result to project
@@ -1379,7 +1411,7 @@
                         <div class="form-group">
                             <label>Style Intensity</label>
                             <div class="slider-row">
-                                <input type="range" id="styleIntensity" min="0.1" max="1.0" value="1.0" step="0.1">
+                                <input type="range" id="styleIntensity" min="0.1" max="1.0" value="1.0" step="0.1" title="Blend between original video and stylized version">
                                 <span class="slider-val" id="styleIntensityVal">1.0</span>
                             </div>
                             <span class="hint-inline">Lower = subtle blend with original</span>
@@ -1581,7 +1613,7 @@
                         <div class="form-group">
                             <label>Intensity</label>
                             <div class="slider-row">
-                                <input type="range" id="lutIntensity" min="0.1" max="1.0" value="1.0" step="0.05">
+                                <input type="range" id="lutIntensity" min="0.1" max="1.0" value="1.0" step="0.05" title="Blend between original and LUT-graded look">
                                 <span class="slider-val" id="lutIntensityVal">1.0</span>
                             </div>
                         </div>
@@ -1598,7 +1630,7 @@
                 <!-- CHROMAKEY -->
                 <div class="sub-panel" id="sub-vid-chroma">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Chromakey &amp; Compositing</div></div>
+                        <div class="card-header" data-collapsible="true"><div class="card-title">Chromakey &amp; Compositing</div></div>
                         <p class="card-desc">Green/blue screen removal, PiP overlay, and blend modes. Select a foreground clip above.</p>
                         <div class="form-group"><label>Mode</label>
                             <select id="chromaMode"><option value="chromakey">Green/Blue Screen</option><option value="pip">Picture-in-Picture</option><option value="blend">Blend Mode</option></select></div>
@@ -1687,7 +1719,7 @@
                 <!-- COLOR CORRECTION -->
                 <div class="sub-panel" id="sub-vid-color">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Color Correction</div></div>
+                        <div class="card-header" data-collapsible="true"><div class="card-title">Color Correction</div></div>
                         <p class="card-desc">Professional color controls: exposure, contrast, saturation, temperature, lift/gamma/gain.</p>
                         <div class="form-group"><label>Exposure</label><div class="slider-row"><input type="range" id="ccExposure" min="-3" max="3" value="0" step="0.1"><span class="slider-val" id="ccExposureVal">0</span></div></div>
                         <div class="form-group"><label>Contrast</label><div class="slider-row"><input type="range" id="ccContrast" min="0.5" max="2.0" value="1.0" step="0.05"><span class="slider-val" id="ccContrastVal">1.0</span></div></div>
@@ -1871,6 +1903,17 @@
 
                         <p class="card-desc">Select files from the clip picker above, then click "Run Batch" to process all selected clips with the chosen operation.</p>
 
+                        <div class="batch-file-picker" id="batchFilePicker">
+                            <div class="batch-file-list" id="batchFileList">
+                                <div class="hint">No files added. Use "Add Selected" or drag files.</div>
+                            </div>
+                            <div class="btn-row" style="gap: 4px; margin-top: 6px;">
+                                <button class="btn-outline btn-sm" id="batchAddSelectedBtn">Add Selected Clip</button>
+                                <button class="btn-outline btn-sm" id="batchAddAllBtn">Add All Project Clips</button>
+                                <button class="btn-outline btn-sm" id="batchClearBtn">Clear</button>
+                            </div>
+                        </div>
+
                         <button class="btn-primary" id="runBatchBtn" disabled>Run Batch (All Clips)</button>
 
                         <div class="hidden" id="batchResults">
@@ -1894,6 +1937,44 @@
                         </div>
 
                         <button class="btn-primary" id="runWorkflowBtn" disabled>Run Workflow</button>
+                        <div style="border-top: 1px solid var(--border); margin-top: 10px; padding-top: 10px;">
+                            <div class="card-header" style="padding: 0; margin-bottom: 6px;"><div class="card-title" style="font-size: 12px;">Custom Workflows</div></div>
+                            <div class="form-group">
+                                <label>Name</label>
+                                <input type="text" id="customWorkflowName" class="text-input" placeholder="My Workflow">
+                            </div>
+                            <div class="workflow-step-list" id="workflowStepList">
+                                <div class="hint">Add steps to build a custom workflow.</div>
+                            </div>
+                            <div class="btn-row" style="gap: 4px; margin-top: 6px;">
+                                <select id="workflowStepSelect" class="inline-select" style="flex:1;">
+                                    <option value="/cut/silence">Remove Silences</option>
+                                    <option value="/audio/denoise">Denoise Audio</option>
+                                    <option value="/audio/normalize">Normalize Audio</option>
+                                    <option value="/captions/styled">Styled Captions</option>
+                                    <option value="/captions/subtitle">Export Subtitles</option>
+                                    <option value="/captions/burnin">Burn-in Captions</option>
+                                    <option value="/video/stabilize">Stabilize Video</option>
+                                    <option value="/video/effects">Video Effects</option>
+                                    <option value="/export/preset">Export Preset</option>
+                                </select>
+                                <button class="btn-sm" id="workflowAddStepBtn">Add Step</button>
+                            </div>
+                            <div class="btn-row" style="gap: 4px; margin-top: 6px;">
+                                <button class="btn-outline btn-sm" id="saveCustomWorkflowBtn">Save Workflow</button>
+                                <button class="btn-outline btn-sm" id="runCustomWorkflowBtn" disabled>Run Custom</button>
+                            </div>
+                            <div class="form-group" style="margin-top: 6px;">
+                                <label>Saved Workflows</label>
+                                <select id="savedWorkflowSelect">
+                                    <option value="" disabled selected>No custom workflows</option>
+                                </select>
+                            </div>
+                            <div class="btn-row" style="gap: 4px;">
+                                <button class="btn-outline btn-sm" id="loadCustomWorkflowBtn">Load</button>
+                                <button class="btn-outline btn-sm" id="deleteCustomWorkflowBtn">Delete</button>
+                            </div>
+                        </div>
                     </section>
                 </div>
             </div>
@@ -1966,6 +2047,21 @@
                             <option value="custom">Custom location...</option>
                         </select>
                     </div>
+                    <div class="form-group" style="margin-top: 12px;">
+                        <label>UI Language</label>
+                        <select id="settingsLang">
+                            <option value="en" selected>English</option>
+                            <option value="es">Espa&ntilde;ol</option>
+                            <option value="fr">Fran&ccedil;ais</option>
+                            <option value="de">Deutsch</option>
+                            <option value="ja">日本語</option>
+                            <option value="ko">한국어</option>
+                            <option value="zh">中文</option>
+                            <option value="pt">Portugu&ecirc;s</option>
+                            <option value="ru">Русский</option>
+                            <option value="it">Italiano</option>
+                        </select>
+                    </div>
                 </section>
 
                 <section class="card">
@@ -1990,6 +2086,19 @@
 
                 <section class="card">
                     <div class="card-header">
+                        <div class="card-title">Dependency Health</div>
+                        <button class="link-btn" id="refreshDepsBtn" title="Refresh dependency status">
+                            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
+                            Check
+                        </button>
+                    </div>
+                    <div class="dep-grid" id="depGrid">
+                        <div class="hint">Click "Check" to scan dependencies.</div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header">
                         <div class="card-title">Presets</div>
                     </div>
                     <div class="form-group">
@@ -2008,6 +2117,13 @@
                     <div class="btn-row" style="gap: 6px;">
                         <button class="btn-outline btn-sm" id="loadPresetBtn">Load</button>
                         <button class="btn-outline btn-sm" id="deletePresetBtn">Delete</button>
+                    </div>
+                    <div style="border-top: 1px solid var(--border); margin-top: 10px; padding-top: 10px;">
+                        <div class="btn-row" style="gap: 6px;">
+                            <button class="btn-outline btn-sm" id="exportSettingsBtn">Export All Settings</button>
+                            <button class="btn-outline btn-sm" id="importSettingsBtn">Import Settings</button>
+                        </div>
+                        <input type="file" id="importSettingsFile" accept=".json" class="hidden">
                     </div>
                 </section>
 
@@ -2057,7 +2173,7 @@
                     <div class="card-header"><div class="card-title">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.1.0</span>
+                        <span class="settings-value">1.2.0</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>
@@ -2096,6 +2212,84 @@
             </section>
 
         </main>
+
+        <!-- Side-by-Side Preview Modal -->
+        <div class="preview-modal hidden" id="previewModal">
+            <div class="preview-modal-header">
+                <span class="preview-modal-title">Before / After Preview</span>
+                <button class="preview-modal-close" id="previewModalClose">&times;</button>
+            </div>
+            <div class="preview-modal-body">
+                <div class="preview-pane">
+                    <div class="preview-label">Original</div>
+                    <img id="previewOriginal" class="preview-img" alt="Original">
+                </div>
+                <div class="preview-divider"></div>
+                <div class="preview-pane">
+                    <div class="preview-label">Preview</div>
+                    <img id="previewProcessed" class="preview-img" alt="Preview">
+                </div>
+            </div>
+            <div class="preview-modal-footer">
+                <button class="btn-outline btn-sm" id="previewRefreshBtn">Refresh</button>
+                <span class="preview-timestamp-label">Timestamp:</span>
+                <input type="text" id="previewTimestamp" class="text-input" value="00:00:01" style="width: 80px; font-size: 11px;">
+            </div>
+        </div>
+
+        <!-- Audio Preview Player (floating) -->
+        <div class="audio-preview hidden" id="audioPreview">
+            <div class="audio-preview-header">
+                <span>Audio Preview</span>
+                <button class="audio-preview-close" id="audioPreviewClose">&times;</button>
+            </div>
+            <audio id="audioPreviewPlayer" controls style="width: 100%;"></audio>
+        </div>
+
+        <!-- Right-Click Context Menu -->
+        <div class="context-menu hidden" id="contextMenu">
+            <div class="context-menu-item" data-action="silence">Remove Silences</div>
+            <div class="context-menu-item" data-action="transcribe">Transcribe</div>
+            <div class="context-menu-item" data-action="denoise">Denoise Audio</div>
+            <div class="context-menu-item" data-action="normalize">Normalize Audio</div>
+            <div class="context-menu-item" data-action="stabilize">Stabilize Video</div>
+            <div class="context-menu-item" data-action="export">Export Preset</div>
+            <div class="context-menu-sep"></div>
+            <div class="context-menu-item" data-action="favorite">Add to Favorites</div>
+        </div>
+
+        <!-- First-Run Wizard Overlay -->
+        <div class="wizard-overlay hidden" id="wizardOverlay">
+            <div class="wizard-card">
+                <div class="wizard-header">
+                    <img class="wizard-logo" width="32" height="32" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB6ElEQVR4nMWXUU4CMRCG/5nsBSQrmCgiGM/gITiGb8aoT8YoMb6qxMTEB/UcchsJECNqqGcYH7aF0i24xWXpy26myXzt/PO3u7R3MIKQAAQI6ycBYEmeU3EBWM+TQBhO3OTR8wQnns4feSZlyXCy83PBcIBF7PxcMNzkFxPnFcBNXIQALrLhfHFeJXxSgRXBQeK64H/wr8sahcCFYbsgh50jDG65IDv843pLufDPi+3O13mtIyKv32e1Tla4kIBDdw4Aw6uqGraqykA2bgZN2CMjXBjg4LJbw0C+z3eo0u433fhfcExckF3z1E4JKN/1RAgo3yeLGJ3WO/Pg0O/aBYENZ1fA03DrD72kEnPgjgvCut2Myu0g9nX76KSuAOyro4bylX16UYJoEatN79DR3Bo/h7sKANZe3mKxym7nj0JPOACotPuxD66O68peQOm5G7uau/mj4OPVaO+x2hj81I1d/X1wIQFttt6TqzGns91ntVlwEIjzvFgC4bYL8oXP09yVmxeBq9MGuXCZY7VZcOuLKHDncCHZGi4tt5i7IKzspceuLKq5DdcVKFZzN39UVLe78LEEq4DDHFw0+S+gIsuu85PlAkkWEQAPsdosOFgQOZME/ceyLM1tuL4NU2VPHTJ5aj4VZ+AX8o+DeqiKjVUAAAAASUVORK5CYII=" alt="OpenCut">
+                    <h2>Welcome to OpenCut</h2>
+                    <p class="wizard-subtitle">AI-powered video editing for Premiere Pro</p>
+                </div>
+                <div class="wizard-steps" id="wizardSteps">
+                    <div class="wizard-step active" data-step="1">
+                        <div class="wizard-step-num">1</div>
+                        <h3>Select Media</h3>
+                        <p>Choose a clip from your Premiere Pro project, use timeline selection, or drag and drop a file onto the panel.</p>
+                    </div>
+                    <div class="wizard-step" data-step="2">
+                        <div class="wizard-step-num">2</div>
+                        <h3>Pick an Operation</h3>
+                        <p>Use the 6 tabs at the top: Cut, Captions, Audio, Video, Export, and Settings. Each tab has multiple tools.</p>
+                    </div>
+                    <div class="wizard-step" data-step="3">
+                        <div class="wizard-step-num">3</div>
+                        <h3>Run &amp; Auto-Import</h3>
+                        <p>Click the action button to process. Results automatically import back into your Premiere Pro project.</p>
+                    </div>
+                </div>
+                <div class="wizard-footer">
+                    <label class="checkbox-row"><input type="checkbox" id="wizardDontShow"> Don't show again</label>
+                    <button class="btn-primary" id="wizardCloseBtn">Get Started</button>
+                </div>
+            </div>
+        </div>
+
     </div>
     <script src="CSInterface.js"></script>
     <script src="main.js"></script>

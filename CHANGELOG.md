@@ -1,5 +1,34 @@
 # Changelog
 
+## v1.2.0 (2026-03-15)
+
+### New Features
+- **Waveform Preview**: Visual waveform display on Silence tab with draggable threshold line synced to slider
+- **Side-by-Side Preview**: Before/after frame comparison modal for video effects
+- **Dependency Health Dashboard**: Grid view of all 24 optional dependencies with install status in Settings
+- **First-Run Wizard**: Animated 3-step onboarding overlay for new users (dismissible, persisted)
+- **Output File Browser**: Browse recent output files with Import-to-Premiere button
+- **Favorites Bar**: Pin frequently-used operations as quick-access chips below the nav tabs
+- **Batch Multi-Select**: Multi-file picker for batch operations (add selected, add all, clear)
+- **Parameter Tooltips**: Hover tooltips on range sliders explaining what each parameter controls
+- **Custom Workflow Builder**: Chain multiple operations into named reusable workflows (saved to `~/.opencut/workflows.json`)
+- **Audio Preview Player**: Floating audio player to preview generated audio before importing
+- **Settings Import/Export**: Export all settings (presets, favorites, workflows) as JSON, import on another machine
+- **Right-Click Context Menu**: Quick-action context menu on clip selector (silence, transcribe, denoise, etc.)
+- **Collapsible Cards**: Click card headers to collapse/expand dense form sections
+- **Job Time Estimates**: Estimated processing time in the progress banner based on historical job data
+- **Localization Framework**: Language selector in Settings (placeholder for future i18n support)
+
+### Backend (8 new endpoints)
+- `POST /audio/waveform` - Extract waveform peak data via FFmpeg PCM extraction
+- `POST /video/preview-frame` - Extract single frame as base64 JPEG at timestamp
+- `GET /system/dependencies` - Check 24 optional deps + FFmpeg install status
+- `GET /outputs/recent` - List recent output files from completed jobs
+- `GET/POST /favorites` - Favorites persistence to `~/.opencut/favorites.json`
+- `GET/POST/DELETE /workflows` - Custom workflow CRUD to `~/.opencut/workflows.json`
+- `GET/POST /settings/export|import` - Bundle presets + favorites + workflows
+- `POST /system/estimate-time` - Historical ratio-based time estimation
+
 ## v1.1.0 (2026-03-15)
 
 ### New Features
