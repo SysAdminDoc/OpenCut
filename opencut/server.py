@@ -791,10 +791,13 @@ def generate_captions():
 def get_caption_styles():
     """Return available caption style presets for the panel preview."""
     try:
-        from .core.styled_captions import get_style_info
-    except ImportError:
-        from opencut.core.styled_captions import get_style_info
-    return jsonify({"styles": get_style_info()})
+        try:
+            from .core.styled_captions import get_style_info
+        except ImportError:
+            from opencut.core.styled_captions import get_style_info
+        return jsonify({"styles": get_style_info()})
+    except Exception as e:
+        return _safe_error(f"Could not load caption styles: {e}", 500)
 
 
 @app.route("/styled-captions", methods=["POST"])
@@ -2354,7 +2357,7 @@ def system_gpu():
     """Check GPU availability for AI features."""
     gpu_info = {"available": False, "name": "None", "vram_mb": 0}
     try:
-        result = subprocess.run(
+        result = _sp.run(
             ["nvidia-smi", "--query-gpu=name,memory.total",
              "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=5,
@@ -2418,12 +2421,13 @@ def stream_job(job_id):
         while True:
             with job_lock:
                 job = jobs.get(job_id)
-            if not job:
-                yield f"data: {json.dumps({'status': 'not_found', 'error': 'Job not found'})}\n\n"
-                break
-            safe = {k: v for k, v in job.items() if not k.startswith("_")}
+                if not job:
+                    yield f"data: {json.dumps({'status': 'not_found', 'error': 'Job not found'})}\n\n"
+                    break
+                safe = {k: v for k, v in job.items() if not k.startswith("_")}
+                status = job["status"]
             yield f"data: {json.dumps(safe)}\n\n"
-            if job["status"] in ("complete", "error", "cancelled"):
+            if status in ("complete", "error", "cancelled"):
                 break
             time.sleep(0.5)
 
@@ -3675,7 +3679,7 @@ def video_ai_install():
             for i, pkg in enumerate(pkgs):
                 pct = int((i / len(pkgs)) * 90)
                 _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
-                result = subprocess.run(
+                result = _sp.run(
                     [sys.executable, "-m", "pip", "install", pkg,
                      "--break-system-packages", "-q"],
                     capture_output=True, timeout=600,
@@ -3837,7 +3841,7 @@ def audio_pro_install():
             for i, pkg in enumerate(pkgs):
                 pct = int((i / len(pkgs)) * 90)
                 _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
-                result = subprocess.run(
+                result = _sp.run(
                     [sys.executable, "-m", "pip", "install", pkg,
                      "--break-system-packages", "-q"],
                     capture_output=True, timeout=600,
@@ -3957,7 +3961,7 @@ def face_install():
     def _process():
         try:
             _update_job(job_id, progress=20, message="Installing MediaPipe...")
-            result = subprocess.run(
+            result = _sp.run(
                 [sys.executable, "-m", "pip", "install", "mediapipe",
                  "opencv-python-headless", "--break-system-packages", "-q"],
                 capture_output=True, timeout=600,
@@ -4263,7 +4267,7 @@ def captions_enhanced_install():
             for i, pkg in enumerate(pkgs):
                 pct = int((i / len(pkgs)) * 90)
                 _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
-                result = subprocess.run(
+                result = _sp.run(
                     [sys.executable, "-m", "pip", "install", pkg,
                      "--break-system-packages", "-q"],
                     capture_output=True, timeout=600,
@@ -4771,7 +4775,7 @@ def tts_install():
         try:
             for pkg in pkgs:
                 _update_job(job_id, progress=30, message=f"Installing {pkg}...")
-                result = subprocess.run(
+                result = _sp.run(
                     [sys.executable, "-m", "pip", "install", pkg,
                      "--break-system-packages", "-q"],
                     capture_output=True, timeout=600,
