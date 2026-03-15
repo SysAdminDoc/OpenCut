@@ -404,6 +404,11 @@ body {
     -webkit-font-smoothing: antialiased;
 }
 
+input, textarea, [contenteditable] {
+    -webkit-user-select: text;
+    user-select: text;
+}
+
 .hidden { display: none !important; }
 
 /* ============================================================

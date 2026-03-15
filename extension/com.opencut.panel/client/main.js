@@ -1402,6 +1402,7 @@
             } catch (ex) {}
         };
         es.onerror = function () {
+            if (!activeStream) return;
             es.close();
             activeStream = null;
             // Fallback to polling
@@ -1963,7 +1964,7 @@
         var tool = el.vidAiTool.value;
         var component = tool === "rembg" ? "rembg_cpu" : tool;
         el.vidAiHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing... This may take several minutes.</span>';
-        startJob("/video/ai/install", { component: component });
+        startJob("/video/ai/install", { component: component, no_input: true });
     }
 
     // --- AUDIO PRO (Pedalboard) ---
@@ -2044,7 +2045,7 @@
 
     function installPedalboard() {
         el.proFxHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing Pedalboard...</span>';
-        startJob("/audio/pro/install", { component: "pedalboard" });
+        startJob("/audio/pro/install", { component: "pedalboard", no_input: true });
     }
 
     function runDeepFilter() {
@@ -2056,7 +2057,7 @@
 
     function installDeepFilter() {
         el.deepFilterHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing DeepFilterNet...</span>';
-        startJob("/audio/pro/install", { component: "deepfilter" });
+        startJob("/audio/pro/install", { component: "deepfilter", no_input: true });
     }
 
     // --- FACE BLUR ---
@@ -2072,7 +2073,7 @@
 
     function installMediapipe() {
         el.faceHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing MediaPipe...</span>';
-        startJob("/video/face/install", {});
+        startJob("/video/face/install", { no_input: true });
     }
 
     // --- STYLE TRANSFER ---
@@ -2119,7 +2120,7 @@
 
     function installNllb() {
         el.translateHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing NLLB translation...</span>';
-        startJob("/captions/enhanced/install", { component: "nllb" });
+        startJob("/captions/enhanced/install", { component: "nllb", no_input: true });
     }
 
     // --- KARAOKE CAPTIONS ---
@@ -2134,7 +2135,7 @@
 
     function installWhisperx() {
         el.karaokeHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing WhisperX...</span>';
-        startJob("/captions/enhanced/install", { component: "whisperx" });
+        startJob("/captions/enhanced/install", { component: "whisperx", no_input: true });
     }
 
     // --- EXPORT PRESETS ---
@@ -2245,8 +2246,7 @@
             { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
         ],
         subtitle_pipeline: [
-            { endpoint: "/transcript", payload: { model: "base" }, label: "Transcribing..." },
-            { endpoint: "/transcript/export", payload: { format: "srt" }, label: "Exporting subtitles..." },
+            { endpoint: "/transcript", payload: { model: "base", export_format: "srt" }, label: "Transcribing & exporting subtitles..." },
         ],
         translate_pipeline: [
             { endpoint: "/transcript", payload: { model: "base" }, label: "Transcribing..." },
@@ -2306,7 +2306,7 @@
 
     function installEdgeTts() {
         el.ttsHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing Edge TTS...</span>';
-        startJob("/audio/tts/install", { component: "edge_tts" });
+        startJob("/audio/tts/install", { component: "edge_tts", no_input: true });
     }
 
     // --- SFX GENERATOR ---
@@ -2894,7 +2894,7 @@
     function reinstallWhisper() {
         var cpuMode = el.whisperCpuMode.checked;
         showAlert("Reinstalling Whisper" + (cpuMode ? " in CPU mode" : "") + "... Please wait.");
-        startJob("/whisper/reinstall", { backend: "faster-whisper", cpu_mode: cpuMode });
+        startJob("/whisper/reinstall", { backend: "faster-whisper", cpu_mode: cpuMode, no_input: true });
     }
 
     function clearWhisperCache() {
