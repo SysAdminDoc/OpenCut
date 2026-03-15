@@ -354,7 +354,7 @@ def health():
     # Caption burn-in always available (FFmpeg-based)
     caps["burnin"] = True
 
-    return jsonify({"status": "ok", "version": "1.0.0-beta", "capabilities": caps})
+    return jsonify({"status": "ok", "version": "1.1.0", "capabilities": caps})
 
 
 @app.route("/shutdown", methods=["POST"])
@@ -6161,6 +6161,294 @@ def music_ai_melody():
 
 
 # ---------------------------------------------------------------------------
+# User Presets
+# ---------------------------------------------------------------------------
+_PRESETS_FILE = os.path.join(os.path.expanduser("~"), ".opencut", "user_presets.json")
+
+def _load_user_presets():
+    try:
+        if os.path.isfile(_PRESETS_FILE):
+            with open(_PRESETS_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def _save_user_presets(presets):
+    os.makedirs(os.path.dirname(_PRESETS_FILE), exist_ok=True)
+    with open(_PRESETS_FILE, "w", encoding="utf-8") as f:
+        json.dump(presets, f, indent=2)
+
+@app.route("/presets", methods=["GET"])
+def list_presets():
+    """List all saved user presets."""
+    return jsonify(_load_user_presets())
+
+@app.route("/presets/save", methods=["POST"])
+def save_preset():
+    """Save a named preset."""
+    data = request.get_json(force=True)
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "Preset name required"}), 400
+    if len(name) > 100:
+        return jsonify({"error": "Preset name too long"}), 400
+    settings = data.get("settings", {})
+    if not isinstance(settings, dict):
+        return jsonify({"error": "Settings must be an object"}), 400
+    presets = _load_user_presets()
+    presets[name] = {"settings": settings, "saved": time.time()}
+    _save_user_presets(presets)
+    return jsonify({"success": True, "name": name})
+
+@app.route("/presets/delete", methods=["POST"])
+def delete_preset():
+    """Delete a named preset."""
+    data = request.get_json(force=True)
+    name = data.get("name", "").strip()
+    presets = _load_user_presets()
+    if name in presets:
+        del presets[name]
+        _save_user_presets(presets)
+    return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Model Management
+# ---------------------------------------------------------------------------
+@app.route("/models/list", methods=["GET"])
+def list_models():
+    """List downloaded AI models and their sizes."""
+    models = []
+    # Check HuggingFace cache
+    hf_cache = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
+    if os.path.isdir(hf_cache):
+        for entry in os.listdir(hf_cache):
+            path = os.path.join(hf_cache, entry)
+            if os.path.isdir(path) and entry.startswith("models--"):
+                name = entry.replace("models--", "").replace("--", "/")
+                size = 0
+                for root, dirs, files in os.walk(path):
+                    for f in files:
+                        try:
+                            size += os.path.getsize(os.path.join(root, f))
+                        except OSError:
+                            pass
+                models.append({"name": name, "path": path, "size_mb": round(size / (1024 * 1024), 1), "source": "huggingface"})
+    # Check torch hub cache
+    torch_cache = os.environ.get("TORCH_HOME", os.path.join(os.path.expanduser("~"), ".cache", "torch", "hub"))
+    if os.path.isdir(torch_cache):
+        checkpoints = os.path.join(torch_cache, "checkpoints")
+        if os.path.isdir(checkpoints):
+            for f in os.listdir(checkpoints):
+                fp = os.path.join(checkpoints, f)
+                if os.path.isfile(fp):
+                    size = os.path.getsize(fp) / (1024 * 1024)
+                    models.append({"name": f, "path": fp, "size_mb": round(size, 1), "source": "torch"})
+    # Check custom whisper models dir
+    if WHISPER_MODELS_DIR and os.path.isdir(WHISPER_MODELS_DIR):
+        for entry in os.listdir(WHISPER_MODELS_DIR):
+            path = os.path.join(WHISPER_MODELS_DIR, entry)
+            if os.path.isdir(path):
+                size = 0
+                for root, dirs, files in os.walk(path):
+                    for f in files:
+                        try:
+                            size += os.path.getsize(os.path.join(root, f))
+                        except OSError:
+                            pass
+                models.append({"name": "whisper/" + entry, "path": path, "size_mb": round(size / (1024 * 1024), 1), "source": "whisper"})
+    return jsonify({"models": models, "total_mb": round(sum(m["size_mb"] for m in models), 1)})
+
+@app.route("/models/delete", methods=["POST"])
+def delete_model():
+    """Delete a downloaded model."""
+    import shutil
+    data = request.get_json(force=True)
+    path = data.get("path", "").strip()
+    if not path:
+        return jsonify({"error": "No path provided"}), 400
+    # Security: only allow deletion within known cache directories
+    path = os.path.realpath(path)
+    allowed_roots = [
+        os.path.realpath(os.path.join(os.path.expanduser("~"), ".cache", "huggingface")),
+        os.path.realpath(os.path.join(os.path.expanduser("~"), ".cache", "torch")),
+    ]
+    if WHISPER_MODELS_DIR:
+        allowed_roots.append(os.path.realpath(WHISPER_MODELS_DIR))
+    if not any(path.startswith(r) for r in allowed_roots):
+        return jsonify({"error": "Cannot delete files outside of model cache directories"}), 403
+    try:
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        elif os.path.isfile(path):
+            os.remove(path)
+        else:
+            return jsonify({"error": "Path not found"}), 404
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# GPU Recommendation
+# ---------------------------------------------------------------------------
+@app.route("/system/gpu-recommend", methods=["GET"])
+def gpu_recommend():
+    """Recommend model sizes and settings based on GPU."""
+    gpu_info = {"available": False, "name": "None", "vram_mb": 0}
+    try:
+        result = _sp.run(
+            ["nvidia-smi", "--query-gpu=name,memory.total",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            parts = result.stdout.strip().split(",")
+            gpu_info["available"] = True
+            gpu_info["name"] = parts[0].strip()
+            gpu_info["vram_mb"] = int(parts[1].strip()) if len(parts) > 1 else 0
+    except Exception:
+        pass
+
+    vram = gpu_info["vram_mb"]
+    rec = {
+        "gpu": gpu_info,
+        "whisper_model": "tiny",
+        "whisper_device": "cpu",
+        "caption_quality": "fast",
+        "batch_size": 1,
+        "notes": []
+    }
+    if gpu_info["available"]:
+        rec["whisper_device"] = "cuda"
+        if vram >= 10000:
+            rec["whisper_model"] = "large-v3"
+            rec["caption_quality"] = "best"
+            rec["batch_size"] = 4
+            rec["notes"].append("High-end GPU: all features at max quality")
+        elif vram >= 6000:
+            rec["whisper_model"] = "medium"
+            rec["caption_quality"] = "great"
+            rec["batch_size"] = 2
+            rec["notes"].append("Mid-range GPU: most features at high quality")
+        elif vram >= 4000:
+            rec["whisper_model"] = "small"
+            rec["caption_quality"] = "good"
+            rec["batch_size"] = 1
+            rec["notes"].append("Entry GPU: good quality, some features may be slow")
+        else:
+            rec["whisper_model"] = "base"
+            rec["caption_quality"] = "balanced"
+            rec["batch_size"] = 1
+            rec["notes"].append("Low VRAM: use smaller models for best performance")
+    else:
+        rec["notes"].append("No NVIDIA GPU detected. Using CPU mode (slower).")
+    return jsonify(rec)
+
+
+# ---------------------------------------------------------------------------
+# Job Queue
+# ---------------------------------------------------------------------------
+job_queue = []
+job_queue_lock = threading.Lock()
+_queue_running = False
+
+@app.route("/queue/add", methods=["POST"])
+def queue_add():
+    """Add a job to the queue."""
+    data = request.get_json(force=True)
+    entry = {
+        "id": str(uuid.uuid4())[:8],
+        "endpoint": data.get("endpoint", ""),
+        "payload": data.get("payload", {}),
+        "status": "queued",
+        "added": time.time(),
+    }
+    with job_queue_lock:
+        job_queue.append(entry)
+    _process_queue()
+    return jsonify({"queue_id": entry["id"], "position": len(job_queue)})
+
+@app.route("/queue/list", methods=["GET"])
+def queue_list():
+    """List queued jobs."""
+    with job_queue_lock:
+        return jsonify(list(job_queue))
+
+@app.route("/queue/clear", methods=["POST"])
+def queue_clear():
+    """Clear all queued (not running) jobs."""
+    with job_queue_lock:
+        removed = len([e for e in job_queue if e["status"] == "queued"])
+        job_queue[:] = [e for e in job_queue if e["status"] != "queued"]
+    return jsonify({"removed": removed})
+
+def _process_queue():
+    """Process the next item in the queue (fire-and-forget)."""
+    global _queue_running
+    with job_queue_lock:
+        if _queue_running:
+            return
+        pending = [e for e in job_queue if e["status"] == "queued"]
+        if not pending:
+            return
+        _queue_running = True
+        entry = pending[0]
+        entry["status"] = "running"
+
+    def _run():
+        global _queue_running
+        try:
+            # Use Flask test client to hit the endpoint internally
+            with app.test_client() as client:
+                resp = client.post(entry["endpoint"], json=entry["payload"])
+                result = resp.get_json()
+                entry["job_id"] = result.get("job_id", "")
+                entry["status"] = "started"
+                # Wait for the job to finish
+                if entry["job_id"]:
+                    while True:
+                        with job_lock:
+                            job = jobs.get(entry["job_id"])
+                            if job and job["status"] in ("complete", "error", "cancelled"):
+                                entry["status"] = job["status"]
+                                break
+                        time.sleep(1)
+        except Exception as e:
+            entry["status"] = "error"
+            logger.exception("Queue processing error: %s", e)
+        finally:
+            _queue_running = False
+            with job_queue_lock:
+                # Remove completed entries
+                job_queue[:] = [e for e in job_queue if e["status"] in ("queued", "running", "started")]
+            # Process next
+            _process_queue()
+
+    threading.Thread(target=_run, daemon=True).start()
+
+
+# ---------------------------------------------------------------------------
+# Social Platform Quick Presets
+# ---------------------------------------------------------------------------
+@app.route("/export/social-presets", methods=["GET"])
+def social_presets():
+    """Quick export presets for social media platforms."""
+    return jsonify({
+        "presets": [
+            {"id": "youtube_shorts", "name": "YouTube Shorts", "resolution": "1080x1920", "fps": 30, "max_duration": 60, "codec": "h264", "bitrate": "8M"},
+            {"id": "tiktok", "name": "TikTok", "resolution": "1080x1920", "fps": 30, "max_duration": 180, "codec": "h264", "bitrate": "6M"},
+            {"id": "instagram_reel", "name": "Instagram Reel", "resolution": "1080x1920", "fps": 30, "max_duration": 90, "codec": "h264", "bitrate": "6M"},
+            {"id": "instagram_story", "name": "Instagram Story", "resolution": "1080x1920", "fps": 30, "max_duration": 15, "codec": "h264", "bitrate": "5M"},
+            {"id": "instagram_post", "name": "Instagram Post", "resolution": "1080x1080", "fps": 30, "max_duration": 60, "codec": "h264", "bitrate": "5M"},
+            {"id": "twitter_x", "name": "Twitter/X", "resolution": "1920x1080", "fps": 30, "max_duration": 140, "codec": "h264", "bitrate": "5M"},
+            {"id": "linkedin", "name": "LinkedIn", "resolution": "1920x1080", "fps": 30, "max_duration": 600, "codec": "h264", "bitrate": "8M"},
+        ]
+    })
+
+
+# ---------------------------------------------------------------------------
 # Server Startup
 # ---------------------------------------------------------------------------
 def run_server(host="127.0.0.1", port=5679, debug=False):
@@ -6195,7 +6483,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     atexit.register(_remove_pid)
 
     print(f"")
-    print(f"  OpenCut Backend Server v0.9.0")
+    print(f"  OpenCut Backend Server v1.1.0")
     print(f"  Listening on http://{host}:{effective_port}")
     print(f"  PID: {os.getpid()}")
     print(f"  Log file: {LOG_FILE}")

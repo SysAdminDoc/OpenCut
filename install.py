@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenCut Installer v1.0.0
+OpenCut Installer v1.1.0
 Cross-platform setup script. Run: python install.py
 """
 
@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import platform
 
-VERS = "1.0.0-beta"
+VERS = "1.1.0"
 CEP_EXT = "com.opencut.panel"
 WIN_CEP_DIR = os.path.expandvars(r"%APPDATA%\Adobe\CEP\extensions")
 MAC_CEP_DIR = os.path.expanduser("~/Library/Application Support/Adobe/CEP/extensions")
