@@ -8,10 +8,10 @@
 - **AI**: faster-whisper, demucs, pedalboard, MusicGen, Real-ESRGAN, rembg, etc.
 
 ## Key Files
-- `opencut/server.py` (~6500 lines) - Flask backend, all API routes, job system
-- `extension/com.opencut.panel/client/main.js` (~3900 lines) - Frontend controller
-- `extension/com.opencut.panel/client/index.html` (~2100 lines) - UI layout (6 tabs)
-- `extension/com.opencut.panel/client/style.css` (~2850 lines) - Themes & styles
+- `opencut/server.py` (~7550 lines) - Flask backend, all API routes, job system
+- `extension/com.opencut.panel/client/main.js` (~5340 lines) - Frontend controller
+- `extension/com.opencut.panel/client/index.html` (~2490 lines) - UI layout (6 tabs)
+- `extension/com.opencut.panel/client/style.css` (~3690 lines) - Themes & styles
 - `extension/com.opencut.panel/host/index.jsx` (~1150 lines) - ExtendScript host
 - `opencut_server.spec` - PyInstaller spec
 - `OpenCut.iss` - Inno Setup installer script
@@ -74,3 +74,18 @@
 - Collapsible card headers
 - Job time estimates (historical ratio-based, stored in `~/.opencut/job_times.json`)
 - i18n language selector placeholder
+- Video reframe tool (resize/crop for TikTok, Shorts, Reels, square, custom dims; crop/pad/stretch modes)
+- Clip preview thumbnail + metadata on selection
+- Command palette (Ctrl+K) with fuzzy search across all 28+ operations
+- Recent clips dropdown (last 10, persisted to localStorage)
+- Trim tool with in/out points (stream copy or re-encode)
+- Merge/concatenate clips (fast demux or re-encoded filter modes)
+- Auto-crop detect for reframe (FFmpeg cropdetect → smart anchor)
+- Waveform preview buttons on denoise/normalize tabs
+- Per-operation preset save/load (localStorage)
+- FFmpeg real progress parsing via `-progress pipe:1`
+- Job cancel kills FFmpeg subprocess (Popen terminate/kill)
+- Temp file cleanup on server startup
+- Server health ping with reconnect banner (10s interval)
+- Output file deduplication (auto-increment suffix)
+- Sub-tab visibility persistence infrastructure

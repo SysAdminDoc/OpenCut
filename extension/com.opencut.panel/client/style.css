@@ -3447,3 +3447,246 @@ input[type="range"][title] {
     pointer-events: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
+
+/* ================================================================
+   Clip Preview Thumbnail
+   ================================================================ */
+.clip-preview-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: var(--sp-md) var(--sp-xl);
+    background: var(--bg-card);
+    border-radius: var(--r-xs);
+    margin-bottom: var(--sp-md);
+    border: 1px solid var(--border);
+}
+.clip-preview-row.hidden { display: none; }
+.clip-thumb {
+    width: 80px;
+    height: 45px;
+    border-radius: 4px;
+    overflow: hidden;
+    background: var(--bg-void);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.clip-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.clip-thumb-loading {
+    width: 20px;
+    height: 20px;
+    border: 2px solid var(--border-light);
+    border-top-color: var(--neon-cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+.clip-thumb-none {
+    font-size: 9px;
+    color: var(--text-faint);
+    text-align: center;
+}
+.clip-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    font-size: 11px;
+    color: var(--text-muted);
+}
+.clip-meta span:first-child {
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+/* ================================================================
+   Command Palette
+   ================================================================ */
+.command-palette-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 80px;
+}
+.command-palette-overlay.hidden { display: none; }
+.command-palette {
+    width: 440px;
+    max-width: 90vw;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-light);
+    border-radius: var(--r-md);
+    box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
+    overflow: hidden;
+}
+.command-palette input {
+    width: 100%;
+    padding: 14px 16px;
+    background: transparent;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-primary);
+    font-size: 14px;
+    font-family: var(--font-sans);
+    outline: none;
+    box-sizing: border-box;
+}
+.command-palette input::placeholder { color: var(--text-faint); }
+.command-palette-results {
+    max-height: 320px;
+    overflow-y: auto;
+}
+.command-palette-item {
+    padding: 10px 16px;
+    cursor: pointer;
+    color: var(--text-secondary);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    transition: background var(--t-fast);
+}
+.command-palette-item:hover,
+.command-palette-item.selected {
+    background: var(--neon-cyan);
+    color: var(--bg-void);
+}
+.command-palette-item.selected .command-palette-tab {
+    color: rgba(0, 0, 0, 0.5);
+}
+.command-palette-tab {
+    font-size: 10px;
+    color: var(--text-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.command-palette-empty {
+    padding: 20px 16px;
+    color: var(--text-faint);
+    text-align: center;
+    font-size: 13px;
+}
+.command-palette-hint {
+    padding: 8px 16px;
+    font-size: 10px;
+    color: var(--text-faint);
+    border-top: 1px solid var(--border);
+}
+
+/* ================================================================
+   Recent Clips Dropdown
+   ================================================================ */
+.recent-clips-row {
+    position: relative;
+    display: inline-block;
+}
+.recent-clips-dropdown {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 260px;
+    max-height: 300px;
+    overflow-y: auto;
+    background: var(--bg-raised);
+    border: 1px solid var(--border-light);
+    border-radius: var(--r-xs);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    z-index: 500;
+}
+.recent-clips-dropdown.hidden { display: none; }
+.recent-clip-item {
+    padding: 8px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: background var(--t-fast);
+}
+.recent-clip-item:hover {
+    background: var(--neon-cyan);
+    color: var(--bg-void);
+}
+
+/* ================================================================
+   Merge File List
+   ================================================================ */
+.merge-file-list {
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xs);
+    max-height: 200px;
+    overflow-y: auto;
+}
+.merge-file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+}
+.merge-file-item:last-child { border-bottom: none; }
+.merge-file-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    flex: 1;
+}
+.merge-file-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 16px;
+    padding: 0 4px;
+    line-height: 1;
+    transition: color var(--t-fast);
+}
+.merge-file-remove:hover { color: var(--neon-red); }
+
+/* ================================================================
+   Server Status Banner
+   ================================================================ */
+.server-status-banner {
+    background: var(--neon-red);
+    color: var(--text-white);
+    text-align: center;
+    padding: 6px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    letter-spacing: 0.3px;
+    animation: pulse-banner 2s ease-in-out infinite;
+}
+.server-status-banner.hidden { display: none; }
+@keyframes pulse-banner {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+}
+
+/* ================================================================
+   Trim Tool
+   ================================================================ */
+#trimQualityGroup.hidden { display: none; }
+
+/* ================================================================
+   Waveform Audio Preview Button
+   ================================================================ */
+.waveform-audio-btn {
+    display: block;
+    width: 100%;
+}
+
+/* ================================================================
+   Sub-tab Visibility
+   ================================================================ */
+.sub-tab[style*="display: none"] + .sub-panel { display: none; }
