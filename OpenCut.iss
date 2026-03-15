@@ -1,5 +1,5 @@
 ; OpenCut Installer Script for Inno Setup 6
-; Installs the OpenCut backend + CEP extension for Premiere Pro
+; Fully self-contained installer — bundles server exe, ffmpeg, and CEP extension
 
 #define MyAppName "OpenCut"
 #define MyAppVersion "1.0.0"
@@ -37,36 +37,32 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "autostart"; Description: "Start OpenCut server when Windows starts"; GroupDescription: "Startup:"
 Name: "installextension"; Description: "Install Adobe Premiere Pro CEP extension"; GroupDescription: "Adobe Integration:"; Flags: checkedonce
-Name: "installdeps"; Description: "Install Python dependencies (requires Python 3.9+)"; GroupDescription: "Setup:"; Flags: checkedonce
 
 [Files]
 ; Icon
 Source: "img\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 
-; OpenCut Python package
-Source: "opencut\*"; DestDir: "{app}\opencut"; Flags: ignoreversion recursesubdirs createallsubdirs
-Source: "pyproject.toml"; DestDir: "{app}"; Flags: ignoreversion
-Source: "requirements.txt"; DestDir: "{app}"; Flags: ignoreversion
+; Bundled server (PyInstaller output — includes Python runtime + all deps)
+Source: "dist\OpenCut-Server\*"; DestDir: "{app}\server"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Hidden launcher (runs server with no console window)
+Source: "OpenCut-Launcher.vbs"; DestDir: "{app}"; Flags: ignoreversion
 
 ; CEP Extension
 Source: "extension\com.opencut.panel\*"; DestDir: "{app}\extension\com.opencut.panel"; Flags: ignoreversion recursesubdirs createallsubdirs
-
-; Launchers
-Source: "OpenCut-Server.bat"; DestDir: "{app}"; Flags: ignoreversion
-Source: "OpenCut-Server.vbs"; DestDir: "{app}"; Flags: ignoreversion
 
 [Dirs]
 Name: "{app}\logs"
 
 [Icons]
-; Start menu
-Name: "{group}\OpenCut Server"; Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Server.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\logo.ico"
-Name: "{group}\OpenCut Server (Console)"; Filename: "{app}\OpenCut-Server.bat"; WorkingDir: "{app}"; IconFilename: "{app}\logo.ico"
+; Start menu — hidden launcher (no console window)
+Name: "{group}\OpenCut Server"; Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Launcher.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\logo.ico"
+Name: "{group}\OpenCut Server (Console)"; Filename: "{app}\server\OpenCut-Server.exe"; WorkingDir: "{app}\server"; IconFilename: "{app}\logo.ico"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
-; Desktop shortcut
-Name: "{autodesktop}\OpenCut"; Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Server.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\logo.ico"; Tasks: desktopicon
-; Startup
-Name: "{userstartup}\OpenCut"; Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Server.vbs"""; WorkingDir: "{app}"; Tasks: autostart
+; Desktop shortcut — hidden launcher
+Name: "{autodesktop}\OpenCut"; Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Launcher.vbs"""; WorkingDir: "{app}"; IconFilename: "{app}\logo.ico"; Tasks: desktopicon
+; Startup — hidden launcher
+Name: "{userstartup}\OpenCut"; Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Launcher.vbs"""; WorkingDir: "{app}"; Tasks: autostart
 
 [Registry]
 ; Enable unsigned CEP extensions (PlayerDebugMode) for CSXS 7-12
@@ -78,10 +74,8 @@ Root: HKCU; Subkey: "Software\Adobe\CSXS.11"; ValueType: string; ValueName: "Pla
 Root: HKCU; Subkey: "Software\Adobe\CSXS.12"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist
 
 [Run]
-; Install Python deps post-install
-Filename: "cmd.exe"; Parameters: "/c python -m pip install ""{app}"" --quiet & python -m pip install -r ""{app}\requirements.txt"" --quiet"; StatusMsg: "Installing Python dependencies..."; Flags: runhidden; Tasks: installdeps
 ; Start server after install
-Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Server.vbs"""; Description: "Start OpenCut Server"; Flags: nowait postinstall skipifsilent
+Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Launcher.vbs"""; Description: "Start OpenCut Server"; Flags: nowait postinstall skipifsilent
 
 [Code]
 function DirectoryCopy(SourcePath, DestPath: string): Boolean;
