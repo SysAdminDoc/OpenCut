@@ -14,33 +14,29 @@
 ### Prerequisites
 
 - **Adobe Premiere Pro** 2023 or later
-- **Python 3.9+** ([python.org](https://python.org/downloads))
 - **FFmpeg** ([ffmpeg.org](https://ffmpeg.org/download.html)) -- must be on PATH
 - **Windows 10/11** (macOS/Linux: server works, CEP panel is Windows-only)
 
 ### Installation
 
-```
-git clone https://github.com/SysAdminDoc/OpenCut.git
-cd OpenCut
-```
+**Option A -- Installer exe (recommended):**
 
-**Option A -- Double-click installer (recommended):**
+Download `OpenCut-Setup-1.2.0.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. The installer handles everything: server exe, CEP extension deployment, registry keys, desktop shortcut, and optional Whisper model download. **No Python needed.**
 
-Run `Install.bat` as Administrator. It handles everything: FFmpeg check, Python deps, CEP extension deployment, registry keys, and launcher creation.
-
-**Option B -- Manual setup:**
+**Option B -- From source (requires Python 3.9+):**
 
 ```bash
+git clone https://github.com/SysAdminDoc/OpenCut.git
+cd OpenCut
 pip install -e ".[all]"
 python -m opencut.server
 ```
 
 Then copy `extension/com.opencut.panel` to your Premiere Pro CEP extensions folder and enable unsigned extensions via the registry key `PlayerDebugMode = 1`.
 
-**Option C -- Standalone exe:**
+**Option C -- Double-click installer from source (requires Python 3.9+):**
 
-Download `OpenCut-Server-v1.2.0-win64.zip` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases), extract, and run `OpenCut-Server.exe`. No Python install needed.
+Clone the repo and run `Install.bat` as Administrator. It handles FFmpeg check, Python deps, CEP extension deployment, registry keys, and launcher creation.
 
 ### Launch
 
