@@ -5060,6 +5060,7 @@
     // Init
     // ================================================================
     document.addEventListener("DOMContentLoaded", function () {
+        try {
         initCSInterface();
         initDOM();
         setupNavTabs();
@@ -5349,6 +5350,10 @@
         addAudioWaveformButtons();
         initHealthCheck();
         renderMergeFiles();
+        } catch (initErr) {
+            console.error("OpenCut init error:", initErr);
+            document.body.innerHTML = '<div style="color:#ff4444;padding:20px;font-family:monospace;white-space:pre-wrap;">OpenCut Init Error:\n' + initErr.message + '\n\n' + initErr.stack + '</div>';
+        }
     });
 
 })();
