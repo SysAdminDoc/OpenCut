@@ -18,8 +18,26 @@
 - **Collapsible Cards**: Click card headers to collapse/expand dense form sections
 - **Job Time Estimates**: Estimated processing time in the progress banner based on historical job data
 - **Localization Framework**: Language selector in Settings (placeholder for future i18n support)
+- **Video Reframe**: Resize/crop video for TikTok, Shorts, Reels, Instagram, Square, or custom dimensions with crop/pad/stretch modes
+- **Clip Preview Thumbnail**: Visual thumbnail + duration/resolution metadata when selecting a clip
+- **Command Palette**: Ctrl+K fuzzy search across all 28+ operations with keyboard navigation
+- **Recent Clips**: Dropdown of last 10 used clips, persisted across sessions
+- **Trim Tool**: Set in/out points to extract a clip portion (stream copy or re-encode)
+- **Merge/Concatenate**: Join multiple clips into one (fast stream copy or re-encoded for mixed formats)
+- **Auto-Crop Detect**: Smart reframe anchor using FFmpeg cropdetect for talking-head content
+- **Audio Waveform Everywhere**: Waveform preview buttons on Denoise and Normalize tabs (reuses Silence tab infrastructure)
+- **Per-Operation Presets**: Save/load settings per operation (persisted to localStorage)
+- **Server Health Monitor**: 10-second heartbeat with reconnect banner and toast notification
+- **Output Deduplication**: Auto-increment suffix prevents overwriting previous outputs
 
-### Backend (8 new endpoints)
+### Backend Improvements
+- **FFmpeg Progress Parsing**: `_run_ffmpeg_with_progress()` helper parses `-progress pipe:1` for real percentage updates
+- **Subprocess Kill on Cancel**: Job cancellation now terminates the running FFmpeg process via `_kill_job_process()`
+- **Temp File Cleanup**: Stale `opencut_preview_*.jpg` files cleaned up on server startup
+- **File Serving Endpoint**: `GET /file` serves local audio/video for preview player (path-restricted)
+
+### Backend (14 new endpoints)
+
 - `POST /audio/waveform` - Extract waveform peak data via FFmpeg PCM extraction
 - `POST /video/preview-frame` - Extract single frame as base64 JPEG at timestamp
 - `GET /system/dependencies` - Check 24 optional deps + FFmpeg install status
@@ -28,6 +46,11 @@
 - `GET/POST/DELETE /workflows` - Custom workflow CRUD to `~/.opencut/workflows.json`
 - `GET/POST /settings/export|import` - Bundle presets + favorites + workflows
 - `POST /system/estimate-time` - Historical ratio-based time estimation
+- `POST /video/reframe` - Resize/crop video for target aspect ratio
+- `GET /video/reframe/presets` - Available reframe platform presets
+- `GET /file` - Serve local files for audio/video preview
+- `POST /video/merge` - Concatenate multiple clips (demux or filter modes)
+- `POST /video/trim` - Extract clip portion by in/out timecodes
 
 ## v1.1.0 (2026-03-15)
 

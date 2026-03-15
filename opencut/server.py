@@ -19,7 +19,7 @@ import tempfile
 import subprocess as _sp
 from pathlib import Path
 
-from flask import Flask, request, jsonify, Response
+from flask import Flask, request, jsonify, Response, send_file
 from flask_cors import CORS
 
 # ---------------------------------------------------------------------------
@@ -126,6 +126,7 @@ CORS(app, origins=["null", "file://"])  # CEP panels use null origin; file:// fo
 # ---------------------------------------------------------------------------
 jobs = {}
 job_lock = threading.Lock()
+_job_processes = {}  # job_id -> Popen, for subprocess kill support
 JOB_MAX_AGE = 3600  # Auto-clean jobs older than 1 hour
 MAX_CONCURRENT_JOBS = 50  # Prevent job spam / DOS
 MAX_BATCH_FILES = 100  # Max files per batch request
@@ -163,12 +164,42 @@ def _update_job(job_id: str, **kwargs):
     with job_lock:
         if job_id in jobs:
             jobs[job_id].update(kwargs)
+            # Record timing data when a job completes for future estimates
+            if kwargs.get("status") == "complete":
+                job = jobs[job_id]
+                elapsed = time.time() - job.get("created", time.time())
+                try:
+                    _record_job_time(job.get("type", ""), elapsed, _get_file_duration(job.get("filepath", "")))
+                except Exception:
+                    pass
 
 
 def _is_cancelled(job_id: str) -> bool:
     """Check if a job has been cancelled."""
     with job_lock:
         return jobs.get(job_id, {}).get("status") == "cancelled"
+
+
+def _register_job_process(job_id: str, proc):
+    """Store a Popen handle so the cancel route can kill it."""
+    with job_lock:
+        _job_processes[job_id] = proc
+
+
+def _kill_job_process(job_id: str):
+    """Terminate (then kill) a stored subprocess for the given job."""
+    proc = None
+    with job_lock:
+        proc = _job_processes.pop(job_id, None)
+    if proc is not None:
+        try:
+            proc.terminate()
+        except OSError:
+            pass
+        try:
+            proc.kill()
+        except OSError:
+            pass
 
 
 def _cleanup_old_jobs():
@@ -227,6 +258,78 @@ def _resolve_output_dir(filepath: str, requested_dir: str = "") -> str:
     fallback = os.path.join(tempfile.gettempdir(), "opencut_output")
     os.makedirs(fallback, exist_ok=True)
     return fallback
+
+
+def _unique_output_path(path: str) -> str:
+    """
+    If *path* already exists on disk, append _2, _3, ... before the extension
+    until we find a name that doesn't collide.
+    """
+    if not os.path.exists(path):
+        return path
+    base, ext = os.path.splitext(path)
+    counter = 2
+    while True:
+        candidate = f"{base}_{counter}{ext}"
+        if not os.path.exists(candidate):
+            return candidate
+        counter += 1
+
+
+def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
+    """
+    Run an FFmpeg command via Popen, parsing ``-progress pipe:1`` output
+    to update job progress.  Returns a (returncode, stderr) tuple.
+    Registers the process for kill-on-cancel support.
+    """
+    import subprocess as _sp
+
+    full_cmd = list(cmd) + ["-progress", "pipe:1"]
+    proc = _sp.Popen(full_cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True)
+    _register_job_process(job_id, proc)
+
+    stderr_lines = []
+    last_pct = 0
+
+    try:
+        for line in proc.stdout:
+            if _is_cancelled(job_id):
+                proc.terminate()
+                proc.kill()
+                break
+
+            line = line.strip()
+            if line.startswith("out_time_us="):
+                try:
+                    us = int(line.split("=", 1)[1])
+                    if duration_sec > 0:
+                        pct = min(int((us / 1_000_000) / duration_sec * 100), 99)
+                        if pct > last_pct:
+                            last_pct = pct
+                            _update_job(job_id, progress=pct,
+                                        message=f"Processing... {pct}%")
+                except (ValueError, ZeroDivisionError):
+                    pass
+    except Exception:
+        pass
+
+    # Collect remaining stderr
+    try:
+        _, stderr_data = proc.communicate(timeout=10)
+        stderr_lines.append(stderr_data or "")
+    except Exception:
+        proc.kill()
+        try:
+            _, stderr_data = proc.communicate(timeout=5)
+            stderr_lines.append(stderr_data or "")
+        except Exception:
+            pass
+
+    # Cleanup process registration
+    with job_lock:
+        _job_processes.pop(job_id, None)
+
+    return proc.returncode, "".join(stderr_lines)
 
 
 def _make_sequence_name(filepath: str, suffix: str = "") -> str:
@@ -2396,6 +2499,7 @@ def cancel_job(job_id):
         job["status"] = "cancelled"
         job["message"] = "Cancelled by user"
         job["progress"] = 0
+    _kill_job_process(job_id)
     return jsonify({"status": "cancelled", "job_id": job_id})
 
 
@@ -2902,7 +3006,9 @@ def export_video():
             effective_dir = _resolve_output_dir(filepath, output_dir)
             base_name = os.path.splitext(os.path.basename(filepath))[0]
             suffix = "_audio" if audio_only else "_opencut"
-            output_path = os.path.join(effective_dir, f"{base_name}{suffix}.{output_format}")
+            output_path = _unique_output_path(
+                os.path.join(effective_dir, f"{base_name}{suffix}.{output_format}")
+            )
 
             # Build filter_complex for segment extraction and concatenation
             # Using the segment approach: extract each segment, then concat
@@ -6430,6 +6536,390 @@ def _process_queue():
 
 
 # ---------------------------------------------------------------------------
+# Video Reframe (resize/crop for phone / social media aspect ratios)
+# ---------------------------------------------------------------------------
+@app.route("/video/reframe/presets", methods=["GET"])
+def reframe_presets():
+    """Return available reframe presets with target dimensions."""
+    return jsonify([
+        {"id": "tiktok",          "name": "TikTok / Shorts",        "width": 1080, "height": 1920, "aspect": "9:16"},
+        {"id": "instagram_reel",  "name": "Instagram Reel / Story",  "width": 1080, "height": 1920, "aspect": "9:16"},
+        {"id": "instagram_post",  "name": "Instagram Post",          "width": 1080, "height": 1080, "aspect": "1:1"},
+        {"id": "instagram_land",  "name": "Instagram Landscape",     "width": 1080, "height": 566,  "aspect": "1.91:1"},
+        {"id": "youtube_short",   "name": "YouTube Short",           "width": 1080, "height": 1920, "aspect": "9:16"},
+        {"id": "youtube",         "name": "YouTube (1080p)",         "width": 1920, "height": 1080, "aspect": "16:9"},
+        {"id": "youtube_4k",      "name": "YouTube (4K)",            "width": 3840, "height": 2160, "aspect": "16:9"},
+        {"id": "twitter",         "name": "Twitter / X",             "width": 1920, "height": 1080, "aspect": "16:9"},
+        {"id": "square",          "name": "Square",                  "width": 1080, "height": 1080, "aspect": "1:1"},
+        {"id": "custom",          "name": "Custom",                  "width": 0,    "height": 0,    "aspect": "custom"},
+    ])
+
+
+@app.route("/video/reframe", methods=["POST"])
+def video_reframe():
+    """Reframe/resize video for a target aspect ratio using crop, pad, or scale."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    if not filepath or not os.path.isfile(filepath):
+        return jsonify({"error": "File not found"}), 400
+
+    target_w = int(data.get("width", 1080))
+    target_h = int(data.get("height", 1920))
+    mode = data.get("mode", "crop")  # crop, pad, stretch
+    position = data.get("position", "center")  # center, top, bottom (for crop), or custom x:y
+    bg_color = data.get("bg_color", "black")  # for pad mode
+    quality = data.get("quality", "high")  # low, medium, high
+    output_dir = data.get("output_dir", "")
+
+    if target_w < 16 or target_h < 16:
+        return jsonify({"error": "Target dimensions too small (min 16x16)"}), 400
+
+    job_id = _new_job("reframe", filepath)
+
+    def _process():
+        import subprocess as _sp
+        try:
+            _update_job(job_id, progress=5, message="Probing video...")
+
+            # Get source dimensions
+            probe_cmd = [
+                "ffprobe", "-v", "error", "-select_streams", "v:0",
+                "-show_entries", "stream=width,height",
+                "-of", "json", filepath
+            ]
+            probe_result = _sp.run(probe_cmd, capture_output=True, text=True, timeout=15)
+            probe_data = json.loads(probe_result.stdout)
+            streams = probe_data.get("streams", [])
+            if not streams:
+                _update_job(job_id, status="error", error="No video stream found")
+                return
+            src_w = int(streams[0]["width"])
+            src_h = int(streams[0]["height"])
+
+            _update_job(job_id, progress=10, message=f"Source: {src_w}x{src_h} → Target: {target_w}x{target_h}")
+
+            # Build the video filter chain based on mode
+            if mode == "stretch":
+                # Simple scale to exact target (distorts if aspect differs)
+                vf = f"scale={target_w}:{target_h}"
+
+            elif mode == "pad":
+                # Scale to fit inside target, then pad with bg_color
+                vf = (
+                    f"scale={target_w}:{target_h}:force_original_aspect_ratio=decrease,"
+                    f"pad={target_w}:{target_h}:(ow-iw)/2:(oh-ih)/2:color={bg_color}"
+                )
+
+            else:
+                # Crop mode (default) — scale to cover target, then crop
+                src_aspect = src_w / src_h
+                tgt_aspect = target_w / target_h
+
+                if abs(src_aspect - tgt_aspect) < 0.01:
+                    # Aspects match — just scale
+                    vf = f"scale={target_w}:{target_h}"
+                else:
+                    # Scale to cover target dimensions, then crop
+                    vf = f"scale={target_w}:{target_h}:force_original_aspect_ratio=increase,"
+
+                    # Determine crop position
+                    _effective_pos = position
+                    if position == "auto":
+                        # Auto-detect content region via cropdetect
+                        try:
+                            import re as _re
+                            cd_cmd = [
+                                "ffmpeg", "-i", filepath,
+                                "-vf", "cropdetect=24:16:0",
+                                "-frames:v", "120", "-f", "null", "-"
+                            ]
+                            cd_result = _sp.run(cd_cmd, capture_output=True, text=True, timeout=30)
+                            crops = _re.findall(r"crop=(\d+):(\d+):(\d+):(\d+)", cd_result.stderr)
+                            if crops:
+                                # Use the last (most stable) detection
+                                cw, ch, cx, cy = [int(v) for v in crops[-1]]
+                                # Center of the detected content region
+                                content_cx = cx + cw // 2
+                                content_cy = cy + ch // 2
+                                # After the scale-to-cover step the intermediate frame is
+                                # larger than target on one axis.  We express the crop
+                                # offset as a proportion of the source so FFmpeg can map
+                                # it onto the scaled frame.
+                                prop_x = content_cx / src_w if src_w else 0.5
+                                prop_y = content_cy / src_h if src_h else 0.5
+                                # Clamp so the crop window stays inside the frame
+                                crop_x = f"max(0,min(iw-{target_w},int(iw*{prop_x:.4f}-{target_w}/2)))"
+                                crop_y = f"max(0,min(ih-{target_h},int(ih*{prop_y:.4f}-{target_h}/2)))"
+                                _effective_pos = None  # skip named-position branch
+                        except Exception:
+                            pass
+                        if _effective_pos == "auto":
+                            _effective_pos = "center"  # fallback
+
+                    if _effective_pos == "top":
+                        crop_x, crop_y = "(ow-iw)/2", "0"
+                    elif _effective_pos == "bottom":
+                        crop_x, crop_y = "(ow-iw)/2", "(oh-ih)"
+                    elif _effective_pos == "left":
+                        crop_x, crop_y = "0", "(oh-ih)/2"
+                    elif _effective_pos == "right":
+                        crop_x, crop_y = "(ow-iw)", "(oh-ih)/2"
+                    elif _effective_pos is None:
+                        pass  # crop_x/crop_y already set by auto-detect
+                    else:
+                        # center (default)
+                        crop_x, crop_y = "(ow-iw)/2", "(oh-ih)/2"
+
+                    vf += f"crop={target_w}:{target_h}:{crop_x}:{crop_y}"
+
+            # Quality mapping
+            crf_map = {"low": "28", "medium": "23", "high": "18"}
+            crf = crf_map.get(quality, "18")
+
+            effective_dir = _resolve_output_dir(filepath, output_dir)
+            base_name = os.path.splitext(os.path.basename(filepath))[0]
+            output_path = _unique_output_path(
+                os.path.join(effective_dir, f"{base_name}_reframed_{target_w}x{target_h}.mp4")
+            )
+
+            _update_job(job_id, progress=20, message=f"Reframing ({mode})...")
+
+            cmd = [
+                "ffmpeg", "-i", filepath,
+                "-vf", vf,
+                "-c:v", "libx264", "-crf", crf, "-preset", "medium",
+                "-c:a", "aac", "-b:a", "192k",
+                "-movflags", "+faststart",
+                "-y", output_path
+            ]
+            proc = _sp.run(cmd, capture_output=True, text=True, timeout=600)
+            if proc.returncode != 0:
+                err_msg = (proc.stderr or "")[-500:]
+                _update_job(job_id, status="error", error=f"FFmpeg failed: {err_msg}")
+                return
+
+            if not os.path.isfile(output_path):
+                _update_job(job_id, status="error", error="Output file not created")
+                return
+
+            size_mb = round(os.path.getsize(output_path) / (1024 * 1024), 2)
+            _update_job(job_id, status="complete", progress=100,
+                        message=f"Reframed to {target_w}x{target_h}",
+                        result={
+                            "output_path": output_path,
+                            "summary": f"{src_w}x{src_h} → {target_w}x{target_h} ({mode}), {size_mb} MB",
+                            "width": target_w,
+                            "height": target_h,
+                            "size_mb": size_mb,
+                            "mode": mode,
+                        })
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e))
+
+    threading.Thread(target=_process, daemon=True).start()
+    return jsonify({"job_id": job_id})
+
+
+# ---------------------------------------------------------------------------
+# Video Merge / Concatenate
+# ---------------------------------------------------------------------------
+@app.route("/video/merge", methods=["POST"])
+def video_merge():
+    """Merge / concatenate multiple video files into one."""
+    data = request.get_json(force=True)
+    files = data.get("files", [])
+    if not files or len(files) < 2:
+        return jsonify({"error": "At least 2 files required"}), 400
+    for f in files:
+        if not os.path.isfile(f):
+            return jsonify({"error": f"File not found: {f}"}), 400
+
+    merge_mode = data.get("mode", "concat_demux")  # concat_demux | concat_filter
+    quality = data.get("quality", "high")
+    output_dir = data.get("output_dir", "")
+
+    job_id = _new_job("merge", files[0])
+
+    def _process():
+        import subprocess as _sp
+        try:
+            _update_job(job_id, progress=5, message="Preparing merge...")
+
+            effective_dir = _resolve_output_dir(files[0], output_dir)
+            base_name = os.path.splitext(os.path.basename(files[0]))[0]
+            output_path = _unique_output_path(
+                os.path.join(effective_dir, f"{base_name}_merged.mp4")
+            )
+
+            # Get total duration for progress
+            total_dur = 0
+            for f in files:
+                total_dur += _get_file_duration(f)
+
+            if merge_mode == "concat_filter":
+                # Re-encoded merge via filter_complex
+                inputs = []
+                for f in files:
+                    inputs.extend(["-i", f])
+
+                n = len(files)
+                filter_parts = "".join(f"[{i}:v][{i}:a]" for i in range(n))
+                filter_parts += f"concat=n={n}:v=1:a=1[outv][outa]"
+
+                crf_map = {"low": "28", "medium": "23", "high": "18"}
+                crf = crf_map.get(quality, "18")
+
+                cmd = ["ffmpeg"] + inputs + [
+                    "-filter_complex", filter_parts,
+                    "-map", "[outv]", "-map", "[outa]",
+                    "-c:v", "libx264", "-crf", crf, "-preset", "medium",
+                    "-c:a", "aac", "-b:a", "192k",
+                    "-movflags", "+faststart",
+                    "-y", output_path
+                ]
+
+                _update_job(job_id, progress=10, message="Merging (re-encode)...")
+                rc, stderr = _run_ffmpeg_with_progress(job_id, cmd, total_dur)
+
+            else:
+                # concat demux (stream copy, fast)
+                concat_file = os.path.join(tempfile.gettempdir(), f"opencut_concat_{job_id}.txt")
+                try:
+                    with open(concat_file, "w", encoding="utf-8") as cf:
+                        for f in files:
+                            safe = f.replace("'", "'\\''")
+                            cf.write(f"file '{safe}'\n")
+
+                    cmd = [
+                        "ffmpeg", "-f", "concat", "-safe", "0",
+                        "-i", concat_file, "-c", "copy",
+                        "-movflags", "+faststart",
+                        "-y", output_path
+                    ]
+
+                    _update_job(job_id, progress=10, message="Merging (stream copy)...")
+                    rc, stderr = _run_ffmpeg_with_progress(job_id, cmd, total_dur)
+                finally:
+                    try:
+                        os.unlink(concat_file)
+                    except OSError:
+                        pass
+
+            if _is_cancelled(job_id):
+                return
+
+            if rc != 0:
+                err_msg = (stderr or "")[-500:]
+                _update_job(job_id, status="error", error=f"FFmpeg failed: {err_msg}")
+                return
+
+            if not os.path.isfile(output_path):
+                _update_job(job_id, status="error", error="Output file not created")
+                return
+
+            size_mb = round(os.path.getsize(output_path) / (1024 * 1024), 2)
+            _update_job(job_id, status="complete", progress=100,
+                        message=f"Merged {len(files)} files",
+                        result={
+                            "output_path": output_path,
+                            "summary": f"{len(files)} files merged ({merge_mode}), {size_mb} MB",
+                            "size_mb": size_mb,
+                            "mode": merge_mode,
+                        })
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e))
+
+    threading.Thread(target=_process, daemon=True).start()
+    return jsonify({"job_id": job_id})
+
+
+# ---------------------------------------------------------------------------
+# Video Trim
+# ---------------------------------------------------------------------------
+@app.route("/video/trim", methods=["POST"])
+def video_trim():
+    """Trim a video to a start/end time range."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    if not filepath or not os.path.isfile(filepath):
+        return jsonify({"error": "File not found"}), 400
+
+    start_time = data.get("start", "00:00:00")
+    end_time = data.get("end", "")
+    quality = data.get("quality", "high")  # low, medium, high, copy
+    output_dir = data.get("output_dir", "")
+
+    if not end_time:
+        return jsonify({"error": "End time is required"}), 400
+
+    job_id = _new_job("trim", filepath)
+
+    def _process():
+        import subprocess as _sp
+        try:
+            _update_job(job_id, progress=5, message="Preparing trim...")
+
+            effective_dir = _resolve_output_dir(filepath, output_dir)
+            base_name = os.path.splitext(os.path.basename(filepath))[0]
+            ext = os.path.splitext(filepath)[1] or ".mp4"
+            output_path = _unique_output_path(
+                os.path.join(effective_dir, f"{base_name}_trimmed{ext}")
+            )
+
+            # Estimate duration for progress
+            total_dur = _get_file_duration(filepath)
+
+            if quality == "copy":
+                cmd = [
+                    "ffmpeg", "-ss", str(start_time), "-to", str(end_time),
+                    "-i", filepath,
+                    "-c", "copy",
+                    "-movflags", "+faststart",
+                    "-y", output_path
+                ]
+            else:
+                crf_map = {"low": "28", "medium": "23", "high": "18"}
+                crf = crf_map.get(quality, "18")
+                cmd = [
+                    "ffmpeg", "-ss", str(start_time), "-to", str(end_time),
+                    "-i", filepath,
+                    "-c:v", "libx264", "-crf", crf,
+                    "-c:a", "aac",
+                    "-movflags", "+faststart",
+                    "-y", output_path
+                ]
+
+            _update_job(job_id, progress=10, message="Trimming...")
+            rc, stderr = _run_ffmpeg_with_progress(job_id, cmd, total_dur)
+
+            if _is_cancelled(job_id):
+                return
+
+            if rc != 0:
+                err_msg = (stderr or "")[-500:]
+                _update_job(job_id, status="error", error=f"FFmpeg failed: {err_msg}")
+                return
+
+            if not os.path.isfile(output_path):
+                _update_job(job_id, status="error", error="Output file not created")
+                return
+
+            size_mb = round(os.path.getsize(output_path) / (1024 * 1024), 2)
+            _update_job(job_id, status="complete", progress=100,
+                        message=f"Trimmed {start_time} - {end_time}",
+                        result={
+                            "output_path": output_path,
+                            "summary": f"Trimmed {start_time} to {end_time}, {size_mb} MB",
+                            "size_mb": size_mb,
+                        })
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e))
+
+    threading.Thread(target=_process, daemon=True).start()
+    return jsonify({"job_id": job_id})
+
+
+# ---------------------------------------------------------------------------
 # Social Platform Quick Presets
 # ---------------------------------------------------------------------------
 @app.route("/export/social-presets", methods=["GET"])
@@ -6446,6 +6936,32 @@ def social_presets():
             {"id": "linkedin", "name": "LinkedIn", "resolution": "1920x1080", "fps": 30, "max_duration": 600, "codec": "h264", "bitrate": "8M"},
         ]
     })
+
+
+# ---------------------------------------------------------------------------
+# File Serving (for audio preview player)
+# ---------------------------------------------------------------------------
+@app.route("/file", methods=["GET"])
+def serve_file():
+    """Serve a local file for audio/video preview. Only serves from output dirs."""
+    import mimetypes
+    filepath = request.args.get("path", "")
+    if not filepath or not os.path.isfile(filepath):
+        return jsonify({"error": "File not found"}), 404
+    # Security: only serve files from temp or opencut output directories
+    abs_path = os.path.abspath(filepath)
+    allowed_prefixes = [
+        os.path.abspath(tempfile.gettempdir()),
+        os.path.abspath(_OPENCUT_DIR),
+    ]
+    # Also allow files in the same directory as the input (common output location)
+    if not any(abs_path.startswith(p) for p in allowed_prefixes):
+        # Check if it's in a typical output directory pattern
+        parent = os.path.dirname(abs_path)
+        if not (parent.endswith("_opencut") or "_opencut_" in os.path.basename(abs_path)):
+            return jsonify({"error": "Access denied"}), 403
+    mime_type = mimetypes.guess_type(filepath)[0] or "application/octet-stream"
+    return send_file(filepath, mimetype=mime_type)
 
 
 # ---------------------------------------------------------------------------
@@ -6476,24 +6992,20 @@ def audio_waveform():
             "-f", "s16le", "-acodec", "pcm_s16le", "-v", "error", "-"
         ]
         result = _sp.run(cmd, capture_output=True, timeout=120)
-        import struct
+        import array
         raw = result.stdout
-        total_samples = len(raw) // 2
-        if total_samples == 0:
+        # Bulk unpack all samples at once using array module (much faster than per-sample struct)
+        sample_count = len(raw) // 2
+        if sample_count == 0:
             return jsonify({"error": "No audio data"}), 400
+        all_samples = array.array('h')
+        all_samples.frombytes(raw[:sample_count * 2])
 
-        chunk_size = max(1, total_samples // samples)
+        chunk_size = max(1, sample_count // samples)
         peaks = []
-        for i in range(0, total_samples, chunk_size):
-            chunk_end = min(i + chunk_size, total_samples)
-            chunk_max = 0
-            for j in range(i, chunk_end):
-                offset = j * 2
-                if offset + 2 <= len(raw):
-                    val = abs(struct.unpack_from('<h', raw, offset)[0])
-                    if val > chunk_max:
-                        chunk_max = val
-            # Normalize to 0.0-1.0
+        for i in range(0, sample_count, chunk_size):
+            chunk = all_samples[i:i + chunk_size]
+            chunk_max = max(abs(s) for s in chunk)
             peaks.append(round(chunk_max / 32768.0, 4))
 
         return jsonify({"peaks": peaks[:samples], "duration": duration, "sample_count": len(peaks[:samples])})
@@ -6514,8 +7026,8 @@ def preview_frame():
     width = int(data.get("width", 640))
     if not file_path or not os.path.isfile(file_path):
         return jsonify({"error": "File not found"}), 400
+    tmp = os.path.join(tempfile.gettempdir(), f"opencut_preview_{uuid.uuid4().hex[:8]}.jpg")
     try:
-        tmp = os.path.join(tempfile.gettempdir(), f"opencut_preview_{uuid.uuid4().hex[:8]}.jpg")
         cmd = [
             "ffmpeg", "-ss", str(timestamp), "-i", file_path,
             "-vframes", "1", "-vf", f"scale={width}:-1",
@@ -6526,10 +7038,15 @@ def preview_frame():
             return jsonify({"error": "Frame extraction failed"}), 500
         with open(tmp, "rb") as f:
             img_data = base64.b64encode(f.read()).decode("utf-8")
-        os.remove(tmp)
         return jsonify({"image": img_data, "format": "jpeg", "timestamp": str(timestamp)})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    finally:
+        if os.path.isfile(tmp):
+            try:
+                os.remove(tmp)
+            except OSError:
+                pass
 
 
 # ---------------------------------------------------------------------------
@@ -6780,6 +7297,19 @@ def import_settings():
 # ---------------------------------------------------------------------------
 _JOB_TIMES_FILE = os.path.join(_OPENCUT_DIR, "job_times.json")
 
+def _get_file_duration(filepath):
+    """Get media file duration in seconds via ffprobe. Returns 0 on failure."""
+    if not filepath or not os.path.isfile(filepath):
+        return 0
+    try:
+        cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+               "-of", "json", filepath]
+        result = _sp.run(cmd, capture_output=True, text=True, timeout=10)
+        data = json.loads(result.stdout)
+        return float(data["format"]["duration"])
+    except Exception:
+        return 0
+
 def _load_job_times():
     try:
         if os.path.isfile(_JOB_TIMES_FILE):
@@ -6839,6 +7369,20 @@ def estimate_job_time():
 # ---------------------------------------------------------------------------
 def run_server(host="127.0.0.1", port=5679, debug=False):
     """Start the OpenCut backend server."""
+    # Clean up stale preview temp files from previous runs
+    try:
+        import glob as _glob
+        _tmp = tempfile.gettempdir()
+        _now = time.time()
+        for _f in _glob.glob(os.path.join(_tmp, "opencut_preview_*.jpg")):
+            try:
+                if (_now - os.path.getmtime(_f)) > 3600:
+                    os.unlink(_f)
+            except OSError:
+                pass
+    except Exception:
+        pass
+
     effective_port = port
 
     if not _check_port(host, port):
