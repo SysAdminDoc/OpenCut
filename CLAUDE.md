@@ -33,7 +33,7 @@
 - Build installer: Inno Setup 6 compile `OpenCut.iss`
 
 ## Version
-- Current: **v1.1.0**
+- Current: **v1.2.0**
 - All version strings: pyproject.toml, __init__.py, server.py health + banner, install.py, requirements.txt, index.html header + about, main.js header, style.css header
 
 ## Gotchas
@@ -57,3 +57,20 @@
 - Social platform export presets (YouTube Shorts, TikTok, Instagram, etc.)
 - Premiere Pro theme sync (CSInterface skin detection)
 - Universal auto-import ExtendScript function
+
+## v1.2.0 Features Added
+- Waveform preview with draggable threshold (canvas-based, FFmpeg PCM extraction)
+- Side-by-side before/after preview modal (FFmpeg frame extraction, base64 JPEG)
+- Dependency health dashboard (24 optional deps + FFmpeg status grid)
+- First-run wizard overlay (3-step onboarding, localStorage dismissal)
+- Output file browser (recent outputs from completed jobs, Import button)
+- Favorites bar (pinned operations as chips, persisted to `~/.opencut/favorites.json`)
+- Batch multi-select file picker (add selected, add all, clear)
+- Parameter tooltips on range sliders
+- Custom workflow builder (chain operations, save/load/delete to `~/.opencut/workflows.json`)
+- Audio preview player (floating player for generated audio)
+- Settings import/export (JSON bundle of presets + favorites + workflows)
+- Right-click context menu on clip selector
+- Collapsible card headers
+- Job time estimates (historical ratio-based, stored in `~/.opencut/job_times.json`)
+- i18n language selector placeholder

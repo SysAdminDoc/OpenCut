@@ -354,7 +354,7 @@ def health():
     # Caption burn-in always available (FFmpeg-based)
     caps["burnin"] = True
 
-    return jsonify({"status": "ok", "version": "1.1.0", "capabilities": caps})
+    return jsonify({"status": "ok", "version": "1.2.0", "capabilities": caps})
 
 
 @app.route("/shutdown", methods=["POST"])
@@ -6449,6 +6449,392 @@ def social_presets():
 
 
 # ---------------------------------------------------------------------------
+# Waveform Data (for silence threshold preview)
+# ---------------------------------------------------------------------------
+@app.route("/audio/waveform", methods=["POST"])
+def audio_waveform():
+    """Extract waveform amplitude data from audio/video file for visualization."""
+    data = request.get_json(force=True)
+    file_path = data.get("file", "")
+    if not file_path or not os.path.isfile(file_path):
+        return jsonify({"error": "File not found"}), 400
+    samples = int(data.get("samples", 500))
+    samples = max(100, min(samples, 2000))
+    try:
+        # Use FFmpeg to extract peak amplitude per chunk
+        cmd = [
+            "ffprobe", "-v", "error", "-show_entries", "format=duration",
+            "-of", "json", file_path
+        ]
+        dur_result = _sp.run(cmd, capture_output=True, text=True, timeout=10)
+        dur_data = json.loads(dur_result.stdout)
+        duration = float(dur_data["format"]["duration"])
+
+        # Extract raw audio samples as 16-bit PCM
+        cmd = [
+            "ffmpeg", "-i", file_path, "-ac", "1", "-ar", "8000",
+            "-f", "s16le", "-acodec", "pcm_s16le", "-v", "error", "-"
+        ]
+        result = _sp.run(cmd, capture_output=True, timeout=120)
+        import struct
+        raw = result.stdout
+        total_samples = len(raw) // 2
+        if total_samples == 0:
+            return jsonify({"error": "No audio data"}), 400
+
+        chunk_size = max(1, total_samples // samples)
+        peaks = []
+        for i in range(0, total_samples, chunk_size):
+            chunk_end = min(i + chunk_size, total_samples)
+            chunk_max = 0
+            for j in range(i, chunk_end):
+                offset = j * 2
+                if offset + 2 <= len(raw):
+                    val = abs(struct.unpack_from('<h', raw, offset)[0])
+                    if val > chunk_max:
+                        chunk_max = val
+            # Normalize to 0.0-1.0
+            peaks.append(round(chunk_max / 32768.0, 4))
+
+        return jsonify({"peaks": peaks[:samples], "duration": duration, "sample_count": len(peaks[:samples])})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Video Frame Preview (for side-by-side comparison)
+# ---------------------------------------------------------------------------
+@app.route("/video/preview-frame", methods=["POST"])
+def preview_frame():
+    """Extract a single frame from video at given timestamp, return as base64 JPEG."""
+    import base64
+    data = request.get_json(force=True)
+    file_path = data.get("file", "")
+    timestamp = data.get("timestamp", "00:00:01")
+    width = int(data.get("width", 640))
+    if not file_path or not os.path.isfile(file_path):
+        return jsonify({"error": "File not found"}), 400
+    try:
+        tmp = os.path.join(tempfile.gettempdir(), f"opencut_preview_{uuid.uuid4().hex[:8]}.jpg")
+        cmd = [
+            "ffmpeg", "-ss", str(timestamp), "-i", file_path,
+            "-vframes", "1", "-vf", f"scale={width}:-1",
+            "-q:v", "2", "-y", tmp
+        ]
+        _sp.run(cmd, capture_output=True, timeout=30)
+        if not os.path.isfile(tmp):
+            return jsonify({"error": "Frame extraction failed"}), 500
+        with open(tmp, "rb") as f:
+            img_data = base64.b64encode(f.read()).decode("utf-8")
+        os.remove(tmp)
+        return jsonify({"image": img_data, "format": "jpeg", "timestamp": str(timestamp)})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Dependency Health Dashboard
+# ---------------------------------------------------------------------------
+@app.route("/system/dependencies", methods=["GET"])
+def check_dependencies():
+    """Check all optional dependencies and return their status."""
+    deps = {}
+    checks = {
+        "faster-whisper": "faster_whisper",
+        "whisperx": "whisperx",
+        "demucs": "demucs",
+        "pedalboard": "pedalboard",
+        "deepfilternet": "df",
+        "noisereduce": "noisereduce",
+        "librosa": "librosa",
+        "pydub": "pydub",
+        "opencv": "cv2",
+        "Pillow": "PIL",
+        "numpy": "numpy",
+        "rembg": "rembg",
+        "realesrgan": "realesrgan",
+        "gfpgan": "gfpgan",
+        "insightface": "insightface",
+        "edge-tts": "edge_tts",
+        "audiocraft": "audiocraft",
+        "scenedetect": "scenedetect",
+        "deep-translator": "deep_translator",
+        "pyannote.audio": "pyannote.audio",
+        "mediapipe": "mediapipe",
+        "torch": "torch",
+        "onnxruntime": "onnxruntime",
+    }
+    for name, module in checks.items():
+        try:
+            mod = __import__(module.split(".")[0])
+            version = getattr(mod, "__version__", getattr(mod, "VERSION", "installed"))
+            deps[name] = {"installed": True, "version": str(version)}
+        except ImportError:
+            deps[name] = {"installed": False, "version": None}
+
+    # Check FFmpeg
+    try:
+        r = _sp.run(["ffmpeg", "-version"], capture_output=True, text=True, timeout=5)
+        line = r.stdout.split("\n")[0] if r.stdout else ""
+        deps["ffmpeg"] = {"installed": True, "version": line}
+    except Exception:
+        deps["ffmpeg"] = {"installed": False, "version": None}
+
+    return jsonify(deps)
+
+
+# ---------------------------------------------------------------------------
+# Output Browser (recent outputs)
+# ---------------------------------------------------------------------------
+_OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
+
+@app.route("/outputs/recent", methods=["GET"])
+def recent_outputs():
+    """List recent output files from completed jobs."""
+    limit = int(request.args.get("limit", 20))
+    outputs = []
+    with job_lock:
+        sorted_jobs = sorted(jobs.values(), key=lambda j: j.get("created", 0), reverse=True)
+        for job in sorted_jobs[:limit * 2]:
+            if job.get("status") != "complete":
+                continue
+            result = job.get("result", {})
+            path = result.get("output_path", result.get("output", ""))
+            if isinstance(path, list):
+                for p in path:
+                    if os.path.isfile(p):
+                        try:
+                            stat = os.stat(p)
+                            outputs.append({
+                                "path": p,
+                                "name": os.path.basename(p),
+                                "size_mb": round(stat.st_size / (1024 * 1024), 2),
+                                "modified": stat.st_mtime,
+                                "type": job.get("type", "unknown"),
+                            })
+                        except OSError:
+                            pass
+            elif isinstance(path, str) and path and os.path.isfile(path):
+                try:
+                    stat = os.stat(path)
+                    outputs.append({
+                        "path": path,
+                        "name": os.path.basename(path),
+                        "size_mb": round(stat.st_size / (1024 * 1024), 2),
+                        "modified": stat.st_mtime,
+                        "type": job.get("type", "unknown"),
+                    })
+                except OSError:
+                    pass
+            if len(outputs) >= limit:
+                break
+    return jsonify(outputs)
+
+
+# ---------------------------------------------------------------------------
+# Favorites / Pinned Operations
+# ---------------------------------------------------------------------------
+_FAVORITES_FILE = os.path.join(_OPENCUT_DIR, "favorites.json")
+
+@app.route("/favorites", methods=["GET"])
+def get_favorites():
+    """Get user's favorite/pinned operations."""
+    try:
+        if os.path.isfile(_FAVORITES_FILE):
+            with open(_FAVORITES_FILE, "r", encoding="utf-8") as f:
+                return jsonify(json.load(f))
+    except Exception:
+        pass
+    return jsonify([])
+
+@app.route("/favorites/save", methods=["POST"])
+def save_favorites():
+    """Save user's favorite operations list."""
+    data = request.get_json(force=True)
+    favorites = data.get("favorites", [])
+    if not isinstance(favorites, list):
+        return jsonify({"error": "favorites must be a list"}), 400
+    os.makedirs(_OPENCUT_DIR, exist_ok=True)
+    with open(_FAVORITES_FILE, "w", encoding="utf-8") as f:
+        json.dump(favorites, f, indent=2)
+    return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Custom Workflow Templates
+# ---------------------------------------------------------------------------
+_WORKFLOWS_FILE = os.path.join(_OPENCUT_DIR, "workflows.json")
+
+@app.route("/workflows/list", methods=["GET"])
+def list_workflows():
+    """List saved custom workflow templates."""
+    try:
+        if os.path.isfile(_WORKFLOWS_FILE):
+            with open(_WORKFLOWS_FILE, "r", encoding="utf-8") as f:
+                return jsonify(json.load(f))
+    except Exception:
+        pass
+    return jsonify([])
+
+@app.route("/workflows/save", methods=["POST"])
+def save_workflow():
+    """Save a custom workflow template."""
+    data = request.get_json(force=True)
+    name = data.get("name", "").strip()
+    steps = data.get("steps", [])
+    if not name:
+        return jsonify({"error": "Name required"}), 400
+    if not steps or not isinstance(steps, list):
+        return jsonify({"error": "Steps must be a non-empty list"}), 400
+    workflows = []
+    try:
+        if os.path.isfile(_WORKFLOWS_FILE):
+            with open(_WORKFLOWS_FILE, "r", encoding="utf-8") as f:
+                workflows = json.load(f)
+    except Exception:
+        pass
+    # Update or add
+    found = False
+    for wf in workflows:
+        if wf.get("name") == name:
+            wf["steps"] = steps
+            wf["updated"] = time.time()
+            found = True
+            break
+    if not found:
+        workflows.append({"name": name, "steps": steps, "created": time.time()})
+    os.makedirs(_OPENCUT_DIR, exist_ok=True)
+    with open(_WORKFLOWS_FILE, "w", encoding="utf-8") as f:
+        json.dump(workflows, f, indent=2)
+    return jsonify({"success": True})
+
+@app.route("/workflows/delete", methods=["POST"])
+def delete_workflow():
+    """Delete a custom workflow template."""
+    data = request.get_json(force=True)
+    name = data.get("name", "").strip()
+    workflows = []
+    try:
+        if os.path.isfile(_WORKFLOWS_FILE):
+            with open(_WORKFLOWS_FILE, "r", encoding="utf-8") as f:
+                workflows = json.load(f)
+    except Exception:
+        pass
+    workflows = [wf for wf in workflows if wf.get("name") != name]
+    os.makedirs(_OPENCUT_DIR, exist_ok=True)
+    with open(_WORKFLOWS_FILE, "w", encoding="utf-8") as f:
+        json.dump(workflows, f, indent=2)
+    return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Settings Import/Export
+# ---------------------------------------------------------------------------
+@app.route("/settings/export", methods=["GET"])
+def export_settings():
+    """Export all OpenCut settings (presets, favorites, workflows) as a single JSON bundle."""
+    bundle = {"version": "1.2.0", "exported": time.time()}
+    try:
+        bundle["presets"] = _load_user_presets()
+    except Exception:
+        bundle["presets"] = {}
+    try:
+        if os.path.isfile(_FAVORITES_FILE):
+            with open(_FAVORITES_FILE, "r", encoding="utf-8") as f:
+                bundle["favorites"] = json.load(f)
+    except Exception:
+        bundle["favorites"] = []
+    try:
+        if os.path.isfile(_WORKFLOWS_FILE):
+            with open(_WORKFLOWS_FILE, "r", encoding="utf-8") as f:
+                bundle["workflows"] = json.load(f)
+    except Exception:
+        bundle["workflows"] = []
+    return jsonify(bundle)
+
+@app.route("/settings/import", methods=["POST"])
+def import_settings():
+    """Import settings bundle (presets, favorites, workflows)."""
+    data = request.get_json(force=True)
+    imported = []
+    if "presets" in data and isinstance(data["presets"], dict):
+        existing = _load_user_presets()
+        existing.update(data["presets"])
+        _save_user_presets(existing)
+        imported.append("presets")
+    if "favorites" in data and isinstance(data["favorites"], list):
+        os.makedirs(_OPENCUT_DIR, exist_ok=True)
+        with open(_FAVORITES_FILE, "w", encoding="utf-8") as f:
+            json.dump(data["favorites"], f, indent=2)
+        imported.append("favorites")
+    if "workflows" in data and isinstance(data["workflows"], list):
+        os.makedirs(_OPENCUT_DIR, exist_ok=True)
+        with open(_WORKFLOWS_FILE, "w", encoding="utf-8") as f:
+            json.dump(data["workflows"], f, indent=2)
+        imported.append("workflows")
+    return jsonify({"success": True, "imported": imported})
+
+
+# ---------------------------------------------------------------------------
+# Job Time Estimation
+# ---------------------------------------------------------------------------
+_JOB_TIMES_FILE = os.path.join(_OPENCUT_DIR, "job_times.json")
+
+def _load_job_times():
+    try:
+        if os.path.isfile(_JOB_TIMES_FILE):
+            with open(_JOB_TIMES_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+    except Exception:
+        pass
+    return {}
+
+def _record_job_time(job_type, duration_sec, file_duration_sec):
+    """Record how long a job took for future estimates."""
+    times = _load_job_times()
+    if job_type not in times:
+        times[job_type] = []
+    times[job_type].append({
+        "job_secs": round(duration_sec, 1),
+        "file_secs": round(file_duration_sec, 1) if file_duration_sec else 0,
+        "ratio": round(duration_sec / max(file_duration_sec, 0.1), 3) if file_duration_sec else 0,
+        "ts": time.time()
+    })
+    # Keep last 20 entries per type
+    times[job_type] = times[job_type][-20:]
+    os.makedirs(_OPENCUT_DIR, exist_ok=True)
+    with open(_JOB_TIMES_FILE, "w", encoding="utf-8") as f:
+        json.dump(times, f, indent=2)
+
+@app.route("/system/estimate-time", methods=["POST"])
+def estimate_job_time():
+    """Estimate processing time based on historical data."""
+    data = request.get_json(force=True)
+    job_type = data.get("type", "")
+    file_duration = float(data.get("file_duration", 0))
+    times = _load_job_times()
+    entries = times.get(job_type, [])
+    if not entries:
+        return jsonify({"estimate_seconds": None, "confidence": "none", "message": "No historical data"})
+    # Average ratio
+    ratios = [e["ratio"] for e in entries if e["ratio"] > 0]
+    if ratios and file_duration > 0:
+        avg_ratio = sum(ratios) / len(ratios)
+        estimate = file_duration * avg_ratio
+        confidence = "high" if len(ratios) >= 5 else "medium" if len(ratios) >= 2 else "low"
+    else:
+        avg_times = [e["job_secs"] for e in entries]
+        estimate = sum(avg_times) / len(avg_times)
+        confidence = "low"
+    return jsonify({
+        "estimate_seconds": round(estimate, 1),
+        "confidence": confidence,
+        "based_on": len(entries),
+        "message": f"~{int(estimate)}s based on {len(entries)} previous runs"
+    })
+
+
+# ---------------------------------------------------------------------------
 # Server Startup
 # ---------------------------------------------------------------------------
 def run_server(host="127.0.0.1", port=5679, debug=False):
@@ -6483,7 +6869,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     atexit.register(_remove_pid)
 
     print(f"")
-    print(f"  OpenCut Backend Server v1.1.0")
+    print(f"  OpenCut Backend Server v1.2.0")
     print(f"  Listening on http://{host}:{effective_port}")
     print(f"  PID: {os.getpid()}")
     print(f"  Log file: {LOG_FILE}")
