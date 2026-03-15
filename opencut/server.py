@@ -5874,8 +5874,8 @@ def particle_apply():
 # ---------------------------------------------------------------------------
 # Face Swap & Enhancement
 # ---------------------------------------------------------------------------
-@app.route("/video/face/capabilities", methods=["GET"])
-def face_capabilities():
+@app.route("/video/face/swap/capabilities", methods=["GET"])
+def face_swap_capabilities():
     try:
         try:
             from .core.face_swap import get_face_capabilities
