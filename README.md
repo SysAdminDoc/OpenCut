@@ -14,16 +14,15 @@
 ### Prerequisites
 
 - **Adobe Premiere Pro** 2023 or later
-- **FFmpeg** ([ffmpeg.org](https://ffmpeg.org/download.html)) -- must be on PATH
 - **Windows 10/11** (macOS/Linux: server works, CEP panel is Windows-only)
 
 ### Installation
 
 **Option A -- Installer exe (recommended):**
 
-Download `OpenCut-Setup-1.2.0.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. The installer handles everything: server exe, CEP extension deployment, registry keys, desktop shortcut, and optional Whisper model download. **No Python needed.**
+Download `OpenCut-Setup-1.2.0.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. The installer handles everything: server exe, FFmpeg, CEP extension deployment, registry keys, desktop shortcut, and optional Whisper model download. **No Python or FFmpeg needed.**
 
-**Option B -- From source (requires Python 3.9+):**
+**Option B -- From source (requires Python 3.9+ and [FFmpeg](https://ffmpeg.org/download.html) on PATH):**
 
 ```bash
 git clone https://github.com/SysAdminDoc/OpenCut.git
