@@ -947,7 +947,7 @@ def get_caption_styles():
             from opencut.core.styled_captions import get_style_info
         return jsonify({"styles": get_style_info()})
     except Exception as e:
-        return _safe_error(f"Could not load caption styles: {e}", 500)
+        return _safe_error(e, context="caption styles")
 
 
 @app.route("/styled-captions", methods=["POST"])
