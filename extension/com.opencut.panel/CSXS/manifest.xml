@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   Version="7.0"
+                   ExtensionBundleId="com.opencut.panel"
+                   ExtensionBundleVersion="0.6.5"
+                   ExtensionBundleName="OpenCut">
+
+    <ExtensionList>
+        <Extension Id="com.opencut.panel.main" Version="0.6.5" />
+    </ExtensionList>
+
+    <ExecutionEnvironment>
+        <HostList>
+            <!-- Premiere Pro CC 2019+ (CSXS 9+) -->
+            <Host Name="PPRO" Version="[13.0,99.9]" />
+        </HostList>
+        <LocaleList>
+            <Locale Code="All" />
+        </LocaleList>
+        <RequiredRuntimeList>
+            <RequiredRuntime Name="CSXS" Version="9.0" />
+        </RequiredRuntimeList>
+    </ExecutionEnvironment>
+
+    <DispatchInfoList>
+        <Extension Id="com.opencut.panel.main">
+            <DispatchInfo>
+                <Resources>
+                    <MainPath>./client/index.html</MainPath>
+                    <ScriptPath>./host/index.jsx</ScriptPath>
+                    <CEFCommandLine>
+                        <Parameter>--enable-nodejs</Parameter>
+                        <Parameter>--mixed-context</Parameter>
+                    </CEFCommandLine>
+                </Resources>
+                <Lifecycle>
+                    <AutoVisible>true</AutoVisible>
+                </Lifecycle>
+                <UI>
+                    <Type>Panel</Type>
+                    <Menu>OpenCut</Menu>
+                    <Geometry>
+                        <Size>
+                            <Height>600</Height>
+                            <Width>400</Width>
+                        </Size>
+                        <MinSize>
+                            <Height>400</Height>
+                            <Width>300</Width>
+                        </MinSize>
+                    </Geometry>
+                    <Icons>
+                        <Icon Type="Normal">./client/icon.png</Icon>
+                    </Icons>
+                </UI>
+            </DispatchInfo>
+        </Extension>
+    </DispatchInfoList>
+</ExtensionManifest>
