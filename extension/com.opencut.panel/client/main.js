@@ -2688,6 +2688,7 @@
     }
 
     function runReframe() {
+        console.log("[OpenCut] runReframe selectedPath:", selectedPath);
         var preset = el.reframePreset.value;
         var w, h;
         if (preset === "custom") {
