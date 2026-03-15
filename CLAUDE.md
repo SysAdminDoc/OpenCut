@@ -30,7 +30,8 @@
 - Dev: `python -m opencut.server` (or `pip install -e .` then `opencut-server`)
 - CEP dev: Set `PlayerDebugMode = 1` in registry for all CC versions
 - Build exe: `pyinstaller opencut_server.spec`
-- Build installer: Inno Setup 6 compile `OpenCut.iss`
+- Build installer: Inno Setup 6 compile `OpenCut.iss` (requires `ffmpeg/ffmpeg.exe` + `ffprobe.exe` in project root)
+- FFmpeg is bundled in installer and auto-added to user PATH; server also auto-detects bundled ffmpeg dir
 
 ## Version
 - Current: **v1.2.0**

@@ -70,6 +70,42 @@ if BUNDLED_MODE:
     if LAMA_MODEL_DIR:
         logger.info(f"  LaMA model: {LAMA_MODEL_DIR}")
 
+# ---------------------------------------------------------------------------
+# FFmpeg Path Resolution
+# ---------------------------------------------------------------------------
+# Check for bundled ffmpeg next to the exe (installer puts it in {app}\ffmpeg\)
+# or in a sibling ffmpeg/ folder. Prepend to PATH so all subprocess calls find it.
+def _setup_ffmpeg_path():
+    """Find bundled FFmpeg and prepend its directory to PATH."""
+    candidates = []
+    # When running as PyInstaller exe, sys._MEIPASS is the temp extract dir
+    # but the ffmpeg folder is next to the exe, not inside the bundle
+    if getattr(sys, 'frozen', False):
+        exe_dir = os.path.dirname(sys.executable)
+        candidates.append(os.path.join(exe_dir, "..", "ffmpeg"))  # {app}\ffmpeg from {app}\server\exe
+        candidates.append(os.path.join(exe_dir, "ffmpeg"))
+    # When running from source
+    candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ffmpeg"))
+    candidates.append(os.path.join(os.path.dirname(os.path.abspath(__file__)), "ffmpeg"))
+
+    for candidate in candidates:
+        ffmpeg_exe = os.path.join(candidate, "ffmpeg.exe") if sys.platform == "win32" else os.path.join(candidate, "ffmpeg")
+        if os.path.isfile(ffmpeg_exe):
+            resolved = os.path.abspath(candidate)
+            os.environ["PATH"] = resolved + os.pathsep + os.environ.get("PATH", "")
+            logger.info(f"  Bundled FFmpeg: {resolved}")
+            return True
+    return False
+
+_bundled_ffmpeg = _setup_ffmpeg_path()
+if not _bundled_ffmpeg:
+    # Verify FFmpeg is available on system PATH
+    import shutil
+    if shutil.which("ffmpeg"):
+        logger.info("  FFmpeg: system PATH")
+    else:
+        logger.warning("  FFmpeg: NOT FOUND — many features will not work")
+
 # Handle both relative and absolute imports
 try:
     from .utils.media import probe as _probe_media

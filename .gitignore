@@ -22,3 +22,4 @@ htmlcov/
 *.vtt
 !tests/**/*.xml
 installer/dist/
+ffmpeg/

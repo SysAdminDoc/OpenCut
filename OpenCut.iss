@@ -29,6 +29,7 @@ PrivilegesRequired=admin
 ArchitecturesInstallIn64BitMode=x64compatible
 WizardImageFile=compiler:WizClassicImage-IS.bmp
 WizardSmallImageFile=compiler:WizClassicSmallImage-IS.bmp
+ChangesEnvironment=yes
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
@@ -50,6 +51,10 @@ Source: "img\logo.ico"; DestDir: "{app}"; Flags: ignoreversion
 
 ; Bundled server (PyInstaller output — includes Python runtime + all deps)
 Source: "dist\OpenCut-Server\*"; DestDir: "{app}\server"; Flags: ignoreversion recursesubdirs createallsubdirs
+
+; Bundled FFmpeg (ffmpeg.exe + ffprobe.exe)
+Source: "ffmpeg\ffmpeg.exe"; DestDir: "{app}\ffmpeg"; Flags: ignoreversion
+Source: "ffmpeg\ffprobe.exe"; DestDir: "{app}\ffmpeg"; Flags: ignoreversion
 
 ; Hidden launcher (runs server with no console window)
 Source: "OpenCut-Launcher.vbs"; DestDir: "{app}"; Flags: ignoreversion
@@ -90,6 +95,50 @@ Filename: "{app}\server\OpenCut-Server.exe"; Parameters: "--download-models turb
 Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Launcher.vbs"""; Description: "Start OpenCut Server"; Flags: nowait postinstall skipifsilent
 
 [Code]
+const
+  EnvironmentKey = 'Environment';
+
+// --- PATH management for bundled FFmpeg ---
+
+procedure AddToPath(Dir: string);
+var
+  OldPath: string;
+begin
+  if not RegQueryStringValue(HKCU, EnvironmentKey, 'Path', OldPath) then
+    OldPath := '';
+  if Pos(Uppercase(Dir), Uppercase(OldPath)) = 0 then
+  begin
+    if OldPath <> '' then
+      OldPath := OldPath + ';';
+    RegWriteStringValue(HKCU, EnvironmentKey, 'Path', OldPath + Dir);
+  end;
+end;
+
+procedure RemoveFromPath(Dir: string);
+var
+  OldPath, UpperDir, UpperPath: string;
+  P: Integer;
+begin
+  if not RegQueryStringValue(HKCU, EnvironmentKey, 'Path', OldPath) then
+    Exit;
+  UpperDir := Uppercase(Dir);
+  UpperPath := Uppercase(OldPath);
+  P := Pos(UpperDir, UpperPath);
+  if P > 0 then
+  begin
+    Delete(OldPath, P, Length(Dir));
+    while Pos(';;', OldPath) > 0 do
+      StringChangeEx(OldPath, ';;', ';', True);
+    if (Length(OldPath) > 0) and (OldPath[1] = ';') then
+      Delete(OldPath, 1, 1);
+    if (Length(OldPath) > 0) and (OldPath[Length(OldPath)] = ';') then
+      Delete(OldPath, Length(OldPath), 1);
+    RegWriteStringValue(HKCU, EnvironmentKey, 'Path', OldPath);
+  end;
+end;
+
+// --- CEP extension copy ---
+
 function DirectoryCopy(SourcePath, DestPath: string): Boolean;
 var
   FindRec: TFindRec;
@@ -122,7 +171,6 @@ begin
   end;
 end;
 
-// Copy CEP extension to Adobe's extensions folder
 procedure InstallCEPExtension();
 var
   ExtSrc, ExtDest, ExtParent: string;
@@ -131,24 +179,30 @@ begin
   ExtParent := ExpandConstant('{userappdata}\Adobe\CEP\extensions');
   ExtDest := ExtParent + '\com.opencut.panel';
 
-  // Create parent dir
   if not DirExists(ExtParent) then
     ForceDirectories(ExtParent);
 
-  // Remove old extension
   if DirExists(ExtDest) then
     DelTree(ExtDest, True, True, True);
 
-  // Copy recursively
   DirectoryCopy(ExtSrc, ExtDest);
 end;
+
+// --- Post-install hooks ---
 
 procedure CurStepChanged(CurStep: TSetupStep);
 begin
   if CurStep = ssPostInstall then
+  begin
+    // Add bundled FFmpeg to user PATH
+    AddToPath(ExpandConstant('{app}\ffmpeg'));
+    // Install CEP extension
     if WizardIsTaskSelected('installextension') then
       InstallCEPExtension();
+  end;
 end;
+
+// --- Uninstall hooks ---
 
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
@@ -156,12 +210,16 @@ var
 begin
   if CurUninstallStep = usUninstall then
   begin
+    // Remove CEP extension
     ExtPath := ExpandConstant('{userappdata}\Adobe\CEP\extensions\com.opencut.panel');
     if DirExists(ExtPath) then
       DelTree(ExtPath, True, True, True);
+    // Remove FFmpeg from user PATH
+    RemoveFromPath(ExpandConstant('{app}\ffmpeg'));
   end;
 end;
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{userappdata}\Adobe\CEP\extensions\com.opencut.panel"
 Type: filesandordirs; Name: "{app}\logs"
+Type: filesandordirs; Name: "{app}\ffmpeg"
