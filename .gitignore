@@ -17,6 +17,8 @@ env/
 htmlcov/
 .ruff_cache/
 *.xml
+!extension/**/manifest.xml
 *.srt
 *.vtt
 !tests/**/*.xml
+installer/dist/
