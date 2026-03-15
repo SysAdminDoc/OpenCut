@@ -37,6 +37,12 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "autostart"; Description: "Start OpenCut server when Windows starts"; GroupDescription: "Startup:"
 Name: "installextension"; Description: "Install Adobe Premiere Pro CEP extension"; GroupDescription: "Adobe Integration:"; Flags: checkedonce
+Name: "downloadmodel"; Description: "Download Whisper AI model for captions (~150MB, requires internet)"; GroupDescription: "AI Models:"; Flags: checkedonce
+Name: "downloadmodel\tiny"; Description: "tiny (75MB) — Fastest, lower accuracy"; GroupDescription: "AI Models:"; Flags: exclusive unchecked
+Name: "downloadmodel\base"; Description: "base (150MB) — Good balance (recommended)"; GroupDescription: "AI Models:"; Flags: exclusive
+Name: "downloadmodel\small"; Description: "small (500MB) — Better accuracy, slower"; GroupDescription: "AI Models:"; Flags: exclusive unchecked
+Name: "downloadmodel\medium"; Description: "medium (1.5GB) — High accuracy, requires more RAM"; GroupDescription: "AI Models:"; Flags: exclusive unchecked
+Name: "downloadmodel\turbo"; Description: "turbo (1.6GB) — Best speed/accuracy ratio, needs good hardware"; GroupDescription: "AI Models:"; Flags: exclusive unchecked
 
 [Files]
 ; Icon
@@ -74,6 +80,12 @@ Root: HKCU; Subkey: "Software\Adobe\CSXS.11"; ValueType: string; ValueName: "Pla
 Root: HKCU; Subkey: "Software\Adobe\CSXS.12"; ValueType: string; ValueName: "PlayerDebugMode"; ValueData: "1"; Flags: createvalueifdoesntexist
 
 [Run]
+; Download Whisper model (runs with visible console so user can see progress)
+Filename: "{app}\server\OpenCut-Server.exe"; Parameters: "--download-models tiny"; StatusMsg: "Downloading Whisper AI model (tiny)..."; Flags: runasoriginaluser; Tasks: downloadmodel\tiny
+Filename: "{app}\server\OpenCut-Server.exe"; Parameters: "--download-models base"; StatusMsg: "Downloading Whisper AI model (base)..."; Flags: runasoriginaluser; Tasks: downloadmodel\base
+Filename: "{app}\server\OpenCut-Server.exe"; Parameters: "--download-models small"; StatusMsg: "Downloading Whisper AI model (small)..."; Flags: runasoriginaluser; Tasks: downloadmodel\small
+Filename: "{app}\server\OpenCut-Server.exe"; Parameters: "--download-models medium"; StatusMsg: "Downloading Whisper AI model (medium)..."; Flags: runasoriginaluser; Tasks: downloadmodel\medium
+Filename: "{app}\server\OpenCut-Server.exe"; Parameters: "--download-models turbo"; StatusMsg: "Downloading Whisper AI model (turbo)..."; Flags: runasoriginaluser; Tasks: downloadmodel\turbo
 ; Start server after install
 Filename: "wscript.exe"; Parameters: """{app}\OpenCut-Launcher.vbs"""; Description: "Start OpenCut Server"; Flags: nowait postinstall skipifsilent
 

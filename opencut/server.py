@@ -6201,11 +6201,45 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     app.run(host=host, port=effective_port, debug=debug, threaded=True)
 
 
+def download_models(model_size="base"):
+    """Download Whisper model for offline use. Called by installer."""
+    print(f"")
+    print(f"  OpenCut Model Downloader")
+    print(f"  ========================")
+    print(f"")
+    print(f"  Downloading Whisper '{model_size}' model...")
+    print(f"  This may take a few minutes depending on your connection.")
+    print(f"")
+
+    try:
+        from faster_whisper import WhisperModel
+        model = WhisperModel(model_size, device="cpu", compute_type="int8")
+        del model
+        print(f"  [OK] Whisper '{model_size}' model downloaded and verified.")
+    except Exception as e:
+        print(f"  [ERROR] Failed to download model: {e}")
+        print(f"  You can download it later from the OpenCut panel in Premiere Pro.")
+        return 1
+
+    print(f"")
+    print(f"  Models are cached in your user profile and will be")
+    print(f"  available immediately when you use OpenCut.")
+    print(f"")
+    return 0
+
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="OpenCut Backend Server")
     parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
     parser.add_argument("--port", type=int, default=5679, help="Port to listen on")
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+    parser.add_argument("--download-models", nargs="?", const="base", default=None,
+                        metavar="MODEL",
+                        help="Download Whisper model (tiny/base/small/medium/large-v3/turbo)")
     args = parser.parse_args()
-    run_server(host=args.host, port=args.port, debug=args.debug)
+
+    if args.download_models is not None:
+        sys.exit(download_models(args.download_models))
+    else:
+        run_server(host=args.host, port=args.port, debug=args.debug)
