@@ -6203,23 +6203,104 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
 
 def download_models(model_size="base"):
     """Download Whisper model for offline use. Called by installer."""
+    import warnings
+    warnings.filterwarnings("ignore")
+
+    # Suppress noisy huggingface_hub warnings
+    for name in ["huggingface_hub", "huggingface_hub.file_download",
+                 "huggingface_hub.utils", "huggingface_hub._commit_api",
+                 "urllib3", "filelock"]:
+        logging.getLogger(name).setLevel(logging.ERROR)
+
+    # Model size info for progress display
+    model_sizes = {
+        "tiny": "~75 MB", "tiny.en": "~75 MB",
+        "base": "~150 MB", "base.en": "~150 MB",
+        "small": "~500 MB", "small.en": "~500 MB",
+        "medium": "~1.5 GB", "medium.en": "~1.5 GB",
+        "large-v1": "~3 GB", "large-v2": "~3 GB", "large-v3": "~3 GB",
+        "turbo": "~1.6 GB", "large-v3-turbo": "~1.6 GB",
+    }
+    size_str = model_sizes.get(model_size, "unknown size")
+
+    # Resolve model name to HF repo ID
+    try:
+        from faster_whisper.utils import _MODELS
+        repo_id = _MODELS.get(model_size, model_size)
+    except Exception:
+        repo_id = f"Systran/faster-whisper-{model_size}"
+
     print(f"")
     print(f"  OpenCut Model Downloader")
     print(f"  ========================")
     print(f"")
-    print(f"  Downloading Whisper '{model_size}' model...")
-    print(f"  This may take a few minutes depending on your connection.")
+    print(f"  Model:  Whisper '{model_size}' ({size_str})")
+    print(f"  Repo:   {repo_id}")
+    print(f"  Source: Hugging Face (huggingface.co)")
     print(f"")
 
+    # Step 1: Download model files with progress
+    try:
+        from huggingface_hub import snapshot_download, list_repo_files
+        import time
+
+        print(f"  Fetching file list...")
+        files = list_repo_files(repo_id)
+        total_files = len(files)
+        print(f"  Found {total_files} files to download.")
+        print(f"")
+
+        _file_count = [0]
+        _start_time = [time.time()]
+
+        def _progress_callback(step_name: str):
+            """Called when tqdm updates — we intercept to show our own progress."""
+            pass
+
+        # Monkey-patch tqdm to show cleaner progress
+        try:
+            import tqdm as _tqdm_mod
+            _orig_tqdm = _tqdm_mod.tqdm
+
+            class _InstallerTqdm(_orig_tqdm):
+                def __init__(self, *args, **kwargs):
+                    kwargs["bar_format"] = "  {desc} {percentage:3.0f}% |{bar:25}| {n_fmt}/{total_fmt} {rate_fmt}"
+                    kwargs["ncols"] = 75
+                    kwargs.setdefault("file", sys.stdout)
+                    super().__init__(*args, **kwargs)
+
+            _tqdm_mod.tqdm = _InstallerTqdm
+        except Exception:
+            pass
+
+        print(f"  Downloading from Hugging Face...")
+        print(f"")
+        snapshot_download(repo_id, local_files_only=False)
+        print(f"")
+
+        # Restore tqdm
+        try:
+            _tqdm_mod.tqdm = _orig_tqdm
+        except Exception:
+            pass
+
+    except Exception as e:
+        print(f"  [ERROR] Download failed: {e}")
+        print(f"")
+        print(f"  You can download it later from the OpenCut panel in Premiere Pro.")
+        return 1
+
+    # Step 2: Verify model loads correctly
+    print(f"")
+    print(f"  Verifying model...")
     try:
         from faster_whisper import WhisperModel
         model = WhisperModel(model_size, device="cpu", compute_type="int8")
         del model
-        print(f"  [OK] Whisper '{model_size}' model downloaded and verified.")
+        print(f"  [OK] Whisper '{model_size}' model downloaded and verified!")
     except Exception as e:
-        print(f"  [ERROR] Failed to download model: {e}")
-        print(f"  You can download it later from the OpenCut panel in Premiere Pro.")
-        return 1
+        print(f"  [WARNING] Model downloaded but verification failed: {e}")
+        print(f"  The model may still work — try it from the OpenCut panel.")
 
     print(f"")
     print(f"  Models are cached in your user profile and will be")
@@ -6240,6 +6321,10 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.download_models is not None:
+        # Suppress HF warnings before any huggingface imports happen
+        os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
+        os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+        os.environ["HF_HUB_DISABLE_EXPERIMENTAL_WARNING"] = "1"
         sys.exit(download_models(args.download_models))
     else:
         run_server(host=args.host, port=args.port, debug=args.debug)
