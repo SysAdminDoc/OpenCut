@@ -2,15 +2,14 @@ Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
 strPath = fso.GetParentFolderName(WScript.ScriptFullName)
-strExe = """" & strPath & "\server\OpenCut-Server.exe"""
+strExe = strPath & "\server\OpenCut-Server.exe"
 
 ' Add bundled ffmpeg to PATH if present
-strEnv = ""
 If fso.FolderExists(strPath & "\server\ffmpeg") Then
-    strEnv = "set PATH=" & strPath & "\server\ffmpeg;%PATH% && "
+    Dim objEnv
+    Set objEnv = WshShell.Environment("Process")
+    objEnv("PATH") = strPath & "\server\ffmpeg;" & objEnv("PATH")
 End If
 
-strCmd = "cmd /c " & strEnv & strExe
-
 ' Run completely hidden (0 = hidden, False = don't wait)
-WshShell.Run strCmd, 0, False
+WshShell.Run """" & strExe & """", 0, False

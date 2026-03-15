@@ -120,10 +120,10 @@ opencut = "opencut.cli:main"
 opencut-server = "opencut.server:main"
 
 [project.urls]
-Homepage = "https://github.com/opencut/opencut"
-Repository = "https://github.com/opencut/opencut"
-Issues = "https://github.com/opencut/opencut/issues"
-Documentation = "https://github.com/opencut/opencut/wiki"
+Homepage = "https://github.com/SysAdminDoc/OpenCut"
+Repository = "https://github.com/SysAdminDoc/OpenCut"
+Issues = "https://github.com/SysAdminDoc/OpenCut/issues"
+Documentation = "https://github.com/SysAdminDoc/OpenCut/wiki"
 
 [tool.setuptools.packages.find]
 include = ["opencut*"]

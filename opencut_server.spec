@@ -31,6 +31,8 @@ external_hiddenimports = [
     'click',
     'rich',
     'soundfile',
+    'tokenizers',
+    'sentencepiece',
 ]
 
 # Filter to only actually installed packages
@@ -44,11 +46,19 @@ for mod in external_hiddenimports:
 
 all_hiddenimports = opencut_hiddenimports + valid_imports
 
+# Collect native DLLs and data for ctranslate2/faster_whisper
+extra_datas = []
+for pkg in ['ctranslate2', 'faster_whisper']:
+    try:
+        extra_datas += collect_data_files(pkg)
+    except Exception:
+        pass
+
 a = Analysis(
     ['opencut\\server.py'],
     pathex=['.'],
     binaries=[],
-    datas=[],
+    datas=extra_datas,
     hiddenimports=all_hiddenimports,
     hookspath=[],
     hooksconfig={},
