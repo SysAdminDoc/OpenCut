@@ -37,13 +37,13 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 Name: "autostart"; Description: "Start OpenCut server when Windows starts"; GroupDescription: "Startup:"
-Name: "installextension"; Description: "Install Adobe Premiere Pro CEP extension"; GroupDescription: "Adobe Integration:"; Flags: checkedonce
-Name: "downloadmodel"; Description: "Download Whisper AI model for captions (~150MB, requires internet)"; GroupDescription: "AI Models:"; Flags: checkedonce
+Name: "installextension"; Description: "Install Adobe Premiere Pro CEP extension"; GroupDescription: "Adobe Integration:"
+Name: "downloadmodel"; Description: "Download Whisper AI model for captions (~1.6GB, requires internet)"; GroupDescription: "AI Models:"
 Name: "downloadmodel\tiny"; Description: "tiny (75MB) — Fastest, lower accuracy"; GroupDescription: "AI Models:"; Flags: exclusive unchecked
-Name: "downloadmodel\base"; Description: "base (150MB) — Good balance (recommended)"; GroupDescription: "AI Models:"; Flags: exclusive
+Name: "downloadmodel\base"; Description: "base (150MB) — Good balance"; GroupDescription: "AI Models:"; Flags: exclusive unchecked
 Name: "downloadmodel\small"; Description: "small (500MB) — Better accuracy, slower"; GroupDescription: "AI Models:"; Flags: exclusive unchecked
 Name: "downloadmodel\medium"; Description: "medium (1.5GB) — High accuracy, requires more RAM"; GroupDescription: "AI Models:"; Flags: exclusive unchecked
-Name: "downloadmodel\turbo"; Description: "turbo (1.6GB) — Best speed/accuracy ratio, needs good hardware"; GroupDescription: "AI Models:"; Flags: exclusive unchecked
+Name: "downloadmodel\turbo"; Description: "turbo (1.6GB) — Best speed/accuracy ratio (recommended)"; GroupDescription: "AI Models:"; Flags: exclusive
 
 [Files]
 ; Icon
