@@ -157,6 +157,16 @@ def _save_whisper_settings(settings: dict):
 app = Flask(__name__)
 CORS(app, origins=["null", "file://"])  # CEP panels use null origin; file:// for local dev
 
+
+@app.errorhandler(RuntimeError)
+def handle_runtime_error(e):
+    """Return 429 for max-concurrent-jobs errors, 500 for others."""
+    msg = str(e)
+    if "concurrent jobs" in msg.lower():
+        return jsonify({"error": msg}), 429
+    logger.exception("Unhandled RuntimeError: %s", e)
+    return jsonify({"error": msg}), 500
+
 # ---------------------------------------------------------------------------
 # Job tracking
 # ---------------------------------------------------------------------------
@@ -249,6 +259,7 @@ def _cleanup_old_jobs():
         ]
         for jid in expired:
             del jobs[jid]
+            _job_processes.pop(jid, None)
 
 
 def _resolve_output_dir(filepath: str, requested_dir: str = "") -> str:
@@ -2101,9 +2112,10 @@ def video_watermark():
             effective_dir = _resolve_output_dir(filepath, output_dir)
             base_name = os.path.splitext(os.path.basename(filepath))[0]
             ext = os.path.splitext(filepath)[1].lower()
-            
+            temp_video = None
+
             _update_job(job_id, progress=5, message="Initializing AI models...")
-            
+
             # Determine if video or image
             video_exts = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v', '.flv', '.wmv'}
             is_video = ext in video_exts
@@ -2392,6 +2404,7 @@ def install_watermark():
             'opencv-python'
         ]
         
+        failed = []
         for pkg in packages:
             result = subprocess.run(
                 [sys.executable, '-m', 'pip', 'install', pkg, '--break-system-packages'],
@@ -2407,7 +2420,11 @@ def install_watermark():
                     text=True,
                     timeout=600
                 )
-        
+                if result.returncode != 0:
+                    failed.append(pkg)
+
+        if failed:
+            return jsonify({"error": f"Failed to install: {', '.join(failed)}"}), 500
         return jsonify({"success": True, "message": "Watermark remover installed successfully"})
         
     except subprocess.TimeoutExpired:
@@ -3162,6 +3179,7 @@ def export_video():
             proc = _sp.Popen(
                 cmd, stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True
             )
+            _register_job_process(job_id, proc)
 
             # Calculate expected output duration for progress estimation
             total_kept = sum(
@@ -3183,6 +3201,7 @@ def export_video():
 
                 if _is_cancelled(job_id):
                     proc.kill()
+                    _job_processes.pop(job_id, None)
                     # Clean up partial file
                     if os.path.exists(output_path):
                         try:
@@ -3192,6 +3211,7 @@ def export_video():
                     return
 
             proc.wait()
+            _job_processes.pop(job_id, None)
 
             if proc.returncode != 0:
                 _update_job(
@@ -6418,7 +6438,7 @@ def delete_model():
     ]
     if WHISPER_MODELS_DIR:
         allowed_roots.append(os.path.realpath(WHISPER_MODELS_DIR))
-    if not any(path.startswith(r) for r in allowed_roots):
+    if not any(path == r or path.startswith(r + os.sep) for r in allowed_roots):
         return jsonify({"error": "Cannot delete files outside of model cache directories"}), 403
     try:
         if os.path.isdir(path):
@@ -6561,8 +6581,8 @@ def _process_queue():
             entry["status"] = "error"
             logger.exception("Queue processing error: %s", e)
         finally:
-            _queue_running = False
             with job_queue_lock:
+                _queue_running = False
                 # Remove completed entries
                 job_queue[:] = [e for e in job_queue if e["status"] in ("queued", "running", "started")]
             # Process next
@@ -6596,8 +6616,10 @@ def video_reframe():
     """Reframe/resize video for a target aspect ratio using crop, pad, or scale."""
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
-    if not filepath or not os.path.isfile(filepath):
-        return jsonify({"error": "File not found"}), 400
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+    if not os.path.isfile(filepath):
+        return jsonify({"error": f"File not found: {filepath}"}), 400
 
     target_w = int(data.get("width", 1080))
     target_h = int(data.get("height", 1920))
@@ -6985,17 +7007,14 @@ def serve_file():
     if not filepath or not os.path.isfile(filepath):
         return jsonify({"error": "File not found"}), 404
     # Security: only serve files from temp or opencut output directories
-    abs_path = os.path.abspath(filepath)
+    abs_path = os.path.realpath(filepath)
     allowed_prefixes = [
-        os.path.abspath(tempfile.gettempdir()),
-        os.path.abspath(_OPENCUT_DIR),
+        os.path.realpath(tempfile.gettempdir()),
+        os.path.realpath(_OPENCUT_DIR),
     ]
-    # Also allow files in the same directory as the input (common output location)
-    if not any(abs_path.startswith(p) for p in allowed_prefixes):
-        # Check if it's in a typical output directory pattern
-        parent = os.path.dirname(abs_path)
-        if not (parent.endswith("_opencut") or "_opencut_" in os.path.basename(abs_path)):
-            return jsonify({"error": "Access denied"}), 403
+    # Ensure prefix check uses path separators to avoid partial matches
+    if not any(abs_path == p or abs_path.startswith(p + os.sep) for p in allowed_prefixes):
+        return jsonify({"error": "Access denied"}), 403
     mime_type = mimetypes.guess_type(filepath)[0] or "application/octet-stream"
     return send_file(filepath, mimetype=mime_type)
 
