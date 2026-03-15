@@ -1,5 +1,31 @@
 # Changelog
 
+## v1.1.0 (2026-03-15)
+
+### New Features
+- **Preset Save/Load**: Save and load all panel settings as named presets (persisted to `~/.opencut/user_presets.json`)
+- **AI Model Manager**: View all downloaded AI models (HuggingFace, Torch, Whisper) with sizes, delete unused models to free space
+- **GPU Auto-Detection & Recommendation**: Automatically recommend optimal model sizes and settings based on detected GPU VRAM
+- **Job Queue System**: Queue multiple jobs for sequential processing instead of waiting for each to finish
+- **Enhanced Job History**: Re-run previous jobs directly from history, toast notifications on completion
+- **Keyboard Shortcuts**: Enter to run active operation, 1-6 to switch tabs, Escape to cancel
+- **Enhanced Drag-and-Drop**: Drop files anywhere on the panel, not just the drop zone
+- **Toast Notifications**: Non-intrusive slide-in notifications for job completion/errors
+- **Transcript Search**: Search and navigate through transcript segments with highlight
+- **Social Platform Export Presets**: Quick export presets for YouTube Shorts, TikTok, Instagram Reel/Story/Post, Twitter/X, LinkedIn
+- **Premiere Theme Sync**: Detect Premiere Pro's UI brightness via CSInterface
+- **Universal Auto-Import**: Smart ExtendScript import function that routes files to appropriate project bins
+
+### Bug Fixes (v1.0.0 audit)
+- Fixed 6 broken install routes using `subprocess.run` instead of `_sp.run`
+- Fixed SSE race condition (dict copy + status read now inside `job_lock`)
+- Fixed VBS launcher path quoting for `C:\Program Files\OpenCut`
+- Replaced `eval()` with `JSON.parse()` in ExtendScript
+- Fixed wrong `/cut/silence` endpoint in social_ready workflow
+- Fixed `jobStarting` guard and `no_input` flag in all applicable routes
+- Fixed temp file leaks in audio_separate and watermark routes
+- Added `user-select: text` override for CEP Chromium inputs
+
 ## v1.0.0-beta (2026-02-09)
 
 First public beta release with full feature set.

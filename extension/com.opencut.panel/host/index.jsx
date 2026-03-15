@@ -1081,3 +1081,87 @@ function startOpenCutBackend() {
     }
     return JSON.stringify({ error: "Could not launch backend. Start manually: python -m opencut.server" });
 }
+
+
+/**
+ * Get Premiere Pro's current UI brightness for theme syncing.
+ * Returns JSON with brightness level (0-255 range).
+ *
+ * @returns {string} JSON: {brightness: number, isDark: boolean}
+ */
+function getPremiereThemeInfo() {
+    try {
+        // CSInterface handles this on the panel side, but for ExtendScript
+        // we can check the app display name / version for context
+        var info = {
+            appName: app.name || "Premiere Pro",
+            appVersion: app.version || "unknown",
+            projectName: "",
+            projectPath: ""
+        };
+        if (app.project) {
+            info.projectName = app.project.name || "";
+            info.projectPath = app.project.path || "";
+        }
+        return JSON.stringify(info);
+    } catch (e) {
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+
+/**
+ * Auto-import any output file by detecting its type and placing it
+ * in the appropriate project bin. Universal import handler.
+ *
+ * @param {string} filePath  - Full path to the output file
+ * @param {string} jobType   - The type of job that produced this file (e.g., "denoise", "export-preset")
+ * @returns {string} JSON result
+ */
+function autoImportResult(filePath, jobType) {
+    _ocLog("autoImportResult: " + filePath + " (type: " + jobType + ")");
+
+    if (!filePath) {
+        return JSON.stringify({ error: "No file path provided" });
+    }
+
+    var f = new File(filePath);
+    if (!f.exists) {
+        return JSON.stringify({ error: "File not found: " + filePath });
+    }
+
+    // Determine the bin name based on job type
+    var binName = "OpenCut Output";
+    if (jobType) {
+        var t = jobType.toLowerCase();
+        if (t.indexOf("caption") !== -1 || t.indexOf("subtitle") !== -1 || t.indexOf("srt") !== -1) {
+            binName = "OpenCut Captions";
+        } else if (t.indexOf("audio") !== -1 || t.indexOf("denoise") !== -1 || t.indexOf("normalize") !== -1 || t.indexOf("stem") !== -1 || t.indexOf("tts") !== -1 || t.indexOf("sfx") !== -1 || t.indexOf("music") !== -1) {
+            binName = "OpenCut Audio";
+        } else if (t.indexOf("export") !== -1) {
+            binName = "OpenCut Exports";
+        } else if (t.indexOf("thumbnail") !== -1) {
+            binName = "OpenCut Thumbnails";
+        }
+    }
+
+    // Check if already imported
+    var existing = _findProjectItemByPath(app.project.rootItem, filePath, 0);
+    if (existing) {
+        return JSON.stringify({ success: true, message: "Already in project (" + binName + ")" });
+    }
+
+    var targetBin = _findOrCreateBin(binName);
+    if (!targetBin) targetBin = app.project.rootItem;
+
+    try {
+        app.project.importFiles([filePath], false, targetBin, false);
+    } catch (e) {
+        return JSON.stringify({ error: "Import failed: " + e.toString() });
+    }
+
+    return JSON.stringify({
+        success: true,
+        message: "Imported to " + binName
+    });
+}

@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v0.6.5 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.1.0 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -2655,3 +2655,192 @@ input[type="checkbox"] {
 .job-history-status.complete { background: var(--neon-green); }
 .job-history-status.error { background: var(--neon-red, #ff4444); }
 .job-history-status.cancelled { background: var(--text-muted); }
+
+/* ============================================================
+   JOB QUEUE BAR
+   ============================================================ */
+.job-queue-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 4px 12px;
+    background: var(--bg-raised);
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+}
+.job-queue-bar .queue-info {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-secondary);
+}
+
+/* ============================================================
+   PRESET SAVE/LOAD
+   ============================================================ */
+.preset-save-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.preset-save-row .text-input {
+    flex: 1;
+}
+
+/* ============================================================
+   MODEL MANAGEMENT LIST
+   ============================================================ */
+.model-list {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--bg-input);
+}
+.model-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 11px;
+}
+.model-item:last-child { border-bottom: none; }
+.model-item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+    flex: 1;
+}
+.model-item-name {
+    color: var(--text-primary);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.model-item-meta {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+.model-item-delete {
+    background: none;
+    border: none;
+    color: var(--neon-red, #ff4444);
+    cursor: pointer;
+    padding: 2px 6px;
+    font-size: 11px;
+    border-radius: 3px;
+    opacity: 0.6;
+    flex-shrink: 0;
+}
+.model-item-delete:hover { opacity: 1; background: rgba(255, 0, 0, 0.1); }
+
+/* ============================================================
+   GPU RECOMMENDATION
+   ============================================================ */
+.gpu-rec { margin-top: 8px; }
+.gpu-rec-notes {
+    margin-top: 6px;
+    padding: 6px 8px;
+    background: var(--bg-input);
+    border-radius: var(--radius);
+    font-size: 10px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* ============================================================
+   TRANSCRIPT SEARCH
+   ============================================================ */
+.transcript-search {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 0;
+}
+.transcript-search .text-input {
+    flex: 1;
+    font-size: 11px;
+    padding: 4px 8px;
+}
+.transcript-search-count {
+    font-size: 10px;
+    color: var(--text-muted);
+    white-space: nowrap;
+    min-width: 40px;
+    text-align: center;
+}
+.transcript-segment.search-highlight {
+    background: rgba(255, 255, 0, 0.15) !important;
+    border-left: 2px solid var(--neon-orange, #ff8800);
+}
+.transcript-segment.search-active {
+    background: rgba(255, 200, 0, 0.25) !important;
+    border-left: 2px solid var(--neon-cyan, #00ffff);
+}
+
+/* ============================================================
+   KEYBOARD SHORTCUT HINTS
+   ============================================================ */
+.shortcut-hint {
+    display: inline-block;
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    font-size: 9px;
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-muted);
+    margin-left: 6px;
+    vertical-align: middle;
+}
+
+/* ============================================================
+   DRAG AND DROP ZONE ENHANCEMENTS
+   ============================================================ */
+.drop-zone.drag-active {
+    border-color: var(--neon-cyan, #00ffff) !important;
+    background: rgba(0, 255, 255, 0.05) !important;
+    box-shadow: 0 0 15px rgba(0, 255, 255, 0.15);
+}
+.drop-zone.drag-active .drop-zone-icon {
+    transform: scale(1.2);
+    transition: transform 0.2s ease;
+}
+
+/* ============================================================
+   NOTIFICATION TOAST (for completion alerts)
+   ============================================================ */
+.toast-notification {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    font-size: 12px;
+    color: var(--text-primary);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    max-width: 280px;
+    animation: toast-slide-in 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.toast-notification.success { border-left: 3px solid var(--neon-green, #00ff88); }
+.toast-notification.error { border-left: 3px solid var(--neon-red, #ff0055); }
+.toast-notification.info { border-left: 3px solid var(--neon-cyan, #00ffff); }
+@keyframes toast-slide-in {
+    from { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}
+.toast-notification.fade-out {
+    animation: toast-fade-out 0.3s ease forwards;
+}
+@keyframes toast-fade-out {
+    to { transform: translateX(100%); opacity: 0; }
+}

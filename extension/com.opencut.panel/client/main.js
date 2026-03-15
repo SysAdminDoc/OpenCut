@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v0.6.5
+   OpenCut CEP Panel - Main Controller v1.1.0
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -760,6 +760,38 @@
         // Job history
         el.jobHistoryToggle = $("jobHistoryToggle");
         el.jobHistory = $("jobHistory");
+
+        // Presets
+        el.presetNameInput = $("presetNameInput");
+        el.savePresetBtn = $("savePresetBtn");
+        el.presetSelect = $("presetSelect");
+        el.loadPresetBtn = $("loadPresetBtn");
+        el.deletePresetBtn = $("deletePresetBtn");
+
+        // Model management
+        el.modelList = $("modelList");
+        el.modelsTotalSize = $("modelsTotalSize");
+        el.refreshModelsBtn = $("refreshModelsBtn");
+
+        // GPU recommendation
+        el.getGpuRecBtn = $("getGpuRecBtn");
+        el.gpuRecResults = $("gpuRecResults");
+        el.gpuRecModel = $("gpuRecModel");
+        el.gpuRecQuality = $("gpuRecQuality");
+        el.gpuRecDevice = $("gpuRecDevice");
+        el.gpuRecNotes = $("gpuRecNotes");
+        el.applyGpuRecBtn = $("applyGpuRecBtn");
+
+        // Job queue
+        el.jobQueueBar = $("jobQueueBar");
+        el.queueStatusText = $("queueStatusText");
+        el.clearQueueBtn = $("clearQueueBtn");
+
+        // Transcript search
+        el.transcriptSearchInput = $("transcriptSearchInput");
+        el.transcriptSearchCount = $("transcriptSearchCount");
+        el.transcriptSearchPrev = $("transcriptSearchPrev");
+        el.transcriptSearchNext = $("transcriptSearchNext");
     }
 
     // ================================================================
@@ -3273,10 +3305,18 @@
             type: job.type,
             status: job.status || "complete",
             message: job.message || "",
-            time: new Date().toLocaleTimeString()
+            time: new Date().toLocaleTimeString(),
+            endpoint: lastJobEndpoint || "",
+            payload: lastJobPayload ? JSON.parse(JSON.stringify(lastJobPayload)) : null
         });
         if (jobHistoryList.length > MAX_JOB_HISTORY) jobHistoryList.pop();
         renderJobHistory();
+        // Show toast notification on completion
+        if (job.status === "complete") {
+            showToast(job.type + " completed", "success");
+        } else if (job.status === "error") {
+            showToast(job.type + " failed", "error");
+        }
     }
 
     function renderJobHistory() {
@@ -3286,12 +3326,28 @@
         for (var i = 0; i < jobHistoryList.length; i++) {
             var h = jobHistoryList[i];
             var statusClass = h.status === "complete" ? "complete" : (h.status === "cancelled" ? "cancelled" : "error");
-            html += '<div class="job-history-item">' +
-                '<span style="display:flex;align-items:center"><span class="job-history-status ' + statusClass + '"></span>' +
+            html += '<div class="job-history-item" data-idx="' + i + '">' +
+                '<span style="display:flex;align-items:center;gap:4px"><span class="job-history-status ' + statusClass + '"></span>' +
                 esc(h.type) + '</span>' +
-                '<span>' + esc(h.time) + '</span></div>';
+                '<span style="display:flex;align-items:center;gap:6px">' +
+                '<span style="font-size:10px;color:var(--text-muted)">' + esc(h.time) + '</span>' +
+                (h.endpoint ? '<button class="btn-sm job-history-rerun" data-idx="' + i + '" title="Re-run this job" style="padding:1px 5px;font-size:9px">Re-run</button>' : '') +
+                '</span></div>';
         }
         el.jobHistory.innerHTML = html;
+
+        // Attach re-run handlers
+        var rerunBtns = el.jobHistory.querySelectorAll(".job-history-rerun");
+        for (var j = 0; j < rerunBtns.length; j++) {
+            rerunBtns[j].addEventListener("click", function (e) {
+                e.stopPropagation();
+                var idx = parseInt(this.getAttribute("data-idx"));
+                var entry = jobHistoryList[idx];
+                if (entry && entry.endpoint && entry.payload) {
+                    startJob(entry.endpoint, entry.payload);
+                }
+            });
+        }
     }
 
     function initJobHistory() {
@@ -3307,15 +3363,470 @@
     }
 
     // ================================================================
-    // Escape to Cancel
+    // Escape to Cancel + Keyboard Shortcuts
     // ================================================================
-    function initEscapeCancel() {
+    function initKeyboardShortcuts() {
         document.addEventListener("keydown", function (e) {
+            // Escape to cancel running job
             if (e.key === "Escape" && currentJob && !e.defaultPrevented) {
                 cancelJob();
+                return;
+            }
+            // Don't handle shortcuts when typing in inputs
+            var tag = e.target.tagName;
+            if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable) return;
+
+            // Enter to run the primary action for active tab/subtab
+            if (e.key === "Enter" && !currentJob) {
+                var activePanel = document.querySelector(".nav-panel.active");
+                if (!activePanel) return;
+                var activeSub = activePanel.querySelector(".sub-panel.active");
+                var target = activeSub || activePanel;
+                var primaryBtn = target.querySelector(".btn-primary:not([disabled])");
+                if (primaryBtn) {
+                    e.preventDefault();
+                    primaryBtn.click();
+                }
+                return;
+            }
+
+            // Tab switching: 1-6 for main tabs
+            if (e.key >= "1" && e.key <= "6" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+                var tabBtns = document.querySelectorAll(".nav-tab");
+                var idx = parseInt(e.key) - 1;
+                if (tabBtns[idx]) {
+                    e.preventDefault();
+                    tabBtns[idx].click();
+                }
             }
         });
     }
+
+    // ================================================================
+    // Preset Save / Load
+    // ================================================================
+    function initPresets() {
+        if (!el.savePresetBtn) return;
+
+        el.savePresetBtn.addEventListener("click", function () {
+            var name = el.presetNameInput ? el.presetNameInput.value.trim() : "";
+            if (!name) { showAlert("Enter a preset name."); return; }
+            var settings = collectCurrentSettings();
+            api("POST", "/presets/save", { name: name, settings: settings }, function (err, data) {
+                if (!err && data && data.success) {
+                    showAlert("Preset saved: " + name);
+                    showToast("Preset '" + name + "' saved", "success");
+                    el.presetNameInput.value = "";
+                    refreshPresetList();
+                } else {
+                    showAlert("Failed to save preset.");
+                }
+            });
+        });
+
+        if (el.loadPresetBtn) el.loadPresetBtn.addEventListener("click", function () {
+            if (!el.presetSelect || !el.presetSelect.value) { showAlert("Select a preset first."); return; }
+            api("GET", "/presets", null, function (err, data) {
+                if (!err && data) {
+                    var preset = data[el.presetSelect.value];
+                    if (preset && preset.settings) {
+                        applyPresetSettings(preset.settings);
+                        showAlert("Preset loaded: " + el.presetSelect.value);
+                        showToast("Preset loaded", "info");
+                    }
+                }
+            });
+        });
+
+        if (el.deletePresetBtn) el.deletePresetBtn.addEventListener("click", function () {
+            if (!el.presetSelect || !el.presetSelect.value) return;
+            var name = el.presetSelect.value;
+            api("POST", "/presets/delete", { name: name }, function (err, data) {
+                if (!err && data && data.success) {
+                    showAlert("Preset deleted: " + name);
+                    refreshPresetList();
+                }
+            });
+        });
+
+        refreshPresetList();
+    }
+
+    function refreshPresetList() {
+        if (!el.presetSelect) return;
+        api("GET", "/presets", null, function (err, data) {
+            if (err || !data) return;
+            var keys = Object.keys(data);
+            var html = "";
+            if (keys.length === 0) {
+                html = '<option value="" disabled selected>No presets saved</option>';
+            } else {
+                html = '<option value="" disabled selected>Select preset...</option>';
+                for (var i = 0; i < keys.length; i++) {
+                    html += '<option value="' + esc(keys[i]) + '">' + esc(keys[i]) + '</option>';
+                }
+            }
+            el.presetSelect.innerHTML = html;
+            if (el.presetSelect._customDropdown) el.presetSelect._customDropdown.rebuild();
+        });
+    }
+
+    function collectCurrentSettings() {
+        var s = {};
+        // Gather values from all visible form controls
+        var selects = document.querySelectorAll("select:not(.no-custom)");
+        for (var i = 0; i < selects.length; i++) {
+            if (selects[i].id) s["s_" + selects[i].id] = selects[i].value;
+        }
+        var ranges = document.querySelectorAll('input[type="range"]');
+        for (var i = 0; i < ranges.length; i++) {
+            if (ranges[i].id) s["r_" + ranges[i].id] = ranges[i].value;
+        }
+        var checks = document.querySelectorAll('input[type="checkbox"]');
+        for (var i = 0; i < checks.length; i++) {
+            if (checks[i].id) s["c_" + checks[i].id] = checks[i].checked;
+        }
+        return s;
+    }
+
+    function applyPresetSettings(s) {
+        for (var key in s) {
+            if (!s.hasOwnProperty(key)) continue;
+            var id = key.substring(2);
+            var elem = document.getElementById(id);
+            if (!elem) continue;
+            if (key.charAt(0) === "s") {
+                elem.value = s[key];
+                if (elem._customDropdown) elem._customDropdown.updateText();
+                var evt = new Event("change", { bubbles: true });
+                elem.dispatchEvent(evt);
+            } else if (key.charAt(0) === "r") {
+                elem.value = s[key];
+                var evt2 = new Event("input", { bubbles: true });
+                elem.dispatchEvent(evt2);
+            } else if (key.charAt(0) === "c") {
+                elem.checked = s[key];
+            }
+        }
+    }
+
+    // ================================================================
+    // Model Management
+    // ================================================================
+    function initModelManagement() {
+        if (!el.refreshModelsBtn) return;
+        el.refreshModelsBtn.addEventListener("click", refreshModelList);
+    }
+
+    function refreshModelList() {
+        if (!el.modelList) return;
+        el.modelList.innerHTML = '<div class="hint">Scanning...</div>';
+        api("GET", "/models/list", null, function (err, data) {
+            if (err || !data) {
+                el.modelList.innerHTML = '<div class="hint">Failed to load models.</div>';
+                return;
+            }
+            if (!data.models || data.models.length === 0) {
+                el.modelList.innerHTML = '<div class="hint">No models found.</div>';
+                if (el.modelsTotalSize) el.modelsTotalSize.textContent = "0 MB";
+                return;
+            }
+            var html = "";
+            for (var i = 0; i < data.models.length; i++) {
+                var m = data.models[i];
+                var sizeStr = m.size_mb >= 1024 ? (m.size_mb / 1024).toFixed(1) + " GB" : m.size_mb.toFixed(0) + " MB";
+                html += '<div class="model-item">' +
+                    '<div class="model-item-info"><span class="model-item-name">' + esc(m.name) + '</span>' +
+                    '<span class="model-item-meta">' + sizeStr + ' - ' + esc(m.source) + '</span></div>' +
+                    '<button class="model-item-delete" data-path="' + esc(m.path) + '" title="Delete model">Delete</button>' +
+                    '</div>';
+            }
+            el.modelList.innerHTML = html;
+            if (el.modelsTotalSize) {
+                var totalStr = data.total_mb >= 1024 ? (data.total_mb / 1024).toFixed(1) + " GB" : data.total_mb.toFixed(0) + " MB";
+                el.modelsTotalSize.textContent = totalStr;
+            }
+            // Attach delete handlers
+            var delBtns = el.modelList.querySelectorAll(".model-item-delete");
+            for (var j = 0; j < delBtns.length; j++) {
+                delBtns[j].addEventListener("click", function () {
+                    var path = this.getAttribute("data-path");
+                    api("POST", "/models/delete", { path: path }, function (err2, data2) {
+                        if (!err2 && data2 && data2.success) {
+                            showToast("Model deleted", "success");
+                            refreshModelList();
+                        } else {
+                            showAlert("Failed to delete model.");
+                        }
+                    });
+                });
+            }
+        }, 30000);
+    }
+
+    // ================================================================
+    // GPU Recommendation
+    // ================================================================
+    function initGpuRecommendation() {
+        if (!el.getGpuRecBtn) return;
+        el.getGpuRecBtn.addEventListener("click", function () {
+            el.getGpuRecBtn.textContent = "Checking...";
+            el.getGpuRecBtn.disabled = true;
+            api("GET", "/system/gpu-recommend", null, function (err, data) {
+                el.getGpuRecBtn.textContent = "Get Recommendation";
+                el.getGpuRecBtn.disabled = false;
+                if (err || !data) { showAlert("Failed to get GPU recommendation."); return; }
+                if (el.gpuRecModel) el.gpuRecModel.textContent = data.whisper_model;
+                if (el.gpuRecQuality) el.gpuRecQuality.textContent = data.caption_quality;
+                if (el.gpuRecDevice) el.gpuRecDevice.textContent = data.whisper_device;
+                if (el.gpuRecNotes) {
+                    el.gpuRecNotes.textContent = (data.notes || []).join(" ");
+                }
+                if (el.gpuRecResults) el.gpuRecResults.classList.remove("hidden");
+                _lastGpuRec = data;
+            });
+        });
+
+        if (el.applyGpuRecBtn) el.applyGpuRecBtn.addEventListener("click", function () {
+            if (!_lastGpuRec) return;
+            // Apply the recommended model to all model selects
+            var modelSelects = ["captionModel", "subModel", "fillerModel", "transcriptModel", "settingsDefaultModel"];
+            for (var i = 0; i < modelSelects.length; i++) {
+                var sel = document.getElementById(modelSelects[i]);
+                if (sel) {
+                    // Check if the recommended value exists as an option
+                    for (var j = 0; j < sel.options.length; j++) {
+                        if (sel.options[j].value === _lastGpuRec.whisper_model) {
+                            sel.value = _lastGpuRec.whisper_model;
+                            if (sel._customDropdown) sel._customDropdown.updateText();
+                            break;
+                        }
+                    }
+                }
+            }
+            saveLocalSettings();
+            showToast("GPU recommendations applied", "success");
+        });
+    }
+    var _lastGpuRec = null;
+
+    // ================================================================
+    // Job Queue UI
+    // ================================================================
+    function initQueue() {
+        if (!el.clearQueueBtn) return;
+        el.clearQueueBtn.addEventListener("click", function () {
+            api("POST", "/queue/clear", {}, function (err, data) {
+                if (!err && data) {
+                    showAlert("Queue cleared: " + (data.removed || 0) + " jobs removed.");
+                    refreshQueueStatus();
+                }
+            });
+        });
+    }
+
+    function addToQueue(endpoint, payload) {
+        api("POST", "/queue/add", { endpoint: endpoint, payload: payload }, function (err, data) {
+            if (!err && data) {
+                showToast("Added to queue (position " + data.position + ")", "info");
+                refreshQueueStatus();
+            }
+        });
+    }
+
+    function refreshQueueStatus() {
+        api("GET", "/queue/list", null, function (err, data) {
+            if (err || !data) return;
+            var count = data.length;
+            if (el.jobQueueBar) {
+                if (count > 0) {
+                    el.jobQueueBar.classList.remove("hidden");
+                    if (el.queueStatusText) el.queueStatusText.textContent = "Queue: " + count + " job" + (count !== 1 ? "s" : "");
+                } else {
+                    el.jobQueueBar.classList.add("hidden");
+                }
+            }
+        });
+    }
+
+    // ================================================================
+    // Toast Notifications
+    // ================================================================
+    function showToast(message, type) {
+        // Only show if notifications enabled
+        if (el.settingsShowNotifications && !el.settingsShowNotifications.checked) return;
+        var toast = document.createElement("div");
+        toast.className = "toast-notification " + (type || "info");
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(function () {
+            toast.classList.add("fade-out");
+            setTimeout(function () {
+                if (toast.parentNode) toast.parentNode.removeChild(toast);
+            }, 300);
+        }, 3000);
+    }
+
+    // ================================================================
+    // Enhanced Drag and Drop
+    // ================================================================
+    function initEnhancedDragDrop() {
+        // Enable drag and drop on the whole panel, not just the drop zone
+        var panel = document.querySelector(".app");
+        if (!panel) return;
+
+        var dragCounter = 0;
+
+        panel.addEventListener("dragenter", function (e) {
+            e.preventDefault();
+            dragCounter++;
+            if (el.dropZone) el.dropZone.classList.add("drag-active");
+        });
+
+        panel.addEventListener("dragleave", function (e) {
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
+                if (el.dropZone) el.dropZone.classList.remove("drag-active");
+            }
+        });
+
+        panel.addEventListener("dragover", function (e) {
+            e.preventDefault();
+        });
+
+        panel.addEventListener("drop", function (e) {
+            e.preventDefault();
+            dragCounter = 0;
+            if (el.dropZone) el.dropZone.classList.remove("drag-active");
+
+            var files = e.dataTransfer && e.dataTransfer.files;
+            if (files && files.length > 0) {
+                var file = files[0];
+                // CEP environment provides the file path
+                if (file.path) {
+                    selectFile(file.path, file.name);
+                    showToast("File loaded: " + file.name, "success");
+                } else {
+                    showAlert("File dropped, but path not available in this environment.");
+                }
+            }
+        });
+    }
+
+    // ================================================================
+    // Transcript Search
+    // ================================================================
+    var _searchMatches = [];
+    var _searchIndex = -1;
+
+    function initTranscriptSearch() {
+        if (!el.transcriptSearchInput) return;
+
+        el.transcriptSearchInput.addEventListener("input", function () {
+            doTranscriptSearch(this.value.trim());
+        });
+
+        if (el.transcriptSearchNext) el.transcriptSearchNext.addEventListener("click", function () {
+            if (_searchMatches.length === 0) return;
+            _searchIndex = (_searchIndex + 1) % _searchMatches.length;
+            highlightSearchMatch();
+        });
+
+        if (el.transcriptSearchPrev) el.transcriptSearchPrev.addEventListener("click", function () {
+            if (_searchMatches.length === 0) return;
+            _searchIndex = (_searchIndex - 1 + _searchMatches.length) % _searchMatches.length;
+            highlightSearchMatch();
+        });
+    }
+
+    function doTranscriptSearch(query) {
+        _searchMatches = [];
+        _searchIndex = -1;
+
+        // Clear previous highlights
+        var segments = document.querySelectorAll(".transcript-segment");
+        for (var i = 0; i < segments.length; i++) {
+            segments[i].classList.remove("search-highlight", "search-active");
+        }
+
+        if (!query) {
+            if (el.transcriptSearchCount) el.transcriptSearchCount.textContent = "";
+            return;
+        }
+
+        var lower = query.toLowerCase();
+        for (var i = 0; i < segments.length; i++) {
+            var text = segments[i].textContent || "";
+            if (text.toLowerCase().indexOf(lower) !== -1) {
+                _searchMatches.push(segments[i]);
+                segments[i].classList.add("search-highlight");
+            }
+        }
+
+        if (el.transcriptSearchCount) {
+            el.transcriptSearchCount.textContent = _searchMatches.length + " match" + (_searchMatches.length !== 1 ? "es" : "");
+        }
+
+        if (_searchMatches.length > 0) {
+            _searchIndex = 0;
+            highlightSearchMatch();
+        }
+    }
+
+    function highlightSearchMatch() {
+        for (var i = 0; i < _searchMatches.length; i++) {
+            _searchMatches[i].classList.remove("search-active");
+        }
+        if (_searchIndex >= 0 && _searchIndex < _searchMatches.length) {
+            _searchMatches[_searchIndex].classList.add("search-active");
+            _searchMatches[_searchIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+            if (el.transcriptSearchCount) {
+                el.transcriptSearchCount.textContent = (_searchIndex + 1) + "/" + _searchMatches.length;
+            }
+        }
+    }
+
+    // ================================================================
+    // Premiere Pro Theme Sync
+    // ================================================================
+    function initPremiereThemeSync() {
+        if (!inPremiere || !cs) return;
+        // CSInterface provides app skin info
+        try {
+            var skinInfo = cs.getHostEnvironment();
+            if (skinInfo && skinInfo.appSkinInfo) {
+                var bgColor = skinInfo.appSkinInfo.panelBackgroundColor;
+                if (bgColor && bgColor.color) {
+                    var r = bgColor.color.red || 0;
+                    var g = bgColor.color.green || 0;
+                    var b = bgColor.color.blue || 0;
+                    var brightness = (r + g + b) / 3;
+                    // If Premiere is using a light theme (brightness > 128),
+                    // we could switch, but all our themes are dark, so just note it
+                    if (brightness > 160) {
+                        // Premiere is in a lighter mode - show a subtle note
+                        logger("Premiere using light theme (brightness " + Math.round(brightness) + ")");
+                    }
+                }
+            }
+            // Register for theme change events
+            cs.addEventListener("com.adobe.csxs.events.ThemeColorChanged", function () {
+                // Re-check theme on change
+                initPremiereThemeSync();
+            });
+        } catch (e) {
+            // CSInterface theme API not available
+        }
+    }
+
+    function logger(msg) {
+        if (typeof console !== "undefined" && console.log) console.log("[OpenCut] " + msg);
+    }
+
+    // ================================================================
+    // Enhanced Job History (with re-run and details)
+    // ================================================================
 
     // ================================================================
     // Init
@@ -3531,9 +4042,16 @@
 
         // New features
         initDropZone();
+        initEnhancedDragDrop();
         initThemeToggle();
         initJobHistory();
-        initEscapeCancel();
+        initKeyboardShortcuts();
+        initPresets();
+        initModelManagement();
+        initGpuRecommendation();
+        initQueue();
+        initTranscriptSearch();
+        initPremiereThemeSync();
     });
 
 })();
