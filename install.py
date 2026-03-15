@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-OpenCut Installer v1.0.0-beta
+OpenCut Installer v1.0.0
 Cross-platform setup script. Run: python install.py
 """
 
