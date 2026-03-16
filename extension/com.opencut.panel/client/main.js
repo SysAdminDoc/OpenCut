@@ -22,6 +22,7 @@
     var currentJob = null;
     var pollTimer = null;
     var healthTimer = null;
+    var csrfToken = "";
     var lastXmlPath = "";
     var lastCaptionPath = "";
     var lastOverlayPath = "";
@@ -78,6 +79,9 @@
         var trigger = document.createElement('div');
         trigger.className = 'custom-dropdown-trigger';
         trigger.tabIndex = 0;
+        trigger.setAttribute("role", "combobox");
+        trigger.setAttribute("aria-expanded", "false");
+        trigger.setAttribute("aria-haspopup", "listbox");
         
         var selectedText = document.createElement('span');
         selectedText.className = 'custom-dropdown-text';
@@ -91,6 +95,7 @@
         
         var dropdown = document.createElement('div');
         dropdown.className = 'custom-dropdown-menu';
+        dropdown.setAttribute("role", "listbox");
         
         function buildOptions() {
             dropdown.innerHTML = '';
@@ -124,6 +129,7 @@
         function createOption(opt) {
             var item = document.createElement('div');
             item.className = 'custom-dropdown-item';
+            item.setAttribute("role", "option");
             if (opt.disabled) item.classList.add('disabled');
             if (opt.selected) item.classList.add('selected');
             item.dataset.value = opt.value;
@@ -173,8 +179,9 @@
             closeAllDropdowns();
             if (!isOpen) {
                 wrapper.classList.add('open');
+                trigger.setAttribute("aria-expanded", "true");
                 positionDropdown();
-                
+
                 // Scroll to selected item
                 var selectedItem = dropdown.querySelector('.custom-dropdown-item.selected');
                 if (selectedItem) {
@@ -185,6 +192,7 @@
         
         function closeDropdown() {
             wrapper.classList.remove('open');
+            trigger.setAttribute("aria-expanded", "false");
             var focused = dropdown.querySelector('.custom-dropdown-item.focused');
             if (focused) focused.classList.remove('focused');
         }
@@ -310,6 +318,8 @@
         var openDropdowns = document.querySelectorAll('.custom-dropdown.open');
         for (var i = 0; i < openDropdowns.length; i++) {
             openDropdowns[i].classList.remove('open');
+            var trig = openDropdowns[i].querySelector('.custom-dropdown-trigger');
+            if (trig) trig.setAttribute("aria-expanded", "false");
         }
     }
     
@@ -320,12 +330,20 @@
         }
     }
 
-    // ---- DOM ----
-    var el = {};
+    // ---- DOM (Lazy Proxy — elements are cached on first access) ----
+    var _elCache = {};
+    var el = new Proxy(_elCache, {
+        get: function (target, id) {
+            if (id in target) return target[id];
+            var node = document.getElementById(id);
+            if (node) target[id] = node;
+            return node;
+        }
+    });
     function $(id) { return document.getElementById(id); }
 
     function initDOM() {
-        // Header
+        // Header (pre-warm frequently used elements)
         el.connDot = $("connDot");
         el.connLabel = $("connLabel");
         el.refreshAllBtn = $("refreshAllBtn");
@@ -922,17 +940,32 @@
     // ================================================================
     // Backend Communication
     // ================================================================
+    var _inflightRequests = {};
     function api(method, path, body, callback, timeout) {
+        var key = method + " " + path;
+        // Deduplicate in-flight GET requests (F6)
+        if (method === "GET" && _inflightRequests[key]) {
+            return;
+        }
         var xhr = new XMLHttpRequest();
         xhr.open(method, BACKEND + path, true);
-        xhr.timeout = timeout || 15000;
+        xhr.timeout = timeout || 120000;
         xhr.setRequestHeader("Content-Type", "application/json");
+        if (csrfToken) xhr.setRequestHeader("X-OpenCut-Token", csrfToken);
+        if (method === "GET") _inflightRequests[key] = xhr;
         xhr.onload = function () {
+            delete _inflightRequests[key];
             try { callback(null, JSON.parse(xhr.responseText)); }
             catch (e) { callback(e, null); }
         };
-        xhr.onerror = function () { callback(new Error("Network error"), null); };
-        xhr.ontimeout = function () { callback(new Error("Timeout"), null); };
+        xhr.onerror = function () {
+            delete _inflightRequests[key];
+            callback(new Error("Network error"), null);
+        };
+        xhr.ontimeout = function () {
+            delete _inflightRequests[key];
+            callback(new Error("Timeout"), null);
+        };
         xhr.send(body ? JSON.stringify(body) : null);
     }
 
@@ -949,14 +982,22 @@
     }
 
     // ================================================================
-    // Health Check
+    // Health Check (exponential backoff on failure)
     // ================================================================
     var portScanPending = false;
+    var healthBackoff = HEALTH_MS;
+    var HEALTH_MAX_MS = 60000;
 
     function checkHealth() {
         api("GET", "/health", null, function (err, data) {
             var ok = !err && data && data.status === "ok";
             if (ok) {
+                // Reset backoff on success
+                if (healthBackoff !== HEALTH_MS) {
+                    healthBackoff = HEALTH_MS;
+                    clearInterval(healthTimer);
+                    healthTimer = setInterval(checkHealth, HEALTH_MS);
+                }
                 if (!connected && el.serverStatusBanner) {
                     el.serverStatusBanner.classList.add("hidden");
                     showToast("Server reconnected", "success");
@@ -964,6 +1005,7 @@
                 connected = true;
                 el.connDot.className = "conn-dot on";
                 el.connLabel.textContent = "Connected";
+                if (data.csrf_token) csrfToken = data.csrf_token;
                 if (data.capabilities) capabilities = data.capabilities;
                 el.backendPort.textContent = BACKEND.replace("http://127.0.0.1:", "Port ");
                 updateButtons();
@@ -975,8 +1017,12 @@
                 if (el.serverStatusMsg) el.serverStatusMsg.textContent = "Server disconnected. Reconnecting...";
             }
             connected = false;
+            // Exponential backoff: double interval on failure, cap at 60s
+            healthBackoff = Math.min(healthBackoff * 2, HEALTH_MAX_MS);
+            clearInterval(healthTimer);
+            healthTimer = setInterval(checkHealth, healthBackoff);
             if (!portScanPending) { portScanPending = true; scanForServer(); }
-        }, 2000);
+        }, 10000);
     }
 
     function scanForServer() {
@@ -1050,7 +1096,10 @@
                 el.clipSelect.innerHTML = html;
                 populateRecentFiles();
                 refreshClipDropdown();
-            } catch (e) {}
+            } catch (e) {
+                console.error("scanProjectMedia parse error:", e, result);
+                showAlert("Failed to read project media. Check console for details.");
+            }
         });
     }
 
@@ -1167,6 +1216,9 @@
         el.fileInfoBox.classList.remove("hidden");
         el.fileNameDisplay.textContent = selectedName;
         el.fileMetaDisplay.innerHTML = '<span class="skeleton skeleton-wide"></span>';
+        // CSS-driven button state: body.has-clip enables .requires-clip buttons
+        if (path) document.body.classList.add("has-clip");
+        else document.body.classList.remove("has-clip");
         updateButtons();
         updateClipPreview();
 
@@ -1245,80 +1297,35 @@
     // ================================================================
     // Button State
     // ================================================================
+    // All buttons that require a clip to be selected
+    var _clipButtons = [
+        "runSilenceBtn", "runFillersBtn", "runFullBtn",
+        "runStyledCaptionsBtn", "runSubtitleBtn", "runTranscriptBtn",
+        "runSeparateBtn", "runDenoiseBtn", "measureLoudnessBtn",
+        "runNormalizeBtn", "runBeatsBtn", "runEffectBtn",
+        "runWatermarkBtn", "runScenesBtn", "runVfxBtn", "runVidAiBtn",
+        "runProFxBtn", "runDeepFilterBtn",
+        "runFaceBlurBtn", "runStyleBtn",
+        "runTranslateBtn", "runKaraokeBtn",
+        "runExportPresetBtn", "runThumbBtn", "runBatchBtn", "runWorkflowBtn",
+        "runBurninBtn",
+        "runSpeedBtn", "runLutBtn", "runDuckBtn",
+        "runChromaBtn", "runTransBtn", "runParticlesBtn",
+        "runTitleOverlayBtn", "runReframeBtn", "runUpscaleBtn",
+        "runColorBtn", "runRemoveBtn", "runFaceAiBtn", "runAnimCapBtn",
+        "runExpTranscriptBtn", "loadWaveformBtn", "previewVfxBtn", "runTrimBtn"
+    ];
+
     function updateButtons() {
         var canRun = connected && selectedPath;
 
-        // Cut tab
-        el.runSilenceBtn.disabled = !canRun;
-        el.runFillersBtn.disabled = !canRun;
-        el.runFullBtn.disabled = !canRun;
+        // Batch-disable all clip-dependent buttons
+        for (var i = 0; i < _clipButtons.length; i++) {
+            var btn = el[_clipButtons[i]];
+            if (btn) btn.disabled = !canRun;
+        }
 
-        // Captions tab
-        el.runStyledCaptionsBtn.disabled = !canRun;
-        el.runSubtitleBtn.disabled = !canRun;
-        el.runTranscriptBtn.disabled = !canRun;
-
-        // Audio tab
-        el.runSeparateBtn.disabled = !canRun;
-        el.runDenoiseBtn.disabled = !canRun;
-        el.measureLoudnessBtn.disabled = !canRun;
-        el.runNormalizeBtn.disabled = !canRun;
-        el.runBeatsBtn.disabled = !canRun;
-        el.runEffectBtn.disabled = !canRun;
-
-        // Video tab
-        el.runWatermarkBtn.disabled = !canRun;
-        el.runScenesBtn.disabled = !canRun;
-        el.runVfxBtn.disabled = !canRun;
-        el.runVidAiBtn.disabled = !canRun;
-
-        // Audio pro tab
-        el.runProFxBtn.disabled = !canRun;
-        el.runDeepFilterBtn.disabled = !canRun;
-
-        // Video face/style
-        el.runFaceBlurBtn.disabled = !canRun;
-        el.runStyleBtn.disabled = !canRun;
-
-        // Captions translate/karaoke
-        el.runTranslateBtn.disabled = !canRun;
-        el.runKaraokeBtn.disabled = !canRun;
-
-        // Export presets/thumbnails/batch
-        el.runExportPresetBtn.disabled = !canRun;
-        el.runThumbBtn.disabled = !canRun;
-        el.runBatchBtn.disabled = !canRun;
-        el.runWorkflowBtn.disabled = !canRun;
-
-        // Caption burn-in
-        el.runBurninBtn.disabled = !canRun;
-
-        // Speed / LUT / Duck
-        el.runSpeedBtn.disabled = !canRun;
-        el.runLutBtn.disabled = !canRun;
-        el.runDuckBtn.disabled = !canRun;
-
-        // Phase 6 buttons
-        el.runChromaBtn.disabled = !canRun;
-        el.runTransBtn.disabled = !canRun;
-        el.runParticlesBtn.disabled = !canRun;
-        el.runTitleOverlayBtn.disabled = !canRun;
-        el.runReframeBtn.disabled = !canRun;
-        el.runUpscaleBtn.disabled = !canRun;
-        el.runColorBtn.disabled = !canRun;
-        el.runRemoveBtn.disabled = !canRun;
-        el.runFaceAiBtn.disabled = !canRun;
-        el.runAnimCapBtn.disabled = !canRun;
-
-        // Export tab
-        el.runExpTranscriptBtn.disabled = !canRun;
-
-        // v1.2.0 buttons
-        if (el.loadWaveformBtn) el.loadWaveformBtn.disabled = !canRun;
-        if (el.previewVfxBtn) el.previewVfxBtn.disabled = !canRun;
-
-        // v1.3.0 buttons
-        if (el.runTrimBtn) el.runTrimBtn.disabled = !canRun;
+        // Merge has special logic
         if (el.runMergeBtn) el.runMergeBtn.disabled = _mergeFiles.length < 2;
 
         // Whisper hints
@@ -1624,6 +1631,23 @@
         el.processingMsg.textContent = msg;
     }
 
+    function enhanceError(msg) {
+        if (!msg) return msg;
+        if (/not installed|No module named/i.test(msg)) {
+            return msg + " \u2014 Install from the Settings tab.";
+        }
+        if (/memory|CUDA out of memory/i.test(msg)) {
+            return msg + " \u2014 Try reducing file size or using CPU mode.";
+        }
+        if (/Permission|Access denied/i.test(msg)) {
+            return msg + " \u2014 Check file permissions.";
+        }
+        if (/No such file/i.test(msg)) {
+            return msg + " \u2014 File may have been moved or deleted.";
+        }
+        return msg;
+    }
+
     function onJobDone(job) {
         currentJob = null;
         if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
@@ -1640,7 +1664,7 @@
             el.resultsTitle.textContent = "Error";
             el.resultsTitle.removeAttribute("style");
             el.resultsTitle.setAttribute("data-state", "error");
-            el.resultsStats.textContent = job.error || job.message || "Unknown error";
+            el.resultsStats.textContent = enhanceError(job.error || job.message || "Unknown error");
             el.resultsPath.textContent = "";
             // Show retry button if we have a last job to retry
             if (lastJobEndpoint) {
@@ -2927,7 +2951,7 @@
     // ---- Transcript Undo/Redo ----
     var transcriptHistory = [];
     var transcriptHistoryIdx = -1;
-    var MAX_TRANSCRIPT_HISTORY = 30;
+    var MAX_TRANSCRIPT_HISTORY = 50;
 
     function snapshotTranscript() {
         if (!transcriptData || !transcriptData.segments) return;
@@ -2941,7 +2965,8 @@
         }
         transcriptHistory.push(snap);
         if (transcriptHistory.length > MAX_TRANSCRIPT_HISTORY) {
-            transcriptHistory.shift();
+            transcriptHistory = transcriptHistory.slice(-MAX_TRANSCRIPT_HISTORY);
+            transcriptHistoryIdx = Math.min(transcriptHistoryIdx, transcriptHistory.length - 1);
         }
         transcriptHistoryIdx = transcriptHistory.length - 1;
         updateUndoRedoButtons();
@@ -3227,6 +3252,7 @@
         };
         try {
             localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
+            showToast("Settings saved", "success");
         } catch (e) {
             // localStorage may not be available in CEP
         }
@@ -3655,6 +3681,7 @@
             api("POST", "/presets/delete", { name: name }, function (err, data) {
                 if (!err && data && data.success) {
                     showAlert("Preset deleted: " + name);
+                    showToast("Preset deleted", "success");
                     refreshPresetList();
                 }
             });
@@ -3863,9 +3890,17 @@
     // ================================================================
     // Toast Notifications
     // ================================================================
+    var MAX_TOASTS = 5;
     function showToast(message, type) {
         // Only show if notifications enabled
         if (el.settingsShowNotifications && !el.settingsShowNotifications.checked) return;
+        // Cap concurrent toasts — remove oldest if at limit
+        var existing = document.querySelectorAll(".toast-notification");
+        if (existing.length >= MAX_TOASTS) {
+            for (var ti = 0; ti <= existing.length - MAX_TOASTS; ti++) {
+                if (existing[ti].parentNode) existing[ti].parentNode.removeChild(existing[ti]);
+            }
+        }
         var toast = document.createElement("div");
         toast.className = "toast-notification " + (type || "info");
         toast.textContent = message;
@@ -4141,14 +4176,37 @@
         });
     }
 
+    var _favDelegationAdded = false;
     function renderFavorites() {
         if (!el.favoritesItems || !el.favoritesBar) return;
-        el.favoritesItems.innerHTML = "";
         if (_favorites.length === 0) {
+            el.favoritesItems.innerHTML = "";
             el.favoritesBar.classList.add("hidden");
             return;
         }
         el.favoritesBar.classList.remove("hidden");
+        // Event delegation for favorite chips (F2 pattern)
+        if (!_favDelegationAdded) {
+            _favDelegationAdded = true;
+            el.favoritesItems.addEventListener("click", function (e) {
+                var chip = e.target.closest(".fav-chip");
+                if (!chip) return;
+                var favId = chip.dataset.fav;
+                // Remove button clicked
+                if (e.target.closest(".fav-chip-remove")) {
+                    e.stopPropagation();
+                    _favorites = _favorites.filter(function (f) { return f !== favId; });
+                    saveFavorites();
+                    renderFavorites();
+                    showToast("Removed from favorites", "info");
+                    return;
+                }
+                // Navigate on label click
+                var op = _favoriteOps[favId];
+                if (op) navigateToTab(op.tab, op.sub);
+            });
+        }
+        var frag = document.createDocumentFragment();
         for (var i = 0; i < _favorites.length; i++) {
             var favId = _favorites[i];
             var op = _favoriteOps[favId];
@@ -4157,20 +4215,10 @@
             chip.className = "fav-chip";
             chip.dataset.fav = favId;
             chip.innerHTML = '<span>' + op.label + '</span><span class="fav-chip-remove">&times;</span>';
-            // Click to navigate
-            (function (fId, o) {
-                chip.querySelector("span:first-child").addEventListener("click", function () {
-                    navigateToTab(o.tab, o.sub);
-                });
-                chip.querySelector(".fav-chip-remove").addEventListener("click", function (e) {
-                    e.stopPropagation();
-                    _favorites = _favorites.filter(function (f) { return f !== fId; });
-                    saveFavorites();
-                    renderFavorites();
-                });
-            })(favId, op);
-            el.favoritesItems.appendChild(chip);
+            frag.appendChild(chip);
         }
+        el.favoritesItems.innerHTML = "";
+        el.favoritesItems.appendChild(frag);
     }
 
     function navigateToTab(tab, sub) {
@@ -4400,6 +4448,7 @@
     // ================================================================
     var _batchFiles = [];
 
+    var _batchDelegationAdded = false;
     function initBatchPicker() {
         if (el.batchAddSelectedBtn) {
             el.batchAddSelectedBtn.addEventListener("click", function () {
@@ -4424,6 +4473,18 @@
                 renderBatchFiles();
             });
         }
+        // Event delegation for batch file remove buttons (F2)
+        if (el.batchFileList && !_batchDelegationAdded) {
+            _batchDelegationAdded = true;
+            el.batchFileList.addEventListener("click", function (e) {
+                var removeBtn = e.target.closest(".batch-file-remove");
+                if (removeBtn) {
+                    var idx = parseInt(removeBtn.getAttribute("data-idx"), 10);
+                    _batchFiles.splice(idx, 1);
+                    renderBatchFiles();
+                }
+            });
+        }
     }
 
     function renderBatchFiles() {
@@ -4432,19 +4493,16 @@
             el.batchFileList.innerHTML = '<div class="hint">No files added. Use "Add Selected" or drag files.</div>';
             return;
         }
-        el.batchFileList.innerHTML = "";
+        var frag = document.createDocumentFragment();
         for (var i = 0; i < _batchFiles.length; i++) {
             var item = document.createElement("div");
             item.className = "batch-file-item";
             var name = _batchFiles[i].split(/[/\\]/).pop();
             item.innerHTML = '<span>' + (i + 1) + '. ' + name + '</span><button class="batch-file-remove" data-idx="' + i + '">&times;</button>';
-            item.querySelector(".batch-file-remove").addEventListener("click", function () {
-                var idx = parseInt(this.dataset.idx);
-                _batchFiles.splice(idx, 1);
-                renderBatchFiles();
-            });
-            el.batchFileList.appendChild(item);
+            frag.appendChild(item);
         }
+        el.batchFileList.innerHTML = "";
+        el.batchFileList.appendChild(frag);
     }
 
     // ================================================================
@@ -4464,8 +4522,8 @@
                 el.depGrid.innerHTML = '<div class="hint">Failed to check dependencies.</div>';
                 return;
             }
-            el.depGrid.innerHTML = "";
             var keys = Object.keys(data);
+            var frag = document.createDocumentFragment();
             for (var i = 0; i < keys.length; i++) {
                 var name = keys[i];
                 var info = data[name];
@@ -4474,8 +4532,10 @@
                 div.innerHTML = '<span class="dep-dot ' + (info.installed ? "installed" : "missing") + '"></span>' +
                     '<span class="dep-name">' + name + '</span>' +
                     '<span class="dep-version">' + (info.installed ? (info.version || "OK").toString().substring(0, 12) : "missing") + '</span>';
-                el.depGrid.appendChild(div);
+                frag.appendChild(div);
             }
+            el.depGrid.innerHTML = "";
+            el.depGrid.appendChild(frag);
         });
     }
 
@@ -4534,6 +4594,7 @@
     // Custom Workflow Builder
     // ================================================================
     var _workflowSteps = [];
+    var _workflowDelegationAdded = false;
 
     function initWorkflowBuilder() {
         if (el.workflowAddStepBtn) {
@@ -4545,6 +4606,18 @@
                     label: sel.options[sel.selectedIndex].textContent
                 });
                 renderWorkflowSteps();
+            });
+        }
+        // Event delegation for workflow step remove buttons (F2)
+        if (el.workflowStepList && !_workflowDelegationAdded) {
+            _workflowDelegationAdded = true;
+            el.workflowStepList.addEventListener("click", function (e) {
+                var removeBtn = e.target.closest(".workflow-step-remove");
+                if (removeBtn) {
+                    var idx = parseInt(removeBtn.getAttribute("data-idx"), 10);
+                    _workflowSteps.splice(idx, 1);
+                    renderWorkflowSteps();
+                }
             });
         }
         if (el.saveCustomWorkflowBtn) {
@@ -4609,18 +4682,15 @@
             return;
         }
         if (el.runCustomWorkflowBtn) el.runCustomWorkflowBtn.disabled = false;
-        el.workflowStepList.innerHTML = "";
+        var frag = document.createDocumentFragment();
         for (var i = 0; i < _workflowSteps.length; i++) {
             var item = document.createElement("div");
             item.className = "workflow-step-item";
             item.innerHTML = '<span class="workflow-step-num">' + (i + 1) + '</span><span>' + _workflowSteps[i].label + '</span><button class="workflow-step-remove" data-idx="' + i + '">&times;</button>';
-            item.querySelector(".workflow-step-remove").addEventListener("click", function () {
-                var idx = parseInt(this.dataset.idx);
-                _workflowSteps.splice(idx, 1);
-                renderWorkflowSteps();
-            });
-            el.workflowStepList.appendChild(item);
+            frag.appendChild(item);
         }
+        el.workflowStepList.innerHTML = "";
+        el.workflowStepList.appendChild(frag);
     }
 
     function refreshSavedWorkflows() {
@@ -5305,6 +5375,7 @@
 
         // Health check loop
         checkHealth();
+        if (healthTimer) clearInterval(healthTimer);
         healthTimer = setInterval(checkHealth, HEALTH_MS);
 
         // Scan project media and populate recent files
