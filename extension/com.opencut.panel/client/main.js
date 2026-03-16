@@ -306,11 +306,12 @@
         });
         observer.observe(select, { childList: true, subtree: true, attributes: true });
         
-        // Store reference for updating
+        // Store reference for updating and cleanup
         select._customDropdown = {
             wrapper: wrapper,
             update: buildOptions,
-            updateText: updateSelectedText
+            updateText: updateSelectedText,
+            observer: observer
         };
     }
     
@@ -4317,7 +4318,7 @@
             var chip = document.createElement("div");
             chip.className = "fav-chip";
             chip.dataset.fav = favId;
-            chip.innerHTML = '<span>' + op.label + '</span><span class="fav-chip-remove">&times;</span>';
+            chip.innerHTML = '<span>' + esc(op.label) + '</span><span class="fav-chip-remove">&times;</span>';
             frag.appendChild(chip);
         }
         el.favoritesItems.innerHTML = "";
@@ -4789,7 +4790,7 @@
         for (var i = 0; i < _workflowSteps.length; i++) {
             var item = document.createElement("div");
             item.className = "workflow-step-item";
-            item.innerHTML = '<span class="workflow-step-num">' + (i + 1) + '</span><span>' + _workflowSteps[i].label + '</span><button class="workflow-step-remove" data-idx="' + i + '">&times;</button>';
+            item.innerHTML = '<span class="workflow-step-num">' + (i + 1) + '</span><span>' + esc(_workflowSteps[i].label) + '</span><button class="workflow-step-remove" data-idx="' + i + '">&times;</button>';
             frag.appendChild(item);
         }
         el.workflowStepList.innerHTML = "";
@@ -5758,6 +5759,14 @@
         loadLLMSettings();
         updateSilenceModeUI();
         updateFaceTrackingUI();
+
+        // Cleanup SSE connections on panel close/navigation
+        window.addEventListener("beforeunload", function () {
+            if (activeStream) {
+                activeStream.close();
+                activeStream = null;
+            }
+        });
     });
 
 })();

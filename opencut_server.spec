@@ -33,6 +33,11 @@ external_hiddenimports = [
     'soundfile',
     'tokenizers',
     'sentencepiece',
+    # v1.3.0 additions
+    'mediapipe',
+    'auto_editor',
+    'transnetv2',
+    'resemble_enhance',
 ]
 
 # Filter to only actually installed packages

@@ -217,78 +217,80 @@ def video_watermark():
                     _update_job(job_id, progress=30, message="Processing video frames...")
 
                     cap = cv2.VideoCapture(filepath)
-                    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-                    total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
-                    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-                    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+                    try:
+                        fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+                        total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+                        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+                        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-                    # Create temp output
-                    _ntf = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
-                    temp_video = _ntf.name
-                    _ntf.close()
-                    fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-                    out_video = cv2.VideoWriter(temp_video, fourcc, fps, (width, height))
+                        # Create temp output
+                        _ntf = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
+                        temp_video = _ntf.name
+                        _ntf.close()
+                        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                        out_video = cv2.VideoWriter(temp_video, fourcc, fps, (width, height))
 
-                    # Two-pass: detect watermarks on key frames, then apply to all
-                    detected_masks = {}
-                    frame_idx = 0
+                        # Two-pass: detect watermarks on key frames, then apply to all
+                        detected_masks = {}
+                        frame_idx = 0
 
-                    while True:
-                        ret, frame = cap.read()
-                        if not ret:
-                            break
+                        while True:
+                            ret, frame = cap.read()
+                            if not ret:
+                                break
 
-                        # Detect on every N frames
-                        if frame_idx % detection_skip == 0:
-                            img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                            bboxes = detect_watermarks(img_pil)
-                            if bboxes:
-                                detected_masks[frame_idx] = bboxes
+                            # Detect on every N frames
+                            if frame_idx % detection_skip == 0:
+                                img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                                bboxes = detect_watermarks(img_pil)
+                                if bboxes:
+                                    detected_masks[frame_idx] = bboxes
 
-                        progress = 30 + int((frame_idx / total_frames) * 30)
-                        if frame_idx % 30 == 0:
-                            _update_job(job_id, progress=progress, message=f"Detecting... frame {frame_idx}/{total_frames}")
+                            progress = 30 + int((frame_idx / total_frames) * 30)
+                            if frame_idx % 30 == 0:
+                                _update_job(job_id, progress=progress, message=f"Detecting... frame {frame_idx}/{total_frames}")
 
-                        frame_idx += 1
-
-                    cap.release()
+                            frame_idx += 1
+                    finally:
+                        cap.release()
 
                     # Second pass: process all frames
                     _update_job(job_id, progress=60, message="Inpainting frames...")
 
                     cap = cv2.VideoCapture(filepath)
-                    frame_idx = 0
-                    current_mask = None
+                    try:
+                        frame_idx = 0
+                        current_mask = None
 
-                    while True:
-                        ret, frame = cap.read()
-                        if not ret:
-                            break
+                        while True:
+                            ret, frame = cap.read()
+                            if not ret:
+                                break
 
-                        # Find nearest detected mask
-                        if frame_idx in detected_masks:
-                            current_mask = detected_masks[frame_idx]
+                            # Find nearest detected mask
+                            if frame_idx in detected_masks:
+                                current_mask = detected_masks[frame_idx]
 
-                        if current_mask and not preview:
-                            img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
-                            mask = create_mask((width, height), current_mask)
-                            mask_pil = Image.fromarray(mask)
-                            result = lama(img_pil, mask_pil)
-                            frame = cv2.cvtColor(np.array(result), cv2.COLOR_RGB2BGR)
-                        elif current_mask and preview:
-                            for bbox in current_mask:
-                                cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
+                            if current_mask and not preview:
+                                img_pil = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
+                                mask = create_mask((width, height), current_mask)
+                                mask_pil = Image.fromarray(mask)
+                                result = lama(img_pil, mask_pil)
+                                frame = cv2.cvtColor(np.array(result), cv2.COLOR_RGB2BGR)
+                            elif current_mask and preview:
+                                for bbox in current_mask:
+                                    cv2.rectangle(frame, (bbox[0], bbox[1]), (bbox[2], bbox[3]), (0, 255, 0), 2)
 
-                        out_video.write(frame)
+                            out_video.write(frame)
 
-                        progress = 60 + int((frame_idx / total_frames) * 35)
-                        if frame_idx % 30 == 0:
-                            _update_job(job_id, progress=progress, message=f"Processing... frame {frame_idx}/{total_frames}")
+                            progress = 60 + int((frame_idx / total_frames) * 35)
+                            if frame_idx % 30 == 0:
+                                _update_job(job_id, progress=progress, message=f"Processing... frame {frame_idx}/{total_frames}")
 
-                        frame_idx += 1
-
-                    cap.release()
-                    out_video.release()
+                            frame_idx += 1
+                    finally:
+                        cap.release()
+                        out_video.release()
 
                     # Merge audio if ffmpeg available
                     _update_job(job_id, progress=95, message="Merging audio...")

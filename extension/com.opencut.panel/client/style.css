@@ -969,7 +969,7 @@ body.job-active .btn-install {
     pointer-events: none;
     transition: opacity 0.15s ease, transform 0.15s ease;
     transform: translateY(-50%) translateX(-4px);
-    z-index: 9999;
+    z-index: 500;
 }
 
 .nav-tab[title]:hover::before {
@@ -1334,6 +1334,8 @@ body.job-active .btn-install {
     opacity: 0.4;
     cursor: not-allowed;
     transform: none;
+    filter: grayscale(0.5);
+    pointer-events: none;
 }
 
 /* Outline buttons */
@@ -1396,6 +1398,8 @@ body.job-active .btn-install {
     opacity: 0.4;
     cursor: not-allowed;
     transform: none;
+    filter: grayscale(0.5);
+    pointer-events: none;
 }
 
 .btn-text {
@@ -2946,7 +2950,7 @@ input[type="checkbox"] {
     font-size: 12px;
     color: var(--text-primary);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
-    z-index: 9999;
+    z-index: 10000;
     max-width: 280px;
     animation: toast-slide-in 0.3s ease;
     display: flex;
