@@ -802,6 +802,8 @@ def captions_translate():
 
     if not segments:
         return jsonify({"error": "No segments provided"}), 400
+    if len(segments) > 10000:
+        return jsonify({"error": "Too many segments (max 10000)"}), 400
 
     job_id = _new_job("translate", filepath or "captions")
 
@@ -850,6 +852,8 @@ def captions_karaoke():
 
     if not segments:
         return jsonify({"error": "No segments provided"}), 400
+    if len(segments) > 10000:
+        return jsonify({"error": "Too many segments (max 10000)"}), 400
 
     job_id = _new_job("karaoke", filepath or "captions")
 
@@ -1002,7 +1006,7 @@ def burnin_from_file():
                 output_dir=effective_dir,
                 font_size=safe_int(data.get("font_size", 0)),
                 margin_bottom=safe_int(data.get("margin_bottom", 0)),
-                force_style=data.get("force_style", ""),
+                force_style=data.get("force_style", "").replace("'", "").replace(";", "").replace("\\", ""),
                 on_progress=_on_progress,
             )
             _update_job(
@@ -1040,6 +1044,8 @@ def burnin_from_segments():
         return jsonify({"error": str(exc)}), 400
     if not segments:
         return jsonify({"error": "No segments provided"}), 400
+    if len(segments) > 10000:
+        return jsonify({"error": "Too many segments (max 10000)"}), 400
 
     job_id = _new_job("burnin-seg", video_path)
 
