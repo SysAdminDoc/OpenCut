@@ -77,7 +77,7 @@ def _get_video_info(filepath: str) -> Dict:
         stream = data.get("streams", [{}])[0]
         fmt = data.get("format", {})
         fps_parts = stream.get("r_frame_rate", "30/1").split("/")
-        fps = float(fps_parts[0]) / float(fps_parts[1]) if len(fps_parts) == 2 else 30.0
+        fps = (float(fps_parts[0]) / float(fps_parts[1])) if len(fps_parts) == 2 and float(fps_parts[1]) else 30.0
         duration = float(stream.get("duration", 0) or fmt.get("duration", 0) or 0)
         nb_frames = int(stream.get("nb_frames", 0) or 0)
         if nb_frames == 0 and duration > 0:
@@ -269,15 +269,17 @@ def _build_crop_expression(positions: List[Tuple[float, float]],
     if len(windows) == 1:
         return str(windows[0][2]), str(windows[0][3])
 
-    # Build nested if(between(t,...),val,...) expression
+    # Build nested if(between(t,...),val,...) expression iteratively
     # FFmpeg expression: if(between(t,0,1),100,if(between(t,1,2),150,...))
     def _build_nested(windows_list, coord_idx):
-        if len(windows_list) == 1:
-            return str(windows_list[0][coord_idx])
-        w = windows_list[0]
-        rest = windows_list[1:]
-        val = w[coord_idx]
-        return f"if(between(t\\,{w[0]}\\,{w[1]})\\,{val}\\,{_build_nested(rest, coord_idx)})"
+        # Start from the last window (innermost expression / default value)
+        expr = str(windows_list[-1][coord_idx])
+        # Work backwards to build the nested if() chain
+        for i in range(len(windows_list) - 2, -1, -1):
+            w = windows_list[i]
+            val = w[coord_idx]
+            expr = f"if(between(t\\,{w[0]}\\,{w[1]})\\,{val}\\,{expr})"
+        return expr
 
     x_expr = _build_nested(windows, 2)
     y_expr = _build_nested(windows, 3)

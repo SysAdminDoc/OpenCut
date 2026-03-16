@@ -985,6 +985,7 @@
         var key = method + " " + path;
         // Deduplicate in-flight GET requests (F6)
         if (method === "GET" && _inflightRequests[key]) {
+            if (callback) callback(null, null);
             return;
         }
         var xhr = new XMLHttpRequest();
@@ -4072,7 +4073,7 @@
         _searchIndex = -1;
 
         // Clear previous highlights
-        var segments = document.querySelectorAll(".transcript-segment");
+        var segments = document.querySelectorAll(".transcript-seg");
         for (var i = 0; i < segments.length; i++) {
             segments[i].classList.remove("search-highlight", "search-active");
         }
@@ -4117,6 +4118,7 @@
     // ================================================================
     // Premiere Pro Theme Sync
     // ================================================================
+    var _themeSyncRegistered = false;
     function initPremiereThemeSync() {
         if (!inPremiere || !cs) return;
         // CSInterface provides app skin info
@@ -4137,11 +4139,13 @@
                     }
                 }
             }
-            // Register for theme change events
-            cs.addEventListener("com.adobe.csxs.events.ThemeColorChanged", function () {
-                // Re-check theme on change
-                initPremiereThemeSync();
-            });
+            // Register for theme change events (once only — prevent exponential listener leak)
+            if (!_themeSyncRegistered) {
+                _themeSyncRegistered = true;
+                cs.addEventListener("com.adobe.csxs.events.ThemeColorChanged", function () {
+                    initPremiereThemeSync();
+                });
+            }
         } catch (e) {
             // CSInterface theme API not available
         }
@@ -4579,7 +4583,7 @@
             var item = document.createElement("div");
             item.className = "batch-file-item";
             var name = _batchFiles[i].split(/[/\\]/).pop();
-            item.innerHTML = '<span>' + (i + 1) + '. ' + name + '</span><button class="batch-file-remove" data-idx="' + i + '">&times;</button>';
+            item.innerHTML = '<span>' + (i + 1) + '. ' + esc(name) + '</span><button class="batch-file-remove" data-idx="' + i + '">&times;</button>';
             frag.appendChild(item);
         }
         el.batchFileList.innerHTML = "";
@@ -4611,8 +4615,8 @@
                 var div = document.createElement("div");
                 div.className = "dep-item";
                 div.innerHTML = '<span class="dep-dot ' + (info.installed ? "installed" : "missing") + '"></span>' +
-                    '<span class="dep-name">' + name + '</span>' +
-                    '<span class="dep-version">' + (info.installed ? (info.version || "OK").toString().substring(0, 12) : "missing") + '</span>';
+                    '<span class="dep-name">' + esc(name) + '</span>' +
+                    '<span class="dep-version">' + esc(info.installed ? (info.version || "OK").toString().substring(0, 12) : "missing") + '</span>';
                 frag.appendChild(div);
             }
             el.depGrid.innerHTML = "";
@@ -5373,8 +5377,8 @@
         startJob("/video/shorts-pipeline", {
             filepath: selectedPath,
             output_dir: projectFolder,
-            target_w: d[0],
-            target_h: d[1],
+            width: d[0],
+            height: d[1],
             max_shorts: el.shortsMaxClips ? parseInt(el.shortsMaxClips.value) : 5,
             min_duration: el.shortsMinDur ? parseFloat(el.shortsMinDur.value) : 15,
             max_duration: el.shortsMaxDur ? parseFloat(el.shortsMaxDur.value) : 60,
@@ -5575,8 +5579,9 @@
         });
         if (el.mergeAddAllBtn) el.mergeAddAllBtn.addEventListener("click", function() {
             for (var i = 0; i < projectMedia.length; i++) {
-                if (_mergeFiles.indexOf(projectMedia[i].path) === -1) {
-                    _mergeFiles.push(projectMedia[i].path);
+                var path = projectMedia[i].path || projectMedia[i];
+                if (_mergeFiles.indexOf(path) === -1) {
+                    _mergeFiles.push(path);
                 }
             }
             renderMergeFiles();

@@ -43,7 +43,7 @@ def _get_video_info(fp):
     try:
         s = json.loads(r.stdout.decode())["streams"][0]
         fps_p = s.get("r_frame_rate", "30/1").split("/")
-        fps = float(fps_p[0]) / float(fps_p[1]) if len(fps_p) == 2 else 30.0
+        fps = (float(fps_p[0]) / float(fps_p[1])) if len(fps_p) == 2 and float(fps_p[1]) else 30.0
         return {"width": int(s.get("width", 1920)), "height": int(s.get("height", 1080)),
                 "fps": fps, "duration": float(s.get("duration", 0))}
     except Exception:
@@ -117,7 +117,9 @@ def chromakey_video(
     if bg_img is not None:
         bg_img = cv2.resize(bg_img, (w, h))
 
-    tmp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+    _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    tmp_video = _ntf.name
+    _ntf.close()
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
 

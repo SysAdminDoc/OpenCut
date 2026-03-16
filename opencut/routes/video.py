@@ -28,7 +28,7 @@ from opencut.helpers import (
 )
 from opencut.security import (
     validate_path, require_csrf, safe_pip_install,
-    validate_filepath, safe_float, safe_int,
+    validate_filepath, safe_float, safe_int, require_rate_limit,
 )
 from opencut.checks import check_watermark_available
 
@@ -217,13 +217,15 @@ def video_watermark():
                     _update_job(job_id, progress=30, message="Processing video frames...")
 
                     cap = cv2.VideoCapture(filepath)
-                    fps = cap.get(cv2.CAP_PROP_FPS)
-                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+                    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
                     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
                     # Create temp output
-                    temp_video = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False).name
+                    _ntf = tempfile.NamedTemporaryFile(suffix='.mp4', delete=False)
+                    temp_video = _ntf.name
+                    _ntf.close()
                     fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                     out_video = cv2.VideoWriter(temp_video, fourcc, fps, (width, height))
 
@@ -746,6 +748,7 @@ def video_fx_apply():
                 lut_path = params.get("lut_path", "")
                 if not lut_path:
                     raise ValueError("No LUT file path provided")
+                lut_path = validate_filepath(lut_path)
                 out = video_fx.apply_lut(
                     filepath, lut_path, output_dir=effective_dir,
                     intensity=params.get("intensity", 1.0),
@@ -770,9 +773,13 @@ def video_fx_apply():
                     on_progress=_on_progress,
                 )
             elif effect == "color_match":
+                ref_path = params.get("reference_path", "")
+                if not ref_path:
+                    raise ValueError("No reference file path provided")
+                ref_path = validate_filepath(ref_path)
                 out = video_fx.color_match(
                     filepath, output_dir=effective_dir,
-                    reference_path=params.get("reference_path", ""),
+                    reference_path=ref_path,
                     on_progress=_on_progress,
                 )
             else:
@@ -815,7 +822,7 @@ def video_ai_upscale():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
-    scale = data.get("scale", 2)
+    scale = safe_int(data.get("scale", 2), 2, min_val=1, max_val=4)
     model = data.get("model", "realesrgan-x4plus")
 
     if not filepath:
@@ -917,7 +924,7 @@ def video_ai_interpolate():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
-    multiplier = data.get("multiplier", 2)
+    multiplier = safe_int(data.get("multiplier", 2), 2, min_val=2, max_val=8)
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -967,7 +974,7 @@ def video_ai_denoise():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     method = data.get("method", "nlmeans")
-    strength = data.get("strength", 0.5)
+    strength = safe_float(data.get("strength", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -1011,6 +1018,7 @@ def video_ai_denoise():
 
 @video_bp.route("/video/ai/install", methods=["POST"])
 @require_csrf
+@require_rate_limit("model_install")
 def video_ai_install():
     """Install AI video dependencies."""
     data = request.get_json(force=True)
@@ -1096,7 +1104,7 @@ def face_blur():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     method = data.get("method", "gaussian")
-    strength = data.get("strength", 51)
+    strength = safe_int(data.get("strength", 51), 51, min_val=1, max_val=99)
     detector = data.get("detector", "mediapipe")
 
     if not filepath:
@@ -1141,6 +1149,7 @@ def face_blur():
 
 @video_bp.route("/video/face/install", methods=["POST"])
 @require_csrf
+@require_rate_limit("model_install")
 def face_install():
     """Install MediaPipe for face detection."""
     job_id = _new_job("install", "mediapipe")
@@ -1187,7 +1196,7 @@ def style_apply():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     style_name = data.get("style", "candy")
-    intensity = data.get("intensity", 1.0)
+    intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0)
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -1306,8 +1315,8 @@ def generate_thumbnails_route():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
-    count = data.get("count", 5)
-    width = data.get("width", 1920)
+    count = safe_int(data.get("count", 5), 5, min_val=1, max_val=20)
+    width = safe_int(data.get("width", 1920), 1920, min_val=160, max_val=3840)
     use_faces = data.get("use_faces", True)
 
     if not filepath:
@@ -1470,21 +1479,21 @@ def _execute_batch_item(operation, filepath, params, on_progress):
         from opencut.core.audio_suite import denoise_audio
         return denoise_audio(
             filepath, output_dir=output_dir,
-            strength=params.get("strength", 0.5),
+            strength=safe_float(params.get("strength", 0.5), 0.5, min_val=0.0, max_val=1.0),
             on_progress=on_progress,
         )
     elif operation == "normalize":
         from opencut.core.audio_suite import normalize_audio
         return normalize_audio(
             filepath, output_dir=output_dir,
-            target_lufs=params.get("target_lufs", -16),
+            target_lufs=safe_float(params.get("target_lufs", -16), -16.0, min_val=-70.0, max_val=0.0),
             on_progress=on_progress,
         )
     elif operation == "stabilize":
         from opencut.core.video_fx import stabilize_video
         return stabilize_video(
             filepath, output_dir=output_dir,
-            smoothing=params.get("smoothing", 10),
+            smoothing=safe_int(params.get("smoothing", 10), 10, min_val=1, max_val=100),
             on_progress=on_progress,
         )
     elif operation == "face_blur":
@@ -1492,7 +1501,7 @@ def _execute_batch_item(operation, filepath, params, on_progress):
         return blur_faces(
             filepath, output_dir=output_dir,
             method=params.get("method", "gaussian"),
-            strength=params.get("strength", 51),
+            strength=safe_int(params.get("strength", 51), 51, min_val=1, max_val=99),
             on_progress=on_progress,
         )
     elif operation == "export_preset":
@@ -1506,14 +1515,14 @@ def _execute_batch_item(operation, filepath, params, on_progress):
         from opencut.core.video_fx import apply_vignette
         return apply_vignette(
             filepath, output_dir=output_dir,
-            intensity=params.get("intensity", 0.5),
+            intensity=safe_float(params.get("intensity", 0.5), 0.5, min_val=0.0, max_val=2.0),
             on_progress=on_progress,
         )
     elif operation == "film_grain":
         from opencut.core.video_fx import apply_film_grain
         return apply_film_grain(
             filepath, output_dir=output_dir,
-            intensity=params.get("intensity", 0.5),
+            intensity=safe_float(params.get("intensity", 0.5), 0.5, min_val=0.0, max_val=2.0),
             on_progress=on_progress,
         )
     elif operation == "letterbox":
@@ -1528,7 +1537,7 @@ def _execute_batch_item(operation, filepath, params, on_progress):
         return style_transfer_video(
             filepath, style_name=params.get("style", "candy"),
             output_dir=output_dir,
-            intensity=params.get("intensity", 1.0),
+            intensity=safe_float(params.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0),
             on_progress=on_progress,
         )
     else:
@@ -1557,7 +1566,7 @@ def speed_change_route():
     """Apply constant speed change."""
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
-    speed = data.get("speed", 2.0)
+    speed = safe_float(data.get("speed", 2.0), 2.0, min_val=0.1, max_val=100.0)
     output_dir = data.get("output_dir", "")
 
     if not filepath:
@@ -1725,7 +1734,7 @@ def lut_apply():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     lut_name = data.get("lut", "teal_orange")
-    intensity = data.get("intensity", 1.0)
+    intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0)
     output_dir = data.get("output_dir", "")
 
     if not filepath:
@@ -1835,9 +1844,9 @@ def chromakey_route():
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fg, output_dir)
             out = chromakey_video(fg, bg, output_dir=d, color=data.get("color", "green"),
-                                  tolerance=data.get("tolerance", 0.5),
-                                  spill_suppress=data.get("spill_suppress", 0.5),
-                                  edge_blur=data.get("edge_blur", 3), on_progress=_p)
+                                  tolerance=safe_float(data.get("tolerance", 0.5), 0.5, min_val=0.0, max_val=1.0),
+                                  spill_suppress=safe_float(data.get("spill_suppress", 0.5), 0.5, min_val=0.0, max_val=1.0),
+                                  edge_blur=safe_int(data.get("edge_blur", 3), 3, min_val=0, max_val=20), on_progress=_p)
             _update_job(job_id, status="complete", progress=100, message="Chromakey complete!",
                         result={"output_path": out})
         except Exception as e:
@@ -1885,7 +1894,7 @@ def pip_route():
             d = _resolve_output_dir(main, data.get("output_dir", ""))
             out = picture_in_picture(main, pip, output_dir=d,
                                       position=data.get("position", "bottom_right"),
-                                      scale=data.get("scale", 0.25), on_progress=_p)
+                                      scale=safe_float(data.get("scale", 0.25), 0.25, min_val=0.05, max_val=1.0), on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
@@ -1932,7 +1941,7 @@ def blend_route():
             d = _resolve_output_dir(base, data.get("output_dir", ""))
             out = blend_videos(base, overlay, output_dir=d,
                                 mode=data.get("mode", "overlay"),
-                                opacity=data.get("opacity", 0.5), on_progress=_p)
+                                opacity=safe_float(data.get("opacity", 0.5), 0.5, min_val=0.0, max_val=1.0), on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
@@ -2032,8 +2041,8 @@ def title_render():
             d = data.get("output_dir", "") or tempfile.gettempdir()
             out = render_title_card(text, output_dir=d,
                                      preset=data.get("preset", "fade_center"),
-                                     duration=data.get("duration", 5.0),
-                                     font_size=data.get("font_size", 72),
+                                     duration=safe_float(data.get("duration", 5.0), 5.0, min_val=0.5, max_val=60.0),
+                                     font_size=safe_int(data.get("font_size", 72), 72, min_val=8, max_val=500),
                                      subtitle=data.get("subtitle", ""),
                                      on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
@@ -2077,9 +2086,9 @@ def title_overlay():
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
             out = overlay_title(fp, text, output_dir=d,
                                  preset=data.get("preset", "fade_center"),
-                                 font_size=data.get("font_size", 72),
-                                 start_time=data.get("start_time", 0),
-                                 duration=data.get("duration", 5.0),
+                                 font_size=safe_int(data.get("font_size", 72), 72, min_val=8, max_val=500),
+                                 start_time=safe_float(data.get("start_time", 0), 0.0, min_val=0.0, max_val=86400.0),
+                                 duration=safe_float(data.get("duration", 5.0), 5.0, min_val=0.5, max_val=60.0),
                                  subtitle=data.get("subtitle", ""),
                                  on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
@@ -2140,7 +2149,7 @@ def transitions_apply():
             d = _resolve_output_dir(a, data.get("output_dir", ""))
             out = apply_transition(a, b, output_dir=d,
                                     transition=data.get("transition", "fade"),
-                                    duration=data.get("duration", 1.0),
+                                    duration=safe_float(data.get("duration", 1.0), 1.0, min_val=0.1, max_val=10.0),
                                     on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
@@ -2183,7 +2192,7 @@ def transitions_join():
             d = _resolve_output_dir(clips[0], data.get("output_dir", ""))
             out = join_with_transitions(clips, output_dir=d,
                                          transition=data.get("transition", "fade"),
-                                         duration=data.get("duration", 1.0),
+                                         duration=safe_float(data.get("duration", 1.0), 1.0, min_val=0.1, max_val=10.0),
                                          on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
@@ -2235,7 +2244,7 @@ def particle_apply():
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
             out = overlay_particles(fp, output_dir=d,
                                      preset=data.get("preset", "confetti"),
-                                     density=data.get("density", 1.0),
+                                     density=safe_float(data.get("density", 1.0), 1.0, min_val=0.1, max_val=5.0),
                                      on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
@@ -2285,7 +2294,7 @@ def face_enhance_route():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
-            out = enhance_faces(fp, output_dir=d, upscale=data.get("upscale", 2), on_progress=_p)
+            out = enhance_faces(fp, output_dir=d, upscale=safe_int(data.get("upscale", 2), 2, min_val=1, max_val=4), on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
@@ -2380,7 +2389,7 @@ def upscale_run():
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
             out = upscale_with_preset(fp, preset=data.get("preset", "fast"),
-                                       scale=data.get("scale", 2),
+                                       scale=safe_int(data.get("scale", 2), 2, min_val=1, max_val=4),
                                        output_dir=d, on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
@@ -2431,14 +2440,14 @@ def color_correct_route():
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
             out = color_correct(fp, output_dir=d,
-                                 exposure=data.get("exposure", 0),
-                                 contrast=data.get("contrast", 1.0),
-                                 saturation=data.get("saturation", 1.0),
-                                 temperature=data.get("temperature", 0),
-                                 tint=data.get("tint", 0),
-                                 shadows=data.get("shadows", 0),
-                                 midtones=data.get("midtones", 0),
-                                 highlights=data.get("highlights", 0),
+                                 exposure=safe_float(data.get("exposure", 0), 0.0, min_val=-5.0, max_val=5.0),
+                                 contrast=safe_float(data.get("contrast", 1.0), 1.0, min_val=0.0, max_val=3.0),
+                                 saturation=safe_float(data.get("saturation", 1.0), 1.0, min_val=0.0, max_val=3.0),
+                                 temperature=safe_float(data.get("temperature", 0), 0.0, min_val=-100.0, max_val=100.0),
+                                 tint=safe_float(data.get("tint", 0), 0.0, min_val=-100.0, max_val=100.0),
+                                 shadows=safe_float(data.get("shadows", 0), 0.0, min_val=-100.0, max_val=100.0),
+                                 midtones=safe_float(data.get("midtones", 0), 0.0, min_val=-100.0, max_val=100.0),
+                                 highlights=safe_float(data.get("highlights", 0), 0.0, min_val=-100.0, max_val=100.0),
                                  on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
@@ -2522,7 +2531,7 @@ def color_external_lut_route():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
-            out = apply_external_lut(fp, lut, intensity=data.get("intensity", 1.0),
+            out = apply_external_lut(fp, lut, intensity=safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0),
                                       output_dir=d, on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
@@ -3000,8 +3009,12 @@ def preview_frame():
 def social_presets():
     import json as _json
     presets_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "social_presets.json")
-    with open(presets_path, "r") as f:
-        return jsonify({"presets": _json.load(f)})
+    try:
+        with open(presets_path, "r") as f:
+            return jsonify({"presets": _json.load(f)})
+    except (FileNotFoundError, _json.JSONDecodeError) as e:
+        logger.warning("Could not load social_presets.json: %s", e)
+        return jsonify({"presets": []})
 
 
 # ---------------------------------------------------------------------------

@@ -272,10 +272,23 @@ def _kill_via_shutdown_endpoint(host: str, port: int) -> bool:
     """Strategy 1: Ask the server to shut itself down via HTTP."""
     import urllib.request
     try:
+        # First fetch CSRF token from /health
+        csrf_token = ""
+        try:
+            health_req = urllib.request.Request(f"http://{host}:{port}/health", method="GET")
+            with urllib.request.urlopen(health_req, timeout=2) as health_resp:
+                health_data = json.loads(health_resp.read())
+                csrf_token = health_data.get("csrf_token", "")
+        except Exception:
+            pass
+
         req = urllib.request.Request(
             f"http://{host}:{port}/shutdown",
             method="POST",
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "X-OpenCut-Token": csrf_token,
+            },
             data=b"{}",
         )
         resp = urllib.request.urlopen(req, timeout=3)
@@ -611,7 +624,8 @@ def download_models(model_size="base"):
     return 0
 
 
-if __name__ == "__main__":
+def main():
+    """Entry point for `opencut-server` console script (pyproject.toml)."""
     try:
         import argparse
         parser = argparse.ArgumentParser(description="OpenCut Backend Server")
@@ -624,7 +638,6 @@ if __name__ == "__main__":
         args = parser.parse_args()
 
         if args.download_models is not None:
-            # Suppress HF warnings before any huggingface imports happen
             os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
             os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
             os.environ["HF_HUB_DISABLE_EXPERIMENTAL_WARNING"] = "1"
@@ -632,7 +645,6 @@ if __name__ == "__main__":
         else:
             run_server(host=args.host, port=args.port, debug=args.debug)
     except Exception as _fatal:
-        # Catch startup crashes so the console window stays open
         print("")
         print("  " + "=" * 50)
         print("  FATAL ERROR — OpenCut Server failed to start")
@@ -640,14 +652,18 @@ if __name__ == "__main__":
         print("")
         traceback.print_exc()
         print("")
-        # Also write to log file
         try:
             _crash_log = os.path.join(os.path.expanduser("~"), ".opencut", "crash.log")
-            with open(_crash_log, "w", encoding="utf-8") as _f:
-                _f.write(f"OpenCut Server crash at {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+            with open(_crash_log, "a", encoding="utf-8") as _f:
+                _f.write(f"\n--- {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+                _f.write("OpenCut Server startup crash\n\n")
                 traceback.print_exc(file=_f)
             print(f"  Crash log saved to: {_crash_log}")
         except Exception:
             pass
         print("")
         input("  Press Enter to close...")
+
+
+if __name__ == "__main__":
+    main()

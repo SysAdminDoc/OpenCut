@@ -269,11 +269,9 @@ function importXMLToProject(xmlPath) {
         
         // Import the XML file into the project root
         // Premiere Pro will create a sequence from FCP XML
-        var importSuccess = app.project.importFiles([xmlPath], false, app.project.rootItem, false);
-        
-        if (!importSuccess) {
-            return JSON.stringify({ error: "Import returned false - check file format" });
-        }
+        // importFiles() returns undefined in many Premiere versions,
+        // so we don't rely on the return value.  If it throws, we catch it.
+        app.project.importFiles([xmlPath], false, app.project.rootItem, false);
         
         // Wait a moment for import to process
         $.sleep(500);
@@ -403,17 +401,16 @@ function importAndOpenXml(filePath) {
 
         var seqCountBefore = app.project.sequences.numSequences;
 
-        var success = app.project.importFiles(
+        // importFiles() returns undefined in many Premiere versions
+        app.project.importFiles(
             [filePath], true, app.project.rootItem, false
         );
-
-        if (!success) return JSON.stringify({ error: "Import returned false" });
 
         var seqCountAfter = app.project.sequences.numSequences;
         if (seqCountAfter > seqCountBefore) {
             var newSeq = app.project.sequences[seqCountAfter - 1];
             if (newSeq) {
-                app.project.activeSequence = newSeq;
+                app.project.openSequence(newSeq.sequenceID);
                 return JSON.stringify({ success: true, sequenceName: newSeq.name });
             }
         }
@@ -1049,7 +1046,9 @@ function startOpenCutBackend() {
         }
     } else {
         // ---- macOS / Linux ----
-        var sh = new File(Folder.temp.fsName + "/opencut_start.sh");
+        // Write the startup script
+        var shPath = Folder.temp.fsName + "/opencut_start.sh";
+        var sh = new File(shPath);
         sh.open("w");
         sh.writeln("#!/bin/bash");
         // Kill via PID file
@@ -1067,13 +1066,23 @@ function startOpenCutBackend() {
         sh.close();
 
         try {
-            var chmodF = new File(Folder.temp.fsName + "/opencut_chmod.sh");
-            chmodF.open("w");
-            chmodF.writeln("#!/bin/bash");
-            chmodF.writeln('chmod +x "' + sh.fsName + '" && "' + sh.fsName + '"');
-            chmodF.close();
-            chmodF.execute();
-            launched = true;
+            // File.execute() on macOS opens .sh files in a text editor.
+            // Use system.callSystem (or app.system) to run bash directly.
+            var cmd = '/bin/bash -c \'chmod +x "' + shPath + '" && "' + shPath + '"\'';
+            if (typeof app.system === "function") {
+                app.system(cmd);
+                launched = true;
+            } else {
+                // Fallback: use a .command file which Terminal.app can run
+                var cmdFile = new File(Folder.temp.fsName + "/opencut_start.command");
+                cmdFile.open("w");
+                cmdFile.writeln("#!/bin/bash");
+                cmdFile.writeln('chmod +x "' + shPath + '" && "' + shPath + '"');
+                cmdFile.writeln("exit 0");
+                cmdFile.close();
+                cmdFile.execute();
+                launched = true;
+            }
             _ocLog("Launched via sh (python)");
         } catch (e4) {
             _ocLog("Sh launch failed: " + e4.toString());

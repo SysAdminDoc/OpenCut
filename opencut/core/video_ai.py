@@ -96,7 +96,7 @@ def _get_video_info(filepath: str) -> Dict:
         data = json.loads(result.stdout.decode())
         stream = data["streams"][0]
         fps_parts = stream.get("r_frame_rate", "30/1").split("/")
-        fps = float(fps_parts[0]) / float(fps_parts[1]) if len(fps_parts) == 2 else 30.0
+        fps = (float(fps_parts[0]) / float(fps_parts[1])) if len(fps_parts) == 2 and float(fps_parts[1]) else 30.0
         return {
             "width": int(stream.get("width", 1920)),
             "height": int(stream.get("height", 1080)),
@@ -518,7 +518,7 @@ def get_ai_capabilities() -> Dict:
         caps["gpu_available"] = torch.cuda.is_available()
         if caps["gpu_available"]:
             caps["gpu_name"] = torch.cuda.get_device_name(0)
-            caps["gpu_vram_mb"] = torch.cuda.get_device_properties(0).total_mem // (1024 * 1024)
+            caps["gpu_vram_mb"] = torch.cuda.get_device_properties(0).total_memory // (1024 * 1024)
     except Exception:
         caps["gpu_available"] = False
     return caps

@@ -173,7 +173,9 @@ def join_with_transitions(
 
         if i < len(clips) - 1:
             import tempfile
-            tmp = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+            _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+            tmp = _ntf.name
+            _ntf.close()
             tmp_files.append(tmp)
         else:
             tmp = output_path

@@ -29,7 +29,7 @@ from opencut.helpers import (
 )
 from opencut.security import (
     validate_path, validate_filepath, require_csrf, safe_pip_install,
-    safe_float, safe_int,
+    safe_float, safe_int, require_rate_limit,
 )
 from opencut.checks import check_demucs_available
 
@@ -340,8 +340,8 @@ def audio_denoise():
         return jsonify({"error": str(e)}), 400
 
     method = data.get("method", "afftdn")
-    strength = safe_float(data.get("strength", 0.7), 0.7)
-    noise_floor = safe_float(data.get("noise_floor", -30.0), -30.0)
+    strength = safe_float(data.get("strength", 0.7), 0.7, min_val=0.0, max_val=1.0)
+    noise_floor = safe_float(data.get("noise_floor", -30.0), -30.0, min_val=-80.0, max_val=0.0)
 
     job_id = _new_job("denoise", filepath)
 
@@ -648,7 +648,7 @@ def audio_normalize():
     preset = data.get("preset", "youtube")
     target_lufs = data.get("target_lufs", None)
     if target_lufs is not None:
-        target_lufs = safe_float(target_lufs)
+        target_lufs = safe_float(target_lufs, -16.0, min_val=-70.0, max_val=0.0)
 
     job_id = _new_job("normalize", filepath)
 
@@ -746,7 +746,7 @@ def audio_beats():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    sensitivity = safe_float(data.get("sensitivity", 0.5), 0.5)
+    sensitivity = safe_float(data.get("sensitivity", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
     job_id = _new_job("beats", filepath)
 
@@ -987,6 +987,7 @@ def audio_pro_deepfilter():
 
 @audio_bp.route("/audio/pro/install", methods=["POST"])
 @require_csrf
+@require_rate_limit("model_install")
 def audio_pro_install():
     """Install audio pro dependencies."""
     data = request.get_json(force=True)
@@ -1058,7 +1059,7 @@ def tts_generate():
     voice = data.get("voice", "en-US-AriaNeural")
     rate = data.get("rate", "+0%")
     pitch = data.get("pitch", "+0Hz")
-    speed = data.get("speed", 1.0)
+    speed = safe_float(data.get("speed", 1.0), 1.0, min_val=0.25, max_val=4.0)
     output_dir = data.get("output_dir", "")
 
     if not text:
@@ -1148,6 +1149,7 @@ def tts_subtitled():
 
 @audio_bp.route("/audio/tts/install", methods=["POST"])
 @require_csrf
+@require_rate_limit("model_install")
 def tts_install():
     """Install TTS engine dependencies."""
     data = request.get_json(force=True)
@@ -1216,12 +1218,12 @@ def audio_gen_tone():
             effective_dir = output_dir or tempfile.gettempdir()
             out = generate_tone(
                 output_dir=effective_dir,
-                frequency=data.get("frequency", 440),
-                duration=data.get("duration", 3.0),
+                frequency=safe_float(data.get("frequency", 440), 440.0, min_val=20.0, max_val=20000.0),
+                duration=safe_float(data.get("duration", 3.0), 3.0, min_val=0.1, max_val=300.0),
                 waveform=data.get("waveform", "sine"),
-                volume=data.get("volume", 0.5),
-                fade_in=data.get("fade_in", 0.1),
-                fade_out=data.get("fade_out", 0.5),
+                volume=safe_float(data.get("volume", 0.5), 0.5, min_val=0.0, max_val=1.0),
+                fade_in=safe_float(data.get("fade_in", 0.1), 0.1, min_val=0.0, max_val=30.0),
+                fade_out=safe_float(data.get("fade_out", 0.5), 0.5, min_val=0.0, max_val=30.0),
                 on_progress=_on_progress,
             )
             _update_job(
@@ -1261,7 +1263,7 @@ def audio_gen_sfx():
             out = generate_sfx(
                 preset=preset,
                 output_dir=effective_dir,
-                duration=data.get("duration", 1.0),
+                duration=safe_float(data.get("duration", 1.0), 1.0, min_val=0.1, max_val=30.0),
                 on_progress=_on_progress,
             )
             _update_job(
@@ -1286,7 +1288,7 @@ def audio_gen_silence():
     """Generate silence/padding audio."""
     data = request.get_json(force=True)
     output_dir = data.get("output_dir", "")
-    duration = data.get("duration", 1.0)
+    duration = safe_float(data.get("duration", 1.0), 1.0, min_val=0.1, max_val=3600.0)
 
     try:
         from opencut.core.music_gen import generate_silence
@@ -1335,10 +1337,10 @@ def audio_duck_route():
             effective_dir = _resolve_output_dir(music_path, output_dir)
             out = sidechain_duck(
                 music_path, voice_path, output_dir=effective_dir,
-                duck_amount=data.get("duck_amount", 0.7),
-                threshold=data.get("threshold", 0.015),
-                attack=data.get("attack", 20),
-                release=data.get("release", 300),
+                duck_amount=safe_float(data.get("duck_amount", 0.7), 0.7, min_val=0.0, max_val=1.0),
+                threshold=safe_float(data.get("threshold", 0.015), 0.015, min_val=0.001, max_val=1.0),
+                attack=safe_float(data.get("attack", 20), 20.0, min_val=1.0, max_val=1000.0),
+                release=safe_float(data.get("release", 300), 300.0, min_val=10.0, max_val=5000.0),
                 on_progress=_on_progress,
             )
             _update_job(
@@ -1393,8 +1395,8 @@ def audio_mix_duck_route():
             effective_dir = _resolve_output_dir(voice_path, output_dir)
             out = mix_with_duck(
                 voice_path, music_path, output_dir=effective_dir,
-                music_volume=data.get("music_volume", 0.3),
-                duck_amount=data.get("duck_amount", 0.6),
+                music_volume=safe_float(data.get("music_volume", 0.3), 0.3, min_val=0.0, max_val=2.0),
+                duck_amount=safe_float(data.get("duck_amount", 0.6), 0.6, min_val=0.0, max_val=1.0),
                 on_progress=_on_progress,
             )
             _update_job(
@@ -1449,8 +1451,8 @@ def audio_duck_video_route():
             effective_dir = _resolve_output_dir(video_path, output_dir)
             out = auto_duck_video(
                 video_path, music_path, output_dir=effective_dir,
-                music_volume=data.get("music_volume", 0.25),
-                duck_amount=data.get("duck_amount", 0.7),
+                music_volume=safe_float(data.get("music_volume", 0.25), 0.25, min_val=0.0, max_val=2.0),
+                duck_amount=safe_float(data.get("duck_amount", 0.7), 0.7, min_val=0.0, max_val=1.0),
                 on_progress=_on_progress,
             )
             _update_job(
@@ -1552,9 +1554,9 @@ def music_ai_generate():
 
             d = data.get("output_dir", "") or tempfile.gettempdir()
             out = generate_music(prompt, output_dir=d,
-                                  duration=data.get("duration", 10),
+                                  duration=safe_float(data.get("duration", 10), 10.0, min_val=1.0, max_val=120.0),
                                   model_size=data.get("model", "small"),
-                                  temperature=data.get("temperature", 1.0),
+                                  temperature=safe_float(data.get("temperature", 1.0), 1.0, min_val=0.1, max_val=2.0),
                                   on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
@@ -1596,7 +1598,7 @@ def music_ai_melody():
 
             d = data.get("output_dir", "") or tempfile.gettempdir()
             out = generate_music_with_melody(prompt, melody, output_dir=d,
-                                              duration=data.get("duration", 10),
+                                              duration=safe_float(data.get("duration", 10), 10.0, min_val=1.0, max_val=120.0),
                                               on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:

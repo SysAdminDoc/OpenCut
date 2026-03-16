@@ -117,13 +117,7 @@ def _resolve_output_dir(filepath: str, requested_dir: str = "") -> str:
             logger.warning("Invalid output dir rejected: %s", requested_dir)
             requested_dir = ""
         else:
-            # Verify it's on the same drive as the source
-            source_root = os.path.splitdrive(os.path.abspath(filepath))[0] or "/"
-            resolved_root = os.path.splitdrive(requested_dir)[0] or "/"
-            if resolved_root.lower() != source_root.lower():
-                logger.warning("Output dir on different drive than source: %s", requested_dir)
-                requested_dir = ""
-            elif os.path.isdir(requested_dir):
+            if os.path.isdir(requested_dir):
                 return requested_dir
             else:
                 try:
@@ -201,7 +195,9 @@ class FFmpegCmd:
     def __init__(self):
         self._inputs = []
         self._pre_input = []      # flags before first -i (e.g. -ss for input seeking)
-        self._filters = []
+        self._vf = []             # -vf filters
+        self._af = []             # -af filters
+        self._fc = []             # -filter_complex
         self._vcodec = []
         self._acodec = []
         self._maps = []
@@ -248,19 +244,29 @@ class FFmpegCmd:
         self._extra.extend(["-vn"])
         return self
 
+    def pre_input(self, key, value=None):
+        """Add a flag before all -i inputs (e.g. -ss for input seeking)."""
+        self._pre_input.append(f"-{key}" if not key.startswith("-") else key)
+        if value is not None:
+            self._pre_input.append(str(value))
+        return self
+
     def video_filter(self, vf):
-        """Set -vf (simple video filter)."""
-        self._filters = ["-vf", vf]
+        """Set -vf (simple video filter). Cannot combine with filter_complex."""
+        self._vf = ["-vf", vf]
         return self
 
     def audio_filter(self, af):
-        """Set -af (simple audio filter)."""
-        self._filters = ["-af", af]
+        """Set -af (simple audio filter). Cannot combine with filter_complex."""
+        self._af = ["-af", af]
         return self
 
     def filter_complex(self, fc, maps=None):
-        """Set -filter_complex with optional -map entries."""
-        self._filters = ["-filter_complex", fc]
+        """Set -filter_complex with optional -map entries.
+        Overrides any -vf/-af set earlier (FFmpeg doesn't allow both)."""
+        self._fc = ["-filter_complex", fc]
+        self._vf = []  # filter_complex supersedes simple filters
+        self._af = []
         if maps:
             for m in maps:
                 self._maps.extend(["-map", m])
@@ -314,10 +320,16 @@ class FFmpegCmd:
             cmd.append("-hide_banner")
         if self._overwrite:
             cmd.append("-y")
+        cmd.extend(self._pre_input)
         for opts, path in self._inputs:
             cmd.extend(opts)
             cmd.extend(["-i", path])
-        cmd.extend(self._filters)
+        # filter_complex takes priority; otherwise use simple vf/af
+        if self._fc:
+            cmd.extend(self._fc)
+        else:
+            cmd.extend(self._vf)
+            cmd.extend(self._af)
         cmd.extend(self._maps)
         cmd.extend(self._vcodec)
         cmd.extend(self._acodec)
@@ -411,7 +423,7 @@ def _get_file_duration(filepath):
 
 
 def _load_job_times():
-    """Load historical job timing data."""
+    """Load historical job timing data. Must be called under _job_times_lock."""
     try:
         if os.path.isfile(_JOB_TIMES_FILE):
             with open(_JOB_TIMES_FILE, "r", encoding="utf-8") as f:
@@ -442,7 +454,8 @@ def _record_job_time(job_type, duration_sec, file_duration_sec):
 
 def compute_estimate(job_type: str, file_duration: float) -> dict:
     """Compute a time estimate for a job type. Used by /system/estimate-time."""
-    times = _load_job_times()
+    with _job_times_lock:
+        times = _load_job_times()
     entries = times.get(job_type, [])
     if not entries:
         return {"estimate_seconds": None, "confidence": "none", "message": "No historical data"}

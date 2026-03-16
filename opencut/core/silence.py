@@ -372,6 +372,11 @@ def speed_up_silences(
     if pos < total_duration:
         all_segments.append(("speech", pos, total_duration))
 
+    # Detect if input has video (vs audio-only files like .mp3, .wav)
+    has_video = info.has_video if hasattr(info, "has_video") else not filepath.lower().endswith(
+        (".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus")
+    )
+
     # Build FFmpeg filter_complex with concat
     # Each segment gets its own trim + setpts/atempo chain
     filter_parts = []
@@ -380,34 +385,43 @@ def speed_up_silences(
 
     for i, (seg_type, start, end) in enumerate(all_segments):
         # Trim the segment
-        filter_parts.append(
-            f"[0:v]trim=start={start:.6f}:end={end:.6f},setpts=PTS-STARTPTS[v{i}];"
-        )
+        if has_video:
+            filter_parts.append(
+                f"[0:v]trim=start={start:.6f}:end={end:.6f},setpts=PTS-STARTPTS[v{i}];"
+            )
         filter_parts.append(
             f"[0:a]atrim=start={start:.6f}:end={end:.6f},asetpts=PTS-STARTPTS[a{i}];"
         )
 
         if seg_type == "silence":
-            # Speed up the video segment
-            filter_parts.append(
-                f"[v{i}]setpts=PTS/{speed_factor:.2f}[vs{i}];"
-            )
+            if has_video:
+                # Speed up the video segment
+                filter_parts.append(
+                    f"[v{i}]setpts=PTS/{speed_factor:.2f}[vs{i}];"
+                )
+                concat_inputs_v.append(f"[vs{i}]")
             # Speed up audio — atempo max is 2.0, so chain for higher speeds
             atempo_chain = _build_atempo_chain(speed_factor, f"a{i}", f"as{i}")
             filter_parts.append(atempo_chain)
-            concat_inputs_v.append(f"[vs{i}]")
             concat_inputs_a.append(f"[as{i}]")
         else:
-            concat_inputs_v.append(f"[v{i}]")
+            if has_video:
+                concat_inputs_v.append(f"[v{i}]")
             concat_inputs_a.append(f"[a{i}]")
 
     # Concat all segments
     n = len(all_segments)
-    v_inputs = "".join(concat_inputs_v)
-    a_inputs = "".join(concat_inputs_a)
-    filter_parts.append(
-        f"{v_inputs}{a_inputs}concat=n={n}:v=1:a=1[outv][outa]"
-    )
+    if has_video:
+        v_inputs = "".join(concat_inputs_v)
+        a_inputs = "".join(concat_inputs_a)
+        filter_parts.append(
+            f"{v_inputs}{a_inputs}concat=n={n}:v=1:a=1[outv][outa]"
+        )
+    else:
+        a_inputs = "".join(concat_inputs_a)
+        filter_parts.append(
+            f"{a_inputs}concat=n={n}:v=0:a=1[outa]"
+        )
 
     filter_complex = "".join(filter_parts)
 
@@ -422,17 +436,27 @@ def speed_up_silences(
         on_progress(30, "Rendering output...")
 
     # Run FFmpeg
-    cmd = [
-        "ffmpeg", "-hide_banner", "-y",
-        "-i", filepath,
-        "-filter_complex", filter_complex,
-        "-map", "[outv]", "-map", "[outa]",
-        "-c:v", "libx264", "-crf", "18", "-preset", "fast",
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "192k",
-        "-movflags", "+faststart",
-        output_path,
-    ]
+    if has_video:
+        cmd = [
+            "ffmpeg", "-hide_banner", "-y",
+            "-i", filepath,
+            "-filter_complex", filter_complex,
+            "-map", "[outv]", "-map", "[outa]",
+            "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "192k",
+            "-movflags", "+faststart",
+            output_path,
+        ]
+    else:
+        cmd = [
+            "ffmpeg", "-hide_banner", "-y",
+            "-i", filepath,
+            "-filter_complex", filter_complex,
+            "-map", "[outa]",
+            "-c:a", "aac", "-b:a", "192k",
+            output_path,
+        ]
 
     try:
         result = subprocess.run(

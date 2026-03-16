@@ -114,7 +114,9 @@ def enhance_faces(
     orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
 
-    tmp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+    _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    tmp_video = _ntf.name
+    _ntf.close()
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (orig_w, orig_h))
 
@@ -230,7 +232,9 @@ def swap_face(
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
 
-    tmp_video = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False).name
+    _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    tmp_video = _ntf.name
+    _ntf.close()
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
 

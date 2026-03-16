@@ -17,7 +17,7 @@ from flask import Blueprint, request, jsonify
 
 from opencut.jobs import jobs, job_lock, _new_job, _update_job, _safe_error, _is_cancelled
 from opencut.helpers import _try_import, _try_import_from, _resolve_output_dir, _unique_output_path, _run_ffmpeg_with_progress, _make_sequence_name, OPENCUT_DIR
-from opencut.security import validate_path, validate_filepath, require_csrf, safe_pip_install, safe_float, safe_int, VALID_WHISPER_MODELS
+from opencut.security import validate_path, validate_filepath, require_csrf, safe_pip_install, safe_float, safe_int, VALID_WHISPER_MODELS, require_rate_limit
 
 # Core imports used by multiple routes (try relative/absolute)
 try:
@@ -912,6 +912,7 @@ def captions_convert():
 
 @captions_bp.route("/captions/enhanced/install", methods=["POST"])
 @require_csrf
+@require_rate_limit("model_install")
 def captions_enhanced_install():
     """Install enhanced caption dependencies."""
     data = request.get_json(force=True)

@@ -314,10 +314,14 @@ def concatenate_audio(
 # ---------------------------------------------------------------------------
 def get_audio_generators() -> Dict:
     """Return available audio generation capabilities."""
+    from opencut.checks import check_edge_tts_available
+    from opencut.helpers import _try_import
+
+    kokoro_available = _try_import("kokoro") is not None
     return {
         "tts": {
             "edge_tts": check_edge_tts_available(),
-            "kokoro": check_kokoro_available(),
+            "kokoro": kokoro_available,
         },
         "sfx_presets": [
             {"name": k, "label": v["label"], "description": v["description"]}

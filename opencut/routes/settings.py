@@ -78,6 +78,8 @@ def save_favorites_route():
     favorites = data.get("favorites", [])
     if not isinstance(favorites, list):
         return jsonify({"error": "favorites must be a list"}), 400
+    if len(favorites) > 100:
+        return jsonify({"error": "Too many favorites (max 100)"}), 400
     save_favorites(favorites)
     return jsonify({"success": True})
 
@@ -100,8 +102,12 @@ def save_workflow():
     steps = data.get("steps", [])
     if not name:
         return jsonify({"error": "Name required"}), 400
+    if len(name) > 100:
+        return jsonify({"error": "Workflow name too long"}), 400
     if not steps or not isinstance(steps, list):
         return jsonify({"error": "Steps must be a non-empty list"}), 400
+    if len(steps) > 50:
+        return jsonify({"error": "Too many workflow steps (max 50)"}), 400
     workflows = load_workflows()
     # Update or add
     found = False

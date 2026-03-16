@@ -3687,6 +3687,23 @@ input[type="range"][title] {
 #trimQualityGroup.hidden { display: none; }
 
 /* ================================================================
+   Result Areas (auto-edit, highlights, summary, shorts)
+   ================================================================ */
+.result-area {
+    margin-top: 12px;
+    padding: 12px 14px;
+    background: var(--bg-card);
+    border: 1px solid rgba(0, 255, 255, 0.08);
+    border-radius: 10px;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--text-secondary);
+    max-height: 300px;
+    overflow-y: auto;
+}
+.result-area.hidden { display: none; }
+
+/* ================================================================
    Waveform Audio Preview Button
    ================================================================ */
 .waveform-audio-btn {
