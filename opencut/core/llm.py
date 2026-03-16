@@ -75,6 +75,10 @@ def _http_json(url, data=None, headers=None, timeout=60):
 
 def _query_ollama(prompt, system_prompt, config):
     """Query Ollama local server."""
+    from urllib.parse import urlparse
+    parsed = urlparse(config.base_url)
+    if parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
+        raise RuntimeError("Ollama base_url must point to localhost for security")
     url = f"{config.base_url.rstrip('/')}/api/generate"
     body = {
         "model": config.model,

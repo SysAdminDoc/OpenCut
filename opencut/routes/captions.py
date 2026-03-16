@@ -39,6 +39,26 @@ logger = logging.getLogger("opencut")
 
 captions_bp = Blueprint("captions", __name__)
 
+import re as _re
+
+_VALID_SUBTITLE_FORMATS = {"srt", "ass", "vtt", "sub", "json"}
+_VALID_ANIMATIONS = {"pop", "slide", "fade", "bounce", "typewriter", "wave", "glow"}
+_VALID_BURNIN_STYLES = {"default", "minimal", "bold", "outline", "shadow", "neon", "classic"}
+
+
+def _sanitize_force_style(s: str) -> str:
+    """Allow only safe ASS style directives (alphanumeric, commas, equals, parens, dots, spaces)."""
+    if s and _re.match(r'^[a-zA-Z0-9,=.() -]+$', s):
+        return s
+    return ""
+
+
+def _sanitize_font_name(s: str) -> str:
+    """Allow only safe font names (alphanumeric, spaces, hyphens, underscores)."""
+    if s and _re.match(r'^[a-zA-Z0-9 _-]+$', s):
+        return s
+    return "Arial"
+
 
 # ---------------------------------------------------------------------------
 # Captions
@@ -870,7 +890,7 @@ def captions_karaoke():
 
             segments_to_ass_karaoke(
                 segments, out_path,
-                font_name=data.get("font", "Arial"),
+                font_name=_sanitize_font_name(data.get("font", "Arial")),
                 font_size=safe_int(data.get("font_size", 48), default=48),
                 on_progress=_on_progress,
             )
@@ -898,6 +918,8 @@ def captions_convert():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     target_format = data.get("format", "srt")
+    if target_format not in _VALID_SUBTITLE_FORMATS:
+        return jsonify({"error": f"Unsupported format: {target_format}"}), 400
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -1006,7 +1028,7 @@ def burnin_from_file():
                 output_dir=effective_dir,
                 font_size=safe_int(data.get("font_size", 0)),
                 margin_bottom=safe_int(data.get("margin_bottom", 0)),
-                force_style=data.get("force_style", "").replace("'", "").replace(";", "").replace("\\", ""),
+                force_style=_sanitize_force_style(data.get("force_style", "")),
                 on_progress=_on_progress,
             )
             _update_job(
@@ -1034,6 +1056,8 @@ def burnin_from_segments():
     video_path = data.get("filepath", "").strip()
     segments = data.get("segments", [])
     style = data.get("style", "default")
+    if style not in _VALID_BURNIN_STYLES:
+        style = "default"
     output_dir = data.get("output_dir", "")
 
     if not video_path:
@@ -1114,8 +1138,11 @@ def animated_caption_render():
             from opencut.core.animated_captions import render_animated_captions
             def _p(pct, msg): _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
+            _anim = data.get("animation", "pop")
+            if _anim not in _VALID_ANIMATIONS:
+                _anim = "pop"
             out = render_animated_captions(fp, words, output_dir=d,
-                                            animation=data.get("animation", "pop"),
+                                            animation=_anim,
                                             font_size=safe_int(data.get("font_size", 56), default=56),
                                             max_words_per_line=safe_int(data.get("max_words", 6), default=6),
                                             on_progress=_p)
