@@ -105,6 +105,10 @@ def analyze_energy(
     """
     Analyze audio energy using windowed RMS.
 
+    Uses array module for memory-efficient sample storage (~4x less RAM
+    than a Python list of floats) and processes in-place to avoid creating
+    a second normalized copy.
+
     Args:
         filepath: Path to the media file.
         window_size: Analysis window in seconds.
@@ -113,16 +117,19 @@ def analyze_energy(
     Returns:
         List of AudioEnergy measurements.
     """
+    import array as _array
+    import math
+
     sample_rate = 16000
     pcm_data, sr = extract_audio_pcm(filepath, sample_rate=sample_rate)
 
-    # Convert bytes to samples
-    num_samples = len(pcm_data) // 2
-    samples = struct.unpack(f"<{num_samples}h", pcm_data)
+    # Convert bytes to signed 16-bit array (2 bytes/sample, ~8x less than list of floats)
+    samples = _array.array("h")
+    samples.frombytes(pcm_data)
+    num_samples = len(samples)
 
-    # Normalize to -1.0 to 1.0
+    # Work directly with int16 values — normalize at the point of use
     max_val = 32768.0
-    normalized = [s / max_val for s in samples]
 
     # Windowed analysis
     window_samples = int(window_size * sample_rate)
@@ -130,14 +137,19 @@ def analyze_energy(
 
     energies = []
     pos = 0
-    while pos + window_samples <= len(normalized):
-        window = normalized[pos:pos + window_samples]
+    while pos + window_samples <= num_samples:
+        # Compute RMS and peak directly from int16 samples
+        sum_sq = 0.0
+        pk = 0
+        for i in range(pos, pos + window_samples):
+            v = samples[i]
+            av = v if v >= 0 else -v
+            sum_sq += v * v
+            if av > pk:
+                pk = av
 
-        # RMS
-        rms = (sum(s * s for s in window) / len(window)) ** 0.5
-
-        # Peak
-        peak = max(abs(s) for s in window)
+        rms = math.sqrt(sum_sq / window_samples) / max_val
+        peak = pk / max_val
 
         time_sec = pos / sample_rate
         energies.append(AudioEnergy(time=time_sec, rms=rms, peak=peak))

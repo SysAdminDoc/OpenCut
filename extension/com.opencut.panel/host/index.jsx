@@ -481,7 +481,7 @@ function getProjectFolder() {
  * @returns {string} JSON result: {success, sequenceName, segments} or {error}
  */
 function applyEditsToTimeline(segmentsJson, mediaPath) {
-    var TICKS_PER_SECOND = 254016000000;
+    var TICKS_PER_SECOND = 254016000000; // Premiere Pro internal time base
 
     var segments;
     try {
@@ -598,7 +598,7 @@ function applyEditsToTimeline(segmentsJson, mediaPath) {
  * Find a project item by its media file path (recursive search).
  */
 function _findProjectItemByPath(parent, targetPath, depth) {
-    if (depth > 10) return null;
+    if (depth > 50) return null;
     var numChildren = 0;
     try { numChildren = parent.children.numItems; } catch (e) { return null; }
     for (var i = 0; i < numChildren; i++) {
@@ -611,7 +611,7 @@ function _findProjectItemByPath(parent, targetPath, depth) {
             } else {
                 var p = "";
                 try { p = item.getMediaPath(); } catch (e) { _ocLog(e.toString()); }
-                if (p && p.toLowerCase() === targetPath.toLowerCase()) return item;
+                if (p && decodeURI(p).toLowerCase() === decodeURI(targetPath).toLowerCase()) return item;
             }
         } catch (e) { _ocLog(e.toString()); }
     }
@@ -810,9 +810,13 @@ function importFileToProject(filePath, binName) {
         return JSON.stringify({ error: "Import failed: " + e.toString() });
     }
 
-    $.sleep(300);
-
-    var imported = _findProjectItemByPath(app.project.rootItem, filePath, 0);
+    // Poll for the imported item instead of fixed sleep
+    var imported = null;
+    for (var attempt = 0; attempt < 20; attempt++) {
+        $.sleep(50);
+        imported = _findProjectItemByPath(app.project.rootItem, filePath, 0);
+        if (imported) break;
+    }
     var displayName = f.displayName || filePath.split(/[\/\\]/).pop();
 
     if (imported) {

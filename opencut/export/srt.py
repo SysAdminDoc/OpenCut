@@ -241,9 +241,15 @@ def _format_ass_time(seconds: float) -> str:
 def rgb_to_ass_color(r: int, g: int, b: int, a: int = 0) -> str:
     """
     Convert RGBA (0-255) to ASS color format &HAABBGGRR.
-    Note: ASS alpha is inverted (0=opaque, 255=transparent).
+
+    ASS alpha is inverted vs standard RGBA:
+      RGBA a=0   (transparent) -> ASS alpha=255 (transparent)
+      RGBA a=255 (opaque)      -> ASS alpha=0   (opaque)
+
+    The default a=0 means fully transparent in RGBA, which maps to
+    ASS alpha=255.  Pass a=255 for fully opaque text.
     """
-    ass_alpha = 255 - a if a < 255 else 0
+    ass_alpha = max(0, min(255, 255 - a))
     return f"&H{ass_alpha:02X}{b:02X}{g:02X}{r:02X}"
 
 

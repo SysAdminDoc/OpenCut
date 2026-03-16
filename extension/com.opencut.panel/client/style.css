@@ -3,7 +3,9 @@
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+/* Google Fonts removed — external imports hang for 30s+ in air-gapped studios.
+   Inter/JetBrains Mono will still work if installed locally on the system;
+   otherwise the fallback stack provides visually similar alternatives. */
 
 /* ============================================================
    DESIGN SYSTEM - Cyberpunk Neon Theme
@@ -926,19 +928,19 @@ body.job-active .btn-install {
 /* ============================================================
    MAIN CONTENT
    ============================================================ */
-        .main {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            padding: var(--sp-md);
-            padding-bottom: var(--sp-lg);
-            display: flex;
-            flex-direction: column;
-            gap: var(--sp-md);
-            position: relative;
-            z-index: 10;
-            min-height: 0; /* Important for flex child scrolling */
-        }
+.main {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: var(--sp-md);
+  padding-bottom: var(--sp-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-md);
+  position: relative;
+  z-index: 10;
+  min-height: 0; /* Important for flex child scrolling */
+}
 
 /* Custom neon scrollbar */
 .main::-webkit-scrollbar { width: 8px; }
@@ -1338,11 +1340,6 @@ body.job-active .btn-install {
 }
 
 .link-btn:hover svg { transform: rotate(45deg); transition: transform 0.2s ease; }
-
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-}
 
 .btn-install {
     background: linear-gradient(135deg, var(--neon-green), var(--neon-green));

@@ -1,0 +1,9 @@
+[
+  {"id": "youtube_shorts", "name": "YouTube Shorts", "resolution": "1080x1920", "fps": 30, "max_duration": 60, "codec": "h264", "bitrate": "8M"},
+  {"id": "tiktok", "name": "TikTok", "resolution": "1080x1920", "fps": 30, "max_duration": 180, "codec": "h264", "bitrate": "6M"},
+  {"id": "instagram_reel", "name": "Instagram Reel", "resolution": "1080x1920", "fps": 30, "max_duration": 90, "codec": "h264", "bitrate": "6M"},
+  {"id": "instagram_story", "name": "Instagram Story", "resolution": "1080x1920", "fps": 30, "max_duration": 15, "codec": "h264", "bitrate": "5M"},
+  {"id": "instagram_post", "name": "Instagram Post", "resolution": "1080x1080", "fps": 30, "max_duration": 60, "codec": "h264", "bitrate": "5M"},
+  {"id": "twitter_x", "name": "Twitter/X", "resolution": "1920x1080", "fps": 30, "max_duration": 140, "codec": "h264", "bitrate": "5M"},
+  {"id": "linkedin", "name": "LinkedIn", "resolution": "1920x1080", "fps": 30, "max_duration": 600, "codec": "h264", "bitrate": "8M"}
+]

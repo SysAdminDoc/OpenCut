@@ -1,0 +1,68 @@
+name: Build
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact: OpenCut-Server-Windows
+          - os: ubuntu-latest
+            artifact: OpenCut-Server-Linux
+          - os: macos-latest
+            artifact: OpenCut-Server-macOS
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pyinstaller
+          pip install -e .
+
+      - name: Lint with ruff
+        run: |
+          pip install ruff
+          ruff check opencut/ --select E,F,I --ignore E501
+
+      - name: Smoke test
+        run: |
+          python -c "from opencut.server import app; print('Import OK')"
+          python -c "from opencut.security import get_csrf_token; print('Security OK')"
+          python -c "from opencut.jobs import _new_job; print('Jobs OK')"
+
+      - name: Build with PyInstaller
+        run: pyinstaller opencut_server.spec
+
+      - name: Archive build output
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.artifact }}
+          path: dist/OpenCut-Server/
+
+      - name: Upload to release
+        if: startsWith(github.ref, 'refs/tags/')
+        run: |
+          cd dist
+          tar -czf ${{ matrix.artifact }}.tar.gz OpenCut-Server/
+          gh release upload ${{ github.ref_name }} ${{ matrix.artifact }}.tar.gz --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
