@@ -3197,9 +3197,12 @@ def video_highlights():
             if not transcript_segments:
                 _update_job(job_id, progress=5, message="Transcribing video first...")
                 try:
-                    from opencut.core.transcribe import transcribe
-                    t_result = transcribe(filepath)
-                    transcript_segments = t_result.get("segments", [])
+                    from opencut.core.captions import transcribe as _transcribe
+                    t_result = _transcribe(filepath)
+                    transcript_segments = [
+                        {"start": s.start, "end": s.end, "text": s.text}
+                        for s in t_result.segments
+                    ]
                 except Exception as te:
                     raise RuntimeError(f"Transcription failed: {te}")
 
@@ -3338,15 +3341,18 @@ def video_shorts_pipeline():
 
             config = ShortsPipelineConfig(
                 whisper_model=data.get("whisper_model", "base"),
-                max_highlights=safe_int(data.get("max_highlights", 5), 5, min_val=1, max_val=20),
+                max_shorts=safe_int(data.get("max_shorts", 5), 5, min_val=1, max_val=20),
                 min_duration=safe_float(data.get("min_duration", 15.0), 15.0, min_val=5.0, max_val=300.0),
                 max_duration=safe_float(data.get("max_duration", 60.0), 60.0, min_val=10.0, max_val=600.0),
-                target_width=safe_int(data.get("width", 1080), 1080, min_val=100, max_val=7680),
-                target_height=safe_int(data.get("height", 1920), 1920, min_val=100, max_val=7680),
+                target_w=safe_int(data.get("width", 1080), 1080, min_val=100, max_val=7680),
+                target_h=safe_int(data.get("height", 1920), 1920, min_val=100, max_val=7680),
                 face_track=bool(data.get("face_track", True)),
                 burn_captions=bool(data.get("burn_captions", True)),
                 caption_style=data.get("caption_style", "default"),
-                llm_config=llm_config,
+                llm_provider=llm_config.provider,
+                llm_model=llm_config.model,
+                llm_api_key=llm_config.api_key,
+                llm_base_url=llm_config.base_url,
             )
 
             clips = generate_shorts(

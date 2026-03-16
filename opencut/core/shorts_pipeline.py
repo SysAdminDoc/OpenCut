@@ -153,11 +153,12 @@ def generate_shorts(
                 "Install faster-whisper: pip install faster-whisper"
             )
 
-        transcript_result = transcribe(
-            input_path,
+        from opencut.utils.config import CaptionConfig as _CapCfg
+        _cap_cfg = _CapCfg(
             model=config.whisper_model,
             language=config.language or None,
         )
+        transcript_result = transcribe(input_path, config=_cap_cfg)
 
         # Extract segments list from transcription result
         if hasattr(transcript_result, "segments"):
@@ -276,7 +277,7 @@ def generate_shorts(
             # 3c. Burn captions (if enabled)
             if config.burn_captions:
                 try:
-                    from opencut.core.caption_burnin import burn_captions
+                    from opencut.core.caption_burnin import burnin_segments
 
                     captioned_path = os.path.join(temp_dir, f"captioned_{i + 1}.mp4")
 
@@ -299,11 +300,11 @@ def generate_shorts(
                                 "text": s.get("text", ""),
                             })
 
-                        burn_captions(
+                        burnin_segments(
                             video_path=current_path,
                             segments=adjusted,
                             output_path=captioned_path,
-                            font_size=config.font_size,
+                            style=config.caption_style,
                         )
                         current_path = captioned_path
 

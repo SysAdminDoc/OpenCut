@@ -162,7 +162,7 @@ def health():
 
     return jsonify({
         "status": "ok",
-        "version": "1.2.0",
+        "version": "1.3.0",
         "capabilities": caps,
         "csrf_token": get_csrf_token(),
     })

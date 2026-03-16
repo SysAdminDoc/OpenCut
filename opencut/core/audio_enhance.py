@@ -154,7 +154,9 @@ def enhance_speech(
         if on_progress:
             on_progress(10, "Extracting audio from video...")
 
-        temp_wav = tempfile.mktemp(suffix=".wav", prefix="opencut_enhance_")
+        _tmp = tempfile.NamedTemporaryFile(suffix=".wav", prefix="opencut_enhance_", delete=False)
+        temp_wav = _tmp.name
+        _tmp.close()
         _extract_audio(input_path, temp_wav)
         audio_path = temp_wav
 

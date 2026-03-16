@@ -1175,9 +1175,12 @@ def transcript_summarize():
             if not transcript_segments:
                 _update_job(job_id, progress=5, message="Transcribing video first...")
                 try:
-                    from opencut.core.transcribe import transcribe
-                    t_result = transcribe(filepath)
-                    transcript_segments = t_result.get("segments", [])
+                    from opencut.core.captions import transcribe as _transcribe
+                    t_result = _transcribe(filepath)
+                    transcript_segments = [
+                        {"start": s.start, "end": s.end, "text": s.text}
+                        for s in t_result.segments
+                    ]
                 except Exception as te:
                     raise RuntimeError(f"Transcription failed: {te}")
 
