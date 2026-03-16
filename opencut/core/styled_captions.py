@@ -10,10 +10,10 @@ Generates transparent video overlays with styled captions including:
 Uses Pillow for text rendering and FFmpeg for video assembly.
 """
 
+import array as _array
 import logging
 import math
 import os
-import struct
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
@@ -422,7 +422,7 @@ def detect_action_words_by_energy(
     if n_samples == 0:
         return set()
 
-    samples = struct.unpack(f"<{n_samples}h", pcm_bytes)
+    samples = _array.array("h", pcm_bytes)
 
     word_rms = []
     for w in words:

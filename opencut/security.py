@@ -215,7 +215,15 @@ def rate_limit_release(key: str):
 
 
 def require_rate_limit(key: str, max_concurrent: int = 1):
-    """Decorator that rejects requests when concurrency limit is reached."""
+    """Decorator that rejects requests when concurrency limit is reached.
+
+    Acquires the rate limit slot before calling the wrapped function and
+    releases it when the function returns (or raises).  For async job
+    routes that spawn a background thread, the thread's ``finally``
+    block should call ``rate_limit_release(key)`` itself — in that case
+    use the lower-level ``rate_limit()`` / ``rate_limit_release()``
+    functions directly instead of this decorator.
+    """
     def decorator(f):
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
@@ -225,9 +233,8 @@ def require_rate_limit(key: str, max_concurrent: int = 1):
                 }), 429
             try:
                 return f(*args, **kwargs)
-            except Exception:
+            finally:
                 rate_limit_release(key)
-                raise
         return wrapper
     return decorator
 

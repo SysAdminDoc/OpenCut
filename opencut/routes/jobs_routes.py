@@ -83,7 +83,8 @@ def list_jobs():
 def stream_job(job_id):
     """Stream job status via Server-Sent Events. Replaces polling."""
     def generate():
-        while True:
+        deadline = time.time() + 1800  # 30 minute timeout
+        while time.time() < deadline:
             # Copy job data under the lock so we don't hold it during yield
             safe = _get_job_copy(job_id)
             if not safe:
@@ -127,8 +128,9 @@ def queue_add():
     }
     with job_queue_lock:
         job_queue.append(entry)
+        position = len(job_queue)
     _process_queue()
-    return jsonify({"queue_id": entry["id"], "position": len(job_queue)})
+    return jsonify({"queue_id": entry["id"], "position": position})
 
 
 @jobs_bp.route("/queue/list", methods=["GET"])
@@ -150,14 +152,19 @@ def queue_clear():
 
 def _dispatch_queue_entry(entry):
     """Dispatch a queue entry by calling the route handler directly
-    via Flask's test_request_context (no HTTP round-trip, no CSRF issues)."""
+    via Flask's test_request_context (no HTTP round-trip).
+    Includes the CSRF token so @require_csrf doesn't reject the call."""
     from flask import current_app
+    from opencut.security import get_csrf_token
     endpoint = entry.get("endpoint", "")
     payload = entry.get("payload", {})
 
     with current_app.test_request_context(endpoint, method="POST",
                                           json=payload,
-                                          headers={"Content-Type": "application/json"}):
+                                          headers={
+                                              "Content-Type": "application/json",
+                                              "X-OpenCut-Token": get_csrf_token(),
+                                          }):
         try:
             # Look up the route function and call it directly
             adapter = current_app.url_map.bind("")
@@ -195,14 +202,18 @@ def _process_queue():
     def _run():
         try:
             _dispatch_queue_entry(entry)
-            # Wait for the job to finish
+            # Wait for the job to finish (timeout after 30 minutes)
             if entry.get("job_id"):
-                while True:
+                deadline = time.time() + 1800
+                while time.time() < deadline:
                     safe = _get_job_copy(entry["job_id"])
                     if safe and safe.get("status") in ("complete", "error", "cancelled"):
                         entry["status"] = safe["status"]
                         break
                     time.sleep(1)
+                else:
+                    entry["status"] = "error"
+                    logger.warning("Queue job %s timed out after 30 minutes", entry.get("job_id"))
         except Exception as e:
             entry["status"] = "error"
             logger.exception("Queue processing error: %s", e)

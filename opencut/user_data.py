@@ -14,7 +14,9 @@ logger = logging.getLogger("opencut")
 
 OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
 
-# Per-file locks to prevent concurrent read-modify-write corruption
+# Per-file locks to prevent concurrent read-modify-write corruption.
+# Bounded: only OpenCut user-data files should be locked (< 20 files).
+_MAX_FILE_LOCKS = 50
 _file_locks = {}
 _file_locks_guard = threading.Lock()
 
@@ -29,6 +31,10 @@ def _get_lock(filepath: str) -> threading.Lock:
     key = os.path.normcase(os.path.realpath(filepath))
     with _file_locks_guard:
         if key not in _file_locks:
+            # Evict oldest entries if we somehow exceed the cap
+            if len(_file_locks) >= _MAX_FILE_LOCKS:
+                oldest = next(iter(_file_locks))
+                del _file_locks[oldest]
             _file_locks[key] = threading.Lock()
         return _file_locks[key]
 

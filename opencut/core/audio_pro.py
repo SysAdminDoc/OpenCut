@@ -309,7 +309,9 @@ def apply_pedalboard_effect(
 
     try:
         if is_video:
-            temp_audio = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+            _ntf = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+            temp_audio = _ntf.name
+            _ntf.close()
             _run_ffmpeg([
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
                 "-y", "-i", input_path,
@@ -317,12 +319,16 @@ def apply_pedalboard_effect(
                 temp_audio,
             ])
             audio_input = temp_audio
-            temp_output = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+            _ntf2 = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+            temp_output = _ntf2.name
+            _ntf2.close()
         else:
             temp_output = output_path
             if ext not in (".wav", ".flac", ".aiff"):
                 # Convert to WAV for processing
-                temp_audio = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+                _ntf = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+                temp_audio = _ntf.name
+                _ntf.close()
                 _run_ffmpeg([
                     "ffmpeg", "-hide_banner", "-loglevel", "error",
                     "-y", "-i", input_path,
@@ -330,7 +336,9 @@ def apply_pedalboard_effect(
                     temp_audio,
                 ])
                 audio_input = temp_audio
-                temp_output = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+                _ntf2 = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+                temp_output = _ntf2.name
+                _ntf2.close()
 
         # Build the pedalboard
         board = _build_pedalboard(effect_name, params, pedalboard)
@@ -563,7 +571,9 @@ def deepfilter_denoise(
 
     try:
         # Extract audio if video
-        temp_audio_in = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+        _ntf = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        temp_audio_in = _ntf.name
+        _ntf.close()
         _run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
@@ -585,7 +595,9 @@ def deepfilter_denoise(
 
         enhanced = enhance(model, df_state, audio)
 
-        temp_audio_out = tempfile.NamedTemporaryFile(suffix=".wav", delete=False).name
+        _ntf2 = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
+        temp_audio_out = _ntf2.name
+        _ntf2.close()
         save_audio(temp_audio_out, enhanced, sr=df_state.sr())
 
         if on_progress:
