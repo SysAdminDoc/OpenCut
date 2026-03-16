@@ -103,8 +103,8 @@ def _schedule_record_time(job_type, elapsed, filepath):
         try:
             from opencut.helpers import _get_file_duration, _record_job_time
             _record_job_time(job_type, elapsed, _get_file_duration(filepath))
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to record job time for %s: %s", job_type, e)
     threading.Thread(target=_record, daemon=True).start()
 
 

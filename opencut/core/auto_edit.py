@@ -304,6 +304,21 @@ def auto_edit(
 
     json_output = os.path.join(work_dir, "auto_edit_result.json")
 
+    try:
+        return _run_auto_edit(
+            input_path, method, threshold, margin, min_clip_length,
+            export_xml, work_dir, json_output, total_duration, on_progress,
+        )
+    except Exception:
+        if temp_dir and os.path.isdir(temp_dir):
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        raise
+
+
+def _run_auto_edit(input_path, method, threshold, margin, min_clip_length,
+                   export_xml, work_dir, json_output, total_duration, on_progress):
+    """Inner auto-edit logic (extracted for temp dir cleanup on error)."""
     if on_progress:
         on_progress(10, f"Analyzing video ({method} detection)...")
 
