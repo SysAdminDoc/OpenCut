@@ -215,6 +215,23 @@
 - Responsive: sidebar shrinks to 44px at ≤380px panel width
 - Content header shows dynamic tab title (updated by `setupNavTabs()` click handler)
 
+## v1.3.0 Code Quality Audit Fixes
+- **GPU detection caching** — `_detect_gpu()` with 30s TTL replaces duplicate nvidia-smi calls in system.py
+- **VideoCapture try/finally** — video.py watermark route now properly releases OpenCV captures on error
+- **Atomic file writes** — user_data.py writes to temp file + `os.replace()` to prevent corruption on crash
+- **Queue thread safety** — jobs_routes.py entry status updates now happen under `job_queue_lock`
+- **Dead code removal** — removed unused `_deferred_cleanup` list from helpers.py
+- **XSS prevention** — favorites chip and workflow step labels now escaped with `esc()` in main.js
+- **SSE cleanup** — `beforeunload` listener closes active EventSource on panel close
+- **MutationObserver tracking** — custom dropdown observers stored for potential cleanup
+- **Z-index hierarchy** — sidebar tooltips (500), context menu (9998), command palette (9999), toasts (10000)
+- **Disabled button UX** — `filter: grayscale(0.5)` + `pointer-events: none` for clearer disabled state
+- **Button accessibility** — all 179 buttons now have explicit `type="button"`
+- **Version sync** — OpenCut.iss, install.py, requirements.txt updated to v1.3.0
+- **Registry InstallPath** — Inno Setup now writes HKCU `Software\OpenCut\InstallPath`
+- **PyInstaller spec** — added mediapipe, auto_editor, transnetv2, resemble_enhance hidden imports
+- **ExtendScript safety** — getProjectFolder() null-checks `f.parent` before accessing `.fsName`
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]

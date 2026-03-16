@@ -8,6 +8,7 @@ favorites, workflows, presets, whisper settings, job times.
 import json
 import logging
 import os
+import tempfile
 import threading
 
 logger = logging.getLogger("opencut")
@@ -66,8 +67,20 @@ def write_user_file(filename: str, data):
     with lock:
         try:
             os.makedirs(OPENCUT_DIR, exist_ok=True)
-            with open(filepath, "w", encoding="utf-8") as f:
-                json.dump(data, f, indent=2)
+            # Atomic write: write to temp file then rename to prevent corruption
+            fd, tmp_path = tempfile.mkstemp(
+                dir=OPENCUT_DIR, suffix=".tmp", prefix=filename + "."
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    json.dump(data, f, indent=2)
+                os.replace(tmp_path, filepath)
+            except BaseException:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
         except Exception as e:
             logger.warning("Could not write %s: %s", filename, e)
             raise
