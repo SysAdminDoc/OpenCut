@@ -47,7 +47,9 @@ for mod in external_hiddenimports:
 all_hiddenimports = opencut_hiddenimports + valid_imports
 
 # Collect native DLLs and data for ctranslate2/faster_whisper
-extra_datas = []
+extra_datas = [
+    (os.path.join('opencut', 'data', 'social_presets.json'), os.path.join('opencut', 'data')),
+]
 for pkg in ['ctranslate2', 'faster_whisper']:
     try:
         extra_datas += collect_data_files(pkg)

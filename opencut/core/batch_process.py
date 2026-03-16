@@ -97,6 +97,28 @@ class BatchJob:
 # Global batch registry
 _batches: Dict[str, BatchJob] = {}
 _batch_lock = threading.Lock()
+_BATCH_MAX_AGE = 3600  # Auto-clean batches older than 1 hour
+_BATCH_MAX_COUNT = 200  # Hard cap on stored batches
+
+
+def _cleanup_old_batches():
+    """Remove finished batches older than _BATCH_MAX_AGE. Must hold _batch_lock."""
+    now = time.time()
+    expired = [
+        bid for bid, b in _batches.items()
+        if b.status not in ("running",) and (now - b.created_at) > _BATCH_MAX_AGE
+    ]
+    for bid in expired:
+        del _batches[bid]
+    # Hard cap: if still over limit, remove oldest finished batches
+    if len(_batches) > _BATCH_MAX_COUNT:
+        finished = sorted(
+            [(bid, b) for bid, b in _batches.items() if b.status != "running"],
+            key=lambda x: x[1].created_at,
+        )
+        to_remove = len(_batches) - _BATCH_MAX_COUNT
+        for bid, _ in finished[:to_remove]:
+            del _batches[bid]
 
 
 def create_batch(
@@ -122,6 +144,7 @@ def create_batch(
     )
 
     with _batch_lock:
+        _cleanup_old_batches()
         _batches[batch_id] = batch
 
     return batch

@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""
+OpenCut Version Sync Script
+
+Reads __version__ from opencut/__init__.py and updates all other files
+that contain version strings to match.
+
+Usage:
+    python scripts/sync_version.py              # Sync current version to all files
+    python scripts/sync_version.py --set 1.3.0  # Set new version, then sync
+"""
+
+import argparse
+import re
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent.parent
+INIT_PY = ROOT / "opencut" / "__init__.py"
+
+# Each entry: (relative path, regex pattern, replacement template)
+# The replacement template uses {v} for the version string.
+TARGETS = [
+    (
+        "pyproject.toml",
+        r'^(version\s*=\s*")[^"]+(")',
+        r'\g<1>{v}\g<2>',
+    ),
+    (
+        "opencut/server.py",
+        r'(OpenCut Backend Server v)[0-9]+\.[0-9]+\.[0-9]+',
+        r'\g<1>{v}',
+    ),
+    (
+        "extension/com.opencut.panel/client/index.html",
+        r'(<span class="version">v)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
+        r'\g<1>{v}\g<2>',
+    ),
+    (
+        "extension/com.opencut.panel/client/index.html",
+        r'(<span class="settings-value">)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
+        r'\g<1>{v}\g<2>',
+    ),
+    (
+        "extension/com.opencut.panel/client/main.js",
+        r'(OpenCut CEP Panel - Main Controller v)[0-9]+\.[0-9]+\.[0-9]+',
+        r'\g<1>{v}',
+    ),
+    (
+        "extension/com.opencut.panel/client/style.css",
+        r'(OpenCut CEP Panel v)[0-9]+\.[0-9]+\.[0-9]+',
+        r'\g<1>{v}',
+    ),
+]
+
+
+def read_version() -> str:
+    """Read __version__ from opencut/__init__.py."""
+    text = INIT_PY.read_text(encoding="utf-8")
+    m = re.search(r'__version__\s*=\s*"([^"]+)"', text)
+    if not m:
+        print(f"ERROR: Could not find __version__ in {INIT_PY}")
+        sys.exit(1)
+    return m.group(1)
+
+
+def set_version(new_ver: str) -> None:
+    """Write __version__ into opencut/__init__.py."""
+    text = INIT_PY.read_text(encoding="utf-8")
+    updated = re.sub(
+        r'(__version__\s*=\s*")[^"]+(")',
+        rf'\g<1>{new_ver}\g<2>',
+        text,
+    )
+    INIT_PY.write_text(updated, encoding="utf-8")
+    print(f"  SET  {INIT_PY.relative_to(ROOT)}  ->  {new_ver}")
+
+
+def sync_file(rel_path: str, pattern: str, replacement: str, version: str) -> bool:
+    """Update a single version occurrence in a file. Returns True if changed."""
+    fpath = ROOT / rel_path
+    if not fpath.exists():
+        print(f"  SKIP {rel_path}  (file not found)")
+        return False
+
+    text = fpath.read_text(encoding="utf-8")
+    repl = replacement.replace("{v}", version)
+    updated, count = re.subn(pattern, repl, text, count=1, flags=re.MULTILINE)
+
+    if count == 0:
+        print(f"  SKIP {rel_path}  (pattern not matched)")
+        return False
+
+    fpath.write_text(updated, encoding="utf-8")
+    print(f"  SYNC {rel_path}  ->  {version}")
+    return True
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Sync OpenCut version across all files")
+    parser.add_argument("--set", dest="new_version", metavar="X.Y.Z",
+                        help="Set a new version in __init__.py before syncing")
+    args = parser.parse_args()
+
+    if args.new_version:
+        if not re.match(r'^\d+\.\d+\.\d+$', args.new_version):
+            print(f"ERROR: Invalid version format '{args.new_version}' (expected X.Y.Z)")
+            sys.exit(1)
+        set_version(args.new_version)
+
+    version = read_version()
+    print(f"\nSyncing version {version} across project files:\n")
+
+    changed = 0
+    for rel_path, pattern, replacement in TARGETS:
+        if sync_file(rel_path, pattern, replacement, version):
+            changed += 1
+
+    print(f"\nDone. {changed} file(s) updated to v{version}.")
+
+
+if __name__ == "__main__":
+    main()
