@@ -311,7 +311,6 @@ def speed_up_silences(
         Dict with output_path, original_duration, new_duration, reduction_percent.
     """
     import os
-    import tempfile
 
     if speed_factor < 1.5:
         speed_factor = 1.5
