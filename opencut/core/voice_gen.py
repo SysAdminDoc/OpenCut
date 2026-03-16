@@ -173,18 +173,17 @@ def edge_tts_generate(
         communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch, volume=volume)
         await communicate.save(output_path)
 
-    # Run async in sync context
+    # Run async in sync context — use asyncio.run() which works in all
+    # Python 3.9+ versions.  If called from an existing event loop thread,
+    # fall back to a new thread with its own loop.
     try:
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            import concurrent.futures
-            with concurrent.futures.ThreadPoolExecutor() as pool:
-                future = pool.submit(asyncio.run, _generate())
-                future.result(timeout=120)
-        else:
-            loop.run_until_complete(_generate())
-    except RuntimeError:
         asyncio.run(_generate())
+    except RuntimeError:
+        # Already inside an event loop — run in a dedicated thread
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            future = pool.submit(asyncio.run, _generate())
+            future.result(timeout=120)
 
     if on_progress:
         on_progress(100, "Speech generated!")

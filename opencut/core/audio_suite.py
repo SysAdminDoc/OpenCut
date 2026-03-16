@@ -12,11 +12,11 @@ Provides audio processing features:
 All features use FFmpeg only - no additional model downloads required.
 """
 
+import array as _array
 import json
 import logging
 import math
 import os
-import struct
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
@@ -378,7 +378,7 @@ def detect_beats(
     if on_progress:
         on_progress(30, "Analyzing energy transients...")
 
-    samples = struct.unpack(f"<{num_samples}h", pcm_data)
+    samples = _array.array("h", pcm_data)
     max_val = 32768.0
 
     # Compute short-time energy with onset detection
@@ -524,7 +524,7 @@ def generate_ducking_keyframes(
     if num_samples < sample_rate:
         return []
 
-    samples = struct.unpack(f"<{num_samples}h", pcm_data)
+    samples = _array.array("h", pcm_data)
     max_val = 32768.0
 
     # Analyze energy in 50ms windows

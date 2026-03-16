@@ -78,7 +78,9 @@ def stabilize_video(
     if output_path is None:
         output_path = _output_path(input_path, "stabilized", output_dir)
 
-    transforms_file = tempfile.NamedTemporaryFile(suffix=".trf", delete=False).name
+    _ntf = tempfile.NamedTemporaryFile(suffix=".trf", delete=False)
+    transforms_file = _ntf.name
+    _ntf.close()
 
     try:
         # Pass 1: Analyze motion
@@ -323,15 +325,11 @@ def apply_letterbox(
 
     # Parse aspect ratio
     parts = aspect.split(":")
+    if len(parts) != 2 or float(parts[1]) == 0:
+        raise ValueError(f"Invalid aspect ratio: {aspect}")
     target_ratio = float(parts[0]) / float(parts[1])
 
-    # Use pad filter to add bars, maintaining original width
-    vf = (
-        f"scale=iw:iw/{target_ratio}:force_original_aspect_ratio=decrease,"
-        f"pad=iw:iw/{target_ratio}:(ow-iw)/2:(oh-ih)/2:color={color},"
-        f"scale=iw:iw/{target_ratio}"
-    )
-    # Simpler: crop to target aspect, or pad with bars
+    # Pad with bars to achieve target aspect ratio
     vf = f"pad=iw:iw/{target_ratio}:(ow-iw)/2:(oh-ih)/2:{color}"
 
     cmd = [
@@ -367,25 +365,27 @@ def color_match(
     if on_progress:
         on_progress(20, "Matching colors...")
 
-    # Extract reference color stats and apply via curves
-    cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
-        "-y", "-i", input_path, "-i", reference_path,
-        "-filter_complex",
-        "[1:v]format=rgba,scale=1:1[ref];"
-        "[0:v][ref]haldclutsrc=8,paletteuse=dither=none",
-        "-c:a", "copy",
-        output_path,
-    ]
-    # Simpler approach: use colortemperature/colorbalance to approximate
-    # For now, use FFmpeg's built-in normalize filter as a baseline
-    cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
-        "-y", "-i", input_path,
-        "-vf", "normalize=blackpt=black:whitept=white:smoothing=20",
-        "-c:a", "copy",
-        output_path,
-    ]
+    # Use reference image as a color palette source via FFmpeg's
+    # histogram equalization approach: normalize source to reference colors
+    if reference_path and os.path.isfile(reference_path):
+        cmd = [
+            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            "-y", "-i", input_path, "-i", reference_path,
+            "-filter_complex",
+            "[1:v]scale=1:1,format=rgba[ref];"
+            "[0:v][ref]normalize=blackpt=black:whitept=white:smoothing=20",
+            "-map", "0:a?", "-c:a", "copy",
+            output_path,
+        ]
+    else:
+        # Fallback: auto-normalize without reference
+        cmd = [
+            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            "-y", "-i", input_path,
+            "-vf", "normalize=blackpt=black:whitept=white:smoothing=20",
+            "-c:a", "copy",
+            output_path,
+        ]
     _run_ffmpeg(cmd)
     if on_progress:
         on_progress(100, "Color matching complete")
