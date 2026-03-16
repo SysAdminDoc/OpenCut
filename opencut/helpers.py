@@ -33,10 +33,6 @@ DEFAULT_CRF = 18
 # ---------------------------------------------------------------------------
 # Deferred Temp File Cleanup
 # ---------------------------------------------------------------------------
-_deferred_cleanup = []
-_cleanup_lock = threading.Lock()
-
-
 def _schedule_temp_cleanup(filepath: str, delay: float = 5.0, retries: int = 3):
     """Schedule a temp file for deferred deletion.
 

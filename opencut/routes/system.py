@@ -255,9 +255,15 @@ def media_info():
 # ---------------------------------------------------------------------------
 # GPU / System Info
 # ---------------------------------------------------------------------------
-@system_bp.route("/system/gpu", methods=["GET"])
-def system_gpu():
-    """Check GPU availability for AI features."""
+_gpu_cache = {"info": None, "ts": 0}
+_GPU_CACHE_TTL = 30  # seconds
+
+
+def _detect_gpu():
+    """Detect GPU via nvidia-smi with 30s cache."""
+    now = time.time()
+    if _gpu_cache["info"] is not None and (now - _gpu_cache["ts"]) < _GPU_CACHE_TTL:
+        return dict(_gpu_cache["info"])
     gpu_info = {"available": False, "name": "None", "vram_mb": 0}
     try:
         result = _sp.run(
@@ -272,7 +278,15 @@ def system_gpu():
             gpu_info["vram_mb"] = safe_int(parts[1].strip()) if len(parts) > 1 else 0
     except Exception:
         pass
-    return jsonify(gpu_info)
+    _gpu_cache["info"] = dict(gpu_info)
+    _gpu_cache["ts"] = now
+    return gpu_info
+
+
+@system_bp.route("/system/gpu", methods=["GET"])
+def system_gpu():
+    """Check GPU availability for AI features."""
+    return jsonify(_detect_gpu())
 
 
 # ---------------------------------------------------------------------------
@@ -281,20 +295,7 @@ def system_gpu():
 @system_bp.route("/system/gpu-recommend", methods=["GET"])
 def gpu_recommend():
     """Recommend model sizes and settings based on GPU."""
-    gpu_info = {"available": False, "name": "None", "vram_mb": 0}
-    try:
-        result = _sp.run(
-            ["nvidia-smi", "--query-gpu=name,memory.total",
-             "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=5,
-        )
-        if result.returncode == 0 and result.stdout.strip():
-            parts = result.stdout.strip().split(",")
-            gpu_info["available"] = True
-            gpu_info["name"] = parts[0].strip()
-            gpu_info["vram_mb"] = safe_int(parts[1].strip()) if len(parts) > 1 else 0
-    except Exception:
-        pass
+    gpu_info = _detect_gpu()
 
     vram = gpu_info["vram_mb"]
     rec = {

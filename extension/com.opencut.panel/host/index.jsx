@@ -459,7 +459,9 @@ function getProjectFolder() {
         var p = app.project.path;
         if (p) {
             var f = new File(p);
-            return f.parent.fsName;
+            if (f.parent) {
+                return f.parent.fsName;
+            }
         }
     } catch (e) { _ocLog(e.toString()); }
     return "";
