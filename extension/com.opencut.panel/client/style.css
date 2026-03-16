@@ -2646,15 +2646,18 @@ input[type="checkbox"] {
    DROP ZONE
    ============================================================ */
 .drop-zone {
-    border: 2px dashed var(--border);
-    border-radius: 8px;
-    padding: 20px;
-    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    border: 1px dashed var(--border-light);
+    border-radius: var(--r-sm);
+    padding: 8px 12px;
     color: var(--text-muted);
-    font-size: 12px;
+    font-size: 11px;
     transition: border-color 0.2s, background 0.2s;
     cursor: pointer;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 .drop-zone.drag-over {
     border-color: var(--neon-cyan);
@@ -2662,9 +2665,9 @@ input[type="checkbox"] {
     color: var(--neon-cyan);
 }
 .drop-zone-icon {
-    font-size: 24px;
-    margin-bottom: 6px;
+    font-size: 16px;
     opacity: 0.5;
+    line-height: 1;
 }
 .drop-zone-text {
     font-size: 11px;
