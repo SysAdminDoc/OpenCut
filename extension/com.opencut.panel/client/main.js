@@ -343,7 +343,8 @@
     function $(id) { return document.getElementById(id); }
 
     function initDOM() {
-        // Header (pre-warm frequently used elements)
+        // Content header
+        el.contentTitle = $("contentTitle");
         el.connDot = $("connDot");
         el.connLabel = $("connLabel");
         el.refreshAllBtn = $("refreshAllBtn");
@@ -1306,6 +1307,12 @@
                 this.setAttribute("aria-selected", "true");
                 var panel = $("panel-" + target);
                 if (panel) panel.classList.add("active");
+                // Update content header title
+                if (el.contentTitle) {
+                    el.contentTitle.textContent = this.getAttribute("title") || target;
+                }
+                // Check sub-tab overflow after tab switch
+                checkSubTabOverflow();
                 // Load settings info on first visit
                 if (target === "settings") loadSettingsInfo();
             });
@@ -1332,6 +1339,17 @@
                     });
                 }
             })(subTabContainers[i]);
+        }
+    }
+
+    function checkSubTabOverflow() {
+        var containers = document.querySelectorAll(".sub-tabs");
+        for (var i = 0; i < containers.length; i++) {
+            if (containers[i].scrollWidth > containers[i].clientWidth) {
+                containers[i].classList.add("has-overflow");
+            } else {
+                containers[i].classList.remove("has-overflow");
+            }
         }
     }
 
@@ -5424,6 +5442,8 @@
         initCSInterface();
         initDOM();
         setupNavTabs();
+        checkSubTabOverflow();
+        window.addEventListener("resize", checkSubTabOverflow);
         setupSliders();
         initCustomDropdowns(); // Initialize custom in-panel dropdowns
 
