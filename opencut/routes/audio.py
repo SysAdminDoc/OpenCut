@@ -491,7 +491,7 @@ def audio_separate():
                     '-vn', '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2',
                     temp_audio
                 ]
-                _sp.run(ffmpeg_cmd, check=True, capture_output=True)
+                _sp.run(ffmpeg_cmd, check=True, capture_output=True, timeout=300)
                 input_audio = temp_audio
             else:
                 input_audio = filepath
@@ -588,13 +588,13 @@ def audio_separate():
                                 'ffmpeg', '-y', '-i', src_path,
                                 '-codec:a', 'libmp3lame', '-b:a', '320k',
                                 out_path
-                            ], check=True, capture_output=True)
+                            ], check=True, capture_output=True, timeout=300)
                         elif output_format == 'flac':
                             _sp.run([
                                 'ffmpeg', '-y', '-i', src_path,
                                 '-codec:a', 'flac',
                                 out_path
-                            ], check=True, capture_output=True)
+                            ], check=True, capture_output=True, timeout=300)
 
                         output_paths.append(out_path)
 

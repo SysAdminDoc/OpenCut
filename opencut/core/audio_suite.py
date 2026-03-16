@@ -458,7 +458,7 @@ def detect_beats(
             variance = sum((iv - mean_interval) ** 2 for iv in reasonable) / len(reasonable)
             std = variance ** 0.5
             # Lower std = higher confidence
-            confidence = max(0.0, min(1.0, 1.0 - (std / mean_interval)))
+            confidence = max(0.0, min(1.0, 1.0 - (std / mean_interval))) if mean_interval > 0 else 0.0
 
     # Identify downbeats (every 4th beat, assuming 4/4 time)
     downbeat_times = beat_times[::4] if beat_times else []
