@@ -1039,3 +1039,61 @@ def delete_model():
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# LLM Status & Test
+# ---------------------------------------------------------------------------
+@system_bp.route("/llm/status", methods=["GET"])
+def llm_status():
+    """Check LLM provider availability and list Ollama models if running."""
+    from opencut.checks import check_ollama_available
+    ollama_ok = check_ollama_available()
+
+    ollama_models = []
+    if ollama_ok:
+        try:
+            from opencut.core.llm import list_ollama_models
+            ollama_models = list_ollama_models()
+        except Exception:
+            pass
+
+    return jsonify({
+        "ollama": {"available": ollama_ok, "models": ollama_models},
+        "openai": {"available": True, "note": "Requires API key"},
+        "anthropic": {"available": True, "note": "Requires API key"},
+    })
+
+
+@system_bp.route("/llm/test", methods=["POST"])
+@require_csrf
+def llm_test():
+    """Test LLM connectivity with a simple prompt."""
+    data = request.get_json(force=True)
+
+    provider = data.get("provider", "ollama").strip()
+    model = data.get("model", "").strip()
+    api_key = data.get("api_key", "").strip()
+    base_url = data.get("base_url", "").strip()
+
+    try:
+        from opencut.core.llm import LLMConfig, query_llm
+
+        config = LLMConfig(
+            provider=provider,
+            model=model,
+            api_key=api_key,
+            base_url=base_url,
+            max_tokens=50,
+        )
+
+        response = query_llm("Say 'Hello from OpenCut!' in exactly those words.", config)
+
+        return jsonify({
+            "success": True,
+            "response": response.text,
+            "provider": response.provider,
+            "model": response.model,
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
