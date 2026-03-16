@@ -58,8 +58,8 @@
     --text-white:     #ffffff;
     --text-primary:   #f0f0ff;
     --text-secondary: #a0a0c0;
-    --text-muted:     #606080;
-    --text-faint:     #404060;
+    --text-muted:     #7878a0;
+    --text-faint:     #58587a;
 
     /* Borders */
     --border:         rgba(255, 255, 255, 0.06);
@@ -106,7 +106,7 @@
     --t-fast: 0.15s ease;
     --t-med: 0.3s ease;
     --t-slow: 0.5s ease;
-    --t-spring: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    --t-spring: cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
     /* Glow intensity (0 = off, 1 = full) */
     --glow-opacity: 1;
@@ -419,6 +419,7 @@ input, textarea, [contenteditable] {
     flex-direction: column;
     height: 100vh;
     max-height: 100vh;
+    min-width: 300px;
     position: relative;
     overflow: hidden;
 }
@@ -564,7 +565,7 @@ input, textarea, [contenteditable] {
 /* Version badge with glow */
 .version {
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     color: var(--neon-cyan);
     background: var(--cyan-subtle);
@@ -616,7 +617,7 @@ input, textarea, [contenteditable] {
 
 .conn-label {
     font-size: 12px;
-    color: var(--text-muted);
+    color: var(--text-secondary);
     font-weight: 500;
 }
 
@@ -670,7 +671,7 @@ input, textarea, [contenteditable] {
     top: 0;
     z-index: 200;
     flex-wrap: wrap;
-    animation: processingSlide 0.3s var(--t-spring);
+    animation: processingSlide 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 .processing-banner.hidden { display: none; }
@@ -730,7 +731,7 @@ input, textarea, [contenteditable] {
     font-weight: 700;
     color: var(--neon-red);
     background: rgba(255, 0, 85, 0.1);
-    border: 1px solid rgba(255, 0, 85, 0.3);
+    border: 1px solid var(--red-glow);
     border-radius: var(--r-xs);
     padding: 3px 10px;
     cursor: pointer;
@@ -741,7 +742,10 @@ input, textarea, [contenteditable] {
 
 .processing-cancel:hover {
     background: rgba(255, 0, 85, 0.25);
-    border-color: rgba(255, 0, 85, 0.5);
+    border-color: var(--neon-red);
+}
+.processing-cancel:active {
+    transform: scale(0.95);
 }
 
 .processing-track {
@@ -786,7 +790,7 @@ body.job-active .btn-install {
     border-bottom: 1px solid rgba(255, 136, 0, 0.3);
     position: relative;
     z-index: 100;
-    animation: alertSlide 0.4s var(--t-spring);
+    animation: alertSlide 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 @keyframes alertSlide {
@@ -962,7 +966,7 @@ body.job-active .btn-install {
 }
 
 .nav-panel.active > * {
-    animation: cardEnter 0.5s var(--t-spring) backwards;
+    animation: cardEnter 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) backwards;
 }
 
 .nav-panel.active > *:nth-child(1) { animation-delay: 0s; }
@@ -993,6 +997,10 @@ body.job-active .btn-install {
     background: var(--bg-card);
     border-radius: var(--r-lg);
     padding: 4px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     border: 1px solid var(--border);
 }
 
@@ -1153,15 +1161,16 @@ body.job-active .btn-install {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 8px 18px;
+    padding: 10px 18px;
     background: var(--accent-grad-bg);
     border: none;
     border-radius: var(--r-md);
-    color: #000;
+    color: var(--text-white);
     font-family: var(--font-sans);
     font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     letter-spacing: 1px;
     cursor: pointer;
     position: relative;
@@ -1223,7 +1232,7 @@ body.job-active .btn-install {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 12px 18px;
+    padding: 10px 18px;
     background: var(--cyan-subtle);
     border: 1px solid var(--border-glow);
     border-radius: var(--r-sm);
@@ -1238,7 +1247,7 @@ body.job-active .btn-install {
 }
 
 .btn-outline:hover {
-    background: var(--cyan-subtle);
+    background: rgba(0, 255, 255, 0.12);
     border-color: var(--neon-cyan);
     transform: translateY(-2px);
     box-shadow: 0 5px 20px var(--border-glow), 0 0 20px var(--cyan-glow);
@@ -1253,7 +1262,7 @@ body.job-active .btn-install {
     align-items: center;
     justify-content: center;
     gap: 8px;
-    padding: 12px 18px;
+    padding: 10px 18px;
     background: var(--bg-card);
     border: 1px solid var(--border-light);
     border-radius: var(--r-sm);
@@ -1328,7 +1337,7 @@ body.job-active .btn-install {
     background: var(--cyan-subtle);
 }
 
-.link-btn:hover svg { animation: spin 0.6s ease; }
+.link-btn:hover svg { transform: rotate(45deg); transition: transform 0.2s ease; }
 
 @keyframes spin {
     from { transform: rotate(0deg); }
@@ -1336,9 +1345,9 @@ body.job-active .btn-install {
 }
 
 .btn-install {
-    background: linear-gradient(135deg, var(--neon-green), #00cc88);
+    background: linear-gradient(135deg, var(--neon-green), var(--neon-green));
     border: none;
-    color: #000;
+    color: var(--bg-void);
     padding: 10px 20px;
     border-radius: var(--r-sm);
     font-size: 11px;
@@ -1353,7 +1362,7 @@ body.job-active .btn-install {
 }
 
 .btn-cancel {
-    background: linear-gradient(135deg, var(--neon-red), #cc0044);
+    background: linear-gradient(135deg, var(--neon-red), var(--neon-red));
     border: none;
     color: #fff;
     padding: 8px 14px;
@@ -1422,7 +1431,7 @@ textarea:focus {
 select {
     cursor: pointer;
     appearance: none;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2300ffff' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0c0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 12px center;
     padding-right: 36px;
@@ -1514,7 +1523,7 @@ textarea {
     appearance: none;
     outline: none;
     transition: all var(--t-fast);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%2300ffff' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%23a0a0c0' viewBox='0 0 16 16'%3E%3Cpath d='M8 11L3 6h10l-5 5z'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: right 14px center;
 }
@@ -1930,14 +1939,16 @@ input[type="checkbox"] {
 }
 
 .stat-item:hover {
-    transform: translateY(-5px) scale(1.03);
+    transform: translateY(-2px);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4), 0 0 30px var(--cyan-glow);
 }
 
 .stat-value {
     display: block;
     font-family: var(--font-mono);
-    font-size: 28px;
+    font-size: 24px;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-weight: 800;
     background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
     -webkit-background-clip: text;
@@ -1947,7 +1958,7 @@ input[type="checkbox"] {
 
 .stat-label {
     display: block;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     color: var(--text-muted);
     text-transform: uppercase;
@@ -2112,7 +2123,7 @@ input[type="checkbox"] {
 .results-card {
     text-align: center;
     padding: 12px 0;
-    animation: resultsPop 0.6s var(--t-spring);
+    animation: resultsPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
 
 @keyframes resultsPop {
@@ -2411,7 +2422,7 @@ input[type="checkbox"] {
 
 .custom-dropdown-group {
     padding: 8px 14px 6px;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     color: var(--text-muted);
     text-transform: uppercase;
@@ -2694,7 +2705,7 @@ input[type="checkbox"] {
     max-height: 200px;
     overflow-y: auto;
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--r-sm);
     background: var(--bg-input);
 }
 .model-item {
@@ -2745,7 +2756,7 @@ input[type="checkbox"] {
     margin-top: 6px;
     padding: 6px 8px;
     background: var(--bg-input);
-    border-radius: var(--radius);
+    border-radius: var(--r-sm);
     font-size: 10px;
     color: var(--text-secondary);
     line-height: 1.5;
@@ -2790,7 +2801,7 @@ input[type="checkbox"] {
     border: 1px solid var(--border);
     border-radius: 3px;
     padding: 1px 5px;
-    font-size: 9px;
+    font-size: 10px;
     font-family: 'JetBrains Mono', monospace;
     color: var(--text-muted);
     margin-left: 6px;
@@ -2819,7 +2830,7 @@ input[type="checkbox"] {
     right: 12px;
     background: var(--bg-card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: var(--r-sm);
     padding: 10px 14px;
     font-size: 12px;
     color: var(--text-primary);
@@ -2873,7 +2884,7 @@ input[type="checkbox"] {
 }
 .waveform-label {
     text-align: center;
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-muted);
     padding: 2px 0;
 }
@@ -3250,7 +3261,7 @@ input[type="checkbox"] {
 }
 .output-item-meta {
     color: var(--text-muted);
-    font-size: 9px;
+    font-size: 10px;
 }
 .output-item-actions {
     display: flex;
@@ -3333,7 +3344,7 @@ input[type="checkbox"] {
 .dep-version {
     color: var(--text-muted);
     font-family: var(--font-mono);
-    font-size: 9px;
+    font-size: 10px;
 }
 
 /* ============================================================
@@ -3365,7 +3376,7 @@ input[type="checkbox"] {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 700;
     color: var(--neon-cyan);
     flex-shrink: 0;
@@ -3487,7 +3498,7 @@ input[type="range"][title] {
     animation: spin 0.8s linear infinite;
 }
 .clip-thumb-none {
-    font-size: 9px;
+    font-size: 10px;
     color: var(--text-faint);
     text-align: center;
 }
@@ -3555,11 +3566,11 @@ input[type="range"][title] {
 }
 .command-palette-item:hover,
 .command-palette-item.selected {
-    background: var(--neon-cyan);
-    color: var(--bg-void);
+    background: rgba(0, 255, 255, 0.15);
+    color: var(--neon-cyan);
 }
 .command-palette-item.selected .command-palette-tab {
-    color: rgba(0, 0, 0, 0.5);
+    color: var(--text-muted);
 }
 .command-palette-tab {
     font-size: 10px;
@@ -3612,8 +3623,8 @@ input[type="range"][title] {
     transition: background var(--t-fast);
 }
 .recent-clip-item:hover {
-    background: var(--neon-cyan);
-    color: var(--bg-void);
+    background: rgba(0, 255, 255, 0.15);
+    color: var(--neon-cyan);
 }
 
 /* ================================================================
@@ -3690,3 +3701,65 @@ input[type="range"][title] {
    Sub-tab Visibility
    ================================================================ */
 .sub-tab[style*="display: none"] + .sub-panel { display: none; }
+
+/* ================================================================
+   Focus-Visible — keyboard-only focus ring for all interactive elements
+   ================================================================ */
+button:focus-visible,
+.btn-primary:focus-visible,
+.btn-outline:focus-visible,
+.btn-secondary:focus-visible,
+.btn-install:focus-visible,
+.btn-cancel:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+.tab:focus-visible,
+.sub-tab:focus-visible,
+.link-btn:focus-visible {
+    outline: 2px solid var(--neon-cyan);
+    outline-offset: 2px;
+}
+
+/* ================================================================
+   Reduced Motion — respect user accessibility preferences
+   ================================================================ */
+@media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* ================================================================
+   Disabled Button Hint
+   ================================================================ */
+.btn-primary[data-hint]:disabled::after,
+.btn-outline[data-hint]:disabled::after {
+    content: attr(data-hint);
+    display: block;
+    font-size: 10px;
+    color: var(--text-muted);
+    margin-top: 4px;
+    font-weight: normal;
+}
+
+/* ================================================================
+   Collapsible Card Chevron Indicator
+   ================================================================ */
+.card-header .collapse-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    margin-left: auto;
+    transition: transform 0.2s ease;
+    color: var(--text-muted);
+}
+.card-header .collapse-icon::before {
+    content: "\25B6";
+    font-size: 10px;
+}
+.card.expanded .card-header .collapse-icon::before {
+    content: "\25BC";
+}
