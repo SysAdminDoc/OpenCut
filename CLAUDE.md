@@ -15,22 +15,33 @@
 - `opencut/jobs.py` (~190 lines) - Job state, _new_job, _update_job, _kill_job_process, _get_job_copy, _list_jobs_copy, _unregister_job_process, TooManyJobsError, MAX_CONCURRENT_JOBS=10, async_job decorator
 - `opencut/helpers.py` (~430 lines) - _try_import, output paths, FFmpegCmd builder, FFmpeg progress runner, deferred temp cleanup, job time tracking, compute_estimate
 - `opencut/errors.py` (~60 lines) - OpenCutError exception class with typed codes (MISSING_DEPENDENCY, FILE_NOT_FOUND, GPU_OUT_OF_MEMORY, INVALID_INPUT, OPERATION_FAILED), register_error_handlers
-- `opencut/checks.py` (~50 lines) - Centralized dependency availability checks (demucs, watermark, pedalboard, audiocraft, edge_tts, rembg, upscale, scenedetect)
+- `opencut/checks.py` (~90 lines) - Centralized dependency availability checks (demucs, watermark, pedalboard, audiocraft, edge_tts, rembg, upscale, scenedetect, auto-editor, transnetv2, resemble-enhance, ollama)
 - `opencut/user_data.py` (~100 lines) - Thread-safe JSON file access for user settings (per-file locks, normalized lock keys)
 - `opencut/data/social_presets.json` - Social platform export presets (YouTube Shorts, TikTok, etc.)
 
+### Core Modules (`opencut/core/`)
+- `llm.py` (~300 lines) - LLM abstraction layer (Ollama/OpenAI/Anthropic). LLMConfig, LLMResponse, query_llm(), check_llm_reachable(). Zero pip deps (stdlib urllib).
+- `silence.py` (~490 lines) - Silence detection + speed_up_silences() for sped-up (not cut) silent segments via FFmpeg filter_complex with chained atempo.
+- `scene_detect.py` (~460 lines) - FFmpeg threshold + TransNetV2 ML scene detection. detect_scenes_ml() with lazy import.
+- `auto_edit.py` (~400 lines) - auto-editor CLI integration for motion/audio-based editing. Parses JSON output, optional Premiere XML export.
+- `audio_enhance.py` (~240 lines) - Resemble Enhance speech super-resolution. Lazy-loaded optional dependency.
+- `face_reframe.py` (~390 lines) - MediaPipe face-tracking auto-framing for vertical/social video reframe. Smoothed crop path with per-second FFmpeg between() expressions.
+- `highlights.py` (~350 lines) - LLM-powered highlight extraction and video summarization. Parses JSON from LLM with fallback regex.
+- `shorts_pipeline.py` (~350 lines) - One-click shorts pipeline: transcribe → LLM highlights → trim → face-reframe → caption burn-in → export.
+- `lut_library.py` (~580 lines) - LUT management + generate_lut_from_reference() for AI LUT generation from reference images using PIL/numpy histogram matching.
+
 ### Route Blueprints (`opencut/routes/`)
 - `__init__.py` - `register_blueprints(app)` registers all 6 Blueprints
-- `system.py` (~1030 lines) - /health, /shutdown, /info, /gpu/*, /dependencies, /file, /whisper/*
-- `audio.py` (~1650 lines) - /silence, /fillers, /audio/*, /audio/pro/*, /audio/tts/*, /audio/gen/*
-- `captions.py` (~1120 lines) - /captions/*, /transcript/*, /full, /captions/burnin/*
-- `video.py` (~2920 lines) - /video/*, /fx/*, /ai/*, /export/*
+- `system.py` (~1100 lines) - /health, /shutdown, /info, /gpu/*, /dependencies, /file, /whisper/*, /llm/*
+- `audio.py` (~1815 lines) - /silence, /silence/speed-up, /fillers, /audio/*, /audio/enhance, /audio/pro/*, /audio/tts/*, /audio/gen/*
+- `captions.py` (~1210 lines) - /captions/*, /transcript/*, /transcript/summarize, /full, /captions/burnin/*
+- `video.py` (~3390 lines) - /video/*, /video/auto-edit, /video/reframe/face, /video/highlights, /video/lut/generate-from-ref, /video/shorts-pipeline, /fx/*, /ai/*, /export/*
 - `jobs_routes.py` (~190 lines) - /status/*, /cancel/*, /cancel-all, /jobs, /stream/*, /queue/*
 - `settings.py` (~200 lines) - /presets/*, /favorites/*, /workflows/*, /settings/import|export
 
 ### Frontend (CEP Panel)
-- `extension/com.opencut.panel/client/main.js` (~5400 lines) - Frontend controller
-- `extension/com.opencut.panel/client/index.html` (~2490 lines) - UI layout (6 tabs)
+- `extension/com.opencut.panel/client/main.js` (~5750 lines) - Frontend controller (includes PremiereBridge UXP abstraction)
+- `extension/com.opencut.panel/client/index.html` (~2700 lines) - UI layout (6 tabs)
 - `extension/com.opencut.panel/client/style.css` (~3690 lines) - Themes & styles
 - `extension/com.opencut.panel/host/index.jsx` (~1150 lines) - ExtendScript host
 
@@ -56,6 +67,7 @@
 - **Crash logging**: 500 errors append to `~/.opencut/crash.log` with endpoint, method, traceback
 - **Subprocess tracking**: Install routes register Popen processes for cancel support via `_register_job_process`
 - **Model cache**: `/models/list` caches results for 5 min TTL, invalidated on model delete
+- **PremiereBridge abstraction**: All jsx/csInterface calls go through `PremiereBridge` object for future UXP migration
 - `subprocess` aliased as `_sp` in route files
 - Custom dropdown system replaces native `<select>` elements in CEP
 - 6 main tabs: Cut, Captions, Audio, Video, Export, Settings
@@ -78,7 +90,7 @@
 - CI: `.github/workflows/build.yml` includes ruff lint + import smoke tests before PyInstaller build
 
 ## Version
-- Current: **v1.2.0**
+- Current: **v1.3.0**
 - All version strings: pyproject.toml, __init__.py, server.py banner, install.py, requirements.txt, index.html header + about, main.js header, style.css header
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all at once
 
@@ -173,3 +185,26 @@
 - .editorconfig + .pre-commit-config.yaml (ruff lint/format)
 - CI lint + smoke test steps in build workflow
 - DEVELOPMENT.md developer setup guide
+
+## v1.3.0 Features Added (New)
+- **UXP Bridge abstraction** (`PremiereBridge` object in main.js) — wraps all 13 jsx/csInterface calls for future CEP→UXP migration
+- **Speed-up-silence mode** — alternative to hard-cut: speeds silent segments 1.5-8x via FFmpeg atempo chains, preserving context
+- **LLM abstraction module** (`opencut/core/llm.py`) — Ollama/OpenAI/Anthropic provider support, zero pip deps (stdlib urllib)
+- **auto-editor integration** — motion/audio-based editing via auto-editor CLI, detects boring/static segments
+- **Resemble Enhance** — speech super-resolution (upsamples low-quality speech audio to studio quality)
+- **TransNetV2 ML scene detection** — neural network scene detector as alternative to FFmpeg threshold filter
+- **MediaPipe face-tracking auto-framing** — auto-crop to keep face centered for vertical reframe (TikTok/Shorts/Reels)
+- **LLM highlight extraction** — send transcript to LLM, get ranked viral/interesting clip timestamps
+- **Video summarization** — transcript → LLM → text summary with bullet points and key topics
+- **AI LUT generation from reference image** — analyze reference image color palette and generate matching .cube LUT
+- **One-click shorts pipeline** — automates: transcribe → highlight → reframe → burn captions → export
+- **LLM Configuration panel** in Settings tab (provider select, model, API key, base URL, test button)
+- 11 new backend routes across 4 Blueprints
+- 6 new core modules, 4 modified core modules
+
+## v1.3.0 New Optional Dependencies
+```toml
+auto-edit = ["auto-editor>=24.0"]
+scene-ml = ["transnetv2>=1.0"]
+enhance = ["resemble-enhance>=0.0.1"]
+```

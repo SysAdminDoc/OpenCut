@@ -46,3 +46,42 @@ def check_upscale_available():
 def check_scenedetect_available():
     """Check if PySceneDetect is installed."""
     return _try_import("scenedetect") is not None
+
+
+def check_auto_editor_available():
+    """Check if auto-editor (motion-based editing) is installed."""
+    import shutil
+    return shutil.which("auto-editor") is not None or _try_import("auto_editor") is not None
+
+
+def check_transnetv2_available():
+    """Check if TransNetV2 (ML scene detection) is installed."""
+    return _try_import("transnetv2") is not None
+
+
+def check_resemble_enhance_available():
+    """Check if Resemble Enhance (speech super-resolution) is installed."""
+    return _try_import("resemble_enhance") is not None
+
+
+def check_mediapipe_available():
+    """Check if MediaPipe (face detection/tracking) is installed."""
+    return _try_import("mediapipe") is not None
+
+
+def check_ollama_available():
+    """Check if Ollama is running locally."""
+    try:
+        import urllib.request
+        urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3)
+        return True
+    except Exception:
+        return False
+
+
+def check_llm_available():
+    """Check if any LLM provider is available (Ollama or API key configured)."""
+    if check_ollama_available():
+        return True
+    # API keys would be checked via settings — here we just check Ollama
+    return False
