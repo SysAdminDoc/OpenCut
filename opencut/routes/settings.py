@@ -166,6 +166,8 @@ def import_settings():
     if "presets" in data and isinstance(data["presets"], dict):
         existing = load_presets()
         existing.update(data["presets"])
+        if len(existing) > 500:
+            return jsonify({"error": "Too many presets (max 500)"}), 400
         save_presets(existing)
         imported.append("presets")
     if "favorites" in data and isinstance(data["favorites"], list):

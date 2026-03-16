@@ -82,7 +82,7 @@ def detect_scenes(
     cmd = [
         "ffmpeg", "-hide_banner", "-loglevel", "info",
         "-i", input_path,
-        "-vf", f"select='gt(scene,{threshold})',showinfo",
+        "-vf", f"select='gt(scene,{max(0.0, min(1.0, float(threshold)))})',showinfo",
         "-f", "null", "-",
     ]
 

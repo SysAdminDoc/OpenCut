@@ -79,22 +79,38 @@ def list_jobs():
 # ---------------------------------------------------------------------------
 # Server-Sent Events (SSE) job stream
 # ---------------------------------------------------------------------------
+_sse_connections = 0
+_sse_lock = threading.Lock()
+MAX_SSE_CONNECTIONS = 20
+
+
 @jobs_bp.route("/stream/<job_id>", methods=["GET"])
 def stream_job(job_id):
     """Stream job status via Server-Sent Events. Replaces polling."""
+    with _sse_lock:
+        if _sse_connections >= MAX_SSE_CONNECTIONS:
+            return jsonify({"error": "Too many streaming connections"}), 429
+
     def generate():
-        deadline = time.time() + 1800  # 30 minute timeout
-        while time.time() < deadline:
-            # Copy job data under the lock so we don't hold it during yield
-            safe = _get_job_copy(job_id)
-            if not safe:
-                yield f"data: {json.dumps({'status': 'not_found', 'error': 'Job not found'})}\n\n"
-                break
-            status = safe.get("status")
-            yield f"data: {json.dumps(safe)}\n\n"
-            if status in ("complete", "error", "cancelled"):
-                break
-            time.sleep(0.5)
+        global _sse_connections
+        with _sse_lock:
+            _sse_connections += 1
+        try:
+            deadline = time.time() + 1800  # 30 minute timeout
+            while time.time() < deadline:
+                # Copy job data under the lock so we don't hold it during yield
+                safe = _get_job_copy(job_id)
+                if not safe:
+                    yield f"data: {json.dumps({'status': 'not_found', 'error': 'Job not found'})}\n\n"
+                    break
+                status = safe.get("status")
+                yield f"data: {json.dumps(safe)}\n\n"
+                if status in ("complete", "error", "cancelled"):
+                    break
+                time.sleep(0.5)
+        finally:
+            with _sse_lock:
+                _sse_connections -= 1
 
     resp = Response(generate(), mimetype="text/event-stream")
     resp.headers["Cache-Control"] = "no-cache"
@@ -112,6 +128,27 @@ def stream_job(job_id):
 job_queue = []
 job_queue_lock = threading.Lock()
 _queue_state = {"running": False}
+MAX_QUEUE_SIZE = 100
+
+# Only processing-oriented routes may be invoked via the queue.
+_ALLOWED_QUEUE_ENDPOINTS = frozenset({
+    "/silence", "/silence/speed-up", "/fillers",
+    "/audio/denoise", "/audio/normalize", "/audio/enhance",
+    "/audio/pro/eq", "/audio/pro/compress", "/audio/pro/fx-chain",
+    "/captions/styled", "/captions/translate", "/captions/karaoke",
+    "/captions/burnin/file", "/captions/burnin/segments",
+    "/captions/animated/render",
+    "/video/scenes", "/video/auto-edit", "/video/stabilize",
+    "/video/face-blur", "/video/reframe", "/video/reframe/face",
+    "/video/chromakey", "/video/highlights",
+    "/video/lut/apply", "/video/lut/generate-from-ref",
+    "/video/color/grade", "/video/color/convert",
+    "/video/speed-ramp", "/video/shorts-pipeline",
+    "/video/title/render", "/video/preview-frame",
+    "/export/video",
+    "/fx/vignette", "/fx/film-grain", "/fx/letterbox",
+    "/ai/upscale", "/ai/style-transfer", "/ai/rembg",
+})
 
 
 @jobs_bp.route("/queue/add", methods=["POST"])
@@ -119,14 +156,19 @@ _queue_state = {"running": False}
 def queue_add():
     """Add a job to the queue."""
     data = request.get_json(force=True)
+    endpoint = data.get("endpoint", "")
+    if endpoint not in _ALLOWED_QUEUE_ENDPOINTS:
+        return jsonify({"error": f"Endpoint not queueable: {endpoint}"}), 400
     entry = {
         "id": str(uuid.uuid4())[:8],
-        "endpoint": data.get("endpoint", ""),
+        "endpoint": endpoint,
         "payload": data.get("payload", {}),
         "status": "queued",
         "added": time.time(),
     }
     with job_queue_lock:
+        if len(job_queue) >= MAX_QUEUE_SIZE:
+            return jsonify({"error": "Queue full (max 100)"}), 429
         job_queue.append(entry)
         position = len(job_queue)
     _process_queue()
