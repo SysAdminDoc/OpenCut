@@ -245,19 +245,26 @@ def _process_queue():
         try:
             _dispatch_queue_entry(entry)
             # Wait for the job to finish (timeout after 30 minutes)
-            if entry.get("job_id"):
+            job_id = entry.get("job_id")
+            if job_id:
                 deadline = time.time() + 1800
                 while time.time() < deadline:
-                    safe = _get_job_copy(entry["job_id"])
+                    safe = _get_job_copy(job_id)
                     if safe and safe.get("status") in ("complete", "error", "cancelled"):
-                        entry["status"] = safe["status"]
+                        with job_queue_lock:
+                            entry["status"] = safe["status"]
                         break
                     time.sleep(1)
                 else:
+                    with job_queue_lock:
+                        entry["status"] = "error"
+                    logger.warning("Queue job %s timed out after 30 minutes", job_id)
+            elif entry.get("status") not in ("started", "error"):
+                with job_queue_lock:
                     entry["status"] = "error"
-                    logger.warning("Queue job %s timed out after 30 minutes", entry.get("job_id"))
         except Exception as e:
-            entry["status"] = "error"
+            with job_queue_lock:
+                entry["status"] = "error"
             logger.exception("Queue processing error: %s", e)
         finally:
             with job_queue_lock:
