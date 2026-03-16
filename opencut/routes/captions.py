@@ -1122,3 +1122,89 @@ def animated_caption_render():
         if job_id in jobs:
             jobs[job_id]["_thread"] = thread
     return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Transcript Summarization (LLM)
+# ---------------------------------------------------------------------------
+@captions_bp.route("/transcript/summarize", methods=["POST"])
+@require_csrf
+def transcript_summarize():
+    """Summarize a video transcript using LLM."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    style = data.get("style", "bullets").strip()
+    if style not in ("bullets", "paragraph", "detailed"):
+        style = "bullets"
+    transcript = data.get("transcript", None)
+
+    # LLM config from request
+    llm_provider = data.get("llm_provider", "ollama")
+    llm_model = data.get("llm_model", "")
+    llm_api_key = data.get("llm_api_key", "")
+    llm_base_url = data.get("llm_base_url", "")
+
+    job_id = _new_job("summarize", filepath)
+
+    def _process():
+        try:
+            from opencut.core.highlights import summarize_video
+            from opencut.core.llm import LLMConfig
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            llm_config = LLMConfig(
+                provider=llm_provider,
+                model=llm_model,
+                api_key=llm_api_key,
+                base_url=llm_base_url,
+            )
+
+            # If no transcript provided, transcribe first
+            transcript_segments = transcript
+            if not transcript_segments:
+                _update_job(job_id, progress=5, message="Transcribing video first...")
+                try:
+                    from opencut.core.transcribe import transcribe
+                    t_result = transcribe(filepath)
+                    transcript_segments = t_result.get("segments", [])
+                except Exception as te:
+                    raise RuntimeError(f"Transcription failed: {te}")
+
+            summary = summarize_video(
+                transcript_segments,
+                style=style,
+                llm_config=llm_config,
+                on_progress=_on_progress,
+            )
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="Summary generated!",
+                result={
+                    "text": summary.text,
+                    "bullet_points": summary.bullet_points,
+                    "topics": summary.topics,
+                    "word_count": summary.word_count,
+                },
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Summarization error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})

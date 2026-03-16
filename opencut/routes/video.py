@@ -379,6 +379,8 @@ def video_scenes():
 
     job_id = _new_job("scenes", filepath)
 
+    method = data.get("method", "ffmpeg").strip().lower()
+
     def _process():
         try:
             from opencut.core.scene_detect import detect_scenes, generate_chapter_markers
@@ -386,11 +388,19 @@ def video_scenes():
             def _on_progress(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
 
-            info = detect_scenes(
-                filepath, threshold=threshold,
-                min_scene_length=min_scene,
-                on_progress=_on_progress,
-            )
+            if method == "ml":
+                from opencut.core.scene_detect import detect_scenes_ml
+                info = detect_scenes_ml(
+                    filepath, threshold=threshold,
+                    min_scene_length=min_scene,
+                    on_progress=_on_progress,
+                )
+            else:
+                info = detect_scenes(
+                    filepath, threshold=threshold,
+                    min_scene_length=min_scene,
+                    on_progress=_on_progress,
+                )
 
             # Generate YouTube chapters
             chapters_yt = generate_chapter_markers(info, format="youtube")
@@ -2992,3 +3002,385 @@ def social_presets():
     presets_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "social_presets.json")
     with open(presets_path, "r") as f:
         return jsonify({"presets": _json.load(f)})
+
+
+# ---------------------------------------------------------------------------
+# Auto-Edit (Motion-Based Editing via auto-editor)
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/auto-edit", methods=["POST"])
+@require_csrf
+def video_auto_edit():
+    """Run auto-editor to detect interesting segments by motion/audio."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    from opencut.checks import check_auto_editor_available
+    if not check_auto_editor_available():
+        return jsonify({"error": "auto-editor not installed. Install with: pip install auto-editor"}), 400
+
+    method = data.get("method", "motion").strip()
+    if method not in ("motion", "audio", "both"):
+        method = "motion"
+    threshold = safe_float(data.get("threshold", 0.02), 0.02, min_val=0.001, max_val=1.0)
+    margin = safe_float(data.get("margin", 0.2), 0.2, min_val=0.0, max_val=5.0)
+    min_clip = safe_float(data.get("min_clip_length", 0.5), 0.5, min_val=0.1, max_val=10.0)
+    output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
+
+    job_id = _new_job("auto-edit", filepath)
+
+    def _process():
+        try:
+            from opencut.core.auto_edit import auto_edit
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            result = auto_edit(
+                filepath,
+                method=method,
+                threshold=threshold,
+                margin=margin,
+                min_clip_length=min_clip,
+                export_xml=True,
+                output_dir=output_dir,
+                on_progress=_on_progress,
+            )
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Done: {result.reduction_percent:.0f}% removed",
+                result={
+                    "total_duration": result.total_duration,
+                    "kept_duration": result.kept_duration,
+                    "removed_duration": result.removed_duration,
+                    "reduction_percent": result.reduction_percent,
+                    "segments_count": len([s for s in result.segments if s.action == "keep"]),
+                    "xml_path": result.xml_path,
+                    "segments": [
+                        {"start": s.start, "end": s.end, "action": s.action}
+                        for s in result.segments
+                    ],
+                },
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Auto-edit error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Face-Tracking Auto-Reframe
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/reframe/face", methods=["POST"])
+@require_csrf
+def video_reframe_face():
+    """Auto-reframe video to keep face centered using MediaPipe face detection."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    from opencut.checks import check_mediapipe_available
+    if not check_mediapipe_available():
+        return jsonify({"error": "mediapipe not installed. Install with: pip install mediapipe"}), 400
+
+    target_w = safe_int(data.get("width", 1080), 1080, min_val=100, max_val=7680)
+    target_h = safe_int(data.get("height", 1920), 1920, min_val=100, max_val=7680)
+    smoothing = safe_float(data.get("smoothing", 0.15), 0.15, min_val=0.01, max_val=1.0)
+    face_padding = safe_float(data.get("face_padding", 0.3), 0.3, min_val=0.0, max_val=1.0)
+    output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
+
+    job_id = _new_job("face-reframe", filepath)
+
+    def _process():
+        try:
+            from opencut.core.face_reframe import face_reframe
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            output_path = face_reframe(
+                filepath,
+                target_w=target_w,
+                target_h=target_h,
+                smoothing=smoothing,
+                face_padding=face_padding,
+                output_dir=output_dir,
+                on_progress=_on_progress,
+            )
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="Face reframe complete!",
+                result={"output_path": output_path},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Face reframe error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# LLM Highlight Extraction
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/highlights", methods=["POST"])
+@require_csrf
+def video_highlights():
+    """Extract highlight clips using LLM analysis of transcript."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    max_highlights = safe_int(data.get("max_highlights", 5), 5, min_val=1, max_val=20)
+    min_duration = safe_float(data.get("min_duration", 15.0), 15.0, min_val=5.0, max_val=300.0)
+    max_duration = safe_float(data.get("max_duration", 60.0), 60.0, min_val=10.0, max_val=600.0)
+    transcript = data.get("transcript", None)
+
+    # LLM config from request
+    llm_provider = data.get("llm_provider", "ollama")
+    llm_model = data.get("llm_model", "")
+    llm_api_key = data.get("llm_api_key", "")
+    llm_base_url = data.get("llm_base_url", "")
+
+    job_id = _new_job("highlights", filepath)
+
+    def _process():
+        try:
+            from opencut.core.highlights import extract_highlights
+            from opencut.core.llm import LLMConfig
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            llm_config = LLMConfig(
+                provider=llm_provider,
+                model=llm_model,
+                api_key=llm_api_key,
+                base_url=llm_base_url,
+            )
+
+            # If no transcript provided, transcribe first
+            transcript_segments = transcript
+            if not transcript_segments:
+                _update_job(job_id, progress=5, message="Transcribing video first...")
+                try:
+                    from opencut.core.transcribe import transcribe
+                    t_result = transcribe(filepath)
+                    transcript_segments = t_result.get("segments", [])
+                except Exception as te:
+                    raise RuntimeError(f"Transcription failed: {te}")
+
+            result = extract_highlights(
+                transcript_segments,
+                max_highlights=max_highlights,
+                min_duration=min_duration,
+                max_duration=max_duration,
+                llm_config=llm_config,
+                on_progress=_on_progress,
+            )
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Found {result.total_found} highlights",
+                result={
+                    "total_found": result.total_found,
+                    "highlights": [
+                        {
+                            "start": h.start,
+                            "end": h.end,
+                            "score": h.score,
+                            "reason": h.reason,
+                            "title": h.title,
+                        }
+                        for h in result.highlights
+                    ],
+                },
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Highlight extraction error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# AI LUT Generation from Reference Image
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/lut/generate-from-ref", methods=["POST"])
+@require_csrf
+def video_lut_from_ref():
+    """Generate a .cube LUT from a reference image's color palette."""
+    data = request.get_json(force=True)
+    reference_path = data.get("reference_path", "").strip()
+
+    if not reference_path:
+        return jsonify({"error": "No reference image path provided"}), 400
+
+    try:
+        reference_path = validate_filepath(reference_path)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    lut_name = data.get("lut_name", "").strip() or "custom_ref_lut"
+    method = data.get("method", "histogram").strip()
+    if method not in ("histogram", "average"):
+        method = "histogram"
+    strength = safe_float(data.get("strength", 0.8), 0.8, min_val=0.1, max_val=1.0)
+
+    job_id = _new_job("lut-gen-ref", reference_path)
+
+    def _process():
+        try:
+            from opencut.core.lut_library import generate_lut_from_reference
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            cube_path = generate_lut_from_reference(
+                reference_path,
+                lut_name=lut_name,
+                method=method,
+                strength=strength,
+                on_progress=_on_progress,
+            )
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"LUT generated: {os.path.basename(cube_path)}",
+                result={"lut_path": cube_path, "lut_name": lut_name},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("LUT generation error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# One-Click Shorts Pipeline
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/shorts-pipeline", methods=["POST"])
+@require_csrf
+def video_shorts_pipeline():
+    """Generate short-form clips from a long video (transcribe + highlight + reframe + captions)."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
+
+    job_id = _new_job("shorts-pipeline", filepath)
+
+    def _process():
+        try:
+            from opencut.core.shorts_pipeline import generate_shorts, ShortsPipelineConfig
+            from opencut.core.llm import LLMConfig
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            llm_config = LLMConfig(
+                provider=data.get("llm_provider", "ollama"),
+                model=data.get("llm_model", ""),
+                api_key=data.get("llm_api_key", ""),
+                base_url=data.get("llm_base_url", ""),
+            )
+
+            config = ShortsPipelineConfig(
+                whisper_model=data.get("whisper_model", "base"),
+                max_highlights=safe_int(data.get("max_highlights", 5), 5, min_val=1, max_val=20),
+                min_duration=safe_float(data.get("min_duration", 15.0), 15.0, min_val=5.0, max_val=300.0),
+                max_duration=safe_float(data.get("max_duration", 60.0), 60.0, min_val=10.0, max_val=600.0),
+                target_width=safe_int(data.get("width", 1080), 1080, min_val=100, max_val=7680),
+                target_height=safe_int(data.get("height", 1920), 1920, min_val=100, max_val=7680),
+                face_track=bool(data.get("face_track", True)),
+                burn_captions=bool(data.get("burn_captions", True)),
+                caption_style=data.get("caption_style", "default"),
+                llm_config=llm_config,
+            )
+
+            clips = generate_shorts(
+                filepath,
+                config=config,
+                output_dir=output_dir,
+                on_progress=_on_progress,
+            )
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Generated {len(clips)} short clips!",
+                result={
+                    "clips": [
+                        {
+                            "index": c.index,
+                            "output_path": c.output_path,
+                            "start": c.start,
+                            "end": c.end,
+                            "duration": c.duration,
+                            "title": c.title,
+                        }
+                        for c in clips
+                    ],
+                    "total_clips": len(clips),
+                },
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Shorts pipeline error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})

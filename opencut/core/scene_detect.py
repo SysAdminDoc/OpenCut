@@ -296,6 +296,160 @@ def generate_speed_ramp(
     return keyframes
 
 
+# ---------------------------------------------------------------------------
+# ML Scene Detection (TransNetV2)
+# ---------------------------------------------------------------------------
+def detect_scenes_ml(
+    input_path: str,
+    threshold: float = 0.5,
+    min_scene_length: float = 2.0,
+    on_progress: Optional[Callable] = None,
+) -> SceneInfo:
+    """
+    Detect scene boundaries using TransNetV2 neural network.
+
+    More accurate than FFmpeg's threshold filter, especially for gradual
+    transitions, fades, and complex cuts.
+
+    Args:
+        input_path: Source video file.
+        threshold: Prediction threshold (0.0-1.0). Lower = more sensitive.
+        min_scene_length: Minimum scene duration in seconds.
+        on_progress: Progress callback(pct, msg).
+
+    Returns:
+        SceneInfo with detected boundaries.
+
+    Requires: pip install transnetv2
+    """
+    try:
+        from transnetv2 import TransNetV2
+    except ImportError:
+        raise RuntimeError(
+            "TransNetV2 not installed. Install with: pip install transnetv2"
+        )
+
+    try:
+        import numpy as np
+    except ImportError:
+        raise RuntimeError("numpy required. Install with: pip install numpy")
+
+    if on_progress:
+        on_progress(5, "Loading TransNetV2 model...")
+
+    # Get video info
+    probe_cmd = [
+        "ffprobe", "-v", "quiet",
+        "-print_format", "json",
+        "-show_format", "-show_streams",
+        "-select_streams", "v:0",
+        input_path,
+    ]
+    probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
+    duration = 0.0
+    fps = 25.0
+    try:
+        probe_data = json.loads(probe_result.stdout)
+        fmt = probe_data.get("format", {})
+        duration = float(fmt.get("duration", 0.0))
+        streams = probe_data.get("streams", [])
+        if streams:
+            fps_str = streams[0].get("r_frame_rate", "25/1")
+            parts = fps_str.split("/")
+            fps = float(parts[0]) / float(parts[1]) if len(parts) == 2 else 25.0
+    except (json.JSONDecodeError, ValueError, IndexError):
+        pass
+
+    if on_progress:
+        on_progress(10, "Extracting frames for analysis...")
+
+    # Extract frames as raw RGB using FFmpeg
+    # TransNetV2 expects 48x27 resolution frames
+    frame_w, frame_h = 48, 27
+    extract_cmd = [
+        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        "-i", input_path,
+        "-vf", f"scale={frame_w}:{frame_h}",
+        "-pix_fmt", "rgb24",
+        "-f", "rawvideo",
+        "-",
+    ]
+
+    try:
+        result = subprocess.run(
+            extract_cmd, capture_output=True,
+            timeout=max(300, int(duration * 2)),
+        )
+    except subprocess.TimeoutExpired:
+        raise RuntimeError("Frame extraction timed out")
+
+    if result.returncode != 0:
+        raise RuntimeError(f"Frame extraction failed: {result.stderr.decode(errors='replace')[-300:]}")
+
+    raw_frames = result.stdout
+    frame_size = frame_w * frame_h * 3
+    n_frames = len(raw_frames) // frame_size
+
+    if n_frames < 2:
+        return SceneInfo(
+            boundaries=[SceneBoundary(time=0.0, frame=0, score=1.0, label="Start")],
+            total_scenes=1,
+            duration=duration,
+            avg_scene_length=duration,
+        )
+
+    if on_progress:
+        on_progress(30, f"Analyzing {n_frames} frames with TransNetV2...")
+
+    # Convert to numpy array
+    frames = np.frombuffer(raw_frames[:n_frames * frame_size], dtype=np.uint8)
+    frames = frames.reshape(n_frames, frame_h, frame_w, 3)
+
+    # Run TransNetV2
+    model = TransNetV2()
+    predictions, _ = model.predict_frames(frames)
+
+    if on_progress:
+        on_progress(80, "Processing predictions...")
+
+    # Find scene boundaries from predictions
+    boundaries = [SceneBoundary(time=0.0, frame=0, score=1.0, label="Start")]
+
+    min_frames = int(min_scene_length * fps)
+    last_boundary_frame = 0
+
+    for i, score in enumerate(predictions):
+        pred_score = float(score)
+        if pred_score >= threshold:
+            # Check minimum distance from last boundary
+            if (i - last_boundary_frame) >= min_frames:
+                time_val = i / fps
+                boundaries.append(SceneBoundary(
+                    time=round(time_val, 3),
+                    frame=i,
+                    score=round(pred_score, 4),
+                ))
+                last_boundary_frame = i
+
+    # Label scenes
+    for i, b in enumerate(boundaries):
+        if not b.label:
+            b.label = f"Scene {i + 1}"
+
+    total_scenes = len(boundaries)
+    avg_scene = duration / total_scenes if total_scenes > 0 else duration
+
+    if on_progress:
+        on_progress(100, f"Found {total_scenes} scenes (ML)")
+
+    return SceneInfo(
+        boundaries=boundaries,
+        total_scenes=total_scenes,
+        duration=duration,
+        avg_scene_length=round(avg_scene, 2),
+    )
+
+
 SPEED_RAMP_PRESETS = [
     {"name": "dramatic_pause", "label": "Dramatic Pause", "description": "Slow down in the middle for impact"},
     {"name": "smooth_ramp_up", "label": "Smooth Ramp Up", "description": "Gradually accelerate"},

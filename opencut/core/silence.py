@@ -8,7 +8,7 @@ for both silent and non-silent (speech) regions.
 import re
 import subprocess
 from dataclasses import dataclass
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from ..utils.config import SilenceConfig
 from ..utils.media import MediaInfo, probe
@@ -276,3 +276,216 @@ def _format_time(seconds: float) -> str:
     minutes = int((seconds % 3600) // 60)
     secs = seconds % 60
     return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
+
+
+# ---------------------------------------------------------------------------
+# Speed-Up-Silence Mode
+# ---------------------------------------------------------------------------
+def speed_up_silences(
+    filepath: str,
+    speed_factor: float = 4.0,
+    threshold_db: float = -30.0,
+    min_duration: float = 0.5,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """
+    Speed up silent segments instead of removing them.
+
+    Detects silences and applies a speed multiplier to those regions,
+    keeping context while dramatically shortening pauses. Produces
+    a single output file with speech at normal speed and silences
+    sped up.
+
+    Args:
+        filepath: Path to the media file.
+        speed_factor: Speed multiplier for silent segments (2.0-8.0).
+        threshold_db: Silence threshold in dB.
+        min_duration: Minimum silence duration to speed up.
+        output_path: Explicit output path. Auto-generated if None.
+        output_dir: Output directory (used if output_path is None).
+        on_progress: Progress callback(pct, msg).
+
+    Returns:
+        Dict with output_path, original_duration, new_duration, reduction_percent.
+    """
+    import os
+    import tempfile
+
+    if speed_factor < 1.5:
+        speed_factor = 1.5
+    elif speed_factor > 8.0:
+        speed_factor = 8.0
+
+    if on_progress:
+        on_progress(5, "Detecting silences...")
+
+    # Probe duration
+    info = probe(filepath)
+    total_duration = info.duration
+
+    if total_duration <= 0:
+        raise ValueError(f"Could not determine duration of '{filepath}'")
+
+    # Detect silences
+    silences = detect_silences(
+        filepath,
+        threshold_db=threshold_db,
+        min_duration=min_duration,
+        file_duration=total_duration,
+    )
+
+    if not silences:
+        # No silences — just copy the file
+        if output_path is None:
+            base = os.path.splitext(os.path.basename(filepath))[0]
+            ext = os.path.splitext(filepath)[1] or ".mp4"
+            directory = output_dir or os.path.dirname(filepath)
+            output_path = os.path.join(directory, f"{base}_speedsilence{ext}")
+
+        import shutil
+        shutil.copy2(filepath, output_path)
+        return {
+            "output_path": output_path,
+            "original_duration": total_duration,
+            "new_duration": total_duration,
+            "reduction_percent": 0.0,
+            "silences_found": 0,
+        }
+
+    if on_progress:
+        on_progress(20, f"Found {len(silences)} silent segments, building filter...")
+
+    # Build all segments (speech + silence) in order
+    all_segments = []
+    pos = 0.0
+
+    for silence in silences:
+        # Speech segment before this silence
+        if silence.start > pos:
+            all_segments.append(("speech", pos, silence.start))
+        # Silent segment
+        all_segments.append(("silence", silence.start, silence.end))
+        pos = silence.end
+
+    # Final speech segment after last silence
+    if pos < total_duration:
+        all_segments.append(("speech", pos, total_duration))
+
+    # Build FFmpeg filter_complex with concat
+    # Each segment gets its own trim + setpts/atempo chain
+    filter_parts = []
+    concat_inputs_v = []
+    concat_inputs_a = []
+
+    for i, (seg_type, start, end) in enumerate(all_segments):
+        # Trim the segment
+        filter_parts.append(
+            f"[0:v]trim=start={start:.6f}:end={end:.6f},setpts=PTS-STARTPTS[v{i}];"
+        )
+        filter_parts.append(
+            f"[0:a]atrim=start={start:.6f}:end={end:.6f},asetpts=PTS-STARTPTS[a{i}];"
+        )
+
+        if seg_type == "silence":
+            # Speed up the video segment
+            filter_parts.append(
+                f"[v{i}]setpts=PTS/{speed_factor:.2f}[vs{i}];"
+            )
+            # Speed up audio — atempo max is 2.0, so chain for higher speeds
+            atempo_chain = _build_atempo_chain(speed_factor, f"a{i}", f"as{i}")
+            filter_parts.append(atempo_chain)
+            concat_inputs_v.append(f"[vs{i}]")
+            concat_inputs_a.append(f"[as{i}]")
+        else:
+            concat_inputs_v.append(f"[v{i}]")
+            concat_inputs_a.append(f"[a{i}]")
+
+    # Concat all segments
+    n = len(all_segments)
+    v_inputs = "".join(concat_inputs_v)
+    a_inputs = "".join(concat_inputs_a)
+    filter_parts.append(
+        f"{v_inputs}{a_inputs}concat=n={n}:v=1:a=1[outv][outa]"
+    )
+
+    filter_complex = "".join(filter_parts)
+
+    # Build output path
+    if output_path is None:
+        base = os.path.splitext(os.path.basename(filepath))[0]
+        ext = os.path.splitext(filepath)[1] or ".mp4"
+        directory = output_dir or os.path.dirname(filepath)
+        output_path = os.path.join(directory, f"{base}_speedsilence{ext}")
+
+    if on_progress:
+        on_progress(30, "Rendering output...")
+
+    # Run FFmpeg
+    cmd = [
+        "ffmpeg", "-hide_banner", "-y",
+        "-i", filepath,
+        "-filter_complex", filter_complex,
+        "-map", "[outv]", "-map", "[outa]",
+        "-c:v", "libx264", "-crf", "18", "-preset", "fast",
+        "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "192k",
+        "-movflags", "+faststart",
+        output_path,
+    ]
+
+    try:
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=max(600, int(total_duration * 5)),
+        )
+    except FileNotFoundError:
+        raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"FFmpeg timed out processing '{filepath}'")
+
+    if result.returncode != 0:
+        stderr = result.stderr[-500:] if result.stderr else "unknown error"
+        raise RuntimeError(f"FFmpeg failed: {stderr}")
+
+    # Calculate new duration
+    new_info = probe(output_path)
+    new_duration = new_info.duration if new_info.duration > 0 else total_duration
+    reduction = ((total_duration - new_duration) / total_duration * 100) if total_duration > 0 else 0
+
+    if on_progress:
+        on_progress(100, f"Done: {_format_time(total_duration)} -> {_format_time(new_duration)} ({reduction:.0f}% shorter)")
+
+    return {
+        "output_path": output_path,
+        "original_duration": total_duration,
+        "new_duration": new_duration,
+        "reduction_percent": round(reduction, 1),
+        "silences_found": len(silences),
+        "speed_factor": speed_factor,
+    }
+
+
+def _build_atempo_chain(speed: float, input_label: str, output_label: str) -> str:
+    """
+    Build chained atempo filters for speeds > 2.0.
+
+    FFmpeg's atempo filter only supports 0.5-2.0 per instance,
+    so we chain multiple: 4x = atempo=2.0,atempo=2.0
+    """
+    tempos = []
+    remaining = speed
+    while remaining > 2.0:
+        tempos.append(2.0)
+        remaining /= 2.0
+    if remaining > 0.5:
+        tempos.append(round(remaining, 4))
+
+    if not tempos:
+        tempos = [speed]
+
+    chain = ",".join(f"atempo={t}" for t in tempos)
+    return f"[{input_label}]{chain}[{output_label}];"

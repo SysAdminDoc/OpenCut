@@ -21,7 +21,7 @@
             <div class="header-left">
                 <img class="logo-mark" width="18" height="18" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAA9ElEQVR4nK3UwUrDQBDG8f/M+gKBxkspePAkvXj14tmjIHr1IBT0Ij6G3kSkHnqQPoNeamNBT+JjTIekNNmkmsP+2GX5MbM7LPJcqLKVKFAiEPG5vt0T8vM1iWIoE9V/j6UpqNw4O2hIqD7L/wGhTqkIWRhKvEqRB56qiMgePkIhsn+YriVNDSSJUF0r2ppNswk0KZi5e5PvXcfpfYd/rJ42ex8RJXCJcqd+22ren5cAxdtm1N6/6oOoiOLVY0Qixvsg/5dcjvEupF3PbRp5JJHOdSMXJ7IasiWZxctOBUrngCzuJPGij/+TIYhclkfSBuCMOAFmNwJ0F6s0yQAAAABJRU5ErkJggg==" alt="OpenCut">
                 <span class="logo-text">Open<span class="logo-accent">Cut</span></span>
-                <span class="version">v1.2.0</span>
+                <span class="version">v1.3.0</span>
             </div>
             <div class="header-right">
                 <button class="header-btn" id="refreshAllBtn" title="Refresh connection and capabilities" aria-label="Refresh connection and capabilities">
@@ -185,6 +185,8 @@
                     <button class="sub-tab" data-sub="fillers">Fillers</button>
                     <button class="sub-tab" data-sub="full">Full Edit</button>
                     <button class="sub-tab" data-sub="trim">Trim</button>
+                    <button class="sub-tab" data-sub="auto-edit">Auto-Edit</button>
+                    <button class="sub-tab" data-sub="highlights">Highlights</button>
                 </div>
 
                 <div class="sub-panel active" id="sub-silence">
@@ -229,6 +231,20 @@
                             <canvas id="waveformCanvas" class="waveform-canvas" width="500" height="100"></canvas>
                             <div class="waveform-threshold" id="waveformThreshold"></div>
                             <div class="waveform-label">Waveform &mdash; drag threshold line to adjust</div>
+                        </div>
+                        <div class="form-group">
+                            <label>Silence Mode</label>
+                            <select id="silenceMode">
+                                <option value="remove" selected>Remove Silent Segments</option>
+                                <option value="speedup">Speed Up Silent Segments</option>
+                            </select>
+                        </div>
+                        <div class="form-group hidden" id="silenceSpeedGroup">
+                            <label>Speed Factor</label>
+                            <div class="slider-row">
+                                <input type="range" id="silenceSpeedFactor" min="1.5" max="8" value="4" step="0.5" title="How fast to play silent segments (higher = shorter pauses)">
+                                <span class="slider-val" id="silenceSpeedVal">4x</span>
+                            </div>
                         </div>
                         <button class="btn-outline btn-sm" id="loadWaveformBtn" disabled style="margin-bottom: 8px;">Preview Waveform</button>
                         <button class="btn-primary" id="runSilenceBtn" disabled>Remove Silences</button>
@@ -333,6 +349,71 @@
                         </div>
 
                         <button class="btn-primary" id="runTrimBtn" disabled>Trim Clip</button>
+                    </section>
+                </div>
+                <div class="sub-panel" id="sub-auto-edit">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Auto-Edit (Motion Detection)</div></div>
+                        <p class="card-desc">Detect and remove static/boring segments using visual motion analysis.</p>
+                        <div class="form-group">
+                            <label>Detection Method</label>
+                            <select id="autoEditMethod">
+                                <option value="motion" selected>Motion</option>
+                                <option value="audio">Audio</option>
+                                <option value="both">Both</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Motion Threshold</label>
+                            <div class="slider-row">
+                                <input type="range" id="autoEditThreshold" min="0.005" max="0.2" value="0.02" step="0.005" title="Lower = more sensitive (detects smaller movements)">
+                                <span class="slider-val" id="autoEditThresholdVal">0.02</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Margin</label>
+                            <div class="slider-row">
+                                <input type="range" id="autoEditMargin" min="0" max="2" value="0.2" step="0.1" title="Padding around kept segments (seconds)">
+                                <span class="slider-val" id="autoEditMarginVal">0.2s</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Min Clip Length</label>
+                            <div class="slider-row">
+                                <input type="range" id="autoEditMinClip" min="0.2" max="5" value="0.5" step="0.1" title="Minimum segment duration to keep (seconds)">
+                                <span class="slider-val" id="autoEditMinClipVal">0.5s</span>
+                            </div>
+                        </div>
+                        <button class="btn-primary" id="runAutoEditBtn" disabled>Run Auto-Edit</button>
+                        <div class="result-area hidden" id="autoEditResult">
+                            <div class="result-stats" id="autoEditStats"></div>
+                        </div>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-highlights">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">AI Highlight Extraction</div></div>
+                        <p class="card-desc">Use AI to find the most interesting/viral moments in your video.</p>
+                        <div class="form-group">
+                            <label>Max Highlights</label>
+                            <div class="slider-row">
+                                <input type="range" id="highlightMax" min="1" max="20" value="5" step="1" title="Maximum number of highlights to extract">
+                                <span class="slider-val" id="highlightMaxVal">5</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Duration Range (sec)</label>
+                            <div class="input-pair">
+                                <input type="number" id="highlightMinDur" value="15" min="5" max="300" step="5">
+                                <span>to</span>
+                                <input type="number" id="highlightMaxDur" value="60" min="10" max="600" step="5">
+                            </div>
+                        </div>
+                        <button class="btn-primary" id="runHighlightsBtn" disabled>Extract Highlights</button>
+                        <div class="result-area hidden" id="highlightResult">
+                            <div id="highlightList"></div>
+                        </div>
                     </section>
                 </div>
             </div>
@@ -505,6 +586,7 @@
                                         <option value="json">JSON</option>
                                     </select>
                                     <button class="btn-sm" id="exportTranscriptBtn">Export</button>
+                                    <button class="btn-sm" id="summarizeTranscriptBtn">Summarize</button>
                                 </div>
                             </div>
                             <div class="transcript-search" id="transcriptSearch">
@@ -514,6 +596,11 @@
                                 <button class="btn-sm" id="transcriptSearchNext" title="Next">&darr;</button>
                             </div>
                             <div class="transcript-segments" id="transcriptSegments"></div>
+                        </div>
+                        <div class="result-area hidden" id="summaryResult">
+                            <div class="card-header"><div class="card-title">Summary</div></div>
+                            <div id="summaryContent" style="white-space: pre-wrap; font-size: 12px; padding: 8px; background: var(--bg-secondary, #1e1e1e); border-radius: 4px; max-height: 200px; overflow-y: auto;"></div>
+                            <button class="btn-sm" id="copySummaryBtn" style="margin-top: 6px;">Copy</button>
                         </div>
                     </section>
                 </div>
@@ -721,6 +808,7 @@
                     <button class="sub-tab" data-sub="aud-sfx">SFX</button>
                     <button class="sub-tab" data-sub="aud-duck">Duck</button>
                     <button class="sub-tab" data-sub="aud-musicai">Music AI</button>
+                    <button class="sub-tab" data-sub="aud-enhance">Enhance</button>
                 </div>
 
                 <div class="sub-panel active" id="sub-aud-separate">
@@ -1127,6 +1215,16 @@
                         <div class="form-group"><label>Temperature</label><div class="slider-row"><input type="range" id="musicAiTemp" min="0.5" max="1.5" value="1.0" step="0.05"><span class="slider-val" id="musicAiTempVal">1.0</span></div></div>
                         <label class="checkbox-row"><input type="checkbox" id="musicAiAutoImport" checked>Auto-import result to project</label>
                         <button class="btn-primary" id="runMusicAiBtn">Generate Music</button>
+                    </section>
+                </div>
+
+                <div class="sub-panel" id="sub-aud-enhance">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Speech Enhancement</div></div>
+                        <p class="card-desc">Upgrade low-quality speech to studio quality using AI super-resolution.</p>
+                        <label class="checkbox-row"><input type="checkbox" id="enhanceDenoise" checked>Denoise</label>
+                        <label class="checkbox-row"><input type="checkbox" id="enhanceUpscale" checked>Super-Resolution</label>
+                        <button class="btn-primary" id="runEnhanceBtn" disabled>Enhance Speech</button>
                     </section>
                 </div>
             </div>
@@ -1549,6 +1647,13 @@
                 <div class="sub-panel" id="sub-vid-scenes">
                     <section class="card">
                         <div class="form-group">
+                            <label>Detection Method</label>
+                            <select id="sceneMethod">
+                                <option value="ffmpeg" selected>FFmpeg (fast)</option>
+                                <option value="ml">ML TransNetV2 (accurate)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
                             <label>Sensitivity</label>
                             <div class="slider-row">
                                 <input type="range" id="sceneThreshold" min="0.1" max="0.8" value="0.3" step="0.05">
@@ -1686,6 +1791,29 @@
                         </label>
 
                         <button class="btn-primary" id="runLutBtn" disabled>Apply LUT</button>
+
+                        <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border, #333);">
+                            <div class="card-header"><div class="card-title" style="font-size: 12px;">Generate LUT from Reference</div></div>
+                            <div class="form-group">
+                                <label>Reference Image</label>
+                                <div style="display: flex; gap: 4px;">
+                                    <input type="text" id="lutRefPath" class="text-input" placeholder="Path to reference image..." style="flex:1;">
+                                    <button class="btn-sm btn-browse" onclick="browseForInput('lutRefPath')">Browse</button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label>LUT Name</label>
+                                <input type="text" id="lutRefName" class="text-input" placeholder="my_color_grade" value="">
+                            </div>
+                            <div class="form-group">
+                                <label>Strength</label>
+                                <div class="slider-row">
+                                    <input type="range" id="lutRefStrength" min="0.1" max="1.0" value="0.8" step="0.05">
+                                    <span class="slider-val" id="lutRefStrengthVal">0.8</span>
+                                </div>
+                            </div>
+                            <button class="btn-outline" id="generateLutBtn">Generate LUT</button>
+                        </div>
                     </section>
                 </div>
 
@@ -1816,8 +1944,16 @@
                                 <option value="bottom">Bottom</option>
                                 <option value="left">Left</option>
                                 <option value="right">Right</option>
+                                <option value="face">Face Tracking (auto)</option>
                             </select>
                             <span class="hint-inline">Where to anchor the crop</span>
+                        </div>
+                        <div class="form-group hidden" id="reframeFaceSmoothing">
+                            <label>Face Tracking Smoothing</label>
+                            <div class="slider-row">
+                                <input type="range" id="faceSmoothing" min="0.01" max="1.0" value="0.15" step="0.01" title="Lower = smoother camera movement">
+                                <span class="slider-val" id="faceSmoothingVal">0.15</span>
+                            </div>
                         </div>
 
                         <div class="form-group hidden" id="reframePadColorGroup">
@@ -1955,6 +2091,7 @@
                     <button class="sub-tab" data-sub="exp-platform">Presets</button>
                     <button class="sub-tab" data-sub="exp-thumbnail">Thumbnails</button>
                     <button class="sub-tab" data-sub="exp-batch">Batch</button>
+                    <button class="sub-tab" data-sub="exp-shorts">Shorts</button>
                 </div>
 
                 <div class="sub-panel active" id="sub-exp-transcript">
@@ -2163,6 +2300,43 @@
                         </div>
                     </section>
                 </div>
+
+                <div class="sub-panel" id="sub-exp-shorts">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">One-Click Shorts Pipeline</div></div>
+                        <p class="card-desc">Auto-generate short clips: transcribe, find highlights, reframe, add captions.</p>
+                        <div class="form-group">
+                            <label>Platform</label>
+                            <select id="shortsPlatform">
+                                <option value="tiktok" selected>TikTok (1080x1920)</option>
+                                <option value="shorts">YouTube Shorts (1080x1920)</option>
+                                <option value="reels">Instagram Reels (1080x1920)</option>
+                                <option value="square">Square (1080x1080)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Max Clips</label>
+                            <div class="slider-row">
+                                <input type="range" id="shortsMaxClips" min="1" max="20" value="5" step="1">
+                                <span class="slider-val" id="shortsMaxClipsVal">5</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Clip Duration (sec)</label>
+                            <div class="input-pair">
+                                <input type="number" id="shortsMinDur" value="15" min="5" max="300" step="5">
+                                <span>to</span>
+                                <input type="number" id="shortsMaxDur" value="60" min="10" max="600" step="5">
+                            </div>
+                        </div>
+                        <label class="checkbox-row"><input type="checkbox" id="shortsFaceTrack" checked>Face Tracking</label>
+                        <label class="checkbox-row"><input type="checkbox" id="shortsCaptions" checked>Burn-in Captions</label>
+                        <button class="btn-primary" id="runShortsBtn" disabled>Generate Shorts</button>
+                        <div class="result-area hidden" id="shortsResult">
+                            <div id="shortsList"></div>
+                        </div>
+                    </section>
+                </div>
             </div>
 
             <!-- ======== TAB: SETTINGS ======== -->
@@ -2285,6 +2459,34 @@
 
                 <section class="card">
                     <div class="card-header">
+                        <div class="card-title">LLM Configuration</div>
+                        <button class="btn-sm" id="testLLMBtn">Test</button>
+                    </div>
+                    <div class="form-group">
+                        <label>Provider</label>
+                        <select id="llmProvider" class="form-select">
+                            <option value="ollama" selected>Ollama (Local)</option>
+                            <option value="openai">OpenAI</option>
+                            <option value="anthropic">Anthropic</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Model</label>
+                        <input type="text" id="llmModel" class="text-input" placeholder="llama3.1">
+                    </div>
+                    <div class="form-group hidden" id="llmApiKeyGroup">
+                        <label>API Key</label>
+                        <input type="password" id="llmApiKey" class="text-input" placeholder="sk-...">
+                    </div>
+                    <div class="form-group">
+                        <label>Base URL</label>
+                        <input type="text" id="llmBaseUrl" class="text-input" placeholder="http://localhost:11434">
+                    </div>
+                    <div class="hint" id="llmStatus">Not tested yet.</div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header">
                         <div class="card-title">Presets</div>
                     </div>
                     <div class="form-group">
@@ -2359,7 +2561,7 @@
                     <div class="card-header"><div class="card-title">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.2.0</span>
+                        <span class="settings-value">1.3.0</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>

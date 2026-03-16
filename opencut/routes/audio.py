@@ -1692,3 +1692,124 @@ def audio_waveform():
         if job_id in jobs:
             jobs[job_id]["_thread"] = thread
     return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Speed-Up-Silence Mode
+# ---------------------------------------------------------------------------
+@audio_bp.route("/silence/speed-up", methods=["POST"])
+@require_csrf
+def silence_speed_up():
+    """Speed up silent segments instead of removing them."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    speed_factor = safe_float(data.get("speed_factor", 4.0), 4.0, min_val=1.5, max_val=8.0)
+    threshold_db = safe_float(data.get("threshold_db", -30.0), -30.0, min_val=-60.0, max_val=-10.0)
+    min_duration = safe_float(data.get("min_duration", 0.5), 0.5, min_val=0.1, max_val=5.0)
+    output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
+
+    job_id = _new_job("speed-silence", filepath)
+
+    def _process():
+        try:
+            from opencut.core.silence import speed_up_silences
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            result = speed_up_silences(
+                filepath,
+                speed_factor=speed_factor,
+                threshold_db=threshold_db,
+                min_duration=min_duration,
+                output_dir=output_dir,
+                on_progress=_on_progress,
+            )
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Done: {result['reduction_percent']:.0f}% shorter",
+                result=result,
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Speed-up-silence error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Audio Enhancement (Resemble Enhance)
+# ---------------------------------------------------------------------------
+@audio_bp.route("/audio/enhance", methods=["POST"])
+@require_csrf
+def audio_enhance():
+    """Enhance speech audio using Resemble Enhance (super-resolution + denoising)."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    from opencut.checks import check_resemble_enhance_available
+    if not check_resemble_enhance_available():
+        return jsonify({"error": "resemble-enhance not installed. Install with: pip install resemble-enhance"}), 400
+
+    denoise = bool(data.get("denoise", True))
+    enhance = bool(data.get("enhance", True))
+    output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
+
+    if not denoise and not enhance:
+        return jsonify({"error": "At least one of 'denoise' or 'enhance' must be True"}), 400
+
+    job_id = _new_job("audio-enhance", filepath)
+
+    def _process():
+        try:
+            from opencut.core.audio_enhance import enhance_speech
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            output_path = enhance_speech(
+                filepath,
+                output_dir=output_dir,
+                denoise=denoise,
+                enhance=enhance,
+                on_progress=_on_progress,
+            )
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="Audio enhanced!",
+                result={"output_path": output_path},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Audio enhance error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})

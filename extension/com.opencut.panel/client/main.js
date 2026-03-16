@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.2.0
+   OpenCut CEP Panel - Main Controller v1.3.0
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -938,6 +938,46 @@
     }
 
     // ================================================================
+    // UXP Bridge Abstraction Layer
+    // ================================================================
+    // Wraps all ExtendScript/CSInterface calls. When CEP is replaced by UXP,
+    // only this object needs to change — all call sites use PremiereBridge.
+    var PremiereBridge = {
+        startBackend: function () {
+            jsx("startOpenCutBackend()", function () {});
+        },
+        getProjectMedia: function (cb) {
+            jsx("getProjectMedia()", cb);
+        },
+        getTimelineSelection: function (cb) {
+            jsx("getTimelineSelection()", cb);
+        },
+        browseForFile: function (cb) {
+            jsx("browseForFile()", cb);
+        },
+        importXML: function (path, cb) {
+            jsx('importXMLToProject("' + escPath(path) + '")', cb);
+        },
+        importOverlay: function (path, cb) {
+            jsx('importOverlayToProject("' + escPath(path) + '")', cb);
+        },
+        importFiles: function (paths, bin, cb) {
+            var pathsJson = JSON.stringify(paths);
+            jsx("importFilesToProject('" + pathsJson.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "', \"" + (bin || "OpenCut Output") + "\")", cb);
+        },
+        importCaptions: function (path, cb) {
+            jsx('importCaptions("' + escPath(path) + '")', cb);
+        },
+        importFile: function (path, bin, cb) {
+            jsx('importFileToProject("' + escPath(path) + '", "' + (bin || "OpenCut Output") + '")', cb);
+        },
+        autoImport: function (path, type) {
+            if (!cs) return;
+            cs.evalScript('autoImportResult("' + path.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '", "' + (type || "output") + '")');
+        }
+    };
+
+    // ================================================================
     // Backend Communication
     // ================================================================
     var _inflightRequests = {};
@@ -1072,7 +1112,7 @@
             updateButtons();
             if (!backendStartAttempted && inPremiere) {
                 backendStartAttempted = true;
-                jsx("startOpenCutBackend()", function () {});
+                PremiereBridge.startBackend();
             }
         }
     }
@@ -1082,7 +1122,7 @@
     // ================================================================
     function scanProjectMedia() {
         if (!inPremiere) return;
-        jsx("getProjectMedia()", function (result) {
+        PremiereBridge.getProjectMedia(function (result) {
             if (!result || result === "null" || result === "undefined") return;
             try {
                 var data = JSON.parse(result);
@@ -1105,7 +1145,7 @@
 
     function useTimelineSelection() {
         if (!inPremiere) return;
-        jsx("getTimelineSelection()", function (result) {
+        PremiereBridge.getTimelineSelection(function (result) {
             if (!result || result === "null") { showAlert("No clip selected in timeline."); return; }
             try {
                 var data = JSON.parse(result);
@@ -1117,7 +1157,7 @@
 
     function browseForFile() {
         if (inPremiere) {
-            jsx("browseForFile()", function (result) {
+            PremiereBridge.browseForFile(function (result) {
                 if (result && result !== "null" && result !== "undefined" && result.length > 3) {
                     selectFile(result, result.split(/[/\\]/).pop());
                 }
@@ -1127,7 +1167,7 @@
 
     function browseForInput(targetId) {
         if (inPremiere) {
-            jsx("browseForFile()", function (result) {
+            PremiereBridge.browseForFile(function (result) {
                 if (result && result !== "null" && result !== "undefined" && result.length > 3) {
                     var input = document.getElementById(targetId);
                     if (input) input.value = result;
@@ -1313,7 +1353,8 @@
         "runChromaBtn", "runTransBtn", "runParticlesBtn",
         "runTitleOverlayBtn", "runReframeBtn", "runUpscaleBtn",
         "runColorBtn", "runRemoveBtn", "runFaceAiBtn", "runAnimCapBtn",
-        "runExpTranscriptBtn", "loadWaveformBtn", "previewVfxBtn", "runTrimBtn"
+        "runExpTranscriptBtn", "loadWaveformBtn", "previewVfxBtn", "runTrimBtn",
+        "runAutoEditBtn", "runHighlightsBtn", "runEnhanceBtn", "runShortsBtn"
     ];
 
     function updateButtons() {
@@ -1689,7 +1730,7 @@
             // XML edit list (silence removal, filler removal, etc.)
             var xmlPath = job.result.xml_path;
             if (xmlPath) {
-                jsx('importXMLToProject("' + escPath(xmlPath) + '")', function (result) {
+                PremiereBridge.importXML(xmlPath, function (result) {
                     try {
                         var r = JSON.parse(result);
                         if (r.error) {
@@ -1705,7 +1746,7 @@
             // Styled caption overlay video (.mov with alpha)
             var overlayPath = job.result.overlay_path;
             if (overlayPath) {
-                jsx('importOverlayToProject("' + escPath(overlayPath) + '")', function (result) {
+                PremiereBridge.importOverlay(overlayPath, function (result) {
                     try {
                         var r = JSON.parse(result);
                         if (r.error) {
@@ -1721,8 +1762,7 @@
             // Multiple output files (stem separation)
             var outputPaths = job.result.output_paths;
             if (outputPaths && outputPaths.length > 0) {
-                var pathsJson = JSON.stringify(outputPaths);
-                jsx('importFilesToProject(\'' + pathsJson.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + '\', "OpenCut Stems")', function (result) {
+                PremiereBridge.importFiles(outputPaths, "OpenCut Stems", function (result) {
                     try {
                         var r = JSON.parse(result);
                         if (r.error) {
@@ -1745,7 +1785,7 @@
                 }
                 // Caption files (SRT, VTT, ASS) - import to caption track
                 if (ext === "srt" || ext === "vtt" || ext === "ass") {
-                    jsx('importCaptions("' + escPath(outputPath) + '")', function (result) {
+                    PremiereBridge.importCaptions(outputPath, function (result) {
                         try {
                             var r = JSON.parse(result);
                             if (r.error) {
@@ -1760,7 +1800,7 @@
                 // Audio/video files - generic import to project
                 else if (ext === "wav" || ext === "mp3" || ext === "flac" || ext === "aac" || ext === "ogg" ||
                          ext === "mp4" || ext === "mov" || ext === "avi" || ext === "mkv" || ext === "webm" || ext === "png" || ext === "jpg") {
-                    jsx('importFileToProject("' + escPath(outputPath) + '", "OpenCut Output")', function (result) {
+                    PremiereBridge.importFile(outputPath, "OpenCut Output", function (result) {
                         try {
                             var r = JSON.parse(result);
                             if (r.error) {
@@ -1776,7 +1816,7 @@
             // SRT path from full pipeline (separate from output_path)
             var srtPath = job.result.srt_path;
             if (srtPath && srtPath !== outputPath) {
-                jsx('importCaptions("' + escPath(srtPath) + '")', function (result) {
+                PremiereBridge.importCaptions(srtPath, function (result) {
                     try {
                         var r = JSON.parse(result);
                         if (r.error) {
@@ -1880,6 +1920,17 @@
 
     // --- CUT TAB ---
     function runSilence() {
+        var mode = el.silenceMode ? el.silenceMode.value : "remove";
+        if (mode === "speedup") {
+            startJob("/silence/speed-up", {
+                filepath: selectedPath,
+                output_dir: projectFolder,
+                speed_factor: parseFloat((el.silenceSpeedFactor || {}).value || "4"),
+                threshold: parseFloat(el.threshold.value),
+                min_duration: parseFloat(el.minDuration.value),
+            });
+            return;
+        }
         var preset = el.silencePreset.value;
         var payload = { filepath: selectedPath, output_dir: projectFolder };
         if (preset) {
@@ -2098,6 +2149,7 @@
             output_dir: projectFolder,
             threshold: parseFloat(el.sceneThreshold.value),
             min_scene_length: parseFloat(el.minSceneLen.value),
+            method: el.sceneMethod ? el.sceneMethod.value : "ffmpeg",
         });
     }
 
@@ -2741,11 +2793,21 @@
             var d = _reframeDims[preset] || [1080, 1920];
             w = d[0]; h = d[1];
         }
+        var pos = el.reframeCropPos.value;
+        if (pos === "face") {
+            var smoothing = el.faceSmoothing ? parseFloat(el.faceSmoothing.value) : 0.3;
+            startJob("/video/reframe/face", {
+                filepath: selectedPath, output_dir: projectFolder,
+                width: w, height: h,
+                smoothing: smoothing, face_padding: 1.5,
+            });
+            return;
+        }
         startJob("/video/reframe", {
             filepath: selectedPath, output_dir: projectFolder,
             width: w, height: h,
             mode: el.reframeMode.value,
-            position: el.reframeCropPos.value,
+            position: pos,
             bg_color: el.reframePadColor.value,
             quality: el.reframeQuality.value
         });
@@ -4434,7 +4496,7 @@
                 div.querySelector(".btn-sm").addEventListener("click", function () {
                     var p = this.dataset.path;
                     if (inPremiere && cs) {
-                        cs.evalScript('autoImportResult("' + p.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '", "output")');
+                        PremiereBridge.autoImport(p, "output");
                         showToast("Imported: " + p.split(/[/\\]/).pop(), "success");
                     }
                 });
@@ -5134,6 +5196,230 @@
     // Health ping consolidated into checkHealth() above
 
     // ================================================================
+    // v1.3.0 — New Feature Handlers
+    // ================================================================
+
+    // --- LLM Config helpers ---
+    function getLLMConfig() {
+        var provider = el.llmProvider ? el.llmProvider.value : "ollama";
+        var config = { provider: provider };
+        if (el.llmModel && el.llmModel.value) config.model = el.llmModel.value;
+        if (el.llmApiKey && el.llmApiKey.value) config.api_key = el.llmApiKey.value;
+        if (el.llmBaseUrl && el.llmBaseUrl.value) config.base_url = el.llmBaseUrl.value;
+        return config;
+    }
+
+    function saveLLMSettings() {
+        try {
+            var cfg = getLLMConfig();
+            localStorage.setItem("opencut_llm", JSON.stringify(cfg));
+        } catch (e) {}
+    }
+
+    function loadLLMSettings() {
+        try {
+            var saved = localStorage.getItem("opencut_llm");
+            if (!saved) return;
+            var cfg = JSON.parse(saved);
+            if (cfg.provider && el.llmProvider) el.llmProvider.value = cfg.provider;
+            if (cfg.model && el.llmModel) el.llmModel.value = cfg.model;
+            if (cfg.api_key && el.llmApiKey) el.llmApiKey.value = cfg.api_key;
+            if (cfg.base_url && el.llmBaseUrl) el.llmBaseUrl.value = cfg.base_url;
+            updateLLMProviderUI();
+        } catch (e) {}
+    }
+
+    function updateLLMProviderUI() {
+        if (!el.llmProvider) return;
+        var provider = el.llmProvider.value;
+        var needsKey = provider === "openai" || provider === "anthropic";
+        if (el.llmApiKeyGroup) el.llmApiKeyGroup.classList.toggle("hidden", !needsKey);
+        if (el.llmBaseUrl) {
+            var defaults = { ollama: "http://localhost:11434", openai: "https://api.openai.com/v1", anthropic: "https://api.anthropic.com" };
+            if (!el.llmBaseUrl.value || el.llmBaseUrl.value === defaults.ollama || el.llmBaseUrl.value === defaults.openai || el.llmBaseUrl.value === defaults.anthropic) {
+                el.llmBaseUrl.placeholder = defaults[provider] || "";
+            }
+        }
+        if (el.llmModel) {
+            var modelDefaults = { ollama: "llama3.1", openai: "gpt-4o-mini", anthropic: "claude-sonnet-4-20250514" };
+            if (!el.llmModel.value) el.llmModel.placeholder = modelDefaults[provider] || "";
+        }
+    }
+
+    function testLLM() {
+        var cfg = getLLMConfig();
+        if (el.llmStatus) el.llmStatus.textContent = "Testing...";
+        api("POST", "/llm/test", { prompt: "Say hello in one sentence.", config: cfg }, function (err, resp) {
+            if (err || !resp || !resp.success) {
+                var msg = (resp && resp.error) ? resp.error : (err ? err.message : "Connection failed");
+                if (el.llmStatus) el.llmStatus.textContent = "Failed: " + msg;
+                return;
+            }
+            if (el.llmStatus) el.llmStatus.textContent = "Connected: " + resp.provider + "/" + resp.model;
+            saveLLMSettings();
+            showToast("LLM connected", "success");
+        });
+    }
+
+    // --- Silence mode toggle ---
+    function updateSilenceModeUI() {
+        if (!el.silenceMode) return;
+        var isSpeedUp = el.silenceMode.value === "speedup";
+        if (el.silenceSpeedGroup) el.silenceSpeedGroup.style.display = isSpeedUp ? "" : "none";
+        // Hide preset/padding rows for speed-up mode
+        if (el.silencePreset) el.silencePreset.closest(".form-group").style.display = isSpeedUp ? "none" : "";
+        if (el.padBefore) el.padBefore.closest(".form-group").style.display = isSpeedUp ? "none" : "";
+        if (el.padAfter) el.padAfter.closest(".form-group").style.display = isSpeedUp ? "none" : "";
+    }
+
+    // --- Face tracking smoothing toggle ---
+    function updateFaceTrackingUI() {
+        if (!el.reframeCropPos) return;
+        var isFace = el.reframeCropPos.value === "face";
+        if (el.reframeFaceSmoothing) el.reframeFaceSmoothing.style.display = isFace ? "" : "none";
+    }
+
+    // --- Auto-Edit ---
+    function runAutoEdit() {
+        startJob("/video/auto-edit", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            method: el.autoEditMethod ? el.autoEditMethod.value : "motion",
+            threshold: el.autoEditThreshold ? parseFloat(el.autoEditThreshold.value) : 0.04,
+            margin: el.autoEditMargin ? parseFloat(el.autoEditMargin.value) : 0.3,
+            min_clip_length: el.autoEditMinClip ? parseFloat(el.autoEditMinClip.value) : 1.0,
+        });
+    }
+
+    // --- Highlights ---
+    function runHighlights() {
+        var llm = getLLMConfig();
+        startJob("/video/highlights", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            max_highlights: el.highlightMax ? parseInt(el.highlightMax.value) : 5,
+            min_duration: el.highlightMinDur ? parseFloat(el.highlightMinDur.value) : 15,
+            max_duration: el.highlightMaxDur ? parseFloat(el.highlightMaxDur.value) : 60,
+            llm_provider: llm.provider,
+            llm_model: llm.model,
+            llm_api_key: llm.api_key,
+            llm_base_url: llm.base_url,
+        });
+    }
+
+    // --- Speech Enhance ---
+    function runEnhance() {
+        startJob("/audio/enhance", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            denoise: el.enhanceDenoise ? el.enhanceDenoise.checked : true,
+            enhance: el.enhanceUpscale ? el.enhanceUpscale.checked : true,
+        });
+    }
+
+    // --- Transcript Summarize ---
+    function runSummarize() {
+        var llm = getLLMConfig();
+        if (el.summaryResult) el.summaryResult.classList.remove("hidden");
+        if (el.summaryContent) el.summaryContent.textContent = "Summarizing...";
+        api("POST", "/transcript/summarize", {
+            filepath: selectedPath,
+            style: "bullets",
+            llm_provider: llm.provider,
+            llm_model: llm.model,
+            llm_api_key: llm.api_key,
+            llm_base_url: llm.base_url,
+        }, function (err, resp) {
+            if (err || !resp) {
+                if (el.summaryContent) el.summaryContent.textContent = "Error: " + (err ? err.message : "unknown");
+                return;
+            }
+            if (resp.error) {
+                if (el.summaryContent) el.summaryContent.textContent = "Error: " + resp.error;
+                return;
+            }
+            var text = "";
+            if (resp.bullet_points && resp.bullet_points.length) {
+                for (var i = 0; i < resp.bullet_points.length; i++) {
+                    text += "\u2022 " + resp.bullet_points[i] + "\n";
+                }
+            } else if (resp.text) {
+                text = resp.text;
+            }
+            if (resp.topics && resp.topics.length) {
+                text += "\nTopics: " + resp.topics.join(", ");
+            }
+            if (el.summaryContent) el.summaryContent.textContent = text || "No summary generated.";
+            showToast("Summary generated", "success");
+        });
+    }
+
+    // --- Generate LUT from Reference ---
+    function runGenerateLut() {
+        var refPath = el.lutRefPath ? el.lutRefPath.value.trim() : "";
+        if (!refPath) { showAlert("Select a reference image."); return; }
+        var lutName = el.lutRefName ? el.lutRefName.value.trim() : "";
+        if (!lutName) lutName = "custom_ref";
+        api("POST", "/video/lut/generate-from-ref", {
+            reference_path: refPath,
+            lut_name: lutName,
+            strength: el.lutRefStrength ? parseFloat(el.lutRefStrength.value) : 1.0,
+        }, function (err, resp) {
+            if (err || !resp) {
+                showAlert("LUT generation failed: " + (err ? err.message : "unknown"));
+                return;
+            }
+            if (resp.error) { showAlert("Error: " + resp.error); return; }
+            showToast("LUT generated: " + (resp.lut_name || lutName), "success");
+        });
+    }
+
+    // --- Shorts Pipeline ---
+    function runShorts() {
+        var llm = getLLMConfig();
+        startJob("/video/shorts-pipeline", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            platform: el.shortsPlatform ? el.shortsPlatform.value : "tiktok",
+            max_shorts: el.shortsMaxClips ? parseInt(el.shortsMaxClips.value) : 5,
+            min_duration: el.shortsMinDur ? parseFloat(el.shortsMinDur.value) : 15,
+            max_duration: el.shortsMaxDur ? parseFloat(el.shortsMaxDur.value) : 60,
+            face_track: el.shortsFaceTrack ? el.shortsFaceTrack.checked : false,
+            burn_captions: el.shortsCaptions ? el.shortsCaptions.checked : false,
+            llm_provider: llm.provider,
+            llm_model: llm.model,
+            llm_api_key: llm.api_key,
+            llm_base_url: llm.base_url,
+        });
+    }
+
+    // --- Slider value display updaters ---
+    function initNewSliderDisplays() {
+        var sliders = [
+            ["silenceSpeedFactor", "silenceSpeedVal"],
+            ["autoEditThreshold", "autoEditThresholdVal"],
+            ["autoEditMargin", "autoEditMarginVal"],
+            ["autoEditMinClip", "autoEditMinClipVal"],
+            ["highlightMax", "highlightMaxVal"],
+            ["faceSmoothing", "faceSmoothingVal"],
+            ["lutRefStrength", "lutRefStrengthVal"],
+            ["shortsMaxClips", "shortsMaxClipsVal"],
+        ];
+        for (var i = 0; i < sliders.length; i++) {
+            (function (sliderId, displayId) {
+                var slider = document.getElementById(sliderId);
+                var display = document.getElementById(displayId);
+                if (slider && display) {
+                    display.textContent = slider.value;
+                    slider.addEventListener("input", function () {
+                        display.textContent = this.value;
+                    });
+                }
+            })(sliders[i][0], sliders[i][1]);
+        }
+    }
+
+    // ================================================================
     // Init
     // ================================================================
     document.addEventListener("DOMContentLoaded", function () {
@@ -5323,6 +5609,29 @@
         // Export tab buttons
         el.runExpTranscriptBtn.addEventListener("click", runExpTranscript);
 
+        // v1.3.0 — New feature event listeners
+        if (el.silenceMode) el.silenceMode.addEventListener("change", updateSilenceModeUI);
+        if (el.reframeCropPos) el.reframeCropPos.addEventListener("change", updateFaceTrackingUI);
+        if (el.runAutoEditBtn) el.runAutoEditBtn.addEventListener("click", runAutoEdit);
+        if (el.runHighlightsBtn) el.runHighlightsBtn.addEventListener("click", runHighlights);
+        if (el.runEnhanceBtn) el.runEnhanceBtn.addEventListener("click", runEnhance);
+        if (el.runShortsBtn) el.runShortsBtn.addEventListener("click", runShorts);
+        if (el.summarizeTranscriptBtn) el.summarizeTranscriptBtn.addEventListener("click", runSummarize);
+        if (el.generateLutBtn) el.generateLutBtn.addEventListener("click", runGenerateLut);
+        if (el.testLLMBtn) el.testLLMBtn.addEventListener("click", testLLM);
+        if (el.llmProvider) el.llmProvider.addEventListener("change", function () {
+            updateLLMProviderUI();
+            saveLLMSettings();
+        });
+        if (el.copySummaryBtn) el.copySummaryBtn.addEventListener("click", function () {
+            var text = el.summaryContent ? el.summaryContent.textContent : "";
+            if (navigator.clipboard) {
+                navigator.clipboard.writeText(text).then(function () { showToast("Summary copied", "success"); });
+            } else {
+                showToast("Copy not supported", "warning");
+            }
+        });
+
         // Settings tab buttons
         el.settingsInstallWhisperBtn.addEventListener("click", installWhisper);
         el.settingsReinstallWhisperBtn.addEventListener("click", reinstallWhisper);
@@ -5426,6 +5735,10 @@
         initSubTabFilter();
         addAudioWaveformButtons();
         renderMergeFiles();
+        initNewSliderDisplays();
+        loadLLMSettings();
+        updateSilenceModeUI();
+        updateFaceTrackingUI();
     });
 
 })();
