@@ -40,9 +40,9 @@
 - `settings.py` (~200 lines) - /presets/*, /favorites/*, /workflows/*, /settings/import|export
 
 ### Frontend (CEP Panel)
-- `extension/com.opencut.panel/client/main.js` (~5750 lines) - Frontend controller (includes PremiereBridge UXP abstraction)
-- `extension/com.opencut.panel/client/index.html` (~2700 lines) - UI layout (6 tabs)
-- `extension/com.opencut.panel/client/style.css` (~3690 lines) - Themes & styles
+- `extension/com.opencut.panel/client/main.js` (~5770 lines) - Frontend controller (includes PremiereBridge UXP abstraction)
+- `extension/com.opencut.panel/client/index.html` (~2710 lines) - UI layout (sidebar + content-area, 6 tabs)
+- `extension/com.opencut.panel/client/style.css` (~3890 lines) - Themes & styles (sidebar navigation)
 - `extension/com.opencut.panel/host/index.jsx` (~1150 lines) - ExtendScript host
 
 ### Build
@@ -70,6 +70,8 @@
 - **PremiereBridge abstraction**: All jsx/csInterface calls go through `PremiereBridge` object for future UXP migration
 - `subprocess` aliased as `_sp` in route files
 - Custom dropdown system replaces native `<select>` elements in CEP
+- **Sidebar navigation**: 52px icon-only left sidebar (CapCut-style), CSS tooltips on hover, active tab = left accent bar
+- **Layout**: `.app` = flex row → `aside.sidebar` (52px) + `.content-area` (flex:1 column → `.content-header` + banners + `main.main` + `.content-footer`)
 - 6 main tabs: Cut, Captions, Audio, Video, Export, Settings
 - localStorage for settings persistence (`opencut_settings` key)
 
@@ -201,6 +203,17 @@
 - **LLM Configuration panel** in Settings tab (provider select, model, API key, base URL, test button)
 - 11 new backend routes across 4 Blueprints
 - 6 new core modules, 4 modified core modules
+
+## v1.3.0 UI Overhaul
+- **Sidebar navigation** — CapCut-style 52px icon-only left sidebar replaces horizontal tab bar
+- CSS tooltips on hover show tab names; active tab = animated left accent bar
+- `.app` layout changed from `flex-direction: column` to `row`
+- New elements: `.sidebar`, `.sidebar-brand`, `.sidebar-footer`, `.content-area`, `.content-header`, `.content-title`, `.content-actions`, `.content-footer`
+- Increased spacing variables: `--sp-xs:6px`, `--sp-sm:8px`, `--sp-md:12px`, `--sp-lg:16px`, `--sp-xl:20px`
+- Sub-tab overflow fade indicator (`.has-overflow` class via `checkSubTabOverflow()`)
+- Compact clip section (reduced glass morphism)
+- Responsive: sidebar shrinks to 44px at ≤380px panel width
+- Content header shows dynamic tab title (updated by `setupNavTabs()` click handler)
 
 ## v1.3.0 New Optional Dependencies
 ```toml

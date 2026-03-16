@@ -93,12 +93,12 @@
     --r-xl: 24px;
     --r-full: 9999px;
 
-    /* Spacing (compact) */
-    --sp-xs: 4px;
-    --sp-sm: 6px;
-    --sp-md: 8px;
-    --sp-lg: 10px;
-    --sp-xl: 12px;
+    /* Spacing */
+    --sp-xs: 6px;
+    --sp-sm: 8px;
+    --sp-md: 12px;
+    --sp-lg: 16px;
+    --sp-xl: 20px;
 
     /* Fonts */
     --font-sans: 'Inter', -apple-system, sans-serif;
@@ -418,7 +418,7 @@ input, textarea, [contenteditable] {
    ============================================================ */
 .app {
     display: flex;
-    flex-direction: column;
+    flex-direction: row;
     height: 100vh;
     max-height: 100vh;
     min-width: 300px;
@@ -466,9 +466,50 @@ input, textarea, [contenteditable] {
 }
 
 /* ============================================================
-   HEADER - Neon Glass
+   SIDEBAR - Left Navigation
    ============================================================ */
-.header {
+.sidebar {
+    display: flex;
+    flex-direction: column;
+    width: 52px;
+    min-width: 52px;
+    background: var(--bg-deep);
+    border-right: 1px solid var(--border);
+    position: relative;
+    z-index: 200;
+    overflow: visible;
+}
+
+.sidebar-brand {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px 0 10px;
+    border-bottom: 1px solid var(--border);
+}
+
+.sidebar-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 0;
+    margin-top: auto;
+    border-top: 1px solid var(--border);
+}
+
+/* ============================================================
+   CONTENT AREA - Main wrapper
+   ============================================================ */
+.content-area {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-width: 0;
+    position: relative;
+    z-index: 1;
+}
+
+.content-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -480,8 +521,8 @@ input, textarea, [contenteditable] {
     z-index: 100;
 }
 
-/* Animated top border */
-.header::before {
+/* Animated top border on content header */
+.content-header::before {
     content: '';
     position: absolute;
     top: 0;
@@ -498,6 +539,28 @@ input, textarea, [contenteditable] {
     100% { background-position: -200% 0; }
 }
 
+.content-title {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text-primary);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin: 0;
+    white-space: nowrap;
+}
+
+.content-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.content-footer {
+    position: relative;
+    z-index: 50;
+}
+
+/* Legacy header classes — remapped to content-header children */
 .header-left { display: flex; align-items: center; gap: 12px; }
 .header-right { display: flex; align-items: center; gap: 10px; }
 
@@ -837,38 +900,36 @@ body.job-active .btn-install {
 }
 
 /* ============================================================
-   NAV TABS - Holographic Style
+   NAV TABS - Vertical Sidebar Icons
    ============================================================ */
 .nav-tabs {
     display: flex;
-    background: var(--glass);
-    backdrop-filter: blur(15px);
-    padding: 8px 10px;
+    flex-direction: column;
+    align-items: center;
+    padding: 8px 0;
     gap: 4px;
-    border-bottom: 1px solid var(--border);
-    position: relative;
-    z-index: 100;
+    flex: 1;
 }
 
 .nav-tab {
-    flex: 1;
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: 5px;
-    padding: 7px 6px 5px;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
     background: transparent;
     border: none;
-    border-radius: var(--r-md);
+    border-radius: var(--r-sm);
     color: var(--text-muted);
     cursor: pointer;
-    font-size: 10px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
     transition: all var(--t-med);
     position: relative;
-    overflow: hidden;
+    overflow: visible;
+}
+
+/* Hide text labels — icon-only sidebar */
+.nav-tab span {
+    display: none;
 }
 
 .nav-tab svg {
@@ -880,12 +941,40 @@ body.job-active .btn-install {
 
 .nav-tab:hover {
     color: var(--text-secondary);
-    background: rgba(255, 255, 255, 0.02);
+    background: rgba(255, 255, 255, 0.04);
 }
 
 .nav-tab:hover svg {
     opacity: 0.7;
-    transform: scale(1.15) translateY(-2px);
+    transform: scale(1.15);
+}
+
+/* Tooltip on hover — shows tab name */
+.nav-tab[title]::before {
+    content: attr(title);
+    position: absolute;
+    left: calc(100% + 10px);
+    top: 50%;
+    transform: translateY(-50%);
+    padding: 5px 10px;
+    background: var(--bg-elevated);
+    color: var(--text-primary);
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    border-radius: var(--r-xs);
+    border: 1px solid var(--border-light);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+    transform: translateY(-50%) translateX(-4px);
+    z-index: 9999;
+}
+
+.nav-tab[title]:hover::before {
+    opacity: 1;
+    transform: translateY(-50%) translateX(0);
 }
 
 /* Active state - Full neon */
@@ -902,27 +991,27 @@ body.job-active .btn-install {
 
 @keyframes iconFloat {
     0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-3px); }
+    50% { transform: translateY(-2px); }
 }
 
-/* Animated underline */
+/* Active left accent bar (replaces bottom underline) */
 .nav-tab.active::after {
     content: '';
     position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 35px;
-    height: 3px;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 24px;
     background: var(--accent-grad);
-    border-radius: 2px;
+    border-radius: 0 2px 2px 0;
     box-shadow: 0 0 10px var(--cyan-glow), 0 0 20px var(--cyan-glow);
-    animation: underlineGlow 1.5s ease-in-out infinite alternate;
+    animation: sidebarGlow 1.5s ease-in-out infinite alternate;
 }
 
-@keyframes underlineGlow {
-    0% { width: 35px; box-shadow: 0 0 10px var(--cyan-glow); }
-    100% { width: 45px; box-shadow: 0 0 20px var(--cyan-glow), 0 0 30px var(--magenta-glow); }
+@keyframes sidebarGlow {
+    0% { height: 24px; box-shadow: 0 0 10px var(--cyan-glow); }
+    100% { height: 28px; box-shadow: 0 0 20px var(--cyan-glow), 0 0 30px var(--magenta-glow); }
 }
 
 /* ============================================================
@@ -1004,6 +1093,21 @@ body.job-active .btn-install {
     scrollbar-width: none;
     -ms-overflow-style: none;
     border: 1px solid var(--border);
+    position: relative;
+}
+
+/* Fade indicator when sub-tabs overflow (e.g. Video panel's 18 tabs) */
+.sub-tabs.has-overflow::after {
+    content: '';
+    position: sticky;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    min-width: 30px;
+    flex-shrink: 0;
+    background: linear-gradient(90deg, transparent, var(--bg-card));
+    border-radius: 0 var(--r-lg) var(--r-lg) 0;
+    pointer-events: none;
 }
 
 .sub-tab {
@@ -1112,8 +1216,8 @@ body.job-active .btn-install {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 10px;
-    padding-bottom: 8px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
     border-bottom: 1px solid var(--border);
 }
 
@@ -1137,22 +1241,26 @@ body.job-active .btn-install {
    MEDIA CARD - Special Neon Accent
    ============================================================ */
 #clipSection {
-    background: linear-gradient(135deg, var(--glass), var(--cyan-subtle));
+    background: var(--bg-surface);
     border-left: 3px solid var(--neon-cyan);
-    box-shadow: inset 0 0 30px var(--cyan-subtle);
+    padding: var(--sp-sm) var(--sp-md);
+    border-radius: var(--r-sm);
 }
 
 #clipSection:hover {
     border-left-color: var(--neon-magenta);
-    box-shadow: 
-        0 10px 40px rgba(0, 0, 0, 0.4),
-        inset 0 0 50px var(--cyan-subtle),
-        0 0 40px var(--cyan-subtle);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+    transform: none;
 }
 
 #clipSection .card-title {
     color: var(--neon-cyan);
-    text-shadow: 0 0 15px var(--cyan-glow);
+    font-size: 10px;
+}
+
+#clipSection .card-header {
+    margin-bottom: 8px;
+    padding-bottom: 6px;
 }
 
 /* ============================================================
@@ -1382,7 +1490,7 @@ body.job-active .btn-install {
 /* ============================================================
    FORM ELEMENTS
    ============================================================ */
-.form-group { margin-bottom: 8px; }
+.form-group { margin-bottom: 12px; }
 .form-group:last-child { margin-bottom: 0; }
 
 label {
@@ -1390,7 +1498,7 @@ label {
     font-size: 10px;
     font-weight: 700;
     color: var(--text-secondary);
-    margin-bottom: 5px;
+    margin-bottom: 8px;
     text-transform: uppercase;
     letter-spacing: 1px;
 }
@@ -2265,9 +2373,12 @@ input[type="checkbox"] {
 /* ============================================================
    RESPONSIVE
    ============================================================ */
-@media (max-width: 340px) {
-    .nav-tab span { display: none; }
-    .nav-tab { padding: 12px 8px; }
+@media (max-width: 380px) {
+    .sidebar { width: 44px; min-width: 44px; }
+    .nav-tab { width: 36px; height: 36px; }
+    .nav-tab svg { width: 18px; height: 18px; }
+    .sidebar-brand { padding: 10px 0 8px; }
+    .content-title { font-size: 12px; letter-spacing: 1px; }
     .stat-grid { grid-template-columns: 1fr 1fr; }
     .filler-checks { grid-template-columns: 1fr; }
     .slider-val { min-width: auto; width: auto; }
@@ -2893,9 +3004,9 @@ input[type="checkbox"] {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 12px;
+    padding: 6px 12px;
     background: var(--bg-raised);
-    border-bottom: 1px solid var(--border);
+    border-radius: var(--r-sm);
     overflow-x: auto;
     position: relative;
     z-index: 10;

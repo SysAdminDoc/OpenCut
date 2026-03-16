@@ -16,29 +16,61 @@
 <body>
     <div class="app">
 
-        <!-- ===== HEADER ===== -->
-        <header class="header">
-            <div class="header-left">
+        <!-- ===== SIDEBAR ===== -->
+        <aside class="sidebar">
+            <div class="sidebar-brand">
                 <img class="logo-mark" width="18" height="18" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAA9ElEQVR4nK3UwUrDQBDG8f/M+gKBxkspePAkvXj14tmjIHr1IBT0Ij6G3kSkHnqQPoNeamNBT+JjTIekNNmkmsP+2GX5MbM7LPJcqLKVKFAiEPG5vt0T8vM1iWIoE9V/j6UpqNw4O2hIqD7L/wGhTqkIWRhKvEqRB56qiMgePkIhsn+YriVNDSSJUF0r2ppNswk0KZi5e5PvXcfpfYd/rJ42ex8RJXCJcqd+22ren5cAxdtm1N6/6oOoiOLVY0Qixvsg/5dcjvEupF3PbRp5JJHOdSMXJ7IasiWZxctOBUrngCzuJPGij/+TIYhclkfSBuCMOAFmNwJ0F6s0yQAAAABJRU5ErkJggg==" alt="OpenCut">
-                <span class="logo-text">Open<span class="logo-accent">Cut</span></span>
-                <span class="version">v1.3.0</span>
             </div>
-            <div class="header-right">
-                <button class="header-btn" id="refreshAllBtn" title="Refresh connection and capabilities" aria-label="Refresh connection and capabilities">
-                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
+            <nav class="nav-tabs" id="navTabs" aria-label="Main navigation" role="tablist">
+                <button class="nav-tab active" data-nav="cut" title="Cut & Clean" role="tab" aria-selected="true">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5a2.5 2.5 0 00-1.47 4.53L6.47 8 2.53 9.97A2.5 2.5 0 104 14.5a2.5 2.5 0 001.47-4.53L7.44 8.99 13.5 12V4L7.44 7.01 5.47 5.97A2.5 2.5 0 004 1.5zM2.5 4a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm0 8a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"/></svg>
+                <span>Cut</span>
                 </button>
-                <div class="theme-toggle" id="themeToggle">
+                <button class="nav-tab" data-nav="captions" title="Captions & Subtitles" role="tab" aria-selected="false">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6.5L2 14.5V12H2a2 2 0 01-2-2V2zm4 3a.5.5 0 000 1h4a.5.5 0 000-1H4zm0 2.5a.5.5 0 000 1h8a.5.5 0 000-1H4z"/></svg>
+                <span>Captions</span>
+                </button>
+                <button class="nav-tab" data-nav="audio" title="Audio Suite" role="tab" aria-selected="false">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1v14l-4-4H0V5h2l4-4zm7.07 1.93a.75.75 0 00-1.06 1.06 5.5 5.5 0 010 7.78.75.75 0 001.06 1.06 7 7 0 000-9.9zm-2.12 2.12a.75.75 0 00-1.06 1.06 2.5 2.5 0 010 3.54.75.75 0 001.06 1.06 4 4 0 000-5.66z"/></svg>
+                <span>Audio</span>
+                </button>
+                <button class="nav-tab" data-nav="video" title="Video Tools" role="tab" aria-selected="false">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 3a2 2 0 012-2h8a2 2 0 012 2v4l4-2v6l-4-2v4a2 2 0 01-2 2H2a2 2 0 01-2-2V3z"/></svg>
+                <span>Video</span>
+                </button>
+                <button class="nav-tab" data-nav="export" title="Export & Publish" role="tab" aria-selected="false">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8.5 1a.5.5 0 00-1 0v5.793L5.854 5.146a.5.5 0 10-.708.708l2.5 2.5a.5.5 0 00.708 0l2.5-2.5a.5.5 0 00-.708-.708L8.5 6.793V1zM2 10a2 2 0 00-2 2v1a2 2 0 002 2h12a2 2 0 002-2v-1a2 2 0 00-2-2h-3.5a.5.5 0 010-1H14a3 3 0 013 3v1a3 3 0 01-3 3H2a3 3 0 01-3-3v-1a3 3 0 013-3h3.5a.5.5 0 010 1H2z"/></svg>
+                <span>Export</span>
+                </button>
+                <button class="nav-tab" data-nav="settings" title="Settings" role="tab" aria-selected="false">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 001.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.084.303a.96.96 0 001.187 1.187l.303-.084c.961-.275 1.65.918.931 1.613l-.211.205a.96.96 0 00.434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 00-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.303-.084a.96.96 0 00-1.187 1.187l.084.303c.275.961-.918 1.65-1.613.931l-.205-.211a.96.96 0 00-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 00-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.084-.303a.96.96 0 00-1.187-1.187l-.303.084c-.961.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 00-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071A.96.96 0 001.39 4.22l-.211-.205c-.719-.695-.03-1.888.931-1.613l.303.084a.96.96 0 001.187-1.187l-.084-.303C3.241.035 4.434-.654 5.13.065l.205.211A.96.96 0 006.997.71l.071-.286zM8 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
+                <span>Settings</span>
+                </button>
+            </nav>
+            <div class="sidebar-footer">
+                <span class="conn-dot" id="connDot"></span>
+            </div>
+        </aside>
+
+        <!-- ===== CONTENT AREA ===== -->
+        <div class="content-area">
+            <div class="content-header">
+                <h1 class="content-title" id="contentTitle">Cut & Clean</h1>
+                <div class="content-actions">
+                    <button class="header-btn" id="refreshAllBtn" title="Refresh connection and capabilities" aria-label="Refresh connection and capabilities">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
+                    </button>
+                    <div class="theme-toggle" id="themeToggle">
                     <button class="theme-toggle-btn" id="themeToggleBtn" title="Switch theme" aria-label="Switch theme">
-                        <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 01.5.5v1a.5.5 0 01-1 0v-1A.5.5 0 018 1zm0 11a.5.5 0 01.5.5v1a.5.5 0 01-1 0v-1A.5.5 0 018 12zm7-4a.5.5 0 01-.5.5h-1a.5.5 0 010-1h1a.5.5 0 01.5.5zM4 8a.5.5 0 01-.5.5h-1a.5.5 0 010-1h1A.5.5 0 014 8zm9.354-4.354a.5.5 0 010 .708l-.707.707a.5.5 0 11-.707-.707l.707-.707a.5.5 0 01.708 0zM4.06 11.94a.5.5 0 010 .708l-.707.707a.5.5 0 11-.707-.707l.707-.707a.5.5 0 01.708 0zm9.18.708a.5.5 0 01-.708 0l-.707-.707a.5.5 0 01.707-.708l.707.708a.5.5 0 010 .707zM4.06 4.06a.5.5 0 01-.708 0l-.707-.707a.5.5 0 01.707-.708l.707.708a.5.5 0 010 .707zM8 5a3 3 0 100 6 3 3 0 000-6z"/></svg>
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a.5.5 0 01.5.5v1a.5.5 0 01-1 0v-1A.5.5 0 018 1zm0 11a.5.5 0 01.5.5v1a.5.5 0 01-1 0v-1A.5.5 0 018 12zm7-4a.5.5 0 01-.5.5h-1a.5.5 0 010-1h1a.5.5 0 01.5.5zM4 8a.5.5 0 01-.5.5h-1a.5.5 0 010-1h1A.5.5 0 014 8zm9.354-4.354a.5.5 0 010 .708l-.707.707a.5.5 0 11-.707-.707l.707-.707a.5.5 0 01.708 0zM4.06 11.94a.5.5 0 010 .708l-.707.707a.5.5 0 11-.707-.707l.707-.707a.5.5 0 01.708 0zm9.18.708a.5.5 0 01-.708 0l-.707-.707a.5.5 0 01.707-.708l.707.708a.5.5 0 010 .707zM4.06 4.06a.5.5 0 01-.708 0l-.707-.707a.5.5 0 01.707-.708l.707.708a.5.5 0 010 .707zM8 5a3 3 0 100 6 3 3 0 000-6z"/></svg>
                     </button>
                     <div class="theme-menu" id="themeMenu"></div>
-                </div>
-                <div class="conn-status" id="connStatus" title="Backend status" role="status" aria-live="polite">
-                    <span class="conn-dot" id="connDot"></span>
-                    <span class="conn-label" id="connLabel">Offline</span>
+                    </div>
+                    <div class="conn-status" id="connStatus" title="Backend status" role="status" aria-live="polite">
+                        <span class="conn-label" id="connLabel">Offline</span>
+                    </div>
                 </div>
             </div>
-        </header>
 
         <!-- Processing Banner (always visible when job active, no scrolling needed) -->
         <div class="processing-banner hidden" id="processingBanner" role="status" aria-live="polite">
@@ -54,36 +86,6 @@
             <div class="processing-track"><div class="processing-fill" id="processingFill"></div></div>
         </div>
 
-        <!-- Job History -->
-        <div class="job-history-bar">
-            <button class="job-history-toggle" id="jobHistoryToggle" title="Toggle job history">History (0)</button>
-        </div>
-        <div class="job-history" id="jobHistory"></div>
-
-        <!-- Job Queue -->
-        <div class="job-queue-bar hidden" id="jobQueueBar">
-            <div class="queue-info">
-                <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" opacity="0.6"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
-                <span id="queueStatusText">Queue: 0 jobs</span>
-            </div>
-            <button class="btn-sm" id="clearQueueBtn">Clear</button>
-        </div>
-
-        <!-- Output Browser -->
-        <div class="output-browser hidden" id="outputBrowser">
-            <div class="output-browser-header">
-                <span>Recent Outputs</span>
-                <div style="display:flex;gap:4px;">
-                    <button class="btn-sm" id="refreshOutputsBtn" title="Refresh">Refresh</button>
-                    <button class="output-browser-close" id="outputBrowserClose" aria-label="Close output browser">&times;</button>
-                </div>
-            </div>
-            <div class="output-browser-list" id="outputBrowserList"></div>
-        </div>
-        <div class="output-toggle-bar">
-            <button class="job-history-toggle" id="outputBrowserToggle" title="Toggle output browser">Outputs (0)</button>
-        </div>
-
         <!-- Alert Banner -->
         <div class="alert-banner hidden" id="alertBanner" role="alert" aria-live="assertive">
             <div class="alert-inner">
@@ -93,44 +95,6 @@
             <button class="alert-dismiss" id="alertDismiss" title="Dismiss alert" aria-label="Dismiss alert">&times;</button>
         </div>
 
-        <!-- ===== MAIN NAV TABS ===== -->
-        <nav class="nav-tabs" id="navTabs" aria-label="Main navigation" role="tablist">
-            <button class="nav-tab active" data-nav="cut" title="Cut & Clean" role="tab" aria-selected="true">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5a2.5 2.5 0 00-1.47 4.53L6.47 8 2.53 9.97A2.5 2.5 0 104 14.5a2.5 2.5 0 001.47-4.53L7.44 8.99 13.5 12V4L7.44 7.01 5.47 5.97A2.5 2.5 0 004 1.5zM2.5 4a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm0 8a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"/></svg>
-                <span>Cut</span>
-            </button>
-            <button class="nav-tab" data-nav="captions" title="Captions & Subtitles" role="tab" aria-selected="false">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6.5L2 14.5V12H2a2 2 0 01-2-2V2zm4 3a.5.5 0 000 1h4a.5.5 0 000-1H4zm0 2.5a.5.5 0 000 1h8a.5.5 0 000-1H4z"/></svg>
-                <span>Captions</span>
-            </button>
-            <button class="nav-tab" data-nav="audio" title="Audio Suite" role="tab" aria-selected="false">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1v14l-4-4H0V5h2l4-4zm7.07 1.93a.75.75 0 00-1.06 1.06 5.5 5.5 0 010 7.78.75.75 0 001.06 1.06 7 7 0 000-9.9zm-2.12 2.12a.75.75 0 00-1.06 1.06 2.5 2.5 0 010 3.54.75.75 0 001.06 1.06 4 4 0 000-5.66z"/></svg>
-                <span>Audio</span>
-            </button>
-            <button class="nav-tab" data-nav="video" title="Video Tools" role="tab" aria-selected="false">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 3a2 2 0 012-2h8a2 2 0 012 2v4l4-2v6l-4-2v4a2 2 0 01-2 2H2a2 2 0 01-2-2V3z"/></svg>
-                <span>Video</span>
-            </button>
-            <button class="nav-tab" data-nav="export" title="Export & Publish" role="tab" aria-selected="false">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8.5 1a.5.5 0 00-1 0v5.793L5.854 5.146a.5.5 0 10-.708.708l2.5 2.5a.5.5 0 00.708 0l2.5-2.5a.5.5 0 00-.708-.708L8.5 6.793V1zM2 10a2 2 0 00-2 2v1a2 2 0 002 2h12a2 2 0 002-2v-1a2 2 0 00-2-2h-3.5a.5.5 0 010-1H14a3 3 0 013 3v1a3 3 0 01-3 3H2a3 3 0 01-3-3v-1a3 3 0 013-3h3.5a.5.5 0 010 1H2z"/></svg>
-                <span>Export</span>
-            </button>
-            <button class="nav-tab" data-nav="settings" title="Settings" role="tab" aria-selected="false">
-                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 001.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.084.303a.96.96 0 001.187 1.187l.303-.084c.961-.275 1.65.918.931 1.613l-.211.205a.96.96 0 00.434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 00-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.303-.084a.96.96 0 00-1.187 1.187l.084.303c.275.961-.918 1.65-1.613.931l-.205-.211a.96.96 0 00-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 00-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.084-.303a.96.96 0 00-1.187-1.187l-.303.084c-.961.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 00-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071A.96.96 0 001.39 4.22l-.211-.205c-.719-.695-.03-1.888.931-1.613l.303.084a.96.96 0 001.187-1.187l-.084-.303C3.241.035 4.434-.654 5.13.065l.205.211A.96.96 0 006.997.71l.071-.286zM8 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
-                <span>Settings</span>
-            </button>
-        </nav>
-
-        <!-- Favorites Quick Access Bar -->
-        <div class="favorites-bar hidden" id="favoritesBar">
-            <div class="favorites-label">
-                <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
-                Favorites
-            </div>
-            <div class="favorites-items" id="favoritesItems"></div>
-        </div>
-
-        <!-- ===== MAIN CONTENT ===== -->
         <main class="main">
             <div class="server-status-banner hidden" id="serverStatusBanner">
                 <span id="serverStatusMsg">Server disconnected. Reconnecting...</span>
@@ -177,6 +141,16 @@
                     <button class="btn-text" id="browseFileBtn">Browse File...</button>
                 </div>
             </section>
+
+
+        <!-- Favorites Quick Access Bar -->
+        <div class="favorites-bar hidden" id="favoritesBar">
+            <div class="favorites-label">
+                <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
+                Favorites
+            </div>
+            <div class="favorites-items" id="favoritesItems"></div>
+        </div>
 
             <!-- ======== TAB: CUT ======== -->
             <div class="nav-panel active" id="panel-cut" role="tabpanel" aria-label="Cut & Clean">
@@ -2601,6 +2575,41 @@
 
         </main>
 
+            <div class="content-footer">
+            <!-- Job History -->
+            <div class="job-history-bar">
+                <button class="job-history-toggle" id="jobHistoryToggle" title="Toggle job history">History (0)</button>
+            </div>
+            <div class="job-history" id="jobHistory"></div>
+
+            <!-- Job Queue -->
+            <div class="job-queue-bar hidden" id="jobQueueBar">
+                <div class="queue-info">
+                    <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" opacity="0.6"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
+                    <span id="queueStatusText">Queue: 0 jobs</span>
+                </div>
+                <button class="btn-sm" id="clearQueueBtn">Clear</button>
+            </div>
+
+            <!-- Output Browser -->
+            <div class="output-browser hidden" id="outputBrowser">
+                <div class="output-browser-header">
+                    <span>Recent Outputs</span>
+                    <div style="display:flex;gap:4px;">
+                        <button class="btn-sm" id="refreshOutputsBtn" title="Refresh">Refresh</button>
+                        <button class="output-browser-close" id="outputBrowserClose" aria-label="Close output browser">&times;</button>
+                    </div>
+                </div>
+                <div class="output-browser-list" id="outputBrowserList"></div>
+            </div>
+            <div class="output-toggle-bar">
+                <button class="job-history-toggle" id="outputBrowserToggle" title="Toggle output browser">Outputs (0)</button>
+            </div>
+
+            </div>
+        </div><!-- end content-area -->
+
+
         <!-- Command Palette -->
         <div class="command-palette-overlay hidden" id="commandPaletteOverlay">
             <div class="command-palette">
@@ -2672,7 +2681,7 @@
                     <div class="wizard-step" data-step="2">
                         <div class="wizard-step-num">2</div>
                         <h3>Pick an Operation</h3>
-                        <p>Use the 6 tabs at the top: Cut, Captions, Audio, Video, Export, and Settings. Each tab has multiple tools.</p>
+                        <p>Use the sidebar on the left: Cut, Captions, Audio, Video, Export, and Settings. Hover icons for labels.</p>
                     </div>
                     <div class="wizard-step" data-step="3">
                         <div class="wizard-step-num">3</div>
