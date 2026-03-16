@@ -1926,7 +1926,7 @@
                 filepath: selectedPath,
                 output_dir: projectFolder,
                 speed_factor: parseFloat((el.silenceSpeedFactor || {}).value || "4"),
-                threshold: parseFloat(el.threshold.value),
+                threshold_db: parseFloat(el.threshold.value),
                 min_duration: parseFloat(el.minDuration.value),
             });
             return;
@@ -3005,6 +3005,25 @@
             jobStepCurrent = 0;
             jobStepTotal = 0;
         }
+    });
+
+    // Listener: Populate summarize results panel
+    addJobDoneListener(function (job) {
+        if (job.type !== "summarize" || job.status !== "complete" || !job.result) return;
+        var r = job.result;
+        var text = "";
+        if (r.bullet_points && r.bullet_points.length) {
+            for (var i = 0; i < r.bullet_points.length; i++) {
+                text += "\u2022 " + r.bullet_points[i] + "\n";
+            }
+        } else if (r.text) {
+            text = r.text;
+        }
+        if (r.topics && r.topics.length) {
+            text += "\nTopics: " + r.topics.join(", ");
+        }
+        if (el.summaryResult) el.summaryResult.classList.remove("hidden");
+        if (el.summaryContent) el.summaryContent.textContent = text || "No summary generated.";
     });
 
     // ================================================================
@@ -5249,7 +5268,7 @@
     function testLLM() {
         var cfg = getLLMConfig();
         if (el.llmStatus) el.llmStatus.textContent = "Testing...";
-        api("POST", "/llm/test", { prompt: "Say hello in one sentence.", config: cfg }, function (err, resp) {
+        api("POST", "/llm/test", { prompt: "Say hello in one sentence.", provider: cfg.provider, model: cfg.model || "", api_key: cfg.api_key || "", base_url: cfg.base_url || "" }, function (err, resp) {
             if (err || !resp || !resp.success) {
                 var msg = (resp && resp.error) ? resp.error : (err ? err.message : "Connection failed");
                 if (el.llmStatus) el.llmStatus.textContent = "Failed: " + msg;
@@ -5322,35 +5341,13 @@
         var llm = getLLMConfig();
         if (el.summaryResult) el.summaryResult.classList.remove("hidden");
         if (el.summaryContent) el.summaryContent.textContent = "Summarizing...";
-        api("POST", "/transcript/summarize", {
+        startJob("/transcript/summarize", {
             filepath: selectedPath,
             style: "bullets",
             llm_provider: llm.provider,
-            llm_model: llm.model,
-            llm_api_key: llm.api_key,
-            llm_base_url: llm.base_url,
-        }, function (err, resp) {
-            if (err || !resp) {
-                if (el.summaryContent) el.summaryContent.textContent = "Error: " + (err ? err.message : "unknown");
-                return;
-            }
-            if (resp.error) {
-                if (el.summaryContent) el.summaryContent.textContent = "Error: " + resp.error;
-                return;
-            }
-            var text = "";
-            if (resp.bullet_points && resp.bullet_points.length) {
-                for (var i = 0; i < resp.bullet_points.length; i++) {
-                    text += "\u2022 " + resp.bullet_points[i] + "\n";
-                }
-            } else if (resp.text) {
-                text = resp.text;
-            }
-            if (resp.topics && resp.topics.length) {
-                text += "\nTopics: " + resp.topics.join(", ");
-            }
-            if (el.summaryContent) el.summaryContent.textContent = text || "No summary generated.";
-            showToast("Summary generated", "success");
+            llm_model: llm.model || "",
+            llm_api_key: llm.api_key || "",
+            llm_base_url: llm.base_url || "",
         });
     }
 
@@ -5360,62 +5357,59 @@
         if (!refPath) { showAlert("Select a reference image."); return; }
         var lutName = el.lutRefName ? el.lutRefName.value.trim() : "";
         if (!lutName) lutName = "custom_ref";
-        api("POST", "/video/lut/generate-from-ref", {
+        startJob("/video/lut/generate-from-ref", {
             reference_path: refPath,
             lut_name: lutName,
             strength: el.lutRefStrength ? parseFloat(el.lutRefStrength.value) : 1.0,
-        }, function (err, resp) {
-            if (err || !resp) {
-                showAlert("LUT generation failed: " + (err ? err.message : "unknown"));
-                return;
-            }
-            if (resp.error) { showAlert("Error: " + resp.error); return; }
-            showToast("LUT generated: " + (resp.lut_name || lutName), "success");
         });
     }
 
     // --- Shorts Pipeline ---
     function runShorts() {
         var llm = getLLMConfig();
+        var platform = el.shortsPlatform ? el.shortsPlatform.value : "tiktok";
+        var dims = { tiktok: [1080, 1920], shorts: [1080, 1920], reels: [1080, 1920], square: [1080, 1080] };
+        var d = dims[platform] || [1080, 1920];
         startJob("/video/shorts-pipeline", {
             filepath: selectedPath,
             output_dir: projectFolder,
-            platform: el.shortsPlatform ? el.shortsPlatform.value : "tiktok",
+            target_w: d[0],
+            target_h: d[1],
             max_shorts: el.shortsMaxClips ? parseInt(el.shortsMaxClips.value) : 5,
             min_duration: el.shortsMinDur ? parseFloat(el.shortsMinDur.value) : 15,
             max_duration: el.shortsMaxDur ? parseFloat(el.shortsMaxDur.value) : 60,
             face_track: el.shortsFaceTrack ? el.shortsFaceTrack.checked : false,
             burn_captions: el.shortsCaptions ? el.shortsCaptions.checked : false,
             llm_provider: llm.provider,
-            llm_model: llm.model,
-            llm_api_key: llm.api_key,
-            llm_base_url: llm.base_url,
+            llm_model: llm.model || "",
+            llm_api_key: llm.api_key || "",
+            llm_base_url: llm.base_url || "",
         });
     }
 
     // --- Slider value display updaters ---
     function initNewSliderDisplays() {
         var sliders = [
-            ["silenceSpeedFactor", "silenceSpeedVal"],
-            ["autoEditThreshold", "autoEditThresholdVal"],
-            ["autoEditMargin", "autoEditMarginVal"],
-            ["autoEditMinClip", "autoEditMinClipVal"],
-            ["highlightMax", "highlightMaxVal"],
-            ["faceSmoothing", "faceSmoothingVal"],
-            ["lutRefStrength", "lutRefStrengthVal"],
-            ["shortsMaxClips", "shortsMaxClipsVal"],
+            ["silenceSpeedFactor", "silenceSpeedVal", "x"],
+            ["autoEditThreshold", "autoEditThresholdVal", ""],
+            ["autoEditMargin", "autoEditMarginVal", "s"],
+            ["autoEditMinClip", "autoEditMinClipVal", "s"],
+            ["highlightMax", "highlightMaxVal", ""],
+            ["faceSmoothing", "faceSmoothingVal", ""],
+            ["lutRefStrength", "lutRefStrengthVal", ""],
+            ["shortsMaxClips", "shortsMaxClipsVal", ""],
         ];
         for (var i = 0; i < sliders.length; i++) {
-            (function (sliderId, displayId) {
+            (function (sliderId, displayId, unit) {
                 var slider = document.getElementById(sliderId);
                 var display = document.getElementById(displayId);
                 if (slider && display) {
-                    display.textContent = slider.value;
+                    display.textContent = slider.value + unit;
                     slider.addEventListener("input", function () {
-                        display.textContent = this.value;
+                        display.textContent = this.value + unit;
                     });
                 }
-            })(sliders[i][0], sliders[i][1]);
+            })(sliders[i][0], sliders[i][1], sliders[i][2]);
         }
     }
 

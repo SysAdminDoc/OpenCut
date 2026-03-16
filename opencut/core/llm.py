@@ -87,7 +87,7 @@ def _query_ollama(prompt, system_prompt, config):
         },
     }
 
-    data = _http_json(url, data=body, timeout=30)
+    data = _http_json(url, data=body, timeout=180)
 
     return LLMResponse(
         text=data.get("response", ""),
