@@ -176,6 +176,11 @@ def health():
 @require_csrf
 def shutdown_server():
     """Aggressively shut down the server. Used by new instances to kill old ones."""
+    # Only allow shutdown from localhost
+    remote = request.remote_addr or ""
+    if remote not in ("127.0.0.1", "::1", "localhost"):
+        logger.warning("Shutdown attempt from non-localhost IP: %s", remote)
+        return jsonify({"error": "Shutdown only allowed from localhost"}), 403
     logger.info("Shutdown requested via /shutdown endpoint")
 
     # Cancel all running jobs first

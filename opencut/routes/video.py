@@ -449,6 +449,8 @@ def export_video():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     segments_data = data.get("segments", [])
+    if len(segments_data) > 10000:
+        return jsonify({"error": "Too many segments (max 10000)"}), 400
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -461,9 +463,15 @@ def export_video():
     if not segments_data:
         return jsonify({"error": "No segments provided"}), 400
 
-    # Options
+    # Options — allowlisted codecs to prevent argument injection
+    _VALID_VIDEO_CODECS = {"libx264", "libx265", "copy", "vp9", "libvpx-vp9", "libaom-av1", "prores_ks"}
+    _VALID_AUDIO_CODECS = {"aac", "libmp3lame", "flac", "pcm_s16le", "copy", "libopus", "libvorbis"}
     video_codec = data.get("video_codec", "libx264")
+    if video_codec not in _VALID_VIDEO_CODECS:
+        video_codec = "libx264"
     audio_codec = data.get("audio_codec", "aac")
+    if audio_codec not in _VALID_AUDIO_CODECS:
+        audio_codec = "aac"
     quality = data.get("quality", "medium")  # low, medium, high, lossless
     output_format = data.get("output_format", "mp4")
     audio_only = data.get("audio_only", False)
@@ -2038,7 +2046,14 @@ def title_render():
 
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
-            d = data.get("output_dir", "") or tempfile.gettempdir()
+            d = data.get("output_dir", "")
+            if d:
+                valid, msg = validate_path(d)
+                if not valid:
+                    _update_job(job_id, status="error", message=msg)
+                    return
+            else:
+                d = tempfile.gettempdir()
             out = render_title_card(text, output_dir=d,
                                      preset=data.get("preset", "fade_center"),
                                      duration=safe_float(data.get("duration", 5.0), 5.0, min_val=0.5, max_val=60.0),
@@ -2584,6 +2599,10 @@ def video_reframe():
     mode = data.get("mode", "crop")  # crop, pad, stretch
     position = data.get("position", "center")  # center, top, bottom (for crop), or custom x:y
     bg_color = data.get("bg_color", "black")  # for pad mode
+    # Sanitize bg_color: allow only alphanumeric, #, and hex digits
+    import re as _re
+    if not _re.match(r'^[a-zA-Z0-9#]+$', bg_color):
+        bg_color = "black"
     quality = data.get("quality", "high")  # low, medium, high
     output_dir = data.get("output_dir", "")
 

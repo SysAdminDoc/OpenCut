@@ -1552,7 +1552,14 @@ def music_ai_generate():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
 
-            d = data.get("output_dir", "") or tempfile.gettempdir()
+            d = data.get("output_dir", "")
+            if d:
+                valid, msg = validate_path(d)
+                if not valid:
+                    _update_job(job_id, status="error", message=msg)
+                    return
+            else:
+                d = tempfile.gettempdir()
             out = generate_music(prompt, output_dir=d,
                                   duration=safe_float(data.get("duration", 10), 10.0, min_val=1.0, max_val=120.0),
                                   model_size=data.get("model", "small"),
@@ -1596,7 +1603,14 @@ def music_ai_melody():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
 
-            d = data.get("output_dir", "") or tempfile.gettempdir()
+            d = data.get("output_dir", "")
+            if d:
+                valid, msg = validate_path(d)
+                if not valid:
+                    _update_job(job_id, status="error", message=msg)
+                    return
+            else:
+                d = tempfile.gettempdir()
             out = generate_music_with_melody(prompt, melody, output_dir=d,
                                               duration=safe_float(data.get("duration", 10), 10.0, min_val=1.0, max_val=120.0),
                                               on_progress=_p)
