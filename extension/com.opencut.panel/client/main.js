@@ -957,6 +957,10 @@
         api("GET", "/health", null, function (err, data) {
             var ok = !err && data && data.status === "ok";
             if (ok) {
+                if (!connected && el.serverStatusBanner) {
+                    el.serverStatusBanner.classList.add("hidden");
+                    showToast("Server reconnected", "success");
+                }
                 connected = true;
                 el.connDot.className = "conn-dot on";
                 el.connLabel.textContent = "Connected";
@@ -966,6 +970,11 @@
                 loadCapabilities();
                 return;
             }
+            if (connected && el.serverStatusBanner) {
+                el.serverStatusBanner.classList.remove("hidden");
+                if (el.serverStatusMsg) el.serverStatusMsg.textContent = "Server disconnected. Reconnecting...";
+            }
+            connected = false;
             if (!portScanPending) { portScanPending = true; scanForServer(); }
         }, 2000);
     }
@@ -1195,13 +1204,13 @@
                 var all = document.querySelectorAll(".nav-tab");
                 for (var j = 0; j < all.length; j++) {
                     all[j].classList.remove("active");
-                    all[j].removeAttribute("aria-current");
+                    all[j].setAttribute("aria-selected", "false");
                 }
                 var panels = document.querySelectorAll(".nav-panel");
                 for (var j = 0; j < panels.length; j++) panels[j].classList.remove("active");
                 // Activate target
                 this.classList.add("active");
-                this.setAttribute("aria-current", "true");
+                this.setAttribute("aria-selected", "true");
                 var panel = $("panel-" + target);
                 if (panel) panel.classList.add("active");
                 // Load settings info on first visit
@@ -1511,6 +1520,9 @@
             return;
         }
 
+        // Lock immediately to prevent double-click race
+        jobStarting = true;
+
         // Show persistent processing banner
         var stepPrefix = (jobStepTotal > 1) ? "Step " + jobStepCurrent + "/" + jobStepTotal + ": " : "";
         el.processingBanner.classList.remove("hidden");
@@ -1527,7 +1539,6 @@
 
         // Lock the entire UI
         document.body.classList.add("job-active");
-        jobStarting = true;
 
         // Track for retry
         lastJobEndpoint = endpoint;
@@ -1759,7 +1770,11 @@
     function hideProgress() {
         el.progressSection.classList.add("hidden");
         el.cancelBtn.classList.add("hidden");
+        el.cancelBtn.textContent = "Cancel";
+        el.cancelBtn.disabled = false;
         el.processingBanner.classList.add("hidden");
+        el.processingCancel.textContent = "Cancel";
+        el.processingCancel.disabled = false;
         document.body.classList.remove("job-active");
         if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
     }
@@ -1827,6 +1842,10 @@
 
     function cancelJob() {
         if (currentJob) {
+            el.processingCancel.textContent = "Cancelling...";
+            el.processingCancel.disabled = true;
+            el.cancelBtn.textContent = "Cancelling...";
+            el.cancelBtn.disabled = true;
             api("POST", "/cancel/" + currentJob, {}, function () {});
         }
     }
@@ -3294,7 +3313,7 @@
         el.styleIntensity.addEventListener("input", function () { el.styleIntensityVal.textContent = this.value; });
 
         // Karaoke font size slider
-        el.karaokeFontSize.addEventListener("input", function () { el.karaokeFontSizeVal.textContent = this.value; });
+        el.karaokeFontSize.addEventListener("input", function () { el.karaokeFontSizeVal.textContent = this.value + "px"; });
 
         // TTS rate slider
         el.ttsRate.addEventListener("input", function () {
@@ -3303,8 +3322,8 @@
         });
 
         // SFX sliders
-        el.toneFreq.addEventListener("input", function () { el.toneFreqVal.textContent = this.value; });
-        el.sfxDuration.addEventListener("input", function () { el.sfxDurationVal.textContent = this.value; });
+        el.toneFreq.addEventListener("input", function () { el.toneFreqVal.textContent = this.value + " Hz"; });
+        el.sfxDuration.addEventListener("input", function () { el.sfxDurationVal.textContent = this.value + "s"; });
 
         // Speed multiplier slider
         el.speedMultiplier.addEventListener("input", function () { el.speedMultiplierVal.textContent = this.value + "x"; });
@@ -3320,19 +3339,19 @@
         el.chromaTol.addEventListener("input", function () { el.chromaTolVal.textContent = this.value; });
         el.pipScale.addEventListener("input", function () { el.pipScaleVal.textContent = this.value; });
         el.blendOpacity.addEventListener("input", function () { el.blendOpacityVal.textContent = this.value; });
-        el.transDur.addEventListener("input", function () { el.transDurVal.textContent = this.value; });
+        el.transDur.addEventListener("input", function () { el.transDurVal.textContent = this.value + "s"; });
         el.particleDensity.addEventListener("input", function () { el.particleDensityVal.textContent = this.value; });
-        el.titleDur.addEventListener("input", function () { el.titleDurVal.textContent = this.value; });
-        el.titleFontSize.addEventListener("input", function () { el.titleFontSizeVal.textContent = this.value; });
+        el.titleDur.addEventListener("input", function () { el.titleDurVal.textContent = this.value + "s"; });
+        el.titleFontSize.addEventListener("input", function () { el.titleFontSizeVal.textContent = this.value + "px"; });
         el.ccExposure.addEventListener("input", function () { el.ccExposureVal.textContent = this.value; });
         el.ccContrast.addEventListener("input", function () { el.ccContrastVal.textContent = this.value; });
         el.ccSaturation.addEventListener("input", function () { el.ccSaturationVal.textContent = this.value; });
         el.ccTemp.addEventListener("input", function () { el.ccTempVal.textContent = this.value; });
         el.ccShadows.addEventListener("input", function () { el.ccShadowsVal.textContent = this.value; });
         el.ccHighlights.addEventListener("input", function () { el.ccHighlightsVal.textContent = this.value; });
-        el.animCapFontSize.addEventListener("input", function () { el.animCapFontSizeVal.textContent = this.value; });
+        el.animCapFontSize.addEventListener("input", function () { el.animCapFontSizeVal.textContent = this.value + "px"; });
         el.animCapWpl.addEventListener("input", function () { el.animCapWplVal.textContent = this.value; });
-        el.musicAiDur.addEventListener("input", function () { el.musicAiDurVal.textContent = this.value; });
+        el.musicAiDur.addEventListener("input", function () { el.musicAiDurVal.textContent = this.value + "s"; });
         el.musicAiTemp.addEventListener("input", function () { el.musicAiTempVal.textContent = this.value; });
     }
 
@@ -3349,16 +3368,18 @@
         setTimeout(function () {
             el.refreshAllBtn.classList.remove("spinning");
             showAlert("Refreshed");
-        }, 1200);
+        }, 2500);
     }
 
     // ================================================================
     // Utility
     // ================================================================
+    var _alertTimer = null;
     function showAlert(msg) {
         el.alertText.textContent = msg;
         el.alertBanner.classList.remove("hidden");
-        setTimeout(function () { el.alertBanner.classList.add("hidden"); }, 6000);
+        if (_alertTimer) clearTimeout(_alertTimer);
+        _alertTimer = setTimeout(function () { el.alertBanner.classList.add("hidden"); }, 15000);
     }
 
     function esc(s) {
@@ -4931,13 +4952,26 @@
     // ================================================================
     // v1.3.0 - Trim Handler
     // ================================================================
+    function parseTimeToSec(t) {
+        var parts = (t || "0").split(":");
+        if (parts.length === 3) return (+parts[0]) * 3600 + (+parts[1]) * 60 + (+parts[2]);
+        if (parts.length === 2) return (+parts[0]) * 60 + (+parts[1]);
+        return +parts[0] || 0;
+    }
+
     function runTrim() {
+        var startVal = el.trimStart ? el.trimStart.value.trim() || "00:00:00" : "00:00:00";
+        var endVal = el.trimEnd ? el.trimEnd.value.trim() || "00:00:30" : "00:00:30";
+        if (parseTimeToSec(endVal) <= parseTimeToSec(startVal)) {
+            showAlert("End time must be after start time.");
+            return;
+        }
         var mode = el.trimMode ? el.trimMode.value : "reencode";
         var payload = {
             filepath: selectedPath,
             output_dir: projectFolder,
-            start: el.trimStart ? el.trimStart.value.trim() || "00:00:00" : "00:00:00",
-            end: el.trimEnd ? el.trimEnd.value.trim() || "00:00:30" : "00:00:30",
+            start: startVal,
+            end: endVal,
             quality: mode === "copy" ? "copy" : (el.trimQuality ? el.trimQuality.value : "medium")
         };
         startJob("/video/trim", payload);
@@ -5027,36 +5061,7 @@
         showToast("Preset loaded for " + opName, "success");
     }
 
-    // ================================================================
-    // v1.3.0 - Server Health Ping
-    // ================================================================
-    var _serverOnline = true;
-    var _healthCheckInterval = null;
-
-    function initHealthCheck() {
-        _healthCheckInterval = setInterval(function() {
-            var xhr = new XMLHttpRequest();
-            xhr.open("GET", BACKEND + "/health", true);
-            xhr.timeout = 5000;
-            xhr.onload = function() {
-                if (!_serverOnline) {
-                    _serverOnline = true;
-                    if (el.serverStatusBanner) el.serverStatusBanner.classList.add("hidden");
-                    showToast("Server reconnected", "success");
-                }
-            };
-            xhr.onerror = xhr.ontimeout = function() {
-                if (_serverOnline) {
-                    _serverOnline = false;
-                    if (el.serverStatusBanner) {
-                        el.serverStatusBanner.classList.remove("hidden");
-                        if (el.serverStatusMsg) el.serverStatusMsg.textContent = "Server disconnected. Reconnecting...";
-                    }
-                }
-            };
-            xhr.send();
-        }, 10000);
-    }
+    // Health ping consolidated into checkHealth() above
 
     // ================================================================
     // Init
@@ -5349,7 +5354,6 @@
         initCommandPalette();
         initSubTabFilter();
         addAudioWaveformButtons();
-        initHealthCheck();
         renderMergeFiles();
     });
 
