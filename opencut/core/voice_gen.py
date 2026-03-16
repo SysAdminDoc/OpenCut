@@ -28,15 +28,9 @@ def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable =
         pip_name = pip_name or pkg_name
         if on_progress:
             on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing: {pip_name}")
-        result = subprocess.run(
-            [sys.executable, "-m", "pip", "install", pip_name,
-             "--break-system-packages", "-q"],
-            capture_output=True, timeout=600,
-        )
-        if result.returncode != 0:
-            err = result.stderr.decode(errors="replace")
-            raise RuntimeError(f"Failed to install {pip_name}: {err[-300:]}")
+        logger.info(f"Installing missing dependency: {pip_name}")
+        from opencut.security import safe_pip_install
+        safe_pip_install(pip_name)
         return True
 
 

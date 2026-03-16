@@ -25,8 +25,15 @@ def _ensure_package(pkg, pip_name=None, on_progress=None):
         __import__(pkg)
         return True
     except ImportError:
-        r = subprocess.run([sys.executable, "-m", "pip", "install", pip_name or pkg,
-                            "--break-system-packages", "-q"], capture_output=True, timeout=600)
+        pip_name = pip_name or pkg
+        if on_progress:
+            on_progress(5, f"Installing {pip_name}...")
+        logger.info(f"Installing missing dependency: {pip_name}")
+        from opencut.security import safe_pip_install
+        try:
+            safe_pip_install(pip_name)
+        except RuntimeError:
+            return False
         try:
             __import__(pkg)
             return True
