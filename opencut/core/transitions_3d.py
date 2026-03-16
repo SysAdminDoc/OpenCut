@@ -166,28 +166,32 @@ def join_with_transitions(
     current = clips[0]
     tmp_files = []
 
-    for i in range(1, len(clips)):
-        if on_progress:
-            pct = 5 + int((i / (len(clips) - 1)) * 90)
-            on_progress(pct, f"Joining clip {i+1}/{len(clips)}...")
+    try:
+        for i in range(1, len(clips)):
+            if on_progress:
+                pct = 5 + int((i / (len(clips) - 1)) * 90)
+                on_progress(pct, f"Joining clip {i+1}/{len(clips)}...")
 
-        if i < len(clips) - 1:
-            import tempfile
-            _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
-            tmp = _ntf.name
-            _ntf.close()
-            tmp_files.append(tmp)
-        else:
-            tmp = output_path
+            if i < len(clips) - 1:
+                import tempfile
+                _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+                tmp = _ntf.name
+                _ntf.close()
+                tmp_files.append(tmp)
+            else:
+                tmp = output_path
 
-        apply_transition(current, clips[i], output_path=tmp,
-                         transition=transition, duration=duration)
-        current = tmp
-
-    # Cleanup temp files
-    for tf in tmp_files:
-        if os.path.exists(tf) and tf != output_path:
-            os.unlink(tf)
+            apply_transition(current, clips[i], output_path=tmp,
+                             transition=transition, duration=duration)
+            current = tmp
+    finally:
+        # Cleanup temp files
+        for tf in tmp_files:
+            try:
+                if os.path.exists(tf) and tf != output_path:
+                    os.unlink(tf)
+            except OSError:
+                pass
 
     if on_progress:
         on_progress(100, f"Joined {len(clips)} clips!")

@@ -237,7 +237,7 @@ def remove_watermark_lama(
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
 
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
+    total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
     frame_idx = 0
 
     if on_progress:
@@ -270,15 +270,20 @@ def remove_watermark_lama(
     if on_progress:
         on_progress(92, "Encoding with audio...")
 
-    _run_ffmpeg([
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-        "-i", tmp_video, "-i", video_path,
-        "-map", "0:v", "-map", "1:a?",
-        "-c:v", "libx264", "-crf", "18", "-preset", "medium",
-        "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
-        "-shortest", output_path,
-    ])
-    os.unlink(tmp_video)
+    try:
+        _run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-i", tmp_video, "-i", video_path,
+            "-map", "0:v", "-map", "1:a?",
+            "-c:v", "libx264", "-crf", "18", "-preset", "medium",
+            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+            "-shortest", output_path,
+        ])
+    finally:
+        try:
+            os.unlink(tmp_video)
+        except OSError:
+            pass
 
     if on_progress:
         on_progress(100, "Watermark removed!")
