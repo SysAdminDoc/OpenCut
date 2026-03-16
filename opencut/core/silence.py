@@ -33,6 +33,7 @@ def detect_silences(
     filepath: str,
     threshold_db: float = -30.0,
     min_duration: float = 0.5,
+    file_duration: float = 0.0,
 ) -> List[TimeSegment]:
     """
     Detect silent segments in an audio/video file using FFmpeg.
@@ -42,6 +43,8 @@ def detect_silences(
         threshold_db: Noise floor in dB. Audio quieter than this is silence.
                       Typical values: -30 (aggressive) to -50 (conservative).
         min_duration: Minimum silence duration in seconds to detect.
+        file_duration: Pre-probed file duration to avoid redundant ffprobe calls.
+                       If 0, will probe the file.
 
     Returns:
         List of TimeSegment objects representing silent regions.
@@ -58,11 +61,15 @@ def detect_silences(
     ]
 
     # Scale timeout: 10 min base + 3x file duration (long podcasts need more time)
-    try:
-        info = probe(filepath)
-        timeout = max(600, int(info.duration * 3) + 120)
-    except Exception:
-        timeout = 1800  # 30 min fallback for very long files
+    if file_duration > 0:
+        timeout = max(600, int(file_duration * 3) + 120)
+    else:
+        try:
+            info = probe(filepath)
+            file_duration = info.duration
+            timeout = max(600, int(file_duration * 3) + 120)
+        except Exception:
+            timeout = 1800  # 30 min fallback for very long files
 
     try:
         result = subprocess.run(
@@ -101,9 +108,11 @@ def detect_silences(
         if i < len(silence_ends):
             end = silence_ends[i]
         else:
-            # Silence extends to end of file — get duration
-            info = probe(filepath)
-            end = info.duration
+            # Silence extends to end of file — use pre-probed duration
+            if file_duration <= 0:
+                info = probe(filepath)
+                file_duration = info.duration
+            end = file_duration
 
         if end > start:
             silences.append(TimeSegment(start=start, end=end, label="silence"))
@@ -114,6 +123,7 @@ def detect_silences(
 def detect_speech(
     filepath: str,
     config: Optional[SilenceConfig] = None,
+    file_duration: float = 0.0,
 ) -> List[TimeSegment]:
     """
     Detect speech segments by inverting silence detection results.
@@ -124,6 +134,7 @@ def detect_speech(
     Args:
         filepath: Path to the media file.
         config: Silence detection configuration. Uses defaults if None.
+        file_duration: Pre-probed file duration to avoid redundant ffprobe calls.
 
     Returns:
         List of TimeSegment objects representing speech regions.
@@ -131,18 +142,22 @@ def detect_speech(
     if config is None:
         config = SilenceConfig()
 
-    # Get file duration
-    info = probe(filepath)
-    total_duration = info.duration
+    # Get file duration (reuse if already probed)
+    if file_duration > 0:
+        total_duration = file_duration
+    else:
+        info = probe(filepath)
+        total_duration = info.duration
 
     if total_duration <= 0:
         raise ValueError(f"Could not determine duration of '{filepath}'")
 
-    # Detect silences
+    # Detect silences (pass duration to avoid redundant ffprobe)
     silences = detect_silences(
         filepath,
         threshold_db=config.threshold_db,
         min_duration=config.min_duration,
+        file_duration=total_duration,
     )
 
     # Invert: get speech segments (gaps between silences)
@@ -221,6 +236,7 @@ def _merge_overlapping(segments: List[TimeSegment]) -> List[TimeSegment]:
 def get_edit_summary(
     filepath: str,
     speech_segments: List[TimeSegment],
+    file_duration: float = 0.0,
 ) -> dict:
     """
     Generate a summary of the edit (how much was cut, time saved, etc.).
@@ -228,12 +244,16 @@ def get_edit_summary(
     Args:
         filepath: Path to the original media file.
         speech_segments: The detected speech segments.
+        file_duration: Pre-probed duration to avoid redundant ffprobe calls.
 
     Returns:
         Dictionary with edit statistics.
     """
-    info = probe(filepath)
-    original_duration = info.duration
+    if file_duration > 0:
+        original_duration = file_duration
+    else:
+        info = probe(filepath)
+        original_duration = info.duration
 
     kept_duration = sum(s.duration for s in speech_segments)
     removed_duration = original_duration - kept_duration
@@ -251,10 +271,8 @@ def get_edit_summary(
 
 
 def _format_time(seconds: float) -> str:
-    """Format seconds as HH:MM:SS.mmm."""
+    """Format seconds as HH:MM:SS.mmm (always includes hours for consistent parsing)."""
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = seconds % 60
-    if hours > 0:
-        return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
-    return f"{minutes:02d}:{secs:06.3f}"
+    return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"

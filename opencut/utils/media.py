@@ -27,8 +27,8 @@ class VideoStream:
 
     @property
     def timebase(self) -> int:
-        """FCP XML timebase (rounded frame rate)."""
-        return round(self.fps) if self.fps % 1 > 0.5 else int(self.fps) if self.fps == int(self.fps) else round(self.fps)
+        """FCP XML timebase (rounded frame rate). Use effective_timebase for NTSC-aware values."""
+        return round(self.fps)
 
     @property
     def ntsc(self) -> bool:
