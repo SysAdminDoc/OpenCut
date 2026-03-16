@@ -1506,9 +1506,13 @@ def _execute_batch_item(operation, filepath, params, on_progress):
         )
     elif operation == "face_blur":
         from opencut.core.face_tools import blur_faces
+        _valid_blur = {"gaussian", "pixelate", "fill"}
+        _blur_method = params.get("method", "gaussian")
+        if _blur_method not in _valid_blur:
+            _blur_method = "gaussian"
         return blur_faces(
             filepath, output_dir=output_dir,
-            method=params.get("method", "gaussian"),
+            method=_blur_method,
             strength=safe_int(params.get("strength", 51), 51, min_val=1, max_val=99),
             on_progress=on_progress,
         )
@@ -1535,15 +1539,23 @@ def _execute_batch_item(operation, filepath, params, on_progress):
         )
     elif operation == "letterbox":
         from opencut.core.video_fx import apply_letterbox
+        _valid_aspects = {"2.39:1", "2.35:1", "1.85:1", "16:9", "4:3", "1:1", "21:9"}
+        _aspect = params.get("aspect", "2.39:1")
+        if _aspect not in _valid_aspects:
+            _aspect = "2.39:1"
         return apply_letterbox(
             filepath, output_dir=output_dir,
-            aspect=params.get("aspect", "2.39:1"),
+            aspect=_aspect,
             on_progress=on_progress,
         )
     elif operation == "style_transfer":
         from opencut.core.style_transfer import style_transfer_video
+        _valid_styles = {"candy", "mosaic", "rain_princess", "udnie", "starry_night", "la_muse", "the_scream", "feathers", "composition_vii"}
+        _style = params.get("style", "candy")
+        if _style not in _valid_styles:
+            _style = "candy"
         return style_transfer_video(
-            filepath, style_name=params.get("style", "candy"),
+            filepath, style_name=_style,
             output_dir=output_dir,
             intensity=safe_float(params.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0),
             on_progress=on_progress,
@@ -1699,9 +1711,13 @@ def speed_ramp_route():
                 )
             else:
                 from opencut.core.speed_ramp import speed_ramp
+                _VALID_EASING = {"linear", "ease_in", "ease_out", "ease_in_out"}
+                easing_val = data.get("easing", "ease_in_out")
+                if easing_val not in _VALID_EASING:
+                    easing_val = "ease_in_out"
                 out = speed_ramp(
                     filepath, keyframes, output_dir=effective_dir,
-                    easing=data.get("easing", "ease_in_out"),
+                    easing=easing_val,
                     on_progress=_on_progress,
                 )
 
@@ -1851,7 +1867,11 @@ def chromakey_route():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fg, output_dir)
-            out = chromakey_video(fg, bg, output_dir=d, color=data.get("color", "green"),
+            _valid_chroma = {"green", "blue", "red", "custom"}
+            _chroma_color = data.get("color", "green")
+            if _chroma_color not in _valid_chroma:
+                _chroma_color = "green"
+            out = chromakey_video(fg, bg, output_dir=d, color=_chroma_color,
                                   tolerance=safe_float(data.get("tolerance", 0.5), 0.5, min_val=0.0, max_val=1.0),
                                   spill_suppress=safe_float(data.get("spill_suppress", 0.5), 0.5, min_val=0.0, max_val=1.0),
                                   edge_blur=safe_int(data.get("edge_blur", 3), 3, min_val=0, max_val=20), on_progress=_p)
@@ -2038,6 +2058,11 @@ def title_render():
     text = data.get("text", "").strip()
     if not text:
         return jsonify({"error": "No text"}), 400
+    if len(text) > 500:
+        return jsonify({"error": "Title text too long (max 500 chars)"}), 400
+    subtitle = data.get("subtitle", "")
+    if len(subtitle) > 500:
+        return jsonify({"error": "Subtitle too long (max 500 chars)"}), 400
     job_id = _new_job("title", text[:40])
 
     def _process():
@@ -2058,7 +2083,7 @@ def title_render():
                                      preset=data.get("preset", "fade_center"),
                                      duration=safe_float(data.get("duration", 5.0), 5.0, min_val=0.5, max_val=60.0),
                                      font_size=safe_int(data.get("font_size", 72), 72, min_val=8, max_val=500),
-                                     subtitle=data.get("subtitle", ""),
+                                     subtitle=subtitle,
                                      on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
@@ -2500,7 +2525,11 @@ def color_convert_route():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
-            out = convert_colorspace(fp, target=data.get("target", "rec709"),
+            _VALID_COLORSPACES = {"rec709", "rec2020", "srgb", "dci_p3", "aces", "bt709", "bt2020"}
+            target_cs = data.get("target", "rec709")
+            if target_cs not in _VALID_COLORSPACES:
+                target_cs = "rec709"
+            out = convert_colorspace(fp, target=target_cs,
                                       output_dir=d, on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
@@ -2596,8 +2625,16 @@ def video_reframe():
 
     target_w = safe_int(data.get("width", 1080), 1080)
     target_h = safe_int(data.get("height", 1920), 1920)
-    mode = data.get("mode", "crop")  # crop, pad, stretch
-    position = data.get("position", "center")  # center, top, bottom (for crop), or custom x:y
+    _VALID_REFRAME_MODES = {"crop", "pad", "stretch"}
+    mode = data.get("mode", "crop")
+    if mode not in _VALID_REFRAME_MODES:
+        mode = "crop"
+    _VALID_POSITIONS = {"center", "top", "bottom", "left", "right", "face"}
+    position = data.get("position", "center")
+    if position not in _VALID_POSITIONS:
+        import re as _re2
+        if not _re2.match(r'^\d+:\d+$', position):
+            position = "center"
     bg_color = data.get("bg_color", "black")  # for pad mode
     # Sanitize bg_color: allow only alphanumeric, #, and hex digits
     import re as _re
@@ -2973,8 +3010,13 @@ def preview_frame():
     """Extract a single frame from video at given timestamp, return as base64 JPEG via job."""
     data = request.get_json(force=True)
     file_path = data.get("file", "")
-    timestamp = data.get("timestamp", "00:00:01")
+    timestamp = str(data.get("timestamp", "00:00:01"))
     width = safe_int(data.get("width", 640), 640)
+
+    # Validate timestamp format (e.g. "00:01:30", "90", "1:30.5")
+    import re as _re
+    if not _re.match(r'^[\d]+(?::[\d]+)*(?:\.[\d]+)?$', timestamp):
+        return jsonify({"error": "Invalid timestamp format"}), 400
 
     if not file_path:
         return jsonify({"error": "File not found"}), 400
