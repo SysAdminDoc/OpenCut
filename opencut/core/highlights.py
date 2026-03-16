@@ -212,7 +212,6 @@ def extract_highlights(
         prompt=prompt,
         config=llm_config,
         system_prompt=_HIGHLIGHT_SYSTEM_PROMPT,
-        on_progress=on_progress,
     )
 
     if on_progress:
@@ -313,7 +312,6 @@ def summarize_video(
         prompt=prompt,
         config=llm_config,
         system_prompt=_SUMMARY_SYSTEM_PROMPT,
-        on_progress=on_progress,
     )
 
     if on_progress:
