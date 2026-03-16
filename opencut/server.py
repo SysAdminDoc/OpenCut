@@ -7420,6 +7420,33 @@ def estimate_job_time():
 
 
 # ---------------------------------------------------------------------------
+# Windows Toast Notification
+# ---------------------------------------------------------------------------
+def _show_startup_notification(port):
+    """Show a Windows toast notification so user knows the server started."""
+    if sys.platform != "win32":
+        return
+    try:
+        # Use PowerShell to show a native Windows toast (no extra deps needed)
+        _sp.Popen(
+            ["powershell", "-WindowStyle", "Hidden", "-Command",
+             "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; "
+             "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null; "
+             "$xml = [Windows.Data.Xml.Dom.XmlDocument]::new(); "
+             "$xml.LoadXml('<toast><visual><binding template=\"ToastText02\">"
+             f"<text id=\"1\">OpenCut Server Running</text>"
+             f"<text id=\"2\">Listening on port {port}. Open Premiere Pro to connect.</text>"
+             "</binding></visual></toast>'); "
+             "$toast = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('OpenCut'); "
+             "$toast.Show([Windows.UI.Notifications.ToastNotification]::new($xml))"],
+            creationflags=0x08000000,  # CREATE_NO_WINDOW
+            stdout=_sp.DEVNULL, stderr=_sp.DEVNULL
+        )
+    except Exception:
+        pass  # Non-critical — if toast fails, server still runs
+
+
+# ---------------------------------------------------------------------------
 # Server Startup
 # ---------------------------------------------------------------------------
 def run_server(host="127.0.0.1", port=5679, debug=False):
@@ -7475,6 +7502,11 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     print(f"  Press Ctrl+C to stop")
     print(f"")
     logger.info(f"Server starting on http://{host}:{effective_port} (pid={os.getpid()})")
+
+    # Show Windows toast notification so user knows server started (especially
+    # when launched via VBS hidden launcher where console is invisible)
+    _show_startup_notification(effective_port)
+
     app.run(host=host, port=effective_port, debug=debug, threaded=True)
 
 
@@ -7587,21 +7619,42 @@ def download_models(model_size="base"):
 
 
 if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser(description="OpenCut Backend Server")
-    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
-    parser.add_argument("--port", type=int, default=5679, help="Port to listen on")
-    parser.add_argument("--debug", action="store_true", help="Enable debug mode")
-    parser.add_argument("--download-models", nargs="?", const="base", default=None,
-                        metavar="MODEL",
-                        help="Download Whisper model (tiny/base/small/medium/large-v3/turbo)")
-    args = parser.parse_args()
+    try:
+        import argparse
+        parser = argparse.ArgumentParser(description="OpenCut Backend Server")
+        parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
+        parser.add_argument("--port", type=int, default=5679, help="Port to listen on")
+        parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+        parser.add_argument("--download-models", nargs="?", const="base", default=None,
+                            metavar="MODEL",
+                            help="Download Whisper model (tiny/base/small/medium/large-v3/turbo)")
+        args = parser.parse_args()
 
-    if args.download_models is not None:
-        # Suppress HF warnings before any huggingface imports happen
-        os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
-        os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
-        os.environ["HF_HUB_DISABLE_EXPERIMENTAL_WARNING"] = "1"
-        sys.exit(download_models(args.download_models))
-    else:
-        run_server(host=args.host, port=args.port, debug=args.debug)
+        if args.download_models is not None:
+            # Suppress HF warnings before any huggingface imports happen
+            os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
+            os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+            os.environ["HF_HUB_DISABLE_EXPERIMENTAL_WARNING"] = "1"
+            sys.exit(download_models(args.download_models))
+        else:
+            run_server(host=args.host, port=args.port, debug=args.debug)
+    except Exception as _fatal:
+        # Catch startup crashes so the console window stays open
+        print("")
+        print("  " + "=" * 50)
+        print("  FATAL ERROR — OpenCut Server failed to start")
+        print("  " + "=" * 50)
+        print("")
+        traceback.print_exc()
+        print("")
+        # Also write to log file
+        try:
+            _crash_log = os.path.join(os.path.expanduser("~"), ".opencut", "crash.log")
+            with open(_crash_log, "w", encoding="utf-8") as _f:
+                _f.write(f"OpenCut Server crash at {time.strftime('%Y-%m-%d %H:%M:%S')}\n\n")
+                traceback.print_exc(file=_f)
+            print(f"  Crash log saved to: {_crash_log}")
+        except Exception:
+            pass
+        print("")
+        input("  Press Enter to close...")
