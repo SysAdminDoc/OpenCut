@@ -123,7 +123,7 @@ def chromakey_video(
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
 
-    total_frames = int(fg_cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
+    total_frames = max(1, int(fg_cap.get(cv2.CAP_PROP_FRAME_COUNT)))
     frame_idx = 0
 
     try:
@@ -181,15 +181,20 @@ def chromakey_video(
         on_progress(92, "Encoding final video with audio...")
 
     # Mux with audio from foreground
-    _run_ffmpeg([
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-        "-i", tmp_video, "-i", fg_path,
-        "-map", "0:v", "-map", "1:a?",
-        "-c:v", "libx264", "-crf", "18", "-preset", "medium",
-        "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
-        "-shortest", output_path,
-    ])
-    os.unlink(tmp_video)
+    try:
+        _run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-i", tmp_video, "-i", fg_path,
+            "-map", "0:v", "-map", "1:a?",
+            "-c:v", "libx264", "-crf", "18", "-preset", "medium",
+            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+            "-shortest", output_path,
+        ])
+    finally:
+        try:
+            os.unlink(tmp_video)
+        except OSError:
+            pass
 
     if on_progress:
         on_progress(100, "Chromakey complete!")

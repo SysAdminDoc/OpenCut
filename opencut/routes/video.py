@@ -218,7 +218,7 @@ def video_watermark():
 
                     cap = cv2.VideoCapture(filepath)
                     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
-                    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT)) or 1
+                    total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
                     width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
                     height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
@@ -302,7 +302,7 @@ def video_watermark():
                             '-map', '0:v', '-map', '1:a?',
                             '-shortest',
                             out_path
-                        ], check=True, capture_output=True)
+                        ], check=True, capture_output=True, timeout=600)
                         try:
                             os.unlink(temp_video)
                         except OSError:

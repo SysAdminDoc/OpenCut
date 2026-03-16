@@ -967,7 +967,7 @@ def render_styled_caption_video(
         stderr_out = proc.stderr.read()
     except Exception:
         pass
-    proc.wait()
+    proc.wait(timeout=1800)
 
     if proc.returncode != 0:
         err_msg = stderr_out.decode("utf-8", errors="replace").strip()

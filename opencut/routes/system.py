@@ -34,6 +34,7 @@ WHISPER_MODELS_DIR = os.environ.get("WHISPER_MODELS_DIR", None)
 # Models list cache (TTL-based)
 # ---------------------------------------------------------------------------
 _models_cache = {"data": None, "ts": 0}
+_models_cache_lock = threading.Lock()
 _MODELS_CACHE_TTL = 300  # 5 minutes
 
 
@@ -953,8 +954,9 @@ def install_watermark():
 def list_models():
     """List downloaded AI models and their sizes (cached with 5-min TTL)."""
     now = time.time()
-    if _models_cache["data"] is not None and (now - _models_cache["ts"]) < _MODELS_CACHE_TTL:
-        return jsonify(_models_cache["data"])
+    with _models_cache_lock:
+        if _models_cache["data"] is not None and (now - _models_cache["ts"]) < _MODELS_CACHE_TTL:
+            return jsonify(_models_cache["data"])
 
     models = []
     # Check HuggingFace cache
@@ -997,8 +999,9 @@ def list_models():
                 models.append({"name": "whisper/" + entry, "path": path, "size_mb": round(size / (1024 * 1024), 1), "source": "whisper"})
 
     result = {"models": models, "total_mb": round(sum(m["size_mb"] for m in models), 1)}
-    _models_cache["data"] = result
-    _models_cache["ts"] = now
+    with _models_cache_lock:
+        _models_cache["data"] = result
+        _models_cache["ts"] = now
     return jsonify(result)
 
 
@@ -1034,8 +1037,9 @@ def delete_model():
         else:
             return jsonify({"error": "Path not found"}), 404
         # Invalidate models cache after deletion
-        _models_cache["data"] = None
-        _models_cache["ts"] = 0
+        with _models_cache_lock:
+            _models_cache["data"] = None
+            _models_cache["ts"] = 0
         return jsonify({"success": True})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
