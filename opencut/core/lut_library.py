@@ -418,3 +418,166 @@ def generate_all_luts(on_progress: Optional[Callable] = None) -> int:
     if on_progress:
         on_progress(100, f"Generated {count} LUTs")
     return count
+
+
+# ---------------------------------------------------------------------------
+# AI LUT Generation from Reference Image
+# ---------------------------------------------------------------------------
+def generate_lut_from_reference(
+    reference_path: str,
+    lut_name: str = "",
+    method: str = "histogram",
+    strength: float = 1.0,
+    size: int = 33,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    Generate a .cube LUT by analyzing a reference image's color palette.
+
+    Computes per-channel CDFs (cumulative distribution functions) from the
+    reference image and builds transfer functions that match the color
+    distribution. Uses PIL + numpy (both already in the standard dep group).
+
+    Args:
+        reference_path: Path to the reference image (jpg, png, etc.).
+        lut_name: Name for the generated LUT. Auto-generated from filename if empty.
+        method: Analysis method - "histogram" (CDF matching) or "average" (simple color shift).
+        strength: Blend strength 0.0-1.0 (1.0 = full match, 0.5 = half).
+        size: LUT cube size (17, 33, or 65).
+        on_progress: Progress callback(pct, msg).
+
+    Returns:
+        Path to the generated .cube LUT file.
+    """
+    try:
+        from PIL import Image
+        import numpy as np
+    except ImportError:
+        raise RuntimeError(
+            "PIL and numpy are required. Install with: "
+            "pip install Pillow numpy"
+        )
+
+    if not os.path.isfile(reference_path):
+        raise FileNotFoundError(f"Reference image not found: {reference_path}")
+
+    strength = max(0.0, min(1.0, strength))
+    size = max(17, min(65, size))
+
+    if not lut_name:
+        lut_name = os.path.splitext(os.path.basename(reference_path))[0]
+        lut_name = "ref_" + lut_name.replace(" ", "_")[:30]
+
+    if on_progress:
+        on_progress(10, "Loading reference image...")
+
+    # Load and analyze reference image
+    img = Image.open(reference_path).convert("RGB")
+    img_array = np.array(img, dtype=np.float64) / 255.0
+
+    if on_progress:
+        on_progress(30, f"Analyzing color distribution ({method})...")
+
+    if method == "histogram":
+        # Compute per-channel CDFs from reference
+        r_cdf = _compute_cdf(img_array[:, :, 0].flatten())
+        g_cdf = _compute_cdf(img_array[:, :, 1].flatten())
+        b_cdf = _compute_cdf(img_array[:, :, 2].flatten())
+
+        def transform(r, g, b):
+            # Map input through reference CDF (histogram matching)
+            nr = _apply_cdf_transfer(r, r_cdf, strength)
+            ng = _apply_cdf_transfer(g, g_cdf, strength)
+            nb = _apply_cdf_transfer(b, b_cdf, strength)
+            return nr, ng, nb
+
+    elif method == "average":
+        # Simple color shift toward reference average
+        avg_r = float(np.mean(img_array[:, :, 0]))
+        avg_g = float(np.mean(img_array[:, :, 1]))
+        avg_b = float(np.mean(img_array[:, :, 2]))
+
+        # Also compute standard deviations for contrast matching
+        std_r = float(np.std(img_array[:, :, 0])) or 0.2
+        std_g = float(np.std(img_array[:, :, 1])) or 0.2
+        std_b = float(np.std(img_array[:, :, 2])) or 0.2
+
+        def transform(r, g, b):
+            # Shift toward reference average with strength blending
+            nr = r + (avg_r - 0.5) * strength * 0.5
+            ng = g + (avg_g - 0.5) * strength * 0.5
+            nb = b + (avg_b - 0.5) * strength * 0.5
+            # Subtle contrast match
+            nr = (nr - 0.5) * (1.0 + (std_r / 0.2 - 1.0) * strength * 0.3) + 0.5
+            ng = (ng - 0.5) * (1.0 + (std_g / 0.2 - 1.0) * strength * 0.3) + 0.5
+            nb = (nb - 0.5) * (1.0 + (std_b / 0.2 - 1.0) * strength * 0.3) + 0.5
+            return _clamp(nr), _clamp(ng), _clamp(nb)
+
+    else:
+        raise ValueError(f"Unknown method: {method}. Use 'histogram' or 'average'.")
+
+    if on_progress:
+        on_progress(50, "Generating .cube LUT file...")
+
+    # Generate to user LUTs directory
+    user_dir = os.path.join(LUTS_DIR, "user")
+    os.makedirs(user_dir, exist_ok=True)
+    cube_path = os.path.join(user_dir, f"{lut_name}.cube")
+
+    with open(cube_path, "w") as f:
+        f.write(f"TITLE \"{lut_name}\"\n")
+        f.write(f"# Generated from: {os.path.basename(reference_path)}\n")
+        f.write(f"# Method: {method}, Strength: {strength}\n")
+        f.write(f"LUT_SIZE {size}\n\n")
+
+        total_entries = size * size * size
+        written = 0
+
+        for b_i in range(size):
+            for g_i in range(size):
+                for r_i in range(size):
+                    r = r_i / (size - 1)
+                    g = g_i / (size - 1)
+                    b = b_i / (size - 1)
+
+                    nr, ng, nb = transform(r, g, b)
+                    nr = _clamp(nr)
+                    ng = _clamp(ng)
+                    nb = _clamp(nb)
+
+                    f.write(f"{nr:.6f} {ng:.6f} {nb:.6f}\n")
+                    written += 1
+
+            if on_progress and b_i % 5 == 0:
+                pct = 50 + int((b_i / size) * 45)
+                on_progress(pct, f"Writing LUT ({b_i + 1}/{size})...")
+
+    if on_progress:
+        on_progress(100, f"LUT saved: {lut_name}")
+
+    logger.info("Generated reference LUT: %s -> %s", reference_path, cube_path)
+    return cube_path
+
+
+def _compute_cdf(channel_data):
+    """Compute cumulative distribution function for a color channel (0-1 float array)."""
+    import numpy as np
+    bins = 256
+    hist, bin_edges = np.histogram(channel_data, bins=bins, range=(0.0, 1.0))
+    cdf = np.cumsum(hist).astype(np.float64)
+    cdf /= cdf[-1] if cdf[-1] > 0 else 1.0
+    return cdf
+
+
+def _apply_cdf_transfer(value, ref_cdf, strength):
+    """Apply CDF transfer function to map input value through reference distribution."""
+    # Map input value (0-1) to bin index
+    bin_idx = int(value * 255)
+    bin_idx = max(0, min(255, bin_idx))
+
+    # Look up reference CDF value
+    mapped = float(ref_cdf[bin_idx])
+
+    # Blend with identity based on strength
+    result = value * (1.0 - strength) + mapped * strength
+    return _clamp(result)
