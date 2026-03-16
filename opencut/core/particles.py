@@ -25,8 +25,12 @@ def _ensure_package(pkg, pip_name=None, on_progress=None):
     try:
         __import__(pkg)
     except ImportError:
-        subprocess.run([sys.executable, "-m", "pip", "install", pip_name or pkg,
-                        "--break-system-packages", "-q"], capture_output=True, timeout=300)
+        pip_name = pip_name or pkg
+        if on_progress:
+            on_progress(5, f"Installing {pip_name}...")
+        logger.info(f"Installing missing dependency: {pip_name}")
+        from opencut.security import safe_pip_install
+        safe_pip_install(pip_name)
 
 
 def _run_ffmpeg(cmd, timeout=7200):
