@@ -310,15 +310,49 @@ def _transcribe_openai_whisper(wav_path: str, config: CaptionConfig) -> Transcri
 def _clear_model_cache(model_name: str):
     """Clear cached files for a specific whisper model to force re-download."""
     import shutil
-    cache_dir = os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub")
-    if not os.path.isdir(cache_dir):
+
+    # Resolve HF cache dir (respects HF_HOME / HUGGINGFACE_HUB_CACHE env vars)
+    hf_home = os.environ.get("HF_HOME", os.environ.get(
+        "HUGGINGFACE_HUB_CACHE",
+        os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
+    ))
+    # HF_HOME points to ~/.cache/huggingface; actual hub cache is inside /hub
+    if os.path.isdir(os.path.join(hf_home, "hub")):
+        hf_home = os.path.join(hf_home, "hub")
+
+    if not os.path.isdir(hf_home):
         return
+
     # Match model directories like "models--Systran--faster-whisper-base"
-    for item in os.listdir(cache_dir):
-        if "whisper" in item.lower() and model_name.replace(".", "-") in item.lower():
-            target = os.path.join(cache_dir, item)
+    safe_name = model_name.replace(".", "-")
+    for item in os.listdir(hf_home):
+        if "whisper" in item.lower() and safe_name in item.lower():
+            target = os.path.join(hf_home, item)
             logger.warning(f"Clearing corrupt model cache: {target}")
             shutil.rmtree(target, ignore_errors=True)
+
+    # Also nuke any orphaned .lock files for this model
+    for item in os.listdir(hf_home):
+        if item.endswith(".lock") and "whisper" in item.lower() and safe_name in item.lower():
+            try:
+                os.unlink(os.path.join(hf_home, item))
+            except Exception:
+                pass
+
+
+def _download_model(model_name: str):
+    """Force-download a faster-whisper model via huggingface_hub."""
+    repo_id = f"Systran/faster-whisper-{model_name}"
+    try:
+        from huggingface_hub import snapshot_download
+        logger.info(f"Downloading model '{repo_id}' from HuggingFace Hub...")
+        snapshot_download(repo_id, force_download=True)
+        logger.info(f"Model '{repo_id}' downloaded successfully.")
+    except ImportError:
+        # huggingface_hub not available — faster-whisper will download on load
+        logger.info("huggingface_hub not available, relying on faster-whisper auto-download")
+    except Exception as e:
+        logger.warning(f"Model download via huggingface_hub failed: {e}")
 
 
 def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> TranscriptionResult:
@@ -360,10 +394,10 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
     
     # Try to load model with auto-repair on corrupt cache
     model = None
-    max_attempts = 2
+    max_attempts = 3
     for attempt in range(max_attempts):
         try:
-            logger.info(f"Loading Whisper model '{config.model}' on {device} (attempt {attempt + 1})")
+            logger.info(f"Loading Whisper model '{config.model}' on {device} (attempt {attempt + 1}/{max_attempts})")
             model = WhisperModel(config.model, device=device, compute_type=compute_type)
             break
         except RuntimeError as e:
@@ -375,27 +409,31 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 compute_type = "int8"
                 model = WhisperModel(config.model, device=device, compute_type=compute_type)
                 break
-            # Corrupt model cache - clear and retry
+            # Corrupt model cache - clear, re-download, and retry
             elif ("unable to open file" in err_str or "model.bin" in err_str
-                  or "corrupt" in err_str or "invalid" in err_str):
+                  or "corrupt" in err_str or "invalid" in err_str
+                  or "no such file" in err_str or "not found" in err_str):
                 if attempt < max_attempts - 1:
-                    logger.warning(f"Model cache appears corrupt, clearing and re-downloading: {e}")
+                    logger.warning(f"Model cache appears corrupt (attempt {attempt + 1}), purging and re-downloading: {e}")
                     _clear_model_cache(config.model)
+                    _download_model(config.model)
                     continue
                 else:
                     raise RuntimeError(
-                        f"Model '{config.model}' failed to load after re-download. "
-                        f"Try: Settings > Clear Cache > Reinstall Whisper. Error: {e}"
+                        f"Model '{config.model}' failed to load after {max_attempts} attempts. "
+                        f"Please check your internet connection and disk space, then try again. Error: {e}"
                     )
             else:
                 raise
         except Exception as e:
             err_str = str(e).lower()
             if ("unable to open file" in err_str or "model.bin" in err_str
-                or "corrupt" in err_str or "no such file" in err_str):
+                or "corrupt" in err_str or "no such file" in err_str
+                or "not found" in err_str):
                 if attempt < max_attempts - 1:
-                    logger.warning(f"Model cache error, clearing and re-downloading: {e}")
+                    logger.warning(f"Model cache error (attempt {attempt + 1}), purging and re-downloading: {e}")
                     _clear_model_cache(config.model)
+                    _download_model(config.model)
                     continue
                 else:
                     raise
