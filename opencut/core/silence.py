@@ -504,11 +504,12 @@ def _build_atempo_chain(speed: float, input_label: str, output_label: str) -> st
     while remaining > 2.0:
         tempos.append(2.0)
         remaining /= 2.0
-    if remaining > 0.5:
-        tempos.append(round(remaining, 4))
+    # Clamp to FFmpeg atempo range (0.5-100.0)
+    remaining = max(0.5, min(100.0, round(remaining, 4)))
+    tempos.append(remaining)
 
     if not tempos:
-        tempos = [speed]
+        tempos = [max(0.5, min(2.0, speed))]
 
     chain = ",".join(f"atempo={t}" for t in tempos)
     return f"[{input_label}]{chain}[{output_label}];"
