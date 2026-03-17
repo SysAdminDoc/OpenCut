@@ -290,6 +290,16 @@
 - **Batch import verification** — index.jsx counts items before/after `importFiles()` to report actual import count
 - **Helper consolidation** — `run_ffmpeg()` (from 22 files), `ensure_package()` (from 15 files), `get_video_info()` (from 14 files) consolidated into `opencut/helpers.py`. ~886 lines of duplicate code removed. All core modules now import these shared helpers instead of defining local copies. `ensure_package()` routes through `safe_pip_install()` for security.
 
+## v1.3.1 Batch 4 Bug Fixes
+- **PyTorch API fix** — `.total_mem` → `.total_memory` in VRAM preflight check (video.py)
+- **TooManyJobsError handler** — registered in `register_error_handlers()`, returns 429 JSON instead of unhandled 500
+- **Export format allowlists** — `output_format` and `audio_format` validated against allowlists to prevent path injection
+- **safeFixed() helper** — null-safe `.toFixed()` replacement in main.js `showResults()`; all numeric server values coerced with `Number()` before innerHTML
+- **detection_prompt cap** — capped to 200 chars in watermark removal route
+- **None-callable guard** — `detect_speech` checked for None before use in silence_remove and filler_removal (audio.py)
+- **Time object for insertClip** — index.jsx uses `new Time()` instead of string ticks for Premiere Pro API
+- **Bare subprocess removed** — deleted `import subprocess` inside `_process()`, uses `_sp` alias consistently (video.py)
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
