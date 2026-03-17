@@ -3926,7 +3926,7 @@
             var html = "";
             for (var i = 0; i < data.models.length; i++) {
                 var m = data.models[i];
-                var sizeStr = m.size_mb >= 1024 ? (m.size_mb / 1024).toFixed(1) + " GB" : m.size_mb.toFixed(0) + " MB";
+                var sizeStr = m.size_mb >= 1024 ? safeFixed(m.size_mb / 1024, 1) + " GB" : safeFixed(m.size_mb, 0) + " MB";
                 html += '<div class="model-item">' +
                     '<div class="model-item-info"><span class="model-item-name">' + esc(m.name) + '</span>' +
                     '<span class="model-item-meta">' + sizeStr + ' - ' + esc(m.source) + '</span></div>' +
@@ -3935,7 +3935,7 @@
             }
             el.modelList.innerHTML = html;
             if (el.modelsTotalSize) {
-                var totalStr = data.total_mb >= 1024 ? (data.total_mb / 1024).toFixed(1) + " GB" : data.total_mb.toFixed(0) + " MB";
+                var totalStr = data.total_mb >= 1024 ? safeFixed(data.total_mb / 1024, 1) + " GB" : safeFixed(data.total_mb, 0) + " MB";
                 el.modelsTotalSize.textContent = totalStr;
             }
             // Attach delete handlers
@@ -5402,9 +5402,9 @@
         var isSpeedUp = el.silenceMode.value === "speedup";
         if (el.silenceSpeedGroup) el.silenceSpeedGroup.style.display = isSpeedUp ? "" : "none";
         // Hide preset/padding rows for speed-up mode
-        if (el.silencePreset) el.silencePreset.closest(".form-group").style.display = isSpeedUp ? "none" : "";
-        if (el.padBefore) el.padBefore.closest(".form-group").style.display = isSpeedUp ? "none" : "";
-        if (el.padAfter) el.padAfter.closest(".form-group").style.display = isSpeedUp ? "none" : "";
+        if (el.silencePreset) { var fg1 = el.silencePreset.closest(".form-group"); if (fg1) fg1.style.display = isSpeedUp ? "none" : ""; }
+        if (el.padBefore) { var fg2 = el.padBefore.closest(".form-group"); if (fg2) fg2.style.display = isSpeedUp ? "none" : ""; }
+        if (el.padAfter) { var fg3 = el.padAfter.closest(".form-group"); if (fg3) fg3.style.display = isSpeedUp ? "none" : ""; }
     }
 
     // --- Face tracking smoothing toggle ---
