@@ -1,0 +1,96 @@
+<Window x:Class="OpenCut.Installer.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="clr-namespace:OpenCut.Installer.Controls"
+        Title="OpenCut Setup" Width="640" Height="480"
+        WindowStartupLocation="CenterScreen"
+        ResizeMode="NoResize"
+        Background="{DynamicResource Base}"
+        WindowStyle="None" AllowsTransparency="True">
+
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="36" GlassFrameThickness="0"
+                      ResizeBorderThickness="0" CornerRadius="10" />
+    </WindowChrome.WindowChrome>
+
+    <Border CornerRadius="10" Background="{DynamicResource Base}"
+            BorderBrush="{DynamicResource Surface1}" BorderThickness="1">
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="36" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+
+            <!-- Custom Titlebar -->
+            <Grid Grid.Row="0" Background="{DynamicResource Crust}">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+
+                <!-- Icon + Title -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal"
+                            VerticalAlignment="Center" Margin="12,0,0,0">
+                    <Image Source="Assets/logo.png" Width="16" Height="16"
+                           RenderOptions.BitmapScalingMode="HighQuality" Margin="0,0,8,0" />
+                    <TextBlock Text="OpenCut Setup" Foreground="{DynamicResource Subtext0}"
+                               FontSize="12" FontFamily="{DynamicResource UIFont}"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Window Controls -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal"
+                            VerticalAlignment="Stretch"
+                            WindowChrome.IsHitTestVisibleInChrome="True">
+                    <Button x:Name="MinBtn" Content="&#xE921;" Click="MinBtn_Click"
+                            FontFamily="Segoe MDL2 Assets" FontSize="10"
+                            Width="46" Background="Transparent" Foreground="{DynamicResource Overlay1}"
+                            BorderThickness="0" Cursor="Hand" VerticalAlignment="Stretch">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="{TemplateBinding Background}">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="{StaticResource Surface0}" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                    <Button x:Name="CloseBtn" Content="&#xE8BB;" Click="CloseBtn_Click"
+                            FontFamily="Segoe MDL2 Assets" FontSize="10"
+                            Width="46" Background="Transparent" Foreground="{DynamicResource Overlay1}"
+                            BorderThickness="0" Cursor="Hand" VerticalAlignment="Stretch">
+                        <Button.Template>
+                            <ControlTemplate TargetType="Button">
+                                <Border x:Name="Bd" Background="{TemplateBinding Background}"
+                                        CornerRadius="0,10,0,0">
+                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter TargetName="Bd" Property="Background" Value="#c53b53" />
+                                        <Setter Property="Foreground" Value="White" />
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Button.Template>
+                    </Button>
+                </StackPanel>
+            </Grid>
+
+            <!-- Step Indicator -->
+            <controls:StepIndicator x:Name="StepIndicator" Grid.Row="1"
+                                     Margin="0,4,0,0" />
+
+            <!-- Page Content -->
+            <Frame x:Name="PageFrame" Grid.Row="2"
+                   NavigationUIVisibility="Hidden"
+                   Background="Transparent" />
+        </Grid>
+    </Border>
+</Window>
