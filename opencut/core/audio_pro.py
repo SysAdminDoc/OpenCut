@@ -17,6 +17,8 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
 
 
@@ -36,13 +38,6 @@ def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable =
         from opencut.security import safe_pip_install
         safe_pip_install(pip_name)
         return True
-
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 1800) -> str:
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {result.stderr.decode(errors='replace')[-500:]}")
-    return result.stderr.decode(errors="replace")
 
 
 # ---------------------------------------------------------------------------
@@ -304,12 +299,12 @@ def apply_pedalboard_effect(
             _ntf = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
             temp_audio = _ntf.name
             _ntf.close()
-            _run_ffmpeg([
+            run_ffmpeg([
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
                 "-y", "-i", input_path,
                 "-vn", "-acodec", "pcm_s16le", "-ar", "44100",
                 temp_audio,
-            ])
+            ], timeout=1800)
             audio_input = temp_audio
             _ntf2 = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
             temp_output = _ntf2.name
@@ -321,12 +316,12 @@ def apply_pedalboard_effect(
                 _ntf = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
                 temp_audio = _ntf.name
                 _ntf.close()
-                _run_ffmpeg([
+                run_ffmpeg([
                     "ffmpeg", "-hide_banner", "-loglevel", "error",
                     "-y", "-i", input_path,
                     "-acodec", "pcm_s16le", "-ar", "44100",
                     temp_audio,
-                ])
+                ], timeout=1800)
                 audio_input = temp_audio
                 _ntf2 = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
                 temp_output = _ntf2.name
@@ -363,21 +358,21 @@ def apply_pedalboard_effect(
 
         # Remux if video
         if is_video:
-            _run_ffmpeg([
+            run_ffmpeg([
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
                 "-y", "-i", input_path, "-i", temp_output,
                 "-map", "0:v", "-map", "1:a",
                 "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
                 "-shortest",
                 output_path,
-            ])
+            ], timeout=1800)
         elif ext not in (".wav", ".flac", ".aiff"):
             # Re-encode to original format
-            _run_ffmpeg([
+            run_ffmpeg([
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
                 "-y", "-i", temp_output,
                 output_path,
-            ])
+            ], timeout=1800)
 
         if on_progress:
             on_progress(100, f"{PEDALBOARD_EFFECTS[effect_name]['label']} applied")
@@ -566,12 +561,12 @@ def deepfilter_denoise(
         _ntf = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
         temp_audio_in = _ntf.name
         _ntf.close()
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             "-vn", "-acodec", "pcm_s16le", "-ar", "48000", "-ac", "1",
             temp_audio_in,
-        ])
+        ], timeout=1800)
 
         if on_progress:
             on_progress(25, "Running AI noise reduction...")
@@ -596,20 +591,20 @@ def deepfilter_denoise(
             on_progress(85, "Encoding output...")
 
         if is_video:
-            _run_ffmpeg([
+            run_ffmpeg([
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
                 "-y", "-i", input_path, "-i", temp_audio_out,
                 "-map", "0:v", "-map", "1:a",
                 "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
                 "-shortest",
                 output_path,
-            ])
+            ], timeout=1800)
         else:
-            _run_ffmpeg([
+            run_ffmpeg([
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
                 "-y", "-i", temp_audio_out,
                 output_path,
-            ])
+            ], timeout=1800)
 
         if on_progress:
             on_progress(100, "AI noise reduction complete")

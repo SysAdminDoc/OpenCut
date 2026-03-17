@@ -16,6 +16,8 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
 
 
@@ -29,13 +31,6 @@ def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable =
         logger.info(f"Installing missing dependency: {pip_name}")
         from opencut.security import safe_pip_install
         safe_pip_install(pip_name)
-
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 300) -> str:
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {result.stderr.decode(errors='replace')[-500:]}")
-    return result.stderr.decode(errors="replace")
 
 
 def _get_video_info(filepath: str) -> Dict:
@@ -204,11 +199,11 @@ def generate_thumbnails(
         tmp = _ntf.name
         _ntf.close()
         try:
-            _run_ffmpeg([
+            run_ffmpeg([
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
                 "-y", "-ss", f"{t:.3f}", "-i", input_path,
                 "-vframes", "1", "-q:v", "2", tmp,
-            ])
+            ], timeout=300)
             frame = cv2.imread(tmp)
             if frame is None:
                 continue
