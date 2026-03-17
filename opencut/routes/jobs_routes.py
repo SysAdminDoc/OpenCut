@@ -10,12 +10,14 @@ import threading
 import time
 import uuid
 
-from flask import Blueprint, request, jsonify, Response
+from flask import Blueprint, Response, jsonify, request
 
 from opencut.jobs import (
-    jobs, job_lock, _new_job, _update_job, _safe_error,
-    _is_cancelled, _kill_job_process,
-    _get_job_copy, _list_jobs_copy,
+    _get_job_copy,
+    _kill_job_process,
+    _list_jobs_copy,
+    job_lock,
+    jobs,
 )
 from opencut.security import require_csrf
 
@@ -197,6 +199,7 @@ def _dispatch_queue_entry(entry):
     via Flask's test_request_context (no HTTP round-trip).
     Includes the CSRF token so @require_csrf doesn't reject the call."""
     from flask import current_app
+
     from opencut.security import get_csrf_token
     endpoint = entry.get("endpoint", "")
     payload = entry.get("payload", {})

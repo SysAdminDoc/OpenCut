@@ -12,7 +12,7 @@ import shutil
 import subprocess
 import sys
 
-from flask import request, jsonify
+from flask import jsonify, request
 
 logger = logging.getLogger("opencut")
 
@@ -215,8 +215,7 @@ def safe_int(value, default: int = 0, min_val: int = None, max_val: int = None) 
 # ---------------------------------------------------------------------------
 # Rate Limiting (in-memory, per-endpoint)
 # ---------------------------------------------------------------------------
-import threading as _threading
-import time as _time
+import threading as _threading  # noqa: E402
 
 _rate_limits = {}
 _rate_lock = _threading.Lock()

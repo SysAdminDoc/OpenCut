@@ -15,7 +15,7 @@ FFmpeg-based controls always available. OCIO optional for ACES pipeline.
 import logging
 import os
 import subprocess
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -200,7 +200,7 @@ def analyze_colors(
         "-of", "json",
         "-read_intervals", "%+#10",
     ]
-    result = subprocess.run(cmd, capture_output=True, timeout=60)
+    subprocess.run(cmd, capture_output=True, timeout=60)
 
     # Basic analysis via ffprobe
     cmd2 = [

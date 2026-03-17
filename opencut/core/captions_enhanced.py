@@ -14,10 +14,6 @@ NLLB runs through CTranslate2 (already a dep via faster-whisper).
 
 import logging
 import os
-import subprocess
-import sys
-import tempfile
-from pathlib import Path
 from typing import Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("opencut")
@@ -94,8 +90,8 @@ def whisperx_transcribe(
         Dict with segments, each containing words with precise timestamps.
     """
     _ensure_package("whisperx", "whisperx", on_progress)
-    import whisperx
     import torch
+    import whisperx
 
     if device == "auto":
         device = "cuda" if torch.cuda.is_available() else "cpu"

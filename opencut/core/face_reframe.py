@@ -9,12 +9,9 @@ Uses: mediapipe (already a dependency via face_tools.py), opencv-python-headless
 """
 
 import logging
-import math
 import os
 import subprocess
-import sys
-import tempfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("opencut")

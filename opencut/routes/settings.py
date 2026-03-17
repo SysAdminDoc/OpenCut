@@ -6,15 +6,17 @@ Presets, favorites, workflows, settings import/export, job time estimation.
 
 import time
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 
-from opencut.jobs import _safe_error
 from opencut.helpers import compute_estimate
 from opencut.security import require_csrf, safe_float
 from opencut.user_data import (
-    load_presets, save_presets,
-    load_favorites, save_favorites,
-    load_workflows, save_workflows,
+    load_favorites,
+    load_presets,
+    load_workflows,
+    save_favorites,
+    save_presets,
+    save_workflows,
 )
 
 settings_bp = Blueprint("settings", __name__)

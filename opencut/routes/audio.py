@@ -10,35 +10,42 @@ import json
 import logging
 import os
 import subprocess as _sp
-import sys
 import tempfile
 import threading
-import time
 
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, jsonify, request
 
-from opencut.jobs import (
-    jobs, job_lock, _new_job, _update_job, _safe_error,
-    _is_cancelled, _register_job_process, _unregister_job_process,
-    _kill_job_process, MAX_BATCH_FILES,
-)
+from opencut.checks import check_demucs_available
 from opencut.helpers import (
-    _try_import, _try_import_from, _resolve_output_dir, _unique_output_path,
-    _run_ffmpeg_with_progress, _make_sequence_name, _get_file_duration,
-    OPENCUT_DIR,
+    _make_sequence_name,
+    _resolve_output_dir,
+)
+from opencut.jobs import (
+    _is_cancelled,
+    _new_job,
+    _register_job_process,
+    _safe_error,
+    _unregister_job_process,
+    _update_job,
+    job_lock,
+    jobs,
 )
 from opencut.security import (
-    validate_path, validate_filepath, require_csrf, safe_pip_install,
-    safe_float, safe_int, require_rate_limit,
+    require_csrf,
+    require_rate_limit,
+    safe_float,
+    safe_int,
+    safe_pip_install,
+    validate_filepath,
+    validate_path,
 )
-from opencut.checks import check_demucs_available
 
 # Core imports that many routes need
 try:
-    from opencut.utils.media import probe as _probe_media
-    from opencut.utils.config import SilenceConfig, ExportConfig, CaptionConfig, get_preset
     from opencut.core.silence import detect_speech, get_edit_summary
     from opencut.export.premiere import export_premiere_xml
+    from opencut.utils.config import CaptionConfig, ExportConfig, SilenceConfig, get_preset
+    from opencut.utils.media import probe as _probe_media
 except ImportError:
     _probe_media = None
     SilenceConfig = ExportConfig = CaptionConfig = get_preset = None
@@ -182,8 +189,8 @@ def filler_removal():
     def _process():
         try:
             # Check Whisper
-            from opencut.core.captions import transcribe, check_whisper_available
-            from opencut.core.fillers import detect_fillers, remove_fillers_from_segments, FILLER_WORDS
+            from opencut.core.captions import check_whisper_available, transcribe
+            from opencut.core.fillers import detect_fillers, remove_fillers_from_segments
 
             available, backend = check_whisper_available()
             if not available:
@@ -200,12 +207,11 @@ def filler_removal():
 
             # Step 1: Silence detection (optional)
             segments = None
-            summary = None
             if remove_silence:
                 _update_job(job_id, progress=5, message="Step 1/4: Detecting silences...")
                 cfg = get_preset(silence_preset)
                 segments = detect_speech(filepath, config=cfg.silence, file_duration=_fdur)
-                summary = get_edit_summary(filepath, segments, file_duration=_fdur)
+                get_edit_summary(filepath, segments, file_duration=_fdur)
             else:
                 # Use the whole file as one segment
                 info = _finfo
@@ -654,7 +660,7 @@ def audio_normalize():
 
     def _process():
         try:
-            from opencut.core.audio_suite import normalize_loudness, measure_loudness, LOUDNESS_PRESETS
+            from opencut.core.audio_suite import LOUDNESS_PRESETS, normalize_loudness
 
             def _on_progress(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
@@ -877,7 +883,7 @@ def loudness_presets():
 def audio_pro_effects():
     """Return available Pedalboard effects."""
     try:
-        from opencut.core.audio_pro import get_pedalboard_effects, check_pedalboard_available
+        from opencut.core.audio_pro import check_pedalboard_available, get_pedalboard_effects
         return jsonify({
             "effects": get_pedalboard_effects(),
             "available": check_pedalboard_available(),
@@ -923,7 +929,7 @@ def audio_pro_apply():
             )
             _update_job(
                 job_id, status="complete", progress=100,
-                message=f"Effect applied!",
+                message="Effect applied!",
                 result={"output_path": out, "effect": effect},
             )
         except Exception as e:
@@ -1034,7 +1040,12 @@ def audio_pro_install():
 def tts_voices():
     """Return available TTS voices."""
     try:
-        from opencut.core.voice_gen import get_voice_list, KOKORO_VOICES, check_edge_tts_available, check_kokoro_available
+        from opencut.core.voice_gen import (
+            KOKORO_VOICES,
+            check_edge_tts_available,
+            check_kokoro_available,
+            get_voice_list,
+        )
         return jsonify({
             "edge_tts": {
                 "available": check_edge_tts_available(),

@@ -9,10 +9,9 @@ Uses stdlib urllib.request — zero pip dependencies.
 
 import json
 import logging
-import urllib.request
 import urllib.error
-from dataclasses import dataclass, field
-from typing import Callable, Optional
+import urllib.request
+from dataclasses import dataclass
 
 logger = logging.getLogger("opencut")
 

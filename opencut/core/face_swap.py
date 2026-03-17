@@ -14,9 +14,8 @@ Falls back to OpenCV-based face enhancement for CPU-only systems.
 import logging
 import os
 import subprocess
-import sys
 import tempfile
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -93,7 +92,6 @@ def enhance_faces(
     _ensure_package("cv2", "opencv-python-headless")
 
     import cv2
-    import numpy as np
     from gfpgan import GFPGANer
 
     if output_path is None:
@@ -203,7 +201,6 @@ def swap_face(
     _ensure_package("onnxruntime", "onnxruntime")
 
     import cv2
-    import numpy as np
     import insightface
     from insightface.app import FaceAnalysis
 

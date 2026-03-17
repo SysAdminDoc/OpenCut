@@ -13,9 +13,8 @@ pre-trained .t7 models from the OpenCV DNN samples.
 
 import logging
 import os
-import subprocess
-import sys
 import shutil
+import subprocess
 import tempfile
 import urllib.request
 from pathlib import Path

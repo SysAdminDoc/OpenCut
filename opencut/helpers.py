@@ -344,7 +344,7 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     to update job progress.  Returns a (returncode, stderr) tuple.
     Registers the process for kill-on-cancel support.
     """
-    from opencut.jobs import _register_job_process, _is_cancelled, _update_job, job_lock, _job_processes
+    from opencut.jobs import _is_cancelled, _job_processes, _register_job_process, _update_job, job_lock
 
     full_cmd = list(cmd) + ["-progress", "pipe:1"]
     proc = _sp.Popen(full_cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True)

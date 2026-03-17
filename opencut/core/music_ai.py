@@ -12,10 +12,8 @@ Falls back to the SFX/tone generators in music_gen.py for CPU-only systems.
 
 import logging
 import os
-import subprocess
-import sys
 import tempfile
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -93,9 +91,9 @@ def generate_music(
     if on_progress:
         on_progress(5, f"Loading MusicGen ({model_size})...")
 
-    from audiocraft.models import MusicGen
-    import torch
     import soundfile as sf
+    import torch
+    from audiocraft.models import MusicGen
 
     model_name = f"facebook/musicgen-{model_size}"
     model = MusicGen.get_pretrained(model_name)
@@ -161,17 +159,17 @@ def generate_music_with_melody(
     if on_progress:
         on_progress(5, "Loading MusicGen melody model...")
 
-    from audiocraft.models import MusicGen
-    from audiocraft.data.audio import audio_read
-    import torch
     import soundfile as sf
+    import torch
+    from audiocraft.data.audio import audio_read
+    from audiocraft.models import MusicGen
 
     model = MusicGen.get_pretrained("facebook/musicgen-melody")
     model.set_generation_params(duration=min(duration, 30.0))
 
     if output_path is None:
         directory = output_dir or tempfile.gettempdir()
-        output_path = os.path.join(directory, f"musicgen_melody.wav")
+        output_path = os.path.join(directory, "musicgen_melody.wav")
 
     if on_progress:
         on_progress(15, "Loading melody reference...")
@@ -182,7 +180,7 @@ def generate_music_with_melody(
         melody_wav = melody_wav.unsqueeze(0)
 
     if on_progress:
-        on_progress(25, f"Generating with melody conditioning...")
+        on_progress(25, "Generating with melody conditioning...")
 
     with torch.inference_mode():
         wav = model.generate_with_chroma([prompt], melody_wav.expand(1, -1, -1), sr)
@@ -218,10 +216,10 @@ def continue_audio(
     if on_progress:
         on_progress(5, "Loading MusicGen for continuation...")
 
-    from audiocraft.models import MusicGen
-    from audiocraft.data.audio import audio_read
-    import torch
     import soundfile as sf
+    import torch
+    from audiocraft.data.audio import audio_read
+    from audiocraft.models import MusicGen
 
     model = MusicGen.get_pretrained("facebook/musicgen-small")
     model.set_generation_params(duration=min(duration, 30.0))

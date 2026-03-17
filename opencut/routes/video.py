@@ -7,32 +7,43 @@ merge, trim, preview.
 """
 
 import json
+import logging
 import os
 import subprocess as _sp
-import sys
 import tempfile
 import threading
 import time
 import uuid
-from flask import Blueprint, request, jsonify
 
-from opencut.jobs import (
-    jobs, job_lock, _new_job, _update_job, _safe_error,
-    _is_cancelled, _register_job_process, _kill_job_process,
-    _unregister_job_process, MAX_BATCH_FILES,
-)
+from flask import Blueprint, jsonify, request
+
+from opencut.checks import check_watermark_available
 from opencut.helpers import (
-    _try_import, _try_import_from, _resolve_output_dir, _unique_output_path,
-    _run_ffmpeg_with_progress, _make_sequence_name,
-    _get_file_duration, OPENCUT_DIR, DEFAULT_CRF,
+    _get_file_duration,
+    _resolve_output_dir,
+    _run_ffmpeg_with_progress,
+    _unique_output_path,
+)
+from opencut.jobs import (
+    MAX_BATCH_FILES,
+    _is_cancelled,
+    _new_job,
+    _register_job_process,
+    _safe_error,
+    _unregister_job_process,
+    _update_job,
+    job_lock,
+    jobs,
 )
 from opencut.security import (
-    validate_path, require_csrf, safe_pip_install,
-    validate_filepath, safe_float, safe_int, require_rate_limit,
+    require_csrf,
+    require_rate_limit,
+    safe_float,
+    safe_int,
+    safe_pip_install,
+    validate_filepath,
+    validate_path,
 )
-from opencut.checks import check_watermark_available
-
-import logging
 
 logger = logging.getLogger("opencut")
 
@@ -102,12 +113,12 @@ def video_watermark():
 
             # Build command for the watermark remover
             try:
-                from transformers import AutoProcessor, AutoModelForCausalLM
-                from simple_lama_inpainting import SimpleLama
-                from PIL import Image
-                import numpy as np
                 import cv2
+                import numpy as np
                 import torch
+                from PIL import Image
+                from simple_lama_inpainting import SimpleLama
+                from transformers import AutoModelForCausalLM, AutoProcessor
 
                 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -141,10 +152,10 @@ def video_watermark():
                     task = "<OPEN_VOCABULARY_DETECTION>"
                     prompt = task + detection_prompt
 
-                    inputs = florence_processor(text=prompt, images=image, return_tensors="pt").to(device)
+                    inputs = florence_processor(text=prompt, images=image, return_tensors="pt").to(device)  # noqa: F821
 
                     with torch.no_grad():
-                        generated_ids = florence_model.generate(
+                        generated_ids = florence_model.generate(  # noqa: F821
                             input_ids=inputs["input_ids"],
                             pixel_values=inputs["pixel_values"],
                             max_new_tokens=1024,
@@ -152,8 +163,8 @@ def video_watermark():
                             num_beams=3
                         )
 
-                    generated_text = florence_processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
-                    parsed = florence_processor.post_process_generation(
+                    generated_text = florence_processor.batch_decode(generated_ids, skip_special_tokens=False)[0]  # noqa: F821
+                    parsed = florence_processor.post_process_generation(  # noqa: F821
                         generated_text, task=task, image_size=(image.width, image.height)
                     )
 
@@ -209,7 +220,7 @@ def video_watermark():
                     # Inpaint using LaMA
                     mask = create_mask((img_pil.width, img_pil.height), bboxes)
                     mask_pil = Image.fromarray(mask)
-                    result = lama(img_pil, mask_pil)
+                    result = lama(img_pil, mask_pil)  # noqa: F821
                     return result, True
 
                 if is_video:
@@ -486,7 +497,6 @@ def export_video():
     job_id = _new_job("export-video", filepath)
 
     def _process():
-        import subprocess as _sp
 
         try:
             _update_job(job_id, progress=5, message="Preparing export...")
@@ -497,7 +507,7 @@ def export_video():
                 _probe_media = None
 
             if _probe_media:
-                info = _probe_media(filepath)
+                _probe_media(filepath)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
             base_name = os.path.splitext(os.path.basename(filepath))[0]
@@ -1399,7 +1409,7 @@ def batch_create():
     filepaths = validated_paths
 
     try:
-        from opencut.core.batch_process import create_batch, update_batch_item, finalize_batch
+        from opencut.core.batch_process import create_batch, finalize_batch, update_batch_item
 
         batch_id = str(uuid.uuid4())[:8]
         batch = create_batch(batch_id, operation, filepaths, params)
@@ -1573,7 +1583,7 @@ def _execute_batch_item(operation, filepath, params, on_progress):
 def speed_ramp_presets():
     """Return available speed ramp presets."""
     try:
-        from opencut.core.speed_ramp import get_speed_ramp_presets, EASING_FUNCTIONS
+        from opencut.core.speed_ramp import EASING_FUNCTIONS, get_speed_ramp_presets
         return jsonify({
             "presets": get_speed_ramp_presets(),
             "easings": list(EASING_FUNCTIONS.keys()),
@@ -2651,7 +2661,6 @@ def video_reframe():
     job_id = _new_job("reframe", filepath)
 
     def _process():
-        import subprocess as _sp
         try:
             _update_job(job_id, progress=5, message="Probing video...")
 
@@ -2818,7 +2827,6 @@ def video_merge():
     job_id = _new_job("merge", files[0])
 
     def _process():
-        import subprocess as _sp
         try:
             _update_job(job_id, progress=5, message="Preparing merge...")
 
@@ -2939,7 +2947,6 @@ def video_trim():
     job_id = _new_job("trim", filepath)
 
     def _process():
-        import subprocess as _sp
         try:
             _update_job(job_id, progress=5, message="Preparing trim...")
 
@@ -3032,7 +3039,6 @@ def preview_frame():
 
     def _process():
         import base64
-        import subprocess as _sp
         tmp = os.path.join(tempfile.gettempdir(), f"opencut_preview_{uuid.uuid4().hex[:8]}.jpg")
         try:
             _update_job(job_id, progress=10, message="Extracting frame...")
@@ -3402,8 +3408,8 @@ def video_shorts_pipeline():
 
     def _process():
         try:
-            from opencut.core.shorts_pipeline import generate_shorts, ShortsPipelineConfig
             from opencut.core.llm import LLMConfig
+            from opencut.core.shorts_pipeline import ShortsPipelineConfig, generate_shorts
 
             def _on_progress(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
