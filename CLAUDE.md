@@ -79,7 +79,8 @@
 - Dev: `python -m opencut.server` (or `pip install -e .` then `opencut-server`)
 - CEP dev: Set `PlayerDebugMode = 1` in registry for all CC versions
 - Build exe: `pyinstaller opencut_server.spec`
-- Build installer: Inno Setup 6 compile `OpenCut.iss` (requires `ffmpeg/ffmpeg.exe` + `ffprobe.exe` in project root)
+- Build installer (legacy): Inno Setup 6 compile `OpenCut.iss`
+- Build installer (custom): `cd installer && pwsh InstallerBuilder.ps1` (requires .NET 9 SDK + PyInstaller dist)
 - FFmpeg is bundled in installer and auto-added to user PATH; server also auto-detects bundled ffmpeg dir
 - CI/CD: `.github/workflows/build.yml` — PyInstaller builds for Windows/macOS/Linux on `workflow_dispatch` or `v*` tag push, uploads artifacts + release tarballs
 - Optional deps: `pip install -e ".[ai]"` (CPU), `pip install -e ".[ai-gpu]"` (GPU with onnxruntime-gpu), `pip install -e ".[all]"` (everything)
@@ -238,3 +239,23 @@ auto-edit = ["auto-editor>=24.0"]
 scene-ml = ["transnetv2>=1.0"]
 enhance = ["resemble-enhance>=0.0.1"]
 ```
+
+## Custom Installer (`installer/src/OpenCut.Installer/`)
+- **Tech**: C# WPF / .NET 9, self-contained single-file exe, win-x64, requireAdministrator
+- **Theme**: Catppuccin Mocha dark theme (Base #1e1e2e, Accent #89b4fa)
+- **UI Flow**: Welcome -> License -> Options -> Progress -> Complete (forward-only wizard)
+- **Payload**: Self-extracting exe (ZIP appended with `[data][8-byte size][OCPAYLOAD]` trailer) or adjacent `payload.zip` fallback
+- **Key Files**:
+  - `Models/AppConstants.cs` — version, GUIDs, registry paths
+  - `Services/InstallEngine.cs` — orchestrator: 16 install steps matching Inno Setup operations
+  - `Services/UninstallEngine.cs` — reverse all operations, schedule self-delete
+  - `Themes/CatppuccinMocha.xaml` — full theme with all control styles
+  - `Controls/LogPanel.xaml` — auto-scrolling color-coded log
+  - `Controls/StepIndicator.xaml` — dot/line wizard progress
+- **Build**: `cd installer && pwsh InstallerBuilder.ps1` (publishes exe, stages payload, creates self-extracting installer)
+- **Uninstall**: Triggered via `--uninstall` CLI arg (registered in Add/Remove Programs)
+- **Gotchas**:
+  - WPF implicit usings don't include `System.IO` — added `GlobalUsings.cs`
+  - `LibraryImport` requires `AllowUnsafeBlocks=true` in csproj
+  - `OpenFolderDialog` is .NET 8+ only (replaces WinForms FolderBrowserDialog)
+  - COM interop for `WScript.Shell` shortcut creation uses `dynamic` + `Marshal.ReleaseComObject`
