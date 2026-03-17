@@ -5,9 +5,11 @@ strPath = fso.GetParentFolderName(WScript.ScriptFullName)
 strExe = strPath & "\server\OpenCut-Server.exe"
 
 ' Add bundled ffmpeg to PATH if present
-If fso.FolderExists(strPath & "\server\ffmpeg") Then
-    Dim objEnv
-    Set objEnv = WshShell.Environment("Process")
+Dim objEnv
+Set objEnv = WshShell.Environment("Process")
+If fso.FolderExists(strPath & "\ffmpeg") Then
+    objEnv("PATH") = strPath & "\ffmpeg;" & objEnv("PATH")
+ElseIf fso.FolderExists(strPath & "\server\ffmpeg") Then
     objEnv("PATH") = strPath & "\server\ffmpeg;" & objEnv("PATH")
 End If
 

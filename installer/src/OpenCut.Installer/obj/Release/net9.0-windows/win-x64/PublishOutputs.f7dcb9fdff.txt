@@ -1,0 +1,2 @@
+C:\Users\--\repos\OpenCut\installer\publish\OpenCut-Setup.pdb
+C:\Users\--\repos\OpenCut\installer\publish\OpenCut-Setup.exe

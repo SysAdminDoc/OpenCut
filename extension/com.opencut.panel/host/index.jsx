@@ -971,15 +971,24 @@ function startOpenCutBackend() {
     var exePath = "";
 
     if (isWindows) {
-        // Check registry for install path (set by Inno Setup)
+        // Check registry for install path (set by installer)
         try {
             var wsh = new ActiveXObject("WScript.Shell");
             var regPath = wsh.RegRead("HKCU\\Software\\OpenCut\\InstallPath");
             if (regPath) {
-                var candidate = regPath + "\\opencut-server.exe";
+                // Custom installer puts exe in server\ subdir
+                var candidate = regPath + "\\server\\OpenCut-Server.exe";
                 if (new File(candidate).exists) {
                     exePath = candidate;
                     _ocLog("Found exe via registry: " + exePath);
+                }
+                // Fallback: exe in install root (legacy layout)
+                if (!exePath) {
+                    candidate = regPath + "\\OpenCut-Server.exe";
+                    if (new File(candidate).exists) {
+                        exePath = candidate;
+                        _ocLog("Found exe via registry (root): " + exePath);
+                    }
                 }
             }
         } catch (e) {
@@ -989,12 +998,12 @@ function startOpenCutBackend() {
         // Check default install location
         if (!exePath) {
             try {
-                var localAppData = $.getenv("LOCALAPPDATA");
-                if (localAppData) {
-                    var candidate2 = localAppData + "\\OpenCut\\opencut-server.exe";
+                var progFiles = $.getenv("ProgramFiles");
+                if (progFiles) {
+                    var candidate2 = progFiles + "\\OpenCut\\server\\OpenCut-Server.exe";
                     if (new File(candidate2).exists) {
                         exePath = candidate2;
-                        _ocLog("Found exe at default location: " + exePath);
+                        _ocLog("Found exe at Program Files: " + exePath);
                     }
                 }
             } catch (e2) {}

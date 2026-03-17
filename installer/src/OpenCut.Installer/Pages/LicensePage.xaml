@@ -1,0 +1,52 @@
+<Page x:Class="OpenCut.Installer.Pages.LicensePage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      Background="Transparent">
+
+    <Grid Margin="40,16,40,30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="License Agreement" FontSize="20" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextBrush}"
+                   FontFamily="{DynamicResource UIFont}" Margin="0,0,0,12" />
+
+        <!-- License Text -->
+        <Border Grid.Row="1" Background="{DynamicResource Surface0}"
+                CornerRadius="8" Padding="16,12" Margin="0,0,0,12">
+            <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <TextBlock x:Name="LicenseText" TextWrapping="Wrap"
+                           Foreground="{DynamicResource Subtext1}"
+                           FontFamily="{DynamicResource MonoFont}"
+                           FontSize="11.5" LineHeight="18" />
+            </ScrollViewer>
+        </Border>
+
+        <!-- Accept Checkbox -->
+        <CheckBox x:Name="AcceptCheck" Grid.Row="2"
+                  Content="I accept the terms of the MIT License"
+                  Margin="0,0,0,16"
+                  Checked="AcceptCheck_Changed" Unchecked="AcceptCheck_Changed" />
+
+        <!-- Buttons -->
+        <Grid Grid.Row="3">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button Grid.Column="1" Content="Back"
+                    Style="{StaticResource SecondaryButton}"
+                    Click="Back_Click" Margin="0,0,10,0" />
+            <Button x:Name="NextBtn" Grid.Column="2" Content="Next"
+                    Style="{StaticResource PrimaryButton}"
+                    IsEnabled="False" Click="Next_Click" />
+        </Grid>
+    </Grid>
+</Page>
