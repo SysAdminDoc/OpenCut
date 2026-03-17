@@ -117,6 +117,8 @@ def chromakey_video(
     bg_is_video = bg_path.lower().endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm'))
     bg_cap = cv2.VideoCapture(bg_path) if bg_is_video else None
     bg_img = None if bg_is_video else cv2.imread(bg_path)
+    if not bg_is_video and bg_img is None:
+        raise FileNotFoundError(f"Could not read background image: {bg_path}")
     if bg_img is not None:
         bg_img = cv2.resize(bg_img, (w, h))
 
@@ -140,8 +142,11 @@ def chromakey_video(
                 ret_bg, bg_frame = bg_cap.read()
                 if not ret_bg:
                     bg_cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
-                    _, bg_frame = bg_cap.read()
-                bg_frame = cv2.resize(bg_frame, (w, h))
+                    ret_bg, bg_frame = bg_cap.read()
+                if bg_frame is None:
+                    bg_frame = np.zeros((h, w, 3), dtype=np.uint8)
+                else:
+                    bg_frame = cv2.resize(bg_frame, (w, h))
             else:
                 bg_frame = bg_img.copy()
 

@@ -325,14 +325,22 @@ def _clear_model_cache(model_name: str):
 
     # Match model directories like "models--Systran--faster-whisper-base"
     safe_name = model_name.replace(".", "-")
-    for item in os.listdir(hf_home):
+    try:
+        items = os.listdir(hf_home)
+    except OSError:
+        return
+    for item in items:
         if "whisper" in item.lower() and safe_name in item.lower():
             target = os.path.join(hf_home, item)
             logger.warning(f"Clearing corrupt model cache: {target}")
             shutil.rmtree(target, ignore_errors=True)
 
     # Also nuke any orphaned .lock files for this model
-    for item in os.listdir(hf_home):
+    try:
+        items = os.listdir(hf_home)
+    except OSError:
+        return
+    for item in items:
         if item.endswith(".lock") and "whisper" in item.lower() and safe_name in item.lower():
             try:
                 os.unlink(os.path.join(hf_home, item))

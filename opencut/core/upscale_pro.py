@@ -165,18 +165,25 @@ def upscale_realesrgan(
         half=torch.cuda.is_available(),
     )
 
-    cap = cv2.VideoCapture(video_path)
-    fps = cap.get(cv2.CAP_PROP_FPS) or 30
-    total = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
-
+    cap = None
+    writer = None
     _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
     tmp_video = _ntf.name
     _ntf.close()
-    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-    writer = cv2.VideoWriter(tmp_video, fourcc, fps, (new_w, new_h))
 
-    frame_idx = 0
     try:
+        cap = cv2.VideoCapture(video_path)
+        if not cap.isOpened():
+            raise RuntimeError(f"Cannot open video file: {video_path}")
+        fps = cap.get(cv2.CAP_PROP_FPS) or 30
+        total = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+
+        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        writer = cv2.VideoWriter(tmp_video, fourcc, fps, (new_w, new_h))
+        if not writer.isOpened():
+            raise RuntimeError("Failed to initialize video writer")
+
+        frame_idx = 0
         while True:
             ret, frame = cap.read()
             if not ret:
@@ -190,8 +197,10 @@ def upscale_realesrgan(
                 pct = 5 + int((frame_idx / total) * 85)
                 on_progress(pct, f"Upscaling frame {frame_idx}/{total}...")
     finally:
-        cap.release()
-        writer.release()
+        if cap is not None:
+            cap.release()
+        if writer is not None:
+            writer.release()
 
     if on_progress:
         on_progress(92, "Encoding with audio...")

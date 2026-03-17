@@ -119,7 +119,7 @@ def denoise_audio(
 
     result = subprocess.run(cmd, capture_output=True, timeout=600)
     if result.returncode != 0:
-        raise RuntimeError(f"Noise reduction failed: {result.stderr.decode()}")
+        raise RuntimeError(f"Noise reduction failed: {result.stderr.decode(errors='replace')}")
 
     if on_progress:
         on_progress(100, "Noise reduction complete")
@@ -183,7 +183,7 @@ def isolate_voice(
 
     result = subprocess.run(cmd, capture_output=True, timeout=600)
     if result.returncode != 0:
-        raise RuntimeError(f"Voice isolation failed: {result.stderr.decode()}")
+        raise RuntimeError(f"Voice isolation failed: {result.stderr.decode(errors='replace')}")
 
     if on_progress:
         on_progress(100, "Voice isolation complete")
@@ -366,7 +366,7 @@ def detect_beats(
 
     result = subprocess.run(cmd, capture_output=True, timeout=300)
     if result.returncode != 0:
-        raise RuntimeError(f"Audio extraction failed: {result.stderr.decode()}")
+        raise RuntimeError(f"Audio extraction failed: {result.stderr.decode(errors='replace')}")
 
     pcm_data = result.stdout
     num_samples = len(pcm_data) // 2
@@ -515,7 +515,7 @@ def generate_ducking_keyframes(
 
     result = subprocess.run(cmd, capture_output=True, timeout=300)
     if result.returncode != 0:
-        raise RuntimeError(f"Audio extraction failed: {result.stderr.decode()}")
+        raise RuntimeError(f"Audio extraction failed: {result.stderr.decode(errors='replace')}")
 
     pcm_data = result.stdout
     num_samples = len(pcm_data) // 2
@@ -699,7 +699,7 @@ def apply_audio_effect(
 
     result = subprocess.run(cmd, capture_output=True, timeout=600)
     if result.returncode != 0:
-        raise RuntimeError(f"Audio effect failed: {result.stderr.decode()}")
+        raise RuntimeError(f"Audio effect failed: {result.stderr.decode(errors='replace')}")
 
     if on_progress:
         on_progress(100, f"{effect['label']} applied")
