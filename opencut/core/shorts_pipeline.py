@@ -224,7 +224,7 @@ def generate_shorts(
         total_dur = _probe_duration(input_path)
         if total_dur > 0:
             for hl in highlights:
-                hl.start = max(0.0, min(total_dur, hl.start))
+                hl.start = max(0.0, min(total_dur - 0.1, hl.start))
                 hl.end = max(hl.start + 0.1, min(total_dur, hl.end))
 
         if on_progress:

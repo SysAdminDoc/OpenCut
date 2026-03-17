@@ -146,9 +146,15 @@ def get_video_info(filepath: str) -> dict:
         "-of", "json", filepath,
     ]
     result = _sp.run(cmd, capture_output=True, timeout=30)
+    if result.returncode != 0:
+        logger.warning("ffprobe failed (rc=%d) for %s", result.returncode, filepath)
+        return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
     try:
         data = _json.loads(result.stdout.decode())
-        s = data["streams"][0]
+        streams = data.get("streams", [])
+        if not streams:
+            return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
+        s = streams[0]
         fps_p = s.get("r_frame_rate", "30/1").split("/")
         fps = (float(fps_p[0]) / float(fps_p[1])) if len(fps_p) == 2 and float(fps_p[1]) else 30.0
         duration = float(s.get("duration", 0))
