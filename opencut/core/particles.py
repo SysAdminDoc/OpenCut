@@ -16,22 +16,9 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-
-def _ensure_package(pkg, pip_name=None, on_progress=None):
-    try:
-        __import__(pkg)
-    except ImportError:
-        pip_name = pip_name or pkg
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        safe_pip_install(pip_name)
-
 
 def _get_video_info(fp):
     import json
@@ -206,8 +193,8 @@ def overlay_particles(
         preset: Particle preset name from PARTICLE_PRESETS.
         density: Particle density multiplier (0.5 = half, 2.0 = double).
     """
-    _ensure_package("cv2", "opencv-python-headless", on_progress)
-    _ensure_package("PIL", "Pillow", on_progress)
+    ensure_package("cv2", "opencv-python-headless", on_progress)
+    ensure_package("PIL", "Pillow", on_progress)
     import cv2
     import numpy as np
     from PIL import Image, ImageDraw

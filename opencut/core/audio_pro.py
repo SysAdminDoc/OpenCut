@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -25,20 +25,6 @@ logger = logging.getLogger("opencut")
 # ---------------------------------------------------------------------------
 # Dependency management
 # ---------------------------------------------------------------------------
-def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable = None):
-    """Import a package, installing it if missing."""
-    try:
-        __import__(pkg_name)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg_name
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        safe_pip_install(pip_name)
-        return True
-
 
 # ---------------------------------------------------------------------------
 # Pedalboard availability
@@ -270,7 +256,7 @@ def apply_pedalboard_effect(
 
     For video files, extracts audio, processes, then remuxes.
     """
-    _ensure_package("pedalboard", "pedalboard", on_progress)
+    ensure_package("pedalboard", "pedalboard", on_progress)
     import pedalboard
     from pedalboard.io import AudioFile
 
@@ -539,7 +525,7 @@ def deepfilter_denoise(
     Broadcast-grade speech enhancement that runs real-time on CPU.
     Model size: <10MB. Supports 48kHz full-band audio.
     """
-    _ensure_package("df", "deepfilternet", on_progress)
+    ensure_package("df", "deepfilternet", on_progress)
 
     if output_path is None:
         base = os.path.splitext(os.path.basename(input_path))[0]
