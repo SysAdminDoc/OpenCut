@@ -10,11 +10,9 @@ Zero ML dependencies - Pillow + FFmpeg only.
 """
 
 import logging
-import math
 import os
 import random
 import subprocess
-import sys
 import tempfile
 from typing import Callable, Dict, List, Optional
 

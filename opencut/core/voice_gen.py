@@ -12,8 +12,6 @@ Kokoro runs fully offline on CPU at near-realtime speed.
 import asyncio
 import logging
 import os
-import subprocess
-import sys
 import tempfile
 from typing import Callable, Dict, List, Optional
 

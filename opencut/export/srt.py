@@ -4,7 +4,7 @@ SRT and VTT subtitle export.
 Generates standard subtitle files from transcription results.
 """
 
-from typing import List, Optional
+from typing import List
 
 from ..core.captions import CaptionSegment, TranscriptionResult
 

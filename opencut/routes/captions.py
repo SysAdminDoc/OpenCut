@@ -5,41 +5,46 @@ Transcription, caption styles, burn-in, animated captions, whisperx,
 translation, karaoke, format conversion.
 """
 
-import json
 import logging
 import os
-import subprocess as _sp
-import sys
 import tempfile
 import threading
-import time
-from flask import Blueprint, request, jsonify
 
-from opencut.jobs import jobs, job_lock, _new_job, _update_job, _safe_error, _is_cancelled
-from opencut.helpers import _try_import, _try_import_from, _resolve_output_dir, _unique_output_path, _run_ffmpeg_with_progress, _make_sequence_name, OPENCUT_DIR
-from opencut.security import validate_path, validate_filepath, require_csrf, safe_pip_install, safe_float, safe_int, VALID_WHISPER_MODELS, require_rate_limit
+from flask import Blueprint, jsonify, request
+
+from opencut.helpers import _make_sequence_name, _resolve_output_dir
+from opencut.jobs import _is_cancelled, _new_job, _safe_error, _update_job, job_lock, jobs
+from opencut.security import (
+    VALID_WHISPER_MODELS,
+    require_csrf,
+    require_rate_limit,
+    safe_float,
+    safe_int,
+    safe_pip_install,
+    validate_filepath,
+)
 
 # Core imports used by multiple routes (try relative/absolute)
 try:
-    from ..utils.media import probe as _probe_media
-    from ..utils.config import SilenceConfig, ExportConfig, CaptionConfig, get_preset
     from ..core.silence import detect_speech, get_edit_summary
     from ..core.zoom import generate_zoom_events
     from ..export.premiere import export_premiere_xml
-    from ..export.srt import export_srt, export_vtt, export_json, export_ass, rgb_to_ass_color
+    from ..export.srt import export_ass, export_json, export_srt, export_vtt
+    from ..utils.config import CaptionConfig, ExportConfig, get_preset
+    from ..utils.media import probe as _probe_media
 except ImportError:
-    from opencut.utils.media import probe as _probe_media
-    from opencut.utils.config import SilenceConfig, ExportConfig, CaptionConfig, get_preset
     from opencut.core.silence import detect_speech, get_edit_summary
     from opencut.core.zoom import generate_zoom_events
     from opencut.export.premiere import export_premiere_xml
-    from opencut.export.srt import export_srt, export_vtt, export_json, export_ass, rgb_to_ass_color
+    from opencut.export.srt import export_ass, export_json, export_srt, export_vtt
+    from opencut.utils.config import CaptionConfig, ExportConfig, get_preset
+    from opencut.utils.media import probe as _probe_media
 
 logger = logging.getLogger("opencut")
 
 captions_bp = Blueprint("captions", __name__)
 
-import re as _re
+import re as _re  # noqa: E402
 
 _VALID_SUBTITLE_FORMATS = {"srt", "ass", "vtt", "sub", "json"}
 _VALID_ANIMATIONS = {"pop", "slide", "fade", "bounce", "typewriter", "wave", "glow"}
@@ -89,7 +94,7 @@ def generate_captions():
 
     def _process():
         try:
-            from opencut.core.captions import transcribe, check_whisper_available
+            from opencut.core.captions import check_whisper_available, transcribe
 
             available, backend = check_whisper_available()
             if not available:
@@ -205,10 +210,11 @@ def styled_captions_route():
 
     def _process():
         try:
-            from opencut.core.captions import transcribe, check_whisper_available
+            from opencut.core.captions import check_whisper_available, transcribe
             from opencut.core.styled_captions import (
-                render_styled_caption_video, STYLES, detect_action_words_by_energy,
+                detect_action_words_by_energy,
                 get_action_word_indices,
+                render_styled_caption_video,
             )
 
             available, backend = check_whisper_available()
@@ -341,7 +347,7 @@ def get_transcript():
 
     def _process():
         try:
-            from opencut.core.captions import transcribe, check_whisper_available
+            from opencut.core.captions import check_whisper_available, transcribe
 
             available, backend = check_whisper_available()
             if not available:
@@ -424,7 +430,7 @@ def export_edited_transcript():
         return jsonify({"error": "No transcript segments provided"}), 400
 
     try:
-        from opencut.core.captions import CaptionSegment, Word, TranscriptionResult
+        from opencut.core.captions import CaptionSegment, TranscriptionResult, Word
 
         # Reconstruct TranscriptionResult from edited segments
         caption_segments = []
@@ -738,8 +744,10 @@ def captions_enhanced_capabilities():
     """Return enhanced caption capabilities."""
     try:
         from opencut.core.captions_enhanced import (
-            check_whisperx_available, check_nllb_available, check_pysubs2_available,
             TRANSLATION_LANGUAGES,
+            check_nllb_available,
+            check_pysubs2_available,
+            check_whisperx_available,
         )
         return jsonify({
             "whisperx": check_whisperx_available(),
@@ -810,8 +818,8 @@ def captions_translate():
     segments = data.get("segments", [])
     source_lang = data.get("source_lang", "en")
     target_lang = data.get("target_lang", "es")
-    output_dir = data.get("output_dir", "")
-    output_format = data.get("format", "srt")
+    data.get("output_dir", "")
+    data.get("format", "srt")
     filepath = data.get("filepath", "")
 
     if filepath:
