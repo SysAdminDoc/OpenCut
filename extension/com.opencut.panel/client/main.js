@@ -5580,7 +5580,7 @@
         el.copyChaptersBtn.addEventListener("click", function () {
             var text = el.ytChaptersText.value;
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(text).then(function () { showAlert("Copied to clipboard!"); });
+                navigator.clipboard.writeText(text).then(function () { showAlert("Copied to clipboard!"); }).catch(function () { showAlert("Copy failed"); });
             } else {
                 el.ytChaptersText.select();
                 document.execCommand("copy");
@@ -5737,7 +5737,7 @@
         if (el.copySummaryBtn) el.copySummaryBtn.addEventListener("click", function () {
             var text = el.summaryContent ? el.summaryContent.textContent : "";
             if (navigator.clipboard) {
-                navigator.clipboard.writeText(text).then(function () { showToast("Summary copied", "success"); });
+                navigator.clipboard.writeText(text).then(function () { showToast("Summary copied", "success"); }).catch(function () { showToast("Copy failed", "warning"); });
             } else {
                 showToast("Copy not supported", "warning");
             }

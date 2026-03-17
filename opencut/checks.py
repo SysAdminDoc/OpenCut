@@ -5,6 +5,8 @@ Centralized check functions so route files don't duplicate definitions.
 Each function returns True/False indicating if the dependency is usable.
 """
 
+import threading
+
 from opencut.helpers import _try_import
 
 
@@ -70,23 +72,27 @@ def check_mediapipe_available():
 
 
 _ollama_cache = {"result": None, "expires": 0}
+_ollama_cache_lock = threading.Lock()
 
 
 def check_ollama_available():
     """Check if Ollama is running locally (cached for 30s)."""
     import time
     now = time.monotonic()
-    if _ollama_cache["result"] is not None and now < _ollama_cache["expires"]:
-        return _ollama_cache["result"]
+    with _ollama_cache_lock:
+        if _ollama_cache["result"] is not None and now < _ollama_cache["expires"]:
+            return _ollama_cache["result"]
     try:
         import urllib.request
         resp = urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3)
         resp.close()
-        _ollama_cache["result"] = True
+        result = True
     except Exception:
-        _ollama_cache["result"] = False
-    _ollama_cache["expires"] = now + 30
-    return _ollama_cache["result"]
+        result = False
+    with _ollama_cache_lock:
+        _ollama_cache["result"] = result
+        _ollama_cache["expires"] = time.monotonic() + 30
+    return result
 
 
 def check_llm_available():

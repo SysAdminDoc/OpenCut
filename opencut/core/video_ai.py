@@ -201,6 +201,9 @@ def upscale_video(
         import cv2
         for i, frame_path in enumerate(frame_files):
             img = cv2.imread(str(frame_path), cv2.IMREAD_UNCHANGED)
+            if img is None:
+                logger.warning("Skipping unreadable frame: %s", frame_path)
+                continue
             output, _ = upsampler.enhance(img, outscale=scale)
             out_file = os.path.join(frames_out, frame_path.name)
             cv2.imwrite(out_file, output)
