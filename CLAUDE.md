@@ -222,9 +222,13 @@
 
 ## v1.3.0 Code Quality Audit Fixes
 - **GPU detection caching** — `_detect_gpu()` with 30s TTL replaces duplicate nvidia-smi calls in system.py
-- **VideoCapture try/finally** — video.py watermark route now properly releases OpenCV captures on error
+- **GPU cache thread safety** — `_gpu_cache_lock` protects `_detect_gpu()` reads/writes across concurrent requests
+- **VideoCapture try/finally** — video.py watermark route now properly releases OpenCV captures + VideoWriter on error with `try/finally` on both passes
+- **GPU VRAM preflight** — watermark removal checks free VRAM (≥2 GB) before loading Florence-2, falls back to CPU
 - **Atomic file writes** — user_data.py writes to temp file + `os.replace()` to prevent corruption on crash
-- **Queue thread safety** — jobs_routes.py entry status updates now happen under `job_queue_lock`
+- **Queue thread safety** — jobs_routes.py entry status updates now happen under `job_queue_lock`; `_get_job_copy()` called inside lock
+- **Queue dispatch timeout** — `_dispatch_queue_entry()` runs view function in sub-thread with 60s timeout
+- **Pip install timeout** — 10-minute safety timer kills hung pip subprocess; `proc.wait(timeout=30)` prevents zombie
 - **Dead code removal** — removed unused `_deferred_cleanup` list from helpers.py
 - **XSS prevention** — favorites chip and workflow step labels now escaped with `esc()` in main.js
 - **SSE cleanup** — `beforeunload` listener closes active EventSource on panel close
@@ -232,16 +236,38 @@
 - **Z-index hierarchy** — sidebar tooltips (500), context menu (9998), command palette (9999), toasts (10000)
 - **Disabled button UX** — `filter: grayscale(0.5)` + `pointer-events: none` for clearer disabled state
 - **Button accessibility** — all 179 buttons now have explicit `type="button"`
-- **Version sync** — OpenCut.iss, install.py, requirements.txt updated to v1.3.0
+- **Version sync** — OpenCut.iss, install.py, requirements.txt, README.md all synced to v1.3.0
 - **Registry InstallPath** — Inno Setup now writes HKCU `Software\OpenCut\InstallPath`
 - **PyInstaller spec** — added mediapipe, auto_editor, transnetv2, resemble_enhance hidden imports
-- **ExtendScript safety** — getProjectFolder() null-checks `f.parent` before accessing `.fsName`
+- **ExtendScript safety** — getProjectFolder() null-checks `f.parent` before accessing `.fsName`; `isProjectSaved()` added
 - **Frozen-build pip install** — `safe_pip_install` uses system Python from PATH when running as PyInstaller exe
 - **System site-packages discovery** — `_setup_system_site_packages()` in server.py appends system Python's site-packages to `sys.path` for frozen builds
 - **Installer optional deps** — OptionsPage has "Optional Tools" section (auto-editor, edge-tts, mediapipe) with DependencyInstaller service
 - **Condensed media section** — reduced padding/margins throughout #clipSection for tighter vertical layout
 - **`.btn-ghost` CSS class** — added transparent/bordered button style for the "Recent" button
 - **Ruff lint cleanup** — fixed 275+ lint errors across 51 files (unused imports/variables, import sorting, noqa annotations for intentional patterns)
+- **Temp cleanup dedup** — `_schedule_temp_cleanup()` tracks scheduled paths to prevent duplicate timers
+- **Music gen validation** — `generate_tone()` validates waveform against WAVEFORMS list, clamps frequency 20-20000Hz, duration to MAX_DURATION (3600s); `generate_sfx()` validates preset against SFX_PRESETS
+- **Stderr truncation** — `_run_ffmpeg()` in music_gen.py caps stderr to 10 KB
+- **Disk space preflight** — `check_disk_space()` utility in helpers.py; export-video route checks ≥500 MB free before rendering
+- **Job time file safety** — `_schedule_record_time()` checks file exists before probing duration
+- **Input bounds** — `max_bbox_percent` clamped 1-100 in watermark removal
+- **Log export** — `/logs/export` + `/logs/clear` endpoints; UI buttons in Settings tab
+- **Job retry info** — `/jobs/retry/<job_id>` endpoint returns original job params for re-run
+- **ExtendScript error logging** — PremiereBridge import callbacks now `console.error()` instead of silent catch
+- **Project save detection** — `isProjectSaved()` JSX function + `PremiereBridge.isProjectSaved()` + one-time toast warning on unsaved projects
+- **Waveform caching** — `_waveformCache` keyed by filepath (max 10 entries, LRU eviction) avoids redundant API calls
+- **validate_path() crash fix** — audio.py (musicgen, melody) and video.py (title render) had `valid, msg = validate_path()` tuple unpacking on a function that returns a string; converted to try/except
+- **SSE connection race fix** — `_sse_connections` counter moved to mutable dict `_sse_state`; check + increment now atomic under single lock acquisition
+- **Silence generator validation** — `generate_silence()` now clamps duration to MAX_DURATION (same as tone/sfx)
+- **FFmpeg stderr cap** — `_run_ffmpeg_with_progress()` limits collected stderr to 32 KB to prevent memory bloat on long-running jobs
+- **Face reframe safety** — `face_reframe()` validates target_w/target_h > 0, validates src_w/src_h > 0, releases VideoCapture on `isOpened()` failure
+- **LUT path traversal fix** — `ensure_lut()` now validates user LUT names against `..`, `/`, `\` and verifies resolved path stays within LUTS_DIR
+- **LUT CDF bounds** — `_apply_cdf_transfer()` clamps input value to 0.0-1.0 before bin index calculation
+- **Shorts pipeline time clamp** — adjusted segment start/end times clamped to >= 0 to prevent negative timestamps
+- **Highlight JSON robustness** — `_parse_highlights()` skips malformed items instead of crashing; `summarize_transcript()` validates bullet_points/topics are lists
+- **Silence detection bounds** — threshold clamped -60..0 dB, min_duration 0.05..30s, padding 0..5s, min_speech 0.05..10s
+- **Demucs format validation** — output_format validated against {"wav", "mp3", "flac"}, defaults to wav
 
 ## v1.3.0 New Optional Dependencies
 ```toml

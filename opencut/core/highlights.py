@@ -118,13 +118,18 @@ def _parse_highlights_json(text: str) -> List[Highlight]:
         if isinstance(data, list):
             highlights = []
             for item in data:
-                highlights.append(Highlight(
-                    start=float(item.get("start", 0)),
-                    end=float(item.get("end", 0)),
-                    score=float(item.get("score", 0.5)),
-                    reason=str(item.get("reason", "")),
-                    title=str(item.get("title", "")),
-                ))
+                if not isinstance(item, dict):
+                    continue
+                try:
+                    highlights.append(Highlight(
+                        start=float(item.get("start", 0)),
+                        end=float(item.get("end", 0)),
+                        score=float(item.get("score", 0.5)),
+                        reason=str(item.get("reason", "")),
+                        title=str(item.get("title", "")),
+                    ))
+                except (TypeError, ValueError):
+                    continue
             return highlights
     except (json.JSONDecodeError, TypeError, ValueError):
         pass
@@ -329,10 +334,12 @@ def summarize_video(
 
     try:
         data = json.loads(text)
+        bp = data.get("bullet_points", [])
+        tp = data.get("topics", [])
         summary = Summary(
             text=str(data.get("summary", "")),
-            bullet_points=data.get("bullet_points", []),
-            topics=data.get("topics", []),
+            bullet_points=bp if isinstance(bp, list) else [],
+            topics=tp if isinstance(tp, list) else [],
             word_count=len(str(data.get("summary", "")).split()),
         )
     except (json.JSONDecodeError, TypeError):

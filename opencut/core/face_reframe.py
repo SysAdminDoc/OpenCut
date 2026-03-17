@@ -92,6 +92,7 @@ def _detect_faces_in_frames(video_path: str, sample_rate: int,
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
+        cap.release()
         raise RuntimeError(f"Cannot open video: {video_path}")
 
     fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
@@ -308,6 +309,9 @@ def face_reframe(input_path: str, target_w: int = 1080, target_h: int = 1920,
         directory = output_dir or os.path.dirname(input_path)
         output_path = os.path.join(directory, f"{base}_reframed{ext}")
 
+    if target_w <= 0 or target_h <= 0:
+        raise ValueError(f"Target dimensions must be positive: {target_w}x{target_h}")
+
     if on_progress:
         on_progress(5, "Analyzing face positions...")
 
@@ -327,6 +331,9 @@ def face_reframe(input_path: str, target_w: int = 1080, target_h: int = 1920,
 
     if on_progress:
         on_progress(40, "Smoothing camera path...")
+
+    if src_w <= 0 or src_h <= 0:
+        raise RuntimeError(f"Invalid source video dimensions: {src_w}x{src_h}")
 
     # Calculate crop dimensions to match target aspect ratio
     target_aspect = target_w / target_h

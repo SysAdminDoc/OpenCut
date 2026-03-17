@@ -66,7 +66,7 @@ def video_watermark():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
-    max_bbox_percent = safe_int(data.get("max_bbox_percent", 10), 10)
+    max_bbox_percent = safe_int(data.get("max_bbox_percent", 10), 10, min_val=1, max_val=100)
     detection_prompt = data.get("detection_prompt", "watermark")
     detection_skip = safe_int(data.get("detection_skip", 3), 3)
     transparent = data.get("transparent", False)
@@ -120,10 +120,20 @@ def video_watermark():
                 from simple_lama_inpainting import SimpleLama
                 from transformers import AutoModelForCausalLM, AutoProcessor
 
-                device = "cuda" if torch.cuda.is_available() else "cpu"
+                device = "cpu"
+                if torch.cuda.is_available():
+                    try:
+                        free_vram = torch.cuda.get_device_properties(0).total_mem - torch.cuda.memory_allocated(0)
+                        if free_vram >= 2 * 1024 ** 3:  # need ~2GB for Florence-2 + LaMA
+                            device = "cuda"
+                        else:
+                            logger.info("Low GPU VRAM (%.0f MB free), falling back to CPU for watermark removal",
+                                        free_vram / 1024 ** 2)
+                    except Exception:
+                        device = "cuda"  # can't query, try GPU anyway
 
                 # Load Florence-2 model for detection
-                _update_job(job_id, progress=15, message="Loading Florence-2 model...")
+                _update_job(job_id, progress=15, message=f"Loading Florence-2 model ({device})...")
 
                 # Use bundled model path if available
                 if FLORENCE_MODEL_DIR and os.path.isdir(FLORENCE_MODEL_DIR):
@@ -228,6 +238,7 @@ def video_watermark():
                     _update_job(job_id, progress=30, message="Processing video frames...")
 
                     cap = cv2.VideoCapture(filepath)
+                    out_video = None
                     try:
                         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
                         total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
@@ -264,12 +275,17 @@ def video_watermark():
                             frame_idx += 1
                     finally:
                         cap.release()
+                        if out_video is not None:
+                            out_video.release()
 
                     # Second pass: process all frames
                     _update_job(job_id, progress=60, message="Inpainting frames...")
 
                     cap = cv2.VideoCapture(filepath)
+                    out_video = None
                     try:
+                        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+                        out_video = cv2.VideoWriter(temp_video, fourcc, fps, (width, height))
                         frame_idx = 0
                         current_mask = None
 
@@ -301,7 +317,8 @@ def video_watermark():
                             frame_idx += 1
                     finally:
                         cap.release()
-                        out_video.release()
+                        if out_video is not None:
+                            out_video.release()
 
                     # Merge audio if ffmpeg available
                     _update_job(job_id, progress=95, message="Merging audio...")
@@ -510,6 +527,16 @@ def export_video():
                 _probe_media(filepath)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
+
+            # Disk space preflight check (need at least 500 MB free)
+            from opencut.helpers import check_disk_space
+            disk = check_disk_space(effective_dir)
+            if not disk["ok"]:
+                _update_job(job_id, status="error",
+                            error=f"Not enough disk space. {disk['free_mb']} MB free, need at least {disk['required_mb']} MB.",
+                            message="Insufficient disk space")
+                return
+
             base_name = os.path.splitext(os.path.basename(filepath))[0]
             suffix = "_audio" if audio_only else "_opencut"
             output_path = _unique_output_path(
@@ -2085,9 +2112,10 @@ def title_render():
                 _update_job(job_id, progress=pct, message=msg)
             d = data.get("output_dir", "")
             if d:
-                valid, msg = validate_path(d)
-                if not valid:
-                    _update_job(job_id, status="error", message=msg)
+                try:
+                    d = validate_path(d)
+                except ValueError as e:
+                    _update_job(job_id, status="error", message=str(e))
                     return
             else:
                 d = tempfile.gettempdir()

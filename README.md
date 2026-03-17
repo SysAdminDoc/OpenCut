@@ -1,6 +1,6 @@
 # OpenCut
 
-![Version](https://img.shields.io/badge/version-1.2.0-blue)
+![Version](https://img.shields.io/badge/version-1.3.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
@@ -20,7 +20,7 @@
 
 **Option A -- Installer exe (recommended):**
 
-Download `OpenCut-Setup-1.2.0.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. The installer handles everything: server exe, FFmpeg, CEP extension deployment, registry keys, desktop shortcut, and optional Whisper model download. **No Python or FFmpeg needed.**
+Download `OpenCut-Setup-1.3.0.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. The installer handles everything: server exe, FFmpeg, CEP extension deployment, registry keys, desktop shortcut, and optional Whisper model download. **No Python or FFmpeg needed.**
 
 **Option B -- From source (requires Python 3.9+ and [FFmpeg](https://ffmpeg.org/download.html) on PATH):**
 
@@ -47,7 +47,7 @@ Clone the repo and run `Install.bat` as Administrator. It handles FFmpeg check, 
 
 ## Features
 
-OpenCut v1.2.0 includes **142 API routes**, **6 panel tabs** with **43 sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.3.0 includes **142 API routes**, **6 panel tabs** with **43 sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 

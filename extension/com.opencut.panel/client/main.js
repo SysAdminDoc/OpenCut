@@ -976,6 +976,9 @@
         autoImport: function (path, type) {
             if (!cs) return;
             cs.evalScript('autoImportResult("' + path.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '", "' + (type || "output") + '")');
+        },
+        isProjectSaved: function (cb) {
+            jsx("isProjectSaved()", cb);
         }
     };
 
@@ -1123,8 +1126,22 @@
     // ================================================================
     // Project Media
     // ================================================================
+    var _projectSaveWarned = false;
+
     function scanProjectMedia() {
         if (!inPremiere) return;
+        // Warn once if project hasn't been saved
+        if (!_projectSaveWarned) {
+            PremiereBridge.isProjectSaved(function (res) {
+                try {
+                    var info = JSON.parse(res);
+                    if (!info.saved) {
+                        showToast("Save your project first for best results", "warning");
+                    }
+                    _projectSaveWarned = true;
+                } catch (e) {}
+            });
+        }
         PremiereBridge.getProjectMedia(function (result) {
             if (!result || result === "null" || result === "undefined") return;
             try {
@@ -1758,7 +1775,7 @@
                         } else if (r.sequence_name) {
                             showAlert("Opened: " + r.sequence_name);
                         }
-                    } catch (e) {}
+                    } catch (e) { console.error("XML import parse error:", e); }
                 });
                 lastXmlPath = xmlPath;
             }
@@ -1774,11 +1791,11 @@
                         } else if (r.message) {
                             showAlert(r.message);
                         }
-                    } catch (e) {}
+                    } catch (e) { console.error("Overlay import parse error:", e, result); }
                 });
                 lastOverlayPath = overlayPath;
             }
-            
+
             // Multiple output files (stem separation)
             var outputPaths = job.result.output_paths;
             if (outputPaths && outputPaths.length > 0) {
@@ -1790,10 +1807,10 @@
                         } else if (r.message) {
                             showAlert(r.message);
                         }
-                    } catch (e) {}
+                    } catch (e) { console.error("Stem import parse error:", e, result); }
                 });
             }
-            
+
             // Single output file
             var outputPath = job.result.output_path;
             if (outputPath && !overlayPath && !xmlPath) {
@@ -1813,7 +1830,7 @@
                             } else if (r.message) {
                                 showAlert(r.message);
                             }
-                        } catch (e) {}
+                        } catch (e) { console.error("Caption import parse error:", e, result); }
                     });
                     lastCaptionPath = outputPath;
                 }
@@ -1828,11 +1845,11 @@
                             } else if (r.message) {
                                 showAlert(r.message);
                             }
-                        } catch (e) {}
+                        } catch (e) { console.error("File import parse error:", e, result); }
                     });
                 }
             }
-            
+
             // SRT path from full pipeline (separate from output_path)
             var srtPath = job.result.srt_path;
             if (srtPath && srtPath !== outputPath) {
@@ -1844,7 +1861,7 @@
                         } else if (r.message) {
                             showAlert(r.message);
                         }
-                    } catch (e) {}
+                    } catch (e) { console.error("Caption import parse error:", e, result); }
                 });
                 lastCaptionPath = srtPath;
             }
@@ -4175,17 +4192,30 @@
     }
 
     // ================================================================
-    // Waveform Preview
+    // Waveform Preview (with per-file cache)
     // ================================================================
     var _waveformData = null;
+    var _waveformCache = {}; // keyed by filepath
+    var _WAVEFORM_CACHE_MAX = 10;
 
     function initWaveform() {
         if (!el.loadWaveformBtn) return;
         el.loadWaveformBtn.addEventListener("click", function () {
             if (!selectedPath) return;
+
+            // Check cache first
+            if (_waveformCache[selectedPath]) {
+                _waveformData = _waveformCache[selectedPath];
+                if (el.waveformContainer) el.waveformContainer.classList.remove("hidden");
+                drawWaveform(_waveformData.peaks);
+                updateThresholdLine();
+                return;
+            }
+
             el.loadWaveformBtn.textContent = "Loading...";
             el.loadWaveformBtn.disabled = true;
-            api("POST", "/audio/waveform", { file: selectedPath, samples: 500 }, function (err, data) {
+            var fetchPath = selectedPath; // capture for closure
+            api("POST", "/audio/waveform", { file: fetchPath, samples: 500 }, function (err, data) {
                 el.loadWaveformBtn.textContent = "Preview Waveform";
                 el.loadWaveformBtn.disabled = !selectedPath;
                 if (err || !data || !data.peaks) {
@@ -4193,6 +4223,12 @@
                     return;
                 }
                 _waveformData = data;
+                // Cache with eviction
+                var keys = Object.keys(_waveformCache);
+                if (keys.length >= _WAVEFORM_CACHE_MAX) {
+                    delete _waveformCache[keys[0]];
+                }
+                _waveformCache[fetchPath] = data;
                 if (el.waveformContainer) el.waveformContainer.classList.remove("hidden");
                 drawWaveform(data.peaks);
                 updateThresholdLine();
@@ -4690,6 +4726,26 @@
                 };
                 reader.readAsText(file);
                 this.value = "";
+            });
+        }
+
+        // Log export / clear
+        var exportLogsBtn = document.getElementById("exportLogsBtn");
+        var clearLogsBtn = document.getElementById("clearLogsBtn");
+        if (exportLogsBtn) {
+            exportLogsBtn.addEventListener("click", function () {
+                var a = document.createElement("a");
+                a.href = BACKEND + "/logs/export";
+                a.download = "opencut_crash.log";
+                a.click();
+            });
+        }
+        if (clearLogsBtn) {
+            clearLogsBtn.addEventListener("click", function () {
+                api("POST", "/logs/clear", {}, function (err, data) {
+                    if (err) { showToast("Failed to clear logs", "error"); return; }
+                    showToast("Crash log cleared", "success");
+                });
             });
         }
     }
