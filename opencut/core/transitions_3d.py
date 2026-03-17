@@ -15,13 +15,9 @@ import os
 import subprocess
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
-
-
-def _run_ffmpeg(cmd, timeout=7200):
-    r = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if r.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {r.stderr.decode(errors='replace')[-500:]}")
 
 
 def _get_duration(fp):
@@ -124,7 +120,7 @@ def apply_transition(
         f"[0:a][1:a]acrossfade=d={duration}[a]"
     )
 
-    _run_ffmpeg([
+    run_ffmpeg([
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-i", clip_a, "-i", clip_b,
         "-filter_complex", fc,
@@ -132,7 +128,7 @@ def apply_transition(
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",
         "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
         output_path,
-    ])
+    ], timeout=7200)
 
     if on_progress:
         on_progress(100, f"Transition ({transition}) applied!")

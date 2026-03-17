@@ -15,19 +15,13 @@ then applies via FFmpeg - zero external dependencies.
 import logging
 import math
 import os
-import subprocess
 from typing import Callable, Dict, List, Optional
+
+from opencut.helpers import run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
 LUTS_DIR = os.path.join(os.path.expanduser("~"), ".opencut", "luts")
-
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 7200) -> str:
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {result.stderr.decode(errors='replace')[-500:]}")
-    return result.stderr.decode(errors="replace")
 
 
 # ---------------------------------------------------------------------------
@@ -400,7 +394,7 @@ def apply_lut(
         "-pix_fmt", "yuv420p", "-c:a", "copy",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=7200)
 
     if on_progress:
         on_progress(100, f"LUT applied: {lut_name}")

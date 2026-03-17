@@ -18,6 +18,8 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
 
 
@@ -41,11 +43,6 @@ def _ensure_package(pkg, pip_name=None, on_progress=None):
         except ImportError:
             return False
 
-
-def _run_ffmpeg(cmd, timeout=7200):
-    r = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if r.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {r.stderr.decode(errors='replace')[-500:]}")
 
 
 def _get_video_info(fp):
@@ -294,14 +291,14 @@ def render_animated_captions(
         on_progress(92, "Encoding with audio...")
 
     try:
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
             "-i", tmp_video, "-i", video_path,
             "-map", "0:v", "-map", "1:a?",
             "-c:v", "libx264", "-crf", "18", "-preset", "medium",
             "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
             "-shortest", output_path,
-        ])
+        ], timeout=7200)
     finally:
         try:
             os.unlink(tmp_video)

@@ -14,6 +14,8 @@ import subprocess
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
 
 
@@ -43,14 +45,6 @@ def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable =
         safe_pip_install(pip_name)
         return True
 
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 3600) -> str:
-    """Run FFmpeg command, return stderr."""
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        err = result.stderr.decode(errors="replace")
-        raise RuntimeError(f"FFmpeg error: {err[-500:]}")
-    return result.stderr.decode(errors="replace")
 
 
 def _get_video_info(filepath: str) -> Dict:
@@ -387,7 +381,7 @@ def face_reframe(input_path: str, target_w: int = 1080, target_h: int = 1920,
         output_path,
     ]
 
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd)
 
     if on_progress:
         on_progress(100, "Reframe complete!")

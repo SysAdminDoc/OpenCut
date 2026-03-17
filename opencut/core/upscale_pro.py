@@ -17,6 +17,8 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
 
 
@@ -39,12 +41,6 @@ def _ensure_package(pkg, pip_name=None, on_progress=None):
             return True
         except ImportError:
             return False
-
-
-def _run_ffmpeg(cmd, timeout=14400):
-    r = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if r.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {r.stderr.decode(errors='replace')[-500:]}")
 
 
 def _get_video_info(fp):
@@ -108,14 +104,14 @@ def upscale_lanczos(
     if on_progress:
         on_progress(10, f"Upscaling {info['width']}x{info['height']} -> {new_w}x{new_h} (lanczos)...")
 
-    _run_ffmpeg([
+    run_ffmpeg([
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-i", video_path,
         "-vf", f"scale={new_w}:{new_h}:flags=lanczos",
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",
         "-pix_fmt", "yuv420p", "-c:a", "copy",
         output_path,
-    ])
+    ], timeout=14400)
 
     if on_progress:
         on_progress(100, f"Upscaled to {new_w}x{new_h}")
@@ -206,14 +202,14 @@ def upscale_realesrgan(
         on_progress(92, "Encoding with audio...")
 
     try:
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
             "-i", tmp_video, "-i", video_path,
             "-map", "0:v", "-map", "1:a?",
             "-c:v", "libx264", "-crf", "18", "-preset", "medium",
             "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
             "-shortest", output_path,
-        ])
+        ], timeout=14400)
     finally:
         try:
             os.unlink(tmp_video)

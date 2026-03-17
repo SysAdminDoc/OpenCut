@@ -20,6 +20,8 @@ import urllib.request
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
 
 MODELS_DIR = os.path.join(os.path.expanduser("~"), ".opencut", "models", "style_transfer")
@@ -89,13 +91,6 @@ def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable =
         logger.info(f"Installing missing dependency: {pip_name}")
         from opencut.security import safe_pip_install
         safe_pip_install(pip_name)
-
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 3600) -> str:
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {result.stderr.decode(errors='replace')[-500:]}")
-    return result.stderr.decode(errors="replace")
 
 
 def _get_video_info(filepath: str) -> Dict:
@@ -202,7 +197,7 @@ def style_transfer_video(
         if on_progress:
             on_progress(12, "Extracting frames...")
 
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             os.path.join(frames_in, "frame_%06d.png"),
@@ -250,7 +245,7 @@ def style_transfer_video(
         if on_progress:
             on_progress(92, "Encoding output video...")
 
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y",
             "-framerate", str(info["fps"]),

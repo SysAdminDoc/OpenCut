@@ -95,6 +95,20 @@ def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Shared FFmpeg Runner
+# ---------------------------------------------------------------------------
+def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0) -> str:
+    """Run FFmpeg command, raise RuntimeError on failure. Returns stderr."""
+    result = _sp.run(cmd, capture_output=True, timeout=timeout)
+    stderr = result.stderr.decode(errors="replace")
+    if stderr_cap > 0:
+        stderr = stderr[-stderr_cap:]
+    if result.returncode != 0:
+        raise RuntimeError(f"FFmpeg error: {stderr[-500:]}")
+    return stderr
+
+
+# ---------------------------------------------------------------------------
 # Lazy Import Helper
 # ---------------------------------------------------------------------------
 def _try_import(name: str):

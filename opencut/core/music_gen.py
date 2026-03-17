@@ -13,22 +13,14 @@ AudioCraft requires GPU and large model downloads.
 
 import logging
 import os
-import subprocess
 from typing import Callable, Dict, List, Optional
+
+from opencut.helpers import run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
 
 MAX_DURATION = 3600  # 1 hour absolute cap for any generated audio
-MAX_STDERR = 10240  # 10 KB cap on stderr stored in error messages
-
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 120) -> str:
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    stderr_text = result.stderr.decode(errors="replace")[-MAX_STDERR:]
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {stderr_text[-500:]}")
-    return stderr_text
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +91,7 @@ def generate_tone(
         "-c:a", "pcm_s16le",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=120, stderr_cap=10240)
 
     if on_progress:
         on_progress(100, "Tone generated!")
@@ -242,7 +234,7 @@ def generate_sfx(
     else:
         raise ValueError(f"Unknown SFX preset: {preset}")
 
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=120, stderr_cap=10240)
 
     if on_progress:
         on_progress(100, f"SFX '{preset}' generated!")
@@ -274,7 +266,7 @@ def generate_silence(
         "-c:a", "pcm_s16le",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=120, stderr_cap=10240)
 
     if on_progress:
         on_progress(100, "Silence generated!")
@@ -316,7 +308,7 @@ def concatenate_audio(
             "-c:a", "pcm_s16le",
             output_path,
         ]
-        _run_ffmpeg(cmd)
+        run_ffmpeg(cmd, timeout=120, stderr_cap=10240)
     finally:
         os.unlink(list_file.name)
 

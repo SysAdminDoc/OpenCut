@@ -17,15 +17,9 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
-
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 7200) -> str:
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    stderr_text = result.stderr.decode(errors="replace")[-2000:]
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {stderr_text[-500:]}")
-    return stderr_text
 
 
 def _get_video_info(filepath: str) -> Dict:
@@ -116,7 +110,7 @@ def burnin_subtitles(
         "-c:a", "copy",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=7200, stderr_cap=2000)
 
     if not os.path.isfile(output_path):
         raise RuntimeError(f"FFmpeg succeeded but output file not created: {output_path}")

@@ -13,17 +13,11 @@ or volume keyframe automation for more precise control.
 
 import logging
 import os
-import subprocess
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
-
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 3600) -> str:
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {result.stderr.decode(errors='replace')[-500:]}")
-    return result.stderr.decode(errors="replace")
 
 
 # ---------------------------------------------------------------------------
@@ -80,7 +74,7 @@ def sidechain_duck(
         "-c:a", "pcm_s16le",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd)
 
     if on_progress:
         on_progress(100, "Sidechain ducking applied!")
@@ -138,7 +132,7 @@ def mix_with_duck(
         "-c:a", "pcm_s16le",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd)
 
     if on_progress:
         on_progress(100, "Mixed with ducking!")
@@ -192,7 +186,7 @@ def auto_duck_video(
         "-shortest",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd)
 
     if on_progress:
         on_progress(100, "Music added with ducking!")
@@ -240,7 +234,7 @@ def mix_audio_tracks(
     cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
     cmd += inputs
     cmd += ["-filter_complex", fc, "-c:a", "pcm_s16le", output_path]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd)
 
     if on_progress:
         on_progress(100, "Audio mixed!")
