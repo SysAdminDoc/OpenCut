@@ -17,13 +17,9 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
-
-
-def _run_ffmpeg(cmd, timeout=7200):
-    r = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if r.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {r.stderr.decode(errors='replace')[-500:]}")
 
 
 def check_manim_available() -> bool:
@@ -195,7 +191,7 @@ def render_title_card(
         "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=7200)
 
     if on_progress:
         on_progress(100, "Title card rendered!")
@@ -273,13 +269,13 @@ def overlay_title(
                 f"enable='between(t,{start_time+0.3},{end_time})'"
             )
 
-    _run_ffmpeg([
+    run_ffmpeg([
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-i", video_path, "-vf", vf,
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",
         "-pix_fmt", "yuv420p", "-c:a", "copy",
         output_path,
-    ])
+    ], timeout=7200)
 
     if on_progress:
         on_progress(100, "Title overlaid!")

@@ -18,19 +18,9 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-def _run_ffmpeg(cmd: List[str], timeout: int = 1800) -> str:
-    """Run FFmpeg command, return stderr output."""
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        err = result.stderr.decode(errors="replace")
-        raise RuntimeError(f"FFmpeg error: {err[-500:]}")
-    return result.stderr.decode(errors="replace")
 
 
 def _probe_duration(filepath: str) -> float:
@@ -92,7 +82,7 @@ def stabilize_video(
             "-vf", f"vidstabdetect=shakiness=10:accuracy=15:result={transforms_file}",
             "-f", "null", "-",
         ]
-        _run_ffmpeg(cmd1)
+        run_ffmpeg(cmd1, timeout=1800)
 
         if on_progress:
             on_progress(50, "Stabilizing video (pass 2/2)...")
@@ -106,7 +96,7 @@ def stabilize_video(
             "-c:a", "copy",
             output_path,
         ]
-        _run_ffmpeg(cmd2)
+        run_ffmpeg(cmd2, timeout=1800)
 
         if on_progress:
             on_progress(100, "Stabilization complete")
@@ -171,7 +161,7 @@ def chromakey(
             output_path,
         ]
 
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=1800)
     if on_progress:
         on_progress(100, "Chromakey applied")
     return output_path
@@ -219,7 +209,7 @@ def apply_lut(
         "-c:a", "copy",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=1800)
     if on_progress:
         on_progress(100, "LUT applied")
     return output_path
@@ -255,7 +245,7 @@ def apply_vignette(
         "-c:a", "copy",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=1800)
     if on_progress:
         on_progress(100, "Vignette applied")
     return output_path
@@ -291,7 +281,7 @@ def apply_film_grain(
         "-c:a", "copy",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=1800)
     if on_progress:
         on_progress(100, "Film grain applied")
     return output_path
@@ -342,7 +332,7 @@ def apply_letterbox(
         "-c:a", "copy",
         output_path,
     ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=1800)
     if on_progress:
         on_progress(100, "Letterbox applied")
     return output_path
@@ -389,7 +379,7 @@ def color_match(
             "-c:a", "copy",
             output_path,
         ]
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=1800)
     if on_progress:
         on_progress(100, "Color matching complete")
     return output_path

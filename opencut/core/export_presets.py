@@ -20,6 +20,8 @@ import os
 import subprocess
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
 
 
@@ -230,13 +232,6 @@ def get_preset_categories() -> List[Dict]:
     return list(cats.values())
 
 
-def _run_ffmpeg(cmd: List[str], timeout: int = 7200) -> str:
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {result.stderr.decode(errors='replace')[-500:]}")
-    return result.stderr.decode(errors="replace")
-
-
 def _get_video_info(filepath: str) -> Dict:
     import json
     cmd = [
@@ -301,7 +296,7 @@ def export_with_preset(
         if preset.get("audio_bitrate"):
             cmd += ["-b:a", preset["audio_bitrate"]]
         cmd.append(output_path)
-        _run_ffmpeg(cmd)
+        run_ffmpeg(cmd, timeout=7200)
         if on_progress:
             on_progress(100, f"Audio exported ({preset['label']})")
         return output_path
@@ -367,7 +362,7 @@ def export_with_preset(
     if on_progress:
         on_progress(10, "Encoding...")
 
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=7200)
 
     # Check file size limit
     if preset.get("max_size_mb"):
@@ -400,22 +395,22 @@ def _export_gif(
         # Pass 1: Generate palette
         if on_progress:
             on_progress(20, "Generating color palette...")
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             "-vf", f"fps={fps},scale={w}:-1:flags=lanczos,palettegen=stats_mode=diff",
             palette,
-        ])
+        ], timeout=7200)
 
         # Pass 2: Apply palette
         if on_progress:
             on_progress(50, "Encoding GIF...")
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path, "-i", palette,
             "-lavfi", f"fps={fps},scale={w}:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
             output_path,
-        ])
+        ], timeout=7200)
 
         if on_progress:
             on_progress(100, "GIF exported")

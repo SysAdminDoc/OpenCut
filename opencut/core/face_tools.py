@@ -17,7 +17,9 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
+
+from opencut.helpers import run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -35,12 +37,6 @@ def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable =
         safe_pip_install(pip_name)
         return True
 
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 3600) -> str:
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {result.stderr.decode(errors='replace')[-500:]}")
-    return result.stderr.decode(errors="replace")
 
 
 def _get_video_info(filepath: str) -> Dict:
@@ -186,7 +182,7 @@ def blur_faces(
     os.makedirs(frames_out, exist_ok=True)
 
     try:
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             os.path.join(frames_in, "frame_%06d.png"),
@@ -237,7 +233,7 @@ def blur_faces(
         if on_progress:
             on_progress(92, "Encoding output video...")
 
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y",
             "-framerate", str(info["fps"]),
@@ -281,7 +277,7 @@ def detect_faces_in_frame(
         _ntf = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         tmp = _ntf.name
         _ntf.close()
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path, "-vframes", "1", tmp,
         ])
