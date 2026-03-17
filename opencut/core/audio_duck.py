@@ -60,7 +60,7 @@ def sidechain_duck(
         on_progress(10, "Applying sidechain ducking...")
 
     # ratio controls compression depth. Higher = more ducking.
-    ratio = max(2, int(duck_amount * 20))
+    ratio = max(2, min(20, int(duck_amount * 20)))
     # level_sc scales the sidechain sensitivity
     level_sc = 1.0
 
@@ -120,7 +120,7 @@ def mix_with_duck(
     if on_progress:
         on_progress(10, "Mixing voice + music with ducking...")
 
-    ratio = max(2, int(duck_amount * 20))
+    ratio = max(2, min(20, int(duck_amount * 20)))
 
     # Complex filter: duck music using voice as sidechain, then mix
     fc = (
@@ -172,7 +172,7 @@ def auto_duck_video(
     if on_progress:
         on_progress(5, "Preparing audio mix...")
 
-    ratio = max(2, int(duck_amount * 20))
+    ratio = max(2, min(20, int(duck_amount * 20)))
 
     # Use video audio as sidechain to duck music, then mix, then combine with video
     fc = (

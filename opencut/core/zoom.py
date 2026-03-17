@@ -5,12 +5,15 @@ Analyzes audio energy to determine emphasis points and generates
 zoom/scale keyframe data for timeline export.
 """
 
+import logging
 from dataclasses import dataclass
 from typing import List, Optional
 
 from ..utils.config import ZoomConfig
 from .audio import find_emphasis_points
 from .silence import TimeSegment
+
+logger = logging.getLogger("opencut")
 
 
 @dataclass
@@ -65,11 +68,15 @@ def generate_zoom_events(
         config = ZoomConfig()
 
     # Find emphasis points in the audio
-    emphasis = find_emphasis_points(
-        filepath,
-        threshold=config.energy_threshold,
-        min_interval=config.min_interval,
-    )
+    try:
+        emphasis = find_emphasis_points(
+            filepath,
+            threshold=config.energy_threshold,
+            min_interval=config.min_interval,
+        )
+    except Exception as exc:
+        logger.warning("Could not extract emphasis points: %s", exc)
+        return []
 
     # Filter to only speech segments if provided
     if speech_segments:

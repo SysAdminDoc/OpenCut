@@ -323,6 +323,9 @@ def _split_segments(
             # No word timestamps — split by character count with proportional timing
             words = text.split()
             total_chars = len(text)
+            if total_chars == 0:
+                result.append(seg)
+                continue
             chunk_size = max_line_length * max_lines
 
             current_chunk = ""

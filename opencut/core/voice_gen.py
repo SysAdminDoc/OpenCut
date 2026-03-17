@@ -228,10 +228,11 @@ def edge_tts_with_subtitles(
     try:
         asyncio.run(_generate())
     except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-        loop.run_until_complete(_generate())
-        loop.close()
+        # Already inside an event loop — run in a dedicated thread
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor() as pool:
+            future = pool.submit(asyncio.run, _generate())
+            future.result(timeout=120)
 
     if on_progress:
         on_progress(100, "Speech + subtitles generated!")
@@ -295,6 +296,7 @@ def kokoro_generate(
         on_progress(80, "Saving audio...")
 
     # Save as WAV
+    _ensure_package("soundfile")
     import soundfile as sf
     sf.write(output_path, samples, 24000)
 

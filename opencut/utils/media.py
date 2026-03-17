@@ -5,11 +5,14 @@ Extracts video/audio metadata needed for timeline calculations and XML export.
 """
 
 import json
+import logging
 import os
 import subprocess
 from dataclasses import dataclass, field
 from fractions import Fraction
 from typing import Optional
+
+logger = logging.getLogger("opencut")
 
 
 @dataclass
@@ -153,7 +156,10 @@ def probe(filepath: str) -> MediaInfo:
     except subprocess.TimeoutExpired:
         raise RuntimeError(f"ffprobe timed out on '{filepath}'")
 
-    data = json.loads(result.stdout)
+    try:
+        data = json.loads(result.stdout)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"ffprobe returned invalid JSON for '{filepath}': {e}") from e
     streams = data.get("streams", [])
     fmt = data.get("format", {})
 
@@ -204,7 +210,7 @@ def probe(filepath: str) -> MediaInfo:
                 try:
                     bit_depth = int(bits_raw)
                 except ValueError:
-                    pass
+                    logger.warning("Could not parse bit depth '%s', using default 16", bits_raw)
 
             info.audio = AudioStream(
                 sample_rate=int(stream.get("sample_rate", 48000)),

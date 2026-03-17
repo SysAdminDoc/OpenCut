@@ -110,8 +110,12 @@ def detect_silences(
         else:
             # Silence extends to end of file — use pre-probed duration
             if file_duration <= 0:
-                info = probe(filepath)
-                file_duration = info.duration
+                try:
+                    info = probe(filepath)
+                    file_duration = info.duration
+                except Exception:
+                    # If probe fails, skip this trailing silence
+                    continue
             end = file_duration
 
         if end > start:
