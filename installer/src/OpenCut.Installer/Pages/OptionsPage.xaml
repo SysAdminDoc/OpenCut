@@ -59,6 +59,20 @@
                 <!-- Separator -->
                 <Rectangle Height="1" Fill="{DynamicResource Surface1}" Margin="0,12,0,12" />
 
+                <!-- Optional Tools -->
+                <TextBlock Text="Optional Tools" FontSize="13" FontWeight="SemiBold"
+                           Foreground="{DynamicResource Subtext1}" Margin="0,0,0,6" />
+                <CheckBox x:Name="OptionalDepsCheck" Content="Install optional Python tools (requires Python in PATH)"
+                          Checked="OptionalDepsCheck_Changed" Unchecked="OptionalDepsCheck_Changed" />
+                <StackPanel x:Name="OptionalDepsPanel" Margin="20,6,0,0" Visibility="Collapsed">
+                    <CheckBox x:Name="DepAutoEditor" Content="auto-editor (motion-based auto-editing)" IsChecked="True" />
+                    <CheckBox x:Name="DepEdgeTts" Content="edge-tts (text-to-speech)" IsChecked="True" />
+                    <CheckBox x:Name="DepMediapipe" Content="mediapipe (face tracking for reframe)" IsChecked="True" />
+                </StackPanel>
+
+                <!-- Separator -->
+                <Rectangle Height="1" Fill="{DynamicResource Surface1}" Margin="0,12,0,12" />
+
                 <!-- AI Models -->
                 <TextBlock Text="AI Models" FontSize="13" FontWeight="SemiBold"
                            Foreground="{DynamicResource Subtext1}" Margin="0,0,0,6" />

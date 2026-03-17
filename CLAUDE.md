@@ -232,6 +232,11 @@
 - **Registry InstallPath** — Inno Setup now writes HKCU `Software\OpenCut\InstallPath`
 - **PyInstaller spec** — added mediapipe, auto_editor, transnetv2, resemble_enhance hidden imports
 - **ExtendScript safety** — getProjectFolder() null-checks `f.parent` before accessing `.fsName`
+- **Frozen-build pip install** — `safe_pip_install` uses system Python from PATH when running as PyInstaller exe
+- **System site-packages discovery** — `_setup_system_site_packages()` in server.py appends system Python's site-packages to `sys.path` for frozen builds
+- **Installer optional deps** — OptionsPage has "Optional Tools" section (auto-editor, edge-tts, mediapipe) with DependencyInstaller service
+- **Condensed media section** — reduced padding/margins throughout #clipSection for tighter vertical layout
+- **`.btn-ghost` CSS class** — added transparent/bordered button style for the "Recent" button
 
 ## v1.3.0 New Optional Dependencies
 ```toml
@@ -247,7 +252,8 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **Payload**: Self-extracting exe (ZIP appended with `[data][8-byte size][OCPAYLOAD]` trailer) or adjacent `payload.zip` fallback
 - **Key Files**:
   - `Models/AppConstants.cs` — version, GUIDs, registry paths
-  - `Services/InstallEngine.cs` — orchestrator: 16 install steps matching Inno Setup operations
+  - `Services/InstallEngine.cs` — orchestrator: 17 install steps (step 16 = optional Python deps)
+  - `Services/DependencyInstaller.cs` — finds system Python, pip installs optional deps (auto-editor, edge-tts, mediapipe)
   - `Services/UninstallEngine.cs` — reverse all operations, schedule self-delete
   - `Themes/CatppuccinMocha.xaml` — full theme with all control styles
   - `Controls/LogPanel.xaml` — auto-scrolling color-coded log

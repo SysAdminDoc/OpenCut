@@ -10,6 +10,8 @@ public class InstallConfig
     public bool SetPlayerDebugMode { get; set; } = true;
     public bool DownloadWhisperModel { get; set; }
     public string WhisperModel { get; set; } = "turbo";
+    public bool InstallOptionalDeps { get; set; }
+    public List<string> SelectedDeps { get; set; } = [];
 
     public string ServerPath => Path.Combine(InstallPath, "server");
     public string FfmpegPath => Path.Combine(InstallPath, "ffmpeg");
