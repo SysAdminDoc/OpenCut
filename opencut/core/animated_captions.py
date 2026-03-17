@@ -18,32 +18,9 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-
-def _ensure_package(pkg, pip_name=None, on_progress=None):
-    try:
-        __import__(pkg)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        try:
-            safe_pip_install(pip_name)
-        except RuntimeError:
-            return False
-        try:
-            __import__(pkg)
-            return True
-        except ImportError:
-            return False
-
-
 
 def _get_video_info(fp):
     import json
@@ -162,8 +139,8 @@ def render_animated_captions(
         position_y: Vertical position as fraction of height (0=top, 1=bottom).
         max_words_per_line: Words per caption line before wrapping.
     """
-    _ensure_package("cv2", "opencv-python-headless", on_progress)
-    _ensure_package("PIL", "Pillow", on_progress)
+    ensure_package("cv2", "opencv-python-headless", on_progress)
+    ensure_package("PIL", "Pillow", on_progress)
     import cv2
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont

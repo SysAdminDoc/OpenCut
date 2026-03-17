@@ -16,32 +16,9 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-
-def _ensure_package(pkg, pip_name=None, on_progress=None):
-    try:
-        __import__(pkg)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        try:
-            safe_pip_install(pip_name)
-        except RuntimeError:
-            return False
-        try:
-            __import__(pkg)
-            return True
-        except ImportError:
-            return False
-
-
 
 def _get_video_info(fp):
     import json
@@ -107,10 +84,10 @@ def generate_masks_sam2(
 
     Returns dict with mask_dir (PNG masks per frame) and frame_count.
     """
-    if not _ensure_package("sam2", "sam2", on_progress):
+    if not ensure_package("sam2", "sam2", on_progress):
         raise RuntimeError("SAM 2 not installed. Run: pip install sam2")
 
-    _ensure_package("cv2", "opencv-python-headless")
+    ensure_package("cv2", "opencv-python-headless")
     import cv2
     import numpy as np
     import torch
@@ -204,10 +181,10 @@ def remove_watermark_lama(
         mask_region: {"x": int, "y": int, "width": int, "height": int}
             Rectangle covering the watermark area.
     """
-    if not _ensure_package("simple_lama_inpainting", "simple-lama-inpainting", on_progress):
+    if not ensure_package("simple_lama_inpainting", "simple-lama-inpainting", on_progress):
         raise RuntimeError("simple-lama-inpainting not installed")
 
-    _ensure_package("cv2", "opencv-python-headless")
+    ensure_package("cv2", "opencv-python-headless")
     import cv2
     import numpy as np
     from simple_lama_inpainting import SimpleLama

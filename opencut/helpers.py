@@ -109,6 +109,31 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0) -> str:
 
 
 # ---------------------------------------------------------------------------
+# Shared Package Installer
+# ---------------------------------------------------------------------------
+def ensure_package(pkg: str, pip_name: str = None, on_progress=None) -> bool:
+    """Import package, auto-install via safe_pip_install if missing. Returns True on success."""
+    try:
+        __import__(pkg)
+        return True
+    except ImportError:
+        pip_name = pip_name or pkg
+        if on_progress:
+            on_progress(5, f"Installing {pip_name}...")
+        logger.info(f"Installing missing dependency: {pip_name}")
+        from opencut.security import safe_pip_install
+        try:
+            safe_pip_install(pip_name)
+        except RuntimeError:
+            return False
+        try:
+            __import__(pkg)
+            return True
+        except ImportError:
+            return False
+
+
+# ---------------------------------------------------------------------------
 # Lazy Import Helper
 # ---------------------------------------------------------------------------
 def _try_import(name: str):

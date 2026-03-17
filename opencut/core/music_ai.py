@@ -15,29 +15,9 @@ import os
 import tempfile
 from typing import Callable, Dict, Optional
 
+from opencut.helpers import ensure_package
+
 logger = logging.getLogger("opencut")
-
-
-def _ensure_package(pkg, pip_name=None, on_progress=None):
-    try:
-        __import__(pkg)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        try:
-            safe_pip_install(pip_name)
-        except RuntimeError:
-            return False
-        try:
-            __import__(pkg)
-            return True
-        except ImportError:
-            return False
-
 
 # ---------------------------------------------------------------------------
 # Availability
@@ -82,7 +62,7 @@ def generate_music(
         temperature: Sampling temperature (higher = more creative).
         top_k: Top-k sampling parameter.
     """
-    if not _ensure_package("audiocraft", "audiocraft", on_progress):
+    if not ensure_package("audiocraft", "audiocraft", on_progress):
         raise RuntimeError(
             "AudioCraft not installed. Run: pip install audiocraft\n"
             "Requires PyTorch with CUDA support."
@@ -151,7 +131,7 @@ def generate_music_with_melody(
     The melody audio is used as conditioning - MusicGen will generate
     new audio that follows the same melodic contour.
     """
-    if not _ensure_package("audiocraft", "audiocraft", on_progress):
+    if not ensure_package("audiocraft", "audiocraft", on_progress):
         raise RuntimeError("AudioCraft not installed")
 
     if not os.path.isfile(melody_path):
@@ -211,7 +191,7 @@ def continue_audio(
     """
     Continue/extend existing audio with AI-generated content.
     """
-    if not _ensure_package("audiocraft", "audiocraft", on_progress):
+    if not ensure_package("audiocraft", "audiocraft", on_progress):
         raise RuntimeError("AudioCraft not installed")
 
     if on_progress:

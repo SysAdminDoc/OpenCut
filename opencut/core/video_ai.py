@@ -19,7 +19,7 @@ import tempfile
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -30,20 +30,6 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # ---------------------------------------------------------------------------
 # Dependency management
 # ---------------------------------------------------------------------------
-def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable = None):
-    """Import a package, installing it if missing."""
-    try:
-        __import__(pkg_name)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg_name
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        safe_pip_install(pip_name)
-        return True
-
 
 def _output_path(input_path: str, suffix: str, output_dir: str = "") -> str:
     """Generate output path with suffix."""
@@ -122,9 +108,9 @@ def upscale_video(
         model: Model name (realesrgan-x4plus, realesrgan-x4plus-anime).
         denoise_strength: Denoise during upscale (0.0-1.0).
     """
-    _ensure_package("realesrgan", "realesrgan", on_progress)
-    _ensure_package("basicsr", "basicsr", on_progress)
-    _ensure_package("cv2", "opencv-python-headless", on_progress)
+    ensure_package("realesrgan", "realesrgan", on_progress)
+    ensure_package("basicsr", "basicsr", on_progress)
+    ensure_package("cv2", "opencv-python-headless", on_progress)
 
     if output_path is None:
         output_path = _output_path(input_path, f"upscale_{scale}x", output_dir)
@@ -270,8 +256,8 @@ def remove_background(
         bg_image: Path to background image/video.
         alpha_only: If True, output alpha matte only.
     """
-    _ensure_package("rembg", "rembg[gpu]", on_progress)
-    _ensure_package("cv2", "opencv-python-headless", on_progress)
+    ensure_package("rembg", "rembg[gpu]", on_progress)
+    ensure_package("cv2", "opencv-python-headless", on_progress)
 
     if output_path is None:
         suffix = "nobg" if not bg_color else "newbg"

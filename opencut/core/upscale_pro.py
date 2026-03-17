@@ -17,31 +17,9 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-
-def _ensure_package(pkg, pip_name=None, on_progress=None):
-    try:
-        __import__(pkg)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        try:
-            safe_pip_install(pip_name)
-        except RuntimeError:
-            return False
-        try:
-            __import__(pkg)
-            return True
-        except ImportError:
-            return False
-
 
 def _get_video_info(fp):
     import json
@@ -134,9 +112,9 @@ def upscale_realesrgan(
     Upscale video using Real-ESRGAN with frame extraction pipeline.
     Better quality than lanczos, GPU recommended. Model ~67MB.
     """
-    if not _ensure_package("realesrgan", "realesrgan", on_progress):
+    if not ensure_package("realesrgan", "realesrgan", on_progress):
         raise RuntimeError("Real-ESRGAN not installed")
-    _ensure_package("cv2", "opencv-python-headless")
+    ensure_package("cv2", "opencv-python-headless")
 
     import cv2
     import torch

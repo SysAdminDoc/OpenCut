@@ -16,22 +16,9 @@ import logging
 import os
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.helpers import ensure_package
+
 logger = logging.getLogger("opencut")
-
-
-def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable = None):
-    try:
-        __import__(pkg_name)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg_name
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        safe_pip_install(pip_name)
-        return True
-
 
 # ---------------------------------------------------------------------------
 # Availability Checks
@@ -89,7 +76,7 @@ def whisperx_transcribe(
     Returns:
         Dict with segments, each containing words with precise timestamps.
     """
-    _ensure_package("whisperx", "whisperx", on_progress)
+    ensure_package("whisperx", "whisperx", on_progress)
     import torch
     import whisperx
 
@@ -228,8 +215,8 @@ def translate_text(
     CTranslate2 is already a dependency of faster-whisper.
     Uses the distilled 600M NLLB model for good quality with fast inference.
     """
-    _ensure_package("ctranslate2", "ctranslate2", on_progress)
-    _ensure_package("sentencepiece", "sentencepiece", on_progress)
+    ensure_package("ctranslate2", "ctranslate2", on_progress)
+    ensure_package("sentencepiece", "sentencepiece", on_progress)
     import ctranslate2
     import sentencepiece
 
@@ -238,7 +225,7 @@ def translate_text(
     if not os.path.isdir(model_dir):
         if on_progress:
             on_progress(10, "Downloading NLLB translation model (~1.2GB)...")
-        _ensure_package("huggingface_hub", "huggingface-hub", on_progress)
+        ensure_package("huggingface_hub", "huggingface-hub", on_progress)
         from huggingface_hub import snapshot_download
         snapshot_download(
             "JustFrederik/nllb-200-distilled-600M-ct2-float16",
@@ -300,8 +287,8 @@ def translate_segments(
     """
     Translate a list of caption segments, preserving timestamps.
     """
-    _ensure_package("ctranslate2", "ctranslate2", on_progress)
-    _ensure_package("sentencepiece", "sentencepiece", on_progress)
+    ensure_package("ctranslate2", "ctranslate2", on_progress)
+    ensure_package("sentencepiece", "sentencepiece", on_progress)
     import ctranslate2
     import sentencepiece
 
@@ -310,7 +297,7 @@ def translate_segments(
     if not os.path.isdir(model_dir):
         if on_progress:
             on_progress(10, "Downloading NLLB model (~1.2GB)...")
-        _ensure_package("huggingface_hub", "huggingface-hub", on_progress)
+        ensure_package("huggingface_hub", "huggingface-hub", on_progress)
         from huggingface_hub import snapshot_download
         snapshot_download(
             "JustFrederik/nllb-200-distilled-600M-ct2-float16",
@@ -388,7 +375,7 @@ def segments_to_ass_karaoke(
 
     Uses \\kf (smooth fill) for word-by-word highlight animation.
     """
-    _ensure_package("pysubs2", "pysubs2", on_progress)
+    ensure_package("pysubs2", "pysubs2", on_progress)
     import pysubs2
 
     subs = pysubs2.SSAFile()
@@ -470,7 +457,7 @@ def convert_subtitle_format(
 
     Supported formats: srt, ass, ssa, vtt, microdvd, json, txt
     """
-    _ensure_package("pysubs2", "pysubs2", on_progress)
+    ensure_package("pysubs2", "pysubs2", on_progress)
     import pysubs2
 
     if output_path is None:

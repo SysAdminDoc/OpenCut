@@ -16,31 +16,9 @@ import os
 import tempfile
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-
-def _ensure_package(pkg, pip_name=None, on_progress=None):
-    try:
-        __import__(pkg)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        try:
-            safe_pip_install(pip_name)
-        except RuntimeError:
-            return False
-        try:
-            __import__(pkg)
-            return True
-        except ImportError:
-            return False
-
 
 # ---------------------------------------------------------------------------
 # Availability
@@ -82,9 +60,9 @@ def enhance_faces(
         model: "gfpgan" (default, best general quality).
         upscale: Face upscale factor (1-4).
     """
-    if not _ensure_package("gfpgan", "gfpgan", on_progress):
+    if not ensure_package("gfpgan", "gfpgan", on_progress):
         raise RuntimeError("GFPGAN not installed. Run: pip install gfpgan")
-    _ensure_package("cv2", "opencv-python-headless")
+    ensure_package("cv2", "opencv-python-headless")
 
     import cv2
     from gfpgan import GFPGANer
@@ -195,10 +173,10 @@ def swap_face(
     Args:
         reference_face: Path to image containing the source face.
     """
-    if not _ensure_package("insightface", "insightface", on_progress):
+    if not ensure_package("insightface", "insightface", on_progress):
         raise RuntimeError("InsightFace not installed")
-    _ensure_package("cv2", "opencv-python-headless")
-    _ensure_package("onnxruntime", "onnxruntime")
+    ensure_package("cv2", "opencv-python-headless")
+    ensure_package("onnxruntime", "onnxruntime")
 
     import cv2
     import insightface

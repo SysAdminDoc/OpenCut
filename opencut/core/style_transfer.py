@@ -20,7 +20,7 @@ import urllib.request
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -79,19 +79,6 @@ STYLE_MODELS = {
         "filename": "starry_night.t7",
     },
 }
-
-
-def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable = None):
-    try:
-        __import__(pkg_name)
-    except ImportError:
-        pip_name = pip_name or pkg_name
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        safe_pip_install(pip_name)
-
 
 def _get_video_info(filepath: str) -> Dict:
     import json as _json
@@ -165,7 +152,7 @@ def style_transfer_video(
         style_name: Name from STYLE_MODELS (candy, mosaic, etc.).
         intensity: Style blend intensity (0.0-1.0). 1.0 = full style.
     """
-    _ensure_package("cv2", "opencv-python-headless", on_progress)
+    ensure_package("cv2", "opencv-python-headless", on_progress)
     import cv2
     import numpy as np
 
