@@ -17,7 +17,9 @@ import shutil
 import subprocess
 import tempfile
 from pathlib import Path
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
+
+from opencut.helpers import run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -41,15 +43,6 @@ def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable =
         from opencut.security import safe_pip_install
         safe_pip_install(pip_name)
         return True
-
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 3600) -> str:
-    """Run FFmpeg command, return stderr."""
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        err = result.stderr.decode(errors="replace")
-        raise RuntimeError(f"FFmpeg error: {err[-500:]}")
-    return result.stderr.decode(errors="replace")
 
 
 def _output_path(input_path: str, suffix: str, output_dir: str = "") -> str:
@@ -183,7 +176,7 @@ def upscale_video(
     try:
         # Extract frames
         info = _get_video_info(input_path)
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             os.path.join(frames_in, "frame_%06d.png"),
@@ -216,7 +209,7 @@ def upscale_video(
             on_progress(92, "Encoding output video...")
 
         # Reassemble with audio
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y",
             "-framerate", str(info["fps"]),
@@ -305,7 +298,7 @@ def remove_background(
         if on_progress:
             on_progress(10, "Extracting frames...")
 
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             os.path.join(frames_in, "frame_%06d.png"),
@@ -347,7 +340,7 @@ def remove_background(
 
         # Use ProRes for alpha, H.264 for opaque
         if not bg_color and not bg_image and not alpha_only:
-            _run_ffmpeg([
+            run_ffmpeg([
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
                 "-y",
                 "-framerate", str(info["fps"]),
@@ -360,7 +353,7 @@ def remove_background(
                 output_path,
             ])
         else:
-            _run_ffmpeg([
+            run_ffmpeg([
                 "ffmpeg", "-hide_banner", "-loglevel", "error",
                 "-y",
                 "-framerate", str(info["fps"]),
@@ -441,7 +434,7 @@ def frame_interpolate(
         output_path,
     ]
 
-    _run_ffmpeg(cmd, timeout=7200)
+    run_ffmpeg(cmd, timeout=7200)
 
     if on_progress:
         on_progress(100, f"Interpolated to {target_fps:.0f}fps")
@@ -486,7 +479,7 @@ def video_denoise(
         "-c:a", "copy",
         output_path,
     ]
-    _run_ffmpeg(cmd, timeout=7200)
+    run_ffmpeg(cmd, timeout=7200)
 
     if on_progress:
         on_progress(100, "Video denoised")

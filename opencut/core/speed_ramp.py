@@ -18,14 +18,9 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import run_ffmpeg
+
 logger = logging.getLogger("opencut")
-
-
-def _run_ffmpeg(cmd: List[str], timeout: int = 7200) -> str:
-    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {result.stderr.decode(errors='replace')[-500:]}")
-    return result.stderr.decode(errors="replace")
 
 
 def _get_duration(filepath: str) -> float:
@@ -116,7 +111,7 @@ def change_speed(
     cmd += ["-c:v", "libx264", "-crf", "18", "-preset", "medium", "-pix_fmt", "yuv420p"]
     cmd.append(output_path)
 
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=7200)
 
     if on_progress:
         on_progress(100, f"Speed changed to {speed}x")
@@ -179,7 +174,7 @@ def reverse_video(
 
     cmd += ["-c:v", "libx264", "-crf", "18", "-preset", "medium", "-pix_fmt", "yuv420p"]
     cmd.append(output_path)
-    _run_ffmpeg(cmd)
+    run_ffmpeg(cmd, timeout=7200)
 
     if on_progress:
         on_progress(100, "Video reversed!")
@@ -266,7 +261,7 @@ def speed_ramp(
                 "-pix_fmt", "yuv420p",
                 seg_path,
             ]
-            _run_ffmpeg(cmd)
+            run_ffmpeg(cmd, timeout=7200)
             segment_files.append(seg_path)
 
         if not segment_files:
@@ -281,13 +276,13 @@ def speed_ramp(
             for seg in segment_files:
                 f.write(f"file '{seg}'\n")
 
-        _run_ffmpeg([
+        run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
             "-f", "concat", "-safe", "0", "-i", list_file,
             "-c:v", "libx264", "-crf", "18", "-preset", "medium",
             "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
             output_path,
-        ])
+        ], timeout=7200)
 
         if on_progress:
             on_progress(100, "Speed ramp applied!")
