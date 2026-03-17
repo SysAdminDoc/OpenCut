@@ -12,12 +12,13 @@ Usage:
 import os
 import sys
 import time
+
 import click
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TimeElapsedColumn
 from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
+from rich.table import Table
 
 console = Console()
 
@@ -67,9 +68,9 @@ def silence(input_file, output, threshold, min_duration, padding_before, padding
     """
     print_banner()
 
-    from .utils.config import SilenceConfig, ExportConfig, get_preset
     from .core.silence import detect_speech, get_edit_summary
     from .export.premiere import export_premiere_xml
+    from .utils.config import ExportConfig, SilenceConfig, get_preset
 
     # Apply preset or manual settings
     if preset:
@@ -122,7 +123,7 @@ def silence(input_file, output, threshold, min_duration, padding_before, padding
     # Export
     console.print(f"\n[bold]Exporting:[/bold] {output}")
     export_premiere_xml(input_file, segments, output, config=ecfg)
-    console.print(f"[green bold]Done![/green bold] Import this XML into Premiere Pro via File > Import.\n")
+    console.print("[green bold]Done![/green bold] Import this XML into Premiere Pro via File > Import.\n")
 
 
 @cli.command()
@@ -141,9 +142,9 @@ def captions(input_file, output, sub_format, model, language, translate, word_ti
     """
     print_banner()
 
-    from .core.captions import transcribe, check_whisper_available
+    from .core.captions import check_whisper_available, transcribe
+    from .export.srt import export_json, export_srt, export_vtt
     from .utils.config import CaptionConfig
-    from .export.srt import export_srt, export_vtt, export_json
 
     # Check Whisper availability
     available, backend = check_whisper_available()
@@ -219,8 +220,8 @@ def podcast(input_file, output, speakers, hf_token, min_segment, seq_name):
     """
     print_banner()
 
-    from .core.diarize import diarize, check_pyannote_available
-    from .utils.config import DiarizeConfig, ExportConfig
+    from .core.diarize import check_pyannote_available, diarize
+    from .utils.config import DiarizeConfig
 
     if not check_pyannote_available():
         console.print("[red bold]Error:[/red bold] pyannote.audio not installed.\n")
@@ -281,7 +282,7 @@ def podcast(input_file, output, speakers, hf_token, min_segment, seq_name):
     console.print(f"\n[bold]Camera switches:[/bold] {len(switches)}")
 
     # TODO: Export multicam XML
-    console.print(f"\n[yellow]Multicam XML export coming in v0.2. Diarization data saved.[/yellow]\n")
+    console.print("\n[yellow]Multicam XML export coming in v0.2. Diarization data saved.[/yellow]\n")
 
 
 @cli.command()
@@ -299,10 +300,10 @@ def full(input_file, output, preset, skip_captions, skip_zoom, seq_name):
     """
     print_banner()
 
-    from .utils.config import get_preset, ExportConfig
     from .core.silence import detect_speech, get_edit_summary
     from .core.zoom import generate_zoom_events
     from .export.premiere import export_premiere_xml
+    from .utils.config import ExportConfig, get_preset
 
     cfg = get_preset(preset)
     ecfg = ExportConfig(sequence_name=seq_name)
@@ -362,7 +363,7 @@ def full(input_file, output, preset, skip_captions, skip_zoom, seq_name):
     # Export timeline
     console.print(f"\n[bold]Exporting timeline:[/bold] {xml_path}")
     export_premiere_xml(input_file, segments, xml_path, config=ecfg, zoom_events=zoom_events)
-    console.print(f"\n[green bold]Done![/green bold] Import the XML into Premiere Pro via File > Import.\n")
+    console.print("\n[green bold]Done![/green bold] Import the XML into Premiere Pro via File > Import.\n")
 
 
 @cli.command()
@@ -382,7 +383,7 @@ def info(input_file):
 
     if info.has_video:
         v = info.video
-        console.print(f"\n[bold cyan]Video:[/bold cyan]")
+        console.print("\n[bold cyan]Video:[/bold cyan]")
         console.print(f"  Resolution: {v.width}x{v.height}")
         console.print(f"  Frame Rate: {v.fps:.3f} fps (timebase={v.effective_timebase}, ntsc={v.ntsc})")
         console.print(f"  Codec: {v.codec}")
@@ -390,7 +391,7 @@ def info(input_file):
 
     if info.has_audio:
         a = info.audio
-        console.print(f"\n[bold cyan]Audio:[/bold cyan]")
+        console.print("\n[bold cyan]Audio:[/bold cyan]")
         console.print(f"  Sample Rate: {a.sample_rate} Hz")
         console.print(f"  Channels: {a.channels}")
         console.print(f"  Bit Depth: {a.bit_depth}")

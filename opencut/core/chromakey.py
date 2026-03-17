@@ -14,9 +14,8 @@ All via OpenCV + FFmpeg - zero ML dependencies.
 import logging
 import os
 import subprocess
-import sys
 import tempfile
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Optional
 
 logger = logging.getLogger("opencut")
 

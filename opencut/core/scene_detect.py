@@ -9,10 +9,9 @@ Uses FFmpeg only - no additional dependencies required.
 
 import json
 import logging
-import os
 import subprocess
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 

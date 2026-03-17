@@ -13,10 +13,8 @@ Pillow-based renderer for zero-dependency operation.
 """
 
 import logging
-import math
 import os
 import subprocess
-import sys
 import tempfile
 from typing import Callable, Dict, List, Optional
 

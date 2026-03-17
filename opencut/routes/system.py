@@ -4,7 +4,6 @@ OpenCut System Routes
 Health, shutdown, GPU, dependencies, model management, whisper installation.
 """
 
-import json
 import logging
 import os
 import shutil
@@ -14,11 +13,30 @@ import tempfile
 import threading
 import time
 
-from flask import Blueprint, request, jsonify, send_file
+from flask import Blueprint, jsonify, request, send_file
 
-from opencut.jobs import jobs, job_lock, _new_job, _update_job, _safe_error, _is_cancelled, _list_jobs_copy, _register_job_process, _unregister_job_process
-from opencut.helpers import _try_import, _try_import_from, OPENCUT_DIR
-from opencut.security import get_csrf_token, safe_pip_install, require_csrf, validate_path, validate_filepath, safe_float, safe_int, require_rate_limit, rate_limit_release
+from opencut.helpers import OPENCUT_DIR, _try_import, _try_import_from
+from opencut.jobs import (
+    _is_cancelled,
+    _list_jobs_copy,
+    _new_job,
+    _register_job_process,
+    _safe_error,
+    _unregister_job_process,
+    _update_job,
+    job_lock,
+    jobs,
+)
+from opencut.security import (
+    get_csrf_token,
+    rate_limit_release,
+    require_csrf,
+    require_rate_limit,
+    safe_int,
+    safe_pip_install,
+    validate_filepath,
+    validate_path,
+)
 from opencut.user_data import load_whisper_settings, save_whisper_settings
 
 logger = logging.getLogger("opencut")
@@ -561,10 +579,10 @@ def install_whisper():
                             lower = line.lower()
                             if "downloading" in lower:
                                 _update_job(job_id, progress=pct_base + 10,
-                                            message=f"Downloading packages...")
+                                            message="Downloading packages...")
                             elif "installing" in lower or "building" in lower:
                                 _update_job(job_id, progress=pct_base + 20,
-                                            message=f"Installing packages...")
+                                            message="Installing packages...")
                             elif "successfully installed" in lower:
                                 _update_job(job_id, progress=85,
                                             message="Verifying installation...")
@@ -908,7 +926,7 @@ def whisper_reinstall():
 def install_demucs():
     """Install Demucs for AI audio separation."""
     try:
-        result = safe_pip_install("demucs", timeout=600)
+        safe_pip_install("demucs", timeout=600)
         return jsonify({"success": True, "message": "Demucs installed successfully"})
     except RuntimeError as e:
         return jsonify({"error": str(e)}), 500

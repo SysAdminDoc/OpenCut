@@ -8,7 +8,7 @@ camera switching for multi-speaker content.
 import os
 import tempfile
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional
 
 from ..utils.config import DiarizeConfig
 from .audio import extract_audio_wav
@@ -156,8 +156,8 @@ def diarize(
             "  4. Pass token via --hf-token or HUGGINGFACE_TOKEN env var\n"
         )
 
-    from pyannote.audio import Pipeline
     import torch
+    from pyannote.audio import Pipeline
 
     # Get HF token
     hf_token = config.hf_token or os.environ.get("HUGGINGFACE_TOKEN") or os.environ.get("HF_TOKEN")

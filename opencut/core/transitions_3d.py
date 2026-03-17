@@ -162,7 +162,6 @@ def join_with_transitions(
         on_progress(5, f"Joining {len(clips)} clips with {transition}...")
 
     # Join iteratively (FFmpeg xfade only supports 2 inputs at a time)
-    import shutil
     current = clips[0]
     tmp_files = []
 

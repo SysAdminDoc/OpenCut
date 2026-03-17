@@ -12,10 +12,8 @@ Uses Manim CE if available, falls back to FFmpeg drawtext for basic animations.
 """
 
 import logging
-import math
 import os
 import subprocess
-import sys
 import tempfile
 from typing import Callable, Dict, List, Optional
 

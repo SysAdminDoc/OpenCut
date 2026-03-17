@@ -15,10 +15,9 @@ import logging
 import os
 import shutil
 import subprocess
-import sys
 import tempfile
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -133,7 +132,6 @@ def upscale_video(
     _ensure_package("realesrgan", "realesrgan", on_progress)
     _ensure_package("basicsr", "basicsr", on_progress)
     _ensure_package("cv2", "opencv-python-headless", on_progress)
-    import numpy as np
 
     if output_path is None:
         output_path = _output_path(input_path, f"upscale_{scale}x", output_dir)
@@ -142,9 +140,9 @@ def upscale_video(
         on_progress(5, "Loading upscale model...")
 
     # Import and set up Real-ESRGAN
-    from realesrgan import RealESRGANer
-    from basicsr.archs.rrdbnet_arch import RRDBNet
     import torch
+    from basicsr.archs.rrdbnet_arch import RRDBNet
+    from realesrgan import RealESRGANer
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -278,7 +276,6 @@ def remove_background(
     """
     _ensure_package("rembg", "rembg[gpu]", on_progress)
     _ensure_package("cv2", "opencv-python-headless", on_progress)
-    import numpy as np
 
     if output_path is None:
         suffix = "nobg" if not bg_color else "newbg"
@@ -290,7 +287,7 @@ def remove_background(
     if on_progress:
         on_progress(5, f"Loading background removal model ({model})...")
 
-    from rembg import remove, new_session
+    from rembg import new_session, remove
     session = new_session(model)
 
     tmp_dir = tempfile.mkdtemp(prefix="opencut_rembg_")
@@ -319,9 +316,8 @@ def remove_background(
         if on_progress:
             on_progress(15, f"Processing {total} frames...")
 
-        import cv2
+
         from PIL import Image
-        import io
 
         for i, frame_path in enumerate(frame_files):
             img = Image.open(str(frame_path))
@@ -499,7 +495,6 @@ def video_denoise(
 # ---------------------------------------------------------------------------
 def get_ai_capabilities() -> Dict:
     """Return available AI video capabilities."""
-    import importlib
     caps = {
         "upscale": check_upscale_available(),
         "rembg": check_rembg_available(),

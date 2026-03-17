@@ -5,12 +5,11 @@ Detects common filler words (um, uh, like, so, you know, etc.) and
 produces refined speech segments with those words excised.
 """
 
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Set, Tuple
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Set
 
-from .captions import CaptionSegment, TranscriptionResult, Word
+from .captions import TranscriptionResult
 from .silence import TimeSegment
-
 
 # -------------------------------------------------------------------
 # Filler word dictionary

@@ -13,11 +13,10 @@ All via FFmpeg setpts/atempo filters - zero dependencies.
 """
 
 import logging
-import math
 import os
 import subprocess
 import tempfile
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 

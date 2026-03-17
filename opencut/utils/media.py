@@ -5,11 +5,10 @@ Extracts video/audio metadata needed for timeline calculations and XML export.
 """
 
 import json
-import subprocess
 import os
+import subprocess
 from dataclasses import dataclass, field
 from fractions import Fraction
-from pathlib import Path
 from typing import Optional
 
 

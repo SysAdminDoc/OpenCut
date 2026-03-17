@@ -13,9 +13,8 @@ Pipeline: User marks object -> SAM 2 generates + tracks masks -> ProPainter fill
 import logging
 import os
 import subprocess
-import sys
 import tempfile
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -76,7 +75,7 @@ def check_sam2_available() -> bool:
 
 def check_propainter_available() -> bool:
     try:
-        import torch
+        import torch  # noqa: F401
         return os.path.isdir(os.path.expanduser("~/.opencut/models/propainter"))
     except ImportError:
         return False

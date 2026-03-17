@@ -16,7 +16,6 @@ import logging
 import math
 import os
 import subprocess
-import tempfile
 from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
@@ -371,7 +370,6 @@ def apply_lut(
         vf = f"lut3d='{escaped}'"
     else:
         # Blend: split -> apply LUT to one -> merge with original
-        orig_weight = 1.0 - intensity
         vf = (
             f"split[a][b];"
             f"[a]lut3d='{escaped}'[lut];"
@@ -450,8 +448,8 @@ def generate_lut_from_reference(
         Path to the generated .cube LUT file.
     """
     try:
-        from PIL import Image
         import numpy as np
+        from PIL import Image
     except ImportError:
         raise RuntimeError(
             "PIL and numpy are required. Install with: "
@@ -530,7 +528,6 @@ def generate_lut_from_reference(
         f.write(f"# Method: {method}, Strength: {strength}\n")
         f.write(f"LUT_SIZE {size}\n\n")
 
-        total_entries = size * size * size
         written = 0
 
         for b_i in range(size):

@@ -16,7 +16,6 @@ import logging
 import os
 import subprocess
 import tempfile
-from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")

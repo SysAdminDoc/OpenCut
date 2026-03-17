@@ -185,7 +185,7 @@ def extract_highlights(
     Returns:
         HighlightResult with ranked highlights.
     """
-    from opencut.core.llm import query_llm, LLMConfig
+    from opencut.core.llm import LLMConfig, query_llm
 
     if llm_config is None:
         llm_config = LLMConfig()
@@ -279,7 +279,7 @@ def summarize_video(
     Returns:
         Summary with text, bullet points, and topics.
     """
-    from opencut.core.llm import query_llm, LLMConfig
+    from opencut.core.llm import LLMConfig, query_llm
 
     if llm_config is None:
         llm_config = LLMConfig()

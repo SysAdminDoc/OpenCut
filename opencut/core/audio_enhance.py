@@ -11,7 +11,6 @@ import logging
 import os
 import subprocess
 import tempfile
-from typing import Callable, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -139,7 +138,8 @@ def enhance_speech(
         )
 
     try:
-        from resemble_enhance.enhancer.inference import denoise as _denoise_fn, enhance as _enhance_fn
+        from resemble_enhance.enhancer.inference import denoise as _denoise_fn
+        from resemble_enhance.enhancer.inference import enhance as _enhance_fn
     except ImportError:
         raise RuntimeError(
             "resemble-enhance is required. Install with: "

@@ -5,7 +5,6 @@ Supports multiple Whisper backends: openai-whisper, faster-whisper, whisperx.
 Falls back gracefully if Whisper is not installed.
 """
 
-import json
 import logging
 import os
 import tempfile
@@ -263,8 +262,9 @@ def transcribe(
 
 def _transcribe_openai_whisper(wav_path: str, config: CaptionConfig) -> TranscriptionResult:
     """Transcribe using the openai-whisper package."""
-    import whisper
     import os
+
+    import whisper
 
     # Use bundled model path if available
     download_root = os.environ.get("WHISPER_MODELS_DIR", None)
@@ -499,8 +499,8 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
 
 def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionResult:
     """Transcribe using WhisperX (best word-level alignment)."""
-    import whisperx
     import torch
+    import whisperx
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     compute_type = "float16" if device == "cuda" else "int8"
