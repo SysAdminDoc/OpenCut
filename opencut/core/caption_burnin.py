@@ -22,9 +22,10 @@ logger = logging.getLogger("opencut")
 
 def _run_ffmpeg(cmd: List[str], timeout: int = 7200) -> str:
     result = subprocess.run(cmd, capture_output=True, timeout=timeout)
+    stderr_text = result.stderr.decode(errors="replace")[-2000:]
     if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {result.stderr.decode(errors='replace')[-500:]}")
-    return result.stderr.decode(errors="replace")
+        raise RuntimeError(f"FFmpeg error: {stderr_text[-500:]}")
+    return stderr_text
 
 
 def _get_video_info(filepath: str) -> Dict:
@@ -74,6 +75,8 @@ def burnin_subtitles(
         directory = output_dir or os.path.dirname(video_path)
         output_path = os.path.join(directory, f"{base}_subtitled{ext}")
 
+    if not os.path.isfile(video_path):
+        raise FileNotFoundError(f"Video file not found: {video_path}")
     if not os.path.isfile(subtitle_path):
         raise FileNotFoundError(f"Subtitle file not found: {subtitle_path}")
 
@@ -114,6 +117,9 @@ def burnin_subtitles(
         output_path,
     ]
     _run_ffmpeg(cmd)
+
+    if not os.path.isfile(output_path):
+        raise RuntimeError(f"FFmpeg succeeded but output file not created: {output_path}")
 
     if on_progress:
         on_progress(100, "Subtitles burned in!")

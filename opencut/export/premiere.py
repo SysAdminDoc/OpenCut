@@ -44,7 +44,10 @@ def export_premiere_xml(
         config = ExportConfig()
 
     # Probe media for metadata
-    info = probe(filepath)
+    try:
+        info = probe(filepath)
+    except (FileNotFoundError, RuntimeError) as e:
+        raise ValueError(f"Cannot probe media file for XML export: {e}") from e
 
     # Build XML document
     xmeml = ET.Element("xmeml", version="4")
@@ -146,7 +149,7 @@ def _build_sequence(
         )
 
     # ----- Audio Track(s) -----
-    if config.include_audio and info.has_audio:
+    if config.include_audio and info.has_audio and info.audio is not None:
         audio_elem = ET.SubElement(media, "audio")
 
         # Audio format
@@ -278,7 +281,7 @@ def _add_file_element(
         _add_text(sc, "pixelaspectratio", "square")
         _add_text(sc, "fielddominance", "none")
 
-    if info.has_audio:
+    if info.has_audio and info.audio is not None:
         aud = ET.SubElement(file_media, "audio")
         sc = ET.SubElement(aud, "samplecharacteristics")
         _add_text(sc, "depth", str(info.audio.bit_depth))

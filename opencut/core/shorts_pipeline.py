@@ -65,6 +65,8 @@ def _probe_duration(filepath: str) -> float:
              "-show_format", filepath],
             capture_output=True, text=True, timeout=30,
         )
+        if result.returncode != 0 or not result.stdout.strip():
+            return 0.0
         data = json.loads(result.stdout)
         return float(data.get("format", {}).get("duration", 0))
     except Exception:
@@ -217,6 +219,13 @@ def generate_shorts(
             if on_progress:
                 on_progress(100, "No interesting segments found")
             return []
+
+        # Clamp highlight bounds to valid duration range
+        total_dur = _probe_duration(input_path)
+        if total_dur > 0:
+            for hl in highlights:
+                hl.start = max(0.0, min(total_dur, hl.start))
+                hl.end = max(hl.start + 0.1, min(total_dur, hl.end))
 
         if on_progress:
             on_progress(40, f"Found {len(highlights)} highlights")
