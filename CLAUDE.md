@@ -317,6 +317,15 @@
 - **Route parameter allowlists (audio.py)** — denoise method (`afftdn|anlmdn|rnnoise`), stem separation stems validated against known set, filler removal model validated against `VALID_WHISPER_MODELS`
 - **Thread handle tracking** — 4 routes (reframe, merge, trim, preview-frame) now store thread handles in jobs dict for cancellation support, matching the established pattern used by other routes
 
+## v1.3.1 Batch 7 Bug Fixes
+- **Stale version in settings export** — `settings.py` export bundle uses `__version__` instead of hardcoded "1.3.0"
+- **Stale version in CLI** — `cli.py` `@click.version_option` uses `__version__` instead of hardcoded "1.3.0"
+- **face_reframe `best_conf` NameError** — `best_conf` initialized to `0.5` before detection loop to prevent NameError when used in `FaceTrack()`
+- **shorts_pipeline clip overshoot** — highlight start clamped to `total_dur - 0.1` so end never exceeds file duration
+- **Caption format allowlist** — `sub_format` validated against `{srt, vtt, json, ass}` in both `/captions/generate` and `/transcript/export` routes
+- **ffprobe crash in `get_video_info()`** — checks returncode and empty `streams[]` before array access; returns safe defaults on failure
+- **parentNode null guard** — `addAudioWaveformButtons()` guards `parentNode` before calling `querySelector()`
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
