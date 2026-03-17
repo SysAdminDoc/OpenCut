@@ -4,16 +4,16 @@
 - **Backend**: Python 3.9+ / Flask with Blueprints, runs on localhost:5679
 - **Frontend**: CEP panel (HTML/CSS/JS) for Adobe Premiere Pro
 - **ExtendScript**: ES3 JSX for Premiere Pro automation (host/index.jsx)
-- **Build**: PyInstaller for exe, Inno Setup for Windows installer
+- **Build**: PyInstaller for exe, custom WPF installer (C# .NET 9) — legacy Inno Setup still present
 - **AI**: faster-whisper, demucs, pedalboard, MusicGen, Real-ESRGAN, rembg, etc.
 
 ## Key Files
 
 ### Backend (Python)
-- `opencut/server.py` (~400 lines) - Flask app creation, startup, port management, download_models
-- `opencut/security.py` (~180 lines) - Path validation, CSRF tokens, safe_pip_install, safe_float/safe_int (with range clamp + inf/nan rejection), validate_filepath, VALID_WHISPER_MODELS, rate_limit/require_rate_limit
-- `opencut/jobs.py` (~190 lines) - Job state, _new_job, _update_job, _kill_job_process, _get_job_copy, _list_jobs_copy, _unregister_job_process, TooManyJobsError, MAX_CONCURRENT_JOBS=10, async_job decorator
-- `opencut/helpers.py` (~430 lines) - _try_import, output paths, FFmpegCmd builder, FFmpeg progress runner, deferred temp cleanup, job time tracking, compute_estimate
+- `opencut/server.py` (~720 lines) - Flask app creation, startup, port management, download_models, `_setup_system_site_packages()` for frozen builds
+- `opencut/security.py` (~280 lines) - Path validation, CSRF tokens, safe_pip_install (frozen-build aware via `_find_system_python()`), safe_float/safe_int (with range clamp + inf/nan rejection), validate_filepath, VALID_WHISPER_MODELS, rate_limit/require_rate_limit
+- `opencut/jobs.py` (~215 lines) - Job state, _new_job, _update_job, _kill_job_process, _get_job_copy, _list_jobs_copy, _unregister_job_process, TooManyJobsError, MAX_CONCURRENT_JOBS=10, async_job decorator
+- `opencut/helpers.py` (~470 lines) - _try_import, output paths, FFmpegCmd builder, FFmpeg progress runner, deferred temp cleanup, job time tracking, compute_estimate
 - `opencut/errors.py` (~60 lines) - OpenCutError exception class with typed codes (MISSING_DEPENDENCY, FILE_NOT_FOUND, GPU_OUT_OF_MEMORY, INVALID_INPUT, OPERATION_FAILED), register_error_handlers
 - `opencut/checks.py` (~90 lines) - Centralized dependency availability checks (demucs, watermark, pedalboard, audiocraft, edge_tts, rembg, upscale, scenedetect, auto-editor, transnetv2, resemble-enhance, ollama)
 - `opencut/user_data.py` (~100 lines) - Thread-safe JSON file access for user settings (per-file locks, normalized lock keys)
@@ -32,18 +32,18 @@
 
 ### Route Blueprints (`opencut/routes/`)
 - `__init__.py` - `register_blueprints(app)` registers all 6 Blueprints
-- `system.py` (~1100 lines) - /health, /shutdown, /info, /gpu/*, /dependencies, /file, /whisper/*, /llm/*
-- `audio.py` (~1815 lines) - /silence, /silence/speed-up, /fillers, /audio/*, /audio/enhance, /audio/pro/*, /audio/tts/*, /audio/gen/*
-- `captions.py` (~1210 lines) - /captions/*, /transcript/*, /transcript/summarize, /full, /captions/burnin/*
-- `video.py` (~3390 lines) - /video/*, /video/auto-edit, /video/reframe/face, /video/highlights, /video/lut/generate-from-ref, /video/shorts-pipeline, /fx/*, /ai/*, /export/*
-- `jobs_routes.py` (~190 lines) - /status/*, /cancel/*, /cancel-all, /jobs, /stream/*, /queue/*
+- `system.py` (~1130 lines) - /health, /shutdown, /info, /gpu/*, /dependencies, /file, /whisper/*, /llm/*
+- `audio.py` (~1840 lines) - /silence, /silence/speed-up, /fillers, /audio/*, /audio/enhance, /audio/pro/*, /audio/tts/*, /audio/gen/*
+- `captions.py` (~1255 lines) - /captions/*, /transcript/*, /transcript/summarize, /full, /captions/burnin/*
+- `video.py` (~3475 lines) - /video/*, /video/auto-edit, /video/reframe/face, /video/highlights, /video/lut/generate-from-ref, /video/shorts-pipeline, /fx/*, /ai/*, /export/*
+- `jobs_routes.py` (~280 lines) - /status/*, /cancel/*, /cancel-all, /jobs, /stream/*, /queue/*
 - `settings.py` (~200 lines) - /presets/*, /favorites/*, /workflows/*, /settings/import|export
 
 ### Frontend (CEP Panel)
 - `extension/com.opencut.panel/client/main.js` (~5770 lines) - Frontend controller (includes PremiereBridge UXP abstraction)
 - `extension/com.opencut.panel/client/index.html` (~2710 lines) - UI layout (sidebar + content-area, 6 tabs)
-- `extension/com.opencut.panel/client/style.css` (~3890 lines) - Themes & styles (sidebar navigation)
-- `extension/com.opencut.panel/host/index.jsx` (~1150 lines) - ExtendScript host
+- `extension/com.opencut.panel/client/style.css` (~3910 lines) - Themes & styles (sidebar navigation)
+- `extension/com.opencut.panel/host/index.jsx` (~1190 lines) - ExtendScript host
 
 ### Build
 - `opencut_server.spec` - PyInstaller spec
@@ -90,7 +90,8 @@
 - `.editorconfig` - Editor indent/encoding rules (4-space Python, 2-space JS/CSS/HTML)
 - `.pre-commit-config.yaml` - ruff lint+format, trailing whitespace, EOF fixer, YAML/JSON checks
 - `DEVELOPMENT.md` - Developer setup guide (backend, CEP, building, linting)
-- CI: `.github/workflows/build.yml` includes ruff lint + import smoke tests before PyInstaller build
+- CI: `.github/workflows/build.yml` includes ruff lint (`--select E,F,I --ignore E501`) + import smoke tests before PyInstaller build
+- Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
 - Current: **v1.3.0**
@@ -116,6 +117,9 @@
 - `FFmpegCmd` builder in helpers.py — use `.build()` for new FFmpeg commands, don't construct raw lists
 - Dependency checks live in `opencut/checks.py` — don't duplicate `check_X_available()` in route files
 - Deferred temp cleanup: `_schedule_temp_cleanup(path)` retries with exponential backoff on Windows
+- **Never `git add -A`** — `installer/bin/`, `installer/obj/`, `installer/publish/` are build artifacts NOT in `.gitignore` (they're tracked in the repo). Use specific file paths when staging.
+- **Frozen builds** — `sys.executable` points to the exe, not Python. `safe_pip_install()` and `_setup_system_site_packages()` detect frozen state and find system Python from PATH instead.
+- **Ruff CI rules** — CI runs `ruff check opencut/ --select E,F,I --ignore E501`. Codebase is fully lint-clean as of v1.3.0. Use `# noqa: F401` for intentional lazy imports, `# noqa: E402` for delayed imports, `# noqa: F821` for closure-scoped forward refs.
 
 ## v1.1.0 Features Added
 - Preset save/load system (backend + UI)
@@ -237,6 +241,7 @@
 - **Installer optional deps** — OptionsPage has "Optional Tools" section (auto-editor, edge-tts, mediapipe) with DependencyInstaller service
 - **Condensed media section** — reduced padding/margins throughout #clipSection for tighter vertical layout
 - **`.btn-ghost` CSS class** — added transparent/bordered button style for the "Recent" button
+- **Ruff lint cleanup** — fixed 275+ lint errors across 51 files (unused imports/variables, import sorting, noqa annotations for intentional patterns)
 
 ## v1.3.0 New Optional Dependencies
 ```toml
