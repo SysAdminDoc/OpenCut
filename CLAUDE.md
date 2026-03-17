@@ -300,6 +300,14 @@
 - **Time object for insertClip** — index.jsx uses `new Time()` instead of string ticks for Premiere Pro API
 - **Bare subprocess removed** — deleted `import subprocess` inside `_process()`, uses `_sp` alias consistently (video.py)
 
+## v1.3.1 Batch 5 Bug Fixes
+- **ffprobe returncode check** — `detect_scenes()` and `detect_scenes_ml()` in scene_detect.py now warn on non-zero ffprobe returncode before json.loads
+- **safeFixed() expansion** — 7 additional `.toFixed()` call sites in main.js converted to `safeFixed()` (file info fps/sample_rate/file_size, loudness LUFS/dBTP/LU, beat bpm/confidence, scene avg_scene_length, GPU vram_mb)
+- **SSRF fix** — `list_ollama_models()` in llm.py now validates base_url hostname is localhost (matches `_query_ollama()` guard)
+- **Stale version fix** — `/health` endpoint in system.py returns `__version__` instead of hardcoded "1.3.0"
+- **Highlight regex fix** — `_parse_highlights_json()` fallback regex changed from non-greedy `\[[\s\S]*?\]` to greedy `\[\s*\{[\s\S]*\}\s*\]` to match JSON arrays of objects instead of short bracket expressions
+- **Dead code cleanup** — removed 2 orphaned `data.get()` calls in captions.py `captions_translate()`
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
