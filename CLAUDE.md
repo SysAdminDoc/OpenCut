@@ -123,6 +123,7 @@
 - **Never `git add -A`** — `installer/bin/`, `installer/obj/`, `installer/publish/` are build artifacts NOT in `.gitignore` (they're tracked in the repo). Use specific file paths when staging.
 - **Frozen builds** — `sys.executable` points to the exe, not Python. `safe_pip_install()` and `_setup_system_site_packages()` detect frozen state and find system Python from PATH instead.
 - **Ruff CI rules** — CI runs `ruff check opencut/ --select E,F,I --ignore E501`. Codebase is fully lint-clean as of v1.3.0. Use `# noqa: F401` for intentional lazy imports, `# noqa: E402` for delayed imports, `# noqa: F821` for closure-scoped forward refs.
+- **PyInstaller spec paths** — `opencut_server.spec` must use `os.path.join()` for all paths (not backslashes). Backslash paths break Linux/macOS CI runners.
 
 ## v1.1.0 Features Added
 - Preset save/load system (backend + UI)
