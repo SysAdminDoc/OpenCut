@@ -824,8 +824,6 @@ def captions_translate():
     segments = data.get("segments", [])
     source_lang = data.get("source_lang", "en")
     target_lang = data.get("target_lang", "es")
-    data.get("output_dir", "")
-    data.get("format", "srt")
     filepath = data.get("filepath", "")
 
     if filepath:
