@@ -4,6 +4,7 @@ Configuration management for OpenCut.
 Handles default settings, user preferences, and preset management.
 """
 
+import copy
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -153,8 +154,8 @@ PRESETS = {
 
 
 def get_preset(name: str) -> OpenCutConfig:
-    """Get a preset configuration by name."""
+    """Get a preset configuration by name (returns a deep copy)."""
     if name not in PRESETS:
         available = ", ".join(PRESETS.keys())
         raise ValueError(f"Unknown preset '{name}'. Available: {available}")
-    return PRESETS[name]
+    return copy.deepcopy(PRESETS[name])

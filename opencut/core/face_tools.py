@@ -119,7 +119,6 @@ def _detect_faces_mediapipe(frame, detector):
 
 def _detect_faces_haar(frame, cascade):
     """Detect faces using OpenCV Haar cascade. Returns list of (x, y, w, h)."""
-    gray = None
     import cv2
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     rects = cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=5, minSize=(30, 30))

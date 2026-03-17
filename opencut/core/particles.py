@@ -224,7 +224,7 @@ def overlay_particles(
     preset_cfg = PARTICLE_PRESETS.get(preset, PARTICLE_PRESETS["confetti"])
     info = _get_video_info(video_path)
     w, h, fps = info["width"], info["height"], info["fps"]
-    max_particles = int(preset_cfg["count"] * density)
+    max_particles = min(2000, int(preset_cfg["count"] * density))
 
     if on_progress:
         on_progress(5, f"Generating {preset} particles...")
@@ -246,9 +246,12 @@ def overlay_particles(
             if not ret:
                 break
 
-            # Spawn new particles
-            while len(particles) < max_particles:
+            # Spawn new particles (cap per-frame to avoid lag spikes)
+            spawns = 0
+            spawn_limit = max(1, max_particles // 10)
+            while len(particles) < max_particles and spawns < spawn_limit:
                 particles.append(_spawn_particle(w, h, preset_cfg))
+                spawns += 1
 
             # Create overlay
             overlay = Image.new("RGBA", (w, h), (0, 0, 0, 0))
