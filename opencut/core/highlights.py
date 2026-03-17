@@ -135,7 +135,7 @@ def _parse_highlights_json(text: str) -> List[Highlight]:
         pass
 
     # Fallback: find JSON array in response
-    match = re.search(r"\[[\s\S]*?\]", text)
+    match = re.search(r"\[\s*\{[\s\S]*\}\s*\]", text)
     if match:
         try:
             data = json.loads(match.group(0))
