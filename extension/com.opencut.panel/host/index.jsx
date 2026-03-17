@@ -723,7 +723,7 @@ function importCaptions(captionPath) {
                 try {
                     var captionTrack = seq.captionTracks[0];
                     if (captionTrack) {
-                        captionTrack.insertClip(captionItem, "0");
+                        captionTrack.insertClip(captionItem, new Time());
                         addedToTimeline = true;
                         timelineMessage = "Captions added to timeline caption track";
                     }
@@ -750,7 +750,7 @@ function importCaptions(captionPath) {
                 }
                 var vTrack = seq.videoTracks[targetTrackIdx];
                 if (vTrack) {
-                    vTrack.insertClip(captionItem, "0");
+                    vTrack.insertClip(captionItem, new Time());
                     addedToTimeline = true;
                     timelineMessage = "Captions added to video track V" + (targetTrackIdx + 1);
                 }
@@ -899,16 +899,24 @@ function importFilesToProject(filePathsJson, binName) {
     var targetBin = _findOrCreateBin(binName);
     if (!targetBin) targetBin = app.project.rootItem;
 
+    var itemsBefore = 0;
+    try { itemsBefore = targetBin.children.numItems; } catch (e) { /* ignore */ }
+
     try {
         app.project.importFiles(validPaths, false, targetBin, false);
     } catch (e) {
         return JSON.stringify({ error: "Batch import failed: " + e.toString() });
     }
 
+    var itemsAfter = 0;
+    try { itemsAfter = targetBin.children.numItems; } catch (e) { /* ignore */ }
+    var actualImported = itemsAfter - itemsBefore;
+
     return JSON.stringify({
-        success: true,
-        message: "Imported " + validPaths.length + " file(s) to " + binName,
-        imported: validPaths.length,
+        success: actualImported > 0,
+        message: "Imported " + actualImported + " of " + validPaths.length + " file(s) to " + binName,
+        imported: actualImported,
+        requested: validPaths.length,
         failed: failed.length
     });
 }

@@ -10,6 +10,7 @@ import json
 import logging
 import os
 import subprocess as _sp
+import sys
 import tempfile
 import threading
 
@@ -510,7 +511,7 @@ def audio_separate():
             with tempfile.TemporaryDirectory() as temp_out:
                 # Run demucs
                 demucs_cmd = [
-                    'python', '-m', 'demucs',
+                    sys.executable, '-m', 'demucs',
                     '--out', temp_out,
                     '-n', model,
                     '--two-stems=vocals' if set(stems) <= {'vocals', 'no_vocals'} else '',
@@ -1074,6 +1075,11 @@ def tts_generate():
     pitch = data.get("pitch", "+0Hz")
     speed = safe_float(data.get("speed", 1.0), 1.0, min_val=0.25, max_val=4.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
     if not text:
         return jsonify({"error": "No text provided"}), 400
@@ -1125,6 +1131,11 @@ def tts_subtitled():
     text = data.get("text", "").strip()
     voice = data.get("voice", "en-US-AriaNeural")
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
     if not text:
         return jsonify({"error": "No text provided"}), 400
@@ -1218,6 +1229,11 @@ def audio_gen_tone():
     """Generate a tone."""
     data = request.get_json(force=True)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
     job_id = _new_job("tone", f"{data.get('frequency', 440)}Hz")
 
@@ -1262,6 +1278,11 @@ def audio_gen_sfx():
     data = request.get_json(force=True)
     preset = data.get("preset", "swoosh")
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
     job_id = _new_job("sfx", preset)
 
@@ -1301,6 +1322,11 @@ def audio_gen_silence():
     """Generate silence/padding audio."""
     data = request.get_json(force=True)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
     duration = safe_float(data.get("duration", 1.0), 1.0, min_val=0.1, max_val=3600.0)
 
     try:
@@ -1492,6 +1518,11 @@ def audio_mix_route():
     data = request.get_json(force=True)
     tracks = data.get("tracks", [])
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
     if not tracks:
         return jsonify({"error": "No tracks to mix"}), 400
@@ -1674,6 +1705,8 @@ def audio_waveform():
                 "-of", "json", file_path
             ]
             dur_result = _sp.run(cmd, capture_output=True, text=True, timeout=10)
+            if dur_result.returncode != 0:
+                raise RuntimeError(f"ffprobe failed: {dur_result.stderr[:200]}")
             dur_data = json.loads(dur_result.stdout)
             duration = float(dur_data["format"]["duration"])
 

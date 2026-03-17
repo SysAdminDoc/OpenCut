@@ -292,7 +292,9 @@ def _detect_gpu():
             capture_output=True, text=True, timeout=5,
         )
         if result.returncode == 0 and result.stdout.strip():
-            parts = result.stdout.strip().split(",")
+            line = result.stdout.strip().split("\n")[0]  # First GPU only
+            # Use rsplit to handle GPU names containing commas (e.g. "NVIDIA GeForce RTX 4090, 24564")
+            parts = line.rsplit(",", 1)
             gpu_info["available"] = True
             gpu_info["name"] = parts[0].strip()
             gpu_info["vram_mb"] = safe_int(parts[1].strip()) if len(parts) > 1 else 0
@@ -381,7 +383,7 @@ def check_dependencies():
         "audiocraft": "audiocraft",
         "scenedetect": "scenedetect",
         "deep-translator": "deep_translator",
-        "pyannote.audio": "pyannote.audio",
+        "pyannote.audio": "pyannote.audio.pipelines",
         "mediapipe": "mediapipe",
         "torch": "torch",
         "onnxruntime": "onnxruntime",
@@ -1110,7 +1112,10 @@ def llm_test():
     """Test LLM connectivity with a simple prompt."""
     data = request.get_json(force=True)
 
-    provider = data.get("provider", "ollama").strip()
+    _VALID_LLM_PROVIDERS = {"ollama", "openai", "anthropic"}
+    provider = data.get("provider", "ollama").strip().lower()
+    if provider not in _VALID_LLM_PROVIDERS:
+        return jsonify({"success": False, "error": f"Invalid provider: {provider}. Must be one of: {', '.join(sorted(_VALID_LLM_PROVIDERS))}"}), 400
     model = data.get("model", "").strip()
     api_key = data.get("api_key", "").strip()
     base_url = data.get("base_url", "").strip()

@@ -175,10 +175,12 @@ def import_settings():
         save_presets(existing)
         imported.append("presets")
     if "favorites" in data and isinstance(data["favorites"], list):
-        save_favorites(data["favorites"])
+        favs = data["favorites"][:200]  # Cap at 200 favorites
+        save_favorites(favs)
         imported.append("favorites")
     if "workflows" in data and isinstance(data["workflows"], list):
-        save_workflows(data["workflows"])
+        wfs = data["workflows"][:100]  # Cap at 100 workflows
+        save_workflows(wfs)
         imported.append("workflows")
     return jsonify({"success": True, "imported": imported})
 

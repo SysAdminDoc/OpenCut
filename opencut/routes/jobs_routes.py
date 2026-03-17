@@ -274,11 +274,12 @@ def _process_queue():
             if job_id:
                 deadline = time.time() + 1800
                 while time.time() < deadline:
-                    with job_queue_lock:
-                        safe = _get_job_copy(job_id)
-                        if safe and safe.get("status") in ("complete", "error", "cancelled"):
+                    # Call _get_job_copy outside job_queue_lock to avoid nested lock deadlock
+                    safe = _get_job_copy(job_id)
+                    if safe and safe.get("status") in ("complete", "error", "cancelled"):
+                        with job_queue_lock:
                             entry["status"] = safe["status"]
-                            break
+                        break
                     time.sleep(1)
                 else:
                     with job_queue_lock:

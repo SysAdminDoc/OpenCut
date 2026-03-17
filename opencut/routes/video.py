@@ -238,6 +238,8 @@ def video_watermark():
                     _update_job(job_id, progress=30, message="Processing video frames...")
 
                     cap = cv2.VideoCapture(filepath)
+                    if not cap.isOpened():
+                        raise RuntimeError(f"Cannot open video: {filepath}")
                     out_video = None
                     try:
                         fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
@@ -251,6 +253,8 @@ def video_watermark():
                         _ntf.close()
                         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                         out_video = cv2.VideoWriter(temp_video, fourcc, fps, (width, height))
+                        if not out_video.isOpened():
+                            raise RuntimeError("Failed to create video writer for watermark removal")
 
                         # Two-pass: detect watermarks on key frames, then apply to all
                         detected_masks = {}
@@ -282,10 +286,14 @@ def video_watermark():
                     _update_job(job_id, progress=60, message="Inpainting frames...")
 
                     cap = cv2.VideoCapture(filepath)
+                    if not cap.isOpened():
+                        raise RuntimeError(f"Cannot reopen video: {filepath}")
                     out_video = None
                     try:
                         fourcc = cv2.VideoWriter_fourcc(*'mp4v')
                         out_video = cv2.VideoWriter(temp_video, fourcc, fps, (width, height))
+                        if not out_video.isOpened():
+                            raise RuntimeError("Failed to create video writer for inpainting pass")
                         frame_idx = 0
                         current_mask = None
 
