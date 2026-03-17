@@ -1913,13 +1913,13 @@
             stats += esc(r.summary) + "<br>";
         }
         if (r.segments !== undefined) {
-            stats += r.segments + " segments";
+            stats += Number(r.segments) + " segments";
         }
         if (r.filler_stats) {
-            stats += " | " + r.filler_stats.removed_fillers + " fillers removed (" + r.filler_stats.total_filler_time.toFixed(1) + "s)";
+            stats += " | " + Number(r.filler_stats.removed_fillers) + " fillers removed (" + safeFixed(r.filler_stats.total_filler_time, 1) + "s)";
         }
         if (r.caption_segments !== undefined) {
-            stats += (stats ? " | " : "") + r.caption_segments + " captions, " + (r.words || 0) + " words";
+            stats += (stats ? " | " : "") + Number(r.caption_segments) + " captions, " + Number(r.words || 0) + " words";
         }
         if (r.style) {
             stats += " | Style: " + esc(r.style);
@@ -1929,18 +1929,18 @@
             stats += (stats ? "<br>" : "") + "Effect applied: " + esc(r.effect);
         }
         if (r.method && r.strength !== undefined) {
-            stats += (stats ? "<br>" : "") + "Denoise: " + esc(r.method) + " (" + (r.strength * 100).toFixed(0) + "% strength)";
+            stats += (stats ? "<br>" : "") + "Denoise: " + esc(r.method) + " (" + safeFixed(r.strength * 100, 0) + "% strength)";
         }
         if (r.preset && r.target_loudness !== undefined) {
-            stats += (stats ? "<br>" : "") + "Normalized to " + r.target_loudness.toFixed(1) + " LUFS (" + esc(r.preset) + ")";
+            stats += (stats ? "<br>" : "") + "Normalized to " + safeFixed(r.target_loudness, 1) + " LUFS (" + esc(r.preset) + ")";
             if (r.input_loudness !== undefined) {
-                stats += " | Was: " + r.input_loudness.toFixed(1) + " LUFS";
+                stats += " | Was: " + safeFixed(r.input_loudness, 1) + " LUFS";
             }
         }
         if (r.bpm) {
-            stats += (stats ? "<br>" : "") + "BPM: " + r.bpm.toFixed(0) + " | " + r.total_beats + " beats";
+            stats += (stats ? "<br>" : "") + "BPM: " + safeFixed(r.bpm, 0) + " | " + Number(r.total_beats) + " beats";
             if (r.confidence !== undefined) {
-                stats += " | Confidence: " + (r.confidence * 100).toFixed(0) + "%";
+                stats += " | Confidence: " + safeFixed(r.confidence * 100, 0) + "%";
             }
         }
         // Stem separation
@@ -1954,7 +1954,7 @@
         }
         // Scene detection
         if (r.total_scenes) {
-            stats += (stats ? "<br>" : "") + "Scenes: " + r.total_scenes + " | Avg: " + r.avg_scene_length + "s";
+            stats += (stats ? "<br>" : "") + "Scenes: " + Number(r.total_scenes) + " | Avg: " + safeFixed(r.avg_scene_length, 1) + "s";
         }
 
         el.resultsStats.innerHTML = stats || "Processing complete.";
@@ -3564,6 +3564,8 @@
         if (!s) return "";
         return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
+
+    function safeFixed(v, digits) { var n = Number(v); return isFinite(n) ? n.toFixed(digits) : "0"; }
     
     // Escape for use inside JSX string arguments (handles Windows paths)
     function escPath(s) {
