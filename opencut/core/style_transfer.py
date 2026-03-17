@@ -14,13 +14,12 @@ pre-trained .t7 models from the OpenCV DNN samples.
 import logging
 import os
 import shutil
-import subprocess
 import tempfile
 import urllib.request
 from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import ensure_package, run_ffmpeg
+from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -79,28 +78,6 @@ STYLE_MODELS = {
         "filename": "starry_night.t7",
     },
 }
-
-def _get_video_info(filepath: str) -> Dict:
-    import json as _json
-    cmd = [
-        "ffprobe", "-v", "quiet", "-select_streams", "v:0",
-        "-show_entries", "stream=width,height,r_frame_rate",
-        "-of", "json", filepath,
-    ]
-    result = subprocess.run(cmd, capture_output=True, timeout=30)
-    try:
-        data = _json.loads(result.stdout.decode())
-        stream = data["streams"][0]
-        fps_parts = stream.get("r_frame_rate", "30/1").split("/")
-        fps = (float(fps_parts[0]) / float(fps_parts[1])) if len(fps_parts) == 2 and float(fps_parts[1]) else 30.0
-        return {
-            "width": int(stream.get("width", 1920)),
-            "height": int(stream.get("height", 1080)),
-            "fps": fps,
-        }
-    except Exception:
-        return {"width": 1920, "height": 1080, "fps": 30.0}
-
 
 def _download_model(style_name: str, on_progress: Optional[Callable] = None) -> str:
     """Download style model if not cached."""
@@ -173,7 +150,7 @@ def style_transfer_video(
     net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
     net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
-    info = _get_video_info(input_path)
+    info = get_video_info(input_path)
     tmp_dir = tempfile.mkdtemp(prefix="opencut_style_")
     frames_in = os.path.join(tmp_dir, "in")
     frames_out = os.path.join(tmp_dir, "out")
