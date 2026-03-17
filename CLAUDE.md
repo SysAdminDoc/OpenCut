@@ -94,7 +94,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.3.0**
+- Current: **v1.3.1**
 - All version strings: pyproject.toml, __init__.py, server.py banner, install.py, requirements.txt, index.html header + about, main.js header, style.css header
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all at once
 
