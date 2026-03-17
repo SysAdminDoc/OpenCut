@@ -308,6 +308,15 @@
 - **Highlight regex fix** — `_parse_highlights_json()` fallback regex changed from non-greedy `\[[\s\S]*?\]` to greedy `\[\s*\{[\s\S]*\}\s*\]` to match JSON arrays of objects instead of short bracket expressions
 - **Dead code cleanup** — removed 2 orphaned `data.get()` calls in captions.py `captions_translate()`
 
+## v1.3.1 Batch 6 Bug Fixes
+- **safeFixed() on model sizes** — model list display uses `safeFixed()` for `size_mb` and `total_mb` (crash on null API data)
+- **`.closest()` null guard** — `updateSilenceModeUI()` guards `.closest(".form-group")` result before accessing `.style` (3 sites)
+- **Audio tracks in getSequenceClips()** — ExtendScript now iterates `seq.audioTracks` in addition to `seq.videoTracks`, returning audio clips with `trackType: "audio"`
+- **Trim time validation** — `/video/trim` validates `start_time`/`end_time` format against `HH:MM:SS(.xxx)` regex before passing to FFmpeg
+- **Route parameter allowlists (video.py)** — denoise method (`nlmeans|highpass|gate`), face blur method+detector, upscale model, rembg model, watermark method (`delogo|lama`), scene detect method (`ffmpeg|ml`), LLM provider (`ollama|openai|anthropic`)
+- **Route parameter allowlists (audio.py)** — denoise method (`afftdn|anlmdn|rnnoise`), stem separation stems validated against known set, filler removal model validated against `VALID_WHISPER_MODELS`
+- **Thread handle tracking** — 4 routes (reframe, merge, trim, preview-frame) now store thread handles in jobs dict for cancellation support, matching the established pattern used by other routes
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
