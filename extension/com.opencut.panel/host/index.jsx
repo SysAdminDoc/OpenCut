@@ -478,7 +478,7 @@ function isProjectSaved() {
     try {
         var p = app.project.path;
         if (p && p.length > 0) {
-            return '{"saved":true,"path":"' + p.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"}';
+            return '{"saved":true,"path":"' + p.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n").replace(/\r/g, "\\r") + '"}';
         }
         return '{"saved":false,"path":""}';
     } catch (e) {

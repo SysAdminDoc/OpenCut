@@ -114,8 +114,13 @@ def chromakey_video(
     upper_hsv = np.array(upper, dtype=np.uint8)
 
     fg_cap = cv2.VideoCapture(fg_path)
+    if not fg_cap.isOpened():
+        raise RuntimeError(f"Cannot open foreground video: {fg_path}")
     bg_is_video = bg_path.lower().endswith(('.mp4', '.mov', '.avi', '.mkv', '.webm'))
     bg_cap = cv2.VideoCapture(bg_path) if bg_is_video else None
+    if bg_is_video and not bg_cap.isOpened():
+        fg_cap.release()
+        raise RuntimeError(f"Cannot open background video: {bg_path}")
     bg_img = None if bg_is_video else cv2.imread(bg_path)
     if not bg_is_video and bg_img is None:
         raise FileNotFoundError(f"Could not read background image: {bg_path}")

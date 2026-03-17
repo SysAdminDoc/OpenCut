@@ -201,6 +201,8 @@ def render_animated_captions(
     lines = _group_words_into_lines(word_segments, max_words_per_line)
 
     cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {video_path}")
     _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
     tmp_video = _ntf.name
     _ntf.close()
