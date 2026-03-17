@@ -268,6 +268,22 @@
 - **Highlight JSON robustness** — `_parse_highlights()` skips malformed items instead of crashing; `summarize_transcript()` validates bullet_points/topics are lists
 - **Silence detection bounds** — threshold clamped -60..0 dB, min_duration 0.05..30s, padding 0..5s, min_speech 0.05..10s
 - **Demucs format validation** — output_format validated against {"wav", "mp3", "flac"}, defaults to wav
+- **VideoCapture/Writer isOpened()** — video.py watermark route checks `isOpened()` on both passes, fails fast on corrupt files
+- **Demucs sys.executable** — audio.py uses `sys.executable` instead of hardcoded `'python'` for venv/frozen builds
+- **ffprobe returncode check** — waveform route checks returncode before `json.loads` to prevent crash on probe failure
+- **output_dir validation** — 6 TTS/gen/mix routes now validate `output_dir` via `validate_path()` (path traversal prevention)
+- **GPU comma parse fix** — `_detect_gpu()` uses `rsplit(",", 1)` to handle GPU names containing commas
+- **pyannote.audio false positive fix** — dependency check imports `pyannote.audio.pipelines` instead of just `pyannote` namespace stub
+- **LLM provider allowlist** — `/llm/test` validates provider against `{"ollama", "openai", "anthropic"}`
+- **Queue deadlock fix** — jobs_routes.py moves `_get_job_copy()` outside `job_queue_lock` to prevent nested lock deadlock
+- **Import size limits** — settings import caps favorites (200) and workflows (100)
+- **Captions import resilience** — `captions.py` uses None defaults + nested try/except for import fallback
+- **GET dedup callback fix** — main.js queues pending callbacks instead of calling with `(null, null)` on deduped GETs
+- **Batch poll error limit** — batch poll interval auto-clears after 10 consecutive errors
+- **Blob URL revocation timing** — settings export defers `URL.revokeObjectURL()` via 5s `setTimeout`
+- **HTML attribute escaping** — data-path attributes now escape `<`, `>`, `&`, `"` (XSS prevention)
+- **insertClip Time object** — index.jsx uses `new Time()` instead of string `"0"` for caption/clip insertion
+- **Batch import verification** — index.jsx counts items before/after `importFiles()` to report actual import count
 
 ## v1.3.0 New Optional Dependencies
 ```toml
