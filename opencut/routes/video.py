@@ -9,6 +9,7 @@ merge, trim, preview.
 import json
 import logging
 import os
+import re
 import subprocess as _sp
 import tempfile
 import threading
@@ -418,6 +419,8 @@ def video_scenes():
     job_id = _new_job("scenes", filepath)
 
     method = data.get("method", "ffmpeg").strip().lower()
+    if method not in ("ffmpeg", "ml"):
+        method = "ffmpeg"
 
     def _process():
         try:
@@ -885,6 +888,8 @@ def video_ai_upscale():
     output_dir = data.get("output_dir", "")
     scale = safe_int(data.get("scale", 2), 2, min_val=1, max_val=4)
     model = data.get("model", "realesrgan-x4plus")
+    if model not in ("realesrgan-x4plus", "realesrgan-x4plus-anime", "realesrgan-x2plus"):
+        model = "realesrgan-x4plus"
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -934,6 +939,8 @@ def video_ai_rembg():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     model = data.get("model", "u2net")
+    if model not in ("u2net", "u2net_human_seg", "isnet-general-use", "birefnet-general"):
+        model = "u2net"
     bg_color = data.get("bg_color", "")
     alpha_only = data.get("alpha_only", False)
 
@@ -1035,6 +1042,8 @@ def video_ai_denoise():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     method = data.get("method", "nlmeans")
+    if method not in ("nlmeans", "highpass", "gate"):
+        method = "nlmeans"
     strength = safe_float(data.get("strength", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
     if not filepath:
@@ -1165,8 +1174,12 @@ def face_blur():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     method = data.get("method", "gaussian")
+    if method not in ("gaussian", "pixelate", "black"):
+        method = "gaussian"
     strength = safe_int(data.get("strength", 51), 51, min_val=1, max_val=99)
     detector = data.get("detector", "mediapipe")
+    if detector not in ("mediapipe", "haarcascade"):
+        detector = "mediapipe"
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -2055,6 +2068,8 @@ def remove_watermark_route():
     fp = data.get("filepath", "").strip()
     region = data.get("region", {})
     method = data.get("method", "delogo")
+    if method not in ("delogo", "lama"):
+        method = "delogo"
 
     if not fp:
         return jsonify({"error": "File not found"}), 400
@@ -2840,7 +2855,11 @@ def video_reframe():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e))
 
-    threading.Thread(target=_process, daemon=True).start()
+    _t = threading.Thread(target=_process, daemon=True)
+    _t.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = _t
     return jsonify({"job_id": job_id})
 
 
@@ -2959,7 +2978,11 @@ def video_merge():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e))
 
-    threading.Thread(target=_process, daemon=True).start()
+    _t = threading.Thread(target=_process, daemon=True)
+    _t.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = _t
     return jsonify({"job_id": job_id})
 
 
@@ -2988,6 +3011,11 @@ def video_trim():
 
     if not end_time:
         return jsonify({"error": "End time is required"}), 400
+
+    # Validate time format (HH:MM:SS or HH:MM:SS.xxx)
+    _time_re = re.compile(r"^\d{1,3}:\d{2}:\d{2}(?:\.\d+)?$")
+    if not _time_re.match(str(start_time)) or not _time_re.match(str(end_time)):
+        return jsonify({"error": "Invalid time format. Use HH:MM:SS or HH:MM:SS.xxx"}), 400
 
     job_id = _new_job("trim", filepath)
 
@@ -3051,7 +3079,11 @@ def video_trim():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e))
 
-    threading.Thread(target=_process, daemon=True).start()
+    _t = threading.Thread(target=_process, daemon=True)
+    _t.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = _t
     return jsonify({"job_id": job_id})
 
 
@@ -3112,7 +3144,11 @@ def preview_frame():
                 except OSError:
                     pass
 
-    threading.Thread(target=_process, daemon=True).start()
+    _t = threading.Thread(target=_process, daemon=True)
+    _t.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = _t
     return jsonify({"job_id": job_id})
 
 
@@ -3298,6 +3334,8 @@ def video_highlights():
 
     # LLM config from request
     llm_provider = data.get("llm_provider", "ollama")
+    if llm_provider not in ("ollama", "openai", "anthropic"):
+        llm_provider = "ollama"
     llm_model = data.get("llm_model", "")
     llm_api_key = data.get("llm_api_key", "")
     llm_base_url = data.get("llm_base_url", "")

@@ -32,6 +32,7 @@ from opencut.jobs import (
     jobs,
 )
 from opencut.security import (
+    VALID_WHISPER_MODELS,
     require_csrf,
     require_rate_limit,
     safe_float,
@@ -179,6 +180,8 @@ def filler_removal():
         return jsonify({"error": str(e)}), 400
 
     model = data.get("model", "base")
+    if model not in VALID_WHISPER_MODELS:
+        model = "base"
     language = data.get("language", None)
     include_context = data.get("include_context_fillers", True)
     custom_words = data.get("custom_words", [])
@@ -355,6 +358,8 @@ def audio_denoise():
         return jsonify({"error": str(e)}), 400
 
     method = data.get("method", "afftdn")
+    if method not in ("afftdn", "anlmdn", "rnnoise"):
+        method = "afftdn"
     strength = safe_float(data.get("strength", 0.7), 0.7, min_val=0.0, max_val=1.0)
     noise_floor = safe_float(data.get("noise_floor", -30.0), -30.0, min_val=-80.0, max_val=0.0)
 
@@ -467,6 +472,8 @@ def audio_separate():
     if model not in allowed_models:
         return jsonify({"error": f"Unknown model: {model}. Allowed: {', '.join(sorted(allowed_models))}"}), 400
     stems = data.get("stems", ["vocals", "no_vocals"])
+    valid_stems = {"vocals", "drums", "bass", "other", "no_vocals", "guitar", "piano"}
+    stems = [s for s in stems if isinstance(s, str) and s in valid_stems] or ["vocals", "no_vocals"]
     output_format = data.get("format", "wav")
     if output_format not in ("wav", "mp3", "flac"):
         output_format = "wav"
