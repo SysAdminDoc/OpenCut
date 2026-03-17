@@ -94,6 +94,8 @@ def generate_captions():
         return jsonify({"error": f"Invalid model: {model}"}), 400
     language = data.get("language", None)
     sub_format = data.get("format", "srt")
+    if sub_format not in ("srt", "vtt", "json", "ass"):
+        sub_format = "srt"
     word_timestamps = data.get("word_timestamps", True)
 
     job_id = _new_job("captions", filepath)
@@ -424,6 +426,8 @@ def export_edited_transcript():
     output_dir = data.get("output_dir", "")
     segments_data = data.get("segments", [])
     sub_format = data.get("format", "srt")
+    if sub_format not in ("srt", "vtt", "json", "ass"):
+        sub_format = "srt"
     language = data.get("language", "en")
 
     if not filepath:

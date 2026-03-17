@@ -20,6 +20,8 @@ from rich.panel import Panel
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
 from rich.table import Table
 
+from opencut import __version__
+
 console = Console()
 
 BANNER = r"""
@@ -42,7 +44,7 @@ def print_banner():
 
 
 @click.group()
-@click.version_option(version="1.3.0", prog_name="opencut")
+@click.version_option(version=__version__, prog_name="opencut")
 def cli():
     """OpenCut - Open source video editing automation for Premiere Pro."""
     pass

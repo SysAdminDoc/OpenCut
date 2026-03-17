@@ -63,6 +63,7 @@ def _detect_faces_in_frames(video_path: str, sample_rate: int,
                     # Pick the largest / most confident face
                     best = None
                     best_area = 0.0
+                    best_conf = 0.5
                     for det in results.detections:
                         bb = det.location_data.relative_bounding_box
                         area = bb.width * bb.height

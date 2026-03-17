@@ -10,6 +10,7 @@ import time
 
 from flask import Blueprint, jsonify, request, send_file
 
+from opencut import __version__
 from opencut.helpers import OPENCUT_DIR, compute_estimate
 from opencut.security import require_csrf, safe_float
 from opencut.user_data import (
@@ -145,7 +146,7 @@ def delete_workflow():
 @settings_bp.route("/settings/export", methods=["GET"])
 def export_settings():
     """Export all OpenCut settings (presets, favorites, workflows) as a single JSON bundle."""
-    bundle = {"version": "1.3.0", "exported": time.time()}
+    bundle = {"version": __version__, "exported": time.time()}
     try:
         bundle["presets"] = load_presets()
     except Exception:
