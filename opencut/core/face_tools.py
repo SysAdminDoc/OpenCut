@@ -14,36 +14,13 @@ Falls back to OpenCV Haar cascades if MediaPipe unavailable.
 import logging
 import os
 import shutil
-import subprocess
 import tempfile
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import ensure_package, run_ffmpeg
+from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-def _get_video_info(filepath: str) -> Dict:
-    import json as _json
-    cmd = [
-        "ffprobe", "-v", "quiet", "-select_streams", "v:0",
-        "-show_entries", "stream=width,height,r_frame_rate,duration",
-        "-of", "json", filepath,
-    ]
-    result = subprocess.run(cmd, capture_output=True, timeout=30)
-    try:
-        data = _json.loads(result.stdout.decode())
-        stream = data["streams"][0]
-        fps_parts = stream.get("r_frame_rate", "30/1").split("/")
-        fps = (float(fps_parts[0]) / float(fps_parts[1])) if len(fps_parts) == 2 and float(fps_parts[1]) else 30.0
-        return {
-            "width": int(stream.get("width", 1920)),
-            "height": int(stream.get("height", 1080)),
-            "fps": fps,
-        }
-    except Exception:
-        return {"width": 1920, "height": 1080, "fps": 30.0}
-
 
 # ---------------------------------------------------------------------------
 # Availability
@@ -158,7 +135,7 @@ def blur_faces(
     if on_progress:
         on_progress(10, "Processing video frames...")
 
-    info = _get_video_info(input_path)
+    info = get_video_info(input_path)
     tmp_dir = tempfile.mkdtemp(prefix="opencut_faceblur_")
     frames_in = os.path.join(tmp_dir, "in")
     frames_out = os.path.join(tmp_dir, "out")

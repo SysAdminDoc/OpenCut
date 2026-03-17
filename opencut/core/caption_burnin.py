@@ -13,33 +13,12 @@ Use this when the target player doesn't support soft subs.
 
 import logging
 import os
-import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-
-def _get_video_info(filepath: str) -> Dict:
-    import json
-    cmd = [
-        "ffprobe", "-v", "quiet", "-select_streams", "v:0",
-        "-show_entries", "stream=width,height,r_frame_rate,duration",
-        "-of", "json", filepath,
-    ]
-    result = subprocess.run(cmd, capture_output=True, timeout=30)
-    try:
-        data = json.loads(result.stdout.decode())
-        stream = data["streams"][0]
-        return {
-            "width": int(stream.get("width", 1920)),
-            "height": int(stream.get("height", 1080)),
-        }
-    except Exception:
-        return {"width": 1920, "height": 1080}
-
 
 # ---------------------------------------------------------------------------
 # Burn-in from subtitle file
@@ -223,7 +202,7 @@ def burnin_segments(
         raise ValueError("No caption segments provided")
 
     style_cfg = BURNIN_STYLES.get(style, BURNIN_STYLES["default"])
-    info = _get_video_info(video_path)
+    info = get_video_info(video_path)
 
     if on_progress:
         on_progress(5, "Generating subtitle file...")

@@ -13,28 +13,12 @@ All via OpenCV + FFmpeg - zero ML dependencies.
 
 import logging
 import os
-import subprocess
 import tempfile
 from typing import Callable, Optional
 
-from opencut.helpers import ensure_package, run_ffmpeg
+from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-def _get_video_info(fp):
-    import json
-    r = subprocess.run(["ffprobe", "-v", "quiet", "-select_streams", "v:0",
-                        "-show_entries", "stream=width,height,r_frame_rate,duration",
-                        "-of", "json", fp], capture_output=True, timeout=30)
-    try:
-        s = json.loads(r.stdout.decode())["streams"][0]
-        fps_p = s.get("r_frame_rate", "30/1").split("/")
-        fps = (float(fps_p[0]) / float(fps_p[1])) if len(fps_p) == 2 and float(fps_p[1]) else 30.0
-        return {"width": int(s.get("width", 1920)), "height": int(s.get("height", 1080)),
-                "fps": fps, "duration": float(s.get("duration", 0))}
-    except Exception:
-        return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
-
 
 # ---------------------------------------------------------------------------
 # Chromakey Presets
@@ -80,7 +64,7 @@ def chromakey_video(
     if on_progress:
         on_progress(5, "Setting up chromakey...")
 
-    fg_info = _get_video_info(fg_path)
+    fg_info = get_video_info(fg_path)
     w, h, fps = fg_info["width"], fg_info["height"], fg_info["fps"]
 
     # Get HSV range
@@ -217,7 +201,7 @@ def picture_in_picture(
         directory = output_dir or os.path.dirname(main_path)
         output_path = os.path.join(directory, f"{base}_pip.mp4")
 
-    info = _get_video_info(main_path)
+    info = get_video_info(main_path)
     pip_w = int(info["width"] * scale)
 
     pos_map = {
@@ -275,7 +259,7 @@ def blend_videos(
     if on_progress:
         on_progress(10, f"Blending with {mode} mode...")
 
-    info = _get_video_info(base_path)
+    info = get_video_info(base_path)
     fc = (
         f"[1:v]scale={info['width']}:{info['height']}[ov];"
         f"[0:v][ov]blend=all_mode={mode}:all_opacity={opacity}"

@@ -12,23 +12,11 @@ FFmpeg xfade is zero-dependency. ModernGL requires OpenGL 3.3+.
 
 import logging
 import os
-import subprocess
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-
-def _get_duration(fp):
-    import json
-    r = subprocess.run(["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
-                        "-of", "json", fp], capture_output=True, timeout=30)
-    try:
-        return float(json.loads(r.stdout.decode())["format"]["duration"])
-    except Exception:
-        return 5.0
-
 
 def check_moderngl_available() -> bool:
     try:
@@ -108,7 +96,7 @@ def apply_transition(
     if transition not in XFADE_TRANSITIONS:
         transition = "fade"
 
-    dur_a = _get_duration(clip_a)
+    dur_a = get_video_info(clip_a)["duration"]
     if offset is None:
         offset = max(0, dur_a - duration)
 

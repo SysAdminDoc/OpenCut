@@ -14,28 +14,12 @@ All via FFmpeg setpts/atempo filters - zero dependencies.
 
 import logging
 import os
-import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-
-def _get_duration(filepath: str) -> float:
-    import json
-    cmd = [
-        "ffprobe", "-v", "quiet", "-show_entries", "format=duration",
-        "-of", "json", filepath,
-    ]
-    result = subprocess.run(cmd, capture_output=True, timeout=30)
-    try:
-        data = json.loads(result.stdout.decode())
-        return float(data["format"]["duration"])
-    except Exception:
-        return 0.0
-
 
 # ---------------------------------------------------------------------------
 # Easing Functions
@@ -367,7 +351,7 @@ def apply_speed_ramp_preset(
         raise ValueError(f"Unknown preset: {preset_name}")
 
     preset = SPEED_RAMP_PRESETS[preset_name]
-    duration = _get_duration(input_path)
+    duration = get_video_info(input_path)["duration"]
     if duration <= 0:
         raise RuntimeError("Could not determine video duration")
 

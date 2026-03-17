@@ -17,10 +17,9 @@ platform-specific constraints (max duration, file size, etc.).
 
 import logging
 import os
-import subprocess
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -231,30 +230,6 @@ def get_preset_categories() -> List[Dict]:
         cats[c]["count"] += 1
     return list(cats.values())
 
-
-def _get_video_info(filepath: str) -> Dict:
-    import json
-    cmd = [
-        "ffprobe", "-v", "quiet", "-select_streams", "v:0",
-        "-show_entries", "stream=width,height,r_frame_rate,duration",
-        "-of", "json", filepath,
-    ]
-    result = subprocess.run(cmd, capture_output=True, timeout=30)
-    try:
-        data = json.loads(result.stdout.decode())
-        stream = data["streams"][0]
-        fps_parts = stream.get("r_frame_rate", "30/1").split("/")
-        fps = (float(fps_parts[0]) / float(fps_parts[1])) if len(fps_parts) == 2 and float(fps_parts[1]) else 30.0
-        return {
-            "width": int(stream.get("width", 1920)),
-            "height": int(stream.get("height", 1080)),
-            "fps": fps,
-            "duration": float(stream.get("duration", 0)),
-        }
-    except Exception:
-        return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
-
-
 def export_with_preset(
     input_path: str,
     preset_name: str,
@@ -279,7 +254,7 @@ def export_with_preset(
     if on_progress:
         on_progress(5, f"Exporting with {preset['label']}...")
 
-    info = _get_video_info(input_path)
+    info = get_video_info(input_path)
 
     # Special handling for GIF
     if preset.get("ext") == ".gif":
