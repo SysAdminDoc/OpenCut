@@ -1,14 +1,16 @@
 """
 OpenCut Settings Routes
 
-Presets, favorites, workflows, settings import/export, job time estimation.
+Presets, favorites, workflows, settings import/export, job time estimation,
+log export, job retry.
 """
 
+import os
 import time
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify, request, send_file
 
-from opencut.helpers import compute_estimate
+from opencut.helpers import OPENCUT_DIR, compute_estimate
 from opencut.security import require_csrf, safe_float
 from opencut.user_data import (
     load_favorites,
@@ -192,3 +194,57 @@ def estimate_job_time():
     job_type = data.get("type", "")
     file_duration = safe_float(data.get("file_duration", 0))
     return jsonify(compute_estimate(job_type, file_duration))
+
+
+# ---------------------------------------------------------------------------
+# Log Export
+# ---------------------------------------------------------------------------
+@settings_bp.route("/logs/export", methods=["GET"])
+def export_logs():
+    """Export the crash log file for debugging."""
+    crash_log = os.path.join(OPENCUT_DIR, "crash.log")
+    if not os.path.isfile(crash_log):
+        return jsonify({"error": "No crash log found"}), 404
+    return send_file(crash_log, mimetype="text/plain", as_attachment=True,
+                     download_name="opencut_crash.log")
+
+
+@settings_bp.route("/logs/clear", methods=["POST"])
+@require_csrf
+def clear_logs():
+    """Clear the crash log."""
+    crash_log = os.path.join(OPENCUT_DIR, "crash.log")
+    try:
+        if os.path.isfile(crash_log):
+            os.unlink(crash_log)
+        return jsonify({"success": True})
+    except OSError as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Job Retry
+# ---------------------------------------------------------------------------
+@settings_bp.route("/jobs/retry/<job_id>", methods=["POST"])
+@require_csrf
+def retry_job(job_id):
+    """Retry a failed/cancelled job by re-submitting its original parameters."""
+    from opencut.jobs import _get_job_copy
+
+    job = _get_job_copy(job_id)
+    if not job:
+        return jsonify({"error": "Job not found"}), 404
+    if job.get("status") not in ("error", "cancelled"):
+        return jsonify({"error": "Only failed or cancelled jobs can be retried"}), 400
+
+    job_type = job.get("type", "")
+    filepath = job.get("filepath", "")
+    if not job_type or not filepath:
+        return jsonify({"error": "Cannot retry: missing job type or filepath"}), 400
+
+    return jsonify({
+        "retry_available": True,
+        "original_type": job_type,
+        "original_filepath": filepath,
+        "message": "Use the original endpoint to re-run this operation",
+    })

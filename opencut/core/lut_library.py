@@ -320,7 +320,15 @@ def ensure_lut(name: str) -> str:
     if name not in BUILTIN_LUTS:
         # Check user LUTs
         if name.startswith("user/"):
-            user_path = os.path.join(LUTS_DIR, "user", name.split("/", 1)[1] + ".cube")
+            lut_basename = name.split("/", 1)[1]
+            # Prevent path traversal: reject names with directory separators or ..
+            if ".." in lut_basename or "/" in lut_basename or "\\" in lut_basename:
+                raise ValueError(f"Invalid LUT name: {name}")
+            user_dir = os.path.join(LUTS_DIR, "user")
+            user_path = os.path.join(user_dir, lut_basename + ".cube")
+            # Verify resolved path stays within user LUT directory
+            if not os.path.realpath(user_path).startswith(os.path.realpath(user_dir)):
+                raise ValueError(f"Invalid LUT path: {name}")
             if os.path.exists(user_path):
                 return user_path
         raise ValueError(f"Unknown LUT: {name}")
@@ -568,7 +576,8 @@ def _compute_cdf(channel_data):
 
 def _apply_cdf_transfer(value, ref_cdf, strength):
     """Apply CDF transfer function to map input value through reference distribution."""
-    # Map input value (0-1) to bin index
+    # Clamp input and map to bin index
+    value = max(0.0, min(1.0, value))
     bin_idx = int(value * 255)
     bin_idx = max(0, min(255, bin_idx))
 

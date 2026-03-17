@@ -19,11 +19,16 @@ from typing import Callable, Dict, List, Optional
 logger = logging.getLogger("opencut")
 
 
+MAX_DURATION = 3600  # 1 hour absolute cap for any generated audio
+MAX_STDERR = 10240  # 10 KB cap on stderr stored in error messages
+
+
 def _run_ffmpeg(cmd: List[str], timeout: int = 120) -> str:
     result = subprocess.run(cmd, capture_output=True, timeout=timeout)
+    stderr_text = result.stderr.decode(errors="replace")[-MAX_STDERR:]
     if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {result.stderr.decode(errors='replace')[-500:]}")
-    return result.stderr.decode(errors="replace")
+        raise RuntimeError(f"FFmpeg error: {stderr_text[-500:]}")
+    return stderr_text
 
 
 # ---------------------------------------------------------------------------
@@ -53,6 +58,13 @@ def generate_tone(
         volume: 0.0-1.0.
         fade_in/fade_out: Fade duration in seconds.
     """
+    # Validate inputs
+    if waveform not in WAVEFORMS:
+        raise ValueError(f"Invalid waveform '{waveform}'. Must be one of: {', '.join(WAVEFORMS)}")
+    frequency = max(20.0, min(20000.0, float(frequency)))
+    duration = max(0.01, min(MAX_DURATION, float(duration)))
+    volume = max(0.0, min(1.0, float(volume)))
+
     if output_path is None:
         directory = output_dir or os.path.join(os.path.expanduser("~"), "opencut_audio")
         os.makedirs(directory, exist_ok=True)
@@ -70,8 +82,6 @@ def generate_tone(
         expr = f"(2*({frequency}*t-floor({frequency}*t))-1)*{volume}"
     elif waveform == "triangle":
         expr = f"(4*abs({frequency}*t-floor({frequency}*t+0.5))-1)*{volume}"
-    else:
-        expr = f"sin(2*PI*{frequency}*t)*{volume}"
 
     af_parts = []
     if fade_in > 0:
@@ -145,6 +155,10 @@ def generate_sfx(
     """
     Generate a synthesized sound effect using FFmpeg lavfi.
     """
+    if preset not in SFX_PRESETS:
+        raise ValueError(f"Unknown SFX preset '{preset}'. Must be one of: {', '.join(SFX_PRESETS.keys())}")
+    duration = max(0.01, min(MAX_DURATION, float(duration)))
+
     if output_path is None:
         directory = output_dir or os.path.join(os.path.expanduser("~"), "opencut_audio")
         os.makedirs(directory, exist_ok=True)
@@ -246,6 +260,8 @@ def generate_silence(
     on_progress: Optional[Callable] = None,
 ) -> str:
     """Generate a silent audio file."""
+    duration = max(0.01, min(MAX_DURATION, float(duration)))
+
     if output_path is None:
         directory = output_dir or os.path.join(os.path.expanduser("~"), "opencut_audio")
         os.makedirs(directory, exist_ok=True)

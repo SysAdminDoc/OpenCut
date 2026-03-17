@@ -81,7 +81,7 @@ def list_jobs():
 # ---------------------------------------------------------------------------
 # Server-Sent Events (SSE) job stream
 # ---------------------------------------------------------------------------
-_sse_connections = 0
+_sse_state = {"connections": 0}
 _sse_lock = threading.Lock()
 MAX_SSE_CONNECTIONS = 20
 
@@ -90,13 +90,13 @@ MAX_SSE_CONNECTIONS = 20
 def stream_job(job_id):
     """Stream job status via Server-Sent Events. Replaces polling."""
     with _sse_lock:
-        if _sse_connections >= MAX_SSE_CONNECTIONS:
+        if _sse_state["connections"] >= MAX_SSE_CONNECTIONS:
             return jsonify({"error": "Too many streaming connections"}), 429
+        # Increment inside the same lock acquisition that checks the limit,
+        # preventing a race where multiple requests pass the check concurrently.
+        _sse_state["connections"] += 1
 
     def generate():
-        global _sse_connections
-        with _sse_lock:
-            _sse_connections += 1
         try:
             deadline = time.time() + 1800  # 30 minute timeout
             while time.time() < deadline:
@@ -112,7 +112,7 @@ def stream_job(job_id):
                 time.sleep(0.5)
         finally:
             with _sse_lock:
-                _sse_connections -= 1
+                _sse_state["connections"] -= 1
 
     resp = Response(generate(), mimetype="text/event-stream")
     resp.headers["Cache-Control"] = "no-cache"
@@ -204,6 +204,8 @@ def _dispatch_queue_entry(entry):
     endpoint = entry.get("endpoint", "")
     payload = entry.get("payload", {})
 
+    dispatch_timeout = 60  # seconds max for route handler to return a job_id
+
     with current_app.test_request_context(endpoint, method="POST",
                                           json=payload,
                                           headers={
@@ -218,7 +220,27 @@ def _dispatch_queue_entry(entry):
             if view_func is None:
                 entry["status"] = "error"
                 return
-            resp = view_func(**view_args)
+
+            # Run the handler in a sub-thread with a timeout
+            _dispatch_result = [None, None]  # [response, exception]
+
+            def _call():
+                try:
+                    _dispatch_result[0] = view_func(**view_args)
+                except Exception as exc:
+                    _dispatch_result[1] = exc
+
+            t = threading.Thread(target=_call, daemon=True)
+            t.start()
+            t.join(timeout=dispatch_timeout)
+            if t.is_alive():
+                entry["status"] = "error"
+                logger.warning("Queue dispatch timed out after %ds for %s", dispatch_timeout, endpoint)
+                return
+            if _dispatch_result[1]:
+                raise _dispatch_result[1]
+
+            resp = _dispatch_result[0]
             # Flask view functions return (response, status) or a Response
             if isinstance(resp, tuple):
                 resp_obj = resp[0]
@@ -252,11 +274,11 @@ def _process_queue():
             if job_id:
                 deadline = time.time() + 1800
                 while time.time() < deadline:
-                    safe = _get_job_copy(job_id)
-                    if safe and safe.get("status") in ("complete", "error", "cancelled"):
-                        with job_queue_lock:
+                    with job_queue_lock:
+                        safe = _get_job_copy(job_id)
+                        if safe and safe.get("status") in ("complete", "error", "cancelled"):
                             entry["status"] = safe["status"]
-                        break
+                            break
                     time.sleep(1)
                 else:
                     with job_queue_lock:
