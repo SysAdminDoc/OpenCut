@@ -15,22 +15,9 @@ import os
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import ensure_package
+
 logger = logging.getLogger("opencut")
-
-
-def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable = None):
-    try:
-        __import__(pkg_name)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg_name
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        safe_pip_install(pip_name)
-        return True
-
 
 # ---------------------------------------------------------------------------
 # Availability
@@ -150,7 +137,7 @@ def edge_tts_generate(
         pitch: Pitch adjustment (e.g. "+5Hz", "-3Hz").
         volume: Volume adjustment (e.g. "+10%", "-5%").
     """
-    _ensure_package("edge_tts", "edge-tts", on_progress)
+    ensure_package("edge_tts", "edge-tts", on_progress)
     import edge_tts
 
     if output_path is None:
@@ -199,7 +186,7 @@ def edge_tts_with_subtitles(
 
     Returns dict with audio_path and subtitle_path.
     """
-    _ensure_package("edge_tts", "edge-tts", on_progress)
+    ensure_package("edge_tts", "edge-tts", on_progress)
     import edge_tts
 
     directory = output_dir or tempfile.gettempdir()
@@ -264,7 +251,7 @@ def kokoro_generate(
         voice: Kokoro voice preset (af_heart, af_bella, am_adam, am_michael, etc.)
         speed: Playback speed multiplier.
     """
-    _ensure_package("kokoro", "kokoro>=0.3", on_progress)
+    ensure_package("kokoro", "kokoro>=0.3", on_progress)
     import kokoro
 
     if output_path is None:
@@ -296,7 +283,7 @@ def kokoro_generate(
         on_progress(80, "Saving audio...")
 
     # Save as WAV
-    _ensure_package("soundfile")
+    ensure_package("soundfile")
     import soundfile as sf
     sf.write(output_path, samples, 24000)
 

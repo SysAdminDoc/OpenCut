@@ -14,7 +14,7 @@ import subprocess
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -29,23 +29,6 @@ class FaceTrack:
     w: float   # normalized width
     h: float   # normalized height
     confidence: float
-
-
-def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable = None):
-    """Import a package, installing it if missing."""
-    try:
-        __import__(pkg_name)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg_name
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        safe_pip_install(pip_name)
-        return True
-
-
 
 def _get_video_info(filepath: str) -> Dict:
     """Get video metadata via ffprobe."""
@@ -293,9 +276,9 @@ def face_reframe(input_path: str, target_w: int = 1080, target_h: int = 1920,
     Returns:
         Output file path.
     """
-    _ensure_package("cv2", "opencv-python-headless", on_progress)
-    _ensure_package("mediapipe", "mediapipe", on_progress)
-    _ensure_package("numpy", "numpy", on_progress)
+    ensure_package("cv2", "opencv-python-headless", on_progress)
+    ensure_package("mediapipe", "mediapipe", on_progress)
+    ensure_package("numpy", "numpy", on_progress)
 
     if output_path is None:
         base = os.path.splitext(os.path.basename(input_path))[0]
