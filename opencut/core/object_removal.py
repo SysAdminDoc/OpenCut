@@ -12,29 +12,12 @@ Pipeline: User marks object -> SAM 2 generates + tracks masks -> ProPainter fill
 
 import logging
 import os
-import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import ensure_package, run_ffmpeg
+from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-def _get_video_info(fp):
-    import json
-    r = subprocess.run(["ffprobe", "-v", "quiet", "-select_streams", "v:0",
-                        "-show_entries", "stream=width,height,r_frame_rate,duration,nb_frames",
-                        "-of", "json", fp], capture_output=True, timeout=30)
-    try:
-        s = json.loads(r.stdout.decode())["streams"][0]
-        fps_p = s.get("r_frame_rate", "30/1").split("/")
-        fps = (float(fps_p[0]) / float(fps_p[1])) if len(fps_p) == 2 and float(fps_p[1]) else 30.0
-        return {"width": int(s.get("width", 1920)), "height": int(s.get("height", 1080)),
-                "fps": fps, "duration": float(s.get("duration", 0)),
-                "frames": int(s.get("nb_frames", 0))}
-    except Exception:
-        return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0, "frames": 0}
-
 
 # ---------------------------------------------------------------------------
 # Availability checks
@@ -198,7 +181,7 @@ def remove_watermark_lama(
         on_progress(5, "Loading LaMA model...")
 
     lama = SimpleLama()
-    info = _get_video_info(video_path)
+    info = get_video_info(video_path)
     w, h, fps = info["width"], info["height"], info["fps"]
 
     # Create static mask
