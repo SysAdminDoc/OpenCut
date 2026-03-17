@@ -1948,6 +1948,11 @@
             el.cancelBtn.textContent = "Cancelling...";
             el.cancelBtn.disabled = true;
             api("POST", "/cancel/" + currentJob, {}, function () {});
+            // Clean up poll timer since job is being cancelled
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
         }
     }
 
@@ -5816,11 +5821,23 @@
         updateSilenceModeUI();
         updateFaceTrackingUI();
 
-        // Cleanup SSE connections on panel close/navigation
+        // Cleanup SSE connections and timers on panel close/navigation
         window.addEventListener("beforeunload", function () {
             if (activeStream) {
                 activeStream.close();
                 activeStream = null;
+            }
+            if (healthTimer) {
+                clearInterval(healthTimer);
+                healthTimer = null;
+            }
+            if (pollTimer) {
+                clearInterval(pollTimer);
+                pollTimer = null;
+            }
+            if (elapsedTimer) {
+                clearInterval(elapsedTimer);
+                elapsedTimer = null;
             }
         });
     });
