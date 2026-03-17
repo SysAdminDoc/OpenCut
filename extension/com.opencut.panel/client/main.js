@@ -990,7 +990,11 @@
         var key = method + " " + path;
         // Deduplicate in-flight GET requests (F6)
         if (method === "GET" && _inflightRequests[key]) {
-            if (callback) callback(null, null);
+            // Queue callback to be called when the in-flight request completes
+            var existing = _inflightRequests[key];
+            if (callback && existing._pendingCallbacks) {
+                existing._pendingCallbacks.push(callback);
+            }
             return;
         }
         var xhr = new XMLHttpRequest();
@@ -998,19 +1002,35 @@
         xhr.timeout = timeout || 120000;
         xhr.setRequestHeader("Content-Type", "application/json");
         if (csrfToken) xhr.setRequestHeader("X-OpenCut-Token", csrfToken);
-        if (method === "GET") _inflightRequests[key] = xhr;
+        if (method === "GET") {
+            xhr._pendingCallbacks = [];
+            _inflightRequests[key] = xhr;
+        }
+        function _notifyPending(err, data) {
+            var cbs = xhr._pendingCallbacks || [];
+            for (var i = 0; i < cbs.length; i++) {
+                try { cbs[i](err, data); } catch (e) { /* swallow */ }
+            }
+        }
         xhr.onload = function () {
             delete _inflightRequests[key];
-            try { callback(null, JSON.parse(xhr.responseText)); }
-            catch (e) { callback(e, null); }
+            var err = null, data = null;
+            try { data = JSON.parse(xhr.responseText); }
+            catch (e) { err = e; }
+            callback(err, data);
+            _notifyPending(err, data);
         };
         xhr.onerror = function () {
             delete _inflightRequests[key];
-            callback(new Error("Network error"), null);
+            var err = new Error("Network error");
+            callback(err, null);
+            _notifyPending(err, null);
         };
         xhr.ontimeout = function () {
             delete _inflightRequests[key];
-            callback(new Error("Timeout"), null);
+            var err = new Error("Timeout");
+            callback(err, null);
+            _notifyPending(err, null);
         };
         xhr.send(body ? JSON.stringify(body) : null);
     }
@@ -2537,10 +2557,19 @@
             }
             var batchId = data.batch_id;
             el.batchStatusText.textContent = "Batch running: 0/" + data.total + " complete...";
-            // Poll for status
+            // Poll for status (with error limit to prevent infinite polling)
+            var pollErrors = 0;
             var pollInterval = setInterval(function () {
                 api("GET", "/batch/" + batchId, null, function (e2, d2) {
-                    if (e2 || !d2) return;
+                    if (e2 || !d2) {
+                        pollErrors++;
+                        if (pollErrors >= 10) {
+                            clearInterval(pollInterval);
+                            el.batchStatusText.textContent = "Batch poll failed after 10 errors";
+                        }
+                        return;
+                    }
+                    pollErrors = 0;
                     var res = d2.results || {};
                     el.batchStatusText.textContent =
                         "Batch " + d2.status + ": " + (d2.completed || 0) + "/" + (d2.total || 0) +
@@ -4575,7 +4604,7 @@
                 var item = data[i];
                 var div = document.createElement("div");
                 div.className = "output-item";
-                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + esc(item.name) + '</div><div class="output-item-meta">' + esc(item.size_mb) + ' MB &mdash; ' + esc(item.type) + '</div></div><div class="output-item-actions"><button class="btn-sm" data-path="' + item.path.replace(/&/g, '&amp;').replace(/"/g, '&quot;') + '">Import</button></div>';
+                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + esc(item.name) + '</div><div class="output-item-meta">' + esc(item.size_mb) + ' MB &mdash; ' + esc(item.type) + '</div></div><div class="output-item-actions"><button class="btn-sm" data-path="' + item.path.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') + '">Import</button></div>';
                 div.querySelector(".btn-sm").addEventListener("click", function () {
                     var p = this.dataset.path;
                     if (inPremiere && cs) {
@@ -4700,7 +4729,8 @@
                     a.href = url;
                     a.download = "opencut_settings_" + new Date().toISOString().slice(0, 10) + ".json";
                     a.click();
-                    URL.revokeObjectURL(url);
+                    // Defer revocation so browser has time to start the download
+                    setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
                     showToast("Settings exported", "success");
                 });
             });
@@ -5013,7 +5043,7 @@
             var html = "";
             for (var i = 0; i < _recentClips.length; i++) {
                 var name = _recentClips[i].split(/[/\\]/).pop();
-                html += '<div class="recent-clip-item" data-path="' + _recentClips[i].replace(/"/g, '&quot;') + '">' + esc(name) + '</div>';
+                html += '<div class="recent-clip-item" data-path="' + _recentClips[i].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') + '">' + esc(name) + '</div>';
             }
             el.recentClipsDropdown.innerHTML = html;
         }
