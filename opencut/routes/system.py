@@ -15,6 +15,7 @@ import time
 
 from flask import Blueprint, jsonify, request, send_file
 
+from opencut import __version__
 from opencut.helpers import OPENCUT_DIR, _try_import, _try_import_from
 from opencut.jobs import (
     _is_cancelled,
@@ -181,7 +182,7 @@ def health():
 
     return jsonify({
         "status": "ok",
-        "version": "1.3.0",
+        "version": __version__,
         "capabilities": caps,
         "csrf_token": get_csrf_token(),
     })

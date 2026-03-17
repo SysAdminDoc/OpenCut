@@ -295,6 +295,10 @@ def list_ollama_models(base_url="http://localhost:11434"):
     Returns:
         List of model name strings.
     """
+    from urllib.parse import urlparse
+    parsed = urlparse(base_url)
+    if parsed.hostname not in ("localhost", "127.0.0.1", "::1"):
+        raise RuntimeError("Ollama base_url must point to localhost for security")
     url = f"{base_url.rstrip('/')}/api/tags"
     data = _http_json(url, timeout=10)
 

@@ -67,6 +67,8 @@ def detect_scenes(
         input_path,
     ]
     probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
+    if probe_result.returncode != 0:
+        logger.warning("ffprobe failed (rc=%d) for %s", probe_result.returncode, input_path)
     duration = 0.0
     try:
         probe_data = json.loads(probe_result.stdout)
@@ -346,6 +348,8 @@ def detect_scenes_ml(
         input_path,
     ]
     probe_result = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
+    if probe_result.returncode != 0:
+        logger.warning("ffprobe failed (rc=%d) for %s", probe_result.returncode, input_path)
     duration = 0.0
     fps = 25.0
     try:

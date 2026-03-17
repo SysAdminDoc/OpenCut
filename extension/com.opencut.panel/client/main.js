@@ -1308,14 +1308,14 @@
                     var meta = "";
                     if (data.duration) meta += fmtDur(data.duration);
                     if (data.video) {
-                        meta += " | " + data.video.width + "x" + data.video.height + " @ " + data.video.fps.toFixed(2) + " fps";
+                        meta += " | " + data.video.width + "x" + data.video.height + " @ " + safeFixed(data.video.fps, 2) + " fps";
                         if (data.video.codec) meta += " (" + data.video.codec + ")";
                     }
                     if (data.audio) {
-                        meta += " | " + (data.audio.sample_rate / 1000).toFixed(1) + " kHz";
+                        meta += " | " + safeFixed(data.audio.sample_rate / 1000, 1) + " kHz";
                         if (data.audio.codec) meta += " (" + data.audio.codec + ")";
                     }
-                    if (data.file_size_mb) meta += " | " + data.file_size_mb.toFixed(1) + " MB";
+                    if (data.file_size_mb) meta += " | " + safeFixed(data.file_size_mb, 1) + " MB";
                     if (lastTranscriptSegments) meta += " | Transcript cached";
                     if (meta) el.fileMetaDisplay.textContent = meta;
                 } else { el.fileMetaDisplay.textContent = path; }
@@ -2143,9 +2143,9 @@
 
         apiWithSpinner(el.measureLoudnessBtn, "POST", "/audio/measure", { filepath: selectedPath }, function (err, data) {
             if (!err && data && !data.error) {
-                el.meterLUFS.textContent = data.integrated_lufs.toFixed(1) + " LUFS";
-                el.meterTP.textContent = data.true_peak_dbtp.toFixed(1) + " dBTP";
-                el.meterLRA.textContent = data.loudness_range_lu.toFixed(1) + " LU";
+                el.meterLUFS.textContent = safeFixed(data.integrated_lufs, 1) + " LUFS";
+                el.meterTP.textContent = safeFixed(data.true_peak_dbtp, 1) + " dBTP";
+                el.meterLRA.textContent = safeFixed(data.loudness_range_lu, 1) + " LU";
             } else {
                 el.meterLUFS.textContent = "Error";
             }
@@ -3051,9 +3051,9 @@
     addJobDoneListener(function (job) {
         if (job.type === "beats" && job.status === "complete" && job.result) {
             el.beatResults.classList.remove("hidden");
-            el.bpmValue.textContent = job.result.bpm.toFixed(0);
+            el.bpmValue.textContent = safeFixed(job.result.bpm, 0);
             el.beatCount.textContent = job.result.total_beats;
-            el.beatConfidence.textContent = (job.result.confidence * 100).toFixed(0) + "%";
+            el.beatConfidence.textContent = safeFixed(job.result.confidence * 100, 0) + "%";
         }
     });
 
@@ -3062,7 +3062,7 @@
         if (job.type === "scenes" && job.status === "complete" && job.result) {
             el.sceneResults.classList.remove("hidden");
             el.sceneCount.textContent = job.result.total_scenes;
-            el.avgSceneLen.textContent = job.result.avg_scene_length + "s";
+            el.avgSceneLen.textContent = safeFixed(job.result.avg_scene_length, 1) + "s";
             if (job.result.youtube_chapters) {
                 el.ytChapters.classList.remove("hidden");
                 el.ytChaptersText.value = job.result.youtube_chapters;
@@ -3299,7 +3299,7 @@
         api("GET", "/system/gpu", null, function (err, data) {
             if (!err && data) {
                 el.gpuName.textContent = data.available ? data.name : "None detected";
-                el.gpuVram.textContent = data.available ? (data.vram_mb / 1024).toFixed(1) + " GB" : "--";
+                el.gpuVram.textContent = data.available ? safeFixed(data.vram_mb / 1024, 1) + " GB" : "--";
             }
         });
     }
