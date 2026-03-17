@@ -55,7 +55,7 @@ def extract_audio_pcm(
 
     result = subprocess.run(cmd, capture_output=True, timeout=300)
     if result.returncode != 0:
-        raise RuntimeError(f"Audio extraction failed: {result.stderr.decode()}")
+        raise RuntimeError(f"Audio extraction failed: {result.stderr.decode(errors='replace')}")
 
     return result.stdout, sample_rate
 
@@ -91,7 +91,7 @@ def extract_audio_wav(filepath: str, output_path: Optional[str] = None, sample_r
 
     result = subprocess.run(cmd, capture_output=True, timeout=300)
     if result.returncode != 0:
-        raise RuntimeError(f"Audio extraction failed: {result.stderr.decode()}")
+        raise RuntimeError(f"Audio extraction failed: {result.stderr.decode(errors='replace')}")
 
     return output_path
 
