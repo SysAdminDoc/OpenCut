@@ -15,11 +15,10 @@ import logging
 import math
 import os
 import subprocess
-import tempfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
-from .captions import CaptionSegment, TranscriptionResult, Word
+from .captions import TranscriptionResult, Word
 
 logger = logging.getLogger("opencut.styled_captions")
 
@@ -676,7 +675,7 @@ def render_frame(
     style: CaptionStyle,
     video_size: Tuple[int, int],
     font,
-) -> "Image":
+):  # returns PIL Image
     """Render a single caption frame as a transparent RGBA image."""
     from PIL import Image, ImageDraw
 
@@ -815,7 +814,6 @@ def render_styled_caption_video(
     Output is PNG codec in MOV container for universal alpha support.
     """
     _ensure_pillow()
-    from PIL import Image
 
     style = STYLES.get(style_name, STYLES[DEFAULT_STYLE])
     font = _load_font(style)

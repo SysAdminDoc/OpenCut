@@ -6,11 +6,10 @@ Adobe Premiere Pro and other NLEs that support this format
 (DaVinci Resolve, Vegas Pro, etc.).
 """
 
-import os
 import uuid
 import xml.etree.ElementTree as ET
-from xml.dom import minidom
 from typing import List, Optional
+from xml.dom import minidom
 
 from ..core.silence import TimeSegment
 from ..core.zoom import ZoomEvent
@@ -49,7 +48,7 @@ def export_premiere_xml(
 
     # Build XML document
     xmeml = ET.Element("xmeml", version="4")
-    sequence = _build_sequence(xmeml, info, speech_segments, config, zoom_events)
+    _build_sequence(xmeml, info, speech_segments, config, zoom_events)
 
     # Write formatted XML
     xml_str = _prettify(xmeml)

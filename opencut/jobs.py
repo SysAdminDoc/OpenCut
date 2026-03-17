@@ -5,8 +5,6 @@ Shared job tracking state and helper functions used across all route modules.
 """
 
 import logging
-import os
-import subprocess as _sp
 import threading
 import time
 import uuid
@@ -182,7 +180,8 @@ def async_job(job_type: str):
             return {"segments": 42}
     """
     import functools
-    from flask import request, jsonify
+
+    from flask import jsonify, request
 
     def decorator(f):
         @functools.wraps(f)

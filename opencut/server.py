@@ -9,15 +9,13 @@ import json
 import logging
 import logging.handlers
 import os
-import sys
 import socket
-import time
-import threading
-import traceback
 import subprocess as _sp
-from pathlib import Path
+import sys
+import time
+import traceback
 
-from flask import Flask, request, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 # ---------------------------------------------------------------------------
@@ -158,21 +156,16 @@ def _setup_system_site_packages():
 
 _setup_system_site_packages()
 
-# Handle both relative and absolute imports
+# Blueprints handle their own imports; this block pre-loads for backward compat
 try:
-    from .utils.media import probe as _probe_media
-    from .utils.config import SilenceConfig, ExportConfig, CaptionConfig, get_preset
-    from .core.silence import detect_speech, get_edit_summary
-    from .core.zoom import generate_zoom_events
-    from .export.premiere import export_premiere_xml
-    from .export.srt import export_srt, export_vtt, export_json, export_ass, rgb_to_ass_color
+    from .core.silence import detect_speech, get_edit_summary  # noqa: F401
+    from .core.zoom import generate_zoom_events  # noqa: F401
+    from .export.premiere import export_premiere_xml  # noqa: F401
+    from .export.srt import export_ass, export_json, export_srt, export_vtt, rgb_to_ass_color  # noqa: F401
+    from .utils.config import CaptionConfig, ExportConfig, SilenceConfig, get_preset  # noqa: F401
+    from .utils.media import probe as _probe_media  # noqa: F401
 except ImportError:
-    from opencut.utils.media import probe as _probe_media
-    from opencut.utils.config import SilenceConfig, ExportConfig, CaptionConfig, get_preset
-    from opencut.core.silence import detect_speech, get_edit_summary
-    from opencut.core.zoom import generate_zoom_events
-    from opencut.export.premiere import export_premiere_xml
-    from opencut.export.srt import export_srt, export_vtt, export_json, export_ass, rgb_to_ass_color
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -183,8 +176,9 @@ app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB request size limi
 CORS(app, origins=["null", "file://"])  # CEP panels use null origin; file:// for local dev
 
 
-from opencut.jobs import TooManyJobsError
-from opencut.errors import register_error_handlers
+from opencut.errors import register_error_handlers  # noqa: E402
+from opencut.jobs import TooManyJobsError  # noqa: E402
+
 register_error_handlers(app)
 
 
@@ -226,7 +220,8 @@ def handle_internal_error(e):
 # ---------------------------------------------------------------------------
 # Register Blueprints (all routes are in opencut/routes/)
 # ---------------------------------------------------------------------------
-from opencut.routes import register_blueprints
+from opencut.routes import register_blueprints  # noqa: E402
+
 register_blueprints(app)
 
 
@@ -450,7 +445,7 @@ def _nuke_old_servers(host: str, port: int) -> bool:
         _kill_via_shutdown_endpoint(host, p)
 
     if _wait_for_port(host, port, timeout=3.0):
-        print(f"  Graceful shutdown succeeded.")
+        print("  Graceful shutdown succeeded.")
         return True
 
     # --- Step 2: Kill via PID file ---
@@ -534,7 +529,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
             effective_port = port
         else:
             # Kill sequence failed - find an alternate port
-            print(f"  Searching for an open port...")
+            print("  Searching for an open port...")
             for offset in range(1, 11):
                 candidate = port + offset
                 if _check_port(host, candidate):
@@ -542,10 +537,10 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
                     print(f"  Using port {effective_port} instead.")
                     break
             else:
-                print(f"")
+                print("")
                 print(f"  ERROR: Ports {port}-{port + 10} are all in use.")
-                print(f"  Kill any stuck python processes and try again.")
-                print(f"")
+                print("  Kill any stuck python processes and try again.")
+                print("")
                 sys.exit(1)
 
     # Write PID file so future instances can kill us
@@ -555,13 +550,13 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     import atexit
     atexit.register(_remove_pid)
 
-    print(f"")
-    print(f"  OpenCut Backend Server v1.3.0")
+    print("")
+    print("  OpenCut Backend Server v1.3.0")
     print(f"  Listening on http://{host}:{effective_port}")
     print(f"  PID: {os.getpid()}")
     print(f"  Log file: {LOG_FILE}")
-    print(f"  Press Ctrl+C to stop")
-    print(f"")
+    print("  Press Ctrl+C to stop")
+    print("")
     logger.info(f"Server starting on http://{host}:{effective_port} (pid={os.getpid()})")
 
     # Show Windows toast notification so user knows server started (especially
@@ -600,24 +595,24 @@ def download_models(model_size="base"):
     except Exception:
         repo_id = f"Systran/faster-whisper-{model_size}"
 
-    print(f"")
-    print(f"  OpenCut Model Downloader")
-    print(f"  ========================")
-    print(f"")
+    print("")
+    print("  OpenCut Model Downloader")
+    print("  ========================")
+    print("")
     print(f"  Model:  Whisper '{model_size}' ({size_str})")
     print(f"  Repo:   {repo_id}")
-    print(f"  Source: Hugging Face (huggingface.co)")
-    print(f"")
+    print("  Source: Hugging Face (huggingface.co)")
+    print("")
 
     # Step 1: Download model files with progress
     try:
-        from huggingface_hub import snapshot_download, list_repo_files
+        from huggingface_hub import list_repo_files, snapshot_download
 
-        print(f"  Fetching file list...")
+        print("  Fetching file list...")
         files = list_repo_files(repo_id)
         total_files = len(files)
         print(f"  Found {total_files} files to download.")
-        print(f"")
+        print("")
 
         _file_count = [0]
         _start_time = [time.time()]
@@ -642,10 +637,10 @@ def download_models(model_size="base"):
         except Exception:
             pass
 
-        print(f"  Downloading from Hugging Face...")
-        print(f"")
+        print("  Downloading from Hugging Face...")
+        print("")
         snapshot_download(repo_id, local_files_only=False)
-        print(f"")
+        print("")
 
         # Restore tqdm
         try:
@@ -655,13 +650,13 @@ def download_models(model_size="base"):
 
     except Exception as e:
         print(f"  [ERROR] Download failed: {e}")
-        print(f"")
-        print(f"  You can download it later from the OpenCut panel in Premiere Pro.")
+        print("")
+        print("  You can download it later from the OpenCut panel in Premiere Pro.")
         return 1
 
     # Step 2: Verify model loads correctly
-    print(f"")
-    print(f"  Verifying model...")
+    print("")
+    print("  Verifying model...")
     try:
         from faster_whisper import WhisperModel
         model = WhisperModel(model_size, device="cpu", compute_type="int8")
@@ -669,12 +664,12 @@ def download_models(model_size="base"):
         print(f"  [OK] Whisper '{model_size}' model downloaded and verified!")
     except Exception as e:
         print(f"  [WARNING] Model downloaded but verification failed: {e}")
-        print(f"  The model may still work — try it from the OpenCut panel.")
+        print("  The model may still work — try it from the OpenCut panel.")
 
-    print(f"")
-    print(f"  Models are cached in your user profile and will be")
-    print(f"  available immediately when you use OpenCut.")
-    print(f"")
+    print("")
+    print("  Models are cached in your user profile and will be")
+    print("  available immediately when you use OpenCut.")
+    print("")
     return 0
 
 

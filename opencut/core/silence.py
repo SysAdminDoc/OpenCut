@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from typing import Callable, List, Optional
 
 from ..utils.config import SilenceConfig
-from ..utils.media import MediaInfo, probe
+from ..utils.media import probe
 
 
 @dataclass

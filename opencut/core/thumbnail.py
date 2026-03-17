@@ -13,9 +13,7 @@ Extracts top N candidate frames and returns them as JPEGs.
 import logging
 import os
 import subprocess
-import sys
 import tempfile
-from pathlib import Path
 from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
@@ -154,7 +152,6 @@ def generate_thumbnails(
     """
     _ensure_package("cv2", "opencv-python-headless", on_progress)
     import cv2
-    import numpy as np
 
     info = _get_video_info(input_path)
     duration = info["duration"]

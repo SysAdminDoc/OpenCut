@@ -5,12 +5,11 @@ Provides audio energy analysis for zoom detection and other features
 that don't require ML models.
 """
 
-import subprocess
-import struct
-import tempfile
 import os
-from typing import List, Tuple, Optional
+import subprocess
+import tempfile
 from dataclasses import dataclass
+from typing import List, Optional, Tuple
 
 from .silence import TimeSegment
 

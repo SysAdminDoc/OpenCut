@@ -14,10 +14,8 @@ noise suppression with <10MB model weight.
 import logging
 import os
 import subprocess
-import sys
 import tempfile
-from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 

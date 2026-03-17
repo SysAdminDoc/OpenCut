@@ -14,9 +14,8 @@ Heavy GPU requirements: SeedVR2 needs 8-24GB VRAM.
 import logging
 import os
 import subprocess
-import sys
 import tempfile
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -144,7 +143,6 @@ def upscale_realesrgan(
     _ensure_package("cv2", "opencv-python-headless")
 
     import cv2
-    import numpy as np
     import torch
     from basicsr.archs.rrdbnet_arch import RRDBNet
     from realesrgan import RealESRGANer

@@ -13,12 +13,11 @@ Falls back to OpenCV Haar cascades if MediaPipe unavailable.
 
 import logging
 import os
-import subprocess
-import sys
-import tempfile
 import shutil
+import subprocess
+import tempfile
 from pathlib import Path
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -80,7 +79,7 @@ def check_mediapipe_available() -> bool:
 def check_face_tools_available() -> Dict:
     caps = {"mediapipe": check_mediapipe_available()}
     try:
-        import cv2
+        import cv2  # noqa: F401
         caps["opencv"] = True
         caps["haar"] = True
     except ImportError:
@@ -94,8 +93,7 @@ def check_face_tools_available() -> Dict:
 # ---------------------------------------------------------------------------
 def _detect_faces_mediapipe(frame, detector):
     """Detect faces using MediaPipe. Returns list of (x, y, w, h) rects."""
-    import mediapipe as mp
-    h, t_h = frame.shape[:2], frame.shape[0]
+    t_h = frame.shape[0]
     w = frame.shape[1]
 
     rgb = frame[:, :, ::-1]  # BGR to RGB
@@ -150,7 +148,6 @@ def blur_faces(
     """
     _ensure_package("cv2", "opencv-python-headless", on_progress)
     import cv2
-    import numpy as np
 
     if output_path is None:
         base = os.path.splitext(os.path.basename(input_path))[0]

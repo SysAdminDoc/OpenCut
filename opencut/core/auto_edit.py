@@ -14,7 +14,7 @@ import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional
+from typing import List, Optional
 
 logger = logging.getLogger("opencut")
 
