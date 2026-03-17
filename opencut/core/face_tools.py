@@ -19,25 +19,9 @@ import tempfile
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-
-def _ensure_package(pkg_name: str, pip_name: str = None, on_progress: Callable = None):
-    try:
-        __import__(pkg_name)
-        return True
-    except ImportError:
-        pip_name = pip_name or pkg_name
-        if on_progress:
-            on_progress(5, f"Installing {pip_name}...")
-        logger.info(f"Installing missing dependency: {pip_name}")
-        from opencut.security import safe_pip_install
-        safe_pip_install(pip_name)
-        return True
-
-
 
 def _get_video_info(filepath: str) -> Dict:
     import json as _json
@@ -141,7 +125,7 @@ def blur_faces(
         strength: Blur kernel size (odd number, higher = more blur). For pixelate, block size.
         detector: "mediapipe" (best) or "haar" (fallback, no install needed).
     """
-    _ensure_package("cv2", "opencv-python-headless", on_progress)
+    ensure_package("cv2", "opencv-python-headless", on_progress)
     import cv2
 
     if output_path is None:
@@ -159,7 +143,7 @@ def blur_faces(
     mp_face = None
     if detector == "mediapipe":
         try:
-            _ensure_package("mediapipe", "mediapipe", on_progress)
+            ensure_package("mediapipe", "mediapipe", on_progress)
             import mediapipe as mp
             mp_face = mp.solutions.face_detection.FaceDetection(
                 model_selection=1, min_detection_confidence=0.5
@@ -267,7 +251,7 @@ def detect_faces_in_frame(
     Detect faces in an image or first frame of video.
     Returns face count and bounding box coordinates.
     """
-    _ensure_package("cv2", "opencv-python-headless", on_progress)
+    ensure_package("cv2", "opencv-python-headless", on_progress)
     import cv2
 
     ext = os.path.splitext(input_path)[1].lower()
@@ -291,7 +275,7 @@ def detect_faces_in_frame(
 
     if detector == "mediapipe":
         try:
-            _ensure_package("mediapipe", "mediapipe", on_progress)
+            ensure_package("mediapipe", "mediapipe", on_progress)
             import mediapipe as mp
             with mp.solutions.face_detection.FaceDetection(
                 model_selection=1, min_detection_confidence=0.5
