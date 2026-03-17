@@ -104,6 +104,60 @@ if not _bundled_ffmpeg:
     else:
         logger.warning("  FFmpeg: NOT FOUND — many features will not work")
 
+
+# ---------------------------------------------------------------------------
+# System Site-Packages Discovery (frozen builds)
+# ---------------------------------------------------------------------------
+def _setup_system_site_packages():
+    """Add system Python's site-packages to sys.path for frozen builds.
+
+    When running as a PyInstaller exe, optional packages installed via pip
+    into the system Python are invisible. This finds system Python in PATH,
+    queries its site-packages dirs, and appends them so _try_import() can
+    discover packages like auto-editor, mediapipe, edge-tts, etc.
+    """
+    if not getattr(sys, "frozen", False):
+        return
+
+    import shutil
+    for name in ("python", "python3", "py"):
+        python = shutil.which(name)
+        if not python:
+            continue
+        try:
+            result = _sp.run(
+                [python, "-c", "import site, json; print(json.dumps(site.getsitepackages()))"],
+                capture_output=True, text=True, timeout=10
+            )
+            if result.returncode == 0:
+                import json
+                paths = json.loads(result.stdout.strip())
+                added = 0
+                for p in paths:
+                    if os.path.isdir(p) and p not in sys.path:
+                        sys.path.append(p)
+                        added += 1
+                # Also check user site-packages
+                result2 = _sp.run(
+                    [python, "-c", "import site; print(site.getusersitepackages())"],
+                    capture_output=True, text=True, timeout=10
+                )
+                if result2.returncode == 0:
+                    user_sp = result2.stdout.strip()
+                    if os.path.isdir(user_sp) and user_sp not in sys.path:
+                        sys.path.append(user_sp)
+                        added += 1
+                if added:
+                    logger.info("  System site-packages: added %d paths from %s", added, python)
+                return
+        except Exception as e:
+            logger.debug("  Could not query site-packages from %s: %s", name, e)
+
+    logger.debug("  System Python not found — optional deps from pip unavailable")
+
+
+_setup_system_site_packages()
+
 # Handle both relative and absolute imports
 try:
     from .utils.media import probe as _probe_media

@@ -15,6 +15,7 @@ public class InstallEngine
     private readonly ShortcutCreator _shortcutCreator = new();
     private readonly CepInstaller _cepInstaller = new();
     private readonly WhisperDownloader _whisperDownloader = new();
+    private readonly DependencyInstaller _dependencyInstaller = new();
 
     public InstallEngine(InstallConfig config)
     {
@@ -23,7 +24,7 @@ public class InstallEngine
 
     public void RunInstall(IProgress<InstallProgress> progress)
     {
-        int totalSteps = 16;
+        int totalSteps = 17;
         int step = 0;
 
         var tempDir = Path.Combine(Path.GetTempPath(), $"OpenCut-Install-{Guid.NewGuid():N}");
@@ -144,8 +145,12 @@ public class InstallEngine
             else
                 Report(progress, step, totalSteps, "Whisper model", "Skipped (not selected).", LogLevel.Debug);
 
-            // Step 16: Cleanup temp
+            // Step 16: Install optional Python tools
             step = 16;
+            _dependencyInstaller.InstallDeps(_config, progress, step, totalSteps);
+
+            // Step 17: Cleanup temp
+            step = 17;
             Report(progress, step, totalSteps, "Cleaning up", "Removing temporary files...");
             try
             {

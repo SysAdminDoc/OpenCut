@@ -61,6 +61,12 @@ public partial class OptionsPage : Page
             ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    private void OptionalDepsCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        OptionalDepsPanel.Visibility = OptionalDepsCheck.IsChecked == true
+            ? Visibility.Visible : Visibility.Collapsed;
+    }
+
     private void Back_Click(object sender, RoutedEventArgs e)
     {
         _mainWindow.SetStep(1);
@@ -78,6 +84,15 @@ public partial class OptionsPage : Page
         config.CreateStartMenuShortcut = StartMenuCheck.IsChecked == true;
         config.CreateStartupShortcut = AutostartCheck.IsChecked == true;
         config.DownloadWhisperModel = WhisperCheck.IsChecked == true;
+        config.InstallOptionalDeps = OptionalDepsCheck.IsChecked == true;
+
+        if (config.InstallOptionalDeps)
+        {
+            config.SelectedDeps.Clear();
+            if (DepAutoEditor.IsChecked == true) config.SelectedDeps.Add("auto-editor");
+            if (DepEdgeTts.IsChecked == true) config.SelectedDeps.Add("edge-tts");
+            if (DepMediapipe.IsChecked == true) config.SelectedDeps.Add("mediapipe");
+        }
 
         if (config.DownloadWhisperModel)
         {

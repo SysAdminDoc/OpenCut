@@ -8,6 +8,7 @@ import functools
 import logging
 import os
 import secrets
+import shutil
 import subprocess
 import sys
 
@@ -92,6 +93,23 @@ def validate_path(path: str, allowed_base: str = None) -> str:
 # ---------------------------------------------------------------------------
 # Safe pip install
 # ---------------------------------------------------------------------------
+def _find_system_python() -> str | None:
+    """Find system Python executable when running as a frozen (PyInstaller) build."""
+    for name in ("python", "python3", "py"):
+        path = shutil.which(name)
+        if path:
+            try:
+                result = subprocess.run(
+                    [path, "--version"], capture_output=True, text=True, timeout=10
+                )
+                if result.returncode == 0:
+                    logger.debug("Found system Python: %s (%s)", path, result.stdout.strip())
+                    return path
+            except Exception:
+                continue
+    return None
+
+
 def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedProcess:
     """
     Install a pip package with a safe fallback chain:
@@ -100,17 +118,31 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     2. ``pip install --user <package>``
     3. ``pip install --break-system-packages <package>``  (only inside a venv)
 
+    When running as a frozen (PyInstaller) build, uses system Python
+    from PATH instead of ``sys.executable`` (which points to the exe).
+
     Returns the ``CompletedProcess`` on success.
     Raises ``RuntimeError`` if all strategies fail.
     """
+    # Frozen builds can't use sys.executable for pip — find system Python
+    if getattr(sys, "frozen", False):
+        python = _find_system_python()
+        if not python:
+            raise RuntimeError(
+                f"Cannot install {package}: Python not found in PATH. "
+                "Install Python from python.org and ensure it is on PATH."
+            )
+    else:
+        python = sys.executable
+
     strategies = [
-        [sys.executable, "-m", "pip", "install", package, "-q"],
-        [sys.executable, "-m", "pip", "install", package, "--user", "-q"],
+        [python, "-m", "pip", "install", package, "-q"],
+        [python, "-m", "pip", "install", package, "--user", "-q"],
     ]
     # Only allow --break-system-packages inside a virtual environment
     if _in_virtualenv():
         strategies.append(
-            [sys.executable, "-m", "pip", "install", package, "--break-system-packages", "-q"]
+            [python, "-m", "pip", "install", package, "--break-system-packages", "-q"]
         )
 
     last_result = None
