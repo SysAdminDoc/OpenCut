@@ -373,6 +373,23 @@ function getSequenceClips() {
                 });
             }
         }
+
+        for (var a = 0; a < seq.audioTracks.numTracks; a++) {
+            var aTrack = seq.audioTracks[a];
+            for (var ac = 0; ac < aTrack.clips.numItems; ac++) {
+                var aClip = aTrack.clips[ac];
+                var aPath = "";
+                try { aPath = aClip.projectItem.getMediaPath(); } catch (e2) { _ocLog(e2.toString()); }
+                clips.push({
+                    name: aClip.name || "",
+                    path: aPath,
+                    inPoint: aClip.start ? aClip.start.seconds : 0,
+                    outPoint: aClip.end ? aClip.end.seconds : 0,
+                    trackIndex: a,
+                    trackType: "audio"
+                });
+            }
+        }
     } catch (e3) {
         return JSON.stringify({ error: e3.toString() });
     }
