@@ -42,7 +42,7 @@ def print_banner():
 
 
 @click.group()
-@click.version_option(version="0.1.0", prog_name="opencut")
+@click.version_option(version="1.3.0", prog_name="opencut")
 def cli():
     """OpenCut - Open source video editing automation for Premiere Pro."""
     pass
