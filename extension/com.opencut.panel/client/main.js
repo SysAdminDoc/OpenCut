@@ -5204,7 +5204,7 @@
             var parent = document.getElementById(btns[i]);
             if (!parent) continue;
             parent = parent.parentNode;
-            if (parent.querySelector(".waveform-audio-btn")) continue;
+            if (!parent || parent.querySelector(".waveform-audio-btn")) continue;
             var btn = document.createElement("button");
             btn.className = "btn-outline btn-sm waveform-audio-btn";
             btn.textContent = "Preview Waveform";
