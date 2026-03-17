@@ -419,17 +419,26 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     except Exception:
         pass
 
-    # Collect remaining stderr (capped to prevent memory bloat)
+    # Collect remaining stderr — use proc.stderr.read() directly since
+    # proc.stdout was already consumed by the iterator above.  Calling
+    # proc.communicate() after partial stdout read can deadlock.
     try:
-        _, stderr_data = proc.communicate(timeout=10)
-        if stderr_data:
-            stderr_lines.append(stderr_data[-_max_stderr_bytes:])
-    except Exception:
-        proc.kill()
-        try:
-            _, stderr_data = proc.communicate(timeout=5)
+        proc.wait(timeout=10)
+        if proc.stderr:
+            stderr_data = proc.stderr.read()
             if stderr_data:
                 stderr_lines.append(stderr_data[-_max_stderr_bytes:])
+    except Exception:
+        try:
+            proc.kill()
+        except OSError:
+            pass
+        try:
+            proc.wait(timeout=5)
+            if proc.stderr:
+                stderr_data = proc.stderr.read()
+                if stderr_data:
+                    stderr_lines.append(stderr_data[-_max_stderr_bytes:])
         except Exception:
             pass
 

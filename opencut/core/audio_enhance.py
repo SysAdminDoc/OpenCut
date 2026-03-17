@@ -179,7 +179,12 @@ def enhance_speech(
                 on_progress(30, "Denoising speech...")
 
             logger.info("Running denoiser (device=%s)...", device)
-            audio, sr = _denoise_fn(audio.squeeze(0), sr, device)
+            # squeeze(0) is a no-op on stereo (2,N) — explicitly mix to mono
+            if audio.shape[0] > 1:
+                mono = audio.mean(dim=0)
+            else:
+                mono = audio.squeeze(0)
+            audio, sr = _denoise_fn(mono, sr, device)
             # _denoise returns (tensor, sr) — ensure 2D for torchaudio
             if audio.dim() == 1:
                 audio = audio.unsqueeze(0)
@@ -192,8 +197,13 @@ def enhance_speech(
                 on_progress(70, "Enhancing speech quality...")
 
             logger.info("Running enhancer (solver=%s, nfe=%d, device=%s)...", solver, nfe, device)
+            # squeeze(0) is a no-op on stereo (2,N) — explicitly mix to mono
+            if audio.shape[0] > 1:
+                mono = audio.mean(dim=0)
+            else:
+                mono = audio.squeeze(0)
             audio, sr = _enhance_fn(
-                audio.squeeze(0), sr,
+                mono, sr,
                 device,
                 nfe=nfe,
                 solver=solver,

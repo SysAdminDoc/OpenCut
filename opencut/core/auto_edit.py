@@ -7,6 +7,7 @@ by visual motion analysis and creates edit lists of segments to keep.
 Requires: pip install auto-editor
 """
 
+import html
 import json
 import logging
 import os
@@ -134,8 +135,9 @@ def _parse_auto_editor_json(json_path, total_duration):
             v_tracks = timeline.get("v", [])
             if v_tracks and isinstance(v_tracks[0], list):
                 for clip in v_tracks[0]:
-                    start = float(clip.get("offset", clip.get("start", 0))) / clip.get("tb", 30)
-                    dur = float(clip.get("dur", 0)) / clip.get("tb", 30)
+                    tb = float(clip.get("tb", 30)) or 30.0  # guard against zero
+                    start = float(clip.get("offset", clip.get("start", 0))) / tb
+                    dur = float(clip.get("dur", 0)) / tb
                     speed = float(clip.get("speed", 1.0))
                     end = start + dur
                     action = "cut" if speed == 0 or speed >= 99999 else "keep"
@@ -184,15 +186,15 @@ def _export_premiere_xml(segments, input_path, output_path):
         output_path: Path to write the XML file.
     """
     keep_segments = [s for s in segments if s.action == "keep"]
-    filename = os.path.basename(input_path)
-    filepath_url = input_path.replace("\\", "/")
+    filename = html.escape(os.path.basename(input_path))
+    filepath_url = html.escape(input_path.replace("\\", "/"))
 
     # Build clip entries
     clip_entries = []
     timeline_pos = 0
     for i, seg in enumerate(keep_segments):
-        start_frames = int(seg.start * 30)
-        end_frames = int(seg.end * 30)
+        start_frames = max(0, int(seg.start * 30))
+        end_frames = max(start_frames, int(seg.end * 30))
         duration_frames = end_frames - start_frames
 
         clip_entries.append(f"""

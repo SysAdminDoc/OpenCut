@@ -198,7 +198,10 @@ def async_job(job_type: str):
             except ValueError as e:
                 return jsonify({"error": str(e)}), 400
 
-            job_id = _new_job(job_type, filepath)
+            try:
+                job_id = _new_job(job_type, filepath)
+            except TooManyJobsError as e:
+                return jsonify({"error": str(e)}), 429
 
             def _process():
                 try:

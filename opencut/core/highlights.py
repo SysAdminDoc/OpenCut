@@ -233,7 +233,7 @@ def extract_highlights(
     for h in highlights:
         if h.duration < min_duration:
             h.end = h.start + min_duration
-        if h.duration > max_duration:
+        elif h.duration > max_duration:
             h.end = h.start + max_duration
         if h.end > h.start:
             filtered.append(h)

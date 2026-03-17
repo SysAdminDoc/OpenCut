@@ -9,6 +9,7 @@ Uses FFmpeg only - no additional dependencies required.
 
 import json
 import logging
+import re
 import subprocess
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
@@ -93,36 +94,36 @@ def detect_scenes(
     # Parse showinfo output for timestamps
     boundaries = [SceneBoundary(time=0.0, frame=0, score=1.0, label="Start")]
 
+    _pts_re = re.compile(r"pts_time:\s*([\d.]+)")
+    _frame_re = re.compile(r"\bn:\s*(\d+)")
+
     for line in result.stderr.splitlines():
-        if "showinfo" in line and "pts_time:" in line:
-            try:
-                # Extract pts_time from showinfo output
-                pts_idx = line.index("pts_time:")
-                time_str = line[pts_idx + 9:].split()[0]
-                time_val = float(time_str)
+        if "showinfo" not in line:
+            continue
+        pts_match = _pts_re.search(line)
+        if not pts_match:
+            continue
+        try:
+            time_val = float(pts_match.group(1))
 
-                # Check minimum spacing from last boundary
-                if boundaries and (time_val - boundaries[-1].time) < min_scene_length:
-                    continue
-
-                # Extract frame number if available
-                frame_num = 0
-                if "n:" in line:
-                    try:
-                        n_idx = line.index("n:")
-                        frame_str = line[n_idx + 2:].split()[0]
-                        frame_num = int(frame_str)
-                    except (ValueError, IndexError):
-                        pass
-
-                boundaries.append(SceneBoundary(
-                    time=time_val,
-                    frame=frame_num,
-                    score=threshold,
-                ))
-
-            except (ValueError, IndexError):
+            # Check minimum spacing from last boundary
+            if boundaries and (time_val - boundaries[-1].time) < min_scene_length:
                 continue
+
+            # Extract frame number if available
+            frame_num = 0
+            frame_match = _frame_re.search(line)
+            if frame_match:
+                frame_num = int(frame_match.group(1))
+
+            boundaries.append(SceneBoundary(
+                time=time_val,
+                frame=frame_num,
+                score=threshold,
+            ))
+
+        except (ValueError, IndexError):
+            continue
 
     if on_progress:
         on_progress(90, "Finalizing scene analysis...")
@@ -355,7 +356,10 @@ def detect_scenes_ml(
         if streams:
             fps_str = streams[0].get("r_frame_rate", "25/1")
             parts = fps_str.split("/")
-            fps = float(parts[0]) / float(parts[1]) if len(parts) == 2 else 25.0
+            if len(parts) == 2 and float(parts[1]) > 0:
+                fps = float(parts[0]) / float(parts[1])
+            else:
+                fps = 25.0
     except (json.JSONDecodeError, ValueError, IndexError):
         pass
 

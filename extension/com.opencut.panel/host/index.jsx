@@ -399,14 +399,16 @@ function importAndOpenXml(filePath) {
         var file = new File(filePath);
         if (!file.exists) return JSON.stringify({ error: "File not found: " + filePath });
 
-        var seqCountBefore = app.project.sequences.numSequences;
+        var seqCountBefore = 0;
+        try { seqCountBefore = app.project.sequences.numSequences; } catch (e) {}
 
         // importFiles() returns undefined in many Premiere versions
         app.project.importFiles(
             [filePath], true, app.project.rootItem, false
         );
 
-        var seqCountAfter = app.project.sequences.numSequences;
+        var seqCountAfter = 0;
+        try { seqCountAfter = app.project.sequences.numSequences; } catch (e) {}
         if (seqCountAfter > seqCountBefore) {
             var newSeq = app.project.sequences[seqCountAfter - 1];
             if (newSeq) {
@@ -441,7 +443,7 @@ function getProjectInfo() {
             info.sequenceName = seq.name || "";
             try {
                 var settings = seq.getSettings();
-                if (settings && settings.videoFrameRate) {
+                if (settings && settings.videoFrameRate && settings.videoFrameRate.seconds > 0) {
                     info.sequenceFrameRate = 1 / settings.videoFrameRate.seconds;
                 }
             } catch (e) { _ocLog(e.toString()); }
@@ -628,7 +630,12 @@ function _findProjectItemByPath(parent, targetPath, depth) {
             } else {
                 var p = "";
                 try { p = item.getMediaPath(); } catch (e) { _ocLog(e.toString()); }
-                if (p && decodeURI(p).toLowerCase() === decodeURI(targetPath).toLowerCase()) return item;
+                if (p) {
+                    var dp, dt;
+                    try { dp = decodeURI(p); } catch (e) { dp = p; }
+                    try { dt = decodeURI(targetPath); } catch (e) { dt = targetPath; }
+                    if (dp.toLowerCase() === dt.toLowerCase()) return item;
+                }
             }
         } catch (e) { _ocLog(e.toString()); }
     }
@@ -671,14 +678,15 @@ function importCaptions(captionPath) {
             var captionBin = _findOrCreateBin("OpenCut Captions");
             var targetBin = captionBin || app.project.rootItem;
 
-            importSuccess = app.project.importFiles(
+            // importFiles() returns undefined in many Premiere versions —
+            // check for the item in the project instead of relying on return value
+            app.project.importFiles(
                 [captionPath], false, targetBin, false
             );
 
-            if (importSuccess) {
-                // Find the newly imported item
-                captionItem = _findProjectItemByPath(app.project.rootItem, captionPath, 0);
-            }
+            // Find the newly imported item
+            captionItem = _findProjectItemByPath(app.project.rootItem, captionPath, 0);
+            importSuccess = !!captionItem;
         } else {
             importSuccess = true;
             _ocLog("Caption file already imported");
@@ -1035,36 +1043,38 @@ function startOpenCutBackend() {
         // Build a batch file that kills old server, then launches new
         var bat = new File(Folder.temp.fsName + "/opencut_start.bat");
         bat.open("w");
-        bat.writeln("@echo off");
-        bat.writeln("setlocal");
-        // Kill via PID file
-        bat.writeln('set "PIDFILE=%USERPROFILE%\\.opencut\\server.pid"');
-        bat.writeln('if exist "%PIDFILE%" (');
-        bat.writeln('    set /p OLDPID=<"%PIDFILE%"');
-        bat.writeln('    if defined OLDPID (');
-        bat.writeln('        taskkill /F /T /PID %OLDPID% >nul 2>&1');
-        bat.writeln('    )');
-        bat.writeln('    del "%PIDFILE%" >nul 2>&1');
-        bat.writeln(')');
-        // Kill anything holding port 5679
-        bat.writeln('for /f "tokens=5" %%a in (\'netstat -ano -p TCP ^| findstr ":5679 " ^| findstr "LISTENING"\') do (');
-        bat.writeln('    taskkill /F /T /PID %%a >nul 2>&1');
-        bat.writeln(')');
-        bat.writeln("timeout /t 1 /nobreak >nul 2>&1");
+        try {
+            bat.writeln("@echo off");
+            bat.writeln("setlocal");
+            // Kill via PID file
+            bat.writeln('set "PIDFILE=%USERPROFILE%\\.opencut\\server.pid"');
+            bat.writeln('if exist "%PIDFILE%" (');
+            bat.writeln('    set /p OLDPID=<"%PIDFILE%"');
+            bat.writeln('    if defined OLDPID (');
+            bat.writeln('        taskkill /F /T /PID %OLDPID% >nul 2>&1');
+            bat.writeln('    )');
+            bat.writeln('    del "%PIDFILE%" >nul 2>&1');
+            bat.writeln(')');
+            // Kill anything holding port 5679
+            bat.writeln('for /f "tokens=5" %%a in (\'netstat -ano -p TCP ^| findstr ":5679 " ^| findstr "LISTENING"\') do (');
+            bat.writeln('    taskkill /F /T /PID %%a >nul 2>&1');
+            bat.writeln(')');
+            bat.writeln("timeout /t 1 /nobreak >nul 2>&1");
 
-        if (exePath) {
-            // Launch the installed exe
-            bat.writeln('"' + exePath + '"');
-        } else {
-            // Fall back to python -m (dev mode)
-            var pythonCmds = ["python", "python3", "py"];
-            for (var i = 0; i < pythonCmds.length; i++) {
-                bat.writeln(pythonCmds[i] + ' -m opencut.server 2>nul && goto :done');
+            if (exePath) {
+                // Launch the installed exe
+                bat.writeln('"' + exePath + '"');
+            } else {
+                // Fall back to python -m (dev mode)
+                var pythonCmds = ["python", "python3", "py"];
+                for (var i = 0; i < pythonCmds.length; i++) {
+                    bat.writeln(pythonCmds[i] + ' -m opencut.server 2>nul && goto :done');
+                }
+                bat.writeln(":done");
             }
-            bat.writeln(":done");
+        } finally {
+            bat.close();
         }
-
-        bat.close();
 
         try {
             bat.execute();
@@ -1079,20 +1089,23 @@ function startOpenCutBackend() {
         var shPath = Folder.temp.fsName + "/opencut_start.sh";
         var sh = new File(shPath);
         sh.open("w");
-        sh.writeln("#!/bin/bash");
-        // Kill via PID file
-        sh.writeln('PIDFILE="$HOME/.opencut/server.pid"');
-        sh.writeln('if [ -f "$PIDFILE" ]; then');
-        sh.writeln('    OLDPID=$(head -1 "$PIDFILE" 2>/dev/null)');
-        sh.writeln('    [ -n "$OLDPID" ] && kill -9 "$OLDPID" 2>/dev/null');
-        sh.writeln('    rm -f "$PIDFILE"');
-        sh.writeln('fi');
-        // Kill anything on port 5679
-        sh.writeln('for PID in $(lsof -ti :5679 2>/dev/null); do kill -9 "$PID" 2>/dev/null; done');
-        sh.writeln("sleep 1");
-        // Launch
-        sh.writeln("nohup python3 -m opencut.server > /dev/null 2>&1 &");
-        sh.close();
+        try {
+            sh.writeln("#!/bin/bash");
+            // Kill via PID file
+            sh.writeln('PIDFILE="$HOME/.opencut/server.pid"');
+            sh.writeln('if [ -f "$PIDFILE" ]; then');
+            sh.writeln('    OLDPID=$(head -1 "$PIDFILE" 2>/dev/null)');
+            sh.writeln('    [ -n "$OLDPID" ] && kill -9 "$OLDPID" 2>/dev/null');
+            sh.writeln('    rm -f "$PIDFILE"');
+            sh.writeln('fi');
+            // Kill anything on port 5679
+            sh.writeln('for PID in $(lsof -ti :5679 2>/dev/null); do kill -9 "$PID" 2>/dev/null; done');
+            sh.writeln("sleep 1");
+            // Launch
+            sh.writeln("nohup python3 -m opencut.server > /dev/null 2>&1 &");
+        } finally {
+            sh.close();
+        }
 
         try {
             // File.execute() on macOS opens .sh files in a text editor.
@@ -1105,10 +1118,13 @@ function startOpenCutBackend() {
                 // Fallback: use a .command file which Terminal.app can run
                 var cmdFile = new File(Folder.temp.fsName + "/opencut_start.command");
                 cmdFile.open("w");
-                cmdFile.writeln("#!/bin/bash");
-                cmdFile.writeln('chmod +x "' + shPath + '" && "' + shPath + '"');
-                cmdFile.writeln("exit 0");
-                cmdFile.close();
+                try {
+                    cmdFile.writeln("#!/bin/bash");
+                    cmdFile.writeln('chmod +x "' + shPath + '" && "' + shPath + '"');
+                    cmdFile.writeln("exit 0");
+                } finally {
+                    cmdFile.close();
+                }
                 cmdFile.execute();
                 launched = true;
             }

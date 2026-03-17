@@ -351,6 +351,10 @@ def face_reframe(input_path: str, target_w: int = 1080, target_h: int = 1920,
     crop_w = min(crop_w, src_w)
     crop_h = min(crop_h, src_h)
 
+    # Ensure valid crop dimensions (degenerate source can produce 0)
+    crop_w = max(2, crop_w)
+    crop_h = max(2, crop_h)
+
     if not tracks:
         # No faces detected: center crop
         logger.warning("No faces detected, using center crop")

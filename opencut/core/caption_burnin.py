@@ -82,8 +82,8 @@ def burnin_subtitles(
 
     ext_lower = os.path.splitext(subtitle_path)[1].lower()
 
-    # Escape path for FFmpeg filter (Windows backslashes, colons, etc.)
-    escaped_sub = subtitle_path.replace("\\", "/").replace(":", "\\:")
+    # Escape path for FFmpeg filter (Windows backslashes, colons, single quotes)
+    escaped_sub = subtitle_path.replace("\\", "/").replace(":", "\\:").replace("'", "'\\''")
 
     if ext_lower == ".ass" or ext_lower == ".ssa":
         # ASS subtitles: use ass filter (respects all ASS styling)
@@ -286,6 +286,7 @@ def _write_ass_file(f, segments: List[Dict], style: Dict, info: Dict):
 
 def _format_ass_time(seconds: float) -> str:
     """Format seconds to ASS time format H:MM:SS.CC"""
+    seconds = max(0.0, float(seconds))
     h = int(seconds // 3600)
     m = int((seconds % 3600) // 60)
     s = int(seconds % 60)

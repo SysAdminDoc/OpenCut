@@ -234,9 +234,21 @@ PID_FILE = os.path.join(os.path.expanduser("~"), ".opencut", "server.pid")
 def _write_pid(port: int):
     """Write current PID and port to file so future instances can find us."""
     try:
-        os.makedirs(os.path.dirname(PID_FILE), exist_ok=True)
-        with open(PID_FILE, "w") as f:
-            f.write(f"{os.getpid()}\n{port}\n")
+        import tempfile
+        pid_dir = os.path.dirname(PID_FILE)
+        os.makedirs(pid_dir, exist_ok=True)
+        # Atomic write: temp file + rename to prevent partial reads
+        fd, tmp_path = tempfile.mkstemp(dir=pid_dir, suffix=".tmp", prefix="server.pid.")
+        try:
+            with os.fdopen(fd, "w") as f:
+                f.write(f"{os.getpid()}\n{port}\n")
+            os.replace(tmp_path, PID_FILE)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
         logger.debug(f"Wrote PID file: pid={os.getpid()} port={port}")
     except Exception as e:
         logger.warning(f"Could not write PID file: {e}")
@@ -622,6 +634,8 @@ def download_models(model_size="base"):
             pass
 
         # Monkey-patch tqdm to show cleaner progress
+        _orig_tqdm = None
+        _tqdm_mod = None
         try:
             import tqdm as _tqdm_mod
             _orig_tqdm = _tqdm_mod.tqdm
@@ -637,16 +651,15 @@ def download_models(model_size="base"):
         except Exception:
             pass
 
-        print("  Downloading from Hugging Face...")
-        print("")
-        snapshot_download(repo_id, local_files_only=False)
-        print("")
-
-        # Restore tqdm
         try:
-            _tqdm_mod.tqdm = _orig_tqdm
-        except Exception:
-            pass
+            print("  Downloading from Hugging Face...")
+            print("")
+            snapshot_download(repo_id, local_files_only=False)
+            print("")
+        finally:
+            # Always restore tqdm even if download fails
+            if _tqdm_mod is not None and _orig_tqdm is not None:
+                _tqdm_mod.tqdm = _orig_tqdm
 
     except Exception as e:
         print(f"  [ERROR] Download failed: {e}")

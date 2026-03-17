@@ -69,14 +69,24 @@ def check_mediapipe_available():
     return _try_import("mediapipe") is not None
 
 
+_ollama_cache = {"result": None, "expires": 0}
+
+
 def check_ollama_available():
-    """Check if Ollama is running locally."""
+    """Check if Ollama is running locally (cached for 30s)."""
+    import time
+    now = time.monotonic()
+    if _ollama_cache["result"] is not None and now < _ollama_cache["expires"]:
+        return _ollama_cache["result"]
     try:
         import urllib.request
-        urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3)
-        return True
+        resp = urllib.request.urlopen("http://localhost:11434/api/tags", timeout=3)
+        resp.close()
+        _ollama_cache["result"] = True
     except Exception:
-        return False
+        _ollama_cache["result"] = False
+    _ollama_cache["expires"] = now + 30
+    return _ollama_cache["result"]
 
 
 def check_llm_available():
