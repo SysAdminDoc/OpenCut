@@ -469,6 +469,24 @@ function getProjectFolder() {
 
 
 /**
+ * Check if the current project has been saved (has a file path).
+ * Returns JSON: {saved: true/false, path: "..."}
+ */
+function isProjectSaved() {
+    try {
+        var p = app.project.path;
+        if (p && p.length > 0) {
+            return '{"saved":true,"path":"' + p.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"}';
+        }
+        return '{"saved":false,"path":""}';
+    } catch (e) {
+        _ocLog("isProjectSaved error: " + e.toString());
+        return '{"saved":false,"path":""}';
+    }
+}
+
+
+/**
  * Apply silence-removed edits directly to the timeline.
  *
  * Creates a new sequence and inserts the clip multiple times,

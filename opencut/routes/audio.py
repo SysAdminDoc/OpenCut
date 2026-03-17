@@ -76,11 +76,11 @@ def silence_remove():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    threshold = safe_float(data.get("threshold", -30.0), -30.0)
-    min_duration = safe_float(data.get("min_duration", 0.5), 0.5)
-    padding_before = safe_float(data.get("padding_before", 0.1), 0.1)
-    padding_after = safe_float(data.get("padding_after", 0.1), 0.1)
-    min_speech = safe_float(data.get("min_speech", 0.25), 0.25)
+    threshold = safe_float(data.get("threshold", -30.0), -30.0, min_val=-60.0, max_val=0.0)
+    min_duration = safe_float(data.get("min_duration", 0.5), 0.5, min_val=0.05, max_val=30.0)
+    padding_before = safe_float(data.get("padding_before", 0.1), 0.1, min_val=0.0, max_val=5.0)
+    padding_after = safe_float(data.get("padding_after", 0.1), 0.1, min_val=0.0, max_val=5.0)
+    min_speech = safe_float(data.get("min_speech", 0.25), 0.25, min_val=0.05, max_val=10.0)
     preset = data.get("preset", None)
     seq_name = data.get("sequence_name", "")
 
@@ -459,6 +459,8 @@ def audio_separate():
         return jsonify({"error": f"Unknown model: {model}. Allowed: {', '.join(sorted(allowed_models))}"}), 400
     stems = data.get("stems", ["vocals", "no_vocals"])
     output_format = data.get("format", "wav")
+    if output_format not in ("wav", "mp3", "flac"):
+        output_format = "wav"
     auto_import = data.get("auto_import", True)
 
     if not filepath:
@@ -1565,9 +1567,10 @@ def music_ai_generate():
 
             d = data.get("output_dir", "")
             if d:
-                valid, msg = validate_path(d)
-                if not valid:
-                    _update_job(job_id, status="error", message=msg)
+                try:
+                    d = validate_path(d)
+                except ValueError as e:
+                    _update_job(job_id, status="error", message=str(e))
                     return
             else:
                 d = tempfile.gettempdir()
@@ -1616,9 +1619,10 @@ def music_ai_melody():
 
             d = data.get("output_dir", "")
             if d:
-                valid, msg = validate_path(d)
-                if not valid:
-                    _update_job(job_id, status="error", message=msg)
+                try:
+                    d = validate_path(d)
+                except ValueError as e:
+                    _update_job(job_id, status="error", message=str(e))
                     return
             else:
                 d = tempfile.gettempdir()

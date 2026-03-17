@@ -97,10 +97,14 @@ def _update_job(job_id: str, **kwargs):
 
 def _schedule_record_time(job_type, elapsed, filepath):
     """Record job time outside of the lock to avoid I/O under lock."""
+    import os
+
     def _record():
         try:
             from opencut.helpers import _get_file_duration, _record_job_time
-            _record_job_time(job_type, elapsed, _get_file_duration(filepath))
+            # File may have been deleted/moved by the time this runs
+            file_dur = _get_file_duration(filepath) if filepath and os.path.isfile(filepath) else 0
+            _record_job_time(job_type, elapsed, file_dur)
         except Exception as e:
             logger.debug("Failed to record job time for %s: %s", job_type, e)
     threading.Thread(target=_record, daemon=True).start()
