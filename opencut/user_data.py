@@ -22,8 +22,11 @@ _file_locks = {}
 _file_locks_guard = threading.Lock()
 
 
-def _get_lock(filepath: str) -> threading.Lock:
-    """Get or create a lock for a specific file path.
+def _get_lock(filepath: str) -> threading.RLock:
+    """Get or create a reentrant lock for a specific file path.
+
+    Uses RLock so that nested calls (e.g. load_whisper_settings calling
+    read_user_file) don't deadlock if they share the same file path.
 
     Normalizes the path so that different representations of the same
     file (e.g. forward-slash vs backslash, relative vs absolute) share
@@ -36,7 +39,7 @@ def _get_lock(filepath: str) -> threading.Lock:
             if len(_file_locks) >= _MAX_FILE_LOCKS:
                 oldest = next(iter(_file_locks))
                 del _file_locks[oldest]
-            _file_locks[key] = threading.Lock()
+            _file_locks[key] = threading.RLock()
         return _file_locks[key]
 
 

@@ -327,7 +327,7 @@ def ensure_lut(name: str) -> str:
             user_dir = os.path.join(LUTS_DIR, "user")
             user_path = os.path.join(user_dir, lut_basename + ".cube")
             # Verify resolved path stays within user LUT directory
-            if not os.path.realpath(user_path).startswith(os.path.realpath(user_dir)):
+            if not os.path.realpath(user_path).startswith(os.path.realpath(user_dir) + os.sep):
                 raise ValueError(f"Invalid LUT path: {name}")
             if os.path.exists(user_path):
                 return user_path
@@ -371,8 +371,9 @@ def apply_lut(
     if on_progress:
         on_progress(10, f"Applying LUT: {lut_name}...")
 
-    # Escape path for FFmpeg
-    escaped = cube_path.replace("\\", "/").replace(":", "\\:").replace("'", "'\\''")
+    # Escape path for FFmpeg filter syntax (subprocess list invocation, no shell)
+    escaped = cube_path.replace("\\", "/")
+    escaped = escaped.replace("'", "\\'").replace(":", "\\:")
 
     if intensity >= 0.99:
         vf = f"lut3d='{escaped}'"
@@ -525,10 +526,16 @@ def generate_lut_from_reference(
     if on_progress:
         on_progress(50, "Generating .cube LUT file...")
 
+    # Validate lut_name contains no path traversal
+    if ".." in lut_name or "/" in lut_name or "\\" in lut_name:
+        raise ValueError(f"Invalid LUT name: {lut_name}")
+
     # Generate to user LUTs directory
     user_dir = os.path.join(LUTS_DIR, "user")
     os.makedirs(user_dir, exist_ok=True)
     cube_path = os.path.join(user_dir, f"{lut_name}.cube")
+    if not os.path.realpath(cube_path).startswith(os.path.realpath(user_dir) + os.sep):
+        raise ValueError(f"Invalid LUT path: {lut_name}")
 
     with open(cube_path, "w") as f:
         f.write(f"TITLE \"{lut_name}\"\n")

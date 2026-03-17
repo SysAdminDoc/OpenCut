@@ -5,8 +5,10 @@ Path validation, CSRF protection, and safe pip install helpers.
 """
 
 import functools
+import hmac
 import logging
 import os
+import re
 import secrets
 import shutil
 import subprocess
@@ -44,7 +46,7 @@ def require_csrf(f):
     def wrapper(*args, **kwargs):
         if request.method in ("POST", "PUT", "DELETE"):
             token = request.headers.get("X-OpenCut-Token", "")
-            if token != _csrf_token:
+            if not hmac.compare_digest(token, _csrf_token):
                 return jsonify({"error": "Invalid or missing CSRF token"}), 403
         return f(*args, **kwargs)
     return wrapper
@@ -79,7 +81,7 @@ def validate_path(path: str, allowed_base: str = None) -> str:
         raise ValueError("Path traversal blocked")
 
     # Resolve to absolute real path (follows symlinks)
-    resolved = os.path.realpath(path)
+    resolved = os.path.realpath(normed)
 
     # Optional base-directory confinement
     if allowed_base is not None:
@@ -110,6 +112,9 @@ def _find_system_python() -> str | None:
     return None
 
 
+_SAFE_PACKAGE_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?(\[.+\])?(==.+|>=.+|<=.+|~=.+|!=.+)?$")
+
+
 def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedProcess:
     """
     Install a pip package with a safe fallback chain:
@@ -124,6 +129,9 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     Returns the ``CompletedProcess`` on success.
     Raises ``RuntimeError`` if all strategies fail.
     """
+    if not package or not _SAFE_PACKAGE_RE.match(package):
+        raise ValueError(f"Invalid package name: {package!r}")
+
     # Frozen builds can't use sys.executable for pip — find system Python
     if getattr(sys, "frozen", False):
         python = _find_system_python()
