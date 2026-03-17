@@ -134,6 +134,37 @@ def ensure_package(pkg: str, pip_name: str = None, on_progress=None) -> bool:
 
 
 # ---------------------------------------------------------------------------
+# Shared Video Info Helper
+# ---------------------------------------------------------------------------
+def get_video_info(filepath: str) -> dict:
+    """Get video width, height, fps, duration via ffprobe. Returns safe defaults on error."""
+    import json as _json
+    cmd = [
+        "ffprobe", "-v", "quiet", "-select_streams", "v:0",
+        "-show_entries", "stream=width,height,r_frame_rate,duration",
+        "-show_entries", "format=duration",
+        "-of", "json", filepath,
+    ]
+    result = _sp.run(cmd, capture_output=True, timeout=30)
+    try:
+        data = _json.loads(result.stdout.decode())
+        s = data["streams"][0]
+        fps_p = s.get("r_frame_rate", "30/1").split("/")
+        fps = (float(fps_p[0]) / float(fps_p[1])) if len(fps_p) == 2 and float(fps_p[1]) else 30.0
+        duration = float(s.get("duration", 0))
+        if duration <= 0:
+            duration = float(data.get("format", {}).get("duration", 0))
+        return {
+            "width": int(s.get("width", 1920)),
+            "height": int(s.get("height", 1080)),
+            "fps": fps,
+            "duration": duration,
+        }
+    except Exception:
+        return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
+
+
+# ---------------------------------------------------------------------------
 # Lazy Import Helper
 # ---------------------------------------------------------------------------
 def _try_import(name: str):

@@ -17,24 +17,9 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import ensure_package, run_ffmpeg
+from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
-
-def _get_video_info(fp):
-    import json
-    r = subprocess.run(["ffprobe", "-v", "quiet", "-select_streams", "v:0",
-                        "-show_entries", "stream=width,height,r_frame_rate,duration",
-                        "-of", "json", fp], capture_output=True, timeout=30)
-    try:
-        s = json.loads(r.stdout.decode())["streams"][0]
-        fps_p = s.get("r_frame_rate", "30/1").split("/")
-        fps = (float(fps_p[0]) / float(fps_p[1])) if len(fps_p) == 2 and float(fps_p[1]) else 30.0
-        return {"width": int(s.get("width", 1920)), "height": int(s.get("height", 1080)),
-                "fps": fps, "duration": float(s.get("duration", 0))}
-    except Exception:
-        return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
-
 
 # ---------------------------------------------------------------------------
 # Availability
@@ -70,7 +55,7 @@ def upscale_lanczos(
     Upscale video using FFmpeg's lanczos scaler.
     Fast, no ML, but quality is basic interpolation only.
     """
-    info = _get_video_info(video_path)
+    info = get_video_info(video_path)
     new_w = info["width"] * scale
     new_h = info["height"] * scale
 
@@ -121,7 +106,7 @@ def upscale_realesrgan(
     from basicsr.archs.rrdbnet_arch import RRDBNet
     from realesrgan import RealESRGANer
 
-    info = _get_video_info(video_path)
+    info = get_video_info(video_path)
     new_w = info["width"] * scale
     new_h = info["height"] * scale
 
