@@ -67,7 +67,7 @@ def video_watermark():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     max_bbox_percent = safe_int(data.get("max_bbox_percent", 10), 10, min_val=1, max_val=100)
-    detection_prompt = data.get("detection_prompt", "watermark")
+    detection_prompt = data.get("detection_prompt", "watermark")[:200]
     detection_skip = safe_int(data.get("detection_skip", 3), 3)
     transparent = data.get("transparent", False)
     preview = data.get("preview", False)
@@ -88,8 +88,6 @@ def video_watermark():
 
     def _process():
         try:
-            import subprocess
-
             effective_dir = _resolve_output_dir(filepath, output_dir)
             base_name = os.path.splitext(os.path.basename(filepath))[0]
             ext = os.path.splitext(filepath)[1].lower()
@@ -123,7 +121,7 @@ def video_watermark():
                 device = "cpu"
                 if torch.cuda.is_available():
                     try:
-                        free_vram = torch.cuda.get_device_properties(0).total_mem - torch.cuda.memory_allocated(0)
+                        free_vram = torch.cuda.get_device_properties(0).total_memory - torch.cuda.memory_allocated(0)
                         if free_vram >= 2 * 1024 ** 3:  # need ~2GB for Florence-2 + LaMA
                             device = "cuda"
                         else:
@@ -331,7 +329,7 @@ def video_watermark():
                     # Merge audio if ffmpeg available
                     _update_job(job_id, progress=95, message="Merging audio...")
                     try:
-                        subprocess.run([
+                        _sp.run([
                             'ffmpeg', '-y',
                             '-i', temp_video,
                             '-i', filepath,
@@ -516,6 +514,14 @@ def export_video():
 
     # Audio-only: override format and extension
     audio_format_ext = data.get("audio_format", "mp3")  # mp3, wav, flac
+
+    # Format allowlists — prevent path injection via user-controlled extensions
+    _VALID_VIDEO_FORMATS = {"mp4", "mov", "mkv", "webm", "avi"}
+    _VALID_AUDIO_FORMATS = {"mp3", "wav", "flac", "aac", "ogg"}
+    if output_format not in _VALID_VIDEO_FORMATS:
+        output_format = "mp4"
+    if audio_format_ext not in _VALID_AUDIO_FORMATS:
+        audio_format_ext = "mp3"
     if audio_only:
         output_format = audio_format_ext
 

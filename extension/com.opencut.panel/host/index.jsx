@@ -566,17 +566,18 @@ function applyEditsToTimeline(segmentsJson, mediaPath) {
         }
 
         // Calculate timeline position in ticks
-        var ticks = String(Math.round(timelinePos * TICKS_PER_SECOND));
+        var t = new Time();
+        t.ticks = String(Math.round(timelinePos * TICKS_PER_SECOND));
 
         // Insert the clip at this position
         try {
-            videoTrack.insertClip(projectItem, ticks);
+            videoTrack.insertClip(projectItem, t);
             insertedCount++;
             timelinePos += segDuration;
         } catch (e) {
             // Try overwriteClip as fallback
             try {
-                videoTrack.overwriteClip(projectItem, ticks);
+                videoTrack.overwriteClip(projectItem, t);
                 insertedCount++;
                 timelinePos += segDuration;
             } catch (e2) {
