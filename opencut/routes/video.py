@@ -2707,6 +2707,9 @@ def video_reframe():
                 "-of", "json", filepath
             ]
             probe_result = _sp.run(probe_cmd, capture_output=True, text=True, timeout=15)
+            if probe_result.returncode != 0 or not probe_result.stdout.strip():
+                _update_job(job_id, status="error", error="ffprobe failed on video file")
+                return
             probe_data = json.loads(probe_result.stdout)
             streams = probe_data.get("streams", [])
             if not streams:
