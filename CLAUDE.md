@@ -13,7 +13,7 @@
 - `opencut/server.py` (~720 lines) - Flask app creation, startup, port management, download_models, `_setup_system_site_packages()` for frozen builds
 - `opencut/security.py` (~280 lines) - Path validation, CSRF tokens, safe_pip_install (frozen-build aware via `_find_system_python()`), safe_float/safe_int (with range clamp + inf/nan rejection), validate_filepath, VALID_WHISPER_MODELS, rate_limit/require_rate_limit
 - `opencut/jobs.py` (~215 lines) - Job state, _new_job, _update_job, _kill_job_process, _get_job_copy, _list_jobs_copy, _unregister_job_process, TooManyJobsError, MAX_CONCURRENT_JOBS=10, async_job decorator
-- `opencut/helpers.py` (~470 lines) - _try_import, output paths, FFmpegCmd builder, FFmpeg progress runner, deferred temp cleanup, job time tracking, compute_estimate
+- `opencut/helpers.py` (~530 lines) - _try_import, output paths, FFmpegCmd builder, FFmpeg progress runner, deferred temp cleanup, job time tracking, compute_estimate, `run_ffmpeg()`, `ensure_package()`, `get_video_info()`
 - `opencut/errors.py` (~60 lines) - OpenCutError exception class with typed codes (MISSING_DEPENDENCY, FILE_NOT_FOUND, GPU_OUT_OF_MEMORY, INVALID_INPUT, OPERATION_FAILED), register_error_handlers
 - `opencut/checks.py` (~90 lines) - Centralized dependency availability checks (demucs, watermark, pedalboard, audiocraft, edge_tts, rembg, upscale, scenedetect, auto-editor, transnetv2, resemble-enhance, ollama)
 - `opencut/user_data.py` (~100 lines) - Thread-safe JSON file access for user settings (per-file locks, normalized lock keys)
@@ -54,7 +54,7 @@
 - Backend runs as standalone process (exe or `python -m opencut.server`)
 - Panel communicates via XHR to localhost:5679
 - **Blueprint-based route organization**: 6 Blueprints (system, audio, captions, video, jobs, settings)
-- **Shared modules**: security.py (CSRF + path validation), jobs.py (job state), helpers.py (utilities), user_data.py (thread-safe file I/O)
+- **Shared modules**: security.py (CSRF + path validation), jobs.py (job state), helpers.py (utilities + `run_ffmpeg` + `ensure_package` + `get_video_info`), user_data.py (thread-safe file I/O)
 - **CSRF protection**: Token generated at startup in security.py, returned via /health, sent as `X-OpenCut-Token` header on mutations. `@require_csrf` decorator applied to ALL POST routes.
 - **Path validation**: `validate_path()` checks realpath, null bytes, `..` components, symlinks. `validate_filepath()` adds isfile check. Applied to ALL routes accepting file paths.
 - **Input validation**: `safe_float()`/`safe_int()` with optional `min_val`/`max_val` range clamping and inf/nan rejection, `VALID_WHISPER_MODELS` frozenset for model name validation
@@ -114,8 +114,11 @@
 - GET request deduplication in `api()` — concurrent identical GETs share one XHR
 - Event delegation for batch files, workflow steps, favorites — don't attach per-element listeners
 - DocumentFragment batching for DOM rebuilds (batch files, deps grid, favorites, workflow steps)
-- `FFmpegCmd` builder in helpers.py — use `.build()` for new FFmpeg commands, don't construct raw lists
+- `FFmpegCmd` builder in helpers.py — use `.build()` for new FFmpeg commands in routes. Core modules use `run_ffmpeg(cmd, timeout=N)` directly.
 - Dependency checks live in `opencut/checks.py` — don't duplicate `check_X_available()` in route files
+- **Consolidated helpers** — `run_ffmpeg()`, `ensure_package()`, `get_video_info()` live in `opencut/helpers.py`. All core modules import from there. Never define local `_run_ffmpeg`/`_ensure_package`/`_get_video_info` copies.
+- `ensure_package()` routes through `safe_pip_install()` from security.py — never bypass this with raw `subprocess.run(["pip", ...])` in core modules
+- `get_video_info()` includes format-duration fallback for containers where stream-level duration is unavailable
 - Deferred temp cleanup: `_schedule_temp_cleanup(path)` retries with exponential backoff on Windows
 - **Never `git add -A`** — `installer/bin/`, `installer/obj/`, `installer/publish/` are build artifacts NOT in `.gitignore` (they're tracked in the repo). Use specific file paths when staging.
 - **Frozen builds** — `sys.executable` points to the exe, not Python. `safe_pip_install()` and `_setup_system_site_packages()` detect frozen state and find system Python from PATH instead.
@@ -284,6 +287,7 @@
 - **HTML attribute escaping** — data-path attributes now escape `<`, `>`, `&`, `"` (XSS prevention)
 - **insertClip Time object** — index.jsx uses `new Time()` instead of string `"0"` for caption/clip insertion
 - **Batch import verification** — index.jsx counts items before/after `importFiles()` to report actual import count
+- **Helper consolidation** — `run_ffmpeg()` (from 22 files), `ensure_package()` (from 15 files), `get_video_info()` (from 14 files) consolidated into `opencut/helpers.py`. ~886 lines of duplicate code removed. All core modules now import these shared helpers instead of defining local copies. `ensure_package()` routes through `safe_pip_install()` for security.
 
 ## v1.3.0 New Optional Dependencies
 ```toml
