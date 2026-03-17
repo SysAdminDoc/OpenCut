@@ -89,6 +89,10 @@ def silence_remove():
 
     def _process():
         try:
+            if detect_speech is None:
+                _update_job(job_id, status="error", error="Core audio modules not available. Reinstall opencut.")
+                return
+
             _update_job(job_id, progress=5, message="Analyzing media file...")
 
             if preset:
@@ -189,6 +193,10 @@ def filler_removal():
 
     def _process():
         try:
+            if detect_speech is None:
+                _update_job(job_id, status="error", error="Core audio modules not available. Reinstall opencut.")
+                return
+
             # Check Whisper
             from opencut.core.captions import check_whisper_available, transcribe
             from opencut.core.fillers import detect_fillers, remove_fillers_from_segments

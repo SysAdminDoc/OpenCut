@@ -67,6 +67,12 @@ def operation_failed(detail: str) -> OpenCutError:
 def register_error_handlers(app):
     """Register the OpenCutError handler on a Flask app."""
 
+    from opencut.jobs import TooManyJobsError
+
     @app.errorhandler(OpenCutError)
     def handle_opencut_error(e):
         return e.to_response()
+
+    @app.errorhandler(TooManyJobsError)
+    def handle_too_many_jobs(e):
+        return jsonify({"error": str(e), "code": "TOO_MANY_JOBS"}), 429
