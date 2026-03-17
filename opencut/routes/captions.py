@@ -24,23 +24,29 @@ from opencut.security import (
     validate_filepath,
 )
 
-# Core imports used by multiple routes (try relative/absolute)
-try:
-    from ..core.silence import detect_speech, get_edit_summary
-    from ..core.zoom import generate_zoom_events
-    from ..export.premiere import export_premiere_xml
-    from ..export.srt import export_ass, export_json, export_srt, export_vtt
-    from ..utils.config import CaptionConfig, ExportConfig, get_preset
-    from ..utils.media import probe as _probe_media
-except ImportError:
-    from opencut.core.silence import detect_speech, get_edit_summary
-    from opencut.core.zoom import generate_zoom_events
-    from opencut.export.premiere import export_premiere_xml
-    from opencut.export.srt import export_ass, export_json, export_srt, export_vtt
-    from opencut.utils.config import CaptionConfig, ExportConfig, get_preset
-    from opencut.utils.media import probe as _probe_media
-
 logger = logging.getLogger("opencut")
+
+# Core imports used by multiple routes (try relative/absolute, tolerate missing)
+detect_speech = get_edit_summary = generate_zoom_events = None
+export_premiere_xml = export_ass = export_json = export_srt = export_vtt = None
+CaptionConfig = ExportConfig = get_preset = _probe_media = None
+try:
+    from ..core.silence import detect_speech, get_edit_summary  # noqa: F811
+    from ..core.zoom import generate_zoom_events  # noqa: F811
+    from ..export.premiere import export_premiere_xml  # noqa: F811
+    from ..export.srt import export_ass, export_json, export_srt, export_vtt  # noqa: F811
+    from ..utils.config import CaptionConfig, ExportConfig, get_preset  # noqa: F811
+    from ..utils.media import probe as _probe_media  # noqa: F811
+except ImportError:
+    try:
+        from opencut.core.silence import detect_speech, get_edit_summary  # noqa: F811
+        from opencut.core.zoom import generate_zoom_events  # noqa: F811
+        from opencut.export.premiere import export_premiere_xml  # noqa: F811
+        from opencut.export.srt import export_ass, export_json, export_srt, export_vtt  # noqa: F811
+        from opencut.utils.config import CaptionConfig, ExportConfig, get_preset  # noqa: F811
+        from opencut.utils.media import probe as _probe_media  # noqa: F811
+    except ImportError:
+        logger.warning("Some caption dependencies could not be imported")
 
 captions_bp = Blueprint("captions", __name__)
 
