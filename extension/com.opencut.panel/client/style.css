@@ -1243,7 +1243,7 @@ body.job-active .btn-install {
 #clipSection {
     background: var(--bg-surface);
     border-left: 3px solid var(--neon-cyan);
-    padding: var(--sp-sm) var(--sp-md);
+    padding: 6px var(--sp-md);
     border-radius: var(--r-sm);
 }
 
@@ -1259,8 +1259,8 @@ body.job-active .btn-install {
 }
 
 #clipSection .card-header {
-    margin-bottom: 8px;
-    padding-bottom: 6px;
+    margin-bottom: 4px;
+    padding-bottom: 2px;
 }
 
 /* ============================================================
@@ -1367,6 +1367,20 @@ body.job-active .btn-install {
 }
 
 .btn-sm { padding: 8px 14px; font-size: 10px; }
+
+/* Ghost buttons (transparent background, border only) */
+.btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border-light);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+.btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: var(--text-muted);
+    color: var(--text-primary);
+}
 
 /* Secondary buttons (less emphasis than primary) */
 .btn-secondary {
@@ -1487,7 +1501,7 @@ body.job-active .btn-install {
     transform: scale(1.05);
 }
 
-.btn-row { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-bottom: 2px; }
+.btn-row { display: flex; align-items: center; gap: 8px; margin-top: 6px; padding-bottom: 2px; }
 .btn-sep { width: 1px; height: 16px; background: var(--border-light); }
 .btn-row-split { display: flex; gap: 10px; margin-top: 8px; }
 
@@ -1722,8 +1736,8 @@ input[type="checkbox"] {
    FILE INFO BOX
    ============================================================ */
 .file-info {
-    margin-top: 10px;
-    padding: 10px 14px;
+    margin-top: 6px;
+    padding: 6px 10px;
     background: linear-gradient(135deg, var(--bg-elevated), var(--bg-raised));
     border-radius: var(--r-sm);
     border: 1px solid var(--border);
@@ -2656,12 +2670,12 @@ input[type="checkbox"] {
     gap: 8px;
     border: 1px dashed var(--border-light);
     border-radius: var(--r-sm);
-    padding: 8px 12px;
+    padding: 6px 10px;
     color: var(--text-muted);
     font-size: 11px;
     transition: border-color 0.2s, background 0.2s;
     cursor: pointer;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
 }
 .drop-zone.drag-over {
     border-color: var(--neon-cyan);
@@ -3581,16 +3595,16 @@ input[type="range"][title] {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: var(--sp-md) var(--sp-xl);
+    padding: 6px 12px;
     background: var(--bg-card);
     border-radius: var(--r-xs);
-    margin-bottom: var(--sp-md);
+    margin-bottom: 6px;
     border: 1px solid var(--border);
 }
 .clip-preview-row.hidden { display: none; }
 .clip-thumb {
-    width: 80px;
-    height: 45px;
+    width: 64px;
+    height: 36px;
     border-radius: 4px;
     overflow: hidden;
     background: var(--bg-void);
