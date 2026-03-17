@@ -1,0 +1,48 @@
+<Page x:Class="OpenCut.Installer.Pages.ProgressPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:controls="clr-namespace:OpenCut.Installer.Controls"
+      Background="Transparent">
+
+    <Grid Margin="40,16,40,30">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <TextBlock Grid.Row="0" Text="Installing OpenCut..." FontSize="20" FontWeight="SemiBold"
+                   Foreground="{DynamicResource TextBrush}"
+                   FontFamily="{DynamicResource UIFont}" Margin="0,0,0,6" />
+
+        <!-- Current Step -->
+        <TextBlock x:Name="StepLabel" Grid.Row="1" Text="Preparing..."
+                   FontSize="13" Foreground="{DynamicResource Subtext0}"
+                   FontFamily="{DynamicResource UIFont}" Margin="0,0,0,12" />
+
+        <!-- Progress Bar -->
+        <Grid Grid.Row="2" Margin="0,0,0,16">
+            <ProgressBar x:Name="ProgressBar" Height="6" Minimum="0" Maximum="100" Value="0" />
+            <!-- Shimmer overlay -->
+            <Border x:Name="Shimmer" Height="6" CornerRadius="3"
+                    HorizontalAlignment="Left" Width="80"
+                    IsHitTestVisible="False" Opacity="0.3">
+                <Border.Background>
+                    <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
+                        <GradientStop Color="Transparent" Offset="0" />
+                        <GradientStop Color="#40FFFFFF" Offset="0.5" />
+                        <GradientStop Color="Transparent" Offset="1" />
+                    </LinearGradientBrush>
+                </Border.Background>
+                <Border.RenderTransform>
+                    <TranslateTransform />
+                </Border.RenderTransform>
+            </Border>
+        </Grid>
+
+        <!-- Log Panel -->
+        <controls:LogPanel x:Name="LogPanel" Grid.Row="3" />
+    </Grid>
+</Page>
