@@ -62,7 +62,7 @@ for pkg in ['ctranslate2', 'faster_whisper']:
         pass
 
 a = Analysis(
-    ['opencut\\server.py'],
+    [os.path.join('opencut', 'server.py')],
     pathex=['.'],
     binaries=[],
     datas=extra_datas,
@@ -99,7 +99,7 @@ exe = EXE(
     strip=False,
     upx=True,
     console=True,
-    icon='img\\logo.ico',
+    icon=os.path.join('img', 'logo.ico'),
 )
 
 coll = COLLECT(
