@@ -33,27 +33,66 @@ DEFAULT_CRF = 18
 # ---------------------------------------------------------------------------
 # Deferred Temp File Cleanup
 # ---------------------------------------------------------------------------
+_cleanup_scheduled = set()
+_cleanup_schedule_lock = threading.Lock()
+
+
 def _schedule_temp_cleanup(filepath: str, delay: float = 5.0, retries: int = 3):
     """Schedule a temp file for deferred deletion.
 
     On Windows, FFmpeg may still hold a file handle when the job thread
     finishes.  This retries deletion with exponential backoff.
+    Deduplicates: won't schedule the same path twice.
     """
+    norm = os.path.normcase(os.path.abspath(filepath))
+    with _cleanup_schedule_lock:
+        if norm in _cleanup_scheduled:
+            return
+        _cleanup_scheduled.add(norm)
+
     def _try_delete(path, attempt, max_attempts, wait):
         try:
             if os.path.isfile(path):
                 os.unlink(path)
                 logger.debug("Cleaned up temp file: %s", path)
+            with _cleanup_schedule_lock:
+                _cleanup_scheduled.discard(os.path.normcase(os.path.abspath(path)))
         except OSError:
             if attempt < max_attempts:
                 threading.Timer(wait, _try_delete,
                                 args=(path, attempt + 1, max_attempts, wait * 2)).start()
             else:
+                with _cleanup_schedule_lock:
+                    _cleanup_scheduled.discard(os.path.normcase(os.path.abspath(path)))
                 logger.warning("Failed to clean up temp file after %d attempts: %s",
                                max_attempts, path)
 
     threading.Timer(delay, _try_delete,
                     args=(filepath, 1, retries, delay)).start()
+
+# ---------------------------------------------------------------------------
+# Disk Space Preflight Check
+# ---------------------------------------------------------------------------
+def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
+    """Check available disk space at path. Returns dict with 'ok', 'free_bytes', 'free_mb'.
+
+    Args:
+        path: Directory or file path to check (uses its mount point).
+        min_bytes: Minimum required free space in bytes (default 500 MB).
+    """
+    import shutil
+    try:
+        check_dir = path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
+        usage = shutil.disk_usage(check_dir)
+        return {
+            "ok": usage.free >= min_bytes,
+            "free_bytes": usage.free,
+            "free_mb": round(usage.free / (1024 * 1024)),
+            "required_mb": round(min_bytes / (1024 * 1024)),
+        }
+    except Exception:
+        return {"ok": True, "free_bytes": 0, "free_mb": 0, "required_mb": 0}
+
 
 # ---------------------------------------------------------------------------
 # Lazy Import Helper
@@ -351,6 +390,8 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     _register_job_process(job_id, proc)
 
     stderr_lines = []
+    _max_stderr_bytes = 32768  # 32 KB cap on accumulated stderr
+    _stderr_size = 0
     last_pct = 0
 
     try:
@@ -378,15 +419,17 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     except Exception:
         pass
 
-    # Collect remaining stderr
+    # Collect remaining stderr (capped to prevent memory bloat)
     try:
         _, stderr_data = proc.communicate(timeout=10)
-        stderr_lines.append(stderr_data or "")
+        if stderr_data:
+            stderr_lines.append(stderr_data[-_max_stderr_bytes:])
     except Exception:
         proc.kill()
         try:
             _, stderr_data = proc.communicate(timeout=5)
-            stderr_lines.append(stderr_data or "")
+            if stderr_data:
+                stderr_lines.append(stderr_data[-_max_stderr_bytes:])
         except Exception:
             pass
 

@@ -294,9 +294,11 @@ def generate_shorts(
                     if clip_segments:
                         adjusted = []
                         for s in clip_segments:
+                            adj_start = max(0, s["start"] - highlight.start)
+                            adj_end = max(adj_start, s["end"] - highlight.start)
                             adjusted.append({
-                                "start": s["start"] - highlight.start,
-                                "end": s["end"] - highlight.start,
+                                "start": adj_start,
+                                "end": adj_end,
                                 "text": s.get("text", ""),
                             })
 

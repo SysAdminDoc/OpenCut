@@ -274,14 +274,16 @@ def media_info():
 # GPU / System Info
 # ---------------------------------------------------------------------------
 _gpu_cache = {"info": None, "ts": 0}
+_gpu_cache_lock = threading.Lock()
 _GPU_CACHE_TTL = 30  # seconds
 
 
 def _detect_gpu():
     """Detect GPU via nvidia-smi with 30s cache."""
     now = time.time()
-    if _gpu_cache["info"] is not None and (now - _gpu_cache["ts"]) < _GPU_CACHE_TTL:
-        return dict(_gpu_cache["info"])
+    with _gpu_cache_lock:
+        if _gpu_cache["info"] is not None and (now - _gpu_cache["ts"]) < _GPU_CACHE_TTL:
+            return dict(_gpu_cache["info"])
     gpu_info = {"available": False, "name": "None", "vram_mb": 0}
     try:
         result = _sp.run(
@@ -296,8 +298,9 @@ def _detect_gpu():
             gpu_info["vram_mb"] = safe_int(parts[1].strip()) if len(parts) > 1 else 0
     except Exception:
         pass
-    _gpu_cache["info"] = dict(gpu_info)
-    _gpu_cache["ts"] = now
+    with _gpu_cache_lock:
+        _gpu_cache["info"] = dict(gpu_info)
+        _gpu_cache["ts"] = now
     return gpu_info
 
 
@@ -571,6 +574,13 @@ def install_whisper():
                 try:
                     proc = _sp.Popen(strat["cmd"], stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True)
                     _register_job_process(job_id, proc)
+
+                    # Safety timeout: kill pip if it hangs (10 minutes)
+                    _pip_timeout = 600
+                    _pip_timer = threading.Timer(_pip_timeout, lambda: proc.kill())
+                    _pip_timer.daemon = True
+                    _pip_timer.start()
+
                     lines = []
                     for line in proc.stdout:
                         line = line.strip()
@@ -587,7 +597,8 @@ def install_whisper():
                                 _update_job(job_id, progress=85,
                                             message="Verifying installation...")
 
-                    proc.wait()
+                    _pip_timer.cancel()
+                    proc.wait(timeout=30)
                     _unregister_job_process(job_id)
                     logger.debug(f"pip exit code: {proc.returncode}")
 
