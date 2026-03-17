@@ -106,7 +106,8 @@ def generate_music(
 
     if output_path is None:
         directory = output_dir or tempfile.gettempdir()
-        safe_prompt = prompt[:30].replace(" ", "_").replace("/", "")
+        import re
+        safe_prompt = re.sub(r'[^\w\-]', '_', prompt[:30]).strip('_')
         output_path = os.path.join(directory, f"musicgen_{safe_prompt}.wav")
 
     if on_progress:

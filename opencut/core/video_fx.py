@@ -324,9 +324,13 @@ def apply_letterbox(
 
     # Parse aspect ratio
     parts = aspect.split(":")
-    if len(parts) != 2 or float(parts[1]) == 0:
+    try:
+        denom = float(parts[1]) if len(parts) == 2 else 0
+        if len(parts) != 2 or denom == 0:
+            raise ValueError()
+        target_ratio = float(parts[0]) / denom
+    except (ValueError, IndexError):
         raise ValueError(f"Invalid aspect ratio: {aspect}")
-    target_ratio = float(parts[0]) / float(parts[1])
 
     # Pad with bars to achieve target aspect ratio
     vf = f"pad=iw:iw/{target_ratio}:(ow-iw)/2:(oh-ih)/2:{color}"

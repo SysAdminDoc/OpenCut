@@ -114,6 +114,8 @@ def enhance_faces(
     )
 
     cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {video_path}")
     fps = cap.get(cv2.CAP_PROP_FPS) or 30
     orig_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     orig_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -124,6 +126,9 @@ def enhance_faces(
     _ntf.close()
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (orig_w, orig_h))
+    if not writer.isOpened():
+        cap.release()
+        raise RuntimeError(f"Cannot create video writer for: {tmp_video}")
 
     if on_progress:
         on_progress(10, "Enhancing faces frame by frame...")
@@ -228,6 +233,8 @@ def swap_face(
 
     # Get source face
     ref_img = cv2.imread(reference_face)
+    if ref_img is None:
+        raise RuntimeError(f"Cannot read reference face image: {reference_face}")
     ref_faces = app.get(ref_img)
     if not ref_faces:
         raise RuntimeError("No face found in reference image")
@@ -237,6 +244,8 @@ def swap_face(
         on_progress(15, "Swapping faces in video...")
 
     cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {video_path}")
     fps = cap.get(cv2.CAP_PROP_FPS) or 30
     w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
     h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -247,6 +256,9 @@ def swap_face(
     _ntf.close()
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
+    if not writer.isOpened():
+        cap.release()
+        raise RuntimeError(f"Cannot create video writer for: {tmp_video}")
 
     frame_idx = 0
     try:

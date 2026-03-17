@@ -327,6 +327,8 @@ def translate_segments(
     sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
     if not os.path.isfile(sp_path):
         sp_path = os.path.join(model_dir, "source.spm")
+    if not os.path.isfile(sp_path):
+        raise FileNotFoundError(f"SentencePiece model not found in {model_dir}")
 
     sp = sentencepiece.SentencePieceProcessor()
     sp.Load(sp_path)

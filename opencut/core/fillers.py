@@ -142,8 +142,6 @@ def detect_fillers(
                 parts = norm.split()
                 if len(parts) == 1:
                     active_singles[norm] = norm
-                    # Also add it to the SAFE set since user explicitly asked
-                    SAFE_FILLERS.add(norm)
                 else:
                     active_phrases[norm] = parts
 

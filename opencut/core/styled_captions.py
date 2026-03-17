@@ -763,13 +763,10 @@ def _ensure_pillow():
     except ImportError:
         pass
 
-    import sys
     logger.info("Pillow not found, installing...")
     try:
-        subprocess.check_call(
-            [sys.executable, "-m", "pip", "install", "Pillow", "--quiet"],
-            timeout=120,
-        )
+        from opencut.security import safe_pip_install
+        safe_pip_install("Pillow")
     except Exception as e:
         logger.error(f"Failed to install Pillow: {e}")
         raise RuntimeError(

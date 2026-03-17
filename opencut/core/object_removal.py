@@ -249,14 +249,12 @@ def remove_watermark_lama(
     if on_progress:
         on_progress(10, "Removing watermark frame by frame...")
 
+    from PIL import Image
     try:
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
-
-            # Convert to PIL for LaMA
-            from PIL import Image
             pil_frame = Image.fromarray(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
             pil_mask = Image.fromarray(mask)
 
