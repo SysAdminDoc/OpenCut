@@ -1199,6 +1199,8 @@ def transcript_summarize():
 
     # LLM config from request
     llm_provider = data.get("llm_provider", "ollama")
+    if llm_provider not in ("ollama", "openai", "anthropic"):
+        llm_provider = "ollama"
     llm_model = data.get("llm_model", "")
     llm_api_key = data.get("llm_api_key", "")
     llm_base_url = data.get("llm_base_url", "")

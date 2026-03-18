@@ -181,7 +181,7 @@ function getSelectedClips() {
                                 if (ap) {
                                     var dup = false;
                                     for (var d = 0; d < results.length; d++) {
-                                        if (results[d].path === ap) { dup = true; break; }
+                                        if (results[d].path.toLowerCase() === ap.toLowerCase()) { dup = true; break; }
                                     }
                                     if (!dup) results.push({ name: aclip.name || api.name || "", path: ap });
                                 }
@@ -519,6 +519,10 @@ function isProjectSaved() {
 function applyEditsToTimeline(segmentsJson, mediaPath) {
     var TICKS_PER_SECOND = 254016000000; // Premiere Pro internal time base
 
+    if (!app || !app.project || !app.project.rootItem) {
+        return JSON.stringify({ error: "No project open" });
+    }
+
     var segments;
     try {
         segments = JSON.parse(segmentsJson);
@@ -566,8 +570,9 @@ function applyEditsToTimeline(segmentsJson, mediaPath) {
 
     for (var i = 0; i < segments.length; i++) {
         var seg = segments[i];
-        var segStart = seg.start;
-        var segEnd = seg.end;
+        var segStart = Number(seg.start);
+        var segEnd = Number(seg.end);
+        if (isNaN(segStart) || isNaN(segEnd)) continue;
         var segDuration = segEnd - segStart;
 
         if (segDuration <= 0.01) continue;
@@ -827,6 +832,10 @@ function _findOrCreateBin(binName) {
 function importFileToProject(filePath, binName) {
     _ocLog("importFileToProject: " + filePath + " -> bin: " + binName);
 
+    if (!app || !app.project || !app.project.rootItem) {
+        return JSON.stringify({ error: "No project open" });
+    }
+
     if (!binName) binName = "OpenCut Output";
 
     var f = new File(filePath);
@@ -1068,7 +1077,9 @@ function startOpenCutBackend() {
         // ---- WINDOWS ----
         // Build a batch file that kills old server, then launches new
         var bat = new File(Folder.temp.fsName + "/opencut_start.bat");
-        bat.open("w");
+        if (!bat.open("w")) {
+            return JSON.stringify({ error: "Cannot write startup script to temp folder" });
+        }
         try {
             bat.writeln("@echo off");
             bat.writeln("setlocal");
@@ -1114,7 +1125,9 @@ function startOpenCutBackend() {
         // Write the startup script
         var shPath = Folder.temp.fsName + "/opencut_start.sh";
         var sh = new File(shPath);
-        sh.open("w");
+        if (!sh.open("w")) {
+            return JSON.stringify({ error: "Cannot write startup script to temp folder" });
+        }
         try {
             sh.writeln("#!/bin/bash");
             // Kill via PID file
@@ -1204,6 +1217,10 @@ function getPremiereThemeInfo() {
  */
 function autoImportResult(filePath, jobType) {
     _ocLog("autoImportResult: " + filePath + " (type: " + jobType + ")");
+
+    if (!app || !app.project || !app.project.rootItem) {
+        return JSON.stringify({ error: "No project open" });
+    }
 
     if (!filePath) {
         return JSON.stringify({ error: "No file path provided" });
