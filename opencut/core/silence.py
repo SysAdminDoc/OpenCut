@@ -5,6 +5,7 @@ Detects silent segments in audio/video files and returns time intervals
 for both silent and non-silent (speech) regions.
 """
 
+import logging
 import re
 import subprocess
 from dataclasses import dataclass
@@ -12,6 +13,8 @@ from typing import Callable, List, Optional
 
 from ..utils.config import SilenceConfig
 from ..utils.media import probe
+
+logger = logging.getLogger("opencut")
 
 
 @dataclass
@@ -49,6 +52,10 @@ def detect_silences(
     Returns:
         List of TimeSegment objects representing silent regions.
     """
+    # Coerce to float for safe interpolation into FFmpeg filter
+    threshold_db = float(threshold_db)
+    min_duration = float(min_duration)
+
     cmd = [
         "ffmpeg",
         "-hide_banner",
@@ -82,6 +89,9 @@ def detect_silences(
         raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
     except subprocess.TimeoutExpired:
         raise RuntimeError(f"FFmpeg timed out processing '{filepath}'")
+
+    if result.returncode != 0:
+        logger.warning("FFmpeg silencedetect failed (rc=%d) for %s", result.returncode, filepath)
 
     # Parse silencedetect output from stderr
     # Format: [silencedetect @ 0x...] silence_start: 1.234

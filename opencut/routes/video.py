@@ -1171,6 +1171,8 @@ def face_detect():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     detector = data.get("detector", "mediapipe")
+    if detector not in ("mediapipe", "haar"):
+        detector = "mediapipe"
 
     if not filepath:
         return jsonify({"error": "File not found"}), 400
@@ -1200,7 +1202,7 @@ def face_blur():
         method = "gaussian"
     strength = safe_int(data.get("strength", 51), 51, min_val=1, max_val=99)
     detector = data.get("detector", "mediapipe")
-    if detector not in ("mediapipe", "haarcascade"):
+    if detector not in ("mediapipe", "haar"):
         detector = "mediapipe"
 
     if not filepath:
@@ -1681,7 +1683,7 @@ def speed_change_route():
     """Apply constant speed change."""
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
-    speed = safe_float(data.get("speed", 2.0), 2.0, min_val=0.1, max_val=100.0)
+    speed = safe_float(data.get("speed", 2.0), 2.0, min_val=0.1, max_val=8.0)
     output_dir = data.get("output_dir", "")
 
     if not filepath:
@@ -1806,7 +1808,7 @@ def speed_ramp_route():
                 )
             else:
                 from opencut.core.speed_ramp import speed_ramp
-                _VALID_EASING = {"linear", "ease_in", "ease_out", "ease_in_out"}
+                _VALID_EASING = {"linear", "ease_in", "ease_out", "ease_in_out", "exponential"}
                 easing_val = data.get("easing", "ease_in_out")
                 if easing_val not in _VALID_EASING:
                     easing_val = "ease_in_out"

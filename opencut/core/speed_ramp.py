@@ -214,10 +214,10 @@ def speed_ramp(
         total_segs = len(keyframes) - 1
 
         for i in range(total_segs):
-            start_time = keyframes[i]["time"]
-            end_time = keyframes[i + 1]["time"]
-            start_speed = keyframes[i]["speed"]
-            end_speed = keyframes[i + 1]["speed"]
+            start_time = float(keyframes[i]["time"])
+            end_time = float(keyframes[i + 1]["time"])
+            start_speed = float(keyframes[i]["speed"])
+            end_speed = float(keyframes[i + 1]["speed"])
 
             if end_time <= start_time:
                 continue
