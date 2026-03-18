@@ -417,6 +417,28 @@
 - **ExtendScript rootItem guards** — added `!app || !app.project || !app.project.rootItem` guards to 5 import functions: `importXMLToProject`, `importAndOpenXml`, `importCaptions`, `importFilesToProject`, `importCaptionOverlay`
 - **importCaptionOverlay try/catch** — entire function body wrapped in try/catch (was previously unguarded, crash on null project)
 
+## v1.3.1 Batch 17 Bug Fixes
+- **face_reframe ensure_package** — 3 `ensure_package()` calls now check return value; raises RuntimeError on install failure. Zero duration/fps from probe now raises ValueError instead of producing garbage output.
+- **style_transfer atomic download** — `urlretrieve()` now uses 120s socket timeout, writes to `.tmp` then `os.replace()` to prevent corrupt partial downloads from persisting on disk
+- **auto_edit temp dir leak** — changed `except` cleanup to `finally` so temp dir is cleaned on both success and failure paths
+- **auto_edit 30fps hardcode** — `_export_premiere_xml()` now accepts `fps` param from actual ffprobe result; XML timebase matches source video instead of hardcoded 30fps
+- **diarize GPU memory** — `del pipeline` + `torch.cuda.empty_cache()` in finally block prevents VRAM accumulation across successive diarize jobs
+- **shorts_pipeline trim crash** — `_trim_clip()` wrapped in try/except with `continue` so single clip failure doesn't abort entire pipeline
+- **speed_ramp double encoding** — concat step changed from `libx264` re-encode to `-c copy` (segments already encoded); eliminates 2x CPU time and quality loss
+- **audio.py info.duration crash** — filler removal no-silence path used `_fdur` fallback instead of `info.duration` which crashes when `_finfo` is None
+- **TTS rate/pitch validation** — regex validates rate (`[+-]?\d{1,3}%`) and pitch (`[+-]?\d{1,4}Hz`) before passing to edge_tts
+- **audio mix tracks cap** — `/audio/mix` caps tracks list at 32 to prevent FFmpeg filter_complex resource exhaustion
+- **TTS text length cap** — both `/audio/tts/generate` and `/audio/tts/subtitled` cap text at 50000 chars
+- **remap_segments validation** — captions animated route validates remap_segments_raw items as dicts with start/end keys + safe_float coercion
+- **word_segments cap** — animated caption render caps word_segments at 50000 entries
+- **workflow count limit** — `save_workflow()` caps at 100 workflows (matching import route limit)
+- **parseTimeToSec NaN** — returns 0 on NaN instead of propagating garbage values from malformed time input
+- **createEvent modernization** — preset load event dispatch uses `new Event()` with CEP fallback
+- **context menu overflow** — viewport-clamped positioning prevents menu from rendering off-screen
+- **custom workflow queue fix** — changed `file` to `filepath` key (all custom workflow queue jobs were failing silently)
+- **runBatch file selection** — uses `_batchFiles` array when populated instead of ignoring user's batch picker selection
+- **Dead code + play() promise** — removed unused `_translations` variable; `showAudioPreview()` catches play() rejection
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
