@@ -508,3 +508,22 @@ enhance = ["resemble-enhance>=0.0.1"]
 ## v1.3.1 Batch 21 Bug Fixes
 - **Rate limit async bug** — `@require_rate_limit("model_install")` decorator releases rate limit slot immediately when async install routes return (before background thread finishes), making concurrent protection useless. 4 routes fixed: `install_whisper` + `whisper_reinstall` (system.py — also fixed double-release since thread's finally also called `rate_limit_release`), `audio_pro_install` + `tts_install` (audio.py — added missing `rate_limit_release` in thread's finally). All 4 now use manual `rate_limit()`/`rate_limit_release()` instead of decorator, with early-return paths also releasing the slot.
 - **ensure_package return guards** — 16 unchecked `ensure_package()` calls across 5 core modules crashed with `ImportError` when pip install failed (return value not checked before subsequent import). Added `if not ensure_package(...): raise RuntimeError(...)` guards: voice_gen.py (4: edge_tts x2, kokoro, soundfile — soundfile also gained missing pip_name and on_progress args), face_swap.py (3: cv2, cv2+onnxruntime), animated_captions.py (2: cv2, Pillow), video_ai.py (5: realesrgan, basicsr, cv2 x3, rembg), face_tools.py (2: cv2 in blur_faces + detect_faces_in_frame)
+
+## v1.3.1 Batch 22 Bug Fixes
+- **captions_enhanced ensure_package** — 6 unchecked `ensure_package()` calls (whisperx, ctranslate2 x2, sentencepiece x2, huggingface_hub x2, pysubs2 x2) now check return value and raise RuntimeError on failure
+- **WhisperX GPU memory leak** — model + align_model wrapped in try/finally with `del` + `torch.cuda.empty_cache()` to free VRAM between jobs
+- **CTranslate2 translator leak** — `translate_text()` and `translate_segments()` translator objects wrapped in try/finally with `del translator` to prevent memory accumulation
+- **Empty translation crash** — both translate functions guard `if not results or not results[0].hypotheses` before accessing output tokens
+- **object_removal ensure_package** — 2 unchecked cv2 `ensure_package()` calls in `generate_masks_sam2()` and `remove_watermark_lama()`
+- **SAM2 temp dir leak** — frames extraction dir wrapped in try/finally with `shutil.rmtree()` (was only cleaned on success path)
+- **mask_region KeyError** — `remove_watermark_lama()` changed `mask_region["x"]` to `.get("x", 0)` with `int()` coercion (4 keys)
+- **VideoCapture/Writer isOpened** — `remove_watermark_lama()` checks `cap.isOpened()` and `writer.isOpened()` after construction
+- **Zero-dimension validation** — `remove_watermark_lama()` validates w/h/fps > 0 from `get_video_info()` before processing
+- **upscale_pro ensure_package** — 1 unchecked cv2 `ensure_package()` in `upscale_realesrgan()`
+- **thumbnail ensure_package** — 1 unchecked cv2 `ensure_package()` in `generate_thumbnails()`
+- **Rule-of-thirds break bug** — inner `break` only exited inner `ty` loop, not outer `tx` loop; face at multiple thirds intersections inflated score. Fixed with `thirds_bonus` flag pattern
+- **Rate limit async (video.py)** — `video_ai_install` and `face_install` used `@require_rate_limit` decorator which releases on route return, not thread completion. Converted to manual `rate_limit()`/`rate_limit_release()` with early-return + finally release
+- **Segment type coercion** — export_video segment start/end now coerced via `safe_float()` in both audio-only and video+audio paths (prevents TypeError from JSON string values)
+- **bg_color injection** — rembg route validates bg_color against `^[a-zA-Z0-9#]+$` regex; rejects injection payloads
+- **Phantom colorspace removal** — removed "aces", "bt709", "bt2020" from colorspace allowlist (silently passed validation but produced wrong FFmpeg output)
+- **Dead position cleanup** — removed "face" from `_VALID_POSITIONS` (unreachable code path) and `\d+:\d+` regex fallback (never matched valid user input)
