@@ -43,7 +43,10 @@ public class WhisperDownloader
                 return;
             }
 
-            // Read output for progress reporting
+            // Consume stderr async to prevent pipe deadlock
+            var stderrTask = process.StandardError.ReadToEndAsync();
+
+            // Read stdout for progress reporting
             while (!process.StandardOutput.EndOfStream)
             {
                 var line = process.StandardOutput.ReadLine();
@@ -53,7 +56,13 @@ public class WhisperDownloader
                 }
             }
 
-            process.WaitForExit(600000); // 10 minute timeout
+            if (!process.WaitForExit(600000)) // 10 minute timeout
+            {
+                try { process.Kill(entireProcessTree: true); } catch { /* best effort */ }
+                Report(progress, step, totalSteps, stepName,
+                    "Model download timed out (10 min).", LogLevel.Error);
+                return;
+            }
 
             if (process.ExitCode == 0)
             {
@@ -62,7 +71,7 @@ public class WhisperDownloader
             }
             else
             {
-                var stderr = process.StandardError.ReadToEnd();
+                var stderr = stderrTask.Result;
                 Report(progress, step, totalSteps, stepName,
                     $"Model download failed (exit {process.ExitCode}): {stderr}", LogLevel.Error);
             }

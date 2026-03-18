@@ -16,7 +16,8 @@ public class RegistryManager
 
             var currentPath = envKey.GetValue("Path", "") as string ?? "";
 
-            if (currentPath.Contains(directory, StringComparison.OrdinalIgnoreCase))
+            var pathSegments = currentPath.Split(';', StringSplitOptions.RemoveEmptyEntries);
+            if (pathSegments.Any(p => p.Equals(directory, StringComparison.OrdinalIgnoreCase)))
             {
                 Report(progress, step, totalSteps, "Updating PATH", "Already in PATH.", LogLevel.Debug);
                 return;

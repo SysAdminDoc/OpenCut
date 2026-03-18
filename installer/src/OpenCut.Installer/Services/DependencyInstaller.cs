@@ -55,7 +55,19 @@ public class DependencyInstaller
                     continue;
                 }
 
-                process.WaitForExit(300000); // 5 min per package
+                // Consume both streams to prevent pipe deadlock
+                var stdoutTask = process.StandardOutput.ReadToEndAsync();
+                var stderrTask = process.StandardError.ReadToEndAsync();
+
+                if (!process.WaitForExit(300000)) // 5 min per package
+                {
+                    try { process.Kill(entireProcessTree: true); } catch { /* best effort */ }
+                    Report(progress, step, totalSteps, stepName,
+                        $"Timed out installing {package} (5 min).", LogLevel.Warning);
+                    continue;
+                }
+
+                var stderr = stderrTask.Result;
 
                 if (process.ExitCode == 0)
                 {
@@ -64,7 +76,6 @@ public class DependencyInstaller
                 }
                 else
                 {
-                    var stderr = process.StandardError.ReadToEnd();
                     var msg = string.IsNullOrWhiteSpace(stderr) ? $"exit code {process.ExitCode}" : stderr.Trim();
                     Report(progress, step, totalSteps, stepName,
                         $"Failed to install {package}: {msg}", LogLevel.Warning);
