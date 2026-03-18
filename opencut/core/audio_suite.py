@@ -369,6 +369,10 @@ def detect_beats(
         raise RuntimeError(f"Audio extraction failed: {result.stderr.decode(errors='replace')}")
 
     pcm_data = result.stdout
+    # Truncate to even length — FFmpeg may produce odd-byte output on
+    # partial frames, and array.array("h") requires 2-byte alignment.
+    if len(pcm_data) % 2:
+        pcm_data = pcm_data[:-1]
     num_samples = len(pcm_data) // 2
     if num_samples < sample_rate:
         return BeatInfo()
@@ -518,6 +522,9 @@ def generate_ducking_keyframes(
         raise RuntimeError(f"Audio extraction failed: {result.stderr.decode(errors='replace')}")
 
     pcm_data = result.stdout
+    # Truncate to even length — array.array("h") requires 2-byte alignment
+    if len(pcm_data) % 2:
+        pcm_data = pcm_data[:-1]
     num_samples = len(pcm_data) // 2
     if num_samples < sample_rate:
         return []
