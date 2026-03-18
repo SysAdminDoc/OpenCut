@@ -70,7 +70,10 @@ def generate_masks_sam2(
     if not ensure_package("sam2", "sam2", on_progress):
         raise RuntimeError("SAM 2 not installed. Run: pip install sam2")
 
-    ensure_package("cv2", "opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    import shutil
+
     import cv2
     import numpy as np
     import torch
@@ -98,54 +101,53 @@ def generate_masks_sam2(
 
     # Extract frames to temp dir
     frames_dir = tempfile.mkdtemp(prefix="sam2_frames_")
-    run_ffmpeg([
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-        "-i", video_path, "-q:v", "2",
-        os.path.join(frames_dir, "frame_%06d.jpg"),
-    ], timeout=7200)
+    try:
+        run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-i", video_path, "-q:v", "2",
+            os.path.join(frames_dir, "frame_%06d.jpg"),
+        ], timeout=7200)
 
-    frame_files = sorted([f for f in os.listdir(frames_dir) if f.endswith(".jpg")])
-    total = len(frame_files)
+        frame_files = sorted([f for f in os.listdir(frames_dir) if f.endswith(".jpg")])
+        total = len(frame_files)
 
-    if on_progress:
-        on_progress(25, f"Running SAM 2 on {total} frames...")
+        if on_progress:
+            on_progress(25, f"Running SAM 2 on {total} frames...")
 
-    # Initialize video predictor
-    with torch.inference_mode():
-        state = predictor.init_state(video_path=frames_dir)
+        # Initialize video predictor
+        with torch.inference_mode():
+            state = predictor.init_state(video_path=frames_dir)
 
-        # Add prompts on frame 0
-        for p in prompts:
-            ptype = p.get("type", "")
-            if ptype == "point":
-                if "x" not in p or "y" not in p:
-                    raise ValueError("Point prompt missing 'x' or 'y' key")
-                predictor.add_new_points_or_box(
-                    state, frame_idx=0, obj_id=1,
-                    points=np.array([[float(p["x"]), float(p["y"])]], dtype=np.float32),
-                    labels=np.array([p.get("label", 1)], dtype=np.int32),
-                )
-            elif ptype == "box":
-                for k in ("x1", "y1", "x2", "y2"):
-                    if k not in p:
-                        raise ValueError(f"Box prompt missing '{k}' key")
-                predictor.add_new_points_or_box(
-                    state, frame_idx=0, obj_id=1,
-                    box=np.array([float(p["x1"]), float(p["y1"]), float(p["x2"]), float(p["y2"])], dtype=np.float32),
-                )
+            # Add prompts on frame 0
+            for p in prompts:
+                ptype = p.get("type", "")
+                if ptype == "point":
+                    if "x" not in p or "y" not in p:
+                        raise ValueError("Point prompt missing 'x' or 'y' key")
+                    predictor.add_new_points_or_box(
+                        state, frame_idx=0, obj_id=1,
+                        points=np.array([[float(p["x"]), float(p["y"])]], dtype=np.float32),
+                        labels=np.array([p.get("label", 1)], dtype=np.int32),
+                    )
+                elif ptype == "box":
+                    for k in ("x1", "y1", "x2", "y2"):
+                        if k not in p:
+                            raise ValueError(f"Box prompt missing '{k}' key")
+                    predictor.add_new_points_or_box(
+                        state, frame_idx=0, obj_id=1,
+                        box=np.array([float(p["x1"]), float(p["y1"]), float(p["x2"]), float(p["y2"])], dtype=np.float32),
+                    )
 
-        # Propagate masks
-        for frame_idx, obj_ids, masks in predictor.propagate_in_video(state):
-            mask = (masks[0, 0] > 0.5).cpu().numpy().astype(np.uint8) * 255
-            cv2.imwrite(os.path.join(mask_dir, f"mask_{frame_idx:06d}.png"), mask)
+            # Propagate masks
+            for frame_idx, obj_ids, masks in predictor.propagate_in_video(state):
+                mask = (masks[0, 0] > 0.5).cpu().numpy().astype(np.uint8) * 255
+                cv2.imwrite(os.path.join(mask_dir, f"mask_{frame_idx:06d}.png"), mask)
 
-            if on_progress and frame_idx % 30 == 0:
-                pct = 25 + int((frame_idx / max(total, 1)) * 60)
-                on_progress(pct, f"Tracking object: frame {frame_idx}/{total}...")
-
-    # Cleanup frames
-    import shutil
-    shutil.rmtree(frames_dir, ignore_errors=True)
+                if on_progress and frame_idx % 30 == 0:
+                    pct = 25 + int((frame_idx / max(total, 1)) * 60)
+                    on_progress(pct, f"Tracking object: frame {frame_idx}/{total}...")
+    finally:
+        shutil.rmtree(frames_dir, ignore_errors=True)
 
     if on_progress:
         on_progress(90, "Masks generated!")
@@ -173,7 +175,8 @@ def remove_watermark_lama(
     if not ensure_package("simple_lama_inpainting", "simple-lama-inpainting", on_progress):
         raise RuntimeError("simple-lama-inpainting not installed")
 
-    ensure_package("cv2", "opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
     import cv2
     import numpy as np
     from simple_lama_inpainting import SimpleLama
@@ -189,22 +192,31 @@ def remove_watermark_lama(
     lama = SimpleLama()
     info = get_video_info(video_path)
     w, h, fps = info["width"], info["height"], info["fps"]
+    if w <= 0 or h <= 0 or fps <= 0:
+        raise RuntimeError(f"Cannot determine video properties: {w}x{h} @ {fps}fps")
 
     # Create static mask
     mask = np.zeros((h, w), dtype=np.uint8)
-    rx, ry = mask_region["x"], mask_region["y"]
-    rw, rh = mask_region["width"], mask_region["height"]
+    rx = int(mask_region.get("x", 0))
+    ry = int(mask_region.get("y", 0))
+    rw = int(mask_region.get("width", 100))
+    rh = int(mask_region.get("height", 100))
     # Expand slightly for better inpainting
     pad = 5
     mask[max(0, ry - pad):min(h, ry + rh + pad),
          max(0, rx - pad):min(w, rx + rw + pad)] = 255
 
     cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {video_path}")
     _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
     tmp_video = _ntf.name
     _ntf.close()
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
+    if not writer.isOpened():
+        cap.release()
+        raise RuntimeError("Failed to initialize video writer")
 
     total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
     frame_idx = 0
