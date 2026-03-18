@@ -187,17 +187,6 @@ def analyze_colors(
     if on_progress:
         on_progress(10, "Analyzing colors...")
 
-    # Use ffprobe signalstats for a quick analysis
-    cmd = [
-        "ffprobe", "-v", "quiet",
-        "-f", "lavfi", "-i",
-        f"movie='{video_path}',signalstats=stat=tout+vrep+brng",
-        "-show_entries", "frame_tags",
-        "-of", "json",
-        "-read_intervals", "%+#10",
-    ]
-    subprocess.run(cmd, capture_output=True, timeout=60)
-
     # Basic analysis via ffprobe
     cmd2 = [
         "ffprobe", "-v", "quiet", "-select_streams", "v:0",
@@ -208,7 +197,12 @@ def analyze_colors(
 
     color_info = {"color_space": "unknown", "transfer": "unknown", "primaries": "unknown"}
     try:
-        s = json.loads(r2.stdout.decode())["streams"][0]
+        if r2.returncode != 0:
+            raise RuntimeError("ffprobe failed")
+        streams = json.loads(r2.stdout.decode()).get("streams", [])
+        if not streams:
+            raise RuntimeError("no streams")
+        s = streams[0]
         color_info["color_space"] = s.get("color_space", "unknown")
         color_info["transfer"] = s.get("color_transfer", "unknown")
         color_info["primaries"] = s.get("color_primaries", "unknown")

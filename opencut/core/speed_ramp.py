@@ -192,6 +192,10 @@ def speed_ramp(
         raise ValueError("Need at least 2 keyframes for speed ramp")
 
     # Sort by time
+    for _ki, _kf in enumerate(keyframes):
+        if "time" not in _kf or "speed" not in _kf:
+            raise ValueError(f"Keyframe {_ki} missing required 'time' or 'speed' key")
+
     keyframes = sorted(keyframes, key=lambda k: k["time"])
 
     if output_path is None:
