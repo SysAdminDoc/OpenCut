@@ -395,6 +395,13 @@
 - **Subtitle path colon inside quotes** — `caption_burnin.py` same colon-inside-quotes bug for ass/subtitles FFmpeg filter paths. Removed colon escaping.
 - **Temp file leak in audio_pro.py** — `temp_output` was excluded from cleanup when `is_video=False`, leaking temp WAV files for non-wav/flac/aiff audio processing. Now cleans all temp files that differ from `output_path`.
 
+## v1.3.1 Batch 14 Bug Fixes
+- **Transition acrossfade crash** — `apply_transition()` now probes both clips for audio streams before building filter_complex; omits `acrossfade` and maps `-an` when either clip lacks audio (prevents FFmpeg "matches no streams" crash)
+- **Transition duration guard** — warns when `dur_a <= 0` from ffprobe failure instead of silently computing wrong offset
+- **Style transfer allowlist sync** — route allowlists in `video.py` (lines 1280, 1629) replaced phantom "feathers"/"composition_vii" with "pointilism" to match actual `STYLE_MODELS` keys in `style_transfer.py`
+- **Particles isOpened() check** — `overlay_particles()` now checks `cap.isOpened()` after `cv2.VideoCapture()` and raises early on failure (matching face_swap.py pattern)
+- **Face swap temp file leak** — both `enhance_faces()` and `swap_face()` now clean up temp video file when `VideoWriter.isOpened()` fails (was leaking orphan files)
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
