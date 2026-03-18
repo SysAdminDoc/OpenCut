@@ -355,6 +355,15 @@
 - **File.open() return check** — startup script writers (Windows bat, macOS sh) check return value and report error
 - **Case-insensitive path dedup** — `getSelectedClips` audio track dedup uses `.toLowerCase()` for Windows path matching
 
+## v1.3.1 Batch 10 Bug Fixes
+- **Burn-in style allowlist sync** — `_VALID_BURNIN_STYLES` in captions.py updated to match actual `BURNIN_STYLES` keys in `caption_burnin.py`
+- **ASS override tag injection** — `_write_ass_file()` strips `{\tag}` override expressions from user-provided caption text via regex
+- **SAM2 prompt validation** — `generate_masks_sam2()` uses `.get()` with key-existence checks and `float()` coercion on point/box coordinates (prevents KeyError + type injection)
+- **Delogo coord coercion** — `remove_watermark_delogo()` coerces region coords to `int()` via `.get()` with defaults (prevents type injection into FFmpeg filter)
+- **Track volume coercion** — `mix_audio_tracks()` coerces track volume to `float()` before FFmpeg filter interpolation (prevents string injection)
+- **FFmpeg semicolon escaping** — `render_title_card()` and `overlay_title()` escape `;` in title/subtitle text to prevent filter chain injection
+- **Subtitle length cap in overlay** — title overlay route caps subtitle to 500 chars (matching render route guard)
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
