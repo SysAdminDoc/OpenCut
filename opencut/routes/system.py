@@ -29,6 +29,7 @@ from opencut.jobs import (
     jobs,
 )
 from opencut.security import (
+    VALID_WHISPER_MODELS,
     get_csrf_token,
     rate_limit_release,
     require_csrf,
@@ -702,7 +703,9 @@ def whisper_settings():
     if "cpu_mode" in data:
         settings["cpu_mode"] = bool(data["cpu_mode"])
     if "model" in data:
-        settings["model"] = str(data["model"])
+        _m = str(data["model"])
+        if _m in VALID_WHISPER_MODELS:
+            settings["model"] = _m
 
     save_whisper_settings(settings)
     logger.info(f"Whisper settings updated: {settings}")
