@@ -480,3 +480,17 @@ enhance = ["resemble-enhance>=0.0.1"]
   - `LibraryImport` requires `AllowUnsafeBlocks=true` in csproj
   - `OpenFolderDialog` is .NET 8+ only (replaces WinForms FolderBrowserDialog)
   - COM interop for `WScript.Shell` shortcut creation uses `dynamic` + `Marshal.ReleaseComObject`
+
+## v1.3.1 Batch 19 Bug Fixes
+- **safe_int OverflowError** — `int(float('inf'))` raised uncaught `OverflowError` in `safe_int()`; added to except tuple and changed `int(value)` to `int(float(value))` to also handle float strings like `"3.7"` (security.py)
+- **FFmpeg progress pipe deadlock** — `_run_ffmpeg_with_progress()` consumed stdout line-by-line while stderr was deferred; if stderr exceeded pipe buffer (4KB Windows), classic deadlock. Now drains stderr in background thread (helpers.py)
+- **Job times atomic write** — `_record_job_time()` used raw `open()+json.dump()` risking corruption on crash; now uses `tempfile.mkstemp()` + `os.replace()` matching `user_data.py` pattern (helpers.py)
+- **Dead variable cleanup** — removed unused `_stderr_size` variable from progress runner (helpers.py)
+- **particles.py ensure_package** — `ensure_package()` return value unchecked; `import cv2` crashed with unhandled `ImportError` on failed install. Added return guard + `RuntimeError`
+- **particles.py writer.isOpened()** — `VideoWriter` creation not checked; silent corrupt output on codec/resolution failure. Added guard with cleanup
+- **chromakey.py ensure_package** — same `ensure_package()` return value bug as particles.py
+- **chromakey.py writer.isOpened()** — same `VideoWriter` guard as particles.py, plus `fg_cap`/`bg_cap` cleanup on failure
+- **motion_graphics.py drawtext escaping** — POSIX shell `'\\''` trick doesn't work in FFmpeg filter expressions; changed to FFmpeg-native `\\'` escaping. Text with apostrophes (e.g., "don't") no longer breaks the filter parser
+- **motion_graphics.py filename sanitization** — output filename only stripped spaces and `/`; now strips all Windows-reserved characters (`\:*?"<>|`) via regex
+- **index.jsx .command open check** — macOS `.command` fallback didn't check `open("w")` return value (`.bat` and `.sh` paths did); added matching guard
+- **index.jsx importCaptions polling** — `_findProjectItemByPath()` ran immediately after `importFiles()` with no delay; added polling loop (20 attempts × 50ms) matching `importFileToProject()` pattern

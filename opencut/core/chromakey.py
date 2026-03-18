@@ -52,7 +52,8 @@ def chromakey_video(
         spill_suppress: Spill suppression strength 0-1.
         edge_blur: Edge feathering radius in pixels.
     """
-    ensure_package("cv2", "opencv-python-headless", on_progress)
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
     import cv2
     import numpy as np
 
@@ -99,6 +100,15 @@ def chromakey_video(
     _ntf.close()
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
+    if not writer.isOpened():
+        fg_cap.release()
+        if bg_cap:
+            bg_cap.release()
+        try:
+            os.unlink(tmp_video)
+        except OSError:
+            pass
+        raise RuntimeError("Failed to create video writer — codec or resolution unsupported")
 
     total_frames = max(1, int(fg_cap.get(cv2.CAP_PROP_FRAME_COUNT)))
     frame_idx = 0
