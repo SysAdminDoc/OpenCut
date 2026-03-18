@@ -32,6 +32,7 @@
     var jobStartTime = 0;
     var elapsedTimer = null;
     var activeStream = null;
+    var batchPollTimer = null;
     var transcriptData = null; // stored transcript for editing/export
     var lastJobEndpoint = "";  // for retry
     var lastJobPayload = null; // for retry
@@ -1938,7 +1939,7 @@
             }
         }
         if (r.bpm) {
-            stats += (stats ? "<br>" : "") + "BPM: " + safeFixed(r.bpm, 0) + " | " + Number(r.total_beats) + " beats";
+            stats += (stats ? "<br>" : "") + "BPM: " + safeFixed(r.bpm, 0) + " | " + (r.total_beats != null ? Number(r.total_beats) : 0) + " beats";
             if (r.confidence !== undefined) {
                 stats += " | Confidence: " + safeFixed(r.confidence * 100, 0) + "%";
             }
@@ -1969,10 +1970,10 @@
             el.cancelBtn.disabled = true;
             api("POST", "/cancel/" + currentJob, {}, function (err) {
                 if (err) {
-                    currentJob = null;
-                    hideProgress();
                     showToast("Cancel failed — connection lost", "error");
                 }
+                currentJob = null;
+                hideProgress();
             });
             // Clean up poll timer and SSE since job is being cancelled
             if (pollTimer) {
@@ -2569,12 +2570,13 @@
             el.batchStatusText.textContent = "Batch running: 0/" + data.total + " complete...";
             // Poll for status (with error limit to prevent infinite polling)
             var pollErrors = 0;
-            var pollInterval = setInterval(function () {
+            if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
+            batchPollTimer = setInterval(function () {
                 api("GET", "/batch/" + batchId, null, function (e2, d2) {
                     if (e2 || !d2) {
                         pollErrors++;
                         if (pollErrors >= 10) {
-                            clearInterval(pollInterval);
+                            clearInterval(batchPollTimer); batchPollTimer = null;
                             el.batchStatusText.textContent = "Batch poll failed after 10 errors";
                         }
                         return;
@@ -2585,7 +2587,7 @@
                         "Batch " + d2.status + ": " + (d2.completed || 0) + "/" + (d2.total || 0) +
                         " (" + (res.success || 0) + " ok, " + (res.failed || 0) + " failed)";
                     if (d2.status !== "running") {
-                        clearInterval(pollInterval);
+                        clearInterval(batchPollTimer); batchPollTimer = null;
                         showAlert("Batch complete: " + (res.success || 0) + " succeeded");
                     }
                 });
@@ -3479,7 +3481,7 @@
         // Video sliders
         el.wmMaxBbox.addEventListener("input", function () { el.wmMaxBboxVal.textContent = this.value + "%"; });
         el.wmFrameSkip.addEventListener("input", function () { el.wmFrameSkipVal.textContent = this.value; });
-        el.sceneThreshold.addEventListener("input", function () { el.sceneThresholdVal.textContent = parseFloat(this.value).toFixed(2); });
+        el.sceneThreshold.addEventListener("input", function () { el.sceneThresholdVal.textContent = safeFixed(parseFloat(this.value), 2); });
         el.minSceneLen.addEventListener("input", function () { el.minSceneLenVal.textContent = this.value + "s"; });
 
         // Video FX sliders
@@ -3487,8 +3489,8 @@
         el.vfxStabZoom.addEventListener("input", function () { el.vfxStabZoomVal.textContent = this.value + "%"; });
         el.vfxVignetteIntensity.addEventListener("input", function () { el.vfxVignetteIntensityVal.textContent = this.value; });
         el.vfxGrainIntensity.addEventListener("input", function () { el.vfxGrainIntensityVal.textContent = this.value; });
-        el.vfxChromakeySim.addEventListener("input", function () { el.vfxChromakeySimVal.textContent = parseFloat(this.value).toFixed(2); });
-        el.vfxChromakeyBlend.addEventListener("input", function () { el.vfxChromakeyBlendVal.textContent = parseFloat(this.value).toFixed(2); });
+        el.vfxChromakeySim.addEventListener("input", function () { el.vfxChromakeySimVal.textContent = safeFixed(parseFloat(this.value), 2); });
+        el.vfxChromakeyBlend.addEventListener("input", function () { el.vfxChromakeyBlendVal.textContent = safeFixed(parseFloat(this.value), 2); });
         el.vfxLutIntensity.addEventListener("input", function () { el.vfxLutIntensityVal.textContent = this.value; });
 
         // Video AI sliders
@@ -4616,7 +4618,7 @@
                 var item = data[i];
                 var div = document.createElement("div");
                 div.className = "output-item";
-                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + esc(item.name) + '</div><div class="output-item-meta">' + esc(item.size_mb) + ' MB &mdash; ' + esc(item.type) + '</div></div><div class="output-item-actions"><button class="btn-sm" data-path="' + esc(item.path) + '">Import</button></div>';
+                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + esc(item.name) + '</div><div class="output-item-meta">' + safeFixed(item.size_mb, 1) + ' MB &mdash; ' + esc(item.type || "") + '</div></div><div class="output-item-actions"><button class="btn-sm" data-path="' + esc(item.path) + '">Import</button></div>';
                 div.querySelector(".btn-sm").addEventListener("click", function () {
                     var p = this.dataset.path;
                     if (inPremiere && cs) {
@@ -5881,6 +5883,10 @@
             if (elapsedTimer) {
                 clearInterval(elapsedTimer);
                 elapsedTimer = null;
+            }
+            if (batchPollTimer) {
+                clearInterval(batchPollTimer);
+                batchPollTimer = null;
             }
         });
     });

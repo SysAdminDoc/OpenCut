@@ -69,9 +69,19 @@ public class PayloadExtractor
             using var subStream = new SubStream(fs, payloadOffset, payloadSize);
             using var archive = new ZipArchive(subStream, ZipArchiveMode.Read);
 
+            var fullTargetDir = Path.GetFullPath(targetDir);
+
             foreach (var entry in archive.Entries)
             {
-                var destPath = Path.Combine(targetDir, entry.FullName);
+                var destPath = Path.GetFullPath(Path.Combine(targetDir, entry.FullName));
+
+                // ZIP Slip prevention: ensure extracted path stays within target directory
+                if (!destPath.StartsWith(fullTargetDir + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                    && !destPath.Equals(fullTargetDir, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue; // Skip malicious entry
+                }
+
                 if (entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
                 {
                     Directory.CreateDirectory(destPath);
