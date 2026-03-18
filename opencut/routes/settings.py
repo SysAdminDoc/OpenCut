@@ -125,6 +125,8 @@ def save_workflow():
             found = True
             break
     if not found:
+        if len(workflows) >= 100:
+            return jsonify({"error": "Too many workflows (max 100)"}), 400
         workflows.append({"name": name, "steps": steps, "created": time.time()})
     save_workflows(workflows)
     return jsonify({"success": True})
