@@ -389,6 +389,12 @@
 - **Slider toFixed crash** — 3 slider `oninput` handlers use `safeFixed()` instead of raw `.toFixed()` (main.js)
 - **Installer version sync** — `AppConstants.cs` version updated from "1.3.0" to "1.3.1"
 
+## v1.3.1 Batch 13 Bug Fixes
+- **LUT path double-backslash colon** — `video_fx.py` used `"\\\\:"` producing `\\:` in FFmpeg (literal backslash + separator), corrupting Windows LUT paths. Now uses single-quoted path with no colon escaping (matching lut_library.py batch 11 fix).
+- **LUT colon inside single quotes** — `color_management.py` escaped colons with `\:` inside single-quoted FFmpeg filter values where `\` is literal, corrupting `C:/` drive paths. Removed colon escaping.
+- **Subtitle path colon inside quotes** — `caption_burnin.py` same colon-inside-quotes bug for ass/subtitles FFmpeg filter paths. Removed colon escaping.
+- **Temp file leak in audio_pro.py** — `temp_output` was excluded from cleanup when `is_video=False`, leaking temp WAV files for non-wav/flac/aiff audio processing. Now cleans all temp files that differ from `output_path`.
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
