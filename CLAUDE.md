@@ -407,6 +407,16 @@
 - **Chromakey background path traversal** — `/video/fx/apply` chromakey `background` param now validated via `validate_filepath()` (standalone `/video/chromakey` route already validated, but fx/apply was unprotected)
 - **Transition name allowlist** — `/video/transitions/apply` and `/video/transitions/join` routes validate `transition` param against `XFADE_TRANSITIONS` dict at route level (defense-in-depth; downstream already falls back to "fade")
 
+## v1.3.1 Batch 16 Bug Fixes
+- **vid.stab Windows path crash** — `stabilize_video()` transforms_file path now wrapped in single quotes with forward slashes, preventing Windows drive colon (`C:/`) from breaking FFmpeg filter option parsing (same class as LUT colon fixes in batches 11/13)
+- **ensure_package crash** — `apply_pedalboard_effect()` and `deepfilter_denoise()` in audio_pro.py now check `ensure_package()` return value before importing; raises RuntimeError on install failure instead of unhandled ImportError
+- **PCM alignment crash** — beat detection and audio ducking in audio_suite.py truncate PCM data to even byte length before `array.array("h")` — prevents ValueError on truncated FFmpeg output with odd byte count
+- **Letterbox color injection** — `apply_letterbox()` validates color against named color set + hex regex to prevent FFmpeg pad filter injection
+- **Chromakey defense-in-depth** — `chromakey()` module-level color validation via regex (complements route-level fix from batch 15)
+- **ExtendScript children[i] crash** — `_findProjectItemByPath()` moved `children[i]` access inside try/catch to prevent crash on invalidated project items
+- **ExtendScript rootItem guards** — added `!app || !app.project || !app.project.rootItem` guards to 5 import functions: `importXMLToProject`, `importAndOpenXml`, `importCaptions`, `importFilesToProject`, `importCaptionOverlay`
+- **importCaptionOverlay try/catch** — entire function body wrapped in try/catch (was previously unguarded, crash on null project)
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
