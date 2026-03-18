@@ -35,10 +35,6 @@ def _get_lock(filepath: str) -> threading.RLock:
     key = os.path.normcase(os.path.realpath(filepath))
     with _file_locks_guard:
         if key not in _file_locks:
-            # Evict oldest entries if we somehow exceed the cap
-            if len(_file_locks) >= _MAX_FILE_LOCKS:
-                oldest = next(iter(_file_locks))
-                del _file_locks[oldest]
             _file_locks[key] = threading.RLock()
         return _file_locks[key]
 
@@ -57,7 +53,7 @@ def read_user_file(filename: str, default=None):
                     return json.load(f)
         except Exception as e:
             logger.warning("Could not read %s: %s", filename, e)
-    return default if default is not None else None
+    return default
 
 
 def write_user_file(filename: str, data):

@@ -19,7 +19,7 @@ import logging
 import os
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_video_info, run_ffmpeg
+from opencut.helpers import run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -254,11 +254,9 @@ def export_with_preset(
     if on_progress:
         on_progress(5, f"Exporting with {preset['label']}...")
 
-    info = get_video_info(input_path)
-
-    # Special handling for GIF
+    # Special handling for GIF (no video info needed)
     if preset.get("ext") == ".gif":
-        return _export_gif(input_path, output_path, preset, info, on_progress)
+        return _export_gif(input_path, output_path, preset, on_progress)
 
     # Build FFmpeg command
     cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", input_path]
@@ -354,7 +352,7 @@ def export_with_preset(
 
 def _export_gif(
     input_path: str, output_path: str,
-    preset: Dict, info: Dict,
+    preset: Dict,
     on_progress: Optional[Callable] = None,
 ) -> str:
     """Export as optimized GIF using two-pass palette generation."""

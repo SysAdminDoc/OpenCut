@@ -48,6 +48,8 @@ def save_preset():
     if not isinstance(settings, dict):
         return jsonify({"error": "Settings must be an object"}), 400
     presets = load_presets()
+    if name not in presets and len(presets) >= 500:
+        return jsonify({"error": "Too many presets (max 500)"}), 400
     presets[name] = {"settings": settings, "saved": time.time()}
     save_presets(presets)
     return jsonify({"success": True, "name": name})
