@@ -494,3 +494,13 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **motion_graphics.py filename sanitization** — output filename only stripped spaces and `/`; now strips all Windows-reserved characters (`\:*?"<>|`) via regex
 - **index.jsx .command open check** — macOS `.command` fallback didn't check `open("w")` return value (`.bat` and `.sh` paths did); added matching guard
 - **index.jsx importCaptions polling** — `_findProjectItemByPath()` ran immediately after `importFiles()` with no delay; added polling loop (20 attempts × 50ms) matching `importFileToProject()` pattern
+
+## v1.3.1 Batch 20 Bug Fixes
+- **Crop position expressions inverted** — reframe crop mode used `(ow-iw)/2` which evaluates negative (clamped to 0), pinning all crops to top-left. Changed to `(iw-ow)/2` for correct centering; same fix on all 5 named positions (video.py)
+- **Queue allowlist 15 phantom routes** — `_ALLOWED_QUEUE_ENDPOINTS` had 15 paths that don't match actual Flask routes (e.g. `/captions/styled` → `/styled-captions`, `/export/video` → `/export-video`, `/fx/*` → `/video/fx/apply`, `/ai/*` → `/video/ai/*`). ~40% of queue operations silently failed (jobs_routes.py)
+- **face_blur batch allowlist mismatch** — batch processing path validated "fill" instead of "black" for face blur method; `blur_faces()` accepts "black" (video.py)
+- **`.rebuild()` TypeError** — preset list refresh called `.rebuild()` on custom dropdown which doesn't exist; changed to `.update()` (main.js)
+- **styled_captions PCM truncation** — `array.array("h")` crashed on odd-length PCM bytes from FFmpeg; truncates to even byte count before parsing (same class as batch 16 audio_suite fix) (styled_captions.py)
+- **face_tools temp file leak** — face detection extracted first frame to temp PNG but didn't clean up on ffmpeg/imread error; wrapped in try/finally with os.unlink (face_tools.py)
+- **style_transfer ensure_package** — `ensure_package()` return value unchecked; `import cv2` crashed with ImportError on failed install. Added return guard + RuntimeError (style_transfer.py)
+- **Preset slider display** — loading per-operation presets fired "change" event which doesn't trigger slider `oninput` display handlers; now dispatches "input" for range elements (main.js)

@@ -136,20 +136,19 @@ MAX_QUEUE_SIZE = 100
 _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/silence", "/silence/speed-up", "/fillers",
     "/audio/denoise", "/audio/normalize", "/audio/enhance",
-    "/audio/pro/eq", "/audio/pro/compress", "/audio/pro/fx-chain",
-    "/captions/styled", "/captions/translate", "/captions/karaoke",
+    "/audio/pro/apply",
+    "/styled-captions", "/captions/translate", "/captions/karaoke",
     "/captions/burnin/file", "/captions/burnin/segments",
     "/captions/animated/render",
-    "/video/scenes", "/video/auto-edit", "/video/stabilize",
-    "/video/face-blur", "/video/reframe", "/video/reframe/face",
+    "/video/scenes", "/video/auto-edit", "/video/fx/apply",
+    "/video/face/blur", "/video/reframe", "/video/reframe/face",
     "/video/chromakey", "/video/highlights",
     "/video/lut/apply", "/video/lut/generate-from-ref",
-    "/video/color/grade", "/video/color/convert",
-    "/video/speed-ramp", "/video/shorts-pipeline",
+    "/video/color/correct", "/video/color/convert",
+    "/video/speed/ramp", "/video/shorts-pipeline",
     "/video/title/render", "/video/preview-frame",
-    "/export/video",
-    "/fx/vignette", "/fx/film-grain", "/fx/letterbox",
-    "/ai/upscale", "/ai/style-transfer", "/ai/rembg",
+    "/export-video",
+    "/video/ai/upscale", "/video/style/apply", "/video/ai/rembg",
 })
 
 
