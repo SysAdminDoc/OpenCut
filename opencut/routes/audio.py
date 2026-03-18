@@ -1561,9 +1561,12 @@ def audio_mix_route():
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = output_dir or tempfile.gettempdir()
+            _mix_mode = data.get("duration_mode", "longest")
+            if _mix_mode not in ("longest", "shortest", "first"):
+                _mix_mode = "longest"
             out = mix_audio_tracks(
                 tracks, output_dir=effective_dir,
-                duration_mode=data.get("duration_mode", "longest"),
+                duration_mode=_mix_mode,
                 on_progress=_on_progress,
             )
             _update_job(
@@ -1620,9 +1623,12 @@ def music_ai_generate():
                     return
             else:
                 d = tempfile.gettempdir()
+            _mg_model = data.get("model", "small")
+            if _mg_model not in ("small", "medium", "large"):
+                _mg_model = "small"
             out = generate_music(prompt, output_dir=d,
                                   duration=safe_float(data.get("duration", 10), 10.0, min_val=1.0, max_val=120.0),
-                                  model_size=data.get("model", "small"),
+                                  model_size=_mg_model,
                                   temperature=safe_float(data.get("temperature", 1.0), 1.0, min_val=0.1, max_val=2.0),
                                   on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})

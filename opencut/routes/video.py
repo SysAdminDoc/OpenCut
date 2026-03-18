@@ -37,6 +37,7 @@ from opencut.jobs import (
     jobs,
 )
 from opencut.security import (
+    VALID_WHISPER_MODELS,
     require_csrf,
     require_rate_limit,
     safe_float,
@@ -792,19 +793,22 @@ def video_fx_apply():
             effective_dir = _resolve_output_dir(filepath, output_dir)
 
             if effect == "stabilize":
+                _fx_crop = params.get("crop", "keep")
+                if _fx_crop not in ("keep", "black"):
+                    _fx_crop = "keep"
                 out = video_fx.stabilize_video(
                     filepath, output_dir=effective_dir,
-                    smoothing=params.get("smoothing", 10),
-                    crop=params.get("crop", "keep"),
-                    zoom=params.get("zoom", 0),
+                    smoothing=safe_int(params.get("smoothing", 10), 10, min_val=1, max_val=100),
+                    crop=_fx_crop,
+                    zoom=safe_int(params.get("zoom", 0), 0, min_val=0, max_val=100),
                     on_progress=_on_progress,
                 )
             elif effect == "chromakey":
                 out = video_fx.chromakey(
                     filepath, output_dir=effective_dir,
                     color=params.get("color", "0x00FF00"),
-                    similarity=params.get("similarity", 0.3),
-                    blend=params.get("blend", 0.1),
+                    similarity=safe_float(params.get("similarity", 0.3), 0.3, min_val=0.0, max_val=1.0),
+                    blend=safe_float(params.get("blend", 0.1), 0.1, min_val=0.0, max_val=1.0),
                     background=params.get("background", ""),
                     on_progress=_on_progress,
                 )
@@ -815,25 +819,28 @@ def video_fx_apply():
                 lut_path = validate_filepath(lut_path)
                 out = video_fx.apply_lut(
                     filepath, lut_path, output_dir=effective_dir,
-                    intensity=params.get("intensity", 1.0),
+                    intensity=safe_float(params.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0),
                     on_progress=_on_progress,
                 )
             elif effect == "vignette":
                 out = video_fx.apply_vignette(
                     filepath, output_dir=effective_dir,
-                    intensity=params.get("intensity", 0.5),
+                    intensity=safe_float(params.get("intensity", 0.5), 0.5, min_val=0.0, max_val=2.0),
                     on_progress=_on_progress,
                 )
             elif effect == "film_grain":
                 out = video_fx.apply_film_grain(
                     filepath, output_dir=effective_dir,
-                    intensity=params.get("intensity", 0.5),
+                    intensity=safe_float(params.get("intensity", 0.5), 0.5, min_val=0.0, max_val=2.0),
                     on_progress=_on_progress,
                 )
             elif effect == "letterbox":
+                _fx_aspect = params.get("aspect", "2.39:1")
+                if _fx_aspect not in ("2.39:1", "2.35:1", "1.85:1", "16:9", "4:3", "1:1", "21:9"):
+                    _fx_aspect = "2.39:1"
                 out = video_fx.apply_letterbox(
                     filepath, output_dir=effective_dir,
-                    aspect=params.get("aspect", "2.39:1"),
+                    aspect=_fx_aspect,
                     on_progress=_on_progress,
                 )
             elif effect == "color_match":
@@ -1270,6 +1277,9 @@ def style_apply():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     style_name = data.get("style", "candy")
+    if style_name not in ("candy", "mosaic", "rain_princess", "udnie", "starry_night",
+                          "la_muse", "the_scream", "feathers", "composition_vii"):
+        style_name = "candy"
     intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0)
 
     if not filepath:
@@ -2033,8 +2043,13 @@ def blend_route():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(base, data.get("output_dir", ""))
+            _blend_mode = data.get("mode", "overlay")
+            if _blend_mode not in ("normal", "multiply", "screen", "overlay", "darken", "lighten",
+                                   "softlight", "hardlight", "difference", "exclusion", "addition",
+                                   "dodge", "burn", "average"):
+                _blend_mode = "overlay"
             out = blend_videos(base, overlay, output_dir=d,
-                                mode=data.get("mode", "overlay"),
+                                mode=_blend_mode,
                                 opacity=safe_float(data.get("opacity", 0.5), 0.5, min_val=0.0, max_val=1.0), on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
@@ -2148,8 +2163,11 @@ def title_render():
                     return
             else:
                 d = tempfile.gettempdir()
+            _title_preset = data.get("preset", "fade_center")
+            if _title_preset not in ("fade_center", "slide_left", "typewriter"):
+                _title_preset = "fade_center"
             out = render_title_card(text, output_dir=d,
-                                     preset=data.get("preset", "fade_center"),
+                                     preset=_title_preset,
                                      duration=safe_float(data.get("duration", 5.0), 5.0, min_val=0.5, max_val=60.0),
                                      font_size=safe_int(data.get("font_size", 72), 72, min_val=8, max_val=500),
                                      subtitle=subtitle,
@@ -2193,8 +2211,11 @@ def title_overlay():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
+            _title_preset2 = data.get("preset", "fade_center")
+            if _title_preset2 not in ("fade_center", "slide_left", "typewriter"):
+                _title_preset2 = "fade_center"
             out = overlay_title(fp, text, output_dir=d,
-                                 preset=data.get("preset", "fade_center"),
+                                 preset=_title_preset2,
                                  font_size=safe_int(data.get("font_size", 72), 72, min_val=8, max_val=500),
                                  start_time=safe_float(data.get("start_time", 0), 0.0, min_val=0.0, max_val=86400.0),
                                  duration=safe_float(data.get("duration", 5.0), 5.0, min_val=0.5, max_val=60.0),
@@ -3497,15 +3518,21 @@ def video_shorts_pipeline():
             def _on_progress(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
 
+            _shorts_provider = data.get("llm_provider", "ollama")
+            if _shorts_provider not in ("ollama", "openai", "anthropic"):
+                _shorts_provider = "ollama"
             llm_config = LLMConfig(
-                provider=data.get("llm_provider", "ollama"),
+                provider=_shorts_provider,
                 model=data.get("llm_model", ""),
                 api_key=data.get("llm_api_key", ""),
                 base_url=data.get("llm_base_url", ""),
             )
 
+            _shorts_whisper = data.get("whisper_model", "base")
+            if _shorts_whisper not in VALID_WHISPER_MODELS:
+                _shorts_whisper = "base"
             config = ShortsPipelineConfig(
-                whisper_model=data.get("whisper_model", "base"),
+                whisper_model=_shorts_whisper,
                 max_shorts=safe_int(data.get("max_shorts", 5), 5, min_val=1, max_val=20),
                 min_duration=safe_float(data.get("min_duration", 15.0), 15.0, min_val=5.0, max_val=300.0),
                 max_duration=safe_float(data.get("max_duration", 60.0), 60.0, min_val=10.0, max_val=600.0),
