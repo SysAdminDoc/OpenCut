@@ -326,6 +326,18 @@
 - **ffprobe crash in `get_video_info()`** — checks returncode and empty `streams[]` before array access; returns safe defaults on failure
 - **parentNode null guard** — `addAudioWaveformButtons()` guards `parentNode` before calling `querySelector()`
 
+## v1.3.1 Batch 8 Bug Fixes
+- **selectedIndex crash guard** — workflow builder and clip select guard `selectedIndex >= 0` before accessing `options[]` (prevents TypeError on empty selects)
+- **XSS: esc() for data-path** — output browser and recent clips replace inline manual escaping (missing `'`) with `esc()` helper for consistent HTML attribute escaping
+- **GPU rec undefined display** — `whisper_model`, `caption_quality`, `whisper_device` fallback to "N/A" when API omits fields
+- **Null-safe beat/scene counts** — `total_beats` and `total_scenes` display "--" when null/undefined instead of literal "undefined"
+- **err.message type guard** — LLM test error handler checks `typeof err === "object"` before accessing `.message`
+- **Keyframe validation** — `speed_ramp.py` validates each keyframe dict has `time` and `speed` keys before processing
+- **TOCTOU os.unlink fix** — `diarize.py` wraps temp file unlink in try/except to prevent race condition crash
+- **music_gen.py unlink safety** — concat temp list file unlink wrapped in try/except to prevent masking original errors
+- **Dead ffprobe call removed** — `color_management.py` removed unused signalstats ffprobe call; added returncode + empty streams check on remaining probe
+- **sys.executable for frozen builds** — `auto_edit.py` uses `sys.executable` instead of `shutil.which("python")` for PyInstaller compatibility
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
