@@ -101,6 +101,10 @@ def enhance_faces(
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (orig_w, orig_h))
     if not writer.isOpened():
         cap.release()
+        try:
+            os.unlink(tmp_video)
+        except OSError:
+            pass
         raise RuntimeError(f"Cannot create video writer for: {tmp_video}")
 
     if on_progress:
@@ -231,6 +235,10 @@ def swap_face(
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
     if not writer.isOpened():
         cap.release()
+        try:
+            os.unlink(tmp_video)
+        except OSError:
+            pass
         raise RuntimeError(f"Cannot create video writer for: {tmp_video}")
 
     frame_idx = 0
