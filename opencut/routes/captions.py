@@ -249,11 +249,18 @@ def styled_captions_route():
                 return
 
             # Optional: remap captions to edited timeline
-            if remap_segments_raw:
+            if remap_segments_raw and isinstance(remap_segments_raw, list):
                 from opencut.core.captions import remap_captions_to_segments
                 from opencut.core.silence import TimeSegment
-                remap_segs = [TimeSegment(s["start"], s["end"]) for s in remap_segments_raw]
-                transcription = remap_captions_to_segments(transcription, remap_segs)
+                remap_segs = []
+                for s in remap_segments_raw:
+                    if isinstance(s, dict) and "start" in s and "end" in s:
+                        remap_segs.append(TimeSegment(
+                            safe_float(s["start"], 0.0, min_val=0.0),
+                            safe_float(s["end"], 0.0, min_val=0.0),
+                        ))
+                if remap_segs:
+                    transcription = remap_captions_to_segments(transcription, remap_segs)
 
             # Step 2: Detect action words
             _update_job(job_id, progress=50, message="Detecting action words...")
@@ -1146,6 +1153,8 @@ def animated_caption_render():
         return jsonify({"error": str(exc)}), 400
     if not words:
         return jsonify({"error": "No word segments"}), 400
+    if len(words) > 50000:
+        return jsonify({"error": "Too many word segments (max 50000)"}), 400
 
     job_id = _new_job("anim-cap", fp)
 
