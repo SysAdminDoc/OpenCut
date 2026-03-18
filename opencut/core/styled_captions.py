@@ -417,6 +417,9 @@ def detect_action_words_by_energy(
     except Exception:
         return set()
 
+    # Truncate to even byte count to prevent ValueError on odd-length PCM
+    if len(pcm_bytes) % 2 != 0:
+        pcm_bytes = pcm_bytes[:-1]
     n_samples = len(pcm_bytes) // 2
     if n_samples == 0:
         return set()
