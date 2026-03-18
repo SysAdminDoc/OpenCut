@@ -76,10 +76,14 @@ def stabilize_video(
         if on_progress:
             on_progress(10, "Analyzing motion (pass 1/2)...")
 
+        # Escape path for FFmpeg filter: backslashes → forward slashes, wrap
+        # in single quotes so colons in Windows drive letters (C:/) are not
+        # interpreted as FFmpeg filter option separators.
+        trf_safe = transforms_file.replace("\\", "/").replace("'", "\\'")
         cmd1 = [
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
-            "-vf", f"vidstabdetect=shakiness=10:accuracy=15:result={transforms_file}",
+            "-vf", f"vidstabdetect=shakiness=10:accuracy=15:result='{trf_safe}'",
             "-f", "null", "-",
         ]
         run_ffmpeg(cmd1, timeout=1800)
@@ -88,7 +92,7 @@ def stabilize_video(
             on_progress(50, "Stabilizing video (pass 2/2)...")
 
         # Pass 2: Apply stabilization
-        vf = f"vidstabtransform=input={transforms_file}:smoothing={smoothing}:crop={crop}:zoom={zoom}:interpol=linear"
+        vf = f"vidstabtransform=input='{trf_safe}':smoothing={smoothing}:crop={crop}:zoom={zoom}:interpol=linear"
         cmd2 = [
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
@@ -130,11 +134,17 @@ def chromakey(
         blend: Edge blending (0.0-1.0).
         background: Optional replacement background image/video path.
     """
+    import re as _re_ck
+
     if output_path is None:
         output_path = _output_path(input_path, "chromakey", output_dir)
     # Use mov for alpha, mp4 otherwise
     if not background:
         output_path = os.path.splitext(output_path)[0] + ".mov"
+
+    # Validate color against FFmpeg hex format (defense-in-depth)
+    if not _re_ck.fullmatch(r"0x[0-9A-Fa-f]{6}", color):
+        color = "0x00FF00"
 
     if on_progress:
         on_progress(20, "Applying chromakey...")
@@ -314,6 +324,15 @@ def apply_letterbox(
 
     if on_progress:
         on_progress(20, f"Applying {aspect} letterbox...")
+
+    # Validate color: must be a named FFmpeg color or hex format
+    import re as _re_lb
+    _VALID_COLORS = frozenset({
+        "black", "white", "red", "green", "blue", "gray", "grey",
+        "yellow", "cyan", "magenta", "orange", "purple", "navy",
+    })
+    if color not in _VALID_COLORS and not _re_lb.fullmatch(r"0x[0-9A-Fa-f]{6,8}", color):
+        color = "black"
 
     # Parse aspect ratio
     parts = aspect.split(":")

@@ -255,6 +255,10 @@ function getTimelineSelection() {
  */
 function importXMLToProject(xmlPath) {
     _ocLog("importXMLToProject: " + xmlPath);
+
+    if (!app || !app.project || !app.project.rootItem) {
+        return JSON.stringify({ error: "No project open" });
+    }
     try {
         var xmlFile = new File(xmlPath);
         if (!xmlFile.exists) {
@@ -412,6 +416,9 @@ function browseForFile() {
  * Import a file and open it as a sequence.
  */
 function importAndOpenXml(filePath) {
+    if (!app || !app.project || !app.project.rootItem) {
+        return JSON.stringify({ error: "No project open" });
+    }
     try {
         var file = new File(filePath);
         if (!file.exists) return JSON.stringify({ error: "File not found: " + filePath });
@@ -644,8 +651,8 @@ function _findProjectItemByPath(parent, targetPath, depth) {
     var numChildren = 0;
     try { numChildren = parent.children.numItems; } catch (e) { return null; }
     for (var i = 0; i < numChildren; i++) {
-        var item = parent.children[i];
         try {
+            var item = parent.children[i];
             if (item.type === 2) {
                 // Bin -- recurse into it
                 var found = _findProjectItemByPath(item, targetPath, depth + 1);
@@ -678,6 +685,10 @@ function _findProjectItemByPath(parent, targetPath, depth) {
  */
 function importCaptions(captionPath) {
     _ocLog("importCaptions: " + captionPath);
+
+    if (!app || !app.project || !app.project.rootItem) {
+        return JSON.stringify({ error: "No project open" });
+    }
 
     // Validate file exists
     var captionFile = new File(captionPath);
@@ -897,6 +908,10 @@ function importFileToProject(filePath, binName) {
 function importFilesToProject(filePathsJson, binName) {
     _ocLog("importFilesToProject: " + filePathsJson);
 
+    if (!app || !app.project || !app.project.rootItem) {
+        return JSON.stringify({ error: "No project open" });
+    }
+
     if (!binName) binName = "OpenCut Output";
 
     var paths = [];
@@ -959,12 +974,17 @@ function importFilesToProject(filePathsJson, binName) {
 function importCaptionOverlay(overlayPath) {
     _ocLog("importCaptionOverlay: " + overlayPath);
 
+    if (!app || !app.project || !app.project.rootItem) {
+        return JSON.stringify({ error: "No project open" });
+    }
+
     var overlayFile = new File(overlayPath);
     if (!overlayFile.exists) {
         return JSON.stringify({ error: "Overlay file not found: " + overlayPath });
     }
 
     // Check if already imported
+    try {
     var overlayItem = _findProjectItemByPath(app.project.rootItem, overlayPath, 0);
     if (overlayItem) {
         return JSON.stringify({
@@ -1009,6 +1029,9 @@ function importCaptionOverlay(overlayPath) {
     return JSON.stringify({
         error: "Import may have failed. Check the OpenCut Overlays bin, or try File > Import and select: " + overlayPath
     });
+    } catch (e) {
+        return JSON.stringify({ error: "importCaptionOverlay: " + e.toString() });
+    }
 }
 
 

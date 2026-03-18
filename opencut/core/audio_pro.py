@@ -256,9 +256,10 @@ def apply_pedalboard_effect(
 
     For video files, extracts audio, processes, then remuxes.
     """
-    ensure_package("pedalboard", "pedalboard", on_progress)
-    import pedalboard
-    from pedalboard.io import AudioFile
+    if not ensure_package("pedalboard", "pedalboard", on_progress):
+        raise RuntimeError("Pedalboard not installed. Run: pip install pedalboard")
+    import pedalboard  # noqa: E402
+    from pedalboard.io import AudioFile  # noqa: E402
 
     if effect_name not in PEDALBOARD_EFFECTS:
         raise ValueError(f"Unknown effect: {effect_name}")
@@ -525,7 +526,8 @@ def deepfilter_denoise(
     Broadcast-grade speech enhancement that runs real-time on CPU.
     Model size: <10MB. Supports 48kHz full-band audio.
     """
-    ensure_package("df", "deepfilternet", on_progress)
+    if not ensure_package("df", "deepfilternet", on_progress):
+        raise RuntimeError("DeepFilterNet not installed. Run: pip install deepfilternet")
 
     if output_path is None:
         base = os.path.splitext(os.path.basename(input_path))[0]
