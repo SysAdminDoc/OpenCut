@@ -2219,7 +2219,7 @@ def title_overlay():
                                  font_size=safe_int(data.get("font_size", 72), 72, min_val=8, max_val=500),
                                  start_time=safe_float(data.get("start_time", 0), 0.0, min_val=0.0, max_val=86400.0),
                                  duration=safe_float(data.get("duration", 5.0), 5.0, min_val=0.5, max_val=60.0),
-                                 subtitle=data.get("subtitle", ""),
+                                 subtitle=data.get("subtitle", "")[:500],
                                  on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:

@@ -92,8 +92,8 @@ def render_title_card(
     if on_progress:
         on_progress(10, f"Rendering title: {preset}...")
 
-    escaped_text = text.replace("'", "'\\''").replace(":", "\\:")
-    escaped_sub = subtitle.replace("'", "'\\''").replace(":", "\\:") if subtitle else ""
+    escaped_text = text.replace("'", "'\\''").replace(":", "\\:").replace(";", "\\;")
+    escaped_sub = subtitle.replace("'", "'\\''").replace(":", "\\:").replace(";", "\\;") if subtitle else ""
 
     if preset == "fade_center":
         fade_in = min(1.0, duration * 0.2)
@@ -223,8 +223,8 @@ def overlay_title(
     if on_progress:
         on_progress(10, "Overlaying title...")
 
-    escaped_text = text.replace("'", "'\\''").replace(":", "\\:")
-    escaped_sub = subtitle.replace("'", "'\\''").replace(":", "\\:") if subtitle else ""
+    escaped_text = text.replace("'", "'\\''").replace(":", "\\:").replace(";", "\\;")
+    escaped_sub = subtitle.replace("'", "'\\''").replace(":", "\\:").replace(";", "\\;") if subtitle else ""
     end_time = start_time + duration
 
     fade_in = min(1.0, duration * 0.2)

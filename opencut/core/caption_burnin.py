@@ -13,6 +13,7 @@ Use this when the target player doesn't support soft subs.
 
 import logging
 import os
+import re as _re
 import tempfile
 from typing import Callable, Dict, List, Optional
 
@@ -260,6 +261,7 @@ def _write_ass_file(f, segments: List[Dict], style: Dict, info: Dict):
         start = _format_ass_time(seg.get("start", 0))
         end = _format_ass_time(seg.get("end", 0))
         text = seg.get("text", "").strip().replace("\n", "\\N")
+        text = _re.sub(r'\{[^}]*\}', '', text)
         f.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n")
 
 
