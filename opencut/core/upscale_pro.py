@@ -99,7 +99,8 @@ def upscale_realesrgan(
     """
     if not ensure_package("realesrgan", "realesrgan", on_progress):
         raise RuntimeError("Real-ESRGAN not installed")
-    ensure_package("cv2", "opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
 
     import cv2
     import torch

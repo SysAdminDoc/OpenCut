@@ -69,12 +69,17 @@ def _score_frame(frame, has_face_detector=False, face_detector=None) -> float:
                     cx = (fx + fw / 2) / w
                     cy = (fy + fh / 2) / h
                     # Rule of thirds bonus
+                    thirds_bonus = False
                     for tx in [0.33, 0.5, 0.67]:
                         for ty in [0.33, 0.5, 0.67]:
                             dist = ((cx - tx) ** 2 + (cy - ty) ** 2) ** 0.5
                             if dist < 0.15:
-                                score += 5
+                                thirds_bonus = True
                                 break
+                        if thirds_bonus:
+                            break
+                    if thirds_bonus:
+                        score += 5
         except Exception:
             pass
 
@@ -108,7 +113,8 @@ def generate_thumbnails(
     Returns:
         List of dicts with path, timestamp, score.
     """
-    ensure_package("cv2", "opencv-python-headless", on_progress)
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
     import cv2
 
     info = get_video_info(input_path)

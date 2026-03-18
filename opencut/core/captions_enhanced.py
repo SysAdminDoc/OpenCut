@@ -76,7 +76,8 @@ def whisperx_transcribe(
     Returns:
         Dict with segments, each containing words with precise timestamps.
     """
-    ensure_package("whisperx", "whisperx", on_progress)
+    if not ensure_package("whisperx", "whisperx", on_progress):
+        raise RuntimeError("Failed to install whisperx. Install manually: pip install whisperx")
     import torch
     import whisperx
 
@@ -89,68 +90,72 @@ def whisperx_transcribe(
 
     # Step 1: Transcribe with batched inference
     model = whisperx.load_model(model_size, device, compute_type=compute_type)
-    audio = whisperx.load_audio(audio_path)
-
-    if on_progress:
-        on_progress(25, "Transcribing audio...")
-
-    result = model.transcribe(audio, batch_size=16, language=language or None)
-    detected_lang = result.get("language", language or "en")
-
-    if on_progress:
-        on_progress(50, "Aligning word timestamps (wav2vec2)...")
-
-    # Step 2: Word-level alignment
-    align_model, align_metadata = whisperx.load_align_model(
-        language_code=detected_lang, device=device
-    )
-    result = whisperx.align(
-        result["segments"], align_model, align_metadata,
-        audio, device, return_char_alignments=False
-    )
-
-    # Step 3: Optional speaker diarization
-    if diarize and hf_token:
-        if on_progress:
-            on_progress(70, "Running speaker diarization...")
-        try:
-            diarize_model = whisperx.DiarizationPipeline(
-                use_auth_token=hf_token, device=device
-            )
-            diarize_segments = diarize_model(audio)
-            result = whisperx.assign_word_speakers(diarize_segments, result)
-        except Exception as e:
-            logger.warning(f"Diarization failed: {e}")
-
-    if on_progress:
-        on_progress(90, "Formatting results...")
-
-    # Format output
-    segments = []
-    for seg in result.get("segments", []):
-        words = []
-        for w in seg.get("words", []):
-            words.append({
-                "text": w.get("word", ""),
-                "start": round(w.get("start", 0), 3),
-                "end": round(w.get("end", 0), 3),
-                "score": round(w.get("score", 1.0), 3),
-            })
-        segments.append({
-            "text": seg.get("text", "").strip(),
-            "start": round(seg.get("start", 0), 3),
-            "end": round(seg.get("end", 0), 3),
-            "words": words,
-            "speaker": seg.get("speaker", None),
-        })
-
-    # Free GPU memory
+    align_model = None
     try:
-        del model, align_model
-        if device == "cuda":
-            torch.cuda.empty_cache()
-    except Exception:
-        pass
+        audio = whisperx.load_audio(audio_path)
+
+        if on_progress:
+            on_progress(25, "Transcribing audio...")
+
+        result = model.transcribe(audio, batch_size=16, language=language or None)
+        detected_lang = result.get("language", language or "en")
+
+        if on_progress:
+            on_progress(50, "Aligning word timestamps (wav2vec2)...")
+
+        # Step 2: Word-level alignment
+        align_model, align_metadata = whisperx.load_align_model(
+            language_code=detected_lang, device=device
+        )
+        result = whisperx.align(
+            result["segments"], align_model, align_metadata,
+            audio, device, return_char_alignments=False
+        )
+
+        # Step 3: Optional speaker diarization
+        if diarize and hf_token:
+            if on_progress:
+                on_progress(70, "Running speaker diarization...")
+            try:
+                diarize_model = whisperx.DiarizationPipeline(
+                    use_auth_token=hf_token, device=device
+                )
+                diarize_segments = diarize_model(audio)
+                result = whisperx.assign_word_speakers(diarize_segments, result)
+            except Exception as e:
+                logger.warning(f"Diarization failed: {e}")
+
+        if on_progress:
+            on_progress(90, "Formatting results...")
+
+        # Format output
+        segments = []
+        for seg in result.get("segments", []):
+            words = []
+            for w in seg.get("words", []):
+                words.append({
+                    "text": w.get("word", ""),
+                    "start": round(w.get("start", 0), 3),
+                    "end": round(w.get("end", 0), 3),
+                    "score": round(w.get("score", 1.0), 3),
+                })
+            segments.append({
+                "text": seg.get("text", "").strip(),
+                "start": round(seg.get("start", 0), 3),
+                "end": round(seg.get("end", 0), 3),
+                "words": words,
+                "speaker": seg.get("speaker", None),
+            })
+    finally:
+        # Free GPU memory
+        try:
+            del model
+            if align_model is not None:
+                del align_model
+            if device == "cuda":
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
     if on_progress:
         on_progress(100, "WhisperX transcription complete")
@@ -215,8 +220,10 @@ def translate_text(
     CTranslate2 is already a dependency of faster-whisper.
     Uses the distilled 600M NLLB model for good quality with fast inference.
     """
-    ensure_package("ctranslate2", "ctranslate2", on_progress)
-    ensure_package("sentencepiece", "sentencepiece", on_progress)
+    if not ensure_package("ctranslate2", "ctranslate2", on_progress):
+        raise RuntimeError("Failed to install ctranslate2. Install manually: pip install ctranslate2")
+    if not ensure_package("sentencepiece", "sentencepiece", on_progress):
+        raise RuntimeError("Failed to install sentencepiece. Install manually: pip install sentencepiece")
     import ctranslate2
     import sentencepiece
 
@@ -225,7 +232,8 @@ def translate_text(
     if not os.path.isdir(model_dir):
         if on_progress:
             on_progress(10, "Downloading NLLB translation model (~1.2GB)...")
-        ensure_package("huggingface_hub", "huggingface-hub", on_progress)
+        if not ensure_package("huggingface_hub", "huggingface-hub", on_progress):
+            raise RuntimeError("Failed to install huggingface-hub. Install manually: pip install huggingface-hub")
         from huggingface_hub import snapshot_download
         snapshot_download(
             "JustFrederik/nllb-200-distilled-600M-ct2-float16",
@@ -239,42 +247,46 @@ def translate_text(
         on_progress(30, "Loading translation model...")
 
     translator = ctranslate2.Translator(model_dir, device="auto")
-    sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
+    try:
+        sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
 
-    if not os.path.isfile(sp_path):
-        # Try alternate name
-        sp_path = os.path.join(model_dir, "source.spm")
-    if not os.path.isfile(sp_path):
-        raise FileNotFoundError(f"SentencePiece model not found in {model_dir}")
+        if not os.path.isfile(sp_path):
+            # Try alternate name
+            sp_path = os.path.join(model_dir, "source.spm")
+        if not os.path.isfile(sp_path):
+            raise FileNotFoundError(f"SentencePiece model not found in {model_dir}")
 
-    sp = sentencepiece.SentencePieceProcessor()
-    sp.Load(sp_path)
+        sp = sentencepiece.SentencePieceProcessor()
+        sp.Load(sp_path)
 
-    if on_progress:
-        on_progress(50, "Translating...")
+        if on_progress:
+            on_progress(50, "Translating...")
 
-    # Tokenize and translate
-    source_tokens = sp.Encode(text, out_type=str)
-    source_tokens = [src_code] + source_tokens
+        # Tokenize and translate
+        source_tokens = sp.Encode(text, out_type=str)
+        source_tokens = [src_code] + source_tokens
 
-    results = translator.translate_batch(
-        [source_tokens],
-        target_prefix=[[tgt_code]],
-        max_batch_size=1,
-        beam_size=4,
-    )
+        results = translator.translate_batch(
+            [source_tokens],
+            target_prefix=[[tgt_code]],
+            max_batch_size=1,
+            beam_size=4,
+        )
 
-    translated_tokens = results[0].hypotheses[0]
-    # Remove language tag from output
-    if translated_tokens and translated_tokens[0] == tgt_code:
-        translated_tokens = translated_tokens[1:]
+        if not results or not results[0].hypotheses:
+            raise RuntimeError("Translation produced no output")
+        translated_tokens = results[0].hypotheses[0]
+        # Remove language tag from output
+        if translated_tokens and translated_tokens[0] == tgt_code:
+            translated_tokens = translated_tokens[1:]
 
-    translated = sp.Decode(translated_tokens)
+        translated = sp.Decode(translated_tokens)
+    finally:
+        del translator
 
     if on_progress:
         on_progress(100, "Translation complete")
 
-    del translator
     return translated
 
 
@@ -287,8 +299,10 @@ def translate_segments(
     """
     Translate a list of caption segments, preserving timestamps.
     """
-    ensure_package("ctranslate2", "ctranslate2", on_progress)
-    ensure_package("sentencepiece", "sentencepiece", on_progress)
+    if not ensure_package("ctranslate2", "ctranslate2", on_progress):
+        raise RuntimeError("Failed to install ctranslate2. Install manually: pip install ctranslate2")
+    if not ensure_package("sentencepiece", "sentencepiece", on_progress):
+        raise RuntimeError("Failed to install sentencepiece. Install manually: pip install sentencepiece")
     import ctranslate2
     import sentencepiece
 
@@ -297,7 +311,8 @@ def translate_segments(
     if not os.path.isdir(model_dir):
         if on_progress:
             on_progress(10, "Downloading NLLB model (~1.2GB)...")
-        ensure_package("huggingface_hub", "huggingface-hub", on_progress)
+        if not ensure_package("huggingface_hub", "huggingface-hub", on_progress):
+            raise RuntimeError("Failed to install huggingface-hub. Install manually: pip install huggingface-hub")
         from huggingface_hub import snapshot_download
         snapshot_download(
             "JustFrederik/nllb-200-distilled-600M-ct2-float16",
@@ -311,44 +326,48 @@ def translate_segments(
         on_progress(20, "Loading translation model...")
 
     translator = ctranslate2.Translator(model_dir, device="auto")
-    sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
-    if not os.path.isfile(sp_path):
-        sp_path = os.path.join(model_dir, "source.spm")
-    if not os.path.isfile(sp_path):
-        raise FileNotFoundError(f"SentencePiece model not found in {model_dir}")
+    try:
+        sp_path = os.path.join(model_dir, "sentencepiece.bpe.model")
+        if not os.path.isfile(sp_path):
+            sp_path = os.path.join(model_dir, "source.spm")
+        if not os.path.isfile(sp_path):
+            raise FileNotFoundError(f"SentencePiece model not found in {model_dir}")
 
-    sp = sentencepiece.SentencePieceProcessor()
-    sp.Load(sp_path)
+        sp = sentencepiece.SentencePieceProcessor()
+        sp.Load(sp_path)
 
-    translated_segments = []
-    total = len(segments)
-    for i, seg in enumerate(segments):
-        text = seg.get("text", "").strip()
-        if not text:
-            translated_segments.append(seg.copy())
-            continue
+        translated_segments = []
+        total = len(segments)
+        for i, seg in enumerate(segments):
+            text = seg.get("text", "").strip()
+            if not text:
+                translated_segments.append(seg.copy())
+                continue
 
-        source_tokens = [src_code] + sp.Encode(text, out_type=str)
-        results = translator.translate_batch(
-            [source_tokens],
-            target_prefix=[[tgt_code]],
-            beam_size=4,
-        )
-        out_tokens = results[0].hypotheses[0]
-        if out_tokens and out_tokens[0] == tgt_code:
-            out_tokens = out_tokens[1:]
-        translated_text = sp.Decode(out_tokens)
+            source_tokens = [src_code] + sp.Encode(text, out_type=str)
+            results = translator.translate_batch(
+                [source_tokens],
+                target_prefix=[[tgt_code]],
+                beam_size=4,
+            )
+            if not results or not results[0].hypotheses:
+                raise RuntimeError("Translation produced no output")
+            out_tokens = results[0].hypotheses[0]
+            if out_tokens and out_tokens[0] == tgt_code:
+                out_tokens = out_tokens[1:]
+            translated_text = sp.Decode(out_tokens)
 
-        new_seg = seg.copy()
-        new_seg["text"] = translated_text
-        new_seg["original_text"] = text
-        translated_segments.append(new_seg)
+            new_seg = seg.copy()
+            new_seg["text"] = translated_text
+            new_seg["original_text"] = text
+            translated_segments.append(new_seg)
 
-        if on_progress and i % max(1, total // 10) == 0:
-            pct = 20 + int((i / total) * 75)
-            on_progress(pct, f"Translating {i+1}/{total}...")
+            if on_progress and i % max(1, total // 10) == 0:
+                pct = 20 + int((i / total) * 75)
+                on_progress(pct, f"Translating {i+1}/{total}...")
+    finally:
+        del translator
 
-    del translator
     if on_progress:
         on_progress(100, "Translation complete")
 
@@ -375,7 +394,8 @@ def segments_to_ass_karaoke(
 
     Uses \\kf (smooth fill) for word-by-word highlight animation.
     """
-    ensure_package("pysubs2", "pysubs2", on_progress)
+    if not ensure_package("pysubs2", "pysubs2", on_progress):
+        raise RuntimeError("Failed to install pysubs2. Install manually: pip install pysubs2")
     import pysubs2
 
     subs = pysubs2.SSAFile()
@@ -457,7 +477,8 @@ def convert_subtitle_format(
 
     Supported formats: srt, ass, ssa, vtt, microdvd, json, txt
     """
-    ensure_package("pysubs2", "pysubs2", on_progress)
+    if not ensure_package("pysubs2", "pysubs2", on_progress):
+        raise RuntimeError("Failed to install pysubs2. Install manually: pip install pysubs2")
     import pysubs2
 
     if output_path is None:
