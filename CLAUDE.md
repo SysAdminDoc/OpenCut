@@ -527,3 +527,24 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **bg_color injection** — rembg route validates bg_color against `^[a-zA-Z0-9#]+$` regex; rejects injection payloads
 - **Phantom colorspace removal** — removed "aces", "bt709", "bt2020" from colorspace allowlist (silently passed validation but produced wrong FFmpeg output)
 - **Dead position cleanup** — removed "face" from `_VALID_POSITIONS` (unreachable code path) and `\d+:\d+` regex fallback (never matched valid user input)
+
+## v1.3.1 Batch 23 Bug Fixes
+- **audio_enhance GPU leak** — Resemble Enhance `audio` tensor and torch CUDA cache freed in finally block (`del audio` + `torch.cuda.empty_cache()`)
+- **auto_edit master clip fps** — FCP XML master clip `<rate><timebase>` used hardcoded 30; now uses actual source fps via `{timebase}` variable
+- **auto_edit consolidated probe** — replaced local `_probe_duration()`/`_probe_fps()` with `_probe_media_info()` wrapping consolidated `get_video_info()`
+- **auto_edit URL encoding** — `<pathurl>` in Premiere XML now uses `urllib.parse.quote()` instead of `html.escape()` (spaces/special chars broke import)
+- **auto_edit float coercion** — threshold/margin/min_clip_length coerced to `float()` before interpolation into command args
+- **speed_ramp float coercion** — keyframe `time`/`speed` values coerced to `float()` (prevents TypeError from JSON string values)
+- **speed max clamp sync** — speed change route max_val changed from 100.0 to 8.0 to match `speed_ramp.py` module clamp
+- **silence returncode check** — FFmpeg silencedetect result.returncode checked with logger.warning on failure
+- **silence float coercion** — `threshold_db`/`min_duration` coerced to `float()` before FFmpeg filter interpolation
+- **voice_gen path traversal** — voice param sanitized with `re.sub(r'[^a-zA-Z0-9_]', '_', voice)` to prevent directory traversal via `../../` in output filenames (3 sites: edge_tts_generate, edge_tts_with_subtitles, kokoro_generate)
+- **voice_gen empty output** — edge_tts_with_subtitles validates audio file exists and is non-empty before returning
+- **audio_pro GPU cache** — added `torch.cuda.empty_cache()` after `del model, df_state` in DeepFilterNet finally block
+- **audio_suite denoise allowlist** — route allowlist synced from `("afftdn", "anlmdn", "rnnoise")` to `("afftdn", "highpass", "gate")` to match actual module methods
+- **audio_suite stderr truncation** — `normalize_loudness` error message truncated to last 500 chars (was exposing full stderr)
+- **face_swap GPU leaks** — `enhance_faces()` frees GFPGANer restorer, `swap_face()` frees FaceAnalysis app + swapper model, both with `del` + `torch.cuda.empty_cache()` in finally blocks
+- **face_reframe sample_rate guard** — `sample_rate <= 0` clamped to 1 to prevent ZeroDivisionError in `frame_idx % sample_rate`
+- **face detector name fix** — route allowlist changed `"haarcascade"` to `"haar"` to match `face_tools.py` module's expected value (was causing `face_det = None` → AttributeError)
+- **face_detect allowlist** — `/video/face/detect` route now validates detector param against `("mediapipe", "haar")` (was unvalidated)
+- **easing allowlist** — added `"exponential"` to `_VALID_EASING` set in video.py
