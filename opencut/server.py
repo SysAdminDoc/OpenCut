@@ -177,7 +177,6 @@ CORS(app, origins=["null", "file://"])  # CEP panels use null origin; file:// fo
 
 
 from opencut.errors import register_error_handlers  # noqa: E402
-from opencut.jobs import TooManyJobsError  # noqa: E402
 
 register_error_handlers(app)
 
@@ -186,12 +185,6 @@ register_error_handlers(app)
 def handle_large_request(e):
     """Return 413 when request payload exceeds MAX_CONTENT_LENGTH."""
     return jsonify({"error": "Request too large (max 100 MB)"}), 413
-
-
-@app.errorhandler(TooManyJobsError)
-def handle_too_many_jobs(e):
-    """Return 429 when the concurrent-job limit is reached."""
-    return jsonify({"error": str(e)}), 429
 
 
 @app.errorhandler(RuntimeError)
@@ -352,8 +345,8 @@ def _kill_via_shutdown_endpoint(host: str, port: int) -> bool:
             },
             data=b"{}",
         )
-        resp = urllib.request.urlopen(req, timeout=3)
-        data = json.loads(resp.read())
+        with urllib.request.urlopen(req, timeout=3) as resp:
+            data = json.loads(resp.read())
         old_pid = data.get("pid")
         logger.info(f"Shutdown request accepted by server on :{port} (pid={old_pid})")
         return True

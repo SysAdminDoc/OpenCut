@@ -1967,11 +1967,21 @@
             el.processingCancel.disabled = true;
             el.cancelBtn.textContent = "Cancelling...";
             el.cancelBtn.disabled = true;
-            api("POST", "/cancel/" + currentJob, {}, function () {});
-            // Clean up poll timer since job is being cancelled
+            api("POST", "/cancel/" + currentJob, {}, function (err) {
+                if (err) {
+                    currentJob = null;
+                    hideProgress();
+                    showToast("Cancel failed — connection lost", "error");
+                }
+            });
+            // Clean up poll timer and SSE since job is being cancelled
             if (pollTimer) {
                 clearInterval(pollTimer);
                 pollTimer = null;
+            }
+            if (activeStream) {
+                activeStream.close();
+                activeStream = null;
             }
         }
     }

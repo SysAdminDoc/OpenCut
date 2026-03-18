@@ -367,7 +367,10 @@ def apply_lut(
 
     # Escape path for FFmpeg filter syntax (subprocess list invocation, no shell)
     escaped = cube_path.replace("\\", "/")
-    escaped = escaped.replace("'", "\\'").replace(":", "\\:")
+    escaped = escaped.replace("'", "\\'")
+    # Note: do NOT escape colons here -- the path is wrapped in single quotes
+    # in the FFmpeg filter expression, so colon escaping is unnecessary and
+    # would corrupt Windows drive-letter paths (e.g. C:/... → C\:/...).
 
     if intensity >= 0.99:
         vf = f"lut3d='{escaped}'"

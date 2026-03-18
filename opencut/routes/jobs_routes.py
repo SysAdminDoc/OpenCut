@@ -206,52 +206,61 @@ def _dispatch_queue_entry(entry):
 
     dispatch_timeout = 60  # seconds max for route handler to return a job_id
 
-    with current_app.test_request_context(endpoint, method="POST",
+    app = current_app._get_current_object()
+    csrf_token = get_csrf_token()
+
+    try:
+        # Look up the route function (needs a request context for url_map)
+        with app.test_request_context(endpoint, method="POST",
+                                      json=payload,
+                                      headers={
+                                          "Content-Type": "application/json",
+                                          "X-OpenCut-Token": csrf_token,
+                                      }):
+            adapter = current_app.url_map.bind("")
+            ep_name, view_args = adapter.match(endpoint, method="POST")
+            view_func = current_app.view_functions.get(ep_name)
+        if view_func is None:
+            entry["status"] = "error"
+            return
+
+        # Run the handler in a sub-thread with its own request context
+        _dispatch_result = [None, None]  # [response, exception]
+
+        def _call():
+            with app.test_request_context(endpoint, method="POST",
                                           json=payload,
                                           headers={
                                               "Content-Type": "application/json",
-                                              "X-OpenCut-Token": get_csrf_token(),
+                                              "X-OpenCut-Token": csrf_token,
                                           }):
-        try:
-            # Look up the route function and call it directly
-            adapter = current_app.url_map.bind("")
-            rule, view_args = adapter.match(endpoint, method="POST")
-            view_func = current_app.view_functions.get(rule.endpoint)
-            if view_func is None:
-                entry["status"] = "error"
-                return
-
-            # Run the handler in a sub-thread with a timeout
-            _dispatch_result = [None, None]  # [response, exception]
-
-            def _call():
                 try:
                     _dispatch_result[0] = view_func(**view_args)
                 except Exception as exc:
                     _dispatch_result[1] = exc
 
-            t = threading.Thread(target=_call, daemon=True)
-            t.start()
-            t.join(timeout=dispatch_timeout)
-            if t.is_alive():
-                entry["status"] = "error"
-                logger.warning("Queue dispatch timed out after %ds for %s", dispatch_timeout, endpoint)
-                return
-            if _dispatch_result[1]:
-                raise _dispatch_result[1]
-
-            resp = _dispatch_result[0]
-            # Flask view functions return (response, status) or a Response
-            if isinstance(resp, tuple):
-                resp_obj = resp[0]
-            else:
-                resp_obj = resp
-            result = resp_obj.get_json() if hasattr(resp_obj, "get_json") else {}
-            entry["job_id"] = result.get("job_id", "")
-            entry["status"] = "started"
-        except Exception as e:
+        t = threading.Thread(target=_call, daemon=True)
+        t.start()
+        t.join(timeout=dispatch_timeout)
+        if t.is_alive():
             entry["status"] = "error"
-            logger.exception("Queue dispatch error for %s: %s", endpoint, e)
+            logger.warning("Queue dispatch timed out after %ds for %s", dispatch_timeout, endpoint)
+            return
+        if _dispatch_result[1]:
+            raise _dispatch_result[1]
+
+        resp = _dispatch_result[0]
+        # Flask view functions return (response, status) or a Response
+        if isinstance(resp, tuple):
+            resp_obj = resp[0]
+        else:
+            resp_obj = resp
+        result = resp_obj.get_json() if hasattr(resp_obj, "get_json") else {}
+        entry["job_id"] = result.get("job_id", "")
+        entry["status"] = "started"
+    except Exception as e:
+        entry["status"] = "error"
+        logger.exception("Queue dispatch error for %s: %s", endpoint, e)
 
 
 def _process_queue():
