@@ -137,7 +137,8 @@ def edge_tts_generate(
         pitch: Pitch adjustment (e.g. "+5Hz", "-3Hz").
         volume: Volume adjustment (e.g. "+10%", "-5%").
     """
-    ensure_package("edge_tts", "edge-tts", on_progress)
+    if not ensure_package("edge_tts", "edge-tts", on_progress):
+        raise RuntimeError("Failed to install edge-tts. Install manually: pip install edge-tts")
     import edge_tts
 
     if output_path is None:
@@ -186,7 +187,8 @@ def edge_tts_with_subtitles(
 
     Returns dict with audio_path and subtitle_path.
     """
-    ensure_package("edge_tts", "edge-tts", on_progress)
+    if not ensure_package("edge_tts", "edge-tts", on_progress):
+        raise RuntimeError("Failed to install edge-tts. Install manually: pip install edge-tts")
     import edge_tts
 
     directory = output_dir or tempfile.gettempdir()
@@ -251,7 +253,8 @@ def kokoro_generate(
         voice: Kokoro voice preset (af_heart, af_bella, am_adam, am_michael, etc.)
         speed: Playback speed multiplier.
     """
-    ensure_package("kokoro", "kokoro>=0.3", on_progress)
+    if not ensure_package("kokoro", "kokoro>=0.3", on_progress):
+        raise RuntimeError("Failed to install kokoro. Install manually: pip install kokoro>=0.3")
     import kokoro
 
     if output_path is None:
@@ -283,7 +286,8 @@ def kokoro_generate(
         on_progress(80, "Saving audio...")
 
     # Save as WAV
-    ensure_package("soundfile")
+    if not ensure_package("soundfile", "soundfile", on_progress):
+        raise RuntimeError("Failed to install soundfile. Install manually: pip install soundfile")
     import soundfile as sf
     sf.write(output_path, samples, 24000)
 

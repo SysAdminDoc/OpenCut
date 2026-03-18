@@ -33,8 +33,9 @@ from opencut.jobs import (
 )
 from opencut.security import (
     VALID_WHISPER_MODELS,
+    rate_limit,
+    rate_limit_release,
     require_csrf,
-    require_rate_limit,
     safe_float,
     safe_int,
     safe_pip_install,
@@ -1010,9 +1011,10 @@ def audio_pro_deepfilter():
 
 @audio_bp.route("/audio/pro/install", methods=["POST"])
 @require_csrf
-@require_rate_limit("model_install")
 def audio_pro_install():
     """Install audio pro dependencies."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
     data = request.get_json(force=True)
     component = data.get("component", "pedalboard")
 
@@ -1023,6 +1025,7 @@ def audio_pro_install():
 
     pkgs = packages.get(component, [])
     if not pkgs:
+        rate_limit_release("model_install")
         return jsonify({"error": f"Unknown component: {component}"}), 400
 
     job_id = _new_job("install", component)
@@ -1041,6 +1044,8 @@ def audio_pro_install():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
             logger.exception("Audio pro install error")
+        finally:
+            rate_limit_release("model_install")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -1196,9 +1201,10 @@ def tts_subtitled():
 
 @audio_bp.route("/audio/tts/install", methods=["POST"])
 @require_csrf
-@require_rate_limit("model_install")
 def tts_install():
     """Install TTS engine dependencies."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
     data = request.get_json(force=True)
     component = data.get("component", "edge_tts")
 
@@ -1208,6 +1214,7 @@ def tts_install():
     }
     pkgs = packages.get(component, [])
     if not pkgs:
+        rate_limit_release("model_install")
         return jsonify({"error": f"Unknown component: {component}"}), 400
 
     job_id = _new_job("install", component)
@@ -1224,6 +1231,8 @@ def tts_install():
             )
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+        finally:
+            rate_limit_release("model_install")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()

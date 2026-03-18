@@ -82,9 +82,12 @@ def upscale_video(
         model: Model name (realesrgan-x4plus, realesrgan-x4plus-anime).
         denoise_strength: Denoise during upscale (0.0-1.0).
     """
-    ensure_package("realesrgan", "realesrgan", on_progress)
-    ensure_package("basicsr", "basicsr", on_progress)
-    ensure_package("cv2", "opencv-python-headless", on_progress)
+    if not ensure_package("realesrgan", "realesrgan", on_progress):
+        raise RuntimeError("Failed to install realesrgan. Install manually: pip install realesrgan")
+    if not ensure_package("basicsr", "basicsr", on_progress):
+        raise RuntimeError("Failed to install basicsr. Install manually: pip install basicsr")
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
 
     if output_path is None:
         output_path = _output_path(input_path, f"upscale_{scale}x", output_dir)
@@ -230,8 +233,10 @@ def remove_background(
         bg_image: Path to background image/video.
         alpha_only: If True, output alpha matte only.
     """
-    ensure_package("rembg", "rembg[gpu]", on_progress)
-    ensure_package("cv2", "opencv-python-headless", on_progress)
+    if not ensure_package("rembg", "rembg[gpu]", on_progress):
+        raise RuntimeError("Failed to install rembg. Install manually: pip install rembg[gpu]")
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
 
     if output_path is None:
         suffix = "nobg" if not bg_color else "newbg"

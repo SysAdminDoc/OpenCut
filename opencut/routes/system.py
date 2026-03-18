@@ -31,6 +31,7 @@ from opencut.jobs import (
 from opencut.security import (
     VALID_WHISPER_MODELS,
     get_csrf_token,
+    rate_limit,
     rate_limit_release,
     require_csrf,
     require_rate_limit,
@@ -490,14 +491,16 @@ def recent_outputs():
 # ---------------------------------------------------------------------------
 @system_bp.route("/install-whisper", methods=["POST"])
 @require_csrf
-@require_rate_limit("model_install")
 def install_whisper():
     """Install faster-whisper via pip (on-demand from panel)."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
     data = request.get_json(force=True) if request.data else {}
     backend = data.get("backend", "faster-whisper")
 
     allowed = {"faster-whisper", "openai-whisper", "whisperx"}
     if backend not in allowed:
+        rate_limit_release("model_install")
         return jsonify({"error": f"Unknown backend: {backend}"}), 400
 
     job_id = _new_job("install-whisper", backend)
@@ -756,14 +759,16 @@ def whisper_clear_cache():
 
 @system_bp.route("/whisper/reinstall", methods=["POST"])
 @require_csrf
-@require_rate_limit("model_install")
 def whisper_reinstall():
     """Complete Whisper reinstall: uninstall, clear cache, reinstall fresh."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
     data = request.get_json(force=True) if request.data else {}
     backend = data.get("backend", "faster-whisper")
 
     allowed_backends = {"faster-whisper", "openai-whisper", "whisperx"}
     if backend not in allowed_backends:
+        rate_limit_release("model_install")
         return jsonify({"error": f"Unknown backend: {backend}"}), 400
 
     cpu_mode = data.get("cpu_mode", False)

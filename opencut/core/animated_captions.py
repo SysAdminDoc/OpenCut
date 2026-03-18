@@ -123,8 +123,10 @@ def render_animated_captions(
         position_y: Vertical position as fraction of height (0=top, 1=bottom).
         max_words_per_line: Words per caption line before wrapping.
     """
-    ensure_package("cv2", "opencv-python-headless", on_progress)
-    ensure_package("PIL", "Pillow", on_progress)
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("PIL", "Pillow", on_progress):
+        raise RuntimeError("Failed to install Pillow. Install manually: pip install Pillow")
     import cv2
     import numpy as np
     from PIL import Image, ImageDraw, ImageFont
