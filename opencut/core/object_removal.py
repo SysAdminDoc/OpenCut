@@ -116,16 +116,22 @@ def generate_masks_sam2(
 
         # Add prompts on frame 0
         for p in prompts:
-            if p["type"] == "point":
+            ptype = p.get("type", "")
+            if ptype == "point":
+                if "x" not in p or "y" not in p:
+                    raise ValueError("Point prompt missing 'x' or 'y' key")
                 predictor.add_new_points_or_box(
                     state, frame_idx=0, obj_id=1,
-                    points=np.array([[p["x"], p["y"]]], dtype=np.float32),
+                    points=np.array([[float(p["x"]), float(p["y"])]], dtype=np.float32),
                     labels=np.array([p.get("label", 1)], dtype=np.int32),
                 )
-            elif p["type"] == "box":
+            elif ptype == "box":
+                for k in ("x1", "y1", "x2", "y2"):
+                    if k not in p:
+                        raise ValueError(f"Box prompt missing '{k}' key")
                 predictor.add_new_points_or_box(
                     state, frame_idx=0, obj_id=1,
-                    box=np.array([p["x1"], p["y1"], p["x2"], p["y2"]], dtype=np.float32),
+                    box=np.array([float(p["x1"]), float(p["y1"]), float(p["x2"]), float(p["y2"])], dtype=np.float32),
                 )
 
         # Propagate masks
@@ -267,8 +273,8 @@ def remove_watermark_delogo(
         directory = output_dir or os.path.dirname(video_path)
         output_path = os.path.join(directory, f"{base}_delogo.mp4")
 
-    x, y = region["x"], region["y"]
-    rw, rh = region["width"], region["height"]
+    x, y = int(region.get("x", 0)), int(region.get("y", 0))
+    rw, rh = int(region.get("width", 100)), int(region.get("height", 100))
 
     if on_progress:
         on_progress(10, "Applying delogo filter...")

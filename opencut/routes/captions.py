@@ -54,7 +54,7 @@ import re as _re  # noqa: E402
 
 _VALID_SUBTITLE_FORMATS = {"srt", "ass", "vtt", "sub", "json"}
 _VALID_ANIMATIONS = {"pop", "slide", "fade", "bounce", "typewriter", "wave", "glow"}
-_VALID_BURNIN_STYLES = {"default", "minimal", "bold", "outline", "shadow", "neon", "classic"}
+_VALID_BURNIN_STYLES = {"default", "bold_yellow", "boxed_dark", "neon_cyan", "cinematic_serif", "top_center"}
 
 
 def _sanitize_force_style(s: str) -> str:

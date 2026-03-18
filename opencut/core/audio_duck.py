@@ -224,7 +224,7 @@ def mix_audio_tracks(
     inputs = []
     volume_filters = []
     for i, t in enumerate(tracks):
-        vol = t.get("volume", 1.0)
+        vol = float(t.get("volume", 1.0))
         inputs += ["-i", t["path"]]
         volume_filters.append(f"[{i}:a]volume={vol}[a{i}]")
 
