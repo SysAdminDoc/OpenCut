@@ -364,6 +364,18 @@
 - **FFmpeg semicolon escaping** — `render_title_card()` and `overlay_title()` escape `;` in title/subtitle text to prevent filter chain injection
 - **Subtitle length cap in overlay** — title overlay route caps subtitle to 500 chars (matching render route guard)
 
+## v1.3.1 Batch 11 Bug Fixes
+- **Queue dispatch crash** — `adapter.match()` returns `(endpoint_string, view_args)`, not `(Rule, view_args)`. Fixed `rule.endpoint` → direct endpoint string usage; entire queue system was non-functional (jobs_routes.py)
+- **Queue request context** — sub-thread now creates its own Flask `test_request_context` so view functions can access `request.get_json()` (jobs_routes.py)
+- **Duplicate error handler** — removed redundant `TooManyJobsError` handler in server.py that clobbered the one in errors.py (lost error code field)
+- **Socket leak** — `urlopen` in `_kill_via_shutdown_endpoint` wrapped in `with` (server.py)
+- **Lock eviction safety** — removed lock eviction in `_get_lock()` that could break thread safety if an in-use lock was evicted (user_data.py)
+- **LUT Windows path fix** — removed colon escaping (`\:`) inside single-quoted FFmpeg filter values, which corrupted Windows drive-letter paths (lut_library.py)
+- **Dead code** — removed unreachable `if not tempos:` branch (silence.py), unused `info` variable + `get_video_info` import (export_presets.py)
+- **Preset count limit** — `save_preset()` now caps at 500 presets, matching import route (settings.py)
+- **SSE leak on cancel** — `cancelJob()` closes `activeStream` EventSource to prevent connection leak (main.js)
+- **Cancel failure recovery** — cancel API error callback resets UI instead of leaving permanent "Cancelling..." state (main.js)
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
