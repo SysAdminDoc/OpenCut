@@ -610,3 +610,9 @@ def deepfilter_denoise(
             del model, df_state
         except Exception:
             pass
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass

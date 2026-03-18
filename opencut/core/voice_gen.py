@@ -12,6 +12,7 @@ Kokoro runs fully offline on CPU at near-realtime speed.
 import asyncio
 import logging
 import os
+import re
 import tempfile
 from typing import Callable, Dict, List, Optional
 
@@ -142,7 +143,7 @@ def edge_tts_generate(
     import edge_tts
 
     if output_path is None:
-        safe_voice = voice.replace("-", "_")[:20]
+        safe_voice = re.sub(r'[^a-zA-Z0-9_]', '_', voice)[:20]
         directory = output_dir or tempfile.gettempdir()
         output_path = os.path.join(directory, f"tts_{safe_voice}.mp3")
 
@@ -192,7 +193,7 @@ def edge_tts_with_subtitles(
     import edge_tts
 
     directory = output_dir or tempfile.gettempdir()
-    safe_voice = voice.replace("-", "_")[:20]
+    safe_voice = re.sub(r'[^a-zA-Z0-9_]', '_', voice)[:20]
     audio_path = os.path.join(directory, f"tts_{safe_voice}.mp3")
     sub_path = os.path.join(directory, f"tts_{safe_voice}.vtt")
 
@@ -222,6 +223,9 @@ def edge_tts_with_subtitles(
         with concurrent.futures.ThreadPoolExecutor() as pool:
             future = pool.submit(asyncio.run, _generate())
             future.result(timeout=120)
+
+    if not os.path.isfile(audio_path) or os.path.getsize(audio_path) == 0:
+        raise RuntimeError("Edge TTS produced empty audio output")
 
     if on_progress:
         on_progress(100, "Speech + subtitles generated!")
@@ -258,8 +262,9 @@ def kokoro_generate(
     import kokoro
 
     if output_path is None:
+        safe_voice = re.sub(r'[^a-zA-Z0-9_]', '_', voice)[:20]
         directory = output_dir or tempfile.gettempdir()
-        output_path = os.path.join(directory, f"kokoro_{voice}.wav")
+        output_path = os.path.join(directory, f"kokoro_{safe_voice}.wav")
 
     if on_progress:
         on_progress(10, f"Loading Kokoro model ({voice})...")

@@ -44,6 +44,10 @@ def _detect_faces_in_frames(video_path: str, sample_rate: int,
     total = int(cap.get(cv2.CAP_PROP_FRAME_COUNT) or 0)
     tracks = []
 
+    # Guard against zero sample_rate (ZeroDivisionError)
+    if sample_rate <= 0:
+        sample_rate = 1
+
     detector = mp.solutions.face_detection.FaceDetection(
         model_selection=1, min_detection_confidence=0.5
     )

@@ -318,7 +318,8 @@ def normalize_loudness(
 
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
     if result.returncode != 0:
-        raise RuntimeError(f"Loudness normalization failed: {result.stderr}")
+        stderr = result.stderr.strip()[-500:] if result.stderr else "unknown error"
+        raise RuntimeError(f"Loudness normalization failed: {stderr}")
 
     if on_progress:
         on_progress(100, "Loudness normalization complete")

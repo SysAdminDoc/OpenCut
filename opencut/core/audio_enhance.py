@@ -250,3 +250,13 @@ def enhance_speech(
                 os.remove(temp_wav)
             except OSError:
                 pass
+        # Free GPU memory
+        try:
+            del audio  # noqa: F821
+        except Exception:
+            pass
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass

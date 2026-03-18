@@ -154,6 +154,17 @@ def enhance_faces(
             os.unlink(tmp_video)
         except OSError:
             pass
+        # Free GPU memory from GFPGAN model
+        try:
+            del restorer
+        except Exception:
+            pass
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
     if on_progress:
         on_progress(100, "Faces enhanced!")
@@ -283,6 +294,17 @@ def swap_face(
         try:
             os.unlink(tmp_video)
         except OSError:
+            pass
+        # Free GPU memory from InsightFace/swapper models
+        try:
+            del app, swapper
+        except Exception:
+            pass
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
             pass
 
     if on_progress:
