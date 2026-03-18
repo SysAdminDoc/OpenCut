@@ -376,6 +376,19 @@
 - **SSE leak on cancel** — `cancelJob()` closes `activeStream` EventSource to prevent connection leak (main.js)
 - **Cancel failure recovery** — cancel API error callback resets UI instead of leaving permanent "Cancelling..." state (main.js)
 
+## v1.3.1 Batch 12 Bug Fixes
+- **WaitForExit timeout crash** — `DependencyInstaller.cs` and `WhisperDownloader.cs` now check `WaitForExit()` return value; kill process on timeout instead of accessing `ExitCode` on still-running process (InvalidOperationException)
+- **Pipe deadlock prevention** — both installer services consume stdout/stderr asynchronously to prevent pipe buffer deadlock when output exceeds 4 KB
+- **ZIP Slip path traversal** — `PayloadExtractor.cs` validates that each extracted entry resolves within `targetDir` (prevents `../` escape in malicious ZIP entries)
+- **PATH segment comparison** — `RegistryManager.cs` splits PATH by `;` for exact segment match instead of substring `Contains()` (prevents false positive on partial path match like `C:\OpenCut-Old` matching `C:\OpenCut`)
+- **Process handle leak** — `ProcessKiller.cs` uses `using var proc` for `GetProcessById()` to ensure handle disposal even if `Kill()`/`WaitForExit()` throw
+- **cancelJob UI deadlock** — `currentJob = null; hideProgress()` moved outside `if (err)` block so cancel success also resets UI (main.js)
+- **esc(number) crash** — model list `esc(item.size_mb)` replaced with `safeFixed(item.size_mb, 1)` and `esc(item.type || "")` for null safety (main.js)
+- **NaN beat count** — beat detection result guards `total_beats` with `!= null` + `Number()` coercion (main.js)
+- **Batch poll timer leak** — `pollInterval` → module-level `batchPollTimer` variable, cleared on `beforeunload` (main.js)
+- **Slider toFixed crash** — 3 slider `oninput` handlers use `safeFixed()` instead of raw `.toFixed()` (main.js)
+- **Installer version sync** — `AppConstants.cs` version updated from "1.3.0" to "1.3.1"
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
