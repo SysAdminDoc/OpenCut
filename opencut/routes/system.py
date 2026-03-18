@@ -761,6 +761,11 @@ def whisper_reinstall():
     """Complete Whisper reinstall: uninstall, clear cache, reinstall fresh."""
     data = request.get_json(force=True) if request.data else {}
     backend = data.get("backend", "faster-whisper")
+
+    allowed_backends = {"faster-whisper", "openai-whisper", "whisperx"}
+    if backend not in allowed_backends:
+        return jsonify({"error": f"Unknown backend: {backend}"}), 400
+
     cpu_mode = data.get("cpu_mode", False)
 
     job_id = _new_job("reinstall-whisper", backend)
