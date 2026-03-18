@@ -195,12 +195,15 @@ def apply_lut(
     if on_progress:
         on_progress(20, f"Applying LUT ({os.path.basename(lut_path)})...")
 
-    lut_safe = lut_path.replace("\\", "/").replace(":", "\\\\:")
+    # Escape path for FFmpeg filter: backslashes → forward slashes, escape quotes.
+    # Path is wrapped in single quotes, so do NOT escape colons (would corrupt
+    # Windows drive-letter paths like C:/... → C\:/...).
+    lut_safe = lut_path.replace("\\", "/").replace("'", "\\'")
     if intensity >= 1.0:
-        vf = f"lut3d={lut_safe}"
+        vf = f"lut3d='{lut_safe}'"
     else:
         # Blend between original and LUT-graded
-        vf = f"split[a][b];[a]lut3d={lut_safe}[graded];[b][graded]blend=all_expr='A*{1-intensity}+B*{intensity}'"
+        vf = f"split[a][b];[a]lut3d='{lut_safe}'[graded];[b][graded]blend=all_expr='A*{1-intensity}+B*{intensity}'"
 
     cmd = [
         "ffmpeg", "-hide_banner", "-loglevel", "error",

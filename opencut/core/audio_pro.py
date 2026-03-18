@@ -365,8 +365,8 @@ def apply_pedalboard_effect(
         return output_path
 
     finally:
-        for f in [temp_audio, temp_output if is_video else None]:
-            if f and os.path.exists(f):
+        for f in [temp_audio, temp_output]:
+            if f and f != output_path and os.path.exists(f):
                 try:
                     os.unlink(f)
                 except OSError:

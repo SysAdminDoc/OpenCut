@@ -243,7 +243,10 @@ def apply_external_lut(
     if on_progress:
         on_progress(10, f"Applying LUT: {os.path.basename(lut_path)}...")
 
-    escaped = lut_path.replace("\\", "/").replace(":", "\\:")
+    # Escape path for FFmpeg filter: backslashes → forward slashes, escape quotes.
+    # Path is wrapped in single quotes below, so do NOT escape colons (would
+    # corrupt Windows drive-letter paths like C:/... → C\:/...).
+    escaped = lut_path.replace("\\", "/").replace("'", "\\'")
 
     if intensity >= 0.99:
         vf = f"lut3d='{escaped}'"

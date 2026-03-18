@@ -59,8 +59,10 @@ def burnin_subtitles(
 
     ext_lower = os.path.splitext(subtitle_path)[1].lower()
 
-    # Escape path for FFmpeg filter (Windows backslashes, colons, single quotes)
-    escaped_sub = subtitle_path.replace("\\", "/").replace(":", "\\:").replace("'", "'\\''")
+    # Escape path for FFmpeg filter (Windows backslashes, single quotes).
+    # Path is wrapped in single quotes below, so do NOT escape colons (would
+    # corrupt Windows drive-letter paths like C:/... → C\:/...).
+    escaped_sub = subtitle_path.replace("\\", "/").replace("'", "'\\''")
 
     if ext_lower == ".ass" or ext_lower == ".ssa":
         # ASS subtitles: use ass filter (respects all ASS styling)
