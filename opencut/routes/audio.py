@@ -358,7 +358,7 @@ def audio_denoise():
         return jsonify({"error": str(e)}), 400
 
     method = data.get("method", "afftdn")
-    if method not in ("afftdn", "anlmdn", "rnnoise"):
+    if method not in ("afftdn", "highpass", "gate"):
         method = "afftdn"
     strength = safe_float(data.get("strength", 0.7), 0.7, min_val=0.0, max_val=1.0)
     noise_floor = safe_float(data.get("noise_floor", -30.0), -30.0, min_val=-80.0, max_val=0.0)

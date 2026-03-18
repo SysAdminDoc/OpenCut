@@ -17,6 +17,9 @@ import sys
 import tempfile
 from dataclasses import dataclass, field
 from typing import List, Optional
+from urllib.parse import quote
+
+from opencut.helpers import get_video_info
 
 logger = logging.getLogger("opencut")
 
@@ -89,39 +92,14 @@ def _get_auto_editor_cmd():
     return [sys.executable, "-m", "auto_editor"]
 
 
-def _probe_duration(input_path):
-    """Get video duration via ffprobe. Returns float seconds or 0.0."""
-    try:
-        result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json",
-             "-show_format", input_path],
-            capture_output=True, text=True, timeout=30,
-        )
-        data = json.loads(result.stdout)
-        return float(data.get("format", {}).get("duration", 0.0))
-    except Exception:
-        return 0.0
-
-
-def _probe_fps(input_path):
-    """Get video frame rate via ffprobe. Returns float fps or 30.0."""
-    try:
-        result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json",
-             "-show_streams", "-select_streams", "v:0", input_path],
-            capture_output=True, text=True, timeout=30,
-        )
-        data = json.loads(result.stdout)
-        streams = data.get("streams", [])
-        if streams:
-            r_fps = streams[0].get("r_frame_rate", "30/1")
-            parts = r_fps.split("/")
-            if len(parts) == 2 and float(parts[1]) > 0:
-                return float(parts[0]) / float(parts[1])
-            return float(parts[0])
-    except Exception:
-        pass
-    return 30.0
+def _probe_media_info(input_path):
+    """Get video duration and fps via consolidated get_video_info(). Returns (duration, fps)."""
+    info = get_video_info(input_path)
+    duration = info.get("duration", 0.0) or 0.0
+    fps = info.get("fps", 0.0) or 0.0
+    if fps <= 0:
+        fps = 30.0
+    return duration, fps
 
 
 # ---------------------------------------------------------------------------
@@ -210,7 +188,7 @@ def _export_premiere_xml(segments, input_path, output_path, fps=30):
     """
     keep_segments = [s for s in segments if s.action == "keep"]
     filename = html.escape(os.path.basename(input_path))
-    filepath_url = html.escape(input_path.replace("\\", "/"))
+    filepath_url = quote(input_path.replace("\\", "/"), safe="/:")
 
     # Use integer timebase (Premiere requires whole number)
     timebase = max(1, round(fps))
@@ -263,7 +241,7 @@ def _export_premiere_xml(segments, input_path, output_path, fps=30):
                 <file id="file-1">
                     <name>{filename}</name>
                     <pathurl>file:///{filepath_url}</pathurl>
-                    <rate><timebase>30</timebase><ntsc>TRUE</ntsc></rate>
+                    <rate><timebase>{timebase}</timebase><ntsc>TRUE</ntsc></rate>
                 </file>
             </clip>
         </children>
@@ -320,8 +298,7 @@ def auto_edit(
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
     # Probe duration and fps for timeout scaling, stats, and XML export
-    total_duration = _probe_duration(input_path)
-    source_fps = _probe_fps(input_path)
+    total_duration, source_fps = _probe_media_info(input_path)
 
     # Set up output directory
     if output_dir and os.path.isdir(output_dir):
@@ -354,6 +331,11 @@ def _run_auto_edit(input_path, method, threshold, margin, min_clip_length,
     # Build auto-editor command
     base_cmd = _get_auto_editor_cmd()
     cmd = base_cmd + [input_path]
+
+    # Coerce to float for safe interpolation into command args
+    threshold = float(threshold)
+    margin = float(margin)
+    min_clip_length = float(min_clip_length)
 
     if method == "motion":
         cmd += ["--edit", f"motion:threshold={threshold}"]
