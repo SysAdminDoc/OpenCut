@@ -338,6 +338,23 @@
 - **Dead ffprobe call removed** — `color_management.py` removed unused signalstats ffprobe call; added returncode + empty streams check on remaining probe
 - **sys.executable for frozen builds** — `auto_edit.py` uses `sys.executable` instead of `shutil.which("python")` for PyInstaller compatibility
 
+## v1.3.1 Batch 9 Bug Fixes
+- **Blend mode allowlist** — `/video/blend` validates mode against 14 valid FFmpeg blend modes (prevents filter expression injection)
+- **Style transfer allowlist** — `/video/style/apply` validates style name against 9 known styles
+- **Title preset allowlist** — `/video/title/render` and `/video/title/overlay` validate preset against {fade_center, slide_left, typewriter}
+- **Shorts pipeline validation** — `whisper_model` validated against `VALID_WHISPER_MODELS`, `llm_provider` validated against {ollama, openai, anthropic}
+- **Stabilize crop allowlist** — `crop` param validated against {keep, black} (prevents FFmpeg filter injection)
+- **Letterbox aspect allowlist** — `aspect` param validated against 7 standard ratios
+- **FX route safe_float/safe_int** — 7 params (smoothing, zoom, similarity, blend, intensity x3) now use `safe_float()`/`safe_int()` with bounds clamping, matching the batch processing path
+- **MusicGen model allowlist** — `model_size` validated against {small, medium, large} (prevents arbitrary HuggingFace downloads)
+- **Mix duration_mode allowlist** — validated against {longest, shortest, first}
+- **Summarize llm_provider** — `/transcript/summarize` validates provider (was missing, unlike `/video/highlights`)
+- **Whisper model persistence** — `/whisper/settings` POST validates model against `VALID_WHISPER_MODELS` before saving
+- **ExtendScript project-open guards** — `applyEditsToTimeline`, `importFileToProject`, `autoImportResult` check `app.project.rootItem` before access
+- **Segment value coercion** — `applyEditsToTimeline` coerces `seg.start`/`seg.end` via `Number()` with `isNaN` guard
+- **File.open() return check** — startup script writers (Windows bat, macOS sh) check return value and report error
+- **Case-insensitive path dedup** — `getSelectedClips` audio track dedup uses `.toLowerCase()` for Windows path matching
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
