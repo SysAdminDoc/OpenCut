@@ -402,6 +402,11 @@
 - **Particles isOpened() check** — `overlay_particles()` now checks `cap.isOpened()` after `cv2.VideoCapture()` and raises early on failure (matching face_swap.py pattern)
 - **Face swap temp file leak** — both `enhance_faces()` and `swap_face()` now clean up temp video file when `VideoWriter.isOpened()` fails (was leaking orphan files)
 
+## v1.3.1 Batch 15 Security Fixes
+- **Chromakey color injection** — `/video/fx/apply` chromakey effect now validates `color` param against `0x[0-9A-Fa-f]{6}` regex; prevents FFmpeg filter expression injection via crafted hex strings
+- **Chromakey background path traversal** — `/video/fx/apply` chromakey `background` param now validated via `validate_filepath()` (standalone `/video/chromakey` route already validated, but fx/apply was unprotected)
+- **Transition name allowlist** — `/video/transitions/apply` and `/video/transitions/join` routes validate `transition` param against `XFADE_TRANSITIONS` dict at route level (defense-in-depth; downstream already falls back to "fade")
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]
