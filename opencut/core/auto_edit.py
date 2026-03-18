@@ -103,6 +103,27 @@ def _probe_duration(input_path):
         return 0.0
 
 
+def _probe_fps(input_path):
+    """Get video frame rate via ffprobe. Returns float fps or 30.0."""
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-v", "quiet", "-print_format", "json",
+             "-show_streams", "-select_streams", "v:0", input_path],
+            capture_output=True, text=True, timeout=30,
+        )
+        data = json.loads(result.stdout)
+        streams = data.get("streams", [])
+        if streams:
+            r_fps = streams[0].get("r_frame_rate", "30/1")
+            parts = r_fps.split("/")
+            if len(parts) == 2 and float(parts[1]) > 0:
+                return float(parts[0]) / float(parts[1])
+            return float(parts[0])
+    except Exception:
+        pass
+    return 30.0
+
+
 # ---------------------------------------------------------------------------
 # JSON parsing
 # ---------------------------------------------------------------------------
@@ -174,7 +195,7 @@ def _parse_auto_editor_json(json_path, total_duration):
 # ---------------------------------------------------------------------------
 # Premiere XML export
 # ---------------------------------------------------------------------------
-def _export_premiere_xml(segments, input_path, output_path):
+def _export_premiere_xml(segments, input_path, output_path, fps=30):
     """
     Convert edit segments to Premiere Pro compatible FCP 7 XML.
 
@@ -185,24 +206,28 @@ def _export_premiere_xml(segments, input_path, output_path):
         segments: List of EditSegment (only "keep" segments are placed).
         input_path: Path to the source media file.
         output_path: Path to write the XML file.
+        fps: Frame rate for timeline (default 30).
     """
     keep_segments = [s for s in segments if s.action == "keep"]
     filename = html.escape(os.path.basename(input_path))
     filepath_url = html.escape(input_path.replace("\\", "/"))
 
+    # Use integer timebase (Premiere requires whole number)
+    timebase = max(1, round(fps))
+
     # Build clip entries
     clip_entries = []
     timeline_pos = 0
     for i, seg in enumerate(keep_segments):
-        start_frames = max(0, int(seg.start * 30))
-        end_frames = max(start_frames, int(seg.end * 30))
+        start_frames = max(0, int(seg.start * timebase))
+        end_frames = max(start_frames, int(seg.end * timebase))
         duration_frames = end_frames - start_frames
 
         clip_entries.append(f"""
                 <clipitem id="clip-{i + 1}">
                     <name>{filename} - Clip {i + 1}</name>
                     <duration>{duration_frames}</duration>
-                    <rate><timebase>30</timebase><ntsc>TRUE</ntsc></rate>
+                    <rate><timebase>{timebase}</timebase><ntsc>TRUE</ntsc></rate>
                     <start>{timeline_pos}</start>
                     <end>{timeline_pos + duration_frames}</end>
                     <in>{start_frames}</in>
@@ -221,7 +246,7 @@ def _export_premiere_xml(segments, input_path, output_path):
         <name>OpenCut Auto-Edit</name>
         <duration>{total_frames}</duration>
         <rate>
-            <timebase>30</timebase>
+            <timebase>{timebase}</timebase>
             <ntsc>TRUE</ntsc>
         </rate>
         <media>
@@ -294,8 +319,9 @@ def auto_edit(
     if not os.path.isfile(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
-    # Probe duration for timeout scaling and stats
+    # Probe duration and fps for timeout scaling, stats, and XML export
     total_duration = _probe_duration(input_path)
+    source_fps = _probe_fps(input_path)
 
     # Set up output directory
     if output_dir and os.path.isdir(output_dir):
@@ -310,17 +336,17 @@ def auto_edit(
     try:
         return _run_auto_edit(
             input_path, method, threshold, margin, min_clip_length,
-            export_xml, work_dir, json_output, total_duration, on_progress,
+            export_xml, work_dir, json_output, total_duration, source_fps,
+            on_progress,
         )
-    except Exception:
+    finally:
         if temp_dir and os.path.isdir(temp_dir):
-            import shutil
             shutil.rmtree(temp_dir, ignore_errors=True)
-        raise
 
 
 def _run_auto_edit(input_path, method, threshold, margin, min_clip_length,
-                   export_xml, work_dir, json_output, total_duration, on_progress):
+                   export_xml, work_dir, json_output, total_duration, source_fps,
+                   on_progress):
     """Inner auto-edit logic (extracted for temp dir cleanup on error)."""
     if on_progress:
         on_progress(10, f"Analyzing video ({method} detection)...")
@@ -400,7 +426,7 @@ def _run_auto_edit(input_path, method, threshold, margin, min_clip_length,
             on_progress(90, "Generating Premiere Pro XML...")
 
         xml_path = os.path.join(work_dir, "auto_edit_premiere.xml")
-        _export_premiere_xml(segments, input_path, xml_path)
+        _export_premiere_xml(segments, input_path, xml_path, fps=source_fps)
 
     if on_progress:
         on_progress(100, f"Done: keeping {kept_duration:.1f}s of {total_duration:.1f}s ({reduction:.0f}% removed)")

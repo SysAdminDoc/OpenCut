@@ -214,6 +214,13 @@ def diarize(
         )
 
     finally:
+        # Release GPU memory
+        try:
+            del pipeline
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
         if wav_path.startswith(tempfile.gettempdir()):
             try:
                 os.unlink(wav_path)

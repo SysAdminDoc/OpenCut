@@ -245,9 +245,12 @@ def face_reframe(input_path: str, target_w: int = 1080, target_h: int = 1920,
     Returns:
         Output file path.
     """
-    ensure_package("cv2", "opencv-python-headless", on_progress)
-    ensure_package("mediapipe", "mediapipe", on_progress)
-    ensure_package("numpy", "numpy", on_progress)
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("OpenCV not installed. Run: pip install opencv-python-headless")
+    if not ensure_package("mediapipe", "mediapipe", on_progress):
+        raise RuntimeError("MediaPipe not installed. Run: pip install mediapipe")
+    if not ensure_package("numpy", "numpy", on_progress):
+        raise RuntimeError("NumPy not installed. Run: pip install numpy")
 
     if output_path is None:
         base = os.path.splitext(os.path.basename(input_path))[0]
@@ -267,6 +270,8 @@ def face_reframe(input_path: str, target_w: int = 1080, target_h: int = 1920,
     src_h = info["height"]
     fps = info["fps"]
     duration = info["duration"]
+    if duration <= 0 or fps <= 0:
+        raise ValueError(f"Cannot reframe: invalid duration ({duration}) or fps ({fps}) from probe")
     total_frames = max(1, int(duration * fps))
 
     # Detect faces in sampled frames
