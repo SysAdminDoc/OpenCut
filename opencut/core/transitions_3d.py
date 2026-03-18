@@ -12,6 +12,7 @@ FFmpeg xfade is zero-dependency. ModernGL requires OpenGL 3.3+.
 
 import logging
 import os
+import subprocess as _sp
 from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import get_video_info, run_ffmpeg
@@ -67,6 +68,19 @@ XFADE_TRANSITIONS = {
 }
 
 
+def _has_audio_stream(filepath: str) -> bool:
+    """Check whether a media file contains at least one audio stream."""
+    try:
+        r = _sp.run(
+            ["ffprobe", "-v", "quiet", "-select_streams", "a",
+             "-show_entries", "stream=codec_type", "-of", "csv=p=0", filepath],
+            capture_output=True, timeout=10,
+        )
+        return r.returncode == 0 and b"audio" in r.stdout
+    except Exception:
+        return False
+
+
 def apply_transition(
     clip_a: str,
     clip_b: str,
@@ -97,26 +111,39 @@ def apply_transition(
         transition = "fade"
 
     dur_a = get_video_info(clip_a)["duration"]
+    if dur_a <= 0:
+        logger.warning("Could not determine duration of clip_a (%s); defaulting offset to 0", clip_a)
     if offset is None:
         offset = max(0, dur_a - duration)
 
     if on_progress:
         on_progress(10, f"Applying {transition} transition...")
 
-    fc = (
-        f"[0:v][1:v]xfade=transition={transition}:duration={duration}:offset={offset}[v];"
-        f"[0:a][1:a]acrossfade=d={duration}[a]"
-    )
+    # Check whether both clips have audio streams (acrossfade crashes without)
+    has_audio_a = _has_audio_stream(clip_a)
+    has_audio_b = _has_audio_stream(clip_b)
 
-    run_ffmpeg([
+    if has_audio_a and has_audio_b:
+        fc = (
+            f"[0:v][1:v]xfade=transition={transition}:duration={duration}:offset={offset}[v];"
+            f"[0:a][1:a]acrossfade=d={duration}[a]"
+        )
+        maps = ["-map", "[v]", "-map", "[a]"]
+        audio_codec = ["-c:a", "aac", "-b:a", "192k"]
+    else:
+        fc = f"[0:v][1:v]xfade=transition={transition}:duration={duration}:offset={offset}[v]"
+        maps = ["-map", "[v]"]
+        audio_codec = ["-an"]
+
+    cmd = [
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-i", clip_a, "-i", clip_b,
         "-filter_complex", fc,
-        "-map", "[v]", "-map", "[a]",
+    ] + maps + [
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",
-        "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
-        output_path,
-    ], timeout=7200)
+        "-pix_fmt", "yuv420p",
+    ] + audio_codec + [output_path]
+    run_ffmpeg(cmd, timeout=7200)
 
     if on_progress:
         on_progress(100, f"Transition ({transition}) applied!")

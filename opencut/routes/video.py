@@ -1278,7 +1278,7 @@ def style_apply():
     output_dir = data.get("output_dir", "")
     style_name = data.get("style", "candy")
     if style_name not in ("candy", "mosaic", "rain_princess", "udnie", "starry_night",
-                          "la_muse", "the_scream", "feathers", "composition_vii"):
+                          "la_muse", "the_scream", "pointilism"):
         style_name = "candy"
     intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0)
 
@@ -1626,7 +1626,7 @@ def _execute_batch_item(operation, filepath, params, on_progress):
         )
     elif operation == "style_transfer":
         from opencut.core.style_transfer import style_transfer_video
-        _valid_styles = {"candy", "mosaic", "rain_princess", "udnie", "starry_night", "la_muse", "the_scream", "feathers", "composition_vii"}
+        _valid_styles = {"candy", "mosaic", "rain_princess", "udnie", "starry_night", "la_muse", "the_scream", "pointilism"}
         _style = params.get("style", "candy")
         if _style not in _valid_styles:
             _style = "candy"

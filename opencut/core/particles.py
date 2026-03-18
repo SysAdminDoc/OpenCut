@@ -197,6 +197,8 @@ def overlay_particles(
         on_progress(5, f"Generating {preset} particles...")
 
     cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {video_path}")
     _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
     tmp_video = _ntf.name
     _ntf.close()
