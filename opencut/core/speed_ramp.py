@@ -267,8 +267,7 @@ def speed_ramp(
         run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
             "-f", "concat", "-safe", "0", "-i", list_file,
-            "-c:v", "libx264", "-crf", "18", "-preset", "medium",
-            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+            "-c", "copy",
             output_path,
         ], timeout=7200)
 

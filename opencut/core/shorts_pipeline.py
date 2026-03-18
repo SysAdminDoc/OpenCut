@@ -243,7 +243,11 @@ def generate_shorts(
             safe_title = "".join(c for c in safe_title if c.isalnum() or c in "_-")
             trimmed_path = os.path.join(temp_dir, f"trim_{i + 1}.mp4")
 
-            _trim_clip(input_path, highlight.start, highlight.end, trimmed_path)
+            try:
+                _trim_clip(input_path, highlight.start, highlight.end, trimmed_path)
+            except Exception as exc:
+                logger.warning("Trim failed for clip %d: %s", i + 1, exc)
+                continue
 
             current_path = trimmed_path
 

@@ -226,9 +226,8 @@ def filler_removal():
                 get_edit_summary(filepath, segments, file_duration=_fdur)
             else:
                 # Use the whole file as one segment
-                info = _finfo
                 from opencut.core.silence import TimeSegment
-                segments = [TimeSegment(start=0.0, end=info.duration, label="speech")]
+                segments = [TimeSegment(start=0.0, end=_fdur or 0.0, label="speech")]
 
             if _is_cancelled(job_id):
                 return
@@ -1086,8 +1085,13 @@ def tts_generate():
     text = data.get("text", "").strip()
     engine = data.get("engine", "edge")
     voice = data.get("voice", "en-US-AriaNeural")
+    import re as _re_tts
     rate = data.get("rate", "+0%")
+    if not isinstance(rate, str) or not _re_tts.match(r'^[+-]?\d{1,3}%$', rate):
+        rate = "+0%"
     pitch = data.get("pitch", "+0Hz")
+    if not isinstance(pitch, str) or not _re_tts.match(r'^[+-]?\d{1,4}Hz$', pitch):
+        pitch = "+0Hz"
     speed = safe_float(data.get("speed", 1.0), 1.0, min_val=0.25, max_val=4.0)
     output_dir = data.get("output_dir", "")
     if output_dir:
@@ -1098,6 +1102,8 @@ def tts_generate():
 
     if not text:
         return jsonify({"error": "No text provided"}), 400
+    if len(text) > 50000:
+        return jsonify({"error": "Text too long (max 50000 chars)"}), 400
 
     job_id = _new_job("tts", text[:50])
 
@@ -1154,6 +1160,8 @@ def tts_subtitled():
 
     if not text:
         return jsonify({"error": "No text provided"}), 400
+    if len(text) > 50000:
+        return jsonify({"error": "Text too long (max 50000 chars)"}), 400
 
     job_id = _new_job("tts-sub", text[:50])
 
@@ -1541,6 +1549,8 @@ def audio_mix_route():
 
     if not tracks:
         return jsonify({"error": "No tracks to mix"}), 400
+    if len(tracks) > 32:
+        return jsonify({"error": "Too many tracks (max 32)"}), 400
 
     # Validate each track path
     for i, track in enumerate(tracks):

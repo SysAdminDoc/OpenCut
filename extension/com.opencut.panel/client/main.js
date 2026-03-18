@@ -2536,9 +2536,9 @@
 
     // --- BATCH PROCESSING ---
     function runBatch() {
-        // Collect all clip paths from the clip selector
-        var paths = [];
-        if (el.clipSelect && el.clipSelect.options) {
+        // Use batch file picker selection if available, otherwise fall back to clip selector
+        var paths = _batchFiles && _batchFiles.length > 0 ? _batchFiles.slice() : [];
+        if (paths.length === 0 && el.clipSelect && el.clipSelect.options) {
             for (var i = 0; i < el.clipSelect.options.length; i++) {
                 var val = el.clipSelect.options[i].value;
                 if (val) paths.push(val);
@@ -4487,7 +4487,7 @@
         if (!el.audioPreview || !el.audioPreviewPlayer) return;
         el.audioPreviewPlayer.src = BACKEND + "/file?path=" + encodeURIComponent(filePath);
         el.audioPreview.classList.remove("hidden");
-        el.audioPreviewPlayer.play();
+        try { el.audioPreviewPlayer.play().catch(function() {}); } catch (e) {}
     }
 
     // ================================================================
@@ -4501,9 +4501,13 @@
             clipSelect.addEventListener("contextmenu", function (e) {
                 if (!selectedPath) return;
                 e.preventDefault();
-                el.contextMenu.style.left = e.clientX + "px";
-                el.contextMenu.style.top = e.clientY + "px";
                 el.contextMenu.classList.remove("hidden");
+                var menuW = el.contextMenu.offsetWidth || 160;
+                var menuH = el.contextMenu.offsetHeight || 200;
+                var left = Math.min(e.clientX, window.innerWidth - menuW - 4);
+                var top = Math.min(e.clientY, window.innerHeight - menuH - 4);
+                el.contextMenu.style.left = Math.max(0, left) + "px";
+                el.contextMenu.style.top = Math.max(0, top) + "px";
             });
         }
         // Handle menu item clicks
@@ -4876,7 +4880,7 @@
                 if (_workflowSteps.length === 0 || !selectedPath) return;
                 // Queue each step
                 for (var i = 0; i < _workflowSteps.length; i++) {
-                    addToQueue(_workflowSteps[i].endpoint, { file: selectedPath });
+                    addToQueue(_workflowSteps[i].endpoint, { filepath: selectedPath, output_dir: projectFolder });
                 }
                 showToast("Queued " + _workflowSteps.length + " workflow steps", "success");
             });
@@ -4972,7 +4976,6 @@
     // ================================================================
     // i18n / Localization (placeholder framework)
     // ================================================================
-    var _translations = {};
     var _currentLang = "en";
 
     function initI18n() {
@@ -5234,9 +5237,11 @@
     // ================================================================
     function parseTimeToSec(t) {
         var parts = (t || "0").split(":");
-        if (parts.length === 3) return (+parts[0]) * 3600 + (+parts[1]) * 60 + (+parts[2]);
-        if (parts.length === 2) return (+parts[0]) * 60 + (+parts[1]);
-        return +parts[0] || 0;
+        var result;
+        if (parts.length === 3) result = (+parts[0]) * 3600 + (+parts[1]) * 60 + (+parts[2]);
+        else if (parts.length === 2) result = (+parts[0]) * 60 + (+parts[1]);
+        else result = +parts[0];
+        return isNaN(result) ? 0 : result;
     }
 
     function runTrim() {
@@ -5334,8 +5339,9 @@
                 el2.value = settings[id];
             }
             // Trigger change event for sliders etc
-            var evt = document.createEvent("Event");
-            evt.initEvent("change", true, true);
+            var evt;
+            try { evt = new Event("change", { bubbles: true }); }
+            catch (err2) { evt = document.createEvent("Event"); evt.initEvent("change", true, true); }
             el2.dispatchEvent(evt);
         }
         showToast("Preset loaded for " + opName, "success");

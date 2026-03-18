@@ -14,6 +14,7 @@ pre-trained .t7 models from the OpenCV DNN samples.
 import logging
 import os
 import shutil
+import socket
 import tempfile
 import urllib.request
 from pathlib import Path
@@ -94,7 +95,22 @@ def _download_model(style_name: str, on_progress: Optional[Callable] = None) -> 
         on_progress(5, f"Downloading {info['label']} style model...")
 
     logger.info(f"Downloading style model: {info['url']}")
-    urllib.request.urlretrieve(info["url"], model_path)
+    tmp_path = model_path + ".tmp"
+    try:
+        old_timeout = socket.getdefaulttimeout()
+        socket.setdefaulttimeout(120)
+        try:
+            urllib.request.urlretrieve(info["url"], tmp_path)
+        finally:
+            socket.setdefaulttimeout(old_timeout)
+        os.replace(tmp_path, model_path)
+    except Exception:
+        # Remove partial download
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
     return model_path
 
 
