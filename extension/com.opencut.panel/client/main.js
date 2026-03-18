@@ -3052,7 +3052,7 @@
         if (job.type === "beats" && job.status === "complete" && job.result) {
             el.beatResults.classList.remove("hidden");
             el.bpmValue.textContent = safeFixed(job.result.bpm, 0);
-            el.beatCount.textContent = job.result.total_beats;
+            el.beatCount.textContent = job.result.total_beats != null ? job.result.total_beats : "--";
             el.beatConfidence.textContent = safeFixed(job.result.confidence * 100, 0) + "%";
         }
     });
@@ -3061,7 +3061,7 @@
     addJobDoneListener(function (job) {
         if (job.type === "scenes" && job.status === "complete" && job.result) {
             el.sceneResults.classList.remove("hidden");
-            el.sceneCount.textContent = job.result.total_scenes;
+            el.sceneCount.textContent = job.result.total_scenes != null ? job.result.total_scenes : "--";
             el.avgSceneLen.textContent = safeFixed(job.result.avg_scene_length, 1) + "s";
             if (job.result.youtube_chapters) {
                 el.ytChapters.classList.remove("hidden");
@@ -3968,9 +3968,9 @@
                 el.getGpuRecBtn.textContent = "Get Recommendation";
                 el.getGpuRecBtn.disabled = false;
                 if (err || !data) { showAlert("Failed to get GPU recommendation."); return; }
-                if (el.gpuRecModel) el.gpuRecModel.textContent = data.whisper_model;
-                if (el.gpuRecQuality) el.gpuRecQuality.textContent = data.caption_quality;
-                if (el.gpuRecDevice) el.gpuRecDevice.textContent = data.whisper_device;
+                if (el.gpuRecModel) el.gpuRecModel.textContent = data.whisper_model || "N/A";
+                if (el.gpuRecQuality) el.gpuRecQuality.textContent = data.caption_quality || "N/A";
+                if (el.gpuRecDevice) el.gpuRecDevice.textContent = data.whisper_device || "N/A";
                 if (el.gpuRecNotes) {
                     el.gpuRecNotes.textContent = (data.notes || []).join(" ");
                 }
@@ -4606,7 +4606,7 @@
                 var item = data[i];
                 var div = document.createElement("div");
                 div.className = "output-item";
-                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + esc(item.name) + '</div><div class="output-item-meta">' + esc(item.size_mb) + ' MB &mdash; ' + esc(item.type) + '</div></div><div class="output-item-actions"><button class="btn-sm" data-path="' + item.path.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') + '">Import</button></div>';
+                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + esc(item.name) + '</div><div class="output-item-meta">' + esc(item.size_mb) + ' MB &mdash; ' + esc(item.type) + '</div></div><div class="output-item-actions"><button class="btn-sm" data-path="' + esc(item.path) + '">Import</button></div>';
                 div.querySelector(".btn-sm").addEventListener("click", function () {
                     var p = this.dataset.path;
                     if (inPremiere && cs) {
@@ -4798,9 +4798,10 @@
             el.workflowAddStepBtn.addEventListener("click", function () {
                 var sel = el.workflowStepSelect;
                 if (!sel) return;
+                var selOpt = sel.selectedIndex >= 0 ? sel.options[sel.selectedIndex] : null;
                 _workflowSteps.push({
                     endpoint: sel.value,
-                    label: sel.options[sel.selectedIndex].textContent
+                    label: selOpt ? selOpt.textContent : sel.value
                 });
                 renderWorkflowSteps();
             });
@@ -5045,7 +5046,7 @@
             var html = "";
             for (var i = 0; i < _recentClips.length; i++) {
                 var name = _recentClips[i].split(/[/\\]/).pop();
-                html += '<div class="recent-clip-item" data-path="' + _recentClips[i].replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') + '">' + esc(name) + '</div>';
+                html += '<div class="recent-clip-item" data-path="' + esc(_recentClips[i]) + '">' + esc(name) + '</div>';
             }
             el.recentClipsDropdown.innerHTML = html;
         }
@@ -5386,7 +5387,7 @@
         if (el.llmStatus) el.llmStatus.textContent = "Testing...";
         api("POST", "/llm/test", { prompt: "Say hello in one sentence.", provider: cfg.provider, model: cfg.model || "", api_key: cfg.api_key || "", base_url: cfg.base_url || "" }, function (err, resp) {
             if (err || !resp || !resp.success) {
-                var msg = (resp && resp.error) ? resp.error : (err ? err.message : "Connection failed");
+                var msg = (resp && resp.error) ? resp.error : (err && typeof err === "object" && err.message) ? err.message : "Connection failed";
                 if (el.llmStatus) el.llmStatus.textContent = "Failed: " + msg;
                 return;
             }
@@ -5544,8 +5545,8 @@
         // Event listeners - Clip selection
         el.refreshAllBtn.addEventListener("click", refreshAll);
         el.clipSelect.addEventListener("change", function () {
-            var opt = this.options[this.selectedIndex];
-            if (opt.value) selectFile(opt.value, opt.getAttribute("data-name") || opt.value.split(/[/\\]/).pop());
+            var opt = this.selectedIndex >= 0 ? this.options[this.selectedIndex] : null;
+            if (opt && opt.value) selectFile(opt.value, opt.getAttribute("data-name") || opt.value.split(/[/\\]/).pop());
         });
         el.refreshClipsBtn.addEventListener("click", scanProjectMedia);
         el.useSelectionBtn.addEventListener("click", useTimelineSelection);

@@ -310,7 +310,10 @@ def concatenate_audio(
         ]
         run_ffmpeg(cmd, timeout=120, stderr_cap=10240)
     finally:
-        os.unlink(list_file.name)
+        try:
+            os.unlink(list_file.name)
+        except OSError:
+            pass
 
     if on_progress:
         on_progress(100, "Audio concatenated!")
