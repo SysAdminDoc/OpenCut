@@ -211,14 +211,16 @@ def apply_lut(
     lut_safe = lut_path.replace("\\", "/").replace("'", "\\'")
     if intensity >= 1.0:
         vf = f"lut3d='{lut_safe}'"
+        vf_flag = "-vf"
     else:
-        # Blend between original and LUT-graded
+        # Blend between original and LUT-graded (requires filter_complex for named pads)
         vf = f"split[a][b];[a]lut3d='{lut_safe}'[graded];[b][graded]blend=all_expr='A*{1-intensity}+B*{intensity}'"
+        vf_flag = "-filter_complex"
 
     cmd = [
         "ffmpeg", "-hide_banner", "-loglevel", "error",
         "-y", "-i", input_path,
-        "-vf", vf,
+        vf_flag, vf,
         "-c:a", "copy",
         output_path,
     ]

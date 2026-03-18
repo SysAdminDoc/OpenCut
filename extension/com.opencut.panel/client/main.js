@@ -1112,10 +1112,14 @@
                             found = true;
                             BACKEND = testUrl;
                             connected = true;
+                            if (data.csrf_token) csrfToken = data.csrf_token;
                             el.connDot.className = "conn-dot on";
                             el.connLabel.textContent = "Connected" + (port !== BACKEND_BASE_PORT ? " (:" + port + ")" : "");
                             el.backendPort.textContent = "Port " + port;
                             if (data.capabilities) capabilities = data.capabilities;
+                            healthBackoff = HEALTH_MS;
+                            clearInterval(healthTimer);
+                            healthTimer = setInterval(checkHealth, HEALTH_MS);
                             updateButtons();
                             loadCapabilities();
                             portScanPending = false;
@@ -3332,7 +3336,7 @@
         api("POST", "/whisper/clear-cache", {}, function (err, data) {
             if (!err && data) {
                 if (data.success) {
-                    showAlert("Cache cleared! Cleared " + data.cleared.length + " location(s). Models will re-download on next use.");
+                    showAlert("Cache cleared! Cleared " + (data.cleared ? data.cleared.length : 0) + " location(s). Models will re-download on next use.");
                 } else {
                     showAlert("Cache clear had errors: " + (data.errors ? data.errors.join(", ") : "unknown"));
                 }
@@ -4608,7 +4612,7 @@
 
     function refreshOutputs() {
         api("GET", "/outputs/recent", null, function (err, data) {
-            if (err || !data) return;
+            if (err || !data || !Array.isArray(data)) return;
             if (el.outputBrowserToggle) {
                 el.outputBrowserToggle.textContent = "Outputs (" + data.length + ")";
             }
@@ -5004,17 +5008,17 @@
             return;
         }
         el.clipPreviewRow.classList.remove("hidden");
-        el.clipThumb.innerHTML = '<div class="clip-thumb-loading"></div>';
-        el.clipMetaRes.textContent = "";
-        el.clipMetaDur.textContent = "";
-        el.clipMetaSize.textContent = "";
+        if (el.clipThumb) el.clipThumb.innerHTML = '<div class="clip-thumb-loading"></div>';
+        if (el.clipMetaRes) el.clipMetaRes.textContent = "";
+        if (el.clipMetaDur) el.clipMetaDur.textContent = "";
+        if (el.clipMetaSize) el.clipMetaSize.textContent = "";
         // Fetch thumbnail
         api("POST", "/video/preview-frame", { file: selectedPath, timestamp: "00:00:01", width: 160 }, function(err, data) {
             if (err || !data || !data.image) {
-                el.clipThumb.innerHTML = '<div class="clip-thumb-none">No Preview</div>';
+                if (el.clipThumb) el.clipThumb.innerHTML = '<div class="clip-thumb-none">No Preview</div>';
                 return;
             }
-            el.clipThumb.innerHTML = '<img src="data:image/jpeg;base64,' + data.image + '" alt="preview">';
+            if (el.clipThumb) el.clipThumb.innerHTML = '<img src="data:image/jpeg;base64,' + data.image + '" alt="preview">';
         });
         // Fetch metadata via probe
         api("POST", "/audio/waveform", { file: selectedPath, samples: 1 }, function(err, data) {
@@ -5022,7 +5026,7 @@
                 var dur = Math.round(data.duration);
                 var m = Math.floor(dur / 60);
                 var s = dur % 60;
-                el.clipMetaDur.textContent = m + ":" + (s < 10 ? "0" : "") + s;
+                if (el.clipMetaDur) el.clipMetaDur.textContent = m + ":" + (s < 10 ? "0" : "") + s;
             }
         });
     }
@@ -5106,11 +5110,11 @@
     var _paletteResults = [];
 
     function openCommandPalette() {
-        if (!el.commandPaletteOverlay) return;
+        if (!el.commandPaletteOverlay || !el.commandPaletteInput || !el.commandPaletteResults) return;
         el.commandPaletteOverlay.classList.remove("hidden");
         el.commandPaletteInput.value = "";
         renderPaletteResults("");
-        setTimeout(function() { el.commandPaletteInput.focus(); }, 50);
+        setTimeout(function() { if (el.commandPaletteInput) el.commandPaletteInput.focus(); }, 50);
     }
 
     function closeCommandPalette() {
@@ -5134,7 +5138,7 @@
         if (_paletteResults.length === 0) {
             html = '<div class="command-palette-empty">No matching operations</div>';
         }
-        el.commandPaletteResults.innerHTML = html;
+        if (el.commandPaletteResults) el.commandPaletteResults.innerHTML = html;
     }
 
     function executePaletteItem(tab, sub) {
@@ -5143,7 +5147,7 @@
     }
 
     function paletteNavigate(dir) {
-        if (!_paletteResults.length) return;
+        if (!_paletteResults.length || !el.commandPaletteResults) return;
         var items = el.commandPaletteResults.querySelectorAll(".command-palette-item");
         if (items[_paletteSelectedIdx]) items[_paletteSelectedIdx].classList.remove("selected");
         _paletteSelectedIdx += dir;
@@ -5163,7 +5167,7 @@
     }
 
     function initCommandPalette() {
-        if (!el.commandPaletteOverlay) return;
+        if (!el.commandPaletteOverlay || !el.commandPaletteInput || !el.commandPaletteResults) return;
 
         el.commandPaletteInput.addEventListener("input", function() {
             renderPaletteResults(this.value);
@@ -5727,6 +5731,13 @@
 
         // v1.3.0 - Recent Clips
         if (el.recentClipsBtn) el.recentClipsBtn.addEventListener("click", showRecentClips);
+        // Close recent clips dropdown on outside click
+        document.addEventListener("click", function(e) {
+            if (el.recentClipsDropdown && !el.recentClipsDropdown.classList.contains("hidden") &&
+                !e.target.closest("#recentClipsBtn") && !e.target.closest("#recentClipsDropdown")) {
+                el.recentClipsDropdown.classList.add("hidden");
+            }
+        });
         if (el.recentClipsDropdown) el.recentClipsDropdown.addEventListener("click", function(e) {
             var item = e.target.closest(".recent-clip-item");
             if (item) {

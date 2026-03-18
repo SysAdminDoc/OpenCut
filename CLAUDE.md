@@ -439,6 +439,20 @@
 - **runBatch file selection** — uses `_batchFiles` array when populated instead of ignoring user's batch picker selection
 - **Dead code + play() promise** — removed unused `_translations` variable; `showAudioPreview()` catches play() rejection
 
+## v1.3.1 Batch 18 Bug Fixes
+- **apply_lut() FFmpeg crash** — partial-intensity LUT uses filter_complex graph syntax (named pads/semicolons) but was passed via `-vf`; now correctly switches to `-filter_complex` when intensity < 1.0 (video_fx.py)
+- **concat path quoting** — `concatenate_audio()` escapes single quotes in file paths for FFmpeg concat demuxer list file (music_gen.py)
+- **whisper/reinstall SECURITY** — `/whisper/reinstall` backend param was unvalidated, allowing arbitrary pip install; added allowlist matching `/install-whisper` route (system.py)
+- **reframe "auto" dead code** — `"auto"` position was missing from `_VALID_POSITIONS` set, making auto-crop detection unreachable; added to allowlist (video.py)
+- **title overlay text cap** — `/video/title/overlay` now caps text at 500 chars, matching `/video/title/render` (video.py)
+- **merge/join file cap** — `/video/merge` and `/video/transitions/join` now enforce `MAX_BATCH_FILES` limit (video.py)
+- **scanForServer CSRF** — port-scan reconnection now extracts `csrf_token` from health response and resets `healthBackoff` + restarts health interval; prevents stale CSRF and 60s backoff after backend restart (main.js)
+- **updateClipPreview null guards** — null-safe access on `clipThumb`, `clipMetaRes`, `clipMetaDur`, `clipMetaSize` elements (main.js)
+- **command palette null guards** — `openCommandPalette`, `renderPaletteResults`, `initCommandPalette`, `paletteNavigate` all guard `commandPaletteInput` and `commandPaletteResults` (main.js)
+- **clearWhisperCache crash** — `data.cleared.length` guarded with `(data.cleared ? data.cleared.length : 0)` (main.js)
+- **recent clips click-outside** — document click handler closes recent clips dropdown when clicking outside (main.js)
+- **refreshOutputs array check** — `Array.isArray(data)` guard prevents "undefined" display when API returns non-array (main.js)
+
 ## v1.3.0 New Optional Dependencies
 ```toml
 auto-edit = ["auto-editor>=24.0"]

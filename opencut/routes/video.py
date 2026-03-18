@@ -2209,6 +2209,8 @@ def title_overlay():
 
     if not text:
         return jsonify({"error": "No text"}), 400
+    if len(text) > 500:
+        return jsonify({"error": "Title text too long (max 500 chars)"}), 400
     job_id = _new_job("title-overlay", fp)
 
     def _process():
@@ -2312,6 +2314,8 @@ def transitions_join():
     clips = data.get("clips", [])
     if len(clips) < 2:
         return jsonify({"error": "Need 2+ clips"}), 400
+    if len(clips) > MAX_BATCH_FILES:
+        return jsonify({"error": f"Too many clips (max {MAX_BATCH_FILES})"}), 400
 
     # Validate all clip paths
     validated_clips = []
@@ -2734,7 +2738,7 @@ def video_reframe():
     mode = data.get("mode", "crop")
     if mode not in _VALID_REFRAME_MODES:
         mode = "crop"
-    _VALID_POSITIONS = {"center", "top", "bottom", "left", "right", "face"}
+    _VALID_POSITIONS = {"center", "top", "bottom", "left", "right", "face", "auto"}
     position = data.get("position", "center")
     if position not in _VALID_POSITIONS:
         import re as _re2
@@ -2910,6 +2914,8 @@ def video_merge():
     files = data.get("files", [])
     if not files or len(files) < 2:
         return jsonify({"error": "At least 2 files required"}), 400
+    if len(files) > MAX_BATCH_FILES:
+        return jsonify({"error": f"Too many files (max {MAX_BATCH_FILES})"}), 400
 
     # Validate all file paths
     validated_files = []

@@ -299,7 +299,8 @@ def concatenate_audio(
     list_file = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
     try:
         for p in input_paths:
-            list_file.write(f"file '{p}'\n")
+            escaped = p.replace("'", "'\\''")
+            list_file.write(f"file '{escaped}'\n")
         list_file.close()
 
         cmd = [
