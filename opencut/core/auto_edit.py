@@ -13,6 +13,7 @@ import logging
 import os
 import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass, field
 from typing import List, Optional
@@ -69,7 +70,7 @@ def check_auto_editor_version():
     # Fallback: try as Python module
     try:
         result = subprocess.run(
-            [shutil.which("python") or "python", "-m", "auto_editor", "--version"],
+            [sys.executable, "-m", "auto_editor", "--version"],
             capture_output=True, text=True, timeout=10,
         )
         if result.returncode == 0:
@@ -85,7 +86,7 @@ def _get_auto_editor_cmd():
     if shutil.which("auto-editor"):
         return ["auto-editor"]
     # Try as python module
-    return [shutil.which("python") or "python", "-m", "auto_editor"]
+    return [sys.executable, "-m", "auto_editor"]
 
 
 def _probe_duration(input_path):

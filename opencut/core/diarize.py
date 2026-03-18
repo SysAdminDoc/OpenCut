@@ -214,5 +214,8 @@ def diarize(
         )
 
     finally:
-        if os.path.exists(wav_path) and wav_path.startswith(tempfile.gettempdir()):
-            os.unlink(wav_path)
+        if wav_path.startswith(tempfile.gettempdir()):
+            try:
+                os.unlink(wav_path)
+            except OSError:
+                pass
