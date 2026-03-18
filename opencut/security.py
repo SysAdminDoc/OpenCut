@@ -210,8 +210,8 @@ def safe_int(value, default: int = 0, min_val: int = None, max_val: int = None) 
     If *min_val* or *max_val* are given, clamp the result to that range.
     """
     try:
-        result = int(value)
-    except (TypeError, ValueError):
+        result = int(float(value))
+    except (TypeError, ValueError, OverflowError):
         return default
     if min_val is not None and result < min_val:
         result = min_val

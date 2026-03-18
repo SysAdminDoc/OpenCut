@@ -718,8 +718,14 @@ function importCaptions(captionPath) {
                 [captionPath], false, targetBin, false
             );
 
-            // Find the newly imported item
-            captionItem = _findProjectItemByPath(app.project.rootItem, captionPath, 0);
+            // Poll for the imported item — Premiere may need time to register it
+            var pollAttempts = 0;
+            while (!captionItem && pollAttempts < 20) {
+                captionItem = _findProjectItemByPath(app.project.rootItem, captionPath, 0);
+                if (captionItem) { break; }
+                $.sleep(50);
+                pollAttempts++;
+            }
             importSuccess = !!captionItem;
         } else {
             importSuccess = true;
@@ -1179,7 +1185,9 @@ function startOpenCutBackend() {
             } else {
                 // Fallback: use a .command file which Terminal.app can run
                 var cmdFile = new File(Folder.temp.fsName + "/opencut_start.command");
-                cmdFile.open("w");
+                if (!cmdFile.open("w")) {
+                    return JSON.stringify({ error: "Cannot write startup script to temp folder" });
+                }
                 try {
                     cmdFile.writeln("#!/bin/bash");
                     cmdFile.writeln('chmod +x "' + shPath + '" && "' + shPath + '"');

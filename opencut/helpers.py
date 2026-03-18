@@ -467,7 +467,21 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
 
     stderr_lines = []
     _max_stderr_bytes = 32768  # 32 KB cap on accumulated stderr
-    _stderr_size = 0
+
+    # Drain stderr in a background thread to prevent pipe deadlock:
+    # if FFmpeg writes >4KB stderr (Windows) while stdout blocks, both
+    # pipes stall permanently.
+    def _drain_stderr():
+        try:
+            data = proc.stderr.read()
+            if data:
+                stderr_lines.append(data[-_max_stderr_bytes:])
+        except Exception:
+            pass
+
+    stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
+    stderr_thread.start()
+
     last_pct = 0
 
     try:
@@ -495,15 +509,8 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     except Exception:
         pass
 
-    # Collect remaining stderr — use proc.stderr.read() directly since
-    # proc.stdout was already consumed by the iterator above.  Calling
-    # proc.communicate() after partial stdout read can deadlock.
     try:
         proc.wait(timeout=10)
-        if proc.stderr:
-            stderr_data = proc.stderr.read()
-            if stderr_data:
-                stderr_lines.append(stderr_data[-_max_stderr_bytes:])
     except Exception:
         try:
             proc.kill()
@@ -511,12 +518,10 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
             pass
         try:
             proc.wait(timeout=5)
-            if proc.stderr:
-                stderr_data = proc.stderr.read()
-                if stderr_data:
-                    stderr_lines.append(stderr_data[-_max_stderr_bytes:])
         except Exception:
             pass
+
+    stderr_thread.join(timeout=10)
 
     # Cleanup process registration
     with job_lock:
@@ -572,8 +577,19 @@ def _record_job_time(job_type, duration_sec, file_duration_sec):
         # Keep last 20 entries per type
         times[job_type] = times[job_type][-20:]
         _ensure_opencut_dir()
-        with open(_JOB_TIMES_FILE, "w", encoding="utf-8") as f:
-            json.dump(times, f, indent=2)
+        fd, tmp_path = tempfile.mkstemp(
+            dir=OPENCUT_DIR, suffix=".tmp", prefix="job_times_"
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(times, f, indent=2)
+            os.replace(tmp_path, _JOB_TIMES_FILE)
+        except Exception:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
 
 def compute_estimate(job_type: str, file_duration: float) -> dict:

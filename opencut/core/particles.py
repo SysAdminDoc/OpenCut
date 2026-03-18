@@ -177,8 +177,10 @@ def overlay_particles(
         preset: Particle preset name from PARTICLE_PRESETS.
         density: Particle density multiplier (0.5 = half, 2.0 = double).
     """
-    ensure_package("cv2", "opencv-python-headless", on_progress)
-    ensure_package("PIL", "Pillow", on_progress)
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
+    if not ensure_package("PIL", "Pillow", on_progress):
+        raise RuntimeError("Failed to install Pillow. Install manually: pip install Pillow")
     import cv2
     import numpy as np
     from PIL import Image, ImageDraw
@@ -204,6 +206,13 @@ def overlay_particles(
     _ntf.close()
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
+    if not writer.isOpened():
+        cap.release()
+        try:
+            os.unlink(tmp_video)
+        except OSError:
+            pass
+        raise RuntimeError("Failed to create video writer — codec or resolution unsupported")
 
     particles = []
     total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
