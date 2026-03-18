@@ -109,11 +109,10 @@ public class ProcessKiller
                 {
                     try
                     {
-                        var proc = Process.GetProcessById(pid);
+                        using var proc = Process.GetProcessById(pid);
                         Report(progress, step, totalSteps, $"Killing process on port {port} (PID {pid})...");
                         proc.Kill(entireProcessTree: true);
                         proc.WaitForExit(3000);
-                        proc.Dispose();
                     }
                     catch { /* Process may have already exited */ }
                 }
