@@ -1589,7 +1589,7 @@ def _execute_batch_item(operation, filepath, params, on_progress):
         )
     elif operation == "face_blur":
         from opencut.core.face_tools import blur_faces
-        _valid_blur = {"gaussian", "pixelate", "fill"}
+        _valid_blur = {"gaussian", "pixelate", "black"}
         _blur_method = params.get("method", "gaussian")
         if _blur_method not in _valid_blur:
             _blur_method = "gaussian"
@@ -2836,18 +2836,18 @@ def video_reframe():
                             _effective_pos = "center"  # fallback
 
                     if _effective_pos == "top":
-                        crop_x, crop_y = "(ow-iw)/2", "0"
+                        crop_x, crop_y = "(iw-ow)/2", "0"
                     elif _effective_pos == "bottom":
-                        crop_x, crop_y = "(ow-iw)/2", "(oh-ih)"
+                        crop_x, crop_y = "(iw-ow)/2", "(ih-oh)"
                     elif _effective_pos == "left":
-                        crop_x, crop_y = "0", "(oh-ih)/2"
+                        crop_x, crop_y = "0", "(ih-oh)/2"
                     elif _effective_pos == "right":
-                        crop_x, crop_y = "(ow-iw)", "(oh-ih)/2"
+                        crop_x, crop_y = "(iw-ow)", "(ih-oh)/2"
                     elif _effective_pos is None:
                         pass  # crop_x/crop_y already set by auto-detect
                     else:
                         # center (default)
-                        crop_x, crop_y = "(ow-iw)/2", "(oh-ih)/2"
+                        crop_x, crop_y = "(iw-ow)/2", "(ih-oh)/2"
 
                     vf += f"crop={target_w}:{target_h}:{crop_x}:{crop_y}"
 

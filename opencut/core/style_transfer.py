@@ -145,7 +145,8 @@ def style_transfer_video(
         style_name: Name from STYLE_MODELS (candy, mosaic, etc.).
         intensity: Style blend intensity (0.0-1.0). 1.0 = full style.
     """
-    ensure_package("cv2", "opencv-python-headless", on_progress)
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
     import cv2
     import numpy as np
 

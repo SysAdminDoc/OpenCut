@@ -238,12 +238,17 @@ def detect_faces_in_frame(
         _ntf = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
         tmp = _ntf.name
         _ntf.close()
-        run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
-            "-y", "-i", input_path, "-vframes", "1", tmp,
-        ])
-        frame = cv2.imread(tmp)
-        os.unlink(tmp)
+        try:
+            run_ffmpeg([
+                "ffmpeg", "-hide_banner", "-loglevel", "error",
+                "-y", "-i", input_path, "-vframes", "1", tmp,
+            ])
+            frame = cv2.imread(tmp)
+        finally:
+            try:
+                os.unlink(tmp)
+            except OSError:
+                pass
     else:
         frame = cv2.imread(input_path)
 

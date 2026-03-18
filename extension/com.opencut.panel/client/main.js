@@ -3875,7 +3875,7 @@
                 }
             }
             el.presetSelect.innerHTML = html;
-            if (el.presetSelect._customDropdown) el.presetSelect._customDropdown.rebuild();
+            if (el.presetSelect._customDropdown) el.presetSelect._customDropdown.update();
         });
     }
 
@@ -5342,10 +5342,11 @@
             } else {
                 el2.value = settings[id];
             }
-            // Trigger change event for sliders etc
+            // Trigger appropriate event — "input" for sliders (display update), "change" for selects
+            var evtName = (el2.type === "range") ? "input" : "change";
             var evt;
-            try { evt = new Event("change", { bubbles: true }); }
-            catch (err2) { evt = document.createEvent("Event"); evt.initEvent("change", true, true); }
+            try { evt = new Event(evtName, { bubbles: true }); }
+            catch (err2) { evt = document.createEvent("Event"); evt.initEvent(evtName, true, true); }
             el2.dispatchEvent(evt);
         }
         showToast("Preset loaded for " + opName, "success");
