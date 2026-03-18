@@ -804,12 +804,19 @@ def video_fx_apply():
                     on_progress=_on_progress,
                 )
             elif effect == "chromakey":
+                import re as _re_fx
+                _fx_color = params.get("color", "0x00FF00")
+                if not _re_fx.fullmatch(r"0x[0-9A-Fa-f]{6}", _fx_color):
+                    _fx_color = "0x00FF00"
+                _fx_bg = params.get("background", "")
+                if _fx_bg:
+                    _fx_bg = validate_filepath(_fx_bg)
                 out = video_fx.chromakey(
                     filepath, output_dir=effective_dir,
-                    color=params.get("color", "0x00FF00"),
+                    color=_fx_color,
                     similarity=safe_float(params.get("similarity", 0.3), 0.3, min_val=0.0, max_val=1.0),
                     blend=safe_float(params.get("blend", 0.1), 0.1, min_val=0.0, max_val=1.0),
-                    background=params.get("background", ""),
+                    background=_fx_bg,
                     on_progress=_on_progress,
                 )
             elif effect == "lut":
@@ -2277,8 +2284,12 @@ def transitions_apply():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(a, data.get("output_dir", ""))
+            from opencut.core.transitions_3d import XFADE_TRANSITIONS
+            _tr = data.get("transition", "fade")
+            if _tr not in XFADE_TRANSITIONS:
+                _tr = "fade"
             out = apply_transition(a, b, output_dir=d,
-                                    transition=data.get("transition", "fade"),
+                                    transition=_tr,
                                     duration=safe_float(data.get("duration", 1.0), 1.0, min_val=0.1, max_val=10.0),
                                     on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
@@ -2320,8 +2331,12 @@ def transitions_join():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(clips[0], data.get("output_dir", ""))
+            from opencut.core.transitions_3d import XFADE_TRANSITIONS
+            _tr = data.get("transition", "fade")
+            if _tr not in XFADE_TRANSITIONS:
+                _tr = "fade"
             out = join_with_transitions(clips, output_dir=d,
-                                         transition=data.get("transition", "fade"),
+                                         transition=_tr,
                                          duration=safe_float(data.get("duration", 1.0), 1.0, min_val=0.1, max_val=10.0),
                                          on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
