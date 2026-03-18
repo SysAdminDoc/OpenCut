@@ -38,8 +38,9 @@ from opencut.jobs import (
 )
 from opencut.security import (
     VALID_WHISPER_MODELS,
+    rate_limit,
+    rate_limit_release,
     require_csrf,
-    require_rate_limit,
     safe_float,
     safe_int,
     safe_pip_install,
@@ -578,8 +579,8 @@ def export_video():
                 concat_inputs = []
 
                 for i, seg in enumerate(segments_data):
-                    start = seg.get("start", 0)
-                    end = seg.get("end", 0)
+                    start = safe_float(seg.get("start", 0), 0.0, min_val=0.0)
+                    end = safe_float(seg.get("end", 0), 0.0, min_val=0.0)
                     if end <= start:
                         continue
                     filter_parts.append(
@@ -621,8 +622,8 @@ def export_video():
                 concat_inputs = []
 
                 for i, seg in enumerate(segments_data):
-                    start = seg.get("start", 0)
-                    end = seg.get("end", 0)
+                    start = safe_float(seg.get("start", 0), 0.0, min_val=0.0)
+                    end = safe_float(seg.get("end", 0), 0.0, min_val=0.0)
                     if end <= start:
                         continue
                     filter_parts.append(
@@ -956,6 +957,8 @@ def video_ai_rembg():
     if model not in ("u2net", "u2net_human_seg", "isnet-general-use", "birefnet-general"):
         model = "u2net"
     bg_color = data.get("bg_color", "")
+    if bg_color and not re.match(r'^[a-zA-Z0-9#]+$', bg_color):
+        bg_color = ""
     alpha_only = data.get("alpha_only", False)
 
     if not filepath:
@@ -1102,9 +1105,11 @@ def video_ai_denoise():
 
 @video_bp.route("/video/ai/install", methods=["POST"])
 @require_csrf
-@require_rate_limit("model_install")
 def video_ai_install():
     """Install AI video dependencies."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
+
     data = request.get_json(force=True)
     component = data.get("component", "upscale")
 
@@ -1116,6 +1121,7 @@ def video_ai_install():
 
     pkgs = packages.get(component, [])
     if not pkgs:
+        rate_limit_release("model_install")
         return jsonify({"error": f"Unknown component: {component}"}), 400
 
     job_id = _new_job("install", component)
@@ -1134,6 +1140,8 @@ def video_ai_install():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
             logger.exception("AI install error")
+        finally:
+            rate_limit_release("model_install")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -1237,9 +1245,11 @@ def face_blur():
 
 @video_bp.route("/video/face/install", methods=["POST"])
 @require_csrf
-@require_rate_limit("model_install")
 def face_install():
     """Install MediaPipe for face detection."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
+
     job_id = _new_job("install", "mediapipe")
 
     def _process():
@@ -1254,6 +1264,8 @@ def face_install():
             )
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+        finally:
+            rate_limit_release("model_install")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -2634,7 +2646,7 @@ def color_convert_route():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
-            _VALID_COLORSPACES = {"rec709", "rec2020", "srgb", "dci_p3", "aces", "bt709", "bt2020"}
+            _VALID_COLORSPACES = {"rec709", "rec2020", "srgb", "dci_p3"}
             target_cs = data.get("target", "rec709")
             if target_cs not in _VALID_COLORSPACES:
                 target_cs = "rec709"
@@ -2738,12 +2750,10 @@ def video_reframe():
     mode = data.get("mode", "crop")
     if mode not in _VALID_REFRAME_MODES:
         mode = "crop"
-    _VALID_POSITIONS = {"center", "top", "bottom", "left", "right", "face", "auto"}
+    _VALID_POSITIONS = {"center", "top", "bottom", "left", "right", "auto"}
     position = data.get("position", "center")
     if position not in _VALID_POSITIONS:
-        import re as _re2
-        if not _re2.match(r'^\d+:\d+$', position):
-            position = "center"
+        position = "center"
     bg_color = data.get("bg_color", "black")  # for pad mode
     # Sanitize bg_color: allow only alphanumeric, #, and hex digits
     import re as _re
