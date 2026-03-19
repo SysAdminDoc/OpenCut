@@ -53,6 +53,46 @@ captions_bp = Blueprint("captions", __name__)
 
 import re as _re  # noqa: E402
 
+# ---------------------------------------------------------------------------
+# Transcript Cache (transcribe once, reuse across highlights/shorts/translate)
+# ---------------------------------------------------------------------------
+_transcript_cache = {}  # {filepath_hash: {"segments": [...], "language": str, "model": str, "mtime": float}}
+_transcript_cache_lock = threading.Lock()
+_TRANSCRIPT_CACHE_MAX = 20
+
+
+def _cache_key(filepath):
+    """Generate cache key from filepath + file modification time."""
+    try:
+        mtime = os.path.getmtime(filepath)
+    except OSError:
+        mtime = 0
+    return f"{os.path.normcase(os.path.realpath(filepath))}:{mtime}"
+
+
+def cache_transcript(filepath, segments, language="", model=""):
+    """Cache transcription results for reuse."""
+    key = _cache_key(filepath)
+    with _transcript_cache_lock:
+        if len(_transcript_cache) >= _TRANSCRIPT_CACHE_MAX:
+            oldest = next(iter(_transcript_cache))
+            del _transcript_cache[oldest]
+        _transcript_cache[key] = {
+            "segments": segments,
+            "language": language,
+            "model": model,
+        }
+
+
+def get_cached_transcript(filepath, model=""):
+    """Get cached transcript if available and model matches."""
+    key = _cache_key(filepath)
+    with _transcript_cache_lock:
+        cached = _transcript_cache.get(key)
+        if cached and (not model or cached.get("model") == model):
+            return cached["segments"]
+    return None
+
 _VALID_SUBTITLE_FORMATS = {"srt", "ass", "vtt", "sub", "json"}
 _VALID_ANIMATIONS = {"pop", "slide_up", "fade", "bounce", "typewriter", "highlight_box", "glow"}
 _VALID_BURNIN_STYLES = {"default", "bold_yellow", "boxed_dark", "neon_cyan", "cinematic_serif", "top_center"}
@@ -122,8 +162,18 @@ def generate_captions():
                 word_timestamps=word_timestamps,
             )
 
-            _update_job(job_id, progress=20, message="Transcribing audio (this takes a while for long files)...")
-            result = transcribe(filepath, config=config)
+            # Check transcript cache first (avoids re-transcribing)
+            cached = get_cached_transcript(filepath, model=model)
+            if cached and not data.get("force_retranscribe", False):
+                _update_job(job_id, progress=20, message="Using cached transcript...")
+                result = type("TranscriptResult", (), {"segments": cached, "language": language or "en"})()
+            else:
+                _update_job(job_id, progress=20, message="Transcribing audio (this takes a while for long files)...")
+                result = transcribe(filepath, config=config)
+                # Cache for reuse by highlights/shorts/translate
+                if hasattr(result, "segments"):
+                    segs = [{"start": s.start, "end": s.end, "text": s.text} for s in result.segments] if hasattr(result.segments[0], "start") else result.segments
+                    cache_transcript(filepath, segs, language=getattr(result, "language", ""), model=model)
 
             if _is_cancelled(job_id):
                 return
@@ -831,11 +881,14 @@ def captions_whisperx():
 @captions_bp.route("/captions/translate", methods=["POST"])
 @require_csrf
 def captions_translate():
-    """Translate caption segments using NLLB."""
+    """Translate caption segments using NLLB or SeamlessM4T v2."""
     data = request.get_json(force=True)
     segments = data.get("segments", [])
     source_lang = data.get("source_lang", "en")
     target_lang = data.get("target_lang", "es")
+    backend = data.get("backend", "nllb")
+    if backend not in ("nllb", "seamless"):
+        backend = "nllb"
     filepath = data.get("filepath", "")
 
     if filepath:
@@ -853,15 +906,32 @@ def captions_translate():
 
     def _process():
         try:
-            from opencut.core.captions_enhanced import translate_segments
-
             def _on_progress(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
 
-            translated = translate_segments(
-                segments, source_lang=source_lang,
-                target_lang=target_lang, on_progress=_on_progress,
-            )
+            if backend == "seamless":
+                # SeamlessM4T v2 — higher quality, per-segment translation
+                from opencut.core.captions_enhanced import translate_text_seamless
+                translated = []
+                total = len(segments)
+                for i, seg in enumerate(segments):
+                    text = seg.get("text", "").strip()
+                    if not text:
+                        translated.append(seg.copy())
+                        continue
+                    t = translate_text_seamless(text, source_lang=source_lang, target_lang=target_lang)
+                    new_seg = seg.copy()
+                    new_seg["text"] = t
+                    translated.append(new_seg)
+                    if i % 10 == 0:
+                        _on_progress(10 + int((i / total) * 85), f"Translating {i+1}/{total}...")
+            else:
+                from opencut.core.captions_enhanced import translate_segments
+                translated = translate_segments(
+                    segments, source_lang=source_lang,
+                    target_lang=target_lang, on_progress=_on_progress,
+                )
+
             _update_job(
                 job_id, status="complete", progress=100,
                 message=f"Translated {len(translated)} segments to {target_lang}",

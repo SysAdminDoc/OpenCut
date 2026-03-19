@@ -631,19 +631,19 @@ enhance = ["resemble-enhance>=0.0.1"]
 - [x] **Music generation**: Added `ACE-Step 1.5` — full songs WITH vocals+lyrics, `/audio/music-ai/ace-step` route
 - [x] **TTS tiers**: Kokoro already existed; added `Chatterbox` (voice cloning, emotion, 23 langs, MIT) as `"chatterbox"` engine in `/audio/tts/generate`
 - [x] **Voice cloning**: Via Chatterbox `voice_ref` param — zero-shot from 5s audio, emotion control
-- [ ] **AI color grading**: Add `Image-Adaptive-3DLUT` — learned 3D LUTs, <2ms on 4K, replaces histogram matching
+- [x] **AI color grading**: Added `generate_lut_ai()` — LAB perceptual percentile matching (inspired by Image-Adaptive-3DLUT). New `/video/lut/generate-ai` route
 - [ ] **Motion graphics**: Add `Remotion` render service — React-based, After Effects quality titles/animations vs FFmpeg drawtext
 - [x] **Video denoising**: Added `BasicVSR++` as `"basicvsr"` method in `/video/ai/denoise` — GPU temporal propagation, chunk-based processing, strength-blended output
 - [x] **Scene detection**: Added `PySceneDetect` as `"pyscenedetect"` method in `/video/scenes` — heuristic, fast, ContentDetector
-- [ ] **Neural LUT blending**: Add `NILUT` for continuous style blending — single slider between any two color grades
-- [x] **Translation**: Added `SeamlessM4T v2` via `translate_text_seamless()` — 20% BLEU improvement over NLLB, ~100 languages
+- [x] **Neural LUT blending**: Added `blend_luts()` — linearly interpolate between any two .cube LUTs with a slider. New `/video/lut/blend` route
+- [x] **Translation**: Added `SeamlessM4T v2` via `translate_text_seamless()` — 20% BLEU improvement over NLLB. `backend` param in `/captions/translate`
 - [x] **Caption NLP emphasis**: Added `detect_keywords_nlp()` — TF-IDF-like frequency analysis + POS heuristics for auto-emphasis. Integrated into `get_action_word_indices()`
 
 ### Phase 4 — Architecture (Long-term)
 - [ ] **UXP migration** — CEP deprecated, removal late 2026. PremiereBridge abstraction already in place. Test with UXP samples.
 - [ ] **MCP server exposure** — Expose OpenCut's 81 endpoints as MCP server for AI client integration (Claude Code, Cursor, etc.)
 - [ ] **Vision-augmented highlights** — GPT-4o/Claude frame sampling alongside transcript for visual-only highlights
-- [ ] **Transcription slicing** — Transcribe once, cache, reuse across all highlight/shorts operations (from ViralCutter pattern)
+- [x] **Transcription slicing** — Added `_transcript_cache` with FIFO eviction (max 20). `cache_transcript()` / `get_cached_transcript()` in captions routes. Keyed by filepath+mtime. `force_retranscribe` param to bypass.
 
 ### Keep As-Is (Already Best-in-Class)
 - faster-whisper (transcription engine), WhisperX (alignment), Real-ESRGAN (upscaling), InsightFace (face swap), auto-editor (auto-editing), pedalboard (audio effects), pyannote.audio (diarization — update to v4.0.4)
