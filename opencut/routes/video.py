@@ -3612,6 +3612,71 @@ def video_lut_from_ref():
     return jsonify({"job_id": job_id, "status": "running"})
 
 
+@video_bp.route("/video/lut/generate-ai", methods=["POST"])
+@require_csrf
+def video_lut_ai():
+    """Generate a .cube LUT using AI perceptual LAB color matching."""
+    data = request.get_json(force=True)
+    reference_path = data.get("reference_path", "").strip()
+
+    if not reference_path:
+        return jsonify({"error": "No reference image path provided"}), 400
+    try:
+        reference_path = validate_filepath(reference_path)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    lut_name = data.get("lut_name", "").strip() or ""
+
+    job_id = _new_job("lut-gen-ai", reference_path)
+
+    def _process():
+        try:
+            from opencut.core.lut_library import generate_lut_ai
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            cube_path = generate_lut_ai(
+                reference_path, lut_name=lut_name, on_progress=_on_progress,
+            )
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"AI LUT generated: {os.path.basename(cube_path)}",
+                result={"lut_path": cube_path},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("AI LUT generation error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+@video_bp.route("/video/lut/blend", methods=["POST"])
+@require_csrf
+def video_lut_blend():
+    """Blend two LUTs into a new LUT with a single slider."""
+    data = request.get_json(force=True)
+    lut_a = data.get("lut_a", "").strip()
+    lut_b = data.get("lut_b", "").strip()
+    blend_val = safe_float(data.get("blend", 0.5), 0.5, min_val=0.0, max_val=1.0)
+
+    if not lut_a or not lut_b:
+        return jsonify({"error": "Two LUT names required"}), 400
+
+    try:
+        from opencut.core.lut_library import blend_luts
+        cube_path = blend_luts(lut_a, lut_b, blend=blend_val, output_name=data.get("output_name", ""))
+        return jsonify({"success": True, "lut_path": cube_path})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 # ---------------------------------------------------------------------------
 # One-Click Shorts Pipeline
 # ---------------------------------------------------------------------------
