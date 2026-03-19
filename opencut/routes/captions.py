@@ -162,11 +162,22 @@ def generate_captions():
                 word_timestamps=word_timestamps,
             )
 
-            # Check transcript cache first (avoids re-transcribing)
-            cached = get_cached_transcript(filepath, model=model)
-            if cached and not data.get("force_retranscribe", False):
+            # Check transcript cache (only for SRT/VTT export — styled captions need Segment objects)
+            _use_cache = sub_format in ("srt", "vtt", "json") and not data.get("force_retranscribe", False)
+            cached = get_cached_transcript(filepath, model=model) if _use_cache else None
+            if cached:
                 _update_job(job_id, progress=20, message="Using cached transcript...")
-                result = type("TranscriptResult", (), {"segments": cached, "language": language or "en"})()
+                # Build minimal objects with .start/.end/.text for export functions
+                _CachedSeg = type("CachedSeg", (), {})
+                cached_segs = []
+                for cs in cached:
+                    seg_obj = _CachedSeg()
+                    seg_obj.start = cs.get("start", 0)
+                    seg_obj.end = cs.get("end", 0)
+                    seg_obj.text = cs.get("text", "")
+                    seg_obj.words = []
+                    cached_segs.append(seg_obj)
+                result = type("TranscriptResult", (), {"segments": cached_segs, "language": language or "en"})()
             else:
                 _update_job(job_id, progress=20, message="Transcribing audio (this takes a while for long files)...")
                 result = transcribe(filepath, config=config)
@@ -910,21 +921,38 @@ def captions_translate():
                 _update_job(job_id, progress=pct, message=msg)
 
             if backend == "seamless":
-                # SeamlessM4T v2 — higher quality, per-segment translation
-                from opencut.core.captions_enhanced import translate_text_seamless
-                translated = []
-                total = len(segments)
-                for i, seg in enumerate(segments):
-                    text = seg.get("text", "").strip()
-                    if not text:
-                        translated.append(seg.copy())
-                        continue
-                    t = translate_text_seamless(text, source_lang=source_lang, target_lang=target_lang)
-                    new_seg = seg.copy()
-                    new_seg["text"] = t
-                    translated.append(new_seg)
-                    if i % 10 == 0:
-                        _on_progress(10 + int((i / total) * 85), f"Translating {i+1}/{total}...")
+                # SeamlessM4T v2 — load model ONCE, translate all segments
+                _on_progress(10, "Loading SeamlessM4T v2 model...")
+                import torch
+                from transformers import AutoProcessor, SeamlessM4Tv2ForTextToText
+                device = "cuda" if torch.cuda.is_available() else "cpu"
+                model_id = "facebook/seamless-m4t-v2-large"
+                processor = AutoProcessor.from_pretrained(model_id)
+                s_model = SeamlessM4Tv2ForTextToText.from_pretrained(model_id).to(device)
+                try:
+                    translated = []
+                    total = len(segments)
+                    for i, seg in enumerate(segments):
+                        text = seg.get("text", "").strip()
+                        if not text:
+                            translated.append(seg.copy())
+                            continue
+                        inputs = processor(text=text, src_lang=source_lang, return_tensors="pt").to(device)
+                        with torch.inference_mode():
+                            tokens = s_model.generate(**inputs, tgt_lang=target_lang, max_new_tokens=512)
+                        t = processor.decode(tokens[0].tolist(), skip_special_tokens=True)
+                        new_seg = seg.copy()
+                        new_seg["text"] = t
+                        translated.append(new_seg)
+                        if i % 10 == 0:
+                            _on_progress(10 + int((i / total) * 85), f"Translating {i+1}/{total}...")
+                finally:
+                    del s_model
+                    try:
+                        if torch.cuda.is_available():
+                            torch.cuda.empty_cache()
+                    except Exception:
+                        pass
             else:
                 from opencut.core.captions_enhanced import translate_segments
                 translated = translate_segments(

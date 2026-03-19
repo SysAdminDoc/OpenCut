@@ -502,15 +502,16 @@ def detect_scenes_pyscenedetect(
     if on_progress:
         on_progress(80, "Building scene boundaries...")
 
-    boundaries = []
+    boundaries = [SceneBoundary(time=0.0, frame=0, score=1.0, label="Start")]
     for i, (start, end) in enumerate(scene_list):
         start_sec = start.get_seconds()
-        boundaries.append(SceneBoundary(
-            time=round(start_sec, 3),
-            frame=start.get_frames(),
-            score=1.0,
-            label=f"Scene {i + 1}",
-        ))
+        if start_sec > 0.01:  # Skip if scene starts at 0 (duplicate of Start)
+            boundaries.append(SceneBoundary(
+                time=round(start_sec, 3),
+                frame=start.get_frames(),
+                score=1.0,
+                label=f"Scene {i + 1}",
+            ))
 
     total_scenes = len(boundaries)
     avg_scene = duration / total_scenes if total_scenes > 0 else duration
