@@ -3640,6 +3640,10 @@ def video_lut_ai():
         return jsonify({"error": str(e)}), 400
 
     lut_name = data.get("lut_name", "").strip() or ""
+    # Defense-in-depth: reject Windows reserved names and path chars
+    _RESERVED = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "LPT1", "LPT2", "LPT3"}
+    if lut_name and (lut_name.upper().split(".")[0] in _RESERVED or re.search(r'[<>:"/\\|?*]', lut_name)):
+        return jsonify({"error": "Invalid LUT name"}), 400
 
     job_id = _new_job("lut-gen-ai", reference_path)
 

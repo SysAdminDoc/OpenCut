@@ -310,12 +310,20 @@ def generate_music_ace_step(
 
     # Save output
     import soundfile as sf
-    audio_data = result["audio"]
+    if isinstance(result, dict):
+        audio_data = result.get("audio")
+    elif hasattr(result, "cpu"):
+        audio_data = result  # tensor returned directly
+    else:
+        raise RuntimeError(f"Unexpected ACE-Step result type: {type(result)}")
+    if audio_data is None:
+        raise RuntimeError("ACE-Step produced no audio output")
     if hasattr(audio_data, "cpu"):
         audio_data = audio_data.cpu().numpy()
     if audio_data.ndim == 2:
         audio_data = audio_data.T
-    sf.write(output_path, audio_data, result.get("sample_rate", 44100))
+    sr = result.get("sample_rate", 44100) if isinstance(result, dict) else 44100
+    sf.write(output_path, audio_data, sr)
 
     # Free GPU
     try:

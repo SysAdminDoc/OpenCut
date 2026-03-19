@@ -849,14 +849,18 @@ def blend_luts(
                 ba = vals_a[i][2] * (1 - blend) + vals_b[i][2] * blend
                 f.write(f"{_clamp(ra):.6f} {_clamp(ga):.6f} {_clamp(ba):.6f}\n")
         else:
-            # Sizes differ — generate identity-blended output
+            raise ValueError(
+                f"LUT size mismatch: {lut_a_name} has {len(vals_a)} entries, "
+                f"{lut_b_name} has {len(vals_b)} entries (need {total_entries} for size {size}). "
+                f"Both LUTs must have the same cube size for blending."
+            )
+            # Unreachable fallback
             for b_i in range(size):
                 for g_i in range(size):
                     for r_i in range(size):
                         r = r_i / (size - 1)
                         g = g_i / (size - 1)
                         b = b_i / (size - 1)
-                        # Just write identity when sizes mismatch (safe fallback)
                         f.write(f"{r:.6f} {g:.6f} {b:.6f}\n")
 
     if on_progress:
