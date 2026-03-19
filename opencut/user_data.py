@@ -115,7 +115,7 @@ def save_workflows(workflows: list):
     write_user_file("workflows.json", workflows)
 
 # Whisper settings
-_WHISPER_DEFAULTS = {"cpu_mode": False, "model": "base"}
+_WHISPER_DEFAULTS = {"cpu_mode": False, "model": "turbo"}
 
 def load_whisper_settings() -> dict:
     saved = read_user_file("whisper_settings.json", default={})
