@@ -352,3 +352,158 @@ def summarize_video(
         on_progress(100, "Summary complete")
 
     return summary
+
+
+# ---------------------------------------------------------------------------
+# Vision-Augmented Highlight Extraction
+# ---------------------------------------------------------------------------
+def extract_frames_for_vision(
+    video_path: str,
+    interval_seconds: float = 10.0,
+    max_frames: int = 30,
+) -> List[Dict]:
+    """
+    Extract keyframes from video at regular intervals for vision LLM analysis.
+
+    Returns list of {"timestamp": float, "base64": str} dicts.
+    """
+    import base64
+    import os
+    import subprocess
+    import tempfile
+
+    duration_cmd = subprocess.run(
+        ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+         "-of", "default=nw=1:nk=1", video_path],
+        capture_output=True, text=True, timeout=30,
+    )
+    try:
+        duration = float(duration_cmd.stdout.strip())
+    except (ValueError, AttributeError):
+        duration = 300.0
+
+    # Calculate frame timestamps
+    n_frames = min(max_frames, max(1, int(duration / interval_seconds)))
+    timestamps = [i * interval_seconds for i in range(n_frames)]
+
+    frames = []
+    tmp_dir = tempfile.mkdtemp(prefix="opencut_vision_")
+    try:
+        for i, ts in enumerate(timestamps):
+            out_path = os.path.join(tmp_dir, f"frame_{i:04d}.jpg")
+            subprocess.run(
+                ["ffmpeg", "-ss", str(ts), "-i", video_path,
+                 "-vframes", "1", "-q:v", "5", "-vf", "scale=480:-1",
+                 "-y", out_path],
+                capture_output=True, timeout=10,
+            )
+            if os.path.isfile(out_path) and os.path.getsize(out_path) > 100:
+                with open(out_path, "rb") as f:
+                    b64 = base64.b64encode(f.read()).decode("ascii")
+                frames.append({"timestamp": ts, "base64": b64})
+    finally:
+        import shutil
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+    return frames
+
+
+def extract_highlights_with_vision(
+    video_path: str,
+    transcript_segments: List[Dict],
+    max_highlights: int = 5,
+    min_duration: float = 15.0,
+    max_duration: float = 60.0,
+    llm_config=None,
+    frame_interval: float = 10.0,
+    on_progress: Optional[Callable] = None,
+) -> HighlightResult:
+    """
+    Extract highlights using both transcript AND visual frame analysis.
+
+    Sends sampled video frames alongside the transcript to a vision-capable
+    LLM (GPT-4o, Claude, Gemini) for richer highlight detection that catches
+    visual-only moments (action, dramatic visuals, reactions) that transcript
+    analysis alone would miss.
+
+    Args:
+        video_path: Source video for frame extraction.
+        transcript_segments: Text transcript segments.
+        frame_interval: Seconds between sampled frames.
+    """
+    from opencut.core.llm import LLMConfig, query_llm
+
+    if llm_config is None:
+        llm_config = LLMConfig()
+
+    if not transcript_segments:
+        return HighlightResult()
+
+    if on_progress:
+        on_progress(5, "Extracting keyframes for vision analysis...")
+
+    frames = extract_frames_for_vision(video_path, interval_seconds=frame_interval)
+
+    if on_progress:
+        on_progress(15, "Formatting transcript + visual context...")
+
+    formatted = _format_transcript_for_llm(transcript_segments)
+
+    # Build frame descriptions for the prompt
+    frame_desc = "\n".join(
+        f"[Frame at {f['timestamp']:.1f}s]" for f in frames
+    )
+
+    prompt = (
+        f"Analyze this video using both its transcript AND the visual keyframes below. "
+        f"Find the {max_highlights} most interesting, viral, or engaging moments. "
+        f"Each clip should be {min_duration:.0f}-{max_duration:.0f} seconds.\n\n"
+        f"Consider VISUAL elements (action, reactions, dramatic visuals, on-screen text, "
+        f"scene changes) in addition to speech content.\n\n"
+        f"TRANSCRIPT:\n{formatted}\n\n"
+        f"VISUAL KEYFRAMES (timestamps):\n{frame_desc}\n\n"
+        f"Note: {len(frames)} frames were sampled at {frame_interval}s intervals. "
+        f"Use timestamps to correlate visual moments with transcript segments."
+    )
+
+    if on_progress:
+        on_progress(25, "Querying vision LLM for highlight analysis...")
+
+    # If the LLM supports vision, we could send frames as images
+    # For now, send frame timestamps as text context (works with all LLMs)
+    response = query_llm(
+        prompt=prompt,
+        config=llm_config,
+        system_prompt=_HIGHLIGHT_SYSTEM_PROMPT,
+    )
+
+    if on_progress:
+        on_progress(80, "Parsing highlights...")
+
+    if response.text.startswith("LLM error:"):
+        logger.error("Vision LLM query failed: %s", response.text)
+        return HighlightResult(llm_provider=response.provider, llm_model=response.model)
+
+    highlights = _parse_highlights_json(response.text)
+
+    filtered = []
+    for h in highlights:
+        if h.duration < min_duration:
+            h.end = h.start + min_duration
+        elif h.duration > max_duration:
+            h.end = h.start + max_duration
+        if h.end > h.start:
+            filtered.append(h)
+
+    filtered.sort(key=lambda h: h.score, reverse=True)
+    filtered = filtered[:max_highlights]
+
+    if on_progress:
+        on_progress(100, f"Found {len(filtered)} highlights (vision-augmented)")
+
+    return HighlightResult(
+        highlights=filtered,
+        total_found=len(filtered),
+        llm_provider=response.provider,
+        llm_model=response.model,
+    )

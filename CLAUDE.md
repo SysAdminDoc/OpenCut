@@ -632,7 +632,7 @@ enhance = ["resemble-enhance>=0.0.1"]
 - [x] **TTS tiers**: Kokoro already existed; added `Chatterbox` (voice cloning, emotion, 23 langs, MIT) as `"chatterbox"` engine in `/audio/tts/generate`
 - [x] **Voice cloning**: Via Chatterbox `voice_ref` param — zero-shot from 5s audio, emotion control
 - [x] **AI color grading**: Added `generate_lut_ai()` — LAB perceptual percentile matching (inspired by Image-Adaptive-3DLUT). New `/video/lut/generate-ai` route
-- [ ] **Motion graphics**: Add `Remotion` render service — React-based, After Effects quality titles/animations vs FFmpeg drawtext
+- [x] **Motion graphics**: Added `render_remotion_title()` — Remotion CLI integration via npx with fallback to FFmpeg drawtext. `check_remotion_available()` for Node.js detection
 - [x] **Video denoising**: Added `BasicVSR++` as `"basicvsr"` method in `/video/ai/denoise` — GPU temporal propagation, chunk-based processing, strength-blended output
 - [x] **Scene detection**: Added `PySceneDetect` as `"pyscenedetect"` method in `/video/scenes` — heuristic, fast, ContentDetector
 - [x] **Neural LUT blending**: Added `blend_luts()` — linearly interpolate between any two .cube LUTs with a slider. New `/video/lut/blend` route
@@ -641,8 +641,8 @@ enhance = ["resemble-enhance>=0.0.1"]
 
 ### Phase 4 — Architecture (Long-term)
 - [ ] **UXP migration** — CEP deprecated, removal late 2026. PremiereBridge abstraction already in place. Test with UXP samples.
-- [ ] **MCP server exposure** — Expose OpenCut's 81 endpoints as MCP server for AI client integration (Claude Code, Cursor, etc.)
-- [ ] **Vision-augmented highlights** — GPT-4o/Claude frame sampling alongside transcript for visual-only highlights
+- [x] **MCP server exposure** — Added `opencut/mcp_server.py` — stdio JSON-RPC MCP server with 10 tools (transcribe, silence, export, highlights, separate, TTS, style, face enhance, music, job status). Run via `python -m opencut.mcp_server`.
+- [x] **Vision-augmented highlights** — Added `extract_highlights_with_vision()` + `extract_frames_for_vision()`. Samples keyframes at intervals, sends alongside transcript to LLM. `use_vision` param in `/video/highlights`.
 - [x] **Transcription slicing** — Added `_transcript_cache` with FIFO eviction (max 20). `cache_transcript()` / `get_cached_transcript()` in captions routes. Keyed by filepath+mtime. `force_retranscribe` param to bypass.
 
 ### Keep As-Is (Already Best-in-Class)

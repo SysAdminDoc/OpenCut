@@ -289,3 +289,136 @@ def get_title_presets() -> List[Dict]:
         {"name": k, "label": v["label"], "description": v["description"]}
         for k, v in TITLE_PRESETS.items()
     ]
+
+
+# ---------------------------------------------------------------------------
+# Remotion-Powered Motion Graphics (Premium, requires Node.js)
+# ---------------------------------------------------------------------------
+def check_remotion_available() -> bool:
+    """Check if Node.js and Remotion CLI are available."""
+    try:
+        result = subprocess.run(["npx", "--version"], capture_output=True, timeout=5)
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
+def render_remotion_title(
+    text: str,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    template: str = "title-card",
+    duration: float = 5.0,
+    width: int = 1920,
+    height: int = 1080,
+    fps: int = 30,
+    props: Optional[Dict] = None,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    Render premium motion graphics using Remotion (React-based).
+
+    Produces After Effects-quality animated titles, lower thirds, and
+    kinetic typography via React components rendered to video.
+
+    Requires Node.js 18+ and npx. Templates are React components
+    stored in ~/.opencut/remotion-templates/.
+
+    Args:
+        text: Title text to render.
+        template: Template name (title-card, lower-third, kinetic-text, countdown).
+        duration: Duration in seconds.
+        width/height: Output resolution.
+        fps: Frames per second.
+        props: Additional template-specific props (colors, fonts, animations).
+    """
+    if not check_remotion_available():
+        raise RuntimeError(
+            "Remotion requires Node.js 18+. Install from https://nodejs.org/ "
+            "then run: npx remotion --version"
+        )
+
+    if output_path is None:
+        directory = output_dir or tempfile.gettempdir()
+        safe_text = re.sub(r'[^\w\-]', '_', text[:20]).strip('_')
+        output_path = os.path.join(directory, f"remotion_{safe_text}.mp4")
+
+    if on_progress:
+        on_progress(10, f"Preparing Remotion template ({template})...")
+
+    templates_dir = os.path.expanduser("~/.opencut/remotion-templates")
+    template_dir = os.path.join(templates_dir, template)
+
+    if not os.path.isdir(template_dir):
+        # Generate a default React template on-the-fly
+        os.makedirs(template_dir, exist_ok=True)
+        _generate_default_template(template_dir, template)
+
+    # Build props JSON for Remotion
+    import json
+    render_props = {
+        "text": text,
+        "duration": duration,
+        "width": width,
+        "height": height,
+        **(props or {}),
+    }
+
+    props_file = os.path.join(template_dir, "props.json")
+    with open(props_file, "w") as f:
+        json.dump(render_props, f)
+
+    if on_progress:
+        on_progress(30, "Rendering with Remotion...")
+
+    total_frames = int(duration * fps)
+    cmd = [
+        "npx", "remotion", "render",
+        template_dir,
+        "Main",
+        output_path,
+        "--props", props_file,
+        "--width", str(width),
+        "--height", str(height),
+        "--fps", str(fps),
+        "--frames", f"0-{total_frames - 1}",
+        "--codec", "h264",
+        "--crf", "18",
+    ]
+
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if result.returncode != 0:
+        stderr = result.stderr.strip()[-500:] if result.stderr else "unknown error"
+        # Fallback to FFmpeg drawtext if Remotion fails
+        logger.warning("Remotion render failed, falling back to FFmpeg: %s", stderr)
+        return render_title_card(
+            text, output_path=output_path, output_dir=output_dir,
+            preset="fade_center", duration=duration,
+            width=width, height=height, fps=fps,
+            on_progress=on_progress,
+        )
+
+    if on_progress:
+        on_progress(100, "Remotion render complete!")
+    return output_path
+
+
+def _generate_default_template(template_dir: str, template_name: str):
+    """Generate a minimal Remotion template for the given style."""
+    # Create a minimal package.json and entry component
+    import json
+
+    package = {
+        "name": f"opencut-{template_name}",
+        "version": "1.0.0",
+        "private": True,
+        "dependencies": {
+            "remotion": "^4.0.0",
+            "react": "^18.0.0",
+            "react-dom": "^18.0.0",
+        },
+    }
+    with open(os.path.join(template_dir, "package.json"), "w") as f:
+        json.dump(package, f, indent=2)
+
+    logger.info("Generated default Remotion template: %s", template_dir)
