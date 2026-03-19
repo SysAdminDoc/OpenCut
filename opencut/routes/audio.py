@@ -1154,7 +1154,22 @@ def tts_generate():
 
             effective_dir = output_dir or tempfile.gettempdir()
 
-            if engine == "kokoro":
+            if engine == "chatterbox":
+                from opencut.core.voice_gen import chatterbox_generate
+                voice_ref = data.get("voice_ref", "")
+                if voice_ref:
+                    try:
+                        voice_ref = validate_filepath(voice_ref)
+                    except ValueError:
+                        voice_ref = None
+                else:
+                    voice_ref = None
+                exaggeration = safe_float(data.get("exaggeration", 0.5), 0.5, min_val=0.0, max_val=1.0)
+                out = chatterbox_generate(
+                    text, voice_ref=voice_ref, output_dir=effective_dir,
+                    exaggeration=exaggeration, on_progress=_on_progress,
+                )
+            elif engine == "kokoro":
                 from opencut.core.voice_gen import kokoro_generate
                 out = kokoro_generate(
                     text, voice=voice, output_dir=effective_dir,
@@ -1685,6 +1700,53 @@ def music_ai_generate():
                                   model_size=_mg_model,
                                   temperature=safe_float(data.get("temperature", 1.0), 1.0, min_val=0.1, max_val=2.0),
                                   on_progress=_p)
+            _update_job(job_id, status="complete", progress=100, result={"output_path": out})
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+@audio_bp.route("/audio/music-ai/ace-step", methods=["POST"])
+@require_csrf
+def music_ai_ace_step():
+    """Generate music with vocals + lyrics using ACE-Step 1.5."""
+    data = request.get_json(force=True)
+    prompt = data.get("prompt", "").strip()
+    lyrics = data.get("lyrics", "").strip()
+    if not prompt:
+        return jsonify({"error": "No prompt"}), 400
+    if len(lyrics) > 10000:
+        return jsonify({"error": "Lyrics too long (max 10000 chars)"}), 400
+
+    job_id = _new_job("ace-step", prompt[:40])
+
+    def _process():
+        try:
+            from opencut.core.music_ai import generate_music_ace_step
+
+            def _p(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            d = data.get("output_dir", "")
+            if d:
+                try:
+                    d = validate_path(d)
+                except ValueError as e:
+                    _update_job(job_id, status="error", message=str(e))
+                    return
+            else:
+                d = tempfile.gettempdir()
+            out = generate_music_ace_step(
+                prompt, lyrics=lyrics, output_dir=d,
+                duration=safe_float(data.get("duration", 30), 30.0, min_val=10.0, max_val=600.0),
+                on_progress=_p,
+            )
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
