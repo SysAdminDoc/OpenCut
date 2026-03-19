@@ -156,7 +156,7 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/pip", "/video/blend", "/video/merge", "/video/trim",
     "/video/object/remove", "/video/watermark",
     "/export-video",
-    "/video/ai/upscale", "/video/style/apply", "/video/ai/rembg",
+    "/video/ai/upscale", "/video/style/apply", "/video/style/arbitrary", "/video/ai/rembg",
 })
 
 
