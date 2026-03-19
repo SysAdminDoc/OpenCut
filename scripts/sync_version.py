@@ -33,11 +33,6 @@ TARGETS = [
     ),
     (
         "extension/com.opencut.panel/client/index.html",
-        r'(<span class="version">v)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
-        r'\g<1>{v}\g<2>',
-    ),
-    (
-        "extension/com.opencut.panel/client/index.html",
         r'(<span class="settings-value">)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
         r'\g<1>{v}\g<2>',
     ),
@@ -50,6 +45,64 @@ TARGETS = [
         "extension/com.opencut.panel/client/style.css",
         r'(OpenCut CEP Panel v)[0-9]+\.[0-9]+\.[0-9]+',
         r'\g<1>{v}',
+    ),
+    # CEP manifest (both bundle and extension version)
+    (
+        "extension/com.opencut.panel/CSXS/manifest.xml",
+        r'(ExtensionBundleVersion=")[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}\g<2>',
+    ),
+    (
+        "extension/com.opencut.panel/CSXS/manifest.xml",
+        r'(<Extension Id="com\.opencut\.panel\.main" Version=")[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}\g<2>',
+    ),
+    # Installer C# project
+    (
+        "installer/src/OpenCut.Installer/OpenCut.Installer.csproj",
+        r'(<Version>)[0-9]+\.[0-9]+\.[0-9]+(</Version>)',
+        r'\g<1>{v}\g<2>',
+    ),
+    (
+        "installer/src/OpenCut.Installer/OpenCut.Installer.csproj",
+        r'(<FileVersion>)[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(</FileVersion>)',
+        r'\g<1>{v}.0\g<2>',
+    ),
+    # Installer AppConstants.cs
+    (
+        "installer/src/OpenCut.Installer/Models/AppConstants.cs",
+        r'(Version\s*=\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}\g<2>',
+    ),
+    # Installer app.manifest
+    (
+        "installer/src/OpenCut.Installer/Properties/app.manifest",
+        r'(assemblyIdentity version=")[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}.0\g<2>',
+    ),
+    # Install.ps1 dev installer banner
+    (
+        "Install.ps1",
+        r'(Installer v)[0-9]+\.[0-9]+\.[0-9]+',
+        r'\g<1>{v}',
+    ),
+    # install.py dev installer
+    (
+        "install.py",
+        r'(VERS\s*=\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}\g<2>',
+    ),
+    # requirements.txt header comment
+    (
+        "requirements.txt",
+        r'(# OpenCut v)[0-9]+\.[0-9]+\.[0-9]+',
+        r'\g<1>{v}',
+    ),
+    # Inno Setup
+    (
+        "OpenCut.iss",
+        r'(#define MyAppVersion\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}\g<2>',
     ),
 ]
 

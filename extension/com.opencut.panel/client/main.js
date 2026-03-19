@@ -1282,6 +1282,10 @@
 
     function refreshClipDropdown() {
         if (el.clipSelect.parentNode) {
+            // Disconnect old observer to prevent leak
+            if (el.clipSelect._customDropdown && el.clipSelect._customDropdown.observer) {
+                el.clipSelect._customDropdown.observer.disconnect();
+            }
             var oldDd = el.clipSelect.parentNode.querySelector(".custom-dropdown");
             if (oldDd) {
                 oldDd.parentNode.removeChild(oldDd);
@@ -1561,6 +1565,10 @@
         }
         // Re-init custom dropdown if it was already created
         if (selectEl.parentNode) {
+            // Disconnect old observer to prevent leak
+            if (selectEl._customDropdown && selectEl._customDropdown.observer) {
+                selectEl._customDropdown.observer.disconnect();
+            }
             var oldDropdown = selectEl.parentNode.querySelector(".custom-dropdown");
             if (oldDropdown) {
                 oldDropdown.parentNode.removeChild(oldDropdown);
@@ -1665,21 +1673,27 @@
             el.processingElapsed.textContent = timeStr;
         }, 1000);
 
-        api("POST", endpoint, payload, function (err, data) {
-            jobStarting = false;
-            if (err || !data || data.error) {
-                showAlert(data ? data.error : "Failed to start job");
-                hideProgress();
-                return;
-            }
-            currentJob = data.job_id;
+        try {
+            api("POST", endpoint, payload, function (err, data) {
+                jobStarting = false;
+                if (err || !data || data.error) {
+                    showAlert(data ? data.error : "Failed to start job");
+                    hideProgress();
+                    return;
+                }
+                currentJob = data.job_id;
 
-            if (SSE_OK) {
-                trackJobSSE(data.job_id);
-            } else {
-                trackJobPoll(data.job_id);
-            }
-        });
+                if (SSE_OK) {
+                    trackJobSSE(data.job_id);
+                } else {
+                    trackJobPoll(data.job_id);
+                }
+            });
+        } catch (e) {
+            jobStarting = false;
+            hideProgress();
+            showAlert("Failed to start job: " + e.message);
+        }
     }
 
     function trackJobSSE(jobId) {
@@ -3180,6 +3194,7 @@
     var editDebounceTimer = null;
 
     function renderTranscriptEditor(data) {
+        ensureTranscriptDelegation();
         // Clear any pending debounce from previous render
         if (editDebounceTimer) { clearTimeout(editDebounceTimer); editDebounceTimer = null; }
 
@@ -3200,20 +3215,10 @@
         }
         el.transcriptSegments.innerHTML = html;
 
-        // Auto-resize textareas and wire up undo snapshots
+        // Auto-resize textareas
         var textareas = el.transcriptSegments.querySelectorAll(".transcript-seg-text");
         for (var i = 0; i < textareas.length; i++) {
             autoResize(textareas[i]);
-            textareas[i].addEventListener("input", function () {
-                autoResize(this);
-                var idx = parseInt(this.getAttribute("data-idx"));
-                if (idx >= 0 && transcriptData && idx < transcriptData.segments.length) {
-                    transcriptData.segments[idx].text = this.value;
-                }
-                // Debounced snapshot for undo history
-                if (editDebounceTimer) clearTimeout(editDebounceTimer);
-                editDebounceTimer = setTimeout(function () { snapshotTranscript(); }, 500);
-            });
         }
 
         // Reset history and take initial snapshot
@@ -3225,6 +3230,24 @@
     function autoResize(textarea) {
         textarea.style.height = "auto";
         textarea.style.height = textarea.scrollHeight + "px";
+    }
+
+    // Delegated input handler for transcript textareas (avoids 1000+ listeners)
+    var _transcriptDelegationAdded = false;
+    function ensureTranscriptDelegation() {
+        if (_transcriptDelegationAdded || !el.transcriptSegments) return;
+        _transcriptDelegationAdded = true;
+        el.transcriptSegments.addEventListener("input", function (e) {
+            var ta = e.target;
+            if (!ta || !ta.classList.contains("transcript-seg-text")) return;
+            autoResize(ta);
+            var idx = parseInt(ta.getAttribute("data-idx"));
+            if (idx >= 0 && transcriptData && idx < transcriptData.segments.length) {
+                transcriptData.segments[idx].text = ta.value;
+            }
+            if (editDebounceTimer) clearTimeout(editDebounceTimer);
+            editDebounceTimer = setTimeout(function () { snapshotTranscript(); }, 500);
+        });
     }
 
     // ================================================================
@@ -3738,27 +3761,32 @@
                 esc(h.type) + '</span>' +
                 '<span style="display:flex;align-items:center;gap:6px">' +
                 '<span style="font-size:10px;color:var(--text-muted)">' + esc(h.time) + '</span>' +
-                (h.endpoint ? '<button class="btn-sm job-history-rerun" data-idx="' + i + '" title="Re-run this job" style="padding:1px 5px;font-size:9px">Re-run</button>' : '') +
+                (h.endpoint ? '<button type="button" class="btn-sm job-history-rerun" data-idx="' + i + '" title="Re-run this job" style="padding:1px 5px;font-size:9px">Re-run</button>' : '') +
                 '</span></div>';
         }
         el.jobHistory.innerHTML = html;
+    }
 
-        // Attach re-run handlers
-        var rerunBtns = el.jobHistory.querySelectorAll(".job-history-rerun");
-        for (var j = 0; j < rerunBtns.length; j++) {
-            rerunBtns[j].addEventListener("click", function (e) {
-                e.stopPropagation();
-                var idx = parseInt(this.getAttribute("data-idx"));
-                var entry = jobHistoryList[idx];
-                if (entry && entry.endpoint && entry.payload) {
-                    startJob(entry.endpoint, entry.payload);
-                }
-            });
-        }
+    // Event delegation for job history re-run buttons (avoids listener accumulation)
+    var _jobHistoryDelegationAdded = false;
+    function ensureJobHistoryDelegation() {
+        if (_jobHistoryDelegationAdded || !el.jobHistory) return;
+        _jobHistoryDelegationAdded = true;
+        el.jobHistory.addEventListener("click", function (e) {
+            var btn = e.target.closest(".job-history-rerun");
+            if (!btn) return;
+            e.stopPropagation();
+            var idx = parseInt(btn.getAttribute("data-idx"));
+            var entry = jobHistoryList[idx];
+            if (entry && entry.endpoint && entry.payload) {
+                startJob(entry.endpoint, entry.payload);
+            }
+        });
     }
 
     function initJobHistory() {
         if (!el.jobHistoryToggle || !el.jobHistory) return;
+        ensureJobHistoryDelegation();
         el.jobHistoryToggle.addEventListener("click", function () {
             el.jobHistory.classList.toggle("open");
         });
@@ -4275,7 +4303,7 @@
                     return;
                 }
                 _waveformData = data;
-                // Cache with eviction
+                // Cache with FIFO eviction
                 var keys = Object.keys(_waveformCache);
                 if (keys.length >= _WAVEFORM_CACHE_MAX) {
                     delete _waveformCache[keys[0]];
@@ -4626,7 +4654,7 @@
                 var item = data[i];
                 var div = document.createElement("div");
                 div.className = "output-item";
-                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + esc(item.name) + '</div><div class="output-item-meta">' + safeFixed(item.size_mb, 1) + ' MB &mdash; ' + esc(item.type || "") + '</div></div><div class="output-item-actions"><button class="btn-sm" data-path="' + esc(item.path) + '">Import</button></div>';
+                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + esc(item.name) + '</div><div class="output-item-meta">' + safeFixed(item.size_mb, 1) + ' MB &mdash; ' + esc(item.type || "") + '</div></div><div class="output-item-actions"><button type="button" class="btn-sm" data-path="' + esc(item.path) + '">Import</button></div>';
                 div.querySelector(".btn-sm").addEventListener("click", function () {
                     var p = this.dataset.path;
                     if (inPremiere && cs) {
@@ -4694,7 +4722,7 @@
             var item = document.createElement("div");
             item.className = "batch-file-item";
             var name = _batchFiles[i].split(/[/\\]/).pop();
-            item.innerHTML = '<span>' + (i + 1) + '. ' + esc(name) + '</span><button class="batch-file-remove" data-idx="' + i + '">&times;</button>';
+            item.innerHTML = '<span>' + (i + 1) + '. ' + esc(name) + '</span><button type="button" class="batch-file-remove" data-idx="' + i + '">&times;</button>';
             frag.appendChild(item);
         }
         el.batchFileList.innerHTML = "";
@@ -4904,7 +4932,7 @@
         for (var i = 0; i < _workflowSteps.length; i++) {
             var item = document.createElement("div");
             item.className = "workflow-step-item";
-            item.innerHTML = '<span class="workflow-step-num">' + (i + 1) + '</span><span>' + esc(_workflowSteps[i].label) + '</span><button class="workflow-step-remove" data-idx="' + i + '">&times;</button>';
+            item.innerHTML = '<span class="workflow-step-num">' + (i + 1) + '</span><span>' + esc(_workflowSteps[i].label) + '</span><button type="button" class="workflow-step-remove" data-idx="' + i + '">&times;</button>';
             frag.appendChild(item);
         }
         el.workflowStepList.innerHTML = "";
@@ -4956,12 +4984,16 @@
     // ================================================================
     function fetchTimeEstimate(jobType) {
         if (!el.processingEstimate) return;
-        // Get file duration from file info
+        // Get file duration from file info (fmtDur outputs M:SS or H:MM:SS)
         var fileDuration = 0;
         var metaEl = document.getElementById("fileMetaDisplay");
         if (metaEl) {
-            var match = (metaEl.textContent || "").match(/(\d+\.?\d*)\s*s/);
-            if (match) fileDuration = parseFloat(match[1]);
+            var txt = metaEl.textContent || "";
+            // Match M:SS or H:MM:SS format from fmtDur()
+            var hmatch = txt.match(/(\d+):(\d+):(\d+)/);
+            var mmatch = !hmatch && txt.match(/(\d+):(\d+)/);
+            if (hmatch) fileDuration = parseInt(hmatch[1]) * 3600 + parseInt(hmatch[2]) * 60 + parseInt(hmatch[3]);
+            else if (mmatch) fileDuration = parseInt(mmatch[1]) * 60 + parseInt(mmatch[2]);
         }
         api("POST", "/system/estimate-time", { type: jobType, file_duration: fileDuration }, function (err, data) {
             if (err || !data || !data.estimate_seconds) {
@@ -5018,15 +5050,24 @@
                 if (el.clipThumb) el.clipThumb.innerHTML = '<div class="clip-thumb-none">No Preview</div>';
                 return;
             }
-            if (el.clipThumb) el.clipThumb.innerHTML = '<img src="data:image/jpeg;base64,' + data.image + '" alt="preview">';
+            if (el.clipThumb) {
+                var img = document.createElement("img");
+                img.src = "data:image/jpeg;base64," + data.image;
+                img.alt = "preview";
+                el.clipThumb.innerHTML = "";
+                el.clipThumb.appendChild(img);
+            }
         });
-        // Fetch metadata via probe
-        api("POST", "/audio/waveform", { file: selectedPath, samples: 1 }, function(err, data) {
+        // Fetch metadata via lightweight probe (reuses /info endpoint)
+        api("POST", "/info", { filepath: selectedPath }, function(err, data) {
             if (!err && data && data.duration) {
-                var dur = Math.round(data.duration);
-                var m = Math.floor(dur / 60);
-                var s = dur % 60;
-                if (el.clipMetaDur) el.clipMetaDur.textContent = m + ":" + (s < 10 ? "0" : "") + s;
+                if (el.clipMetaDur) el.clipMetaDur.textContent = fmtDur(data.duration);
+            }
+            if (!err && data && data.video) {
+                if (el.clipMetaRes) el.clipMetaRes.textContent = data.video.width + "x" + data.video.height;
+            }
+            if (!err && data && data.file_size_mb) {
+                if (el.clipMetaSize) el.clipMetaSize.textContent = safeFixed(data.file_size_mb, 1) + " MB";
             }
         });
     }
@@ -5069,7 +5110,8 @@
             }
             el.recentClipsDropdown.innerHTML = html;
         }
-        el.recentClipsDropdown.classList.toggle("hidden");
+        // Explicit show (not toggle) avoids race with outside-click dismiss handler
+        el.recentClipsDropdown.classList.remove("hidden");
     }
 
     // ================================================================
@@ -5281,18 +5323,26 @@
         var html = "";
         for (var i = 0; i < _mergeFiles.length; i++) {
             var name = _mergeFiles[i].split(/[/\\]/).pop();
-            html += '<div class="merge-file-item"><span class="merge-file-name">' + esc(name) + '</span><button class="btn-ghost btn-xs merge-file-remove" data-idx="' + i + '">&times;</button></div>';
+            html += '<div class="merge-file-item"><span class="merge-file-name">' + esc(name) + '</span><button type="button" class="btn-ghost btn-xs merge-file-remove" data-idx="' + i + '">&times;</button></div>';
         }
         el.mergeFileList.innerHTML = html;
         if (el.runMergeBtn) el.runMergeBtn.disabled = _mergeFiles.length < 2;
-        // Wire remove buttons
-        var removeBtns = el.mergeFileList.querySelectorAll(".merge-file-remove");
-        for (var j = 0; j < removeBtns.length; j++) {
-            removeBtns[j].addEventListener("click", function() {
-                _mergeFiles.splice(parseInt(this.dataset.idx), 1);
+    }
+
+    // Event delegation for merge file remove buttons (avoids listener accumulation)
+    var _mergeDelegationAdded = false;
+    function ensureMergeDelegation() {
+        if (_mergeDelegationAdded || !el.mergeFileList) return;
+        _mergeDelegationAdded = true;
+        el.mergeFileList.addEventListener("click", function(e) {
+            var btn = e.target.closest(".merge-file-remove");
+            if (!btn) return;
+            var idx = parseInt(btn.dataset.idx);
+            if (idx >= 0 && idx < _mergeFiles.length) {
+                _mergeFiles.splice(idx, 1);
                 renderMergeFiles();
-            });
-        }
+            }
+        });
     }
 
     function runMerge() {
@@ -5709,6 +5759,7 @@
         });
 
         // v1.3.0 - Merge
+        ensureMergeDelegation();
         if (el.mergeAddCurrentBtn) el.mergeAddCurrentBtn.addEventListener("click", function() {
             if (selectedPath && _mergeFiles.indexOf(selectedPath) === -1) {
                 _mergeFiles.push(selectedPath);
@@ -5883,6 +5934,15 @@
         loadLLMSettings();
         updateSilenceModeUI();
         updateFaceTrackingUI();
+
+        // Pause CSS animations when panel is hidden (saves GPU/CPU in Premiere)
+        document.addEventListener("visibilitychange", function () {
+            var appEl = document.querySelector(".app");
+            if (appEl) {
+                if (document.hidden) appEl.classList.add("paused-animations");
+                else appEl.classList.remove("paused-animations");
+            }
+        });
 
         // Cleanup SSE connections and timers on panel close/navigation
         window.addEventListener("beforeunload", function () {

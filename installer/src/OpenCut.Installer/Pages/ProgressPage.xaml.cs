@@ -46,7 +46,13 @@ public partial class ProgressPage : Page
         {
             LogPanel.AppendLog($"Installation failed: {ex.Message}", LogLevel.Error);
             StepLabel.Text = "Installation failed";
+            CloseBtn.Visibility = Visibility.Visible;
         }
+    }
+
+    private void CloseBtn_Click(object sender, RoutedEventArgs e)
+    {
+        Application.Current.Shutdown();
     }
 
     private void StartShimmer()

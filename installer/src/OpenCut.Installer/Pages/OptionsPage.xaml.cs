@@ -111,6 +111,41 @@ public partial class OptionsPage : Page
             return;
         }
 
+        // Check for invalid path characters
+        try
+        {
+            var fullPath = Path.GetFullPath(config.InstallPath);
+            if (fullPath.Length > 200)
+            {
+                MessageBox.Show("Install path is too long (max 200 characters).", "OpenCut Setup",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+        }
+        catch (Exception)
+        {
+            MessageBox.Show("Install path contains invalid characters.", "OpenCut Setup",
+                MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        // Check disk space (need at least 500 MB)
+        try
+        {
+            var root = Path.GetPathRoot(config.InstallPath);
+            if (root != null)
+            {
+                var driveInfo = new DriveInfo(root);
+                if (driveInfo.IsReady && driveInfo.AvailableFreeSpace < 500L * 1024 * 1024)
+                {
+                    MessageBox.Show($"Insufficient disk space on {root}. At least 500 MB required.",
+                        "OpenCut Setup", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+            }
+        }
+        catch (Exception) { /* DriveInfo may fail on network paths — allow anyway */ }
+
         _mainWindow.SetStep(3);
         _mainWindow.NavigateToPage(new ProgressPage(_mainWindow));
     }

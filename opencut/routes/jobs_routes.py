@@ -118,9 +118,13 @@ def stream_job(job_id):
     resp.headers["Cache-Control"] = "no-cache"
     resp.headers["Connection"] = "keep-alive"
     resp.headers["X-Accel-Buffering"] = "no"
-    # CEP panels run with origin "null" (no scheme); this is intentional
-    # and safe because the server only binds to 127.0.0.1.
-    resp.headers["Access-Control-Allow-Origin"] = "null"
+    # CEP panels run with origin "null" or "file://" depending on setup;
+    # safe because the server only binds to 127.0.0.1.
+    req_origin = request.headers.get("Origin", "null")
+    if req_origin in ("null", "file://"):
+        resp.headers["Access-Control-Allow-Origin"] = req_origin
+    else:
+        resp.headers["Access-Control-Allow-Origin"] = "null"
     return resp
 
 
@@ -136,17 +140,21 @@ MAX_QUEUE_SIZE = 100
 _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/silence", "/silence/speed-up", "/fillers",
     "/audio/denoise", "/audio/normalize", "/audio/enhance",
-    "/audio/pro/apply",
+    "/audio/pro/apply", "/audio/separate", "/audio/tts/generate",
+    "/audio/tts/subtitled", "/audio/duck",
     "/styled-captions", "/captions/translate", "/captions/karaoke",
     "/captions/burnin/file", "/captions/burnin/segments",
-    "/captions/animated/render",
+    "/captions/animated/render", "/transcript/summarize",
     "/video/scenes", "/video/auto-edit", "/video/fx/apply",
-    "/video/face/blur", "/video/reframe", "/video/reframe/face",
+    "/video/face/blur", "/video/face/enhance", "/video/face/swap",
+    "/video/reframe", "/video/reframe/face",
     "/video/chromakey", "/video/highlights",
     "/video/lut/apply", "/video/lut/generate-from-ref",
     "/video/color/correct", "/video/color/convert",
     "/video/speed/ramp", "/video/shorts-pipeline",
-    "/video/title/render", "/video/preview-frame",
+    "/video/title/render", "/video/title/overlay", "/video/preview-frame",
+    "/video/pip", "/video/blend", "/video/merge", "/video/trim",
+    "/video/object/remove", "/video/watermark",
     "/export-video",
     "/video/ai/upscale", "/video/style/apply", "/video/ai/rembg",
 })

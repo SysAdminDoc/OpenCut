@@ -1,8 +1,11 @@
 <#
 .SYNOPSIS
-    OpenCut Installer Builder GUI
+    [DEPRECATED] Legacy OpenCut Installer Builder GUI
 .DESCRIPTION
-    GUI tool to build the OpenCut installer with verbose logging and diagnostics.
+    DEPRECATED: Use installer/InstallerBuilder.ps1 instead.
+    This file is a legacy GUI tool from before the custom WPF installer.
+    It builds Inno Setup installers with hardcoded stale versions.
+    Kept for reference only — do not use for production builds.
 #>
 
 Add-Type -AssemblyName PresentationFramework

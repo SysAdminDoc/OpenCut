@@ -353,6 +353,9 @@ def apply_lut(
         intensity: Blend with original (0.0 = no effect, 1.0 = full LUT).
     """
     cube_path = ensure_lut(lut_name)
+    import math
+    if not isinstance(intensity, (int, float)) or math.isnan(intensity) or math.isinf(intensity):
+        intensity = 1.0
     intensity = max(0.0, min(1.0, intensity))
 
     if output_path is None:

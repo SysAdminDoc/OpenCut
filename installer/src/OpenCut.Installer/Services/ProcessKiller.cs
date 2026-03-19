@@ -125,11 +125,11 @@ public class ProcessKiller
     {
         try
         {
-            // Use WMI via command line since we don't want a WMI dependency
+            // Use PowerShell CIM instead of deprecated wmic (removed in Win11 23H2+)
             var psi = new ProcessStartInfo
             {
-                FileName = "wmic",
-                Arguments = $"process where ProcessId={process.Id} get CommandLine /format:list",
+                FileName = "powershell.exe",
+                Arguments = $"-NoProfile -Command \"(Get-CimInstance Win32_Process -Filter 'ProcessId={process.Id}').CommandLine\"",
                 RedirectStandardOutput = true,
                 UseShellExecute = false,
                 CreateNoWindow = true
@@ -137,7 +137,7 @@ public class ProcessKiller
             using var p = Process.Start(psi);
             if (p == null) return null;
             var output = p.StandardOutput.ReadToEnd();
-            p.WaitForExit(3000);
+            p.WaitForExit(5000);
             return output;
         }
         catch { return null; }

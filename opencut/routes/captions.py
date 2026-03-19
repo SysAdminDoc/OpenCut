@@ -16,8 +16,9 @@ from opencut.helpers import _make_sequence_name, _resolve_output_dir
 from opencut.jobs import _is_cancelled, _new_job, _safe_error, _update_job, job_lock, jobs
 from opencut.security import (
     VALID_WHISPER_MODELS,
+    rate_limit,
+    rate_limit_release,
     require_csrf,
-    require_rate_limit,
     safe_float,
     safe_int,
     safe_pip_install,
@@ -53,7 +54,7 @@ captions_bp = Blueprint("captions", __name__)
 import re as _re  # noqa: E402
 
 _VALID_SUBTITLE_FORMATS = {"srt", "ass", "vtt", "sub", "json"}
-_VALID_ANIMATIONS = {"pop", "slide", "fade", "bounce", "typewriter", "wave", "glow"}
+_VALID_ANIMATIONS = {"pop", "slide_up", "fade", "bounce", "typewriter", "highlight_box", "glow"}
 _VALID_BURNIN_STYLES = {"default", "bold_yellow", "boxed_dark", "neon_cyan", "cinematic_serif", "top_center"}
 
 
@@ -961,9 +962,11 @@ def captions_convert():
 
 @captions_bp.route("/captions/enhanced/install", methods=["POST"])
 @require_csrf
-@require_rate_limit("model_install")
 def captions_enhanced_install():
     """Install enhanced caption dependencies."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
+
     data = request.get_json(force=True)
     component = data.get("component", "whisperx")
 
@@ -975,9 +978,14 @@ def captions_enhanced_install():
 
     pkgs = packages.get(component, [])
     if not pkgs:
+        rate_limit_release("model_install")
         return jsonify({"error": f"Unknown component: {component}"}), 400
 
-    job_id = _new_job("install", component)
+    try:
+        job_id = _new_job("install", component)
+    except Exception:
+        rate_limit_release("model_install")
+        raise
 
     def _process():
         try:
@@ -992,6 +1000,8 @@ def captions_enhanced_install():
             )
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+        finally:
+            rate_limit_release("model_install")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()

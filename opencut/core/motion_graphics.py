@@ -121,8 +121,8 @@ def render_title_card(
 
     elif preset == "typewriter":
         # Reveal characters over time
-        chars = len(text)
-        char_dur = min(duration * 0.6, chars * 0.08)
+        chars = max(1, len(text))
+        char_dur = max(0.01, min(duration * 0.6, chars * 0.08))
         vf = (
             f"drawtext=text='{escaped_text}':fontsize={font_size}:fontcolor={font_color}:"
             f"x=(w-text_w)/2:y=(h-text_h)/2:"
@@ -174,7 +174,7 @@ def render_title_card(
         word_dur = min(duration * 0.7, len(words) * 0.4) / max(len(words), 1)
         parts = []
         for i, word in enumerate(words):
-            ew = word.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:")
+            ew = word.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:").replace(";", "\\;")
             t_start = i * word_dur + 0.2
             parts.append(
                 f"drawtext=text='{ew} ':fontsize={font_size}:fontcolor={font_color}:"
@@ -232,14 +232,15 @@ def overlay_title(
     fade_out = min(1.0, duration * 0.2)
 
     if preset == "lower_third":
-        info_cmd = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
-             "-show_entries", "stream=height", "-of", "csv=p=0", video_path],
-            capture_output=True, timeout=10)
+        vh = 1080
         try:
+            info_cmd = subprocess.run(
+                ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
+                 "-show_entries", "stream=height", "-of", "csv=p=0", video_path],
+                capture_output=True, timeout=10)
             vh = int(info_cmd.stdout.decode().strip())
-        except Exception:
-            vh = 1080
+        except (FileNotFoundError, subprocess.TimeoutExpired, ValueError, OSError):
+            pass
         bar_h = font_size * 2 + 30
         y_bar = vh - bar_h - 60
         vf = (

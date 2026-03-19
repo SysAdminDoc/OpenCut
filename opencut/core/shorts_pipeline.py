@@ -75,6 +75,13 @@ def _probe_duration(filepath: str) -> float:
 
 def _trim_clip(input_path: str, start: float, end: float, output_path: str):
     """Trim a clip using FFmpeg stream copy (fast)."""
+    import math
+    start = float(start)
+    end = float(end)
+    if math.isnan(start) or math.isinf(start) or start < 0:
+        start = 0.0
+    if math.isnan(end) or math.isinf(end) or end <= start:
+        raise ValueError(f"Invalid trim range: start={start}, end={end}")
     cmd = [
         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
         "-ss", str(start),
@@ -277,8 +284,8 @@ def generate_shorts(
                     crop_cmd = [
                         "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                         "-i", current_path,
-                        "-vf", f"crop=ih*{config.target_w}/{config.target_h}:ih,"
-                               f"scale={config.target_w}:{config.target_h}",
+                        "-vf", f"crop=ih*{int(config.target_w)}/{int(config.target_h)}:ih,"
+                               f"scale={int(config.target_w)}:{int(config.target_h)}",
                         "-c:v", "libx264", "-crf", "18", "-preset", "fast",
                         "-pix_fmt", "yuv420p", "-c:a", "copy",
                         cropped_path,

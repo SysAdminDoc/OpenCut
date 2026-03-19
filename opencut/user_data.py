@@ -35,6 +35,10 @@ def _get_lock(filepath: str) -> threading.RLock:
     key = os.path.normcase(os.path.realpath(filepath))
     with _file_locks_guard:
         if key not in _file_locks:
+            # Evict oldest entry if at capacity (safety bound)
+            if len(_file_locks) >= _MAX_FILE_LOCKS:
+                oldest = next(iter(_file_locks))
+                del _file_locks[oldest]
             _file_locks[key] = threading.RLock()
         return _file_locks[key]
 

@@ -514,11 +514,17 @@ input, textarea, [contenteditable] {
     align-items: center;
     justify-content: space-between;
     padding: 8px 14px;
-    background: var(--glass);
-    backdrop-filter: blur(25px);
+    background: var(--bg-card);
     border-bottom: 1px solid var(--glass-border);
     position: relative;
     z-index: 100;
+}
+/* Glassmorphism with fallback for older CEP Chromium (CC 2019-2020) */
+@supports (backdrop-filter: blur(1px)) {
+    .content-header {
+        background: var(--glass);
+        backdrop-filter: blur(25px);
+    }
 }
 
 /* Animated top border on content header */
@@ -1090,11 +1096,14 @@ body.job-active .btn-install {
     padding: 4px;
     overflow-x: auto;
     overflow-y: hidden;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
+    scrollbar-width: thin;
+    scrollbar-color: var(--text-muted) transparent;
     border: 1px solid var(--border);
     position: relative;
 }
+.sub-tabs::-webkit-scrollbar { height: 3px; }
+.sub-tabs::-webkit-scrollbar-track { background: transparent; }
+.sub-tabs::-webkit-scrollbar-thumb { background: var(--text-muted); border-radius: 3px; }
 
 /* Fade indicator when sub-tabs overflow (e.g. Video panel's 18 tabs) */
 .sub-tabs.has-overflow::after {
@@ -1197,7 +1206,6 @@ body.job-active .btn-install {
 .card:hover::before { opacity: 0.6; }
 
 .card:hover {
-    transform: translateY(-3px);
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4), 0 0 30px var(--cyan-subtle);
 }
 
@@ -3908,4 +3916,14 @@ textarea:focus-visible,
 }
 .card.expanded .card-header .collapse-icon::before {
     content: "\25BC";
+}
+
+/* Pause all animations when page is not visible (saves GPU/CPU in Premiere) */
+.app.paused-animations,
+.app.paused-animations *,
+.app.paused-animations::before,
+.app.paused-animations::after,
+.app.paused-animations *::before,
+.app.paused-animations *::after {
+    animation-play-state: paused !important;
 }
