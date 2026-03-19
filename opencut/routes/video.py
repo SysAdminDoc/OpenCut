@@ -421,7 +421,7 @@ def video_scenes():
     job_id = _new_job("scenes", filepath)
 
     method = data.get("method", "ffmpeg").strip().lower()
-    if method not in ("ffmpeg", "ml"):
+    if method not in ("ffmpeg", "ml", "pyscenedetect"):
         method = "ffmpeg"
 
     def _process():
@@ -435,6 +435,13 @@ def video_scenes():
                 from opencut.core.scene_detect import detect_scenes_ml
                 info = detect_scenes_ml(
                     filepath, threshold=threshold,
+                    min_scene_length=min_scene,
+                    on_progress=_on_progress,
+                )
+            elif method == "pyscenedetect":
+                from opencut.core.scene_detect import detect_scenes_pyscenedetect
+                info = detect_scenes_pyscenedetect(
+                    filepath, threshold=safe_float(data.get("threshold", 27.0), 27.0, min_val=5.0, max_val=80.0),
                     min_scene_length=min_scene,
                     on_progress=_on_progress,
                 )

@@ -457,6 +457,75 @@ def detect_scenes_ml(
     )
 
 
+# ---------------------------------------------------------------------------
+# PySceneDetect (fast, heuristic-based)
+# ---------------------------------------------------------------------------
+def detect_scenes_pyscenedetect(
+    input_path: str,
+    threshold: float = 27.0,
+    min_scene_length: float = 2.0,
+    on_progress: Optional[Callable] = None,
+) -> SceneInfo:
+    """
+    Detect scene boundaries using PySceneDetect (heuristic, fast).
+
+    Faster than TransNetV2 ML approach. Good for rough cuts and long videos.
+    Uses ContentDetector (HSV color histogram + delta analysis).
+
+    Args:
+        threshold: ContentDetector threshold (default 27.0, range ~15-50).
+        min_scene_length: Minimum scene duration in seconds.
+    """
+    try:
+        from scenedetect import SceneManager, open_video
+        from scenedetect.detectors import ContentDetector
+    except ImportError:
+        raise RuntimeError("PySceneDetect not installed. Run: pip install scenedetect[opencv]")
+
+    if on_progress:
+        on_progress(10, "Opening video with PySceneDetect...")
+
+    video = open_video(input_path)
+    fps = video.frame_rate
+    duration = video.duration.get_seconds() if hasattr(video.duration, 'get_seconds') else 0.0
+
+    scene_manager = SceneManager()
+    min_frames = max(1, int(min_scene_length * fps))
+    scene_manager.add_detector(ContentDetector(threshold=threshold, min_scene_len=min_frames))
+
+    if on_progress:
+        on_progress(20, "Detecting scenes...")
+
+    scene_manager.detect_scenes(video, show_progress=False)
+    scene_list = scene_manager.get_scene_list()
+
+    if on_progress:
+        on_progress(80, "Building scene boundaries...")
+
+    boundaries = []
+    for i, (start, end) in enumerate(scene_list):
+        start_sec = start.get_seconds()
+        boundaries.append(SceneBoundary(
+            time=round(start_sec, 3),
+            frame=start.get_frames(),
+            score=1.0,
+            label=f"Scene {i + 1}",
+        ))
+
+    total_scenes = len(boundaries)
+    avg_scene = duration / total_scenes if total_scenes > 0 else duration
+
+    if on_progress:
+        on_progress(100, f"Found {total_scenes} scenes (PySceneDetect)")
+
+    return SceneInfo(
+        boundaries=boundaries,
+        total_scenes=total_scenes,
+        duration=duration,
+        avg_scene_length=round(avg_scene, 2),
+    )
+
+
 SPEED_RAMP_PRESETS = [
     {"name": "dramatic_pause", "label": "Dramatic Pause", "description": "Slow down in the middle for impact"},
     {"name": "smooth_ramp_up", "label": "Smooth Ramp Up", "description": "Gradually accelerate"},
