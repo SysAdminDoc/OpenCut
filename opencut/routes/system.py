@@ -503,7 +503,11 @@ def install_whisper():
         rate_limit_release("model_install")
         return jsonify({"error": f"Unknown backend: {backend}"}), 400
 
-    job_id = _new_job("install-whisper", backend)
+    try:
+        job_id = _new_job("install-whisper", backend)
+    except Exception:
+        rate_limit_release("model_install")
+        raise
 
     def _process():
         import subprocess as _sp
@@ -773,7 +777,11 @@ def whisper_reinstall():
 
     cpu_mode = data.get("cpu_mode", False)
 
-    job_id = _new_job("reinstall-whisper", backend)
+    try:
+        job_id = _new_job("reinstall-whisper", backend)
+    except Exception:
+        rate_limit_release("model_install")
+        raise
 
     def _process():
         import subprocess as _sp
@@ -882,7 +890,11 @@ def whisper_reinstall():
                 elif "installing" in line:
                     _update_job(job_id, progress=70, message="Installing packages...")
 
-            proc.wait()
+            try:
+                proc.wait(timeout=600)
+            except Exception:
+                proc.kill()
+                proc.wait(timeout=10)
             _unregister_job_process(job_id)
 
             if proc.returncode != 0:

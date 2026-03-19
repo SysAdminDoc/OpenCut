@@ -14,34 +14,15 @@ FFmpeg-based video effects:
 
 import logging
 import os
-import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import output_path as _output_path
 from opencut.helpers import run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
 
-def _probe_duration(filepath: str) -> float:
-    """Get media duration in seconds."""
-    cmd = [
-        "ffprobe", "-v", "quiet", "-show_entries", "format=duration",
-        "-of", "default=nw=1:nk=1", filepath,
-    ]
-    result = subprocess.run(cmd, capture_output=True, timeout=30)
-    try:
-        return float(result.stdout.decode().strip())
-    except (ValueError, AttributeError):
-        return 0.0
-
-
-def _output_path(input_path: str, suffix: str, output_dir: str = "") -> str:
-    """Generate output path with suffix."""
-    base = os.path.splitext(os.path.basename(input_path))[0]
-    ext = os.path.splitext(input_path)[1] or ".mp4"
-    directory = output_dir or os.path.dirname(input_path)
-    return os.path.join(directory, f"{base}_{suffix}{ext}")
 
 
 # ---------------------------------------------------------------------------
@@ -92,7 +73,7 @@ def stabilize_video(
             on_progress(50, "Stabilizing video (pass 2/2)...")
 
         # Pass 2: Apply stabilization
-        vf = f"vidstabtransform=input='{trf_safe}':smoothing={smoothing}:crop={crop}:zoom={zoom}:interpol=linear"
+        vf = f"vidstabtransform=input='{trf_safe}':smoothing={int(smoothing)}:crop={crop}:zoom={int(zoom)}:interpol=linear"
         cmd2 = [
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
@@ -155,7 +136,7 @@ def chromakey(
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path, "-i", background,
             "-filter_complex",
-            f"[0:v]colorkey={color}:{similarity}:{blend}[fg];[1:v][fg]overlay=shortest=1",
+            f"[0:v]colorkey={color}:{float(similarity)}:{float(blend)}[fg];[1:v][fg]overlay=shortest=1",
             "-c:a", "copy",
             output_path,
         ]
@@ -164,7 +145,7 @@ def chromakey(
         cmd = [
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
-            "-vf", f"colorkey={color}:{similarity}:{blend}",
+            "-vf", f"colorkey={color}:{float(similarity)}:{float(blend)}",
             "-c:v", "prores_ks", "-profile:v", "4",
             "-pix_fmt", "yuva444p10le",
             "-c:a", "copy",
