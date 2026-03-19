@@ -245,9 +245,95 @@ MUSICGEN_MODELS = [
 ]
 
 
+def check_ace_step_available() -> bool:
+    try:
+        import ace_step  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# ACE-Step Music Generation (full songs with vocals + lyrics)
+# ---------------------------------------------------------------------------
+def generate_music_ace_step(
+    prompt: str,
+    lyrics: str = "",
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    duration: float = 30.0,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    Generate music (with optional vocals + lyrics) using ACE-Step 1.5.
+
+    Superior to MusicGen: full songs with vocals+lyrics, 10x faster,
+    4x less VRAM (<4GB), 1000+ styles, 19 languages. Apache 2.0.
+
+    Args:
+        prompt: Style/genre description (e.g. "upbeat pop, female vocalist, catchy melody").
+        lyrics: Optional lyrics for vocal generation. Empty = instrumental.
+        duration: Song length in seconds (10-600).
+    """
+    if not ensure_package("ace_step", "ace-step", on_progress):
+        raise RuntimeError("ACE-Step not installed. Run: pip install ace-step")
+
+    if on_progress:
+        on_progress(5, "Loading ACE-Step model...")
+
+    import torch
+    from ace_step import ACEStep
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = ACEStep.from_pretrained(device=device)
+
+    if output_path is None:
+        directory = output_dir or tempfile.gettempdir()
+        import re
+        safe_prompt = re.sub(r'[^\w\-]', '_', prompt[:30]).strip('_')
+        output_path = os.path.join(directory, f"ace_step_{safe_prompt}.wav")
+
+    duration = max(10.0, min(600.0, duration))
+
+    if on_progress:
+        on_progress(20, f"Generating music: '{prompt[:50]}'...")
+
+    with torch.inference_mode():
+        result = model.generate(
+            prompt=prompt,
+            lyrics=lyrics or None,
+            duration=duration,
+        )
+
+    if on_progress:
+        on_progress(80, "Saving audio...")
+
+    # Save output
+    import soundfile as sf
+    audio_data = result["audio"]
+    if hasattr(audio_data, "cpu"):
+        audio_data = audio_data.cpu().numpy()
+    if audio_data.ndim == 2:
+        audio_data = audio_data.T
+    sf.write(output_path, audio_data, result.get("sample_rate", 44100))
+
+    # Free GPU
+    try:
+        del model
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
+
+    if on_progress:
+        on_progress(100, "Music generated with ACE-Step!")
+    return output_path
+
+
 def get_music_ai_capabilities() -> Dict:
     return {
         "audiocraft": check_audiocraft_available(),
+        "ace_step": check_ace_step_available(),
         "cuda": check_torch_cuda(),
         "models": MUSICGEN_MODELS,
     }
