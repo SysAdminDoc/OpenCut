@@ -610,3 +610,40 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **app.manifest version** — updated from "1.3.0.0" to "1.3.1.0" (app.manifest)
 - **Version sync +2 targets** — added `app.manifest` and `Install.ps1` to `sync_version.py` (now 17 targets total)
 - **Legacy InstallerBuilder.ps1** — marked as DEPRECATED with note to use `installer/InstallerBuilder.ps1` instead
+
+## Phase 1 — Competitive Upgrades (Quick Wins)
+- **rembg default → BiRefNet** — Changed default model from `u2net` to `birefnet-general` in route + module + UI. Added `birefnet-massive` as highest-quality option. Dramatically sharper edge detection.
+- **Whisper default → turbo** — Changed default model from `base` to `turbo` (6x faster, near large-v3 accuracy). Updated all 3 UI selectors + user_data defaults + installer.
+- **Distil-Whisper models** — Added `distil-large-v3.5`, `distil-large-v3`, `distil-medium.en`, `distil-small.en` to `VALID_WHISPER_MODELS`. Added distil-large-v3.5 and distil-large-v3 to all UI model selectors. These are 6x faster, 49% smaller, within 1% WER of full Whisper.
+- **faster-whisper min version** — Bumped from `>=1.0` to `>=1.1` in pyproject.toml (required for turbo + distil model support)
+
+## Competitive Upgrade Roadmap (March 2026 Research)
+
+### Phase 2 — Dependency Swaps (Medium Effort)
+- [ ] **Audio separation**: Replace archived Demucs with `python-audio-separator` + Mel-Band RoFormer models (better SDR, actively maintained)
+- [ ] **Speech enhancement**: Replace stale Resemble Enhance + DeepFilterNet with `ClearerVoice-Studio` (Alibaba) — single library for denoise + super-res + separation, 48kHz
+- [ ] **Style transfer**: Replace 2016 .t7 models with PyTorch AdaIN arbitrary style transfer — any image as style reference
+- [ ] **Object removal**: Replace per-frame LAMA with `ProPainter` for video inpainting — temporal flow coherence eliminates flickering
+- [ ] **Face enhancement**: Add `CodeFormer` alongside GFPGAN — tunable fidelity slider, better identity preservation
+- [ ] **Face detection**: Use InsightFace `buffalo_l` for accuracy-critical paths (swap, enhance) — already a dependency
+
+### Phase 3 — New Features (Higher Effort)
+- [ ] **Music generation**: Add `ACE-Step 1.5` — full songs WITH vocals+lyrics, 10x faster than MusicGen, 4x less VRAM, Apache 2.0
+- [ ] **TTS tiers**: Add `Kokoro` (82M params, CPU, fast) + `Chatterbox` (voice cloning, emotion, 23 langs, MIT) alongside edge-tts
+- [ ] **Voice cloning**: Via Chatterbox — zero-shot from 5s audio, emotion control, paralinguistic tags
+- [ ] **AI color grading**: Add `Image-Adaptive-3DLUT` — learned 3D LUTs, <2ms on 4K, replaces histogram matching
+- [ ] **Motion graphics**: Add `Remotion` render service — React-based, After Effects quality titles/animations vs FFmpeg drawtext
+- [ ] **Video denoising**: Add `BasicVSR++` as GPU option — temporal propagation across frames vs spatial-only nlmeans
+- [ ] **Scene detection**: Add `PySceneDetect` as fast complement to TransNetV2 — 4.6k stars, actively maintained
+- [ ] **Neural LUT blending**: Add `NILUT` for continuous style blending — single slider between any two color grades
+- [ ] **Translation**: Add `SeamlessM4T v2` as "High Quality" option — 20% BLEU improvement, multimodal
+- [ ] **Caption NLP emphasis**: Auto-detect important words, apply different highlight colors/sizes in Pillow renderer
+
+### Phase 4 — Architecture (Long-term)
+- [ ] **UXP migration** — CEP deprecated, removal late 2026. PremiereBridge abstraction already in place. Test with UXP samples.
+- [ ] **MCP server exposure** — Expose OpenCut's 81 endpoints as MCP server for AI client integration (Claude Code, Cursor, etc.)
+- [ ] **Vision-augmented highlights** — GPT-4o/Claude frame sampling alongside transcript for visual-only highlights
+- [ ] **Transcription slicing** — Transcribe once, cache, reuse across all highlight/shorts operations (from ViralCutter pattern)
+
+### Keep As-Is (Already Best-in-Class)
+- faster-whisper (transcription engine), WhisperX (alignment), Real-ESRGAN (upscaling), InsightFace (face swap), auto-editor (auto-editing), pedalboard (audio effects), pyannote.audio (diarization — update to v4.0.4)
