@@ -156,6 +156,101 @@ def generate_masks_sam2(
 
 
 # ---------------------------------------------------------------------------
+# Video Inpainting (ProPainter - temporally coherent)
+# ---------------------------------------------------------------------------
+def inpaint_video_propainter(
+    video_path: str,
+    mask_dir: str,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    Inpaint masked regions in video using ProPainter (ICCV 2023).
+
+    Temporally coherent video inpainting via flow completion + dual-domain
+    propagation. Produces far better results than per-frame LAMA for video
+    (no flickering, consistent background fill across frames).
+
+    Args:
+        video_path: Source video.
+        mask_dir: Directory of binary mask PNGs (white = inpaint region).
+    """
+    import subprocess as _sp
+
+    if not check_propainter_available():
+        raise RuntimeError(
+            "ProPainter not installed. Clone to ~/.opencut/models/propainter: "
+            "git clone https://github.com/sczhou/ProPainter ~/.opencut/models/propainter"
+        )
+
+    if output_path is None:
+        base = os.path.splitext(os.path.basename(video_path))[0]
+        directory = output_dir or os.path.dirname(video_path)
+        output_path = os.path.join(directory, f"{base}_inpainted.mp4")
+
+    if on_progress:
+        on_progress(10, "Running ProPainter video inpainting...")
+
+    propainter_dir = os.path.expanduser("~/.opencut/models/propainter")
+    inference_script = os.path.join(propainter_dir, "inference_propainter.py")
+
+    if not os.path.isfile(inference_script):
+        raise RuntimeError(f"ProPainter inference script not found: {inference_script}")
+
+    import sys
+    cmd = [
+        sys.executable, inference_script,
+        "--video", video_path,
+        "--mask", mask_dir,
+        "--output", os.path.dirname(output_path),
+        "--save_fps", "0",  # auto-detect from source
+        "--fp16",
+    ]
+
+    result = _sp.run(cmd, capture_output=True, text=True, timeout=7200, cwd=propainter_dir)
+    if result.returncode != 0:
+        stderr = result.stderr.strip()[-500:] if result.stderr else "unknown error"
+        raise RuntimeError(f"ProPainter failed: {stderr}")
+
+    # ProPainter writes to output dir — find the result
+    out_dir = os.path.dirname(output_path)
+    candidates = [f for f in os.listdir(out_dir) if f.startswith("inpaint_") and f.endswith(".mp4")]
+    if candidates:
+        # Rename to expected output path
+        src = os.path.join(out_dir, sorted(candidates)[-1])
+        if src != output_path:
+            import shutil
+            shutil.move(src, output_path)
+
+    if not os.path.isfile(output_path):
+        raise RuntimeError("ProPainter produced no output file")
+
+    # Mux audio from source
+    temp_out = output_path + ".tmp.mp4"
+    try:
+        run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-i", output_path, "-i", video_path,
+            "-map", "0:v", "-map", "1:a?",
+            "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+            "-shortest", temp_out,
+        ], timeout=300)
+        import shutil
+        shutil.move(temp_out, output_path)
+    except Exception:
+        # If muxing fails, keep video-only output
+        try:
+            os.unlink(temp_out)
+        except OSError:
+            pass
+
+    if on_progress:
+        on_progress(100, "Video inpainting complete!")
+    return output_path
+
+
+# ---------------------------------------------------------------------------
 # Static Watermark Removal (LaMA - lightweight)
 # ---------------------------------------------------------------------------
 def remove_watermark_lama(

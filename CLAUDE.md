@@ -620,12 +620,12 @@ enhance = ["resemble-enhance>=0.0.1"]
 ## Competitive Upgrade Roadmap (March 2026 Research)
 
 ### Phase 2 — Dependency Swaps (Medium Effort)
-- [ ] **Audio separation**: Replace archived Demucs with `python-audio-separator` + Mel-Band RoFormer models (better SDR, actively maintained)
-- [ ] **Speech enhancement**: Replace stale Resemble Enhance + DeepFilterNet with `ClearerVoice-Studio` (Alibaba) — single library for denoise + super-res + separation, 48kHz
-- [ ] **Style transfer**: Replace 2016 .t7 models with PyTorch AdaIN arbitrary style transfer — any image as style reference
-- [ ] **Object removal**: Replace per-frame LAMA with `ProPainter` for video inpainting — temporal flow coherence eliminates flickering
-- [ ] **Face enhancement**: Add `CodeFormer` alongside GFPGAN — tunable fidelity slider, better identity preservation
-- [ ] **Face detection**: Use InsightFace `buffalo_l` for accuracy-critical paths (swap, enhance) — already a dependency
+- [x] **Audio separation**: Added `python-audio-separator` backend with Mel-Band RoFormer, BS-RoFormer, SCNet, MDX23C models alongside Demucs (backend param in `/audio/separate`)
+- [x] **Speech enhancement**: Added `ClearerVoice-Studio` as recommended backend (MossFormer2/FRCRN) alongside Resemble Enhance. `backend` param in `/audio/enhance`
+- [x] **Style transfer**: Added `arbitrary_style_transfer()` — any image as style reference via AdaIN color transfer in LAB space. New `/video/style/arbitrary` route. Original .t7 preset styles retained.
+- [x] **Object removal**: Added `inpaint_video_propainter()` for temporally coherent video inpainting (ICCV 2023). LAMA retained as per-frame fallback.
+- [x] **Face enhancement**: Added `CodeFormer` alongside GFPGAN — tunable fidelity slider (0=quality, 1=identity), model param in `/video/face/enhance`
+- [x] **Face detection**: Added InsightFace `buffalo_l` as `"insightface"` detector option in face_tools (highest accuracy). Route allowlists updated.
 
 ### Phase 3 — New Features (Higher Effort)
 - [ ] **Music generation**: Add `ACE-Step 1.5` — full songs WITH vocals+lyrics, 10x faster than MusicGen, 4x less VRAM, Apache 2.0

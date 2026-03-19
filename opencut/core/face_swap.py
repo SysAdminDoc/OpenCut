@@ -48,25 +48,35 @@ def enhance_faces(
     output_dir: str = "",
     model: str = "gfpgan",
     upscale: int = 2,
+    fidelity: float = 0.5,
     on_progress: Optional[Callable] = None,
 ) -> str:
     """
-    Enhance/restore faces in video using GFPGAN.
+    Enhance/restore faces in video using GFPGAN or CodeFormer.
 
     Upscales and restores face quality - fixes blur, compression artifacts,
     and low resolution on faces while preserving the rest of the frame.
 
     Args:
-        model: "gfpgan" (default, best general quality).
+        model: "gfpgan" (fast, good general quality) or "codeformer" (tunable fidelity, better identity).
         upscale: Face upscale factor (1-4).
+        fidelity: CodeFormer fidelity weight (0.0=quality, 1.0=fidelity). Ignored for GFPGAN.
     """
-    if not ensure_package("gfpgan", "gfpgan", on_progress):
-        raise RuntimeError("GFPGAN not installed. Run: pip install gfpgan")
     if not ensure_package("cv2", "opencv-python-headless", on_progress):
         raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
 
     import cv2
-    from gfpgan import GFPGANer
+
+    use_codeformer = model == "codeformer"
+
+    if use_codeformer:
+        if not ensure_package("basicsr", "basicsr", on_progress):
+            raise RuntimeError("basicsr not installed. Run: pip install basicsr")
+        if not ensure_package("facelib", "facexlib", on_progress):
+            raise RuntimeError("facexlib not installed. Run: pip install facexlib")
+    else:
+        if not ensure_package("gfpgan", "gfpgan", on_progress):
+            raise RuntimeError("GFPGAN not installed. Run: pip install gfpgan")
 
     if output_path is None:
         base = os.path.splitext(os.path.basename(video_path))[0]
@@ -74,18 +84,46 @@ def enhance_faces(
         output_path = os.path.join(directory, f"{base}_enhanced.mp4")
 
     if on_progress:
-        on_progress(5, "Loading GFPGAN model...")
+        on_progress(5, f"Loading {model} model...")
 
-    # Auto-download model
-    model_path = os.path.expanduser("~/.opencut/models/GFPGANv1.4.pth")
-    os.makedirs(os.path.dirname(model_path), exist_ok=True)
+    if use_codeformer:
+        # CodeFormer — tunable fidelity, better identity preservation
+        import torch
+        from basicsr.archs.codeformer_arch import CodeFormer as CodeFormerArch
+        from basicsr.utils.download_util import load_file_from_url
 
-    restorer = GFPGANer(
-        model_path=model_path,
-        upscale=upscale,
-        arch="clean",
-        channel_multiplier=2,
-    )
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        codeformer_model_path = os.path.expanduser("~/.opencut/models/codeformer.pth")
+        os.makedirs(os.path.dirname(codeformer_model_path), exist_ok=True)
+        if not os.path.isfile(codeformer_model_path):
+            load_file_from_url(
+                "https://github.com/sczhou/CodeFormer/releases/download/v0.1.0/codeformer.pth",
+                model_dir=os.path.dirname(codeformer_model_path),
+                file_name="codeformer.pth",
+            )
+        codeformer_net = CodeFormerArch(dim_embd=512, codebook_size=1024, n_head=8, n_layers=9, connect_list=["32", "64", "128", "256"]).to(device)
+        ckpt = torch.load(codeformer_model_path, map_location=device, weights_only=True)
+        codeformer_net.load_state_dict(ckpt.get("params_ema", ckpt.get("params", ckpt)), strict=False)
+        codeformer_net.eval()
+
+        from facexlib.utils.face_restoration_helper import FaceRestoreHelper
+        face_helper = FaceRestoreHelper(
+            upscale_factor=upscale, face_size=512, crop_ratio=(1, 1),
+            det_model="retinaface_resnet50", save_ext="png", device=device,
+        )
+        restorer = None  # signal to use codeformer path
+    else:
+        from gfpgan import GFPGANer
+        # Auto-download model
+        model_path = os.path.expanduser("~/.opencut/models/GFPGANv1.4.pth")
+        os.makedirs(os.path.dirname(model_path), exist_ok=True)
+
+        restorer = GFPGANer(
+            model_path=model_path,
+            upscale=upscale,
+            arch="clean",
+            channel_multiplier=2,
+        )
 
     cap = cv2.VideoCapture(video_path)
     if not cap.isOpened():
@@ -119,12 +157,33 @@ def enhance_faces(
                 break
 
             try:
-                _, _, output = restorer.enhance(frame, paste_back=True)
-                if output is not None:
-                    output = cv2.resize(output, (orig_w, orig_h))
-                    writer.write(output)
+                if use_codeformer:
+                    import torch
+                    face_helper.clean_all()
+                    face_helper.read_image(frame)
+                    face_helper.get_face_landmarks_5(only_center_face=False, resize=640, eye_dist_threshold=5)
+                    face_helper.align_warp_face()
+                    for cropped_face in face_helper.cropped_faces:
+                        cropped_t = torch.from_numpy(cropped_face.transpose(2, 0, 1)).float().unsqueeze(0) / 255.0
+                        cropped_t = cropped_t.to(face_helper.device)
+                        with torch.no_grad():
+                            cf_output = codeformer_net(cropped_t, w=fidelity, adain=True)[0]
+                        restored = cf_output.squeeze(0).clamp(0, 1).cpu().numpy().transpose(1, 2, 0) * 255
+                        face_helper.add_restored_face(restored.astype("uint8"))
+                    face_helper.get_inverse_affine(None)
+                    output = face_helper.paste_faces_to_input_image()
+                    if output is not None:
+                        output = cv2.resize(output, (orig_w, orig_h))
+                        writer.write(output)
+                    else:
+                        writer.write(frame)
                 else:
-                    writer.write(frame)
+                    _, _, output = restorer.enhance(frame, paste_back=True)
+                    if output is not None:
+                        output = cv2.resize(output, (orig_w, orig_h))
+                        writer.write(output)
+                    else:
+                        writer.write(frame)
             except Exception as e:
                 logger.debug("Face enhance frame %d failed: %s", frame_idx, e)
                 writer.write(frame)
@@ -154,9 +213,12 @@ def enhance_faces(
             os.unlink(tmp_video)
         except OSError:
             pass
-        # Free GPU memory from GFPGAN model
+        # Free GPU memory from face enhancement model
         try:
-            del restorer
+            if use_codeformer:
+                del codeformer_net, face_helper
+            else:
+                del restorer
         except Exception:
             pass
         try:

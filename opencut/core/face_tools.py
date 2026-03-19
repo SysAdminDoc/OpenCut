@@ -33,8 +33,16 @@ def check_mediapipe_available() -> bool:
         return False
 
 
+def check_insightface_available() -> bool:
+    try:
+        import insightface  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 def check_face_tools_available() -> Dict:
-    caps = {"mediapipe": check_mediapipe_available()}
+    caps = {"mediapipe": check_mediapipe_available(), "insightface": check_insightface_available()}
     try:
         import cv2  # noqa: F401
         caps["opencv"] = True
@@ -82,6 +90,30 @@ def _detect_faces_haar(frame, cascade):
     return [(int(x), int(y), int(w), int(h)) for (x, y, w, h) in rects]
 
 
+def _detect_faces_insightface(frame, app):
+    """Detect faces using InsightFace buffalo_l. Returns list of (x, y, w, h) rects.
+
+    Higher accuracy than MediaPipe/Haar, especially on difficult angles,
+    occlusions, and low-resolution faces. Uses RetinaFace detector internally.
+    """
+    faces = app.get(frame)
+    rects = []
+    for face in faces:
+        bbox = face.bbox.astype(int)
+        x1, y1, x2, y2 = bbox[0], bbox[1], bbox[2], bbox[3]
+        # Add padding (15%)
+        w = x2 - x1
+        h = y2 - y1
+        pad_x = int(w * 0.15)
+        pad_y = int(h * 0.15)
+        x1 = max(0, x1 - pad_x)
+        y1 = max(0, y1 - pad_y)
+        w = min(frame.shape[1] - x1, w + 2 * pad_x)
+        h = min(frame.shape[0] - y1, h + 2 * pad_y)
+        rects.append((x1, y1, w, h))
+    return rects
+
+
 # ---------------------------------------------------------------------------
 # Face Blur / Pixelate
 # ---------------------------------------------------------------------------
@@ -100,7 +132,7 @@ def blur_faces(
     Args:
         method: "gaussian" (smooth blur), "pixelate" (mosaic), "black" (solid box).
         strength: Blur kernel size (odd number, higher = more blur). For pixelate, block size.
-        detector: "mediapipe" (best) or "haar" (fallback, no install needed).
+        detector: "insightface" (highest accuracy), "mediapipe" (fast), or "haar" (fallback).
     """
     if not ensure_package("cv2", "opencv-python-headless", on_progress):
         raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
@@ -119,6 +151,17 @@ def blur_faces(
     # Set up detector
     face_det = None
     mp_face = None
+    insight_app = None
+    if detector == "insightface":
+        try:
+            ensure_package("insightface", "insightface", on_progress)
+            ensure_package("onnxruntime", "onnxruntime", on_progress)
+            import insightface
+            insight_app = insightface.app.FaceAnalysis(name="buffalo_l", providers=["CUDAExecutionProvider", "CPUExecutionProvider"])
+            insight_app.prepare(ctx_id=0, det_size=(640, 640))
+        except Exception:
+            detector = "mediapipe"
+
     if detector == "mediapipe":
         try:
             ensure_package("mediapipe", "mediapipe", on_progress)
@@ -162,7 +205,9 @@ def blur_faces(
                 continue
 
             # Detect faces
-            if detector == "mediapipe" and mp_face:
+            if detector == "insightface" and insight_app:
+                rects = _detect_faces_insightface(frame, insight_app)
+            elif detector == "mediapipe" and mp_face:
                 rects = _detect_faces_mediapipe(frame, mp_face)
             else:
                 rects = _detect_faces_haar(frame, face_det)

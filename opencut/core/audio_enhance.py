@@ -1,10 +1,11 @@
 """
 OpenCut Audio Enhancement Module
 
-Speech super-resolution using Resemble Enhance.
-Upsamples low-quality speech audio to studio quality.
+Speech denoising and super-resolution:
+- ClearerVoice-Studio (recommended): MossFormer2/FRCRN, 16kHz/48kHz, denoise+enhance+separation
+- Resemble Enhance (legacy): ODE-based super-resolution
 
-Requires: pip install resemble-enhance
+Requires: pip install clearvoice (preferred) or pip install resemble-enhance (legacy)
 """
 
 import logging
@@ -256,6 +257,111 @@ def enhance_speech(
         except Exception:
             pass
         try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
+
+
+# ---------------------------------------------------------------------------
+# ClearerVoice-Studio enhancement (recommended alternative)
+# ---------------------------------------------------------------------------
+def enhance_speech_clearvoice(
+    input_path,
+    output_path=None,
+    output_dir="",
+    task="speech_enhancement",
+    model="MossFormer2_SE_48K",
+    on_progress=None,
+):
+    """
+    Enhance speech audio using ClearerVoice-Studio (Alibaba).
+
+    Superior to Resemble Enhance: single library handles denoising,
+    super-resolution, and separation. Supports 16kHz and 48kHz models.
+
+    Args:
+        input_path: Path to input audio/video file.
+        output_path: Optional explicit output path.
+        output_dir: Directory for output.
+        task: "speech_enhancement" (denoise+enhance) or "speech_separation".
+        model: ClearerVoice model name. Options:
+            - "MossFormer2_SE_48K" (best quality, 48kHz)
+            - "FRCRN_SE_16K" (fast, 16kHz, 3M+ uses on ModelScope)
+            - "MossFormerGAN_SE_16K" (balanced, 16kHz)
+        on_progress: Progress callback(pct, msg).
+
+    Returns:
+        Output file path string.
+    """
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
+    if on_progress:
+        on_progress(5, "Loading ClearerVoice model...")
+
+    try:
+        from clearvoice import ClearVoice
+    except ImportError:
+        raise RuntimeError(
+            "clearvoice is required. Install with: pip install clearvoice"
+        )
+
+    # If input is video, extract audio to temp WAV
+    temp_wav = None
+    audio_path = input_path
+
+    if _is_video(input_path):
+        if on_progress:
+            on_progress(10, "Extracting audio from video...")
+
+        _tmp = tempfile.NamedTemporaryFile(suffix=".wav", prefix="opencut_cv_", delete=False)
+        temp_wav = _tmp.name
+        _tmp.close()
+        _extract_audio(input_path, temp_wav)
+        audio_path = temp_wav
+
+    try:
+        if on_progress:
+            on_progress(20, f"Running {model}...")
+
+        cv = ClearVoice(task=task, model_names=[model])
+        result = cv(input_path=audio_path, online_write=False)
+
+        if on_progress:
+            on_progress(80, "Saving enhanced audio...")
+
+        # Build output path
+        if output_path is None:
+            base_name = os.path.splitext(os.path.basename(input_path))[0]
+            suffix = "_enhanced.wav"
+            if output_dir and os.path.isdir(output_dir):
+                output_path = os.path.join(output_dir, base_name + suffix)
+            else:
+                output_path = os.path.join(os.path.dirname(input_path), base_name + suffix)
+
+        out_dir = os.path.dirname(output_path)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+
+        # ClearVoice returns dict of {model: output_array} or writes to file
+        # Write result using the library's write method
+        cv.write(result, output_path=output_path)
+
+        if on_progress:
+            on_progress(100, "Audio enhanced!")
+
+        logger.info("ClearerVoice enhanced: %s -> %s", input_path, output_path)
+        return output_path
+
+    finally:
+        if temp_wav and os.path.isfile(temp_wav):
+            try:
+                os.remove(temp_wav)
+            except OSError:
+                pass
+        try:
+            import torch
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
         except Exception:

@@ -1192,7 +1192,7 @@ def face_detect():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     detector = data.get("detector", "mediapipe")
-    if detector not in ("mediapipe", "haar"):
+    if detector not in ("insightface", "mediapipe", "haar"):
         detector = "mediapipe"
 
     if not filepath:
@@ -1223,7 +1223,7 @@ def face_blur():
         method = "gaussian"
     strength = safe_int(data.get("strength", 51), 51, min_val=1, max_val=99)
     detector = data.get("detector", "mediapipe")
-    if detector not in ("mediapipe", "haar"):
+    if detector not in ("insightface", "mediapipe", "haar"):
         detector = "mediapipe"
 
     if not filepath:
@@ -1360,6 +1360,59 @@ def style_apply():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
             logger.exception("Style transfer error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+@video_bp.route("/video/style/arbitrary", methods=["POST"])
+@require_csrf
+def style_arbitrary():
+    """Apply arbitrary style transfer using any reference image."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    style_image = data.get("style_image", "").strip()
+    intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=1.0)
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+    if not style_image:
+        return jsonify({"error": "No style image provided"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+        style_image = validate_filepath(style_image)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    job_id = _new_job("style-arbitrary", filepath)
+
+    def _process():
+        try:
+            from opencut.core.style_transfer import arbitrary_style_transfer
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            effective_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
+            out = arbitrary_style_transfer(
+                filepath, style_image,
+                output_dir=effective_dir,
+                intensity=intensity,
+                on_progress=_on_progress,
+            )
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="Arbitrary style transfer complete!",
+                result={"output_path": out},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Arbitrary style transfer error")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -2463,9 +2516,13 @@ def face_swap_capabilities():
 @video_bp.route("/video/face/enhance", methods=["POST"])
 @require_csrf
 def face_enhance_route():
-    """Enhance/restore faces in video using GFPGAN."""
+    """Enhance/restore faces in video using GFPGAN or CodeFormer."""
     data = request.get_json(force=True)
     fp = data.get("filepath", "").strip()
+    _enhance_model = data.get("model", "gfpgan")
+    if _enhance_model not in ("gfpgan", "codeformer"):
+        _enhance_model = "gfpgan"
+    _fidelity = safe_float(data.get("fidelity", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
     if not fp:
         return jsonify({"error": "File not found"}), 400
@@ -2484,7 +2541,7 @@ def face_enhance_route():
             def _p(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
             d = _resolve_output_dir(fp, data.get("output_dir", ""))
-            out = enhance_faces(fp, output_dir=d, upscale=safe_int(data.get("upscale", 2), 2, min_val=1, max_val=4), on_progress=_p)
+            out = enhance_faces(fp, output_dir=d, model=_enhance_model, upscale=safe_int(data.get("upscale", 2), 2, min_val=1, max_val=4), fidelity=_fidelity, on_progress=_p)
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
