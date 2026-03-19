@@ -213,7 +213,7 @@ def remove_background(
     input_path: str,
     output_path: Optional[str] = None,
     output_dir: str = "",
-    model: str = "u2net",
+    model: str = "birefnet-general",
     bg_color: str = "",
     bg_image: str = "",
     alpha_only: bool = False,
@@ -223,7 +223,7 @@ def remove_background(
     Remove video background using rembg.
 
     Args:
-        model: rembg model (u2net, u2net_human_seg, isnet-general-use, birefnet-general).
+        model: rembg model (u2net, u2net_human_seg, isnet-general-use, birefnet-general, birefnet-massive).
         bg_color: Replacement background color hex (e.g., "#00FF00"). Empty = transparent.
         bg_image: Path to background image/video.
         alpha_only: If True, output alpha matte only.
