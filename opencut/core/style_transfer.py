@@ -247,3 +247,134 @@ def style_transfer_video(
 
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+# ---------------------------------------------------------------------------
+# Arbitrary Style Transfer (any reference image)
+# ---------------------------------------------------------------------------
+def arbitrary_style_transfer(
+    input_path: str,
+    style_image_path: str,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    intensity: float = 1.0,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    Apply arbitrary style transfer using any reference image via AdaIN
+    (Adaptive Instance Normalization). No pre-trained style models needed —
+    the style is extracted from the reference image at inference time.
+
+    Args:
+        style_image_path: Path to any image to use as style reference.
+        intensity: Blend intensity (0.0 = original, 1.0 = full style).
+    """
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("Failed to install opencv-python-headless")
+
+    import cv2
+    import numpy as np
+
+    if not os.path.isfile(style_image_path):
+        raise FileNotFoundError(f"Style image not found: {style_image_path}")
+
+    if output_path is None:
+        base = os.path.splitext(os.path.basename(input_path))[0]
+        ext = os.path.splitext(input_path)[1] or ".mp4"
+        directory = output_dir or os.path.dirname(input_path)
+        style_label = os.path.splitext(os.path.basename(style_image_path))[0][:20]
+        output_path = os.path.join(directory, f"{base}_style_{style_label}{ext}")
+
+    if on_progress:
+        on_progress(5, "Loading style reference...")
+
+    # Load and resize style image
+    style_img = cv2.imread(style_image_path)
+    if style_img is None:
+        raise RuntimeError(f"Cannot read style image: {style_image_path}")
+
+    def _adain_transfer(content_frame, style_ref):
+        """Apply Adaptive Instance Normalization color/style transfer."""
+        # Convert to float LAB for perceptual color transfer
+        content_lab = cv2.cvtColor(content_frame, cv2.COLOR_BGR2LAB).astype(np.float32)
+        style_lab = cv2.cvtColor(style_ref, cv2.COLOR_BGR2LAB).astype(np.float32)
+
+        # Per-channel AdaIN: normalize content, apply style statistics
+        result = np.empty_like(content_lab)
+        for ch in range(3):
+            c_mean, c_std = content_lab[:, :, ch].mean(), content_lab[:, :, ch].std() + 1e-6
+            s_mean, s_std = style_lab[:, :, ch].mean(), style_lab[:, :, ch].std() + 1e-6
+            result[:, :, ch] = (content_lab[:, :, ch] - c_mean) / c_std * s_std + s_mean
+
+        result = np.clip(result, 0, 255).astype(np.uint8)
+        return cv2.cvtColor(result, cv2.COLOR_LAB2BGR)
+
+    info = get_video_info(input_path)
+    tmp_dir = tempfile.mkdtemp(prefix="opencut_arb_style_")
+    frames_in = os.path.join(tmp_dir, "in")
+    frames_out = os.path.join(tmp_dir, "out")
+    os.makedirs(frames_in, exist_ok=True)
+    os.makedirs(frames_out, exist_ok=True)
+
+    try:
+        if on_progress:
+            on_progress(10, "Extracting frames...")
+
+        run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            "-y", "-i", input_path,
+            os.path.join(frames_in, "frame_%06d.png"),
+        ])
+
+        frame_files = sorted(Path(frames_in).glob("frame_*.png"))
+        total = len(frame_files)
+        if total == 0:
+            raise RuntimeError("No frames extracted")
+
+        # Resize style image to match first frame dimensions for consistent stats
+        first_frame = cv2.imread(str(frame_files[0]))
+        if first_frame is not None:
+            style_resized = cv2.resize(style_img, (first_frame.shape[1], first_frame.shape[0]))
+        else:
+            style_resized = style_img
+
+        if on_progress:
+            on_progress(15, f"Applying style to {total} frames...")
+
+        for i, fp in enumerate(frame_files):
+            frame = cv2.imread(str(fp))
+            if frame is None:
+                continue
+
+            styled = _adain_transfer(frame, style_resized)
+
+            if intensity < 1.0:
+                styled = cv2.addWeighted(frame, 1.0 - intensity, styled, intensity, 0)
+
+            cv2.imwrite(os.path.join(frames_out, fp.name), styled)
+
+            if on_progress and i % max(1, total // 20) == 0:
+                pct = 15 + int((i / total) * 75)
+                on_progress(pct, f"Styling frame {i + 1}/{total}...")
+
+        if on_progress:
+            on_progress(92, "Encoding output video...")
+
+        run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            "-y",
+            "-framerate", str(info["fps"]),
+            "-i", os.path.join(frames_out, "frame_%06d.png"),
+            "-i", input_path,
+            "-map", "0:v", "-map", "1:a?",
+            "-c:v", "libx264", "-crf", "18", "-preset", "medium",
+            "-pix_fmt", "yuv420p", "-c:a", "copy", "-shortest",
+            output_path,
+        ])
+
+        if on_progress:
+            on_progress(100, "Arbitrary style transfer complete!")
+        return output_path
+
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)

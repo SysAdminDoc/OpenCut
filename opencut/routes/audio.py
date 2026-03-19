@@ -463,12 +463,17 @@ def audio_isolate():
 @audio_bp.route("/audio/separate", methods=["POST"])
 @require_csrf
 def audio_separate():
-    """Separate audio into stems using Meta's Demucs AI model."""
+    """Separate audio into stems using AI (Demucs or audio-separator with RoFormer models)."""
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
-    model = data.get("model", "htdemucs")
-    allowed_models = {"htdemucs", "htdemucs_ft", "htdemucs_6s", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q"}
+    backend = data.get("backend", "demucs")
+    if backend not in ("demucs", "audio-separator"):
+        backend = "demucs"
+    model = data.get("model", "htdemucs" if backend == "demucs" else "mel_band_roformer")
+    allowed_demucs = {"htdemucs", "htdemucs_ft", "htdemucs_6s", "mdx", "mdx_extra", "mdx_q", "mdx_extra_q"}
+    allowed_separator = {"mel_band_roformer", "bs_roformer", "scnet", "mdx23c", "htdemucs"}
+    allowed_models = allowed_demucs if backend == "demucs" else allowed_separator
     if model not in allowed_models:
         return jsonify({"error": f"Unknown model: {model}. Allowed: {', '.join(sorted(allowed_models))}"}), 400
     stems = data.get("stems", ["vocals", "no_vocals"])
@@ -487,7 +492,7 @@ def audio_separate():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    if not check_demucs_available():
+    if backend == "demucs" and not check_demucs_available():
         return jsonify({"error": "Demucs not installed. Please install it first."}), 400
 
     job_id = _new_job("separate", filepath)
@@ -519,6 +524,36 @@ def audio_separate():
                 input_audio = temp_audio
             else:
                 input_audio = filepath
+
+            if backend == "audio-separator":
+                # Use python-audio-separator with RoFormer/MDX models
+                try:
+                    from audio_separator.separator import Separator
+                except ImportError:
+                    raise RuntimeError("audio-separator not installed. Run: pip install audio-separator[cpu]")
+
+                _update_job(job_id, progress=15, message=f"Running audio-separator ({model})...")
+                separator = Separator(output_dir=effective_dir, output_format=output_format)
+                separator.load_model(model_filename=model)
+                output_files = separator.separate(input_audio)
+
+                output_paths = []
+                for f in output_files:
+                    if os.path.isfile(f):
+                        output_paths.append(f)
+
+                if temp_audio and os.path.exists(temp_audio):
+                    try:
+                        os.unlink(temp_audio)
+                    except OSError:
+                        pass
+
+                _update_job(
+                    job_id, status="complete", progress=100,
+                    message=f"Separation complete! {len(output_paths)} stems exported.",
+                    result={"output_paths": output_paths, "auto_import": auto_import},
+                )
+                return
 
             _update_job(job_id, progress=15, message=f"Running Demucs ({model})...")
 
@@ -1862,9 +1897,12 @@ def silence_speed_up():
 @audio_bp.route("/audio/enhance", methods=["POST"])
 @require_csrf
 def audio_enhance():
-    """Enhance speech audio using Resemble Enhance (super-resolution + denoising)."""
+    """Enhance speech audio using ClearerVoice-Studio or Resemble Enhance."""
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
+    backend = data.get("backend", "clearvoice")
+    if backend not in ("clearvoice", "resemble"):
+        backend = "clearvoice"
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -1874,33 +1912,46 @@ def audio_enhance():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    from opencut.checks import check_resemble_enhance_available
-    if not check_resemble_enhance_available():
-        return jsonify({"error": "resemble-enhance not installed. Install with: pip install resemble-enhance"}), 400
+    if backend == "resemble":
+        from opencut.checks import check_resemble_enhance_available
+        if not check_resemble_enhance_available():
+            return jsonify({"error": "resemble-enhance not installed. Install with: pip install resemble-enhance"}), 400
 
     denoise = bool(data.get("denoise", True))
     enhance = bool(data.get("enhance", True))
+    cv_model = data.get("model", "MossFormer2_SE_48K")
+    _allowed_cv_models = {"MossFormer2_SE_48K", "FRCRN_SE_16K", "MossFormerGAN_SE_16K"}
+    if cv_model not in _allowed_cv_models:
+        cv_model = "MossFormer2_SE_48K"
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
 
-    if not denoise and not enhance:
+    if backend == "resemble" and not denoise and not enhance:
         return jsonify({"error": "At least one of 'denoise' or 'enhance' must be True"}), 400
 
     job_id = _new_job("audio-enhance", filepath)
 
     def _process():
         try:
-            from opencut.core.audio_enhance import enhance_speech
-
             def _on_progress(pct, msg):
                 _update_job(job_id, progress=pct, message=msg)
 
-            output_path = enhance_speech(
-                filepath,
-                output_dir=output_dir,
-                denoise=denoise,
-                enhance=enhance,
-                on_progress=_on_progress,
-            )
+            if backend == "clearvoice":
+                from opencut.core.audio_enhance import enhance_speech_clearvoice
+                output_path = enhance_speech_clearvoice(
+                    filepath,
+                    output_dir=output_dir,
+                    model=cv_model,
+                    on_progress=_on_progress,
+                )
+            else:
+                from opencut.core.audio_enhance import enhance_speech
+                output_path = enhance_speech(
+                    filepath,
+                    output_dir=output_dir,
+                    denoise=denoise,
+                    enhance=enhance,
+                    on_progress=_on_progress,
+                )
 
             _update_job(
                 job_id, status="complete", progress=100,
