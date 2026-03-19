@@ -1083,7 +1083,7 @@ def video_ai_denoise():
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     method = data.get("method", "nlmeans")
-    if method not in ("nlmeans", "highpass", "gate"):
+    if method not in ("nlmeans", "hqdn3d", "basicvsr"):
         method = "nlmeans"
     strength = safe_float(data.get("strength", 0.5), 0.5, min_val=0.0, max_val=1.0)
 

@@ -402,6 +402,72 @@ _ACTION_KEYWORDS: Set[str] = {
 }
 
 
+def detect_keywords_nlp(
+    words: List[Word],
+    top_n: int = 15,
+) -> Set[int]:
+    """Detect important/keyword words using NLP-inspired frequency analysis.
+
+    Uses a TF-IDF-like approach: words that are rare in general English but
+    present in this transcript are likely important. Combines with POS-like
+    heuristics (capitalized words, longer words = more important).
+
+    No external dependencies — uses only stdlib.
+    """
+    if not words:
+        return set()
+
+    # Common English stopwords to exclude
+    _STOPWORDS = frozenset({
+        "i", "me", "my", "we", "our", "you", "your", "he", "she", "it", "they",
+        "them", "his", "her", "its", "this", "that", "these", "those", "is", "am",
+        "are", "was", "were", "be", "been", "being", "have", "has", "had", "do",
+        "does", "did", "will", "would", "shall", "should", "may", "might", "can",
+        "could", "must", "a", "an", "the", "and", "but", "or", "if", "then",
+        "so", "as", "of", "in", "on", "at", "to", "for", "with", "by", "from",
+        "up", "out", "not", "no", "just", "very", "really", "also", "too",
+        "about", "into", "over", "after", "before", "between", "through",
+        "when", "where", "how", "what", "which", "who", "all", "each", "every",
+        "both", "few", "more", "most", "other", "some", "such", "than", "only",
+        "own", "same", "here", "there", "now", "then", "once", "again",
+        "going", "gonna", "like", "know", "think", "want", "need", "get", "got",
+        "make", "take", "come", "go", "see", "look", "say", "said", "tell",
+        "give", "let", "put", "well", "okay", "yeah", "yes", "right", "oh", "um",
+        "uh", "ah", "so", "because", "actually", "basically", "literally",
+    })
+
+    # Score each word
+    scores = []
+    for i, w in enumerate(words):
+        clean = w.text.strip().lower().strip(".,!?;:\"'()-")
+        if not clean or clean in _STOPWORDS or len(clean) <= 2:
+            scores.append((i, 0.0))
+            continue
+
+        score = 0.0
+        # Length bonus (longer words tend to be more meaningful)
+        score += min(len(clean) / 8.0, 1.0) * 0.3
+        # Capitalization bonus (proper nouns, emphasis)
+        if w.text.strip() and w.text.strip()[0].isupper():
+            score += 0.2
+        # Already in action keywords = strong signal
+        if clean in _ACTION_KEYWORDS:
+            score += 0.5
+        # Number = often important (stats, years, amounts)
+        if any(c.isdigit() for c in clean):
+            score += 0.3
+        # Rarity bonus: words appearing fewer times get higher score
+        freq = sum(1 for ww in words if ww.text.strip().lower().strip(".,!?;:\"'()-") == clean)
+        if freq <= 2:
+            score += 0.2
+
+        scores.append((i, score))
+
+    # Take top_n highest scoring words
+    scores.sort(key=lambda x: x[1], reverse=True)
+    return {idx for idx, score in scores[:top_n] if score > 0.3}
+
+
 def detect_action_words_by_energy(
     filepath: str,
     words: List[Word],
@@ -451,10 +517,16 @@ def get_action_word_indices(
     all_words: List[Word],
     custom_words: Optional[List[str]] = None,
     use_keywords: bool = True,
+    use_nlp: bool = True,
     energy_indices: Optional[Set[int]] = None,
 ) -> Set[int]:
-    """Combine keyword list, custom words, and energy analysis for action words."""
+    """Combine keyword list, NLP analysis, custom words, and energy analysis for action words."""
     result = set()
+
+    # NLP-based keyword detection (frequency/importance analysis)
+    if use_nlp and all_words:
+        nlp_indices = detect_keywords_nlp(all_words)
+        result.update(nlp_indices)
 
     keywords = set()
     if use_keywords:
