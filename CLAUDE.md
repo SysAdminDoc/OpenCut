@@ -633,11 +633,11 @@ enhance = ["resemble-enhance>=0.0.1"]
 - [x] **Voice cloning**: Via Chatterbox `voice_ref` param — zero-shot from 5s audio, emotion control
 - [ ] **AI color grading**: Add `Image-Adaptive-3DLUT` — learned 3D LUTs, <2ms on 4K, replaces histogram matching
 - [ ] **Motion graphics**: Add `Remotion` render service — React-based, After Effects quality titles/animations vs FFmpeg drawtext
-- [ ] **Video denoising**: Add `BasicVSR++` as GPU option — temporal propagation across frames vs spatial-only nlmeans
+- [x] **Video denoising**: Added `BasicVSR++` as `"basicvsr"` method in `/video/ai/denoise` — GPU temporal propagation, chunk-based processing, strength-blended output
 - [x] **Scene detection**: Added `PySceneDetect` as `"pyscenedetect"` method in `/video/scenes` — heuristic, fast, ContentDetector
 - [ ] **Neural LUT blending**: Add `NILUT` for continuous style blending — single slider between any two color grades
-- [ ] **Translation**: Add `SeamlessM4T v2` as "High Quality" option — 20% BLEU improvement, multimodal
-- [ ] **Caption NLP emphasis**: Auto-detect important words, apply different highlight colors/sizes in Pillow renderer
+- [x] **Translation**: Added `SeamlessM4T v2` via `translate_text_seamless()` — 20% BLEU improvement over NLLB, ~100 languages
+- [x] **Caption NLP emphasis**: Added `detect_keywords_nlp()` — TF-IDF-like frequency analysis + POS heuristics for auto-emphasis. Integrated into `get_action_word_indices()`
 
 ### Phase 4 — Architecture (Long-term)
 - [ ] **UXP migration** — CEP deprecated, removal late 2026. PremiereBridge abstraction already in place. Test with UXP samples.

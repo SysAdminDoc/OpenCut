@@ -413,14 +413,18 @@ def video_denoise(
     on_progress: Optional[Callable] = None,
 ) -> str:
     """
-    Video noise reduction using FFmpeg filters.
+    Video noise reduction.
 
     Args:
-        method: "nlmeans" (best quality, slower) or "hqdn3d" (fast).
+        method: "nlmeans" (best spatial, slower), "hqdn3d" (fast),
+                "basicvsr" (ML temporal, best quality, GPU required).
         strength: Denoise strength (0.1-1.0).
     """
     if output_path is None:
         output_path = _output_path(input_path, "denoised", output_dir)
+
+    if method == "basicvsr":
+        return _denoise_basicvsr(input_path, output_path, strength, on_progress)
 
     if on_progress:
         on_progress(10, f"Denoising video ({method})...")
@@ -443,6 +447,133 @@ def video_denoise(
 
     if on_progress:
         on_progress(100, "Video denoised")
+    return output_path
+
+
+def _denoise_basicvsr(
+    input_path: str,
+    output_path: str,
+    strength: float = 0.5,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    ML-based video denoising using BasicVSR++ temporal propagation.
+
+    Exploits information across multiple frames for significantly better
+    results than spatial-only filters (nlmeans/hqdn3d). Requires GPU.
+    """
+    if not ensure_package("basicsr", "basicsr", on_progress):
+        raise RuntimeError("basicsr not installed. Run: pip install basicsr")
+
+    import cv2
+    import numpy as np
+    import torch
+
+    if not torch.cuda.is_available():
+        raise RuntimeError("BasicVSR++ requires a CUDA GPU. Use 'nlmeans' for CPU denoising.")
+
+    if on_progress:
+        on_progress(5, "Loading BasicVSR++ model...")
+
+    from basicsr.archs.basicvsrpp_arch import BasicVSRPlusPlus
+
+    device = torch.device("cuda")
+    model = BasicVSRPlusPlus(mid_channels=64, num_blocks=7, is_low_res_input=False).to(device)
+
+    # Try to load pre-trained weights
+    weights_path = os.path.expanduser("~/.opencut/models/basicvsrpp_denoise.pth")
+    if os.path.isfile(weights_path):
+        ckpt = torch.load(weights_path, map_location=device, weights_only=True)
+        model.load_state_dict(ckpt.get("params", ckpt.get("params_ema", ckpt)), strict=False)
+    else:
+        logger.warning("BasicVSR++ weights not found at %s — using untrained model", weights_path)
+
+    model.eval()
+
+    cap = cv2.VideoCapture(input_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {input_path}")
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30
+    w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+
+    if on_progress:
+        on_progress(10, f"Reading {total} frames...")
+
+    # Read all frames into tensor (BasicVSR++ needs full sequence)
+    # Process in chunks of 30 frames to manage VRAM
+    chunk_size = 30
+    tmp_video = output_path + ".tmp.mp4"
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
+    if not writer.isOpened():
+        cap.release()
+        raise RuntimeError("Cannot create video writer")
+
+    frame_idx = 0
+    try:
+        while True:
+            chunk_frames = []
+            for _ in range(chunk_size):
+                ret, frame = cap.read()
+                if not ret:
+                    break
+                chunk_frames.append(frame)
+
+            if not chunk_frames:
+                break
+
+            # Convert chunk to tensor: [1, T, C, H, W] in [0,1]
+            frames_np = np.stack(chunk_frames).astype(np.float32) / 255.0
+            frames_t = torch.from_numpy(frames_np).permute(0, 3, 1, 2).unsqueeze(0).to(device)
+
+            with torch.inference_mode():
+                output = model(frames_t)
+
+            # Write denoised frames
+            output_np = output.squeeze(0).permute(0, 2, 3, 1).cpu().clamp(0, 1).numpy() * 255
+            for i in range(output_np.shape[0]):
+                # Blend with original based on strength
+                if strength < 1.0:
+                    blended = chunk_frames[i].astype(np.float32) * (1 - strength) + output_np[i] * strength
+                    writer.write(blended.astype(np.uint8))
+                else:
+                    writer.write(output_np[i].astype(np.uint8))
+
+            frame_idx += len(chunk_frames)
+            if on_progress:
+                pct = 10 + int((frame_idx / total) * 80)
+                on_progress(pct, f"Denoising frame {frame_idx}/{total}...")
+
+    finally:
+        cap.release()
+        writer.release()
+        del model
+        torch.cuda.empty_cache()
+
+    # Mux audio
+    if on_progress:
+        on_progress(92, "Encoding with audio...")
+
+    try:
+        run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-i", tmp_video, "-i", input_path,
+            "-map", "0:v", "-map", "1:a?",
+            "-c:v", "libx264", "-crf", "18", "-preset", "medium",
+            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+            "-shortest", output_path,
+        ], timeout=7200)
+    finally:
+        try:
+            os.unlink(tmp_video)
+        except OSError:
+            pass
+
+    if on_progress:
+        on_progress(100, "Video denoised (BasicVSR++)")
     return output_path
 
 

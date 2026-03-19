@@ -375,6 +375,62 @@ def translate_segments(
 
 
 # ---------------------------------------------------------------------------
+# SeamlessM4T v2 Translation (higher quality, multimodal)
+# ---------------------------------------------------------------------------
+def translate_text_seamless(
+    text: str,
+    source_lang: str = "eng",
+    target_lang: str = "spa",
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    Translate text using Meta's SeamlessM4T v2 (higher quality than NLLB).
+
+    20% BLEU improvement over NLLB. Supports ~100 languages.
+    Heavier model (~2.3GB) but significantly better quality.
+
+    Args:
+        source_lang: SeamlessM4T language code (e.g. "eng", "spa", "fra", "deu").
+        target_lang: Target language code.
+    """
+    if not ensure_package("transformers", "transformers", on_progress):
+        raise RuntimeError("transformers not installed")
+
+    if on_progress:
+        on_progress(10, "Loading SeamlessM4T v2...")
+
+    import torch
+    from transformers import AutoProcessor, SeamlessM4Tv2ForTextToText
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model_id = "facebook/seamless-m4t-v2-large"
+
+    processor = AutoProcessor.from_pretrained(model_id)
+    model = SeamlessM4Tv2ForTextToText.from_pretrained(model_id).to(device)
+
+    if on_progress:
+        on_progress(50, "Translating...")
+
+    try:
+        inputs = processor(text=text, src_lang=source_lang, return_tensors="pt").to(device)
+        with torch.inference_mode():
+            output_tokens = model.generate(**inputs, tgt_lang=target_lang, max_new_tokens=512)
+        translated = processor.decode(output_tokens[0].tolist(), skip_special_tokens=True)
+    finally:
+        del model
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
+
+    if on_progress:
+        on_progress(100, "Translation complete (SeamlessM4T)")
+
+    return translated
+
+
+# ---------------------------------------------------------------------------
 # ASS Karaoke Export
 # ---------------------------------------------------------------------------
 def segments_to_ass_karaoke(
