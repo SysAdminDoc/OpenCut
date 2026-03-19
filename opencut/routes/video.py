@@ -970,9 +970,9 @@ def video_ai_rembg():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
-    model = data.get("model", "u2net")
-    if model not in ("u2net", "u2net_human_seg", "isnet-general-use", "birefnet-general"):
-        model = "u2net"
+    model = data.get("model", "birefnet-general")
+    if model not in ("u2net", "u2net_human_seg", "isnet-general-use", "birefnet-general", "birefnet-massive"):
+        model = "birefnet-general"
     bg_color = data.get("bg_color", "")
     if bg_color and not re.match(r'^[a-zA-Z0-9#]+$', bg_color):
         bg_color = ""

@@ -410,11 +410,13 @@
                             <label>Model</label>
                             <select id="captionModel">
                                 <option value="tiny">Tiny (fastest)</option>
-                                <option value="base" selected>Base (balanced)</option>
+                                <option value="base">Base (balanced)</option>
                                 <option value="small">Small (good)</option>
                                 <option value="medium">Medium (great)</option>
-                                <option value="large-v3">Large v3 (best)</option>
-                                <option value="turbo">Turbo (fast + great)</option>
+                                <option value="turbo" selected>Turbo (fast + accurate)</option>
+                                <option value="large-v3">Large v3 (best accuracy)</option>
+                                <option value="distil-large-v3.5">Distil v3.5 (fast + great)</option>
+                                <option value="distil-large-v3">Distil v3 (fast + good)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -501,11 +503,13 @@
                             <label>Model</label>
                             <select id="subModel">
                                 <option value="tiny">Tiny (fastest)</option>
-                                <option value="base" selected>Base (balanced)</option>
+                                <option value="base">Base (balanced)</option>
                                 <option value="small">Small (good)</option>
                                 <option value="medium">Medium (great)</option>
-                                <option value="large-v3">Large v3 (best)</option>
-                                <option value="turbo">Turbo (fast + great)</option>
+                                <option value="turbo" selected>Turbo (fast + accurate)</option>
+                                <option value="large-v3">Large v3 (best accuracy)</option>
+                                <option value="distil-large-v3.5">Distil v3.5 (fast + great)</option>
+                                <option value="distil-large-v3">Distil v3 (fast + good)</option>
                             </select>
                         </div>
                         <div class="form-group">
@@ -1402,10 +1406,11 @@
                             <div class="form-group">
                                 <label>Model</label>
                                 <select id="vidAiRembgModel">
+                                    <option value="birefnet-general" selected>BiRefNet (best quality)</option>
+                                    <option value="birefnet-massive">BiRefNet Massive (highest quality)</option>
                                     <option value="u2net">U2Net (general, fast)</option>
                                     <option value="u2net_human_seg">U2Net Human (people)</option>
                                     <option value="isnet-general-use">ISNet (general)</option>
-                                    <option value="birefnet-general">BiRefNet (best quality)</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -2329,11 +2334,13 @@
                         <label>Default Model</label>
                         <select id="settingsDefaultModel">
                             <option value="tiny">Tiny - Fastest, lower accuracy</option>
-                            <option value="base" selected>Base - Good balance</option>
+                            <option value="base">Base - Good balance</option>
                             <option value="small">Small - Better accuracy</option>
                             <option value="medium">Medium - High accuracy</option>
-                            <option value="large-v3">Large v3 - Best accuracy</option>
-                            <option value="turbo">Turbo - Fast + accurate</option>
+                            <option value="turbo" selected>Turbo - Fast + accurate (recommended)</option>
+                            <option value="large-v3">Large v3 - Best accuracy (slowest)</option>
+                            <option value="distil-large-v3.5">Distil v3.5 - Fast + great quality</option>
+                            <option value="distil-large-v3">Distil v3 - Fast + good quality</option>
                         </select>
                     </div>
                     <div class="checkbox-row" style="margin: 10px 0;">
