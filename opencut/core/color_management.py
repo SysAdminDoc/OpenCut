@@ -116,38 +116,46 @@ def color_correct(
 
     filters = []
 
-    # Exposure via curves
+    # Build a single eq filter with all brightness/contrast/saturation params
+    eq_parts = []
     if abs(exposure) > 0.01:
         brightness = max(-1, min(1, exposure * 0.15))
-        filters.append(f"eq=brightness={brightness}")
-
-    # Contrast + saturation via eq filter
-    eq_parts = []
+        eq_parts.append(f"brightness={brightness}")
     if abs(contrast - 1.0) > 0.01:
         eq_parts.append(f"contrast={contrast}")
     if abs(saturation - 1.0) > 0.01:
         eq_parts.append(f"saturation={saturation}")
     if eq_parts:
-        filters.append(f"eq={'='.join(eq_parts)}" if len(eq_parts) == 1 else f"eq={':'.join(eq_parts)}")
+        filters.append(f"eq={':'.join(eq_parts)}")
 
-    # Temperature via colorbalance
+    # Build a single colorbalance filter combining temperature + lift/gamma/gain
+    cb_parts = {}
     if abs(temperature) > 0.01 or abs(tint) > 0.01:
-        # Warm = more red/yellow, cool = more blue
         rs = max(-1, min(1, temperature * 0.3))
         gs = max(-1, min(1, tint * 0.2))
         bs = max(-1, min(1, -temperature * 0.3))
-        filters.append(f"colorbalance=rs={rs}:gs={gs}:bs={bs}:rm={rs*0.5}:gm={gs*0.5}:bm={bs*0.5}")
-
-    # Lift/Gamma/Gain (shadows/midtones/highlights)
-    if abs(shadows) > 0.01 or abs(midtones) > 0.01 or abs(highlights) > 0.01:
-        cb_parts = []
-        if abs(shadows) > 0.01:
-            cb_parts.append(f"rs={shadows*0.3}:gs={shadows*0.3}:bs={shadows*0.3}")
-        if abs(midtones) > 0.01:
-            cb_parts.append(f"rm={midtones*0.3}:gm={midtones*0.3}:bm={midtones*0.3}")
-        if abs(highlights) > 0.01:
-            cb_parts.append(f"rh={highlights*0.3}:gh={highlights*0.3}:bh={highlights*0.3}")
-        filters.append(f"colorbalance={':'.join(cb_parts)}")
+        cb_parts["rs"] = rs
+        cb_parts["gs"] = gs
+        cb_parts["bs"] = bs
+        cb_parts["rm"] = rs * 0.5
+        cb_parts["gm"] = gs * 0.5
+        cb_parts["bm"] = bs * 0.5
+    if abs(shadows) > 0.01:
+        cb_parts["rs"] = cb_parts.get("rs", 0) + shadows * 0.3
+        cb_parts["gs"] = cb_parts.get("gs", 0) + shadows * 0.3
+        cb_parts["bs"] = cb_parts.get("bs", 0) + shadows * 0.3
+    if abs(midtones) > 0.01:
+        cb_parts["rm"] = cb_parts.get("rm", 0) + midtones * 0.3
+        cb_parts["gm"] = cb_parts.get("gm", 0) + midtones * 0.3
+        cb_parts["bm"] = cb_parts.get("bm", 0) + midtones * 0.3
+    if abs(highlights) > 0.01:
+        cb_parts["rh"] = highlights * 0.3
+        cb_parts["gh"] = highlights * 0.3
+        cb_parts["bh"] = highlights * 0.3
+    if cb_parts:
+        # Clamp all values to [-1, 1]
+        parts_str = ":".join(f"{k}={max(-1, min(1, v))}" for k, v in cb_parts.items())
+        filters.append(f"colorbalance={parts_str}")
 
     if not filters:
         # No corrections needed, just copy

@@ -14,7 +14,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Release")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("OpenCut Video Editing Automation - Installer")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.3.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.3.0+8f3169960d4b56842b82ecf3be6300ecdb640730")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.3.0+1aac64a127b6ef4fa5b0639a1b0b2c5e52f0ee93")]
 [assembly: System.Reflection.AssemblyProductAttribute("OpenCut Installer")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OpenCut-Setup")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.3.0.0")]

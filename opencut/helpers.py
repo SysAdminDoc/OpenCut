@@ -30,6 +30,14 @@ def _ensure_opencut_dir():
 # Named constants
 DEFAULT_CRF = 18
 
+
+def output_path(input_path: str, suffix: str, output_dir: str = "") -> str:
+    """Generate output path with suffix, preserving extension."""
+    base = os.path.splitext(os.path.basename(input_path))[0]
+    ext = os.path.splitext(input_path)[1] or ".mp4"
+    directory = output_dir or os.path.dirname(input_path)
+    return os.path.join(directory, f"{base}_{suffix}{ext}")
+
 # ---------------------------------------------------------------------------
 # Deferred Temp File Cleanup
 # ---------------------------------------------------------------------------

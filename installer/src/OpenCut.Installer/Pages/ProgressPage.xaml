@@ -44,5 +44,11 @@
 
         <!-- Log Panel -->
         <controls:LogPanel x:Name="LogPanel" Grid.Row="3" />
+
+        <!-- Close button (shown only on failure) -->
+        <Button x:Name="CloseBtn" Grid.Row="3" Content="Close" Width="100" Height="32"
+                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,8"
+                Visibility="Collapsed" Click="CloseBtn_Click"
+                Style="{DynamicResource AccentButtonStyle}" />
     </Grid>
 </Page>

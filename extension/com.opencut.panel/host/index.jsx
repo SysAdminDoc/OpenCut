@@ -277,8 +277,13 @@ function importXMLToProject(xmlPath) {
         // so we don't rely on the return value.  If it throws, we catch it.
         app.project.importFiles([xmlPath], false, app.project.rootItem, false);
         
-        // Wait a moment for import to process
-        $.sleep(500);
+        // Poll for import to complete (avoids blocking Premiere UI with long sleep)
+        for (var _poll = 0; _poll < 20; _poll++) {
+            $.sleep(50);
+            try {
+                if (app.project.sequences.numSequences > seqCountBefore) break;
+            } catch (e) {}
+        }
         
         // Try to find and open the newly created sequence
         var seqCountAfter = 0;
@@ -358,6 +363,7 @@ function importOverlayToProject(overlayPath) {
 function getSequenceClips() {
     var clips = [];
     try {
+        if (!app || !app.project) return JSON.stringify({ error: "No project open" });
         var seq = app.project.activeSequence;
         if (!seq) return JSON.stringify({ error: "No active sequence" });
 
@@ -458,6 +464,7 @@ function getProjectInfo() {
         sequenceFrameRate: 0,
         numSequences: 0
     };
+    if (!app || !app.project) return JSON.stringify(info);
     try {
         info.projectName = app.project.name || "";
         info.projectPath = app.project.path || "";
@@ -481,6 +488,7 @@ function getProjectInfo() {
  * Get the project folder path.
  */
 function getProjectFolder() {
+    if (!app || !app.project) return "";
     try {
         var p = app.project.path;
         if (p) {
@@ -499,6 +507,7 @@ function getProjectFolder() {
  * Returns JSON: {saved: true/false, path: "..."}
  */
 function isProjectSaved() {
+    if (!app || !app.project) return '{"saved":false,"path":""}';
     try {
         var p = app.project.path;
         if (p && p.length > 0) {
