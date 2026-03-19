@@ -628,13 +628,13 @@ enhance = ["resemble-enhance>=0.0.1"]
 - [x] **Face detection**: Added InsightFace `buffalo_l` as `"insightface"` detector option in face_tools (highest accuracy). Route allowlists updated.
 
 ### Phase 3 — New Features (Higher Effort)
-- [ ] **Music generation**: Add `ACE-Step 1.5` — full songs WITH vocals+lyrics, 10x faster than MusicGen, 4x less VRAM, Apache 2.0
-- [ ] **TTS tiers**: Add `Kokoro` (82M params, CPU, fast) + `Chatterbox` (voice cloning, emotion, 23 langs, MIT) alongside edge-tts
-- [ ] **Voice cloning**: Via Chatterbox — zero-shot from 5s audio, emotion control, paralinguistic tags
+- [x] **Music generation**: Added `ACE-Step 1.5` — full songs WITH vocals+lyrics, `/audio/music-ai/ace-step` route
+- [x] **TTS tiers**: Kokoro already existed; added `Chatterbox` (voice cloning, emotion, 23 langs, MIT) as `"chatterbox"` engine in `/audio/tts/generate`
+- [x] **Voice cloning**: Via Chatterbox `voice_ref` param — zero-shot from 5s audio, emotion control
 - [ ] **AI color grading**: Add `Image-Adaptive-3DLUT` — learned 3D LUTs, <2ms on 4K, replaces histogram matching
 - [ ] **Motion graphics**: Add `Remotion` render service — React-based, After Effects quality titles/animations vs FFmpeg drawtext
 - [ ] **Video denoising**: Add `BasicVSR++` as GPU option — temporal propagation across frames vs spatial-only nlmeans
-- [ ] **Scene detection**: Add `PySceneDetect` as fast complement to TransNetV2 — 4.6k stars, actively maintained
+- [x] **Scene detection**: Added `PySceneDetect` as `"pyscenedetect"` method in `/video/scenes` — heuristic, fast, ContentDetector
 - [ ] **Neural LUT blending**: Add `NILUT` for continuous style blending — single slider between any two color grades
 - [ ] **Translation**: Add `SeamlessM4T v2` as "High Quality" option — 20% BLEU improvement, multimodal
 - [ ] **Caption NLP emphasis**: Auto-detect important words, apply different highlight colors/sizes in Pillow renderer

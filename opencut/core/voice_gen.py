@@ -303,7 +303,86 @@ def kokoro_generate(
 
 
 # ---------------------------------------------------------------------------
-# Voice Cloning Stub (future: OpenVoice / F5-TTS)
+# Chatterbox TTS + Voice Cloning (Resemble AI, MIT)
+# ---------------------------------------------------------------------------
+def check_chatterbox_available() -> bool:
+    try:
+        import chatterbox  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
+def chatterbox_generate(
+    text: str,
+    voice_ref: Optional[str] = None,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    exaggeration: float = 0.5,
+    cfg_weight: float = 0.5,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    Generate speech using Chatterbox (Resemble AI).
+
+    Premium TTS with zero-shot voice cloning from 5s audio reference,
+    emotion control, and 23 language support. MIT licensed.
+
+    Args:
+        text: Text to synthesize.
+        voice_ref: Path to reference audio for voice cloning (5-30s WAV).
+            If None, uses default voice.
+        exaggeration: Emotion/expressiveness (0.0=neutral, 1.0=dramatic).
+        cfg_weight: Classifier-free guidance weight (0.0-1.0).
+    """
+    if not ensure_package("chatterbox", "chatterbox-tts", on_progress):
+        raise RuntimeError("Failed to install chatterbox-tts. Install: pip install chatterbox-tts")
+
+    if output_path is None:
+        directory = output_dir or tempfile.gettempdir()
+        output_path = os.path.join(directory, f"chatterbox_{hash(text[:20]) & 0xFFFF:04x}.wav")
+
+    if on_progress:
+        on_progress(10, "Loading Chatterbox model...")
+
+    import torch
+    from chatterbox.tts import ChatterboxTTS
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = ChatterboxTTS.from_pretrained(device=device)
+
+    if on_progress:
+        on_progress(40, "Synthesizing speech...")
+
+    wav = model.generate(
+        text,
+        audio_prompt_path=voice_ref,
+        exaggeration=exaggeration,
+        cfg_weight=cfg_weight,
+    )
+
+    if on_progress:
+        on_progress(80, "Saving audio...")
+
+    import torchaudio
+    torchaudio.save(output_path, wav, model.sr)
+
+    # Free GPU memory
+    try:
+        del model
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+    except Exception:
+        pass
+
+    if on_progress:
+        on_progress(100, "Chatterbox speech generated!")
+
+    return output_path
+
+
+# ---------------------------------------------------------------------------
+# Voice list
 # ---------------------------------------------------------------------------
 KOKORO_VOICES = [
     {"id": "af_heart", "label": "Heart (Female, Warm)", "lang": "en", "gender": "female"},
