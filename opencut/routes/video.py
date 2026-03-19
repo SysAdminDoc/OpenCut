@@ -3516,14 +3516,27 @@ def video_highlights():
                 except Exception as te:
                     raise RuntimeError(f"Transcription failed: {te}")
 
-            result = extract_highlights(
-                transcript_segments,
-                max_highlights=max_highlights,
-                min_duration=min_duration,
-                max_duration=max_duration,
-                llm_config=llm_config,
-                on_progress=_on_progress,
-            )
+            use_vision = data.get("use_vision", False)
+            if use_vision:
+                from opencut.core.highlights import extract_highlights_with_vision
+                result = extract_highlights_with_vision(
+                    filepath,
+                    transcript_segments,
+                    max_highlights=max_highlights,
+                    min_duration=min_duration,
+                    max_duration=max_duration,
+                    llm_config=llm_config,
+                    on_progress=_on_progress,
+                )
+            else:
+                result = extract_highlights(
+                    transcript_segments,
+                    max_highlights=max_highlights,
+                    min_duration=min_duration,
+                    max_duration=max_duration,
+                    llm_config=llm_config,
+                    on_progress=_on_progress,
+                )
 
             _update_job(
                 job_id, status="complete", progress=100,
