@@ -15,9 +15,12 @@ on localhost:5679. Start the backend first: python -m opencut.server
 
 import json
 import logging
+import re
 import sys
 import urllib.error
 import urllib.request
+
+from opencut import __version__
 
 logger = logging.getLogger("opencut.mcp")
 
@@ -25,19 +28,24 @@ BACKEND_URL = "http://127.0.0.1:5679"
 _csrf_token = ""
 
 
+def _refresh_csrf():
+    """Fetch fresh CSRF token from backend."""
+    global _csrf_token
+    try:
+        req = urllib.request.Request(f"{BACKEND_URL}/health")
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            body = json.loads(resp.read())
+            _csrf_token = body.get("csrf_token", "")
+    except Exception:
+        pass
+
+
 def _api(method, path, data=None):
     """Call the OpenCut Flask backend."""
     global _csrf_token
 
-    # Get CSRF token if we don't have one
     if not _csrf_token:
-        try:
-            req = urllib.request.Request(f"{BACKEND_URL}/health")
-            with urllib.request.urlopen(req, timeout=5) as resp:
-                body = json.loads(resp.read())
-                _csrf_token = body.get("csrf_token", "")
-        except Exception:
-            pass
+        _refresh_csrf()
 
     url = f"{BACKEND_URL}{path}"
     headers = {"Content-Type": "application/json"}
@@ -51,6 +59,16 @@ def _api(method, path, data=None):
         with urllib.request.urlopen(req, timeout=120) as resp:
             return json.loads(resp.read())
     except urllib.error.HTTPError as e:
+        # Retry once on 403 (stale CSRF token after backend restart)
+        if e.code == 403 and _csrf_token:
+            _refresh_csrf()
+            headers["X-OpenCut-Token"] = _csrf_token
+            req2 = urllib.request.Request(url, data=body, headers=headers, method=method)
+            try:
+                with urllib.request.urlopen(req2, timeout=120) as resp2:
+                    return json.loads(resp2.read())
+            except Exception:
+                pass
         error_body = e.read().decode(errors="replace")
         try:
             return json.loads(error_body)
@@ -214,16 +232,34 @@ _TOOL_ROUTES = {
 }
 
 
+def _validate_mcp_filepath(args, key="filepath"):
+    """Validate filepath arguments at MCP layer (defense-in-depth)."""
+    path = args.get(key, "")
+    if not isinstance(path, str):
+        return False
+    if ".." in path or "\x00" in path:
+        return False
+    return True
+
+
 def handle_tool_call(tool_name, arguments):
     """Execute an MCP tool call by proxying to the Flask backend."""
     if tool_name not in _TOOL_ROUTES:
         return {"error": f"Unknown tool: {tool_name}"}
+
+    # Validate filepath arguments at MCP layer
+    for key in ("filepath", "style_image", "voice_ref"):
+        if key in arguments and not _validate_mcp_filepath(arguments, key):
+            return {"error": f"Invalid {key}: path traversal or null bytes detected"}
 
     method, path = _TOOL_ROUTES[tool_name]
 
     # Handle special routing
     if tool_name == "opencut_job_status":
         job_id = arguments.get("job_id", "")
+        # Validate job_id format (UUID hex + hyphens only)
+        if not re.match(r'^[a-f0-9-]+$', job_id):
+            return {"error": "Invalid job_id format"}
         path = f"/status/{job_id}"
         return _api("GET", path)
 
@@ -255,6 +291,9 @@ def run_mcp_stdio():
         try:
             msg = json.loads(line)
         except json.JSONDecodeError:
+            err = {"jsonrpc": "2.0", "id": None, "error": {"code": -32700, "message": "Parse error"}}
+            sys.stdout.write(json.dumps(err) + "\n")
+            sys.stdout.flush()
             continue
 
         msg_id = msg.get("id")
@@ -270,7 +309,7 @@ def run_mcp_stdio():
                     "capabilities": {"tools": {}},
                     "serverInfo": {
                         "name": "opencut",
-                        "version": "1.3.1",
+                        "version": __version__,
                     },
                 },
             }

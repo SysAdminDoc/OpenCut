@@ -365,7 +365,8 @@ def chatterbox_generate(
         on_progress(80, "Saving audio...")
 
     import torchaudio
-    torchaudio.save(output_path, wav, model.sr)
+    sample_rate = getattr(model, "sr", getattr(model, "sample_rate", 24000))
+    torchaudio.save(output_path, wav, sample_rate)
 
     # Free GPU memory
     try:

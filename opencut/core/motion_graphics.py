@@ -421,4 +421,28 @@ def _generate_default_template(template_dir: str, template_name: str):
     with open(os.path.join(template_dir, "package.json"), "w") as f:
         json.dump(package, f, indent=2)
 
+    # Create a minimal Main composition component
+    comp_code = """import {Composition, useCurrentFrame, useVideoConfig, interpolate} from 'remotion';
+import React from 'react';
+
+const Main = () => {
+  const frame = useCurrentFrame();
+  const {fps, durationInFrames, width, height} = useVideoConfig();
+  const opacity = interpolate(frame, [0, fps * 0.5], [0, 1], {extrapolateRight: 'clamp'});
+  const outOpacity = interpolate(frame, [durationInFrames - fps * 0.5, durationInFrames], [1, 0], {extrapolateLeft: 'clamp'});
+  return (
+    <div style={{width, height, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#1e1e2e', opacity: Math.min(opacity, outOpacity)}}>
+      <h1 style={{color: '#cdd6f4', fontSize: 64, fontFamily: 'sans-serif', textAlign: 'center', padding: 40}}>Title</h1>
+    </div>
+  );
+};
+
+export const RemotionRoot = () => (
+  <Composition id="Main" component={Main} durationInFrames={150} fps={30} width={1920} height={1080} />
+);
+"""
+    os.makedirs(os.path.join(template_dir, "src"), exist_ok=True)
+    with open(os.path.join(template_dir, "src", "index.tsx"), "w") as f:
+        f.write(comp_code)
+
     logger.info("Generated default Remotion template: %s", template_dir)

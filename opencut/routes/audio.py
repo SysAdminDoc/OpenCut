@@ -538,9 +538,14 @@ def audio_separate():
                 output_files = separator.separate(input_audio)
 
                 output_paths = []
+                # Filter to requested stems only
+                requested = set(stems)
                 for f in output_files:
                     if os.path.isfile(f):
-                        output_paths.append(f)
+                        fname = os.path.splitext(os.path.basename(f))[0].lower()
+                        # Match if any requested stem appears in filename
+                        if not requested or any(s in fname for s in requested):
+                            output_paths.append(f)
 
                 if temp_audio and os.path.exists(temp_audio):
                     try:
@@ -1124,6 +1129,8 @@ def tts_generate():
     data = request.get_json(force=True)
     text = data.get("text", "").strip()
     engine = data.get("engine", "edge")
+    if engine not in ("edge", "kokoro", "chatterbox"):
+        engine = "edge"
     voice = data.get("voice", "en-US-AriaNeural")
     import re as _re_tts
     rate = data.get("rate", "+0%")

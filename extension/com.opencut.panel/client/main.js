@@ -5268,6 +5268,7 @@
             parent = parent.parentNode;
             if (!parent || parent.querySelector(".waveform-audio-btn")) continue;
             var btn = document.createElement("button");
+            btn.type = "button";
             btn.className = "btn-outline btn-sm waveform-audio-btn";
             btn.textContent = "Preview Waveform";
             btn.style.marginBottom = "6px";

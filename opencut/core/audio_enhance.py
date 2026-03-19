@@ -348,6 +348,9 @@ def enhance_speech_clearvoice(
         # Write result using the library's write method
         cv.write(result, output_path=output_path)
 
+        if not os.path.isfile(output_path) or os.path.getsize(output_path) == 0:
+            raise RuntimeError("ClearerVoice produced empty or missing output file")
+
         if on_progress:
             on_progress(100, "Audio enhanced!")
 

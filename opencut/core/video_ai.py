@@ -486,7 +486,11 @@ def _denoise_basicvsr(
         ckpt = torch.load(weights_path, map_location=device, weights_only=True)
         model.load_state_dict(ckpt.get("params", ckpt.get("params_ema", ckpt)), strict=False)
     else:
-        logger.warning("BasicVSR++ weights not found at %s — using untrained model", weights_path)
+        raise RuntimeError(
+            f"BasicVSR++ weights not found at {weights_path}. "
+            "Download from https://github.com/ckkelvinchan/BasicVSR_PlusPlus "
+            "and place as ~/.opencut/models/basicvsrpp_denoise.pth"
+        )
 
     model.eval()
 
