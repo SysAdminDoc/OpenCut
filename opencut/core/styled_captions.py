@@ -838,6 +838,9 @@ def render_styled_caption_video(
         else:
             total_duration = 1.0
 
+    import math
+    if not isinstance(fps, (int, float)) or math.isnan(fps) or math.isinf(fps) or fps <= 0:
+        fps = 30.0
     total_frames = max(1, int(total_duration * fps))
 
     # -------------------------------------------------------------------
@@ -962,10 +965,16 @@ def render_styled_caption_video(
 
     stderr_out = b""
     try:
-        stderr_out = proc.stderr.read()
+        stderr_out = proc.stderr.read(64 * 1024)  # Cap at 64KB
     except Exception:
         pass
-    proc.wait(timeout=1800)
+    try:
+        proc.wait(timeout=1800)
+    except subprocess.TimeoutExpired:
+        logger.warning("FFmpeg encoding timed out after 1800s, killing process")
+        proc.kill()
+        proc.wait(timeout=10)
+        raise RuntimeError("FFmpeg encoding timed out")
 
     if proc.returncode != 0:
         err_msg = stderr_out.decode("utf-8", errors="replace").strip()

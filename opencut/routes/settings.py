@@ -85,8 +85,8 @@ def save_favorites_route():
     favorites = data.get("favorites", [])
     if not isinstance(favorites, list):
         return jsonify({"error": "favorites must be a list"}), 400
-    if len(favorites) > 100:
-        return jsonify({"error": "Too many favorites (max 100)"}), 400
+    if len(favorites) > 200:
+        return jsonify({"error": "Too many favorites (max 200)"}), 400
     save_favorites(favorites)
     return jsonify({"success": True})
 

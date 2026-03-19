@@ -674,9 +674,24 @@ def export_video():
             _update_job(job_id, progress=20, message="FFmpeg encoding in progress...")
 
             # Run FFmpeg with progress monitoring
+            # Use separate stderr pipe so error diagnostics aren't lost
             proc = _sp.Popen(
-                cmd, stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True
+                cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True
             )
+            # Drain stderr in background to prevent pipe deadlock
+            _stderr_chunks = []
+
+            def _drain_stderr():
+                try:
+                    for _line in proc.stderr:
+                        _stderr_chunks.append(_line)
+                        if len(_stderr_chunks) > 200:
+                            _stderr_chunks.pop(0)
+                except Exception:
+                    pass
+
+            _stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
+            _stderr_thread.start()
             _register_job_process(job_id, proc)
 
             # Calculate expected output duration for progress estimation
@@ -709,12 +724,14 @@ def export_video():
                     return
 
             proc.wait()
+            _stderr_thread.join(timeout=5)
             _unregister_job_process(job_id)
 
             if proc.returncode != 0:
+                stderr_tail = "".join(_stderr_chunks[-20:]).strip()
                 _update_job(
                     job_id, status="error",
-                    error=f"FFmpeg exited with code {proc.returncode}",
+                    error=f"FFmpeg exited with code {proc.returncode}: {stderr_tail[:500]}",
                     message="Encoding failed",
                 )
                 return
@@ -1124,7 +1141,11 @@ def video_ai_install():
         rate_limit_release("model_install")
         return jsonify({"error": f"Unknown component: {component}"}), 400
 
-    job_id = _new_job("install", component)
+    try:
+        job_id = _new_job("install", component)
+    except Exception:
+        rate_limit_release("model_install")
+        raise
 
     def _process():
         try:
@@ -1252,7 +1273,11 @@ def face_install():
     if not rate_limit("model_install"):
         return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
 
-    job_id = _new_job("install", "mediapipe")
+    try:
+        job_id = _new_job("install", "mediapipe")
+    except Exception:
+        rate_limit_release("model_install")
+        raise
 
     def _process():
         try:
@@ -1301,7 +1326,7 @@ def style_apply():
     if style_name not in ("candy", "mosaic", "rain_princess", "udnie", "starry_night",
                           "la_muse", "the_scream", "pointilism"):
         style_name = "candy"
-    intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0)
+    intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=1.0)
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -1582,15 +1607,17 @@ def _execute_batch_item(operation, filepath, params, on_progress):
 
     if operation == "denoise":
         from opencut.core.audio_suite import denoise_audio
+        out_path = os.path.join(output_dir, os.path.splitext(os.path.basename(filepath))[0] + "_denoised" + os.path.splitext(filepath)[1])
         return denoise_audio(
-            filepath, output_dir=output_dir,
+            filepath, output_path=out_path,
             strength=safe_float(params.get("strength", 0.5), 0.5, min_val=0.0, max_val=1.0),
             on_progress=on_progress,
         )
     elif operation == "normalize":
-        from opencut.core.audio_suite import normalize_audio
-        return normalize_audio(
-            filepath, output_dir=output_dir,
+        from opencut.core.audio_suite import normalize_loudness
+        out_path = os.path.join(output_dir, os.path.splitext(os.path.basename(filepath))[0] + "_normalized" + os.path.splitext(filepath)[1])
+        return normalize_loudness(
+            filepath, output_path=out_path,
             target_lufs=safe_float(params.get("target_lufs", -16), -16.0, min_val=-70.0, max_val=0.0),
             on_progress=on_progress,
         )
@@ -2185,7 +2212,7 @@ def title_render():
             else:
                 d = tempfile.gettempdir()
             _title_preset = data.get("preset", "fade_center")
-            if _title_preset not in ("fade_center", "slide_left", "typewriter"):
+            if _title_preset not in ("fade_center", "slide_left", "typewriter", "lower_third", "countdown", "kinetic_bounce"):
                 _title_preset = "fade_center"
             out = render_title_card(text, output_dir=d,
                                      preset=_title_preset,

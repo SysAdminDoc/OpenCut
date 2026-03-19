@@ -20,6 +20,7 @@ from pathlib import Path
 from typing import Callable, Dict, Optional
 
 from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
+from opencut.helpers import output_path as _output_path
 
 logger = logging.getLogger("opencut")
 
@@ -31,12 +32,6 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 # Dependency management
 # ---------------------------------------------------------------------------
 
-def _output_path(input_path: str, suffix: str, output_dir: str = "") -> str:
-    """Generate output path with suffix."""
-    base = os.path.splitext(os.path.basename(input_path))[0]
-    ext = os.path.splitext(input_path)[1] or ".mp4"
-    directory = output_dir or os.path.dirname(input_path)
-    return os.path.join(directory, f"{base}_{suffix}{ext}")
 
 
 def _count_frames(filepath: str) -> int:
