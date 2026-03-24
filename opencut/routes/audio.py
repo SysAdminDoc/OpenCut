@@ -369,7 +369,7 @@ def audio_denoise():
         try:
             from opencut.core.audio_suite import denoise_audio
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -430,7 +430,7 @@ def audio_isolate():
         try:
             from opencut.core.audio_suite import isolate_voice
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -720,7 +720,7 @@ def audio_normalize():
         try:
             from opencut.core.audio_suite import LOUDNESS_PRESETS, normalize_loudness
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -818,7 +818,7 @@ def audio_beats():
         try:
             from opencut.core.audio_suite import detect_beats
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             info = detect_beats(filepath, sensitivity=sensitivity, on_progress=_on_progress)
@@ -885,7 +885,7 @@ def audio_effects_apply():
         try:
             from opencut.core.audio_suite import apply_audio_effect
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -977,7 +977,7 @@ def audio_pro_apply():
         try:
             from opencut.core.audio_pro import apply_pedalboard_effect
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1024,7 +1024,7 @@ def audio_pro_deepfilter():
         try:
             from opencut.core.audio_pro import deepfilter_denoise
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1156,7 +1156,7 @@ def tts_generate():
 
     def _process():
         try:
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = output_dir or tempfile.gettempdir()
@@ -1231,7 +1231,7 @@ def tts_subtitled():
         try:
             from opencut.core.voice_gen import edge_tts_with_subtitles
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = output_dir or tempfile.gettempdir()
@@ -1330,7 +1330,7 @@ def audio_gen_tone():
         try:
             from opencut.core.music_gen import generate_tone
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = output_dir or tempfile.gettempdir()
@@ -1379,7 +1379,7 @@ def audio_gen_sfx():
         try:
             from opencut.core.music_gen import generate_sfx
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = output_dir or tempfile.gettempdir()
@@ -1459,7 +1459,7 @@ def audio_duck_route():
         try:
             from opencut.core.audio_duck import sidechain_duck
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(music_path, output_dir)
@@ -1517,7 +1517,7 @@ def audio_mix_duck_route():
         try:
             from opencut.core.audio_duck import mix_with_duck
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(voice_path, output_dir)
@@ -1573,7 +1573,7 @@ def audio_duck_video_route():
         try:
             from opencut.core.audio_duck import auto_duck_video
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(video_path, output_dir)
@@ -1633,7 +1633,7 @@ def audio_mix_route():
         try:
             from opencut.core.audio_duck import mix_audio_tracks
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = output_dir or tempfile.gettempdir()
@@ -1931,7 +1931,7 @@ def silence_speed_up():
         try:
             from opencut.core.silence import speed_up_silences
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             result = speed_up_silences(
@@ -2001,7 +2001,7 @@ def audio_enhance():
 
     def _process():
         try:
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             if backend == "clearvoice":
@@ -2047,7 +2047,7 @@ def audio_enhance():
 def audio_beat_markers():
     """Extract beat timestamps for use as Premiere timeline markers."""
     data = request.get_json(force=True)
-    filepath = data.get("file", "").strip()
+    filepath = data.get("filepath", data.get("file", "")).strip()
     subdivisions = safe_int(data.get("subdivisions", 1), 1, min_val=1, max_val=8)
     offset = safe_float(data.get("offset", 0.0), 0.0)
 
@@ -2065,7 +2065,7 @@ def audio_beat_markers():
         try:
             from opencut.core.audio_suite import detect_beats
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             info = detect_beats(filepath, on_progress=_on_progress)
@@ -2146,7 +2146,7 @@ def audio_loudness_match():
         try:
             from opencut.core import loudness_match
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = output_dir if output_dir else None
