@@ -1939,9 +1939,9 @@ function ocCreateSmartBins(rulesJSON) {
                         try { hasVid = mediaItem.hasVideo(); } catch (e) {}
                         try { hasAud = mediaItem.hasAudio(); } catch (e) {}
                         if (ruleValue === "video") {
-                            matches = hasVid && !hasAud;
+                            matches = hasVid;
                         } else if (ruleValue === "audio") {
-                            matches = !hasVid && hasAud;
+                            matches = hasAud && !hasVid;
                         } else if (ruleValue === "av") {
                             matches = hasVid && hasAud;
                         }
@@ -2070,6 +2070,8 @@ function ocAddNativeCaptionTrack(srtJSON) {
             app.project.importFiles([tempFile.fsName], false, targetBin, false);
         } catch (e) {
             return JSON.stringify({ error: "SRT import failed: " + e.toString() });
+        } finally {
+            try { tempFile.remove(); } catch (e2) {}
         }
 
         return JSON.stringify({ success: true, captions_added: segments.length });

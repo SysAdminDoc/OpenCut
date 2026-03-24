@@ -6,7 +6,6 @@ Each function returns True/False indicating if the dependency is usable.
 """
 
 import threading
-from typing import Tuple
 
 from opencut.helpers import _try_import
 
@@ -104,33 +103,22 @@ def check_llm_available():
     return False
 
 
-def check_color_match_available() -> Tuple[bool, str]:
+def check_color_match_available() -> bool:
     """Check if color matching (OpenCV + NumPy) is available."""
-    try:
-        import cv2  # noqa
-        import numpy  # noqa
-        return True, "cv2+numpy"
-    except ImportError as e:
-        return False, str(e)
+    return _try_import("cv2") is not None and _try_import("numpy") is not None
 
 
-def check_auto_zoom_available() -> Tuple[bool, str]:
+def check_auto_zoom_available() -> bool:
     """Check if auto zoom face detection (OpenCV) is available."""
-    try:
-        import cv2  # noqa
-        return True, "cv2"
-    except ImportError as e:
-        return False, str(e)
+    return _try_import("cv2") is not None
 
 
-def check_loudness_match_available() -> Tuple[bool, str]:
+def check_loudness_match_available() -> bool:
     """Check if loudness matching (FFmpeg) is available."""
     import shutil
-    if shutil.which("ffmpeg"):
-        return True, "ffmpeg"
-    return False, "ffmpeg not found in PATH"
+    return shutil.which("ffmpeg") is not None
 
 
-def check_footage_search_available() -> Tuple[bool, str]:
+def check_footage_search_available() -> bool:
     """Check if footage search indexing is available (always True — uses stdlib only)."""
-    return True, "stdlib"
+    return True

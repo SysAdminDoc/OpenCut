@@ -8,7 +8,6 @@ Uses LLM when available, falls back to keyword matching.
 import json
 import logging
 import re
-import string
 from typing import List, Optional
 
 from .llm import LLMConfig, query_llm
@@ -75,7 +74,7 @@ def parse_command_keyword(text: str) -> Optional[dict]:
 
     for entry in _SORTED_COMMAND_MAP:
         keywords = entry["keywords"]
-        matched_keywords = [kw for kw in keywords if kw in text_lower]
+        matched_keywords = [kw for kw in keywords if re.search(r'\b' + re.escape(kw) + r'\b', text_lower)]
         if not matched_keywords:
             continue
 
@@ -166,7 +165,7 @@ def parse_command_llm(
     raw = response.text.strip()
 
     # Extract JSON object from response
-    json_match = re.search(r"\{.*?\}", raw, re.DOTALL)
+    json_match = re.search(r"\{.*\}", raw, re.DOTALL)
     if not json_match:
         logger.warning("No JSON found in LLM command response: %s", raw[:200])
         return None
@@ -181,10 +180,26 @@ def parse_command_llm(
     if not route:
         return None
 
+    # Validate route against known COMMAND_MAP routes
+    valid_routes = {e["route"] for e in COMMAND_MAP}
+    route_str = str(route)
+    if route_str not in valid_routes:
+        logger.warning("LLM returned unknown route %r, discarding", route_str)
+        return None
+
+    params = parsed.get("params", {})
+    if not isinstance(params, dict):
+        params = {}
+
+    try:
+        confidence = float(parsed.get("confidence", 0.5))
+    except (TypeError, ValueError):
+        confidence = 0.5
+
     return {
-        "route": str(route),
-        "params": parsed.get("params", {}),
-        "confidence": float(parsed.get("confidence", 0.5)),
+        "route": route_str,
+        "params": params,
+        "confidence": confidence,
         "matched_keyword": str(parsed.get("matched_keyword", "")),
     }
 

@@ -556,7 +556,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     atexit.register(_remove_pid)
 
     print("")
-    print("  OpenCut Backend Server v1.4.0")
+    print("  OpenCut Backend Server v1.5.1")
     print(f"  Listening on http://{host}:{effective_port}")
     print(f"  PID: {os.getpid()}")
     print(f"  Log file: {LOG_FILE}")

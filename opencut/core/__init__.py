@@ -1,4 +1,13 @@
 """Core processing modules for silence detection, captioning, diarization, and zoom."""
 
-from . import repeat_detect, chapter_gen, footage_search, deliverables
-from . import color_match, multicam, auto_zoom, loudness_match, nlp_command
+from . import (  # noqa: F401
+    auto_zoom,
+    chapter_gen,
+    color_match,
+    deliverables,
+    footage_search,
+    loudness_match,
+    multicam,
+    nlp_command,
+    repeat_detect,
+)

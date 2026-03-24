@@ -7,7 +7,6 @@ Uses OpenCV face detection (Haar cascade fallback if no DNN model available).
 """
 
 import logging
-import math
 import os
 from typing import List, Optional
 
@@ -160,14 +159,18 @@ def _interpolate_anchors(
         return raw_anchors
 
     smoothed = [dict(raw_anchors[0])]
+    n = len(raw_anchors)
 
-    for i in range(1, len(raw_anchors)):
-        prev = raw_anchors[i - 1]
+    for i in range(1, n):
+        prev = smoothed[-1]  # use already-smoothed previous anchor
         curr = raw_anchors[i]
-        # Blend anchor position with easing (1.0 = fully at new anchor)
-        t = _ease(1.0, easing)
-        ax = prev["anchor_x"] + (curr["anchor_x"] - prev["anchor_x"]) * t
-        ay = prev["anchor_y"] + (curr["anchor_y"] - prev["anchor_y"]) * t
+        # Blend factor: ease the normalised position through the sequence
+        t_raw = i / (n - 1) if n > 1 else 1.0
+        t = _ease(t_raw, easing)
+        # Exponential moving average blend — 0.4 weight to new position
+        blend = 0.4 * t + 0.3
+        ax = prev["anchor_x"] + (curr["anchor_x"] - prev["anchor_x"]) * blend
+        ay = prev["anchor_y"] + (curr["anchor_y"] - prev["anchor_y"]) * blend
         smoothed.append({**curr, "anchor_x": round(ax, 4), "anchor_y": round(ay, 4)})
 
     return smoothed
@@ -218,7 +221,9 @@ def generate_zoom_keyframes(
     if not cap.isOpened():
         raise RuntimeError(f"Cannot open video: {video_path}")
 
-    fps = cap.get(cv2.CAP_PROP_FPS) or 25.0
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if not fps or fps <= 0:
+        fps = 25.0
     total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
     duration = total_frames / fps if fps > 0 else 0.0
 
@@ -229,45 +234,46 @@ def generate_zoom_keyframes(
 
     frame_idx = 0
     sample_idx = 0
-    while True:
-        ret, bgr = cap.read()
-        if not ret:
-            break
+    try:
+        while True:
+            ret, bgr = cap.read()
+            if not ret:
+                break
 
-        if frame_idx % frame_interval == 0:
-            t = frame_idx / fps
-            gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-            face = _detect_face_centre(gray)
+            if frame_idx % frame_interval == 0:
+                t = frame_idx / fps
+                gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+                face = _detect_face_centre(gray)
 
-            if face is not None:
-                cx, cy = face
-                # Clamp anchor so face stays within frame after zoom
-                margin = face_padding
-                ax = max(margin, min(1.0 - margin, cx))
-                ay = max(margin, min(1.0 - margin, cy))
-            else:
-                # No face — use centre crop
-                ax, ay = 0.5, 0.5
+                if face is not None:
+                    cx, cy = face
+                    # Clamp anchor so face stays within frame after zoom
+                    margin = face_padding
+                    ax = max(margin, min(1.0 - margin, cx))
+                    ay = max(margin, min(1.0 - margin, cy))
+                else:
+                    # No face — use centre crop
+                    ax, ay = 0.5, 0.5
 
-            # Compute eased scale: ramp from 1.0 at start to zoom_amount
-            t_normalised = t / duration if duration > 0 else 0.0
-            scale = 1.0 + (zoom_amount - 1.0) * _ease(t_normalised, easing)
+                # Compute eased scale: ramp from 1.0 at start to zoom_amount
+                t_normalised = t / duration if duration > 0 else 0.0
+                scale = 1.0 + (zoom_amount - 1.0) * _ease(t_normalised, easing)
 
-            raw_keyframes.append({
-                "time": round(t, 4),
-                "scale": round(scale, 4),
-                "anchor_x": round(ax, 4),
-                "anchor_y": round(ay, 4),
-            })
-            sample_times.append(t)
+                raw_keyframes.append({
+                    "time": round(t, 4),
+                    "scale": round(scale, 4),
+                    "anchor_x": round(ax, 4),
+                    "anchor_y": round(ay, 4),
+                })
+                sample_times.append(t)
 
-            if on_progress and total_samples > 0:
-                on_progress(int(sample_idx / total_samples * 100))
-            sample_idx += 1
+                if on_progress and total_samples > 0:
+                    on_progress(int(sample_idx / total_samples * 100))
+                sample_idx += 1
 
-        frame_idx += 1
-
-    cap.release()
+            frame_idx += 1
+    finally:
+        cap.release()
 
     if not raw_keyframes:
         # Nothing could be read — return safe defaults

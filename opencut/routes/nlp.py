@@ -36,6 +36,8 @@ def nlp_command():
     command = data.get("command", "").strip()
     file_path = data.get("file", "").strip()
     llm_provider = data.get("llm_provider", "ollama").strip()
+    if llm_provider not in ("ollama", "openai", "anthropic"):
+        llm_provider = "ollama"
     llm_model = data.get("llm_model", "llama3").strip()
     api_key = data.get("api_key", "").strip()
 
@@ -64,6 +66,8 @@ def nlp_command():
     try:
         from opencut.core import nlp_command as _nlp_mod
         parsed = _nlp_mod.parse_command(command, llm_config=llm_config)
+        if not parsed:
+            return jsonify({"route": "", "params": {}, "confidence": 0.0, "explanation": "No matching command found"})
         return jsonify({
             "route": parsed.get("route", ""),
             "params": parsed.get("params", {}),

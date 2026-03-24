@@ -9,23 +9,29 @@ import json
 import logging
 import os
 import re
-import subprocess
-import tempfile
-from typing import List, Optional
+import subprocess as _sp
+from typing import List
+
+try:
+    from ..helpers import run_ffmpeg as _helpers_run_ffmpeg
+except ImportError:
+    try:
+        from opencut.helpers import run_ffmpeg as _helpers_run_ffmpeg
+    except ImportError:
+        _helpers_run_ffmpeg = None  # type: ignore
 
 logger = logging.getLogger("opencut")
 
-# ---------------------------------------------------------------------------
-# FFmpeg subprocess helpers (following the pattern in audio.py / silence.py)
-# ---------------------------------------------------------------------------
 
-def _run_ffmpeg(cmd: List[str], timeout: int = 3600) -> subprocess.CompletedProcess:
-    """Run an FFmpeg command, raising RuntimeError on failure."""
+def _run_ffmpeg(cmd: List[str], timeout: int = 3600) -> "_sp.CompletedProcess":
+    """Run an FFmpeg command using consolidated helper when available."""
+    if _helpers_run_ffmpeg is not None:
+        return _helpers_run_ffmpeg(cmd, timeout=timeout)
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
+        result = _sp.run(cmd, capture_output=True, text=True, timeout=timeout)
     except FileNotFoundError:
         raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
-    except subprocess.TimeoutExpired:
+    except _sp.TimeoutExpired:
         raise RuntimeError(f"FFmpeg timed out running: {' '.join(cmd[:6])}")
     return result
 
@@ -61,6 +67,8 @@ def measure_loudness(filepath: str) -> dict:
     ]
 
     result = _run_ffmpeg(cmd)
+    if result.returncode != 0:
+        logger.warning("FFmpeg loudness measurement returned non-zero for %s", filepath)
 
     # loudnorm writes its JSON block to stderr between { } on multiple lines
     stderr = result.stderr
@@ -120,8 +128,8 @@ def normalize_to_lufs(
         RuntimeError: If FFmpeg is not installed or encoding fails.
         ValueError: If the first-pass loudness measurement cannot be parsed.
     """
-    target_lufs = float(target_lufs)
-    true_peak = float(true_peak)
+    target_lufs = max(-70.0, min(0.0, float(target_lufs)))
+    true_peak = max(-10.0, min(0.0, float(true_peak)))
 
     # --- Pass 1: Measure ---
     logger.info("Loudness normalisation pass 1 (measure): %s", input_path)
@@ -133,6 +141,8 @@ def normalize_to_lufs(
         "-f", "null", "-",
     ]
     pass1 = _run_ffmpeg(pass1_cmd)
+    if pass1.returncode != 0:
+        logger.warning("Loudnorm pass 1 returned non-zero for %s", input_path)
 
     stderr = pass1.stderr
     json_match = re.search(r"\{[^{}]+\}", stderr, re.DOTALL)
@@ -148,7 +158,12 @@ def normalize_to_lufs(
         raise ValueError(f"loudnorm pass-1 JSON parse error: {exc}") from exc
 
     def _mv(key: str, default: str = "0.0") -> str:
-        return str(measured.get(key, default))
+        val = str(measured.get(key, default))
+        try:
+            float(val)
+        except (TypeError, ValueError):
+            val = default
+        return val
 
     input_i = _mv("input_i", "-70.0")
     input_tp = _mv("input_tp", "-70.0")

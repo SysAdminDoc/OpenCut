@@ -7,10 +7,9 @@ Stores a simple JSON index on disk. Searches by keyword or phrase.
 
 import json
 import logging
-import math
 import os
 import string
-from typing import List, Optional
+from typing import List
 
 logger = logging.getLogger("opencut")
 
@@ -54,7 +53,9 @@ class _FileLock:
                 pass
         elif _HAS_MSVCRT:
             try:
-                msvcrt.locking(self._fh.fileno(), msvcrt.LK_NBLCK, 1)
+                self._fh.write(" ")
+                self._fh.flush()
+                msvcrt.locking(self._fh.fileno(), msvcrt.LK_LOCK, 1)
             except Exception:
                 pass
         return self
@@ -62,6 +63,11 @@ class _FileLock:
     def __exit__(self, *_):
         if self._fh:
             try:
+                if _HAS_MSVCRT:
+                    try:
+                        msvcrt.locking(self._fh.fileno(), msvcrt.LK_UNLCK, 1)
+                    except Exception:
+                        pass
                 self._fh.close()
             except Exception:
                 pass
