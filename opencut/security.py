@@ -76,8 +76,15 @@ def validate_path(path: str, allowed_base: str = None) -> str:
     if "\x00" in path:
         raise ValueError("Null byte in path")
 
+    # Block UNC/network paths (SSRF/NTLM hash leak risk)
+    if path.startswith("\\\\") or path.startswith("//"):
+        raise ValueError("UNC/network paths are not allowed")
+
     # Normalise and block .. components
     normed = os.path.normpath(path)
+    # Re-check after normpath (could produce UNC from edge cases)
+    if normed.startswith("\\\\") or normed.startswith("//"):
+        raise ValueError("UNC/network paths are not allowed")
     parts = normed.replace("\\", "/").split("/")
     if ".." in parts:
         raise ValueError("Path traversal blocked")
