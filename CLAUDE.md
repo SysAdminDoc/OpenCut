@@ -120,7 +120,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.5.1**
+- Current: **v1.5.3**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all at once (also manually update UXP manifest.json and UXP main.js — not yet covered by sync script)
 
@@ -149,13 +149,17 @@
 - **LLMConfig is a dataclass, not a dict** — routes must instantiate `LLMConfig(provider=..., model=..., api_key=...)`, never pass `{"provider": ...}` dicts to core functions. Import pattern: try relative `..core.llm`, fallback absolute `opencut.core.llm`, guard with `if LLMConfig is not None`.
 - **Deliverables return dict, not string** — `generate_vfx_sheet/adr_list/music_cue_sheet/asset_list()` return `{"output": path, "rows": N}`. Routes use `isinstance(result, dict)` guard with `.get("output", fallback)`.
 - **Multicam result is a dict** — `generate_multicam_cuts()` returns `{"cuts": [...], "total_cuts": N, "speaker_to_track": {...}}`. Unpack with `result.get("cuts", [])`, not direct iteration.
-- **on_progress callbacks** — color_match_video, generate_zoom_keyframes, batch_loudness_match all accept `on_progress=None` callback (receives 0–100 int). Routes pass `_on_progress` from the job closure.
+- **on_progress callbacks** — Core modules call `on_progress(int_pct)` with **1 argument**. All route `_on_progress(pct, msg="")` closures must default `msg` to `""`. Never define `_on_progress(pct, msg)` without the default — it will crash when core modules call with 1 arg.
 - **Auto-zoom FFmpeg resolution** — zoompan filter uses dynamic `s={src_w}x{src_h}` from probe(), not hardcoded `s=hd1080`. Always probe source before building the filter string.
 - **footage_search file locking** — index writes use cross-platform `_FileLock` + `os.replace()` atomic swap. Never write the index JSON file directly; always use `save_index()`.
 - **LLM API key security** — `/settings/llm` GET masks key as `***{last4}`. POST preserves stored key if client echoes back a masked value (starts with `***`). Never log LLMConfig objects or api_key values.
 - **User preferences** — New setting files in `~/.opencut/`: llm_settings.json, footage_index_config.json, loudness_settings.json, color_profiles.json, multicam_config.json, auto_zoom_presets.json, chapter_defaults.json. Always use `load_X()` / `save_X()` wrappers from user_data.py.
 - **MCP server** — 8 new tools added (opencut_repeat_detect, opencut_chapters, opencut_footage_search, opencut_index_footage, opencut_color_match, opencut_loudness_match, opencut_auto_zoom, opencut_multicam_cuts). Filepath validation in handle_tool_call covers "file", "source", "reference" keys in addition to existing "filepath".
-- **Command palette** — 9 new entries at end of `_commandIndex` array (lines ~5162–5171). Tab values must match `data-nav` attributes in HTML.
+- **Command palette** — 9 new entries at end of `_commandIndex` array (lines ~5162–5171). Tab values must match `data-nav` attributes in HTML. Sub-tab IDs must match `data-sub` attributes in HTML — verify before adding entries.
+- **Route param name convention** — CEP panel sends `filepath` (established convention). New routes MUST accept `filepath` as the primary key (use `data.get("filepath", data.get("file", ""))` fallback pattern for compat). Never use only `"file"` — it breaks the frontend.
+- **UXP endpoint convention** — UXP handlers MUST use full Blueprint-prefixed paths (`/audio/denoise`, `/video/color-match`, `/captions/chapters`, `/timeline/batch-rename`, `/search/footage`, `/nlp/command`, `/deliverables/vfx-sheet`). Never use bare paths like `/denoise` or `/chapters`.
+- **ExtendScript data format** — `ocAddSequenceMarkers` expects a JSON array of `{time, name, type}` objects, NOT a wrapper object. `ocBatchRenameProjectItems` reads `{nodeId, newName}`. `ocCreateSmartBins` reads `{binName, rule, field, value}`. Always verify field names match between JS and JSX.
+- **Queue allowlist** — New async routes MUST be added to `_ALLOWED_QUEUE_ENDPOINTS` in jobs_routes.py, or queue operations silently fail with "Endpoint not queueable".
 - **Never `git add -A`** — `installer/bin/`, `installer/obj/`, `installer/publish/` are build artifacts NOT in `.gitignore` (they're tracked in the repo). Use specific file paths when staging.
 - **Frozen builds** — `sys.executable` points to the exe, not Python. `safe_pip_install()` and `_setup_system_site_packages()` detect frozen state and find system Python from PATH instead.
 - **Ruff CI rules** — CI runs `ruff check opencut/ --select E,F,I --ignore E501`. Codebase is fully lint-clean as of v1.3.0. Use `# noqa: F401` for intentional lazy imports, `# noqa: E402` for delayed imports, `# noqa: F821` for closure-scoped forward refs.
@@ -733,3 +737,18 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **captions.py chapters** — missing LLM provider allowlist, missing segments list type+size validation (max 50000)
 - **video.py multicam** — missing segments list type+size validation, diarization file 50 MB size cap before JSON.load
 - **MCP server** — `files` array items validated for path traversal, UNC path (`\\` and `//`) rejection in filepath validation
+
+## v1.5.2 Batch 30 Bug Fixes
+- **CEP panel 7 P0 param mismatches** — beat-markers/repeat-detect/chapters/NLP sent `filepath` but new routes read `file`; routes now accept both via `data.get("filepath", data.get("file", ""))` fallback. Loudness-match/search-index sent `filepaths` but routes read `files`; frontend fixed. Footage search sent `max_results` but route reads `top_k`; frontend fixed. Loudness result table read `r.clips` but API returns `outputs`; fixed.
+- **on_progress crash (48 callbacks)** — all `_on_progress(pct, msg)` closures in video.py/audio.py/captions.py took 2 required args, but core modules (color_match, auto_zoom, loudness_match) call `on_progress(int)` with 1 arg → TypeError. Fixed `msg=""` default on all 48 callbacks.
+- **Queue allowlist** — 9 new v1.5.0 routes missing from `_ALLOWED_QUEUE_ENDPOINTS` (beat-markers, loudness-match, chapters, repeat-detect, color-match, auto-zoom, multicam-cuts, export-from-markers, search/index)
+- **Command palette** — "Color Match" pointed to non-existent `tl-colormatch` → `vid-color`; "Auto Zoom" pointed to `tl-autozoom` → `vid-effects`
+- **Dependencies dashboard** — multicam missing from `/system/dependencies` response
+
+## v1.5.3 Batch 31 Bug Fixes
+- **UXP panel 18 P0 — every feature was broken** — all handlers posted to wrong endpoints missing Blueprint prefixes (/silence, /denoise, /chapters, /color-match → /silence, /audio/denoise, /captions/chapters, /video/color-match, etc.) and sent wrong param names (file_path→filepath, sensitivity→subdivisions, filler_words→custom_words, caption_style→format, etc.). All 18+ handlers fixed.
+- **CEP marker format** — `addBeatMarkersToSequence` and `addChaptersAsMarkers` sent `{times: [...]}` wrapper object but `ocAddSequenceMarkers` expects `[{time, name, type}]` array. Fixed to build proper marker array.
+- **CEP rename fields** — sent `{id, old_name, new_name}` but `ocBatchRenameProjectItems` reads `{nodeId, newName}`. Fixed field mapping.
+- **CEP smart bin fields** — sent `{bin_name, rule_type}` but `ocCreateSmartBins` reads `{binName, rule}`. Added field transformation before ExtendScript call.
+- **CEP deliverables result** — read `data.output_path` but route returns `data.output`. Fixed with fallback.
+- **ExtendScript export range** — `ocExportSequenceRange` setInPoint/setOutPoint failures now abort with error instead of silently exporting wrong range.
