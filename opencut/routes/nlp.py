@@ -34,7 +34,7 @@ def nlp_command():
     """Parse a natural-language command and return the matching route + params."""
     data = request.get_json(force=True)
     command = data.get("command", "").strip()
-    file_path = data.get("file", "").strip()
+    file_path = data.get("filepath", data.get("file", "")).strip()
     llm_provider = data.get("llm_provider", "ollama").strip()
     if llm_provider not in ("ollama", "openai", "anthropic"):
         llm_provider = "ollama"

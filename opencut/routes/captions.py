@@ -867,7 +867,7 @@ def captions_whisperx():
         try:
             from opencut.core.captions_enhanced import whisperx_transcribe
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             result = whisperx_transcribe(
@@ -920,7 +920,7 @@ def captions_translate():
 
     def _process():
         try:
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             if backend == "seamless":
@@ -1006,7 +1006,7 @@ def captions_karaoke():
         try:
             from opencut.core.captions_enhanced import segments_to_ass_karaoke
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir) if filepath else tempfile.gettempdir()
@@ -1153,7 +1153,7 @@ def burnin_from_file():
         try:
             from opencut.core.caption_burnin import burnin_subtitles
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(video_path, output_dir)
@@ -1211,7 +1211,7 @@ def burnin_from_segments():
         try:
             from opencut.core.caption_burnin import burnin_segments
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(video_path, output_dir)
@@ -1332,7 +1332,7 @@ def transcript_summarize():
             from opencut.core.highlights import summarize_video
             from opencut.core.llm import LLMConfig
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             llm_config = LLMConfig(
@@ -1393,7 +1393,7 @@ def transcript_summarize():
 def captions_chapters():
     """Generate YouTube-style chapters from a transcript using an LLM."""
     data = request.get_json(force=True)
-    filepath = data.get("file", "").strip()
+    filepath = data.get("filepath", data.get("file", "")).strip()
     segments = data.get("segments", None)
     llm_provider = data.get("llm_provider", "ollama")
     if llm_provider not in ("ollama", "openai", "anthropic"):
@@ -1510,7 +1510,7 @@ def captions_chapters():
 def captions_repeat_detect():
     """Detect repeated takes in a recording and identify clean ranges."""
     data = request.get_json(force=True)
-    filepath = data.get("file", "").strip()
+    filepath = data.get("filepath", data.get("file", "")).strip()
     model = data.get("model", "base")
     threshold = safe_float(data.get("threshold", 0.6), 0.6, min_val=0.0, max_val=1.0)
     gap_tolerance = safe_float(data.get("gap_tolerance", 2.0), 2.0, min_val=0.0, max_val=30.0)

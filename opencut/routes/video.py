@@ -428,7 +428,7 @@ def video_scenes():
         try:
             from opencut.core.scene_detect import detect_scenes, generate_chapter_markers
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             if method == "ml":
@@ -812,7 +812,7 @@ def video_fx_apply():
         try:
             from opencut.core import video_fx
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -944,7 +944,7 @@ def video_ai_upscale():
         try:
             from opencut.core.video_ai import upscale_video
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -999,7 +999,7 @@ def video_ai_rembg():
         try:
             from opencut.core.video_ai import remove_background
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1049,7 +1049,7 @@ def video_ai_interpolate():
         try:
             from opencut.core.video_ai import frame_interpolate
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1101,7 +1101,7 @@ def video_ai_denoise():
         try:
             from opencut.core.video_ai import video_denoise
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1247,7 +1247,7 @@ def face_blur():
         try:
             from opencut.core.face_tools import blur_faces
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1349,7 +1349,7 @@ def style_apply():
         try:
             from opencut.core.style_transfer import style_transfer_video
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1402,7 +1402,7 @@ def style_arbitrary():
         try:
             from opencut.core.style_transfer import arbitrary_style_transfer
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
@@ -1468,7 +1468,7 @@ def export_with_preset_route():
         try:
             from opencut.core.export_presets import export_with_preset
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1523,7 +1523,7 @@ def generate_thumbnails_route():
         try:
             from opencut.core.thumbnail import generate_thumbnails
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1787,7 +1787,7 @@ def speed_change_route():
         try:
             from opencut.core.speed_ramp import change_speed
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1835,7 +1835,7 @@ def speed_reverse_route():
         try:
             from opencut.core.speed_ramp import reverse_video
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1882,7 +1882,7 @@ def speed_ramp_route():
 
     def _process():
         try:
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1959,7 +1959,7 @@ def lut_apply():
         try:
             from opencut.core.lut_library import apply_lut
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -1995,7 +1995,7 @@ def lut_generate_all():
         try:
             from opencut.core.lut_library import generate_all_luts
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             count = generate_all_luts(on_progress=_on_progress)
@@ -3240,7 +3240,7 @@ def video_trim():
 def preview_frame():
     """Extract a single frame from video at given timestamp, return as base64 JPEG via job."""
     data = request.get_json(force=True)
-    file_path = data.get("file", "")
+    file_path = data.get("filepath", data.get("file", ""))
     timestamp = str(data.get("timestamp", "00:00:01"))
     width = safe_int(data.get("width", 640), 640)
 
@@ -3348,7 +3348,7 @@ def video_auto_edit():
         try:
             from opencut.core.auto_edit import auto_edit
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             result = auto_edit(
@@ -3424,7 +3424,7 @@ def video_reframe_face():
         try:
             from opencut.core.face_reframe import face_reframe
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             output_path = face_reframe(
@@ -3492,7 +3492,7 @@ def video_highlights():
             from opencut.core.highlights import extract_highlights
             from opencut.core.llm import LLMConfig
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             llm_config = LLMConfig(
@@ -3597,7 +3597,7 @@ def video_lut_from_ref():
         try:
             from opencut.core.lut_library import generate_lut_from_reference
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             cube_path = generate_lut_from_reference(
@@ -3651,7 +3651,7 @@ def video_lut_ai():
         try:
             from opencut.core.lut_library import generate_lut_ai
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             cube_path = generate_lut_ai(
@@ -3721,7 +3721,7 @@ def video_shorts_pipeline():
             from opencut.core.llm import LLMConfig
             from opencut.core.shorts_pipeline import ShortsPipelineConfig, generate_shorts
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             _shorts_provider = data.get("llm_provider", "ollama")
@@ -3833,7 +3833,7 @@ def video_color_match():
         try:
             from opencut.core import color_match
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             base_name = os.path.splitext(os.path.basename(source))[0]
@@ -3872,7 +3872,7 @@ def video_color_match():
 def video_auto_zoom():
     """Generate zoom keyframes for a clip, optionally baking them in via FFmpeg."""
     data = request.get_json(force=True)
-    filepath = data.get("file", "").strip()
+    filepath = data.get("filepath", data.get("file", "")).strip()
     zoom_amount = safe_float(data.get("zoom_amount", 1.15), 1.15, min_val=1.0, max_val=4.0)
     easing = data.get("easing", "ease_in_out").strip()
     output_dir = data.get("output_dir", "").strip()
@@ -3905,7 +3905,7 @@ def video_auto_zoom():
         try:
             from opencut.core import auto_zoom
 
-            def _on_progress(pct, msg):
+            def _on_progress(pct, msg=""):
                 _update_job(job_id, progress=pct, message=msg)
 
             keyframes = auto_zoom.generate_zoom_keyframes(

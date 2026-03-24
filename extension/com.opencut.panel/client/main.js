@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.5.1
+   OpenCut CEP Panel - Main Controller v1.5.2
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -5162,10 +5162,10 @@
         { name: "Repeat Detection",   tab: "captions", sub: "cap-repeat",     keywords: "repeat detect loop fumble duplicate take" },
         { name: "Chapter Generation", tab: "captions", sub: "cap-chapters",   keywords: "chapters youtube timestamps sections topics" },
         { name: "Footage Search",     tab: "nlp",      sub: "nlp-search",     keywords: "search footage clips index content find" },
-        { name: "Color Match",        tab: "timeline", sub: "tl-colormatch",  keywords: "color match grade balance reference clip" },
+        { name: "Color Match",        tab: "video",    sub: "vid-color",      keywords: "color match grade balance reference clip" },
         { name: "Multicam Switcher",  tab: "timeline", sub: "tl-multicam",    keywords: "multicam speaker podcast camera switch diarize" },
         { name: "Loudness Match",     tab: "audio",    sub: "aud-loudmatch",  keywords: "loudness lufs normalize match audio levels" },
-        { name: "Auto Zoom",          tab: "timeline", sub: "tl-autozoom",    keywords: "auto zoom push in ken burns face zoom" },
+        { name: "Auto Zoom",          tab: "video",    sub: "vid-effects",    keywords: "auto zoom push in ken burns face zoom" },
         { name: "AI Command",         tab: "nlp",      sub: "nlp-command",    keywords: "nlp ai command natural language instruction" },
         { name: "Deliverables",       tab: "export",   sub: "exp-deliverables", keywords: "deliverables vfx adr music cue sheet asset list" },
     ];
@@ -6112,7 +6112,7 @@
         if (!paths.length) { showAlert("No project media found."); return; }
         var outDir = (document.getElementById("loudMatchOutputDir") || {}).value || projectFolder;
         startJob("/audio/loudness-match", {
-            filepaths: paths,
+            files: paths,
             target_lufs: parseFloat(document.getElementById("loudMatchTarget").value || "-14"),
             output_dir: outDir,
         });
@@ -6124,15 +6124,16 @@
         var res = document.getElementById("loudMatchResults");
         var table = document.getElementById("loudMatchTable");
         if (res) res.classList.remove("hidden");
-        if (table && r.clips) {
+        var outputs = r.outputs || r.clips || [];
+        if (table && outputs.length) {
             var html = '<table style="width:100%;font-size:11px;border-collapse:collapse;">'
                 + '<tr><th style="text-align:left;padding:2px 4px;">Clip</th><th>Original LUFS</th><th>Status</th></tr>';
-            for (var i = 0; i < r.clips.length; i++) {
-                var c = r.clips[i];
-                var name = (c.path || c.name || "").split(/[/\\]/).pop();
+            for (var i = 0; i < outputs.length; i++) {
+                var c = outputs[i];
+                var name = (c.input || c.path || c.name || "").split(/[/\\]/).pop();
                 html += '<tr><td style="padding:2px 4px;">' + esc(name) + '</td>'
                     + '<td style="text-align:center;">' + safeFixed(c.original_lufs, 1) + '</td>'
-                    + '<td style="text-align:center;color:' + (c.success ? 'var(--success)' : 'var(--error)') + ';">' + (c.success ? "OK" : "Failed") + '</td></tr>';
+                    + '<td style="text-align:center;color:' + (c.job_ok || c.success ? 'var(--success)' : 'var(--error)') + ';">' + (c.job_ok || c.success ? "OK" : "Failed") + '</td></tr>';
             }
             html += '</table>';
             table.innerHTML = html;
@@ -6182,7 +6183,7 @@
         if (!paths.length) { showAlert("No project media found."); return; }
         var btn = document.getElementById("indexAllClipsBtn");
         if (btn) { btn.disabled = true; btn.textContent = "Indexing..."; }
-        api("POST", "/search/index", { filepaths: paths }, function (err, data) {
+        api("POST", "/search/index", { files: paths }, function (err, data) {
             if (btn) { btn.disabled = false; btn.textContent = "Index All Project Clips"; }
             if (err || (data && data.error)) { showAlert("Indexing failed: " + (data ? data.error : "Network error")); return; }
             footageIndex = data;
@@ -6196,7 +6197,7 @@
         var query = (document.getElementById("footageSearchQuery") || {}).value || "";
         if (!query) { showAlert("Enter a search query."); return; }
         var maxResults = parseInt((document.getElementById("footageSearchMax") || {}).value || "10");
-        api("POST", "/search/footage", { query: query, max_results: maxResults }, function (err, data) {
+        api("POST", "/search/footage", { query: query, top_k: maxResults }, function (err, data) {
             var res = document.getElementById("footageSearchResults");
             if (!res) return;
             if (err || !data) { res.innerHTML = '<div class="hint">Search failed.</div>'; return; }
