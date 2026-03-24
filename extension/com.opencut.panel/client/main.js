@@ -23,6 +23,7 @@
     var pollTimer = null;
     var healthTimer = null;
     var csrfToken = "";
+    var _updateCheckDone = false;
     var lastXmlPath = "";
     var lastCaptionPath = "";
     var lastOverlayPath = "";
@@ -1088,6 +1089,15 @@
                 el.backendPort.textContent = BACKEND.replace("http://127.0.0.1:", "Port ");
                 updateButtons();
                 loadCapabilities();
+                // One-time update check after server connects
+                if (!_updateCheckDone) {
+                    _updateCheckDone = true;
+                    api("GET", "/system/update-check", null, function (uerr, udata) {
+                        if (!uerr && udata && udata.update_available) {
+                            showToast("OpenCut v" + udata.latest_version + " available \u2014 visit GitHub to update", "info");
+                        }
+                    });
+                }
                 return;
             }
             if (connected && el.serverStatusBanner) {

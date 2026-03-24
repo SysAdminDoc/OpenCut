@@ -1554,6 +1554,16 @@ async function initApp() {
     await BackendClient.fetchCsrf();
     await loadLlmSettings();
     UIController.showToast("OpenCut backend connected.", "success");
+
+    // One-time update check
+    const ur = await BackendClient.get("/system/update-check");
+    if (ur.ok && ur.data && ur.data.update_available) {
+      UIController.showToast(
+        `OpenCut v${ur.data.latest_version} available \u2014 visit GitHub to update`,
+        "info",
+        6000
+      );
+    }
   }
 
   // Periodic health checks

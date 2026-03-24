@@ -231,12 +231,11 @@ def async_job(job_type: str):
                     _update_job(job_id, status="error", error=str(e),
                                 message=f"Error: {e}")
 
-            import threading as _t
-            thread = _t.Thread(target=_process, daemon=True)
-            thread.start()
+            from opencut.workers import get_pool
+            future = get_pool().submit(job_id, _process)
             with job_lock:
                 if job_id in jobs:
-                    jobs[job_id]["_thread"] = thread
+                    jobs[job_id]["_future"] = future
             return jsonify({"job_id": job_id})
         return wrapper
     return decorator

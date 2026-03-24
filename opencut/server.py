@@ -560,6 +560,8 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     # Register cleanup on normal exit
     import atexit
     atexit.register(_remove_pid)
+    from opencut.workers import shutdown_pool
+    atexit.register(shutdown_pool)
 
     print("")
     print("  OpenCut Backend Server v1.6.0")
