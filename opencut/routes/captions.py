@@ -32,22 +32,22 @@ detect_speech = get_edit_summary = generate_zoom_events = None
 export_premiere_xml = export_ass = export_json = export_srt = export_vtt = None
 CaptionConfig = ExportConfig = get_preset = _probe_media = LLMConfig = None
 try:
+    from ..core.llm import LLMConfig  # noqa: F811
     from ..core.silence import detect_speech, get_edit_summary  # noqa: F811
     from ..core.zoom import generate_zoom_events  # noqa: F811
     from ..export.premiere import export_premiere_xml  # noqa: F811
     from ..export.srt import export_ass, export_json, export_srt, export_vtt  # noqa: F811
     from ..utils.config import CaptionConfig, ExportConfig, get_preset  # noqa: F811
     from ..utils.media import probe as _probe_media  # noqa: F811
-    from ..core.llm import LLMConfig  # noqa: F811
 except ImportError:
     try:
+        from opencut.core.llm import LLMConfig  # noqa: F811
         from opencut.core.silence import detect_speech, get_edit_summary  # noqa: F811
         from opencut.core.zoom import generate_zoom_events  # noqa: F811
         from opencut.export.premiere import export_premiere_xml  # noqa: F811
         from opencut.export.srt import export_ass, export_json, export_srt, export_vtt  # noqa: F811
         from opencut.utils.config import CaptionConfig, ExportConfig, get_preset  # noqa: F811
         from opencut.utils.media import probe as _probe_media  # noqa: F811
-        from opencut.core.llm import LLMConfig  # noqa: F811
     except ImportError:
         LLMConfig = None
         logger.warning("Some caption dependencies could not be imported")

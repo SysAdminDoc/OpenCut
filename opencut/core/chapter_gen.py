@@ -84,7 +84,7 @@ def _parse_llm_chapters(llm_text: str) -> List[dict]:
     Returns list of {"time": "M:SS", "title": str} dicts, or empty list.
     """
     # Try to find a JSON array anywhere in the response
-    match = re.search(r"\[.*?\]", llm_text, re.DOTALL)
+    match = re.search(r"\[\s*\{[\s\S]*\}\s*\]", llm_text)
     if not match:
         logger.warning("No JSON array found in LLM chapter response")
         return []
@@ -264,6 +264,9 @@ def generate_chapters(
             "description_block": ready-to-paste YouTube description string
             "source": "llm" or "heuristic"
     """
+    max_chapters = max(1, int(max_chapters))
+    min_chapter_duration = max(0.0, float(min_chapter_duration))
+
     chapters = []
     source = "heuristic"
 

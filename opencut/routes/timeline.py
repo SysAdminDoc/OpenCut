@@ -22,7 +22,6 @@ from opencut.jobs import (
 from opencut.security import (
     require_csrf,
     safe_float,
-    safe_int,
     validate_filepath,
     validate_path,
 )
@@ -254,8 +253,8 @@ def timeline_srt_to_captions():
             if not isinstance(seg, dict):
                 continue
             cleaned.append({
-                "start": float(seg.get("start", 0)),
-                "end": float(seg.get("end", 0)),
+                "start": safe_float(seg.get("start", 0), 0.0, min_val=0.0),
+                "end": safe_float(seg.get("end", 0), 0.0, min_val=0.0),
                 "text": str(seg.get("text", "")).strip(),
             })
         return jsonify({"segments": cleaned, "count": len(cleaned)})

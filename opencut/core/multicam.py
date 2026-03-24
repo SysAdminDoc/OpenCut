@@ -34,17 +34,17 @@ def merge_diarization_segments(
         return []
 
     # Sort by start time
-    sorted_segs = sorted(segments, key=lambda s: s["start"])
+    sorted_segs = sorted(segments, key=lambda s: float(s.get("start", 0.0)))
     merged = [dict(sorted_segs[0])]
 
     for seg in sorted_segs[1:]:
         last = merged[-1]
-        same_speaker = seg["speaker"] == last["speaker"]
-        gap = seg["start"] - last["end"]
+        same_speaker = seg.get("speaker", "") == last.get("speaker", "")
+        gap = float(seg.get("start", 0.0)) - float(last.get("end", 0.0))
 
         if same_speaker and gap <= gap_tolerance:
             # Extend the current segment
-            last["end"] = max(last["end"], seg["end"])
+            last["end"] = max(float(last.get("end", 0.0)), float(seg.get("end", 0.0)))
         else:
             merged.append(dict(seg))
 
@@ -106,6 +106,8 @@ def generate_multicam_cuts(
             "total_cuts": int
             "speaker_to_track": the mapping used
     """
+    min_cut_duration = max(0.0, float(min_cut_duration))
+
     if not diarization_segments:
         return {"cuts": [], "total_cuts": 0, "speaker_to_track": {}}
 

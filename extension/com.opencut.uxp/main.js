@@ -23,7 +23,7 @@ const BACKEND_DEFAULT  = "http://127.0.0.1:5679";
 const BACKEND_MAX_PORT = 5689;
 const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
-const VERSION          = "1.5.0";
+const VERSION          = "1.5.1";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
@@ -185,7 +185,7 @@ const BackendClient = (() => {
   async function call(method, endpoint, body = null) {
     const url = BACKEND + endpoint;
     const headers = { "Content-Type": "application/json" };
-    if (csrfToken) headers["X-CSRF-Token"] = csrfToken;
+    if (csrfToken) headers["X-OpenCut-Token"] = csrfToken;
 
     const opts = { method, headers };
     if (body && method !== "GET") opts.body = JSON.stringify(body);
@@ -232,13 +232,13 @@ const BackendClient = (() => {
    * Fetch CSRF token from /csrf or /api/csrf.
    */
   async function fetchCsrf() {
-    const r = await get("/csrf");
-    if (r.ok && r.data && r.data.token) {
-      csrfToken = r.data.token;
+    const r = await get("/health");
+    if (r.ok && r.data && r.data.csrf_token) {
+      csrfToken = r.data.csrf_token;
     }
   }
 
-  return { call, get, post, del, checkHealth, fetchCsrf };
+  return { call, get, post, del: del, checkHealth, fetchCsrf };
 })();
 
 // ─────────────────────────────────────────────────────────────
@@ -273,7 +273,7 @@ const JobPoller = (() => {
   }
 
   async function pollJob(jobId, onProgress, onComplete, onError) {
-    const r = await BackendClient.get(`/jobs/${jobId}`);
+    const r = await BackendClient.get(`/status/${jobId}`);
     if (!r.ok) {
       onError(r.error ?? "Polling error");
       activeJobId = null;
@@ -309,7 +309,7 @@ const JobPoller = (() => {
 
   async function cancel() {
     if (!activeJobId) return;
-    await BackendClient.del(`/jobs/${activeJobId}`);
+    await BackendClient.post(`/cancel/${activeJobId}`, {});
     activeJobId = null;
   }
 
@@ -1372,7 +1372,9 @@ function pad(n) { return String(n).padStart(2, "0"); }
 // ─────────────────────────────────────────────────────────────
 async function checkConnection() {
   UIController.setConnection("connecting");
-  const alive = await BackendClient.checkHealth();
+  const r = await BackendClient.get("/health");
+  const alive = r.ok;
+  if (alive && r.data?.csrf_token) csrfToken = r.data.csrf_token;
   UIController.setConnection(alive ? "connected" : "disconnected");
   if (alive) {
     UIController.setStatus("Server online");
@@ -1507,15 +1509,15 @@ function bindSliders() {
 // ─────────────────────────────────────────────────────────────
 async function loadLlmSettings() {
   try {
-    const resp = await BackendClient.fetch("GET", "/settings/llm");
-    if (resp && !resp.error) {
+    const resp = await BackendClient.get("/settings/llm");
+    if (resp.ok && resp.data) {
       // Store globally for use in feature functions
-      window._llmSettings = resp;
+      window._llmSettings = resp.data;
       // If there's a provider select in settings tab, populate it
       const provSel = document.getElementById("llmProvider");
-      if (provSel && resp.provider) provSel.value = resp.provider;
+      if (provSel && resp.data.provider) provSel.value = resp.data.provider;
       const modInp = document.getElementById("llmModel");
-      if (modInp && resp.model) modInp.value = resp.model;
+      if (modInp && resp.data.model) modInp.value = resp.data.model;
     }
   } catch (e) {
     console.warn("Could not load LLM settings:", e);

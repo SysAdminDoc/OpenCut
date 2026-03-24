@@ -8,8 +8,7 @@ from Premiere Pro sequence data. Exports as CSV or plain text.
 import csv
 import logging
 import os
-from collections import defaultdict
-from typing import List, Optional
+from typing import List
 
 logger = logging.getLogger("opencut")
 
@@ -32,8 +31,9 @@ def _seconds_to_tc(seconds: float, fps: float = 24.0) -> str:
     seconds = max(0.0, seconds)
     fps = max(1.0, fps)
     total_frames = int(round(seconds * fps))
-    ff = total_frames % int(fps)
-    total_secs = total_frames // int(fps)
+    fps_int = int(round(fps))
+    ff = total_frames % fps_int
+    total_secs = total_frames // fps_int
     ss = total_secs % 60
     total_mins = total_secs // 60
     mm = total_mins % 60
