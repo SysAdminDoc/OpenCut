@@ -1234,6 +1234,15 @@ _update_cache_lock = threading.Lock()
 _UPDATE_CACHE_TTL = 3600  # 1 hour
 
 
+@system_bp.route("/openapi.json", methods=["GET"])
+def openapi_spec():
+    """Return the OpenAPI 3.0 specification for this server."""
+    from flask import current_app
+
+    from opencut.openapi import generate_openapi_spec
+    return jsonify(generate_openapi_spec(current_app))
+
+
 @system_bp.route("/system/update-check", methods=["GET"])
 def check_for_update():
     """Check GitHub for a newer release. Cached for 1 hour."""

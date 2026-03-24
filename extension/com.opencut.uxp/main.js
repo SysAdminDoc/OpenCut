@@ -49,6 +49,10 @@ let elapsedSec    = 0;
 let lastCuts      = null;   // cuts array from last silence/filler run
 let lastMarkers   = null;   // marker array from last beat detection
 
+// ---- Premiere Pro state cache (reduces UXP API round-trips) ----
+const _pproCache = { seq: null, ts: 0 };
+const PPRO_CACHE_TTL = 8000; // 8 seconds
+
 // ─────────────────────────────────────────────────────────────
 // PProBridge — gracefully degrades when UXP module unavailable
 // ─────────────────────────────────────────────────────────────
@@ -88,13 +92,18 @@ const PProBridge = (() => {
 
   /**
    * Returns basic info about the active sequence as a plain object.
+   * Results are cached for PPRO_CACHE_TTL ms to reduce UXP API round-trips.
    */
   async function getSequenceInfo() {
+    // Return cached data if still fresh
+    if (_pproCache.seq && (Date.now() - _pproCache.ts < PPRO_CACHE_TTL)) {
+      return _pproCache.seq;
+    }
     const seq = await getActiveSequence();
     if (!seq) return null;
     try {
       const settings = await seq.getSettings();
-      return {
+      const info = {
         name:        await seq.getName(),
         duration:    await seq.getEnd(),
         framerate:   settings ? settings.videoFrameRate : "unknown",
@@ -103,10 +112,20 @@ const PProBridge = (() => {
         audioTracks: (await seq.getAudioTrackList())?.length ?? "unknown",
         videoTracks: (await seq.getVideoTrackList())?.length ?? "unknown",
       };
+      _pproCache.seq = info;
+      _pproCache.ts = Date.now();
+      return info;
     } catch (e) {
       console.warn("[PProBridge] getSequenceInfo failed:", e.message);
       return null;
     }
+  }
+
+  /**
+   * Invalidates the sequence info cache, forcing a fresh UXP API call next time.
+   */
+  function invalidateCache() {
+    _pproCache.seq = null;
   }
 
   /**
@@ -168,7 +187,7 @@ const PProBridge = (() => {
     return map[name.toLowerCase()] ?? 1;
   }
 
-  return { init, available: () => available, getActiveSequence, getSequenceInfo, addMarkers, applyCuts };
+  return { init, available: () => available, getActiveSequence, getSequenceInfo, addMarkers, applyCuts, invalidateCache };
 })();
 
 // ─────────────────────────────────────────────────────────────
@@ -322,6 +341,8 @@ const JobPoller = (() => {
 const UIController = (() => {
   // ── Tab switching ──
   function switchTab(tabId) {
+    // Invalidate Premiere state cache on tab switch
+    PProBridge.invalidateCache();
     document.querySelectorAll(".oc-tab").forEach(btn => {
       const active = btn.dataset.tab === tabId;
       btn.classList.toggle("active", active);
