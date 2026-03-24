@@ -23,7 +23,7 @@ const BACKEND_DEFAULT  = "http://127.0.0.1:5679";
 const BACKEND_MAX_PORT = 5689;
 const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
-const VERSION          = "1.5.4";
+const VERSION          = "1.5.5";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
@@ -1136,7 +1136,7 @@ async function runIndexLibrary() {
 
   await JobPoller.start(
     "/search/index",
-    { files: [folder], model: "base" },
+    { folder, model: "base" },
     (pct, msg) => {
       UIController.setProgress(pct);
       UIController.setProcessingMsg(msg || "Scanning...");
@@ -1321,36 +1321,39 @@ async function runDeliverables(type) {
   );
 }
 
-/** ── FULL PROJECT REPORT ── */
+/** ── FULL PROJECT REPORT (generates all 4 deliverables) ── */
 async function runFullReport() {
   const outputDir = document.getElementById("delivOutputDir")?.value?.trim();
-  const format    = document.getElementById("reportFormat")?.value ?? "csv";
-  const include   = {
-    vfx:    document.getElementById("rptIncludeVfx")?.checked    ?? true,
-    adr:    document.getElementById("rptIncludeAdr")?.checked    ?? true,
-    music:  document.getElementById("rptIncludeMusic")?.checked  ?? true,
-    assets: document.getElementById("rptIncludeAssets")?.checked ?? true,
-  };
+  const types = ["vfx-sheet", "adr-list", "music-cue-sheet", "asset-list"];
+  const seqData = { video_tracks: [], audio_tracks: [] };
+
+  // Try to get real sequence data from UXP bridge
+  if (PProBridge.available()) {
+    const info = await PProBridge.getSequenceInfo();
+    if (info) Object.assign(seqData, info);
+  }
 
   UIController.setButtonLoading("runFullReportBtn", true);
   UIController.showProcessing("Generating full project report...");
 
-  await JobPoller.start(
-    "/project-report",
-    { output_dir: outputDir || null, format, include },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Building report..."); },
-    (result) => {
-      UIController.hideProcessing();
-      UIController.setButtonLoading("runFullReportBtn", false);
-      UIController.showToast(`Report saved: ${result.output_path ?? "done"}`, "success");
-      UIController.setStatus("Report generated.");
-    },
-    (err) => {
-      UIController.hideProcessing();
-      UIController.setButtonLoading("runFullReportBtn", false);
-      UIController.showToast(`Report error: ${err}`, "error");
-    }
-  );
+  let generated = 0;
+  let errors = 0;
+  for (const type of types) {
+    const r = await BackendClient.post(`/deliverables/${type}`, {
+      sequence_data: seqData,
+      output_dir: outputDir || null,
+    });
+    if (r.ok) generated++; else errors++;
+  }
+
+  UIController.hideProcessing();
+  UIController.setButtonLoading("runFullReportBtn", false);
+  if (errors === 0) {
+    UIController.showToast(`Generated ${generated} deliverable document(s).`, "success");
+  } else {
+    UIController.showToast(`Generated ${generated}, failed ${errors}.`, "warning");
+  }
+  UIController.setStatus(`Report: ${generated} docs generated.`);
 }
 
 // ─────────────────────────────────────────────────────────────
