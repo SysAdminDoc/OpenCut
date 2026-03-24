@@ -13,6 +13,8 @@ import secrets
 import shutil
 import subprocess
 import sys
+import threading
+import time
 
 from flask import jsonify, request
 
@@ -28,14 +30,46 @@ VALID_WHISPER_MODELS = frozenset({
 })
 
 # ---------------------------------------------------------------------------
-# CSRF Token
+# CSRF Token (rotating with TTL)
 # ---------------------------------------------------------------------------
-_csrf_token = secrets.token_hex(32)
+CSRF_TTL = 3600          # seconds — tokens expire after 1 hour
+CSRF_MAX_TOKENS = 10     # keep at most this many valid tokens
+
+_csrf_tokens: dict[str, float] = {}   # token_str -> expiry_timestamp
+_csrf_lock = threading.Lock()
+
+
+def _purge_expired_tokens() -> None:
+    """Remove expired tokens from ``_csrf_tokens``.  Caller must hold ``_csrf_lock``."""
+    now = time.monotonic()
+    expired = [t for t, exp in _csrf_tokens.items() if exp <= now]
+    for t in expired:
+        del _csrf_tokens[t]
+
+
+def _newest_token() -> tuple[str | None, float]:
+    """Return ``(token, expiry)`` for the newest token, or ``(None, 0)``."""
+    if not _csrf_tokens:
+        return None, 0.0
+    return max(_csrf_tokens.items(), key=lambda kv: kv[1])
 
 
 def get_csrf_token() -> str:
-    """Return the current session CSRF token."""
-    return _csrf_token
+    """Return the current (newest) CSRF token, generating a new one if needed."""
+    with _csrf_lock:
+        _purge_expired_tokens()
+        tok, exp = _newest_token()
+        now = time.monotonic()
+        # Generate a new token when none exist or the newest is past half-life
+        if tok is None or (exp - now) < (CSRF_TTL / 2):
+            new_tok = secrets.token_hex(32)
+            _csrf_tokens[new_tok] = now + CSRF_TTL
+            # Evict oldest if over the cap
+            while len(_csrf_tokens) > CSRF_MAX_TOKENS:
+                oldest = min(_csrf_tokens, key=_csrf_tokens.get)
+                del _csrf_tokens[oldest]
+            tok = new_tok
+        return tok
 
 
 def require_csrf(f):
@@ -43,12 +77,21 @@ def require_csrf(f):
     Decorator that rejects POST/PUT/DELETE requests missing a valid
     ``X-OpenCut-Token`` header.  The token is handed to the panel via
     the ``/health`` response so no extra round-trip is needed.
+
+    Accepts ANY non-expired token from the rotating pool, giving clients
+    a grace window when tokens rotate.
     """
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
         if request.method in ("POST", "PUT", "DELETE"):
-            token = request.headers.get("X-OpenCut-Token", "")
-            if not hmac.compare_digest(token, _csrf_token):
+            header_token = request.headers.get("X-OpenCut-Token", "")
+            with _csrf_lock:
+                _purge_expired_tokens()
+                valid = any(
+                    hmac.compare_digest(header_token, t)
+                    for t in _csrf_tokens
+                )
+            if not valid:
                 return jsonify({"error": "Invalid or missing CSRF token"}), 403
         return f(*args, **kwargs)
     return wrapper
@@ -232,10 +275,8 @@ def safe_int(value, default: int = 0, min_val: int = None, max_val: int = None) 
 # ---------------------------------------------------------------------------
 # Rate Limiting (in-memory, per-endpoint)
 # ---------------------------------------------------------------------------
-import threading as _threading  # noqa: E402
-
 _rate_limits = {}
-_rate_lock = _threading.Lock()
+_rate_lock = threading.Lock()
 
 
 def rate_limit(key: str, max_concurrent: int = 1) -> bool:
