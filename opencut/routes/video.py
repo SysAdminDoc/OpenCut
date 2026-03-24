@@ -3982,6 +3982,7 @@ def video_auto_zoom():
 def video_multicam_cuts():
     """Generate multicam cut points from speaker diarization data."""
     data = request.get_json(force=True)
+    filepath = data.get("filepath", data.get("file", "")).strip()
     diarization_file = data.get("diarization_file", "").strip()
     segments = data.get("segments", None)
     speaker_map = data.get("speaker_map", None)
@@ -3994,9 +3995,15 @@ def video_multicam_cuts():
         if len(segments) > 50000:
             return jsonify({"error": "Too many segments (max 50000)"}), 400
 
-    # Need either segments or a diarization file
-    if not segments and not diarization_file:
-        return jsonify({"error": "diarization_file or segments required"}), 400
+    # Need either segments, a diarization file, or a media filepath to diarize
+    if not segments and not diarization_file and not filepath:
+        return jsonify({"error": "filepath, diarization_file, or segments required"}), 400
+
+    if filepath and not diarization_file and not segments:
+        try:
+            filepath = validate_filepath(filepath)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
 
     if diarization_file:
         try:
@@ -4016,6 +4023,30 @@ def video_multicam_cuts():
                 effective_segments = _json.load(_f)
         except Exception as exc:
             return jsonify({"error": f"Could not read diarization_file: {exc}"}), 400
+
+    # If filepath given but no segments, attempt transcription with speaker diarization
+    if effective_segments is None and not diarization_file and filepath:
+        try:
+            from opencut.core.captions import check_whisper_available, transcribe
+            from opencut.utils.config import CaptionConfig
+            available, _backend = check_whisper_available()
+            if not available:
+                return jsonify({"error": "Whisper not installed. Cannot transcribe for multicam. Provide segments or diarization_file instead."}), 400
+            config = CaptionConfig(model="base", word_timestamps=True)
+            result = transcribe(filepath, config=config)
+            effective_segments = []
+            if hasattr(result, "segments"):
+                for seg in result.segments:
+                    effective_segments.append({
+                        "start": getattr(seg, "start", 0),
+                        "end": getattr(seg, "end", 0),
+                        "text": getattr(seg, "text", ""),
+                        "speaker": getattr(seg, "speaker", "SPEAKER_00"),
+                    })
+        except ImportError:
+            return jsonify({"error": "Transcription modules not available. Provide segments directly."}), 503
+        except Exception as exc:
+            return jsonify({"error": f"Transcription failed: {exc}"}), 500
 
     if not isinstance(effective_segments, list) or not effective_segments:
         return jsonify({"error": "No valid segments found"}), 400
