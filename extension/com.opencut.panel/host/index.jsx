@@ -1306,3 +1306,872 @@ function autoImportResult(filePath, jobType) {
         message: "Imported to " + binName
     });
 }
+
+
+/**
+ * Get rich information about the active sequence for deliverables generation.
+ * Returns JSON: {name, duration, fps, width, height, video_tracks, audio_tracks, markers}
+ */
+function ocGetSequenceInfo() {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+        var seq = app.project.activeSequence;
+        if (!seq) {
+            return JSON.stringify({ error: "No active sequence" });
+        }
+
+        // Duration
+        var duration = 0;
+        try { duration = seq.end ? seq.end.seconds : 0; } catch (e) {}
+
+        // FPS
+        var fps = 24.0;
+        try {
+            var settings = seq.getSettings();
+            if (settings && settings.videoFrameRate && settings.videoFrameRate.seconds > 0) {
+                fps = 1.0 / settings.videoFrameRate.seconds;
+            }
+        } catch (e) { _ocLog("ocGetSequenceInfo fps error: " + e.toString()); }
+
+        // Dimensions
+        var width = 0;
+        var height = 0;
+        try { width = seq.frameSizeHorizontal || 0; } catch (e) {}
+        try { height = seq.frameSizeVertical || 0; } catch (e) {}
+
+        // Video tracks
+        var videoTracks = [];
+        try {
+            for (var vt = 0; vt < seq.videoTracks.numTracks; vt++) {
+                var vTrack = seq.videoTracks[vt];
+                var vClips = [];
+                for (var vc = 0; vc < vTrack.clips.numItems; vc++) {
+                    var vClip = vTrack.clips[vc];
+                    var vPath = "";
+                    try { vPath = vClip.projectItem.getMediaPath(); } catch (e) {}
+                    var vStart = 0;
+                    var vEnd = 0;
+                    try { vStart = vClip.start ? vClip.start.seconds : 0; } catch (e) {}
+                    try { vEnd = vClip.end ? vClip.end.seconds : 0; } catch (e) {}
+
+                    // Effects / components
+                    var effects = [];
+                    try {
+                        if (vClip.components) {
+                            for (var ci = 0; ci < vClip.components.numItems; ci++) {
+                                try {
+                                    var comp = vClip.components[ci];
+                                    if (comp && comp.displayName) {
+                                        effects.push(comp.displayName);
+                                    }
+                                } catch (ce) {}
+                            }
+                        }
+                    } catch (e) {}
+
+                    vClips.push({
+                        name: vClip.name || "",
+                        path: vPath,
+                        start: vStart,
+                        end: vEnd,
+                        effects: effects
+                    });
+                }
+                videoTracks.push({ index: vt, clips: vClips });
+            }
+        } catch (e) { _ocLog("ocGetSequenceInfo videoTracks error: " + e.toString()); }
+
+        // Audio tracks
+        var audioTracks = [];
+        try {
+            for (var at = 0; at < seq.audioTracks.numTracks; at++) {
+                var aTrack = seq.audioTracks[at];
+                var aClips = [];
+                for (var ac = 0; ac < aTrack.clips.numItems; ac++) {
+                    var aClip = aTrack.clips[ac];
+                    var aPath = "";
+                    try { aPath = aClip.projectItem.getMediaPath(); } catch (e) {}
+                    var aStart = 0;
+                    var aEnd = 0;
+                    try { aStart = aClip.start ? aClip.start.seconds : 0; } catch (e) {}
+                    try { aEnd = aClip.end ? aClip.end.seconds : 0; } catch (e) {}
+                    aClips.push({
+                        name: aClip.name || "",
+                        path: aPath,
+                        start: aStart,
+                        end: aEnd
+                    });
+                }
+                audioTracks.push({ index: at, clips: aClips });
+            }
+        } catch (e) { _ocLog("ocGetSequenceInfo audioTracks error: " + e.toString()); }
+
+        // Markers
+        var markers = [];
+        try {
+            var seqMarkers = seq.markers;
+            if (seqMarkers) {
+                var numM = seqMarkers.numMarkers;
+                for (var mi = 0; mi < numM; mi++) {
+                    try {
+                        var m = seqMarkers[mi];
+                        var mTime = 0;
+                        try { mTime = m.time ? m.time.seconds : 0; } catch (e) {}
+                        var mName = "";
+                        try { mName = m.name || m.comments || ""; } catch (e) {}
+                        var mType = "";
+                        try { mType = m.type || ""; } catch (e) {}
+                        var mColor = 0;
+                        try { mColor = m.colorByteArray ? m.colorByteArray[0] : 0; } catch (e) {}
+                        markers.push({
+                            time: mTime,
+                            name: mName,
+                            type: mType,
+                            color: mColor
+                        });
+                    } catch (e) {}
+                }
+            }
+        } catch (e) { _ocLog("ocGetSequenceInfo markers error: " + e.toString()); }
+
+        return JSON.stringify({
+            name: seq.name || "",
+            duration: duration,
+            fps: fps,
+            width: width,
+            height: height,
+            video_tracks: videoTracks,
+            audio_tracks: audioTracks,
+            markers: markers
+        });
+    } catch (e) {
+        _ocLog("ocGetSequenceInfo error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+
+/**
+ * Add markers to the active sequence from a JSON string array.
+ * markersJSON: '[{"time": 30.5, "name": "Chapter 1", "color": 0, "type": "comment", "duration": 0}]'
+ * Returns: '{"added": N, "errors": [...]}'
+ */
+function ocAddSequenceMarkers(markersJSON) {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+        var seq = app.project.activeSequence;
+        if (!seq) {
+            return JSON.stringify({ error: "No active sequence" });
+        }
+
+        var items = [];
+        try {
+            items = JSON.parse(markersJSON);
+        } catch (e) {
+            return JSON.stringify({ error: "Invalid JSON: " + e.toString() });
+        }
+
+        var added = 0;
+        var errors = [];
+
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            try {
+                var markerTime = item.time || 0;
+                var marker = seq.markers.createMarker(markerTime);
+
+                try { marker.name = item.name || ""; } catch (e) {}
+
+                // Type: 0 = comment, 1 = chapter, 2 = segmentation
+                try {
+                    var typeStr = (item.type || "comment").toLowerCase();
+                    if (typeStr === "chapter") {
+                        marker.type = 1;
+                    } else if (typeStr === "segmentation") {
+                        marker.type = 2;
+                    } else {
+                        marker.type = 0;
+                    }
+                } catch (e) {}
+
+                // Color — API varies by version, wrap tightly
+                try {
+                    var colorVal = item.color || 0;
+                    marker.colorByteArray = [colorVal, colorVal, colorVal, 255];
+                } catch (e) {}
+
+                added++;
+            } catch (e) {
+                errors.push("Marker " + i + ": " + e.toString());
+                _ocLog("ocAddSequenceMarkers item " + i + " error: " + e.toString());
+            }
+        }
+
+        return JSON.stringify({ added: added, errors: errors });
+    } catch (e) {
+        _ocLog("ocAddSequenceMarkers error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+
+/**
+ * Get all markers on the active sequence.
+ * Returns: '[{"time": 30.5, "name": "Chapter 1", "type": "comment", "duration": 0, "color": 0}]'
+ */
+function ocGetSequenceMarkers() {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+        var seq = app.project.activeSequence;
+        if (!seq) {
+            return JSON.stringify({ error: "No active sequence" });
+        }
+
+        var result = [];
+        var seqMarkers = seq.markers;
+        if (!seqMarkers) {
+            return JSON.stringify(result);
+        }
+
+        var numM = 0;
+        try { numM = seqMarkers.numMarkers; } catch (e) {}
+
+        for (var i = 0; i < numM; i++) {
+            try {
+                var m = seqMarkers[i];
+                var mTime = 0;
+                try { mTime = m.time ? m.time.seconds : 0; } catch (e) {}
+                var mName = "";
+                try { mName = m.name || m.comments || ""; } catch (e) {}
+                var mType = "";
+                try { mType = m.type !== undefined ? String(m.type) : ""; } catch (e) {}
+                var mDuration = 0;
+                try { mDuration = m.duration ? m.duration.seconds : 0; } catch (e) {}
+                var mColor = 0;
+                try { mColor = m.colorByteArray ? m.colorByteArray[0] : 0; } catch (e) {}
+
+                result.push({
+                    time: mTime,
+                    name: mName,
+                    type: mType,
+                    duration: mDuration,
+                    color: mColor
+                });
+            } catch (e) {
+                _ocLog("ocGetSequenceMarkers item " + i + " error: " + e.toString());
+            }
+        }
+
+        return JSON.stringify(result);
+    } catch (e) {
+        _ocLog("ocGetSequenceMarkers error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+
+/**
+ * Delete regions from the active sequence timeline (ripple delete).
+ * Removes clips FULLY contained within each cut range.
+ * cutsJSON: '[{"start": 10.5, "end": 12.3}, ...]'
+ * Returns: '{"applied": N, "errors": [...]}'
+ */
+function ocApplySequenceCuts(cutsJSON) {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+        var seq = app.project.activeSequence;
+        if (!seq) {
+            return JSON.stringify({ error: "No active sequence" });
+        }
+
+        var cuts = [];
+        try {
+            cuts = JSON.parse(cutsJSON);
+        } catch (e) {
+            return JSON.stringify({ error: "Invalid JSON: " + e.toString() });
+        }
+
+        if (!cuts || cuts.length === 0) {
+            return JSON.stringify({ applied: 0, errors: [] });
+        }
+
+        // Sort cuts in reverse order so earlier ripple deletes don't shift later timecodes
+        cuts.sort(function (a, b) { return b.start - a.start; });
+
+        var applied = 0;
+        var errors = [];
+
+        for (var ci = 0; ci < cuts.length; ci++) {
+            var cut = cuts[ci];
+            var cutStart = cut.start;
+            var cutEnd = cut.end;
+
+            if (cutStart >= cutEnd) continue;
+
+            // Iterate video tracks
+            for (var vt = 0; vt < seq.videoTracks.numTracks; vt++) {
+                var vTrack = seq.videoTracks[vt];
+                // Walk backwards so removing an item doesn't shift the index
+                for (var vc = vTrack.clips.numItems - 1; vc >= 0; vc--) {
+                    try {
+                        var vClip = vTrack.clips[vc];
+                        var clipStart = vClip.start ? vClip.start.seconds : 0;
+                        var clipEnd = vClip.end ? vClip.end.seconds : 0;
+                        // Only remove clips fully contained within the cut range
+                        if (clipStart >= cutStart && clipEnd <= cutEnd) {
+                            vClip.remove(false, true);
+                            applied++;
+                        }
+                    } catch (e) {
+                        errors.push("Video track " + vt + " clip " + vc + ": " + e.toString());
+                        _ocLog("ocApplySequenceCuts vTrack error: " + e.toString());
+                    }
+                }
+            }
+
+            // Iterate audio tracks
+            for (var at = 0; at < seq.audioTracks.numTracks; at++) {
+                var aTrack = seq.audioTracks[at];
+                for (var ac = aTrack.clips.numItems - 1; ac >= 0; ac--) {
+                    try {
+                        var aClip = aTrack.clips[ac];
+                        var aClipStart = aClip.start ? aClip.start.seconds : 0;
+                        var aClipEnd = aClip.end ? aClip.end.seconds : 0;
+                        if (aClipStart >= cutStart && aClipEnd <= cutEnd) {
+                            aClip.remove(false, true);
+                            applied++;
+                        }
+                    } catch (e) {
+                        errors.push("Audio track " + at + " clip " + ac + ": " + e.toString());
+                        _ocLog("ocApplySequenceCuts aTrack error: " + e.toString());
+                    }
+                }
+            }
+        }
+
+        return JSON.stringify({ applied: applied, errors: errors });
+    } catch (e) {
+        _ocLog("ocApplySequenceCuts error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+
+/**
+ * Apply scale and position keyframes to a clip on a video track.
+ * trackIndex: int (0-based video track index)
+ * clipStartTime: float (clip's start time in seconds, used to identify the clip)
+ * keyframesJSON: '[{"time": 0.0, "scale": 100, "x": 0, "y": 0}, ...]'
+ * Returns: '{"success": true}' or '{"error": "..."}'
+ */
+function ocApplyClipKeyframes(trackIndex, clipStartTime, keyframesJSON) {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+        var seq = app.project.activeSequence;
+        if (!seq) {
+            return JSON.stringify({ error: "No active sequence" });
+        }
+
+        var keyframes = [];
+        try {
+            keyframes = JSON.parse(keyframesJSON);
+        } catch (e) {
+            return JSON.stringify({ error: "Invalid JSON: " + e.toString() });
+        }
+
+        var vTrack = seq.videoTracks[trackIndex];
+        if (!vTrack) {
+            return JSON.stringify({ error: "Video track " + trackIndex + " not found" });
+        }
+
+        // Find the clip whose start time is within 0.1s of clipStartTime
+        var targetClip = null;
+        for (var ci = 0; ci < vTrack.clips.numItems; ci++) {
+            try {
+                var c = vTrack.clips[ci];
+                var cs = c.start ? c.start.seconds : -9999;
+                if (Math.abs(cs - clipStartTime) < 0.1) {
+                    targetClip = c;
+                    break;
+                }
+            } catch (e) {}
+        }
+
+        if (!targetClip) {
+            return JSON.stringify({ error: "Clip not found at time " + clipStartTime + " on track " + trackIndex });
+        }
+
+        // Find the Motion component
+        var motionComponent = null;
+        try {
+            if (targetClip.components) {
+                for (var compIdx = 0; compIdx < targetClip.components.numItems; compIdx++) {
+                    try {
+                        var comp = targetClip.components[compIdx];
+                        if (comp && (comp.displayName === "Motion" || comp.matchName === "AE.ADBE Motion")) {
+                            motionComponent = comp;
+                            break;
+                        }
+                    } catch (e) {}
+                }
+                // Fallback: index 0 is typically Motion
+                if (!motionComponent && targetClip.components.numItems > 0) {
+                    motionComponent = targetClip.components[0];
+                }
+            }
+        } catch (e) {
+            return JSON.stringify({ error: "Cannot access clip components: " + e.toString() });
+        }
+
+        if (!motionComponent) {
+            return JSON.stringify({ error: "Motion component not found on clip" });
+        }
+
+        // Find Scale and Position properties
+        var scaleProp = null;
+        var posProp = null;
+        try {
+            if (motionComponent.properties) {
+                for (var pi = 0; pi < motionComponent.properties.numItems; pi++) {
+                    try {
+                        var prop = motionComponent.properties[pi];
+                        if (!prop) continue;
+                        var pName = prop.displayName || "";
+                        if (pName === "Scale" || pName === "Uniform Scale") {
+                            scaleProp = prop;
+                        } else if (pName === "Position") {
+                            posProp = prop;
+                        }
+                    } catch (e) {}
+                }
+            }
+        } catch (e) {
+            return JSON.stringify({ error: "Cannot access motion properties: " + e.toString() });
+        }
+
+        // Apply keyframes
+        for (var ki = 0; ki < keyframes.length; ki++) {
+            var kf = keyframes[ki];
+            var kfTime = kf.time || 0;
+
+            if (scaleProp) {
+                try {
+                    scaleProp.addKey(kfTime);
+                    scaleProp.setValueAtKey(kfTime, kf.scale !== undefined ? kf.scale : 100);
+                } catch (e) {
+                    _ocLog("ocApplyClipKeyframes scale key error: " + e.toString());
+                }
+            }
+
+            if (posProp) {
+                try {
+                    posProp.addKey(kfTime);
+                    posProp.setValueAtKey(kfTime, [kf.x || 0, kf.y || 0]);
+                } catch (e) {
+                    _ocLog("ocApplyClipKeyframes position key error: " + e.toString());
+                }
+            }
+        }
+
+        return JSON.stringify({ success: true });
+    } catch (e) {
+        _ocLog("ocApplyClipKeyframes error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+
+/**
+ * Rename project panel items by nodeId.
+ * renamesJSON: '[{"nodeId": "abc123", "newName": "Interview_01"}, ...]'
+ * Returns: '{"renamed": N, "errors": [...]}'
+ */
+function ocBatchRenameProjectItems(renamesJSON) {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+
+        var renames = [];
+        try {
+            renames = JSON.parse(renamesJSON);
+        } catch (e) {
+            return JSON.stringify({ error: "Invalid JSON: " + e.toString() });
+        }
+
+        var renamed = 0;
+        var errors = [];
+
+        for (var i = 0; i < renames.length; i++) {
+            var rename = renames[i];
+            try {
+                var found = _findByNodeId(app.project.rootItem, rename.nodeId, 0);
+                if (found) {
+                    found.name = rename.newName;
+                    renamed++;
+                } else {
+                    errors.push("nodeId not found: " + rename.nodeId);
+                }
+            } catch (e) {
+                errors.push("Rename " + i + " (" + rename.nodeId + "): " + e.toString());
+                _ocLog("ocBatchRenameProjectItems item " + i + " error: " + e.toString());
+            }
+        }
+
+        return JSON.stringify({ renamed: renamed, errors: errors });
+    } catch (e) {
+        _ocLog("ocBatchRenameProjectItems error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+/**
+ * Recursive helper: find a project item by nodeId.
+ */
+function _findByNodeId(parent, nodeId, depth) {
+    if (depth > 20) return null;
+    var numChildren = 0;
+    try { numChildren = parent.children.numItems; } catch (e) { return null; }
+    for (var i = 0; i < numChildren; i++) {
+        try {
+            var item = parent.children[i];
+            if (!item) continue;
+            if (item.nodeId === nodeId) return item;
+            // Recurse into bins
+            var isBin = false;
+            try { isBin = (item.type === 2); } catch (e) {}
+            if (isBin) {
+                var found = _findByNodeId(item, nodeId, depth + 1);
+                if (found) return found;
+            }
+        } catch (e) {}
+    }
+    return null;
+}
+
+
+/**
+ * Create project bins and auto-sort items into them by rules.
+ * rulesJSON: '[{"binName": "B-Roll", "rule": "contains", "field": "name", "value": "broll"}, ...]'
+ * Returns: '{"bins_created": N, "items_moved": M}'
+ */
+function ocCreateSmartBins(rulesJSON) {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+
+        var rules = [];
+        try {
+            rules = JSON.parse(rulesJSON);
+        } catch (e) {
+            return JSON.stringify({ error: "Invalid JSON: " + e.toString() });
+        }
+
+        var binsCreated = 0;
+        var itemsMoved = 0;
+
+        // Collect all media items from the project
+        var mediaItems = [];
+        _collectMediaItems(app.project.rootItem, mediaItems, 0);
+
+        for (var ri = 0; ri < rules.length; ri++) {
+            var rule = rules[ri];
+            var binName = rule.binName || "Unnamed Bin";
+            var ruleType = (rule.rule || "contains").toLowerCase();
+            var ruleField = (rule.field || "name").toLowerCase();
+            var ruleValue = (rule.value !== undefined ? String(rule.value) : "").toLowerCase();
+
+            // Find or create the target bin
+            var targetBin = null;
+            try {
+                // Check root for existing bin with this name
+                var root = app.project.rootItem;
+                for (var bi = 0; bi < root.children.numItems; bi++) {
+                    try {
+                        var child = root.children[bi];
+                        if (child.type === 2 && child.name === binName) {
+                            targetBin = child;
+                            break;
+                        }
+                    } catch (e) {}
+                }
+                if (!targetBin) {
+                    targetBin = root.createBin(binName);
+                    binsCreated++;
+                }
+            } catch (e) {
+                _ocLog("ocCreateSmartBins bin create error: " + e.toString());
+                continue;
+            }
+
+            if (!targetBin) continue;
+
+            // Test each media item against the rule
+            for (var ii = 0; ii < mediaItems.length; ii++) {
+                var mediaItem = mediaItems[ii];
+                try {
+                    var matches = false;
+
+                    if (ruleField === "name") {
+                        var itemNameLower = (mediaItem.name || "").toLowerCase();
+                        if (ruleType === "contains") {
+                            matches = itemNameLower.indexOf(ruleValue) >= 0;
+                        } else if (ruleType === "starts_with") {
+                            matches = itemNameLower.indexOf(ruleValue) === 0;
+                        } else if (ruleType === "ends_with") {
+                            matches = itemNameLower.length >= ruleValue.length &&
+                                      itemNameLower.indexOf(ruleValue, itemNameLower.length - ruleValue.length) !== -1;
+                        }
+                    } else if (ruleField === "type") {
+                        var hasVid = false;
+                        var hasAud = false;
+                        try { hasVid = mediaItem.hasVideo(); } catch (e) {}
+                        try { hasAud = mediaItem.hasAudio(); } catch (e) {}
+                        if (ruleValue === "video") {
+                            matches = hasVid && !hasAud;
+                        } else if (ruleValue === "audio") {
+                            matches = !hasVid && hasAud;
+                        } else if (ruleValue === "av") {
+                            matches = hasVid && hasAud;
+                        }
+                    } else if (ruleField === "duration") {
+                        var dur = 0;
+                        try {
+                            var op = mediaItem.getOutPoint();
+                            dur = op ? op.seconds : 0;
+                        } catch (e) {}
+                        var ruleNum = parseFloat(ruleValue) || 0;
+                        if (ruleType === "duration_gt") {
+                            matches = dur > ruleNum;
+                        } else if (ruleType === "duration_lt") {
+                            matches = dur < ruleNum;
+                        }
+                    }
+
+                    if (matches) {
+                        try {
+                            mediaItem.moveBin(targetBin);
+                            itemsMoved++;
+                        } catch (e) {
+                            _ocLog("ocCreateSmartBins moveBin error: " + e.toString());
+                        }
+                    }
+                } catch (e) {
+                    _ocLog("ocCreateSmartBins item test error: " + e.toString());
+                }
+            }
+        }
+
+        return JSON.stringify({ bins_created: binsCreated, items_moved: itemsMoved });
+    } catch (e) {
+        _ocLog("ocCreateSmartBins error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+/**
+ * Helper: collect all non-bin media items from the project tree into an array.
+ */
+function _collectMediaItems(parent, items, depth) {
+    if (depth > 20) return;
+    var numChildren = 0;
+    try { numChildren = parent.children.numItems; } catch (e) { return; }
+    for (var i = 0; i < numChildren; i++) {
+        try {
+            var item = parent.children[i];
+            if (!item) continue;
+            var isBin = false;
+            try { isBin = (item.type === 2); } catch (e) {}
+            if (isBin) {
+                _collectMediaItems(item, items, depth + 1);
+            } else {
+                items.push(item);
+            }
+        } catch (e) {}
+    }
+}
+
+
+/**
+ * Create a native Premiere Pro caption track from SRT-style segment data.
+ * Writes an SRT file to temp and imports it for maximum cross-version compatibility.
+ * srtJSON: '[{"start": 0.5, "end": 2.3, "text": "Hello world"}, ...]'
+ * Returns: '{"success": true, "captions_added": N}' or '{"error": "..."}'
+ */
+function ocAddNativeCaptionTrack(srtJSON) {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+
+        var segments = [];
+        try {
+            segments = JSON.parse(srtJSON);
+        } catch (e) {
+            return JSON.stringify({ error: "Invalid JSON: " + e.toString() });
+        }
+
+        if (!segments || segments.length === 0) {
+            return JSON.stringify({ error: "No caption segments provided" });
+        }
+
+        // Helper: format seconds as SRT timecode HH:MM:SS,mmm
+        function _secondsToSrtTime(secs) {
+            var totalMs = Math.round(secs * 1000);
+            var ms = totalMs % 1000;
+            var totalSec = Math.floor(totalMs / 1000);
+            var s = totalSec % 60;
+            var totalMin = Math.floor(totalSec / 60);
+            var m = totalMin % 60;
+            var h = Math.floor(totalMin / 60);
+
+            var hh = h < 10 ? "0" + h : String(h);
+            var mm = m < 10 ? "0" + m : String(m);
+            var ss = s < 10 ? "0" + s : String(s);
+            var msStr = ms < 10 ? "00" + ms : (ms < 100 ? "0" + ms : String(ms));
+            return hh + ":" + mm + ":" + ss + "," + msStr;
+        }
+
+        // Write SRT file to temp
+        var tempPath = Folder.temp.fsName + "/opencut_captions.srt";
+        var tempFile = new File(tempPath);
+        if (!tempFile.open("w")) {
+            return JSON.stringify({ error: "Cannot write temp SRT file" });
+        }
+
+        try {
+            for (var i = 0; i < segments.length; i++) {
+                var seg = segments[i];
+                tempFile.writeln(String(i + 1));
+                tempFile.writeln(_secondsToSrtTime(seg.start || 0) + " --> " + _secondsToSrtTime(seg.end || 0));
+                tempFile.writeln(seg.text || "");
+                tempFile.writeln("");
+            }
+        } finally {
+            tempFile.close();
+        }
+
+        // Import the SRT into the project
+        var captionBin = _findOrCreateBin("OpenCut Captions");
+        var targetBin = captionBin || app.project.rootItem;
+
+        try {
+            app.project.importFiles([tempFile.fsName], false, targetBin, false);
+        } catch (e) {
+            return JSON.stringify({ error: "SRT import failed: " + e.toString() });
+        }
+
+        return JSON.stringify({ success: true, captions_added: segments.length });
+    } catch (e) {
+        _ocLog("ocAddNativeCaptionTrack error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+
+/**
+ * Get all bins (folders) in the project with their contents.
+ * Returns: '[{"name": "BinName", "path": "BinName/SubBin", "item_count": N}]'
+ */
+function ocGetProjectBins() {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+
+        var bins = [];
+        _collectBins(app.project.rootItem, bins, "", 0);
+        return JSON.stringify(bins);
+    } catch (e) {
+        _ocLog("ocGetProjectBins error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+/**
+ * Helper: recursively collect bins into an array with path tracking.
+ */
+function _collectBins(parent, bins, parentPath, depth) {
+    if (depth > 20) return;
+    var numChildren = 0;
+    try { numChildren = parent.children.numItems; } catch (e) { return; }
+    for (var i = 0; i < numChildren; i++) {
+        try {
+            var item = parent.children[i];
+            if (!item) continue;
+            var isBin = false;
+            try { isBin = (item.type === 2); } catch (e) {}
+            if (isBin) {
+                var binName = item.name || "";
+                var binPath = parentPath ? (parentPath + "/" + binName) : binName;
+                var itemCount = 0;
+                try { itemCount = item.children.numItems; } catch (e) {}
+                bins.push({
+                    name: binName,
+                    path: binPath,
+                    item_count: itemCount
+                });
+                // Recurse into sub-bins
+                _collectBins(item, bins, binPath, depth + 1);
+            }
+        } catch (e) {
+            _ocLog("_collectBins item " + i + " error: " + e.toString());
+        }
+    }
+}
+
+
+/**
+ * Queue a sequence range export to Adobe Media Encoder.
+ * outputPath: full path to the output file
+ * startSeconds: in-point in seconds
+ * endSeconds: out-point in seconds
+ * Returns: '{"success": true}' or '{"error": "..."}'
+ */
+function ocExportSequenceRange(outputPath, startSeconds, endSeconds) {
+    try {
+        if (!app || !app.project) {
+            return JSON.stringify({ error: "No project open" });
+        }
+        var seq = app.project.activeSequence;
+        if (!seq) {
+            return JSON.stringify({ error: "No active sequence" });
+        }
+
+        // Set in/out points on the sequence
+        try {
+            seq.setInPoint(startSeconds);
+        } catch (e) {
+            _ocLog("ocExportSequenceRange setInPoint error: " + e.toString());
+        }
+        try {
+            seq.setOutPoint(endSeconds);
+        } catch (e) {
+            _ocLog("ocExportSequenceRange setOutPoint error: " + e.toString());
+        }
+
+        // Queue to AME
+        // encodeSequence(sequence, outputFilePath, presetPath, removeOnCompletion, startQueueImmediately)
+        try {
+            app.encoder.encodeSequence(seq, outputPath, "", 1, 2);
+        } catch (e) {
+            return JSON.stringify({ error: "AME encode failed: " + e.toString() });
+        }
+
+        return JSON.stringify({ success: true });
+    } catch (e) {
+        _ocLog("ocExportSequenceRange error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}

@@ -407,6 +407,60 @@ def check_dependencies():
     except Exception:
         deps["ffmpeg"] = {"installed": False, "version": None}
 
+    # Color match (cv2 + numpy)
+    try:
+        from opencut.checks import check_color_match_available
+        ok, backend = check_color_match_available()
+        deps["color_match"] = {"installed": ok, "version": backend if ok else None}
+    except Exception:
+        deps["color_match"] = {"installed": False, "version": None}
+
+    # Auto zoom (cv2)
+    try:
+        from opencut.checks import check_auto_zoom_available
+        ok, backend = check_auto_zoom_available()
+        deps["auto_zoom"] = {"installed": ok, "version": backend if ok else None}
+    except Exception:
+        deps["auto_zoom"] = {"installed": False, "version": None}
+
+    # Footage search (stdlib only — always available)
+    try:
+        from opencut.checks import check_footage_search_available
+        ok, backend = check_footage_search_available()
+        deps["footage_search"] = {"installed": ok, "version": backend if ok else None}
+    except Exception:
+        deps["footage_search"] = {"installed": True, "version": "stdlib"}
+
+    # Loudness match (ffmpeg in PATH)
+    try:
+        from opencut.checks import check_loudness_match_available
+        ok, backend = check_loudness_match_available()
+        deps["loudness_match"] = {"installed": ok, "version": backend if ok else None}
+    except Exception:
+        deps["loudness_match"] = {"installed": False, "version": None}
+
+    # Deliverables (csv stdlib — always available)
+    deps["deliverables"] = {"installed": True, "version": "stdlib"}
+
+    # NLP command (ollama running or openai/anthropic key set)
+    try:
+        from opencut.checks import check_ollama_available
+        ollama_ok = check_ollama_available()
+        openai_key = bool(os.environ.get("OPENAI_API_KEY", "").strip())
+        anthropic_key = bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())
+        nlp_ok = ollama_ok or openai_key or anthropic_key
+        if ollama_ok:
+            nlp_backend = "ollama"
+        elif openai_key:
+            nlp_backend = "openai"
+        elif anthropic_key:
+            nlp_backend = "anthropic"
+        else:
+            nlp_backend = None
+        deps["nlp_command"] = {"installed": nlp_ok, "version": nlp_backend}
+    except Exception:
+        deps["nlp_command"] = {"installed": False, "version": None}
+
     return jsonify(deps)
 
 

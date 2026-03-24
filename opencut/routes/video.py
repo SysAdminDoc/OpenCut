@@ -3788,3 +3788,250 @@ def video_shorts_pipeline():
         if job_id in jobs:
             jobs[job_id]["_thread"] = thread
     return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Video: Color Match
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/color-match", methods=["POST"])
+@require_csrf
+def video_color_match():
+    """Match the color grading of a source video to a reference clip."""
+    data = request.get_json(force=True)
+    source = data.get("source", "").strip()
+    reference = data.get("reference", "").strip()
+    output_dir = data.get("output_dir", "").strip()
+    strength = safe_float(data.get("strength", 1.0), 1.0, min_val=0.0, max_val=1.0)
+
+    if not source:
+        return jsonify({"error": "source is required"}), 400
+    if not reference:
+        return jsonify({"error": "reference is required"}), 400
+
+    try:
+        source = validate_filepath(source)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    try:
+        reference = validate_filepath(reference)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        os.makedirs(output_dir, exist_ok=True)
+    else:
+        output_dir = os.path.dirname(source)
+
+    job_id = _new_job("color-match", source)
+
+    def _process():
+        try:
+            from opencut.core import color_match
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            base_name = os.path.splitext(os.path.basename(source))[0]
+            ext = os.path.splitext(source)[1]
+            out_path = os.path.join(output_dir, f"{base_name}_color_matched{ext}")
+
+            result = color_match.color_match_video(
+                source, reference, out_path,
+                strength=strength,
+                on_progress=_on_progress,
+            )
+
+            out = result.get("output", out_path) if isinstance(result, dict) else out_path
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="Color match complete!",
+                result={"output": out},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Color match error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Video: Auto Zoom
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/auto-zoom", methods=["POST"])
+@require_csrf
+def video_auto_zoom():
+    """Generate zoom keyframes for a clip, optionally baking them in via FFmpeg."""
+    data = request.get_json(force=True)
+    filepath = data.get("file", "").strip()
+    zoom_amount = safe_float(data.get("zoom_amount", 1.15), 1.15, min_val=1.0, max_val=4.0)
+    easing = data.get("easing", "ease_in_out").strip()
+    output_dir = data.get("output_dir", "").strip()
+    apply_to_file = bool(data.get("apply_to_file", False))
+
+    if not filepath:
+        return jsonify({"error": "file is required"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    _VALID_EASINGS = {"ease_in", "ease_out", "ease_in_out", "linear"}
+    if easing not in _VALID_EASINGS:
+        easing = "ease_in_out"
+
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        os.makedirs(output_dir, exist_ok=True)
+    else:
+        output_dir = os.path.dirname(filepath)
+
+    job_id = _new_job("auto-zoom", filepath)
+
+    def _process():
+        try:
+            from opencut.core import auto_zoom
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            keyframes = auto_zoom.generate_zoom_keyframes(
+                filepath, zoom_amount=zoom_amount, easing=easing,
+                on_progress=_on_progress,
+            )
+
+            output_path = None
+            if apply_to_file:
+                _update_job(job_id, progress=60, message="Applying zoom via FFmpeg...")
+                base_name = os.path.splitext(os.path.basename(filepath))[0]
+                ext = os.path.splitext(filepath)[1]
+                out_path = os.path.join(output_dir, f"{base_name}_autozoom{ext}")
+
+                # Build FFmpeg zoompan filter from keyframes
+                if keyframes:
+                    import subprocess as _sp2
+                    # zoompan: z='zoom_expr':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'
+                    zoom_val = zoom_amount
+                    # Get source dimensions
+                    try:
+                        from opencut.utils.media import probe as _probe_media
+                    except ImportError:
+                        _probe_media = None
+                    probe = _probe_media(filepath) if _probe_media else None
+                    src_w = probe.get("width", 1920) if probe else 1920
+                    src_h = probe.get("height", 1080) if probe else 1080
+                    zoompan_filter = (
+                        f"zoompan=z='min(zoom+0.0015,{zoom_val})'"
+                        f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
+                        f":d=1:s={src_w}x{src_h}"
+                    )
+                    cmd = [
+                        "ffmpeg", "-y", "-i", filepath,
+                        "-vf", zoompan_filter,
+                        "-c:a", "copy",
+                        out_path,
+                    ]
+                    result = _sp2.run(cmd, capture_output=True, timeout=600)
+                    if result.returncode == 0:
+                        output_path = out_path
+                    else:
+                        logger.warning("FFmpeg auto-zoom failed: %s", result.stderr.decode(errors="replace")[:200])
+
+            kf_list = keyframes if isinstance(keyframes, list) else []
+            result_dict = {"keyframes": kf_list}
+            if output_path:
+                result_dict["output"] = output_path
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="Auto-zoom complete!",
+                result=result_dict,
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Auto-zoom error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Video: Multicam Cuts
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/multicam-cuts", methods=["POST"])
+@require_csrf
+def video_multicam_cuts():
+    """Generate multicam cut points from speaker diarization data."""
+    data = request.get_json(force=True)
+    diarization_file = data.get("diarization_file", "").strip()
+    segments = data.get("segments", None)
+    speaker_map = data.get("speaker_map", None)
+    min_cut_duration = safe_float(data.get("min_cut_duration", 1.0), 1.0, min_val=0.1, max_val=60.0)
+
+    # Need either segments or a diarization file
+    if not segments and not diarization_file:
+        return jsonify({"error": "diarization_file or segments required"}), 400
+
+    if diarization_file:
+        try:
+            diarization_file = validate_filepath(diarization_file)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
+    # Load diarization file if segments not given directly
+    effective_segments = segments
+    if effective_segments is None and diarization_file:
+        try:
+            import json as _json
+            with open(diarization_file, encoding="utf-8") as _f:
+                effective_segments = _json.load(_f)
+        except Exception as exc:
+            return jsonify({"error": f"Could not read diarization_file: {exc}"}), 400
+
+    if not isinstance(effective_segments, list) or not effective_segments:
+        return jsonify({"error": "No valid segments found"}), 400
+
+    try:
+        from opencut.core import multicam
+
+        # Auto-assign speakers if no map provided
+        effective_speaker_map = speaker_map
+        if not effective_speaker_map:
+            effective_speaker_map = multicam.auto_assign_speakers(effective_segments)
+
+        result = multicam.generate_multicam_cuts(
+            effective_segments,
+            speaker_map=effective_speaker_map,
+            min_cut_duration=min_cut_duration,
+        )
+        cuts = result.get("cuts", []) if isinstance(result, dict) else result
+        total_cuts = result.get("total_cuts", len(cuts)) if isinstance(result, dict) else len(cuts)
+
+        speakers = sorted({str(s.get("speaker", "")) for s in effective_segments if s.get("speaker")})
+        return jsonify({
+            "cuts": cuts,
+            "total_cuts": total_cuts,
+            "speakers": speakers,
+            "speaker_map": effective_speaker_map,
+        })
+    except ImportError:
+        return jsonify({"error": "multicam module not available"}), 503
+    except Exception as exc:
+        return _safe_error(exc)

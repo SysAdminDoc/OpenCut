@@ -35,3 +35,16 @@ scenedetect[opencv]>=0.6
 # === ADVANCED (optional) ===
 # whisperx>=3.0            # Word-level timestamps + alignment
 # pyannote.audio>=3.1      # Speaker diarization (needs HuggingFace token)
+
+# === POST-PRODUCTION FEATURES (optional) ===
+# Color matching & auto-zoom use opencv-python-headless + numpy (already listed above)
+
+# Loudness matching uses FFmpeg subprocess (external tool, not pip)
+# Install FFmpeg from https://ffmpeg.org/download.html
+
+# Footage search uses stdlib json only (no extra deps)
+
+# LLM integration (for chapters, NLP commands) — optional
+# ollama: run locally via https://ollama.ai
+# openai>=1.0.0            # For OpenAI provider
+# anthropic>=0.20.0        # For Anthropic provider

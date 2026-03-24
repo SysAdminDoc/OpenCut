@@ -40,6 +40,17 @@
     // ---- Style Preview CSS Map (loaded from backend) ----
     var stylePreviewMap = {};
 
+    // ---- New Feature State (v1.5.0) ----
+    var lastTimelineCuts = null;    // stores last cuts result for timeline apply
+    var sequenceInfo = null;        // stores loaded sequence info for deliverables
+    var footageIndex = {};          // stores local copy of index stats
+    var beatMarkerTimes = null;     // beat times for marker insertion
+    var seqMarkersData = null;      // markers from sequence for export
+    var renameItemsData = [];       // project items for rename
+    var multicamCutsData = null;    // multicam cut result
+    var repeatCutsData = null;      // repeat-detect cuts data
+    var chaptersData = null;        // generated chapters
+
     // ============================================================
     // CUSTOM DROPDOWN SYSTEM - Inline Panel Dropdowns
     // ============================================================
@@ -1420,7 +1431,9 @@
         "runTitleOverlayBtn", "runReframeBtn", "runUpscaleBtn",
         "runColorBtn", "runRemoveBtn", "runFaceAiBtn", "runAnimCapBtn",
         "runExpTranscriptBtn", "loadWaveformBtn", "previewVfxBtn", "runTrimBtn",
-        "runAutoEditBtn", "runHighlightsBtn", "runEnhanceBtn", "runShortsBtn"
+        "runAutoEditBtn", "runHighlightsBtn", "runEnhanceBtn", "runShortsBtn",
+        "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runMulticamBtn",
+        "runLoudMatchBtn", "runFootageSearchBtn"
     ];
 
     function updateButtons() {
@@ -5145,7 +5158,16 @@
         {name: "Titles", tab: "video", sub: "vid-titles", keywords: "title text overlay lower third"},
         {name: "Export Presets", tab: "export", sub: "exp-platform", keywords: "export platform youtube tiktok instagram"},
         {name: "Thumbnails", tab: "export", sub: "exp-thumbnail", keywords: "thumbnail extract frame"},
-        {name: "Batch Processing", tab: "export", sub: "exp-batch", keywords: "batch process multiple files"}
+        {name: "Batch Processing", tab: "export", sub: "exp-batch", keywords: "batch process multiple files"},
+        { name: "Repeat Detection",   tab: "captions", sub: "cap-repeat",     keywords: "repeat detect loop fumble duplicate take" },
+        { name: "Chapter Generation", tab: "captions", sub: "cap-chapters",   keywords: "chapters youtube timestamps sections topics" },
+        { name: "Footage Search",     tab: "nlp",      sub: "nlp-search",     keywords: "search footage clips index content find" },
+        { name: "Color Match",        tab: "timeline", sub: "tl-colormatch",  keywords: "color match grade balance reference clip" },
+        { name: "Multicam Switcher",  tab: "timeline", sub: "tl-multicam",    keywords: "multicam speaker podcast camera switch diarize" },
+        { name: "Loudness Match",     tab: "audio",    sub: "aud-loudmatch",  keywords: "loudness lufs normalize match audio levels" },
+        { name: "Auto Zoom",          tab: "timeline", sub: "tl-autozoom",    keywords: "auto zoom push in ken burns face zoom" },
+        { name: "AI Command",         tab: "nlp",      sub: "nlp-command",    keywords: "nlp ai command natural language instruction" },
+        { name: "Deliverables",       tab: "export",   sub: "exp-deliverables", keywords: "deliverables vfx adr music cue sheet asset list" },
     ];
 
     var _paletteSelectedIdx = 0;
@@ -5472,6 +5494,79 @@
     }
 
     // --- Silence mode toggle ---
+    function loadLlmSettings() {
+        fetch(BACKEND + "/settings/llm", { headers: { "X-CSRF-Token": csrfToken } })
+            .then(function(r) { return r.json(); })
+            .then(function(s) {
+                if (s.provider) {
+                    var sel = document.getElementById("llmProvider2");
+                    if (sel) sel.value = s.provider;
+                }
+                if (s.model) {
+                    var m = document.getElementById("llmModel2");
+                    if (m) m.value = s.model;
+                }
+                if (s.api_key && s.api_key !== "****") {
+                    var k = document.getElementById("llmApiKey2");
+                    if (k) k.value = s.api_key;
+                }
+                if (s.base_url) {
+                    var u = document.getElementById("llmBaseUrl2");
+                    if (u) u.value = s.base_url;
+                }
+                updateLlmProviderUI();
+            })
+            .catch(function() {});
+    }
+
+    function saveLlmSettings() {
+        var provider = (document.getElementById("llmProvider2") || {}).value || "ollama";
+        var model = (document.getElementById("llmModel2") || {}).value || "llama3";
+        var apiKey = (document.getElementById("llmApiKey2") || {}).value || "";
+        var baseUrl = (document.getElementById("llmBaseUrl2") || {}).value || "";
+        fetch(BACKEND + "/settings/llm", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+            body: JSON.stringify({ provider: provider, model: model, api_key: apiKey, base_url: baseUrl })
+        }).then(function(r) { return r.json(); })
+          .then(function() { showToast("LLM settings saved", "success"); })
+          .catch(function() { showToast("Failed to save LLM settings", "error"); });
+    }
+
+    function updateLlmProviderUI() {
+        var provider = (document.getElementById("llmProvider2") || {}).value || "ollama";
+        var apiKeyRow = document.getElementById("llmApiKeyRow");
+        var baseUrlRow = document.getElementById("llmBaseUrlRow");
+        if (apiKeyRow) apiKeyRow.style.display = provider === "ollama" ? "none" : "";
+        if (baseUrlRow) baseUrlRow.style.display = provider === "ollama" ? "" : "none";
+    }
+
+    function saveAudioZoomDefaults() {
+        var lufs = parseFloat((document.getElementById("defaultLufs") || {}).value || -14);
+        var zoom = parseFloat((document.getElementById("defaultZoom") || {}).value || 1.15);
+        var easing = (document.getElementById("defaultZoomEasing") || {}).value || "ease_in_out";
+        fetch(BACKEND + "/settings/loudness-target", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+            body: JSON.stringify({ target_lufs: lufs })
+        }).catch(function() {});
+        fetch(BACKEND + "/settings/auto-zoom", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+            body: JSON.stringify({ zoom_amount: zoom, easing: easing })
+        }).then(function() { showToast("Defaults saved", "success"); })
+          .catch(function() { showToast("Failed to save defaults", "error"); });
+    }
+
+    function toggleCard(cardId) {
+        var card = document.getElementById(cardId);
+        if (!card) return;
+        var body = card.querySelector(".card-body");
+        var toggle = card.querySelector(".card-toggle");
+        if (body) body.style.display = body.style.display === "none" ? "" : "none";
+        if (toggle) toggle.textContent = (body && body.style.display === "none") ? "▸" : "▾";
+    }
+
     function updateSilenceModeUI() {
         if (!el.silenceMode) return;
         var isSpeedUp = el.silenceMode.value === "speedup";
@@ -5603,6 +5698,703 @@
             })(sliders[i][0], sliders[i][1], sliders[i][2]);
         }
     }
+
+    // ================================================================
+    // v1.5.0 — Timeline Tab Functions
+    // ================================================================
+
+    function applySequenceCuts(cuts) {
+        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        var payload = JSON.stringify(cuts);
+        cs.evalScript('ocApplySequenceCuts(' + JSON.stringify(payload) + ')', function (result) {
+            try {
+                var r = JSON.parse(result);
+                showToast("Applied " + (r.applied || 0) + " cuts to sequence", "success");
+                var statusEl = document.getElementById("tlWritebackStatus");
+                if (statusEl) statusEl.textContent = "Applied " + (r.applied || 0) + " cuts to sequence.";
+            } catch (e) { showAlert("Error applying cuts: " + (result || e.message)); }
+        });
+    }
+
+    function runBeatMarkers() {
+        startJob("/audio/beat-markers", {
+            filepath: selectedPath,
+            subdivisions: parseInt(document.getElementById("beatMarkerSubs").value || "1"),
+        });
+    }
+
+    addJobDoneListener(function (job) {
+        if (job.type !== "beat-markers" || job.status !== "complete" || !job.result) return;
+        var r = job.result;
+        beatMarkerTimes = r.beat_times || r.beats || [];
+        var res = document.getElementById("beatMarkersResult");
+        var sum = document.getElementById("beatMarkersSummary");
+        if (res) res.classList.remove("hidden");
+        if (sum) sum.textContent = beatMarkerTimes.length + " beat markers detected. BPM: " + safeFixed(r.bpm || 0, 1);
+    });
+
+    function addBeatMarkersToSequence() {
+        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        if (!beatMarkerTimes || !beatMarkerTimes.length) { showAlert("No beat markers detected."); return; }
+        var payload = JSON.stringify({ times: beatMarkerTimes, type: "Chapter" });
+        cs.evalScript('ocAddSequenceMarkers(' + JSON.stringify(payload) + ')', function (result) {
+            try {
+                var r = JSON.parse(result);
+                showToast("Added " + (r.added || beatMarkerTimes.length) + " markers", "success");
+            } catch (e) { showAlert("Error adding markers: " + (result || e.message)); }
+        });
+    }
+
+    function runMulticamCuts() {
+        var trackMap = [];
+        var rows = document.querySelectorAll(".multicam-track-row");
+        for (var i = 0; i < rows.length; i++) {
+            var trackInput = rows[i].querySelector(".multicam-track-input");
+            trackMap.push(trackInput ? parseInt(trackInput.value) || i : i);
+        }
+        startJob("/video/multicam-cuts", {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            num_speakers: parseInt(document.getElementById("multicamSpeakers").value || "2"),
+            min_cut_duration: parseFloat(document.getElementById("multicamMinCut").value || "1.0"),
+            track_map: trackMap,
+        });
+    }
+
+    addJobDoneListener(function (job) {
+        if (job.type !== "multicam-cuts" || job.status !== "complete" || !job.result) return;
+        var r = job.result;
+        multicamCutsData = r.cuts || r;
+        var res = document.getElementById("multicamResult");
+        var sum = document.getElementById("multicamSummary");
+        if (res) res.classList.remove("hidden");
+        if (sum) sum.textContent = (r.total_cuts || (r.cuts && r.cuts.length) || 0) + " cuts generated.";
+    });
+
+    function applyMulticamCuts() {
+        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        if (!multicamCutsData) { showAlert("No multicam cuts available."); return; }
+        var payload = JSON.stringify(multicamCutsData);
+        cs.evalScript('ocApplySequenceCuts(' + JSON.stringify(payload) + ')', function (result) {
+            try {
+                var r = JSON.parse(result);
+                showToast("Multicam cuts applied: " + (r.applied || 0), "success");
+            } catch (e) { showAlert("Error: " + (result || e.message)); }
+        });
+    }
+
+    function renderMulticamTrackMap() {
+        var n = parseInt(document.getElementById("multicamSpeakers").value || "2");
+        var container = document.getElementById("multicamTrackMap");
+        if (!container) return;
+        var html = "";
+        for (var i = 0; i < n; i++) {
+            html += '<div class="multicam-track-row" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
+                + '<span style="font-size:11px;color:var(--text-secondary);min-width:70px;">Speaker ' + (i + 1) + '</span>'
+                + '<span style="font-size:11px;color:var(--text-muted);">\u2192 Track</span>'
+                + '<input type="number" class="multicam-track-input" value="' + i + '" min="0" max="20" style="width:50px;">'
+                + '</div>';
+        }
+        container.innerHTML = html;
+    }
+
+    function getSeqMarkers() {
+        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        cs.evalScript('ocGetSequenceMarkers()', function (result) {
+            try {
+                var markers = JSON.parse(result);
+                seqMarkersData = markers;
+                var listEl = document.getElementById("markerExportList");
+                var exportBtn = document.getElementById("exportMarkedClipsBtn");
+                if (listEl) {
+                    listEl.classList.remove("hidden");
+                    if (!markers || !markers.length) {
+                        listEl.innerHTML = '<div class="hint">No markers found in sequence.</div>';
+                    } else {
+                        var html = "";
+                        for (var i = 0; i < markers.length; i++) {
+                            var m = markers[i];
+                            var dur = m.duration != null ? safeFixed(m.duration, 2) + "s" : "--";
+                            html += '<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border);">'
+                                + esc(m.name || ("Marker " + (i + 1))) + ' &mdash; ' + fmtDur(m.start || 0) + ' (' + dur + ')'
+                                + '</div>';
+                        }
+                        listEl.innerHTML = html;
+                    }
+                }
+                if (exportBtn) exportBtn.disabled = !(markers && markers.length);
+            } catch (e) { showAlert("Error reading markers: " + (result || e.message)); }
+        });
+    }
+
+    function exportMarkedClips() {
+        if (!seqMarkersData || !seqMarkersData.length) { showAlert("Get sequence markers first."); return; }
+        var outDir = (document.getElementById("markerExportDir") || {}).value || projectFolder;
+        startJob("/timeline/export-from-markers", {
+            filepath: selectedPath,
+            output_dir: outDir,
+            markers: seqMarkersData,
+        });
+    }
+
+    addJobDoneListener(function (job) {
+        if (job.type !== "export-from-markers" || job.status !== "complete" || !job.result) return;
+        var r = job.result;
+        var res = document.getElementById("markerExportResult");
+        var sum = document.getElementById("markerExportSummary");
+        if (res) res.classList.remove("hidden");
+        if (sum) sum.textContent = "Exported " + (r.exported || 0) + " clips.";
+    });
+
+    function loadProjectItems() {
+        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        cs.evalScript('getAllProjectMedia()', function (result) {
+            try {
+                var items = JSON.parse(result);
+                renameItemsData = items || [];
+                renderRenameItems();
+                var applyBtn = document.getElementById("applyRenamePatternBtn");
+                var renameBtn = document.getElementById("renameAllBtn");
+                if (applyBtn) applyBtn.disabled = !renameItemsData.length;
+                if (renameBtn) renameBtn.disabled = !renameItemsData.length;
+            } catch (e) { showAlert("Error loading items: " + (result || e.message)); }
+        });
+    }
+
+    function renderRenameItems() {
+        var container = document.getElementById("renameItemsList");
+        if (!container) return;
+        if (!renameItemsData.length) {
+            container.innerHTML = '<div class="hint">No items loaded.</div>';
+            return;
+        }
+        var html = "";
+        for (var i = 0; i < renameItemsData.length; i++) {
+            var item = renameItemsData[i];
+            html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">'
+                + '<input type="text" class="text-input rename-name-input" data-idx="' + i + '" value="' + esc(item.name || "") + '" style="flex:1;font-size:11px;">'
+                + '</div>';
+        }
+        container.innerHTML = html;
+    }
+
+    function applyRenamePattern() {
+        var find = (document.getElementById("renameFindText") || {}).value || "";
+        var replace = (document.getElementById("renameReplaceText") || {}).value || "";
+        if (!find) { showAlert("Enter find text."); return; }
+        var inputs = document.querySelectorAll(".rename-name-input");
+        for (var i = 0; i < inputs.length; i++) {
+            inputs[i].value = inputs[i].value.split(find).join(replace);
+        }
+    }
+
+    function renameAll() {
+        var inputs = document.querySelectorAll(".rename-name-input");
+        var renames = [];
+        for (var i = 0; i < inputs.length; i++) {
+            var idx = parseInt(inputs[i].getAttribute("data-idx"));
+            var orig = renameItemsData[idx];
+            if (orig && inputs[i].value !== orig.name) {
+                renames.push({ id: orig.id || orig.path, old_name: orig.name, new_name: inputs[i].value });
+            }
+        }
+        if (!renames.length) { showAlert("No changes to apply."); return; }
+        api("POST", "/timeline/batch-rename", { renames: renames }, function (err, data) {
+            if (err || (data && data.error)) { showAlert("Validation failed: " + (data ? data.error : "Network error")); return; }
+            if (!inPremiere) { showToast("Rename validated (no Premiere connection)", "info"); return; }
+            var payload = JSON.stringify(renames);
+            cs.evalScript('ocBatchRenameProjectItems(' + JSON.stringify(payload) + ')', function (result) {
+                try {
+                    var r = JSON.parse(result);
+                    showToast("Renamed " + (r.renamed || renames.length) + " items", "success");
+                } catch (e) { showAlert("Error: " + (result || e.message)); }
+            });
+        });
+    }
+
+    // ---- Smart Bins ----
+    var smartBinRules = [];
+
+    function addBinRule() {
+        smartBinRules.push({ bin_name: "", rule_type: "contains", field: "name", value: "" });
+        renderBinRules();
+    }
+
+    function removeBinRule(idx) {
+        smartBinRules.splice(idx, 1);
+        renderBinRules();
+    }
+
+    function renderBinRules() {
+        var container = document.getElementById("smartBinRules");
+        if (!container) return;
+        if (!smartBinRules.length) {
+            container.innerHTML = '<div class="hint">No rules yet. Click "+ Add Rule".</div>';
+            return;
+        }
+        var html = "";
+        for (var i = 0; i < smartBinRules.length; i++) {
+            var r = smartBinRules[i];
+            html += '<div class="smart-bin-rule" data-idx="' + i + '" style="display:flex;gap:4px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">'
+                + '<input type="text" class="text-input bin-name" data-idx="' + i + '" placeholder="Bin name" value="' + esc(r.bin_name) + '" style="width:80px;font-size:11px;">'
+                + '<select class="bin-rule-type" data-idx="' + i + '" style="font-size:11px;">'
+                + ['contains','starts_with','ends_with','type_is','duration_gt','duration_lt'].map(function(v) {
+                    return '<option value="' + v + '"' + (r.rule_type === v ? ' selected' : '') + '>' + v + '</option>';
+                }).join('')
+                + '</select>'
+                + '<select class="bin-field" data-idx="' + i + '" style="font-size:11px;">'
+                + ['name','type','duration'].map(function(v) {
+                    return '<option value="' + v + '"' + (r.field === v ? ' selected' : '') + '>' + v + '</option>';
+                }).join('')
+                + '</select>'
+                + '<input type="text" class="text-input bin-value" data-idx="' + i + '" placeholder="Value" value="' + esc(r.value) + '" style="width:70px;font-size:11px;">'
+                + '<button type="button" class="btn-ghost btn-xs bin-rule-remove" data-idx="' + i + '">&times;</button>'
+                + '</div>';
+        }
+        container.innerHTML = html;
+        // Attach change handlers
+        container.querySelectorAll('.bin-name').forEach(function(el2) {
+            el2.addEventListener('input', function() { smartBinRules[parseInt(this.dataset.idx)].bin_name = this.value; });
+        });
+        container.querySelectorAll('.bin-rule-type').forEach(function(el2) {
+            el2.addEventListener('change', function() { smartBinRules[parseInt(this.dataset.idx)].rule_type = this.value; });
+        });
+        container.querySelectorAll('.bin-field').forEach(function(el2) {
+            el2.addEventListener('change', function() { smartBinRules[parseInt(this.dataset.idx)].field = this.value; });
+        });
+        container.querySelectorAll('.bin-value').forEach(function(el2) {
+            el2.addEventListener('input', function() { smartBinRules[parseInt(this.dataset.idx)].value = this.value; });
+        });
+        container.querySelectorAll('.bin-rule-remove').forEach(function(el2) {
+            el2.addEventListener('click', function() { removeBinRule(parseInt(this.dataset.idx)); });
+        });
+    }
+
+    function createSmartBins() {
+        if (!smartBinRules.length) { showAlert("Add at least one rule."); return; }
+        api("POST", "/timeline/smart-bins", { rules: smartBinRules }, function (err, data) {
+            if (err || (data && data.error)) { showAlert("Validation failed: " + (data ? data.error : "Network error")); return; }
+            if (!inPremiere) { showToast("Rules validated (no Premiere connection)", "info"); return; }
+            var payload = JSON.stringify(smartBinRules);
+            cs.evalScript('ocCreateSmartBins(' + JSON.stringify(payload) + ')', function (result) {
+                try {
+                    var r = JSON.parse(result);
+                    showToast("Created " + (r.created || smartBinRules.length) + " bins", "success");
+                } catch (e) { showAlert("Error: " + (result || e.message)); }
+            });
+        });
+    }
+
+    // ================================================================
+    // v1.5.0 — Captions Tab New Features
+    // ================================================================
+
+    function runRepeatDetect() {
+        startJob("/captions/repeat-detect", {
+            filepath: selectedPath,
+            model: document.getElementById("repeatModel").value,
+            threshold: parseFloat(document.getElementById("repeatThreshold").value || "0.6"),
+        });
+    }
+
+    addJobDoneListener(function (job) {
+        if (job.type !== "repeat-detect" || job.status !== "complete" || !job.result) return;
+        var r = job.result;
+        repeatCutsData = r.cuts || r.ranges || [];
+        lastTimelineCuts = repeatCutsData;
+        var res = document.getElementById("repeatResults");
+        var sum = document.getElementById("repeatSummary");
+        var list = document.getElementById("repeatList");
+        if (res) res.classList.remove("hidden");
+        if (sum) sum.textContent = "Found " + repeatCutsData.length + " repeated takes.";
+        if (list) {
+            var html = "";
+            for (var i = 0; i < repeatCutsData.length; i++) {
+                var c = repeatCutsData[i];
+                html += '<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border);">'
+                    + fmtDur(c.start || 0) + " - " + fmtDur(c.end || 0)
+                    + (c.text ? ' &mdash; <em>' + esc(c.text.substring(0, 60)) + '</em>' : '')
+                    + '</div>';
+            }
+            list.innerHTML = html || '<div class="hint">No repeats found.</div>';
+        }
+        // Update writeback status
+        var tlStatus = document.getElementById("tlWritebackStatus");
+        if (tlStatus) tlStatus.textContent = repeatCutsData.length + " repeat cuts ready to apply.";
+    });
+
+    function applyRepeatCutsToTimeline() {
+        if (!repeatCutsData || !repeatCutsData.length) { showAlert("No repeat cuts available."); return; }
+        applySequenceCuts(repeatCutsData);
+    }
+
+    function runChapters() {
+        var provider = document.getElementById("chaptersLlmProvider").value;
+        var model = document.getElementById("chaptersLlmModel").value || "llama3";
+        var apiKey = (document.getElementById("chaptersApiKey") || {}).value || "";
+        var maxChapters = parseInt(document.getElementById("chaptersMax").value || "15");
+        startJob("/captions/chapters", {
+            filepath: selectedPath,
+            llm_provider: provider,
+            llm_model: model,
+            llm_api_key: apiKey,
+            max_chapters: maxChapters,
+        });
+    }
+
+    addJobDoneListener(function (job) {
+        if (job.type !== "chapters" || job.status !== "complete" || !job.result) return;
+        var r = job.result;
+        chaptersData = r.chapters || [];
+        var res = document.getElementById("chaptersResult");
+        var text = document.getElementById("chaptersText");
+        if (res) res.classList.remove("hidden");
+        if (text) {
+            var block = r.description_block || "";
+            if (!block && chaptersData.length) {
+                block = chaptersData.map(function(c) {
+                    return fmtDur(c.time || c.start || 0) + " " + (c.title || c.label || "");
+                }).join("\n");
+            }
+            text.value = block;
+        }
+    });
+
+    function copyChaptersDesc() {
+        var text = document.getElementById("chaptersText");
+        if (!text) return;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text.value).then(function() { showToast("Chapters copied", "success"); }).catch(function() { showToast("Copy failed", "warning"); });
+        } else {
+            text.select();
+            document.execCommand("copy");
+            showToast("Chapters copied", "success");
+        }
+    }
+
+    function addChaptersAsMarkers() {
+        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        if (!chaptersData || !chaptersData.length) { showAlert("No chapters available."); return; }
+        var payload = JSON.stringify({ chapters: chaptersData, type: "chapter" });
+        cs.evalScript('ocAddSequenceMarkers(' + JSON.stringify(payload) + ')', function (result) {
+            try {
+                var r = JSON.parse(result);
+                showToast("Added " + (r.added || chaptersData.length) + " chapter markers", "success");
+            } catch (e) { showAlert("Error: " + (result || e.message)); }
+        });
+    }
+
+    function runSrtImport() {
+        var path = (document.getElementById("srtImportPath") || {}).value || "";
+        if (!path) { showAlert("Select an SRT file first."); return; }
+        api("POST", "/timeline/srt-to-captions", { srt_path: path }, function (err, data) {
+            if (err || (data && data.error)) { showAlert("Failed: " + (data ? data.error : "Network error")); return; }
+            var segments = data.segments || [];
+            if (!inPremiere) { showToast("SRT parsed (" + segments.length + " segments), no Premiere connection", "info"); return; }
+            var payload = JSON.stringify(segments);
+            cs.evalScript('ocAddNativeCaptionTrack(' + JSON.stringify(payload) + ')', function (result) {
+                try {
+                    var r = JSON.parse(result);
+                    showToast("Imported " + (r.imported || segments.length) + " captions", "success");
+                } catch (e) { showAlert("Error: " + (result || e.message)); }
+            });
+            var statusEl = document.getElementById("srtImportStatus");
+            if (statusEl) { statusEl.textContent = "Imported " + segments.length + " caption segments."; statusEl.classList.remove("hidden"); }
+        });
+    }
+
+    // ================================================================
+    // v1.5.0 — Audio Tab: Loudness Match
+    // ================================================================
+
+    function runLoudMatch() {
+        var paths = projectMedia.map(function(m) { return m.path || m; }).filter(Boolean);
+        if (!paths.length) { showAlert("No project media found."); return; }
+        var outDir = (document.getElementById("loudMatchOutputDir") || {}).value || projectFolder;
+        startJob("/audio/loudness-match", {
+            filepaths: paths,
+            target_lufs: parseFloat(document.getElementById("loudMatchTarget").value || "-14"),
+            output_dir: outDir,
+        });
+    }
+
+    addJobDoneListener(function (job) {
+        if (job.type !== "loudness-match" || job.status !== "complete" || !job.result) return;
+        var r = job.result;
+        var res = document.getElementById("loudMatchResults");
+        var table = document.getElementById("loudMatchTable");
+        if (res) res.classList.remove("hidden");
+        if (table && r.clips) {
+            var html = '<table style="width:100%;font-size:11px;border-collapse:collapse;">'
+                + '<tr><th style="text-align:left;padding:2px 4px;">Clip</th><th>Original LUFS</th><th>Status</th></tr>';
+            for (var i = 0; i < r.clips.length; i++) {
+                var c = r.clips[i];
+                var name = (c.path || c.name || "").split(/[/\\]/).pop();
+                html += '<tr><td style="padding:2px 4px;">' + esc(name) + '</td>'
+                    + '<td style="text-align:center;">' + safeFixed(c.original_lufs, 1) + '</td>'
+                    + '<td style="text-align:center;color:' + (c.success ? 'var(--success)' : 'var(--error)') + ';">' + (c.success ? "OK" : "Failed") + '</td></tr>';
+            }
+            html += '</table>';
+            table.innerHTML = html;
+        }
+    });
+
+    // ================================================================
+    // v1.5.0 — Export Tab: Deliverables
+    // ================================================================
+
+    function loadSeqInfo() {
+        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        cs.evalScript('ocGetSequenceInfo()', function (result) {
+            try {
+                sequenceInfo = JSON.parse(result);
+                var statusEl = document.getElementById("seqInfoStatus");
+                if (statusEl) {
+                    statusEl.textContent = "Loaded: " + (sequenceInfo.name || "Unknown") + " — " + (sequenceInfo.clip_count || 0) + " clips";
+                    statusEl.classList.remove("hidden");
+                }
+                var btns = ["genVfxSheetBtn","genAdrListBtn","genMusicCueBtn","genAssetListBtn"];
+                btns.forEach(function(id) { var b = document.getElementById(id); if (b) b.disabled = false; });
+                showToast("Sequence info loaded", "success");
+            } catch (e) { showAlert("Error loading sequence info: " + (result || e.message)); }
+        });
+    }
+
+    function genDeliverableDoc(type) {
+        if (!sequenceInfo) { showAlert("Load sequence info first."); return; }
+        var outDir = (document.getElementById("deliverablesOutputDir") || {}).value || projectFolder;
+        api("POST", "/deliverables/" + type, { sequence_data: sequenceInfo, output_dir: outDir }, function (err, data) {
+            if (err || (data && data.error)) { showAlert("Generation failed: " + (data ? data.error : "Network error")); return; }
+            var res = document.getElementById("deliverablesResult");
+            var fp = document.getElementById("deliverablesFilePath");
+            if (res) res.classList.remove("hidden");
+            if (fp) fp.textContent = data.output_path || "File generated.";
+            showToast(type + " generated", "success");
+        });
+    }
+
+    // ================================================================
+    // v1.5.0 — NLP Tab Functions
+    // ================================================================
+
+    function indexAllClips() {
+        var paths = projectMedia.map(function(m) { return m.path || m; }).filter(Boolean);
+        if (!paths.length) { showAlert("No project media found."); return; }
+        var btn = document.getElementById("indexAllClipsBtn");
+        if (btn) { btn.disabled = true; btn.textContent = "Indexing..."; }
+        api("POST", "/search/index", { filepaths: paths }, function (err, data) {
+            if (btn) { btn.disabled = false; btn.textContent = "Index All Project Clips"; }
+            if (err || (data && data.error)) { showAlert("Indexing failed: " + (data ? data.error : "Network error")); return; }
+            footageIndex = data;
+            var statsEl = document.getElementById("searchIndexStats");
+            if (statsEl) statsEl.textContent = "Index: " + (data.total_files || paths.length) + " files, " + (data.total_segments || 0) + " segments.";
+            showToast("Indexing complete", "success");
+        });
+    }
+
+    function runFootageSearch() {
+        var query = (document.getElementById("footageSearchQuery") || {}).value || "";
+        if (!query) { showAlert("Enter a search query."); return; }
+        var maxResults = parseInt((document.getElementById("footageSearchMax") || {}).value || "10");
+        api("POST", "/search/footage", { query: query, max_results: maxResults }, function (err, data) {
+            var res = document.getElementById("footageSearchResults");
+            if (!res) return;
+            if (err || !data) { res.innerHTML = '<div class="hint">Search failed.</div>'; return; }
+            var results = data.results || [];
+            if (!results.length) { res.innerHTML = '<div class="hint">No results found.</div>'; return; }
+            var html = "";
+            for (var i = 0; i < results.length; i++) {
+                var r = results[i];
+                var name = (r.path || "").split(/[/\\]/).pop();
+                var timeRange = r.start != null ? fmtDur(r.start) + " - " + fmtDur(r.end || r.start) : "";
+                html += '<div class="footage-result-item" data-path="' + esc(r.path || "") + '" style="padding:6px;border-bottom:1px solid var(--border);cursor:pointer;" title="Click to select">'
+                    + '<div style="font-size:11px;font-weight:600;">' + esc(name) + (timeRange ? ' &mdash; ' + timeRange : '') + '</div>'
+                    + (r.text ? '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + esc(r.text.substring(0, 80)) + '</div>' : '')
+                    + '</div>';
+            }
+            res.innerHTML = html;
+            // Click to select clip
+            var items = res.querySelectorAll(".footage-result-item");
+            for (var j = 0; j < items.length; j++) {
+                items[j].addEventListener("click", function() {
+                    var p = this.getAttribute("data-path");
+                    if (p) selectFile(p, p.split(/[/\\]/).pop());
+                });
+            }
+        });
+    }
+
+    function runNlpCommand() {
+        var text = (document.getElementById("nlpCommandText") || {}).value || "";
+        if (!text) { showAlert("Enter a command."); return; }
+        var provider = (document.getElementById("nlpLlmProvider") || {}).value || "ollama";
+        var btn = document.getElementById("runNlpCommandBtn");
+        if (btn) { btn.disabled = true; btn.textContent = "Processing..."; }
+        api("POST", "/nlp/command", { command: text, filepath: selectedPath, llm_provider: provider }, function (err, data) {
+            if (btn) { btn.disabled = false; btn.textContent = "Execute"; }
+            var res = document.getElementById("nlpCommandResult");
+            var routeEl = document.getElementById("nlpCommandRoute");
+            var confEl = document.getElementById("nlpCommandConf");
+            var outEl = document.getElementById("nlpCommandOutput");
+            if (res) res.classList.remove("hidden");
+            if (err || !data) {
+                if (routeEl) routeEl.textContent = "Error: " + (err ? err.message : "Unknown");
+                return;
+            }
+            if (routeEl) routeEl.textContent = "Route: " + (data.route || "unknown");
+            if (confEl) confEl.textContent = "Confidence: " + safeFixed((data.confidence || 0) * 100, 0) + "%";
+            if (outEl) outEl.textContent = data.result ? JSON.stringify(data.result, null, 2) : "";
+            // Auto-execute matched route if high confidence
+            if (data.route && data.confidence > 0.6 && data.params) {
+                startJob(data.route, Object.assign({ filepath: selectedPath, output_dir: projectFolder }, data.params));
+            }
+        });
+    }
+
+    // ================================================================
+    // v1.5.0 — Init Timeline/NLP features
+    // ================================================================
+
+    function initTimelineFeatures() {
+        // Write-back
+        var applyBtn = document.getElementById("applySeqCutsBtn");
+        if (applyBtn) applyBtn.addEventListener("click", function() {
+            if (!lastTimelineCuts) { showAlert("No cuts available. Run Silence Removal or Repeat Detection first."); return; }
+            applySequenceCuts(lastTimelineCuts);
+        });
+
+        // Beat markers
+        var beatBtn = document.getElementById("runBeatMarkersBtn");
+        if (beatBtn) beatBtn.addEventListener("click", runBeatMarkers);
+        var addBeatBtn = document.getElementById("addBeatMarkersBtn");
+        if (addBeatBtn) addBeatBtn.addEventListener("click", addBeatMarkersToSequence);
+
+        // Multicam
+        var multicamBtn = document.getElementById("runMulticamBtn");
+        if (multicamBtn) multicamBtn.addEventListener("click", runMulticamCuts);
+        var applMcBtn = document.getElementById("applyMulticamCutsBtn");
+        if (applMcBtn) applMcBtn.addEventListener("click", applyMulticamCuts);
+        var speakersInput = document.getElementById("multicamSpeakers");
+        if (speakersInput) {
+            speakersInput.addEventListener("change", renderMulticamTrackMap);
+            renderMulticamTrackMap();
+        }
+
+        // Export from markers
+        var getMarkersBtn = document.getElementById("getSeqMarkersBtn");
+        if (getMarkersBtn) getMarkersBtn.addEventListener("click", getSeqMarkers);
+        var exportMarkedBtn = document.getElementById("exportMarkedClipsBtn");
+        if (exportMarkedBtn) exportMarkedBtn.addEventListener("click", exportMarkedClips);
+
+        // Batch rename
+        var loadItemsBtn = document.getElementById("loadProjectItemsBtn");
+        if (loadItemsBtn) loadItemsBtn.addEventListener("click", loadProjectItems);
+        var patternBtn = document.getElementById("applyRenamePatternBtn");
+        if (patternBtn) patternBtn.addEventListener("click", applyRenamePattern);
+        var renameAllBtn = document.getElementById("renameAllBtn");
+        if (renameAllBtn) renameAllBtn.addEventListener("click", renameAll);
+
+        // Smart bins
+        var addRuleBtn = document.getElementById("addBinRuleBtn");
+        if (addRuleBtn) addRuleBtn.addEventListener("click", addBinRule);
+        var createBinsBtn = document.getElementById("createSmartBinsBtn");
+        if (createBinsBtn) createBinsBtn.addEventListener("click", createSmartBins);
+        renderBinRules();
+
+        // Slider: beat marker subdivisions (no display needed, select-only)
+    }
+
+    function initCaptionNewFeatures() {
+        // Repeat detection
+        var repeatBtn = document.getElementById("runRepeatDetectBtn");
+        if (repeatBtn) repeatBtn.addEventListener("click", runRepeatDetect);
+        var applyRepBtn = document.getElementById("applyRepeatCutsBtn");
+        if (applyRepBtn) applyRepBtn.addEventListener("click", applyRepeatCutsToTimeline);
+        var repThresh = document.getElementById("repeatThreshold");
+        var repThreshVal = document.getElementById("repeatThresholdVal");
+        if (repThresh && repThreshVal) {
+            repThresh.addEventListener("input", function() { repThreshVal.textContent = safeFixed(parseFloat(this.value), 2); });
+        }
+
+        // Chapters
+        var chaptersBtn = document.getElementById("runChaptersBtn");
+        if (chaptersBtn) chaptersBtn.addEventListener("click", runChapters);
+        var copyChapBtn = document.getElementById("copyChaptersDescBtn");
+        if (copyChapBtn) copyChapBtn.addEventListener("click", copyChaptersDesc);
+        var addChapMarkersBtn = document.getElementById("addChaptersMarkersBtn");
+        if (addChapMarkersBtn) addChapMarkersBtn.addEventListener("click", addChaptersAsMarkers);
+        var chapProvider = document.getElementById("chaptersLlmProvider");
+        var chapApiKeyGroup = document.getElementById("chaptersApiKeyGroup");
+        if (chapProvider && chapApiKeyGroup) {
+            chapProvider.addEventListener("change", function() {
+                chapApiKeyGroup.classList.toggle("hidden", this.value === "ollama");
+            });
+        }
+        var chapMax = document.getElementById("chaptersMax");
+        var chapMaxVal = document.getElementById("chaptersMaxVal");
+        if (chapMax && chapMaxVal) {
+            chapMax.addEventListener("input", function() { chapMaxVal.textContent = this.value; });
+        }
+
+        // SRT import
+        var srtBtn = document.getElementById("runSrtImportBtn");
+        if (srtBtn) srtBtn.addEventListener("click", runSrtImport);
+    }
+
+    function initAudioNewFeatures() {
+        // Loudness match
+        var loudBtn = document.getElementById("runLoudMatchBtn");
+        if (loudBtn) loudBtn.addEventListener("click", runLoudMatch);
+        var loudSlider = document.getElementById("loudMatchTarget");
+        var loudVal = document.getElementById("loudMatchTargetVal");
+        if (loudSlider && loudVal) {
+            loudSlider.addEventListener("input", function() { loudVal.textContent = this.value + " LUFS"; });
+        }
+    }
+
+    function initDeliverablesFeatures() {
+        var loadSeqBtn = document.getElementById("loadSeqInfoBtn");
+        if (loadSeqBtn) loadSeqBtn.addEventListener("click", loadSeqInfo);
+        var vfxBtn = document.getElementById("genVfxSheetBtn");
+        if (vfxBtn) vfxBtn.addEventListener("click", function() { genDeliverableDoc("vfx-sheet"); });
+        var adrBtn = document.getElementById("genAdrListBtn");
+        if (adrBtn) adrBtn.addEventListener("click", function() { genDeliverableDoc("adr-list"); });
+        var musicBtn = document.getElementById("genMusicCueBtn");
+        if (musicBtn) musicBtn.addEventListener("click", function() { genDeliverableDoc("music-cue-sheet"); });
+        var assetBtn = document.getElementById("genAssetListBtn");
+        if (assetBtn) assetBtn.addEventListener("click", function() { genDeliverableDoc("asset-list"); });
+        var openFolderBtn = document.getElementById("openDeliverablesFolder");
+        if (openFolderBtn) openFolderBtn.addEventListener("click", function() {
+            var fp = document.getElementById("deliverablesFilePath");
+            if (fp && fp.textContent && inPremiere) {
+                cs.evalScript('openFolderInFinder(' + JSON.stringify(fp.textContent) + ')', function() {});
+            }
+        });
+    }
+
+    function initNlpFeatures() {
+        var indexBtn = document.getElementById("indexAllClipsBtn");
+        if (indexBtn) indexBtn.addEventListener("click", indexAllClips);
+        var searchBtn = document.getElementById("runFootageSearchBtn");
+        if (searchBtn) searchBtn.addEventListener("click", runFootageSearch);
+        var footageQuery = document.getElementById("footageSearchQuery");
+        if (footageQuery) {
+            footageQuery.addEventListener("keydown", function(e) {
+                if (e.key === "Enter") runFootageSearch();
+            });
+        }
+        var nlpBtn = document.getElementById("runNlpCommandBtn");
+        if (nlpBtn) nlpBtn.addEventListener("click", runNlpCommand);
+    }
+
+    // Hook silence result to update lastTimelineCuts
+    addJobDoneListener(function (job) {
+        if (job.type === "silence" && job.status === "complete" && job.result && job.result.cuts) {
+            lastTimelineCuts = job.result.cuts;
+            var tlStatus = document.getElementById("tlWritebackStatus");
+            if (tlStatus) tlStatus.textContent = job.result.cuts.length + " silence cuts ready to apply.";
+        }
+    });
 
     // ================================================================
     // Init
@@ -5933,8 +6725,16 @@
         renderMergeFiles();
         initNewSliderDisplays();
         loadLLMSettings();
+        loadLlmSettings();
         updateSilenceModeUI();
         updateFaceTrackingUI();
+
+        // v1.5.0 inits
+        initTimelineFeatures();
+        initCaptionNewFeatures();
+        initAudioNewFeatures();
+        initDeliverablesFeatures();
+        initNlpFeatures();
 
         // Pause CSS animations when panel is hidden (saves GPU/CPU in Premiere)
         document.addEventListener("visibilitychange", function () {

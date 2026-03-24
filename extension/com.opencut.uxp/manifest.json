@@ -1,0 +1,42 @@
+{
+  "id": "com.opencut.uxp",
+  "name": "OpenCut UXP",
+  "version": "1.5.0",
+  "main": "index.html",
+  "host": [
+    {
+      "app": "PPRO",
+      "minVersion": "25.6",
+      "data": {
+        "apiVersion": 2
+      }
+    }
+  ],
+  "entrypoints": [
+    {
+      "type": "panel",
+      "id": "com.opencut.uxp.panel",
+      "label": {
+        "default": "OpenCut UXP"
+      },
+      "minimumSize": {"width": 480, "height": 400},
+      "preferredSize": {"width": 520, "height": 700},
+      "maximumSize": {"width": 1200, "height": 1600}
+    }
+  ],
+  "requiredPermissions": {
+    "network": {
+      "domains": [
+        "http://127.0.0.1:5679", "http://127.0.0.1:5680", "http://127.0.0.1:5681",
+        "http://127.0.0.1:5682", "http://127.0.0.1:5683", "http://127.0.0.1:5684",
+        "http://127.0.0.1:5685", "http://127.0.0.1:5686", "http://127.0.0.1:5687",
+        "http://127.0.0.1:5688", "http://127.0.0.1:5689",
+        "http://localhost:5679"
+      ]
+    },
+    "localFileSystem": "fullAccess",
+    "ipc": {
+      "enablePluginCommunication": true
+    }
+  }
+}
