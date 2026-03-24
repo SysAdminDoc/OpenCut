@@ -120,7 +120,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.5.3**
+- Current: **v1.5.6**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all at once (also manually update UXP manifest.json and UXP main.js — not yet covered by sync script)
 
@@ -752,3 +752,28 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **CEP smart bin fields** — sent `{bin_name, rule_type}` but `ocCreateSmartBins` reads `{binName, rule}`. Added field transformation before ExtendScript call.
 - **CEP deliverables result** — read `data.output_path` but route returns `data.output`. Fixed with fallback.
 - **ExtendScript export range** — `ocExportSequenceRange` setInPoint/setOutPoint failures now abort with error instead of silently exporting wrong range.
+
+## v1.5.4 Batch 32 Bug Fixes
+- **CEP repeat-detect result** — read `r.cuts`/`r.ranges` but route returns `r.repeats`. Fixed with fallback chain.
+- **CEP chapters api_key** — sent `llm_api_key` but route reads `api_key` — OpenAI/Anthropic key was silently lost.
+- **CEP export-from-markers result** — read `r.exported` but route returns `r.count`.
+- **CEP CSRF header in raw fetch()** — 4 `fetch()` calls used `X-CSRF-Token` instead of `X-OpenCut-Token` — settings saves were 403 failures.
+- **UXP result field mismatches** — color-match/auto-zoom/denoise result handlers read `result.output_path` but routes return `result.output`.
+- **UXP chapters timecodes** — read `c.start` (undefined) instead of `c.seconds` for display.
+- **UXP batch-rename/smart-bins/export-from-markers** — sent wrong param schemas for route validation.
+- **UXP deliverables** — empty `{}` sequence_data was falsy in Python, causing 400 errors.
+- **Route fallbacks** — `export-from-markers` accepts `filepath` for `input_file`, `smart-bins` accepts both `binName`/`bin_name` and `rule`/`rule_type`.
+
+## v1.5.5 Batch 33 Fixes
+- **Multicam route** — now accepts `filepath` param and auto-transcribes with Whisper to generate diarization segments (CEP multicam was completely broken — sent filepath but route only accepted diarization_file/segments)
+- **UXP Full Report** — replaced non-existent `/project-report` endpoint with sequential calls to all 4 deliverables endpoints, with UXP PProBridge sequence info
+- **Search/Index folder support** — route now accepts `folder` param alongside `files`, auto-scans for media files
+
+## v1.5.6 Batch 34 Fixes
+- **SECURITY: UNC path blocking** — `validate_path()` now blocks `\\server\share` and `//server/share` paths (SSRF/NTLM hash leak prevention). Checked pre and post `normpath()`.
+- **SECURITY: Registry command injection** — ExtendScript `startOpenCutBackend()` sanitizes registry-sourced `exePath` against batch metacharacters
+- **Stuck jobs auto-expire** — "running" jobs stuck >2 hours marked as error (prevents permanent TooManyJobsError)
+- **Zombie process reaping** — `proc.wait(5)` after `proc.kill()` in `_kill_job_process()`
+- **async_job thread tracking** — decorator stores thread handle in job dict (`_thread` was always None)
+- **ExtendScript projectItem safety** — in/out point reset guaranteed even if insert loop throws
+- **Test fixes** — 5 broken tests fixed (mock paths updated for consolidated helpers, tempdir context scope)

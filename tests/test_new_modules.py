@@ -532,12 +532,12 @@ class TestDeliverables(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "assets.csv")
             result = self.asset(seq, output_path)
-        # Only one unique path, so one data row
-        self.assertEqual(result["rows"], 1)
-        with open(result["output"]) as f:
-            reader = csv.DictReader(f)
-            rows = list(reader)
-        self.assertEqual(int(rows[0]["UseCount"]), 2)
+            # Only one unique path, so one data row
+            self.assertEqual(result["rows"], 1)
+            with open(result["output"]) as f:
+                reader = csv.DictReader(f)
+                rows = list(reader)
+            self.assertEqual(int(rows[0]["UseCount"]), 2)
 
     def test_seconds_to_tc_negative_input_clamped(self):
         """Negative seconds should be clamped to 0."""
@@ -803,7 +803,7 @@ class TestLoudnessMatchInterface(unittest.TestCase):
         mock_result.returncode = 0
         mock_result.stderr = fake_json  # loudnorm block is extracted with regex
 
-        with patch("subprocess.run", return_value=mock_result):
+        with patch("opencut.core.loudness_match._run_ffmpeg", return_value=mock_result):
             result = measure_loudness("/fake/file.mp4")
 
         self.assertIn("lufs", result)
@@ -821,7 +821,7 @@ class TestLoudnessMatchInterface(unittest.TestCase):
         mock_result.returncode = 0
         mock_result.stderr = "no JSON here at all"
 
-        with patch("subprocess.run", return_value=mock_result):
+        with patch("opencut.core.loudness_match._run_ffmpeg", return_value=mock_result):
             with self.assertRaises(ValueError):
                 measure_loudness("/fake/file.mp4")
 
@@ -829,7 +829,7 @@ class TestLoudnessMatchInterface(unittest.TestCase):
         """measure_loudness should raise RuntimeError when FFmpeg binary is missing."""
         from opencut.core.loudness_match import measure_loudness
 
-        with patch("subprocess.run", side_effect=FileNotFoundError("ffmpeg not found")):
+        with patch("opencut.core.loudness_match._run_ffmpeg", side_effect=RuntimeError("FFmpeg not found")):
             with self.assertRaises(RuntimeError):
                 measure_loudness("/fake/file.mp4")
 
@@ -892,7 +892,7 @@ class TestLoudnessMatchInterface(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "out.mp4")
-            with patch("subprocess.run", side_effect=[mock_pass1, mock_pass2]) as mock_run:
+            with patch("opencut.core.loudness_match._run_ffmpeg", side_effect=[mock_pass1, mock_pass2]) as mock_run:
                 normalize_to_lufs("/fake/in.mp4", output_path, target_lufs=-14.0)
         self.assertEqual(mock_run.call_count, 2)
 
