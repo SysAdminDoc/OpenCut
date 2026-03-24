@@ -2151,16 +2151,18 @@ function ocExportSequenceRange(outputPath, startSeconds, endSeconds) {
             return JSON.stringify({ error: "No active sequence" });
         }
 
-        // Set in/out points on the sequence
+        // Set in/out points on the sequence — abort if either fails
         try {
             seq.setInPoint(startSeconds);
         } catch (e) {
             _ocLog("ocExportSequenceRange setInPoint error: " + e.toString());
+            return JSON.stringify({ error: "Failed to set in-point: " + e.toString() });
         }
         try {
             seq.setOutPoint(endSeconds);
         } catch (e) {
             _ocLog("ocExportSequenceRange setOutPoint error: " + e.toString());
+            return JSON.stringify({ error: "Failed to set out-point: " + e.toString() });
         }
 
         // Queue to AME

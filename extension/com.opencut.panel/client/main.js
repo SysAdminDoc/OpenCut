@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.5.2
+   OpenCut CEP Panel - Main Controller v1.5.3
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -5736,7 +5736,8 @@
     function addBeatMarkersToSequence() {
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
         if (!beatMarkerTimes || !beatMarkerTimes.length) { showAlert("No beat markers detected."); return; }
-        var payload = JSON.stringify({ times: beatMarkerTimes, type: "Chapter" });
+        var markers = beatMarkerTimes.map(function(t) { return { time: t, name: "Beat", type: "Chapter" }; });
+        var payload = JSON.stringify(markers);
         cs.evalScript('ocAddSequenceMarkers(' + JSON.stringify(payload) + ')', function (result) {
             try {
                 var r = JSON.parse(result);
@@ -5895,7 +5896,7 @@
             var idx = parseInt(inputs[i].getAttribute("data-idx"));
             var orig = renameItemsData[idx];
             if (orig && inputs[i].value !== orig.name) {
-                renames.push({ id: orig.id || orig.path, old_name: orig.name, new_name: inputs[i].value });
+                renames.push({ nodeId: orig.nodeId || orig.id || orig.path, newName: inputs[i].value });
             }
         }
         if (!renames.length) { showAlert("No changes to apply."); return; }
@@ -5975,7 +5976,8 @@
         api("POST", "/timeline/smart-bins", { rules: smartBinRules }, function (err, data) {
             if (err || (data && data.error)) { showAlert("Validation failed: " + (data ? data.error : "Network error")); return; }
             if (!inPremiere) { showToast("Rules validated (no Premiere connection)", "info"); return; }
-            var payload = JSON.stringify(smartBinRules);
+            var jsxRules = smartBinRules.map(function(r) { return { binName: r.bin_name, rule: r.rule_type, field: r.field, value: r.value }; });
+            var payload = JSON.stringify(jsxRules);
             cs.evalScript('ocCreateSmartBins(' + JSON.stringify(payload) + ')', function (result) {
                 try {
                     var r = JSON.parse(result);
@@ -6075,7 +6077,8 @@
     function addChaptersAsMarkers() {
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
         if (!chaptersData || !chaptersData.length) { showAlert("No chapters available."); return; }
-        var payload = JSON.stringify({ chapters: chaptersData, type: "chapter" });
+        var markers = chaptersData.map(function(c) { return { time: c.seconds || c.start || c.time || 0, name: c.title || c.label || "Chapter", type: "Chapter" }; });
+        var payload = JSON.stringify(markers);
         cs.evalScript('ocAddSequenceMarkers(' + JSON.stringify(payload) + ')', function (result) {
             try {
                 var r = JSON.parse(result);
@@ -6169,7 +6172,7 @@
             var res = document.getElementById("deliverablesResult");
             var fp = document.getElementById("deliverablesFilePath");
             if (res) res.classList.remove("hidden");
-            if (fp) fp.textContent = data.output_path || "File generated.";
+            if (fp) fp.textContent = data.output || data.output_path || "File generated.";
             showToast(type + " generated", "success");
         });
     }
