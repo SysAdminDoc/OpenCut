@@ -23,7 +23,7 @@ const BACKEND_DEFAULT  = "http://127.0.0.1:5679";
 const BACKEND_MAX_PORT = 5689;
 const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
-const VERSION          = "1.5.5";
+const VERSION          = "1.5.6";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does

@@ -150,12 +150,29 @@ def _kill_job_process(job_id: str):
             proc.kill()
         except OSError:
             pass
+        # Reap zombie process
+        try:
+            proc.wait(timeout=5)
+        except Exception:
+            pass
+
+
+_JOB_STUCK_TIMEOUT = 7200  # 2 hours — mark running jobs as error if stuck
 
 
 def _cleanup_old_jobs():
-    """Remove completed/errored jobs older than JOB_MAX_AGE."""
+    """Remove completed/errored jobs older than JOB_MAX_AGE.
+    Also mark stuck 'running' jobs as error after _JOB_STUCK_TIMEOUT."""
     now = time.time()
     with job_lock:
+        # Mark stuck running jobs as error
+        for jid, j in jobs.items():
+            if j["status"] == "running" and (now - j["created"]) > _JOB_STUCK_TIMEOUT:
+                j["status"] = "error"
+                j["error"] = "Job timed out (stuck for >2 hours)"
+                j["message"] = "Timed out"
+                logger.warning("Marking stuck job %s as error (created %.0fs ago)", jid, now - j["created"])
+        # Clean up old finished jobs
         expired = [
             jid for jid, j in jobs.items()
             if j["status"] in ("complete", "error", "cancelled")
@@ -215,7 +232,11 @@ def async_job(job_type: str):
                                 message=f"Error: {e}")
 
             import threading as _t
-            _t.Thread(target=_process, daemon=True).start()
+            thread = _t.Thread(target=_process, daemon=True)
+            thread.start()
+            with job_lock:
+                if job_id in jobs:
+                    jobs[job_id]["_thread"] = thread
             return jsonify({"job_id": job_id})
         return wrapper
     return decorator

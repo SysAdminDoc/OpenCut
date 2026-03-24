@@ -595,9 +595,11 @@ function applyEditsToTimeline(segmentsJson, mediaPath) {
 
         // Set the project item's in/out points to this segment
         // This controls what portion of the clip gets inserted
+        var needsReset = false;
         try {
             projectItem.setInPoint(segStart, 4);  // 4 = all media types
             projectItem.setOutPoint(segEnd, 4);
+            needsReset = true;
         } catch (e) {
             // If setInPoint/setOutPoint not available, skip this segment
             continue;
@@ -624,19 +626,15 @@ function applyEditsToTimeline(segmentsJson, mediaPath) {
         }
     }
 
-    // Reset the project item's in/out points so it appears normal in the project panel
+    // Always reset the project item's in/out points (even if loop threw)
     try {
         projectItem.clearInPoint(4);
         projectItem.clearOutPoint(4);
     } catch (e) {
-        // clearInPoint may not exist in all versions; try setting to extremes
         try {
             projectItem.setInPoint(0, 4);
-            // setOutPoint to a very large value to effectively clear it
-            projectItem.setOutPoint(86400, 4);  // 24 hours
-        } catch (e2) {
-            // Best effort -- don't fail the whole operation
-        }
+            projectItem.setOutPoint(86400, 4);
+        } catch (e2) {}
     }
 
     if (insertedCount === 0) {
@@ -1137,8 +1135,9 @@ function startOpenCutBackend() {
             bat.writeln("timeout /t 1 /nobreak >nul 2>&1");
 
             if (exePath) {
-                // Launch the installed exe
-                bat.writeln('"' + exePath + '"');
+                // Launch the installed exe (sanitize path against injection)
+                var safePath = exePath.replace(/[&|<>^%"]/g, "");
+                bat.writeln('"' + safePath + '"');
             } else {
                 // Fall back to python -m (dev mode)
                 var pythonCmds = ["python", "python3", "py"];
