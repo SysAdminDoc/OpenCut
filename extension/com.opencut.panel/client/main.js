@@ -52,6 +52,9 @@
     var repeatCutsData = null;      // repeat-detect cuts data
     var chaptersData = null;        // generated chapters
 
+    // ---- Premiere Pro state cache (reduces evalScript round-trips) ----
+    var _pproCache = { seq: null, clips: null, bins: null, ts: 0, ttl: 8000 };
+
     // ============================================================
     // CUSTOM DROPDOWN SYSTEM - Inline Panel Dropdowns
     // ============================================================
@@ -1379,6 +1382,10 @@
                 if (el.contentTitle) {
                     el.contentTitle.textContent = this.getAttribute("title") || target;
                 }
+                // Invalidate Premiere state cache on tab switch
+                _pproCache.seq = null;
+                _pproCache.clips = null;
+                _pproCache.bins = null;
                 // Check sub-tab overflow after tab switch
                 checkSubTabOverflow();
                 // Load settings info on first visit
@@ -5859,10 +5866,22 @@
 
     function loadProjectItems() {
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        // Return cached project media if still fresh
+        if (_pproCache.clips && (Date.now() - _pproCache.ts < _pproCache.ttl)) {
+            renameItemsData = _pproCache.clips;
+            renderRenameItems();
+            var applyBtn = document.getElementById("applyRenamePatternBtn");
+            var renameBtn = document.getElementById("renameAllBtn");
+            if (applyBtn) applyBtn.disabled = !renameItemsData.length;
+            if (renameBtn) renameBtn.disabled = !renameItemsData.length;
+            return;
+        }
         cs.evalScript('getAllProjectMedia()', function (result) {
             try {
                 var items = JSON.parse(result);
                 renameItemsData = items || [];
+                _pproCache.clips = renameItemsData;
+                _pproCache.ts = Date.now();
                 renderRenameItems();
                 var applyBtn = document.getElementById("applyRenamePatternBtn");
                 var renameBtn = document.getElementById("renameAllBtn");
@@ -6159,9 +6178,24 @@
 
     function loadSeqInfo() {
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        // Return cached sequence info if still fresh
+        if (_pproCache.seq && (Date.now() - _pproCache.ts < _pproCache.ttl)) {
+            var cached = _pproCache.seq;
+            sequenceInfo = cached;
+            var statusEl = document.getElementById("seqInfoStatus");
+            if (statusEl) {
+                statusEl.textContent = "Loaded: " + (cached.name || "Unknown") + " — " + (cached.clip_count || 0) + " clips (cached)";
+                statusEl.classList.remove("hidden");
+            }
+            var btns = ["genVfxSheetBtn","genAdrListBtn","genMusicCueBtn","genAssetListBtn"];
+            btns.forEach(function(id) { var b = document.getElementById(id); if (b) b.disabled = false; });
+            return;
+        }
         cs.evalScript('ocGetSequenceInfo()', function (result) {
             try {
                 sequenceInfo = JSON.parse(result);
+                _pproCache.seq = sequenceInfo;
+                _pproCache.ts = Date.now();
                 var statusEl = document.getElementById("seqInfoStatus");
                 if (statusEl) {
                     statusEl.textContent = "Loaded: " + (sequenceInfo.name || "Unknown") + " — " + (sequenceInfo.clip_count || 0) + " clips";
