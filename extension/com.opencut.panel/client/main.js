@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.5.3
+   OpenCut CEP Panel - Main Controller v1.5.4
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -5495,7 +5495,7 @@
 
     // --- Silence mode toggle ---
     function loadLlmSettings() {
-        fetch(BACKEND + "/settings/llm", { headers: { "X-CSRF-Token": csrfToken } })
+        fetch(BACKEND + "/settings/llm", { headers: { "X-OpenCut-Token": csrfToken } })
             .then(function(r) { return r.json(); })
             .then(function(s) {
                 if (s.provider) {
@@ -5526,7 +5526,7 @@
         var baseUrl = (document.getElementById("llmBaseUrl2") || {}).value || "";
         fetch(BACKEND + "/settings/llm", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+            headers: { "Content-Type": "application/json", "X-OpenCut-Token": csrfToken },
             body: JSON.stringify({ provider: provider, model: model, api_key: apiKey, base_url: baseUrl })
         }).then(function(r) { return r.json(); })
           .then(function() { showToast("LLM settings saved", "success"); })
@@ -5547,12 +5547,12 @@
         var easing = (document.getElementById("defaultZoomEasing") || {}).value || "ease_in_out";
         fetch(BACKEND + "/settings/loudness-target", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+            headers: { "Content-Type": "application/json", "X-OpenCut-Token": csrfToken },
             body: JSON.stringify({ target_lufs: lufs })
         }).catch(function() {});
         fetch(BACKEND + "/settings/auto-zoom", {
             method: "POST",
-            headers: { "Content-Type": "application/json", "X-CSRF-Token": csrfToken },
+            headers: { "Content-Type": "application/json", "X-OpenCut-Token": csrfToken },
             body: JSON.stringify({ zoom_amount: zoom, easing: easing })
         }).then(function() { showToast("Defaults saved", "success"); })
           .catch(function() { showToast("Failed to save defaults", "error"); });
@@ -5844,7 +5844,7 @@
         var res = document.getElementById("markerExportResult");
         var sum = document.getElementById("markerExportSummary");
         if (res) res.classList.remove("hidden");
-        if (sum) sum.textContent = "Exported " + (r.exported || 0) + " clips.";
+        if (sum) sum.textContent = "Exported " + (r.count || r.exported || 0) + " clips.";
     });
 
     function loadProjectItems() {
@@ -6002,7 +6002,7 @@
     addJobDoneListener(function (job) {
         if (job.type !== "repeat-detect" || job.status !== "complete" || !job.result) return;
         var r = job.result;
-        repeatCutsData = r.cuts || r.ranges || [];
+        repeatCutsData = r.repeats || r.cuts || r.ranges || [];
         lastTimelineCuts = repeatCutsData;
         var res = document.getElementById("repeatResults");
         var sum = document.getElementById("repeatSummary");
@@ -6039,7 +6039,7 @@
             filepath: selectedPath,
             llm_provider: provider,
             llm_model: model,
-            llm_api_key: apiKey,
+            api_key: apiKey,
             max_chapters: maxChapters,
         });
     }
