@@ -120,7 +120,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.5.0**
+- Current: **v1.5.1**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all at once (also manually update UXP manifest.json and UXP main.js — not yet covered by sync script)
 
@@ -708,3 +708,28 @@ enhance = ["resemble-enhance>=0.0.1"]
 
 ### Keep As-Is (Already Best-in-Class)
 - faster-whisper (transcription engine), WhisperX (alignment), Real-ESRGAN (upscaling), InsightFace (face swap), auto-editor (auto-editing), pedalboard (audio effects), pyannote.audio (diarization — update to v4.0.4)
+
+## v1.5.1 Batch 28 Bug Fixes
+- **UXP panel 5 P0 bugs** — entire panel was non-functional: CSRF header X-CSRF-Token→X-OpenCut-Token, fetchCsrf /csrf→/health csrf_token field, job poll /jobs/{id}→/status/{id}, cancel DELETE→POST /cancel/{id}, LLM settings BackendClient.fetch()→.get()
+- **chapter_gen JSON regex** — non-greedy `\[.*?\]` truncated multi-element LLM arrays; changed to greedy `\[\s*\{[\s\S]*\}\s*\]` (same class as highlights batch 5)
+- **nlp_command** — greedy JSON regex for nested params, route allowlist on LLM output, word-boundary keyword matching (`\b` regex prevents "um" matching "volume"), float coercion safety on confidence, removed unused `string` import
+- **color_match** — VideoWriter.isOpened() check, on_progress(100) at completion, use consolidated run_ffmpeg helper, fix YCrCb channel labels (OpenCV order is Y,Cr,Cb not Y,Cb,Cr)
+- **auto_zoom** — VideoCapture try/finally, easing no-op fix (_ease(1.0,mode) always=1.0 → proper fractional blending), negative fps guard
+- **loudness_match** — use consolidated helper, pass 1 returncode check, validate measured values as floats before FFmpeg filter interpolation, clamp target_lufs [-70,0] and true_peak [-10,0]
+- **footage_search** — Windows LK_NBLCK→LK_LOCK (blocking), write 1 byte before lock, explicit msvcrt.LK_UNLCK before close
+- **multicam** — float coercion on start/end via .get(), min_cut_duration clamp
+- **deliverables** — int(fps)→int(round(fps)) for 29.97fps timecodes
+- **checks.py** — all check functions return bool consistently (new ones returned Tuple, making `if check_X():` always truthy)
+- **user_data.py** — removed lock eviction that could delete in-use locks (re-introduced bug from batch 11/25)
+- **CLI** — chapters uses dict.get() not attribute access, repeat-detect unpacks dict result, search index/query import from footage_search (was non-existent .core.search)
+- **nlp route** — guard parse_command() returning None, LLM provider allowlist
+- **timeline route** — safe_float instead of float() on SRT segments
+- **ExtendScript** — smart bins "video" type matches AV files (hasVid, not hasVid&&!hasAud), temp SRT cleanup after caption import
+
+## v1.5.1 Batch 29 Bug Fixes
+- **video.py auto-zoom crash** — `probe.get("width")` on non-dict probe object; replaced with `get_video_info()` from helpers.py. `import subprocess as _sp2` → use module-level `_sp`. Keyframe result dict unpacking fixed (`keyframes.get("keyframes", [])` not raw list check).
+- **audio.py loudness-match** — `batch_loudness_match()` returns a list, not dict; `result.get("outputs")` always returned empty. Fixed to handle list directly.
+- **settings.py 6 POST routes** — `request.get_json(silent=True)` → `force=True` (malformed JSON silently became {}, returning success without changes)
+- **captions.py chapters** — missing LLM provider allowlist, missing segments list type+size validation (max 50000)
+- **video.py multicam** — missing segments list type+size validation, diarization file 50 MB size cap before JSON.load
+- **MCP server** — `files` array items validated for path traversal, UNC path (`\\` and `//`) rejection in filepath validation
