@@ -23,7 +23,7 @@ const BACKEND_DEFAULT  = "http://127.0.0.1:5679";
 const BACKEND_MAX_PORT = 5689;
 const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
-const VERSION          = "1.5.2";
+const VERSION          = "1.5.3";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
@@ -541,7 +541,7 @@ async function runSilenceRemoval() {
 
   await JobPoller.start(
     "/silence",
-    { file_path: clipPath, threshold_db: threshold, min_silence_duration: minSilence, padding_ms: padding, mode },
+    { filepath: clipPath, threshold: threshold, min_duration: minSilence, padding_before: padding / 1000, padding_after: padding / 1000, mode },
     (pct, msg) => {
       UIController.setProgress(pct);
       UIController.setProcessingMsg(msg || "Processing...");
@@ -595,8 +595,8 @@ async function runFillerDetection() {
   UIController.showProcessing("Detecting filler words...");
 
   await JobPoller.start(
-    "/filler-words",
-    { file_path: clipPath, filler_words: words.split(",").map(w => w.trim()), padding_ms: padding },
+    "/fillers",
+    { filepath: clipPath, custom_words: words.split(",").map(w => w.trim()) },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Transcribing..."); },
     (result) => {
       UIController.hideProcessing();
@@ -630,9 +630,9 @@ async function runTranscribe() {
   UIController.showProcessing("Transcribing — this may take a while...");
 
   await JobPoller.start(
-    "/transcribe",
-    { file_path: clipPath, model, language: lang === "auto" ? null : lang,
-      caption_style: style, diarize, word_level: wordLevel },
+    "/captions",
+    { filepath: clipPath, model, language: lang === "auto" ? null : lang,
+      format: style, diarize, word_timestamps: wordLevel },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Transcribing..."); },
     (result) => {
       UIController.hideProcessing();
@@ -671,8 +671,8 @@ async function runChapterGeneration() {
   UIController.showProcessing("Generating chapters with AI...");
 
   await JobPoller.start(
-    "/chapters",
-    { file_path: clipPath, llm_provider: provider, llm_model: model },
+    "/captions/chapters",
+    { filepath: clipPath, llm_provider: provider, llm_model: model },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Generating..."); },
     (result) => {
       UIController.hideProcessing();
@@ -711,8 +711,8 @@ async function runRepeatDetection() {
   UIController.showProcessing("Detecting repeated segments...");
 
   await JobPoller.start(
-    "/repeat-detection",
-    { file_path: clipPath, similarity_threshold: threshold, keep_best: keepBest },
+    "/captions/repeat-detect",
+    { filepath: clipPath, threshold, keep_best: keepBest },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing..."); },
     (result) => {
       UIController.hideProcessing();
@@ -741,8 +741,8 @@ async function runDenoise() {
   UIController.showProcessing("Applying noise reduction...");
 
   await JobPoller.start(
-    "/denoise",
-    { file_path: clipPath, method, strength },
+    "/audio/denoise",
+    { filepath: clipPath, method, strength },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Processing..."); },
     (result) => {
       UIController.hideProcessing();
@@ -770,8 +770,8 @@ async function runNormalize() {
   UIController.showProcessing("Normalizing audio...");
 
   await JobPoller.start(
-    "/normalize",
-    { file_path: clipPath, target_lufs: targetLufs, true_peak: truePeak ? -1.0 : null },
+    "/audio/normalize",
+    { filepath: clipPath, target_lufs: targetLufs, true_peak: truePeak ? -1.0 : null },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Normalizing..."); },
     (result) => {
       UIController.hideProcessing();
@@ -800,8 +800,8 @@ async function runLoudnessMatch() {
   UIController.showProcessing("Matching loudness to reference...");
 
   await JobPoller.start(
-    "/loudness-match",
-    { file_path: clipPath, reference_path: refPath },
+    "/audio/loudness-match",
+    { files: [clipPath, refPath], target_lufs: -14.0 },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Matching..."); },
     (result) => {
       UIController.hideProcessing();
@@ -828,8 +828,8 @@ async function runBeatMarkers() {
   UIController.showProcessing("Detecting beats...");
 
   await JobPoller.start(
-    "/beat-detection",
-    { file_path: trackPath, sensitivity },
+    "/audio/beat-markers",
+    { filepath: trackPath, subdivisions: Math.max(1, Math.round(sensitivity * 4)) },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing tempo..."); },
     async (result) => {
       UIController.hideProcessing();
@@ -866,8 +866,8 @@ async function runColorMatch() {
   UIController.showProcessing("Matching color grading...");
 
   await JobPoller.start(
-    "/color-match",
-    { file_path: clipPath, reference_path: refPath, strength },
+    "/video/color-match",
+    { source: clipPath, reference: refPath, strength },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Grading..."); },
     (result) => {
       UIController.hideProcessing();
@@ -895,8 +895,8 @@ async function runAutoZoom() {
   UIController.showProcessing("Applying auto zoom / reframe...");
 
   await JobPoller.start(
-    "/auto-zoom",
-    { file_path: clipPath, aspect_ratio: aspect, max_zoom: maxZoom },
+    "/video/auto-zoom",
+    { filepath: clipPath, zoom_amount: maxZoom, easing: "ease_in_out" },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Reframing..."); },
     (result) => {
       UIController.hideProcessing();
@@ -927,8 +927,8 @@ async function runMulticamCuts() {
   UIController.showProcessing("Generating multicam cuts...");
 
   await JobPoller.start(
-    "/multicam-cuts",
-    { cam1_path: cam1Path, cam2_path: cam2Path, strategy },
+    "/video/multicam-cuts",
+    { filepath: cam1Path, diarization_file: cam2Path, min_cut_duration: 1.0 },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing cameras..."); },
     async (result) => {
       UIController.hideProcessing();
@@ -1023,7 +1023,7 @@ async function runBatchExport() {
   UIController.showProcessing("Starting batch export from markers...");
 
   await JobPoller.start(
-    "/batch-export-markers",
+    "/timeline/export-from-markers",
     { preset, output_dir: outputDir },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Exporting..."); },
     (result) => {
@@ -1050,7 +1050,7 @@ async function runBatchRename() {
   UIController.showProcessing("Renaming project items...");
 
   await JobPoller.start(
-    "/batch-rename",
+    "/timeline/batch-rename",
     { pattern, scope },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Renaming..."); },
     (result) => {
@@ -1076,7 +1076,7 @@ async function runSmartBins() {
   UIController.showProcessing("Organising project bins...");
 
   await JobPoller.start(
-    "/smart-bins",
+    "/timeline/smart-bins",
     { strategy },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Organising..."); },
     (result) => {
@@ -1104,7 +1104,7 @@ async function runSrtImport() {
   UIController.showProcessing("Importing SRT to timeline...");
 
   await JobPoller.start(
-    "/import-srt",
+    "/timeline/srt-to-captions",
     { srt_path: srtPath, track_index: trackIndex },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Importing..."); },
     (result) => {
@@ -1135,8 +1135,8 @@ async function runIndexLibrary() {
   if (statusLine) statusLine.textContent = "Indexing...";
 
   await JobPoller.start(
-    "/index-library",
-    { folder, index_transcripts: transcripts, index_frames: frames },
+    "/search/index",
+    { files: [folder], model: "base" },
     (pct, msg) => {
       UIController.setProgress(pct);
       UIController.setProcessingMsg(msg || "Scanning...");
@@ -1168,7 +1168,7 @@ async function runFootageSearch() {
   UIController.setButtonLoading("runFootageSearchBtn", true);
   UIController.setStatus("Searching footage...");
 
-  const r = await BackendClient.post("/search-footage", { query, limit });
+  const r = await BackendClient.post("/search/footage", { query, top_k: limit });
 
   UIController.setButtonLoading("runFootageSearchBtn", false);
 
@@ -1213,7 +1213,7 @@ async function runNlpCommand() {
   UIController.showProcessing("Parsing command with AI...");
 
   await JobPoller.start(
-    "/nlp-command",
+    "/nlp/command",
     { command, llm_provider: provider },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Thinking..."); },
     (result) => {
@@ -1301,14 +1301,14 @@ async function runDeliverables(type) {
   UIController.showProcessing(`Generating ${type.replace(/_/g, " ")}...`);
 
   await JobPoller.start(
-    "/deliverables",
-    { type, output_dir: outputDir || null },
+    `/deliverables/${type.replace(/_/g, "-")}`,
+    { sequence_data: {}, output_dir: outputDir || null },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Generating..."); },
     (result) => {
       UIController.hideProcessing();
       if (btnId) UIController.setButtonLoading(btnId, false);
       UIController.showToast(
-        `${type.replace(/_/g, " ")} saved: ${result.output_path ?? result.path ?? "done"}`,
+        `${type.replace(/_/g, " ")} saved: ${result.output ?? result.output_path ?? "done"}`,
         "success"
       );
       UIController.setStatus(`${type} generated.`);
