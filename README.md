@@ -1,6 +1,6 @@
 # OpenCut
 
-![Version](https://img.shields.io/badge/version-1.3.0-blue)
+![Version](https://img.shields.io/badge/version-1.5.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
@@ -47,7 +47,7 @@ Clone the repo and run `Install.bat` as Administrator. It handles FFmpeg check, 
 
 ## Features
 
-OpenCut v1.3.0 includes **142 API routes**, **6 panel tabs** with **43 sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.5.0 includes **142 API routes**, **7 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task — now with ~20 new capabilities including Timeline Integration, AI-powered NLP commands, footage search, post-production deliverables, and a UXP panel for Premiere Pro 25.6+.
 
 ### Cut & Clean
 
@@ -58,6 +58,7 @@ OpenCut v1.3.0 includes **142 API routes**, **6 panel tabs** with **43 sub-tabs*
 | Waveform Preview | Visual waveform with draggable threshold line synced to slider | FFmpeg PCM + Canvas |
 | Trim Tool | Set in/out points to extract a clip portion (stream copy or re-encode) | FFmpeg |
 | Full Pipeline | Combined silence + filler removal in one pass | Multi-stage |
+| Repeated Take Detection | Automatically detects when speakers restart a sentence or fumble a phrase. Removes the earlier attempt using transcript similarity analysis (Jaccard overlap) | WhisperX |
 
 ### Captions & Transcription
 
@@ -72,6 +73,8 @@ OpenCut v1.3.0 includes **142 API routes**, **6 panel tabs** with **43 sub-tabs*
 | Translation | Translate captions to 50+ languages | deep-translator |
 | Karaoke Mode | Word-by-word highlight sync for lyrics/captions | Pillow renderer |
 | Transcript Editor | Edit segments in-panel with undo/redo and search | Built-in |
+| YouTube Chapter Generation | Analyze transcript with local (Ollama) or cloud (OpenAI, Anthropic) LLM to identify topic changes. Outputs ready-to-paste chapter timestamps for YouTube descriptions | Ollama / OpenAI / Anthropic |
+| SRT to Native Captions | Import any SRT file as a native Premiere Pro caption track | ExtendScript |
 
 ### Audio Processing
 
@@ -87,6 +90,8 @@ OpenCut v1.3.0 includes **142 API routes**, **6 panel tabs** with **43 sub-tabs*
 | SFX Generator | Procedural tones, sweeps, impacts, noise | NumPy synthesis |
 | AI Music Generation | Text-to-music from prompts | MusicGen (AudioCraft) |
 | Audio Preview Player | Floating player to preview generated audio before importing | Built-in |
+| Loudness Match | FFmpeg two-pass LUFS normalization across multiple clips. Ensures consistent audio levels throughout a sequence | FFmpeg loudnorm |
+| Beat Markers | Export detected beat timestamps as Premiere Pro sequence markers for manual snap-to-beat editing | librosa + ExtendScript |
 
 ### Video Effects & Processing
 
@@ -111,6 +116,7 @@ OpenCut v1.3.0 includes **142 API routes**, **6 panel tabs** with **43 sub-tabs*
 | Merge / Concatenate | Join multiple clips (fast stream copy or re-encoded) | FFmpeg concat |
 | Side-by-Side Preview | Before/after frame comparison modal for effects | FFmpeg + base64 |
 | Watermark Removal | Remove logos via delogo or LaMA AI inpainting | FFmpeg / LaMA |
+| Color Match | Match the color profile of one clip to a reference clip using YCbCr histogram matching | OpenCV |
 
 ### AI & ML Tools
 
@@ -122,12 +128,14 @@ OpenCut v1.3.0 includes **142 API routes**, **6 panel tabs** with **43 sub-tabs*
 | Face Swap | Replace faces with reference image | InsightFace |
 | Style Transfer | Neural artistic style transfer | PyTorch models |
 | Auto Thumbnails | AI-scored frame extraction for thumbnails | OpenCV scoring |
+| Auto Zoom Keyframes | Face-detected push-in zoom for talking-head content. Returns keyframes for the Premiere Pro Motion effect | OpenCV + ExtendScript |
+| Multicam Auto-Switching | Speaker diarization → camera cut list. Maps speakers to track indices and generates multicam edits | pyannote.audio + ExtendScript |
 
 ### Export & Batch
 
 | Feature | Description | Engine |
 |---------|-------------|--------|
-| Platform Presets | YouTube, TikTok, Instagram, Twitter/X, LinkedIn, Podcast | FFmpeg encode |
+| Platform Presets | YouTube, TikTok, Instagram, Twitter/X, LinkedIn, Podcast, Snapchat Story, Facebook Reel, Facebook Post, YouTube Long Form, Pinterest Video, Podcast MP3 | FFmpeg encode |
 | Social Quick Export | One-click export optimized per platform's format and limits | FFmpeg |
 | Batch Processing | Process multiple clips in parallel | ThreadPool |
 | Transcript Export | SRT, VTT, ASS, plain text, timestamped | Built-in |
@@ -169,6 +177,60 @@ OpenCut v1.3.0 includes **142 API routes**, **6 panel tabs** with **43 sub-tabs*
 | Dependency Dashboard | Grid view of all 24 optional deps with install status |
 | GPU Auto-Detection | Recommend optimal settings based on detected GPU VRAM |
 | AI Model Manager | View/delete downloaded models to free disk space |
+
+---
+
+## Timeline Integration
+
+OpenCut v1.5.0 adds direct write-back to the active Premiere Pro sequence via ExtendScript:
+
+| Feature | Description |
+|---------|-------------|
+| Apply Cuts | Remove silences, repeated takes, or custom ranges directly from the timeline |
+| Beat Markers | Add detected beats as sequence markers at the click of a button |
+| Multicam Cuts | Apply speaker-driven cuts directly to the open sequence |
+| Clip Keyframes | Write scale/position keyframes to Motion effect for auto-zoom |
+| Batch Rename | Rename project panel clips with find/replace patterns |
+| Smart Bins | Auto-sort project items into bins by rule (name, type, duration) |
+| Export from Markers | Batch-export clip ranges defined by sequence markers |
+| Native Captions | Import SRT as a native Premiere Pro caption track |
+
+---
+
+## Search & AI Commands
+
+### Footage Search
+
+Index your entire media library by spoken content. Search across all clips by keyword or phrase. Results include clip path, timestamp, and matched text snippet.
+
+### Natural Language Commands
+
+Type commands in plain English — OpenCut maps them to API routes using keyword matching or LLM analysis:
+- *"remove silence from this clip"* → `/captions/silence`
+- *"add captions in Spanish"* → `/captions/transcribe` with language=Spanish
+- *"generate YouTube chapters"* → `/captions/chapters`
+
+### Post-Production Deliverables
+
+Generate professional post-production documents from sequence data:
+- **VFX Sheet** — Shot list with effects for the VFX supervisor
+- **ADR List** — Dialogue list for re-recording sessions
+- **Music Cue Sheet** — Music usage log for licensing/clearance
+- **Asset List** — Complete media inventory with usage counts
+
+---
+
+## UXP Panel
+
+A parallel panel (`com.opencut.uxp`) is available for Premiere Pro 25.6+ using Adobe's modern UXP platform:
+
+- **Modern JavaScript** — ES modules, async/await, native `fetch()`
+- **Same Python backend** — Connects to the same local server on port 5679
+- **Auto port detection** — Scans ports 5679–5689 automatically
+- **7 tabs** — Cut & Clean, Captions, Audio, Video, Timeline, Search, Deliverables
+- **Timeline API** — Uses the `premierepro` UXP module for direct sequence access (where available)
+
+> **Note:** The CEP panel (`com.opencut.panel`) remains the primary panel and supports Premiere Pro 2019+. The UXP panel is the future-facing option for 25.6+.
 
 ---
 
@@ -234,6 +296,32 @@ pip install torch torchvision torchaudio --index-url https://download.pytorch.or
 | `OPENCUT_HOST` | `127.0.0.1` | Bind address |
 | `OPENCUT_OUTPUT_DIR` | Source file dir | Default output directory |
 | `WHISPER_MODELS_DIR` | `~/.cache` | Whisper model cache |
+
+## CLI Usage
+
+```bash
+# Generate YouTube chapters
+opencut chapters interview.mp4 --provider ollama --model llama3
+
+# Detect repeated takes
+opencut repeat-detect recording.mp4 --threshold 0.6
+
+# Search footage library
+opencut search index *.mp4
+opencut search query "camera lens focal length"
+
+# Match colors to reference
+opencut color-match source.mp4 reference.mp4
+
+# Normalize loudness
+opencut loudness-match clip1.mp4 clip2.mp4 --target-lufs -14
+
+# Generate post-production documents
+opencut deliverables --sequence-json sequence.json --type all
+
+# Natural language editing
+opencut nlp "remove silence and add captions in Spanish" --file video.mp4
+```
 
 ## FAQ
 

@@ -126,3 +126,155 @@ def load_whisper_settings() -> dict:
 
 def save_whisper_settings(settings: dict):
     write_user_file("whisper_settings.json", settings)
+
+
+# ---------------------------------------------------------------------------
+# LLM Settings
+# ---------------------------------------------------------------------------
+
+def load_llm_settings() -> dict:
+    """Load LLM provider/model/key settings."""
+    defaults = {
+        "provider": "ollama",
+        "model": "llama3",
+        "api_key": "",
+        "base_url": "http://localhost:11434",
+        "max_tokens": 2000,
+        "temperature": 0.3,
+    }
+    saved = read_user_file("llm_settings.json", default={})
+    if isinstance(saved, dict):
+        defaults.update(saved)
+    return defaults
+
+
+def save_llm_settings(settings: dict) -> None:
+    """Save LLM settings."""
+    write_user_file("llm_settings.json", settings)
+
+
+# ---------------------------------------------------------------------------
+# Footage Index Settings
+# ---------------------------------------------------------------------------
+
+def load_footage_index_config() -> dict:
+    """Load footage search index configuration."""
+    defaults = {
+        "index_path": "",  # empty = default ~/.opencut/footage_index.json
+        "auto_index_on_load": False,
+        "whisper_model": "base",
+        "max_index_size_mb": 500,
+    }
+    saved = read_user_file("footage_index_config.json", default={})
+    if isinstance(saved, dict):
+        defaults.update(saved)
+    return defaults
+
+
+def save_footage_index_config(config: dict) -> None:
+    """Save footage index configuration."""
+    write_user_file("footage_index_config.json", config)
+
+
+# ---------------------------------------------------------------------------
+# Loudness Target
+# ---------------------------------------------------------------------------
+
+def load_loudness_target() -> dict:
+    """Load loudness normalization preferences."""
+    defaults = {
+        "target_lufs": -14.0,
+        "true_peak": -1.0,
+        "lra_max": 11.0,
+    }
+    saved = read_user_file("loudness_settings.json", default={})
+    if isinstance(saved, dict):
+        defaults.update(saved)
+    return defaults
+
+
+def save_loudness_target(settings: dict) -> None:
+    """Save loudness settings."""
+    write_user_file("loudness_settings.json", settings)
+
+
+# ---------------------------------------------------------------------------
+# Color Profile Presets
+# ---------------------------------------------------------------------------
+
+def load_color_profiles() -> list:
+    """Load saved color matching reference profiles."""
+    saved = read_user_file("color_profiles.json", default=[])
+    return saved if isinstance(saved, list) else []
+
+
+def save_color_profiles(profiles: list) -> None:
+    """Save color matching profiles."""
+    write_user_file("color_profiles.json", profiles)
+
+
+# ---------------------------------------------------------------------------
+# Multicam Defaults
+# ---------------------------------------------------------------------------
+
+def load_multicam_config() -> dict:
+    """Load multicam auto-switching configuration."""
+    defaults = {
+        "min_cut_duration": 1.0,
+        "gap_tolerance": 0.5,
+        "default_speaker_count": 2,
+    }
+    saved = read_user_file("multicam_config.json", default={})
+    if isinstance(saved, dict):
+        defaults.update(saved)
+    return defaults
+
+
+def save_multicam_config(config: dict) -> None:
+    """Save multicam configuration."""
+    write_user_file("multicam_config.json", config)
+
+
+# ---------------------------------------------------------------------------
+# Auto Zoom Presets
+# ---------------------------------------------------------------------------
+
+def load_auto_zoom_presets() -> dict:
+    """Load auto zoom preferences."""
+    defaults = {
+        "zoom_amount": 1.15,
+        "easing": "ease_in_out",
+        "sample_rate": 2.0,
+        "face_padding": 0.2,
+    }
+    saved = read_user_file("auto_zoom_presets.json", default={})
+    if isinstance(saved, dict):
+        defaults.update(saved)
+    return defaults
+
+
+def save_auto_zoom_presets(presets: dict) -> None:
+    """Save auto zoom preferences."""
+    write_user_file("auto_zoom_presets.json", presets)
+
+
+# ---------------------------------------------------------------------------
+# Chapter Generation Defaults
+# ---------------------------------------------------------------------------
+
+def load_chapter_defaults() -> dict:
+    """Load chapter generation defaults."""
+    defaults = {
+        "max_chapters": 15,
+        "min_chapter_duration": 30.0,
+        "naming_style": "descriptive",  # "descriptive" | "numbered" | "timecode"
+    }
+    saved = read_user_file("chapter_defaults.json", default={})
+    if isinstance(saved, dict):
+        defaults.update(saved)
+    return defaults
+
+
+def save_chapter_defaults(defaults: dict) -> None:
+    """Save chapter generation defaults."""
+    write_user_file("chapter_defaults.json", defaults)

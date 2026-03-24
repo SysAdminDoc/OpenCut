@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.5.0] - 2026-03-23
+
+### Added
+- **Repeated Take Detection** — Jaccard similarity sliding-window to find and remove fumbled/repeated takes from transcriptions
+- **YouTube Chapter Generation** — LLM-powered (Ollama/OpenAI/Anthropic) topic detection and chapter timestamp generation
+- **Footage Search** — Index media library by spoken content; search by keyword or phrase across all clips
+- **Post-Production Deliverables** — Generate VFX sheets, ADR lists, music cue sheets, and asset lists as CSV from sequence data
+- **Color Match** — YCbCr histogram matching to match color profile of one clip to a reference clip
+- **Multicam Auto-Switching** — Diarization-driven cut generation for podcast multicam editing
+- **Auto Zoom Keyframes** — Face-detected keyframe generation for dynamic push-in zoom effect
+- **Loudness Match** — FFmpeg two-pass LUFS normalization to match loudness across multiple clips
+- **NLP Command Parser** — Natural language command dispatch via keyword matching and LLM
+- **Timeline Write-Back** — Apply cuts, markers, and keyframes directly to the active Premiere Pro sequence via ExtendScript
+- **Beat Markers** — Sync detected beat timestamps as sequence markers in Premiere Pro
+- **Batch Rename** — Rename project panel clips with find/replace pattern support
+- **Smart Bins** — Auto-sort project items into bins by rule (name contains, type, duration)
+- **SRT to Native Captions** — Import SRT files as native Premiere Pro caption tracks
+- **Batch Export from Markers** — Export individual clips defined by sequence markers
+- **UXP Panel** — New parallel panel for Premiere Pro 25.6+ using modern UXP APIs (com.opencut.uxp)
+- **Timeline Tab** — New CEP panel tab with all timeline write-back operations
+- **Search & NLP Tab** — New CEP panel tab with footage search and AI command input
+- **Deliverables Section** — Post-production document generation in the Export tab
+
+### Fixed
+- Improved progress callback support in color match, auto zoom, and loudness match operations
+- LLMConfig now properly instantiated as dataclass object across all routes
+
 ## v1.2.0 (2026-03-15)
 
 ### New Features
