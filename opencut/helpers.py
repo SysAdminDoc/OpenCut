@@ -9,6 +9,7 @@ import importlib
 import json
 import logging
 import os
+import shutil
 import subprocess as _sp
 import tempfile
 import threading
@@ -16,6 +17,32 @@ import time
 import uuid
 
 logger = logging.getLogger("opencut")
+
+# ---------------------------------------------------------------------------
+# FFmpeg / FFprobe Path Cache
+# ---------------------------------------------------------------------------
+_ffmpeg_path = None
+_ffprobe_path = None
+
+
+def get_ffmpeg_path() -> str:
+    """Return cached path to ffmpeg binary, resolving via shutil.which on first call."""
+    global _ffmpeg_path
+    if _ffmpeg_path is not None:
+        return _ffmpeg_path
+    found = shutil.which("ffmpeg")
+    _ffmpeg_path = found if found else "ffmpeg"
+    return _ffmpeg_path
+
+
+def get_ffprobe_path() -> str:
+    """Return cached path to ffprobe binary, resolving via shutil.which on first call."""
+    global _ffprobe_path
+    if _ffprobe_path is not None:
+        return _ffprobe_path
+    found = shutil.which("ffprobe")
+    _ffprobe_path = found if found else "ffprobe"
+    return _ffprobe_path
 
 # ---------------------------------------------------------------------------
 # OpenCut user data directory
@@ -88,7 +115,6 @@ def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
         path: Directory or file path to check (uses its mount point).
         min_bytes: Minimum required free space in bytes (default 500 MB).
     """
-    import shutil
     try:
         check_dir = path if os.path.isdir(path) else os.path.dirname(os.path.abspath(path))
         usage = shutil.disk_usage(check_dir)
@@ -107,6 +133,8 @@ def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
 # ---------------------------------------------------------------------------
 def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0) -> str:
     """Run FFmpeg command, raise RuntimeError on failure. Returns stderr."""
+    if cmd and cmd[0] == "ffmpeg":
+        cmd = [get_ffmpeg_path()] + cmd[1:]
     result = _sp.run(cmd, capture_output=True, timeout=timeout)
     stderr = result.stderr.decode(errors="replace")
     if stderr_cap > 0:
@@ -148,7 +176,7 @@ def get_video_info(filepath: str) -> dict:
     """Get video width, height, fps, duration via ffprobe. Returns safe defaults on error."""
     import json as _json
     cmd = [
-        "ffprobe", "-v", "quiet", "-select_streams", "v:0",
+        get_ffprobe_path(), "-v", "quiet", "-select_streams", "v:0",
         "-show_entries", "stream=width,height,r_frame_rate,duration",
         "-show_entries", "format=duration",
         "-of", "json", filepath,
@@ -434,7 +462,7 @@ class FFmpegCmd:
 
     def build(self):
         """Build the command list."""
-        cmd = ["ffmpeg"]
+        cmd = [get_ffmpeg_path()]
         if self._hide_banner:
             cmd.append("-hide_banner")
         if self._overwrite:
@@ -550,7 +578,7 @@ def _get_file_duration(filepath):
     if not filepath or not os.path.isfile(filepath):
         return 0
     try:
-        cmd = ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+        cmd = [get_ffprobe_path(), "-v", "error", "-show_entries", "format=duration",
                "-of", "json", filepath]
         result = _sp.run(cmd, capture_output=True, text=True, timeout=10)
         data = json.loads(result.stdout)

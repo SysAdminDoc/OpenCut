@@ -102,6 +102,12 @@ if not _bundled_ffmpeg:
     else:
         logger.warning("  FFmpeg: NOT FOUND — many features will not work")
 
+# Pre-warm FFmpeg/FFprobe path cache now that PATH is fully configured
+from opencut.helpers import get_ffmpeg_path, get_ffprobe_path  # noqa: E402
+
+get_ffmpeg_path()
+get_ffprobe_path()
+
 
 # ---------------------------------------------------------------------------
 # System Site-Packages Discovery (frozen builds)
@@ -556,7 +562,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     atexit.register(_remove_pid)
 
     print("")
-    print("  OpenCut Backend Server v1.5.6")
+    print("  OpenCut Backend Server v1.6.0")
     print(f"  Listening on http://{host}:{effective_port}")
     print(f"  PID: {os.getpid()}")
     print(f"  Log file: {LOG_FILE}")
