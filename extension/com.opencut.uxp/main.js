@@ -23,7 +23,7 @@ const BACKEND_DEFAULT  = "http://127.0.0.1:5679";
 const BACKEND_MAX_PORT = 5689;
 const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
-const VERSION          = "1.5.3";
+const VERSION          = "1.5.4";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
@@ -686,7 +686,7 @@ async function runChapterGeneration() {
         if (area && body) {
           area.classList.remove("hidden");
           body.value = result.chapters.map((c, i) =>
-            `${formatTimecode(c.start)} — ${c.title ?? `Chapter ${i + 1}`}`
+            `${formatTimecode(c.seconds ?? c.start ?? 0)} — ${c.title ?? `Chapter ${i + 1}`}`
           ).join("\n");
         }
       }
@@ -747,7 +747,7 @@ async function runDenoise() {
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runDenoiseBtn", false);
-      UIController.showToast(`Denoise complete. Output: ${result.output_path ?? "saved"}`, "success");
+      UIController.showToast(`Denoise complete. Output: ${result.output ?? result.output_path ?? "saved"}`, "success");
       UIController.setStatus("Denoise complete.");
     },
     (err) => {
@@ -776,7 +776,7 @@ async function runNormalize() {
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runNormalizeBtn", false);
-      UIController.showToast(`Normalization complete. Output: ${result.output_path ?? "saved"}`, "success");
+      UIController.showToast(`Normalization complete. Output: ${result.output ?? result.output_path ?? "saved"}`, "success");
       UIController.setStatus("Normalization complete.");
     },
     (err) => {
@@ -872,7 +872,7 @@ async function runColorMatch() {
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runColorMatchBtn", false);
-      UIController.showToast(`Color match complete. Output: ${result.output_path ?? "saved"}`, "success");
+      UIController.showToast(`Color match complete. Output: ${result.output ?? result.output_path ?? "saved"}`, "success");
       UIController.setStatus("Color match complete.");
     },
     (err) => {
@@ -901,7 +901,7 @@ async function runAutoZoom() {
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runAutoZoomBtn", false);
-      UIController.showToast(`Auto zoom complete. Output: ${result.output_path ?? "saved"}`, "success");
+      UIController.showToast(`Auto zoom complete. Output: ${result.output ?? result.output_path ?? "saved"}`, "success");
       UIController.setStatus("Auto zoom complete.");
     },
     (err) => {
@@ -1024,7 +1024,7 @@ async function runBatchExport() {
 
   await JobPoller.start(
     "/timeline/export-from-markers",
-    { preset, output_dir: outputDir },
+    { input_file: "", markers: [], output_dir: outputDir, format: preset },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Exporting..."); },
     (result) => {
       UIController.hideProcessing();
@@ -1051,7 +1051,7 @@ async function runBatchRename() {
 
   await JobPoller.start(
     "/timeline/batch-rename",
-    { pattern, scope },
+    { renames: [], pattern, scope },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Renaming..."); },
     (result) => {
       UIController.hideProcessing();
@@ -1077,7 +1077,7 @@ async function runSmartBins() {
 
   await JobPoller.start(
     "/timeline/smart-bins",
-    { strategy },
+    { rules: [{ binName: strategy, rule: "type", field: "type", value: strategy }] },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Organising..."); },
     (result) => {
       UIController.hideProcessing();
@@ -1302,7 +1302,7 @@ async function runDeliverables(type) {
 
   await JobPoller.start(
     `/deliverables/${type.replace(/_/g, "-")}`,
-    { sequence_data: {}, output_dir: outputDir || null },
+    { sequence_data: { video_tracks: [], audio_tracks: [] }, output_dir: outputDir || null },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Generating..."); },
     (result) => {
       UIController.hideProcessing();
