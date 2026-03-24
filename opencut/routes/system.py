@@ -442,6 +442,9 @@ def check_dependencies():
     # Deliverables (csv stdlib — always available)
     deps["deliverables"] = {"installed": True, "version": "stdlib"}
 
+    # Multicam (pure Python — always available)
+    deps["multicam"] = {"installed": True, "version": "stdlib"}
+
     # NLP command (ollama running or openai/anthropic key set)
     try:
         from opencut.checks import check_ollama_available
