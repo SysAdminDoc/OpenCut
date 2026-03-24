@@ -215,6 +215,113 @@ MCP_TOOLS = [
             "required": ["job_id"],
         },
     },
+    {
+        "name": "opencut_repeat_detect",
+        "description": "Detect and identify repeated/fumbled takes in a video or audio file using transcript similarity analysis.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "description": "Path to media file"},
+                "model": {"type": "string", "default": "base", "description": "Whisper model size"},
+                "threshold": {"type": "number", "default": 0.6, "description": "Similarity threshold 0-1"},
+            },
+            "required": ["file"],
+        },
+    },
+    {
+        "name": "opencut_chapters",
+        "description": "Generate YouTube chapter timestamps from a video transcript using LLM analysis.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "description": "Path to media file"},
+                "llm_provider": {"type": "string", "default": "ollama"},
+                "llm_model": {"type": "string", "default": "llama3"},
+                "api_key": {"type": "string", "default": ""},
+                "max_chapters": {"type": "integer", "default": 15},
+            },
+            "required": ["file"],
+        },
+    },
+    {
+        "name": "opencut_footage_search",
+        "description": "Search indexed media library by spoken content. Returns matching clips with timestamps.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {"type": "string", "description": "Search query"},
+                "top_k": {"type": "integer", "default": 10, "description": "Max results"},
+            },
+            "required": ["query"],
+        },
+    },
+    {
+        "name": "opencut_index_footage",
+        "description": "Index media files for footage search by transcribing their spoken content.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "files": {"type": "array", "items": {"type": "string"}, "description": "List of file paths to index"},
+                "model": {"type": "string", "default": "base"},
+            },
+            "required": ["files"],
+        },
+    },
+    {
+        "name": "opencut_color_match",
+        "description": "Match the color profile of a source video clip to a reference clip using histogram matching.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "source": {"type": "string", "description": "Path to source video"},
+                "reference": {"type": "string", "description": "Path to reference video"},
+                "output_dir": {"type": "string", "description": "Output directory"},
+                "strength": {"type": "number", "default": 1.0, "description": "Matching strength 0-1"},
+            },
+            "required": ["source", "reference"],
+        },
+    },
+    {
+        "name": "opencut_loudness_match",
+        "description": "Normalize audio loudness (LUFS) across multiple clips to a target level.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "files": {"type": "array", "items": {"type": "string"}},
+                "target_lufs": {"type": "number", "default": -14.0},
+                "output_dir": {"type": "string"},
+            },
+            "required": ["files"],
+        },
+    },
+    {
+        "name": "opencut_auto_zoom",
+        "description": "Generate face-detected zoom keyframes for a push-in zoom effect on talking-head clips.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "file": {"type": "string"},
+                "zoom_amount": {"type": "number", "default": 1.15},
+                "easing": {"type": "string", "default": "ease_in_out", "enum": ["linear", "ease_in", "ease_out", "ease_in_out"]},
+                "output_dir": {"type": "string"},
+                "apply_to_file": {"type": "boolean", "default": False},
+            },
+            "required": ["file"],
+        },
+    },
+    {
+        "name": "opencut_multicam_cuts",
+        "description": "Generate multicam cut decisions from speaker diarization — cuts to the camera angle assigned to whoever is speaking.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "file": {"type": "string", "description": "Audio/video file with multiple speakers"},
+                "speaker_count": {"type": "integer", "default": 2},
+                "min_cut_duration": {"type": "number", "default": 1.0},
+            },
+            "required": ["file"],
+        },
+    },
 ]
 
 # Route mapping for tool execution
@@ -229,6 +336,14 @@ _TOOL_ROUTES = {
     "opencut_face_enhance": ("POST", "/video/face/enhance"),
     "opencut_generate_music": ("POST", "/audio/music-ai/generate"),
     "opencut_job_status": ("GET", "/status/{job_id}"),
+    "opencut_repeat_detect": ("POST", "/captions/repeat-detect"),
+    "opencut_chapters": ("POST", "/captions/chapters"),
+    "opencut_footage_search": ("POST", "/search/footage"),
+    "opencut_index_footage": ("POST", "/search/index"),
+    "opencut_color_match": ("POST", "/video/color-match"),
+    "opencut_loudness_match": ("POST", "/audio/loudness-match"),
+    "opencut_auto_zoom": ("POST", "/video/auto-zoom"),
+    "opencut_multicam_cuts": ("POST", "/video/multicam-cuts"),
 }
 
 
@@ -248,7 +363,7 @@ def handle_tool_call(tool_name, arguments):
         return {"error": f"Unknown tool: {tool_name}"}
 
     # Validate filepath arguments at MCP layer
-    for key in ("filepath", "style_image", "voice_ref"):
+    for key in ("filepath", "style_image", "voice_ref", "file", "source", "reference"):
         if key in arguments and not _validate_mcp_filepath(arguments, key):
             return {"error": f"Invalid {key}: path traversal or null bytes detected"}
 

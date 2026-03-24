@@ -1,0 +1,337 @@
+"""
+OpenCut Timeline Routes
+
+Marker-based export, batch rename, smart bins, SRT-to-captions, index status.
+"""
+
+import logging
+import os
+import subprocess as _sp
+import threading
+
+from flask import Blueprint, jsonify, request
+
+from opencut.jobs import (
+    _is_cancelled,
+    _new_job,
+    _safe_error,
+    _update_job,
+    job_lock,
+    jobs,
+)
+from opencut.security import (
+    require_csrf,
+    safe_float,
+    safe_int,
+    validate_filepath,
+    validate_path,
+)
+
+logger = logging.getLogger("opencut")
+
+timeline_bp = Blueprint("timeline", __name__)
+
+# Valid smart-bin rule types and fields
+_VALID_RULE_TYPES = {"contains", "starts_with", "ends_with", "equals", "regex"}
+_VALID_RULE_FIELDS = {"name", "label", "comment", "media_type", "file_path", "duration"}
+
+
+# ---------------------------------------------------------------------------
+# Timeline: Export Clips from Markers
+# ---------------------------------------------------------------------------
+@timeline_bp.route("/timeline/export-from-markers", methods=["POST"])
+@require_csrf
+def timeline_export_from_markers():
+    """Use FFmpeg to extract clip segments defined by timeline markers."""
+    data = request.get_json(force=True)
+    input_file = data.get("input_file", "").strip()
+    markers = data.get("markers", [])
+    output_dir = data.get("output_dir", "").strip()
+    fmt = data.get("format", "mp4").strip().lower()
+
+    if not input_file:
+        return jsonify({"error": "No input_file provided"}), 400
+
+    try:
+        input_file = validate_filepath(input_file)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    if not isinstance(markers, list) or not markers:
+        return jsonify({"error": "No markers provided"}), 400
+
+    if len(markers) > 500:
+        return jsonify({"error": "Too many markers (max 500)"}), 400
+
+    if fmt not in {"mp4", "mov", "mkv", "mxf"}:
+        fmt = "mp4"
+
+    # Resolve output directory
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        os.makedirs(output_dir, exist_ok=True)
+    else:
+        output_dir = os.path.dirname(input_file)
+
+    job_id = _new_job("timeline-export", input_file)
+
+    def _process():
+        try:
+            outputs = []
+            valid_markers = [
+                m for m in markers
+                if isinstance(m, dict) and safe_float(m.get("duration", 0), 0) > 0
+            ]
+            total = len(valid_markers)
+            if total == 0:
+                _update_job(
+                    job_id, status="complete", progress=100,
+                    message="No markers with duration > 0",
+                    result={"outputs": [], "count": 0},
+                )
+                return
+
+            base_name = os.path.splitext(os.path.basename(input_file))[0]
+
+            for idx, marker in enumerate(valid_markers):
+                if _is_cancelled(job_id):
+                    return
+
+                pct = int((idx / total) * 90)
+                name = str(marker.get("name", f"marker_{idx}"))[:100]
+                start = safe_float(marker.get("time", 0), 0, min_val=0.0)
+                duration = safe_float(marker.get("duration", 0), 0, min_val=0.0)
+
+                safe_name = "".join(c if c.isalnum() or c in "-_ " else "_" for c in name)
+                out_path = os.path.join(output_dir, f"{base_name}_{safe_name}_{idx}.{fmt}")
+
+                _update_job(job_id, progress=pct, message=f"Extracting marker '{name}' ({idx + 1}/{total})...")
+
+                cmd = [
+                    "ffmpeg", "-y",
+                    "-i", input_file,
+                    "-ss", str(start),
+                    "-t", str(duration),
+                    "-c", "copy",
+                    out_path,
+                ]
+                try:
+                    result = _sp.run(cmd, capture_output=True, timeout=300)
+                    if result.returncode == 0:
+                        outputs.append({"marker": name, "path": out_path})
+                    else:
+                        logger.warning("FFmpeg failed for marker '%s': %s", name, result.stderr.decode(errors="replace")[:200])
+                except Exception as ffmpeg_exc:
+                    logger.warning("FFmpeg error for marker '%s': %s", name, ffmpeg_exc)
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Exported {len(outputs)} clips from markers",
+                result={"outputs": outputs, "count": len(outputs)},
+            )
+        except Exception as exc:
+            _update_job(job_id, status="error", error=str(exc), message=f"Error: {exc}")
+            logger.exception("timeline-export error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Timeline: Batch Rename (validation only — execution via ExtendScript)
+# ---------------------------------------------------------------------------
+@timeline_bp.route("/timeline/batch-rename", methods=["POST"])
+@require_csrf
+def timeline_batch_rename():
+    """Validate a list of rename operations; returns validated/invalid sets for ExtendScript."""
+    data = request.get_json(force=True)
+    renames = data.get("renames", [])
+
+    if not isinstance(renames, list):
+        return jsonify({"error": "renames must be a list"}), 400
+
+    if len(renames) > 1000:
+        return jsonify({"error": "Too many renames (max 1000)"}), 400
+
+    validated = []
+    invalid = []
+
+    for item in renames:
+        if not isinstance(item, dict):
+            invalid.append({"item": item, "reason": "not an object"})
+            continue
+
+        node_id = str(item.get("nodeId", "")).strip()
+        current_name = str(item.get("currentName", "")).strip()
+        new_name = str(item.get("newName", "")).strip()
+
+        # Validate: newName must not be empty
+        if not new_name:
+            invalid.append({"nodeId": node_id, "currentName": current_name, "newName": new_name, "reason": "newName is empty"})
+            continue
+
+        # Validate: must not contain path separators or null bytes
+        if "/" in new_name or "\\" in new_name or "\x00" in new_name:
+            invalid.append({"nodeId": node_id, "currentName": current_name, "newName": new_name, "reason": "newName contains invalid characters"})
+            continue
+
+        validated.append({"nodeId": node_id, "currentName": current_name, "newName": new_name})
+
+    return jsonify({"validated_renames": validated, "invalid": invalid})
+
+
+# ---------------------------------------------------------------------------
+# Timeline: Smart Bins (validation only — execution via ExtendScript)
+# ---------------------------------------------------------------------------
+@timeline_bp.route("/timeline/smart-bins", methods=["POST"])
+@require_csrf
+def timeline_smart_bins():
+    """Validate smart-bin rules; returns validated/invalid sets for ExtendScript."""
+    data = request.get_json(force=True)
+    rules = data.get("rules", [])
+
+    if not isinstance(rules, list):
+        return jsonify({"error": "rules must be a list"}), 400
+
+    if len(rules) > 200:
+        return jsonify({"error": "Too many rules (max 200)"}), 400
+
+    validated = []
+    invalid = []
+
+    for item in rules:
+        if not isinstance(item, dict):
+            invalid.append({"item": item, "reason": "not an object"})
+            continue
+
+        bin_name = str(item.get("binName", "")).strip()
+        rule_type = str(item.get("rule", "")).strip()
+        field = str(item.get("field", "")).strip()
+        value = str(item.get("value", "")).strip()
+
+        reasons = []
+        if not bin_name:
+            reasons.append("binName is empty")
+        if rule_type not in _VALID_RULE_TYPES:
+            reasons.append(f"rule '{rule_type}' not in {sorted(_VALID_RULE_TYPES)}")
+        if field not in _VALID_RULE_FIELDS:
+            reasons.append(f"field '{field}' not in {sorted(_VALID_RULE_FIELDS)}")
+        if not value:
+            reasons.append("value is empty")
+
+        if reasons:
+            invalid.append({"binName": bin_name, "rule": rule_type, "field": field, "value": value, "reason": "; ".join(reasons)})
+        else:
+            validated.append({"binName": bin_name, "rule": rule_type, "field": field, "value": value})
+
+    return jsonify({"validated_rules": validated, "invalid": invalid})
+
+
+# ---------------------------------------------------------------------------
+# Timeline: SRT to Captions Segments
+# ---------------------------------------------------------------------------
+@timeline_bp.route("/timeline/srt-to-captions", methods=["POST"])
+@require_csrf
+def timeline_srt_to_captions():
+    """Parse an SRT file into caption segments, or pass through provided segments."""
+    data = request.get_json(force=True)
+    srt_path = data.get("srt_path", "").strip()
+    segments = data.get("segments", None)
+
+    # If segments are already provided, pass through
+    if segments is not None:
+        if not isinstance(segments, list):
+            return jsonify({"error": "segments must be a list"}), 400
+        cleaned = []
+        for seg in segments:
+            if not isinstance(seg, dict):
+                continue
+            cleaned.append({
+                "start": float(seg.get("start", 0)),
+                "end": float(seg.get("end", 0)),
+                "text": str(seg.get("text", "")).strip(),
+            })
+        return jsonify({"segments": cleaned, "count": len(cleaned)})
+
+    # Parse SRT file
+    if not srt_path:
+        return jsonify({"error": "srt_path or segments required"}), 400
+
+    try:
+        srt_path = validate_filepath(srt_path)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    try:
+        parsed = _parse_srt(srt_path)
+        return jsonify({"segments": parsed, "count": len(parsed)})
+    except Exception as exc:
+        return _safe_error(exc)
+
+
+def _parse_srt(path: str) -> list:
+    """Parse an SRT subtitle file into a list of segment dicts."""
+    with open(path, encoding="utf-8", errors="replace") as f:
+        content = f.read()
+
+    segments = []
+    import re as _re
+    # Each SRT block: index, timecode line, text lines, blank line
+    blocks = _re.split(r"\n\s*\n", content.strip())
+    _time_re = _re.compile(r"(\d{2}:\d{2}:\d{2}[,.]\d{3})\s*-->\s*(\d{2}:\d{2}:\d{2}[,.]\d{3})")
+
+    def _tc_to_sec(tc: str) -> float:
+        tc = tc.replace(",", ".")
+        parts = tc.split(":")
+        h, m, s = float(parts[0]), float(parts[1]), float(parts[2])
+        return h * 3600 + m * 60 + s
+
+    for block in blocks:
+        lines = block.strip().splitlines()
+        if len(lines) < 2:
+            continue
+        # Find the timecode line (may have index number before it)
+        tc_line_idx = None
+        for i, line in enumerate(lines):
+            if _time_re.match(line.strip()):
+                tc_line_idx = i
+                break
+        if tc_line_idx is None:
+            continue
+        m = _time_re.match(lines[tc_line_idx].strip())
+        start = _tc_to_sec(m.group(1))
+        end = _tc_to_sec(m.group(2))
+        text = " ".join(lines[tc_line_idx + 1:]).strip()
+        # Strip HTML-like tags common in SRT
+        text = _re.sub(r"<[^>]+>", "", text)
+        if text:
+            segments.append({"start": start, "end": end, "text": text})
+
+    return segments
+
+
+# ---------------------------------------------------------------------------
+# Timeline: Footage Index Status
+# ---------------------------------------------------------------------------
+@timeline_bp.route("/timeline/index-status", methods=["GET"])
+def timeline_index_status():
+    """Return footage search index statistics."""
+    try:
+        from opencut.core import footage_search
+        stats = footage_search.get_index_stats()
+        return jsonify({
+            "total_files": stats.get("total_files", 0),
+            "total_segments": stats.get("total_segments", 0),
+            "index_size_bytes": stats.get("index_size_bytes", 0),
+        })
+    except ImportError:
+        return jsonify({"total_files": 0, "total_segments": 0, "index_size_bytes": 0})
+    except Exception as exc:
+        return _safe_error(exc)

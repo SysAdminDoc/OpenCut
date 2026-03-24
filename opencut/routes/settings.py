@@ -255,3 +255,175 @@ def retry_job(job_id):
         "original_filepath": filepath,
         "message": "Use the original endpoint to re-run this operation",
     })
+
+
+# ---------------------------------------------------------------------------
+# LLM Settings
+# ---------------------------------------------------------------------------
+
+@settings_bp.route("/settings/llm", methods=["GET"])
+def get_llm_settings():
+    """Get LLM provider configuration."""
+    try:
+        from ..user_data import load_llm_settings
+    except ImportError:
+        from opencut.user_data import load_llm_settings
+    settings = load_llm_settings()
+    # Never return the API key in full — mask it
+    if settings.get("api_key"):
+        settings = dict(settings)
+        settings["api_key"] = "***" + settings["api_key"][-4:] if len(settings["api_key"]) > 4 else "****"
+    return jsonify(settings)
+
+
+@settings_bp.route("/settings/llm", methods=["POST"])
+@require_csrf
+def save_llm_settings_route():
+    """Save LLM provider configuration."""
+    try:
+        from ..user_data import load_llm_settings, save_llm_settings
+    except ImportError:
+        from opencut.user_data import load_llm_settings, save_llm_settings
+    data = request.get_json(silent=True) or {}
+    current = load_llm_settings()
+    # Don't overwrite key if masked value sent back
+    if data.get("api_key", "").startswith("***"):
+        data["api_key"] = current.get("api_key", "")
+    current.update({k: v for k, v in data.items() if k in current})
+    save_llm_settings(current)
+    return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Footage Index Settings
+# ---------------------------------------------------------------------------
+
+@settings_bp.route("/settings/footage-index", methods=["GET"])
+def get_footage_index_config():
+    try:
+        from ..user_data import load_footage_index_config
+    except ImportError:
+        from opencut.user_data import load_footage_index_config
+    return jsonify(load_footage_index_config())
+
+
+@settings_bp.route("/settings/footage-index", methods=["POST"])
+@require_csrf
+def save_footage_index_config_route():
+    try:
+        from ..user_data import load_footage_index_config, save_footage_index_config
+    except ImportError:
+        from opencut.user_data import load_footage_index_config, save_footage_index_config
+    data = request.get_json(silent=True) or {}
+    config = load_footage_index_config()
+    config.update({k: v for k, v in data.items() if k in config})
+    save_footage_index_config(config)
+    return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Loudness Target
+# ---------------------------------------------------------------------------
+
+@settings_bp.route("/settings/loudness-target", methods=["GET"])
+def get_loudness_target():
+    try:
+        from ..user_data import load_loudness_target
+    except ImportError:
+        from opencut.user_data import load_loudness_target
+    return jsonify(load_loudness_target())
+
+
+@settings_bp.route("/settings/loudness-target", methods=["POST"])
+@require_csrf
+def save_loudness_target_route():
+    try:
+        from ..user_data import load_loudness_target, save_loudness_target
+    except ImportError:
+        from opencut.user_data import load_loudness_target, save_loudness_target
+    data = request.get_json(silent=True) or {}
+    settings = load_loudness_target()
+    settings.update({k: v for k, v in data.items() if k in settings})
+    save_loudness_target(settings)
+    return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Multicam Defaults
+# ---------------------------------------------------------------------------
+
+@settings_bp.route("/settings/multicam", methods=["GET"])
+def get_multicam_config():
+    try:
+        from ..user_data import load_multicam_config
+    except ImportError:
+        from opencut.user_data import load_multicam_config
+    return jsonify(load_multicam_config())
+
+
+@settings_bp.route("/settings/multicam", methods=["POST"])
+@require_csrf
+def save_multicam_config_route():
+    try:
+        from ..user_data import load_multicam_config, save_multicam_config
+    except ImportError:
+        from opencut.user_data import load_multicam_config, save_multicam_config
+    data = request.get_json(silent=True) or {}
+    config = load_multicam_config()
+    config.update({k: v for k, v in data.items() if k in config})
+    save_multicam_config(config)
+    return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Auto Zoom Presets
+# ---------------------------------------------------------------------------
+
+@settings_bp.route("/settings/auto-zoom", methods=["GET"])
+def get_auto_zoom_presets():
+    try:
+        from ..user_data import load_auto_zoom_presets
+    except ImportError:
+        from opencut.user_data import load_auto_zoom_presets
+    return jsonify(load_auto_zoom_presets())
+
+
+@settings_bp.route("/settings/auto-zoom", methods=["POST"])
+@require_csrf
+def save_auto_zoom_presets_route():
+    try:
+        from ..user_data import load_auto_zoom_presets, save_auto_zoom_presets
+    except ImportError:
+        from opencut.user_data import load_auto_zoom_presets, save_auto_zoom_presets
+    data = request.get_json(silent=True) or {}
+    presets = load_auto_zoom_presets()
+    presets.update({k: v for k, v in data.items() if k in presets})
+    save_auto_zoom_presets(presets)
+    return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Chapter Generation Defaults
+# ---------------------------------------------------------------------------
+
+@settings_bp.route("/settings/chapters", methods=["GET"])
+def get_chapter_defaults():
+    try:
+        from ..user_data import load_chapter_defaults
+    except ImportError:
+        from opencut.user_data import load_chapter_defaults
+    return jsonify(load_chapter_defaults())
+
+
+@settings_bp.route("/settings/chapters", methods=["POST"])
+@require_csrf
+def save_chapter_defaults_route():
+    try:
+        from ..user_data import load_chapter_defaults, save_chapter_defaults
+    except ImportError:
+        from opencut.user_data import load_chapter_defaults, save_chapter_defaults
+    data = request.get_json(silent=True) or {}
+    defaults = load_chapter_defaults()
+    defaults.update({k: v for k, v in data.items() if k in defaults})
+    save_chapter_defaults(defaults)
+    return jsonify({"success": True})

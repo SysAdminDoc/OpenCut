@@ -9,10 +9,15 @@ def register_blueprints(app):
     """Register all route Blueprints with the Flask app."""
     from .audio import audio_bp
     from .captions import captions_bp
+    from .deliverables import deliverables_bp
     from .jobs_routes import jobs_bp
+    from .nlp import nlp_bp
+    from .search import search_bp
     from .settings import settings_bp
     from .system import system_bp
+    from .timeline import timeline_bp
     from .video import video_bp
 
-    for bp in [system_bp, audio_bp, captions_bp, video_bp, jobs_bp, settings_bp]:
+    for bp in [system_bp, audio_bp, captions_bp, video_bp, jobs_bp, settings_bp,
+               timeline_bp, search_bp, deliverables_bp, nlp_bp]:
         app.register_blueprint(bp)

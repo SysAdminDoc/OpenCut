@@ -42,6 +42,14 @@
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8.5 1a.5.5 0 00-1 0v5.793L5.854 5.146a.5.5 0 10-.708.708l2.5 2.5a.5.5 0 00.708 0l2.5-2.5a.5.5 0 00-.708-.708L8.5 6.793V1zM2 10a2 2 0 00-2 2v1a2 2 0 002 2h12a2 2 0 002-2v-1a2 2 0 00-2-2h-3.5a.5.5 0 010-1H14a3 3 0 013 3v1a3 3 0 01-3 3H2a3 3 0 01-3-3v-1a3 3 0 013-3h3.5a.5.5 0 010 1H2z"/></svg>
                 <span>Export</span>
                 </button>
+                <button type="button" class="nav-tab" data-nav="timeline" title="Timeline Tools" role="tab" aria-selected="false">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 3.5A.5.5 0 01.5 3h15a.5.5 0 010 1H.5A.5.5 0 010 3.5zm0 4A.5.5 0 01.5 7h15a.5.5 0 010 1H.5A.5.5 0 010 7.5zm0 4A.5.5 0 01.5 11h15a.5.5 0 010 1H.5a.5.5 0 01-.5-.5z"/></svg>
+                <span>Timeline</span>
+                </button>
+                <button type="button" class="nav-tab" data-nav="nlp" title="Search &amp; AI Commands" role="tab" aria-selected="false">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1.007 1.007 0 00-.115-.099zM12 6.5a5.5 5.5 0 11-11 0 5.5 5.5 0 0111 0z"/></svg>
+                <span>NLP</span>
+                </button>
                 <button type="button" class="nav-tab" data-nav="settings" title="Settings" role="tab" aria-selected="false">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 001.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.084.303a.96.96 0 001.187 1.187l.303-.084c.961-.275 1.65.918.931 1.613l-.211.205a.96.96 0 00.434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 00-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.303-.084a.96.96 0 00-1.187 1.187l.084.303c.275.961-.918 1.65-1.613.931l-.205-.211a.96.96 0 00-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 00-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.084-.303a.96.96 0 00-1.187-1.187l-.303.084c-.961.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 00-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071A.96.96 0 001.39 4.22l-.211-.205c-.719-.695-.03-1.888.931-1.613l.303.084a.96.96 0 001.187-1.187l-.084-.303C3.241.035 4.434-.654 5.13.065l.205.211A.96.96 0 006.997.71l.071-.286zM8 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
                 <span>Settings</span>
@@ -402,6 +410,9 @@
                     <button type="button" class="sub-tab" data-sub="cap-karaoke">Karaoke</button>
                     <button type="button" class="sub-tab" data-sub="cap-burnin">Burn-in</button>
                     <button type="button" class="sub-tab" data-sub="cap-animated">Animated</button>
+                    <button type="button" class="sub-tab" data-sub="cap-repeat">Repeats</button>
+                    <button type="button" class="sub-tab" data-sub="cap-chapters">Chapters</button>
+                    <button type="button" class="sub-tab" data-sub="cap-srt-import">SRT Import</button>
                 </div>
 
                 <div class="sub-panel active" id="sub-cap-styled">
@@ -771,6 +782,93 @@
                         <button type="button" class="btn-primary" id="runAnimCapBtn" disabled>Render Animated Captions</button>
                     </section>
                 </div>
+
+                <!-- REPEAT TAKE DETECTION -->
+                <div class="sub-panel" id="sub-cap-repeat">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Remove Repeated Takes</div></div>
+                        <p class="card-desc">Detect and cut duplicate or repeated spoken takes using transcript similarity.</p>
+                        <div class="form-group">
+                            <label>Whisper Model</label>
+                            <select id="repeatModel">
+                                <option value="tiny">Tiny (fastest)</option>
+                                <option value="base" selected>Base (balanced)</option>
+                                <option value="small">Small (accurate)</option>
+                                <option value="medium">Medium (best)</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Similarity Threshold</label>
+                            <div class="slider-row">
+                                <input type="range" id="repeatThreshold" min="0.4" max="0.9" value="0.6" step="0.05">
+                                <span class="slider-val" id="repeatThresholdVal">0.60</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-primary" id="runRepeatDetectBtn" disabled>Detect Repeats</button>
+                        <div class="result-area hidden" id="repeatResults">
+                            <div class="hint" id="repeatSummary"></div>
+                            <div id="repeatList" style="max-height:160px;overflow-y:auto;margin-top:6px;"></div>
+                            <button type="button" class="btn-primary" id="applyRepeatCutsBtn" style="margin-top:8px;">Apply Cuts to Timeline</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- YOUTUBE CHAPTERS -->
+                <div class="sub-panel" id="sub-cap-chapters">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Generate Chapters</div></div>
+                        <p class="card-desc">Use an LLM to generate YouTube chapter markers from the transcript.</p>
+                        <div class="form-group">
+                            <label>LLM Provider</label>
+                            <select id="chaptersLlmProvider">
+                                <option value="ollama" selected>Ollama (Local)</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Model</label>
+                            <input type="text" id="chaptersLlmModel" class="text-input" value="llama3" placeholder="llama3">
+                        </div>
+                        <div class="form-group hidden" id="chaptersApiKeyGroup">
+                            <label>API Key</label>
+                            <input type="password" id="chaptersApiKey" class="text-input" placeholder="sk-...">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Chapters</label>
+                            <div class="slider-row">
+                                <input type="range" id="chaptersMax" min="5" max="25" value="15" step="1">
+                                <span class="slider-val" id="chaptersMaxVal">15</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-primary" id="runChaptersBtn" disabled>Generate Chapters</button>
+                        <div class="result-area hidden" id="chaptersResult">
+                            <label style="font-size:11px;color:var(--text-secondary);">Chapter List</label>
+                            <textarea class="text-area" id="chaptersText" rows="6" readonly style="margin-top:4px;"></textarea>
+                            <div class="btn-row" style="margin-top:6px;gap:6px;">
+                                <button type="button" class="btn-sm" id="copyChaptersDescBtn">Copy to Clipboard</button>
+                                <button type="button" class="btn-sm btn-secondary" id="addChaptersMarkersBtn">Add as Sequence Markers</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- SRT TO NATIVE CAPTIONS (moved to captions tab) -->
+                <div class="sub-panel" id="sub-cap-srt-import">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Import SRT as Native Captions</div></div>
+                        <p class="card-desc">Parse an SRT file and inject caption segments into the active Premiere sequence as native captions.</p>
+                        <div class="form-group">
+                            <label>SRT File</label>
+                            <div class="input-row">
+                                <input type="text" id="srtImportPath" class="text-input" placeholder="Path to .srt file..." readonly>
+                                <button type="button" class="btn-sm btn-browse" data-target="srtImportPath">Browse</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-primary" id="runSrtImportBtn">Import Captions</button>
+                        <div class="hint hidden" id="srtImportStatus"></div>
+                    </section>
+                </div>
             </div>
 
             <!-- ======== TAB: AUDIO ======== -->
@@ -787,6 +885,7 @@
                     <button type="button" class="sub-tab" data-sub="aud-duck">Duck</button>
                     <button type="button" class="sub-tab" data-sub="aud-musicai">Music AI</button>
                     <button type="button" class="sub-tab" data-sub="aud-enhance">Enhance</button>
+                    <button type="button" class="sub-tab" data-sub="aud-loudmatch">Loudness</button>
                 </div>
 
                 <div class="sub-panel active" id="sub-aud-separate">
@@ -1203,6 +1302,32 @@
                         <label class="checkbox-row"><input type="checkbox" id="enhanceDenoise" checked>Denoise</label>
                         <label class="checkbox-row"><input type="checkbox" id="enhanceUpscale" checked>Super-Resolution</label>
                         <button type="button" class="btn-primary" id="runEnhanceBtn" disabled>Enhance Speech</button>
+                    </section>
+                </div>
+
+                <!-- LOUDNESS MATCH -->
+                <div class="sub-panel" id="sub-aud-loudmatch">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Loudness Match</div></div>
+                        <p class="card-desc">Normalize multiple clips to a common integrated LUFS target.</p>
+                        <div class="form-group">
+                            <label>Target LUFS</label>
+                            <div class="slider-row">
+                                <input type="range" id="loudMatchTarget" min="-23" max="-9" value="-14" step="0.5">
+                                <span class="slider-val" id="loudMatchTargetVal">-14 LUFS</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Output Directory</label>
+                            <div class="input-row">
+                                <input type="text" id="loudMatchOutputDir" class="text-input" placeholder="Same as source if blank">
+                                <button type="button" class="btn-sm btn-browse" data-target="loudMatchOutputDir">Browse</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-primary" id="runLoudMatchBtn" disabled>Normalize All to Target</button>
+                        <div class="result-area hidden" id="loudMatchResults">
+                            <div id="loudMatchTable" style="font-size:11px;max-height:150px;overflow-y:auto;"></div>
+                        </div>
                     </section>
                 </div>
             </div>
@@ -2071,6 +2196,7 @@
                     <button type="button" class="sub-tab" data-sub="exp-thumbnail">Thumbnails</button>
                     <button type="button" class="sub-tab" data-sub="exp-batch">Batch</button>
                     <button type="button" class="sub-tab" data-sub="exp-shorts">Shorts</button>
+                    <button type="button" class="sub-tab" data-sub="exp-deliverables">Deliverables</button>
                 </div>
 
                 <div class="sub-panel active" id="sub-exp-transcript">
@@ -2316,6 +2442,213 @@
                         </div>
                     </section>
                 </div>
+
+                <!-- DELIVERABLES -->
+                <div class="sub-panel" id="sub-exp-deliverables">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Deliverables</div></div>
+                        <p class="card-desc">Generate post-production documents (VFX sheet, ADR list, music cue sheet, asset list) from the active sequence.</p>
+                        <button type="button" class="btn-outline btn-sm" id="loadSeqInfoBtn">Load Sequence Info</button>
+                        <div class="hint hidden" id="seqInfoStatus" style="margin-top:6px;"></div>
+                        <div class="form-group" style="margin-top:8px;">
+                            <label>Output Directory</label>
+                            <div class="input-row">
+                                <input type="text" id="deliverablesOutputDir" class="text-input" placeholder="Same as project if blank">
+                                <button type="button" class="btn-sm btn-browse" data-target="deliverablesOutputDir">Browse</button>
+                            </div>
+                        </div>
+                        <div class="btn-row" style="gap:6px;flex-wrap:wrap;margin-top:4px;">
+                            <button type="button" class="btn-sm btn-secondary" id="genVfxSheetBtn" disabled>VFX Sheet (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genAdrListBtn" disabled>ADR List (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genMusicCueBtn" disabled>Music Cue Sheet (CSV)</button>
+                            <button type="button" class="btn-sm btn-secondary" id="genAssetListBtn" disabled>Asset List (CSV)</button>
+                        </div>
+                        <div class="result-area hidden" id="deliverablesResult" style="margin-top:8px;">
+                            <div class="hint" id="deliverablesFilePath"></div>
+                            <button type="button" class="btn-sm" id="openDeliverablesFolder">Open Folder</button>
+                        </div>
+                    </section>
+                </div>
+            </div>
+
+            <!-- ======== TAB: TIMELINE ======== -->
+            <div class="nav-panel" id="panel-timeline" role="tabpanel" aria-label="Timeline Tools">
+                <div class="sub-tabs" role="tablist" id="timelineSubTabs">
+                    <button type="button" class="sub-tab active" data-sub="tl-writeback">Write-Back</button>
+                    <button type="button" class="sub-tab" data-sub="tl-beats">Beat Markers</button>
+                    <button type="button" class="sub-tab" data-sub="tl-multicam">Multicam</button>
+                    <button type="button" class="sub-tab" data-sub="tl-export-markers">Export Clips</button>
+                    <button type="button" class="sub-tab" data-sub="tl-rename">Rename</button>
+                    <button type="button" class="sub-tab" data-sub="tl-bins">Smart Bins</button>
+                </div>
+
+                <!-- TIMELINE WRITE-BACK -->
+                <div class="sub-panel active" id="sub-tl-writeback">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Apply Cuts to Timeline</div></div>
+                        <p class="card-desc">Apply silence removal or repeat detection cuts directly to the active Premiere sequence.</p>
+                        <div class="hint" id="tlWritebackStatus" style="margin-bottom:8px;">No cuts loaded. Run Silence Removal or Repeat Detection first.</div>
+                        <button type="button" class="btn-primary" id="applySeqCutsBtn">Apply Last Cuts to Timeline</button>
+                    </section>
+                </div>
+
+                <!-- BEAT MARKERS -->
+                <div class="sub-panel" id="sub-tl-beats">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Sync Beat Markers</div></div>
+                        <p class="card-desc">Detect beats in an audio track and add them as markers to the active Premiere sequence.</p>
+                        <div class="form-group">
+                            <label>Subdivisions</label>
+                            <select id="beatMarkerSubs">
+                                <option value="1" selected>1 (every beat)</option>
+                                <option value="2">2 (half beats)</option>
+                                <option value="4">4 (quarter beats)</option>
+                                <option value="8">8 (eighth beats)</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-primary" id="runBeatMarkersBtn" disabled>Detect Beats</button>
+                        <div class="result-area hidden" id="beatMarkersResult">
+                            <div class="hint" id="beatMarkersSummary"></div>
+                            <button type="button" class="btn-sm btn-secondary" id="addBeatMarkersBtn" style="margin-top:6px;">Add Markers to Sequence</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- MULTICAM AUTO-SWITCH -->
+                <div class="sub-panel" id="sub-tl-multicam">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Podcast Multicam Switcher</div></div>
+                        <p class="card-desc">Detect speakers and generate cut decisions for a multicam podcast timeline.</p>
+                        <div class="form-group">
+                            <label>Speakers</label>
+                            <input type="number" id="multicamSpeakers" value="2" min="2" max="8" style="width:70px;">
+                        </div>
+                        <div class="form-group">
+                            <label>Min Cut Duration (sec)</label>
+                            <input type="number" id="multicamMinCut" value="1.0" min="0.2" max="10" step="0.1" style="width:70px;">
+                        </div>
+                        <div class="form-group">
+                            <label>Speaker-to-Track Mapping</label>
+                            <div id="multicamTrackMap" style="margin-top:4px;"></div>
+                        </div>
+                        <button type="button" class="btn-primary" id="runMulticamBtn" disabled>Generate Cuts</button>
+                        <div class="result-area hidden" id="multicamResult">
+                            <div class="hint" id="multicamSummary"></div>
+                            <button type="button" class="btn-sm btn-secondary" id="applyMulticamCutsBtn" style="margin-top:6px;">Apply Cuts to Sequence</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- EXPORT CLIPS FROM MARKERS -->
+                <div class="sub-panel" id="sub-tl-export-markers">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Export Clips from Markers</div></div>
+                        <p class="card-desc">Read chapter/range markers from the active sequence and export each as a separate clip.</p>
+                        <div class="form-group">
+                            <label>Output Directory</label>
+                            <div class="input-row">
+                                <input type="text" id="markerExportDir" class="text-input" placeholder="Output folder...">
+                                <button type="button" class="btn-sm btn-browse" data-target="markerExportDir">Browse</button>
+                            </div>
+                        </div>
+                        <div class="btn-row" style="gap:6px;margin-top:4px;">
+                            <button type="button" class="btn-outline btn-sm" id="getSeqMarkersBtn">Get Sequence Markers</button>
+                            <button type="button" class="btn-primary btn-sm" id="exportMarkedClipsBtn" disabled>Export All Marked Clips</button>
+                        </div>
+                        <div class="result-area hidden" id="markerExportList" style="margin-top:8px;max-height:160px;overflow-y:auto;"></div>
+                        <div class="result-area hidden" id="markerExportResult" style="margin-top:6px;">
+                            <div class="hint" id="markerExportSummary"></div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- BATCH RENAME CLIPS -->
+                <div class="sub-panel" id="sub-tl-rename">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Batch Rename Clips</div></div>
+                        <p class="card-desc">Rename project items in bulk with find/replace patterns or individual edits.</p>
+                        <button type="button" class="btn-outline btn-sm" id="loadProjectItemsBtn">Load Project Items</button>
+                        <div id="renameItemsList" style="margin-top:8px;max-height:160px;overflow-y:auto;"></div>
+                        <div class="form-group" style="margin-top:8px;">
+                            <label>Find</label>
+                            <input type="text" id="renameFindText" class="text-input" placeholder="Find text...">
+                        </div>
+                        <div class="form-group">
+                            <label>Replace</label>
+                            <input type="text" id="renameReplaceText" class="text-input" placeholder="Replace with...">
+                        </div>
+                        <div class="btn-row" style="gap:6px;">
+                            <button type="button" class="btn-sm btn-secondary" id="applyRenamePatternBtn" disabled>Apply Pattern</button>
+                            <button type="button" class="btn-primary btn-sm" id="renameAllBtn" disabled>Rename All</button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- SMART BINS -->
+                <div class="sub-panel" id="sub-tl-bins">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Smart Bins</div></div>
+                        <p class="card-desc">Automatically organise project items into bins based on custom rules.</p>
+                        <div id="smartBinRules" style="margin-bottom:8px;"></div>
+                        <button type="button" class="btn-sm btn-outline" id="addBinRuleBtn">+ Add Rule</button>
+                        <button type="button" class="btn-primary" id="createSmartBinsBtn" style="margin-top:10px;">Create Bins</button>
+                    </section>
+                </div>
+            </div>
+
+            <!-- ======== TAB: NLP / SEARCH ======== -->
+            <div class="nav-panel" id="panel-nlp" role="tabpanel" aria-label="Search &amp; NLP">
+                <div class="sub-tabs" role="tablist" id="nlpSubTabs">
+                    <button type="button" class="sub-tab active" data-sub="nlp-search">Search</button>
+                    <button type="button" class="sub-tab" data-sub="nlp-command">AI Command</button>
+                </div>
+
+                <!-- FOOTAGE SEARCH -->
+                <div class="sub-panel active" id="sub-nlp-search">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">Search Footage Library</div></div>
+                        <p class="card-desc">Index and semantically search all project clips by transcript content.</p>
+                        <div class="hint" id="searchIndexStats" style="margin-bottom:8px;">Index not loaded.</div>
+                        <button type="button" class="btn-outline btn-sm" id="indexAllClipsBtn">Index All Project Clips</button>
+                        <div style="border-top:1px solid var(--border);margin:10px 0;"></div>
+                        <div class="form-group">
+                            <label>Search For...</label>
+                            <input type="text" id="footageSearchQuery" class="text-input" placeholder="e.g. interview about climate...">
+                        </div>
+                        <div class="form-group">
+                            <label>Max Results</label>
+                            <input type="number" id="footageSearchMax" value="10" min="1" max="50" style="width:70px;">
+                        </div>
+                        <button type="button" class="btn-primary" id="runFootageSearchBtn">Search</button>
+                        <div id="footageSearchResults" style="margin-top:8px;max-height:200px;overflow-y:auto;"></div>
+                    </section>
+                </div>
+
+                <!-- NLP COMMAND -->
+                <div class="sub-panel" id="sub-nlp-command">
+                    <section class="card">
+                        <div class="card-header"><div class="card-title">AI Command</div></div>
+                        <p class="card-desc">Type a natural language instruction and let AI route it to the correct operation.</p>
+                        <div class="form-group">
+                            <label>Command</label>
+                            <textarea id="nlpCommandText" rows="3" placeholder="e.g. remove silence and add captions in Spanish"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>LLM Provider</label>
+                            <select id="nlpLlmProvider">
+                                <option value="ollama" selected>Ollama (Local)</option>
+                                <option value="openai">OpenAI</option>
+                                <option value="anthropic">Anthropic</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-primary" id="runNlpCommandBtn">Execute</button>
+                        <div class="result-area hidden" id="nlpCommandResult" style="margin-top:8px;">
+                            <div class="hint" id="nlpCommandRoute"></div>
+                            <div class="hint" id="nlpCommandConf" style="margin-top:4px;"></div>
+                            <div id="nlpCommandOutput" style="margin-top:6px;font-size:11px;"></div>
+                        </div>
+                    </section>
+                </div>
             </div>
 
             <!-- ======== TAB: SETTINGS ======== -->
@@ -2545,11 +2878,72 @@
                     </div>
                 </section>
 
+                <!-- LLM Settings Card -->
+                <div class="settings-card" id="card-llm-settings">
+                  <div class="card-header" onclick="toggleCard('card-llm-settings')">
+                    <span class="card-title">AI / LLM Settings</span>
+                    <span class="card-toggle">▾</span>
+                  </div>
+                  <div class="card-body">
+                    <div class="form-row">
+                      <label for="llmProvider2">LLM Provider</label>
+                      <select id="llmProvider2" onchange="updateLlmProviderUI()">
+                        <option value="ollama">Ollama (Local)</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="anthropic">Anthropic</option>
+                      </select>
+                    </div>
+                    <div class="form-row">
+                      <label for="llmModel2">Model</label>
+                      <input type="text" id="llmModel2" placeholder="llama3 / gpt-4o / claude-3-haiku" value="llama3">
+                    </div>
+                    <div class="form-row" id="llmApiKeyRow">
+                      <label for="llmApiKey2">API Key</label>
+                      <input type="password" id="llmApiKey2" placeholder="sk-... (not needed for Ollama)">
+                    </div>
+                    <div class="form-row" id="llmBaseUrlRow">
+                      <label for="llmBaseUrl2">Base URL</label>
+                      <input type="text" id="llmBaseUrl2" placeholder="http://localhost:11434" value="http://localhost:11434">
+                    </div>
+                    <button class="btn btn-primary" onclick="saveLlmSettings()">Save LLM Settings</button>
+                  </div>
+                </div>
+
+                <!-- Audio / Zoom Defaults Card -->
+                <div class="settings-card" id="card-audio-defaults">
+                  <div class="card-header" onclick="toggleCard('card-audio-defaults')">
+                    <span class="card-title">Audio &amp; Zoom Defaults</span>
+                    <span class="card-toggle">▾</span>
+                  </div>
+                  <div class="card-body">
+                    <div class="slider-group">
+                      <label>Default Loudness Target (LUFS): <span id="defaultLufsVal">-14</span></label>
+                      <input type="range" id="defaultLufs" min="-23" max="-9" step="0.5" value="-14"
+                             oninput="document.getElementById('defaultLufsVal').textContent=this.value">
+                    </div>
+                    <div class="slider-group">
+                      <label>Auto Zoom Amount: <span id="defaultZoomVal">1.15</span>&times;</label>
+                      <input type="range" id="defaultZoom" min="1.05" max="1.5" step="0.01" value="1.15"
+                             oninput="document.getElementById('defaultZoomVal').textContent=parseFloat(this.value).toFixed(2)">
+                    </div>
+                    <div class="form-row">
+                      <label for="defaultZoomEasing">Zoom Easing</label>
+                      <select id="defaultZoomEasing">
+                        <option value="ease_in_out">Ease In/Out</option>
+                        <option value="ease_in">Ease In</option>
+                        <option value="ease_out">Ease Out</option>
+                        <option value="linear">Linear</option>
+                      </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="saveAudioZoomDefaults()">Save Defaults</button>
+                  </div>
+                </div>
+
                 <section class="card">
                     <div class="card-header"><div class="card-title">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.4.0</span>
+                        <span class="settings-value">1.5.0</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>

@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>OpenCut UXP</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app">
+
+    <!-- ===== HEADER ===== -->
+    <header class="oc-header">
+      <div class="oc-header-left">
+        <svg class="oc-logo-mark" width="16" height="16" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4 2.5a3 3 0 00-1.76 5.43L7.33 11l-5.09 3.07A3 3 0 104.8 19.5a3 3 0 001.76-5.43L8.93 12.6 16.5 17V5L8.93 9.4 6.56 7.93A3 3 0 004 2.5z" fill="var(--accent)"/>
+        </svg>
+        <span class="oc-logo">OpenCut</span>
+        <span class="oc-version">v1.4.0</span>
+      </div>
+      <div class="oc-header-right">
+        <div class="oc-connection" id="connectionStatus" title="Backend connection status">
+          <span class="oc-conn-dot" id="connDot"></span>
+          <span class="oc-conn-label" id="connLabel">Offline</span>
+        </div>
+        <button class="oc-icon-btn" id="refreshBtn" title="Refresh connection" aria-label="Refresh connection">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- ===== PROCESSING BANNER ===== -->
+    <div class="oc-processing-banner hidden" id="processingBanner" role="status" aria-live="polite">
+      <div class="oc-processing-left">
+        <div class="oc-spinner"></div>
+        <span class="oc-processing-msg" id="processingMsg">Processing...</span>
+      </div>
+      <div class="oc-processing-right">
+        <span class="oc-elapsed" id="processingElapsed">0s</span>
+        <button class="oc-cancel-btn" id="cancelBtn">Cancel</button>
+      </div>
+      <div class="oc-progress-track"><div class="oc-progress-fill" id="progressFill"></div></div>
+    </div>
+
+    <!-- ===== TAB NAVIGATION ===== -->
+    <nav class="oc-tabs" role="tablist" aria-label="Feature tabs" id="tabNav">
+      <button class="oc-tab active" data-tab="cut" role="tab" aria-selected="true" aria-controls="tab-cut">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5a2.5 2.5 0 00-1.47 4.53L6.47 8 2.53 9.97A2.5 2.5 0 104 14.5a2.5 2.5 0 001.47-4.53L7.44 8.99 13.5 12V4L7.44 7.01 5.47 5.97A2.5 2.5 0 004 1.5z"/></svg>
+        <span>Cut</span>
+      </button>
+      <button class="oc-tab" data-tab="captions" role="tab" aria-selected="false" aria-controls="tab-captions">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6.5L2 14.5V12H2a2 2 0 01-2-2V2zm4 3a.5.5 0 000 1h4a.5.5 0 000-1H4zm0 2.5a.5.5 0 000 1h8a.5.5 0 000-1H4z"/></svg>
+        <span>Captions</span>
+      </button>
+      <button class="oc-tab" data-tab="audio" role="tab" aria-selected="false" aria-controls="tab-audio">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1v14l-4-4H0V5h2l4-4zm7.07 1.93a.75.75 0 00-1.06 1.06 5.5 5.5 0 010 7.78.75.75 0 001.06 1.06 7 7 0 000-9.9zm-2.12 2.12a.75.75 0 00-1.06 1.06 2.5 2.5 0 010 3.54.75.75 0 001.06 1.06 4 4 0 000-5.66z"/></svg>
+        <span>Audio</span>
+      </button>
+      <button class="oc-tab" data-tab="video" role="tab" aria-selected="false" aria-controls="tab-video">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M0 3a2 2 0 012-2h8a2 2 0 012 2v4l4-2v6l-4-2v4a2 2 0 01-2 2H2a2 2 0 01-2-2V3z"/></svg>
+        <span>Video</span>
+      </button>
+      <button class="oc-tab" data-tab="timeline" role="tab" aria-selected="false" aria-controls="tab-timeline">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M1 2.5A1.5 1.5 0 012.5 1h3A1.5 1.5 0 017 2.5v3A1.5 1.5 0 015.5 7h-3A1.5 1.5 0 011 5.5v-3zm8 0A1.5 1.5 0 0110.5 1h3A1.5 1.5 0 0115 2.5v3A1.5 1.5 0 0113.5 7h-3A1.5 1.5 0 019 5.5v-3zm-8 8A1.5 1.5 0 012.5 9h3A1.5 1.5 0 017 10.5v3A1.5 1.5 0 015.5 15h-3A1.5 1.5 0 011 13.5v-3zm8 0A1.5 1.5 0 0110.5 9h3A1.5 1.5 0 0115 10.5v3A1.5 1.5 0 0113.5 15h-3A1.5 1.5 0 019 13.5v-3z"/></svg>
+        <span>Timeline</span>
+      </button>
+      <button class="oc-tab" data-tab="search" role="tab" aria-selected="false" aria-controls="tab-search">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1.007 1.007 0 00-.115-.099zm-5.242 1.156a5.5 5.5 0 110-11 5.5 5.5 0 010 11z"/></svg>
+        <span>Search</span>
+      </button>
+      <button class="oc-tab" data-tab="deliverables" role="tab" aria-selected="false" aria-controls="tab-deliverables">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M9.293.879A1 1 0 0110 1.586V4h2.5A1.5 1.5 0 0114 5.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 14.5v-13A1.5 1.5 0 013.5 0H9a1 1 0 01.293.293L9.293.879zM9 1.586L3.5 1a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h9a.5.5 0 00.5-.5v-9H10a1 1 0 01-1-1V1.586zM5 7.5a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0 2.5a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5A.5.5 0 015 10zm0 2.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z"/></svg>
+        <span>Deliverables</span>
+      </button>
+    </nav>
+
+    <!-- ===== MAIN CONTENT ===== -->
+    <main class="oc-content" id="mainContent">
+
+      <!-- ==================== CUT & CLEAN TAB ==================== -->
+      <div class="oc-tab-panel active" id="tab-cut" role="tabpanel" aria-labelledby="">
+
+        <div class="oc-section-title">Clip Input</div>
+        <div class="oc-card">
+          <div class="oc-field-row">
+            <label class="oc-label" for="clipPathCut">Clip Path</label>
+            <div class="oc-input-group">
+              <input type="text" class="oc-input" id="clipPathCut" placeholder="Select or paste clip path...">
+              <button class="oc-btn oc-btn-secondary" id="browseClipCut">Browse</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Silence Removal</div>
+        <div class="oc-card" id="silenceCard">
+          <div class="oc-card-header collapsible" data-target="silenceBody">
+            <span>Silence Detection</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="silenceBody">
+            <div class="oc-slider-row">
+              <label class="oc-label" for="silenceThreshold">Threshold (dB)</label>
+              <input type="range" class="oc-slider" id="silenceThreshold" min="-60" max="-10" value="-35" step="1">
+              <span class="oc-slider-val" id="silenceThresholdVal">-35 dB</span>
+            </div>
+            <div class="oc-slider-row">
+              <label class="oc-label" for="minSilence">Min Silence (s)</label>
+              <input type="range" class="oc-slider" id="minSilence" min="0.1" max="3.0" value="0.5" step="0.05">
+              <span class="oc-slider-val" id="minSilenceVal">0.50 s</span>
+            </div>
+            <div class="oc-slider-row">
+              <label class="oc-label" for="silencePadding">Padding (ms)</label>
+              <input type="range" class="oc-slider" id="silencePadding" min="0" max="500" value="80" step="10">
+              <span class="oc-slider-val" id="silencePaddingVal">80 ms</span>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="silenceMode">Output Mode</label>
+              <select class="oc-select" id="silenceMode">
+                <option value="remove">Remove Silences</option>
+                <option value="markers">Generate Markers Only</option>
+                <option value="chapter">Chapter Cuts</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runSilenceBtn">Remove Silence</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Filler Word Detection</div>
+        <div class="oc-card" id="fillerCard">
+          <div class="oc-card-header collapsible" data-target="fillerBody">
+            <span>Filler Words</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="fillerBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="fillerWords">Words to remove</label>
+              <input type="text" class="oc-input" id="fillerWords" value="um, uh, like, you know, so, actually">
+            </div>
+            <div class="oc-slider-row">
+              <label class="oc-label" for="fillerPadding">Clip Padding (ms)</label>
+              <input type="range" class="oc-slider" id="fillerPadding" min="0" max="300" value="50" step="10">
+              <span class="oc-slider-val" id="fillerPaddingVal">50 ms</span>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runFillerBtn">Detect &amp; Remove Fillers</button>
+          </div>
+        </div>
+
+        <div class="oc-result-area hidden" id="cutResultArea">
+          <div class="oc-result-header">Result</div>
+          <div class="oc-result-body" id="cutResultBody"></div>
+          <button class="oc-btn oc-btn-secondary oc-btn-sm" id="applyCutResultBtn">Apply Cuts to Timeline</button>
+        </div>
+      </div>
+
+      <!-- ==================== CAPTIONS TAB ==================== -->
+      <div class="oc-tab-panel" id="tab-captions" role="tabpanel">
+
+        <div class="oc-section-title">Transcription</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="transcribeBody">
+            <span>Transcribe</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="transcribeBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="clipPathCaptions">Clip Path</label>
+              <div class="oc-input-group">
+                <input type="text" class="oc-input" id="clipPathCaptions" placeholder="Select clip...">
+                <button class="oc-btn oc-btn-secondary" id="browseClipCaptions">Browse</button>
+              </div>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="whisperModel">Model</label>
+              <select class="oc-select" id="whisperModel">
+                <option value="tiny">tiny (fastest)</option>
+                <option value="base">base</option>
+                <option value="small">small</option>
+                <option value="medium" selected>medium (recommended)</option>
+                <option value="large-v2">large-v2</option>
+                <option value="large-v3">large-v3 (best)</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="transcribeLang">Language</label>
+              <select class="oc-select" id="transcribeLang">
+                <option value="auto" selected>Auto-detect</option>
+                <option value="en">English</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+                <option value="de">German</option>
+                <option value="ja">Japanese</option>
+                <option value="zh">Chinese</option>
+                <option value="pt">Portuguese</option>
+                <option value="ru">Russian</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="captionStyle">Caption Style</label>
+              <select class="oc-select" id="captionStyle">
+                <option value="youtube_bold">YouTube Bold</option>
+                <option value="neon_pop">Neon Pop</option>
+                <option value="cinematic">Cinematic</option>
+                <option value="netflix">Netflix</option>
+                <option value="sports">Sports</option>
+                <option value="minimal">Minimal</option>
+              </select>
+            </div>
+            <div class="oc-checkbox-row">
+              <label class="oc-checkbox-label">
+                <input type="checkbox" id="enableDiarization"> Speaker Diarization
+              </label>
+              <label class="oc-checkbox-label">
+                <input type="checkbox" id="enableWordLevel" checked> Word-Level Timestamps
+              </label>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runTranscribeBtn">Transcribe</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Chapter Generation</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="chaptersBody">
+            <span>AI Chapters</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="chaptersBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="llmProvider">LLM Provider</label>
+              <select class="oc-select" id="llmProvider">
+                <option value="ollama">Ollama (local)</option>
+                <option value="openai">OpenAI</option>
+                <option value="anthropic">Anthropic</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="llmModel">Model</label>
+              <input type="text" class="oc-input" id="llmModel" value="llama3.2" placeholder="e.g. llama3.2, gpt-4o-mini">
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runChaptersBtn">Generate Chapters</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Repeat Detection</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="repeatBody">
+            <span>Repeat Removal</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="repeatBody">
+            <div class="oc-slider-row">
+              <label class="oc-label" for="repeatSimilarity">Similarity Threshold</label>
+              <input type="range" class="oc-slider" id="repeatSimilarity" min="0.5" max="1.0" value="0.85" step="0.01">
+              <span class="oc-slider-val" id="repeatSimilarityVal">0.85</span>
+            </div>
+            <div class="oc-checkbox-row">
+              <label class="oc-checkbox-label">
+                <input type="checkbox" id="keepBestRepeat" checked> Keep Best Take
+              </label>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runRepeatBtn">Detect Repeats</button>
+          </div>
+        </div>
+
+        <div class="oc-result-area hidden" id="captionsResultArea">
+          <div class="oc-result-header">Transcript</div>
+          <textarea class="oc-textarea" id="captionsResultBody" rows="6" readonly placeholder="Transcript will appear here..."></textarea>
+          <div class="oc-btn-row">
+            <button class="oc-btn oc-btn-secondary oc-btn-sm" id="copySrtBtn">Copy SRT</button>
+            <button class="oc-btn oc-btn-secondary oc-btn-sm" id="importSrtBtn">Import to Timeline</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== AUDIO TAB ==================== -->
+      <div class="oc-tab-panel" id="tab-audio" role="tabpanel">
+
+        <div class="oc-field-row oc-mb-sm">
+          <label class="oc-label" for="clipPathAudio">Clip Path</label>
+          <div class="oc-input-group">
+            <input type="text" class="oc-input" id="clipPathAudio" placeholder="Select clip...">
+            <button class="oc-btn oc-btn-secondary" id="browseClipAudio">Browse</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Denoise</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="denoiseBody">
+            <span>AI Noise Reduction</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="denoiseBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="denoiseMethod">Method</label>
+              <select class="oc-select" id="denoiseMethod">
+                <option value="noisereduce">noisereduce (fast)</option>
+                <option value="rnnoise">RNNoise (AI)</option>
+                <option value="spectral">Spectral Gating</option>
+              </select>
+            </div>
+            <div class="oc-slider-row">
+              <label class="oc-label" for="denoiseStrength">Strength</label>
+              <input type="range" class="oc-slider" id="denoiseStrength" min="0" max="100" value="75" step="1">
+              <span class="oc-slider-val" id="denoiseStrengthVal">75%</span>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runDenoiseBtn">Apply Denoise</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Normalize</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="normalizeBody">
+            <span>Loudness Normalization</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="normalizeBody">
+            <div class="oc-slider-row">
+              <label class="oc-label" for="targetLufs">Target LUFS</label>
+              <input type="range" class="oc-slider" id="targetLufs" min="-23" max="-9" value="-14" step="0.5">
+              <span class="oc-slider-val" id="targetLufsVal">-14 LUFS</span>
+            </div>
+            <div class="oc-checkbox-row">
+              <label class="oc-checkbox-label">
+                <input type="checkbox" id="normalizeTruePeak" checked> Limit True Peak (-1 dBTP)
+              </label>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runNormalizeBtn">Normalize</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Loudness Match</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="loudnessBody">
+            <span>Match to Reference</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="loudnessBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="refClipLoudness">Reference Clip</label>
+              <div class="oc-input-group">
+                <input type="text" class="oc-input" id="refClipLoudness" placeholder="Reference audio file...">
+                <button class="oc-btn oc-btn-secondary" id="browseRefLoudness">Browse</button>
+              </div>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runLoudnessBtn">Match Loudness</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Beat Markers</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="beatBody">
+            <span>Beat Detection</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="beatBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="beatTrackPath">Audio Track</label>
+              <div class="oc-input-group">
+                <input type="text" class="oc-input" id="beatTrackPath" placeholder="Music file...">
+                <button class="oc-btn oc-btn-secondary" id="browseBeatTrack">Browse</button>
+              </div>
+            </div>
+            <div class="oc-slider-row">
+              <label class="oc-label" for="beatSensitivity">Sensitivity</label>
+              <input type="range" class="oc-slider" id="beatSensitivity" min="0" max="100" value="60" step="1">
+              <span class="oc-slider-val" id="beatSensitivityVal">60%</span>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runBeatMarkersBtn">Detect Beats &amp; Add Markers</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== VIDEO TAB ==================== -->
+      <div class="oc-tab-panel" id="tab-video" role="tabpanel">
+
+        <div class="oc-field-row oc-mb-sm">
+          <label class="oc-label" for="clipPathVideo">Clip Path</label>
+          <div class="oc-input-group">
+            <input type="text" class="oc-input" id="clipPathVideo" placeholder="Select clip...">
+            <button class="oc-btn oc-btn-secondary" id="browseClipVideo">Browse</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Color Match</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="colorMatchBody">
+            <span>Color Grading Match</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="colorMatchBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="colorRefPath">Reference Clip</label>
+              <div class="oc-input-group">
+                <input type="text" class="oc-input" id="colorRefPath" placeholder="Reference video file...">
+                <button class="oc-btn oc-btn-secondary" id="browseColorRef">Browse</button>
+              </div>
+            </div>
+            <div class="oc-slider-row">
+              <label class="oc-label" for="colorMatchStrength">Match Strength</label>
+              <input type="range" class="oc-slider" id="colorMatchStrength" min="0" max="100" value="80" step="1">
+              <span class="oc-slider-val" id="colorMatchStrengthVal">80%</span>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runColorMatchBtn">Match Color</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Auto Zoom</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="autoZoomBody">
+            <span>AI Auto-Reframe / Zoom</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="autoZoomBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="zoomAspect">Target Aspect</label>
+              <select class="oc-select" id="zoomAspect">
+                <option value="9:16">9:16 (Shorts / TikTok)</option>
+                <option value="1:1">1:1 (Square)</option>
+                <option value="4:5">4:5 (Instagram)</option>
+                <option value="16:9" selected>16:9 (Widescreen)</option>
+              </select>
+            </div>
+            <div class="oc-slider-row">
+              <label class="oc-label" for="zoomFactor">Max Zoom</label>
+              <input type="range" class="oc-slider" id="zoomFactor" min="1.0" max="2.5" value="1.4" step="0.05">
+              <span class="oc-slider-val" id="zoomFactorVal">1.40x</span>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runAutoZoomBtn">Apply Auto Zoom</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Multicam Switch</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="multicamBody">
+            <span>Multicam Cut Detection</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="multicamBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="cam2Path">Camera 2</label>
+              <div class="oc-input-group">
+                <input type="text" class="oc-input" id="cam2Path" placeholder="Second camera file...">
+                <button class="oc-btn oc-btn-secondary" id="browseCam2">Browse</button>
+              </div>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="multicamStrategy">Cut Strategy</label>
+              <select class="oc-select" id="multicamStrategy">
+                <option value="activity">Activity-Based</option>
+                <option value="scene">Scene Detection</option>
+                <option value="audio">Audio Energy</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runMulticamBtn">Generate Multicam Cuts</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== TIMELINE TAB ==================== -->
+      <div class="oc-tab-panel" id="tab-timeline" role="tabpanel">
+
+        <div class="oc-uxp-notice" id="uxpTimelineNotice">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
+          <span>UXP timeline write-back is in preview. Some operations fall back to the CEP panel for Premiere &lt; 25.6.</span>
+        </div>
+
+        <div class="oc-section-title">Apply Cuts</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="applyCutsBody">
+            <span>Apply Cuts to Sequence</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="applyCutsBody">
+            <p class="oc-hint">Run Silence Removal or Filler Detection first, then apply the resulting cuts directly to the active Premiere sequence.</p>
+            <div class="oc-field-row">
+              <label class="oc-label" for="cutsJsonPath">Cuts JSON</label>
+              <div class="oc-input-group">
+                <input type="text" class="oc-input" id="cutsJsonPath" placeholder="Path to cuts JSON or auto from last job...">
+                <button class="oc-btn oc-btn-secondary" id="browseCutsJson">Browse</button>
+              </div>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="applyTimelineCutsBtn">Apply to Active Sequence</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Beat Markers to Sequence</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="beatSeqBody">
+            <span>Add Beat Markers</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="beatSeqBody">
+            <p class="oc-hint">Adds beat markers from the last Beat Detection run to the active sequence timeline.</p>
+            <div class="oc-field-row">
+              <label class="oc-label" for="beatMarkerColor">Marker Color</label>
+              <select class="oc-select" id="beatMarkerColor">
+                <option value="green">Green</option>
+                <option value="red">Red</option>
+                <option value="blue">Blue</option>
+                <option value="yellow">Yellow</option>
+                <option value="purple">Purple</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="addBeatMarkersBtn">Add Beat Markers</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Batch Export from Markers</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="batchExportBody">
+            <span>Marker-Based Export</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="batchExportBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="exportPreset">Export Preset</label>
+              <select class="oc-select" id="exportPreset">
+                <option value="youtube">YouTube H.264</option>
+                <option value="tiktok">TikTok</option>
+                <option value="instagram">Instagram</option>
+                <option value="prores">ProRes 422</option>
+                <option value="h265">H.265 HQ</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="exportDir">Output Folder</label>
+              <div class="oc-input-group">
+                <input type="text" class="oc-input" id="exportDir" placeholder="Output directory...">
+                <button class="oc-btn oc-btn-secondary" id="browseExportDir">Browse</button>
+              </div>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runBatchExportBtn">Batch Export</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Batch Rename</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="batchRenameBody">
+            <span>Rename Project Items</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="batchRenameBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="renamePattern">Pattern</label>
+              <input type="text" class="oc-input" id="renamePattern" placeholder="{name}_{index:03d}" value="{name}_{index:03d}">
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="renameScope">Scope</label>
+              <select class="oc-select" id="renameScope">
+                <option value="selected">Selected Items</option>
+                <option value="bin">Current Bin</option>
+                <option value="project">Whole Project</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runBatchRenameBtn">Rename Items</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Smart Bins</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="smartBinsBody">
+            <span>Auto-Organize Bins</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="smartBinsBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="binStrategy">Organize By</label>
+              <select class="oc-select" id="binStrategy">
+                <option value="type">File Type</option>
+                <option value="date">Date</option>
+                <option value="camera">Camera/Source</option>
+                <option value="scene">Scene (AI)</option>
+                <option value="speaker">Speaker</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runSmartBinsBtn">Organize into Smart Bins</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">SRT Import</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="srtImportBody">
+            <span>Import SRT to Sequence</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="srtImportBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="srtFilePath">SRT File</label>
+              <div class="oc-input-group">
+                <input type="text" class="oc-input" id="srtFilePath" placeholder="Path to .srt file...">
+                <button class="oc-btn oc-btn-secondary" id="browseSrtFile">Browse</button>
+              </div>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="srtTrackIndex">Target Track</label>
+              <input type="number" class="oc-input oc-input-sm" id="srtTrackIndex" value="1" min="1" max="99">
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runSrtImportBtn">Import SRT to Timeline</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== SEARCH TAB ==================== -->
+      <div class="oc-tab-panel" id="tab-search" role="tabpanel">
+
+        <div class="oc-section-title">Library Index</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="indexLibBody">
+            <span>Index Media Library</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="indexLibBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="indexFolder">Media Folder</label>
+              <div class="oc-input-group">
+                <input type="text" class="oc-input" id="indexFolder" placeholder="Root folder to index...">
+                <button class="oc-btn oc-btn-secondary" id="browseIndexFolder">Browse</button>
+              </div>
+            </div>
+            <div class="oc-checkbox-row">
+              <label class="oc-checkbox-label">
+                <input type="checkbox" id="indexTranscripts" checked> Transcribe audio for text search
+              </label>
+              <label class="oc-checkbox-label">
+                <input type="checkbox" id="indexFrames"> Index key frames
+              </label>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runIndexLibBtn">Index Library</button>
+            <div class="oc-status-line" id="indexStatus"></div>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Search Footage</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="searchFootageBody">
+            <span>Semantic Search</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="searchFootageBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="searchQuery">Query</label>
+              <input type="text" class="oc-input" id="searchQuery" placeholder='e.g. "person laughing outdoors"'>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="searchResultCount">Results</label>
+              <input type="number" class="oc-input oc-input-sm" id="searchResultCount" value="10" min="1" max="100">
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runFootageSearchBtn">Search Footage</button>
+            <div class="oc-result-list" id="searchResultList"></div>
+          </div>
+        </div>
+
+        <div class="oc-section-title">NLP Command</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="nlpBody">
+            <span>Natural Language Edit Commands</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="nlpBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="nlpCommand">Command</label>
+              <input type="text" class="oc-input" id="nlpCommand" placeholder='e.g. "remove all silences longer than 1 second"'>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="nlpLlmProvider">LLM</label>
+              <select class="oc-select" id="nlpLlmProvider">
+                <option value="ollama">Ollama (local)</option>
+                <option value="openai">OpenAI</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runNlpBtn">Execute Command</button>
+            <div class="oc-result-area" id="nlpResultArea" style="display:none;">
+              <div class="oc-result-header">Parsed Action</div>
+              <pre class="oc-code-block" id="nlpResultBody"></pre>
+              <button class="oc-btn oc-btn-secondary oc-btn-sm" id="applyNlpBtn">Apply to Timeline</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== DELIVERABLES TAB ==================== -->
+      <div class="oc-tab-panel" id="tab-deliverables" role="tabpanel">
+
+        <div class="oc-section-title">Sequence Info</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="seqInfoBody">
+            <span>Load Active Sequence</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="seqInfoBody">
+            <button class="oc-btn oc-btn-secondary oc-btn-full" id="loadSeqInfoBtn">Load Sequence Info</button>
+            <div class="oc-info-grid" id="seqInfoGrid"></div>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Export Documents</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="deliverablesBody">
+            <span>Generate Deliverable Documents</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="deliverablesBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="delivOutputDir">Output Folder</label>
+              <div class="oc-input-group">
+                <input type="text" class="oc-input" id="delivOutputDir" placeholder="Save documents to...">
+                <button class="oc-btn oc-btn-secondary" id="browseDelivDir">Browse</button>
+              </div>
+            </div>
+            <div class="oc-deliverable-grid">
+              <button class="oc-deliv-btn" id="delivVfxSheetBtn">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 0A1.5 1.5 0 000 1.5v13A1.5 1.5 0 001.5 16h13a1.5 1.5 0 001.5-1.5V1.5A1.5 1.5 0 0014.5 0h-13zm1 2.5h11a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-11a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5zm0 3h11a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-11a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5zm0 3h6a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-6a.5.5 0 01-.5-.5V9a.5.5 0 01.5-.5z"/></svg>
+                VFX Sheet
+              </button>
+              <button class="oc-deliv-btn" id="delivAdrListBtn">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1v14l-4-4H0V5h2l4-4zm5.854 4.146a.5.5 0 010 .708L10.707 7l1.147 1.146a.5.5 0 01-.708.708L10 7.707l-1.146 1.147a.5.5 0 01-.708-.708L9.293 7 8.146 5.854a.5.5 0 01.708-.708L10 6.293l1.146-1.147a.5.5 0 01.708 0z"/></svg>
+                ADR List
+              </button>
+              <button class="oc-deliv-btn" id="delivMusicCueBtn">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 13c0 1.105-1.12 2-2.5 2S1 14.105 1 13c0-1.104 1.12-2 2.5-2s2.5.896 2.5 2zm9-2c0 1.105-1.12 2-2.5 2s-2.5-.895-2.5-2 1.12-2 2.5-2 2.5.895 2.5 2zM14 11V2h1v9h-1zM6 12V3h1v9H6zM6 2.5a.5.5 0 01.5-.5l8-1a.5.5 0 01.5.5v1.5a.5.5 0 01-.5.5l-8 1A.5.5 0 016 4V2.5z"/></svg>
+                Music Cue Sheet
+              </button>
+              <button class="oc-deliv-btn" id="delivAssetListBtn">
+                <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H2a2 2 0 01-2-2V2zm5.5 3a.5.5 0 00-1 0v5.793L3.146 9.354a.5.5 0 10-.708.707l2 2a.5.5 0 00.708 0l2-2a.5.5 0 00-.708-.707L5.5 10.793V5z"/></svg>
+                Asset List
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Project Report</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="projectReportBody">
+            <span>Full Project Report</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="projectReportBody">
+            <div class="oc-checkbox-row">
+              <label class="oc-checkbox-label"><input type="checkbox" id="rptIncludeVfx" checked> VFX Sheet</label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="rptIncludeAdr" checked> ADR List</label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="rptIncludeMusic" checked> Music Cue Sheet</label>
+              <label class="oc-checkbox-label"><input type="checkbox" id="rptIncludeAssets" checked> Asset List</label>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="reportFormat">Format</label>
+              <select class="oc-select" id="reportFormat">
+                <option value="csv">CSV</option>
+                <option value="xlsx">Excel (.xlsx)</option>
+                <option value="pdf">PDF</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runFullReportBtn">Generate Full Report</button>
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ===== TOAST AREA ===== -->
+    <div id="toastArea" class="oc-toast-area" aria-live="polite" aria-atomic="false"></div>
+
+    <!-- ===== STATUS BAR ===== -->
+    <footer class="oc-status-bar" id="statusBar" role="status">
+      <span id="statusText">Ready</span>
+      <span id="statusRight" class="oc-status-right"></span>
+    </footer>
+
+  </div><!-- #app -->
+
+  <script type="module" src="main.js"></script>
+</body>
+</html>

@@ -2037,3 +2037,139 @@ def audio_enhance():
         if job_id in jobs:
             jobs[job_id]["_thread"] = thread
     return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Audio: Beat Markers (for ExtendScript timeline marker insertion)
+# ---------------------------------------------------------------------------
+@audio_bp.route("/audio/beat-markers", methods=["POST"])
+@require_csrf
+def audio_beat_markers():
+    """Extract beat timestamps for use as Premiere timeline markers."""
+    data = request.get_json(force=True)
+    filepath = data.get("file", "").strip()
+    subdivisions = safe_int(data.get("subdivisions", 1), 1, min_val=1, max_val=8)
+    offset = safe_float(data.get("offset", 0.0), 0.0)
+
+    if not filepath:
+        return jsonify({"error": "file is required"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    job_id = _new_job("beat-markers", filepath)
+
+    def _process():
+        try:
+            from opencut.core.audio_suite import detect_beats
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            info = detect_beats(filepath, on_progress=_on_progress)
+
+            raw_beats = info.beat_times
+
+            # Apply offset
+            if offset != 0.0:
+                raw_beats = [max(0.0, t + offset) for t in raw_beats]
+
+            # Apply subdivisions: insert evenly-spaced sub-beats between each pair
+            if subdivisions > 1 and len(raw_beats) >= 2:
+                subdivided = []
+                for i in range(len(raw_beats) - 1):
+                    subdivided.append(raw_beats[i])
+                    interval = (raw_beats[i + 1] - raw_beats[i]) / subdivisions
+                    for s in range(1, subdivisions):
+                        subdivided.append(round(raw_beats[i] + s * interval, 4))
+                subdivided.append(raw_beats[-1])
+                raw_beats = subdivided
+
+            beats = [round(t, 4) for t in raw_beats]
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Extracted {len(beats)} beat markers at {info.bpm:.1f} BPM",
+                result={"beats": beats, "bpm": round(info.bpm, 2), "count": len(beats)},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Beat markers error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Audio: Loudness Match (batch)
+# ---------------------------------------------------------------------------
+@audio_bp.route("/audio/loudness-match", methods=["POST"])
+@require_csrf
+def audio_loudness_match():
+    """Batch-normalize a list of audio/video files to a target LUFS level."""
+    data = request.get_json(force=True)
+    files = data.get("files", [])
+    target_lufs = safe_float(data.get("target_lufs", -14.0), -14.0, min_val=-70.0, max_val=0.0)
+    output_dir = data.get("output_dir", "").strip()
+
+    if not isinstance(files, list) or not files:
+        return jsonify({"error": "files must be a non-empty list"}), 400
+
+    if len(files) > 100:
+        return jsonify({"error": "Too many files (max 100)"}), 400
+
+    validated_files = []
+    for f in files:
+        if not isinstance(f, str) or not f.strip():
+            return jsonify({"error": "Each file entry must be a non-empty string"}), 400
+        try:
+            validated_files.append(validate_filepath(f.strip()))
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        os.makedirs(output_dir, exist_ok=True)
+
+    job_id = _new_job("loudness-match", validated_files[0] if validated_files else "")
+
+    def _process():
+        try:
+            from opencut.core import loudness_match
+
+            def _on_progress(pct, msg):
+                _update_job(job_id, progress=pct, message=msg)
+
+            effective_dir = output_dir if output_dir else None
+            result = loudness_match.batch_loudness_match(
+                validated_files,
+                output_dir=effective_dir,
+                target_lufs=target_lufs,
+                on_progress=_on_progress,
+            )
+
+            outputs = result.get("outputs", []) if isinstance(result, dict) else []
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Loudness-matched {len(outputs)} files to {target_lufs:.1f} LUFS",
+                result={"outputs": outputs},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Loudness match error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})

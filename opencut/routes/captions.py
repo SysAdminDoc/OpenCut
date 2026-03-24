@@ -30,7 +30,7 @@ logger = logging.getLogger("opencut")
 # Core imports used by multiple routes (try relative/absolute, tolerate missing)
 detect_speech = get_edit_summary = generate_zoom_events = None
 export_premiere_xml = export_ass = export_json = export_srt = export_vtt = None
-CaptionConfig = ExportConfig = get_preset = _probe_media = None
+CaptionConfig = ExportConfig = get_preset = _probe_media = LLMConfig = None
 try:
     from ..core.silence import detect_speech, get_edit_summary  # noqa: F811
     from ..core.zoom import generate_zoom_events  # noqa: F811
@@ -38,6 +38,7 @@ try:
     from ..export.srt import export_ass, export_json, export_srt, export_vtt  # noqa: F811
     from ..utils.config import CaptionConfig, ExportConfig, get_preset  # noqa: F811
     from ..utils.media import probe as _probe_media  # noqa: F811
+    from ..core.llm import LLMConfig  # noqa: F811
 except ImportError:
     try:
         from opencut.core.silence import detect_speech, get_edit_summary  # noqa: F811
@@ -46,7 +47,9 @@ except ImportError:
         from opencut.export.srt import export_ass, export_json, export_srt, export_vtt  # noqa: F811
         from opencut.utils.config import CaptionConfig, ExportConfig, get_preset  # noqa: F811
         from opencut.utils.media import probe as _probe_media  # noqa: F811
+        from opencut.core.llm import LLMConfig  # noqa: F811
     except ImportError:
+        LLMConfig = None
         logger.warning("Some caption dependencies could not be imported")
 
 captions_bp = Blueprint("captions", __name__)
@@ -1373,6 +1376,216 @@ def transcript_summarize():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
             logger.exception("Summarization error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Captions: Chapter Generation
+# ---------------------------------------------------------------------------
+@captions_bp.route("/captions/chapters", methods=["POST"])
+@require_csrf
+def captions_chapters():
+    """Generate YouTube-style chapters from a transcript using an LLM."""
+    data = request.get_json(force=True)
+    filepath = data.get("file", "").strip()
+    segments = data.get("segments", None)
+    llm_provider = data.get("llm_provider", "ollama")
+    llm_model = data.get("llm_model", "llama3")
+    api_key = data.get("api_key", "")
+    max_chapters = safe_int(data.get("max_chapters", 15), 15, min_val=1, max_val=100)
+    transcribe_model = data.get("model", "base")
+
+    if filepath:
+        try:
+            filepath = validate_filepath(filepath)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+    if transcribe_model not in VALID_WHISPER_MODELS:
+        transcribe_model = "base"
+
+    job_id = _new_job("chapters", filepath or "segments")
+
+    def _process():
+        try:
+            effective_segments = segments
+
+            # Transcribe if segments not provided
+            if effective_segments is None:
+                if not filepath:
+                    _update_job(job_id, status="error", error="file or segments required", message="Missing input")
+                    return
+
+                from opencut.core.captions import check_whisper_available, transcribe
+
+                available, backend = check_whisper_available()
+                if not available:
+                    _update_job(
+                        job_id, status="error",
+                        error="No Whisper backend installed. Run: pip install faster-whisper",
+                        message="Whisper not installed",
+                    )
+                    return
+
+                _update_job(job_id, progress=10, message="Transcribing for chapter generation...")
+                config = CaptionConfig(model=transcribe_model, word_timestamps=False)
+
+                # Check cache first
+                cached = get_cached_transcript(filepath, model=transcribe_model)
+                if cached:
+                    effective_segments = cached
+                    _update_job(job_id, progress=30, message="Using cached transcript...")
+                else:
+                    result = transcribe(filepath, config=config)
+                    if hasattr(result, "segments"):
+                        effective_segments = [
+                            {"start": s.start, "end": s.end, "text": s.text}
+                            for s in result.segments
+                        ]
+                        cache_transcript(filepath, effective_segments, model=transcribe_model)
+                    else:
+                        effective_segments = []
+
+            if not effective_segments:
+                _update_job(job_id, status="error", error="No transcript segments available", message="Empty transcript")
+                return
+
+            _update_job(job_id, progress=50, message="Generating chapters with LLM...")
+
+            llm_config = None
+            if LLMConfig is not None:
+                llm_config = LLMConfig(
+                    provider=llm_provider,
+                    model=llm_model,
+                    api_key=api_key or "",
+                )
+
+            from opencut.core import chapter_gen
+            result = chapter_gen.generate_chapters(
+                effective_segments,
+                llm_config=llm_config,
+                max_chapters=max_chapters,
+            )
+
+            chapters = result.get("chapters", []) if isinstance(result, dict) else []
+            description_block = result.get("description_block", "") if isinstance(result, dict) else str(result)
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Generated {len(chapters)} chapters",
+                result={"chapters": chapters, "description_block": description_block},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Chapter generation error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Captions: Repeat / Duplicate Take Detection
+# ---------------------------------------------------------------------------
+@captions_bp.route("/captions/repeat-detect", methods=["POST"])
+@require_csrf
+def captions_repeat_detect():
+    """Detect repeated takes in a recording and identify clean ranges."""
+    data = request.get_json(force=True)
+    filepath = data.get("file", "").strip()
+    model = data.get("model", "base")
+    threshold = safe_float(data.get("threshold", 0.6), 0.6, min_val=0.0, max_val=1.0)
+    gap_tolerance = safe_float(data.get("gap_tolerance", 2.0), 2.0, min_val=0.0, max_val=30.0)
+
+    if not filepath:
+        return jsonify({"error": "file is required"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    if model not in VALID_WHISPER_MODELS:
+        model = "base"
+
+    job_id = _new_job("repeat-detect", filepath)
+
+    def _process():
+        try:
+            from opencut.core.captions import check_whisper_available, transcribe
+            from opencut.utils.config import CaptionConfig as _CC
+
+            available, backend = check_whisper_available()
+            if not available:
+                _update_job(
+                    job_id, status="error",
+                    error="No Whisper backend installed. Run: pip install faster-whisper",
+                    message="Whisper not installed",
+                )
+                return
+
+            _update_job(job_id, progress=10, message="Transcribing with word-level timestamps...")
+
+            config = _CC(model=model, word_timestamps=True)
+
+            # Check cache
+            cached = get_cached_transcript(filepath, model=model)
+            if cached:
+                segments = cached
+                _update_job(job_id, progress=30, message="Using cached transcript...")
+            else:
+                result = transcribe(filepath, config=config)
+                if hasattr(result, "segments"):
+                    segments = [
+                        {"start": s.start, "end": s.end, "text": s.text,
+                         "words": [{"word": w.word, "start": w.start, "end": w.end}
+                                   for w in getattr(s, "words", [])] if hasattr(s, "words") else []}
+                        for s in result.segments
+                    ]
+                    cache_transcript(filepath, segments, model=model)
+                else:
+                    segments = []
+
+            if not segments:
+                _update_job(
+                    job_id, status="complete", progress=100,
+                    message="No segments to analyse",
+                    result={"repeats": [], "clean_ranges": [], "total_removed_seconds": 0.0},
+                )
+                return
+
+            _update_job(job_id, progress=60, message="Detecting repeated takes...")
+
+            from opencut.core import repeat_detect
+            detection = repeat_detect.detect_repeated_takes(
+                segments, threshold=threshold, gap_tolerance=gap_tolerance
+            )
+
+            repeats = detection.get("repeats", []) if isinstance(detection, dict) else []
+            clean_ranges = detection.get("clean_ranges", []) if isinstance(detection, dict) else []
+            total_removed = float(detection.get("total_removed_seconds", 0.0)) if isinstance(detection, dict) else 0.0
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Found {len(repeats)} repeated takes, {total_removed:.1f}s removable",
+                result={
+                    "repeats": repeats,
+                    "clean_ranges": clean_ranges,
+                    "total_removed_seconds": total_removed,
+                },
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Repeat detection error")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()

@@ -74,3 +74,59 @@ Use the sync script to update all at once:
 ```bash
 python scripts/sync_version.py --set 1.3.0
 ```
+
+## UXP Panel Development
+
+The UXP panel at `extension/com.opencut.uxp/` targets Premiere Pro 25.6+.
+
+### Setup
+1. Install Adobe UXP Developer Tool from the Creative Cloud app
+2. In UXP Developer Tool: Add Plugin → select `extension/com.opencut.uxp/`
+3. Click "Load" to sideload the panel into Premiere Pro
+4. The UXP panel connects to the same Python backend on port 5679
+
+### Key differences from CEP panel
+- Uses modern ES modules (`import`/`export`) — no ES3 restrictions
+- Direct `fetch()` API — no HTTP bridge needed
+- Timeline write-back uses `premierepro` UXP module (Premiere 25.6+)
+- CEP panel handles write-back for older versions
+
+### Manifests
+- CEP manifest: `extension/com.opencut.panel/CSXS/manifest.xml`
+- UXP manifest: `extension/com.opencut.uxp/manifest.json`
+- Both must be kept in sync for version numbers
+
+## New Optional Dependency Groups (v1.5.0+)
+
+Install groups individually as needed:
+
+```bash
+# LLM features (chapters, NLP commands)
+pip install openai>=1.0.0          # for OpenAI provider
+pip install anthropic>=0.20.0      # for Anthropic provider
+# Ollama: install from https://ollama.ai (no pip needed)
+
+# Color matching (OpenCV required)
+pip install opencv-python-headless>=4.8.0
+
+# Auto-zoom face detection (OpenCV required)
+pip install opencv-python-headless>=4.8.0
+
+# Footage search (stdlib only — no pip required)
+
+# Deliverables (stdlib csv only — no pip required)
+
+# Loudness matching (FFmpeg required — external tool)
+# Download from https://ffmpeg.org/download.html
+```
+
+## Version Sync
+
+When releasing a new version, update these files:
+- `opencut/__init__.py` — `__version__`
+- `pyproject.toml` — `version`
+- `extension/com.opencut.panel/CSXS/manifest.xml` — `ExtensionBundleVersion` and `Version`
+- `extension/com.opencut.uxp/manifest.json` — `version`
+- `extension/com.opencut.uxp/main.js` — `VERSION` constant
+- `README.md` — version badge
+- `CHANGELOG.md` — new section
