@@ -2157,10 +2157,12 @@ def audio_loudness_match():
                 on_progress=_on_progress,
             )
 
-            outputs = result.get("outputs", []) if isinstance(result, dict) else []
+            # batch_loudness_match returns a list, not a dict
+            outputs = result if isinstance(result, list) else result.get("outputs", []) if isinstance(result, dict) else []
+            ok_count = sum(1 for r in outputs if isinstance(r, dict) and r.get("job_ok")) if outputs else 0
             _update_job(
                 job_id, status="complete", progress=100,
-                message=f"Loudness-matched {len(outputs)} files to {target_lufs:.1f} LUFS",
+                message=f"Loudness-matched {ok_count}/{len(outputs)} files to {target_lufs:.1f} LUFS",
                 result={"outputs": outputs},
             )
         except Exception as e:
