@@ -42,11 +42,18 @@ jobs:
           pip install ruff
           ruff check opencut/ --select E,F,I --ignore E501
 
-      - name: Smoke test
+      - name: Run tests
+        run: |
+          python -m pytest tests/ -v --tb=short
+
+      - name: Smoke test imports
         run: |
           python -c "from opencut.server import app; print('Import OK')"
           python -c "from opencut.security import get_csrf_token; print('Security OK')"
           python -c "from opencut.jobs import _new_job; print('Jobs OK')"
+          python -c "from opencut.core.repeat_detect import detect_repeated_takes; print('Core OK')"
+          python -c "from opencut.core.nlp_command import parse_command; print('NLP OK')"
+          python -c "from opencut.cli import cli; print('CLI OK')"
 
       - name: Build with PyInstaller
         run: pyinstaller opencut_server.spec

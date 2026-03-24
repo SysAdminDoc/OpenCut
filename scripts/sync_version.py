@@ -104,6 +104,24 @@ TARGETS = [
         r'(#define MyAppVersion\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
         r'\g<1>{v}\g<2>',
     ),
+    # UXP manifest.json
+    (
+        "extension/com.opencut.uxp/manifest.json",
+        r'("version":\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}\g<2>',
+    ),
+    # UXP main.js VERSION constant
+    (
+        "extension/com.opencut.uxp/main.js",
+        r'(const VERSION\s*=\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}\g<2>',
+    ),
+    # UXP index.html version display
+    (
+        "extension/com.opencut.uxp/index.html",
+        r'(<span class="oc-version">v)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
+        r'\g<1>{v}\g<2>',
+    ),
 ]
 
 

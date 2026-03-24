@@ -122,7 +122,7 @@
 ## Version
 - Current: **v1.5.6**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge
-- Use `python scripts/sync_version.py --set X.Y.Z` to update all at once (also manually update UXP manifest.json and UXP main.js — not yet covered by sync script)
+- Use `python scripts/sync_version.py --set X.Y.Z` to update all 18 targets at once (including UXP files)
 
 ## Gotchas
 - `subprocess.run` must use `_sp.run` (the alias) in route files
