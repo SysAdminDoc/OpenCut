@@ -43,7 +43,7 @@ _VALID_RULE_FIELDS = {"name", "label", "comment", "media_type", "file_path", "du
 def timeline_export_from_markers():
     """Use FFmpeg to extract clip segments defined by timeline markers."""
     data = request.get_json(force=True)
-    input_file = data.get("input_file", "").strip()
+    input_file = data.get("input_file", data.get("filepath", "")).strip()
     markers = data.get("markers", [])
     output_dir = data.get("output_dir", "").strip()
     fmt = data.get("format", "mp4").strip().lower()
@@ -210,8 +210,8 @@ def timeline_smart_bins():
             invalid.append({"item": item, "reason": "not an object"})
             continue
 
-        bin_name = str(item.get("binName", "")).strip()
-        rule_type = str(item.get("rule", "")).strip()
+        bin_name = str(item.get("binName", item.get("bin_name", ""))).strip()
+        rule_type = str(item.get("rule", item.get("rule_type", ""))).strip()
         field = str(item.get("field", "")).strip()
         value = str(item.get("value", "")).strip()
 
