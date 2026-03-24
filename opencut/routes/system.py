@@ -1224,3 +1224,56 @@ def llm_test():
         })
     except Exception as e:
         return jsonify({"success": False, "error": str(e)}), 500
+
+
+# ---------------------------------------------------------------------------
+# Update Check (GitHub releases, 1-hour cache)
+# ---------------------------------------------------------------------------
+_update_cache = {"data": None, "ts": 0}
+_update_cache_lock = threading.Lock()
+_UPDATE_CACHE_TTL = 3600  # 1 hour
+
+
+@system_bp.route("/system/update-check", methods=["GET"])
+def check_for_update():
+    """Check GitHub for a newer release. Cached for 1 hour."""
+    import json
+    import urllib.request
+
+    now = time.time()
+    with _update_cache_lock:
+        if _update_cache["data"] is not None and (now - _update_cache["ts"]) < _UPDATE_CACHE_TTL:
+            return jsonify(_update_cache["data"])
+
+    current = __version__
+    result = {
+        "current_version": current,
+        "latest_version": current,
+        "update_available": False,
+        "release_url": "https://github.com/SysAdminDoc/OpenCut/releases",
+    }
+
+    try:
+        url = "https://api.github.com/repos/SysAdminDoc/OpenCut/releases/latest"
+        req = urllib.request.Request(url, headers={"Accept": "application/vnd.github.v3+json", "User-Agent": "OpenCut"})
+        with urllib.request.urlopen(req, timeout=5) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        tag = data.get("tag_name", "").lstrip("vV")
+        html_url = data.get("html_url", result["release_url"])
+
+        if tag:
+            result["latest_version"] = tag
+            result["release_url"] = html_url
+            current_parts = tuple(int(x) for x in current.split("."))
+            latest_parts = tuple(int(x) for x in tag.split("."))
+            result["update_available"] = latest_parts > current_parts
+    except Exception as exc:
+        logger.debug("Update check failed: %s", exc)
+        result["error"] = "offline"
+
+    with _update_cache_lock:
+        _update_cache["data"] = result
+        _update_cache["ts"] = now
+
+    return jsonify(result)
