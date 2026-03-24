@@ -3927,3 +3927,54 @@ textarea:focus-visible,
 .app.paused-animations *::after {
     animation-play-state: paused !important;
 }
+
+/* ================================================================
+   v1.5.0 - Timeline, NLP & New Feature Styles
+   ================================================================ */
+
+/* Smart bin rules */
+.smart-bin-rule input, .smart-bin-rule select {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xs);
+    color: var(--text-primary);
+    padding: 3px 6px;
+}
+.smart-bin-rule input:focus, .smart-bin-rule select:focus {
+    outline: none;
+    border-color: var(--neon-cyan-dark);
+}
+
+/* Footage search result items */
+.footage-result-item {
+    transition: background var(--t-fast);
+}
+.footage-result-item:hover {
+    background: var(--bg-hover);
+}
+
+/* Multicam track-map rows */
+.multicam-track-row input {
+    background: var(--bg-input);
+    border: 1px solid var(--border);
+    border-radius: var(--r-xs);
+    color: var(--text-primary);
+    padding: 2px 6px;
+    text-align: center;
+}
+
+/* Rename list inputs */
+.rename-name-input {
+    font-size: 11px;
+    padding: 3px 6px;
+}
+
+/* input-row for path + browse button pairs */
+.input-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+.input-row .text-input {
+    flex: 1;
+}

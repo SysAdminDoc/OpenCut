@@ -6,6 +6,7 @@ Each function returns True/False indicating if the dependency is usable.
 """
 
 import threading
+from typing import Tuple
 
 from opencut.helpers import _try_import
 
@@ -101,3 +102,35 @@ def check_llm_available():
         return True
     # API keys would be checked via settings — here we just check Ollama
     return False
+
+
+def check_color_match_available() -> Tuple[bool, str]:
+    """Check if color matching (OpenCV + NumPy) is available."""
+    try:
+        import cv2  # noqa
+        import numpy  # noqa
+        return True, "cv2+numpy"
+    except ImportError as e:
+        return False, str(e)
+
+
+def check_auto_zoom_available() -> Tuple[bool, str]:
+    """Check if auto zoom face detection (OpenCV) is available."""
+    try:
+        import cv2  # noqa
+        return True, "cv2"
+    except ImportError as e:
+        return False, str(e)
+
+
+def check_loudness_match_available() -> Tuple[bool, str]:
+    """Check if loudness matching (FFmpeg) is available."""
+    import shutil
+    if shutil.which("ffmpeg"):
+        return True, "ffmpeg"
+    return False, "ffmpeg not found in PATH"
+
+
+def check_footage_search_available() -> Tuple[bool, str]:
+    """Check if footage search indexing is available (always True — uses stdlib only)."""
+    return True, "stdlib"

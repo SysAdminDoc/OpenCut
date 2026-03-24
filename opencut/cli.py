@@ -431,6 +431,477 @@ def server(host, port, debug):
     run_server(host=host, port=port, debug=debug)
 
 
+def _resolve_output_dir(input_file, output_dir):
+    """Resolve output directory, creating it if needed. Returns base path."""
+    base = os.path.splitext(input_file)[0]
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+        base = os.path.join(output_dir, os.path.basename(base))
+    return base
+
+
+@cli.command()
+@click.argument("file", type=click.Path(exists=True))
+@click.option("--provider", default="ollama", help="LLM provider: ollama, openai, anthropic")
+@click.option("--model", default="llama3", help="LLM model name")
+@click.option("--api-key", default="", help="API key (for OpenAI/Anthropic)")
+@click.option("--max-chapters", default=15, help="Maximum chapters to generate")
+@click.option("--whisper-model", default="base", help="Whisper model for transcription")
+@click.option("--output", "-o", default=None, help="Output text file path")
+def chapters(file, provider, model, api_key, max_chapters, whisper_model, output):
+    """Generate YouTube chapter timestamps from video transcript."""
+    print_banner()
+
+    try:
+        from .core.captions import transcribe_audio
+        from .core.chapter_gen import generate_chapters
+        from .core.llm import LLMConfig
+    except ImportError as e:
+        console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
+        console.print("Ensure opencut[chapters] extras are installed.")
+        sys.exit(1)
+
+    llm_cfg = LLMConfig(provider=provider, model=model, api_key=api_key)
+
+    console.print(f"\n[bold]Generating chapters:[/bold] {file}")
+    console.print(f"[dim]Provider: {provider} | Model: {model} | Whisper: {whisper_model} | Max chapters: {max_chapters}[/dim]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Transcribing audio...", total=None)
+        start_time = time.time()
+        segments = transcribe_audio(file, model=whisper_model)
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Transcription complete ({elapsed:.1f}s)")
+        progress.stop()
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Generating chapter timestamps...", total=None)
+        start_time = time.time()
+        result = generate_chapters(segments, llm_cfg, max_chapters=max_chapters)
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Chapters generated ({elapsed:.1f}s)")
+        progress.stop()
+
+    description_block = result.description_block
+
+    if output:
+        with open(output, "w", encoding="utf-8") as f:
+            f.write(description_block)
+        console.print(f"\n[green bold]Saved:[/green bold] {output}\n")
+    else:
+        console.print("\n[bold]Chapter Timestamps:[/bold]\n")
+        console.print(description_block)
+
+
+@cli.command("repeat-detect")
+@click.argument("file", type=click.Path(exists=True))
+@click.option("--threshold", default=0.6, help="Similarity threshold (0-1)")
+@click.option("--model", default="base", help="Whisper model")
+@click.option("--output", "-o", default=None, help="Output JSON path")
+def repeat_detect(file, threshold, model, output):
+    """Detect and list repeated/fumbled takes in a recording."""
+    print_banner()
+
+    try:
+        from .core.captions import transcribe_audio
+        from .core.repeat_detect import detect_repeated_takes
+    except ImportError as e:
+        console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
+        console.print("Ensure opencut[repeat-detect] extras are installed.")
+        sys.exit(1)
+
+    console.print(f"\n[bold]Detecting repeated takes:[/bold] {file}")
+    console.print(f"[dim]Whisper model: {model} | Similarity threshold: {threshold}[/dim]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Transcribing audio...", total=None)
+        start_time = time.time()
+        segments = transcribe_audio(file, model=model)
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Transcription complete ({elapsed:.1f}s)")
+        progress.stop()
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Analyzing repeated takes...", total=None)
+        start_time = time.time()
+        repeats = detect_repeated_takes(segments, threshold=threshold)
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Analysis complete ({elapsed:.1f}s)")
+        progress.stop()
+
+    console.print(f"\n[bold]Repeated takes found:[/bold] {len(repeats)}\n")
+
+    if repeats:
+        if output:
+            import json
+            with open(output, "w", encoding="utf-8") as f:
+                json.dump([r if isinstance(r, dict) else vars(r) for r in repeats], f, indent=2)
+            console.print(f"[green bold]Saved:[/green bold] {output}\n")
+        else:
+            table = Table(title="Repeated Takes", box=box.ROUNDED)
+            table.add_column("Take #", style="cyan", justify="right")
+            table.add_column("Start", justify="right")
+            table.add_column("End", justify="right")
+            table.add_column("Similarity", justify="right", style="yellow")
+            table.add_column("Text", style="dim")
+
+            for i, r in enumerate(repeats, 1):
+                data = r if isinstance(r, dict) else vars(r)
+                table.add_row(
+                    str(i),
+                    f"{data.get('start', 0):.2f}s",
+                    f"{data.get('end', 0):.2f}s",
+                    f"{data.get('similarity', 0):.2f}",
+                    str(data.get('text', ''))[:60],
+                )
+            console.print(table)
+    else:
+        console.print("[green]No repeated takes detected.[/green]\n")
+
+
+@cli.group()
+def search():
+    """Footage search commands."""
+    pass
+
+
+@search.command("index")
+@click.argument("files", nargs=-1, type=click.Path(exists=True))
+@click.option("--model", default="base", help="Whisper model")
+def search_index(files, model):
+    """Index media files for content search."""
+    print_banner()
+
+    try:
+        from .core.captions import transcribe_audio
+        from .core.search import index_files
+    except ImportError as e:
+        console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
+        console.print("Ensure opencut[search] extras are installed.")
+        sys.exit(1)
+
+    if not files:
+        console.print("[yellow]No files provided to index.[/yellow]")
+        return
+
+    console.print(f"\n[bold]Indexing {len(files)} file(s):[/bold]")
+    console.print(f"[dim]Whisper model: {model}[/dim]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task(f"Indexing {len(files)} file(s)...", total=None)
+        start_time = time.time()
+        index_files(files, model=model)
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Indexing complete ({elapsed:.1f}s)")
+        progress.stop()
+
+    console.print(f"[green bold]Indexed {len(files)} file(s) successfully.[/green bold]\n")
+
+
+@search.command("query")
+@click.argument("query")
+@click.option("--top-k", default=10, help="Number of results")
+def search_query(query, top_k):
+    """Search indexed footage by spoken content."""
+    print_banner()
+
+    try:
+        from .core.search import query_index
+    except ImportError as e:
+        console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
+        console.print("Ensure opencut[search] extras are installed.")
+        sys.exit(1)
+
+    console.print(f"\n[bold]Searching:[/bold] {query!r}")
+    console.print(f"[dim]Top {top_k} results[/dim]\n")
+
+    results = query_index(query, top_k=top_k)
+
+    if not results:
+        console.print("[yellow]No results found. Have you indexed any files with [cyan]opencut search index[/cyan]?[/yellow]\n")
+        return
+
+    table = Table(title=f'Search results for "{query}"', box=box.ROUNDED)
+    table.add_column("File", style="cyan")
+    table.add_column("Start", justify="right")
+    table.add_column("End", justify="right")
+    table.add_column("Score", justify="right", style="yellow")
+    table.add_column("Text", style="dim")
+
+    for r in results:
+        data = r if isinstance(r, dict) else vars(r)
+        table.add_row(
+            os.path.basename(str(data.get('file', ''))),
+            f"{data.get('start', 0):.2f}s",
+            f"{data.get('end', 0):.2f}s",
+            f"{data.get('score', 0):.3f}",
+            str(data.get('text', ''))[:60],
+        )
+    console.print(table)
+    console.print()
+
+
+@cli.command("color-match")
+@click.argument("source", type=click.Path(exists=True))
+@click.argument("reference", type=click.Path(exists=True))
+@click.option("--output-dir", "-o", default=None)
+@click.option("--strength", default=1.0, help="Match strength 0-1")
+def color_match(source, reference, output_dir, strength):
+    """Match the color profile of source clip to reference clip."""
+    print_banner()
+
+    try:
+        from .core.color import match_color
+    except ImportError as e:
+        console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
+        console.print("Ensure opencut[color] extras are installed.")
+        sys.exit(1)
+
+    base = _resolve_output_dir(source, output_dir)
+    output_path = f"{base}_color_matched{os.path.splitext(source)[1]}"
+
+    console.print(f"\n[bold]Color matching:[/bold] {source}")
+    console.print(f"[bold]Reference:[/bold] {reference}")
+    console.print(f"[dim]Strength: {strength}[/dim]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Applying color match...", total=None)
+        start_time = time.time()
+        match_color(source, reference, output_path, strength=strength)
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Color match complete ({elapsed:.1f}s)")
+        progress.stop()
+
+    console.print(f"\n[green bold]Saved:[/green bold] {output_path}\n")
+
+
+@cli.command("loudness-match")
+@click.argument("files", nargs=-1, type=click.Path(exists=True), required=True)
+@click.option("--target-lufs", default=-14.0, help="Target LUFS level")
+@click.option("--output-dir", "-o", default=None)
+def loudness_match(files, target_lufs, output_dir):
+    """Normalize loudness across multiple clips to a target LUFS level."""
+    print_banner()
+
+    try:
+        from .core.loudness import normalize_loudness
+    except ImportError as e:
+        console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
+        console.print("Ensure opencut[loudness] extras are installed.")
+        sys.exit(1)
+
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    console.print(f"\n[bold]Loudness normalizing {len(files)} file(s):[/bold]")
+    console.print(f"[dim]Target: {target_lufs} LUFS[/dim]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task(f"Normalizing {len(files)} file(s)...", total=None)
+        start_time = time.time()
+        output_paths = normalize_loudness(files, target_lufs=target_lufs, output_dir=output_dir)
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Normalization complete ({elapsed:.1f}s)")
+        progress.stop()
+
+    console.print(f"\n[green bold]Normalized {len(files)} file(s):[/green bold]")
+    for path in output_paths:
+        console.print(f"  {path}")
+    console.print()
+
+
+@cli.command("auto-zoom")
+@click.argument("file", type=click.Path(exists=True))
+@click.option("--zoom-amount", default=1.15, help="Zoom factor (e.g. 1.15 = 15%% zoom)")
+@click.option("--easing", default="ease_in_out", type=click.Choice(["linear", "ease_in", "ease_out", "ease_in_out"]))
+@click.option("--output-dir", "-o", default=None)
+@click.option("--apply/--keyframes-only", default=True, help="Bake zoom into output or return keyframe JSON")
+def auto_zoom(file, zoom_amount, easing, output_dir, apply):
+    """Apply face-tracked auto-zoom effect to a talking-head clip."""
+    print_banner()
+
+    try:
+        from .core.zoom import apply_auto_zoom
+    except ImportError as e:
+        console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
+        console.print("Ensure opencut[zoom] extras are installed.")
+        sys.exit(1)
+
+    base = _resolve_output_dir(file, output_dir)
+    ext = os.path.splitext(file)[1]
+    output_path = f"{base}_autozoom{ext}"
+    keyframes_path = f"{base}_autozoom_keyframes.json"
+
+    console.print(f"\n[bold]Auto-zoom:[/bold] {file}")
+    console.print(f"[dim]Zoom: {zoom_amount}x | Easing: {easing} | Apply: {apply}[/dim]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Detecting faces and applying zoom...", total=None)
+        start_time = time.time()
+        result = apply_auto_zoom(
+            file,
+            zoom_amount=zoom_amount,
+            easing=easing,
+            output_path=output_path if apply else None,
+            keyframes_path=keyframes_path if not apply else None,
+        )
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Auto-zoom complete ({elapsed:.1f}s)")
+        progress.stop()
+
+    if apply:
+        console.print(f"\n[green bold]Saved:[/green bold] {output_path}\n")
+    else:
+        console.print(f"\n[green bold]Keyframes saved:[/green bold] {keyframes_path}\n")
+
+
+@cli.command()
+@click.option("--sequence-json", required=True, type=click.Path(exists=True), help="Sequence data JSON file")
+@click.option("--output-dir", "-o", default=None)
+@click.option("--type", "doc_type", default="all", type=click.Choice(["all", "vfx", "adr", "music", "asset"]))
+def deliverables(sequence_json, output_dir, doc_type):
+    """Generate post-production deliverable documents from sequence data."""
+    print_banner()
+
+    try:
+        from .core.deliverables import generate_deliverables
+    except ImportError as e:
+        console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
+        console.print("Ensure opencut[deliverables] extras are installed.")
+        sys.exit(1)
+
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    console.print(f"\n[bold]Generating deliverables:[/bold] {sequence_json}")
+    console.print(f"[dim]Type: {doc_type} | Output dir: {output_dir or '(same as input)'}[/dim]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Generating deliverable documents...", total=None)
+        start_time = time.time()
+        docs = generate_deliverables(sequence_json, doc_type=doc_type, output_dir=output_dir)
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Generation complete ({elapsed:.1f}s)")
+        progress.stop()
+
+    console.print(f"\n[green bold]Generated {len(docs)} document(s):[/green bold]")
+    for doc in docs:
+        console.print(f"  {doc}")
+    console.print()
+
+
+@cli.command()
+@click.argument("command_text")
+@click.option("--file", type=click.Path(), default=None, help="Media file to operate on")
+@click.option("--provider", default="ollama")
+@click.option("--model", default="llama3")
+@click.option("--api-key", default="")
+def nlp(command_text, file, provider, model, api_key):
+    """Execute a natural language editing command."""
+    print_banner()
+
+    try:
+        from .core.llm import LLMConfig
+        from .core.nlp import parse_nlp_command
+    except ImportError as e:
+        console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
+        console.print("Ensure opencut[nlp] extras are installed.")
+        sys.exit(1)
+
+    llm_cfg = LLMConfig(provider=provider, model=model, api_key=api_key)
+
+    console.print(f"\n[bold]NLP command:[/bold] {command_text!r}")
+    if file:
+        console.print(f"[bold]File:[/bold] {file}")
+    console.print(f"[dim]Provider: {provider} | Model: {model}[/dim]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Parsing command...", total=None)
+        start_time = time.time()
+        parsed = parse_nlp_command(command_text, llm_cfg)
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Parsed ({elapsed:.1f}s)")
+        progress.stop()
+
+    console.print(f"[bold]Matched route:[/bold] [cyan]{parsed.route}[/cyan]")
+    console.print(f"[bold]Parameters:[/bold] {parsed.params}\n")
+
+    if file and parsed.route:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            TimeElapsedColumn(),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Executing command...", total=None)
+            start_time = time.time()
+            result = parsed.execute(file)
+            elapsed = time.time() - start_time
+            progress.update(task, description=f"[green]Execution complete ({elapsed:.1f}s)")
+            progress.stop()
+
+        console.print(f"\n[green bold]Done:[/green bold] {result}\n")
+    else:
+        console.print("[dim]Pass --file to execute the command.[/dim]\n")
+
+
 def main():
     """Entry point."""
     cli()

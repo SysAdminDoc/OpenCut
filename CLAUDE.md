@@ -17,7 +17,7 @@
 - `opencut/errors.py` (~60 lines) - OpenCutError exception class with typed codes (MISSING_DEPENDENCY, FILE_NOT_FOUND, GPU_OUT_OF_MEMORY, INVALID_INPUT, OPERATION_FAILED), register_error_handlers
 - `opencut/checks.py` (~90 lines) - Centralized dependency availability checks (demucs, watermark, pedalboard, audiocraft, edge_tts, rembg, upscale, scenedetect, auto-editor, transnetv2, resemble-enhance, ollama)
 - `opencut/user_data.py` (~100 lines) - Thread-safe JSON file access for user settings (per-file locks, normalized lock keys)
-- `opencut/data/social_presets.json` - Social platform export presets (YouTube Shorts, TikTok, etc.)
+- `opencut/data/social_presets.json` - Social platform export presets (13 platforms: YouTube Shorts/Long, TikTok, Instagram Reel/Story/Post, Twitter/X, LinkedIn, Snapchat, Facebook Reel/Post, Pinterest, Podcast MP3)
 
 ### Core Modules (`opencut/core/`)
 - `llm.py` (~300 lines) - LLM abstraction layer (Ollama/OpenAI/Anthropic). LLMConfig, LLMResponse, query_llm(), check_llm_reachable(). Zero pip deps (stdlib urllib).
@@ -30,20 +30,44 @@
 - `shorts_pipeline.py` (~350 lines) - One-click shorts pipeline: transcribe → LLM highlights → trim → face-reframe → caption burn-in → export.
 - `lut_library.py` (~580 lines) - LUT management + generate_lut_from_reference() for AI LUT generation from reference images using PIL/numpy histogram matching.
 
+**New in v1.5.0:**
+- `repeat_detect.py` - Jaccard similarity sliding-window to detect fumbled/repeated takes. detect_repeated_takes(segments, threshold=0.6, gap_tolerance=2.0) → {repeats, clean_ranges}. merge_repeat_ranges() for overlapping range merging.
+- `chapter_gen.py` - YouTube chapter generation via LLM (with heuristic pause-detection fallback). generate_chapters(segments, llm_config, max_chapters) → {chapters, description_block}. LLM response JSON parsed with regex fallback.
+- `footage_search.py` - BM25-lite transcript index at `~/.opencut/footage_index.json`. index_file(), search_footage(), clear_index(), get_index_stats(). Cross-platform file locking (_FileLock) + atomic write (os.replace). Always returns structured results, never crashes on empty index.
+- `deliverables.py` - Post-production CSV documents from sequence_data dict. generate_vfx_sheet/adr_list/music_cue_sheet/asset_list() all return {output: path, rows: N}. Music detection: audio track index >= 2. Helpers: _seconds_to_tc(secs, fps) → "HH:MM:SS:FF", _seconds_to_readable(secs) → "H:MM:SS".
+- `color_match.py` - YCbCr histogram matching with cv2/numpy. color_match_video(source, reference, output, strength=1.0, on_progress=None). extract_color_stats() for profiling. cv2/numpy wrapped in try/except.
+- `multicam.py` - Speaker diarization → multicam cut list. generate_multicam_cuts(segments, speaker_map, min_cut_duration) → {cuts, total_cuts, speaker_to_track}. auto_assign_speakers() assigns tracks in order of first appearance. merge_diarization_segments(gap_tolerance=0.5) merges same-speaker gaps. Pure Python, no optional deps.
+- `auto_zoom.py` - Face-tracked zoom keyframes via OpenCV Haar cascade. generate_zoom_keyframes(path, zoom_amount=1.15, easing, on_progress=None) → {keyframes, fps, duration}. _ease(t, mode) for linear/ease_in/ease_out/ease_in_out curves — boundary: _ease(0)=0, _ease(1)=1. Center-crop fallback if no face detected. cv2 wrapped in try/except.
+- `loudness_match.py` - FFmpeg loudnorm two-pass LUFS normalization. measure_loudness(file) → {lufs, lra, peak, true_peak} parsed from stderr JSON. normalize_to_lufs(input, output, target=-14.0). batch_loudness_match(files, output_dir, target_lufs, on_progress=None) → [{input, output, original_lufs, job_ok}].
+- `nlp_command.py` - Natural language → API route mapping. COMMAND_MAP with 19 entries. parse_command_keyword(text) → {route, params, confidence, matched_keyword} or None. parse_command_llm(text, config, routes). parse_command(text, llm_config) tries LLM then keyword. extract_params_from_text(text) extracts numbers/language/intensity hints.
+
 ### Route Blueprints (`opencut/routes/`)
-- `__init__.py` - `register_blueprints(app)` registers all 6 Blueprints
-- `system.py` (~1130 lines) - /health, /shutdown, /info, /gpu/*, /dependencies, /file, /whisper/*, /llm/*
-- `audio.py` (~1840 lines) - /silence, /silence/speed-up, /fillers, /audio/*, /audio/enhance, /audio/pro/*, /audio/tts/*, /audio/gen/*
-- `captions.py` (~1255 lines) - /captions/*, /transcript/*, /transcript/summarize, /full, /captions/burnin/*
-- `video.py` (~3475 lines) - /video/*, /video/auto-edit, /video/reframe/face, /video/highlights, /video/lut/generate-from-ref, /video/shorts-pipeline, /fx/*, /ai/*, /export/*
+- `__init__.py` - `register_blueprints(app)` registers all 10 Blueprints
+- `system.py` (~1130 lines) - /health, /shutdown, /info, /gpu/*, /dependencies (includes color_match, auto_zoom, footage_search, loudness_match, deliverables, nlp_command checks), /file, /whisper/*, /llm/*
+- `audio.py` (~2175 lines) - /silence, /fillers, /audio/*, /audio/beat-markers (→ beat timestamps for ExtendScript markers), /audio/loudness-match (async, on_progress)
+- `captions.py` (~1590 lines) - /captions/*, /captions/chapters (LLMConfig object, not dict), /captions/repeat-detect (word-level timestamps → detect_repeated_takes)
+- `video.py` (~4021 lines) - /video/*, /video/color-match (async, on_progress), /video/auto-zoom (dynamic resolution via probe — no hardcoded hd1080), /video/multicam-cuts (result.get("cuts") — dict not list)
 - `jobs_routes.py` (~280 lines) - /status/*, /cancel/*, /cancel-all, /jobs, /stream/*, /queue/*
-- `settings.py` (~200 lines) - /presets/*, /favorites/*, /workflows/*, /settings/import|export
+- `settings.py` (~402 lines) - /presets/*, /favorites/*, /workflows/*, /settings/import|export, /settings/llm (GET masks key, POST preserves masked), /settings/loudness-target, /settings/auto-zoom, /settings/chapters, /settings/multicam, /settings/footage-index
+
+**New in v1.5.0:**
+- `timeline.py` - /timeline/export-from-markers (FFmpeg clip extraction per marker), /timeline/batch-rename (validates renames for ExtendScript), /timeline/smart-bins (validates rules), /timeline/srt-to-captions (parse SRT or pass-through segments), GET /timeline/index-status
+- `search.py` - POST /search/index (transcribe → index_file, async job), POST /search/footage (search_footage), DELETE /search/index (clear_index)
+- `deliverables.py` - POST /deliverables/vfx-sheet|adr-list|music-cue-sheet|asset-list → {output, rows}. All handle dict return from core functions via isinstance guard.
+- `nlp.py` - POST /nlp/command → LLMConfig object (not dict), explanation falls back to param_source
 
 ### Frontend (CEP Panel)
-- `extension/com.opencut.panel/client/main.js` (~5770 lines) - Frontend controller (includes PremiereBridge UXP abstraction)
-- `extension/com.opencut.panel/client/index.html` (~2710 lines) - UI layout (sidebar + content-area, 6 tabs)
-- `extension/com.opencut.panel/client/style.css` (~3910 lines) - Themes & styles (sidebar navigation)
-- `extension/com.opencut.panel/host/index.jsx` (~1190 lines) - ExtendScript host
+- `extension/com.opencut.panel/client/main.js` (~6169 lines) - Frontend controller. State vars: lastTimelineCuts, sequenceInfo, footageIndex, beatMarkerTimes, seqMarkersData, renameItemsData, multicamCutsData, repeatCutsData, chaptersData. New init functions: initTimelineFeatures, initCaptionNewFeatures, initAudioNewFeatures, initDeliverablesFeatures, initNlpFeatures. LLM settings loaded on startup via loadLlmSettings().
+- `extension/com.opencut.panel/client/index.html` (~2835 lines) - UI layout (sidebar + content-area, 8 tabs: Cut, Captions, Audio, Video, Export, Timeline, NLP, Settings). Settings tab now has LLM config card + Audio/Zoom Defaults card.
+- `extension/com.opencut.panel/client/style.css` (~3642 lines) - Themes & styles. New classes: .smart-bin-rule, .footage-result-item, .multicam-track-row, .rename-name-input, .input-row.
+- `extension/com.opencut.panel/host/index.jsx` (~2177 lines) - ExtendScript host. **New functions (lines 1315–2177):** ocGetSequenceInfo, ocAddSequenceMarkers, ocGetSequenceMarkers, ocApplySequenceCuts, ocApplyClipKeyframes, ocBatchRenameProjectItems, ocCreateSmartBins, ocAddNativeCaptionTrack, ocGetProjectBins, ocExportSequenceRange. Private helpers: _findByNodeId, _collectMediaItems, _collectBins.
+
+### UXP Panel (Premiere Pro 25.6+)
+- `extension/com.opencut.uxp/manifest.json` - UXP plugin manifest, targets PPRO minVersion 25.6, network domains 5679–5689, localFileSystem fullAccess
+- `extension/com.opencut.uxp/index.html` (~771 lines) - 7-tab panel (Cut & Clean, Captions, Audio, Video, Timeline, Search, Deliverables)
+- `extension/com.opencut.uxp/style.css` (~909 lines) - Dark theme with CSS variables matching CEP aesthetic
+- `extension/com.opencut.uxp/main.js` (~1523 lines) - ES module controller. Internal modules: PProBridge (premierepro UXP lazy import), BackendClient (fetch + CSRF), JobPoller (async poll + cancel), UIController (tabs, toasts, progress). Auto port-scan 5679–5689 via detectBackend(). Loads LLM settings on startup via loadLlmSettings() → window._llmSettings.
+- `extension/com.opencut.uxp/uxp-api-notes.md` - API status notes and CEP vs UXP comparison
 
 ### Build
 - `opencut_server.spec` - PyInstaller spec
@@ -53,7 +77,7 @@
 ## Architecture
 - Backend runs as standalone process (exe or `python -m opencut.server`)
 - Panel communicates via XHR to localhost:5679
-- **Blueprint-based route organization**: 6 Blueprints (system, audio, captions, video, jobs, settings)
+- **Blueprint-based route organization**: 10 Blueprints (system, audio, captions, video, jobs, settings, timeline, search, deliverables, nlp)
 - **Shared modules**: security.py (CSRF + path validation), jobs.py (job state), helpers.py (utilities + `run_ffmpeg` + `ensure_package` + `get_video_info`), user_data.py (thread-safe file I/O)
 - **CSRF protection**: Token generated at startup in security.py, returned via /health, sent as `X-OpenCut-Token` header on mutations. `@require_csrf` decorator applied to ALL POST routes.
 - **Path validation**: `validate_path()` checks realpath, null bytes, `..` components, symlinks. `validate_filepath()` adds isfile check. Applied to ALL routes accepting file paths.
@@ -72,7 +96,9 @@
 - Custom dropdown system replaces native `<select>` elements in CEP
 - **Sidebar navigation**: 52px icon-only left sidebar (CapCut-style), CSS tooltips on hover, active tab = left accent bar
 - **Layout**: `.app` = flex row → `aside.sidebar` (52px) + `.content-area` (flex:1 column → `.content-header` + banners + `main.main` + `.content-footer`)
-- 6 main tabs: Cut, Captions, Audio, Video, Export, Settings
+- 8 main tabs (CEP): Cut, Captions, Audio, Video, Export, Timeline, NLP, Settings
+- 7 main tabs (UXP): Cut & Clean, Captions, Audio, Video, Timeline, Search, Deliverables
+- **Timeline write-back**: ExtendScript functions ocApplySequenceCuts, ocAddSequenceMarkers, ocApplyClipKeyframes, ocBatchRenameProjectItems, ocCreateSmartBins, ocAddNativeCaptionTrack write directly to the active Premiere sequence. Python routes return structured data; frontend JS calls evalScript() to apply it. Never call ExtendScript from Python — always via frontend bridge.
 - localStorage for settings persistence (`opencut_settings` key)
 
 ## Build & Run
@@ -94,9 +120,9 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.3.1**
-- All version strings: pyproject.toml, __init__.py, server.py banner, install.py, requirements.txt, index.html header + about, main.js header, style.css header
-- Use `python scripts/sync_version.py --set X.Y.Z` to update all at once
+- Current: **v1.5.0**
+- All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge
+- Use `python scripts/sync_version.py --set X.Y.Z` to update all at once (also manually update UXP manifest.json and UXP main.js — not yet covered by sync script)
 
 ## Gotchas
 - `subprocess.run` must use `_sp.run` (the alias) in route files
@@ -115,11 +141,21 @@
 - Event delegation for batch files, workflow steps, favorites — don't attach per-element listeners
 - DocumentFragment batching for DOM rebuilds (batch files, deps grid, favorites, workflow steps)
 - `FFmpegCmd` builder in helpers.py — use `.build()` for new FFmpeg commands in routes. Core modules use `run_ffmpeg(cmd, timeout=N)` directly.
-- Dependency checks live in `opencut/checks.py` — don't duplicate `check_X_available()` in route files
+- Dependency checks live in `opencut/checks.py` — don't duplicate `check_X_available()` in route files. New checks: check_color_match_available (cv2+numpy), check_auto_zoom_available (cv2), check_loudness_match_available (ffmpeg in PATH), check_footage_search_available (always True, stdlib)
 - **Consolidated helpers** — `run_ffmpeg()`, `ensure_package()`, `get_video_info()` live in `opencut/helpers.py`. All core modules import from there. Never define local `_run_ffmpeg`/`_ensure_package`/`_get_video_info` copies.
 - `ensure_package()` routes through `safe_pip_install()` from security.py — never bypass this with raw `subprocess.run(["pip", ...])` in core modules
 - `get_video_info()` includes format-duration fallback for containers where stream-level duration is unavailable
 - Deferred temp cleanup: `_schedule_temp_cleanup(path)` retries with exponential backoff on Windows
+- **LLMConfig is a dataclass, not a dict** — routes must instantiate `LLMConfig(provider=..., model=..., api_key=...)`, never pass `{"provider": ...}` dicts to core functions. Import pattern: try relative `..core.llm`, fallback absolute `opencut.core.llm`, guard with `if LLMConfig is not None`.
+- **Deliverables return dict, not string** — `generate_vfx_sheet/adr_list/music_cue_sheet/asset_list()` return `{"output": path, "rows": N}`. Routes use `isinstance(result, dict)` guard with `.get("output", fallback)`.
+- **Multicam result is a dict** — `generate_multicam_cuts()` returns `{"cuts": [...], "total_cuts": N, "speaker_to_track": {...}}`. Unpack with `result.get("cuts", [])`, not direct iteration.
+- **on_progress callbacks** — color_match_video, generate_zoom_keyframes, batch_loudness_match all accept `on_progress=None` callback (receives 0–100 int). Routes pass `_on_progress` from the job closure.
+- **Auto-zoom FFmpeg resolution** — zoompan filter uses dynamic `s={src_w}x{src_h}` from probe(), not hardcoded `s=hd1080`. Always probe source before building the filter string.
+- **footage_search file locking** — index writes use cross-platform `_FileLock` + `os.replace()` atomic swap. Never write the index JSON file directly; always use `save_index()`.
+- **LLM API key security** — `/settings/llm` GET masks key as `***{last4}`. POST preserves stored key if client echoes back a masked value (starts with `***`). Never log LLMConfig objects or api_key values.
+- **User preferences** — New setting files in `~/.opencut/`: llm_settings.json, footage_index_config.json, loudness_settings.json, color_profiles.json, multicam_config.json, auto_zoom_presets.json, chapter_defaults.json. Always use `load_X()` / `save_X()` wrappers from user_data.py.
+- **MCP server** — 8 new tools added (opencut_repeat_detect, opencut_chapters, opencut_footage_search, opencut_index_footage, opencut_color_match, opencut_loudness_match, opencut_auto_zoom, opencut_multicam_cuts). Filepath validation in handle_tool_call covers "file", "source", "reference" keys in addition to existing "filepath".
+- **Command palette** — 9 new entries at end of `_commandIndex` array (lines ~5162–5171). Tab values must match `data-nav` attributes in HTML.
 - **Never `git add -A`** — `installer/bin/`, `installer/obj/`, `installer/publish/` are build artifacts NOT in `.gitignore` (they're tracked in the repo). Use specific file paths when staging.
 - **Frozen builds** — `sys.executable` points to the exe, not Python. `safe_pip_install()` and `_setup_system_site_packages()` detect frozen state and find system Python from PATH instead.
 - **Ruff CI rules** — CI runs `ruff check opencut/ --select E,F,I --ignore E501`. Codebase is fully lint-clean as of v1.3.0. Use `# noqa: F401` for intentional lazy imports, `# noqa: E402` for delayed imports, `# noqa: F821` for closure-scoped forward refs.
@@ -174,6 +210,31 @@
 - Path traversal prevention on all file-accepting endpoints
 - Cancel All jobs endpoint
 - Thread-safe user data file access
+
+## v1.5.0 Features Added
+- **Repeated Take Detection** (`core/repeat_detect.py`) — Jaccard similarity sliding-window; detect_repeated_takes() returns {repeats, clean_ranges}; merge_repeat_ranges() for overlapping ranges
+- **YouTube Chapter Generation** (`core/chapter_gen.py`) — LLM-powered topic boundary detection; heuristic fallback on long pauses; outputs description_block ready to paste
+- **Footage Search** (`core/footage_search.py`) — BM25-lite JSON index; cross-platform atomic writes; index_file, search_footage, clear_index, get_index_stats
+- **Post-Production Deliverables** (`core/deliverables.py`) — VFX sheets, ADR lists, music cue sheets, asset lists as CSV; all return {output, rows}
+- **Color Match** (`core/color_match.py`) — YCbCr histogram matching with strength blending; on_progress callback; cv2/numpy optional
+- **Multicam Auto-Switching** (`core/multicam.py`) — diarization segments → cut list; auto_assign_speakers; merge_diarization_segments; pure Python
+- **Auto Zoom Keyframes** (`core/auto_zoom.py`) — Haar cascade face detection; 4 easing modes; on_progress callback; center-crop fallback; _ease() boundary-correct
+- **Loudness Match** (`core/loudness_match.py`) — FFmpeg loudnorm two-pass; measure_loudness parses stderr JSON; batch_loudness_match with on_progress
+- **NLP Command Parser** (`core/nlp_command.py`) — 19-entry COMMAND_MAP; keyword + LLM dispatch; extract_params_from_text
+- **Timeline Write-Back** (ExtendScript `index.jsx` lines 1315–2177) — 10 new ocXxx functions for direct sequence manipulation; ES3 compliant; all return JSON strings
+- **4 new Flask Blueprints** — timeline, search, deliverables, nlp
+- **New routes** — /audio/beat-markers, /audio/loudness-match, /captions/chapters, /captions/repeat-detect, /video/color-match, /video/auto-zoom, /video/multicam-cuts + full timeline/search/deliverables/nlp suites
+- **CEP panel** — 2 new tabs (Timeline, NLP), 12 new feature cards, LLM settings + Audio/Zoom Defaults in Settings tab, loadLlmSettings() on startup
+- **UXP Panel** (`extension/com.opencut.uxp/`) — full parallel implementation for Premiere Pro 25.6+; auto port-scan; PProBridge/BackendClient/JobPoller/UIController modules; 1523-line main.js
+- **8 new MCP tools** — repeat_detect, chapters, footage_search, index_footage, color_match, loudness_match, auto_zoom, multicam_cuts
+- **8 new CLI commands** — chapters, repeat-detect, search index/query, color-match, loudness-match, auto-zoom, deliverables, nlp
+- **9 command palette entries** — all new features searchable via Ctrl+K
+- **7 user preference groups** — LLM, footage index, loudness, color profiles, multicam, auto-zoom, chapters (load_X/save_X in user_data.py)
+- **14 new settings routes** — GET+POST pairs for llm, loudness-target, auto-zoom, chapters, multicam, footage-index
+- **6 new social presets** — Snapchat Story, Facebook Reel, Facebook Post, YouTube Long Form, Pinterest Video, Podcast MP3 (13 total)
+- **84 new tests** (`tests/test_new_modules.py`, 1064 lines) — 9 test classes, all mocked correctly against actual function signatures
+- **4 new dependency checks** in checks.py; 6 new entries in /system/dependencies dashboard
+- **Dynamic auto-zoom resolution** — zoompan filter uses probed source dimensions, not hardcoded hd1080
 
 ## v1.2.0 Reliability & DX Improvements
 - 100 MB request size limit (MAX_CONTENT_LENGTH + 413 handler)
