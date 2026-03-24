@@ -493,7 +493,7 @@ def chapters(file, provider, model, api_key, max_chapters, whisper_model, output
         progress.update(task, description=f"[green]Chapters generated ({elapsed:.1f}s)")
         progress.stop()
 
-    description_block = result.description_block
+    description_block = result.get("description_block", "") if isinstance(result, dict) else getattr(result, "description_block", "")
 
     if output:
         with open(output, "w", encoding="utf-8") as f:
@@ -546,11 +546,12 @@ def repeat_detect(file, threshold, model, output):
     ) as progress:
         task = progress.add_task("Analyzing repeated takes...", total=None)
         start_time = time.time()
-        repeats = detect_repeated_takes(segments, threshold=threshold)
+        result = detect_repeated_takes(segments, threshold=threshold)
         elapsed = time.time() - start_time
         progress.update(task, description=f"[green]Analysis complete ({elapsed:.1f}s)")
         progress.stop()
 
+    repeats = result.get("repeats", []) if isinstance(result, dict) else result
     console.print(f"\n[bold]Repeated takes found:[/bold] {len(repeats)}\n")
 
     if repeats:
@@ -596,7 +597,7 @@ def search_index(files, model):
 
     try:
         from .core.captions import transcribe_audio
-        from .core.search import index_files
+        from .core.footage_search import index_file
     except ImportError as e:
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
         console.print("Ensure opencut[search] extras are installed.")
@@ -618,7 +619,9 @@ def search_index(files, model):
     ) as progress:
         task = progress.add_task(f"Indexing {len(files)} file(s)...", total=None)
         start_time = time.time()
-        index_files(files, model=model)
+        for filepath in files:
+            segments = transcribe_audio(filepath, model=model)
+            index_file(filepath, segments)
         elapsed = time.time() - start_time
         progress.update(task, description=f"[green]Indexing complete ({elapsed:.1f}s)")
         progress.stop()
@@ -634,7 +637,7 @@ def search_query(query, top_k):
     print_banner()
 
     try:
-        from .core.search import query_index
+        from .core.footage_search import search_footage
     except ImportError as e:
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
         console.print("Ensure opencut[search] extras are installed.")
@@ -643,7 +646,7 @@ def search_query(query, top_k):
     console.print(f"\n[bold]Searching:[/bold] {query!r}")
     console.print(f"[dim]Top {top_k} results[/dim]\n")
 
-    results = query_index(query, top_k=top_k)
+    results = search_footage(query, top_k=top_k)
 
     if not results:
         console.print("[yellow]No results found. Have you indexed any files with [cyan]opencut search index[/cyan]?[/yellow]\n")
@@ -659,7 +662,7 @@ def search_query(query, top_k):
     for r in results:
         data = r if isinstance(r, dict) else vars(r)
         table.add_row(
-            os.path.basename(str(data.get('file', ''))),
+            os.path.basename(str(data.get('path', data.get('file', '')))),
             f"{data.get('start', 0):.2f}s",
             f"{data.get('end', 0):.2f}s",
             f"{data.get('score', 0):.3f}",
@@ -784,7 +787,7 @@ def auto_zoom(file, zoom_amount, easing, output_dir, apply):
     ) as progress:
         task = progress.add_task("Detecting faces and applying zoom...", total=None)
         start_time = time.time()
-        result = apply_auto_zoom(
+        apply_auto_zoom(
             file,
             zoom_amount=zoom_amount,
             easing=easing,

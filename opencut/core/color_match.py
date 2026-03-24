@@ -7,9 +7,16 @@ using histogram matching on each YCbCr channel.
 
 import logging
 import os
-import subprocess
 import tempfile
-from typing import List, Optional
+from typing import List
+
+try:
+    from ..helpers import run_ffmpeg
+except ImportError:
+    try:
+        from opencut.helpers import run_ffmpeg
+    except ImportError:
+        run_ffmpeg = None  # type: ignore
 
 logger = logging.getLogger("opencut")
 
@@ -155,7 +162,7 @@ def extract_color_stats(video_path: str, sample_frames: int = 5) -> dict:
 
     ycbcr_frames = [cv2.cvtColor(f, cv2.COLOR_BGR2YCrCb) for f in bgr_frames]
 
-    channel_names = ["Y", "Cb", "Cr"]
+    channel_names = ["Y", "Cr", "Cb"]
     mean_vals = []
     std_vals = []
     histograms = {}
@@ -250,6 +257,13 @@ def color_match_video(
 
     fourcc = cv2.VideoWriter_fourcc(*"mp4v")
     writer = cv2.VideoWriter(temp_video, fourcc, fps, (width, height))
+    if not writer.isOpened():
+        cap.release()
+        try:
+            os.unlink(temp_video)
+        except OSError:
+            pass
+        raise RuntimeError("Failed to create VideoWriter for color match output")
 
     try:
         frame_count = 0
@@ -281,6 +295,8 @@ def color_match_video(
                     pct = int(frame_count / total_frames * 100)
                     on_progress(pct)
 
+        if on_progress:
+            on_progress(100)
     finally:
         cap.release()
         writer.release()
@@ -302,11 +318,13 @@ def color_match_video(
     ]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
+        if run_ffmpeg is not None:
+            result = run_ffmpeg(cmd, timeout=3600)
+        else:
+            import subprocess as _sp
+            result = _sp.run(cmd, capture_output=True, text=True, timeout=3600)
     except FileNotFoundError:
         raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
-    except subprocess.TimeoutExpired:
-        raise RuntimeError("FFmpeg timed out merging audio into color-matched video")
     finally:
         try:
             os.unlink(temp_video)
