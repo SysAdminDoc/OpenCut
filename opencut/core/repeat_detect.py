@@ -7,9 +7,8 @@ Falls back to segment-level similarity if word timestamps unavailable.
 """
 
 import logging
-import re
 import string
-from typing import List, Optional
+from typing import List
 
 logger = logging.getLogger("opencut")
 
