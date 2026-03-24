@@ -284,7 +284,7 @@ def save_llm_settings_route():
         from ..user_data import load_llm_settings, save_llm_settings
     except ImportError:
         from opencut.user_data import load_llm_settings, save_llm_settings
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True)
     current = load_llm_settings()
     # Don't overwrite key if masked value sent back
     if data.get("api_key", "").startswith("***"):
@@ -314,7 +314,7 @@ def save_footage_index_config_route():
         from ..user_data import load_footage_index_config, save_footage_index_config
     except ImportError:
         from opencut.user_data import load_footage_index_config, save_footage_index_config
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True)
     config = load_footage_index_config()
     config.update({k: v for k, v in data.items() if k in config})
     save_footage_index_config(config)
@@ -341,7 +341,7 @@ def save_loudness_target_route():
         from ..user_data import load_loudness_target, save_loudness_target
     except ImportError:
         from opencut.user_data import load_loudness_target, save_loudness_target
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True)
     settings = load_loudness_target()
     settings.update({k: v for k, v in data.items() if k in settings})
     save_loudness_target(settings)
@@ -368,7 +368,7 @@ def save_multicam_config_route():
         from ..user_data import load_multicam_config, save_multicam_config
     except ImportError:
         from opencut.user_data import load_multicam_config, save_multicam_config
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True)
     config = load_multicam_config()
     config.update({k: v for k, v in data.items() if k in config})
     save_multicam_config(config)
@@ -395,7 +395,7 @@ def save_auto_zoom_presets_route():
         from ..user_data import load_auto_zoom_presets, save_auto_zoom_presets
     except ImportError:
         from opencut.user_data import load_auto_zoom_presets, save_auto_zoom_presets
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True)
     presets = load_auto_zoom_presets()
     presets.update({k: v for k, v in data.items() if k in presets})
     save_auto_zoom_presets(presets)
@@ -422,7 +422,7 @@ def save_chapter_defaults_route():
         from ..user_data import load_chapter_defaults, save_chapter_defaults
     except ImportError:
         from opencut.user_data import load_chapter_defaults, save_chapter_defaults
-    data = request.get_json(silent=True) or {}
+    data = request.get_json(force=True)
     defaults = load_chapter_defaults()
     defaults.update({k: v for k, v in data.items() if k in defaults})
     save_chapter_defaults(defaults)

@@ -354,6 +354,8 @@ def _validate_mcp_filepath(args, key="filepath"):
         return False
     if ".." in path or "\x00" in path:
         return False
+    if path.startswith("\\\\") or path.startswith("//"):
+        return False  # Reject UNC paths
     return True
 
 
@@ -362,10 +364,17 @@ def handle_tool_call(tool_name, arguments):
     if tool_name not in _TOOL_ROUTES:
         return {"error": f"Unknown tool: {tool_name}"}
 
-    # Validate filepath arguments at MCP layer
+    # Validate filepath arguments at MCP layer (scalar keys)
     for key in ("filepath", "style_image", "voice_ref", "file", "source", "reference"):
         if key in arguments and not _validate_mcp_filepath(arguments, key):
             return {"error": f"Invalid {key}: path traversal or null bytes detected"}
+
+    # Validate filepath arrays (e.g. "files" in index_footage / loudness_match)
+    for key in ("files",):
+        if key in arguments and isinstance(arguments[key], list):
+            for i, item in enumerate(arguments[key]):
+                if not isinstance(item, str) or ".." in item or "\x00" in item or item.startswith("\\\\") or item.startswith("//"):
+                    return {"error": f"Invalid path in {key}[{i}]: path traversal or UNC path detected"}
 
     method, path = _TOOL_ROUTES[tool_name]
 

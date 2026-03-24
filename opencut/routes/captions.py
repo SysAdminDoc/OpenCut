@@ -1396,10 +1396,19 @@ def captions_chapters():
     filepath = data.get("file", "").strip()
     segments = data.get("segments", None)
     llm_provider = data.get("llm_provider", "ollama")
+    if llm_provider not in ("ollama", "openai", "anthropic"):
+        llm_provider = "ollama"
     llm_model = data.get("llm_model", "llama3")
     api_key = data.get("api_key", "")
     max_chapters = safe_int(data.get("max_chapters", 15), 15, min_val=1, max_val=100)
     transcribe_model = data.get("model", "base")
+
+    # Validate segments if provided directly
+    if segments is not None:
+        if not isinstance(segments, list):
+            return jsonify({"error": "segments must be a list"}), 400
+        if len(segments) > 50000:
+            return jsonify({"error": "Too many segments (max 50000)"}), 400
 
     if filepath:
         try:

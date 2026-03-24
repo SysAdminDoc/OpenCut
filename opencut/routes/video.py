@@ -3921,18 +3921,20 @@ def video_auto_zoom():
                 out_path = os.path.join(output_dir, f"{base_name}_autozoom{ext}")
 
                 # Build FFmpeg zoompan filter from keyframes
-                if keyframes:
-                    import subprocess as _sp2
+                kf_data = keyframes.get("keyframes", []) if isinstance(keyframes, dict) else keyframes if isinstance(keyframes, list) else []
+                if kf_data:
                     # zoompan: z='zoom_expr':x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'
                     zoom_val = zoom_amount
-                    # Get source dimensions
+                    # Get source dimensions via probe
+                    src_w, src_h = 1920, 1080
                     try:
-                        from opencut.utils.media import probe as _probe_media
-                    except ImportError:
-                        _probe_media = None
-                    probe = _probe_media(filepath) if _probe_media else None
-                    src_w = probe.get("width", 1920) if probe else 1920
-                    src_h = probe.get("height", 1080) if probe else 1080
+                        from opencut.helpers import get_video_info
+                        info = get_video_info(filepath)
+                        if info and info.get("width"):
+                            src_w = int(info["width"])
+                            src_h = int(info["height"])
+                    except Exception:
+                        pass
                     zoompan_filter = (
                         f"zoompan=z='min(zoom+0.0015,{zoom_val})'"
                         f":x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)'"
@@ -3944,13 +3946,13 @@ def video_auto_zoom():
                         "-c:a", "copy",
                         out_path,
                     ]
-                    result = _sp2.run(cmd, capture_output=True, timeout=600)
-                    if result.returncode == 0:
+                    ffmpeg_result = _sp.run(cmd, capture_output=True, timeout=600)
+                    if ffmpeg_result.returncode == 0:
                         output_path = out_path
                     else:
-                        logger.warning("FFmpeg auto-zoom failed: %s", result.stderr.decode(errors="replace")[:200])
+                        logger.warning("FFmpeg auto-zoom failed: %s", ffmpeg_result.stderr.decode(errors="replace")[:200])
 
-            kf_list = keyframes if isinstance(keyframes, list) else []
+            kf_list = keyframes.get("keyframes", []) if isinstance(keyframes, dict) else keyframes if isinstance(keyframes, list) else []
             result_dict = {"keyframes": kf_list}
             if output_path:
                 result_dict["output"] = output_path
@@ -3985,6 +3987,13 @@ def video_multicam_cuts():
     speaker_map = data.get("speaker_map", None)
     min_cut_duration = safe_float(data.get("min_cut_duration", 1.0), 1.0, min_val=0.1, max_val=60.0)
 
+    # Validate segments if provided directly
+    if segments is not None:
+        if not isinstance(segments, list):
+            return jsonify({"error": "segments must be a list"}), 400
+        if len(segments) > 50000:
+            return jsonify({"error": "Too many segments (max 50000)"}), 400
+
     # Need either segments or a diarization file
     if not segments and not diarization_file:
         return jsonify({"error": "diarization_file or segments required"}), 400
@@ -3999,6 +4008,9 @@ def video_multicam_cuts():
     effective_segments = segments
     if effective_segments is None and diarization_file:
         try:
+            file_size = os.path.getsize(diarization_file)
+            if file_size > 50_000_000:
+                return jsonify({"error": "Diarization file too large (max 50 MB)"}), 400
             import json as _json
             with open(diarization_file, encoding="utf-8") as _f:
                 effective_segments = _json.load(_f)
