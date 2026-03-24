@@ -34,14 +34,32 @@ search_bp = Blueprint("search", __name__)
 @search_bp.route("/search/index", methods=["POST"])
 @require_csrf
 def search_index():
-    """Transcribe and index a list of files for footage search."""
+    """Transcribe and index a list of files (or scan a folder) for footage search."""
     data = request.get_json(force=True)
     files = data.get("files", [])
+    folder = data.get("folder", "").strip()
     model = data.get("model", "base")
     language = data.get("language", None)
 
+    # If folder provided, scan for media files
+    if folder and (not files or not isinstance(files, list)):
+        from opencut.security import validate_path
+        try:
+            folder = validate_path(folder)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+        if not os.path.isdir(folder):
+            return jsonify({"error": "folder is not a directory"}), 400
+        _MEDIA_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v", ".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"}
+        files = []
+        for fname in os.listdir(folder):
+            if os.path.splitext(fname)[1].lower() in _MEDIA_EXTS:
+                files.append(os.path.join(folder, fname))
+        if not files:
+            return jsonify({"error": "No media files found in folder"}), 400
+
     if not isinstance(files, list) or not files:
-        return jsonify({"error": "files must be a non-empty list"}), 400
+        return jsonify({"error": "files or folder required"}), 400
 
     if len(files) > 100:
         return jsonify({"error": "Too many files (max 100)"}), 400
