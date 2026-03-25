@@ -588,9 +588,10 @@ function applyEditsToTimeline(segmentsJson, mediaPath) {
         var seg = segments[i];
         var segStart = Number(seg.start);
         var segEnd = Number(seg.end);
-        if (isNaN(segStart) || isNaN(segEnd)) continue;
+        if (isNaN(segStart) || isNaN(segEnd) || segStart < 0) continue;
         var segDuration = segEnd - segStart;
 
+        // Skip zero-length, negative, or near-zero segments
         if (segDuration <= 0.01) continue;
 
         // Set the project item's in/out points to this segment
@@ -1610,10 +1611,11 @@ function ocApplySequenceCuts(cutsJSON) {
 
         for (var ci = 0; ci < cuts.length; ci++) {
             var cut = cuts[ci];
-            var cutStart = cut.start;
-            var cutEnd = cut.end;
+            var cutStart = Number(cut.start);
+            var cutEnd = Number(cut.end);
 
-            if (cutStart >= cutEnd) continue;
+            // Validate numeric cut range before deleting anything
+            if (isNaN(cutStart) || isNaN(cutEnd) || cutStart >= cutEnd) continue;
 
             // Iterate video tracks
             for (var vt = 0; vt < seq.videoTracks.numTracks; vt++) {
@@ -1688,6 +1690,12 @@ function ocApplyClipKeyframes(trackIndex, clipStartTime, keyframesJSON) {
             return JSON.stringify({ error: "Invalid JSON: " + e.toString() });
         }
 
+        trackIndex = Number(trackIndex) || 0;
+        clipStartTime = Number(clipStartTime);
+        if (isNaN(clipStartTime)) {
+            return JSON.stringify({ error: "Invalid clipStartTime" });
+        }
+
         var vTrack = seq.videoTracks[trackIndex];
         if (!vTrack) {
             return JSON.stringify({ error: "Video track " + trackIndex + " not found" });
@@ -1698,8 +1706,8 @@ function ocApplyClipKeyframes(trackIndex, clipStartTime, keyframesJSON) {
         for (var ci = 0; ci < vTrack.clips.numItems; ci++) {
             try {
                 var c = vTrack.clips[ci];
-                var cs = c.start ? c.start.seconds : -9999;
-                if (Math.abs(cs - clipStartTime) < 0.1) {
+                var cs = (c.start && c.start.seconds !== undefined) ? Number(c.start.seconds) : NaN;
+                if (!isNaN(cs) && Math.abs(cs - clipStartTime) < 0.1) {
                     targetClip = c;
                     break;
                 }
@@ -1814,6 +1822,10 @@ function ocBatchRenameProjectItems(renamesJSON) {
         for (var i = 0; i < renames.length; i++) {
             var rename = renames[i];
             try {
+                if (!rename.nodeId || typeof rename.newName !== "string" || rename.newName.length === 0) {
+                    errors.push("Rename " + i + ": missing nodeId or newName");
+                    continue;
+                }
                 var found = _findByNodeId(app.project.rootItem, rename.nodeId, 0);
                 if (found) {
                     found.name = rename.newName;
@@ -2149,6 +2161,15 @@ function ocExportSequenceRange(outputPath, startSeconds, endSeconds) {
         if (!seq) {
             return JSON.stringify({ error: "No active sequence" });
         }
+
+        // Validate time parameters
+        var start = Number(startSeconds);
+        var end = Number(endSeconds);
+        if (isNaN(start) || isNaN(end) || start < 0 || end <= start) {
+            return JSON.stringify({ error: "Invalid time range: start=" + startSeconds + " end=" + endSeconds });
+        }
+        startSeconds = start;
+        endSeconds = end;
 
         // Set in/out points on the sequence — abort if either fails
         try {
