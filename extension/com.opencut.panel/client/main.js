@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.7.1
+   OpenCut CEP Panel - Main Controller v1.7.2
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -4144,6 +4144,10 @@
         var toast = document.createElement("div");
         toast.className = "toast-notification " + (type || "info");
         toast.textContent = message;
+        // Stack toasts upward from the bottom
+        var liveToasts = document.querySelectorAll(".toast-notification");
+        var offset = 48 + liveToasts.length * 44;
+        toast.style.bottom = offset + "px";
         document.body.appendChild(toast);
         setTimeout(function () {
             toast.classList.add("fade-out");
