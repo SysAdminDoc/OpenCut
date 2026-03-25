@@ -120,7 +120,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.7.1**
+- Current: **v1.7.2**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 18 targets at once (including UXP files)
 
@@ -165,6 +165,7 @@
 - **CSS `hidden` class vs `style.display`** — Setting `style.display=""` does NOT override a `display:none` from a CSS class. Use `classList.toggle("hidden", ...)` or `classList.remove("hidden")` instead.
 - **Workflow preset steps** — Each step must be a self-contained `{endpoint, payload, label}` object. Do NOT rely on `pendingTranslate`/`pendingBurnin` flags for chaining — those only work for manual button clicks, not workflow presets.
 - **Duplicate HTML `class` attributes** — HTML parser silently discards the second `class=` attribute. Always merge into a single `class="cls1 cls2"`. Grep with `class=".+" class="` to detect.
+- **pip `--target` fallback** — `safe_pip_install()` has 3 strategies: normal → `--user` → `--target ~/.opencut/packages`. The `--target` dir is created at install time and added to `sys.path` both in security.py (immediately) and server.py (on startup). Packages installed via `--target` are importable without restart.
 - **`cancelJob()` order** — Close SSE/poll streams BEFORE nulling `currentJob` to prevent in-flight events from triggering `onJobDone` after cancel.
 - **Never `git add -A`** — `installer/bin/`, `installer/obj/`, `installer/publish/` are build artifacts NOT in `.gitignore` (they're tracked in the repo). Use specific file paths when staging.
 - **Frozen builds** — `sys.executable` points to the exe, not Python. `safe_pip_install()` and `_setup_system_site_packages()` detect frozen state and find system Python from PATH instead.
@@ -803,3 +804,4 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **export_video no timeout** — `proc.wait()` had no timeout; hung FFmpeg process blocked the thread forever. Added scaled timeout with kill.
 - **export_video partial file leak** — Failed FFmpeg runs left corrupt partial output files on disk. Added cleanup on non-zero exit.
 - **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.
+- **pip install permission denied** — `safe_pip_install()` failed on Windows when both normal and `--user` installs hit Errno 13 (Microsoft Store Python, OneDrive-synced user dirs, restrictive ACLs). Added `--target ~/.opencut/packages` as third fallback strategy. server.py adds `~/.opencut/packages` to `sys.path` at startup.
