@@ -319,10 +319,14 @@ def color_match_video(
 
     try:
         if run_ffmpeg is not None:
-            result = run_ffmpeg(cmd, timeout=3600)
+            # run_ffmpeg raises RuntimeError on non-zero exit, returns stderr str
+            run_ffmpeg(cmd, timeout=3600)
         else:
             import subprocess as _sp
             result = _sp.run(cmd, capture_output=True, text=True, timeout=3600)
+            if result.returncode != 0:
+                stderr = result.stderr[-500:] if result.stderr else "unknown error"
+                raise RuntimeError(f"FFmpeg audio merge failed: {stderr}")
     except FileNotFoundError:
         raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
     finally:
@@ -330,10 +334,6 @@ def color_match_video(
             os.unlink(temp_video)
         except OSError:
             pass
-
-    if result.returncode != 0:
-        stderr = result.stderr[-500:] if result.stderr else "unknown error"
-        raise RuntimeError(f"FFmpeg audio merge failed: {stderr}")
 
     logger.info("Color match complete: %s", output_path)
     return output_path
