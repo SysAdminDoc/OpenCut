@@ -683,7 +683,8 @@ def export_video():
             # Run FFmpeg with progress monitoring
             # Use separate stderr pipe so error diagnostics aren't lost
             proc = _sp.Popen(
-                cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True
+                cmd + ["-progress", "pipe:1"],
+                stdout=_sp.PIPE, stderr=_sp.PIPE, text=True
             )
             # Drain stderr in background to prevent pipe deadlock
             _stderr_chunks = []
@@ -730,12 +731,24 @@ def export_video():
                             pass
                     return
 
-            proc.wait()
+            # Timeout: 2x expected duration + 5min base, capped at 4 hours
+            wait_timeout = min(14400, max(300, int(total_kept * 2) + 300)) if total_kept > 0 else 7200
+            try:
+                proc.wait(timeout=wait_timeout)
+            except Exception:
+                proc.kill()
+                proc.wait(timeout=10)
             _stderr_thread.join(timeout=5)
             _unregister_job_process(job_id)
 
             if proc.returncode != 0:
                 stderr_tail = "".join(_stderr_chunks[-20:]).strip()
+                # Clean up partial/corrupt output file
+                if os.path.exists(output_path):
+                    try:
+                        os.unlink(output_path)
+                    except OSError:
+                        pass
                 _update_job(
                     job_id, status="error",
                     error=f"FFmpeg exited with code {proc.returncode}: {stderr_tail[:500]}",
@@ -2874,13 +2887,20 @@ def video_reframe():
             if probe_result.returncode != 0 or not probe_result.stdout.strip():
                 _update_job(job_id, status="error", error="ffprobe failed on video file")
                 return
-            probe_data = json.loads(probe_result.stdout)
+            try:
+                probe_data = json.loads(probe_result.stdout)
+            except (json.JSONDecodeError, ValueError):
+                _update_job(job_id, status="error", error="Could not read video metadata")
+                return
             streams = probe_data.get("streams", [])
             if not streams:
                 _update_job(job_id, status="error", error="No video stream found")
                 return
-            src_w = int(streams[0]["width"])
-            src_h = int(streams[0]["height"])
+            src_w = int(streams[0].get("width", 0))
+            src_h = int(streams[0].get("height", 0))
+            if src_w <= 0 or src_h <= 0:
+                _update_job(job_id, status="error", error="Could not determine video dimensions")
+                return
 
             _update_job(job_id, progress=10, message=f"Source: {src_w}x{src_h} -> Target: {target_w}x{target_h}")
 

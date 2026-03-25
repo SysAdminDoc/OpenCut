@@ -311,11 +311,21 @@ def auto_edit(
     json_output = os.path.join(work_dir, "auto_edit_result.json")
 
     try:
-        return _run_auto_edit(
+        result = _run_auto_edit(
             input_path, method, threshold, margin, min_clip_length,
             export_xml, work_dir, json_output, total_duration, source_fps,
             on_progress,
         )
+        # If XML was exported to temp_dir, copy it to a persistent location
+        # so the caller can access it after temp_dir is cleaned up
+        if temp_dir and result.xml_path and result.xml_path.startswith(temp_dir):
+            import shutil as _sh
+            persist_dir = os.path.join(tempfile.gettempdir(), "opencut_autoedit_output")
+            os.makedirs(persist_dir, exist_ok=True)
+            persist_path = os.path.join(persist_dir, os.path.basename(result.xml_path))
+            _sh.copy2(result.xml_path, persist_path)
+            result.xml_path = persist_path
+        return result
     finally:
         if temp_dir and os.path.isdir(temp_dir):
             shutil.rmtree(temp_dir, ignore_errors=True)

@@ -813,7 +813,7 @@
                         <div class="result-area hidden" id="repeatResults">
                             <div class="hint" id="repeatSummary"></div>
                             <div id="repeatList" class="scrollable-sm mt-xs"></div>
-                            <button type="button" class="btn-primary" id="applyRepeatCutsBtn" class="mt-sm">Apply Cuts to Timeline</button>
+                            <button type="button" class="btn-primary mt-sm" id="applyRepeatCutsBtn">Apply Cuts to Timeline</button>
                         </div>
                     </section>
                 </div>
@@ -2484,7 +2484,7 @@
                         <div class="card-header"><div class="card-title">Deliverables</div></div>
                         <p class="card-desc">Generate post-production documents (VFX sheet, ADR list, music cue sheet, asset list) from the active sequence.</p>
                         <button type="button" class="btn-outline btn-sm" id="loadSeqInfoBtn">Load Sequence Info</button>
-                        <div class="hint hidden" id="seqInfoStatus" class="mt-xs"></div>
+                        <div class="hint hidden mt-xs" id="seqInfoStatus"></div>
                         <div class="form-group mt-sm">
                             <label>Output Directory</label>
                             <div class="input-row">
@@ -2498,7 +2498,7 @@
                             <button type="button" class="btn-sm btn-secondary" id="genMusicCueBtn" disabled>Music Cue Sheet (CSV)</button>
                             <button type="button" class="btn-sm btn-secondary" id="genAssetListBtn" disabled>Asset List (CSV)</button>
                         </div>
-                        <div class="result-area hidden" id="deliverablesResult" class="mt-sm">
+                        <div class="result-area hidden mt-sm" id="deliverablesResult">
                             <div class="hint" id="deliverablesFilePath"></div>
                             <button type="button" class="btn-sm" id="openDeliverablesFolder">Open Folder</button>
                         </div>
@@ -2522,7 +2522,7 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title">Apply Cuts to Timeline</div></div>
                         <p class="card-desc">Apply silence removal or repeat detection cuts directly to the active Premiere sequence.</p>
-                        <div class="hint" id="tlWritebackStatus" class="mb-sm">No cuts loaded. Run Silence Removal or Repeat Detection first.</div>
+                        <div class="hint mb-sm" id="tlWritebackStatus">No cuts loaded. Run Silence Removal or Repeat Detection first.</div>
                         <button type="button" class="btn-primary" id="applySeqCutsBtn">Apply Last Cuts to Timeline</button>
                     </section>
                 </div>
@@ -2544,7 +2544,7 @@
                         <button type="button" class="btn-primary" id="runBeatMarkersBtn" disabled>Detect Beats</button>
                         <div class="result-area hidden" id="beatMarkersResult">
                             <div class="hint" id="beatMarkersSummary"></div>
-                            <button type="button" class="btn-sm btn-secondary" id="addBeatMarkersBtn" class="mt-xs">Add Markers to Sequence</button>
+                            <button type="button" class="btn-sm btn-secondary mt-xs" id="addBeatMarkersBtn">Add Markers to Sequence</button>
                         </div>
                     </section>
                 </div>
@@ -2569,7 +2569,7 @@
                         <button type="button" class="btn-primary" id="runMulticamBtn" disabled>Generate Cuts</button>
                         <div class="result-area hidden" id="multicamResult">
                             <div class="hint" id="multicamSummary"></div>
-                            <button type="button" class="btn-sm btn-secondary" id="applyMulticamCutsBtn" class="mt-xs">Apply Cuts to Sequence</button>
+                            <button type="button" class="btn-sm btn-secondary mt-xs" id="applyMulticamCutsBtn">Apply Cuts to Sequence</button>
                         </div>
                     </section>
                 </div>
@@ -2591,7 +2591,7 @@
                             <button type="button" class="btn-primary btn-sm" id="exportMarkedClipsBtn" disabled>Export All Marked Clips</button>
                         </div>
                         <div class="result-area hidden scrollable-sm mt-sm" id="markerExportList"></div>
-                        <div class="result-area hidden" id="markerExportResult" class="mt-xs">
+                        <div class="result-area hidden mt-xs" id="markerExportResult">
                             <div class="hint" id="markerExportSummary"></div>
                         </div>
                     </section>
@@ -2626,7 +2626,7 @@
                         <p class="card-desc">Automatically organise project items into bins based on custom rules.</p>
                         <div id="smartBinRules" class="mb-sm"></div>
                         <button type="button" class="btn-sm btn-outline" id="addBinRuleBtn">+ Add Rule</button>
-                        <button type="button" class="btn-primary" id="createSmartBinsBtn" class="mt-md">Create Bins</button>
+                        <button type="button" class="btn-primary mt-md" id="createSmartBinsBtn">Create Bins</button>
                     </section>
                 </div>
             </div>
@@ -2643,7 +2643,7 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title">Search Footage Library</div></div>
                         <p class="card-desc">Index and semantically search all project clips by transcript content.</p>
-                        <div class="hint" id="searchIndexStats" class="mb-sm">Index not loaded.</div>
+                        <div class="hint mb-sm" id="searchIndexStats">Index not loaded.</div>
                         <button type="button" class="btn-outline btn-sm" id="indexAllClipsBtn">Index All Project Clips</button>
                         <div class="border-t"></div>
                         <div class="form-group">
@@ -2677,7 +2677,7 @@
                             </select>
                         </div>
                         <button type="button" class="btn-primary" id="runNlpCommandBtn">Run Command</button>
-                        <div class="result-area hidden" id="nlpCommandResult" class="mt-sm">
+                        <div class="result-area hidden mt-sm" id="nlpCommandResult">
                             <div class="hint" id="nlpCommandRoute"></div>
                             <div class="hint mt-xs" id="nlpCommandConf"></div>
                             <div id="nlpCommandOutput" class="text-sm mt-xs"></div>
@@ -2947,7 +2947,7 @@
                     <div class="card-header"><div class="card-title">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.7.0</span>
+                        <span class="settings-value">1.7.1</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>

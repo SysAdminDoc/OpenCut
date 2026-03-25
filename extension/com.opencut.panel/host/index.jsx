@@ -84,7 +84,7 @@ function getProjectMedia() {
 }
 
 function _walkProjectItems(parent, items, depth) {
-    if (depth > 10) return;
+    if (depth > 20) return;
     var numChildren = 0;
     try { numChildren = parent.children.numItems; } catch (e) { return; }
 
@@ -817,7 +817,8 @@ function importCaptions(captionPath) {
         success: true,
         imported: true,
         addedToTimeline: addedToTimeline,
-        message: timelineMessage
+        message: timelineMessage,
+        warning: addedToTimeline ? "" : "Captions imported to project panel but not yet on the timeline."
     });
 }
 
@@ -1408,15 +1409,14 @@ function ocGetSequenceInfo() {
             }
         } catch (e) { _ocLog("ocGetSequenceInfo audioTracks error: " + e.toString()); }
 
-        // Markers
+        // Markers — use getFirstMarker/getNextMarker iterator (indexed access is unreliable)
         var markers = [];
         try {
             var seqMarkers = seq.markers;
-            if (seqMarkers) {
-                var numM = seqMarkers.numMarkers;
-                for (var mi = 0; mi < numM; mi++) {
+            if (seqMarkers && seqMarkers.numMarkers > 0) {
+                var m = seqMarkers.getFirstMarker();
+                while (m) {
                     try {
-                        var m = seqMarkers[mi];
                         var mTime = 0;
                         try { mTime = m.time ? m.time.seconds : 0; } catch (e) {}
                         var mName = "";
@@ -1432,6 +1432,7 @@ function ocGetSequenceInfo() {
                             color: mColor
                         });
                     } catch (e) {}
+                    try { m = seqMarkers.getNextMarker(m); } catch (e) { m = null; }
                 }
             }
         } catch (e) { _ocLog("ocGetSequenceInfo markers error: " + e.toString()); }
@@ -1478,10 +1479,18 @@ function ocAddSequenceMarkers(markersJSON) {
         var added = 0;
         var errors = [];
 
+        var seqDuration = 0;
+        try { seqDuration = seq.end ? Number(seq.end.seconds) : 0; } catch (e) {}
+
         for (var i = 0; i < items.length; i++) {
             var item = items[i];
             try {
-                var markerTime = item.time || 0;
+                var markerTime = Number(item.time) || 0;
+                if (markerTime < 0) markerTime = 0;
+                if (seqDuration > 0 && markerTime > seqDuration) {
+                    errors.push("Marker " + i + " time " + markerTime + "s exceeds sequence duration " + seqDuration + "s");
+                    continue;
+                }
                 var marker = seq.markers.createMarker(markerTime);
 
                 try { marker.name = item.name || ""; } catch (e) {}
@@ -1542,29 +1551,33 @@ function ocGetSequenceMarkers() {
         var numM = 0;
         try { numM = seqMarkers.numMarkers; } catch (e) {}
 
-        for (var i = 0; i < numM; i++) {
-            try {
-                var m = seqMarkers[i];
-                var mTime = 0;
-                try { mTime = m.time ? m.time.seconds : 0; } catch (e) {}
-                var mName = "";
-                try { mName = m.name || m.comments || ""; } catch (e) {}
-                var mType = "";
-                try { mType = m.type !== undefined ? String(m.type) : ""; } catch (e) {}
-                var mDuration = 0;
-                try { mDuration = m.duration ? m.duration.seconds : 0; } catch (e) {}
-                var mColor = 0;
-                try { mColor = m.colorByteArray ? m.colorByteArray[0] : 0; } catch (e) {}
+        if (numM > 0) {
+            var m = null;
+            try { m = seqMarkers.getFirstMarker(); } catch (e) {}
+            while (m) {
+                try {
+                    var mTime = 0;
+                    try { mTime = m.time ? m.time.seconds : 0; } catch (e) {}
+                    var mName = "";
+                    try { mName = m.name || m.comments || ""; } catch (e) {}
+                    var mType = "";
+                    try { mType = m.type !== undefined ? String(m.type) : ""; } catch (e) {}
+                    var mDuration = 0;
+                    try { mDuration = m.duration ? m.duration.seconds : 0; } catch (e) {}
+                    var mColor = 0;
+                    try { mColor = m.colorByteArray ? m.colorByteArray[0] : 0; } catch (e) {}
 
-                result.push({
-                    time: mTime,
-                    name: mName,
-                    type: mType,
-                    duration: mDuration,
-                    color: mColor
-                });
-            } catch (e) {
-                _ocLog("ocGetSequenceMarkers item " + i + " error: " + e.toString());
+                    result.push({
+                        time: mTime,
+                        name: mName,
+                        type: mType,
+                        duration: mDuration,
+                        color: mColor
+                    });
+                } catch (e) {
+                    _ocLog("ocGetSequenceMarkers item error: " + e.toString());
+                }
+                try { m = seqMarkers.getNextMarker(m); } catch (e) { m = null; }
             }
         }
 
@@ -1603,6 +1616,11 @@ function ocApplySequenceCuts(cutsJSON) {
             return JSON.stringify({ applied: 0, errors: [] });
         }
 
+        // Coerce cut times to numbers before sorting so NaN doesn't corrupt sort order
+        for (var si = 0; si < cuts.length; si++) {
+            cuts[si].start = Number(cuts[si].start) || 0;
+            cuts[si].end = Number(cuts[si].end) || 0;
+        }
         // Sort cuts in reverse order so earlier ripple deletes don't shift later timecodes
         cuts.sort(function (a, b) { return b.start - a.start; });
 
@@ -1624,10 +1642,10 @@ function ocApplySequenceCuts(cutsJSON) {
                 for (var vc = vTrack.clips.numItems - 1; vc >= 0; vc--) {
                     try {
                         var vClip = vTrack.clips[vc];
-                        var clipStart = vClip.start ? vClip.start.seconds : 0;
-                        var clipEnd = vClip.end ? vClip.end.seconds : 0;
-                        // Only remove clips fully contained within the cut range
-                        if (clipStart >= cutStart && clipEnd <= cutEnd) {
+                        var clipStart = vClip.start ? Number(vClip.start.seconds) : 0;
+                        var clipEnd = vClip.end ? Number(vClip.end.seconds) : 0;
+                        // Remove clips fully contained within cut range (with 0.01s tolerance for floating-point)
+                        if (clipStart >= cutStart - 0.01 && clipEnd <= cutEnd + 0.01) {
                             vClip.remove(false, true);
                             applied++;
                         }
@@ -1644,9 +1662,9 @@ function ocApplySequenceCuts(cutsJSON) {
                 for (var ac = aTrack.clips.numItems - 1; ac >= 0; ac--) {
                     try {
                         var aClip = aTrack.clips[ac];
-                        var aClipStart = aClip.start ? aClip.start.seconds : 0;
-                        var aClipEnd = aClip.end ? aClip.end.seconds : 0;
-                        if (aClipStart >= cutStart && aClipEnd <= cutEnd) {
+                        var aClipStart = aClip.start ? Number(aClip.start.seconds) : 0;
+                        var aClipEnd = aClip.end ? Number(aClip.end.seconds) : 0;
+                        if (aClipStart >= cutStart - 0.01 && aClipEnd <= cutEnd + 0.01) {
                             aClip.remove(false, true);
                             applied++;
                         }
@@ -1769,7 +1787,7 @@ function ocApplyClipKeyframes(trackIndex, clipStartTime, keyframesJSON) {
         // Apply keyframes
         for (var ki = 0; ki < keyframes.length; ki++) {
             var kf = keyframes[ki];
-            var kfTime = kf.time || 0;
+            var kfTime = Number(kf.time) || 0;
 
             if (scaleProp) {
                 try {
@@ -2062,10 +2080,16 @@ function ocAddNativeCaptionTrack(srtJSON) {
         }
 
         try {
+            var srtIndex = 0;
             for (var i = 0; i < segments.length; i++) {
                 var seg = segments[i];
-                tempFile.writeln(String(i + 1));
-                tempFile.writeln(_secondsToSrtTime(seg.start || 0) + " --> " + _secondsToSrtTime(seg.end || 0));
+                var segS = Number(seg.start);
+                var segE = Number(seg.end);
+                // Skip invalid segments
+                if (isNaN(segS) || isNaN(segE) || segS < 0 || segE <= segS) continue;
+                srtIndex++;
+                tempFile.writeln(String(srtIndex));
+                tempFile.writeln(_secondsToSrtTime(segS) + " --> " + _secondsToSrtTime(segE));
                 tempFile.writeln(seg.text || "");
                 tempFile.writeln("");
             }
@@ -2085,7 +2109,7 @@ function ocAddNativeCaptionTrack(srtJSON) {
             try { tempFile.remove(); } catch (e2) {}
         }
 
-        return JSON.stringify({ success: true, captions_added: segments.length });
+        return JSON.stringify({ success: true, captions_added: srtIndex });
     } catch (e) {
         _ocLog("ocAddNativeCaptionTrack error: " + e.toString());
         return JSON.stringify({ error: e.toString() });
@@ -2171,6 +2195,11 @@ function ocExportSequenceRange(outputPath, startSeconds, endSeconds) {
         startSeconds = start;
         endSeconds = end;
 
+        // Save original in/out points so we can restore after export
+        var origIn = -1, origOut = -1;
+        try { origIn = seq.getInPoint(); } catch (e) {}
+        try { origOut = seq.getOutPoint(); } catch (e) {}
+
         // Set in/out points on the sequence — abort if either fails
         try {
             seq.setInPoint(startSeconds);
@@ -2182,17 +2211,26 @@ function ocExportSequenceRange(outputPath, startSeconds, endSeconds) {
             seq.setOutPoint(endSeconds);
         } catch (e) {
             _ocLog("ocExportSequenceRange setOutPoint error: " + e.toString());
+            // Restore in-point before returning
+            try { if (origIn >= 0) seq.setInPoint(origIn); } catch (e2) {}
             return JSON.stringify({ error: "Failed to set out-point: " + e.toString() });
         }
 
         // Queue to AME
-        // encodeSequence(sequence, outputFilePath, presetPath, removeOnCompletion, startQueueImmediately)
+        var encodeError = null;
         try {
             app.encoder.encodeSequence(seq, outputPath, "", 1, 2);
         } catch (e) {
-            return JSON.stringify({ error: "AME encode failed: " + e.toString() });
+            encodeError = e.toString();
         }
 
+        // Restore original in/out points regardless of success/failure
+        try { if (origIn >= 0) seq.setInPoint(origIn); else seq.setInPoint(0); } catch (e) {}
+        try { if (origOut >= 0) seq.setOutPoint(origOut); else seq.setOutPoint(seq.end); } catch (e) {}
+
+        if (encodeError) {
+            return JSON.stringify({ error: "AME encode failed: " + encodeError });
+        }
         return JSON.stringify({ success: true });
     } catch (e) {
         _ocLog("ocExportSequenceRange error: " + e.toString());
