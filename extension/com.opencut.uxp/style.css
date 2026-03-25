@@ -5,33 +5,37 @@
 
 :root {
   --bg-primary:    #1a1a1a;
-  --bg-secondary:  #242424;
-  --bg-card:       #2a2a2a;
-  --bg-card-hdr:   #313131;
-  --bg-input:      #1e1e1e;
+  --bg-secondary:  #222222;
+  --bg-card:       #282828;
+  --bg-card-hdr:   #2e2e2e;
+  --bg-input:      #1c1c1c;
   --bg-hover:      #333333;
   --accent:        #4f9cf9;
   --accent-hover:  #6ab0ff;
-  --accent-dim:    rgba(79, 156, 249, 0.15);
+  --accent-dim:    rgba(79, 156, 249, 0.12);
   --text-primary:  #e8e8e8;
   --text-secondary:#999999;
   --text-disabled: #555555;
-  --border:        #3a3a3a;
+  --border:        #353535;
+  --border-light:  #404040;
   --border-focus:  #4f9cf9;
   --success:       #4caf50;
-  --success-dim:   rgba(76, 175, 80, 0.15);
+  --success-dim:   rgba(76, 175, 80, 0.12);
   --error:         #f44336;
-  --error-dim:     rgba(244, 67, 54, 0.15);
+  --error-dim:     rgba(244, 67, 54, 0.12);
   --warning:       #ff9800;
-  --warning-dim:   rgba(255, 152, 0, 0.15);
+  --warning-dim:   rgba(255, 152, 0, 0.12);
   --info:          #29b6f6;
-  --radius-sm:     3px;
-  --radius:        5px;
-  --radius-lg:     8px;
+  --radius-sm:     4px;
+  --radius:        6px;
+  --radius-lg:     10px;
   --font:          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   --font-mono:     "Cascadia Code", "Fira Code", "Consolas", monospace;
+  --shadow-sm:     0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15);
   --shadow:        0 2px 8px rgba(0,0,0,0.4);
-  --transition:    0.15s ease;
+  --shadow-lg:     0 4px 12px rgba(0,0,0,0.4), 0 8px 24px rgba(0,0,0,0.2);
+  --shadow-inner:  inset 0 1px 2px rgba(0,0,0,0.3);
+  --transition:    0.12s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* ── Reset ── */
@@ -50,9 +54,11 @@ body {
   font-family: var(--font);
   font-size: 12px;
   line-height: 1.5;
+  letter-spacing: -0.01em;
   background: var(--bg-primary);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
 /* ── App shell ── */
@@ -70,10 +76,11 @@ body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 10px;
+  padding: 0 12px;
   height: 36px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
   flex-shrink: 0;
 }
 
@@ -284,6 +291,7 @@ body {
 .oc-tab.active {
   color: var(--accent);
   border-bottom-color: var(--accent);
+  background: rgba(79, 156, 249, 0.04);
 }
 
 .oc-tab svg { flex-shrink: 0; }
@@ -296,13 +304,10 @@ body {
   overflow-y: auto;
   overflow-x: hidden;
   padding: 10px;
+  padding-right: 14px; /* scrollbar clearance */
   scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
+  scrollbar-color: rgba(255,255,255,0.08) transparent;
 }
-
-.oc-content::-webkit-scrollbar { width: 5px; }
-.oc-content::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-.oc-content::-webkit-scrollbar-track { background: transparent; }
 
 /* =========================================================
    TAB PANELS
@@ -337,9 +342,11 @@ body {
 .oc-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
+  border-top-color: var(--border-light);
   border-radius: var(--radius);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 .oc-card-header {
@@ -377,7 +384,7 @@ body {
   padding: 10px;
   display: flex;
   flex-direction: column;
-  gap: 7px;
+  gap: 8px;
 }
 
 .oc-card-body.collapsed { display: none; }
@@ -415,18 +422,27 @@ body {
   color: var(--text-primary);
   font-size: 11px;
   font-family: var(--font);
-  padding: 4px 7px;
+  padding: 5px 8px;
   width: 100%;
-  transition: border-color var(--transition);
+  transition: border-color var(--transition), box-shadow var(--transition);
   -webkit-appearance: none;
+  box-shadow: var(--shadow-inner);
 }
 
 .oc-input:focus {
   outline: none;
   border-color: var(--border-focus);
+  box-shadow: var(--shadow-inner), 0 0 0 2px rgba(79, 156, 249, 0.12);
 }
 
 .oc-input::placeholder { color: var(--text-disabled); }
+
+.oc-input:disabled,
+.oc-select:disabled,
+.oc-textarea:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 .oc-input-sm { width: 60px; flex: none !important; }
 
@@ -446,7 +462,8 @@ body {
   color: var(--text-primary);
   font-size: 11px;
   font-family: var(--font);
-  padding: 4px 22px 4px 7px;
+  padding: 5px 22px 5px 8px;
+  box-shadow: var(--shadow-inner);
   cursor: pointer;
   -webkit-appearance: none;
   appearance: none;
@@ -592,11 +609,13 @@ body {
   background: var(--accent);
   border-color: var(--accent);
   color: #fff;
+  box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255,255,255,0.12);
 }
 
 .oc-btn-primary:not(:disabled):hover {
   background: var(--accent-hover);
   border-color: var(--accent-hover);
+  box-shadow: var(--shadow), inset 0 1px 0 rgba(255,255,255,0.15);
 }
 
 .oc-btn-secondary {
@@ -627,11 +646,12 @@ body {
   background: var(--bg-secondary);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 8px;
-  margin-top: 4px;
+  padding: 10px;
+  margin-top: 6px;
   display: flex;
   flex-direction: column;
   gap: 6px;
+  box-shadow: var(--shadow-inner);
 }
 
 .oc-result-area.hidden { display: none; }
@@ -794,17 +814,17 @@ body {
 .oc-toast {
   display: flex;
   align-items: flex-start;
-  gap: 7px;
-  padding: 8px 10px;
-  border-radius: var(--radius);
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border);
   background: var(--bg-card);
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-lg);
   font-size: 11px;
-  line-height: 1.4;
+  line-height: 1.5;
   pointer-events: auto;
-  animation: toastIn 0.2s ease;
-  max-width: 280px;
+  animation: toastIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 300px;
 }
 
 .oc-toast.fade-out {
