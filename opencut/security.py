@@ -195,14 +195,28 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     else:
         python = sys.executable
 
+    # Prefer pre-built binary wheels (avoids needing Rust/C compilers)
+    _prefer = "--prefer-binary"
+
     strategies = [
-        [python, "-m", "pip", "install", package, "-q"],
-        [python, "-m", "pip", "install", package, "--user", "-q"],
+        [python, "-m", "pip", "install", package, _prefer, "-q"],
+        [python, "-m", "pip", "install", package, _prefer, "--user", "-q"],
     ]
+
+    # Fallback: install to ~/.opencut/packages (writable even when user site-packages isn't)
+    _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+    os.makedirs(_target_dir, exist_ok=True)
+    # Add to sys.path so subsequent imports find the package immediately
+    if _target_dir not in sys.path:
+        sys.path.insert(0, _target_dir)
+    strategies.append(
+        [python, "-m", "pip", "install", package, _prefer, "--target", _target_dir, "-q"]
+    )
+
     # Only allow --break-system-packages inside a virtual environment
     if _in_virtualenv():
         strategies.append(
-            [python, "-m", "pip", "install", package, "--break-system-packages", "-q"]
+            [python, "-m", "pip", "install", package, _prefer, "--break-system-packages", "-q"]
         )
 
     last_result = None
@@ -220,6 +234,15 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
             last_result = None
 
     stderr = last_result.stderr[-500:] if last_result and last_result.stderr else "unknown error"
+    # Provide actionable hint for Rust/compiler errors
+    if "rust" in stderr.lower() or "cargo" in stderr.lower() or "metadata-generation-failed" in stderr.lower():
+        raise RuntimeError(
+            f"Failed to install {package}: this package requires Rust to compile from source, "
+            f"and no pre-built wheel is available for your Python version.\n\n"
+            f"Fix: Install Rust from https://rustup.rs/ and restart, "
+            f"or upgrade Python to 3.10-3.12 where pre-built wheels are available.\n\n"
+            f"Details: {stderr[-300:]}"
+        )
     raise RuntimeError(f"Failed to install {package}: {stderr}")
 
 

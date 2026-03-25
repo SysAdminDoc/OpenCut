@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.7.1 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.7.2 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -3091,36 +3091,38 @@ input[type="checkbox"] {
    ============================================================ */
 .toast-notification {
     position: fixed;
-    top: 12px;
-    right: 12px;
+    bottom: 48px;
+    left: 50%;
+    transform: translateX(-50%);
     background: var(--bg-card);
     border: 1px solid var(--border-light);
-    border-top-color: rgba(255,255,255,0.08);
+    border-bottom-color: rgba(255,255,255,0.08);
     border-radius: var(--r-md);
-    padding: 12px 16px;
+    padding: 10px 20px;
     font-size: 12px;
     color: var(--text-primary);
-    box-shadow: var(--shadow-xl);
+    box-shadow: var(--shadow-lg);
     z-index: 10000;
-    max-width: 300px;
-    animation: toast-slide-in 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    max-width: 360px;
+    animation: toast-slide-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     align-items: center;
     gap: 10px;
     backdrop-filter: blur(20px);
+    white-space: nowrap;
 }
 .toast-notification.success { border-left: 2px solid var(--neon-green, #00ff88); }
 .toast-notification.error { border-left: 2px solid var(--neon-red, #ff0055); }
 .toast-notification.info { border-left: 2px solid var(--neon-cyan, #00ffff); }
-@keyframes toast-slide-in {
-    from { transform: translateX(100%); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+@keyframes toast-slide-up {
+    from { transform: translateX(-50%) translateY(100%); opacity: 0; }
+    to { transform: translateX(-50%) translateY(0); opacity: 1; }
 }
 .toast-notification.fade-out {
     animation: toast-fade-out 0.3s ease forwards;
 }
 @keyframes toast-fade-out {
-    to { transform: translateX(100%); opacity: 0; }
+    to { transform: translateX(-50%) translateY(100%); opacity: 0; }
 }
 
 /* ============================================================

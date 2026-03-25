@@ -573,40 +573,61 @@ def install_whisper():
             _update_job(job_id, progress=5, message=f"Installing {backend}...")
             logger.info(f"Starting Whisper install: {backend}")
 
+            # Resolve Python executable (frozen builds can't use sys.executable for pip)
+            from opencut.security import _find_system_python
+            if getattr(sys, "frozen", False):
+                _pip_python = _find_system_python() or sys.executable
+            else:
+                _pip_python = sys.executable
+
+            # Permission fallback: --target to a writable directory
+            _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+            os.makedirs(_target_dir, exist_ok=True)
+            if _target_dir not in sys.path:
+                sys.path.insert(0, _target_dir)
+
+            # Build pip commands with permission fallbacks baked in
+            def _pip_cmd(pkg, *extra_flags):
+                """Return list of pip commands: normal, --user, --target."""
+                base = [_pip_python, "-m", "pip", "install"] + list(extra_flags) + [pkg]
+                return [
+                    base + ["--progress-bar", "on"],
+                    base + ["--user", "--progress-bar", "on"],
+                    base + ["--target", _target_dir, "--progress-bar", "on"],
+                ]
+
+            def _pip_pre(pkg, *extra_flags):
+                """Return list of pre-install commands with fallbacks."""
+                base = [_pip_python, "-m", "pip", "install"] + list(extra_flags) + [pkg, "--quiet"]
+                return [
+                    base,
+                    base + ["--user"],
+                    base + ["--target", _target_dir],
+                ]
+
             # Strategy list - try each in order until one works
             strategies = []
             if backend == "faster-whisper":
                 strategies = [
                     {
                         "label": "Install tokenizers wheel first, then faster-whisper",
-                        "pre": [sys.executable, "-m", "pip", "install",
-                                "tokenizers", "--only-binary", "tokenizers",
-                                "--quiet"],
-                        "cmd": [sys.executable, "-m", "pip", "install",
-                                "faster-whisper", "--progress-bar", "on"],
+                        "pre_cmds": _pip_pre("tokenizers", "--only-binary", "tokenizers"),
+                        "cmds": _pip_cmd("faster-whisper"),
                     },
                     {
                         "label": "Upgrade pip + prefer binary wheels",
-                        "pre": [sys.executable, "-m", "pip", "install",
-                                "--upgrade", "pip", "setuptools", "wheel",
-                                "--quiet"],
-                        "cmd": [sys.executable, "-m", "pip", "install",
-                                "faster-whisper", "--prefer-binary",
-                                "--progress-bar", "on"],
+                        "pre_cmds": _pip_pre("pip setuptools wheel", "--upgrade"),
+                        "cmds": _pip_cmd("faster-whisper", "--prefer-binary"),
                     },
                     {
                         "label": "Pin older tokenizers with wheel support",
-                        "pre": [sys.executable, "-m", "pip", "install",
-                                "tokenizers>=0.13,<0.20", "--only-binary",
-                                "tokenizers", "--quiet"],
-                        "cmd": [sys.executable, "-m", "pip", "install",
-                                "faster-whisper", "--progress-bar", "on"],
+                        "pre_cmds": _pip_pre("tokenizers>=0.13,<0.20", "--only-binary", "tokenizers"),
+                        "cmds": _pip_cmd("faster-whisper"),
                     },
                     {
                         "label": "Fallback to openai-whisper (no Rust needed)",
-                        "cmd": [sys.executable, "-m", "pip", "install",
-                                "openai-whisper", "--progress-bar", "on"],
-                        "verify": [sys.executable, "-c",
+                        "cmds": _pip_cmd("openai-whisper"),
+                        "verify": [_pip_python, "-c",
                                    "import whisper; print('ok')"],
                         "backend_name": "openai-whisper",
                     },
@@ -615,8 +636,7 @@ def install_whisper():
                 strategies = [
                     {
                         "label": "Standard install",
-                        "cmd": [sys.executable, "-m", "pip", "install",
-                                backend, "--progress-bar", "on"],
+                        "cmds": _pip_cmd(backend),
                     },
                 ]
 
@@ -630,52 +650,74 @@ def install_whisper():
                             message=f"Strategy {si+1}/{len(strategies)}: {strat['label']}...")
                 logger.info(f"Whisper install strategy {si+1}: {strat['label']}")
 
-                # Run pre-command if present (e.g. upgrade pip)
-                if "pre" in strat:
+                # Run pre-commands if present (try each fallback until one succeeds)
+                if "pre_cmds" in strat:
+                    for pre_cmd in strat["pre_cmds"]:
+                        try:
+                            pre_result = _sp.run(pre_cmd, capture_output=True, text=True, timeout=120)
+                            if pre_result.returncode == 0:
+                                logger.debug(f"Pre-command succeeded: {' '.join(pre_cmd[:5])}")
+                                break
+                            logger.debug(f"Pre-command exit {pre_result.returncode}, trying next fallback")
+                        except Exception as e:
+                            logger.warning(f"Pre-command failed: {e}")
+
+                # Run main install command (try each permission fallback)
+                cmds_to_try = strat.get("cmds", [strat["cmd"]] if "cmd" in strat else [])
+                pip_ok = False
+                lines = []
+                for cmd_variant in cmds_to_try:
                     try:
-                        pre_result = _sp.run(strat["pre"], capture_output=True, text=True, timeout=120)
-                        logger.debug(f"Pre-command exit {pre_result.returncode}: {pre_result.stdout[-200:]}")
+                        proc = _sp.Popen(cmd_variant, stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True)
+                        _register_job_process(job_id, proc)
+
+                        # Safety timeout: kill pip if it hangs (10 minutes)
+                        _pip_timeout = 600
+                        _pip_timer = threading.Timer(_pip_timeout, lambda: proc.kill())
+                        _pip_timer.daemon = True
+                        _pip_timer.start()
+
+                        lines = []
+                        for line in proc.stdout:
+                            line = line.strip()
+                            if line:
+                                lines.append(line)
+                                lower = line.lower()
+                                if "downloading" in lower:
+                                    _update_job(job_id, progress=pct_base + 10,
+                                                message="Downloading packages...")
+                                elif "installing" in lower or "building" in lower:
+                                    _update_job(job_id, progress=pct_base + 20,
+                                                message="Installing packages...")
+                                elif "successfully installed" in lower:
+                                    _update_job(job_id, progress=85,
+                                                message="Verifying installation...")
+
+                        _pip_timer.cancel()
+                        proc.wait(timeout=30)
+                        _unregister_job_process(job_id)
+                        logger.debug(f"pip exit code: {proc.returncode}")
+
+                        if proc.returncode == 0:
+                            pip_ok = True
+                            break  # This permission variant worked
+                        else:
+                            last_error = "\n".join(lines[-8:])
+                            logger.warning(f"Strategy {si+1} cmd variant failed (trying next): {last_error[-200:]}")
+                            continue  # Try next permission variant (--user, --target)
+
                     except Exception as e:
-                        logger.warning(f"Pre-command failed: {e}")
+                        _unregister_job_process(job_id)
+                        last_error = str(e)
+                        logger.warning(f"Strategy {si+1} cmd variant exception: {e}")
+                        continue  # Try next permission variant
 
-                # Run main install command
+                if not pip_ok:
+                    logger.warning(f"Strategy {si+1} failed all permission variants")
+                    continue  # Try next strategy
+
+                # Verify import
                 try:
-                    proc = _sp.Popen(strat["cmd"], stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True)
-                    _register_job_process(job_id, proc)
-
-                    # Safety timeout: kill pip if it hangs (10 minutes)
-                    _pip_timeout = 600
-                    _pip_timer = threading.Timer(_pip_timeout, lambda: proc.kill())
-                    _pip_timer.daemon = True
-                    _pip_timer.start()
-
-                    lines = []
-                    for line in proc.stdout:
-                        line = line.strip()
-                        if line:
-                            lines.append(line)
-                            lower = line.lower()
-                            if "downloading" in lower:
-                                _update_job(job_id, progress=pct_base + 10,
-                                            message="Downloading packages...")
-                            elif "installing" in lower or "building" in lower:
-                                _update_job(job_id, progress=pct_base + 20,
-                                            message="Installing packages...")
-                            elif "successfully installed" in lower:
-                                _update_job(job_id, progress=85,
-                                            message="Verifying installation...")
-
-                    _pip_timer.cancel()
-                    proc.wait(timeout=30)
-                    _unregister_job_process(job_id)
-                    logger.debug(f"pip exit code: {proc.returncode}")
-
-                    if proc.returncode != 0:
-                        last_error = "\n".join(lines[-8:])
-                        logger.warning(f"Strategy {si+1} failed: {last_error[-300:]}")
-                        continue  # Try next strategy
-
-                    # Verify import
                     _update_job(job_id, progress=90, message="Verifying import...")
 
                     verify_cmd = strat.get("verify", None)
@@ -683,15 +725,16 @@ def install_whisper():
 
                     if verify_cmd is None:
                         if actual_backend == "faster-whisper":
-                            verify_cmd = [sys.executable, "-c", "from faster_whisper import WhisperModel; print('ok')"]
+                            verify_cmd = [_pip_python, "-c", "from faster_whisper import WhisperModel; print('ok')"]
                         elif actual_backend == "openai-whisper":
-                            verify_cmd = [sys.executable, "-c", "import whisper; print('ok')"]
+                            verify_cmd = [_pip_python, "-c", "import whisper; print('ok')"]
                         else:
                             if actual_backend not in allowed:
                                 last_error = f"Unknown backend: {actual_backend}"
                                 continue
-                            verify_cmd = [sys.executable, "-c", f"import {actual_backend}; print('ok')"]
+                            verify_cmd = [_pip_python, "-c", f"import {actual_backend}; print('ok')"]
 
+                    # Also try importing directly in-process (for --target installs)
                     verify = _sp.run(verify_cmd, capture_output=True, text=True, timeout=30)
 
                     if verify.returncode == 0 and "ok" in verify.stdout:
@@ -711,9 +754,8 @@ def install_whisper():
                         continue
 
                 except Exception as e:
-                    _unregister_job_process(job_id)
                     last_error = str(e)
-                    logger.warning(f"Strategy {si+1} exception: {e}")
+                    logger.warning(f"Strategy {si+1} verify exception: {e}")
                     continue
 
             # All strategies failed
@@ -844,6 +886,30 @@ def whisper_reinstall():
         import subprocess as _sp
 
         try:
+            # Resolve Python executable (frozen builds can't use sys.executable for pip)
+            from opencut.security import _find_system_python
+            if getattr(sys, "frozen", False):
+                _pip_python = _find_system_python() or sys.executable
+            else:
+                _pip_python = sys.executable
+
+            _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+            os.makedirs(_target_dir, exist_ok=True)
+            if _target_dir not in sys.path:
+                sys.path.insert(0, _target_dir)
+
+            def _run_pip_with_fallback(args, timeout=300):
+                """Try pip command, then --user, then --target fallback."""
+                base = [_pip_python, "-m", "pip"] + args
+                for variant in [base, base + ["--user"], base + ["--target", _target_dir]]:
+                    try:
+                        result = _sp.run(variant, capture_output=True, text=True, timeout=timeout)
+                        if result.returncode == 0:
+                            return result
+                    except Exception:
+                        continue
+                return result  # Return last result even if failed
+
             # Step 1: Uninstall existing packages
             _update_job(job_id, progress=5, message="Uninstalling existing Whisper packages...")
             logger.info("Reinstall: Uninstalling existing packages")
@@ -852,7 +918,7 @@ def whisper_reinstall():
             for pkg in uninstall_pkgs:
                 try:
                     _sp.run(
-                        [sys.executable, "-m", "pip", "uninstall", pkg, "-y"],
+                        [_pip_python, "-m", "pip", "uninstall", pkg, "-y"],
                         capture_output=True, timeout=60
                     )
                 except Exception:
@@ -891,11 +957,11 @@ def whisper_reinstall():
             _update_job(job_id, progress=30, message="Clearing pip cache...")
             try:
                 _sp.run(
-                    [sys.executable, "-m", "pip", "cache", "remove", "faster_whisper"],
+                    [_pip_python, "-m", "pip", "cache", "remove", "faster_whisper"],
                     capture_output=True, timeout=30
                 )
                 _sp.run(
-                    [sys.executable, "-m", "pip", "cache", "remove", "ctranslate2"],
+                    [_pip_python, "-m", "pip", "cache", "remove", "ctranslate2"],
                     capture_output=True, timeout=30
                 )
             except Exception:
@@ -904,61 +970,61 @@ def whisper_reinstall():
             if _is_cancelled(job_id):
                 return
 
-            # Step 4: Install fresh
+            # Step 4: Install fresh (with permission fallbacks)
             _update_job(job_id, progress=40, message=f"Installing {backend} fresh...")
             logger.info(f"Reinstall: Installing {backend}")
 
             if backend == "faster-whisper":
-                # Install with specific options for CPU mode
-                install_cmd = [
-                    sys.executable, "-m", "pip", "install",
-                    "faster-whisper", "--force-reinstall", "--no-cache-dir"
-                ]
+                install_base = ["install", "faster-whisper", "--force-reinstall", "--no-cache-dir"]
 
                 # For CPU mode, also install CPU-only ctranslate2
                 if cpu_mode:
                     _update_job(job_id, progress=45, message="Installing CPU-optimized version...")
-                    # First install ctranslate2 without CUDA
-                    try:
-                        _sp.run(
-                            [sys.executable, "-m", "pip", "install",
-                             "ctranslate2", "--force-reinstall", "--no-cache-dir"],
-                            capture_output=True, timeout=300
-                        )
-                    except Exception:
-                        pass
+                    _run_pip_with_fallback(
+                        ["install", "ctranslate2", "--force-reinstall", "--no-cache-dir"],
+                        timeout=300
+                    )
             else:
-                install_cmd = [
-                    sys.executable, "-m", "pip", "install",
-                    backend, "--force-reinstall", "--no-cache-dir"
-                ]
+                install_base = ["install", backend, "--force-reinstall", "--no-cache-dir"]
 
-            proc = _sp.Popen(install_cmd, stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True)
-            _register_job_process(job_id, proc)
+            # Try each permission variant for the main install
+            install_ok = False
+            for install_cmd in [
+                [_pip_python, "-m", "pip"] + install_base,
+                [_pip_python, "-m", "pip"] + install_base + ["--user"],
+                [_pip_python, "-m", "pip"] + install_base + ["--target", _target_dir],
+            ]:
+                proc = _sp.Popen(install_cmd, stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True)
+                _register_job_process(job_id, proc)
 
-            for line in proc.stdout:
-                if _is_cancelled(job_id):
+                for line in proc.stdout:
+                    if _is_cancelled(job_id):
+                        proc.kill()
+                        _unregister_job_process(job_id)
+                        return
+                    line = line.strip().lower()
+                    if "downloading" in line:
+                        _update_job(job_id, progress=55, message="Downloading packages...")
+                    elif "installing" in line:
+                        _update_job(job_id, progress=70, message="Installing packages...")
+
+                try:
+                    proc.wait(timeout=600)
+                except Exception:
                     proc.kill()
-                    _unregister_job_process(job_id)
-                    return
-                line = line.strip().lower()
-                if "downloading" in line:
-                    _update_job(job_id, progress=55, message="Downloading packages...")
-                elif "installing" in line:
-                    _update_job(job_id, progress=70, message="Installing packages...")
+                    proc.wait(timeout=10)
+                _unregister_job_process(job_id)
 
-            try:
-                proc.wait(timeout=600)
-            except Exception:
-                proc.kill()
-                proc.wait(timeout=10)
-            _unregister_job_process(job_id)
+                if proc.returncode == 0:
+                    install_ok = True
+                    break
+                logger.warning(f"Reinstall pip variant failed, trying next")
 
-            if proc.returncode != 0:
+            if not install_ok:
                 _update_job(
                     job_id, status="error",
-                    error="pip install failed",
-                    message="Installation failed. Try running: pip install faster-whisper --force-reinstall"
+                    error="pip install failed — permission denied on all attempts",
+                    message="Installation failed. Try running as administrator or: pip install faster-whisper --user --force-reinstall"
                 )
                 return
 
@@ -972,9 +1038,9 @@ def whisper_reinstall():
             _update_job(job_id, progress=90, message="Verifying installation...")
 
             if backend == "faster-whisper":
-                verify_cmd = [sys.executable, "-c", "from faster_whisper import WhisperModel; print('ok')"]
+                verify_cmd = [_pip_python, "-c", "from faster_whisper import WhisperModel; print('ok')"]
             else:
-                verify_cmd = [sys.executable, "-c", "import whisper; print('ok')"]
+                verify_cmd = [_pip_python, "-c", "import whisper; print('ok')"]
 
             verify = _sp.run(verify_cmd, capture_output=True, text=True, timeout=30)
 

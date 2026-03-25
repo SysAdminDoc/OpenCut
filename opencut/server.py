@@ -162,6 +162,12 @@ def _setup_system_site_packages():
 
 _setup_system_site_packages()
 
+# Ensure ~/.opencut/packages (pip --target fallback) is importable
+_opencut_packages = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+if os.path.isdir(_opencut_packages) and _opencut_packages not in sys.path:
+    sys.path.append(_opencut_packages)
+    logger.info("  Added ~/.opencut/packages to sys.path")
+
 # Blueprints handle their own imports; this block pre-loads for backward compat
 try:
     from .core.silence import detect_speech, get_edit_summary  # noqa: F401
@@ -564,7 +570,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     atexit.register(shutdown_pool)
 
     print("")
-    print("  OpenCut Backend Server v1.7.1")
+    print("  OpenCut Backend Server v1.7.2")
     print(f"  Listening on http://{host}:{effective_port}")
     print(f"  PID: {os.getpid()}")
     print(f"  Log file: {LOG_FILE}")
