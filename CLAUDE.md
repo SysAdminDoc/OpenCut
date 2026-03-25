@@ -57,10 +57,10 @@
 - `nlp.py` - POST /nlp/command → LLMConfig object (not dict), explanation falls back to param_source
 
 ### Frontend (CEP Panel)
-- `extension/com.opencut.panel/client/main.js` (~6169 lines) - Frontend controller. State vars: lastTimelineCuts, sequenceInfo, footageIndex, beatMarkerTimes, seqMarkersData, renameItemsData, multicamCutsData, repeatCutsData, chaptersData. New init functions: initTimelineFeatures, initCaptionNewFeatures, initAudioNewFeatures, initDeliverablesFeatures, initNlpFeatures. LLM settings loaded on startup via loadLlmSettings().
-- `extension/com.opencut.panel/client/index.html` (~2835 lines) - UI layout (sidebar + content-area, 8 tabs: Cut, Captions, Audio, Video, Export, Timeline, NLP, Settings). Settings tab now has LLM config card + Audio/Zoom Defaults card.
-- `extension/com.opencut.panel/client/style.css` (~3642 lines) - Themes & styles. New classes: .smart-bin-rule, .footage-result-item, .multicam-track-row, .rename-name-input, .input-row.
-- `extension/com.opencut.panel/host/index.jsx` (~2177 lines) - ExtendScript host. **New functions (lines 1315–2177):** ocGetSequenceInfo, ocAddSequenceMarkers, ocGetSequenceMarkers, ocApplySequenceCuts, ocApplyClipKeyframes, ocBatchRenameProjectItems, ocCreateSmartBins, ocAddNativeCaptionTrack, ocGetProjectBins, ocExportSequenceRange. Private helpers: _findByNodeId, _collectMediaItems, _collectBins.
+- `extension/com.opencut.panel/client/main.js` (~6850 lines) - Frontend controller. State vars: lastTimelineCuts, sequenceInfo, footageIndex, beatMarkerTimes, seqMarkersData, renameItemsData, multicamCutsData, repeatCutsData, chaptersData. New init functions: initTimelineFeatures, initCaptionNewFeatures, initAudioNewFeatures, initDeliverablesFeatures, initNlpFeatures. LLM settings loaded on startup via loadLlmSettings().
+- `extension/com.opencut.panel/client/index.html` (~3115 lines) - UI layout (sidebar + content-area, 8 tabs: Cut, Captions, Audio, Video, Export, Timeline, NLP, Settings). Settings tab now has LLM config card + Audio/Zoom Defaults card.
+- `extension/com.opencut.panel/client/style.css` (~4182 lines) - Themes & styles. New classes: .smart-bin-rule, .footage-result-item, .multicam-track-row, .rename-name-input, .input-row. Design token shadow system (--shadow-sm/md/lg/xl/inner/glow-sm/glow-md). 6 complete themes.
+- `extension/com.opencut.panel/host/index.jsx` (~2230 lines) - ExtendScript host. **New functions (lines 1315–2230):** ocGetSequenceInfo, ocAddSequenceMarkers, ocGetSequenceMarkers, ocApplySequenceCuts, ocApplyClipKeyframes, ocBatchRenameProjectItems, ocCreateSmartBins, ocAddNativeCaptionTrack, ocGetProjectBins, ocExportSequenceRange. Private helpers: _findByNodeId, _collectMediaItems, _collectBins. Markers use getFirstMarker/getNextMarker iterator (not indexed access).
 
 ### UXP Panel (Premiere Pro 25.6+)
 - `extension/com.opencut.uxp/manifest.json` - UXP plugin manifest, targets PPRO minVersion 25.6, network domains 5679–5689, localFileSystem fullAccess
@@ -120,7 +120,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.5.6**
+- Current: **v1.7.1**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 18 targets at once (including UXP files)
 
@@ -160,6 +160,12 @@
 - **UXP endpoint convention** — UXP handlers MUST use full Blueprint-prefixed paths (`/audio/denoise`, `/video/color-match`, `/captions/chapters`, `/timeline/batch-rename`, `/search/footage`, `/nlp/command`, `/deliverables/vfx-sheet`). Never use bare paths like `/denoise` or `/chapters`.
 - **ExtendScript data format** — `ocAddSequenceMarkers` expects a JSON array of `{time, name, type}` objects, NOT a wrapper object. `ocBatchRenameProjectItems` reads `{nodeId, newName}`. `ocCreateSmartBins` reads `{binName, rule, field, value}`. Always verify field names match between JS and JSX.
 - **Queue allowlist** — New async routes MUST be added to `_ALLOWED_QUEUE_ENDPOINTS` in jobs_routes.py, or queue operations silently fail with "Endpoint not queueable".
+- **`run_ffmpeg()` returns `str`, not CompletedProcess** — It raises `RuntimeError` on non-zero exit and returns stderr as a string. Never access `.returncode` or `.stderr` on the return value. If you need the `subprocess.CompletedProcess` fallback path, use `subprocess.run()` directly.
+- **ExtendScript MarkerCollection** — Use `getFirstMarker()`/`getNextMarker()` iterator, NOT `markers[i]` indexed access (unreliable across Premiere versions). Pattern: `var m = markers.getFirstMarker(); while (m) { ... try { m = markers.getNextMarker(m); } catch(e) { m = null; } }`
+- **CSS `hidden` class vs `style.display`** — Setting `style.display=""` does NOT override a `display:none` from a CSS class. Use `classList.toggle("hidden", ...)` or `classList.remove("hidden")` instead.
+- **Workflow preset steps** — Each step must be a self-contained `{endpoint, payload, label}` object. Do NOT rely on `pendingTranslate`/`pendingBurnin` flags for chaining — those only work for manual button clicks, not workflow presets.
+- **Duplicate HTML `class` attributes** — HTML parser silently discards the second `class=` attribute. Always merge into a single `class="cls1 cls2"`. Grep with `class=".+" class="` to detect.
+- **`cancelJob()` order** — Close SSE/poll streams BEFORE nulling `currentJob` to prevent in-flight events from triggering `onJobDone` after cancel.
 - **Never `git add -A`** — `installer/bin/`, `installer/obj/`, `installer/publish/` are build artifacts NOT in `.gitignore` (they're tracked in the repo). Use specific file paths when staging.
 - **Frozen builds** — `sys.executable` points to the exe, not Python. `safe_pip_install()` and `_setup_system_site_packages()` detect frozen state and find system Python from PATH instead.
 - **Ruff CI rules** — CI runs `ruff check opencut/ --select E,F,I --ignore E501`. Codebase is fully lint-clean as of v1.3.0. Use `# noqa: F401` for intentional lazy imports, `# noqa: E402` for delayed imports, `# noqa: F821` for closure-scoped forward refs.
@@ -777,3 +783,23 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **async_job thread tracking** — decorator stores thread handle in job dict (`_thread` was always None)
 - **ExtendScript projectItem safety** — in/out point reset guaranteed even if insert loop throws
 - **Test fixes** — 5 broken tests fixed (mock paths updated for consolidated helpers, tempdir context scope)
+
+## v1.5.6 Batch 35 Bug Fixes (Subtle Bug Hunt)
+- **color_match.py AttributeError CRASH** — `run_ffmpeg()` returns `str` (stderr) but code accessed `.returncode`/`.stderr` (CompletedProcess attributes). Color matching was **completely broken**. Fixed: `run_ffmpeg` raises on failure (no return check needed), fallback `subprocess.run` checks returncode separately.
+- **auto_edit.py temp dir destroys XML** — `finally: shutil.rmtree(temp_dir)` deleted the XML result file before caller could use it. Fixed: copy XML to persistent temp dir before cleanup.
+- **ExtendScript marker iteration** — `seqMarkers[i]` indexed access is unreliable on Premiere's MarkerCollection. Switched both `ocGetSequenceInfo` and `ocGetSequenceMarkers` to `getFirstMarker()`/`getNextMarker()` iterator pattern.
+- **silenceSpeedGroup permanently hidden** — Element has CSS class `hidden` (`display:none`) but JS used `style.display=""` to show it — inline style removal doesn't override class rule. Speed-up slider was **always invisible**. Fixed: `classList.toggle("hidden", ...)`.
+- **Translate Pipeline workflow** — Only transcribed, never translated. Relied on `pendingTranslate` flag that workflow runner never set. Added explicit `/captions/translate` step.
+- **Social Ready workflow** — Dropdown promised "Burn-in Captions" but workflow had no captions step. Added `/captions/burn-in` step.
+- **Styled captions checkboxes dead** — `captionWordHighlight` and `captionAutoEmoji` checkbox values never included in API payload. Added both to `startJob` payload.
+- **Workflow denoise method mismatch** — `clean_audio` and `pro_video` presets hardcoded `method: "rnnoise"` but UI only offers `afftdn`/`bandpass`. Changed to `afftdn`.
+- **Cancel/complete race condition** — SSE could deliver "complete" event after `cancelJob()` nulled `currentJob` but before it closed the stream, causing unwanted auto-import. Fixed: close SSE/poll **before** nulling `currentJob`.
+- **NLP auto-execute stale selectedPath** — `selectedPath` read at callback time, not command time. If user switches clips during NLP API call, job runs on wrong clip. Fixed: snapshot at command invocation.
+- **ocApplySequenceCuts NaN sort corruption** — Sort comparator `b.start - a.start` ran before Number coercion; string/null/undefined values produce NaN, corrupting sort order and causing wrong clips to be deleted. Fixed: pre-coerce all cut times before sort.
+- **ocExportSequenceRange persistent side effect** — `setInPoint`/`setOutPoint` persist on the sequence after export, constraining all future playback and exports. Fixed: save/restore original in/out points.
+- **ocAddNativeCaptionTrack inflated count** — Returned `segments.length` (original array size) instead of `srtIndex` (actual written count after skipping invalid segments).
+- **Keyframe time coercion** — `kf.time || 0` used without `Number()` coercion; string time values from JSON could cause wrong keyframe placement. Added `Number()`.
+- **export_video no progress** — Missing `-progress pipe:1` flag meant FFmpeg wrote progress to stderr (not stdout), so progress parsing never matched. Progress bar was stuck at 20%.
+- **export_video no timeout** — `proc.wait()` had no timeout; hung FFmpeg process blocked the thread forever. Added scaled timeout with kill.
+- **export_video partial file leak** — Failed FFmpeg runs left corrupt partial output files on disk. Added cleanup on non-zero exit.
+- **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.

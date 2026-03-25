@@ -1851,8 +1851,11 @@ def audio_waveform():
             dur_result = _sp.run(cmd, capture_output=True, text=True, timeout=10)
             if dur_result.returncode != 0:
                 raise RuntimeError(f"ffprobe failed: {dur_result.stderr[:200]}")
-            dur_data = json.loads(dur_result.stdout)
-            duration = float(dur_data["format"]["duration"])
+            try:
+                dur_data = json.loads(dur_result.stdout)
+                duration = float(dur_data["format"]["duration"])
+            except (json.JSONDecodeError, ValueError, KeyError, TypeError):
+                raise RuntimeError("Could not determine audio duration from ffprobe output")
 
             _update_job(job_id, progress=30, message="Extracting audio samples...")
 

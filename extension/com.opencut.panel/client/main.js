@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.7.0
+   OpenCut CEP Panel - Main Controller v1.7.1
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -2018,18 +2018,12 @@
 
     function cancelJob() {
         if (currentJob) {
+            var cancellingJob = currentJob;
             el.processingCancel.textContent = "Cancelling...";
             el.processingCancel.disabled = true;
             el.cancelBtn.textContent = "Cancelling...";
             el.cancelBtn.disabled = true;
-            api("POST", "/cancel/" + currentJob, {}, function (err) {
-                if (err) {
-                    showToast("Couldn't cancel — server not responding", "error");
-                }
-                currentJob = null;
-                hideProgress();
-            });
-            // Clean up poll timer and SSE since job is being cancelled
+            // Close SSE/poll FIRST to prevent "complete" events from firing
             if (pollTimer) {
                 clearInterval(pollTimer);
                 pollTimer = null;
@@ -2038,6 +2032,15 @@
                 activeStream.close();
                 activeStream = null;
             }
+            // Now safe to null currentJob — no more event handlers can fire
+            currentJob = null;
+            hideProgress();
+            // Fire cancel to backend (best-effort, UI already updated)
+            api("POST", "/cancel/" + cancellingJob, {}, function (err) {
+                if (err) {
+                    showToast("Couldn't cancel — server not responding", "error");
+                }
+            });
         }
     }
 
@@ -2112,6 +2115,8 @@
             language: el.captionLang.value || null,
             action_words: custom,
             auto_detect_energy: el.captionAutoAction.checked,
+            word_highlight: el.captionWordHighlight ? el.captionWordHighlight.checked : false,
+            auto_emoji: el.captionAutoEmoji ? el.captionAutoEmoji.checked : false,
         });
     }
 
@@ -2652,7 +2657,7 @@
     // --- WORKFLOW PRESETS ---
     var WORKFLOW_PRESETS = {
         clean_audio: [
-            { endpoint: "/audio/denoise", payload: { method: "rnnoise" }, label: "Denoising audio..." },
+            { endpoint: "/audio/denoise", payload: { method: "afftdn" }, label: "Denoising audio..." },
             { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
         ],
         subtitle_pipeline: [
@@ -2660,16 +2665,17 @@
         ],
         translate_pipeline: [
             { endpoint: "/transcript", payload: { model: "base" }, label: "Transcribing..." },
-            // Translation is handled by chaining via pendingTranslate
+            { endpoint: "/captions/translate", payload: { target_lang: "es" }, label: "Translating captions..." },
         ],
         pro_video: [
             { endpoint: "/video/fx/apply", payload: { effect: "stabilize", params: { smoothing: 10, zoom: 0 } }, label: "Stabilizing video..." },
-            { endpoint: "/audio/denoise", payload: { method: "rnnoise" }, label: "Denoising audio..." },
+            { endpoint: "/audio/denoise", payload: { method: "afftdn" }, label: "Denoising audio..." },
             { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
         ],
         social_ready: [
             { endpoint: "/silence", payload: { threshold: -35, min_silence: 0.4, pad_before: 0.1, pad_after: 0.1 }, label: "Removing silence..." },
             { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
+            { endpoint: "/captions/burn-in", payload: { model: "base" }, label: "Burning in captions..." },
         ],
     };
 
@@ -5577,7 +5583,7 @@
     function updateSilenceModeUI() {
         if (!el.silenceMode) return;
         var isSpeedUp = el.silenceMode.value === "speedup";
-        if (el.silenceSpeedGroup) el.silenceSpeedGroup.style.display = isSpeedUp ? "" : "none";
+        if (el.silenceSpeedGroup) el.silenceSpeedGroup.classList.toggle("hidden", !isSpeedUp);
         // Hide preset/padding rows for speed-up mode
         if (el.silencePreset) { var fg1 = el.silencePreset.closest(".form-group"); if (fg1) fg1.style.display = isSpeedUp ? "none" : ""; }
         if (el.padBefore) { var fg2 = el.padBefore.closest(".form-group"); if (fg2) fg2.style.display = isSpeedUp ? "none" : ""; }
@@ -6267,8 +6273,11 @@
         if (!text) { showAlert("Enter a command."); return; }
         var provider = (document.getElementById("nlpLlmProvider") || {}).value || "ollama";
         var btn = document.getElementById("runNlpCommandBtn");
+        // Capture state at command time so async callback uses the correct clip
+        var snapPath = selectedPath;
+        var snapFolder = projectFolder;
         if (btn) { btn.disabled = true; btn.textContent = "Processing..."; }
-        api("POST", "/nlp/command", { command: text, filepath: selectedPath, llm_provider: provider }, function (err, data) {
+        api("POST", "/nlp/command", { command: text, filepath: snapPath, llm_provider: provider }, function (err, data) {
             if (btn) { btn.disabled = false; btn.textContent = "Execute"; }
             var res = document.getElementById("nlpCommandResult");
             var routeEl = document.getElementById("nlpCommandRoute");
@@ -6282,9 +6291,9 @@
             if (routeEl) routeEl.textContent = "Route: " + (data.route || "unknown");
             if (confEl) confEl.textContent = "Confidence: " + safeFixed((data.confidence || 0) * 100, 0) + "%";
             if (outEl) outEl.textContent = data.result ? JSON.stringify(data.result, null, 2) : "";
-            // Auto-execute matched route if high confidence
+            // Auto-execute matched route if high confidence — uses snapshot from command time
             if (data.route && data.confidence > 0.6 && data.params) {
-                startJob(data.route, Object.assign({ filepath: selectedPath, output_dir: projectFolder }, data.params));
+                startJob(data.route, Object.assign({ filepath: snapPath, output_dir: snapFolder }, data.params));
             }
         });
     }
