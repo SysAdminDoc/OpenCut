@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.6.0
+   OpenCut CEP Panel - Main Controller v1.7.0
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -1185,7 +1185,7 @@
                 try {
                     var info = JSON.parse(res);
                     if (!info.saved) {
-                        showToast("Save your project first for best results", "warning");
+                        showToast("Tip: Save your project before processing", "info");
                     }
                     _projectSaveWarned = true;
                 } catch (e) {}
@@ -1207,7 +1207,7 @@
                 refreshClipDropdown();
             } catch (e) {
                 console.error("scanProjectMedia parse error:", e, result);
-                showAlert("Failed to read project media. Check console for details.");
+                showAlert("Couldn't read project media. Make sure a project is open in Premiere Pro.");
             }
         });
     }
@@ -1660,11 +1660,11 @@
 
     function startJob(endpoint, payload) {
         if (currentJob || jobStarting) {
-            showAlert("A job is already running. Wait for it to finish or cancel it.");
+            showAlert("Another task is in progress. You can cancel it from the processing bar above.");
             return;
         }
         if (!selectedPath && payload && !payload.filepath && !payload.no_input) {
-            showAlert("Select a clip first.");
+            showAlert("Choose a clip from the Media section above to get started.");
             return;
         }
 
@@ -1781,16 +1781,22 @@
     function enhanceError(msg) {
         if (!msg) return msg;
         if (/not installed|No module named/i.test(msg)) {
-            return msg + " \u2014 Install from the Settings tab.";
+            return msg + " \u2014 You can install this from the Settings tab.";
         }
-        if (/memory|CUDA out of memory/i.test(msg)) {
-            return msg + " \u2014 Try reducing file size or using CPU mode.";
+        if (/memory|CUDA out of memory|out of memory/i.test(msg)) {
+            return msg + " \u2014 Try a smaller file, lower quality setting, or enable CPU mode in Settings.";
         }
-        if (/Permission|Access denied/i.test(msg)) {
-            return msg + " \u2014 Check file permissions.";
+        if (/Permission|Access denied|denied/i.test(msg)) {
+            return msg + " \u2014 The file may be locked or read-only. Check your file permissions.";
         }
-        if (/No such file/i.test(msg)) {
-            return msg + " \u2014 File may have been moved or deleted.";
+        if (/No such file|not found/i.test(msg)) {
+            return msg + " \u2014 The file may have been moved or deleted.";
+        }
+        if (/timed? ?out|timeout/i.test(msg)) {
+            return msg + " \u2014 The operation took too long. Try a shorter clip or simpler settings.";
+        }
+        if (/connection|ECONNREFUSED|network/i.test(msg)) {
+            return msg + " \u2014 Make sure the OpenCut server is running.";
         }
         return msg;
     }
@@ -2018,7 +2024,7 @@
             el.cancelBtn.disabled = true;
             api("POST", "/cancel/" + currentJob, {}, function (err) {
                 if (err) {
-                    showToast("Cancel failed — connection lost", "error");
+                    showToast("Couldn't cancel — server not responding", "error");
                 }
                 currentJob = null;
                 hideProgress();
@@ -2166,7 +2172,7 @@
         if (el.stemOther.checked) stems.push("other");
         
         if (stems.length === 0) {
-            showAlert("Please select at least one stem to extract");
+            showAlert("Choose at least one stem type to extract (Vocals, Drums, etc.)");
             return;
         }
         
@@ -3406,7 +3412,7 @@
                 if (cpuMode) {
                     el.whisperDeviceText.textContent = "CPU (forced)";
                     el.whisperDeviceText.style.color = "var(--warning)";
-                    showAlert("CPU mode enabled. Whisper will use CPU only.");
+                    showAlert("CPU mode enabled. Transcription may be slower but more stable.");
                 } else {
                     el.whisperDeviceText.textContent = "Auto (GPU if available)";
                     el.whisperDeviceText.style.color = "var(--text-secondary)";
@@ -4706,7 +4712,7 @@
     function initBatchPicker() {
         if (el.batchAddSelectedBtn) {
             el.batchAddSelectedBtn.addEventListener("click", function () {
-                if (!selectedPath) { showToast("No clip selected", "error"); return; }
+                if (!selectedPath) { showToast("Select a clip first", "warning"); return; }
                 if (_batchFiles.indexOf(selectedPath) !== -1) return;
                 _batchFiles.push(selectedPath);
                 renderBatchFiles();
@@ -4800,7 +4806,7 @@
         if (el.exportSettingsBtn) {
             el.exportSettingsBtn.addEventListener("click", function () {
                 api("GET", "/settings/export", null, function (err, data) {
-                    if (err || !data) { showToast("Export failed", "error"); return; }
+                    if (err || !data) { showToast("Couldn't export settings", "error"); return; }
                     // Also include localStorage settings
                     try { data.localStorage = JSON.parse(localStorage.getItem("opencut_settings") || "{}"); } catch (e) {}
                     var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -4827,7 +4833,7 @@
                     try {
                         var data = JSON.parse(e.target.result);
                         api("POST", "/settings/import", data, function (err, result) {
-                            if (err) { showToast("Import failed", "error"); return; }
+                            if (err) { showToast("Couldn't import settings", "error"); return; }
                             if (data.localStorage) {
                                 localStorage.setItem("opencut_settings", JSON.stringify(data.localStorage));
                                 loadLocalSettings();
@@ -4836,7 +4842,7 @@
                             if (typeof initPresets === "function") initPresets();
                         });
                     } catch (ex) {
-                        showToast("Invalid settings file", "error");
+                        showToast("This file doesn't contain valid OpenCut settings", "error");
                     }
                 };
                 reader.readAsText(file);
@@ -4858,7 +4864,7 @@
         if (clearLogsBtn) {
             clearLogsBtn.addEventListener("click", function () {
                 api("POST", "/logs/clear", {}, function (err, data) {
-                    if (err) { showToast("Failed to clear logs", "error"); return; }
+                    if (err) { showToast("Couldn't clear the log file", "error"); return; }
                     showToast("Crash log cleared", "success");
                 });
             });
@@ -5050,7 +5056,7 @@
                 _currentLang = this.value;
                 saveLocalSettings();
                 if (_currentLang !== "en") {
-                    showToast("Language support coming soon. UI will remain in English for now.", "info");
+                    showToast("Language support is coming in a future update", "info");
                 }
             });
         }
@@ -5157,21 +5163,21 @@
         {name: "Stem Separation", tab: "audio", sub: "aud-separate", keywords: "separate stems vocals drums bass demucs"},
         {name: "Denoise", tab: "audio", sub: "aud-denoise", keywords: "denoise noise reduce clean"},
         {name: "Normalize", tab: "audio", sub: "aud-normalize", keywords: "normalize loudness lufs volume"},
-        {name: "Text to Speech", tab: "audio", sub: "aud-tts", keywords: "tts voice speech generate"},
+        {name: "Voice Generation", tab: "audio", sub: "aud-tts", keywords: "tts voice speech generate voiceover narration"},
         {name: "Music AI", tab: "audio", sub: "aud-musicai", keywords: "music generate ai musicgen"},
         {name: "Sound Effects", tab: "audio", sub: "aud-sfx", keywords: "sfx sound effect tone"},
-        {name: "Audio Duck", tab: "audio", sub: "aud-duck", keywords: "duck ducking lower music dialogue"},
+        {name: "Audio Ducking", tab: "audio", sub: "aud-duck", keywords: "duck ducking lower music dialogue"},
         {name: "Video Effects", tab: "video", sub: "vid-effects", keywords: "stabilize vignette grain letterbox"},
         {name: "Reframe", tab: "video", sub: "vid-reframe", keywords: "reframe resize phone tiktok shorts vertical portrait"},
         {name: "Merge Clips", tab: "video", sub: "vid-merge", keywords: "merge concatenate join combine clips"},
         {name: "Speed / Ramp", tab: "video", sub: "vid-speed", keywords: "speed slow fast ramp reverse"},
-        {name: "Chroma Key", tab: "video", sub: "vid-chroma", keywords: "chroma green screen key"},
+        {name: "Compositing & Keying", tab: "video", sub: "vid-chroma", keywords: "chroma green screen key pip blend composite"},
         {name: "Transitions", tab: "video", sub: "vid-transition", keywords: "transition fade wipe slide"},
         {name: "Upscale", tab: "video", sub: "vid-upscale", keywords: "upscale enhance resolution ai"},
         {name: "Color Correction", tab: "video", sub: "vid-color", keywords: "color correct grade exposure contrast"},
         {name: "LUTs", tab: "video", sub: "vid-lut", keywords: "lut color grade cinematic film look"},
         {name: "Face AI", tab: "video", sub: "vid-faceswap", keywords: "face swap enhance gfpgan"},
-        {name: "Remove Object", tab: "video", sub: "vid-remove", keywords: "remove watermark object logo"},
+        {name: "De-Logo / Remove Object", tab: "video", sub: "vid-remove", keywords: "remove watermark object logo delogo inpaint"},
         {name: "Titles", tab: "video", sub: "vid-titles", keywords: "title text overlay lower third"},
         {name: "Export Presets", tab: "export", sub: "exp-platform", keywords: "export platform youtube tiktok instagram"},
         {name: "Thumbnails", tab: "export", sub: "exp-thumbnail", keywords: "thumbnail extract frame"},
@@ -5185,6 +5191,7 @@
         { name: "Auto Zoom",          tab: "video",    sub: "vid-effects",    keywords: "auto zoom push in ken burns face zoom" },
         { name: "AI Command",         tab: "nlp",      sub: "nlp-command",    keywords: "nlp ai command natural language instruction" },
         { name: "Deliverables",       tab: "export",   sub: "exp-deliverables", keywords: "deliverables vfx adr music cue sheet asset list" },
+        { name: "Auto Shorts",        tab: "export",   sub: "exp-shorts",       keywords: "shorts tiktok reels auto highlight clip vertical" },
     ];
 
     var _paletteSelectedIdx = 0;
@@ -5386,7 +5393,7 @@
     }
 
     function runMerge() {
-        if (_mergeFiles.length < 2) { showToast("Need at least 2 files to merge", "error"); return; }
+        if (_mergeFiles.length < 2) { showToast("Add at least 2 clips to merge", "warning"); return; }
         startJob("/video/merge", {
             files: _mergeFiles,
             output_dir: projectFolder,
@@ -5500,7 +5507,7 @@
         if (el.llmStatus) el.llmStatus.textContent = "Testing...";
         api("POST", "/llm/test", { prompt: "Say hello in one sentence.", provider: cfg.provider, model: cfg.model || "", api_key: cfg.api_key || "", base_url: cfg.base_url || "" }, function (err, resp) {
             if (err || !resp || !resp.success) {
-                var msg = (resp && resp.error) ? resp.error : (err && typeof err === "object" && err.message) ? err.message : "Connection failed";
+                var msg = (resp && resp.error) ? resp.error : (err && typeof err === "object" && err.message) ? err.message : "Couldn't reach the LLM provider";
                 if (el.llmStatus) el.llmStatus.textContent = "Failed: " + msg;
                 return;
             }
@@ -5516,31 +5523,31 @@
             .then(function(r) { return r.json(); })
             .then(function(s) {
                 if (s.provider) {
-                    var sel = document.getElementById("llmProvider2");
+                    var sel = document.getElementById("llmProvider");
                     if (sel) sel.value = s.provider;
                 }
                 if (s.model) {
-                    var m = document.getElementById("llmModel2");
+                    var m = document.getElementById("llmModel");
                     if (m) m.value = s.model;
                 }
                 if (s.api_key && s.api_key !== "****") {
-                    var k = document.getElementById("llmApiKey2");
+                    var k = document.getElementById("llmApiKey");
                     if (k) k.value = s.api_key;
                 }
                 if (s.base_url) {
-                    var u = document.getElementById("llmBaseUrl2");
+                    var u = document.getElementById("llmBaseUrl");
                     if (u) u.value = s.base_url;
                 }
-                updateLlmProviderUI();
+                updateLLMProviderUI();
             })
             .catch(function() {});
     }
 
     function saveLlmSettings() {
-        var provider = (document.getElementById("llmProvider2") || {}).value || "ollama";
-        var model = (document.getElementById("llmModel2") || {}).value || "llama3";
-        var apiKey = (document.getElementById("llmApiKey2") || {}).value || "";
-        var baseUrl = (document.getElementById("llmBaseUrl2") || {}).value || "";
+        var provider = (document.getElementById("llmProvider") || {}).value || "ollama";
+        var model = (document.getElementById("llmModel") || {}).value || "llama3";
+        var apiKey = (document.getElementById("llmApiKey") || {}).value || "";
+        var baseUrl = (document.getElementById("llmBaseUrl") || {}).value || "";
         fetch(BACKEND + "/settings/llm", {
             method: "POST",
             headers: { "Content-Type": "application/json", "X-OpenCut-Token": csrfToken },
@@ -5548,14 +5555,6 @@
         }).then(function(r) { return r.json(); })
           .then(function() { showToast("LLM settings saved", "success"); })
           .catch(function() { showToast("Failed to save LLM settings", "error"); });
-    }
-
-    function updateLlmProviderUI() {
-        var provider = (document.getElementById("llmProvider2") || {}).value || "ollama";
-        var apiKeyRow = document.getElementById("llmApiKeyRow");
-        var baseUrlRow = document.getElementById("llmBaseUrlRow");
-        if (apiKeyRow) apiKeyRow.style.display = provider === "ollama" ? "none" : "";
-        if (baseUrlRow) baseUrlRow.style.display = provider === "ollama" ? "" : "none";
     }
 
     function saveAudioZoomDefaults() {
@@ -5573,15 +5572,6 @@
             body: JSON.stringify({ zoom_amount: zoom, easing: easing })
         }).then(function() { showToast("Defaults saved", "success"); })
           .catch(function() { showToast("Failed to save defaults", "error"); });
-    }
-
-    function toggleCard(cardId) {
-        var card = document.getElementById(cardId);
-        if (!card) return;
-        var body = card.querySelector(".card-body");
-        var toggle = card.querySelector(".card-toggle");
-        if (body) body.style.display = body.style.display === "none" ? "" : "none";
-        if (toggle) toggle.textContent = (body && body.style.display === "none") ? "▸" : "▾";
     }
 
     function updateSilenceModeUI() {
@@ -6643,7 +6633,7 @@
         });
 
         // Export tab buttons
-        el.runExpTranscriptBtn.addEventListener("click", runExpTranscript);
+        if (el.runExpTranscriptBtn) el.runExpTranscriptBtn.addEventListener("click", runExpTranscript);
 
         // v1.3.0 — New feature event listeners
         if (el.silenceMode) el.silenceMode.addEventListener("change", updateSilenceModeUI);
@@ -6669,37 +6659,55 @@
         });
 
         // Settings tab buttons
-        el.settingsInstallWhisperBtn.addEventListener("click", installWhisper);
-        el.settingsReinstallWhisperBtn.addEventListener("click", reinstallWhisper);
-        el.settingsClearCacheBtn.addEventListener("click", clearWhisperCache);
-        el.whisperCpuMode.addEventListener("change", toggleCpuMode);
-        el.restartBackendBtn.addEventListener("click", restartBackend);
-        el.openLogsBtn.addEventListener("click", openLogs);
+        if (el.settingsInstallWhisperBtn) el.settingsInstallWhisperBtn.addEventListener("click", installWhisper);
+        if (el.settingsReinstallWhisperBtn) el.settingsReinstallWhisperBtn.addEventListener("click", reinstallWhisper);
+        if (el.settingsClearCacheBtn) el.settingsClearCacheBtn.addEventListener("click", clearWhisperCache);
+        if (el.whisperCpuMode) el.whisperCpuMode.addEventListener("change", toggleCpuMode);
+        if (el.restartBackendBtn) el.restartBackendBtn.addEventListener("click", restartBackend);
+        if (el.openLogsBtn) el.openLogsBtn.addEventListener("click", openLogs);
         
         // Settings persistence
-        el.settingsAutoImport.addEventListener("change", saveLocalSettings);
-        el.settingsAutoOpen.addEventListener("change", saveLocalSettings);
-        el.settingsShowNotifications.addEventListener("change", saveLocalSettings);
-        el.settingsOutputDir.addEventListener("change", saveLocalSettings);
-        el.settingsDefaultModel.addEventListener("change", saveLocalSettings);
-        el.settingsTheme.addEventListener("change", function () {
+        if (el.settingsAutoImport) el.settingsAutoImport.addEventListener("change", saveLocalSettings);
+        if (el.settingsAutoOpen) el.settingsAutoOpen.addEventListener("change", saveLocalSettings);
+        if (el.settingsShowNotifications) el.settingsShowNotifications.addEventListener("change", saveLocalSettings);
+        if (el.settingsOutputDir) el.settingsOutputDir.addEventListener("change", saveLocalSettings);
+        if (el.settingsDefaultModel) el.settingsDefaultModel.addEventListener("change", saveLocalSettings);
+        if (el.settingsTheme) el.settingsTheme.addEventListener("change", function () {
             applyTheme(this.value);
             saveLocalSettings();
         });
         
+        // Audio / Zoom defaults card
+        var saveAudioZoomBtn = $("saveAudioZoomDefaultsBtn");
+        if (saveAudioZoomBtn) saveAudioZoomBtn.addEventListener("click", saveAudioZoomDefaults);
+        var defaultLufsSlider = $("defaultLufs");
+        var defaultLufsValEl = $("defaultLufsVal");
+        if (defaultLufsSlider && defaultLufsValEl) {
+            defaultLufsSlider.addEventListener("input", function () {
+                defaultLufsValEl.textContent = this.value + " LUFS";
+            });
+        }
+        var defaultZoomSlider = $("defaultZoom");
+        var defaultZoomValEl = $("defaultZoomVal");
+        if (defaultZoomSlider && defaultZoomValEl) {
+            defaultZoomSlider.addEventListener("input", function () {
+                defaultZoomValEl.innerHTML = parseFloat(this.value).toFixed(2) + "&times;";
+            });
+        }
+
         // Load saved settings
         loadLocalSettings();
 
         // Progress / Results
-        el.cancelBtn.addEventListener("click", cancelJob);
-        el.processingCancel.addEventListener("click", cancelJob);
-        el.newJobBtn.addEventListener("click", function () {
-            el.resultsSection.classList.add("hidden");
-            el.retryJobBtn.classList.add("hidden");
+        if (el.cancelBtn) el.cancelBtn.addEventListener("click", cancelJob);
+        if (el.processingCancel) el.processingCancel.addEventListener("click", cancelJob);
+        if (el.newJobBtn) el.newJobBtn.addEventListener("click", function () {
+            if (el.resultsSection) el.resultsSection.classList.add("hidden");
+            if (el.retryJobBtn) el.retryJobBtn.classList.add("hidden");
         });
-        el.retryJobBtn.addEventListener("click", function () {
-            el.resultsSection.classList.add("hidden");
-            el.retryJobBtn.classList.add("hidden");
+        if (el.retryJobBtn) el.retryJobBtn.addEventListener("click", function () {
+            if (el.resultsSection) el.resultsSection.classList.add("hidden");
+            if (el.retryJobBtn) el.retryJobBtn.classList.add("hidden");
             if (lastJobEndpoint && lastJobPayload) {
                 startJob(lastJobEndpoint, lastJobPayload);
             }
