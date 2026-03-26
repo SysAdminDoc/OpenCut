@@ -165,6 +165,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/captions/chapters", "/captions/repeat-detect",
     "/video/color-match", "/video/auto-zoom", "/video/multicam-cuts",
     "/timeline/export-from-markers", "/search/index",
+    # v2.0 additions
+    "/workflow/run",
 })
 
 
@@ -325,3 +327,52 @@ def _process_queue():
             _process_queue()
 
     threading.Thread(target=_run, daemon=True).start()
+
+
+# ---------------------------------------------------------------------------
+# Job History (SQLite-backed persistent storage)
+# ---------------------------------------------------------------------------
+
+@jobs_bp.route("/jobs/history", methods=["GET"])
+def job_history():
+    """Return historical jobs from persistent storage.
+
+    Query params:
+        status (str): Filter by status (complete, error, cancelled, interrupted)
+        limit (int): Max results (default 50, max 200)
+        offset (int): Pagination offset
+    """
+    try:
+        from opencut.job_store import list_jobs as db_list_jobs
+    except ImportError:
+        return jsonify([])
+
+    from opencut.security import safe_int
+    status_filter = request.args.get("status", None)
+    limit = min(safe_int(request.args.get("limit", 50), default=50, min_val=1, max_val=200), 200)
+    offset = safe_int(request.args.get("offset", 0), default=0, min_val=0)
+    results = db_list_jobs(status=status_filter, limit=limit, offset=offset)
+    return jsonify(results)
+
+
+@jobs_bp.route("/jobs/stats", methods=["GET"])
+def job_stats():
+    """Return aggregate job statistics."""
+    try:
+        from opencut.job_store import get_job_stats
+        return jsonify(get_job_stats())
+    except ImportError:
+        return jsonify({"total": 0})
+
+
+@jobs_bp.route("/jobs/interrupted", methods=["GET"])
+def interrupted_jobs():
+    """Return jobs that were interrupted by a server restart.
+
+    The frontend can offer to retry these.
+    """
+    try:
+        from opencut.job_store import get_interrupted_jobs
+        return jsonify(get_interrupted_jobs())
+    except ImportError:
+        return jsonify([])

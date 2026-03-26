@@ -17,7 +17,8 @@ def register_blueprints(app):
     from .system import system_bp
     from .timeline import timeline_bp
     from .video import video_bp
+    from .workflow import workflow_bp
 
     for bp in [system_bp, audio_bp, captions_bp, video_bp, jobs_bp, settings_bp,
-               timeline_bp, search_bp, deliverables_bp, nlp_bp]:
+               timeline_bp, search_bp, deliverables_bp, nlp_bp, workflow_bp]:
         app.register_blueprint(bp)

@@ -1595,6 +1595,9 @@ function ocGetSequenceMarkers() {
  * cutsJSON: '[{"start": 10.5, "end": 12.3}, ...]'
  * Returns: '{"applied": N, "errors": [...]}'
  */
+// NOTE: Premiere Pro ExtendScript does not support undo groups (unlike After Effects).
+// Each clip.remove() creates a separate undo step. This is a Premiere limitation.
+// When UXP API supports undo groups, this should be wrapped in one.
 function ocApplySequenceCuts(cutsJSON) {
     try {
         if (!app || !app.project) {
