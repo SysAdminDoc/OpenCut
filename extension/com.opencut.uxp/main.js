@@ -23,14 +23,23 @@ const BACKEND_DEFAULT  = "http://127.0.0.1:5679";
 const BACKEND_MAX_PORT = 5689;
 const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
-const VERSION          = "1.8.0";
+const VERSION          = "1.9.0";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
   for (let port = 5679; port <= BACKEND_MAX_PORT; port++) {
     const url = `http://127.0.0.1:${port}`;
     try {
-      const resp = await fetch(`${url}/health`, { signal: AbortSignal.timeout(500) });
+      // AbortSignal.timeout() may not exist in older UXP runtimes
+      const opts = {};
+      if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
+        opts.signal = AbortSignal.timeout(500);
+      } else {
+        const ac = new AbortController();
+        setTimeout(() => ac.abort(), 500);
+        opts.signal = ac.signal;
+      }
+      const resp = await fetch(`${url}/health`, opts);
       if (resp.ok) return url;
     } catch (e) { /* try next port */ }
   }
@@ -46,8 +55,8 @@ let csrfToken     = null;
 let activeJobId   = null;
 let elapsedTimer  = null;
 let elapsedSec    = 0;
-let lastCuts      = null;   // cuts array from last silence/filler run
-let lastMarkers   = null;   // marker array from last beat detection
+let lastCuts      = [];     // cuts array from last silence/filler run
+let lastMarkers   = [];     // marker array from last beat detection
 
 // ---- Premiere Pro state cache (reduces UXP API round-trips) ----
 const _pproCache = { seq: null, ts: 0 };
@@ -187,7 +196,59 @@ const PProBridge = (() => {
     return map[name.toLowerCase()] ?? 1;
   }
 
-  return { init, available: () => available, getActiveSequence, getSequenceInfo, addMarkers, applyCuts, invalidateCache };
+  /**
+   * Returns all media items in the open project as an array of {name, path, duration, type}.
+   * Falls back to empty array if the UXP module is unavailable.
+   */
+  async function getProjectItems() {
+    if (!available || !ppro) return [];
+    try {
+      // Timeout the entire walk to prevent hanging if UXP API stalls
+      const result = await Promise.race([
+        (async () => {
+          const projList = await ppro.app.getProjectList();
+          if (!projList || projList.length === 0) return [];
+          const proj = projList[0];
+          const rootItem = await proj.getRootItem();
+          if (!rootItem) return [];
+          return await _walkItems(rootItem, 0);
+        })(),
+        new Promise(resolve => setTimeout(() => resolve([]), 5000))
+      ]);
+      return result;
+    } catch (e) {
+      console.warn("[PProBridge] getProjectItems failed:", e.message);
+      return [];
+    }
+  }
+
+  async function _walkItems(parent, depth) {
+    if (depth > 20) return [];
+    const items = [];
+    try {
+      const children = await parent.getItems();
+      if (!children) return [];
+      for (const child of children) {
+        try {
+          const isFolder = await child.isFolder?.() ?? false;
+          if (isFolder) {
+            const subItems = await _walkItems(child, depth + 1);
+            items.push(...subItems);
+          } else {
+            const mediaPath = await child.getMediaPath?.() ?? "";
+            if (mediaPath) {
+              const name = await child.getName?.() ?? "";
+              const duration = await child.getOutPoint?.()?.seconds ?? 0;
+              items.push({ name, path: mediaPath, duration });
+            }
+          }
+        } catch (_) { /* skip inaccessible items */ }
+      }
+    } catch (_) { /* parent has no children */ }
+    return items;
+  }
+
+  return { init, available: () => available, getActiveSequence, getSequenceInfo, addMarkers, applyCuts, invalidateCache, getProjectItems };
 })();
 
 // ─────────────────────────────────────────────────────────────
@@ -309,12 +370,14 @@ const JobPoller = (() => {
     if (status === "done" || status === "complete" || status === "success") {
       activeJobId = null;
       onComplete(job.result ?? job);
+      _fireCompletionHooks();
       return;
     }
 
     if (status === "error" || status === "failed" || status === "cancelled") {
       activeJobId = null;
       onError(job.error ?? job.message ?? "Job failed");
+      _fireCompletionHooks();
       return;
     }
 
@@ -326,13 +389,25 @@ const JobPoller = (() => {
     }, POLL_INTERVAL_MS);
   }
 
+  // Post-completion hooks — called after every successful or failed job
+  const _completionHooks = [];
+
+  function onJobFinished(hook) { _completionHooks.push(hook); }
+
+  function _fireCompletionHooks() {
+    for (const hook of _completionHooks) {
+      try { hook(); } catch (_) {}
+    }
+  }
+
   async function cancel() {
     if (!activeJobId) return;
     await BackendClient.post(`/cancel/${activeJobId}`, {});
     activeJobId = null;
+    _fireCompletionHooks();
   }
 
-  return { start, cancel };
+  return { start, cancel, onJobFinished };
 })();
 
 // ─────────────────────────────────────────────────────────────
@@ -543,6 +618,71 @@ async function browseFolder(inputId) {
 }
 
 // ─────────────────────────────────────────────────────────────
+// Project media discovery — populates clip path inputs
+// ─────────────────────────────────────────────────────────────
+let _projectClips = [];
+let _clipScanTimer = null;
+
+/**
+ * Scan project media via UXP bridge (or backend fallback) and populate
+ * a shared <datalist> so all clip path inputs offer autocomplete.
+ * Also updates any <select id="clipSelect"> if present.
+ */
+async function scanProjectClips() {
+  let items = [];
+
+  // Try UXP bridge first (direct Premiere access)
+  if (PProBridge.available()) {
+    items = await PProBridge.getProjectItems();
+  }
+
+  // Fallback: ask the backend (it can query via its own bridge)
+  if (items.length === 0) {
+    const r = await BackendClient.get("/project/media");
+    if (r.ok && Array.isArray(r.data?.media)) {
+      items = r.data.media;
+    }
+  }
+
+  if (items.length === 0) return;
+
+  _projectClips = items;
+
+  // Build or update a shared <datalist> for clip path inputs
+  let datalist = document.getElementById("projectClipList");
+  if (!datalist) {
+    datalist = document.createElement("datalist");
+    datalist.id = "projectClipList";
+    document.body.appendChild(datalist);
+  }
+  datalist.innerHTML = items.map(c =>
+    `<option value="${UIController.escapeHtml(c.path)}" label="${UIController.escapeHtml(c.name)}">`
+  ).join("");
+
+  // Attach datalist to all clip path inputs so they get autocomplete
+  const clipInputIds = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
+  for (const id of clipInputIds) {
+    const input = document.getElementById(id);
+    if (input && !input.getAttribute("list")) {
+      input.setAttribute("list", "projectClipList");
+    }
+  }
+
+  // Populate <select id="clipSelect"> if it exists in the UXP panel
+  const clipSelect = document.getElementById("clipSelect");
+  if (clipSelect) {
+    const currentVal = clipSelect.value;
+    clipSelect.innerHTML = `<option value="">-- Select a clip --</option>` +
+      items.map(c =>
+        `<option value="${UIController.escapeHtml(c.path)}">${UIController.escapeHtml(c.name)}</option>`
+      ).join("");
+    if (currentVal) clipSelect.value = currentVal;
+  }
+
+  UIController.setStatusRight(`${items.length} clip(s)`);
+}
+
+// ─────────────────────────────────────────────────────────────
 // Feature functions
 // ─────────────────────────────────────────────────────────────
 
@@ -555,6 +695,7 @@ async function runSilenceRemoval() {
   const minSilence = parseFloat(document.getElementById("minSilence")?.value ?? 0.5);
   const padding = parseInt(document.getElementById("silencePadding")?.value ?? 80);
   const mode = document.getElementById("silenceMode")?.value ?? "remove";
+  const detectMethod = document.getElementById("silenceDetectMethod")?.value ?? "auto";
 
   UIController.setButtonLoading("runSilenceBtn", true);
   UIController.showProcessing("Detecting silences...");
@@ -562,7 +703,7 @@ async function runSilenceRemoval() {
 
   await JobPoller.start(
     "/silence",
-    { filepath: clipPath, threshold: threshold, min_duration: minSilence, padding_before: padding / 1000, padding_after: padding / 1000, mode },
+    { filepath: clipPath, threshold: threshold, min_duration: minSilence, padding_before: padding / 1000, padding_after: padding / 1000, mode, method: detectMethod },
     (pct, msg) => {
       UIController.setProgress(pct);
       UIController.setProcessingMsg(msg || "Processing...");
@@ -611,13 +752,14 @@ async function runFillerDetection() {
 
   const words   = document.getElementById("fillerWords")?.value ?? "um,uh,like";
   const padding = parseInt(document.getElementById("fillerPadding")?.value ?? 50);
+  const fillerBackend = document.getElementById("fillerBackend")?.value ?? "whisper";
 
   UIController.setButtonLoading("runFillerBtn", true);
-  UIController.showProcessing("Detecting filler words...");
+  UIController.showProcessing(fillerBackend === "crisper" ? "Detecting fillers with CrisperWhisper..." : "Detecting filler words...");
 
   await JobPoller.start(
     "/fillers",
-    { filepath: clipPath, custom_words: words.split(",").map(w => w.trim()) },
+    { filepath: clipPath, custom_words: words.split(",").map(w => w.trim()), filler_backend: fillerBackend },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Transcribing..."); },
     (result) => {
       UIController.hideProcessing();
@@ -1040,12 +1182,17 @@ async function runBatchExport() {
   const outputDir = document.getElementById("exportDir")?.value?.trim();
   if (!outputDir) { UIController.showToast("Please select an output folder.", "warning"); return; }
 
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+  const markersToExport = lastMarkers ?? lastCuts ?? [];
+  if (!clipPath) { UIController.showToast("Please select a clip first.", "warning"); return; }
+  if (markersToExport.length === 0) { UIController.showToast("No markers or cuts to export. Run beat detection or silence removal first.", "warning"); return; }
+
   UIController.setButtonLoading("runBatchExportBtn", true);
   UIController.showProcessing("Starting batch export from markers...");
 
   await JobPoller.start(
     "/timeline/export-from-markers",
-    { input_file: "", markers: [], output_dir: outputDir, format: preset },
+    { input_file: clipPath, markers: markersToExport, output_dir: outputDir, format: preset },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Exporting..."); },
     (result) => {
       UIController.hideProcessing();
@@ -1072,7 +1219,7 @@ async function runBatchRename() {
 
   await JobPoller.start(
     "/timeline/batch-rename",
-    { renames: [], pattern, scope },
+    { pattern, scope },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Renaming..."); },
     (result) => {
       UIController.hideProcessing();
@@ -1098,7 +1245,7 @@ async function runSmartBins() {
 
   await JobPoller.start(
     "/timeline/smart-bins",
-    { rules: [{ binName: strategy, rule: "type", field: "type", value: strategy }] },
+    { strategy },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Organising..."); },
     (result) => {
       UIController.hideProcessing();
@@ -1394,6 +1541,8 @@ function pad(n) { return String(n).padStart(2, "0"); }
 // ─────────────────────────────────────────────────────────────
 // Health check loop
 // ─────────────────────────────────────────────────────────────
+let _lastConnectionState = null;
+
 async function checkConnection() {
   UIController.setConnection("connecting");
   const r = await BackendClient.get("/health");
@@ -1407,6 +1556,22 @@ async function checkConnection() {
     UIController.setStatus("Server offline — start the OpenCut backend");
     UIController.setStatusRight("");
   }
+
+  // Toggle all action buttons based on connection state
+  if (_lastConnectionState !== alive) {
+    _lastConnectionState = alive;
+    document.querySelectorAll(".oc-btn-primary").forEach(btn => {
+      // Don't override buttons already disabled for other reasons (loading state)
+      if (!btn.classList.contains("loading")) {
+        btn.disabled = !alive;
+      }
+    });
+    // Show reconnection toast when server comes back
+    if (alive && _lastConnectionState === false) {
+      UIController.showToast("Server reconnected.", "success");
+    }
+  }
+
   return alive;
 }
 
@@ -1480,6 +1645,39 @@ function bindEvents() {
   document.getElementById("runBatchRenameBtn")?.addEventListener("click", runBatchRename);
   document.getElementById("runSmartBinsBtn")?.addEventListener("click",   runSmartBins);
   document.getElementById("runSrtImportBtn")?.addEventListener("click",   runSrtImport);
+
+  // ── OTIO Export ──
+  document.getElementById("exportOtioBtn")?.addEventListener("click", async () => {
+    const clipPath = document.getElementById("clipPathCut")?.value?.trim()
+                  ?? document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+    if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+    const mode = document.getElementById("otioExportMode")?.value ?? "cuts";
+    const payload = { filepath: clipPath, mode };
+    if (mode === "cuts") {
+      if (!lastCuts || lastCuts.length === 0) {
+        UIController.showToast("No cuts available. Run silence removal first.", "warning");
+        return;
+      }
+      payload.cuts = lastCuts;
+    } else if (mode === "markers") {
+      if (!lastMarkers || lastMarkers.length === 0) {
+        UIController.showToast("No markers available. Run beat detection first.", "warning");
+        return;
+      }
+      payload.markers = lastMarkers.map(m => ({
+        time: typeof m === "number" ? m : (m.time ?? m.t ?? 0),
+        name: m.label ?? "Marker",
+      }));
+    }
+    UIController.setButtonLoading("exportOtioBtn", true);
+    const r = await BackendClient.post("/timeline/export-otio", payload);
+    UIController.setButtonLoading("exportOtioBtn", false);
+    if (r.ok) {
+      UIController.showToast(`OTIO exported: ${r.data?.output_path?.split(/[/\\]/).pop() ?? "done"}`, "success");
+    } else {
+      UIController.showToast(`OTIO export failed: ${r.error}`, "error");
+    }
+  });
 
   // ── Search ──
   document.getElementById("browseIndexFolder")?.addEventListener("click", () => browseFolder("indexFolder"));
@@ -1576,6 +1774,9 @@ async function initApp() {
     await loadLlmSettings();
     UIController.showToast("OpenCut backend connected.", "success");
 
+    // Scan project media so clip path inputs have autocomplete
+    await scanProjectClips();
+
     // One-time update check
     const ur = await BackendClient.get("/system/update-check");
     if (ur.ok && ur.data && ur.data.update_available) {
@@ -1587,8 +1788,30 @@ async function initApp() {
     }
   }
 
-  // Periodic health checks
-  setInterval(checkConnection, HEALTH_CHECK_MS);
+  // Re-scan project clips after every job completes (picks up auto-imported outputs)
+  JobPoller.onJobFinished(() => {
+    setTimeout(() => scanProjectClips(), 1500);
+  });
+
+  // Periodic soft re-scan to pick up newly imported media
+  setInterval(async () => {
+    if (!activeJobId) await scanProjectClips();
+  }, 25000);
+
+  // Re-scan when panel regains focus
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) scanProjectClips();
+  });
+
+  // Periodic health checks — schedule next check only after current one completes
+  // to prevent overlapping async calls when backend is slow/down
+  function scheduleHealthCheck() {
+    setTimeout(async () => {
+      await checkConnection();
+      scheduleHealthCheck();
+    }, HEALTH_CHECK_MS);
+  }
+  scheduleHealthCheck();
 
   console.log("[OpenCut UXP] Ready.");
 }

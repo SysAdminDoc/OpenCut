@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.8.0
+   OpenCut CEP Panel - Main Controller v1.9.0
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -1077,7 +1077,7 @@
         },
         autoImport: function (path, type) {
             if (!cs) return;
-            cs.evalScript('autoImportResult("' + path.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '", "' + (type || "output") + '")');
+            cs.evalScript('autoImportResult("' + escPath(path) + '", "' + escPath(type || "output") + '")');
         },
         isProjectSaved: function (cb) {
             jsx("isProjectSaved()", cb);
@@ -1119,6 +1119,11 @@
             var err = null, data = null;
             try { data = JSON.parse(xhr.responseText); }
             catch (e) { err = e; }
+            // Treat non-2xx HTTP responses as errors
+            if (!err && xhr.status >= 400) {
+                err = new Error((data && data.error) ? data.error : "HTTP " + xhr.status);
+                err.status = xhr.status;
+            }
             callback(err, data);
             _notifyPending(err, data);
         };
@@ -1256,6 +1261,9 @@
             connected = false;
             el.connDot.className = "conn-dot off";
             el.connLabel.textContent = "Disconnected";
+            // Clear capability cache so buttons get re-evaluated when server returns
+            capabilitiesLoaded = false;
+            capabilities = {};
             updateButtons();
             if (!backendStartAttempted && inPremiere) {
                 backendStartAttempted = true;
@@ -1268,9 +1276,42 @@
     // Project Media
     // ================================================================
     var _projectSaveWarned = false;
+    var _scanInProgress = false;
+    var _scanDebounceTimer = null;
 
     function scanProjectMedia() {
-        if (!inPremiere) return;
+        // Debounce: if multiple scan triggers fire in quick succession, only run once
+        if (_scanDebounceTimer) clearTimeout(_scanDebounceTimer);
+        _scanDebounceTimer = setTimeout(_doScanProjectMedia, 300);
+    }
+
+    function _doScanProjectMedia() {
+        _scanDebounceTimer = null;
+        if (_scanInProgress) return;
+        _scanInProgress = true;
+        // If not running inside Premiere, try the backend's project media endpoint
+        if (!inPremiere) {
+            if (connected) {
+                api("GET", "/project/media", null, function (err, data) {
+                    _scanInProgress = false;
+                    if (!err && data && data.media && data.media.length > 0) {
+                        projectMedia = data.media;
+                        projectFolder = data.projectFolder || "";
+                        var html = '<option value="">-- Select a clip --</option>';
+                        for (var i = 0; i < projectMedia.length; i++) {
+                            var m = projectMedia[i];
+                            html += '<option value="' + esc(m.path) + '" data-name="' + esc(m.name) + '">' + esc(m.name) + '</option>';
+                        }
+                        el.clipSelect.innerHTML = html;
+                        populateRecentFiles();
+                        refreshClipDropdown();
+                    }
+                });
+            } else {
+                _scanInProgress = false;
+            }
+            return;
+        }
         // Warn once if project hasn't been saved
         if (!_projectSaveWarned) {
             PremiereBridge.isProjectSaved(function (res) {
@@ -1284,6 +1325,7 @@
             });
         }
         PremiereBridge.getProjectMedia(function (result) {
+            _scanInProgress = false;
             if (!result || result === "null" || result === "undefined") return;
             try {
                 var data = JSON.parse(result);
@@ -1397,18 +1439,18 @@
     }
 
     function refreshClipDropdown() {
-        if (el.clipSelect.parentNode) {
-            // Disconnect old observer to prevent leak
-            if (el.clipSelect._customDropdown && el.clipSelect._customDropdown.observer) {
-                el.clipSelect._customDropdown.observer.disconnect();
-            }
-            var oldDd = el.clipSelect.parentNode.querySelector(".custom-dropdown");
-            if (oldDd) {
-                oldDd.parentNode.removeChild(oldDd);
-                delete el.clipSelect.dataset.customized;
-                createCustomDropdown(el.clipSelect);
-            }
+        if (!el.clipSelect || !el.clipSelect.parentNode) return;
+        // Disconnect old observer to prevent leak
+        if (el.clipSelect._customDropdown && el.clipSelect._customDropdown.observer) {
+            el.clipSelect._customDropdown.observer.disconnect();
         }
+        var oldDd = el.clipSelect.parentNode.querySelector(".custom-dropdown");
+        if (oldDd) {
+            oldDd.parentNode.removeChild(oldDd);
+        }
+        // Always rebuild (handles both first-time creation and updates)
+        delete el.clipSelect.dataset.customized;
+        createCustomDropdown(el.clipSelect);
     }
 
     function selectFile(path, name) {
@@ -1569,7 +1611,8 @@
         "runTitleOverlayBtn", "runReframeBtn", "runUpscaleBtn",
         "runColorBtn", "runRemoveBtn", "runFaceAiBtn", "runAnimCapBtn",
         "runExpTranscriptBtn", "loadWaveformBtn", "previewVfxBtn", "runTrimBtn",
-        "runAutoEditBtn", "runHighlightsBtn", "runEnhanceBtn", "runShortsBtn",
+        "runAutoEditBtn", "runHighlightsBtn", "runEmotionHighlightsBtn", "runEnhanceBtn", "runShortsBtn",
+        "autoDetectWatermarkBtn",
         "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runMulticamBtn",
         "runLoudMatchBtn", "runFootageSearchBtn",
         "quickCleanInterview", "quickYouTube", "quickPodcast",
@@ -1590,89 +1633,71 @@
         // Merge has special logic
         if (el.runMergeBtn) el.runMergeBtn.disabled = _mergeFiles.length < 2;
 
+        // Helper to safely toggle hint visibility and optionally disable a button
+        function _setHint(hintEl, btnEl, showHint) {
+            if (hintEl) hintEl.classList.toggle("hidden", !showHint);
+            if (btnEl && showHint) btnEl.disabled = true;
+        }
+
         // Whisper hints
-        if (capabilities.captions === false) {
-            el.captionsHint.classList.remove("hidden");
-            el.fillersHint.classList.remove("hidden");
-        } else {
-            el.captionsHint.classList.add("hidden");
-            el.fillersHint.classList.add("hidden");
-        }
-        
+        _setHint(el.captionsHint, null, capabilities.captions === false);
+        _setHint(el.fillersHint, null, capabilities.captions === false);
+
         // Demucs hint
-        if (capabilities.separation === false) {
-            el.separateHint.classList.remove("hidden");
-            el.runSeparateBtn.disabled = true;
-        } else {
-            el.separateHint.classList.add("hidden");
-        }
-        
+        _setHint(el.separateHint, el.runSeparateBtn, capabilities.separation === false);
+
         // Watermark removal hint
-        if (capabilities.watermark_removal === false) {
-            el.watermarkHint.classList.remove("hidden");
-            el.runWatermarkBtn.disabled = true;
-        } else {
-            el.watermarkHint.classList.add("hidden");
-        }
+        _setHint(el.watermarkHint, el.runWatermarkBtn, capabilities.watermark_removal === false);
 
         // Pedalboard hint
-        if (capabilities.pedalboard === false) {
-            el.proFxHint.classList.remove("hidden");
-            el.runProFxBtn.disabled = true;
-        } else {
-            el.proFxHint.classList.add("hidden");
-        }
+        _setHint(el.proFxHint, el.runProFxBtn, capabilities.pedalboard === false);
 
         // DeepFilterNet hint
-        if (capabilities.deepfilter === false) {
-            el.deepFilterHint.classList.remove("hidden");
-            el.runDeepFilterBtn.disabled = true;
-        } else {
-            el.deepFilterHint.classList.add("hidden");
-        }
+        _setHint(el.deepFilterHint, el.runDeepFilterBtn, capabilities.deepfilter === false);
 
         // Video AI hints (upscale/rembg need install, interp/denoise always work)
         var aiCaps = capabilities.video_ai || {};
         var tool = el.vidAiTool ? el.vidAiTool.value : "upscale";
         if (tool === "upscale" && aiCaps.upscale === false) {
-            el.vidAiHint.classList.remove("hidden");
-            el.vidAiHintText.textContent = "Real-ESRGAN not installed.";
+            if (el.vidAiHint) el.vidAiHint.classList.remove("hidden");
+            if (el.vidAiHintText) el.vidAiHintText.textContent = "Real-ESRGAN not installed.";
         } else if (tool === "rembg" && aiCaps.rembg === false) {
-            el.vidAiHint.classList.remove("hidden");
-            el.vidAiHintText.textContent = "rembg not installed.";
+            if (el.vidAiHint) el.vidAiHint.classList.remove("hidden");
+            if (el.vidAiHintText) el.vidAiHintText.textContent = "rembg not installed.";
         } else {
-            el.vidAiHint.classList.add("hidden");
+            if (el.vidAiHint) el.vidAiHint.classList.add("hidden");
         }
 
         // Face tools hint
         var faceCaps = capabilities.face_tools || {};
-        if (faceCaps.mediapipe === false) {
-            el.faceHint.classList.remove("hidden");
-        } else {
-            el.faceHint.classList.add("hidden");
-        }
+        _setHint(el.faceHint, null, faceCaps.mediapipe === false);
 
         // WhisperX / karaoke hint
-        if (capabilities.whisperx === false) {
-            el.karaokeHint.classList.remove("hidden");
-            el.runKaraokeBtn.disabled = true;
-        } else {
-            el.karaokeHint.classList.add("hidden");
-        }
+        _setHint(el.karaokeHint, el.runKaraokeBtn, capabilities.whisperx === false);
 
         // NLLB translation hint
-        if (capabilities.nllb === false) {
-            el.translateHint.classList.remove("hidden");
-        } else {
-            el.translateHint.classList.add("hidden");
-        }
+        _setHint(el.translateHint, null, capabilities.nllb === false);
 
         // Edge TTS hint
-        if (capabilities.edge_tts === false) {
-            el.ttsHint.classList.remove("hidden");
-        } else {
-            el.ttsHint.classList.add("hidden");
+        _setHint(el.ttsHint, null, capabilities.edge_tts === false);
+
+        // Silero VAD hint (show install button if not available)
+        _setHint(el.vadHint, null, capabilities.silero_vad === false);
+
+        // CrisperWhisper hint — update filler backend dropdown availability
+        if (el.fillerBackend && capabilities.crisper_whisper === false) {
+            // Disable the CrisperWhisper option but keep Whisper available
+            var crisperOpt = el.fillerBackend.querySelector('option[value="crisper"]');
+            if (crisperOpt) crisperOpt.disabled = true;
+        } else if (el.fillerBackend) {
+            var crisperOpt2 = el.fillerBackend.querySelector('option[value="crisper"]');
+            if (crisperOpt2) crisperOpt2.disabled = false;
         }
+
+        // OTIO export hint
+        _setHint(el.otioHint, null, capabilities.otio === false);
+        var otioBtn = document.getElementById("exportOtioBtn");
+        if (otioBtn) otioBtn.disabled = !canRun || capabilities.otio === false;
     }
 
     // ================================================================
@@ -2070,6 +2095,9 @@
                 });
                 lastCaptionPath = srtPath;
             }
+
+            // Re-scan project media after auto-import so new files appear in the clip list
+            setTimeout(function () { scanProjectMedia(); }, 1500);
         }
     }
 
@@ -2192,7 +2220,8 @@
             return;
         }
         var preset = el.silencePreset.value;
-        var payload = { filepath: selectedPath, output_dir: projectFolder };
+        var detectMethod = el.silenceDetectMethod ? el.silenceDetectMethod.value : "auto";
+        var payload = { filepath: selectedPath, output_dir: projectFolder, method: detectMethod };
         if (preset) {
             payload.preset = preset;
         } else {
@@ -2210,6 +2239,7 @@
         for (var i = 0; i < checks.length; i++) removeKeys.push(checks[i].getAttribute("data-filler"));
         var customRaw = el.fillerCustom.value.trim();
         var custom = customRaw ? customRaw.split(",").map(function (s) { return s.trim(); }).filter(Boolean) : [];
+        var fillerBackend = el.fillerBackend ? el.fillerBackend.value : "whisper";
 
         startJob("/fillers", {
             filepath: selectedPath,
@@ -2218,6 +2248,7 @@
             remove_fillers: removeKeys,
             custom_words: custom,
             remove_silence: el.fillerSilence.checked,
+            filler_backend: fillerBackend,
         });
     }
 
@@ -2406,6 +2437,44 @@
         }, 300000);
     }
     
+    function autoDetectWatermark() {
+        if (!selectedPath) return;
+        var btn = document.getElementById("autoDetectWatermarkBtn");
+        var resEl = document.getElementById("wmDetectResult");
+        if (btn) { btn.disabled = true; btn.textContent = "Detecting..."; }
+        api("POST", "/video/auto-detect-watermark", { filepath: selectedPath, prompt: (el.wmPrompt ? el.wmPrompt.value.trim() : "watermark") || "watermark" }, function (err, data) {
+            if (btn) { btn.disabled = false; btn.textContent = "Auto-Detect Watermark (Florence-2)"; }
+            if (err || !data) {
+                if (resEl) { resEl.classList.remove("hidden"); resEl.textContent = "Detection failed: " + ((err && err.message) || "Unknown error"); }
+                return;
+            }
+            if (data.error) {
+                if (resEl) { resEl.classList.remove("hidden"); resEl.textContent = data.error + (data.suggestion ? " — " + data.suggestion : ""); }
+                return;
+            }
+            if (data.x !== undefined) {
+                // Fill in the detected region
+                if (el.removeX) el.removeX.value = data.x;
+                if (el.removeY) el.removeY.value = data.y;
+                if (el.removeW) el.removeW.value = data.width;
+                if (el.removeH) el.removeH.value = data.height;
+                if (resEl) { resEl.classList.remove("hidden"); resEl.textContent = "Detected at (" + data.x + ", " + data.y + ") — " + data.width + "×" + data.height + " px (" + (data.method || "auto") + ", " + safeFixed((data.confidence || 0) * 100, 0) + "% confidence)"; }
+                showToast("Watermark detected — region auto-filled", "success");
+            } else {
+                if (resEl) { resEl.classList.remove("hidden"); resEl.textContent = "No watermark detected. Try adjusting the prompt."; }
+            }
+        });
+    }
+
+    function runEmotionHighlights() {
+        startJob("/video/emotion-highlights", {
+            filepath: selectedPath,
+            sample_interval: 1.0,
+            min_intensity: 0.6,
+            min_duration: 2.0,
+        });
+    }
+
     function runScenes() {
         el.sceneResults.classList.add("hidden");
         startJob("/video/scenes", {
@@ -2465,12 +2534,14 @@
                 model: el.vidAiUpscaleModel.value,
             });
         } else if (tool === "rembg") {
+            var rembgBackend = el.vidAiRembgBackend ? el.vidAiRembgBackend.value : "rembg";
             startJob("/video/ai/rembg", {
                 filepath: selectedPath,
                 output_dir: projectFolder,
-                model: el.vidAiRembgModel.value,
-                bg_color: el.vidAiRembgBg.value,
-                alpha_only: el.vidAiRembgAlpha.checked,
+                backend: rembgBackend,
+                model: el.vidAiRembgModel ? el.vidAiRembgModel.value : "birefnet-general",
+                bg_color: el.vidAiRembgBg ? el.vidAiRembgBg.value : "",
+                alpha_only: el.vidAiRembgAlpha ? el.vidAiRembgAlpha.checked : false,
             });
         } else if (tool === "interpolate") {
             startJob("/video/ai/interpolate", {
@@ -3644,12 +3715,12 @@
     
     function saveLocalSettings() {
         var settings = {
-            autoImport: el.settingsAutoImport.checked,
-            autoOpen: el.settingsAutoOpen.checked,
-            showNotifications: el.settingsShowNotifications.checked,
-            outputDir: el.settingsOutputDir.value,
-            defaultModel: el.settingsDefaultModel.value,
-            theme: el.settingsTheme.value,
+            autoImport: el.settingsAutoImport ? el.settingsAutoImport.checked : true,
+            autoOpen: el.settingsAutoOpen ? el.settingsAutoOpen.checked : false,
+            showNotifications: el.settingsShowNotifications ? el.settingsShowNotifications.checked : true,
+            outputDir: el.settingsOutputDir ? el.settingsOutputDir.value : "",
+            defaultModel: el.settingsDefaultModel ? el.settingsDefaultModel.value : "medium",
+            theme: el.settingsTheme ? el.settingsTheme.value : "cyberpunk",
             lang: el.settingsLang ? el.settingsLang.value : "en"
         };
         try {
@@ -3665,18 +3736,19 @@
             var saved = localStorage.getItem(LOCAL_SETTINGS_KEY);
             if (saved) {
                 var settings = JSON.parse(saved);
-                if (settings.autoImport !== undefined) el.settingsAutoImport.checked = settings.autoImport;
-                if (settings.autoOpen !== undefined) el.settingsAutoOpen.checked = settings.autoOpen;
-                if (settings.showNotifications !== undefined) el.settingsShowNotifications.checked = settings.showNotifications;
-                if (settings.outputDir) el.settingsOutputDir.value = settings.outputDir;
-                if (settings.defaultModel) el.settingsDefaultModel.value = settings.defaultModel;
-                if (settings.theme) el.settingsTheme.value = settings.theme;
+                if (settings.autoImport !== undefined && el.settingsAutoImport) el.settingsAutoImport.checked = settings.autoImport;
+                if (settings.autoOpen !== undefined && el.settingsAutoOpen) el.settingsAutoOpen.checked = settings.autoOpen;
+                if (settings.showNotifications !== undefined && el.settingsShowNotifications) el.settingsShowNotifications.checked = settings.showNotifications;
+                if (settings.outputDir && el.settingsOutputDir) el.settingsOutputDir.value = settings.outputDir;
+                if (settings.defaultModel && el.settingsDefaultModel) el.settingsDefaultModel.value = settings.defaultModel;
+                if (settings.theme && el.settingsTheme) el.settingsTheme.value = settings.theme;
             }
         } catch (e) {
             // localStorage may not be available
         }
         // Always apply current theme on load
-        applyTheme(el.settingsTheme.value);
+        var themeName = (el.settingsTheme && el.settingsTheme.value) ? el.settingsTheme.value : "cyberpunk";
+        applyTheme(themeName);
     }
 
     function applyTheme(themeName) {
@@ -3705,82 +3777,93 @@
     // Slider Handlers
     // ================================================================
     function setupSliders() {
+        // Safe slider binding: skips if slider or value element is missing from DOM
+        function _bindSlider(sliderId, valId, fmt) {
+            var slider = el[sliderId], valEl = el[valId];
+            if (!slider || !valEl) return;
+            slider.addEventListener("input", function () { valEl.textContent = fmt(this.value); });
+        }
+
         // Silence sliders
-        el.threshold.addEventListener("input", function () { el.thresholdVal.textContent = this.value + " dB"; });
-        el.minDuration.addEventListener("input", function () { el.minDurationVal.textContent = this.value + "s"; });
-        el.silencePreset.addEventListener("change", function () {
-            el.customSilenceSettings.classList.toggle("hidden", this.value !== "");
-        });
+        _bindSlider("threshold", "thresholdVal", function (v) { return v + " dB"; });
+        _bindSlider("minDuration", "minDurationVal", function (v) { return v + "s"; });
+        if (el.silencePreset) {
+            el.silencePreset.addEventListener("change", function () {
+                if (el.customSilenceSettings) el.customSilenceSettings.classList.toggle("hidden", this.value !== "");
+            });
+        }
 
         // Audio sliders
-        el.denoiseStrength.addEventListener("input", function () { el.denoiseStrengthVal.textContent = this.value; });
-        el.beatSensitivity.addEventListener("input", function () { el.beatSensitivityVal.textContent = this.value; });
+        _bindSlider("denoiseStrength", "denoiseStrengthVal", function (v) { return v; });
+        _bindSlider("beatSensitivity", "beatSensitivityVal", function (v) { return v; });
 
         // Video sliders
-        el.wmMaxBbox.addEventListener("input", function () { el.wmMaxBboxVal.textContent = this.value + "%"; });
-        el.wmFrameSkip.addEventListener("input", function () { el.wmFrameSkipVal.textContent = this.value; });
-        el.sceneThreshold.addEventListener("input", function () { el.sceneThresholdVal.textContent = safeFixed(parseFloat(this.value), 2); });
-        el.minSceneLen.addEventListener("input", function () { el.minSceneLenVal.textContent = this.value + "s"; });
+        _bindSlider("wmMaxBbox", "wmMaxBboxVal", function (v) { return v + "%"; });
+        _bindSlider("wmFrameSkip", "wmFrameSkipVal", function (v) { return v; });
+        _bindSlider("sceneThreshold", "sceneThresholdVal", function (v) { return safeFixed(parseFloat(v), 2); });
+        _bindSlider("minSceneLen", "minSceneLenVal", function (v) { return v + "s"; });
 
         // Video FX sliders
-        el.vfxStabSmoothing.addEventListener("input", function () { el.vfxStabSmoothingVal.textContent = this.value; });
-        el.vfxStabZoom.addEventListener("input", function () { el.vfxStabZoomVal.textContent = this.value + "%"; });
-        el.vfxVignetteIntensity.addEventListener("input", function () { el.vfxVignetteIntensityVal.textContent = this.value; });
-        el.vfxGrainIntensity.addEventListener("input", function () { el.vfxGrainIntensityVal.textContent = this.value; });
-        el.vfxChromakeySim.addEventListener("input", function () { el.vfxChromakeySimVal.textContent = safeFixed(parseFloat(this.value), 2); });
-        el.vfxChromakeyBlend.addEventListener("input", function () { el.vfxChromakeyBlendVal.textContent = safeFixed(parseFloat(this.value), 2); });
-        el.vfxLutIntensity.addEventListener("input", function () { el.vfxLutIntensityVal.textContent = this.value; });
+        _bindSlider("vfxStabSmoothing", "vfxStabSmoothingVal", function (v) { return v; });
+        _bindSlider("vfxStabZoom", "vfxStabZoomVal", function (v) { return v + "%"; });
+        _bindSlider("vfxVignetteIntensity", "vfxVignetteIntensityVal", function (v) { return v; });
+        _bindSlider("vfxGrainIntensity", "vfxGrainIntensityVal", function (v) { return v; });
+        _bindSlider("vfxChromakeySim", "vfxChromakeySimVal", function (v) { return safeFixed(parseFloat(v), 2); });
+        _bindSlider("vfxChromakeyBlend", "vfxChromakeyBlendVal", function (v) { return safeFixed(parseFloat(v), 2); });
+        _bindSlider("vfxLutIntensity", "vfxLutIntensityVal", function (v) { return v; });
 
         // Video AI sliders
-        el.vidAiDenoiseStrength.addEventListener("input", function () { el.vidAiDenoiseStrengthVal.textContent = this.value; });
+        _bindSlider("vidAiDenoiseStrength", "vidAiDenoiseStrengthVal", function (v) { return v; });
 
         // Face blur slider
-        el.faceBlurStrength.addEventListener("input", function () { el.faceBlurStrengthVal.textContent = this.value; });
+        _bindSlider("faceBlurStrength", "faceBlurStrengthVal", function (v) { return v; });
 
         // Style transfer slider
-        el.styleIntensity.addEventListener("input", function () { el.styleIntensityVal.textContent = this.value; });
+        _bindSlider("styleIntensity", "styleIntensityVal", function (v) { return v; });
 
         // Karaoke font size slider
-        el.karaokeFontSize.addEventListener("input", function () { el.karaokeFontSizeVal.textContent = this.value + "px"; });
+        _bindSlider("karaokeFontSize", "karaokeFontSizeVal", function (v) { return v + "px"; });
 
         // TTS rate slider
-        el.ttsRate.addEventListener("input", function () {
-            var v = parseInt(this.value);
-            el.ttsRateVal.textContent = (v >= 0 ? "+" : "") + v + "%";
-        });
+        if (el.ttsRate && el.ttsRateVal) {
+            el.ttsRate.addEventListener("input", function () {
+                var v = parseInt(this.value);
+                el.ttsRateVal.textContent = (v >= 0 ? "+" : "") + v + "%";
+            });
+        }
 
         // SFX sliders
-        el.toneFreq.addEventListener("input", function () { el.toneFreqVal.textContent = this.value + " Hz"; });
-        el.sfxDuration.addEventListener("input", function () { el.sfxDurationVal.textContent = this.value + "s"; });
+        _bindSlider("toneFreq", "toneFreqVal", function (v) { return v + " Hz"; });
+        _bindSlider("sfxDuration", "sfxDurationVal", function (v) { return v + "s"; });
 
         // Speed multiplier slider
-        el.speedMultiplier.addEventListener("input", function () { el.speedMultiplierVal.textContent = this.value + "x"; });
+        _bindSlider("speedMultiplier", "speedMultiplierVal", function (v) { return v + "x"; });
 
         // LUT intensity slider
-        el.lutIntensity.addEventListener("input", function () { el.lutIntensityVal.textContent = this.value; });
+        _bindSlider("lutIntensity", "lutIntensityVal", function (v) { return v; });
 
         // Duck sliders
-        el.duckMusicVol.addEventListener("input", function () { el.duckMusicVolVal.textContent = this.value; });
-        el.duckAmount.addEventListener("input", function () { el.duckAmountVal.textContent = this.value; });
+        _bindSlider("duckMusicVol", "duckMusicVolVal", function (v) { return v; });
+        _bindSlider("duckAmount", "duckAmountVal", function (v) { return v; });
 
         // Phase 6 sliders
-        el.chromaTol.addEventListener("input", function () { el.chromaTolVal.textContent = this.value; });
-        el.pipScale.addEventListener("input", function () { el.pipScaleVal.textContent = this.value; });
-        el.blendOpacity.addEventListener("input", function () { el.blendOpacityVal.textContent = this.value; });
-        el.transDur.addEventListener("input", function () { el.transDurVal.textContent = this.value + "s"; });
-        el.particleDensity.addEventListener("input", function () { el.particleDensityVal.textContent = this.value; });
-        el.titleDur.addEventListener("input", function () { el.titleDurVal.textContent = this.value + "s"; });
-        el.titleFontSize.addEventListener("input", function () { el.titleFontSizeVal.textContent = this.value + "px"; });
-        el.ccExposure.addEventListener("input", function () { el.ccExposureVal.textContent = this.value; });
-        el.ccContrast.addEventListener("input", function () { el.ccContrastVal.textContent = this.value; });
-        el.ccSaturation.addEventListener("input", function () { el.ccSaturationVal.textContent = this.value; });
-        el.ccTemp.addEventListener("input", function () { el.ccTempVal.textContent = this.value; });
-        el.ccShadows.addEventListener("input", function () { el.ccShadowsVal.textContent = this.value; });
-        el.ccHighlights.addEventListener("input", function () { el.ccHighlightsVal.textContent = this.value; });
-        el.animCapFontSize.addEventListener("input", function () { el.animCapFontSizeVal.textContent = this.value + "px"; });
-        el.animCapWpl.addEventListener("input", function () { el.animCapWplVal.textContent = this.value; });
-        el.musicAiDur.addEventListener("input", function () { el.musicAiDurVal.textContent = this.value + "s"; });
-        el.musicAiTemp.addEventListener("input", function () { el.musicAiTempVal.textContent = this.value; });
+        _bindSlider("chromaTol", "chromaTolVal", function (v) { return v; });
+        _bindSlider("pipScale", "pipScaleVal", function (v) { return v; });
+        _bindSlider("blendOpacity", "blendOpacityVal", function (v) { return v; });
+        _bindSlider("transDur", "transDurVal", function (v) { return v + "s"; });
+        _bindSlider("particleDensity", "particleDensityVal", function (v) { return v; });
+        _bindSlider("titleDur", "titleDurVal", function (v) { return v + "s"; });
+        _bindSlider("titleFontSize", "titleFontSizeVal", function (v) { return v + "px"; });
+        _bindSlider("ccExposure", "ccExposureVal", function (v) { return v; });
+        _bindSlider("ccContrast", "ccContrastVal", function (v) { return v; });
+        _bindSlider("ccSaturation", "ccSaturationVal", function (v) { return v; });
+        _bindSlider("ccTemp", "ccTempVal", function (v) { return v; });
+        _bindSlider("ccShadows", "ccShadowsVal", function (v) { return v; });
+        _bindSlider("ccHighlights", "ccHighlightsVal", function (v) { return v; });
+        _bindSlider("animCapFontSize", "animCapFontSizeVal", function (v) { return v + "px"; });
+        _bindSlider("animCapWpl", "animCapWplVal", function (v) { return v; });
+        _bindSlider("musicAiDur", "musicAiDurVal", function (v) { return v + "s"; });
+        _bindSlider("musicAiTemp", "musicAiTempVal", function (v) { return v; });
     }
 
     // ================================================================
@@ -3824,8 +3907,10 @@
     // Escape for use inside JSX string arguments (handles Windows paths)
     function escPath(s) {
         if (!s) return "";
-        // Double backslashes for JavaScript string, then escape quotes
-        return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+        // Escape for safe embedding inside a JS/ExtendScript double-quoted string:
+        // backslashes, quotes, and control characters that could break the string
+        return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
+                .replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
     }
 
     function extractWordSegments(segments) {
@@ -4106,12 +4191,9 @@
         });
         if (jobHistoryList.length > MAX_JOB_HISTORY) jobHistoryList.pop();
         renderJobHistory();
-        // Show toast notification on completion
-        if (job.status === "complete") {
-            showToast(job.type + " completed", "success");
-        } else if (job.status === "error") {
-            showToast(job.type + " failed", "error");
-        }
+        // Note: toast is intentionally NOT shown here — onJobDone/showResults
+        // already displays results and showAlert. Adding a toast here would
+        // duplicate notifications on every job completion.
     }
 
     function renderJobHistory() {
@@ -6280,28 +6362,26 @@
 
     // --- Silence mode toggle ---
     function loadLlmSettings() {
-        fetch(BACKEND + "/settings/llm", { headers: { "X-OpenCut-Token": csrfToken } })
-            .then(function(r) { return r.json(); })
-            .then(function(s) {
-                if (s.provider) {
-                    var sel = document.getElementById("llmProvider");
-                    if (sel) sel.value = s.provider;
-                }
-                if (s.model) {
-                    var m = document.getElementById("llmModel");
-                    if (m) m.value = s.model;
-                }
-                if (s.api_key && s.api_key !== "****") {
-                    var k = document.getElementById("llmApiKey");
-                    if (k) k.value = s.api_key;
-                }
-                if (s.base_url) {
-                    var u = document.getElementById("llmBaseUrl");
-                    if (u) u.value = s.base_url;
-                }
-                updateLLMProviderUI();
-            })
-            .catch(function() {});
+        api("GET", "/settings/llm", null, function (err, s) {
+            if (err || !s) return;
+            if (s.provider) {
+                var sel = document.getElementById("llmProvider");
+                if (sel) sel.value = s.provider;
+            }
+            if (s.model) {
+                var m = document.getElementById("llmModel");
+                if (m) m.value = s.model;
+            }
+            if (s.api_key && s.api_key !== "****") {
+                var k = document.getElementById("llmApiKey");
+                if (k) k.value = s.api_key;
+            }
+            if (s.base_url) {
+                var u = document.getElementById("llmBaseUrl");
+                if (u) u.value = s.base_url;
+            }
+            updateLLMProviderUI();
+        });
     }
 
     function saveLlmSettings() {
@@ -6309,30 +6389,21 @@
         var model = (document.getElementById("llmModel") || {}).value || "llama3";
         var apiKey = (document.getElementById("llmApiKey") || {}).value || "";
         var baseUrl = (document.getElementById("llmBaseUrl") || {}).value || "";
-        fetch(BACKEND + "/settings/llm", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-OpenCut-Token": csrfToken },
-            body: JSON.stringify({ provider: provider, model: model, api_key: apiKey, base_url: baseUrl })
-        }).then(function(r) { return r.json(); })
-          .then(function() { showToast("LLM settings saved", "success"); })
-          .catch(function() { showToast("Failed to save LLM settings", "error"); });
+        api("POST", "/settings/llm", { provider: provider, model: model, api_key: apiKey, base_url: baseUrl }, function (err) {
+            if (err) showToast("Failed to save LLM settings", "error");
+            else showToast("LLM settings saved", "success");
+        });
     }
 
     function saveAudioZoomDefaults() {
         var lufs = parseFloat((document.getElementById("defaultLufs") || {}).value || -14);
         var zoom = parseFloat((document.getElementById("defaultZoom") || {}).value || 1.15);
         var easing = (document.getElementById("defaultZoomEasing") || {}).value || "ease_in_out";
-        fetch(BACKEND + "/settings/loudness-target", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-OpenCut-Token": csrfToken },
-            body: JSON.stringify({ target_lufs: lufs })
-        }).catch(function() {});
-        fetch(BACKEND + "/settings/auto-zoom", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", "X-OpenCut-Token": csrfToken },
-            body: JSON.stringify({ zoom_amount: zoom, easing: easing })
-        }).then(function() { showToast("Defaults saved", "success"); })
-          .catch(function() { showToast("Failed to save defaults", "error"); });
+        api("POST", "/settings/loudness-target", { target_lufs: lufs }, function () {});
+        api("POST", "/settings/auto-zoom", { zoom_amount: zoom, easing: easing }, function (err) {
+            if (err) showToast("Failed to save defaults", "error");
+            else showToast("Defaults saved", "success");
+        });
     }
 
     function updateSilenceModeUI() {
@@ -6474,7 +6545,7 @@
     function applySequenceCuts(cuts) {
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
         var payload = JSON.stringify(cuts);
-        cs.evalScript('ocApplySequenceCuts(' + JSON.stringify(payload) + ')', function (result) {
+        cs.evalScript("ocApplySequenceCuts('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
             try {
                 var r = JSON.parse(result);
                 showToast("Applied " + (r.applied || 0) + " cuts to sequence", "success");
@@ -6506,7 +6577,7 @@
         if (!beatMarkerTimes || !beatMarkerTimes.length) { showAlert("No beat markers detected."); return; }
         var markers = beatMarkerTimes.map(function(t) { return { time: t, name: "Beat", type: "Chapter" }; });
         var payload = JSON.stringify(markers);
-        cs.evalScript('ocAddSequenceMarkers(' + JSON.stringify(payload) + ')', function (result) {
+        cs.evalScript("ocAddSequenceMarkers('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
             try {
                 var r = JSON.parse(result);
                 showToast("Added " + (r.added || beatMarkerTimes.length) + " markers", "success");
@@ -6544,7 +6615,7 @@
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
         if (!multicamCutsData) { showAlert("No multicam cuts available."); return; }
         var payload = JSON.stringify(multicamCutsData);
-        cs.evalScript('ocApplySequenceCuts(' + JSON.stringify(payload) + ')', function (result) {
+        cs.evalScript("ocApplySequenceCuts('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
             try {
                 var r = JSON.parse(result);
                 showToast("Multicam cuts applied: " + (r.applied || 0), "success");
@@ -6684,7 +6755,7 @@
             if (err || (data && data.error)) { showAlert("Validation failed: " + (data ? data.error : "Network error")); return; }
             if (!inPremiere) { showToast("Rename validated (no Premiere connection)", "info"); return; }
             var payload = JSON.stringify(renames);
-            cs.evalScript('ocBatchRenameProjectItems(' + JSON.stringify(payload) + ')', function (result) {
+            cs.evalScript("ocBatchRenameProjectItems('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
                 try {
                     var r = JSON.parse(result);
                     showToast("Renamed " + (r.renamed || renames.length) + " items", "success");
@@ -6758,7 +6829,7 @@
             if (!inPremiere) { showToast("Rules validated (no Premiere connection)", "info"); return; }
             var jsxRules = smartBinRules.map(function(r) { return { binName: r.bin_name, rule: r.rule_type, field: r.field, value: r.value }; });
             var payload = JSON.stringify(jsxRules);
-            cs.evalScript('ocCreateSmartBins(' + JSON.stringify(payload) + ')', function (result) {
+            cs.evalScript("ocCreateSmartBins('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
                 try {
                     var r = JSON.parse(result);
                     showToast("Created " + (r.created || smartBinRules.length) + " bins", "success");
@@ -6867,7 +6938,7 @@
         if (!chaptersData || !chaptersData.length) { showAlert("No chapters available."); return; }
         var markers = chaptersData.map(function(c) { return { time: c.seconds || c.start || c.time || 0, name: c.title || c.label || "Chapter", type: "Chapter" }; });
         var payload = JSON.stringify(markers);
-        cs.evalScript('ocAddSequenceMarkers(' + JSON.stringify(payload) + ')', function (result) {
+        cs.evalScript("ocAddSequenceMarkers('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
             try {
                 var r = JSON.parse(result);
                 showToast("Added " + (r.added || chaptersData.length) + " chapter markers", "success");
@@ -6883,7 +6954,7 @@
             var segments = data.segments || [];
             if (!inPremiere) { showToast("SRT parsed (" + segments.length + " segments), no Premiere connection", "info"); return; }
             var payload = JSON.stringify(segments);
-            cs.evalScript('ocAddNativeCaptionTrack(' + JSON.stringify(payload) + ')', function (result) {
+            cs.evalScript("ocAddNativeCaptionTrack('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
                 try {
                     var r = JSON.parse(result);
                     showToast("Imported " + (r.imported || segments.length) + " captions", "success");
@@ -7020,14 +7091,21 @@
                     + '</div>';
             }
             res.innerHTML = html;
-            // Click to select clip
-            var items = res.querySelectorAll(".footage-result-item");
-            for (var j = 0; j < items.length; j++) {
-                items[j].addEventListener("click", function() {
-                    var p = this.getAttribute("data-path");
-                    if (p) selectFile(p, p.split(/[/\\]/).pop());
-                });
-            }
+        });
+    }
+
+    // Event delegation for footage search results (avoids listener per-item)
+    var _footageDelegationAdded = false;
+    function ensureFootageDelegation() {
+        if (_footageDelegationAdded) return;
+        var res = document.getElementById("footageSearchResults");
+        if (!res) return;
+        _footageDelegationAdded = true;
+        res.addEventListener("click", function (e) {
+            var item = e.target.closest(".footage-result-item");
+            if (!item) return;
+            var p = item.getAttribute("data-path");
+            if (p) selectFile(p, p.split(/[/\\]/).pop());
         });
     }
 
@@ -7075,6 +7153,49 @@
                 lastTimelineCuts = selectedCuts;
                 applySequenceCuts(selectedCuts);
             });
+        });
+
+        // OTIO export
+        var otioBtn = document.getElementById("exportOtioBtn");
+        if (otioBtn) otioBtn.addEventListener("click", function () {
+            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            var mode = (document.getElementById("otioExportMode") || {}).value || "cuts";
+            var payload = { filepath: selectedPath, output_dir: projectFolder, mode: mode };
+            if (mode === "cuts") {
+                if (!lastTimelineCuts || !lastTimelineCuts.length) {
+                    showAlert("No cuts available. Run Silence Removal or Repeat Detection first.");
+                    return;
+                }
+                payload.cuts = lastTimelineCuts;
+            } else if (mode === "markers") {
+                if (beatMarkerTimes && beatMarkerTimes.length) {
+                    payload.markers = beatMarkerTimes.map(function(t) { return { time: t, name: "Beat" }; });
+                } else if (chaptersData && chaptersData.length) {
+                    payload.markers = chaptersData.map(function(c) { return { time: c.seconds || c.start || c.time || 0, name: c.title || "Chapter" }; });
+                } else {
+                    showAlert("No markers available. Run Beat Detection or Chapter Generation first.");
+                    return;
+                }
+            }
+            otioBtn.disabled = true;
+            otioBtn.textContent = "Exporting...";
+            api("POST", "/timeline/export-otio", payload, function (err, data) {
+                otioBtn.disabled = false;
+                otioBtn.textContent = "Export .otio File";
+                if (err || !data || data.error) {
+                    var otioRes = document.getElementById("otioResult");
+                    if (otioRes) { otioRes.classList.remove("hidden"); otioRes.textContent = "Error: " + ((data && data.error) || (err && err.message) || "Unknown"); }
+                    return;
+                }
+                showToast("OTIO exported: " + (data.output_path || "").split(/[/\\]/).pop(), "success");
+                var otioRes = document.getElementById("otioResult");
+                if (otioRes) { otioRes.classList.remove("hidden"); otioRes.textContent = "Saved: " + data.output_path; }
+            });
+        });
+        // OTIO install button
+        var installOtioBtn = document.getElementById("installOtioBtn");
+        if (installOtioBtn) installOtioBtn.addEventListener("click", function () {
+            startJob("/install-pip", { package: "opentimelineio", no_input: true });
         });
 
         // Beat markers
@@ -7181,7 +7302,7 @@
         if (openFolderBtn) openFolderBtn.addEventListener("click", function() {
             var fp = document.getElementById("deliverablesFilePath");
             if (fp && fp.textContent && inPremiere) {
-                cs.evalScript('openFolderInFinder(' + JSON.stringify(fp.textContent) + ')', function() {});
+                cs.evalScript('openFolderInFinder("' + escPath(fp.textContent) + '")', function() {});
             }
         });
     }
@@ -7199,6 +7320,7 @@
         }
         var nlpBtn = document.getElementById("runNlpCommandBtn");
         if (nlpBtn) nlpBtn.addEventListener("click", runNlpCommand);
+        ensureFootageDelegation();
     }
 
     // Hook silence result to update lastTimelineCuts and show review panel
@@ -7275,49 +7397,57 @@
         initCustomDropdowns(); // Initialize custom in-panel dropdowns
         initCutReviewPanel(); // Phase 3.3: Cut review panel
 
+        // Safe event listener binding — skips silently if element is null.
+        // Prevents a single missing HTML element from crashing the entire panel on load.
+        function _on(elemId, event, handler) {
+            var elem = typeof elemId === "string" ? el[elemId] : elemId;
+            if (elem) elem.addEventListener(event, handler);
+        }
+
         // Event listeners - Clip selection
-        el.refreshAllBtn.addEventListener("click", refreshAll);
-        el.clipSelect.addEventListener("change", function () {
+        _on("refreshAllBtn", "click", refreshAll);
+        _on("clipSelect", "change", function () {
             var opt = this.selectedIndex >= 0 ? this.options[this.selectedIndex] : null;
             if (opt && opt.value) selectFile(opt.value, opt.getAttribute("data-name") || opt.value.split(/[/\\]/).pop());
         });
-        el.refreshClipsBtn.addEventListener("click", scanProjectMedia);
-        el.useSelectionBtn.addEventListener("click", useTimelineSelection);
-        el.browseFileBtn.addEventListener("click", browseForFile);
+        _on("refreshClipsBtn", "click", scanProjectMedia);
+        _on("useSelectionBtn", "click", useTimelineSelection);
+        _on("browseFileBtn", "click", browseForFile);
 
         // Cut tab buttons
-        el.runSilenceBtn.addEventListener("click", runSilence);
-        el.runFillersBtn.addEventListener("click", runFillers);
-        el.runFullBtn.addEventListener("click", runFull);
+        _on("runSilenceBtn", "click", runSilence);
+        _on("runFillersBtn", "click", runFillers);
+        _on("runFullBtn", "click", runFull);
 
         // Captions tab buttons
-        el.runStyledCaptionsBtn.addEventListener("click", runStyledCaptions);
-        el.runSubtitleBtn.addEventListener("click", runSubtitle);
-        el.runTranscriptBtn.addEventListener("click", runTranscript);
-        el.exportTranscriptBtn.addEventListener("click", exportEditedTranscript);
-        el.transcriptUndoBtn.addEventListener("click", undoTranscript);
-        el.transcriptRedoBtn.addEventListener("click", redoTranscript);
-        el.installWhisperBtn.addEventListener("click", installWhisper);
-        el.captionStyle.addEventListener("change", updateStylePreview);
+        _on("runStyledCaptionsBtn", "click", runStyledCaptions);
+        _on("runSubtitleBtn", "click", runSubtitle);
+        _on("runTranscriptBtn", "click", runTranscript);
+        _on("exportTranscriptBtn", "click", exportEditedTranscript);
+        _on("transcriptUndoBtn", "click", undoTranscript);
+        _on("transcriptRedoBtn", "click", redoTranscript);
+        _on("installWhisperBtn", "click", installWhisper);
+        _on("captionStyle", "change", updateStylePreview);
 
         // Audio tab buttons
-        el.runSeparateBtn.addEventListener("click", runSeparate);
-        el.installDemucsBtn.addEventListener("click", installDemucs);
-        el.runDenoiseBtn.addEventListener("click", runDenoise);
-        el.measureLoudnessBtn.addEventListener("click", measureLoudness);
-        el.runNormalizeBtn.addEventListener("click", runNormalize);
-        el.runBeatsBtn.addEventListener("click", runBeats);
-        el.runEffectBtn.addEventListener("click", runEffect);
+        _on("runSeparateBtn", "click", runSeparate);
+        _on("installDemucsBtn", "click", installDemucs);
+        _on("runDenoiseBtn", "click", runDenoise);
+        _on("measureLoudnessBtn", "click", measureLoudness);
+        _on("runNormalizeBtn", "click", runNormalize);
+        _on("runBeatsBtn", "click", runBeats);
+        _on("runEffectBtn", "click", runEffect);
 
         // Video tab buttons
-        el.runWatermarkBtn.addEventListener("click", runWatermark);
-        el.installWatermarkBtn.addEventListener("click", installWatermark);
-        el.runScenesBtn.addEventListener("click", runScenes);
-        el.copyChaptersBtn.addEventListener("click", function () {
-            var text = el.ytChaptersText.value;
+        _on("runWatermarkBtn", "click", runWatermark);
+        _on("autoDetectWatermarkBtn", "click", autoDetectWatermark);
+        _on("installWatermarkBtn", "click", installWatermark);
+        _on("runScenesBtn", "click", runScenes);
+        _on("copyChaptersBtn", "click", function () {
+            var text = el.ytChaptersText ? el.ytChaptersText.value : "";
             if (navigator.clipboard) {
                 navigator.clipboard.writeText(text).then(function () { showAlert("Copied to clipboard!"); }).catch(function () { showAlert("Copy failed"); });
-            } else {
+            } else if (el.ytChaptersText) {
                 el.ytChaptersText.select();
                 document.execCommand("copy");
                 showAlert("Copied to clipboard!");
@@ -7325,90 +7455,90 @@
         });
 
         // Video FX buttons
-        el.runVfxBtn.addEventListener("click", runVfx);
-        el.vfxSelect.addEventListener("change", showVfxParams);
+        _on("runVfxBtn", "click", runVfx);
+        _on("vfxSelect", "change", showVfxParams);
 
         // Video AI buttons
-        el.runVidAiBtn.addEventListener("click", runVidAi);
-        el.vidAiTool.addEventListener("change", showVidAiParams);
-        el.installVidAiBtn.addEventListener("click", installVidAi);
+        _on("runVidAiBtn", "click", runVidAi);
+        _on("vidAiTool", "change", showVidAiParams);
+        _on("installVidAiBtn", "click", installVidAi);
 
         // Audio Pro buttons
-        el.runProFxBtn.addEventListener("click", runProFx);
-        el.proFxCategory.addEventListener("change", updateProFxEffectList);
-        el.proFxEffect.addEventListener("change", updateProFxParams);
-        el.installPedalboardBtn.addEventListener("click", installPedalboard);
-        el.runDeepFilterBtn.addEventListener("click", runDeepFilter);
-        el.installDeepFilterBtn.addEventListener("click", installDeepFilter);
+        _on("runProFxBtn", "click", runProFx);
+        _on("proFxCategory", "change", updateProFxEffectList);
+        _on("proFxEffect", "change", updateProFxParams);
+        _on("installPedalboardBtn", "click", installPedalboard);
+        _on("runDeepFilterBtn", "click", runDeepFilter);
+        _on("installDeepFilterBtn", "click", installDeepFilter);
 
         // Face blur buttons
-        el.runFaceBlurBtn.addEventListener("click", runFaceBlur);
-        el.installMediapipeBtn.addEventListener("click", installMediapipe);
+        _on("runFaceBlurBtn", "click", runFaceBlur);
+        _on("installMediapipeBtn", "click", installMediapipe);
 
         // Style transfer button
-        el.runStyleBtn.addEventListener("click", runStyleTransfer);
+        _on("runStyleBtn", "click", runStyleTransfer);
 
         // Caption translation buttons
-        el.runTranslateBtn.addEventListener("click", runTranslate);
-        el.installNllbBtn.addEventListener("click", installNllb);
+        _on("runTranslateBtn", "click", runTranslate);
+        _on("installNllbBtn", "click", installNllb);
 
         // Karaoke buttons
-        el.runKaraokeBtn.addEventListener("click", runKaraoke);
-        el.installWhisperxBtn.addEventListener("click", installWhisperx);
+        _on("runKaraokeBtn", "click", runKaraoke);
+        _on("installWhisperxBtn", "click", installWhisperx);
 
         // Export preset buttons
-        el.runExportPresetBtn.addEventListener("click", runExportPreset);
-        el.exportPresetCategory.addEventListener("change", updateExportPresetList);
-        el.exportPresetSelect.addEventListener("change", updateExportPresetDesc);
+        _on("runExportPresetBtn", "click", runExportPreset);
+        _on("exportPresetCategory", "change", updateExportPresetList);
+        _on("exportPresetSelect", "change", updateExportPresetDesc);
 
         // Thumbnail button
-        el.runThumbBtn.addEventListener("click", runThumbnails);
+        _on("runThumbBtn", "click", runThumbnails);
 
         // Batch button
-        el.runBatchBtn.addEventListener("click", runBatch);
-        el.runWorkflowBtn.addEventListener("click", runWorkflowPreset);
+        _on("runBatchBtn", "click", runBatch);
+        _on("runWorkflowBtn", "click", runWorkflowPreset);
 
         // TTS buttons
-        el.runTtsBtn.addEventListener("click", runTts);
-        el.installEdgeTtsBtn.addEventListener("click", installEdgeTts);
+        _on("runTtsBtn", "click", runTts);
+        _on("installEdgeTtsBtn", "click", installEdgeTts);
 
         // SFX buttons
-        el.runSfxBtn.addEventListener("click", runSfx);
-        el.sfxType.addEventListener("change", showSfxParams);
+        _on("runSfxBtn", "click", runSfx);
+        _on("sfxType", "change", showSfxParams);
 
         // Burn-in button
-        el.runBurninBtn.addEventListener("click", runBurnin);
+        _on("runBurninBtn", "click", runBurnin);
 
         // Speed buttons
-        el.runSpeedBtn.addEventListener("click", runSpeed);
-        el.speedMode.addEventListener("change", showSpeedParams);
+        _on("runSpeedBtn", "click", runSpeed);
+        _on("speedMode", "change", showSpeedParams);
 
         // LUT button
-        el.runLutBtn.addEventListener("click", runLut);
+        _on("runLutBtn", "click", runLut);
 
         // Duck button
-        el.runDuckBtn.addEventListener("click", runDuck);
+        _on("runDuckBtn", "click", runDuck);
 
         // Phase 6 buttons
-        el.runChromaBtn.addEventListener("click", runChroma);
-        el.chromaMode.addEventListener("change", showChromaParams);
-        el.runTransBtn.addEventListener("click", runTransition);
-        el.runParticlesBtn.addEventListener("click", runParticles);
-        el.runTitleOverlayBtn.addEventListener("click", runTitleOverlay);
-        el.runTitleCardBtn.addEventListener("click", runTitleCard);
-        el.runReframeBtn.addEventListener("click", runReframe);
-        el.reframePreset.addEventListener("change", updateReframeUI);
-        el.reframeMode.addEventListener("change", updateReframeUI);
-        el.reframeCustomW.addEventListener("input", updateReframeUI);
-        el.reframeCustomH.addEventListener("input", updateReframeUI);
+        _on("runChromaBtn", "click", runChroma);
+        _on("chromaMode", "change", showChromaParams);
+        _on("runTransBtn", "click", runTransition);
+        _on("runParticlesBtn", "click", runParticles);
+        _on("runTitleOverlayBtn", "click", runTitleOverlay);
+        _on("runTitleCardBtn", "click", runTitleCard);
+        _on("runReframeBtn", "click", runReframe);
+        _on("reframePreset", "change", updateReframeUI);
+        _on("reframeMode", "change", updateReframeUI);
+        _on("reframeCustomW", "input", updateReframeUI);
+        _on("reframeCustomH", "input", updateReframeUI);
         updateReframeUI();
-        el.runUpscaleBtn.addEventListener("click", runUpscale);
-        el.runColorBtn.addEventListener("click", runColor);
-        el.runRemoveBtn.addEventListener("click", runRemove);
-        el.runFaceAiBtn.addEventListener("click", runFaceAi);
-        el.faceAiMode.addEventListener("change", showFaceAiParams);
-        el.runAnimCapBtn.addEventListener("click", runAnimCap);
-        el.runMusicAiBtn.addEventListener("click", runMusicAi);
+        _on("runUpscaleBtn", "click", runUpscale);
+        _on("runColorBtn", "click", runColor);
+        _on("runRemoveBtn", "click", runRemove);
+        _on("runFaceAiBtn", "click", runFaceAi);
+        _on("faceAiMode", "change", showFaceAiParams);
+        _on("runAnimCapBtn", "click", runAnimCap);
+        _on("runMusicAiBtn", "click", runMusicAi);
 
         // v1.3.0 - Trim
         if (el.runTrimBtn) el.runTrimBtn.addEventListener("click", runTrim);
@@ -7469,6 +7599,7 @@
         if (el.reframeCropPos) el.reframeCropPos.addEventListener("change", updateFaceTrackingUI);
         if (el.runAutoEditBtn) el.runAutoEditBtn.addEventListener("click", runAutoEdit);
         if (el.runHighlightsBtn) el.runHighlightsBtn.addEventListener("click", runHighlights);
+        if (document.getElementById("runEmotionHighlightsBtn")) document.getElementById("runEmotionHighlightsBtn").addEventListener("click", runEmotionHighlights);
         if (el.runEnhanceBtn) el.runEnhanceBtn.addEventListener("click", runEnhance);
         if (el.runShortsBtn) el.runShortsBtn.addEventListener("click", runShorts);
         if (el.summarizeTranscriptBtn) el.summarizeTranscriptBtn.addEventListener("click", runSummarize);
@@ -7564,6 +7695,27 @@
         scanProjectMedia();
         populateRecentFiles();
 
+        // Periodic soft re-scan: picks up media imported outside OpenCut
+        // (e.g. user dragging files into Premiere, or Media Browser imports)
+        var MEDIA_POLL_MS = 20000; // 20 seconds
+        setInterval(function () {
+            if (connected && inPremiere && !currentJob) {
+                scanProjectMedia();
+            }
+        }, MEDIA_POLL_MS);
+
+        // Re-scan when panel regains focus or becomes visible
+        document.addEventListener("visibilitychange", function () {
+            if (!document.hidden && connected && inPremiere) {
+                scanProjectMedia();
+            }
+        });
+        window.addEventListener("focus", function () {
+            if (connected && inPremiere) {
+                scanProjectMedia();
+            }
+        });
+
         // Load style preview data
         loadStylePreview();
 
@@ -7576,33 +7728,21 @@
         // Load export presets
         loadExportPresets();
 
-        // New features
-        initDropZone();
-        initEnhancedDragDrop();
-        initThemeToggle();
-        initJobHistory();
-        initKeyboardShortcuts();
-        initPresets();
-        initModelManagement();
-        initGpuRecommendation();
-        initQueue();
-        initTranscriptSearch();
-        initPremiereThemeSync();
-        initWaveform();
-        initFavorites();
-        initPreviewModal();
-        initAudioPreview();
-        initContextMenu();
-        initWizard();
-        initOutputBrowser();
-        initBatchPicker();
-        initDepDashboard();
-        initSettingsIO();
-        initWorkflowBuilder();
-        loadWorkflowPresets();
-        initCollapsibleCards();
-        initI18n();
-        initProjectTemplates();
+        // New features — each wrapped in try/catch so a single feature failure
+        // doesn't prevent the rest of the panel from initialising
+        var _featureInits = [
+            initDropZone, initEnhancedDragDrop, initThemeToggle, initJobHistory,
+            initKeyboardShortcuts, initPresets, initModelManagement, initGpuRecommendation,
+            initQueue, initTranscriptSearch, initPremiereThemeSync, initWaveform,
+            initFavorites, initPreviewModal, initAudioPreview, initContextMenu,
+            initWizard, initOutputBrowser, initBatchPicker, initDepDashboard,
+            initSettingsIO, initWorkflowBuilder, loadWorkflowPresets,
+            initCollapsibleCards, initI18n, initProjectTemplates
+        ];
+        for (var fi = 0; fi < _featureInits.length; fi++) {
+            try { _featureInits[fi](); }
+            catch (initErr) { console.error("[OpenCut] Feature init failed:", _featureInits[fi].name || fi, initErr); }
+        }
 
         // Preset file export/import buttons
         var exportPresetFileBtn = document.getElementById("exportPresetFileBtn");

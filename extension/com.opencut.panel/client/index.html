@@ -223,6 +223,15 @@
                             <div class="waveform-label">Waveform &mdash; drag threshold line to adjust</div>
                         </div>
                         <div class="form-group">
+                            <label>Detection Method</label>
+                            <select id="silenceDetectMethod" aria-label="Silence detection method">
+                                <option value="auto" selected>Auto (AI if available, fallback to threshold)</option>
+                                <option value="vad">Silero VAD (AI neural detection)</option>
+                                <option value="energy">Energy Threshold (classic FFmpeg)</option>
+                            </select>
+                            <div class="hint hidden" id="vadHint">Silero VAD not available. <button type="button" class="btn-text btn-xs" id="installVadBtn">Install PyTorch</button></div>
+                        </div>
+                        <div class="form-group">
                             <label>Silence Mode</label>
                             <select id="silenceMode">
                                 <option value="remove" selected>Remove Silent Segments</option>
@@ -244,6 +253,13 @@
                 <div class="sub-panel" id="sub-fillers">
                     <section class="card">
                         <p class="card-desc">Find and remove filler words like "um", "uh", "like", and "you know" using AI speech recognition.</p>
+                        <div class="form-group">
+                            <label>Detection Backend</label>
+                            <select id="fillerBackend" aria-label="Filler detection backend">
+                                <option value="whisper" selected>Whisper (standard — fast)</option>
+                                <option value="crisper">CrisperWhisper (verbatim — most accurate)</option>
+                            </select>
+                        </div>
                         <div class="form-group">
                             <label>Whisper Model</label>
                             <select id="fillerModel">
@@ -402,7 +418,8 @@
                                 <input type="number" id="highlightMaxDur" value="60" min="10" max="600" step="5">
                             </div>
                         </div>
-                        <button type="button" class="btn-primary" id="runHighlightsBtn" disabled>Extract Highlights</button>
+                        <button type="button" class="btn-primary" id="runHighlightsBtn" disabled>Extract Highlights (LLM)</button>
+                        <button type="button" class="btn-outline btn-sm mt-xs" id="runEmotionHighlightsBtn" disabled aria-label="Detect emotion-based highlights">Emotion Highlights (Face AI)</button>
                         <div class="result-area hidden" id="highlightResult">
                             <div id="highlightList"></div>
                         </div>
@@ -1557,6 +1574,13 @@
                         <!-- Background removal params -->
                         <div class="vidai-params hidden" id="vidAiParams-rembg">
                             <div class="form-group">
+                                <label>Backend</label>
+                                <select id="vidAiRembgBackend" aria-label="Background removal backend">
+                                    <option value="rembg" selected>rembg (per-frame, more models)</option>
+                                    <option value="rvm">Robust Video Matting (temporal consistency)</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
                                 <label>Model</label>
                                 <select id="vidAiRembgModel">
                                     <option value="birefnet-general" selected>BiRefNet (best quality)</option>
@@ -1564,6 +1588,8 @@
                                     <option value="u2net">U2Net (general, fast)</option>
                                     <option value="u2net_human_seg">U2Net Human (people)</option>
                                     <option value="isnet-general-use">ISNet (general)</option>
+                                    <option value="mobilenetv3">RVM MobileNetV3 (fast)</option>
+                                    <option value="resnet50">RVM ResNet50 (quality)</option>
                                 </select>
                             </div>
                             <div class="form-group">
@@ -1767,8 +1793,10 @@
                             Auto-import result to project
                         </label>
                         
+                        <button type="button" class="btn-outline btn-sm mb-sm" id="autoDetectWatermarkBtn" disabled aria-label="Auto-detect watermark location">Auto-Detect Watermark (Florence-2)</button>
+                        <div class="hint hidden mb-sm" id="wmDetectResult"></div>
                         <button type="button" class="btn-primary" id="runWatermarkBtn" disabled>Remove Watermark</button>
-                        
+
                         <div class="hint hidden" id="watermarkHint">
                             Watermark remover not installed.
                             <button type="button" class="btn-install" id="installWatermarkBtn">Install Now</button>
@@ -2539,6 +2567,20 @@
                         <div class="hint mb-sm" id="tlWritebackStatus">No cuts loaded. Run Silence Removal or Repeat Detection first.</div>
                         <button type="button" class="btn-primary" id="applySeqCutsBtn">Apply Last Cuts to Timeline</button>
                     </section>
+                    <section class="card mt-sm">
+                        <div class="card-header"><div class="card-title">Export as OTIO (Universal)</div></div>
+                        <p class="card-desc">Export cuts/markers as OpenTimelineIO for DaVinci Resolve, Final Cut Pro, Avid, or any OTIO-compatible editor.</p>
+                        <div class="form-group">
+                            <label>Export Mode</label>
+                            <select id="otioExportMode" aria-label="OTIO export mode">
+                                <option value="cuts" selected>Cuts (remove regions)</option>
+                                <option value="markers">Markers (chapter/beat points)</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-secondary" id="exportOtioBtn" disabled aria-label="Export OpenTimelineIO file">Export .otio File</button>
+                        <div class="hint hidden" id="otioHint">OpenTimelineIO not installed. <button type="button" class="btn-text btn-xs" id="installOtioBtn">Install</button></div>
+                        <div class="hint hidden mt-xs" id="otioResult"></div>
+                    </section>
                 </div>
 
                 <!-- BEAT MARKERS -->
@@ -3015,7 +3057,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.8.0</span>
+                        <span class="settings-value">1.9.0</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>

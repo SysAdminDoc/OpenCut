@@ -62,6 +62,33 @@ LAMA_MODEL_DIR = os.environ.get("OPENCUT_LAMA_DIR", None)
 # ---------------------------------------------------------------------------
 # Watermark Removal (Florence-2 + LaMA)
 # ---------------------------------------------------------------------------
+@video_bp.route("/video/auto-detect-watermark", methods=["POST"])
+@require_csrf
+def video_auto_detect_watermark():
+    """Auto-detect watermark region using Florence-2 vision model (or edge fallback)."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    prompt = data.get("prompt", "watermark")[:200]
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    try:
+        from opencut.core.object_removal import detect_watermark_region
+        result = detect_watermark_region(filepath, prompt=prompt)
+        if result:
+            return jsonify(result)
+        return jsonify({"error": "No watermark detected", "suggestion": "Try adjusting the prompt or manually specify the region"}), 200
+    except ImportError as e:
+        return jsonify({"error": str(e), "suggestion": "Install: pip install transformers torch opencv-python-headless"}), 400
+    except Exception as exc:
+        return _safe_error(exc)
+
+
 @video_bp.route("/video/watermark", methods=["POST"])
 @require_csrf
 def video_watermark():
@@ -990,9 +1017,17 @@ def video_ai_rembg():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
-    model = data.get("model", "birefnet-general")
-    if model not in ("u2net", "u2net_human_seg", "isnet-general-use", "birefnet-general", "birefnet-massive"):
+    # Backend: "rembg" (per-frame, more models) or "rvm" (Robust Video Matting, temporal)
+    backend = data.get("backend", "rembg")
+    if backend not in ("rembg", "rvm"):
+        backend = "rembg"
+    model = data.get("model", "birefnet-general" if backend == "rembg" else "mobilenetv3")
+    allowed_rembg = ("u2net", "u2net_human_seg", "isnet-general-use", "birefnet-general", "birefnet-massive")
+    allowed_rvm = ("mobilenetv3", "resnet50")
+    if backend == "rembg" and model not in allowed_rembg:
         model = "birefnet-general"
+    elif backend == "rvm" and model not in allowed_rvm:
+        model = "mobilenetv3"
     bg_color = data.get("bg_color", "")
     if bg_color and not re.match(r'^[a-zA-Z0-9#]+$', bg_color):
         bg_color = ""
@@ -1020,6 +1055,7 @@ def video_ai_rembg():
                 filepath, output_dir=effective_dir,
                 model=model, bg_color=bg_color,
                 alpha_only=alpha_only,
+                backend=backend,
                 on_progress=_on_progress,
             )
             _update_job(
@@ -3792,6 +3828,14 @@ def video_shorts_pipeline():
                             "end": c.end,
                             "duration": c.duration,
                             "title": c.title,
+                            "score": round(c.score, 3) if c.score else 0,
+                            "engagement": {
+                                "hook_strength": c.engagement.hook_strength if hasattr(c, "engagement") and c.engagement else 0,
+                                "emotional_peak": c.engagement.emotional_peak if hasattr(c, "engagement") and c.engagement else 0,
+                                "pacing": c.engagement.pacing if hasattr(c, "engagement") and c.engagement else 0,
+                                "quotability": c.engagement.quotability if hasattr(c, "engagement") and c.engagement else 0,
+                                "overall": c.engagement.overall if hasattr(c, "engagement") and c.engagement else 0,
+                            } if hasattr(c, "engagement") and c.engagement else None,
                         }
                         for c in clips
                     ],
@@ -4098,3 +4142,90 @@ def video_multicam_cuts():
         return jsonify({"error": "multicam module not available"}), 503
     except Exception as exc:
         return _safe_error(exc)
+
+
+# ---------------------------------------------------------------------------
+# Video: Emotion-Based Highlight Detection
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/emotion-highlights", methods=["POST"])
+@require_csrf
+def video_emotion_highlights():
+    """Detect emotional peaks in a video for highlight extraction.
+
+    Analyzes facial expressions across frames to build an emotion curve,
+    then identifies peaks as potential highlight moments.
+    """
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    sample_interval = safe_float(data.get("sample_interval", 1.0), 1.0, min_val=0.25, max_val=10.0)
+    min_intensity = safe_float(data.get("min_intensity", 0.6), 0.6, min_val=0.1, max_val=1.0)
+    min_duration = safe_float(data.get("min_duration", 2.0), 2.0, min_val=0.5, max_val=30.0)
+
+    job_id = _new_job("emotion-highlights", filepath)
+
+    def _process():
+        try:
+            from opencut.core.emotion_highlights import (
+                analyze_video_emotions,
+                emotion_peaks_to_highlights,
+            )
+
+            def _on_progress(pct, msg=""):
+                _update_job(job_id, progress=pct, message=msg)
+
+            curve = analyze_video_emotions(
+                filepath,
+                sample_interval=sample_interval,
+                min_peak_intensity=min_intensity,
+                min_peak_duration=min_duration,
+                on_progress=_on_progress,
+            )
+
+            highlights = emotion_peaks_to_highlights(curve.peaks)
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Found {len(curve.peaks)} emotion peak(s) (avg intensity: {curve.avg_intensity:.0%})",
+                result={
+                    "peaks": [
+                        {
+                            "time": p.time,
+                            "start": p.start,
+                            "end": p.end,
+                            "duration": p.duration,
+                            "emotion": p.emotion,
+                            "intensity": p.intensity,
+                        }
+                        for p in curve.peaks
+                    ],
+                    "highlights": highlights,
+                    "avg_intensity": curve.avg_intensity,
+                    "dominant_emotion": curve.dominant_emotion,
+                    "samples_analyzed": len(curve.samples),
+                },
+            )
+        except ImportError as e:
+            _update_job(
+                job_id, status="error",
+                error=f"deepface not installed: {e}",
+                message="Install deepface: pip install deepface",
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Emotion highlights error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})

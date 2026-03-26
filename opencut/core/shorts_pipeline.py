@@ -54,6 +54,7 @@ class ShortClip:
     duration: float
     title: str = ""
     score: float = 0.0
+    engagement: object = None  # EngagementScore from highlights module
 
 
 def _probe_duration(filepath: str) -> float:
@@ -353,6 +354,7 @@ def generate_shorts(
                 duration=highlight.duration,
                 title=highlight.title,
                 score=highlight.score,
+                engagement=highlight.engagement,
             ))
 
             logger.info("Generated short %d: %s (%.1fs)", i + 1, final_path, highlight.duration)

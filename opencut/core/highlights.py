@@ -20,6 +20,26 @@ logger = logging.getLogger("opencut")
 # Data classes
 # ---------------------------------------------------------------------------
 @dataclass
+class EngagementScore:
+    """Breakdown of engagement signals for a highlight."""
+    hook_strength: float = 0.0       # 0-1: how strong the opening hook is
+    emotional_peak: float = 0.0      # 0-1: emotional intensity
+    pacing: float = 0.0              # 0-1: conversational energy / words-per-second
+    quotability: float = 0.0         # 0-1: how quotable/shareable the content is
+    overall: float = 0.0             # 0-1: weighted composite score
+
+    def compute_overall(self):
+        """Compute weighted overall engagement score."""
+        self.overall = (
+            self.hook_strength * 0.30 +
+            self.emotional_peak * 0.25 +
+            self.pacing * 0.20 +
+            self.quotability * 0.25
+        )
+        return self.overall
+
+
+@dataclass
 class Highlight:
     """A single identified highlight/clip."""
     start: float
@@ -27,6 +47,7 @@ class Highlight:
     score: float = 0.0       # Relevance score 0-1
     reason: str = ""          # Why this is interesting
     title: str = ""           # Suggested short title
+    engagement: Optional[EngagementScore] = None  # Detailed engagement breakdown
 
     @property
     def duration(self) -> float:
@@ -238,7 +259,13 @@ def extract_highlights(
         if h.end > h.start:
             filtered.append(h)
 
-    # Sort by score descending, take top N
+    # Score engagement for each highlight
+    for h in filtered:
+        h.engagement = _score_engagement(h, transcript_segments)
+        # Blend LLM score with engagement analysis (60% LLM, 40% engagement)
+        h.score = h.score * 0.6 + h.engagement.overall * 0.4
+
+    # Sort by blended score descending, take top N
     filtered.sort(key=lambda h: h.score, reverse=True)
     filtered = filtered[:max_highlights]
 
@@ -251,6 +278,118 @@ def extract_highlights(
         llm_provider=response.provider,
         llm_model=response.model,
     )
+
+
+def _score_engagement(highlight: Highlight, transcript_segments: List[Dict]) -> EngagementScore:
+    """
+    Score a highlight's engagement potential using text heuristics.
+
+    Analyzes the transcript text within the highlight's time range for:
+    - Hook strength: Does the opening grab attention? (questions, surprises, strong statements)
+    - Emotional peaks: Exclamation marks, emphatic language, emotional vocabulary
+    - Pacing: Words per second — faster pacing tends to be more engaging
+    - Quotability: Short, punchy sentences that work as standalone quotes
+
+    Args:
+        highlight: The highlight to score.
+        transcript_segments: Full transcript for context.
+
+    Returns:
+        EngagementScore with per-dimension breakdown and overall score.
+    """
+    # Extract text within this highlight's time range
+    clip_text = ""
+    for seg in transcript_segments:
+        seg_start = float(seg.get("start", 0))
+        seg_end = float(seg.get("end", 0))
+        if seg_start >= highlight.start - 0.5 and seg_end <= highlight.end + 0.5:
+            clip_text += " " + seg.get("text", "")
+
+    clip_text = clip_text.strip()
+    if not clip_text:
+        return EngagementScore()
+
+    words = clip_text.split()
+    word_count = len(words)
+    sentences = [s.strip() for s in re.split(r'[.!?]+', clip_text) if s.strip()]
+
+    # ---- Hook strength (first sentence analysis) ----
+    hook_score = 0.3  # baseline
+    first_sentence = sentences[0].lower() if sentences else ""
+
+    # Questions are strong hooks
+    if "?" in clip_text[:100]:
+        hook_score += 0.3
+    # "You" / "your" direct address hooks
+    if any(w in first_sentence for w in ["you", "your", "imagine", "what if"]):
+        hook_score += 0.15
+    # Numbers/statistics hook
+    if any(c.isdigit() for c in first_sentence):
+        hook_score += 0.1
+    # Strong opening words
+    hook_words = {"never", "always", "secret", "truth", "mistake", "biggest", "best", "worst",
+                  "shocking", "actually", "here's", "listen", "stop", "wait", "nobody", "everyone"}
+    if any(w in first_sentence.split() for w in hook_words):
+        hook_score += 0.2
+    hook_score = min(1.0, hook_score)
+
+    # ---- Emotional intensity ----
+    emotion_score = 0.2  # baseline
+    exclamation_count = clip_text.count("!")
+    emotion_score += min(0.3, exclamation_count * 0.08)
+
+    # Emotional vocabulary
+    emotion_words = {"love", "hate", "amazing", "incredible", "terrible", "insane", "crazy",
+                     "beautiful", "horrible", "passionate", "excited", "furious", "thrilled",
+                     "shocked", "devastated", "unbelievable", "mind-blowing", "obsessed"}
+    text_lower = clip_text.lower()
+    emotion_hits = sum(1 for w in emotion_words if w in text_lower)
+    emotion_score += min(0.4, emotion_hits * 0.1)
+
+    # ALL CAPS words indicate emphasis
+    caps_words = sum(1 for w in words if w.isupper() and len(w) > 2)
+    emotion_score += min(0.15, caps_words * 0.05)
+    emotion_score = min(1.0, emotion_score)
+
+    # ---- Pacing (words per second) ----
+    duration = max(0.1, highlight.duration)
+    wps = word_count / duration
+    # Sweet spot is 2.5-3.5 wps (conversational but energetic)
+    if wps >= 2.5 and wps <= 3.5:
+        pacing_score = 0.9
+    elif wps >= 2.0 and wps <= 4.0:
+        pacing_score = 0.7
+    elif wps >= 1.5:
+        pacing_score = 0.5
+    else:
+        pacing_score = 0.3
+
+    # ---- Quotability (short punchy sentences) ----
+    quotability_score = 0.3  # baseline
+    if sentences:
+        avg_sentence_len = sum(len(s.split()) for s in sentences) / len(sentences)
+        # Short sentences (5-12 words) are most quotable
+        if 5 <= avg_sentence_len <= 12:
+            quotability_score += 0.3
+        elif avg_sentence_len < 5:
+            quotability_score += 0.15  # too short can be less meaningful
+        # Contrast / reversal patterns are quotable
+        contrast_words = {"but", "however", "actually", "instead", "not", "rather", "though"}
+        if any(w in text_lower.split() for w in contrast_words):
+            quotability_score += 0.15
+        # Lists / patterns of three
+        if text_lower.count(",") >= 2:
+            quotability_score += 0.1
+    quotability_score = min(1.0, quotability_score)
+
+    engagement = EngagementScore(
+        hook_strength=round(hook_score, 3),
+        emotional_peak=round(emotion_score, 3),
+        pacing=round(pacing_score, 3),
+        quotability=round(quotability_score, 3),
+    )
+    engagement.compute_overall()
+    return engagement
 
 
 # ---------------------------------------------------------------------------

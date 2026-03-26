@@ -87,6 +87,10 @@ def silence_remove():
     min_speech = safe_float(data.get("min_speech", 0.25), 0.25, min_val=0.05, max_val=10.0)
     preset = data.get("preset", None)
     seq_name = data.get("sequence_name", "")
+    # Detection method: "energy" (FFmpeg threshold), "vad" (Silero VAD), "auto" (try VAD, fallback to energy)
+    detection_method = data.get("method", "auto")
+    if detection_method not in ("energy", "vad", "auto"):
+        detection_method = "auto"
 
     job_id = _new_job("silence", filepath)
 
@@ -117,8 +121,9 @@ def silence_remove():
             _file_info = _probe_media(filepath)
             _file_dur = _file_info.duration if _file_info else 0.0
 
-            _update_job(job_id, progress=15, message="Detecting silences (this may take a moment for long files)...")
-            segments = detect_speech(filepath, config=scfg, file_duration=_file_dur)
+            method_label = "Silero VAD" if detection_method == "vad" else ("auto (VAD → energy fallback)" if detection_method == "auto" else "energy threshold")
+            _update_job(job_id, progress=15, message=f"Detecting silences via {method_label}...")
+            segments = detect_speech(filepath, config=scfg, file_duration=_file_dur, method=detection_method)
 
             if _is_cancelled(job_id):
                 return
@@ -193,6 +198,10 @@ def filler_removal():
     remove_silence = data.get("remove_silence", True)
     silence_preset = data.get("silence_preset", "youtube")
     seq_name = data.get("sequence_name", "")
+    # Filler detection backend: "whisper" (default) or "crisper" (CrisperWhisper verbatim)
+    filler_backend = data.get("filler_backend", "whisper")
+    if filler_backend not in ("whisper", "crisper"):
+        filler_backend = "whisper"
 
     job_id = _new_job("fillers", filepath)
 
@@ -202,7 +211,51 @@ def filler_removal():
                 _update_job(job_id, status="error", error="Core audio modules not available. Reinstall opencut.")
                 return
 
-            # Check Whisper
+            # CrisperWhisper path: use dedicated verbatim filler detector
+            if filler_backend == "crisper":
+                try:
+                    from opencut.core.crisper_whisper import detect_fillers_crisper
+
+                    def _on_progress(pct, msg=""):
+                        _update_job(job_id, progress=pct, message=msg)
+
+                    _update_job(job_id, progress=5, message="Detecting fillers with CrisperWhisper (verbatim mode)...")
+                    result = detect_fillers_crisper(
+                        filepath,
+                        language=language,
+                        custom_words=custom_words if custom_words else None,
+                        on_progress=_on_progress,
+                    )
+
+                    cuts = result.get("cuts", [])
+                    actual_method = result.get("method", "crisper_whisper")
+
+                    _update_job(
+                        job_id, status="complete", progress=100,
+                        message=f"{actual_method}: {result['count']} fillers ({result['total_filler_time']:.1f}s)",
+                        result={
+                            "cuts": cuts,
+                            "count": result["count"],
+                            "total_filler_time": result["total_filler_time"],
+                            "fillers": result["fillers"],
+                            "method": actual_method,
+                            "filler_stats": {
+                                "removed_fillers": result["count"],
+                                "total_filler_time": result["total_filler_time"],
+                            },
+                        },
+                    )
+                    return
+                except ImportError as e:
+                    logger.info("CrisperWhisper unavailable (%s), falling back to Whisper", e)
+                    _update_job(job_id, progress=5, message="CrisperWhisper unavailable, falling back to Whisper...")
+                    # Fall through to standard Whisper path
+                except Exception as e:
+                    logger.exception("CrisperWhisper failed, falling back to Whisper")
+                    _update_job(job_id, progress=5, message=f"CrisperWhisper error ({e}), falling back to Whisper...")
+                    # Fall through to standard Whisper path
+
+            # Standard Whisper path
             from opencut.core.captions import check_whisper_available, transcribe
             from opencut.core.fillers import detect_fillers, remove_fillers_from_segments
 

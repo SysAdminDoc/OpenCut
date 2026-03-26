@@ -209,6 +209,15 @@ def check_rembg_available() -> bool:
         return False
 
 
+def check_rvm_available() -> bool:
+    """Check if Robust Video Matting is available."""
+    try:
+        import torch  # noqa: F401
+        return True  # RVM uses torchvision hub download, needs only torch
+    except ImportError:
+        return False
+
+
 def remove_background(
     input_path: str,
     output_path: Optional[str] = None,
@@ -217,17 +226,25 @@ def remove_background(
     bg_color: str = "",
     bg_image: str = "",
     alpha_only: bool = False,
+    backend: str = "rembg",
     on_progress: Optional[Callable] = None,
 ) -> str:
     """
-    Remove video background using rembg.
+    Remove video background.
 
     Args:
-        model: rembg model (u2net, u2net_human_seg, isnet-general-use, birefnet-general, birefnet-massive).
+        model: rembg model (u2net, birefnet-general, etc.) or RVM model (mobilenetv3, resnet50).
         bg_color: Replacement background color hex (e.g., "#00FF00"). Empty = transparent.
         bg_image: Path to background image/video.
         alpha_only: If True, output alpha matte only.
+        backend: "rembg" (per-frame, higher quality) or "rvm" (Robust Video Matting, temporal consistency).
     """
+    if backend == "rvm":
+        return _remove_background_rvm(
+            input_path, output_path=output_path, output_dir=output_dir,
+            model=model if model in ("mobilenetv3", "resnet50") else "mobilenetv3",
+            bg_color=bg_color, alpha_only=alpha_only, on_progress=on_progress,
+        )
     if not ensure_package("rembg", "rembg[gpu]", on_progress):
         raise RuntimeError("Failed to install rembg. Install manually: pip install rembg[gpu]")
     if not ensure_package("cv2", "opencv-python-headless", on_progress):
@@ -334,6 +351,227 @@ def remove_background(
         shutil.rmtree(tmp_dir, ignore_errors=True)
         try:
             del session
+        except Exception:
+            pass
+
+
+def _remove_background_rvm(
+    input_path: str,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    model: str = "mobilenetv3",
+    bg_color: str = "",
+    alpha_only: bool = False,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    Remove video background using Robust Video Matting (RVM).
+
+    RVM uses a recurrent neural network that exploits temporal information
+    across frames, producing temporally coherent alpha mattes without
+    green screen or pre-captured backgrounds.
+
+    Args:
+        model: "mobilenetv3" (fast, good quality) or "resnet50" (higher quality, slower).
+        bg_color: Replacement background color hex. Empty = transparent.
+        alpha_only: If True, output alpha matte only.
+    """
+    try:
+        import torch
+    except ImportError:
+        raise RuntimeError("Robust Video Matting requires PyTorch. Install: pip install torch torchvision")
+
+    if output_path is None:
+        suffix = "rvm_nobg" if not bg_color else "rvm_newbg"
+        ext = ".mov" if not bg_color else ".mp4"
+        base = os.path.splitext(os.path.basename(input_path))[0]
+        directory = output_dir or os.path.dirname(input_path)
+        output_path = os.path.join(directory, f"{base}_{suffix}{ext}")
+
+    if on_progress:
+        on_progress(5, f"Loading RVM model ({model})...")
+
+    # Load RVM model from torch hub
+    rvm_model = torch.hub.load(
+        "PeterL1n/RobustVideoMatting",
+        "mobilenetv3" if model == "mobilenetv3" else "resnet50",
+        trust_repo=True,
+    )
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    rvm_model = rvm_model.to(device).eval()
+
+    if on_progress:
+        on_progress(15, "Processing video with RVM (temporal matting)...")
+
+    import cv2
+    import numpy as np
+
+    cap = cv2.VideoCapture(input_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {input_path}")
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30.0
+    width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+    # Parse background color
+    bg_rgb = None
+    if bg_color and bg_color.startswith("#") and len(bg_color) >= 7:
+        bg_rgb = (
+            int(bg_color[1:3], 16),
+            int(bg_color[3:5], 16),
+            int(bg_color[5:7], 16),
+        )
+
+    # Set up output
+    if alpha_only or (not bg_color):
+        # Transparent output — use RGBA PNG frames then reassemble
+        tmp_dir = tempfile.mkdtemp(prefix="opencut_rvm_")
+        frames_out = os.path.join(tmp_dir, "out")
+        os.makedirs(frames_out, exist_ok=True)
+        writer = None
+    else:
+        writer = cv2.VideoWriter(
+            output_path,
+            cv2.VideoWriter_fourcc(*"mp4v"),
+            fps,
+            (width, height),
+        )
+        tmp_dir = None
+
+    try:
+        from PIL import Image as PILImage  # Import once outside loop
+
+        # RVM recurrent state
+        rec = [None] * 4  # r1, r2, r3, r4
+
+        frame_idx = 0
+        with torch.no_grad():
+            while True:
+                ret, frame = cap.read()
+                if not ret:
+                    break
+
+                # Prepare input tensor (BGR→RGB, HWC→CHW, normalize)
+                rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+                src = torch.from_numpy(rgb).permute(2, 0, 1).unsqueeze(0).float().to(device) / 255.0
+
+                # Run RVM — it returns (fgr, pha, *rec)
+                # fgr: foreground, pha: alpha, rec: recurrent states
+                fgr, pha, *rec = rvm_model(src, *rec, downsample_ratio=0.25)
+
+                # Get alpha as numpy
+                alpha = pha[0, 0].cpu().numpy()  # H×W, 0-1
+
+                if alpha_only:
+                    alpha_u8 = (alpha * 255).astype(np.uint8)
+                    PILImage.fromarray(alpha_u8, mode="L").save(
+                        os.path.join(frames_out, f"frame_{frame_idx:06d}.png")
+                    )
+                elif bg_rgb:
+                    # Composite foreground over solid color
+                    alpha_3 = np.stack([alpha] * 3, axis=-1)
+                    bg = np.full_like(rgb, bg_rgb, dtype=np.float32)
+                    composite = (rgb.astype(np.float32) * alpha_3 + bg * (1 - alpha_3)).astype(np.uint8)
+                    writer.write(cv2.cvtColor(composite, cv2.COLOR_RGB2BGR))
+                else:
+                    # Transparent RGBA output
+                    alpha_u8 = (alpha * 255).astype(np.uint8)
+                    rgba = np.dstack([rgb, alpha_u8])
+                    PILImage.fromarray(rgba, mode="RGBA").save(
+                        os.path.join(frames_out, f"frame_{frame_idx:06d}.png")
+                    )
+
+                frame_idx += 1
+                if on_progress and frame_idx % max(1, total_frames // 20) == 0:
+                    pct = 15 + int((frame_idx / max(1, total_frames)) * 75)
+                    on_progress(pct, f"RVM matting {frame_idx}/{total_frames}...")
+
+        # Release capture/writer before FFmpeg reassembly (resources freed in finally on error)
+        try:
+            cap.release()
+        except Exception:
+            pass
+        if writer:
+            try:
+                writer.release()
+            except Exception:
+                pass
+        # Mark as released so finally doesn't double-release
+        cap = None
+        writer = None
+
+        # If we output PNG frames (transparent/alpha), reassemble with FFmpeg
+        if tmp_dir and not writer:
+            if on_progress:
+                on_progress(92, "Encoding output with alpha...")
+
+            if not bg_color and not alpha_only:
+                # ProRes 4444 for alpha
+                run_ffmpeg([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-framerate", str(fps),
+                    "-i", os.path.join(frames_out, "frame_%06d.png"),
+                    "-i", input_path,
+                    "-map", "0:v", "-map", "1:a?",
+                    "-c:v", "prores_ks", "-profile:v", "4",
+                    "-pix_fmt", "yuva444p10le",
+                    "-c:a", "copy", "-shortest",
+                    output_path,
+                ])
+            else:
+                run_ffmpeg([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-framerate", str(fps),
+                    "-i", os.path.join(frames_out, "frame_%06d.png"),
+                    "-i", input_path,
+                    "-map", "0:v", "-map", "1:a?",
+                    "-c:v", "libx264", "-crf", "18",
+                    "-pix_fmt", "yuv420p",
+                    "-c:a", "copy", "-shortest",
+                    output_path,
+                ])
+
+        # Add audio from original if we used cv2.VideoWriter (no audio)
+        if writer and not tmp_dir:
+            temp_no_audio = output_path + ".tmp.mp4"
+            os.rename(output_path, temp_no_audio)
+            run_ffmpeg([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-i", temp_no_audio, "-i", input_path,
+                "-map", "0:v", "-map", "1:a?",
+                "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
+                "-shortest", output_path,
+            ])
+            try:
+                os.remove(temp_no_audio)
+            except OSError:
+                pass
+
+        if on_progress:
+            on_progress(100, "Background removed (RVM)")
+        return output_path
+
+    finally:
+        if cap is not None:
+            try:
+                cap.release()
+            except Exception:
+                pass
+        if writer is not None:
+            try:
+                writer.release()
+            except Exception:
+                pass
+        if tmp_dir:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
+        # Free GPU memory
+        try:
+            del rvm_model
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
         except Exception:
             pass
 
@@ -589,6 +827,7 @@ def get_ai_capabilities() -> Dict:
     caps = {
         "upscale": check_upscale_available(),
         "rembg": check_rembg_available(),
+        "rvm": check_rvm_available(),
         "frame_interp": True,  # Uses FFmpeg minterpolate, always available
         "video_denoise": True,  # Uses FFmpeg, always available
     }

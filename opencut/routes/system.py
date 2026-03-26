@@ -109,6 +109,12 @@ def health():
         caps["captions"] = False
         caps["whisper_backend"] = "none"
 
+    # Check Silero VAD availability (neural silence detection)
+    from opencut.checks import check_silero_vad_available, check_otio_available, check_crisper_whisper_available
+    caps["silero_vad"] = check_silero_vad_available()
+    caps["crisper_whisper"] = check_crisper_whisper_available()
+    caps["otio"] = check_otio_available()
+
     # Check Demucs availability
     caps["separation"] = check_demucs_available()
 

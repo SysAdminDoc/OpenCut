@@ -1000,50 +1000,53 @@ function importCaptionOverlay(overlayPath) {
 
     // Check if already imported
     try {
-    var overlayItem = _findProjectItemByPath(app.project.rootItem, overlayPath, 0);
-    if (overlayItem) {
-        return JSON.stringify({
-            success: true,
-            message: "Caption overlay ready in project panel (OpenCut Overlays bin). Drag it onto V2 above your video."
-        });
-    }
+        var overlayItem = _findProjectItemByPath(app.project.rootItem, overlayPath, 0);
+        if (overlayItem) {
+            return JSON.stringify({
+                success: true,
+                message: "Caption overlay ready in project panel (OpenCut Overlays bin). Drag it onto V2 above your video."
+            });
+        }
 
-    // Import into an OpenCut Overlays bin
-    var overlayBin = _findOrCreateBin("OpenCut Overlays");
-    var targetBin = overlayBin || app.project.rootItem;
-    try {
-        // importFiles returns undefined in many Premiere versions, so
-        // we don't rely on the return value. If it throws, we catch it.
-        app.project.importFiles([overlayPath], false, targetBin, false);
-    } catch (e) {
-        return JSON.stringify({ error: "Import failed: " + e.toString() });
-    }
-
-    // Verify it actually imported by searching for it
-    overlayItem = _findProjectItemByPath(app.project.rootItem, overlayPath, 0);
-    if (overlayItem) {
-        return JSON.stringify({
-            success: true,
-            message: "Caption overlay imported! Find it in the OpenCut Overlays bin and drag it onto V2 above your video."
-        });
-    }
-
-    // If we can't find it by path, check the bin for the most recent item
-    if (overlayBin) {
+        // Import into an OpenCut Overlays bin
+        var overlayBin = _findOrCreateBin("OpenCut Overlays");
+        var targetBin = overlayBin || app.project.rootItem;
         try {
-            var numItems = overlayBin.children.numItems;
-            if (numItems > 0) {
-                return JSON.stringify({
-                    success: true,
-                    message: "Caption overlay imported to OpenCut Overlays bin. Drag it onto V2 above your video."
-                });
-            }
-        } catch (e2) {}
-    }
+            app.project.importFiles([overlayPath], false, targetBin, false);
+        } catch (e) {
+            return JSON.stringify({ error: "Import failed: " + e.toString() });
+        }
 
-    return JSON.stringify({
-        error: "Import may have failed. Check the OpenCut Overlays bin, or try File > Import and select: " + overlayPath
-    });
+        // Poll for import to complete
+        for (var _poll = 0; _poll < 20; _poll++) {
+            $.sleep(50);
+            overlayItem = _findProjectItemByPath(app.project.rootItem, overlayPath, 0);
+            if (overlayItem) break;
+        }
+
+        if (overlayItem) {
+            return JSON.stringify({
+                success: true,
+                message: "Caption overlay imported! Find it in the OpenCut Overlays bin and drag it onto V2 above your video."
+            });
+        }
+
+        // If we can't find it by path, check the bin for the most recent item
+        if (overlayBin) {
+            try {
+                var numItems = overlayBin.children.numItems;
+                if (numItems > 0) {
+                    return JSON.stringify({
+                        success: true,
+                        message: "Caption overlay imported to OpenCut Overlays bin. Drag it onto V2 above your video."
+                    });
+                }
+            } catch (e2) {}
+        }
+
+        return JSON.stringify({
+            error: "Import may have failed. Check the OpenCut Overlays bin, or try File > Import and select: " + overlayPath
+        });
     } catch (e) {
         return JSON.stringify({ error: "importCaptionOverlay: " + e.toString() });
     }

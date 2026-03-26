@@ -334,3 +334,121 @@ def timeline_index_status():
         return jsonify({"total_files": 0, "total_segments": 0, "index_size_bytes": 0})
     except Exception as exc:
         return _safe_error(exc)
+
+
+# ---------------------------------------------------------------------------
+# Timeline: OTIO Export (Universal Timeline Interchange)
+# ---------------------------------------------------------------------------
+@timeline_bp.route("/timeline/export-otio", methods=["POST"])
+@require_csrf
+def timeline_export_otio():
+    """Export timeline edits as OpenTimelineIO file (universal NLE format).
+
+    Supports three modes:
+    - "cuts": Provide cut regions to remove, exports kept segments
+    - "segments": Provide speech/kept segments directly
+    - "markers": Export markers as OTIO markers on a full clip
+
+    Body JSON:
+        filepath (str): Source media path
+        mode (str): "cuts", "segments", or "markers"
+        cuts (list): [{start, end}, ...] — regions to remove (mode=cuts)
+        segments (list): [{start, end}, ...] — regions to keep (mode=segments)
+        markers (list): [{time, name, color}, ...] — marker list (mode=markers)
+        output_dir (str): Output directory
+        sequence_name (str): Name for the timeline
+    """
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    mode = data.get("mode", "cuts")
+    output_dir = data.get("output_dir", "")
+    sequence_name = data.get("sequence_name", "OpenCut Edit")
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+
+    try:
+        from opencut.export.otio_export import (
+            export_otio,
+            export_otio_from_cuts,
+            export_otio_markers,
+            check_otio_available,
+        )
+
+        if not check_otio_available():
+            return jsonify({
+                "error": "OpenTimelineIO not installed.",
+                "suggestion": "Install with: pip install opentimelineio",
+            }), 400
+
+        # Determine output path
+        base_name = os.path.splitext(os.path.basename(filepath))[0]
+        effective_dir = output_dir or os.path.dirname(filepath)
+        otio_path = os.path.join(effective_dir, f"{base_name}_opencut.otio")
+
+        # Probe for framerate
+        from opencut.utils.media import probe
+        info = probe(filepath)
+        fps = info.fps if hasattr(info, "fps") and info.fps > 0 else 24.0
+        total_duration = info.duration if info.duration > 0 else 0.0
+
+        if mode == "markers":
+            markers = data.get("markers", [])
+            if not markers:
+                return jsonify({"error": "No markers provided"}), 400
+            result_path = export_otio_markers(
+                filepath, markers, otio_path,
+                sequence_name=sequence_name,
+                framerate=fps,
+                total_duration=total_duration,
+            )
+        elif mode == "segments":
+            segments_data = data.get("segments", [])
+            if not segments_data:
+                return jsonify({"error": "No segments provided"}), 400
+            from opencut.core.silence import TimeSegment
+            segments = [
+                TimeSegment(start=float(s.get("start", 0)), end=float(s.get("end", 0)), label="speech")
+                for s in segments_data
+            ]
+            result_path = export_otio(
+                filepath, segments, otio_path,
+                sequence_name=sequence_name,
+                framerate=fps,
+            )
+        else:
+            # mode == "cuts" (default)
+            cuts = data.get("cuts", [])
+            if not cuts:
+                return jsonify({"error": "No cuts provided"}), 400
+            result_path = export_otio_from_cuts(
+                filepath, cuts, otio_path,
+                sequence_name=sequence_name,
+                framerate=fps,
+                total_duration=total_duration,
+            )
+
+        return jsonify({
+            "output_path": result_path,
+            "format": "otio",
+            "message": f"Exported OTIO timeline: {os.path.basename(result_path)}",
+        })
+
+    except ImportError as e:
+        return jsonify({
+            "error": f"OpenTimelineIO not available: {e}",
+            "suggestion": "Install with: pip install opentimelineio",
+        }), 400
+    except Exception as exc:
+        return _safe_error(exc)

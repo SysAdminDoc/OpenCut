@@ -16,7 +16,7 @@
           <path d="M4 2.5a3 3 0 00-1.76 5.43L7.33 11l-5.09 3.07A3 3 0 104.8 19.5a3 3 0 001.76-5.43L8.93 12.6 16.5 17V5L8.93 9.4 6.56 7.93A3 3 0 004 2.5z" fill="var(--accent)"/>
         </svg>
         <span class="oc-logo">OpenCut</span>
-        <span class="oc-version">v1.8.0</span>
+        <span class="oc-version">v1.9.0</span>
       </div>
       <div class="oc-header-right">
         <div class="oc-connection" id="connectionStatus" title="Backend connection status">
@@ -114,6 +114,14 @@
               <span class="oc-slider-val" id="silencePaddingVal">80 ms</span>
             </div>
             <div class="oc-field-row">
+              <label class="oc-label" for="silenceDetectMethod">Detection</label>
+              <select class="oc-select" id="silenceDetectMethod" aria-label="Silence detection method">
+                <option value="auto" selected>Auto (AI + fallback)</option>
+                <option value="vad">Silero VAD (neural)</option>
+                <option value="energy">Energy threshold</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
               <label class="oc-label" for="silenceMode">Output Mode</label>
               <select class="oc-select" id="silenceMode">
                 <option value="remove">Remove Silences</option>
@@ -132,6 +140,13 @@
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="fillerBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="fillerBackend">Backend</label>
+              <select class="oc-select" id="fillerBackend" aria-label="Filler detection backend">
+                <option value="whisper" selected>Whisper (fast)</option>
+                <option value="crisper">CrisperWhisper (accurate)</option>
+              </select>
+            </div>
             <div class="oc-field-row">
               <label class="oc-label" for="fillerWords">Words to remove</label>
               <input type="text" class="oc-input" id="fillerWords" value="um, uh, like, you know, so, actually">
@@ -482,6 +497,25 @@
               </div>
             </div>
             <button class="oc-btn oc-btn-primary oc-btn-full" id="applyTimelineCutsBtn">Apply to Active Sequence</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Export as OTIO (Universal)</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="otioExportBody">
+            <span>OpenTimelineIO Export</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="otioExportBody">
+            <p class="oc-hint">Export cuts or markers as .otio for DaVinci Resolve, Final Cut Pro, Avid, or any OTIO-compatible editor.</p>
+            <div class="oc-field-row">
+              <label class="oc-label" for="otioExportMode">Mode</label>
+              <select class="oc-select" id="otioExportMode">
+                <option value="cuts" selected>Cuts (remove regions)</option>
+                <option value="markers">Markers (beats/chapters)</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-secondary oc-btn-full" id="exportOtioBtn" aria-label="Export OpenTimelineIO file">Export .otio File</button>
           </div>
         </div>
 
