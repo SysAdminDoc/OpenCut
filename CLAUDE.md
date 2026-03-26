@@ -146,7 +146,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.8.0**
+- Current: **v1.9.0**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 18 targets at once (including UXP files)
 

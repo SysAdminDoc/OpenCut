@@ -134,10 +134,139 @@ def detect_silences(
     return silences
 
 
+def detect_silences_vad(
+    filepath: str,
+    min_duration: float = 0.5,
+    file_duration: float = 0.0,
+) -> List[TimeSegment]:
+    """
+    Detect silent segments using Silero VAD (neural voice activity detection).
+
+    Silero VAD is far more accurate than energy-based detection, especially
+    in noisy environments. Uses a 1.8MB ONNX model, <1ms per 30ms chunk.
+
+    Args:
+        filepath: Path to the media file.
+        min_duration: Minimum silence duration in seconds to report.
+        file_duration: Pre-probed file duration.
+
+    Returns:
+        List of TimeSegment objects representing silent regions.
+
+    Raises:
+        ImportError: If torch/silero is not installed.
+    """
+    import numpy as np
+
+    try:
+        import torch
+    except ImportError:
+        raise ImportError(
+            "Silero VAD requires PyTorch. Install with: pip install torch"
+        )
+
+    # Load Silero VAD model (cached after first load)
+    model, utils = torch.hub.load(
+        repo_or_dir="snakers4/silero-vad",
+        model="silero_vad",
+        force_reload=False,
+        trust_repo=True,
+    )
+    (get_speech_timestamps, _, read_audio, _, _) = utils
+
+    # Silero VAD requires 16kHz mono audio — read_audio handles conversion
+    try:
+        wav = read_audio(filepath, sampling_rate=16000)
+    except Exception:
+        # Fallback: extract audio with FFmpeg first, then load
+        import tempfile
+        import os
+        tmp_wav = os.path.join(tempfile.gettempdir(), "opencut_vad_tmp.wav")
+        _extract_audio_wav(filepath, tmp_wav)
+        if not os.path.isfile(tmp_wav):
+            raise RuntimeError(f"Audio extraction failed for '{filepath}' — FFmpeg produced no output")
+        wav = read_audio(tmp_wav, sampling_rate=16000)
+        try:
+            os.remove(tmp_wav)
+        except OSError:
+            pass
+
+    # Get speech timestamps from Silero VAD
+    speech_timestamps = get_speech_timestamps(
+        wav,
+        model,
+        sampling_rate=16000,
+        min_silence_duration_ms=int(min_duration * 1000),
+        min_speech_duration_ms=100,
+        return_seconds=True,
+    )
+
+    # Determine total duration
+    if file_duration <= 0:
+        file_duration = len(wav) / 16000.0
+
+    # Invert speech timestamps to get silence segments
+    silences = []
+    prev_end = 0.0
+
+    for ts in speech_timestamps:
+        # Handle both dict format {"start": x, "end": y} and tuple format (start, end)
+        if isinstance(ts, dict):
+            speech_start = float(ts.get("start", 0))
+            speech_end = float(ts.get("end", 0))
+        elif isinstance(ts, (list, tuple)) and len(ts) >= 2:
+            speech_start = float(ts[0])
+            speech_end = float(ts[1])
+        else:
+            continue
+
+        if speech_start > prev_end + min_duration:
+            silences.append(TimeSegment(
+                start=prev_end,
+                end=speech_start,
+                label="silence",
+            ))
+        prev_end = speech_end
+
+    # Trailing silence
+    if file_duration > prev_end + min_duration:
+        silences.append(TimeSegment(
+            start=prev_end,
+            end=file_duration,
+            label="silence",
+        ))
+
+    return silences
+
+
+def _extract_audio_wav(input_path: str, output_path: str) -> None:
+    """Extract audio from a media file as 16kHz mono WAV for VAD processing."""
+    import shutil
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
+
+    cmd = [
+        "ffmpeg", "-hide_banner", "-y",
+        "-i", input_path,
+        "-vn", "-acodec", "pcm_s16le",
+        "-ar", "16000", "-ac", "1",
+        output_path,
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    except subprocess.TimeoutExpired:
+        raise RuntimeError(f"Audio extraction timed out for '{input_path}'")
+
+    if result.returncode != 0:
+        stderr = result.stderr[-300:] if result.stderr else "unknown error"
+        raise RuntimeError(f"Audio extraction failed: {stderr}")
+
+
 def detect_speech(
     filepath: str,
     config: Optional[SilenceConfig] = None,
     file_duration: float = 0.0,
+    method: str = "energy",
 ) -> List[TimeSegment]:
     """
     Detect speech segments by inverting silence detection results.
@@ -149,6 +278,8 @@ def detect_speech(
         filepath: Path to the media file.
         config: Silence detection configuration. Uses defaults if None.
         file_duration: Pre-probed file duration to avoid redundant ffprobe calls.
+        method: Detection method — "energy" (FFmpeg threshold), "vad" (Silero VAD),
+                or "auto" (try VAD first, fall back to energy).
 
     Returns:
         List of TimeSegment objects representing speech regions.
@@ -166,13 +297,37 @@ def detect_speech(
     if total_duration <= 0:
         raise ValueError(f"Could not determine duration of '{filepath}'")
 
-    # Detect silences (pass duration to avoid redundant ffprobe)
-    silences = detect_silences(
-        filepath,
-        threshold_db=config.threshold_db,
-        min_duration=config.min_duration,
-        file_duration=total_duration,
-    )
+    # Choose detection method
+    if method == "vad":
+        silences = detect_silences_vad(
+            filepath,
+            min_duration=config.min_duration,
+            file_duration=total_duration,
+        )
+    elif method == "auto":
+        try:
+            silences = detect_silences_vad(
+                filepath,
+                min_duration=config.min_duration,
+                file_duration=total_duration,
+            )
+            logger.info("Using Silero VAD for silence detection")
+        except (ImportError, Exception) as e:
+            logger.info("Silero VAD unavailable (%s), falling back to energy-based detection", e)
+            silences = detect_silences(
+                filepath,
+                threshold_db=config.threshold_db,
+                min_duration=config.min_duration,
+                file_duration=total_duration,
+            )
+    else:
+        # Default: energy-based (FFmpeg silencedetect)
+        silences = detect_silences(
+            filepath,
+            threshold_db=config.threshold_db,
+            min_duration=config.min_duration,
+            file_duration=total_duration,
+        )
 
     # Invert: get speech segments (gaps between silences)
     speech_segments = []
