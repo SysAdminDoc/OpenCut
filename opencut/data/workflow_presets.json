@@ -1,0 +1,139 @@
+[
+    {
+        "id": "clean-interview",
+        "name": "Clean Interview",
+        "description": "Remove silence and dead air, normalize audio levels",
+        "category": "speech",
+        "steps": [
+            {
+                "endpoint": "/silence",
+                "label": "Detect silence",
+                "params": {
+                    "threshold": -30,
+                    "min_duration": 0.5,
+                    "padding": 0.15
+                }
+            },
+            {
+                "endpoint": "/audio/normalize",
+                "label": "Normalize audio",
+                "params": {
+                    "target_lufs": -14.0
+                }
+            }
+        ]
+    },
+    {
+        "id": "podcast-polish",
+        "name": "Podcast Polish",
+        "description": "Denoise, normalize, and match loudness for podcast platforms",
+        "category": "speech",
+        "steps": [
+            {
+                "endpoint": "/audio/denoise",
+                "label": "Remove background noise",
+                "params": {
+                    "strength": 0.5
+                }
+            },
+            {
+                "endpoint": "/audio/normalize",
+                "label": "Normalize levels",
+                "params": {
+                    "target_lufs": -16.0
+                }
+            }
+        ]
+    },
+    {
+        "id": "social-clip",
+        "name": "Social Media Clip",
+        "description": "Auto-edit for engagement, reframe to vertical, export",
+        "category": "video",
+        "steps": [
+            {
+                "endpoint": "/video/auto-edit",
+                "label": "Smart edit for engagement",
+                "params": {
+                    "style": "fast"
+                }
+            },
+            {
+                "endpoint": "/video/reframe",
+                "label": "Reframe to 9:16",
+                "params": {
+                    "aspect": "9:16",
+                    "method": "face"
+                }
+            }
+        ]
+    },
+    {
+        "id": "youtube-upload",
+        "name": "YouTube Upload Ready",
+        "description": "Clean silence, normalize to -14 LUFS for YouTube",
+        "category": "speech",
+        "steps": [
+            {
+                "endpoint": "/silence",
+                "label": "Detect and remove silence",
+                "params": {
+                    "threshold": -35,
+                    "min_duration": 0.8,
+                    "padding": 0.2
+                }
+            },
+            {
+                "endpoint": "/audio/normalize",
+                "label": "Normalize to YouTube loudness",
+                "params": {
+                    "target_lufs": -14.0
+                }
+            }
+        ]
+    },
+    {
+        "id": "documentary-rough",
+        "name": "Documentary Rough Cut",
+        "description": "Scene detection, auto-edit, and normalize for documentary footage",
+        "category": "video",
+        "steps": [
+            {
+                "endpoint": "/video/scenes",
+                "label": "Detect scene changes",
+                "params": {
+                    "threshold": 27.0
+                }
+            },
+            {
+                "endpoint": "/audio/normalize",
+                "label": "Normalize audio levels",
+                "params": {
+                    "target_lufs": -23.0
+                }
+            }
+        ]
+    },
+    {
+        "id": "studio-audio",
+        "name": "Studio Audio",
+        "description": "Professional audio cleanup: denoise, normalize, loudness match",
+        "category": "audio",
+        "steps": [
+            {
+                "endpoint": "/audio/denoise",
+                "label": "Remove noise floor",
+                "params": {
+                    "strength": 0.7
+                }
+            },
+            {
+                "endpoint": "/audio/normalize",
+                "label": "Normalize and match loudness",
+                "params": {
+                    "target_lufs": -14.0
+                }
+            }
+        ]
+    }
+]

@@ -1,0 +1,41 @@
+version: "3.8"
+
+services:
+  opencut-server:
+    build: .
+    ports:
+      - "5679:5679"
+    volumes:
+      # Persist models, settings, job history across container rebuilds
+      - opencut-data:/root/.opencut
+    environment:
+      - OPENCUT_BUNDLED=false
+      - PYTHONUNBUFFERED=1
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5679/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # GPU-enabled variant (uncomment to use)
+  # opencut-server-gpu:
+  #   build: .
+  #   ports:
+  #     - "5679:5679"
+  #   volumes:
+  #     - opencut-data:/root/.opencut
+  #   environment:
+  #     - OPENCUT_BUNDLED=false
+  #     - PYTHONUNBUFFERED=1
+  #   deploy:
+  #     resources:
+  #       reservations:
+  #         devices:
+  #           - driver: nvidia
+  #             count: 1
+  #             capabilities: [gpu]
+  #   restart: unless-stopped
+
+volumes:
+  opencut-data:

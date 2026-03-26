@@ -28,18 +28,36 @@ LOG_FILE = os.path.join(LOG_DIR, "server.log")
 logger = logging.getLogger("opencut")
 logger.setLevel(logging.DEBUG)
 
+# Job-ID correlation filter — injects job_id into every log record
+# Inline to avoid circular import with opencut.jobs
+import threading as _log_threading
+_log_thread_local = _log_threading.local()
+
+class _JobLogFilter(logging.Filter):
+    def filter(self, record):
+        record.job_id = getattr(_log_thread_local, "job_id", "")
+        return True
+
+_job_filter = _JobLogFilter()
+logger.addFilter(_job_filter)
+
 _file_handler = logging.handlers.RotatingFileHandler(
     LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
 )
 _file_handler.setLevel(logging.DEBUG)
 _file_handler.setFormatter(logging.Formatter(
-    "%(asctime)s [%(levelname)s] %(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    "%(asctime)s [%(levelname)s] [%(job_id)s] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    defaults={"job_id": ""},
 ))
 logger.addHandler(_file_handler)
 
 _console_handler = logging.StreamHandler(sys.stdout)
 _console_handler.setLevel(logging.INFO)
-_console_handler.setFormatter(logging.Formatter("  %(message)s"))
+_console_handler.setFormatter(logging.Formatter(
+    "  %(message)s",
+    defaults={"job_id": ""},
+))
 logger.addHandler(_console_handler)
 
 # ---------------------------------------------------------------------------
@@ -160,13 +178,15 @@ def _setup_system_site_packages():
     logger.debug("  System Python not found — optional deps from pip unavailable")
 
 
-_setup_system_site_packages()
-
-# Ensure ~/.opencut/packages (pip --target fallback) is importable
+# Ensure ~/.opencut/packages (pip --target fallback) is importable EARLY —
+# this is the primary writable install directory for non-admin users
 _opencut_packages = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
-if os.path.isdir(_opencut_packages) and _opencut_packages not in sys.path:
-    sys.path.append(_opencut_packages)
-    logger.info("  Added ~/.opencut/packages to sys.path")
+os.makedirs(_opencut_packages, exist_ok=True)
+if _opencut_packages not in sys.path:
+    sys.path.insert(0, _opencut_packages)
+    logger.info("  Added ~/.opencut/packages to sys.path (priority)")
+
+_setup_system_site_packages()
 
 # Blueprints handle their own imports; this block pre-loads for backward compat
 try:
@@ -524,6 +544,14 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     """Start the OpenCut backend server."""
     import tempfile
 
+    # Mark any jobs that were running when the server last died as interrupted
+    try:
+        from opencut.job_store import mark_interrupted, cleanup_old_jobs
+        mark_interrupted()
+        cleanup_old_jobs()
+    except Exception as e:
+        logger.warning("Job store startup failed: %s", e)
+
     # Clean up stale preview temp files from previous runs
     try:
         import glob as _glob
@@ -570,7 +598,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     atexit.register(shutdown_pool)
 
     print("")
-    print("  OpenCut Backend Server v1.7.2")
+    print("  OpenCut Backend Server v1.8.0")
     print(f"  Listening on http://{host}:{effective_port}")
     print(f"  PID: {os.getpid()}")
     print(f"  Log file: {LOG_FILE}")

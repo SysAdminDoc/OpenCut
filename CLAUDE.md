@@ -10,11 +10,11 @@
 ## Key Files
 
 ### Backend (Python)
-- `opencut/server.py` (~720 lines) - Flask app creation, startup, port management, download_models, `_setup_system_site_packages()` for frozen builds
+- `opencut/server.py` (~730 lines) - Flask app creation, startup, port management, download_models, `_setup_system_site_packages()` for frozen builds. Log format includes `[job_id]` for correlation via _JobLogFilter. `/logs/tail` endpoint for filtered log viewing.
 - `opencut/security.py` (~280 lines) - Path validation, CSRF tokens, safe_pip_install (frozen-build aware via `_find_system_python()`), safe_float/safe_int (with range clamp + inf/nan rejection), validate_filepath, VALID_WHISPER_MODELS, rate_limit/require_rate_limit
-- `opencut/jobs.py` (~215 lines) - Job state, _new_job, _update_job, _kill_job_process, _get_job_copy, _list_jobs_copy, _unregister_job_process, TooManyJobsError, MAX_CONCURRENT_JOBS=10, async_job decorator
+- `opencut/jobs.py` (~240 lines) - Job state, _new_job, _update_job, _kill_job_process, _get_job_copy, _list_jobs_copy, _unregister_job_process, TooManyJobsError, MAX_CONCURRENT_JOBS=10, async_job decorator. Thread-local job_id for log correlation (_thread_local.job_id set in _process, cleared in finally). _safe_error delegates to errors.safe_error for structured classification.
 - `opencut/helpers.py` (~530 lines) - _try_import, output paths, FFmpegCmd builder, FFmpeg progress runner, deferred temp cleanup, job time tracking, compute_estimate, `run_ffmpeg()`, `ensure_package()`, `get_video_info()`
-- `opencut/errors.py` (~60 lines) - OpenCutError exception class with typed codes (MISSING_DEPENDENCY, FILE_NOT_FOUND, GPU_OUT_OF_MEMORY, INVALID_INPUT, OPERATION_FAILED), register_error_handlers
+- `opencut/errors.py` (~230 lines) - Structured error taxonomy. OpenCutError exception class with code/message/suggestion. `error_response()` helper for routes. `safe_error(exc, context)` classifies exceptions (MemoryError→GPU_OUT_OF_MEMORY, TimeoutError→OPERATION_TIMEOUT, PermissionError→PERMISSION_DENIED, ImportError→MISSING_DEPENDENCY, etc.) and returns structured JSON with recovery suggestions. Factory constructors: missing_dependency, file_not_found, gpu_out_of_memory, invalid_input, invalid_model, operation_failed, rate_limited, queue_full, module_not_available, file_permission_denied, too_many_items, server_busy, install_failed. All errors return `{error, code, suggestion}` JSON.
 - `opencut/checks.py` (~90 lines) - Centralized dependency availability checks (demucs, watermark, pedalboard, audiocraft, edge_tts, rembg, upscale, scenedetect, auto-editor, transnetv2, resemble-enhance, ollama)
 - `opencut/user_data.py` (~100 lines) - Thread-safe JSON file access for user settings (per-file locks, normalized lock keys)
 - `opencut/data/social_presets.json` - Social platform export presets (13 platforms: YouTube Shorts/Long, TikTok, Instagram Reel/Story/Post, Twitter/X, LinkedIn, Snapchat, Facebook Reel/Post, Pinterest, Podcast MP3)
@@ -42,24 +42,32 @@
 - `nlp_command.py` - Natural language → API route mapping. COMMAND_MAP with 19 entries. parse_command_keyword(text) → {route, params, confidence, matched_keyword} or None. parse_command_llm(text, config, routes). parse_command(text, llm_config) tries LLM then keyword. extract_params_from_text(text) extracts numbers/language/intensity hints.
 
 ### Route Blueprints (`opencut/routes/`)
-- `__init__.py` - `register_blueprints(app)` registers all 10 Blueprints
+- `__init__.py` - `register_blueprints(app)` registers all 11 Blueprints (added workflow_bp)
 - `system.py` (~1130 lines) - /health, /shutdown, /info, /gpu/*, /dependencies (includes color_match, auto_zoom, footage_search, loudness_match, deliverables, nlp_command checks), /file, /whisper/*, /llm/*
 - `audio.py` (~2175 lines) - /silence, /fillers, /audio/*, /audio/beat-markers (→ beat timestamps for ExtendScript markers), /audio/loudness-match (async, on_progress)
 - `captions.py` (~1590 lines) - /captions/*, /captions/chapters (LLMConfig object, not dict), /captions/repeat-detect (word-level timestamps → detect_repeated_takes)
 - `video.py` (~4021 lines) - /video/*, /video/color-match (async, on_progress), /video/auto-zoom (dynamic resolution via probe — no hardcoded hd1080), /video/multicam-cuts (result.get("cuts") — dict not list)
-- `jobs_routes.py` (~280 lines) - /status/*, /cancel/*, /cancel-all, /jobs, /stream/*, /queue/*
-- `settings.py` (~402 lines) - /presets/*, /favorites/*, /workflows/*, /settings/import|export, /settings/llm (GET masks key, POST preserves masked), /settings/loudness-target, /settings/auto-zoom, /settings/chapters, /settings/multicam, /settings/footage-index
+- `jobs_routes.py` (~330 lines) - /status/*, /cancel/*, /cancel-all, /jobs, /stream/*, /queue/*, /jobs/history (SQLite-backed), /jobs/stats, /jobs/interrupted
+- `settings.py` (~440 lines) - /presets/*, /favorites/*, /workflows/*, /settings/import|export, /settings/llm (GET masks key, POST preserves masked), /settings/loudness-target, /settings/auto-zoom, /settings/chapters, /settings/multicam, /settings/footage-index, /logs/tail (filtered log viewer), /templates/list, /templates/save, /templates/apply
 
 **New in v1.5.0:**
 - `timeline.py` - /timeline/export-from-markers (FFmpeg clip extraction per marker), /timeline/batch-rename (validates renames for ExtendScript), /timeline/smart-bins (validates rules), /timeline/srt-to-captions (parse SRT or pass-through segments), GET /timeline/index-status
 - `search.py` - POST /search/index (transcribe → index_file, async job), POST /search/footage (search_footage), DELETE /search/index (clear_index)
 - `deliverables.py` - POST /deliverables/vfx-sheet|adr-list|music-cue-sheet|asset-list → {output, rows}. All handle dict return from core functions via isinstance guard.
 - `nlp.py` - POST /nlp/command → LLMConfig object (not dict), explanation falls back to param_source
+- `workflow.py` - POST /workflow/run (chained multi-step processing), GET /workflow/presets, POST /workflow/save, DELETE /workflow/delete
+
+### Persistence (`opencut/`)
+- `job_store.py` (~200 lines) - SQLite job persistence at ~/.opencut/jobs.db. WAL mode, thread-local connections. save_job, get_job, list_jobs, mark_interrupted (on startup), cleanup_old_jobs (7-day TTL), get_job_stats. Jobs auto-persisted on terminal status via _persist_job in jobs.py.
+
+### Data Files (`opencut/data/`)
+- `workflow_presets.json` - 6 built-in workflow presets (Clean Interview, Podcast Polish, Social Clip, YouTube Upload, Documentary Rough, Studio Audio)
+- `project_templates.json` - 6 project templates (YouTube, Shorts, TikTok/Reels, Podcast, Cinema, Broadcast)
 
 ### Frontend (CEP Panel)
-- `extension/com.opencut.panel/client/main.js` (~6850 lines) - Frontend controller. State vars: lastTimelineCuts, sequenceInfo, footageIndex, beatMarkerTimes, seqMarkersData, renameItemsData, multicamCutsData, repeatCutsData, chaptersData. New init functions: initTimelineFeatures, initCaptionNewFeatures, initAudioNewFeatures, initDeliverablesFeatures, initNlpFeatures. LLM settings loaded on startup via loadLlmSettings().
-- `extension/com.opencut.panel/client/index.html` (~3115 lines) - UI layout (sidebar + content-area, 8 tabs: Cut, Captions, Audio, Video, Export, Timeline, NLP, Settings). Settings tab now has LLM config card + Audio/Zoom Defaults card.
-- `extension/com.opencut.panel/client/style.css` (~4182 lines) - Themes & styles. New classes: .smart-bin-rule, .footage-result-item, .multicam-track-row, .rename-name-input, .input-row. Design token shadow system (--shadow-sm/md/lg/xl/inner/glow-sm/glow-md). 6 complete themes.
+- `extension/com.opencut.panel/client/main.js` (~7730 lines) - Frontend controller. New systems: keyboard shortcut registry (DEFAULT_SHORTCUTS + localStorage persistence + matchesShortcut), lazy tab rendering (_tabRendered + initTabOnFirstVisit), cut review panel (showCutReview + formatTimecode), status bar (pollSystemStatus), i18n (loadLocale + t() + applyI18nToDOM), workflow preset loader (loadWorkflowPresets + server-side POST /workflow/run), project templates (initProjectTemplates + loadTemplateList), preset export/import (exportPresetFile + importPresetFile), quick action buttons (one-click workflows on Cut/Captions/Audio/Video tabs), toast reflow (_reflowToasts), enhanced error display (showAlert reads structured error.suggestion), job history loads from backend on init, interrupted jobs alert on first connect.
+- `extension/com.opencut.panel/client/index.html` (~3210 lines) - Quick action bars on Cut/Captions/Audio/Video tabs. Cut review panel. Status bar with role="status" + aria-label. Keyboard shortcuts reference card. Project templates card. Preset export/import buttons. Zero inline styles. data-i18n attributes on ~25 elements.
+- `extension/com.opencut.panel/client/style.css` (~4900 lines) - 10 complete themes (6 dark + 4 light: snowlight, latte, solarized, paper). Light-theme overrides for ~40 components including scrollbar (--scrollbar-thumb-color/--scrollbar-hover-color tokens), hovers (--light-hover/--light-border-accent), toast, command palette, job history. 4px spacing rhythm enforced (eliminated 10.5px/11.5px font sizes, normalized 10px/14px/18px/28px margins). 4 responsive breakpoints (800px wide, 480px compact, 440px mid-narrow, 380px very small). Complete interactive states for all button variants (btn-outline :disabled/:active, btn-ghost :active/:disabled, btn-text :disabled, range :focus-visible/:disabled, checkbox :focus-visible/:disabled). Focus-visible rings on 15 interactive elements. Quick action button styles. Shortcut reference card styles. Unified input styling (.text-input matches standard inputs).
 - `extension/com.opencut.panel/host/index.jsx` (~2230 lines) - ExtendScript host. **New functions (lines 1315–2230):** ocGetSequenceInfo, ocAddSequenceMarkers, ocGetSequenceMarkers, ocApplySequenceCuts, ocApplyClipKeyframes, ocBatchRenameProjectItems, ocCreateSmartBins, ocAddNativeCaptionTrack, ocGetProjectBins, ocExportSequenceRange. Private helpers: _findByNodeId, _collectMediaItems, _collectBins. Markers use getFirstMarker/getNextMarker iterator (not indexed access).
 
 ### UXP Panel (Premiere Pro 25.6+)
@@ -69,15 +77,32 @@
 - `extension/com.opencut.uxp/main.js` (~1523 lines) - ES module controller. Internal modules: PProBridge (premierepro UXP lazy import), BackendClient (fetch + CSRF), JobPoller (async poll + cancel), UIController (tabs, toasts, progress). Auto port-scan 5679–5689 via detectBackend(). Loads LLM settings on startup via loadLlmSettings() → window._llmSettings.
 - `extension/com.opencut.uxp/uxp-api-notes.md` - API status notes and CEP vs UXP comparison
 
-### Build
+### Build & Config
 - `opencut_server.spec` - PyInstaller spec
 - `OpenCut.iss` - Inno Setup installer script
 - `install.py` - Cross-platform dev installer
+- `Dockerfile` - Multi-stage build (Python 3.12 + FFmpeg + optional deps)
+- `docker-compose.yml` - Service definition with GPU variant, named volume for ~/.opencut
+- `.dockerignore` - Excludes .git, tests, extension, docs from Docker builds
+- `extension/com.opencut.panel/package.json` - Vite dev dependency for future build pipeline
+- `extension/com.opencut.panel/vite.config.js` - Vite bundler config (source maps, terser, predictable filenames for CEP)
+- `extension/com.opencut.panel/tsconfig.json` - TypeScript config (allowJs, strict:false for incremental migration)
+- `extension/com.opencut.panel/client/locales/en.json` - English locale (~150 i18n strings)
+- `ROADMAP.md` - 7-phase implementation roadmap with priority matrix and success metrics
+
+### Tests
+- `tests/conftest.py` - Flask test client + CSRF fixtures + test media generators
+- `tests/test_core.py` - Core module unit tests (silence, export, config)
+- `tests/test_integration.py` - Route integration tests (health, CSRF, search, NLP, settings, timeline)
+- `tests/test_new_modules.py` - v1.5 module tests (repeat_detect, chapter_gen, footage_search, deliverables, multicam, nlp_command, loudness_match, auto_zoom, color_match)
+- `tests/test_route_smoke.py` (~950 lines) - 107+ smoke tests across all 11 blueprints + structured error tests + CSRF enforcement
+- `tests/test_job_store.py` - SQLite persistence tests (save, get, list, filter, update, mark_interrupted, cleanup, stats, pagination)
+- `tests/test_workflow.py` - Workflow engine tests (validation, presets, save/delete, built-in protection)
 
 ## Architecture
 - Backend runs as standalone process (exe or `python -m opencut.server`)
 - Panel communicates via XHR to localhost:5679
-- **Blueprint-based route organization**: 10 Blueprints (system, audio, captions, video, jobs, settings, timeline, search, deliverables, nlp)
+- **Blueprint-based route organization**: 11 Blueprints (system, audio, captions, video, jobs, settings, timeline, search, deliverables, nlp, workflow)
 - **Shared modules**: security.py (CSRF + path validation), jobs.py (job state), helpers.py (utilities + `run_ffmpeg` + `ensure_package` + `get_video_info`), user_data.py (thread-safe file I/O)
 - **CSRF protection**: Token generated at startup in security.py, returned via /health, sent as `X-OpenCut-Token` header on mutations. `@require_csrf` decorator applied to ALL POST routes.
 - **Path validation**: `validate_path()` checks realpath, null bytes, `..` components, symlinks. `validate_filepath()` adds isfile check. Applied to ALL routes accepting file paths.
@@ -85,8 +110,9 @@
 - **Rate limiting**: `require_rate_limit(key)` decorator prevents concurrent expensive ops (e.g. model installs share `"model_install"` key)
 - **Error taxonomy**: `OpenCutError` with typed codes (`MISSING_DEPENDENCY`, `GPU_OUT_OF_MEMORY`, etc.) — frontend `enhanceError()` adds actionable hints
 - **Job safety**: `TooManyJobsError` (429), `_get_job_copy()`/`_list_jobs_copy()` for thread-safe reads, `_unregister_job_process()` for cleanup
-- **Async job decorator**: `@async_job("type")` wraps routes in standard thread + try/catch + update pattern
-- Job system: `_new_job()` creates job, background thread processes, SSE/polling for status
+- **Async job decorator**: `@async_job("type")` wraps routes in standard thread + try/catch + update pattern. Sets thread-local job_id for log correlation. Auto-persists terminal jobs to SQLite via _persist_job.
+- Job system: `_new_job()` creates job, thread pool processes, SSE/polling for status. SQLite persistence at `~/.opencut/jobs.db` (WAL mode). `mark_interrupted()` on startup recovers jobs from previous crashes.
+- **Workflow engine**: `core/workflow.py` chains steps sequentially via Flask test client, polls sub-jobs to completion, checks parent cancellation between steps. `routes/workflow.py` serves 6 built-in presets + user custom workflows.
 - **Request size limit**: 100 MB `MAX_CONTENT_LENGTH` with 413 error handler
 - **Crash logging**: 500 errors append to `~/.opencut/crash.log` with endpoint, method, traceback
 - **Subprocess tracking**: Install routes register Popen processes for cancel support via `_register_job_process`
@@ -120,7 +146,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.7.2**
+- Current: **v1.8.0**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 18 targets at once (including UXP files)
 
@@ -241,6 +267,55 @@
 - **8 new CLI commands** — chapters, repeat-detect, search index/query, color-match, loudness-match, auto-zoom, deliverables, nlp
 - **9 command palette entries** — all new features searchable via Ctrl+K
 - **7 user preference groups** — LLM, footage index, loudness, color profiles, multicam, auto-zoom, chapters (load_X/save_X in user_data.py)
+
+## v2.0 Features Added
+
+### Backend Infrastructure
+- **Structured error taxonomy** (`errors.py`) — 13 error types with codes, user messages, and recovery suggestions. `safe_error(exc)` auto-classifies exceptions (MemoryError→GPU_OOM, TimeoutError→OPERATION_TIMEOUT, PermissionError→PERMISSION_DENIED, ImportError→MISSING_DEPENDENCY). All `_safe_error()` calls across all routes now return structured `{error, code, suggestion}` JSON.
+- **SQLite job persistence** (`job_store.py`) — Jobs at `~/.opencut/jobs.db` (WAL mode). Auto-persist on terminal status. `mark_interrupted()` on startup. 7-day cleanup. Endpoints: GET /jobs/history, /jobs/stats, /jobs/interrupted.
+- **Structured logging** — Log format `[job_id]` correlation via thread-local. GET /logs/tail with level/job_id filtering.
+- **Workflow engine** (`core/workflow.py` + `routes/workflow.py`) — Server-side sequential step execution with output chaining, cancellation checks between steps, sub-job polling. 6 built-in presets (Clean Interview, Podcast Polish, Social Clip, YouTube Upload, Documentary Rough, Studio Audio). POST /workflow/run, GET /workflow/presets, POST /workflow/save, DELETE /workflow/delete.
+- **Pip install fix** — `safe_pip_install()` reordered: `--target ~/.opencut/packages` is strategy #1 (always writable). Errno 13 / WinError 5 detection skips to next strategy immediately. Post-install verification. `~/.opencut/packages` added to `sys.path` with priority at startup.
+- **Project templates** — 6 built-in templates (YouTube, Shorts, TikTok/Reels, Podcast, Cinema, Broadcast). GET /templates/list, POST /templates/save, POST /templates/apply.
+- **Health monitoring** — GET /system/status (CPU, RAM, GPU VRAM with 30s cache, disk, jobs, uptime). `psutil` optional with graceful degradation.
+- **Route migration** — 5 audio routes migrated from raw `threading.Thread` to `@async_job` decorator (denoise, isolate, normalize, beats, deepfilter).
+- **Docker** — `Dockerfile` (multi-stage), `docker-compose.yml` (GPU variant), `.dockerignore`.
+- **Test coverage** — 107+ smoke tests covering all 11 blueprints, structured error classification, CSRF enforcement, job store persistence.
+
+### Frontend Features
+- **Quick Actions** — One-click workflow buttons at top of Cut (Clean Up, YouTube Ready, Podcast Polish), Captions (Auto Subtitle, Translate), Audio (Studio Polish, Quick Denoise), and Video (Auto Color, Social Reframe) tabs. Wired to server-side POST /workflow/run.
+- **Cut review panel** — After silence/filler/auto-edit/highlights detection, shows checkbox table with timecodes. Select All / Deselect All / Apply Selected. Users review and selectively apply cuts before committing.
+- **Keyboard shortcuts** — 8 default bindings (Ctrl+Shift+S/C/N/D/E/W, Ctrl+K, Escape). Registry in localStorage. Dynamic matching via matchesShortcut(). Shortcut reference card in Settings tab. Title hints on primary buttons.
+- **Lazy tab rendering** — 5 heavy init functions deferred until first tab visit (initCaptionNewFeatures, initAudioNewFeatures, initTimelineFeatures, initNlpFeatures, initDeliverablesFeatures).
+- **Status bar** — Persistent footer: green/yellow/red dot, uptime, CPU%, RAM, GPU VRAM, job count. 5-second polling with 60-retry cap. `role="status"` + `aria-label` for accessibility.
+- **i18n framework** — `locales/en.json` (~150 strings). `t(key, fallback)` function. English loaded as base, target locale merged on top. `data-i18n` attributes on ~25 elements. Language persisted in localStorage.
+- **Project templates UI** — Settings tab card with dropdown (built-in + custom), description, Apply Template button. Applies export/audio/caption settings to panel controls.
+- **Preset export/import** — Export as `.opencut-preset` JSON file, import with validation. Buttons in Settings tab.
+- **Workflow UI upgrade** — Preset dropdown loads from GET /workflow/presets (built-in + custom, with step counts). Run uses server-side POST /workflow/run. Custom save/delete use new /workflow/* routes. Workflow completion toast shows step count and output filename.
+- **Job history persistence** — initJobHistory() loads last 20 jobs from GET /jobs/history. Interrupted jobs alert on first connect.
+- **Toast reflow** — `_reflowToasts()` recalculates positions after removal to eliminate visual gaps.
+- **Enhanced errors** — `showAlert()` and `enhanceError()` read structured `suggestion` field from server. Install errors (Demucs, WhisperX) show recovery guidance.
+- **Command palette** — 4 new entries (Workflow Presets, Project Templates, Keyboard Shortcuts, Job History).
+
+### CSS/Theme Improvements
+- **4 light themes** — Snowlight (clean white/blue), Catppuccin Latte (warm cream), Solarized Light, Paper (monochrome). `color-scheme: light` + scrollbar tokens + ~40 component overrides.
+- **Light-theme scrollbar** — `--scrollbar-thumb-color` / `--scrollbar-hover-color` tokens. Dark themes: rgba(255,255,255,...), light themes: rgba(0,0,0,...). Visible on all 10 themes.
+- **20+ light-theme hover overrides** — nav-tab, header-btn, job-history-item, model-item, fav-chip, batch-file-item, merge-file-item, recent-clip-item, context-menu-item, custom-dropdown-item, btn-ghost, btn-outline. Uses `--light-hover` / `--light-border-accent` tokens.
+- **Typography cleanup** — Eliminated 10.5px→11px and 11.5px→12px fractional sizes. Clean integer scale: 9/10/11/12/13/14/16/17/18/20/22px.
+- **4px spacing rhythm** — Normalized card-header (14px→12px), alert-banner (18px→16px), hints (14px→12px), wizard (28px→24px), slider-row (14px→12px), checkbox-row (10px→8px), margins (10px→8px, 14px→12px).
+- **4 responsive breakpoints** — 800px (wide: 4-col stat grid, wider cards), 480px (compact), 440px (mid-narrow: stacked buttons, single-col), 380px (tiny sidebar).
+- **Complete interactive states** — btn-outline :disabled/:active, btn-ghost :active/:disabled, btn-text :disabled, range :focus-visible/:disabled, checkbox :focus-visible/:disabled. Focus-visible rings on 15 elements. Tokenized focus rings (var(--cyan-subtle)).
+- **Input consistency** — .text-input unified with standard inputs (9px 12px padding). Consistent focus rings across all input types.
+
+### Gotchas (v2.0 additions)
+- **Workflow cancellation** — `run_workflow()` checks `_is_cancelled(parent_job_id)` between steps. Cancelled sub-jobs also stop the workflow. Pass `parent_job_id` when calling from routes.
+- **Job persistence** — `_update_job()` auto-calls `_persist_job()` for terminal statuses (complete/error/cancelled). `_cleanup_old_jobs()` also persists stuck-job error status. Background thread avoids I/O under lock.
+- **`get_interrupted_jobs()`** queries `status='interrupted'` (not 'running') — `mark_interrupted()` changes status on startup.
+- **Workflow step output chaining** — `_extract_output_path(resp_data)` checks `output`, `output_file`, `filepath`, `result.output` keys. If no output found, reuses current_input for next step.
+- **Quick action buttons** — Added to `_clipButtons` array so `updateButtons()` enables/disables them with connection + file selection state. Click handlers call `_quickWorkflow(name)` which looks up preset from `_workflowPresets` loaded from backend.
+- **Scrollbar tokens** — Use `var(--scrollbar-thumb-color)` and `var(--scrollbar-hover-color)` for scrollbar styling. Light themes define dark-alpha versions. Never use hardcoded rgba for scrollbar colors.
+- **Light-theme hover pattern** — Use `var(--light-hover)` / `var(--light-border-accent)` tokens (defined in light theme shared block). For new components, add `:root[data-theme="snowlight/latte/solarized/paper"] .component:hover { background: var(--light-hover); }`.
+- **safe_int for query params** — All GET endpoints accepting numeric query params (limit, offset, lines) must use `safe_int()` from security.py, not bare `int()`. Bare int() causes 500 on non-numeric input.
 - **14 new settings routes** — GET+POST pairs for llm, loudness-target, auto-zoom, chapters, multicam, footage-index
 - **6 new social presets** — Snapchat Story, Facebook Reel, Facebook Post, YouTube Long Form, Pinterest Video, Podcast MP3 (13 total)
 - **84 new tests** (`tests/test_new_modules.py`, 1064 lines) — 9 test classes, all mocked correctly against actual function signatures

@@ -19,6 +19,14 @@ import uuid
 logger = logging.getLogger("opencut")
 
 # ---------------------------------------------------------------------------
+# Ensure ~/.opencut/packages is on sys.path (pip --target fallback dir)
+# ---------------------------------------------------------------------------
+import sys as _sys
+_opencut_pkg_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+if os.path.isdir(_opencut_pkg_dir) and _opencut_pkg_dir not in _sys.path:
+    _sys.path.insert(0, _opencut_pkg_dir)
+
+# ---------------------------------------------------------------------------
 # FFmpeg / FFprobe Path Cache
 # ---------------------------------------------------------------------------
 _ffmpeg_path = None

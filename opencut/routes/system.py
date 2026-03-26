@@ -6,6 +6,7 @@ Health, shutdown, GPU, dependencies, model management, whisper installation.
 
 import logging
 import os
+import platform
 import shutil
 import subprocess as _sp
 import sys
@@ -14,6 +15,11 @@ import threading
 import time
 
 from flask import Blueprint, jsonify, request, send_file
+
+try:
+    import psutil
+except ImportError:
+    psutil = None
 
 from opencut import __version__
 from opencut.helpers import OPENCUT_DIR, _try_import, _try_import_from
@@ -57,6 +63,11 @@ WHISPER_MODELS_DIR = os.environ.get("WHISPER_MODELS_DIR", None)
 _models_cache = {"data": None, "ts": 0}
 _models_cache_lock = threading.Lock()
 _MODELS_CACHE_TTL = 300  # 5 minutes
+
+# ---------------------------------------------------------------------------
+# Server Start Time (for uptime calculation)
+# ---------------------------------------------------------------------------
+_server_start_time = time.time()
 
 
 # ---------------------------------------------------------------------------
@@ -313,6 +324,116 @@ def _detect_gpu():
 def system_gpu():
     """Check GPU availability for AI features."""
     return jsonify(_detect_gpu())
+
+
+# ---------------------------------------------------------------------------
+# System Status (lightweight, polled every 5s by frontend status bar)
+# ---------------------------------------------------------------------------
+_vram_cache = {"used_mb": 0, "ts": 0}
+_vram_cache_lock = threading.Lock()
+_VRAM_CACHE_TTL = 30  # seconds — same as GPU info cache
+
+
+def _get_vram_used():
+    """Get VRAM usage with 30s cache to avoid frequent nvidia-smi calls."""
+    now = time.time()
+    with _vram_cache_lock:
+        if (now - _vram_cache["ts"]) < _VRAM_CACHE_TTL:
+            return _vram_cache["used_mb"]
+    used = 0
+    try:
+        result = _sp.run(
+            ["nvidia-smi", "--query-gpu=memory.used",
+             "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0 and result.stdout.strip():
+            used = safe_int(result.stdout.strip().split("\n")[0].strip())
+    except Exception:
+        pass
+    with _vram_cache_lock:
+        _vram_cache["used_mb"] = used
+        _vram_cache["ts"] = now
+    return used
+
+
+@system_bp.route("/system/status", methods=["GET"])
+def system_status():
+    """Return comprehensive system status for the status bar."""
+    now = time.time()
+    uptime = now - _server_start_time
+
+    # CPU / RAM via psutil or fallback
+    cpu_percent = 0.0
+    ram_used_mb = 0
+    ram_total_mb = 0
+    disk_free_gb = 0.0
+
+    if psutil is not None:
+        try:
+            cpu_percent = psutil.cpu_percent(interval=0)
+            mem = psutil.virtual_memory()
+            ram_used_mb = int(mem.used / (1024 * 1024))
+            ram_total_mb = int(mem.total / (1024 * 1024))
+        except Exception:
+            pass
+        try:
+            disk = psutil.disk_usage(os.path.abspath(os.sep))
+            disk_free_gb = round(disk.free / (1024 * 1024 * 1024), 1)
+        except Exception:
+            pass
+    else:
+        # Fallback: disk via shutil
+        try:
+            usage = shutil.disk_usage(os.path.abspath(os.sep))
+            disk_free_gb = round(usage.free / (1024 * 1024 * 1024), 1)
+        except Exception:
+            pass
+
+    # GPU info (reuses cached _detect_gpu + cached VRAM usage)
+    gpu_raw = _detect_gpu()
+    gpu_info = {
+        "available": gpu_raw.get("available", False),
+        "name": gpu_raw.get("name", "None"),
+        "vram_used_mb": 0,
+        "vram_total_mb": gpu_raw.get("vram_mb", 0),
+    }
+    if gpu_raw.get("available"):
+        gpu_info["vram_used_mb"] = _get_vram_used()
+
+    # Job counts
+    running = 0
+    queued = 0
+    completed_today = 0
+    with job_lock:
+        for j in jobs.values():
+            status = j.get("status", "")
+            if status == "running":
+                running += 1
+            elif status == "queued":
+                queued += 1
+            elif status == "complete":
+                # Count jobs completed today (use created time as proxy)
+                created = j.get("created", 0)
+                if created and (now - created) < 86400:
+                    completed_today += 1
+
+    return jsonify({
+        "connected": True,
+        "uptime_seconds": int(uptime),
+        "cpu_percent": cpu_percent,
+        "ram_used_mb": ram_used_mb,
+        "ram_total_mb": ram_total_mb,
+        "gpu": gpu_info,
+        "disk_free_gb": disk_free_gb,
+        "jobs": {
+            "running": running,
+            "queued": queued,
+            "completed_today": completed_today,
+        },
+        "python_version": platform.python_version(),
+        "server_version": __version__,
+    })
 
 
 # ---------------------------------------------------------------------------

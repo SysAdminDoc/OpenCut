@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.7.2
+   OpenCut CEP Panel - Main Controller v1.8.0
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -54,6 +54,92 @@
 
     // ---- Premiere Pro state cache (reduces evalScript round-trips) ----
     var _pproCache = { seq: null, clips: null, bins: null, ts: 0, ttl: 8000 };
+
+    // ---- Keyboard Shortcut Registry (Phase 3.4) ----
+    var DEFAULT_SHORTCUTS = {
+        "silence-detect": { keys: "Ctrl+Shift+S", label: "Detect Silence" },
+        "caption-generate": { keys: "Ctrl+Shift+C", label: "Generate Captions" },
+        "audio-normalize": { keys: "Ctrl+Shift+N", label: "Normalize Audio" },
+        "audio-denoise": { keys: "Ctrl+Shift+D", label: "Denoise Audio" },
+        "export-video": { keys: "Ctrl+Shift+E", label: "Export Video" },
+        "command-palette": { keys: "Ctrl+K", label: "Command Palette" },
+        "cancel-job": { keys: "Escape", label: "Cancel Current Job" },
+        "quick-workflow": { keys: "Ctrl+Shift+W", label: "Run Quick Workflow" }
+    };
+    var _shortcutRegistry = {};
+
+    function loadShortcuts() {
+        var saved = {};
+        try {
+            var raw = localStorage.getItem("opencut_shortcuts");
+            if (raw) saved = JSON.parse(raw);
+        } catch (e) {}
+        _shortcutRegistry = {};
+        var id;
+        for (id in DEFAULT_SHORTCUTS) {
+            if (DEFAULT_SHORTCUTS.hasOwnProperty(id)) {
+                _shortcutRegistry[id] = {
+                    keys: (saved[id] && saved[id].keys) ? saved[id].keys : DEFAULT_SHORTCUTS[id].keys,
+                    label: DEFAULT_SHORTCUTS[id].label
+                };
+            }
+        }
+        return _shortcutRegistry;
+    }
+
+    function saveShortcuts() {
+        var toSave = {};
+        var id;
+        for (id in _shortcutRegistry) {
+            if (_shortcutRegistry.hasOwnProperty(id) && DEFAULT_SHORTCUTS[id] &&
+                _shortcutRegistry[id].keys !== DEFAULT_SHORTCUTS[id].keys) {
+                toSave[id] = { keys: _shortcutRegistry[id].keys };
+            }
+        }
+        try { localStorage.setItem("opencut_shortcuts", JSON.stringify(toSave)); } catch (e) {}
+    }
+
+    function updateShortcut(actionId, newKeys) {
+        if (_shortcutRegistry[actionId]) {
+            _shortcutRegistry[actionId].keys = newKeys;
+            saveShortcuts();
+        }
+    }
+
+    function matchesShortcut(e, keysStr) {
+        var parts = keysStr.split("+");
+        var needCtrl = false, needShift = false, needAlt = false, needMeta = false;
+        var keyPart = "";
+        for (var i = 0; i < parts.length; i++) {
+            var p = parts[i].trim().toLowerCase();
+            if (p === "ctrl") needCtrl = true;
+            else if (p === "shift") needShift = true;
+            else if (p === "alt") needAlt = true;
+            else if (p === "meta" || p === "cmd") needMeta = true;
+            else keyPart = p;
+        }
+        if (e.ctrlKey !== needCtrl) return false;
+        if (e.shiftKey !== needShift) return false;
+        if (e.altKey !== needAlt) return false;
+        if (e.metaKey !== needMeta) return false;
+        var eventKey = e.key.toLowerCase();
+        if (keyPart === "escape") return eventKey === "escape";
+        return eventKey === keyPart;
+    }
+
+    var _shortcutActions = {
+        "silence-detect": function () { if (el.runSilenceBtn && !el.runSilenceBtn.disabled) el.runSilenceBtn.click(); },
+        "caption-generate": function () { if (el.runStyledCaptionsBtn && !el.runStyledCaptionsBtn.disabled) el.runStyledCaptionsBtn.click(); },
+        "audio-normalize": function () { if (el.runNormalizeBtn && !el.runNormalizeBtn.disabled) el.runNormalizeBtn.click(); },
+        "audio-denoise": function () { if (el.runDenoiseBtn && !el.runDenoiseBtn.disabled) el.runDenoiseBtn.click(); },
+        "export-video": function () { if (el.runExportPresetBtn && !el.runExportPresetBtn.disabled) el.runExportPresetBtn.click(); },
+        "command-palette": function () { openCommandPalette(); },
+        "cancel-job": function () { if (currentJob) cancelJob(); },
+        "quick-workflow": function () { if (el.runWorkflowBtn && !el.runWorkflowBtn.disabled) el.runWorkflowBtn.click(); }
+    };
+
+    // ---- Lazy Tab Rendering (Phase 5.1) ----
+    var _tabRendered = {};
 
     // ============================================================
     // CUSTOM DROPDOWN SYSTEM - Inline Panel Dropdowns
@@ -1092,12 +1178,18 @@
                 el.backendPort.textContent = BACKEND.replace("http://127.0.0.1:", "Port ");
                 updateButtons();
                 loadCapabilities();
-                // One-time update check after server connects
+                // One-time checks after server connects
                 if (!_updateCheckDone) {
                     _updateCheckDone = true;
                     api("GET", "/system/update-check", null, function (uerr, udata) {
                         if (!uerr && udata && udata.update_available) {
                             showToast("OpenCut v" + udata.latest_version + " available \u2014 visit GitHub to update", "info");
+                        }
+                    });
+                    // Check for interrupted jobs from previous session
+                    api("GET", "/jobs/interrupted", null, function (ierr, idata) {
+                        if (!ierr && idata && idata.length > 0) {
+                            showAlert(idata.length + " job(s) were interrupted when the server restarted. Check job history to retry.");
                         }
                     });
                 }
@@ -1390,6 +1482,8 @@
                 checkSubTabOverflow();
                 // Load settings info on first visit
                 if (target === "settings") loadSettingsInfo();
+                // Lazy tab rendering: init tab features on first visit
+                initTabOnFirstVisit(target);
             });
         }
 
@@ -1414,6 +1508,33 @@
                     });
                 }
             })(subTabContainers[i]);
+        }
+    }
+
+    // ================================================================
+    // Lazy Tab Init (Phase 5.1) — Defer heavy init until tab first visited
+    // ================================================================
+    function initTabOnFirstVisit(tabName) {
+        if (_tabRendered[tabName]) return;
+        _tabRendered[tabName] = true;
+
+        switch (tabName) {
+            case "captions":
+                initCaptionNewFeatures();
+                break;
+            case "audio":
+                initAudioNewFeatures();
+                break;
+            case "timeline":
+                initTimelineFeatures();
+                break;
+            case "nlp":
+                initNlpFeatures();
+                break;
+            case "export":
+                initDeliverablesFeatures();
+                break;
+            // cut, video, settings — no deferred init needed (core listeners bound in DOMContentLoaded)
         }
     }
 
@@ -1450,7 +1571,11 @@
         "runExpTranscriptBtn", "loadWaveformBtn", "previewVfxBtn", "runTrimBtn",
         "runAutoEditBtn", "runHighlightsBtn", "runEnhanceBtn", "runShortsBtn",
         "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runMulticamBtn",
-        "runLoudMatchBtn", "runFootageSearchBtn"
+        "runLoudMatchBtn", "runFootageSearchBtn",
+        "quickCleanInterview", "quickYouTube", "quickPodcast",
+        "quickAutoSubtitle", "quickTranslate",
+        "quickStudioAudio", "quickDenoise",
+        "quickAutoColor", "quickSocialReframe"
     ];
 
     function updateButtons() {
@@ -1707,7 +1832,7 @@
             api("POST", endpoint, payload, function (err, data) {
                 jobStarting = false;
                 if (err || !data || data.error) {
-                    showAlert(data ? data.error : "Failed to start job");
+                    showAlert(data ? data.error : "Failed to start job", data);
                     hideProgress();
                     return;
                 }
@@ -1778,8 +1903,13 @@
         el.processingMsg.textContent = msg;
     }
 
-    function enhanceError(msg) {
+    function enhanceError(msg, errorData) {
+        // If the server returned a structured error with suggestion, use it directly
+        if (errorData && errorData.suggestion) {
+            return (errorData.error || msg) + " \u2014 " + errorData.suggestion;
+        }
         if (!msg) return msg;
+        // Fallback: regex-based enhancement for legacy/unstructured errors
         if (/not installed|No module named/i.test(msg)) {
             return msg + " \u2014 You can install this from the Settings tab.";
         }
@@ -1817,7 +1947,7 @@
             el.resultsTitle.textContent = "Error";
             el.resultsTitle.removeAttribute("style");
             el.resultsTitle.setAttribute("data-state", "error");
-            el.resultsStats.textContent = enhanceError(job.error || job.message || "Unknown error");
+            el.resultsStats.textContent = enhanceError(job.error || job.message || "Unknown error", job);
             el.resultsPath.textContent = "";
             // Show retry button if we have a last job to retry
             if (lastJobEndpoint) {
@@ -2195,7 +2325,8 @@
         el.separateHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing Demucs... This may take a few minutes.</span>';
         apiWithSpinner(el.installDemucsBtn, "POST", "/demucs/install", {}, function(err, data) {
             if (err || (data && data.error)) {
-                el.separateHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(data ? data.error : 'Unknown error') + '</span>';
+                var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : 'Unknown error';
+                el.separateHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(errMsg) + '</span>';
             } else {
                 el.separateHint.classList.add("hidden");
                 capabilities.separation = true;
@@ -2264,7 +2395,8 @@
         el.watermarkHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing watermark remover... This may take several minutes.</span>';
         apiWithSpinner(el.installWatermarkBtn, "POST", "/watermark/install", {}, function(err, data) {
             if (err || (data && data.error)) {
-                el.watermarkHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(data ? data.error : 'Unknown error') + '</span>';
+                var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : 'Unknown error';
+                el.watermarkHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(errMsg) + '</span>';
             } else {
                 el.watermarkHint.classList.add("hidden");
                 capabilities.watermark_removal = true;
@@ -2655,49 +2787,86 @@
     }
 
     // --- WORKFLOW PRESETS ---
-    var WORKFLOW_PRESETS = {
-        clean_audio: [
-            { endpoint: "/audio/denoise", payload: { method: "afftdn" }, label: "Denoising audio..." },
-            { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
-        ],
-        subtitle_pipeline: [
-            { endpoint: "/transcript", payload: { model: "base", export_format: "srt" }, label: "Transcribing & exporting subtitles..." },
-        ],
-        translate_pipeline: [
-            { endpoint: "/transcript", payload: { model: "base" }, label: "Transcribing..." },
-            { endpoint: "/captions/translate", payload: { target_lang: "es" }, label: "Translating captions..." },
-        ],
-        pro_video: [
-            { endpoint: "/video/fx/apply", payload: { effect: "stabilize", params: { smoothing: 10, zoom: 0 } }, label: "Stabilizing video..." },
-            { endpoint: "/audio/denoise", payload: { method: "afftdn" }, label: "Denoising audio..." },
-            { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
-        ],
-        social_ready: [
-            { endpoint: "/silence", payload: { threshold: -35, min_silence: 0.4, pad_before: 0.1, pad_after: 0.1 }, label: "Removing silence..." },
-            { endpoint: "/audio/normalize", payload: { target_lufs: -14 }, label: "Normalizing audio..." },
-            { endpoint: "/captions/burn-in", payload: { model: "base" }, label: "Burning in captions..." },
-        ],
-    };
+    var _workflowPresets = []; // Loaded from backend
+
+    function loadWorkflowPresets() {
+        api("GET", "/workflow/presets", null, function (err, data) {
+            if (err || !data) return;
+            _workflowPresets = [];
+            var sel = el.workflowPreset;
+            if (!sel) return;
+            sel.innerHTML = "";
+            // Built-in presets
+            var builtins = data.builtins || [];
+            var customs = data.custom || [];
+            var globalIdx = 0;
+            if (builtins.length) {
+                var optg = document.createElement("optgroup");
+                optg.label = "Built-in";
+                for (var i = 0; i < builtins.length; i++) {
+                    var opt = document.createElement("option");
+                    opt.value = "idx:" + globalIdx;
+                    opt.textContent = builtins[i].name + " (" + (builtins[i].steps || []).length + " steps)";
+                    optg.appendChild(opt);
+                    _workflowPresets.push(builtins[i]);
+                    globalIdx++;
+                }
+                sel.appendChild(optg);
+            }
+            if (customs.length) {
+                var optg2 = document.createElement("optgroup");
+                optg2.label = "Custom";
+                for (var j = 0; j < customs.length; j++) {
+                    var opt2 = document.createElement("option");
+                    opt2.value = "idx:" + globalIdx;
+                    opt2.textContent = customs[j].name + " (" + (customs[j].steps || []).length + " steps)";
+                    optg2.appendChild(opt2);
+                    _workflowPresets.push(customs[j]);
+                    globalIdx++;
+                }
+                sel.appendChild(optg2);
+            }
+            if (!builtins.length && !customs.length) {
+                sel.innerHTML = '<option value="" disabled selected>No presets available</option>';
+            }
+            // Show description on change
+            sel.addEventListener("change", function () {
+                var idx = _getWorkflowPresetIndex(sel.value);
+                var desc = el.workflowPresetDesc;
+                if (desc && idx >= 0 && _workflowPresets[idx]) {
+                    desc.textContent = _workflowPresets[idx].description || "";
+                }
+            });
+        });
+    }
+
+    function _getWorkflowPresetIndex(val) {
+        // Value format: "idx:N" where N is the index into _workflowPresets
+        if (!val) return -1;
+        var parts = val.split(":");
+        if (parts.length !== 2) return -1;
+        var idx = parseInt(parts[1], 10);
+        return isNaN(idx) ? -1 : idx;
+    }
 
     function runWorkflowPreset() {
-        var presetKey = el.workflowPreset.value;
-        var preset = WORKFLOW_PRESETS[presetKey];
-        if (!preset || !preset.length) {
-            showAlert("Unknown workflow preset.");
+        var sel = el.workflowPreset;
+        if (!sel || !sel.value || !selectedPath) {
+            showAlert("Select a preset and a clip first.");
             return;
         }
-        // Inject filepath and output_dir into each step
-        var steps = [];
-        for (var i = 0; i < preset.length; i++) {
-            var step = { endpoint: preset[i].endpoint, label: preset[i].label };
-            var p = {};
-            for (var k in preset[i].payload) { p[k] = preset[i].payload[k]; }
-            p.filepath = selectedPath;
-            p.output_dir = projectFolder;
-            step.payload = p;
-            steps.push(step);
+        var idx = _getWorkflowPresetIndex(sel.value);
+        var preset = _workflowPresets[idx];
+        if (!preset || !preset.steps || !preset.steps.length) {
+            showAlert("Invalid workflow preset.");
+            return;
         }
-        runWorkflow(steps);
+        // Use server-side workflow runner for reliable chained execution
+        startJob("/workflow/run", {
+            filepath: selectedPath,
+            workflow: { steps: preset.steps },
+            output_dir: projectFolder,
+        });
     }
 
     // --- TTS VOICE GENERATION ---
@@ -2926,7 +3095,6 @@
     }
 
     function runReframe() {
-        console.log("[OpenCut] runReframe selectedPath:", selectedPath);
         var preset = el.reframePreset.value;
         var w, h;
         if (preset === "custom") {
@@ -3481,7 +3649,8 @@
             showNotifications: el.settingsShowNotifications.checked,
             outputDir: el.settingsOutputDir.value,
             defaultModel: el.settingsDefaultModel.value,
-            theme: el.settingsTheme.value
+            theme: el.settingsTheme.value,
+            lang: el.settingsLang ? el.settingsLang.value : "en"
         };
         try {
             localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
@@ -3634,8 +3803,12 @@
     // Utility
     // ================================================================
     var _alertTimer = null;
-    function showAlert(msg) {
-        el.alertText.textContent = msg;
+    function showAlert(msg, errorData) {
+        // If errorData has structured suggestion from the server, use it directly
+        var display = (errorData && errorData.suggestion)
+            ? msg + " \u2014 " + errorData.suggestion
+            : enhanceError(msg);
+        el.alertText.textContent = display;
         el.alertBanner.classList.remove("hidden");
         if (_alertTimer) clearTimeout(_alertTimer);
         _alertTimer = setTimeout(function () { el.alertBanner.classList.add("hidden"); }, 15000);
@@ -3675,6 +3848,146 @@
     }
 
     // ================================================================
+    // Cut Review Panel (Phase 3.3 — Preview Before Commit)
+    // ================================================================
+
+    var _cutReviewApplyCallback = null;
+
+    /**
+     * Format seconds as MM:SS.s (e.g. "01:23.4")
+     */
+    function formatTimecode(seconds) {
+        if (!seconds && seconds !== 0) return "00:00.0";
+        var s = Math.abs(Number(seconds));
+        var m = Math.floor(s / 60);
+        var sec = s % 60;
+        return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec.toFixed(1);
+    }
+
+    /**
+     * Update the summary text showing how many cuts are selected.
+     */
+    function updateCutReviewSummary() {
+        var panel = document.getElementById("cutReviewList");
+        var summary = document.getElementById("cutReviewSummary");
+        if (!panel || !summary) return;
+        var boxes = panel.querySelectorAll("input[type='checkbox']");
+        var checked = 0;
+        var totalDuration = 0;
+        for (var i = 0; i < boxes.length; i++) {
+            if (boxes[i].checked) {
+                checked++;
+                totalDuration += parseFloat(boxes[i].getAttribute("data-duration") || 0);
+            }
+        }
+        summary.textContent = checked + " of " + boxes.length + " cuts selected (" + safeFixed(totalDuration, 1) + "s)";
+    }
+
+    /**
+     * Show the cut review panel with a list of cuts.
+     * @param {Array} cuts - Array of {start, end, label, ...}
+     * @param {Function} onApply - Called with the filtered array of selected cuts
+     */
+    function showCutReview(cuts, onApply) {
+        var panel = document.getElementById("cutReviewPanel");
+        var list = document.getElementById("cutReviewList");
+        if (!panel || !list) return;
+        if (!cuts || !cuts.length) {
+            showAlert("No cuts detected in this clip.");
+            return;
+        }
+
+        _cutReviewApplyCallback = onApply;
+
+        var html = "";
+        for (var i = 0; i < cuts.length; i++) {
+            var c = cuts[i];
+            var startSec = Number(c.start || 0);
+            var endSec = Number(c.end || 0);
+            var dur = Math.max(0, endSec - startSec);
+            var label = c.label || c.text || c.reason || ("Cut " + (i + 1));
+            html += '<div class="cut-review-row">'
+                + '<input type="checkbox" checked data-index="' + i + '" data-duration="' + dur.toFixed(2) + '">'
+                + '<span class="cut-review-time">' + formatTimecode(startSec) + '</span>'
+                + '<span class="cut-review-time">' + formatTimecode(endSec) + '</span>'
+                + '<span class="cut-review-duration">' + safeFixed(dur, 1) + 's</span>'
+                + '<span class="cut-review-label">' + esc(String(label).substring(0, 80)) + '</span>'
+                + '</div>';
+        }
+        list.innerHTML = html;
+
+        // Attach change listeners to checkboxes
+        var boxes = list.querySelectorAll("input[type='checkbox']");
+        for (var j = 0; j < boxes.length; j++) {
+            boxes[j].addEventListener("change", updateCutReviewSummary);
+        }
+
+        panel.classList.remove("hidden");
+        updateCutReviewSummary();
+
+        // Store the raw cuts array for retrieval on apply
+        panel._cutsData = cuts;
+    }
+
+    /**
+     * Hide the cut review panel.
+     */
+    function hideCutReview() {
+        var panel = document.getElementById("cutReviewPanel");
+        if (panel) panel.classList.add("hidden");
+        _cutReviewApplyCallback = null;
+    }
+
+    /**
+     * Initialize cut review panel event listeners.
+     */
+    function initCutReviewPanel() {
+        var closeBtn = document.getElementById("cutReviewClose");
+        if (closeBtn) closeBtn.addEventListener("click", hideCutReview);
+
+        var selectAllBtn = document.getElementById("cutReviewSelectAll");
+        if (selectAllBtn) selectAllBtn.addEventListener("click", function () {
+            var boxes = document.getElementById("cutReviewList").querySelectorAll("input[type='checkbox']");
+            for (var i = 0; i < boxes.length; i++) boxes[i].checked = true;
+            updateCutReviewSummary();
+        });
+
+        var deselectAllBtn = document.getElementById("cutReviewDeselectAll");
+        if (deselectAllBtn) deselectAllBtn.addEventListener("click", function () {
+            var boxes = document.getElementById("cutReviewList").querySelectorAll("input[type='checkbox']");
+            for (var i = 0; i < boxes.length; i++) boxes[i].checked = false;
+            updateCutReviewSummary();
+        });
+
+        var applyBtn = document.getElementById("cutReviewApply");
+        if (applyBtn) applyBtn.addEventListener("click", function () {
+            var panel = document.getElementById("cutReviewPanel");
+            var list = document.getElementById("cutReviewList");
+            if (!panel || !list) return;
+
+            var cuts = panel._cutsData || [];
+            var boxes = list.querySelectorAll("input[type='checkbox']");
+            var selected = [];
+            for (var i = 0; i < boxes.length; i++) {
+                if (boxes[i].checked) {
+                    var idx = parseInt(boxes[i].getAttribute("data-index"));
+                    if (cuts[idx]) selected.push(cuts[idx]);
+                }
+            }
+
+            if (!selected.length) {
+                showAlert("No cuts selected. Select at least one cut to apply.");
+                return;
+            }
+
+            if (typeof _cutReviewApplyCallback === "function") {
+                _cutReviewApplyCallback(selected);
+            }
+            hideCutReview();
+        });
+    }
+
+    // ================================================================
     // Drop Zone
     // ================================================================
     function initDropZone() {
@@ -3711,12 +4024,18 @@
     // Theme Quick Toggle
     // ================================================================
     var THEME_LIST = [
+        { value: "_dark", label: "— Dark —", separator: true },
         { value: "cyberpunk", label: "Cyberpunk Neon" },
         { value: "midnight", label: "Midnight OLED" },
         { value: "catppuccin", label: "Catppuccin Mocha" },
         { value: "github", label: "GitHub Dark" },
         { value: "stealth", label: "Stealth" },
-        { value: "ember", label: "Ember" }
+        { value: "ember", label: "Ember" },
+        { value: "_light", label: "— Light —", separator: true },
+        { value: "snowlight", label: "Snowlight" },
+        { value: "latte", label: "Catppuccin Latte" },
+        { value: "solarized", label: "Solarized Light" },
+        { value: "paper", label: "Paper" }
     ];
 
     function initThemeToggle() {
@@ -3724,7 +4043,11 @@
         // Build menu items
         var html = "";
         for (var i = 0; i < THEME_LIST.length; i++) {
-            html += '<button class="theme-menu-item" data-theme="' + THEME_LIST[i].value + '">' + THEME_LIST[i].label + '</button>';
+            if (THEME_LIST[i].separator) {
+                html += '<div class="theme-menu-separator">' + THEME_LIST[i].label + '</div>';
+            } else {
+                html += '<button class="theme-menu-item" data-theme="' + THEME_LIST[i].value + '">' + THEME_LIST[i].label + '</button>';
+            }
         }
         el.themeMenu.innerHTML = html;
 
@@ -3837,21 +4160,63 @@
         addJobDoneListener(function (job) {
             addJobHistory(job);
         });
+
+        // Load persistent job history from backend (fills history across restarts)
+        api("GET", "/jobs/history?limit=20", null, function (err, data) {
+            if (err || !data || !data.length) return;
+            for (var i = data.length - 1; i >= 0; i--) {
+                var j = data[i];
+                // Avoid duplicating entries already in the client-side list
+                var alreadyHas = false;
+                for (var k = 0; k < jobHistoryList.length; k++) {
+                    if (jobHistoryList[k].type === j.type && jobHistoryList[k].status === j.status) {
+                        alreadyHas = true; break;
+                    }
+                }
+                if (!alreadyHas) {
+                    var created = j.created ? new Date(j.created * 1000).toLocaleTimeString() : "";
+                    jobHistoryList.push({
+                        type: j.type || "unknown",
+                        status: j.status || "complete",
+                        message: j.message || "",
+                        time: created,
+                        endpoint: j.endpoint || "",
+                        payload: j.payload || null
+                    });
+                }
+            }
+            if (jobHistoryList.length > MAX_JOB_HISTORY) jobHistoryList.length = MAX_JOB_HISTORY;
+            renderJobHistory();
+        });
     }
 
     // ================================================================
     // Escape to Cancel + Keyboard Shortcuts
     // ================================================================
     function initKeyboardShortcuts() {
+        loadShortcuts();
+
         document.addEventListener("keydown", function (e) {
-            // Escape to cancel running job
-            if (e.key === "Escape" && currentJob && !e.defaultPrevented) {
-                cancelJob();
+            // Cancel-job shortcut works even in inputs (Escape) — but not if already consumed by a dropdown
+            if (!e.defaultPrevented && matchesShortcut(e, _shortcutRegistry["cancel-job"].keys) && currentJob) {
+                _shortcutActions["cancel-job"]();
                 return;
             }
-            // Don't handle shortcuts when typing in inputs
+
+            // Don't handle other shortcuts when typing in inputs
             var tag = e.target.tagName;
             if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable) return;
+
+            // Check registry shortcuts (skip cancel-job, already handled above)
+            var id;
+            for (id in _shortcutRegistry) {
+                if (id === "cancel-job") continue;
+                if (_shortcutRegistry.hasOwnProperty(id) && matchesShortcut(e, _shortcutRegistry[id].keys)) {
+                    e.preventDefault();
+                    if (_shortcutActions[id]) _shortcutActions[id]();
+                    return;
+                }
+            }
 
             // Enter to run the primary action for active tab/subtab
             if (e.key === "Enter" && !currentJob) {
@@ -3867,8 +4232,9 @@
                 return;
             }
 
-            // Tab switching: 1-6 for main tabs
-            if (e.key >= "1" && e.key <= "6" && !e.ctrlKey && !e.altKey && !e.metaKey) {
+            // Tab switching: 1-8 for main tabs (skip if focus is on interactive elements)
+            if (e.key >= "1" && e.key <= "8" && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey
+                && e.target === document.body) {
                 var tabBtns = document.querySelectorAll(".nav-tab");
                 var idx = parseInt(e.key) - 1;
                 if (tabBtns[idx]) {
@@ -3986,6 +4352,234 @@
                 elem.checked = s[key];
             }
         }
+    }
+
+    // ================================================================
+    // Preset Export/Import as .opencut-preset file
+    // ================================================================
+
+    function exportPresetFile() {
+        if (!el.presetSelect || !el.presetSelect.value) {
+            showToast("Select a preset to export first", "error");
+            return;
+        }
+        var presetName = el.presetSelect.value;
+        api("GET", "/presets", null, function (err, data) {
+            if (err || !data || !data[presetName]) {
+                showToast("Could not load preset for export", "error");
+                return;
+            }
+            var exportData = {
+                opencut_preset: true,
+                version: "1.7.2",
+                name: presetName,
+                settings: data[presetName].settings,
+                exported: new Date().toISOString()
+            };
+            var blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement("a");
+            a.href = url;
+            a.download = presetName.replace(/[^a-zA-Z0-9_-]/g, "_") + ".opencut-preset";
+            a.click();
+            setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
+            showToast("Preset exported: " + presetName, "success");
+        });
+    }
+
+    function importPresetFile() {
+        var input = document.getElementById("importPresetFileInput");
+        if (!input) {
+            input = document.createElement("input");
+            input.type = "file";
+            input.id = "importPresetFileInput";
+            input.accept = ".opencut-preset,.json";
+            input.style.display = "none";
+            document.body.appendChild(input);
+            input.addEventListener("change", function () {
+                var file = this.files[0];
+                if (!file) return;
+                var reader = new FileReader();
+                reader.onload = function (e) {
+                    try {
+                        var data = JSON.parse(e.target.result);
+                        if (!data.opencut_preset || !data.name || !data.settings) {
+                            showToast("Invalid preset file: missing required fields", "error");
+                            return;
+                        }
+                        if (typeof data.settings !== "object") {
+                            showToast("Invalid preset file: settings must be an object", "error");
+                            return;
+                        }
+                        api("POST", "/presets/save", { name: data.name, settings: data.settings }, function (err, result) {
+                            if (!err && result && result.success) {
+                                showToast("Preset imported: " + data.name, "success");
+                                refreshPresetList();
+                            } else {
+                                showToast("Failed to import preset", "error");
+                            }
+                        });
+                    } catch (ex) {
+                        showToast("Invalid preset file format", "error");
+                    }
+                };
+                reader.readAsText(file);
+                this.value = "";
+            });
+        }
+        input.click();
+    }
+
+    // ================================================================
+    // Project Templates
+    // ================================================================
+    var _projectTemplates = [];
+
+    function initProjectTemplates() {
+        var select = document.getElementById("templateSelect");
+        var applyBtn = document.getElementById("applyTemplateBtn");
+        var saveBtn = document.getElementById("saveCustomTemplateBtn");
+        var nameInput = document.getElementById("templateCustomName");
+        if (!select) return;
+
+        loadTemplateList();
+
+        if (applyBtn) {
+            applyBtn.addEventListener("click", function () {
+                var id = select.value;
+                if (!id) { showToast("Select a template first", "error"); return; }
+                api("POST", "/templates/apply", { id: id }, function (err, data) {
+                    if (err || !data || !data.success) {
+                        showToast("Failed to apply template", "error");
+                        return;
+                    }
+                    var tpl = data.template;
+                    // Apply audio settings
+                    if (tpl.audio) {
+                        var lufs = document.getElementById("defaultLufs");
+                        if (lufs && tpl.audio.loudness_target !== undefined) {
+                            lufs.value = tpl.audio.loudness_target;
+                            try { lufs.dispatchEvent(new Event("input", { bubbles: true })); } catch (ev) {}
+                        }
+                        if (tpl.audio.normalize !== undefined && el.settingsAutoImport) {
+                            // Normalize flag stored as preference
+                        }
+                    }
+                    // Apply export settings
+                    if (tpl.export) {
+                        var _set = function (id, val) {
+                            var elem = document.getElementById(id);
+                            if (elem && val !== undefined) {
+                                elem.value = val;
+                                try { elem.dispatchEvent(new Event("change", { bubbles: true })); } catch (ev) {}
+                            }
+                        };
+                        _set("exportFormat", tpl.export.format);
+                        _set("exportCodec", tpl.export.codec);
+                        _set("exportResolution", tpl.export.resolution);
+                        _set("exportBitrate", tpl.export.bitrate);
+                        _set("exportFps", tpl.export.fps);
+                        _set("exportAudioBitrate", tpl.export.audio_bitrate);
+                    }
+                    // Apply caption settings
+                    if (tpl.captions) {
+                        if (tpl.captions.style) {
+                            var styleEl = document.getElementById("captionStyle");
+                            if (styleEl) {
+                                styleEl.value = tpl.captions.style;
+                                try { styleEl.dispatchEvent(new Event("change", { bubbles: true })); } catch (ev) {}
+                            }
+                        }
+                        if (tpl.captions.font_size) {
+                            var fsEl = document.getElementById("captionFontSize");
+                            if (fsEl) {
+                                fsEl.value = tpl.captions.font_size;
+                                try { fsEl.dispatchEvent(new Event("input", { bubbles: true })); } catch (ev) {}
+                            }
+                        }
+                    }
+                    showToast("Template applied: " + tpl.name, "success");
+                });
+            });
+        }
+
+        if (saveBtn) {
+            saveBtn.addEventListener("click", function () {
+                var name = nameInput ? nameInput.value.trim() : "";
+                if (!name) { showToast("Enter a template name", "error"); return; }
+                var templateData = {
+                    name: name,
+                    description: "Custom template",
+                    export: {},
+                    audio: {},
+                    captions: {},
+                    aspect: "16:9"
+                };
+                // Capture audio settings
+                var lufs = document.getElementById("defaultLufs");
+                if (lufs) templateData.audio.loudness_target = parseFloat(lufs.value) || -14;
+                templateData.audio.normalize = true;
+                // Capture export settings from current panel values
+                var _get = function (id) { var e = document.getElementById(id); return e ? e.value : ""; };
+                var fmt = _get("exportFormat"); if (fmt) templateData.export.format = fmt;
+                var codec = _get("exportCodec"); if (codec) templateData.export.codec = codec;
+                var res = _get("exportResolution"); if (res) templateData.export.resolution = res;
+                var br = _get("exportBitrate"); if (br) templateData.export.bitrate = br;
+                var fps = _get("exportFps"); if (fps) templateData.export.fps = fps;
+                // Capture caption style
+                var cstyle = _get("captionStyle"); if (cstyle) templateData.captions.style = cstyle;
+                var cfont = _get("captionFontSize"); if (cfont) templateData.captions.font_size = parseInt(cfont, 10) || 24;
+                api("POST", "/templates/save", templateData, function (err, data) {
+                    if (!err && data && data.success) {
+                        showToast("Template saved: " + name, "success");
+                        if (nameInput) nameInput.value = "";
+                        loadTemplateList();
+                    } else {
+                        showToast("Failed to save template", "error");
+                    }
+                });
+            });
+        }
+
+        select.addEventListener("change", updateTemplateDescription);
+    }
+
+    function loadTemplateList() {
+        var select = document.getElementById("templateSelect");
+        if (!select) return;
+        api("GET", "/templates/list", null, function (err, data) {
+            if (err || !data) return;
+            _projectTemplates = (data.builtin || []).concat(data.user || []);
+            var html = '<option value="" disabled selected>Select a template...</option>';
+            if (data.builtin && data.builtin.length) {
+                html += '<optgroup label="Built-in">';
+                for (var i = 0; i < data.builtin.length; i++) {
+                    html += '<option value="' + esc(data.builtin[i].id) + '">' + esc(data.builtin[i].name) + '</option>';
+                }
+                html += '</optgroup>';
+            }
+            if (data.user && data.user.length) {
+                html += '<optgroup label="Custom">';
+                for (var j = 0; j < data.user.length; j++) {
+                    html += '<option value="' + esc(data.user[j].id) + '">' + esc(data.user[j].name) + '</option>';
+                }
+                html += '</optgroup>';
+            }
+            select.innerHTML = html;
+            if (select._customDropdown) select._customDropdown.update();
+        });
+    }
+
+    function updateTemplateDescription() {
+        var select = document.getElementById("templateSelect");
+        var descEl = document.getElementById("templateDesc");
+        if (!select || !descEl) return;
+        var id = select.value;
+        var tpl = null;
+        for (var i = 0; i < _projectTemplates.length; i++) {
+            if (_projectTemplates[i].id === id) { tpl = _projectTemplates[i]; break; }
+        }
+        descEl.textContent = tpl ? tpl.description : "";
     }
 
     // ================================================================
@@ -4131,6 +4725,13 @@
     // Toast Notifications
     // ================================================================
     var MAX_TOASTS = 5;
+    function _reflowToasts() {
+        var live = document.querySelectorAll(".toast-notification");
+        for (var ri = 0; ri < live.length; ri++) {
+            live[ri].style.bottom = (48 + ri * 44) + "px";
+        }
+    }
+
     function showToast(message, type) {
         // Only show if notifications enabled
         if (el.settingsShowNotifications && !el.settingsShowNotifications.checked) return;
@@ -4140,6 +4741,7 @@
             for (var ti = 0; ti <= existing.length - MAX_TOASTS; ti++) {
                 if (existing[ti].parentNode) existing[ti].parentNode.removeChild(existing[ti]);
             }
+            _reflowToasts();
         }
         var toast = document.createElement("div");
         toast.className = "toast-notification " + (type || "info");
@@ -4153,6 +4755,7 @@
             toast.classList.add("fade-out");
             setTimeout(function () {
                 if (toast.parentNode) toast.parentNode.removeChild(toast);
+                _reflowToasts();
             }, 300);
         }, 3000);
     }
@@ -4917,10 +5520,11 @@
                 var name = el.customWorkflowName ? el.customWorkflowName.value.trim() : "";
                 if (!name) { showToast("Enter a workflow name", "error"); return; }
                 if (_workflowSteps.length === 0) { showToast("Add at least one step", "error"); return; }
-                api("POST", "/workflows/save", { name: name, steps: _workflowSteps }, function (err) {
-                    if (err) { showToast("Save failed", "error"); return; }
+                api("POST", "/workflow/save", { name: name, steps: _workflowSteps }, function (err, data) {
+                    if (err || (data && data.error)) { showToast(data ? data.error : "Save failed", "error"); return; }
                     showToast("Workflow saved: " + name, "success");
                     refreshSavedWorkflows();
+                    loadWorkflowPresets();
                 });
             });
         }
@@ -4945,10 +5549,11 @@
             el.deleteCustomWorkflowBtn.addEventListener("click", function () {
                 var sel = el.savedWorkflowSelect;
                 if (!sel || !sel.value) return;
-                api("POST", "/workflows/delete", { name: sel.value }, function (err) {
-                    if (!err) {
+                api("DELETE", "/workflow/delete", { name: sel.value }, function (err, data) {
+                    if (!err && !(data && data.error)) {
                         showToast("Workflow deleted", "success");
                         refreshSavedWorkflows();
+                        loadWorkflowPresets();
                     }
                 });
             });
@@ -4956,11 +5561,12 @@
         if (el.runCustomWorkflowBtn) {
             el.runCustomWorkflowBtn.addEventListener("click", function () {
                 if (_workflowSteps.length === 0 || !selectedPath) return;
-                // Queue each step
-                for (var i = 0; i < _workflowSteps.length; i++) {
-                    addToQueue(_workflowSteps[i].endpoint, { filepath: selectedPath, output_dir: projectFolder });
-                }
-                showToast("Queued " + _workflowSteps.length + " workflow steps", "success");
+                // Use server-side workflow runner for reliable chained execution
+                startJob("/workflow/run", {
+                    filepath: selectedPath,
+                    workflow: { steps: _workflowSteps },
+                    output_dir: projectFolder,
+                });
             });
         }
         refreshSavedWorkflows();
@@ -5056,18 +5662,167 @@
     }
 
     // ================================================================
-    // i18n / Localization (placeholder framework)
+    // Status Bar — Health Monitoring (Phase 4.3)
+    // ================================================================
+    var _statusTimer = null;
+    var _STATUS_POLL_MS = 5000;
+
+    var _statusBarRetries = 0;
+    function initStatusBar() {
+        // Don't start polling until the initial health check has connected
+        if (!connected) {
+            _statusBarRetries++;
+            if (_statusBarRetries < 60) { // Cap at 60 retries (1 minute)
+                setTimeout(initStatusBar, 1000);
+            }
+            return;
+        }
+        pollSystemStatus();
+        _statusTimer = setInterval(pollSystemStatus, _STATUS_POLL_MS);
+    }
+
+    function pollSystemStatus() {
+        api("GET", "/system/status", null, function (err, data) {
+            var dot = el.statusDot;
+            var text = el.statusText;
+            var gpu = el.statusGpu;
+            var jobsEl = el.statusJobs;
+            if (!dot || !text || !gpu || !jobsEl) return;
+
+            if (err || !data || !data.connected) {
+                // Disconnected
+                dot.className = "status-dot";
+                text.textContent = "Disconnected";
+                gpu.textContent = "GPU: --";
+                jobsEl.textContent = "Jobs: --";
+                return;
+            }
+
+            // Determine dot state
+            if (data.gpu && data.gpu.available) {
+                dot.className = "status-dot connected";
+            } else {
+                dot.className = "status-dot degraded";
+            }
+
+            // Uptime text
+            var up = data.uptime_seconds || 0;
+            var upStr;
+            if (up >= 3600) {
+                upStr = Math.floor(up / 3600) + "h " + Math.floor((up % 3600) / 60) + "m";
+            } else if (up >= 60) {
+                upStr = Math.floor(up / 60) + "m";
+            } else {
+                upStr = up + "s";
+            }
+            text.textContent = "Up " + upStr;
+
+            // CPU/RAM if available
+            if (data.cpu_percent > 0 || data.ram_used_mb > 0) {
+                text.textContent += " \u00B7 CPU " + Math.round(data.cpu_percent) + "%";
+                if (data.ram_total_mb > 0) {
+                    text.textContent += " \u00B7 RAM " + Math.round(data.ram_used_mb / 1024 * 10) / 10 + "/" + Math.round(data.ram_total_mb / 1024 * 10) / 10 + "GB";
+                }
+            }
+
+            // GPU
+            if (data.gpu && data.gpu.available) {
+                var gpuLabel = data.gpu.name || "GPU";
+                // Shorten long GPU names
+                gpuLabel = gpuLabel.replace("NVIDIA ", "").replace("GeForce ", "");
+                if (data.gpu.vram_total_mb > 0) {
+                    gpu.textContent = gpuLabel + " " + Math.round(data.gpu.vram_used_mb / 1024 * 10) / 10 + "/" + Math.round(data.gpu.vram_total_mb / 1024 * 10) / 10 + "GB";
+                } else {
+                    gpu.textContent = gpuLabel;
+                }
+            } else {
+                gpu.textContent = "GPU: N/A";
+            }
+
+            // Jobs
+            var j = data.jobs || {};
+            var parts = [];
+            if (j.running) parts.push(j.running + " running");
+            if (j.queued) parts.push(j.queued + " queued");
+            if (!parts.length && j.completed_today) parts.push(j.completed_today + " done today");
+            jobsEl.textContent = parts.length ? "Jobs: " + parts.join(", ") : "Jobs: 0";
+        }, 4000);
+    }
+
+    // ================================================================
+    // i18n / Localization Framework
     // ================================================================
     var _currentLang = "en";
+    var _i18n = {};
+
+    function t(key, fallback) {
+        return _i18n[key] || fallback || key;
+    }
+
+    function applyI18nToDOM() {
+        var els = document.querySelectorAll("[data-i18n]");
+        for (var i = 0; i < els.length; i++) {
+            var k = els[i].getAttribute("data-i18n");
+            if (k) els[i].textContent = t(k);
+        }
+    }
+
+    function loadLocale(lang) {
+        // Always load English first as base, then overlay the target locale
+        function _loadJson(locale, cb) {
+            var xhr = new XMLHttpRequest();
+            xhr.open("GET", "locales/" + locale + ".json", true);
+            xhr.onload = function () {
+                if (xhr.status === 200) {
+                    try { cb(JSON.parse(xhr.responseText)); } catch (e) { cb(null); }
+                } else { cb(null); }
+            };
+            xhr.onerror = function () { cb(null); };
+            xhr.send();
+        }
+        _loadJson("en", function (enData) {
+            _i18n = enData || {};
+            if (lang === "en") {
+                _currentLang = "en";
+                applyI18nToDOM();
+                return;
+            }
+            _loadJson(lang, function (localeData) {
+                if (localeData) {
+                    // Merge locale over English base so missing keys fall back to English
+                    for (var k in localeData) {
+                        if (localeData.hasOwnProperty(k)) _i18n[k] = localeData[k];
+                    }
+                    _currentLang = lang;
+                } else {
+                    _currentLang = "en";
+                    showToast("Language '" + lang + "' not available yet, using English", "info");
+                }
+                applyI18nToDOM();
+            });
+        });
+    }
 
     function initI18n() {
+        // Load saved language preference
+        var savedLang = "en";
+        try {
+            var saved = localStorage.getItem(LOCAL_SETTINGS_KEY);
+            if (saved) {
+                var settings = JSON.parse(saved);
+                if (settings.lang) savedLang = settings.lang;
+            }
+        } catch (e) {}
+
+        // Load the locale file
+        loadLocale(savedLang);
+
         if (el.settingsLang) {
+            if (savedLang !== "en") el.settingsLang.value = savedLang;
             el.settingsLang.addEventListener("change", function () {
                 _currentLang = this.value;
                 saveLocalSettings();
-                if (_currentLang !== "en") {
-                    showToast("Language support is coming in a future update", "info");
-                }
+                loadLocale(_currentLang);
             });
         }
     }
@@ -5202,6 +5957,10 @@
         { name: "AI Command",         tab: "nlp",      sub: "nlp-command",    keywords: "nlp ai command natural language instruction" },
         { name: "Deliverables",       tab: "export",   sub: "exp-deliverables", keywords: "deliverables vfx adr music cue sheet asset list" },
         { name: "Auto Shorts",        tab: "export",   sub: "exp-shorts",       keywords: "shorts tiktok reels auto highlight clip vertical" },
+        { name: "Workflow Presets",   tab: "export",   sub: "exp-workflow",     keywords: "workflow preset pipeline chain steps auto" },
+        { name: "Project Templates",  tab: "settings", sub: "set-prefs",       keywords: "template project youtube podcast broadcast cinema preset" },
+        { name: "Keyboard Shortcuts", tab: "settings", sub: "set-prefs",       keywords: "keyboard shortcut hotkey keybind" },
+        { name: "Job History",        tab: "settings", sub: "set-system",      keywords: "job history log past completed failed" },
     ];
 
     var _paletteSelectedIdx = 0;
@@ -5289,15 +6048,7 @@
             }
         });
 
-        // Ctrl+K to open
-        document.addEventListener("keydown", function(e) {
-            if (e.ctrlKey && e.key === "k") {
-                var tag = e.target.tagName;
-                if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable) return;
-                e.preventDefault();
-                openCommandPalette();
-            }
-        });
+        // Note: Ctrl+K is now handled by the keyboard shortcut registry in initKeyboardShortcuts
     }
 
     // ================================================================
@@ -6051,12 +6802,20 @@
         }
         // Update writeback status
         var tlStatus = document.getElementById("tlWritebackStatus");
-        if (tlStatus) tlStatus.textContent = repeatCutsData.length + " repeat cuts ready to apply.";
+        if (tlStatus) tlStatus.textContent = repeatCutsData.length + " repeat cuts ready to review.";
+        // Phase 3.3: Show cut review panel
+        showCutReview(repeatCutsData, function (selectedCuts) {
+            lastTimelineCuts = selectedCuts;
+            applySequenceCuts(selectedCuts);
+        });
     });
 
     function applyRepeatCutsToTimeline() {
         if (!repeatCutsData || !repeatCutsData.length) { showAlert("No repeat cuts available."); return; }
-        applySequenceCuts(repeatCutsData);
+        // Phase 3.3: Show review panel instead of direct apply
+        showCutReview(repeatCutsData, function (selectedCuts) {
+            applySequenceCuts(selectedCuts);
+        });
     }
 
     function runChapters() {
@@ -6311,7 +7070,11 @@
         var applyBtn = document.getElementById("applySeqCutsBtn");
         if (applyBtn) applyBtn.addEventListener("click", function() {
             if (!lastTimelineCuts) { showAlert("No cuts available. Run Silence Removal or Repeat Detection first."); return; }
-            applySequenceCuts(lastTimelineCuts);
+            // Phase 3.3: Show review panel instead of direct apply
+            showCutReview(lastTimelineCuts, function (selectedCuts) {
+                lastTimelineCuts = selectedCuts;
+                applySequenceCuts(selectedCuts);
+            });
         });
 
         // Beat markers
@@ -6438,12 +7201,64 @@
         if (nlpBtn) nlpBtn.addEventListener("click", runNlpCommand);
     }
 
-    // Hook silence result to update lastTimelineCuts
+    // Hook silence result to update lastTimelineCuts and show review panel
     addJobDoneListener(function (job) {
         if (job.type === "silence" && job.status === "complete" && job.result && job.result.cuts) {
             lastTimelineCuts = job.result.cuts;
             var tlStatus = document.getElementById("tlWritebackStatus");
-            if (tlStatus) tlStatus.textContent = job.result.cuts.length + " silence cuts ready to apply.";
+            if (tlStatus) tlStatus.textContent = job.result.cuts.length + " silence cuts ready to review.";
+            // Phase 3.3: Show cut review panel instead of auto-applying
+            showCutReview(job.result.cuts, function (selectedCuts) {
+                lastTimelineCuts = selectedCuts;
+                applySequenceCuts(selectedCuts);
+            });
+        }
+    });
+
+    // Phase 3.3: Hook filler detection — show review panel when cuts data is available
+    addJobDoneListener(function (job) {
+        if (job.type === "fillers" && job.status === "complete" && job.result && job.result.cuts) {
+            lastTimelineCuts = job.result.cuts;
+            showCutReview(job.result.cuts, function (selectedCuts) {
+                lastTimelineCuts = selectedCuts;
+                applySequenceCuts(selectedCuts);
+            });
+        }
+    });
+
+    // Phase 3.3: Hook auto-edit — show review panel when cuts data is available
+    addJobDoneListener(function (job) {
+        if (job.type === "auto-edit" && job.status === "complete" && job.result && job.result.cuts) {
+            lastTimelineCuts = job.result.cuts;
+            showCutReview(job.result.cuts, function (selectedCuts) {
+                lastTimelineCuts = selectedCuts;
+                applySequenceCuts(selectedCuts);
+            });
+        }
+    });
+
+    // Phase 3.3: Hook highlights — show review panel when cuts/ranges are available
+    addJobDoneListener(function (job) {
+        if (job.type === "highlights" && job.status === "complete" && job.result) {
+            var cuts = job.result.cuts || job.result.highlights || job.result.ranges;
+            if (cuts && cuts.length) {
+                lastTimelineCuts = cuts;
+                showCutReview(cuts, function (selectedCuts) {
+                    lastTimelineCuts = selectedCuts;
+                    applySequenceCuts(selectedCuts);
+                });
+            }
+        }
+    });
+
+    // Workflow completion handler — show step-by-step summary
+    addJobDoneListener(function (job) {
+        if (job.type !== "workflow") return;
+        if (job.status === "complete" && job.result) {
+            var r = job.result;
+            var msg = "Workflow complete: " + (r.steps_completed || 0) + " steps processed.";
+            if (r.output) msg += " Output: " + r.output.split("/").pop().split("\\").pop();
+            showToast(msg, "success");
         }
     });
 
@@ -6458,6 +7273,7 @@
         window.addEventListener("resize", checkSubTabOverflow);
         setupSliders();
         initCustomDropdowns(); // Initialize custom in-panel dropdowns
+        initCutReviewPanel(); // Phase 3.3: Cut review panel
 
         // Event listeners - Clip selection
         el.refreshAllBtn.addEventListener("click", refreshAll);
@@ -6783,8 +7599,16 @@
         initDepDashboard();
         initSettingsIO();
         initWorkflowBuilder();
+        loadWorkflowPresets();
         initCollapsibleCards();
         initI18n();
+        initProjectTemplates();
+
+        // Preset file export/import buttons
+        var exportPresetFileBtn = document.getElementById("exportPresetFileBtn");
+        var importPresetFileBtn = document.getElementById("importPresetFileBtn");
+        if (exportPresetFileBtn) exportPresetFileBtn.addEventListener("click", exportPresetFile);
+        if (importPresetFileBtn) importPresetFileBtn.addEventListener("click", importPresetFile);
 
         // v1.3.0 inits
         loadRecentClips();
@@ -6798,12 +7622,71 @@
         updateSilenceModeUI();
         updateFaceTrackingUI();
 
-        // v1.5.0 inits
-        initTimelineFeatures();
-        initCaptionNewFeatures();
-        initAudioNewFeatures();
-        initDeliverablesFeatures();
-        initNlpFeatures();
+        // v1.7.2 inits — status bar
+        initStatusBar();
+
+        // Quick action buttons (one-click workflows on Cut tab)
+        function _quickWorkflow(workflowName) {
+            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            // Find the workflow by name from loaded presets
+            for (var qi = 0; qi < _workflowPresets.length; qi++) {
+                if (_workflowPresets[qi].name === workflowName) {
+                    startJob("/workflow/run", {
+                        filepath: selectedPath,
+                        workflow: { steps: _workflowPresets[qi].steps },
+                        output_dir: projectFolder,
+                    });
+                    return;
+                }
+            }
+            showAlert("Workflow '" + workflowName + "' not found. Presets may still be loading.");
+        }
+        var qClean = document.getElementById("quickCleanInterview");
+        var qYT = document.getElementById("quickYouTube");
+        var qPod = document.getElementById("quickPodcast");
+        if (qClean) qClean.addEventListener("click", function () { _quickWorkflow("Clean Interview"); });
+        if (qYT) qYT.addEventListener("click", function () { _quickWorkflow("YouTube Upload"); });
+        if (qPod) qPod.addEventListener("click", function () { _quickWorkflow("Podcast Polish"); });
+
+        // Captions quick actions
+        var qSub = document.getElementById("quickAutoSubtitle");
+        var qTrans = document.getElementById("quickTranslate");
+        if (qSub) qSub.addEventListener("click", function () {
+            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            startJob("/transcript", { filepath: selectedPath, model: "base", export_format: "srt", output_dir: projectFolder });
+        });
+        if (qTrans) qTrans.addEventListener("click", function () {
+            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            startJob("/transcript", { filepath: selectedPath, model: "base", output_dir: projectFolder });
+        });
+
+        // Audio quick actions
+        var qStudio = document.getElementById("quickStudioAudio");
+        var qDen = document.getElementById("quickDenoise");
+        if (qStudio) qStudio.addEventListener("click", function () { _quickWorkflow("Studio Audio"); });
+        if (qDen) qDen.addEventListener("click", function () {
+            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            startJob("/audio/denoise", { filepath: selectedPath, output_dir: projectFolder });
+        });
+
+        // Video quick actions
+        var qColor = document.getElementById("quickAutoColor");
+        var qReframe = document.getElementById("quickSocialReframe");
+        if (qColor) qColor.addEventListener("click", function () {
+            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            startJob("/video/color/correct", { filepath: selectedPath, auto: true, output_dir: projectFolder });
+        });
+        if (qReframe) qReframe.addEventListener("click", function () {
+            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            startJob("/video/reframe", { filepath: selectedPath, aspect: "9:16", method: "face", output_dir: projectFolder });
+        });
+
+        // v1.5.0 inits — deferred via lazy tab rendering (Phase 5.1)
+        // These are now called by initTabOnFirstVisit() when user first visits each tab:
+        // initTimelineFeatures(), initCaptionNewFeatures(), initAudioNewFeatures(),
+        // initDeliverablesFeatures(), initNlpFeatures()
+        // Mark the default visible tab (cut) as rendered
+        _tabRendered["cut"] = true;
 
         // Pause CSS animations when panel is hidden (saves GPU/CPU in Premiere)
         document.addEventListener("visibilitychange", function () {
@@ -6835,6 +7718,10 @@
             if (batchPollTimer) {
                 clearInterval(batchPollTimer);
                 batchPollTimer = null;
+            }
+            if (_statusTimer) {
+                clearInterval(_statusTimer);
+                _statusTimer = null;
             }
         });
     });

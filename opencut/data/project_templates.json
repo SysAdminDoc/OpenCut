@@ -1,0 +1,56 @@
+[
+    {
+        "id": "youtube",
+        "name": "YouTube Video",
+        "description": "Optimized for YouTube long-form content",
+        "export": {"format": "mp4", "codec": "h264", "resolution": "1080p", "bitrate": "15M", "fps": 30},
+        "audio": {"loudness_target": -14, "normalize": true, "sample_rate": 48000},
+        "captions": {"style": "default", "font_size": 24},
+        "aspect": "16:9"
+    },
+    {
+        "id": "youtube_shorts",
+        "name": "YouTube Shorts",
+        "description": "Vertical format for YouTube Shorts (60s max)",
+        "export": {"format": "mp4", "codec": "h264", "resolution": "1080p", "bitrate": "12M", "fps": 30},
+        "audio": {"loudness_target": -14, "normalize": true, "sample_rate": 48000},
+        "captions": {"style": "bold_center", "font_size": 28},
+        "aspect": "9:16"
+    },
+    {
+        "id": "tiktok_reels",
+        "name": "TikTok / Reels",
+        "description": "Vertical format for TikTok and Instagram Reels",
+        "export": {"format": "mp4", "codec": "h264", "resolution": "1080p", "bitrate": "10M", "fps": 30},
+        "audio": {"loudness_target": -14, "normalize": true, "sample_rate": 44100},
+        "captions": {"style": "bold_center", "font_size": 30},
+        "aspect": "9:16"
+    },
+    {
+        "id": "podcast",
+        "name": "Podcast",
+        "description": "Audio-focused with minimal video, optimized for spoken word",
+        "export": {"format": "mp4", "codec": "h264", "resolution": "1080p", "bitrate": "5M", "fps": 24},
+        "audio": {"loudness_target": -16, "normalize": true, "sample_rate": 48000},
+        "captions": {"style": "default", "font_size": 22},
+        "aspect": "16:9"
+    },
+    {
+        "id": "cinema",
+        "name": "Cinema",
+        "description": "High-quality cinematic output with wide aspect ratio",
+        "export": {"format": "mp4", "codec": "h264", "resolution": "4k", "bitrate": "50M", "fps": 24},
+        "audio": {"loudness_target": -24, "normalize": true, "sample_rate": 48000},
+        "captions": {"style": "default", "font_size": 20},
+        "aspect": "2.39:1"
+    },
+    {
+        "id": "broadcast",
+        "name": "Broadcast",
+        "description": "Broadcast-safe settings for TV and streaming platforms",
+        "export": {"format": "mp4", "codec": "h264", "resolution": "1080p", "bitrate": "25M", "fps": 29.97},
+        "audio": {"loudness_target": -24, "normalize": true, "sample_rate": 48000},
+        "captions": {"style": "default", "font_size": 22},
+        "aspect": "16:9"
+    }
+]
