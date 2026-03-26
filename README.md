@@ -1,6 +1,6 @@
 # OpenCut
 
-![Version](https://img.shields.io/badge/version-1.7.2-blue)
+![Version](https://img.shields.io/badge/version-1.8.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
@@ -20,7 +20,7 @@
 
 **Option A -- Installer exe (recommended):**
 
-Download `OpenCut-Setup-1.7.2.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. The installer handles everything: server exe, FFmpeg, CEP extension deployment, registry keys, desktop shortcut, and optional Whisper model download. **No Python or FFmpeg needed.**
+Download `OpenCut-Setup-1.8.0.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. The installer handles everything: server exe, FFmpeg, CEP extension deployment, registry keys, desktop shortcut, and optional Whisper model download. **No Python or FFmpeg needed.**
 
 **Option B -- From source (requires Python 3.9+ and [FFmpeg](https://ffmpeg.org/download.html) on PATH):**
 
@@ -47,7 +47,7 @@ Clone the repo and run `Install.bat` as Administrator. It handles FFmpeg check, 
 
 ## Features
 
-OpenCut v1.5.0 includes **142 API routes**, **7 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task — now with ~20 new capabilities including Timeline Integration, AI-powered NLP commands, footage search, post-production deliverables, and a UXP panel for Premiere Pro 25.6+.
+OpenCut v1.8.0 includes **142+ API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task — with workflow automation, project templates, i18n, Docker support, SQLite job persistence, 10 themes, keyboard shortcuts, and a UXP panel for Premiere Pro 25.6+.
 
 ### Cut & Clean
 
@@ -160,9 +160,18 @@ OpenCut v1.5.0 includes **142 API routes**, **7 panel tabs** with **50+ sub-tabs
 | Per-Operation Presets | Save/load settings per operation |
 | Settings Import/Export | Bundle all settings as JSON for backup or sharing |
 | Server Health Monitor | Auto-reconnect banner when backend goes offline |
-| 6 Dark Themes | Cyberpunk, Midnight OLED, Catppuccin Mocha, GitHub Dark, Stealth, Ember |
+| 10 Themes | 6 dark (Cyberpunk, Midnight OLED, Catppuccin Mocha, GitHub Dark, Stealth, Ember) + 4 light (Snowlight, Latte, Solarized, Paper) |
 | Premiere Theme Sync | Auto-detect Premiere's UI brightness |
 | Toast Notifications | Non-intrusive slide-in alerts for job completion |
+| Keyboard Shortcuts | Configurable shortcuts with reference card |
+| Quick Action Buttons | One-click workflows on Cut, Captions, Audio, and Video tabs |
+| Cut Review Panel | Review and approve/reject cuts before applying |
+| Status Bar | Live system health, GPU usage, and job count |
+| i18n | Internationalization system with English locale, extensible to other languages |
+| Project Templates | 6 built-in templates (YouTube, Shorts, TikTok/Reels, Podcast, Cinema, Broadcast) |
+| Workflow Presets | 6 built-in chained workflows (Clean Interview, Podcast Polish, Social Clip, etc.) |
+| Preset Export/Import | Share presets and settings as JSON files |
+| Responsive Layout | 4 breakpoints for compact panels (800px, 480px, 440px, 380px) |
 
 ### Backend Infrastructure
 
@@ -177,6 +186,13 @@ OpenCut v1.5.0 includes **142 API routes**, **7 panel tabs** with **50+ sub-tabs
 | Dependency Dashboard | Grid view of all 24 optional deps with install status |
 | GPU Auto-Detection | Recommend optimal settings based on detected GPU VRAM |
 | AI Model Manager | View/delete downloaded models to free disk space |
+| Job Persistence | SQLite-backed job history survives server restarts |
+| Job Recovery | Detects and reports interrupted jobs on startup |
+| Structured Errors | Error taxonomy with machine-readable codes and recovery suggestions |
+| Job-ID Log Correlation | Every log line tagged with job ID for debugging |
+| Workflow Engine | Chain multi-step processing with cancellation between steps |
+| Docker Support | Multi-stage Dockerfile + docker-compose with GPU variant |
+| Log Viewer | Filtered log tail endpoint for real-time debugging |
 
 ---
 
@@ -241,9 +257,9 @@ A parallel panel (`com.opencut.uxp`) is available for Premiere Pro 25.6+ using A
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  6 tabs, 43 sub-tabs  |                    |  142 API routes       |
-|  Dark theme, 6 color  |                    |  Async job queue      |
-|  schemes              |                    |  SSE + polling        |
+|  8 tabs, 50+ sub-tabs |                    |  142+ API routes      |
+|  10 themes, i18n      |                    |  Async job queue      |
+|  Keyboard shortcuts   |                    |  SSE + polling        |
 +-----------------------+                    +-----------+-----------+
                                                          |
                                              +-----------+-----------+

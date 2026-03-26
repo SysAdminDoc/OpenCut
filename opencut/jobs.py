@@ -12,6 +12,17 @@ import uuid
 logger = logging.getLogger("opencut")
 
 # ---------------------------------------------------------------------------
+# Thread-local job ID for log correlation
+# ---------------------------------------------------------------------------
+_thread_local = threading.local()
+
+
+def get_current_job_id():
+    """Return the job_id running on the current thread, or empty string."""
+    return getattr(_thread_local, "job_id", "")
+
+
+# ---------------------------------------------------------------------------
 # Job State (shared across all Blueprints)
 # ---------------------------------------------------------------------------
 jobs = {}
@@ -23,10 +34,13 @@ MAX_BATCH_FILES = 100  # Max files per batch request
 
 
 def _safe_error(e, context=""):
-    """Log the real exception and return a generic error response."""
-    from flask import jsonify
-    logger.exception("Internal error%s: %s", f" in {context}" if context else "", e)
-    return jsonify({"error": "An internal error occurred. Check server logs for details."}), 500
+    """Log the real exception and return a structured error response.
+
+    Delegates to opencut.errors.safe_error for exception classification
+    so the frontend receives an error code and recovery suggestion.
+    """
+    from opencut.errors import safe_error
+    return safe_error(e, context=context)
 
 
 class TooManyJobsError(RuntimeError):
@@ -61,7 +75,7 @@ def _new_job(job_type: str, filepath: str) -> str:
     return job_id
 
 
-def _get_job_copy(job_id: str) -> dict | None:
+def _get_job_copy(job_id: str):
     """Return a shallow copy of the job dict, or None if not found.
 
     The copy is safe to read outside the lock without race conditions.
@@ -93,6 +107,20 @@ def _update_job(job_id: str, **kwargs):
                 job = jobs[job_id]
                 elapsed = time.time() - job.get("created", time.time())
                 _schedule_record_time(job.get("type", ""), elapsed, job.get("filepath", ""))
+            # Persist terminal job states to SQLite
+            if kwargs.get("status") in ("complete", "error", "cancelled"):
+                _persist_job(jobs[job_id].copy())
+
+
+def _persist_job(job_dict):
+    """Persist a job to SQLite in a background thread to avoid I/O under lock."""
+    def _save():
+        try:
+            from opencut.job_store import save_job
+            save_job(job_dict)
+        except Exception as e:
+            logger.debug("Failed to persist job %s: %s", job_dict.get("id"), e)
+    threading.Thread(target=_save, daemon=True).start()
 
 
 def _schedule_record_time(job_type, elapsed, filepath):
@@ -172,6 +200,7 @@ def _cleanup_old_jobs():
                 j["error"] = "Job timed out (stuck for >2 hours)"
                 j["message"] = "Timed out"
                 logger.warning("Marking stuck job %s as error (created %.0fs ago)", jid, now - j["created"])
+                _persist_job(j.copy())
         # Clean up old finished jobs
         expired = [
             jid for jid, j in jobs.items()
@@ -221,6 +250,13 @@ def async_job(job_type: str):
                 return jsonify({"error": str(e)}), 429
 
             def _process():
+                _thread_local.job_id = job_id
+                # Also set on server's log filter thread-local if available
+                try:
+                    from opencut.server import _log_thread_local
+                    _log_thread_local.job_id = job_id
+                except ImportError:
+                    pass
                 try:
                     result = f(job_id, filepath, data)
                     if not _is_cancelled(job_id):
@@ -230,6 +266,13 @@ def async_job(job_type: str):
                     logger.exception("Job %s error in %s", job_id, job_type)
                     _update_job(job_id, status="error", error=str(e),
                                 message=f"Error: {e}")
+                finally:
+                    _thread_local.job_id = ""
+                    try:
+                        from opencut.server import _log_thread_local
+                        _log_thread_local.job_id = ""
+                    except ImportError:
+                        pass
 
             from opencut.workers import get_pool
             future = get_pool().submit(job_id, _process)

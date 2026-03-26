@@ -167,16 +167,41 @@ def _find_system_python() -> str | None:
 _SAFE_PACKAGE_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?(\[.+\])?(==.+|>=.+|<=.+|~=.+|!=.+)?$")
 
 
+def _verify_package_importable(python: str, package: str, target_dir: str = None) -> bool:
+    """Check if a package is importable by running a quick subprocess check.
+
+    Uses the import name (strips extras/version specifiers and normalises
+    hyphens to underscores).  When *target_dir* is given it is prepended
+    to ``sys.path`` inside the subprocess so ``--target`` installs are
+    found.
+    """
+    # Derive the bare import name: "whisperx[all]>=0.1" -> "whisperx"
+    import_name = re.split(r"[\[>=<!~]", package)[0].replace("-", "_")
+    setup = ""
+    if target_dir:
+        setup = f"import sys; sys.path.insert(0, {target_dir!r}); "
+    cmd = [python, "-c", f"{setup}import {import_name}"]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
 def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedProcess:
     """
     Install a pip package with a safe fallback chain:
 
-    1. Normal ``pip install <package>``
-    2. ``pip install --user <package>``
-    3. ``pip install --break-system-packages <package>``  (only inside a venv)
+    1. ``pip install --target ~/.opencut/packages`` — always writable, no admin needed
+    2. Normal ``pip install <package>``
+    3. ``pip install --user <package>``
+    4. ``pip install --break-system-packages <package>``  (only inside a venv)
 
     When running as a frozen (PyInstaller) build, uses system Python
     from PATH instead of ``sys.executable`` (which points to the exe).
+
+    Permission errors (Errno 13) are caught and immediately skip to the
+    next strategy instead of failing the entire install.
 
     Returns the ``CompletedProcess`` on success.
     Raises ``RuntimeError`` if all strategies fail.
@@ -198,39 +223,70 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     # Prefer pre-built binary wheels (avoids needing Rust/C compilers)
     _prefer = "--prefer-binary"
 
-    strategies = [
-        [python, "-m", "pip", "install", package, _prefer, "-q"],
-        [python, "-m", "pip", "install", package, _prefer, "--user", "-q"],
-    ]
-
-    # Fallback: install to ~/.opencut/packages (writable even when user site-packages isn't)
+    # ~/.opencut/packages — the ONLY directory guaranteed writable without admin
     _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
     os.makedirs(_target_dir, exist_ok=True)
     # Add to sys.path so subsequent imports find the package immediately
     if _target_dir not in sys.path:
         sys.path.insert(0, _target_dir)
-    strategies.append(
-        [python, "-m", "pip", "install", package, _prefer, "--target", _target_dir, "-q"]
-    )
+
+    # Build strategy list — --target first to avoid permission errors
+    strategies = [
+        ("--target (user-local)", [python, "-m", "pip", "install", package, _prefer, "--target", _target_dir, "-q"]),
+        ("default pip install", [python, "-m", "pip", "install", package, _prefer, "-q"]),
+        ("--user install", [python, "-m", "pip", "install", package, _prefer, "--user", "-q"]),
+    ]
 
     # Only allow --break-system-packages inside a virtual environment
     if _in_virtualenv():
         strategies.append(
-            [python, "-m", "pip", "install", package, _prefer, "--break-system-packages", "-q"]
+            ("--break-system-packages", [python, "-m", "pip", "install", package, _prefer, "--break-system-packages", "-q"])
         )
 
     last_result = None
-    for cmd in strategies:
+    for label, cmd in strategies:
+        logger.info("Trying to install %s via strategy: %s", package, label)
         try:
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
             if result.returncode == 0:
-                logger.info("Installed %s via: %s", package, " ".join(cmd))
+                logger.info("Successfully installed %s via strategy: %s", package, label)
+                # Verify the package is actually importable
+                if _verify_package_importable(python, package, _target_dir):
+                    logger.info("Verified %s is importable after install", package)
+                else:
+                    logger.warning(
+                        "Package %s installed via %s but import check failed — "
+                        "this may be OK for packages with different import names",
+                        package, label,
+                    )
                 return result
+
+            # Check stderr for permission denied (Errno 13) — skip immediately
+            stderr_text = result.stderr or ""
+            if "Permission denied" in stderr_text or "Errno 13" in stderr_text or "[WinError 5]" in stderr_text:
+                logger.warning(
+                    "Permission denied installing %s via %s — skipping to next strategy. "
+                    "stderr: %s", package, label, stderr_text[-300:]
+                )
+                last_result = result
+                continue
+
+            logger.warning(
+                "Strategy %s failed for %s (rc=%d): %s",
+                label, package, result.returncode, (result.stderr or "")[-300:]
+            )
             last_result = result
         except subprocess.TimeoutExpired:
             raise RuntimeError(f"pip install {package} timed out after {timeout}s")
+        except OSError as e:
+            # Catch OS-level permission errors (e.g. Errno 13 from subprocess itself)
+            if e.errno == 13:
+                logger.warning("OS permission error for strategy %s: %s — skipping", label, e)
+                continue
+            logger.warning("pip install attempt (%s) failed: %s", label, e)
+            last_result = None
         except Exception as e:
-            logger.warning("pip install attempt failed: %s", e)
+            logger.warning("pip install attempt (%s) failed: %s", label, e)
             last_result = None
 
     stderr = last_result.stderr[-500:] if last_result and last_result.stderr else "unknown error"
