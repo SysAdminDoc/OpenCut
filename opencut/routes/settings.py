@@ -5,6 +5,7 @@ Presets, favorites, workflows, settings import/export, job time estimation,
 log export, job retry.
 """
 
+import json
 import os
 import time
 
@@ -214,6 +215,39 @@ def export_logs():
         return jsonify({"error": "No crash log found"}), 404
     return send_file(crash_log, mimetype="text/plain", as_attachment=True,
                      download_name="opencut_crash.log")
+
+
+@settings_bp.route("/logs/tail", methods=["GET"])
+def tail_logs():
+    """Return the last N lines from the server log, optionally filtered.
+
+    Query params:
+        lines (int): Number of lines to return (default 100, max 500)
+        level (str): Filter by log level (DEBUG, INFO, WARNING, ERROR)
+        job_id (str): Filter by job ID
+    """
+    from opencut.server import LOG_FILE
+    lines = min(safe_int(request.args.get("lines", 100), default=100, min_val=1, max_val=500), 500)
+    level_filter = request.args.get("level", "").upper()
+    job_filter = request.args.get("job_id", "")
+    if not os.path.isfile(LOG_FILE):
+        return jsonify({"lines": [], "total": 0})
+    try:
+        with open(LOG_FILE, "r", encoding="utf-8", errors="replace") as f:
+            all_lines = f.readlines()
+    except OSError:
+        return jsonify({"lines": [], "total": 0})
+    # Filter
+    result = []
+    for line in all_lines:
+        if level_filter and f"[{level_filter}]" not in line:
+            continue
+        if job_filter and job_filter not in line:
+            continue
+        result.append(line.rstrip())
+    # Tail
+    tail = result[-lines:]
+    return jsonify({"lines": tail, "total": len(result)})
 
 
 @settings_bp.route("/logs/clear", methods=["POST"])
@@ -427,3 +461,104 @@ def save_chapter_defaults_route():
     defaults.update({k: v for k, v in data.items() if k in defaults})
     save_chapter_defaults(defaults)
     return jsonify({"success": True})
+
+
+# ---------------------------------------------------------------------------
+# Project Templates
+# ---------------------------------------------------------------------------
+
+def _load_builtin_templates():
+    """Load built-in project templates from the data directory."""
+    templates_path = os.path.join(
+        os.path.dirname(os.path.dirname(__file__)), "data", "project_templates.json"
+    )
+    try:
+        with open(templates_path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return []
+
+
+def _load_user_templates():
+    """Load user-saved templates from ~/.opencut/templates/."""
+    templates_dir = os.path.join(OPENCUT_DIR, "templates")
+    templates = []
+    if not os.path.isdir(templates_dir):
+        return templates
+    for fname in os.listdir(templates_dir):
+        if not fname.endswith(".json"):
+            continue
+        try:
+            fpath = os.path.join(templates_dir, fname)
+            with open(fpath, "r", encoding="utf-8") as f:
+                tpl = json.load(f)
+            if isinstance(tpl, dict) and tpl.get("id"):
+                tpl["user_template"] = True
+                templates.append(tpl)
+        except Exception:
+            continue
+    return templates
+
+
+@settings_bp.route("/templates/list", methods=["GET"])
+def list_templates():
+    """Return all project templates (built-in + user-saved)."""
+    builtin = _load_builtin_templates()
+    user = _load_user_templates()
+    return jsonify({"builtin": builtin, "user": user})
+
+
+@settings_bp.route("/templates/save", methods=["POST"])
+@require_csrf
+def save_template():
+    """Save a custom project template."""
+    data = request.get_json(force=True)
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "Template name required"}), 400
+    if len(name) > 100:
+        return jsonify({"error": "Template name too long"}), 400
+    # Build a safe filename
+    safe_id = "".join(c if c.isalnum() or c in "-_" else "_" for c in name.lower())
+    if not safe_id:
+        return jsonify({"error": "Invalid template name"}), 400
+    templates_dir = os.path.join(OPENCUT_DIR, "templates")
+    os.makedirs(templates_dir, exist_ok=True)
+    # Limit user templates
+    existing = [f for f in os.listdir(templates_dir) if f.endswith(".json")]
+    if len(existing) >= 50:
+        return jsonify({"error": "Too many user templates (max 50)"}), 400
+    tpl = {
+        "id": "user_" + safe_id,
+        "name": name,
+        "description": data.get("description", "Custom template"),
+        "export": data.get("export", {}),
+        "audio": data.get("audio", {}),
+        "captions": data.get("captions", {}),
+        "aspect": data.get("aspect", "16:9"),
+        "saved": time.time(),
+    }
+    fpath = os.path.join(templates_dir, safe_id + ".json")
+    with open(fpath, "w", encoding="utf-8") as f:
+        json.dump(tpl, f, indent=2)
+    return jsonify({"success": True, "template": tpl})
+
+
+@settings_bp.route("/templates/apply", methods=["POST"])
+@require_csrf
+def apply_template():
+    """Apply a template's settings. Returns the settings to apply on the frontend."""
+    data = request.get_json(force=True)
+    template_id = data.get("id", "").strip()
+    if not template_id:
+        return jsonify({"error": "Template ID required"}), 400
+    # Search built-in first, then user templates
+    all_templates = _load_builtin_templates() + _load_user_templates()
+    tpl = None
+    for t in all_templates:
+        if t.get("id") == template_id:
+            tpl = t
+            break
+    if not tpl:
+        return jsonify({"error": "Template not found"}), 404
+    return jsonify({"success": True, "template": tpl})

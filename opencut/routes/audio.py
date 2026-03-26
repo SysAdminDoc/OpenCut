@@ -28,6 +28,7 @@ from opencut.jobs import (
     _safe_error,
     _unregister_job_process,
     _update_job,
+    async_job,
     job_lock,
     jobs,
 )
@@ -343,66 +344,38 @@ def filler_removal():
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/denoise", methods=["POST"])
 @require_csrf
-def audio_denoise():
+@async_job("denoise")
+def audio_denoise(job_id, filepath, data):
     """Remove background noise from audio/video."""
-    data = request.get_json(force=True)
-    filepath = data.get("filepath", "").strip()
+    from opencut.core.audio_suite import denoise_audio
+
     output_dir = data.get("output_dir", "")
-
-    if not filepath:
-        return jsonify({"error": "No file path provided"}), 400
-
-    try:
-        filepath = validate_filepath(filepath)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-
     method = data.get("method", "afftdn")
     if method not in ("afftdn", "highpass", "gate"):
         method = "afftdn"
     strength = safe_float(data.get("strength", 0.7), 0.7, min_val=0.0, max_val=1.0)
     noise_floor = safe_float(data.get("noise_floor", -30.0), -30.0, min_val=-80.0, max_val=0.0)
 
-    job_id = _new_job("denoise", filepath)
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-    def _process():
-        try:
-            from opencut.core.audio_suite import denoise_audio
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    base_name = os.path.splitext(os.path.basename(filepath))[0]
+    ext = os.path.splitext(filepath)[1]
+    out_path = os.path.join(effective_dir, f"{base_name}_denoised{ext}")
 
-            def _on_progress(pct, msg=""):
-                _update_job(job_id, progress=pct, message=msg)
+    denoise_audio(
+        filepath, out_path,
+        method=method, strength=strength,
+        noise_floor=noise_floor,
+        on_progress=_on_progress,
+    )
 
-            effective_dir = _resolve_output_dir(filepath, output_dir)
-            base_name = os.path.splitext(os.path.basename(filepath))[0]
-            ext = os.path.splitext(filepath)[1]
-            out_path = os.path.join(effective_dir, f"{base_name}_denoised{ext}")
-
-            denoise_audio(
-                filepath, out_path,
-                method=method, strength=strength,
-                noise_floor=noise_floor,
-                on_progress=_on_progress,
-            )
-
-            _update_job(
-                job_id, status="complete", progress=100,
-                message="Noise reduction complete!",
-                result={
-                    "output_path": out_path,
-                    "method": method,
-                    "strength": strength,
-                },
-            )
-        except Exception as e:
-            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
-            logger.exception("Denoise error")
-
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-    return jsonify({"job_id": job_id, "status": "running"})
+    return {
+        "output_path": out_path,
+        "method": method,
+        "strength": strength,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -410,51 +383,24 @@ def audio_denoise():
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/isolate", methods=["POST"])
 @require_csrf
-def audio_isolate():
+@async_job("isolate")
+def audio_isolate(job_id, filepath, data):
     """Isolate vocals by emphasizing voice frequencies."""
-    data = request.get_json(force=True)
-    filepath = data.get("filepath", "").strip()
+    from opencut.core.audio_suite import isolate_voice
+
     output_dir = data.get("output_dir", "")
 
-    if not filepath:
-        return jsonify({"error": "No file path provided"}), 400
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-    try:
-        filepath = validate_filepath(filepath)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    base_name = os.path.splitext(os.path.basename(filepath))[0]
+    ext = os.path.splitext(filepath)[1]
+    out_path = os.path.join(effective_dir, f"{base_name}_voice{ext}")
 
-    job_id = _new_job("isolate", filepath)
+    isolate_voice(filepath, out_path, on_progress=_on_progress)
 
-    def _process():
-        try:
-            from opencut.core.audio_suite import isolate_voice
-
-            def _on_progress(pct, msg=""):
-                _update_job(job_id, progress=pct, message=msg)
-
-            effective_dir = _resolve_output_dir(filepath, output_dir)
-            base_name = os.path.splitext(os.path.basename(filepath))[0]
-            ext = os.path.splitext(filepath)[1]
-            out_path = os.path.join(effective_dir, f"{base_name}_voice{ext}")
-
-            isolate_voice(filepath, out_path, on_progress=_on_progress)
-
-            _update_job(
-                job_id, status="complete", progress=100,
-                message="Voice isolation complete!",
-                result={"output_path": out_path},
-            )
-        except Exception as e:
-            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
-            logger.exception("Voice isolation error")
-
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-    return jsonify({"job_id": job_id, "status": "running"})
+    return {"output_path": out_path}
 
 
 # ---------------------------------------------------------------------------
@@ -695,70 +641,42 @@ def audio_separate():
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/normalize", methods=["POST"])
 @require_csrf
-def audio_normalize():
+@async_job("normalize")
+def audio_normalize(job_id, filepath, data):
     """Normalize audio loudness to broadcast/platform standards."""
-    data = request.get_json(force=True)
-    filepath = data.get("filepath", "").strip()
+    from opencut.core.audio_suite import LOUDNESS_PRESETS, normalize_loudness
+
     output_dir = data.get("output_dir", "")
-
-    if not filepath:
-        return jsonify({"error": "No file path provided"}), 400
-
-    try:
-        filepath = validate_filepath(filepath)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
-
     preset = data.get("preset", "youtube")
     target_lufs = data.get("target_lufs", None)
     if target_lufs is not None:
         target_lufs = safe_float(target_lufs, -16.0, min_val=-70.0, max_val=0.0)
 
-    job_id = _new_job("normalize", filepath)
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-    def _process():
-        try:
-            from opencut.core.audio_suite import LOUDNESS_PRESETS, normalize_loudness
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    base_name = os.path.splitext(os.path.basename(filepath))[0]
+    ext = os.path.splitext(filepath)[1]
+    out_path = os.path.join(effective_dir, f"{base_name}_normalized{ext}")
 
-            def _on_progress(pct, msg=""):
-                _update_job(job_id, progress=pct, message=msg)
+    targets = LOUDNESS_PRESETS.get(preset, LOUDNESS_PRESETS["youtube"])
 
-            effective_dir = _resolve_output_dir(filepath, output_dir)
-            base_name = os.path.splitext(os.path.basename(filepath))[0]
-            ext = os.path.splitext(filepath)[1]
-            out_path = os.path.join(effective_dir, f"{base_name}_normalized{ext}")
+    out_path, info = normalize_loudness(
+        filepath, out_path,
+        preset=preset,
+        target_lufs=target_lufs,
+        on_progress=_on_progress,
+    )
 
-            targets = LOUDNESS_PRESETS.get(preset, LOUDNESS_PRESETS["youtube"])
-
-            out_path, info = normalize_loudness(
-                filepath, out_path,
-                preset=preset,
-                target_lufs=target_lufs,
-                on_progress=_on_progress,
-            )
-
-            _update_job(
-                job_id, status="complete", progress=100,
-                message=f"Normalized to {targets['i']:.1f} LUFS",
-                result={
-                    "output_path": out_path,
-                    "preset": preset,
-                    "input_loudness": info.input_i,
-                    "target_loudness": targets["i"],
-                    "input_peak": info.input_tp,
-                    "loudness_range": info.input_lra,
-                },
-            )
-        except Exception as e:
-            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
-            logger.exception("Normalize error")
-
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-    return jsonify({"job_id": job_id, "status": "running"})
+    return {
+        "output_path": out_path,
+        "preset": preset,
+        "input_loudness": info.input_i,
+        "target_loudness": targets["i"],
+        "input_peak": info.input_tp,
+        "loudness_range": info.input_lra,
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -797,53 +715,25 @@ def audio_measure():
 # ---------------------------------------------------------------------------
 @audio_bp.route("/audio/beats", methods=["POST"])
 @require_csrf
-def audio_beats():
+@async_job("beats")
+def audio_beats(job_id, filepath, data):
     """Detect beats and estimate BPM."""
-    data = request.get_json(force=True)
-    filepath = data.get("filepath", "").strip()
-
-    if not filepath:
-        return jsonify({"error": "No file path provided"}), 400
-
-    try:
-        filepath = validate_filepath(filepath)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    from opencut.core.audio_suite import detect_beats
 
     sensitivity = safe_float(data.get("sensitivity", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
-    job_id = _new_job("beats", filepath)
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-    def _process():
-        try:
-            from opencut.core.audio_suite import detect_beats
+    info = detect_beats(filepath, sensitivity=sensitivity, on_progress=_on_progress)
 
-            def _on_progress(pct, msg=""):
-                _update_job(job_id, progress=pct, message=msg)
-
-            info = detect_beats(filepath, sensitivity=sensitivity, on_progress=_on_progress)
-
-            _update_job(
-                job_id, status="complete", progress=100,
-                message=f"Found {len(info.beat_times)} beats at {info.bpm:.0f} BPM",
-                result={
-                    "bpm": info.bpm,
-                    "total_beats": len(info.beat_times),
-                    "beat_times": [round(t, 3) for t in info.beat_times[:500]],
-                    "downbeat_times": [round(t, 3) for t in info.downbeat_times[:125]],
-                    "confidence": round(info.confidence, 3),
-                },
-            )
-        except Exception as e:
-            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
-            logger.exception("Beat detection error")
-
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-    return jsonify({"job_id": job_id, "status": "running"})
+    return {
+        "bpm": info.bpm,
+        "total_beats": len(info.beat_times),
+        "beat_times": [round(t, 3) for t in info.beat_times[:500]],
+        "downbeat_times": [round(t, 3) for t in info.downbeat_times[:125]],
+        "confidence": round(info.confidence, 3),
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -1004,49 +894,23 @@ def audio_pro_apply():
 
 @audio_bp.route("/audio/pro/deepfilter", methods=["POST"])
 @require_csrf
-def audio_pro_deepfilter():
+@async_job("deepfilter")
+def audio_pro_deepfilter(job_id, filepath, data):
     """AI noise reduction using DeepFilterNet."""
-    data = request.get_json(force=True)
-    filepath = data.get("filepath", "").strip()
+    from opencut.core.audio_pro import deepfilter_denoise
+
     output_dir = data.get("output_dir", "")
 
-    if not filepath:
-        return jsonify({"error": "No file path provided"}), 400
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-    try:
-        filepath = validate_filepath(filepath)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+    effective_dir = _resolve_output_dir(filepath, output_dir)
+    out = deepfilter_denoise(
+        filepath, output_dir=effective_dir,
+        on_progress=_on_progress,
+    )
 
-    job_id = _new_job("deepfilter", filepath)
-
-    def _process():
-        try:
-            from opencut.core.audio_pro import deepfilter_denoise
-
-            def _on_progress(pct, msg=""):
-                _update_job(job_id, progress=pct, message=msg)
-
-            effective_dir = _resolve_output_dir(filepath, output_dir)
-            out = deepfilter_denoise(
-                filepath, output_dir=effective_dir,
-                on_progress=_on_progress,
-            )
-            _update_job(
-                job_id, status="complete", progress=100,
-                message="AI noise reduction complete!",
-                result={"output_path": out},
-            )
-        except Exception as e:
-            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
-            logger.exception("DeepFilterNet error")
-
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-    return jsonify({"job_id": job_id, "status": "running"})
+    return {"output_path": out}
 
 
 @audio_bp.route("/audio/pro/install", methods=["POST"])

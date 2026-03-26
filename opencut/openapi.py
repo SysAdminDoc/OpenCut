@@ -57,6 +57,7 @@ _JOB_ENDPOINTS = {
     "/video/color-match", "/video/auto-zoom", "/video/multicam-cuts",
     "/audio/loudness-match", "/audio/beat-markers",
     "/captions/chapters", "/captions/repeat-detect",
+    "/workflow/run",
 }
 
 # Methods to skip (HEAD is auto-added by Flask; OPTIONS for CORS)
