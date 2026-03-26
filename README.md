@@ -1,11 +1,11 @@
 # OpenCut
 
-![Version](https://img.shields.io/badge/version-1.8.0-blue)
+![Version](https://img.shields.io/badge/version-1.9.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%2010%2F11-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2023+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-142-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-148-orange)
 
 > A free, open-source Premiere Pro extension that brings AI-powered video editing automation, caption generation, audio processing, and visual effects -- all running locally on your machine. No subscriptions, no cloud, no API keys. Replaces the need for paid Premiere extensions.
 
@@ -20,7 +20,7 @@
 
 **Option A -- Installer exe (recommended):**
 
-Download `OpenCut-Setup-1.8.0.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. The installer handles everything: server exe, FFmpeg, CEP extension deployment, registry keys, desktop shortcut, and optional Whisper model download. **No Python or FFmpeg needed.**
+Download `OpenCut-Setup-1.9.0.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. The installer handles everything: server exe, FFmpeg, CEP extension deployment, registry keys, desktop shortcut, and optional Whisper model download. **No Python or FFmpeg needed.**
 
 **Option B -- From source (requires Python 3.9+ and [FFmpeg](https://ffmpeg.org/download.html) on PATH):**
 
@@ -47,14 +47,14 @@ Clone the repo and run `Install.bat` as Administrator. It handles FFmpeg check, 
 
 ## Features
 
-OpenCut v1.8.0 includes **142+ API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task — with workflow automation, project templates, i18n, Docker support, SQLite job persistence, 10 themes, keyboard shortcuts, and a UXP panel for Premiere Pro 25.6+.
+OpenCut v1.9.0 includes **148+ API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task — with Silero VAD, CrisperWhisper filler detection, Robust Video Matting, emotion-based highlights, OpenTimelineIO export, Florence-2 watermark detection, and a UXP panel for Premiere Pro 25.6+.
 
 ### Cut & Clean
 
 | Feature | Description | Engine |
 |---------|-------------|--------|
-| Silence Removal | Detect and remove silent segments with adjustable threshold | FFmpeg / VAD |
-| Filler Word Detection | Auto-detect and cut um, uh, like, you know, so, actually | WhisperX |
+| Silence Removal | Detect and remove silent segments. Three methods: energy threshold (classic), Silero VAD (neural AI), or auto (tries AI first) | FFmpeg / Silero VAD |
+| Filler Word Detection | Auto-detect and cut um, uh, like, you know, so, actually. Two backends: Whisper (fast) or CrisperWhisper (verbatim, most accurate) | WhisperX / CrisperWhisper |
 | Waveform Preview | Visual waveform with draggable threshold line synced to slider | FFmpeg PCM + Canvas |
 | Trim Tool | Set in/out points to extract a clip portion (stream copy or re-encode) | FFmpeg |
 | Full Pipeline | Combined silence + filler removal in one pass | Multi-stage |
@@ -115,7 +115,7 @@ OpenCut v1.8.0 includes **142+ API routes**, **8 panel tabs** with **50+ sub-tab
 | Auto-Crop Detect | Smart reframe anchor using cropdetect for talking-head content | FFmpeg cropdetect |
 | Merge / Concatenate | Join multiple clips (fast stream copy or re-encoded) | FFmpeg concat |
 | Side-by-Side Preview | Before/after frame comparison modal for effects | FFmpeg + base64 |
-| Watermark Removal | Remove logos via delogo or LaMA AI inpainting | FFmpeg / LaMA |
+| Watermark Removal | Remove logos via delogo or LaMA AI inpainting. Auto-detect watermark region with Florence-2 vision model | FFmpeg / LaMA / Florence-2 |
 | Color Match | Match the color profile of one clip to a reference clip using YCbCr histogram matching | OpenCV |
 
 ### AI & ML Tools
@@ -123,13 +123,15 @@ OpenCut v1.8.0 includes **142+ API routes**, **8 panel tabs** with **50+ sub-tab
 | Feature | Description | Engine |
 |---------|-------------|--------|
 | AI Upscaling | 3 tiers: Lanczos (fast), Real-ESRGAN (balanced), Video2x (premium) | FFmpeg / Real-ESRGAN |
-| Background Removal | Remove video backgrounds | rembg (U2-Net) |
+| Background Removal | Remove video backgrounds. Two backends: rembg (per-frame, more models) or Robust Video Matting (temporal consistency) | rembg / RVM |
 | Face Enhancement | Restore/upscale faces | GFPGAN |
 | Face Swap | Replace faces with reference image | InsightFace |
 | Style Transfer | Neural artistic style transfer | PyTorch models |
-| Auto Thumbnails | AI-scored frame extraction for thumbnails | OpenCV scoring |
+| Auto Thumbnails | AI-scored frame extraction with composition balance, center interest, and motion blur penalty | OpenCV scoring |
 | Auto Zoom Keyframes | Face-detected push-in zoom for talking-head content. Returns keyframes for the Premiere Pro Motion effect | OpenCV + ExtendScript |
 | Multicam Auto-Switching | Speaker diarization → camera cut list. Maps speakers to track indices and generates multicam edits | pyannote.audio + ExtendScript |
+| Emotion Highlights | Detect emotionally significant moments via facial expression analysis. Builds emotion curve to find peaks | deepface + OpenCV |
+| Engagement Scoring | Multi-signal highlight scoring: hook strength, emotional peak, pacing, quotability — blended with LLM scores | Built-in |
 
 ### Export & Batch
 
@@ -140,6 +142,7 @@ OpenCut v1.8.0 includes **142+ API routes**, **8 panel tabs** with **50+ sub-tab
 | Batch Processing | Process multiple clips in parallel | ThreadPool |
 | Transcript Export | SRT, VTT, ASS, plain text, timestamped | Built-in |
 | Auto Thumbnails | AI-scored thumbnail candidates from video | OpenCV |
+| OpenTimelineIO Export | Universal timeline interchange for DaVinci Resolve, Avid, FCP, and any OTIO-compatible NLE | OpenTimelineIO |
 
 ### Panel UX
 

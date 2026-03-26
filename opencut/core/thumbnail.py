@@ -88,6 +88,39 @@ def _score_frame(frame, has_face_detector=False, face_detector=None) -> float:
     if std_dev < 20:
         score -= 15  # Probably a solid color or title card
 
+    # 7. Composition: visual interest distribution (edge density in quadrants)
+    # Good thumbnails have interest spread across the frame, not clustered in one corner
+    try:
+        edges = cv2.Canny(gray, 50, 150)
+        mid_h, mid_w = h // 2, w // 2
+        quadrants = [
+            edges[:mid_h, :mid_w],    # top-left
+            edges[:mid_h, mid_w:],    # top-right
+            edges[mid_h:, :mid_w],    # bottom-left
+            edges[mid_h:, mid_w:],    # bottom-right
+        ]
+        quad_means = [float(np.mean(q)) for q in quadrants]
+        # Balanced interest across quadrants = higher score
+        if min(quad_means) > 5:  # All quadrants have some edges
+            balance = min(quad_means) / max(max(quad_means), 1)
+            score += balance * 8  # 0-8 points for composition balance
+        # Bonus for strong center interest (subject framing)
+        center_region = edges[h//4:3*h//4, w//4:3*w//4]
+        center_density = float(np.mean(center_region))
+        if center_density > 15:
+            score += min(center_density / 30.0, 1.0) * 5  # 0-5 points
+    except Exception:
+        pass
+
+    # 8. Penalty for motion blur (low edge-to-gradient ratio)
+    try:
+        gradient = cv2.Sobel(gray, cv2.CV_64F, 1, 1)
+        grad_var = float(gradient.var())
+        if grad_var < 100:  # Very low gradient variance = blurry
+            score -= 8
+    except Exception:
+        pass
+
     return score
 
 

@@ -122,3 +122,39 @@ def check_loudness_match_available() -> bool:
 def check_footage_search_available() -> bool:
     """Check if footage search indexing is available (always True — uses stdlib only)."""
     return True
+
+
+def check_silero_vad_available() -> bool:
+    """Check if Silero VAD (neural voice activity detection) is available."""
+    return _try_import("torch") is not None
+
+
+def check_crisper_whisper_available() -> bool:
+    """Check if CrisperWhisper (verbatim filler detection ASR) is available."""
+    # CrisperWhisper is a modified Whisper model loaded via transformers
+    return _try_import("transformers") is not None and _try_import("torch") is not None
+
+
+def check_sam2_available() -> bool:
+    """Check if SAM2 (Segment Anything Model 2) is available."""
+    return _try_import("sam2") is not None
+
+
+def check_propainter_available() -> bool:
+    """Check if ProPainter (video inpainting) is available."""
+    return _try_import("propainter") is not None
+
+
+def check_otio_available() -> bool:
+    """Check if OpenTimelineIO (universal timeline export) is available."""
+    return _try_import("opentimelineio") is not None
+
+
+def check_deepface_available() -> bool:
+    """Check if deepface (emotion/face analysis) is available."""
+    return _try_import("deepface") is not None
+
+
+def check_rvm_available() -> bool:
+    """Check if Robust Video Matting (temporal bg removal) is available."""
+    return _try_import("torch") is not None
