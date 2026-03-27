@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencut"
-version = "1.9.11"
+version = "1.9.12"
 description = "Open-source AI video editing automation for Adobe Premiere Pro - captions, audio processing, visual effects, and more"
 readme = "README.md"
 license = {text = "MIT"}
@@ -40,6 +40,7 @@ dependencies = [
     "flask>=3.0,<4",
     "flask-cors>=4.0,<5",
     "python-json-logger>=2.0,<3",
+    "psutil>=5.9",
 ]
 
 [project.optional-dependencies]
@@ -47,7 +48,7 @@ standard = [
     "faster-whisper>=1.1,<2",
     "opencv-python-headless>=4.8,<5",
     "Pillow>=10.0,<11",
-    "numpy>=1.24,<2",
+    "numpy>=1.24",
     "librosa>=0.10,<1",
     "pydub>=0.25,<1",
     "noisereduce>=3.0,<4",
@@ -72,7 +73,7 @@ audio = [
 video = [
     "opencv-python-headless>=4.8,<5",
     "Pillow>=10.0,<11",
-    "numpy>=1.24,<2",
+    "numpy>=1.24",
     "scenedetect[opencv]>=0.6,<1",
 ]
 ai = [
@@ -104,12 +105,24 @@ scene-ml = [
 enhance = [
     "resemble-enhance>=0.0.1,<1",
 ]
+otio = [
+    "opentimelineio>=0.15,<1",
+]
+tts = [
+    "edge-tts>=6.1,<7",
+    "kokoro>=0.3",
+]
+depth = [
+    "torch>=2.0",
+    "torchvision>=0.15",
+    "transformers>=4.30",
+]
 all = [
     "faster-whisper>=1.1,<2",
     "whisperx>=3.0,<4",
     "opencv-python-headless>=4.8,<5",
     "Pillow>=10.0,<11",
-    "numpy>=1.24,<2",
+    "numpy>=1.24",
     "librosa>=0.10,<1",
     "pydub>=0.25,<1",
     "noisereduce>=3.0,<4",
@@ -128,6 +141,7 @@ all = [
     "auto-editor>=24.0,<25",
     "transnetv2>=1.0,<2",
     "resemble-enhance>=0.0.1,<1",
+    "opentimelineio>=0.15,<1",
 ]
 dev = [
     "pytest>=7.0,<9",
