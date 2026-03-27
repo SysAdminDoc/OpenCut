@@ -12,6 +12,8 @@ from dataclasses import dataclass, field
 from fractions import Fraction
 from typing import Optional
 
+from opencut.helpers import get_ffprobe_path
+
 logger = logging.getLogger("opencut")
 
 
@@ -139,7 +141,7 @@ def probe(filepath: str) -> MediaInfo:
         raise FileNotFoundError(f"Media file not found: {filepath}")
 
     cmd = [
-        "ffprobe",
+        get_ffprobe_path(),
         "-v", "quiet",
         "-print_format", "json",
         "-show_format",

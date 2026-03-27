@@ -40,6 +40,8 @@ def get_ffmpeg_path() -> str:
     if _ffmpeg_path is not None:
         return _ffmpeg_path
     found = shutil.which("ffmpeg")
+    if not found:
+        logger.warning("ffmpeg not found in PATH — subprocess calls may fail")
     _ffmpeg_path = found if found else "ffmpeg"
     return _ffmpeg_path
 
@@ -50,6 +52,8 @@ def get_ffprobe_path() -> str:
     if _ffprobe_path is not None:
         return _ffprobe_path
     found = shutil.which("ffprobe")
+    if not found:
+        logger.warning("ffprobe not found in PATH — media probing may fail")
     _ffprobe_path = found if found else "ffprobe"
     return _ffprobe_path
 

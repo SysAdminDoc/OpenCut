@@ -15,6 +15,7 @@ from opencut.errors import safe_error
 from opencut.helpers import (
     _resolve_output_dir,
     _unique_output_path,
+    get_ffprobe_path,
 )
 from opencut.jobs import (
     _is_cancelled,
@@ -84,7 +85,7 @@ def video_reframe(job_id, filepath, data):
 
     # Get source dimensions
     probe_cmd = [
-        "ffprobe", "-v", "error", "-select_streams", "v:0",
+        get_ffprobe_path(), "-v", "error", "-select_streams", "v:0",
         "-show_entries", "stream=width,height",
         "-of", "json", filepath
     ]

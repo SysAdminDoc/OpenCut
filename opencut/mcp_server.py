@@ -322,6 +322,73 @@ MCP_TOOLS = [
             "required": ["file"],
         },
     },
+    {
+        "name": "opencut_denoise_audio",
+        "description": "Reduce noise from audio/video using FFmpeg filters (afftdn, highpass, gate)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to audio/video file"},
+                "method": {"type": "string", "description": "Denoise method: afftdn, highpass, gate", "default": "afftdn"},
+                "strength": {"type": "number", "description": "Denoise strength 0-1", "default": 0.5},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_upscale",
+        "description": "AI upscale video using Real-ESRGAN (2x or 4x resolution)",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "scale": {"type": "integer", "description": "Upscale factor: 1-4", "default": 2},
+                "model": {"type": "string", "description": "Model: realesrgan-x4plus, realesrgan-x2plus", "default": "realesrgan-x4plus"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_scene_detect",
+        "description": "Detect scene boundaries/cuts in a video file",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "method": {"type": "string", "description": "Detection method: ffmpeg, ml, pyscenedetect", "default": "ffmpeg"},
+                "threshold": {"type": "number", "description": "Detection sensitivity 0-1", "default": 0.3},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_depth_map",
+        "description": "Generate a depth map video using Depth Anything V2",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to video file"},
+                "model_size": {"type": "string", "description": "Model size: small, base, large", "default": "small"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_shorts_pipeline",
+        "description": "One-click pipeline: transcribe + highlight + face-reframe + captions + export short-form clips",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to long-form video"},
+                "max_shorts": {"type": "integer", "default": 5},
+                "min_duration": {"type": "number", "default": 15},
+                "max_duration": {"type": "number", "default": 60},
+                "face_track": {"type": "boolean", "default": True},
+                "burn_captions": {"type": "boolean", "default": True},
+            },
+            "required": ["filepath"],
+        },
+    },
 ]
 
 # Route mapping for tool execution
@@ -344,6 +411,11 @@ _TOOL_ROUTES = {
     "opencut_loudness_match": ("POST", "/audio/loudness-match"),
     "opencut_auto_zoom": ("POST", "/video/auto-zoom"),
     "opencut_multicam_cuts": ("POST", "/video/multicam-cuts"),
+    "opencut_denoise_audio": ("POST", "/audio/denoise"),
+    "opencut_upscale": ("POST", "/video/ai/upscale"),
+    "opencut_scene_detect": ("POST", "/video/scenes"),
+    "opencut_depth_map": ("POST", "/video/depth/map"),
+    "opencut_shorts_pipeline": ("POST", "/video/shorts-pipeline"),
 }
 
 
