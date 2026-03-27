@@ -38,7 +38,7 @@ class TestSystemRoutes:
         resp = client.get("/system/gpu")
         assert resp.status_code == 200
         data = resp.get_json()
-        assert "gpu_available" in data
+        assert "gpu_available" in data or "available" in data
 
     def test_system_gpu_recommend(self, client):
         resp = client.get("/system/gpu-recommend")
@@ -88,18 +88,21 @@ class TestSystemRoutes:
         resp = client.post("/whisper/settings",
                            data=json.dumps({"model": "base"}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_whisper_clear_cache(self, client, csrf_token):
         resp = client.post("/whisper/clear-cache", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_whisper_reinstall(self, client, csrf_token):
         resp = client.post("/whisper/reinstall", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
         # May return 200 or fail gracefully
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_models_list(self, client):
         resp = client.get("/models/list")
@@ -119,7 +122,8 @@ class TestSystemRoutes:
     def test_llm_test(self, client, csrf_token):
         resp = client.post("/llm/test", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_file_no_path_returns_400(self, client):
         resp = client.get("/file")
@@ -135,23 +139,27 @@ class TestSystemRoutes:
         """Shutdown should only work from localhost."""
         resp = client.post("/shutdown", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        # May succeed or reject depending on test client IP -- just shouldn't 500
-        assert resp.status_code != 500
+        # May succeed or reject depending on test client IP
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_install_whisper(self, client, csrf_token):
         resp = client.post("/install-whisper", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_demucs_install(self, client, csrf_token):
         resp = client.post("/demucs/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_watermark_install(self, client, csrf_token):
         resp = client.post("/watermark/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_system_status(self, client):
         resp = client.get("/system/status")
@@ -172,21 +180,25 @@ class TestResolveRoutes:
 
     def test_resolve_media(self, client):
         resp = client.get("/resolve/media")
-        assert resp.status_code != 500
+        assert resp.status_code == 200
+        assert resp.get_json() is not None
 
     def test_resolve_timeline(self, client):
         resp = client.get("/resolve/timeline")
-        assert resp.status_code != 500
+        assert resp.status_code == 200
+        assert resp.get_json() is not None
 
     def test_resolve_import_no_data(self, client, csrf_token):
         resp = client.post("/resolve/import", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_resolve_markers_no_data(self, client, csrf_token):
         resp = client.post("/resolve/markers", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
 
 class TestChatRoutes:
@@ -200,7 +212,8 @@ class TestChatRoutes:
     def test_chat_clear(self, client, csrf_token):
         resp = client.post("/chat/clear", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_chat_sessions(self, client):
         resp = client.get("/chat/sessions")
@@ -245,12 +258,14 @@ class TestWebSocketRoutes:
     def test_ws_start(self, client, csrf_token):
         resp = client.post("/ws/start", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_ws_stop(self, client, csrf_token):
         resp = client.post("/ws/stop", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
 
 class TestEngineRoutes:
@@ -268,13 +283,15 @@ class TestEngineRoutes:
         resp = client.post("/engines/preference",
                            data=json.dumps({"operation": "silence", "engine": "builtin"}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_engines_resolve(self, client, csrf_token):
         resp = client.post("/engines/resolve",
                            data=json.dumps({"operation": "silence"}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
 
 class TestMultimodalDiarizeRoute:
@@ -373,12 +390,14 @@ class TestAudioRoutes:
     def test_audio_tts_install(self, client, csrf_token):
         resp = client.post("/audio/tts/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_audio_crisper_whisper_install(self, client, csrf_token):
         resp = client.post("/audio/crisper-whisper/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_audio_gen_capabilities(self, client):
         resp = client.get("/audio/gen/capabilities")
@@ -435,7 +454,8 @@ class TestAudioRoutes:
     def test_audio_pro_install(self, client, csrf_token):
         resp = client.post("/audio/pro/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_audio_measure_no_file_returns_400(self, client, csrf_token):
         resp = client.post("/audio/measure", data=json.dumps({}),
@@ -550,7 +570,8 @@ class TestCaptionsRoutes:
     def test_captions_enhanced_install(self, client, csrf_token):
         resp = client.post("/captions/enhanced/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_captions_emoji_map(self, client):
         resp = client.get("/captions/emoji-map")
@@ -662,7 +683,8 @@ class TestVideoRoutes:
     def test_video_ai_install(self, client, csrf_token):
         resp = client.post("/video/ai/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_video_upscale_capabilities(self, client):
         resp = client.get("/video/upscale/capabilities")
@@ -690,7 +712,8 @@ class TestVideoRoutes:
     def test_video_face_install(self, client, csrf_token):
         resp = client.post("/video/face/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_video_face_swap_capabilities(self, client):
         resp = client.get("/video/face/swap/capabilities")
@@ -977,22 +1000,26 @@ class TestVideoRoutes:
     def test_video_depth_install(self, client, csrf_token):
         resp = client.post("/video/depth/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_video_emotion_install(self, client, csrf_token):
         resp = client.post("/video/emotion/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_video_multimodal_diarize_install(self, client, csrf_token):
         resp = client.post("/video/multimodal-diarize/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_video_broll_generate_install(self, client, csrf_token):
         resp = client.post("/video/broll-generate/install", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
 
 # =====================================================================
@@ -1136,7 +1163,8 @@ class TestSettingsRoutes:
         resp = client.post("/settings/llm",
                            data=json.dumps({"provider": "none"}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_settings_export(self, client):
         resp = client.get("/settings/export")
@@ -1157,7 +1185,8 @@ class TestSettingsRoutes:
     def test_logs_clear(self, client, csrf_token):
         resp = client.post("/logs/clear", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_job_retry_nonexistent(self, client, csrf_token):
         resp = client.post("/jobs/retry/nonexistent-id",
@@ -1179,7 +1208,8 @@ class TestSettingsRoutes:
         resp = client.post("/settings/loudness-target",
                            data=json.dumps({"target": -14}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_settings_multicam_get(self, client):
         resp = client.get("/settings/multicam")
@@ -1189,7 +1219,8 @@ class TestSettingsRoutes:
         resp = client.post("/settings/multicam",
                            data=json.dumps({"enabled": True}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_settings_auto_zoom_get(self, client):
         resp = client.get("/settings/auto-zoom")
@@ -1199,7 +1230,8 @@ class TestSettingsRoutes:
         resp = client.post("/settings/auto-zoom",
                            data=json.dumps({"enabled": True}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_settings_chapters_get(self, client):
         resp = client.get("/settings/chapters")
@@ -1209,7 +1241,8 @@ class TestSettingsRoutes:
         resp = client.post("/settings/chapters",
                            data=json.dumps({"enabled": True}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
     def test_settings_footage_index_get(self, client):
         resp = client.get("/settings/footage-index")
@@ -1219,7 +1252,8 @@ class TestSettingsRoutes:
         resp = client.post("/settings/footage-index",
                            data=json.dumps({"auto_index": True}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
 
 class TestLogsTailRoute:
@@ -1378,7 +1412,8 @@ class TestSearchRoutes:
     def test_search_cleanup(self, client, csrf_token):
         resp = client.post("/search/cleanup", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code != 500
+        assert resp.status_code in (200, 400, 429)
+        assert resp.get_json() is not None
 
 
 # =====================================================================

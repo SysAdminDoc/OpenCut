@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencut"
-version = "1.9.3"
+version = "1.9.4"
 description = "Open-source AI video editing automation for Adobe Premiere Pro - captions, audio processing, visual effects, and more"
 readme = "README.md"
 license = {text = "MIT"}
@@ -35,105 +35,105 @@ classifiers = [
 ]
 
 dependencies = [
-    "click>=8.0",
-    "rich>=13.0",
-    "flask>=3.0",
-    "flask-cors>=4.0",
-    "python-json-logger>=2.0",
+    "click>=8.0,<9",
+    "rich>=13.0,<14",
+    "flask>=3.0,<4",
+    "flask-cors>=4.0,<5",
+    "python-json-logger>=2.0,<3",
 ]
 
 [project.optional-dependencies]
 standard = [
-    "faster-whisper>=1.1",
-    "opencv-python-headless>=4.8",
-    "Pillow>=10.0",
-    "numpy>=1.24",
-    "librosa>=0.10",
-    "pydub>=0.25",
-    "noisereduce>=3.0",
-    "deep-translator>=1.11",
-    "scenedetect[opencv]>=0.6",
+    "faster-whisper>=1.1,<2",
+    "opencv-python-headless>=4.8,<5",
+    "Pillow>=10.0,<11",
+    "numpy>=1.24,<2",
+    "librosa>=0.10,<1",
+    "pydub>=0.25,<1",
+    "noisereduce>=3.0,<4",
+    "deep-translator>=1.11,<2",
+    "scenedetect[opencv]>=0.6,<1",
 ]
 captions = [
-    "faster-whisper>=1.1",
-    "Pillow>=10.0",
+    "faster-whisper>=1.1,<2",
+    "Pillow>=10.0,<11",
 ]
 captions-whisperx = [
-    "whisperx>=3.0",
+    "whisperx>=3.0,<4",
 ]
 audio = [
-    "demucs>=4.0",
-    "pedalboard>=0.9",
-    "librosa>=0.10",
-    "pydub>=0.25",
-    "noisereduce>=3.0",
-    "edge-tts>=6.1",
+    "demucs>=4.0,<5",
+    "pedalboard>=0.9,<1",
+    "librosa>=0.10,<1",
+    "pydub>=0.25,<1",
+    "noisereduce>=3.0,<4",
+    "edge-tts>=6.1,<7",
 ]
 video = [
-    "opencv-python-headless>=4.8",
-    "Pillow>=10.0",
-    "numpy>=1.24",
-    "scenedetect[opencv]>=0.6",
+    "opencv-python-headless>=4.8,<5",
+    "Pillow>=10.0,<11",
+    "numpy>=1.24,<2",
+    "scenedetect[opencv]>=0.6,<1",
 ]
 ai = [
-    "realesrgan>=0.3",
-    "rembg>=2.0",
-    "gfpgan>=1.3",
-    "insightface>=0.7",
-    "onnxruntime>=1.16",
+    "realesrgan>=0.3,<1",
+    "rembg>=2.0,<3",
+    "gfpgan>=1.3,<2",
+    "insightface>=0.7,<1",
+    "onnxruntime>=1.16,<2",
 ]
 ai-gpu = [
-    "realesrgan>=0.3",
-    "rembg>=2.0",
-    "gfpgan>=1.3",
-    "insightface>=0.7",
-    "onnxruntime-gpu>=1.16",
+    "realesrgan>=0.3,<1",
+    "rembg>=2.0,<3",
+    "gfpgan>=1.3,<2",
+    "insightface>=0.7,<1",
+    "onnxruntime-gpu>=1.16,<2",
 ]
 music = [
-    "audiocraft>=1.0",
+    "audiocraft>=1.0,<2",
 ]
 diarize = [
-    "pyannote.audio>=3.1",
+    "pyannote.audio>=3.1,<4",
 ]
 auto-edit = [
-    "auto-editor>=24.0",
+    "auto-editor>=24.0,<25",
 ]
 scene-ml = [
-    "transnetv2>=1.0",
+    "transnetv2>=1.0,<2",
 ]
 enhance = [
-    "resemble-enhance>=0.0.1",
+    "resemble-enhance>=0.0.1,<1",
 ]
 all = [
-    "faster-whisper>=1.1",
-    "whisperx>=3.0",
-    "opencv-python-headless>=4.8",
-    "Pillow>=10.0",
-    "numpy>=1.24",
-    "librosa>=0.10",
-    "pydub>=0.25",
-    "noisereduce>=3.0",
-    "deep-translator>=1.11",
-    "scenedetect[opencv]>=0.6",
-    "demucs>=4.0",
-    "pedalboard>=0.9",
-    "edge-tts>=6.1",
-    "realesrgan>=0.3",
-    "rembg>=2.0",
-    "gfpgan>=1.3",
-    "insightface>=0.7",
-    "onnxruntime>=1.16",
-    "audiocraft>=1.0",
-    "pyannote.audio>=3.1",
-    "auto-editor>=24.0",
-    "transnetv2>=1.0",
-    "resemble-enhance>=0.0.1",
+    "faster-whisper>=1.1,<2",
+    "whisperx>=3.0,<4",
+    "opencv-python-headless>=4.8,<5",
+    "Pillow>=10.0,<11",
+    "numpy>=1.24,<2",
+    "librosa>=0.10,<1",
+    "pydub>=0.25,<1",
+    "noisereduce>=3.0,<4",
+    "deep-translator>=1.11,<2",
+    "scenedetect[opencv]>=0.6,<1",
+    "demucs>=4.0,<5",
+    "pedalboard>=0.9,<1",
+    "edge-tts>=6.1,<7",
+    "realesrgan>=0.3,<1",
+    "rembg>=2.0,<3",
+    "gfpgan>=1.3,<2",
+    "insightface>=0.7,<1",
+    "onnxruntime>=1.16,<2",
+    "audiocraft>=1.0,<2",
+    "pyannote.audio>=3.1,<4",
+    "auto-editor>=24.0,<25",
+    "transnetv2>=1.0,<2",
+    "resemble-enhance>=0.0.1,<1",
 ]
 dev = [
-    "pytest>=7.0",
-    "pytest-cov>=4.0",
-    "ruff>=0.1",
-    "pre-commit>=3.0",
+    "pytest>=7.0,<9",
+    "pytest-cov>=4.0,<6",
+    "ruff>=0.1,<1",
+    "pre-commit>=3.0,<4",
 ]
 
 [project.scripts]

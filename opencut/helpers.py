@@ -133,7 +133,8 @@ def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
             "free_mb": round(usage.free / (1024 * 1024)),
             "required_mb": round(min_bytes / (1024 * 1024)),
         }
-    except Exception:
+    except Exception as e:
+        logger.debug("Disk space check failed for %s: %s", path, e)
         return {"ok": True, "free_bytes": 0, "free_mb": 0, "required_mb": 0}
 
 
@@ -146,8 +147,8 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0) -> str:
         cmd = [get_ffmpeg_path()] + cmd[1:]
     result = _sp.run(cmd, capture_output=True, timeout=timeout)
     stderr = result.stderr.decode(errors="replace")
-    if stderr_cap > 0:
-        stderr = stderr[-stderr_cap:]
+    if stderr_cap > 0 and len(stderr) > stderr_cap:
+        stderr = "...[truncated] " + stderr[-stderr_cap:]
     if result.returncode != 0:
         raise RuntimeError(f"FFmpeg error: {stderr[-500:]}")
     return stderr
@@ -212,7 +213,8 @@ def get_video_info(filepath: str) -> dict:
             "fps": fps,
             "duration": duration,
         }
-    except Exception:
+    except Exception as e:
+        logger.debug("Failed to parse ffprobe output for %s: %s", filepath, e)
         return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
 
 
@@ -280,8 +282,8 @@ def _resolve_output_dir(filepath: str, requested_dir: str = "") -> str:
                 try:
                     os.makedirs(requested_dir, exist_ok=True)
                     return requested_dir
-                except OSError:
-                    pass
+                except OSError as e:
+                    logger.debug("Failed to create output dir %s: %s", requested_dir, e)
 
     # Try source file's directory
     source_dir = os.path.dirname(os.path.abspath(filepath))
@@ -291,13 +293,13 @@ def _resolve_output_dir(filepath: str, requested_dir: str = "") -> str:
             with open(test_file, "w") as f:
                 f.write("")
             return source_dir
-        except (OSError, PermissionError):
-            pass
+        except (OSError, PermissionError) as e:
+            logger.debug("Source dir %s not writable: %s", source_dir, e)
         finally:
             try:
                 os.unlink(test_file)
             except OSError:
-                pass
+                pass  # test file may not have been created
 
     # Fallback to temp directory
     fallback = os.path.join(tempfile.gettempdir(), "opencut_output")
@@ -522,8 +524,8 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
             data = proc.stderr.read()
             if data:
                 stderr_lines.append(data[-_max_stderr_bytes:])
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Error draining FFmpeg stderr for job %s: %s", job_id, e)
 
     stderr_thread = threading.Thread(target=_drain_stderr, daemon=True)
     stderr_thread.start()
@@ -552,12 +554,13 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
                                         message=f"Processing... {pct}%")
                 except (ValueError, ZeroDivisionError):
                     pass
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Error reading FFmpeg stdout for job %s: %s", job_id, e)
 
     try:
         proc.wait(timeout=10)
-    except Exception:
+    except Exception as e:
+        logger.debug("FFmpeg process did not exit cleanly for job %s, killing: %s", job_id, e)
         try:
             proc.kill()
         except OSError:
@@ -593,7 +596,8 @@ def _get_file_duration(filepath):
         result = _sp.run(cmd, capture_output=True, text=True, timeout=10)
         data = json.loads(result.stdout)
         return float(data["format"]["duration"])
-    except Exception:
+    except Exception as e:
+        logger.debug("Failed to get duration for %s: %s", filepath, e)
         return 0
 
 
@@ -603,8 +607,8 @@ def _load_job_times():
         if os.path.isfile(_JOB_TIMES_FILE):
             with open(_JOB_TIMES_FILE, "r", encoding="utf-8") as f:
                 return json.load(f)
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug("Failed to load job times file: %s", e)
     return {}
 
 

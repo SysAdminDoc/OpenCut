@@ -28,9 +28,12 @@ def get_current_job_id():
 jobs = {}
 job_lock = threading.Lock()
 _job_processes = {}  # job_id -> Popen, for subprocess kill support
-JOB_MAX_AGE = 3600  # Auto-clean jobs older than 1 hour
-MAX_CONCURRENT_JOBS = 10  # Prevent job spam / GPU OOM on consumer hardware
-MAX_BATCH_FILES = 100  # Max files per batch request
+# These mirror OpenCutConfig defaults (the single source of truth for
+# documentation and test overrides).  They are kept as module-level constants
+# because jobs.py operates outside Flask app context.
+JOB_MAX_AGE = 3600              # see OpenCutConfig.job_max_age
+MAX_CONCURRENT_JOBS = 10        # see OpenCutConfig.max_concurrent_jobs
+MAX_BATCH_FILES = 100           # see OpenCutConfig.max_batch_files
 
 
 def _safe_error(e, context=""):
@@ -72,6 +75,7 @@ def _new_job(job_type: str, filepath: str) -> str:
             "_thread": None,
         }
     _cleanup_old_jobs()
+    _start_periodic_cleanup()
     return job_id
 
 
@@ -165,27 +169,56 @@ def _kill_job_process(job_id: str):
     if proc is not None:
         try:
             proc.terminate()
-        except OSError:
-            pass
+        except OSError as e:
+            logger.debug("Failed to terminate process for job %s: %s", job_id, e)
         # Wait up to 3 seconds for graceful exit
         try:
             proc.wait(timeout=3)
             return
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Process for job %s did not exit gracefully: %s", job_id, e)
         # Force kill if still alive
         try:
             proc.kill()
-        except OSError:
-            pass
+        except OSError as e:
+            logger.debug("Failed to kill process for job %s: %s", job_id, e)
         # Reap zombie process
         try:
             proc.wait(timeout=5)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Failed to reap process for job %s: %s", job_id, e)
 
 
-_JOB_STUCK_TIMEOUT = 7200  # 2 hours — mark running jobs as error if stuck
+_JOB_STUCK_TIMEOUT = 7200  # see OpenCutConfig.job_stuck_timeout
+_CLEANUP_INTERVAL = 300  # 5 minutes — periodic cleanup interval
+_cleanup_timer_started = False
+_cleanup_timer_lock = threading.Lock()
+
+
+def _start_periodic_cleanup():
+    """Lazily start a daemon thread that runs _cleanup_old_jobs() every 5 minutes.
+
+    Called on first job creation. The thread is a daemon so it won't block
+    interpreter shutdown.  Idempotent — only one timer thread is ever started.
+    """
+    global _cleanup_timer_started
+    with _cleanup_timer_lock:
+        if _cleanup_timer_started:
+            return
+        _cleanup_timer_started = True
+
+    def _periodic_cleanup_loop():
+        while True:
+            time.sleep(_CLEANUP_INTERVAL)
+            try:
+                _cleanup_old_jobs()
+            except Exception as e:
+                logger.debug("Periodic job cleanup error: %s", e)
+
+    t = threading.Thread(target=_periodic_cleanup_loop, daemon=True,
+                         name="opencut-job-cleanup")
+    t.start()
+    logger.debug("Started periodic job cleanup thread (every %ds)", _CLEANUP_INTERVAL)
 
 
 def _cleanup_old_jobs():
@@ -209,6 +242,13 @@ def _cleanup_old_jobs():
         ]
         for jid in expired:
             del jobs[jid]
+            _job_processes.pop(jid, None)
+        # Clean up _job_processes entries where the process has already terminated
+        stale_procs = [
+            jid for jid, proc in _job_processes.items()
+            if proc.poll() is not None
+        ]
+        for jid in stale_procs:
             _job_processes.pop(jid, None)
 
 
