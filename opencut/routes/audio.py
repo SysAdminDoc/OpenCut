@@ -427,7 +427,7 @@ def audio_separate(job_id, filepath, data):
                 temp_audio = tmp.name
 
             ffmpeg_cmd = [
-                'ffmpeg', '-y', '-i', filepath,
+                get_ffmpeg_path(), '-y', '-i', filepath,
                 '-vn', '-acodec', 'pcm_s16le', '-ar', '44100', '-ac', '2',
                 temp_audio
             ]
@@ -552,13 +552,13 @@ def audio_separate(job_id, filepath, data):
                         shutil.copy2(src_path, out_path)
                     elif output_format == 'mp3':
                         _sp.run([
-                            'ffmpeg', '-y', '-i', src_path,
+                            get_ffmpeg_path(), '-y', '-i', src_path,
                             '-codec:a', 'libmp3lame', '-b:a', '320k',
                             out_path
                         ], check=True, capture_output=True, timeout=300)
                     elif output_format == 'flac':
                         _sp.run([
-                            'ffmpeg', '-y', '-i', src_path,
+                            get_ffmpeg_path(), '-y', '-i', src_path,
                             '-codec:a', 'flac',
                             out_path
                         ], check=True, capture_output=True, timeout=300)
