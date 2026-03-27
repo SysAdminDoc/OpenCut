@@ -1,0 +1,22 @@
+{
+  "env": {
+    "browser": true,
+    "es2021": true
+  },
+  "parserOptions": {
+    "ecmaVersion": 2021,
+    "sourceType": "script"
+  },
+  "rules": {
+    "no-undef": "warn",
+    "no-unused-vars": "warn",
+    "no-redeclare": "warn",
+    "eqeqeq": ["warn", "smart"],
+    "no-eval": "error"
+  },
+  "globals": {
+    "CSInterface": "readonly",
+    "CSEvent": "readonly",
+    "SystemPath": "readonly"
+  }
+}

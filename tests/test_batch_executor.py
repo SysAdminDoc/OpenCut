@@ -374,9 +374,9 @@ class TestBatchParallelRoute:
         We mock _new_job to avoid actual job system side-effects and
         thread spawning.
         """
-        with patch("opencut.routes.video._new_job") as mock_new, \
-             patch("opencut.routes.video.threading") as mock_thread, \
-             patch("opencut.routes.video.validate_filepath", side_effect=lambda x: x):
+        with patch("opencut.routes.video_core._new_job") as mock_new, \
+             patch("opencut.routes.video_core.threading") as mock_thread, \
+             patch("opencut.routes.video_core.validate_filepath", side_effect=lambda x: x):
             mock_new.return_value = "test-j-001"
             mock_thread_inst = MagicMock()
             mock_thread.Thread.return_value = mock_thread_inst
@@ -406,8 +406,8 @@ class TestBatchParallelRoute:
     def test_too_many_jobs_returns_429(self, client, csrf_token):
         from opencut.jobs import TooManyJobsError
 
-        with patch("opencut.routes.video._new_job", side_effect=TooManyJobsError("full")), \
-             patch("opencut.routes.video.validate_filepath", side_effect=lambda x: x):
+        with patch("opencut.routes.video_core._new_job", side_effect=TooManyJobsError("full")), \
+             patch("opencut.routes.video_core.validate_filepath", side_effect=lambda x: x):
             resp = client.post(
                 "/batch/parallel",
                 json={

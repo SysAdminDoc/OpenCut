@@ -254,7 +254,7 @@ def process_batch_parallel(
         filepath = item if isinstance(item, str) else item.get("filepath", item)
         try:
             # Lazy import to avoid circular dependency
-            from opencut.routes.video import _execute_batch_item
+            from opencut.routes.video_core import _execute_batch_item
 
             def _item_progress(pct, msg=""):
                 update_batch_item(batch_id, idx, progress=pct, message=msg)

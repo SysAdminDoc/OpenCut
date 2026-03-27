@@ -26,13 +26,12 @@ from opencut import __version__
 from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, _try_import, _try_import_from
 from opencut.jobs import (
-    TooManyJobsError,
     _is_cancelled,
     _list_jobs_copy,
-    _new_job,
     _register_job_process,
     _unregister_job_process,
     _update_job,
+    async_job,
     job_lock,
     jobs,
 )
@@ -717,247 +716,220 @@ def recent_outputs():
 # ---------------------------------------------------------------------------
 @system_bp.route("/install-whisper", methods=["POST"])
 @require_csrf
-def install_whisper():
+@async_job("install-whisper", filepath_required=False)
+def install_whisper(job_id, filepath, data):
     """Install faster-whisper via pip (on-demand from panel)."""
     if not rate_limit("model_install"):
-        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
-    data = request.get_json(force=True) if request.data else {}
-    backend = data.get("backend", "faster-whisper")
+        raise ValueError("Another model_install operation is already running. Please wait.")
 
+    backend = data.get("backend", "faster-whisper")
     allowed = {"faster-whisper", "openai-whisper", "whisperx"}
     if backend not in allowed:
         rate_limit_release("model_install")
-        return jsonify({"error": f"Unknown backend: {backend}"}), 400
+        raise ValueError(f"Unknown backend: {backend}")
 
     try:
-        job_id = _new_job("install-whisper", backend)
-    except Exception:
-        rate_limit_release("model_install")
-        raise
-
-    def _process():
         import subprocess as _sp
 
-        try:
-            _update_job(job_id, progress=5, message=f"Installing {backend}...")
-            logger.info(f"Starting Whisper install: {backend}")
+        _update_job(job_id, progress=5, message=f"Installing {backend}...")
+        logger.info(f"Starting Whisper install: {backend}")
 
-            # Resolve Python executable (frozen builds can't use sys.executable for pip)
-            from opencut.security import _find_system_python
-            if getattr(sys, "frozen", False):
-                _pip_python = _find_system_python() or sys.executable
-            else:
-                _pip_python = sys.executable
+        # Resolve Python executable (frozen builds can't use sys.executable for pip)
+        from opencut.security import _find_system_python
+        if getattr(sys, "frozen", False):
+            _pip_python = _find_system_python() or sys.executable
+        else:
+            _pip_python = sys.executable
 
-            # Permission fallback: --target to a writable directory
-            _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
-            os.makedirs(_target_dir, exist_ok=True)
-            if _target_dir not in sys.path:
-                sys.path.insert(0, _target_dir)
+        # Permission fallback: --target to a writable directory
+        _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+        os.makedirs(_target_dir, exist_ok=True)
+        if _target_dir not in sys.path:
+            sys.path.insert(0, _target_dir)
 
-            # Build pip commands with permission fallbacks baked in
-            def _pip_cmd(pkg, *extra_flags):
-                """Return list of pip commands: normal, --user, --target."""
-                base = [_pip_python, "-m", "pip", "install"] + list(extra_flags) + [pkg]
-                return [
-                    base + ["--progress-bar", "on"],
-                    base + ["--user", "--progress-bar", "on"],
-                    base + ["--target", _target_dir, "--progress-bar", "on"],
-                ]
+        # Build pip commands with permission fallbacks baked in
+        def _pip_cmd(pkg, *extra_flags):
+            """Return list of pip commands: normal, --user, --target."""
+            base = [_pip_python, "-m", "pip", "install"] + list(extra_flags) + [pkg]
+            return [
+                base + ["--progress-bar", "on"],
+                base + ["--user", "--progress-bar", "on"],
+                base + ["--target", _target_dir, "--progress-bar", "on"],
+            ]
 
-            def _pip_pre(pkg, *extra_flags):
-                """Return list of pre-install commands with fallbacks."""
-                base = [_pip_python, "-m", "pip", "install"] + list(extra_flags) + [pkg, "--quiet"]
-                return [
-                    base,
-                    base + ["--user"],
-                    base + ["--target", _target_dir],
-                ]
+        def _pip_pre(pkg, *extra_flags):
+            """Return list of pre-install commands with fallbacks."""
+            base = [_pip_python, "-m", "pip", "install"] + list(extra_flags) + [pkg, "--quiet"]
+            return [
+                base,
+                base + ["--user"],
+                base + ["--target", _target_dir],
+            ]
 
-            # Strategy list - try each in order until one works
-            strategies = []
-            if backend == "faster-whisper":
-                strategies = [
-                    {
-                        "label": "Install tokenizers wheel first, then faster-whisper",
-                        "pre_cmds": _pip_pre("tokenizers", "--only-binary", "tokenizers"),
-                        "cmds": _pip_cmd("faster-whisper"),
-                    },
-                    {
-                        "label": "Upgrade pip + prefer binary wheels",
-                        "pre_cmds": _pip_pre("pip setuptools wheel", "--upgrade"),
-                        "cmds": _pip_cmd("faster-whisper", "--prefer-binary"),
-                    },
-                    {
-                        "label": "Pin older tokenizers with wheel support",
-                        "pre_cmds": _pip_pre("tokenizers>=0.13,<0.20", "--only-binary", "tokenizers"),
-                        "cmds": _pip_cmd("faster-whisper"),
-                    },
-                    {
-                        "label": "Fallback to openai-whisper (no Rust needed)",
-                        "cmds": _pip_cmd("openai-whisper"),
-                        "verify": [_pip_python, "-c",
-                                   "import whisper; print('ok')"],
-                        "backend_name": "openai-whisper",
-                    },
-                ]
-            else:
-                strategies = [
-                    {
-                        "label": "Standard install",
-                        "cmds": _pip_cmd(backend),
-                    },
-                ]
+        # Strategy list - try each in order until one works
+        strategies = []
+        if backend == "faster-whisper":
+            strategies = [
+                {
+                    "label": "Install tokenizers wheel first, then faster-whisper",
+                    "pre_cmds": _pip_pre("tokenizers", "--only-binary", "tokenizers"),
+                    "cmds": _pip_cmd("faster-whisper"),
+                },
+                {
+                    "label": "Upgrade pip + prefer binary wheels",
+                    "pre_cmds": _pip_pre("pip setuptools wheel", "--upgrade"),
+                    "cmds": _pip_cmd("faster-whisper", "--prefer-binary"),
+                },
+                {
+                    "label": "Pin older tokenizers with wheel support",
+                    "pre_cmds": _pip_pre("tokenizers>=0.13,<0.20", "--only-binary", "tokenizers"),
+                    "cmds": _pip_cmd("faster-whisper"),
+                },
+                {
+                    "label": "Fallback to openai-whisper (no Rust needed)",
+                    "cmds": _pip_cmd("openai-whisper"),
+                    "verify": [_pip_python, "-c",
+                               "import whisper; print('ok')"],
+                    "backend_name": "openai-whisper",
+                },
+            ]
+        else:
+            strategies = [
+                {
+                    "label": "Standard install",
+                    "cmds": _pip_cmd(backend),
+                },
+            ]
 
-            last_error = ""
-            for si, strat in enumerate(strategies):
-                if _is_cancelled(job_id):
-                    return
+        last_error = ""
+        for si, strat in enumerate(strategies):
+            if _is_cancelled(job_id):
+                return {"backend": backend, "installed": False, "cancelled": True}
 
-                pct_base = int(5 + (si / len(strategies)) * 70)
-                _update_job(job_id, progress=pct_base,
-                            message=f"Strategy {si+1}/{len(strategies)}: {strat['label']}...")
-                logger.info(f"Whisper install strategy {si+1}: {strat['label']}")
+            pct_base = int(5 + (si / len(strategies)) * 70)
+            _update_job(job_id, progress=pct_base,
+                        message=f"Strategy {si+1}/{len(strategies)}: {strat['label']}...")
+            logger.info(f"Whisper install strategy {si+1}: {strat['label']}")
 
-                # Run pre-commands if present (try each fallback until one succeeds)
-                if "pre_cmds" in strat:
-                    for pre_cmd in strat["pre_cmds"]:
-                        try:
-                            pre_result = _sp.run(pre_cmd, capture_output=True, text=True, timeout=120)
-                            if pre_result.returncode == 0:
-                                logger.debug(f"Pre-command succeeded: {' '.join(pre_cmd[:5])}")
-                                break
-                            logger.debug(f"Pre-command exit {pre_result.returncode}, trying next fallback")
-                        except Exception as e:
-                            logger.warning(f"Pre-command failed: {e}")
-
-                # Run main install command (try each permission fallback)
-                cmds_to_try = strat.get("cmds", [strat["cmd"]] if "cmd" in strat else [])
-                pip_ok = False
-                lines = []
-                for cmd_variant in cmds_to_try:
+            # Run pre-commands if present (try each fallback until one succeeds)
+            if "pre_cmds" in strat:
+                for pre_cmd in strat["pre_cmds"]:
                     try:
-                        proc = _sp.Popen(cmd_variant, stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True)
-                        _register_job_process(job_id, proc)
-
-                        # Safety timeout: kill pip if it hangs (10 minutes)
-                        _pip_timeout = 600
-                        _pip_timer = threading.Timer(_pip_timeout, lambda: proc.kill())
-                        _pip_timer.daemon = True
-                        _pip_timer.start()
-
-                        lines = []
-                        for line in proc.stdout:
-                            line = line.strip()
-                            if line:
-                                lines.append(line)
-                                lower = line.lower()
-                                if "downloading" in lower:
-                                    _update_job(job_id, progress=pct_base + 10,
-                                                message="Downloading packages...")
-                                elif "installing" in lower or "building" in lower:
-                                    _update_job(job_id, progress=pct_base + 20,
-                                                message="Installing packages...")
-                                elif "successfully installed" in lower:
-                                    _update_job(job_id, progress=85,
-                                                message="Verifying installation...")
-
-                        _pip_timer.cancel()
-                        proc.wait(timeout=30)
-                        _unregister_job_process(job_id)
-                        logger.debug(f"pip exit code: {proc.returncode}")
-
-                        if proc.returncode == 0:
-                            pip_ok = True
-                            break  # This permission variant worked
-                        else:
-                            last_error = "\n".join(lines[-8:])
-                            logger.warning(f"Strategy {si+1} cmd variant failed (trying next): {last_error[-200:]}")
-                            continue  # Try next permission variant (--user, --target)
-
+                        pre_result = _sp.run(pre_cmd, capture_output=True, text=True, timeout=120)
+                        if pre_result.returncode == 0:
+                            logger.debug(f"Pre-command succeeded: {' '.join(pre_cmd[:5])}")
+                            break
+                        logger.debug(f"Pre-command exit {pre_result.returncode}, trying next fallback")
                     except Exception as e:
-                        _unregister_job_process(job_id)
-                        last_error = str(e)
-                        logger.warning(f"Strategy {si+1} cmd variant exception: {e}")
-                        continue  # Try next permission variant
+                        logger.warning(f"Pre-command failed: {e}")
 
-                if not pip_ok:
-                    logger.warning(f"Strategy {si+1} failed all permission variants")
-                    continue  # Try next strategy
-
-                # Verify import
+            # Run main install command (try each permission fallback)
+            cmds_to_try = strat.get("cmds", [strat["cmd"]] if "cmd" in strat else [])
+            pip_ok = False
+            lines = []
+            for cmd_variant in cmds_to_try:
                 try:
-                    _update_job(job_id, progress=90, message="Verifying import...")
+                    proc = _sp.Popen(cmd_variant, stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True)
+                    _register_job_process(job_id, proc)
 
-                    verify_cmd = strat.get("verify", None)
-                    actual_backend = strat.get("backend_name", backend)
+                    # Safety timeout: kill pip if it hangs (10 minutes)
+                    _pip_timeout = 600
+                    _pip_timer = threading.Timer(_pip_timeout, lambda: proc.kill())
+                    _pip_timer.daemon = True
+                    _pip_timer.start()
 
-                    if verify_cmd is None:
-                        if actual_backend == "faster-whisper":
-                            verify_cmd = [_pip_python, "-c", "from faster_whisper import WhisperModel; print('ok')"]
-                        elif actual_backend == "openai-whisper":
-                            verify_cmd = [_pip_python, "-c", "import whisper; print('ok')"]
-                        else:
-                            if actual_backend not in allowed:
-                                last_error = f"Unknown backend: {actual_backend}"
-                                continue
-                            verify_cmd = [_pip_python, "-c", f"import {actual_backend}; print('ok')"]
+                    lines = []
+                    for line in proc.stdout:
+                        line = line.strip()
+                        if line:
+                            lines.append(line)
+                            lower = line.lower()
+                            if "downloading" in lower:
+                                _update_job(job_id, progress=pct_base + 10,
+                                            message="Downloading packages...")
+                            elif "installing" in lower or "building" in lower:
+                                _update_job(job_id, progress=pct_base + 20,
+                                            message="Installing packages...")
+                            elif "successfully installed" in lower:
+                                _update_job(job_id, progress=85,
+                                            message="Verifying installation...")
 
-                    # Also try importing directly in-process (for --target installs)
-                    verify = _sp.run(verify_cmd, capture_output=True, text=True, timeout=30)
+                    _pip_timer.cancel()
+                    proc.wait(timeout=30)
+                    _unregister_job_process(job_id)
+                    logger.debug(f"pip exit code: {proc.returncode}")
 
-                    if verify.returncode == 0 and "ok" in verify.stdout:
-                        note = ""
-                        if actual_backend != backend:
-                            note = f" (used {actual_backend} as fallback)"
-                        _update_job(
-                            job_id, status="complete", progress=100,
-                            message=f"Whisper installed successfully!{note}",
-                            result={"backend": actual_backend, "installed": True},
-                        )
-                        logger.info(f"Whisper installed via strategy {si+1}: {actual_backend}")
-                        return
+                    if proc.returncode == 0:
+                        pip_ok = True
+                        break  # This permission variant worked
                     else:
-                        last_error = f"Import failed: {verify.stderr[:300]}"
-                        logger.warning(f"Strategy {si+1} verify failed: {last_error}")
-                        continue
+                        last_error = "\n".join(lines[-8:])
+                        logger.warning(f"Strategy {si+1} cmd variant failed (trying next): {last_error[-200:]}")
+                        continue  # Try next permission variant (--user, --target)
 
                 except Exception as e:
+                    _unregister_job_process(job_id)
                     last_error = str(e)
-                    logger.warning(f"Strategy {si+1} verify exception: {e}")
+                    logger.warning(f"Strategy {si+1} cmd variant exception: {e}")
+                    continue  # Try next permission variant
+
+            if not pip_ok:
+                logger.warning(f"Strategy {si+1} failed all permission variants")
+                continue  # Try next strategy
+
+            # Verify import
+            try:
+                _update_job(job_id, progress=90, message="Verifying import...")
+
+                verify_cmd = strat.get("verify", None)
+                actual_backend = strat.get("backend_name", backend)
+
+                if verify_cmd is None:
+                    if actual_backend == "faster-whisper":
+                        verify_cmd = [_pip_python, "-c", "from faster_whisper import WhisperModel; print('ok')"]
+                    elif actual_backend == "openai-whisper":
+                        verify_cmd = [_pip_python, "-c", "import whisper; print('ok')"]
+                    else:
+                        if actual_backend not in allowed:
+                            last_error = f"Unknown backend: {actual_backend}"
+                            continue
+                        verify_cmd = [_pip_python, "-c", f"import {actual_backend}; print('ok')"]
+
+                # Also try importing directly in-process (for --target installs)
+                verify = _sp.run(verify_cmd, capture_output=True, text=True, timeout=30)
+
+                if verify.returncode == 0 and "ok" in verify.stdout:
+                    logger.info(f"Whisper installed via strategy {si+1}: {actual_backend}")
+                    return {"backend": actual_backend, "installed": True}
+                else:
+                    last_error = f"Import failed: {verify.stderr[:300]}"
+                    logger.warning(f"Strategy {si+1} verify failed: {last_error}")
                     continue
 
-            # All strategies failed
-            # Provide a helpful error message about Rust/tokenizers
-            helpful = last_error
-            if "metadata-generation-failed" in helpful or "rust" in helpful.lower() or "tokenizers" in helpful.lower():
-                helpful = (
-                    "Could not install Whisper. The 'tokenizers' package needs either "
-                    "a pre-built wheel for your Python version or Rust to compile from source.\n\n"
-                    "Try one of these:\n"
-                    "1. Update Python to 3.10-3.12 (pre-built wheels available)\n"
-                    "2. Install Rust: https://rustup.rs/\n"
-                    "3. Run manually: pip install openai-whisper\n\n"
-                    f"Last error:\n{last_error[-200:]}"
-                )
+            except Exception as e:
+                last_error = str(e)
+                logger.warning(f"Strategy {si+1} verify exception: {e}")
+                continue
 
-            _update_job(
-                job_id, status="error",
-                error=helpful,
-                message="All install methods failed",
+        # All strategies failed
+        # Provide a helpful error message about Rust/tokenizers
+        helpful = last_error
+        if "metadata-generation-failed" in helpful or "rust" in helpful.lower() or "tokenizers" in helpful.lower():
+            helpful = (
+                "Could not install Whisper. The 'tokenizers' package needs either "
+                "a pre-built wheel for your Python version or Rust to compile from source.\n\n"
+                "Try one of these:\n"
+                "1. Update Python to 3.10-3.12 (pre-built wheels available)\n"
+                "2. Install Rust: https://rustup.rs/\n"
+                "3. Run manually: pip install openai-whisper\n\n"
+                f"Last error:\n{last_error[-200:]}"
             )
-            logger.error(f"All whisper install strategies failed. Last error: {last_error[:500]}")
-        finally:
-            rate_limit_release("model_install")
-            _unregister_job_process(job_id)
 
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-
-    return jsonify({"job_id": job_id, "status": "running"})
+        logger.error(f"All whisper install strategies failed. Last error: {last_error[:500]}")
+        raise RuntimeError(helpful)
+    finally:
+        rate_limit_release("model_install")
+        _unregister_job_process(job_id)
 
 
 # ---------------------------------------------------------------------------
@@ -1031,221 +1003,189 @@ def whisper_clear_cache():
 
 @system_bp.route("/whisper/reinstall", methods=["POST"])
 @require_csrf
-def whisper_reinstall():
+@async_job("reinstall-whisper", filepath_required=False)
+def whisper_reinstall(job_id, filepath, data):
     """Complete Whisper reinstall: uninstall, clear cache, reinstall fresh."""
     if not rate_limit("model_install"):
-        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
-    data = request.get_json(force=True) if request.data else {}
-    backend = data.get("backend", "faster-whisper")
+        raise ValueError("Another model_install operation is already running. Please wait.")
 
+    backend = data.get("backend", "faster-whisper")
     allowed_backends = {"faster-whisper", "openai-whisper", "whisperx"}
     if backend not in allowed_backends:
         rate_limit_release("model_install")
-        return jsonify({"error": f"Unknown backend: {backend}"}), 400
+        raise ValueError(f"Unknown backend: {backend}")
 
     cpu_mode = data.get("cpu_mode", False)
 
     try:
-        job_id = _new_job("reinstall-whisper", backend)
-    except Exception:
-        rate_limit_release("model_install")
-        raise
-
-    def _process():
         import subprocess as _sp
 
-        try:
-            # Resolve Python executable (frozen builds can't use sys.executable for pip)
-            from opencut.security import _find_system_python
-            if getattr(sys, "frozen", False):
-                _pip_python = _find_system_python() or sys.executable
-            else:
-                _pip_python = sys.executable
+        # Resolve Python executable (frozen builds can't use sys.executable for pip)
+        from opencut.security import _find_system_python
+        if getattr(sys, "frozen", False):
+            _pip_python = _find_system_python() or sys.executable
+        else:
+            _pip_python = sys.executable
 
-            _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
-            os.makedirs(_target_dir, exist_ok=True)
-            if _target_dir not in sys.path:
-                sys.path.insert(0, _target_dir)
+        _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
+        os.makedirs(_target_dir, exist_ok=True)
+        if _target_dir not in sys.path:
+            sys.path.insert(0, _target_dir)
 
-            def _run_pip_with_fallback(args, timeout=300):
-                """Try pip command, then --user, then --target fallback."""
-                base = [_pip_python, "-m", "pip"] + args
-                for variant in [base, base + ["--user"], base + ["--target", _target_dir]]:
-                    try:
-                        result = _sp.run(variant, capture_output=True, text=True, timeout=timeout)
-                        if result.returncode == 0:
-                            return result
-                    except Exception:
-                        continue
-                return result  # Return last result even if failed
-
-            # Step 1: Uninstall existing packages
-            _update_job(job_id, progress=5, message="Uninstalling existing Whisper packages...")
-            logger.info("Reinstall: Uninstalling existing packages")
-
-            uninstall_pkgs = ["faster-whisper", "openai-whisper", "whisperx"]
-            for pkg in uninstall_pkgs:
+        def _run_pip_with_fallback(args, timeout=300):
+            """Try pip command, then --user, then --target fallback."""
+            base = [_pip_python, "-m", "pip"] + args
+            result = None
+            for variant in [base, base + ["--user"], base + ["--target", _target_dir]]:
                 try:
-                    _sp.run(
-                        [_pip_python, "-m", "pip", "uninstall", pkg, "-y"],
-                        capture_output=True, timeout=60
-                    )
+                    result = _sp.run(variant, capture_output=True, text=True, timeout=timeout)
+                    if result.returncode == 0:
+                        return result
                 except Exception:
-                    pass
-
-            if _is_cancelled(job_id):
-                return
-
-            # Step 2: Clear model cache
-            _update_job(job_id, progress=20, message="Clearing model cache...")
-            logger.info("Reinstall: Clearing cache")
-
-            cache_paths = [
-                os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
-                os.path.join(os.path.expanduser("~"), ".cache", "whisper"),
-                os.path.join(os.environ.get("LOCALAPPDATA", ""), "OpenCut", "models"),
-            ]
-
-            for cache_dir in cache_paths:
-                if not cache_dir or not os.path.exists(cache_dir):
                     continue
-                try:
-                    if "huggingface" in cache_dir:
-                        for item in os.listdir(cache_dir):
-                            if "whisper" in item.lower():
-                                shutil.rmtree(os.path.join(cache_dir, item), ignore_errors=True)
-                    else:
-                        shutil.rmtree(cache_dir, ignore_errors=True)
-                except Exception:
-                    pass
+            return result  # Return last result even if failed
 
-            if _is_cancelled(job_id):
-                return
+        # Step 1: Uninstall existing packages
+        _update_job(job_id, progress=5, message="Uninstalling existing Whisper packages...")
+        logger.info("Reinstall: Uninstalling existing packages")
 
-            # Step 3: Clear pip cache for these packages
-            _update_job(job_id, progress=30, message="Clearing pip cache...")
+        uninstall_pkgs = ["faster-whisper", "openai-whisper", "whisperx"]
+        for pkg in uninstall_pkgs:
             try:
                 _sp.run(
-                    [_pip_python, "-m", "pip", "cache", "remove", "faster_whisper"],
-                    capture_output=True, timeout=30
-                )
-                _sp.run(
-                    [_pip_python, "-m", "pip", "cache", "remove", "ctranslate2"],
-                    capture_output=True, timeout=30
+                    [_pip_python, "-m", "pip", "uninstall", pkg, "-y"],
+                    capture_output=True, timeout=60
                 )
             except Exception:
                 pass
 
-            if _is_cancelled(job_id):
-                return
+        if _is_cancelled(job_id):
+            return {"backend": backend, "installed": False, "cancelled": True}
 
-            # Step 4: Install fresh (with permission fallbacks)
-            _update_job(job_id, progress=40, message=f"Installing {backend} fresh...")
-            logger.info(f"Reinstall: Installing {backend}")
+        # Step 2: Clear model cache
+        _update_job(job_id, progress=20, message="Clearing model cache...")
+        logger.info("Reinstall: Clearing cache")
 
-            if backend == "faster-whisper":
-                install_base = ["install", "faster-whisper", "--force-reinstall", "--no-cache-dir"]
+        cache_paths = [
+            os.path.join(os.path.expanduser("~"), ".cache", "huggingface", "hub"),
+            os.path.join(os.path.expanduser("~"), ".cache", "whisper"),
+            os.path.join(os.environ.get("LOCALAPPDATA", ""), "OpenCut", "models"),
+        ]
 
-                # For CPU mode, also install CPU-only ctranslate2
-                if cpu_mode:
-                    _update_job(job_id, progress=45, message="Installing CPU-optimized version...")
-                    _run_pip_with_fallback(
-                        ["install", "ctranslate2", "--force-reinstall", "--no-cache-dir"],
-                        timeout=300
-                    )
-            else:
-                install_base = ["install", backend, "--force-reinstall", "--no-cache-dir"]
+        for cache_dir in cache_paths:
+            if not cache_dir or not os.path.exists(cache_dir):
+                continue
+            try:
+                if "huggingface" in cache_dir:
+                    for item in os.listdir(cache_dir):
+                        if "whisper" in item.lower():
+                            shutil.rmtree(os.path.join(cache_dir, item), ignore_errors=True)
+                else:
+                    shutil.rmtree(cache_dir, ignore_errors=True)
+            except Exception:
+                pass
 
-            # Try each permission variant for the main install
-            install_ok = False
-            for install_cmd in [
-                [_pip_python, "-m", "pip"] + install_base,
-                [_pip_python, "-m", "pip"] + install_base + ["--user"],
-                [_pip_python, "-m", "pip"] + install_base + ["--target", _target_dir],
-            ]:
-                proc = _sp.Popen(install_cmd, stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True)
-                _register_job_process(job_id, proc)
+        if _is_cancelled(job_id):
+            return {"backend": backend, "installed": False, "cancelled": True}
 
-                for line in proc.stdout:
-                    if _is_cancelled(job_id):
-                        proc.kill()
-                        _unregister_job_process(job_id)
-                        return
-                    line = line.strip().lower()
-                    if "downloading" in line:
-                        _update_job(job_id, progress=55, message="Downloading packages...")
-                    elif "installing" in line:
-                        _update_job(job_id, progress=70, message="Installing packages...")
-
-                try:
-                    proc.wait(timeout=600)
-                except Exception:
-                    proc.kill()
-                    proc.wait(timeout=10)
-                _unregister_job_process(job_id)
-
-                if proc.returncode == 0:
-                    install_ok = True
-                    break
-                logger.warning("Reinstall pip variant failed, trying next")
-
-            if not install_ok:
-                _update_job(
-                    job_id, status="error",
-                    error="pip install failed — permission denied on all attempts",
-                    message="Installation failed. Try running as administrator or: pip install faster-whisper --user --force-reinstall"
-                )
-                return
-
-            # Step 5: Save CPU mode setting
-            _update_job(job_id, progress=85, message="Saving settings...")
-            settings = load_whisper_settings()
-            settings["cpu_mode"] = cpu_mode
-            save_whisper_settings(settings)
-
-            # Step 6: Verify
-            _update_job(job_id, progress=90, message="Verifying installation...")
-
-            if backend == "faster-whisper":
-                verify_cmd = [_pip_python, "-c", "from faster_whisper import WhisperModel; print('ok')"]
-            else:
-                verify_cmd = [_pip_python, "-c", "import whisper; print('ok')"]
-
-            verify = _sp.run(verify_cmd, capture_output=True, text=True, timeout=30)
-
-            if verify.returncode == 0 and "ok" in verify.stdout:
-                mode_str = " (CPU mode)" if cpu_mode else ""
-                _update_job(
-                    job_id, status="complete", progress=100,
-                    message=f"Whisper reinstalled successfully!{mode_str}",
-                    result={"backend": backend, "cpu_mode": cpu_mode, "installed": True}
-                )
-                logger.info(f"Whisper reinstalled: {backend}, cpu_mode={cpu_mode}")
-            else:
-                _update_job(
-                    job_id, status="error",
-                    error=f"Verification failed: {verify.stderr[:200]}",
-                    message="Installation completed but import failed"
-                )
-
-        except Exception as e:
-            logger.exception("Whisper reinstall error")
-            _update_job(
-                job_id, status="error",
-                error=str(e),
-                message=f"Reinstall failed: {e}"
+        # Step 3: Clear pip cache for these packages
+        _update_job(job_id, progress=30, message="Clearing pip cache...")
+        try:
+            _sp.run(
+                [_pip_python, "-m", "pip", "cache", "remove", "faster_whisper"],
+                capture_output=True, timeout=30
             )
-        finally:
-            rate_limit_release("model_install")
+            _sp.run(
+                [_pip_python, "-m", "pip", "cache", "remove", "ctranslate2"],
+                capture_output=True, timeout=30
+            )
+        except Exception:
+            pass
+
+        if _is_cancelled(job_id):
+            return {"backend": backend, "installed": False, "cancelled": True}
+
+        # Step 4: Install fresh (with permission fallbacks)
+        _update_job(job_id, progress=40, message=f"Installing {backend} fresh...")
+        logger.info(f"Reinstall: Installing {backend}")
+
+        if backend == "faster-whisper":
+            install_base = ["install", "faster-whisper", "--force-reinstall", "--no-cache-dir"]
+
+            # For CPU mode, also install CPU-only ctranslate2
+            if cpu_mode:
+                _update_job(job_id, progress=45, message="Installing CPU-optimized version...")
+                _run_pip_with_fallback(
+                    ["install", "ctranslate2", "--force-reinstall", "--no-cache-dir"],
+                    timeout=300
+                )
+        else:
+            install_base = ["install", backend, "--force-reinstall", "--no-cache-dir"]
+
+        # Try each permission variant for the main install
+        install_ok = False
+        for install_cmd in [
+            [_pip_python, "-m", "pip"] + install_base,
+            [_pip_python, "-m", "pip"] + install_base + ["--user"],
+            [_pip_python, "-m", "pip"] + install_base + ["--target", _target_dir],
+        ]:
+            proc = _sp.Popen(install_cmd, stdout=_sp.PIPE, stderr=_sp.STDOUT, text=True)
+            _register_job_process(job_id, proc)
+
+            for line in proc.stdout:
+                if _is_cancelled(job_id):
+                    proc.kill()
+                    _unregister_job_process(job_id)
+                    return {"backend": backend, "installed": False, "cancelled": True}
+                line = line.strip().lower()
+                if "downloading" in line:
+                    _update_job(job_id, progress=55, message="Downloading packages...")
+                elif "installing" in line:
+                    _update_job(job_id, progress=70, message="Installing packages...")
+
+            try:
+                proc.wait(timeout=600)
+            except Exception:
+                proc.kill()
+                proc.wait(timeout=10)
             _unregister_job_process(job_id)
 
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
+            if proc.returncode == 0:
+                install_ok = True
+                break
+            logger.warning("Reinstall pip variant failed, trying next")
 
-    return jsonify({"job_id": job_id, "status": "running"})
+        if not install_ok:
+            raise RuntimeError(
+                "pip install failed -- permission denied on all attempts. "
+                "Try running as administrator or: pip install faster-whisper --user --force-reinstall"
+            )
+
+        # Step 5: Save CPU mode setting
+        _update_job(job_id, progress=85, message="Saving settings...")
+        settings = load_whisper_settings()
+        settings["cpu_mode"] = cpu_mode
+        save_whisper_settings(settings)
+
+        # Step 6: Verify
+        _update_job(job_id, progress=90, message="Verifying installation...")
+
+        if backend == "faster-whisper":
+            verify_cmd = [_pip_python, "-c", "from faster_whisper import WhisperModel; print('ok')"]
+        else:
+            verify_cmd = [_pip_python, "-c", "import whisper; print('ok')"]
+
+        verify = _sp.run(verify_cmd, capture_output=True, text=True, timeout=30)
+
+        if verify.returncode == 0 and "ok" in verify.stdout:
+            logger.info(f"Whisper reinstalled: {backend}, cpu_mode={cpu_mode}")
+            return {"backend": backend, "cpu_mode": cpu_mode, "installed": True}
+        else:
+            raise RuntimeError(f"Verification failed: {verify.stderr[:200]}")
+
+    finally:
+        rate_limit_release("model_install")
+        _unregister_job_process(job_id)
 
 
 # ---------------------------------------------------------------------------
@@ -1702,93 +1642,58 @@ def chat_sessions():
 # ---------------------------------------------------------------------------
 @system_bp.route("/video/multimodal-diarize", methods=["POST"])
 @require_csrf
-def video_multimodal_diarize():
+@async_job("multimodal-diarize")
+def video_multimodal_diarize(job_id, filepath, data):
     """Run multimodal speaker diarization combining audio and face recognition.
 
     Returns speaker segments enriched with face IDs for accurate multicam switching.
     """
     if not rate_limit("gpu_job"):
-        return jsonify({"error": "A GPU-intensive job is already running. Please wait."}), 429
-
-    data = request.get_json(force=True)
-    filepath = data.get("filepath", "").strip()
-
-    if not filepath:
-        rate_limit_release("gpu_job")
-        return jsonify({"error": "No file path provided"}), 400
-    try:
-        filepath = validate_filepath(filepath)
-    except ValueError as e:
-        rate_limit_release("gpu_job")
-        return jsonify({"error": str(e)}), 400
-
-    num_speakers = data.get("num_speakers")
-    if num_speakers is not None:
-        num_speakers = safe_int(num_speakers, None, min_val=1, max_val=20)
-    sample_fps = safe_float(data.get("sample_fps", 2.0), 2.0, min_val=0.5, max_val=10.0)
-    min_face_confidence = safe_float(data.get("min_face_confidence", 0.5), 0.5, min_val=0.1, max_val=1.0)
+        raise ValueError("A GPU-intensive job is already running. Please wait.")
 
     try:
-        job_id = _new_job("multimodal-diarize", filepath)
-    except TooManyJobsError:
+        num_speakers = data.get("num_speakers")
+        if num_speakers is not None:
+            num_speakers = safe_int(num_speakers, None, min_val=1, max_val=20)
+        sample_fps = safe_float(data.get("sample_fps", 2.0), 2.0, min_val=0.5, max_val=10.0)
+        min_face_confidence = safe_float(data.get("min_face_confidence", 0.5), 0.5, min_val=0.1, max_val=1.0)
+
+        from opencut.core.multimodal_diarize import multimodal_diarize
+
+        def _on_progress(pct, msg=""):
+            if _is_cancelled(job_id):
+                raise InterruptedError("Job cancelled")
+            _update_job(job_id, progress=pct, message=msg)
+
+        result = multimodal_diarize(
+            filepath,
+            num_speakers=num_speakers,
+            sample_fps=sample_fps,
+            min_face_confidence=min_face_confidence,
+            on_progress=_on_progress,
+        )
+
+        # Build enriched cuts
+        cuts = result.to_enriched_cuts()
+
+        return {
+            "speaker_segments": result.speaker_segments,
+            "face_segments": [
+                {"face_id": f.face_id, "start": f.start, "end": f.end,
+                 "confidence": f.confidence, "bbox": list(f.bbox)}
+                for f in result.face_segments
+            ],
+            "mappings": [
+                {"speaker": m.speaker, "face_id": m.face_id,
+                 "confidence": m.confidence, "overlap_seconds": m.overlap_seconds}
+                for m in result.mappings
+            ],
+            "cuts": cuts,
+            "num_speakers": result.num_speakers,
+            "num_faces": result.num_faces,
+        }
+    finally:
         rate_limit_release("gpu_job")
-        raise
-
-    def _process():
-        try:
-            from opencut.core.multimodal_diarize import multimodal_diarize
-
-            def _on_progress(pct, msg=""):
-                if _is_cancelled(job_id):
-                    raise InterruptedError("Job cancelled")
-                _update_job(job_id, progress=pct, message=msg)
-
-            result = multimodal_diarize(
-                filepath,
-                num_speakers=num_speakers,
-                sample_fps=sample_fps,
-                min_face_confidence=min_face_confidence,
-                on_progress=_on_progress,
-            )
-
-            # Build enriched cuts
-            cuts = result.to_enriched_cuts()
-
-            _update_job(
-                job_id, status="complete", progress=100,
-                message=f"Diarization complete: {result.num_speakers} speakers, {result.num_faces} faces",
-                result={
-                    "speaker_segments": result.speaker_segments,
-                    "face_segments": [
-                        {"face_id": f.face_id, "start": f.start, "end": f.end,
-                         "confidence": f.confidence, "bbox": list(f.bbox)}
-                        for f in result.face_segments
-                    ],
-                    "mappings": [
-                        {"speaker": m.speaker, "face_id": m.face_id,
-                         "confidence": m.confidence, "overlap_seconds": m.overlap_seconds}
-                        for m in result.mappings
-                    ],
-                    "cuts": cuts,
-                    "num_speakers": result.num_speakers,
-                    "num_faces": result.num_faces,
-                },
-            )
-        except ImportError as e:
-            _update_job(job_id, status="error", error=f"Missing dependency: {e}",
-                        message="Install face detection deps: pip install insightface onnxruntime")
-        except Exception as e:
-            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
-            logger.exception("Multimodal diarization error")
-        finally:
-            rate_limit_release("gpu_job")
-
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-    return jsonify({"job_id": job_id, "status": "running"})
 
 
 # ---------------------------------------------------------------------------
@@ -1796,91 +1701,63 @@ def video_multimodal_diarize():
 # ---------------------------------------------------------------------------
 @system_bp.route("/video/broll-generate", methods=["POST"])
 @require_csrf
-def video_broll_generate():
+@async_job("broll-generate", filepath_required=False)
+def video_broll_generate(job_id, filepath, data):
     """Generate a B-roll video clip from a text description using AI."""
     if not rate_limit("gpu_job"):
-        return jsonify({"error": "A GPU-intensive job is already running. Please wait."}), 429
-
-    data = request.get_json(force=True)
-    prompt = data.get("prompt", "").strip()
-
-    if not prompt:
-        rate_limit_release("gpu_job")
-        return jsonify({"error": "No prompt provided"}), 400
-    if len(prompt) > 500:
-        rate_limit_release("gpu_job")
-        return jsonify({"error": "Prompt too long (max 500 chars)"}), 400
-
-    output_dir = data.get("output_dir", "")
-    backend = data.get("backend", "auto")
-    seed = data.get("seed")
-    if seed is not None:
-        seed = safe_int(seed, None, min_val=0, max_val=2**31)
-    reference_image = data.get("reference_image", "")
-    if reference_image:
-        try:
-            reference_image = validate_filepath(reference_image)
-        except (ValueError, FileNotFoundError):
-            return jsonify({"error": "Invalid reference_image path"}), 400
+        raise ValueError("A GPU-intensive job is already running. Please wait.")
 
     try:
-        job_id = _new_job("broll-generate", prompt[:80])
-    except TooManyJobsError as e:
-        return jsonify({"error": str(e)}), 429
+        prompt = data.get("prompt", "").strip()
 
-    def _process():
-        try:
-            from opencut.core.broll_generate import generate_broll
+        if not prompt:
+            raise ValueError("No prompt provided")
+        if len(prompt) > 500:
+            raise ValueError("Prompt too long (max 500 chars)")
 
-            def _on_progress(pct, msg=""):
-                if _is_cancelled(job_id):
-                    raise InterruptedError("Job cancelled")
-                _update_job(job_id, progress=pct, message=msg)
+        output_dir = data.get("output_dir", "")
+        backend = data.get("backend", "auto")
+        seed = data.get("seed")
+        if seed is not None:
+            seed = safe_int(seed, None, min_val=0, max_val=2**31)
+        reference_image = data.get("reference_image", "")
+        if reference_image:
+            reference_image = validate_filepath(reference_image)
 
-            effective_dir = None
-            if output_dir:
-                try:
-                    effective_dir = validate_path(output_dir)
-                except ValueError:
-                    effective_dir = None
+        from opencut.core.broll_generate import generate_broll
 
-            result = generate_broll(
-                prompt=prompt,
-                output_dir=effective_dir,
-                backend=backend,
-                seed=seed,
-                reference_image=reference_image if reference_image else None,
-                on_progress=_on_progress,
-            )
+        def _on_progress(pct, msg=""):
+            if _is_cancelled(job_id):
+                raise InterruptedError("Job cancelled")
+            _update_job(job_id, progress=pct, message=msg)
 
-            _update_job(
-                job_id, status="complete", progress=100,
-                message=f"B-roll generated: {result.duration}s clip ({result.backend})",
-                result={
-                    "output_path": result.output_path,
-                    "prompt": result.prompt,
-                    "duration": result.duration,
-                    "resolution": result.resolution,
-                    "backend": result.backend,
-                    "generation_time": result.generation_time,
-                    "seed": result.seed,
-                },
-            )
-        except ImportError as e:
-            _update_job(job_id, status="error", error=f"Missing dependency: {e}",
-                        message="Install: pip install diffusers torch transformers accelerate")
-        except Exception as e:
-            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
-            logger.exception("B-roll generation error")
-        finally:
-            rate_limit_release("gpu_job")
+        effective_dir = None
+        if output_dir:
+            try:
+                effective_dir = validate_path(output_dir)
+            except ValueError:
+                effective_dir = None
 
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-    return jsonify({"job_id": job_id, "status": "running"})
+        result = generate_broll(
+            prompt=prompt,
+            output_dir=effective_dir,
+            backend=backend,
+            seed=seed,
+            reference_image=reference_image if reference_image else None,
+            on_progress=_on_progress,
+        )
+
+        return {
+            "output_path": result.output_path,
+            "prompt": result.prompt,
+            "duration": result.duration,
+            "resolution": result.resolution,
+            "backend": result.backend,
+            "generation_time": result.generation_time,
+            "seed": result.seed,
+        }
+    finally:
+        rate_limit_release("gpu_job")
 
 
 @system_bp.route("/video/broll-backends", methods=["GET"])
@@ -1978,21 +1855,13 @@ def social_disconnect():
 
 @system_bp.route("/social/upload", methods=["POST"])
 @require_csrf
-def social_upload():
+@async_job("social-upload")
+def social_upload(job_id, filepath, data):
     """Upload a video to a social media platform."""
-    data = request.get_json(force=True)
-    filepath = data.get("filepath", "").strip()
     platform = data.get("platform", "").strip().lower()
 
-    if not filepath:
-        return jsonify({"error": "No file path provided"}), 400
     if not platform:
-        return jsonify({"error": "No platform specified"}), 400
-
-    try:
-        filepath = validate_filepath(filepath)
-    except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        raise ValueError("No platform specified")
 
     title = data.get("title", "")[:100]
     description = data.get("description", "")[:5000]
@@ -2001,52 +1870,30 @@ def social_upload():
         tags = tags[:30]
     privacy = data.get("privacy", "private")
 
-    try:
-        job_id = _new_job("social-upload", f"{platform}: {os.path.basename(filepath)}")
-    except TooManyJobsError as e:
-        return jsonify({"error": str(e)}), 429
+    from opencut.core.social_post import upload_to_platform
 
-    def _process():
-        try:
-            from opencut.core.social_post import upload_to_platform
+    def _on_progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
 
-            def _on_progress(pct, msg=""):
-                _update_job(job_id, progress=pct, message=msg)
+    result = upload_to_platform(
+        filepath=filepath,
+        platform=platform,
+        title=title,
+        description=description,
+        tags=tags,
+        privacy=privacy,
+        on_progress=_on_progress,
+    )
 
-            result = upload_to_platform(
-                filepath=filepath,
-                platform=platform,
-                title=title,
-                description=description,
-                tags=tags,
-                privacy=privacy,
-                on_progress=_on_progress,
-            )
-
-            if result.success:
-                _update_job(
-                    job_id, status="complete", progress=100,
-                    message=f"Uploaded to {platform}!",
-                    result={
-                        "platform": result.platform,
-                        "video_id": result.video_id,
-                        "url": result.url,
-                        "upload_time": result.upload_time,
-                    },
-                )
-            else:
-                _update_job(job_id, status="error", error=result.error,
-                            message=f"Upload failed: {result.error}")
-        except Exception as e:
-            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
-            logger.exception("Social upload error")
-
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-    return jsonify({"job_id": job_id, "status": "running"})
+    if result.success:
+        return {
+            "platform": result.platform,
+            "video_id": result.video_id,
+            "url": result.url,
+            "upload_time": result.upload_time,
+        }
+    else:
+        raise RuntimeError(f"Upload failed: {result.error}")
 
 
 # ---------------------------------------------------------------------------

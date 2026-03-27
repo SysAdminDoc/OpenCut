@@ -6,18 +6,14 @@ Footage search index: build, query, clear.
 
 import logging
 import os
-import threading
 
 from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import (
-    TooManyJobsError,
     _is_cancelled,
-    _new_job,
     _update_job,
-    job_lock,
-    jobs,
+    async_job,
 )
 from opencut.security import (
     require_csrf,
@@ -34,9 +30,9 @@ search_bp = Blueprint("search", __name__)
 # ---------------------------------------------------------------------------
 @search_bp.route("/search/index", methods=["POST"])
 @require_csrf
-def search_index():
+@async_job("search-index", filepath_required=False)
+def search_index(job_id, filepath, data):
     """Transcribe and index a list of files (or scan a folder) for footage search."""
-    data = request.get_json(force=True)
     files = data.get("files", [])
     folder = data.get("folder", "").strip()
     model = data.get("model", "base")
@@ -45,103 +41,71 @@ def search_index():
     # If folder provided, scan for media files
     if folder and (not files or not isinstance(files, list)):
         from opencut.security import validate_path
-        try:
-            folder = validate_path(folder)
-        except ValueError as exc:
-            return jsonify({"error": str(exc)}), 400
+        folder = validate_path(folder)
         if not os.path.isdir(folder):
-            return jsonify({"error": "folder is not a directory"}), 400
+            raise ValueError("folder is not a directory")
         _MEDIA_EXTS = {".mp4", ".mov", ".avi", ".mkv", ".webm", ".m4v", ".mp3", ".wav", ".flac", ".aac", ".ogg", ".m4a"}
         files = []
         for fname in os.listdir(folder):
             if os.path.splitext(fname)[1].lower() in _MEDIA_EXTS:
                 files.append(os.path.join(folder, fname))
         if not files:
-            return jsonify({"error": "No media files found in folder"}), 400
+            raise ValueError("No media files found in folder")
 
     if not isinstance(files, list) or not files:
-        return jsonify({"error": "files or folder required"}), 400
+        raise ValueError("files or folder required")
 
     if len(files) > 100:
-        return jsonify({"error": "Too many files (max 100)"}), 400
+        raise ValueError("Too many files (max 100)")
 
     # Validate all file paths up-front
     validated_files = []
     for f in files:
         if not isinstance(f, str) or not f.strip():
-            return jsonify({"error": "Each file entry must be a non-empty string"}), 400
-        try:
-            validated_files.append(validate_filepath(f.strip()))
-        except ValueError as exc:
-            return jsonify({"error": str(exc)}), 400
+            raise ValueError("Each file entry must be a non-empty string")
+        validated_files.append(validate_filepath(f.strip()))
 
     from opencut.security import VALID_WHISPER_MODELS
     if model not in VALID_WHISPER_MODELS:
-        return jsonify({"error": f"Invalid model: {model}"}), 400
+        raise ValueError(f"Invalid model: {model}")
 
-    try:
-        job_id = _new_job("search-index", validated_files[0] if validated_files else "")
-    except TooManyJobsError as e:
-        return jsonify({"error": str(e)}), 429
+    from opencut.core import footage_search
+    from opencut.core.captions import check_whisper_available, transcribe
+    from opencut.utils.config import CaptionConfig
 
-    def _process():
+    available, backend = check_whisper_available()
+    if not available:
+        raise ValueError("No Whisper backend installed. Run: pip install faster-whisper")
+
+    total = len(validated_files)
+    indexed = 0
+    errors = []
+
+    for idx, fpath in enumerate(validated_files):
+        if _is_cancelled(job_id):
+            return {"indexed": indexed, "total": total, "errors": errors}
+
+        pct = int((idx / total) * 90)
+        _update_job(job_id, progress=pct, message=f"Indexing {os.path.basename(fpath)} ({idx + 1}/{total})...")
+
         try:
-            from opencut.core import footage_search
-            from opencut.core.captions import check_whisper_available, transcribe
-            from opencut.utils.config import CaptionConfig
+            config = CaptionConfig(model=model, language=language, word_timestamps=True)
+            result = transcribe(fpath, config=config)
+            segments = []
+            if hasattr(result, "segments"):
+                for seg in result.segments:
+                    segments.append({
+                        "start": getattr(seg, "start", 0),
+                        "end": getattr(seg, "end", 0),
+                        "text": getattr(seg, "text", ""),
+                    })
+            footage_search.index_file(fpath, segments)
+            indexed += 1
+        except Exception as file_exc:
+            logger.warning("Failed to index %s: %s", fpath, file_exc)
+            errors.append({"file": fpath, "error": str(file_exc)})
 
-            available, backend = check_whisper_available()
-            if not available:
-                _update_job(
-                    job_id, status="error",
-                    error="No Whisper backend installed. Run: pip install faster-whisper",
-                    message="Whisper not installed",
-                )
-                return
-
-            total = len(validated_files)
-            indexed = 0
-            errors = []
-
-            for idx, filepath in enumerate(validated_files):
-                if _is_cancelled(job_id):
-                    return
-
-                pct = int((idx / total) * 90)
-                _update_job(job_id, progress=pct, message=f"Indexing {os.path.basename(filepath)} ({idx + 1}/{total})...")
-
-                try:
-                    config = CaptionConfig(model=model, language=language, word_timestamps=True)
-                    result = transcribe(filepath, config=config)
-                    segments = []
-                    if hasattr(result, "segments"):
-                        for seg in result.segments:
-                            segments.append({
-                                "start": getattr(seg, "start", 0),
-                                "end": getattr(seg, "end", 0),
-                                "text": getattr(seg, "text", ""),
-                            })
-                    footage_search.index_file(filepath, segments)
-                    indexed += 1
-                except Exception as file_exc:
-                    logger.warning("Failed to index %s: %s", filepath, file_exc)
-                    errors.append({"file": filepath, "error": str(file_exc)})
-
-            _update_job(
-                job_id, status="complete", progress=100,
-                message=f"Indexed {indexed}/{total} files",
-                result={"indexed": indexed, "total": total, "errors": errors},
-            )
-        except Exception as exc:
-            _update_job(job_id, status="error", error=str(exc), message=f"Error: {exc}")
-            logger.exception("search-index error")
-
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-    return jsonify({"job_id": job_id, "status": "running"})
+    return {"indexed": indexed, "total": total, "errors": errors}
 
 
 # ---------------------------------------------------------------------------

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencut"
-version = "1.9.2"
+version = "1.9.3"
 description = "Open-source AI video editing automation for Adobe Premiere Pro - captions, audio processing, visual effects, and more"
 readme = "README.md"
 license = {text = "MIT"}
@@ -148,6 +148,12 @@ Documentation = "https://github.com/SysAdminDoc/OpenCut/wiki"
 
 [tool.setuptools.packages.find]
 include = ["opencut*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: requires real FFmpeg processing",
+    "slow: tests that take >30 seconds",
+]
 
 [tool.ruff]
 line-length = 120

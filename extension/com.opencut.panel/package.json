@@ -1,14 +1,16 @@
 {
   "name": "opencut-panel",
-  "version": "1.7.2",
+  "version": "1.9.3",
   "private": true,
   "description": "OpenCut CEP Panel for Adobe Premiere Pro",
   "scripts": {
     "dev": "vite build --watch",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "lint": "eslint client/main.js"
   },
   "devDependencies": {
+    "eslint": "^8.0.0",
     "vite": "^5.0.0"
   }
 }
