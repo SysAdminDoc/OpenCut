@@ -45,7 +45,7 @@ class _FileLock:
         self._fh = None
 
     def __enter__(self):
-        self._fh = open(self._path, "w")
+        self._fh = open(self._path, "w", encoding="utf-8")
         if _HAS_FCNTL:
             try:
                 fcntl.flock(self._fh, fcntl.LOCK_EX)

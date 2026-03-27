@@ -1,6 +1,10 @@
 # ============================================================
 # OpenCut Server — Docker Image
 # Multi-stage build for minimal final image
+#
+# Build:       docker build -t opencut .
+# Run (CPU):   docker run -d -p 5679:5679 -v opencut-data:/root/.opencut opencut
+# Run (GPU):   docker run -d --gpus all -p 5679:5679 -v opencut-data:/root/.opencut opencut
 # ============================================================
 
 # Stage 1: Base with Python and system deps
@@ -24,11 +28,11 @@ COPY requirements.txt pyproject.toml ./
 COPY opencut/__init__.py opencut/__init__.py
 
 # Install core dependencies first (cached layer)
-RUN pip install --no-cache-dir flask flask-cors click rich
+RUN pip install --no-cache-dir flask flask-cors click rich python-json-logger
 
 # Install standard optional dependencies
 RUN pip install --no-cache-dir \
-    faster-whisper \
+    faster-whisper>=1.1 \
     opencv-python-headless \
     Pillow \
     numpy \
@@ -37,6 +41,7 @@ RUN pip install --no-cache-dir \
     noisereduce \
     deep-translator \
     scenedetect[opencv] \
+    psutil \
     || echo "Some optional deps failed — continuing"
 
 # Stage 3: Final image
@@ -50,10 +55,10 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 COPY . /app
 
 # Create data directories
-RUN mkdir -p /root/.opencut/packages /root/.opencut/models
+RUN mkdir -p /root/.opencut/packages /root/.opencut/models /root/.opencut/plugins
 
-# Expose server port
-EXPOSE 5679
+# Expose server port + WebSocket bridge port
+EXPOSE 5679 5680
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
@@ -62,6 +67,8 @@ HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
 # Environment
 ENV OPENCUT_BUNDLED=false
 ENV PYTHONUNBUFFERED=1
+ENV OPENCUT_HOST=0.0.0.0
+ENV OPENCUT_PORT=5679
 
 # Entrypoint
 ENTRYPOINT ["python", "-m", "opencut.server"]
