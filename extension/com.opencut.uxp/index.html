@@ -16,7 +16,7 @@
           <path d="M4 2.5a3 3 0 00-1.76 5.43L7.33 11l-5.09 3.07A3 3 0 104.8 19.5a3 3 0 001.76-5.43L8.93 12.6 16.5 17V5L8.93 9.4 6.56 7.93A3 3 0 004 2.5z" fill="var(--accent)"/>
         </svg>
         <span class="oc-logo">OpenCut</span>
-        <span class="oc-version">v1.9.8</span>
+        <span class="oc-version">v1.9.9</span>
       </div>
       <div class="oc-header-right">
         <div class="oc-connection" id="connectionStatus" title="Backend connection status">
@@ -595,6 +595,110 @@
           </div>
         </div>
 
+        <div class="oc-section-title">AI Upscale</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="upscaleBody">
+            <span>Real-ESRGAN Video Upscale</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="upscaleBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="upscaleScaleUxp">Scale Factor</label>
+              <select class="oc-select" id="upscaleScaleUxp">
+                <option value="2" selected>2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label class="oc-label" for="upscaleModelUxp">Model</label>
+              <select class="oc-select" id="upscaleModelUxp">
+                <option value="realesrgan-x4plus" selected>RealESRGAN x4plus</option>
+                <option value="realesrgan-x4plus-anime">Anime</option>
+                <option value="realesrgan-x2plus">RealESRGAN x2plus</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runUpscaleBtnUxp">Upscale Video</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Scene Detection</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="sceneDetectBody">
+            <span>Detect Scene Boundaries</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="sceneDetectBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="sceneMethodUxp">Method</label>
+              <select class="oc-select" id="sceneMethodUxp">
+                <option value="ffmpeg" selected>FFmpeg Threshold</option>
+                <option value="ml">TransNetV2 (ML)</option>
+                <option value="pyscenedetect">PySceneDetect</option>
+              </select>
+            </div>
+            <div class="oc-slider-row">
+              <label class="oc-label" for="sceneThresholdUxp">Sensitivity</label>
+              <input type="range" class="oc-slider" id="sceneThresholdUxp" min="0.1" max="0.9" value="0.3" step="0.05">
+              <span class="oc-slider-val" id="sceneThresholdValUxp">0.30</span>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runSceneDetectBtnUxp">Detect Scenes</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Style Transfer</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="styleTransferBody">
+            <span>AI Style Transfer</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="styleTransferBody">
+            <div class="oc-field-row">
+              <label class="oc-label" for="styleNameUxp">Style</label>
+              <select class="oc-select" id="styleNameUxp">
+                <option value="candy" selected>Candy</option>
+                <option value="mosaic">Mosaic</option>
+                <option value="starry_night">Starry Night</option>
+                <option value="la_muse">La Muse</option>
+                <option value="udnie">Udnie</option>
+                <option value="rain_princess">Rain Princess</option>
+                <option value="the_scream">The Scream</option>
+                <option value="pointilism">Pointilism</option>
+              </select>
+            </div>
+            <div class="oc-slider-row">
+              <label class="oc-label" for="styleIntensityUxp">Intensity</label>
+              <input type="range" class="oc-slider" id="styleIntensityUxp" min="0" max="100" value="100" step="5">
+              <span class="oc-slider-val" id="styleIntensityValUxp">100%</span>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runStyleTransferBtnUxp">Apply Style</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Shorts Pipeline</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="shortsPipelineBody">
+            <span>One-Click Short-Form Clips</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="shortsPipelineBody">
+            <p class="oc-hint">Transcribe, detect highlights, face-reframe, burn captions, and export short-form clips in one step.</p>
+            <div class="oc-field-row">
+              <label class="oc-label" for="shortsMaxUxp">Max Clips</label>
+              <input type="number" class="oc-input" id="shortsMaxUxp" value="5" min="1" max="20">
+            </div>
+            <div class="oc-check-row">
+              <input type="checkbox" id="shortsFaceTrackUxp" checked>
+              <label for="shortsFaceTrackUxp">Face tracking reframe</label>
+            </div>
+            <div class="oc-check-row">
+              <input type="checkbox" id="shortsCaptionsUxp" checked>
+              <label for="shortsCaptionsUxp">Burn-in captions</label>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runShortsPipelineBtnUxp">Generate Shorts</button>
+          </div>
+        </div>
+
         <div class="oc-section-title">Social Media Upload</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="socialBody">
@@ -983,7 +1087,7 @@
         <div class="oc-card">
           <div class="oc-field-row">
             <span class="oc-label">Version</span>
-            <span>1.9.2 (UXP)</span>
+            <span id="uxpVersionDisplay">1.9.8 (UXP)</span>
           </div>
           <div class="oc-field-row">
             <span class="oc-label">Panel</span>
