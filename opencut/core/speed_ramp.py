@@ -260,7 +260,7 @@ def speed_ramp(
 
         # Concatenate segments
         list_file = os.path.join(tmp_dir, "concat.txt")
-        with open(list_file, "w") as f:
+        with open(list_file, "w", encoding="utf-8") as f:
             for seg in segment_files:
                 f.write(f"file '{seg}'\n")
 

@@ -373,7 +373,7 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
         settings_file = os.path.join(os.path.expanduser("~"), ".opencut", "whisper_settings.json")
         if os.path.exists(settings_file):
             import json as _json
-            with open(settings_file, "r") as f:
+            with open(settings_file, "r", encoding="utf-8") as f:
                 settings = _json.load(f)
                 force_cpu = settings.get("cpu_mode", False)
     except Exception:

@@ -365,7 +365,7 @@ def render_remotion_title(
     }
 
     props_file = os.path.join(template_dir, "props.json")
-    with open(props_file, "w") as f:
+    with open(props_file, "w", encoding="utf-8") as f:
         json.dump(render_props, f)
 
     if on_progress:
@@ -418,7 +418,7 @@ def _generate_default_template(template_dir: str, template_name: str):
             "react-dom": "^18.0.0",
         },
     }
-    with open(os.path.join(template_dir, "package.json"), "w") as f:
+    with open(os.path.join(template_dir, "package.json"), "w", encoding="utf-8") as f:
         json.dump(package, f, indent=2)
 
     # Create a minimal Main composition component
@@ -442,7 +442,7 @@ export const RemotionRoot = () => (
 );
 """
     os.makedirs(os.path.join(template_dir, "src"), exist_ok=True)
-    with open(os.path.join(template_dir, "src", "index.tsx"), "w") as f:
+    with open(os.path.join(template_dir, "src", "index.tsx"), "w", encoding="utf-8") as f:
         f.write(comp_code)
 
     logger.info("Generated default Remotion template: %s", template_dir)
