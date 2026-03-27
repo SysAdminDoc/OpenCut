@@ -15,7 +15,7 @@ import os
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
+from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -103,7 +103,7 @@ def generate_masks_sam2(
     frames_dir = tempfile.mkdtemp(prefix="sam2_frames_")
     try:
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-i", video_path, "-q:v", "2",
             os.path.join(frames_dir, "frame_%06d.jpg"),
         ], timeout=7200)
@@ -230,7 +230,7 @@ def inpaint_video_propainter(
     temp_out = output_path + ".tmp.mp4"
     try:
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-i", output_path, "-i", video_path,
             "-map", "0:v", "-map", "1:a?",
             "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
@@ -346,7 +346,7 @@ def remove_watermark_lama(
 
     try:
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-i", tmp_video, "-i", video_path,
             "-map", "0:v", "-map", "1:a?",
             "-c:v", "libx264", "-crf", "18", "-preset", "medium",
@@ -387,7 +387,7 @@ def remove_watermark_delogo(
         on_progress(10, "Applying delogo filter...")
 
     run_ffmpeg([
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", video_path,
         "-vf", f"delogo=x={x}:y={y}:w={rw}:h={rh}:show=0",
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",

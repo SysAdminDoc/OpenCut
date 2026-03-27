@@ -11,6 +11,8 @@ import subprocess
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
+from opencut.helpers import get_ffmpeg_path
+
 from ..utils.config import SilenceConfig
 from ..utils.media import probe
 
@@ -57,7 +59,7 @@ def detect_silences(
     min_duration = float(min_duration)
 
     cmd = [
-        "ffmpeg",
+        get_ffmpeg_path(),
         "-hide_banner",
         "-i", filepath,
         "-af", f"silencedetect=noise={threshold_db}dB:d={min_duration}",
@@ -246,7 +248,7 @@ def _extract_audio_wav(input_path: str, output_path: str) -> None:
         raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-y",
         "-i", input_path,
         "-vn", "-acodec", "pcm_s16le",
         "-ar", "16000", "-ac", "1",
@@ -607,7 +609,7 @@ def speed_up_silences(
     # Run FFmpeg
     if has_video:
         cmd = [
-            "ffmpeg", "-hide_banner", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-y",
             "-i", filepath,
             "-filter_complex", filter_complex,
             "-map", "[outv]", "-map", "[outa]",
@@ -619,7 +621,7 @@ def speed_up_silences(
         ]
     else:
         cmd = [
-            "ffmpeg", "-hide_banner", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-y",
             "-i", filepath,
             "-filter_complex", filter_complex,
             "-map", "[outa]",
