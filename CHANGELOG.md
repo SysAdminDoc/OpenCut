@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.9.9] - 2026-03-27
+
+### Added
+- **UXP: 4 new Video features** — AI Upscale (Real-ESRGAN 2x/3x/4x), Scene Detection (FFmpeg/TransNetV2/PySceneDetect), Style Transfer (8 preset styles with intensity slider), Shorts Pipeline (one-click short-form clip generation with face tracking + captions).
+- **UXP: full JS handlers** — `runUpscaleUxp()`, `runSceneDetectUxp()`, `runStyleTransferUxp()`, `runShortsPipelineUxp()` with proper job polling, error handling, and toast notifications.
+
+### Fixed
+- **UXP stale version** — Settings tab showed hardcoded "1.9.2" instead of actual version. Now dynamic via version sync.
+
 ## [1.9.8] - 2026-03-27
 
 ### Added

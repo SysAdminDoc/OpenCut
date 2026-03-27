@@ -26,7 +26,7 @@ const HEALTH_CHECK_MS  = 8000;
 const HEALTH_MAX_MS    = 60000;
 const MEDIA_SCAN_MS    = 30000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
-const VERSION          = "1.9.8";
+const VERSION          = "1.9.9";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
@@ -2099,6 +2099,18 @@ function bindEvents() {
   // ── Multimodal Diarization ──
   document.getElementById("runMmDiarizeBtnUxp")?.addEventListener("click", runMultimodalDiarize);
 
+  // ── AI Upscale ──
+  document.getElementById("runUpscaleBtnUxp")?.addEventListener("click", runUpscaleUxp);
+
+  // ── Scene Detection ──
+  document.getElementById("runSceneDetectBtnUxp")?.addEventListener("click", runSceneDetectUxp);
+
+  // ── Style Transfer ──
+  document.getElementById("runStyleTransferBtnUxp")?.addEventListener("click", runStyleTransferUxp);
+
+  // ── Shorts Pipeline ──
+  document.getElementById("runShortsPipelineBtnUxp")?.addEventListener("click", runShortsPipelineUxp);
+
   // ── Social Media ──
   document.getElementById("socialConnectBtnUxp")?.addEventListener("click", socialConnectUxp);
   document.getElementById("socialUploadBtnUxp")?.addEventListener("click", runSocialUpload);
@@ -2126,6 +2138,8 @@ function bindSliders() {
   UIController.bindSlider("beatSensitivity",   "beatSensitivityVal",  v => `${v}%`);
   UIController.bindSlider("colorMatchStrength","colorMatchStrengthVal",v => `${v}%`);
   UIController.bindSlider("zoomFactor",        "zoomFactorVal",       v => `${v.toFixed(2)}x`);
+  UIController.bindSlider("sceneThresholdUxp", "sceneThresholdValUxp", v => v.toFixed(2));
+  UIController.bindSlider("styleIntensityUxp", "styleIntensityValUxp", v => `${v}%`);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2443,6 +2457,102 @@ async function loadLlmSettings() {
     }
   } catch (e) {
     console.warn("Could not load LLM settings:", e);
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// AI Upscale
+// ─────────────────────────────────────────────────────────────
+async function runUpscaleUxp() {
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  const scale = parseInt(document.getElementById("upscaleScaleUxp")?.value ?? "2", 10);
+  const model = document.getElementById("upscaleModelUxp")?.value ?? "realesrgan-x4plus";
+
+  UIController.setButtonLoading("runUpscaleBtnUxp", true);
+  const r = await BackendClient.post("/video/ai/upscale", { filepath: clipPath, scale, model });
+  UIController.setButtonLoading("runUpscaleBtnUxp", false);
+
+  if (r.ok && r.data?.job_id) {
+    JobPoller.start(r.data.job_id, (result) => {
+      UIController.showToast(`Upscaled: ${result?.output_path || "done"}`, "success");
+    });
+  } else {
+    UIController.showToast(r.data?.error || "Upscale failed.", "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Scene Detection
+// ─────────────────────────────────────────────────────────────
+async function runSceneDetectUxp() {
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  const method = document.getElementById("sceneMethodUxp")?.value ?? "ffmpeg";
+  const threshold = parseFloat(document.getElementById("sceneThresholdUxp")?.value ?? "0.3");
+
+  UIController.setButtonLoading("runSceneDetectBtnUxp", true);
+  const r = await BackendClient.post("/video/scenes", { filepath: clipPath, method, threshold });
+  UIController.setButtonLoading("runSceneDetectBtnUxp", false);
+
+  if (r.ok && r.data?.job_id) {
+    JobPoller.start(r.data.job_id, (result) => {
+      const count = result?.scenes?.length || result?.total_scenes || 0;
+      UIController.showToast(`Found ${count} scene boundaries.`, "success");
+    });
+  } else {
+    UIController.showToast(r.data?.error || "Scene detection failed.", "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Style Transfer
+// ─────────────────────────────────────────────────────────────
+async function runStyleTransferUxp() {
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  const style = document.getElementById("styleNameUxp")?.value ?? "candy";
+  const intensity = (parseInt(document.getElementById("styleIntensityUxp")?.value ?? "100", 10)) / 100;
+
+  UIController.setButtonLoading("runStyleTransferBtnUxp", true);
+  const r = await BackendClient.post("/video/style/apply", { filepath: clipPath, style, intensity });
+  UIController.setButtonLoading("runStyleTransferBtnUxp", false);
+
+  if (r.ok && r.data?.job_id) {
+    JobPoller.start(r.data.job_id, (result) => {
+      UIController.showToast(`Style applied: ${result?.output_path || "done"}`, "success");
+    });
+  } else {
+    UIController.showToast(r.data?.error || "Style transfer failed.", "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Shorts Pipeline
+// ─────────────────────────────────────────────────────────────
+async function runShortsPipelineUxp() {
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  const maxShorts = parseInt(document.getElementById("shortsMaxUxp")?.value ?? "5", 10);
+  const faceTrack = document.getElementById("shortsFaceTrackUxp")?.checked ?? true;
+  const burnCaptions = document.getElementById("shortsCaptionsUxp")?.checked ?? true;
+
+  UIController.setButtonLoading("runShortsPipelineBtnUxp", true);
+  const r = await BackendClient.post("/video/shorts-pipeline", {
+    filepath: clipPath,
+    max_shorts: maxShorts,
+    face_track: faceTrack,
+    burn_captions: burnCaptions,
+  });
+  UIController.setButtonLoading("runShortsPipelineBtnUxp", false);
+
+  if (r.ok && r.data?.job_id) {
+    JobPoller.start(r.data.job_id, (result) => {
+      const count = result?.total_clips || result?.clips?.length || 0;
+      UIController.showToast(`Generated ${count} short-form clips.`, "success");
+    });
+  } else {
+    UIController.showToast(r.data?.error || "Shorts pipeline failed.", "error");
   }
 }
 
