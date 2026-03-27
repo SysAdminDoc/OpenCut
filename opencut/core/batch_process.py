@@ -14,8 +14,9 @@ import logging
 import os
 import threading
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -199,3 +200,157 @@ def list_batches(limit: int = 20) -> List[Dict]:
             reverse=True,
         )[:limit]
         return [b.summary for b in sorted_batches]
+
+
+# ---------------------------------------------------------------------------
+# Parallel Batch Processing
+# ---------------------------------------------------------------------------
+
+# GPU-bound operations need limited concurrency to prevent OOM
+GPU_OPERATIONS = frozenset({
+    "upscale", "rembg", "denoise-ai", "face-enhance",
+    "face-swap", "style-transfer", "interpolate",
+})
+
+
+def process_batch_parallel(
+    batch_id: str,
+    items: List,
+    operation: str,
+    params: Dict,
+    on_item_complete: Optional[Callable] = None,
+    on_item_error: Optional[Callable] = None,
+) -> Dict:
+    """Process batch items in parallel using ThreadPoolExecutor.
+
+    Args:
+        batch_id: batch identifier
+        items: list of file paths or item dicts
+        operation: operation name string
+        params: shared parameters dict
+        on_item_complete: callback(item_index, result_dict)
+        on_item_error: callback(item_index, error_str)
+
+    Returns:
+        dict with keys: completed (int), failed (int), results (list), errors (list)
+    """
+    # Determine worker count based on operation type
+    if operation in GPU_OPERATIONS:
+        max_workers = 2  # Prevent GPU OOM
+    else:
+        max_workers = min(os.cpu_count() or 4, len(items))
+
+    # Ensure at least 1 worker
+    max_workers = max(1, max_workers)
+
+    results: List[Optional[Dict]] = [None] * len(items)
+    errors: List[Optional[str]] = [None] * len(items)
+    completed = 0
+    failed = 0
+    _progress_lock = threading.Lock()
+
+    def _run_item(idx: int, item) -> tuple:
+        """Execute a single item; returns (index, result_or_None, error_or_None)."""
+        filepath = item if isinstance(item, str) else item.get("filepath", item)
+        try:
+            # Lazy import to avoid circular dependency
+            from opencut.routes.video import _execute_batch_item
+
+            def _item_progress(pct, msg=""):
+                update_batch_item(batch_id, idx, progress=pct, message=msg)
+
+            update_batch_item(
+                batch_id, idx,
+                status="running", started_at=time.time(),
+                message="Processing...",
+            )
+
+            result = _execute_batch_item(operation, filepath, params, _item_progress)
+
+            update_batch_item(
+                batch_id, idx,
+                status="complete", progress=100,
+                output_path=result, message="Done",
+                finished_at=time.time(),
+            )
+            return (idx, {"output_path": result}, None)
+        except Exception as exc:
+            err_str = str(exc)
+            update_batch_item(
+                batch_id, idx,
+                status="error", error=err_str,
+                message=f"Error: {exc}",
+                finished_at=time.time(),
+            )
+            return (idx, None, err_str)
+
+    logger.info(
+        "Batch %s: starting parallel processing (%d items, %d workers, op=%s)",
+        batch_id, len(items), max_workers, operation,
+    )
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Check for cancelled batch before submitting
+        batch = get_batch(batch_id)
+        if batch and batch.status == "cancelled":
+            return {"completed": 0, "failed": 0, "results": results, "errors": errors}
+
+        futures = {}
+        for idx, item in enumerate(items):
+            # Skip items already marked (e.g. file-not-found)
+            batch = get_batch(batch_id)
+            if batch and batch.items[idx].status == "skipped":
+                continue
+            # Check for cancellation before each submission
+            if batch and batch.status == "cancelled":
+                break
+            fut = executor.submit(_run_item, idx, item)
+            futures[fut] = idx
+
+        for future in as_completed(futures):
+            idx = futures[future]
+            try:
+                _idx, result_dict, err = future.result()
+            except Exception as exc:
+                # Should not happen since _run_item catches all exceptions,
+                # but guard against thread-pool level failures
+                err = str(exc)
+                result_dict = None
+                update_batch_item(
+                    batch_id, idx,
+                    status="error", error=err,
+                    message=f"Error: {exc}",
+                    finished_at=time.time(),
+                )
+
+            with _progress_lock:
+                if err:
+                    errors[idx] = err
+                    failed += 1
+                    if on_item_error:
+                        try:
+                            on_item_error(idx, err)
+                        except Exception:
+                            pass
+                else:
+                    results[idx] = result_dict
+                    completed += 1
+                    if on_item_complete:
+                        try:
+                            on_item_complete(idx, result_dict)
+                        except Exception:
+                            pass
+
+    finalize_batch(batch_id)
+
+    logger.info(
+        "Batch %s: parallel processing done — %d completed, %d failed",
+        batch_id, completed, failed,
+    )
+
+    return {
+        "completed": completed,
+        "failed": failed,
+        "results": results,
+        "errors": errors,
+    }

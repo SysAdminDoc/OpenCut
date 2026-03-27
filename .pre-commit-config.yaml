@@ -3,7 +3,7 @@ repos:
     rev: v0.8.6
     hooks:
       - id: ruff
-        args: [--fix, --select, "E,F,I", --ignore, "E501"]
+        args: [--fix, --select, "E,F,I", --ignore, "E501,E402"]
       - id: ruff-format
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -13,3 +13,13 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-json
+
+  - repo: local
+    hooks:
+      - id: pytest-smoke
+        name: pytest smoke tests
+        entry: python -m pytest tests/test_route_smoke.py tests/test_core_modules.py -x -q --tb=short --no-header
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]

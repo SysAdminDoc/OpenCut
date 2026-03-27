@@ -432,7 +432,7 @@ If resources are constrained, do these first (highest user impact per effort):
 |----------|------|-------|--------|--------|--------|
 | **P0** | Test coverage baseline | 0.1 | Enables everything else | Medium | DONE |
 | **P0** | Structured error taxonomy | 0.2 | Fixes #1 user complaint (cryptic errors) | Medium | DONE |
-| **P0** | Structured logging | 0.3 | Debugging job failures | Medium | DONE |
+| **P0** | Structured logging (JSON) | 0.3 | Debugging job failures | Medium | DONE |
 | **P1** | Dependency resolution overhaul | 4.1 | Fixes #2 user complaint (install failures) | High | DONE |
 | **P1** | One-click workflows | 3.1 | Biggest UX improvement possible | High | DONE |
 | **P1** | Preview before commit | 3.3 | Removes fear of using the tool | High | DONE |
@@ -445,9 +445,30 @@ If resources are constrained, do these first (highest user impact per effort):
 | **P2** | i18n framework | 6.2 | Opens global market | High | DONE |
 | **P2** | Project templates | 6.4 | Quick-start for new users | Low | DONE |
 | **P2** | Preset export/import | 6.3 | Collaboration & sharing | Low | DONE |
+| **P2** | Contextual awareness | 3.2 | Panel adapts to clip type | Medium | DONE |
+| **P2** | Background indexing (SQLite FTS5) | 5.3 | Fast persistent footage search | Medium | DONE |
+| **P2** | Response streaming (NDJSON) | 5.2 | Progressive large result delivery | Low | DONE |
+| **P2** | Plugin system scaffold | 6.1 | Extensibility platform | High | DONE |
+| **P2** | Multicam XML export | — | Premiere import of multicam edits | Low | DONE |
+| **P2** | Parallel batch processing | 5.4 | Multi-clip ops in parallel | Medium | DONE |
+| **P2** | Clip Notes example plugin | 6.1 | Second reference plugin | Low | DONE |
+| **P2** | Frontend context integration | 3.2 | Guidance banner + tab highlighting | Low | DONE |
+| **P2** | Route smoke tests | 0.1 | Every endpoint has a smoke test | Medium | DONE |
+| **P2** | CI coverage enforcement | 0.1 | Builds fail below 50% coverage | Low | DONE |
+| **P2** | Smart tab reordering | 3.2 | Sub-tabs reorder by relevance | Low | DONE |
+| **P2** | Structured error migration | 0.2 | Routes use safe_error() | Medium | DONE |
+| **P2** | __import__() → importlib | — | Security hardening | Low | DONE |
+| **P2** | Frontend error code mapper | 0.2 | Actionable error guidance in UI | Medium | DONE |
+| **P2** | Core module unit tests (15) | 0.1 | 15 most important modules covered | High | DONE |
+| **P2** | i18n string extraction | 6.2 | ~200 elements with data-i18n | Medium | DONE |
+| **P2** | CI on PRs + coverage gate | 0.1 | CI runs on PRs, not just tags | Low | DONE |
+| **P2** | Version string unification | — | Single source of truth for version | Low | DONE |
+| **P2** | Pre-commit hooks | 0.1 | Ruff + pytest on commit/push | Low | DONE |
+| **P2** | Log levels audit | 0.3 | Correct DEBUG/INFO/WARNING usage | Low | DONE |
+| **P2** | Core module unit tests batch 2 (28) | 0.1 | 28 more modules covered (135 tests) | High | DONE |
+| **P2** | ExtendScript mock harness | 0.1 | JSX functions testable under Node.js | Medium | DONE |
 | **P3** | FastAPI migration | 1.1 | Big effort, mostly internal benefit | Very High | PLANNED |
 | **P3** | TypeScript migration | 2.2 | Developer productivity, not user-facing | High | SCAFFOLDED |
-| **P3** | Plugin system | 6.1 | Long-term platform play | Very High | PLANNED |
 | **P3** | Process isolation (GPU) | 1.3 | Eliminates OOM crashes | Very High | PLANNED |
 | **P3** | UXP parity | 7.1-7.3 | Modern Premiere integration | Very High | PLANNED |
 

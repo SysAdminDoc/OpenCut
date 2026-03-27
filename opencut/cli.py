@@ -283,8 +283,23 @@ def podcast(input_file, output, speakers, hf_token, min_segment, seq_name):
     switches = result.to_camera_switches(min_segment_duration=min_segment)
     console.print(f"\n[bold]Camera switches:[/bold] {len(switches)}")
 
-    # TODO: Export multicam XML
-    console.print("\n[yellow]Multicam XML export coming in v0.2. Diarization data saved.[/yellow]\n")
+    # Export multicam XML
+    from .core.multicam_xml import generate_multicam_xml
+
+    # Build source files mapping from command args or auto-detect
+    source_map = {}
+    for i, speaker in enumerate(result.speakers):
+        source_map[speaker] = input_file  # Same file, different tracks
+
+    output_xml = os.path.splitext(input_file)[0] + "_multicam.xml"
+    xml_result = generate_multicam_xml(
+        cuts=switches,
+        source_files=source_map,
+        sequence_name=f"Multicam - {os.path.basename(input_file)}",
+        output_path=output_xml,
+    )
+    console.print(f"\n[green]Multicam XML exported:[/green] {xml_result['output']}")
+    console.print(f"  Cuts: {xml_result['cuts_count']}, Duration: {xml_result['duration']:.1f}s\n")
 
 
 @cli.command()

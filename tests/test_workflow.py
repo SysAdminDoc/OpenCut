@@ -9,12 +9,8 @@ Smoke tests for:
 """
 
 import json
-from unittest.mock import patch
-
-import pytest
 
 from tests.conftest import csrf_headers
-
 
 # =====================================================================
 # VALIDATION
@@ -43,8 +39,9 @@ class TestWorkflowValidation:
         # clean success.
         if resp.status_code == 200 and "job_id" in data:
             # Job was created — poll for error
-            from opencut.jobs import _get_job_copy
             import time
+
+            from opencut.jobs import _get_job_copy
             job_id = data["job_id"]
             for _ in range(40):
                 job = _get_job_copy(job_id)
@@ -71,8 +68,9 @@ class TestWorkflowValidation:
         )
         data = resp.get_json()
         if resp.status_code == 200 and "job_id" in data:
-            from opencut.jobs import _get_job_copy
             import time
+
+            from opencut.jobs import _get_job_copy
             job_id = data["job_id"]
             for _ in range(40):
                 job = _get_job_copy(job_id)
@@ -97,8 +95,9 @@ class TestWorkflowValidation:
         )
         data = resp.get_json()
         if resp.status_code == 200 and "job_id" in data:
-            from opencut.jobs import _get_job_copy
             import time
+
+            from opencut.jobs import _get_job_copy
             job_id = data["job_id"]
             for _ in range(40):
                 job = _get_job_copy(job_id)

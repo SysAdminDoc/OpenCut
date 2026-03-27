@@ -1,5 +1,80 @@
 # Changelog
 
+## [1.9.2] - 2026-03-26
+
+### Added
+- **JSON Structured Logging** (Phase 0.3) — File handler now outputs JSON via `python-json-logger`. Each log line includes `timestamp`, `level`, `module`, `job_id`, `message`. Console handler stays plain text. Graceful fallback if `python-json-logger` not installed.
+- **CI Coverage Enforcement** (Phase 0.1) — `.github/workflows/build.yml` now runs `pytest-cov` with `--cov-fail-under=50` threshold. CI also triggers on PRs and pushes to main. PyInstaller build skipped for non-release runs.
+- **Structured Error Migration** (Phase 0.2) — All route error handlers migrated from bare `{"error": str(e)}` to `safe_error()` from `opencut/errors.py`. Zero bare 500 error patterns remain across all 13 route files. Every API error returns `{error, code, suggestion}`.
+- **Smart Tab Reordering** (Phase 3.2) — Sub-tabs now physically reorder in the DOM based on contextual relevance scores. Highest-scoring features move to front within each tab group. `resetTabOrder()` restores original order on clip deselection.
+- **Frontend Error Code Mapper** (Phase 0.2) — `enhanceError()` now reads `data.code` field before regex fallbacks. Code-to-action mapping for GPU_OOM, MISSING_DEPENDENCY, FILE_NOT_FOUND, etc. with navigable settings links.
+- **Core Module Unit Tests** (Phase 0.1) — 15 additional core modules tested (silence, fillers, scene_detect, auto_edit, highlights, workflow, speed_ramp, audio, face_reframe, chromakey, video_fx, export_presets, diarize, audio_duck, thumbnail).
+- **i18n String Extraction** (Phase 6.2) — ~200 additional `data-i18n` attributes added to buttons, headers, labels, and tabs in index.html with corresponding en.json keys.
+- **Pre-commit Hooks** (Phase 0.1) — `.pre-commit-config.yaml` now includes ruff lint/format + pytest smoke suite (on pre-push). `pre-commit` added to dev dependencies.
+- **Log Levels Audit** (Phase 0.3) — 22 log calls across 10 files corrected: verbose processing steps downgraded INFO→DEBUG, fallback/degraded paths upgraded INFO→WARNING. No secrets found in logging.
+- **Core Module Unit Tests Batch 2** (Phase 0.1) — 135 additional tests across 28 previously untested core modules (animated_captions, audio_enhance, audio_pro, audio_suite, caption_burnin, captions_enhanced, color_management, emotion_highlights, face_swap, face_tools, lut_library, motion_graphics, music_ai, music_gen, object_removal, particles, shorts_pipeline, style_transfer, styled_captions, transitions_3d, upscale_pro, video_ai, voice_gen, zoom, broll_insert, broll_generate, multimodal_diarize, social_post).
+- **ExtendScript Mock Harness** (Phase 0.1) — `tests/jsx_mock.js` provides fake Premiere Pro DOM (app.project, activeSequence, tracks, markers, ProjectItem). Tests 38 ExtendScript functions including ocApplySequenceCuts, ocBatchRenameProjectItems, ocAddSequenceMarkers, ocAddNativeCaptionTrack. 35 assertions pass under Node.js.
+
+### Security
+- Replaced all `__import__()` calls with `importlib.import_module()` / `importlib.util.find_spec()` in helpers.py, system.py, engine_registry.py, plugins.py
+
+### Fixed
+- **`_safe_error` undefined** — Fixed `_safe_error` reference in video.py multicam XML (F821 undefined name bug)
+- **`safe_int` missing import** — Added missing import in settings.py log tail endpoint (F821)
+- **Timecode watermark plugin** — `start_tc` variable now used in FFmpeg drawtext filter (was extracted but unused)
+- **Version sync** — All version strings (pyproject.toml, __init__.py, CEP manifest, UXP manifest, server startup banner, installer AppConstants.cs) now read from single source. Server banner uses `__version__` instead of hardcoded string.
+- **TooManyJobsError handling** — 7 remaining `_new_job()` calls in system.py, search.py, timeline.py now properly catch `TooManyJobsError` and return HTTP 429 instead of 500.
+- **audio_separate cleanup crash** — `temp_audio` variable moved above try block to prevent `NameError` in finally clause if `_resolve_output_dir()` fails.
+- **GPUContext memory leak** — `__exit__` now calls `.cpu()` on registered models before clearing, actually freeing GPU VRAM instead of only deleting a loop variable.
+- **batch_id collision risk** — Batch IDs extended from 8 to 16 hex chars, reducing collision probability from 1-in-65K to 1-in-4-billion batches.
+- **XSS in engine registry** — All API-sourced values (domain, engine name, display_name, quality, speed) now wrapped in `esc()` before innerHTML insertion.
+- **elapsedTimer leak** — `startJob()` now clears any existing elapsed timer before creating a new one, preventing interval accumulation on rapid re-starts.
+- **mediaScanTimer leak** — Periodic media scan `setInterval` now assigned to tracked variable and cleared on `beforeunload`.
+- **pollTimer leak** — `trackJobPoll()` now clears any existing poll timer before creating a new one; SSE fallback no longer creates duplicate trackers.
+- **SSE parse errors silent** — SSE `onmessage` handler now logs JSON parse failures to console instead of silently swallowing them.
+- **Reframe dimension DoS** — `/video/reframe` now enforces `min_val=16, max_val=7680` on width/height parameters, preventing absurd allocation requests.
+- **ASS subtitle injection** — Caption burn-in now strips backslash sequences from source text before ASS formatting, preventing style override injection via subtitle content.
+- **23 import sorting violations** fixed (I001)
+- **15 unused imports** removed (F401)
+- **4 unused variables** removed (F841)
+- Codebase at **0 lint warnings** matching CI config
+
+## [1.9.1] - 2026-03-26
+
+### Added
+- **Frontend Context Awareness** (Phase 3.2) — CEP panel now calls `POST /context/analyze` after clip selection. Guidance banner shows clip-specific recommendations. Sub-tabs for high-scoring features get visual highlights. Dismiss button hides banner.
+- **Parallel Batch Processing** (Phase 5.4) — `process_batch_parallel()` in `batch_process.py` uses `ThreadPoolExecutor` for concurrent multi-clip operations. GPU ops limited to 1 worker, CPU ops scale to core count. Partial failure isolation — one item crash doesn't kill the batch.
+- **Clip Notes Plugin** (Phase 6.1) — Second example plugin at `opencut/data/example_plugins/clip-notes/`. SQLite-backed per-clip notes with `POST /note`, `GET /notes`, `DELETE /note`, `GET /export` (text/CSV). Shipped alongside timecode-watermark as reference plugins.
+- **Route Smoke Tests** (Phase 0.1) — Comprehensive smoke test suite in `tests/test_route_smoke.py` covering all 175+ endpoints across 13 blueprints. Verifies routes don't crash with minimal payloads.
+
+### Fixed
+- **Ruff lint cleanup** — Fixed unused imports in new test files (8 auto-fixed F401 violations)
+
+## [1.9.0] - 2026-03-26
+
+### Added
+- **Contextual Awareness** (Phase 3.2) — Clip type detection and feature relevance scoring. `POST /context/analyze` accepts clip metadata and returns scored features, guidance messages, and per-tab relevance scores. 35 features scored across 4 tabs based on clip tags (talking_head, audio_only, long_duration, etc.)
+- **Plugin System** (Phase 6.1) — Plugin loader discovers/validates/loads plugins from `~/.opencut/plugins/`. Each plugin has a `plugin.json` manifest and optional Flask Blueprint routes registered under `/plugins/<name>/`. Endpoints: `GET /plugins/list`, `GET /plugins/loaded`, `POST /plugins/install`, `POST /plugins/uninstall`. Includes example timecode-watermark plugin.
+- **Multicam XML Export** — Generate Premiere Pro compatible FCP XML from multicam diarization cut data. `POST /video/multicam-xml` endpoint. CLI `multicam` command now exports XML instead of showing placeholder message.
+- **Background Indexing with SQLite FTS5** (Phase 5.3) — Persistent footage index at `~/.opencut/footage_index.db` with full-text search. Incremental re-indexing via mtime comparison. Endpoints: `POST /search/auto-index`, `POST /search/db-search`, `GET /search/db-stats`, `POST /search/cleanup`.
+- **Response Streaming** (Phase 5.2) — NDJSON streaming utilities for progressively delivering large result sets. `GET /jobs/stream-result/<job_id>` streams completed job results (segments, scenes, thumbnails) in batches of 50.
+- **Context blueprint** (`routes/context.py`) — 2 new endpoints
+- **Plugins blueprint** (`routes/plugins.py`) — 4 new endpoints
+- **4 new search endpoints** — auto-index, db-search, db-stats, cleanup
+
+### Fixed
+- **TooManyJobsError handling** — All 96 manual `_new_job()` calls across video.py (47), audio.py (23), and captions.py (13) now catch `TooManyJobsError` and return proper 429 responses instead of 500 errors
+- **AI GPU rate limiting** — Added `rate_limit("ai_gpu")` to 6 GPU-heavy routes: video AI upscale, background removal, shorts pipeline, and 3 music AI generation routes. Prevents concurrent GPU OOM crashes
+- **Settings import validation** — `/settings/import` now validates workflow steps (requires endpoint + label per step) before saving, preventing malformed workflow injection
+- **Preview frame bounds** — `width` parameter bounded to 32-3840, `detection_skip` bounded to 1-30
+- **Secure tempfile** — Preview frame extraction uses `tempfile.mkstemp()` instead of predictable path construction
+
+### Security
+- 96 routes hardened against job limit bypass (TooManyJobsError → 429)
+- Input bounds added to prevent resource exhaustion via unbounded parameters
+- Workflow import step validation prevents malformed workflow injection
+- Fixed double rate-limit release in demucs/watermark install routes (decorator + explicit call)
+
 ## [1.5.0] - 2026-03-23
 
 ### Added

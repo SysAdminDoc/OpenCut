@@ -262,7 +262,10 @@ def _write_ass_file(f, segments: List[Dict], style: Dict, info: Dict):
     for seg in segments:
         start = _format_ass_time(seg.get("start", 0))
         end = _format_ass_time(seg.get("end", 0))
-        text = seg.get("text", "").strip().replace("\n", "\\N")
+        text = seg.get("text", "").strip()
+        # Strip backslashes from source text to prevent ASS override injection
+        text = text.replace("\\", "")
+        text = text.replace("\n", "\\N")
         text = _re.sub(r'\{[^}]*\}', '', text)
         f.write(f"Dialogue: 0,{start},{end},Default,,0,0,0,,{text}\n")
 

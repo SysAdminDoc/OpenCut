@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencut"
-version = "1.9.0"
+version = "1.9.2"
 description = "Open-source AI video editing automation for Adobe Premiere Pro - captions, audio processing, visual effects, and more"
 readme = "README.md"
 license = {text = "MIT"}
@@ -39,6 +39,7 @@ dependencies = [
     "rich>=13.0",
     "flask>=3.0",
     "flask-cors>=4.0",
+    "python-json-logger>=2.0",
 ]
 
 [project.optional-dependencies]
@@ -132,6 +133,7 @@ dev = [
     "pytest>=7.0",
     "pytest-cov>=4.0",
     "ruff>=0.1",
+    "pre-commit>=3.0",
 ]
 
 [project.scripts]

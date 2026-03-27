@@ -7,6 +7,7 @@ Uses a generated test audio file with known silence patterns.
 import os
 import subprocess
 import tempfile
+
 import pytest
 
 # Generate test media files
@@ -279,7 +280,7 @@ class TestSRTExport:
 
 class TestConfig:
     def test_presets(self):
-        from opencut.utils.config import get_preset, PRESETS
+        from opencut.utils.config import PRESETS, get_preset
         for name in PRESETS:
             cfg = get_preset(name)
             assert cfg.silence.threshold_db < 0
