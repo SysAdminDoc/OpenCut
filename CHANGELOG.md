@@ -1,5 +1,14 @@
 # Changelog
 
+## [1.9.12] - 2026-03-27
+
+### Fixed (Batch 44 — Dependencies & Hardcoded Ports)
+- **`psutil` added to core dependencies** — `/system/status` endpoint used psutil but it wasn't in dependencies, causing ImportError on fresh installs.
+- **`numpy` upper bound removed** — `<2` cap prevented numpy 2.x which is already used in the dist build. Now `>=1.24` with no upper bound.
+- **3 new optional dependency groups** — `otio` (opentimelineio), `tts` (edge-tts + kokoro), `depth` (torch + transformers). All were installable but not declared in pyproject.toml.
+- **`opentimelineio` added to `[all]` extras** — OTIO export was available in code but not installed via `pip install opencut[all]`.
+- **social_post.py hardcoded port** — `get_oauth_url()` hardcoded `localhost:5679` in all 3 OAuth redirect URIs. Now accepts `port` parameter (default 5679) for correct redirect on non-default ports.
+
 ## [1.9.11] - 2026-03-27
 
 ### Fixed (Batch 43 — Encoding, Docker, CI)
