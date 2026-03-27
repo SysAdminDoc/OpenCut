@@ -21,6 +21,8 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.helpers import get_ffmpeg_path
+
 logger = logging.getLogger("opencut")
 
 
@@ -214,7 +216,7 @@ def measure_loudness(input_path: str) -> LoudnessInfo:
         LoudnessInfo with integrated loudness, true peak, and range.
     """
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "info",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "info",
         "-i", input_path,
         "-af", "loudnorm=print_format=json",
         "-f", "null", "-",
@@ -309,7 +311,7 @@ def normalize_loudness(
         )
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "info",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "info",
         "-y", "-i", input_path,
         "-af", af_filter,
         "-c:v", "copy",

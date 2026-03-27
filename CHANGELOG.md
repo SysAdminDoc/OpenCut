@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.9.13] - 2026-03-27
+
+### Fixed (Batch 45 — Complete ffmpeg/ffprobe Path Resolution)
+- **23 bare `"ffmpeg"` in subprocess calls** — 13 in route files (`audio.py`, `system.py`, `timeline.py`, `video_core.py` x7, `video_editing.py` x3) and 10 in core modules (`audio.py` x2, `audio_suite.py` x2, `highlights.py`, `loudness_match.py` x4, `scene_detect.py`). All replaced with `get_ffmpeg_path()`. On bundled installs where FFmpeg is not in system PATH, every one of these would crash with "command not found".
+
 ## [1.9.12] - 2026-03-27
 
 ### Fixed (Batch 44 — Dependencies & Hardcoded Ports)
