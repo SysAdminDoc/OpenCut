@@ -180,7 +180,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.7**
+- Current: **v1.9.8**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -918,6 +918,11 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **export_video partial file leak** — Failed FFmpeg runs left corrupt partial output files on disk. Added cleanup on non-zero exit.
 - **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.
 - **pip install permission denied** — `safe_pip_install()` failed on Windows when both normal and `--user` installs hit Errno 13 (Microsoft Store Python, OneDrive-synced user dirs, restrictive ACLs). Added `--target ~/.opencut/packages` as third fallback strategy. server.py adds `~/.opencut/packages` to `sys.path` at startup.
+
+## v1.9.8 Batch 40 (Schemas, OpenAPI, Test Fixes)
+- **9 new response schemas** — WorkflowResult, ContextAnalysisResult, VideoAIResult, ShortsPipelineResult, DepthMapResult, BrollPlanResult, BatchResult, PluginListResult (22 total).
+- **OpenAPI +15 endpoints** — typed response schemas for all AI video, depth, shorts, workflow, context routes.
+- **Test fixes** — 2 broken assertions (test_info_with_csrf, test_file_no_path), pytest exit hang fixed with worker pool shutdown fixture.
 
 ## v1.9.7 Batch 39 (Priority Queue, MCP Tools, Final ffprobe)
 - **WorkerPool priority queue** — replaced FIFO ThreadPoolExecutor with PriorityQueue-backed pool. CRITICAL(0) jobs leapfrog BACKGROUND(200) when workers busy.

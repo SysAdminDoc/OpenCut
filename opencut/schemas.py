@@ -205,6 +205,116 @@ class ExportMarkersResult:
 
 
 # ---------------------------------------------------------------------------
+# Workflow results
+# ---------------------------------------------------------------------------
+
+@dataclass
+class WorkflowResult:
+    """Result from /workflow/run."""
+    workflow: str = ""
+    steps_completed: int = 0
+    total_steps: int = 0
+    output_path: Optional[str] = None
+    step_results: List[dict] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+# ---------------------------------------------------------------------------
+# Context awareness results
+# ---------------------------------------------------------------------------
+
+@dataclass
+class ContextAnalysisResult:
+    """Result from /context/analyze."""
+    tags: List[str] = field(default_factory=list)
+    features: List[dict] = field(default_factory=list)
+    guidance: str = ""
+    tab_scores: Dict[str, int] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+# ---------------------------------------------------------------------------
+# Video AI results
+# ---------------------------------------------------------------------------
+
+@dataclass
+class VideoAIResult:
+    """Generic result for /video/ai/* routes (upscale, rembg, denoise, interpolate)."""
+    output_path: str = ""
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class ShortsPipelineResult:
+    """Result from /video/shorts-pipeline."""
+    clips: List[dict] = field(default_factory=list)
+    total_clips: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class DepthMapResult:
+    """Result from /video/depth/* routes."""
+    output_path: str = ""
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class BrollPlanResult:
+    """Result from /video/broll-plan."""
+    windows: List[dict] = field(default_factory=list)
+    total_windows: int = 0
+    total_broll_time: float = 0.0
+    keywords_used: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+# ---------------------------------------------------------------------------
+# Batch processing results
+# ---------------------------------------------------------------------------
+
+@dataclass
+class BatchResult:
+    """Result from batch processing routes."""
+    batch_id: str = ""
+    total: int = 0
+    completed: int = 0
+    failed: int = 0
+    outputs: List[dict] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+# ---------------------------------------------------------------------------
+# Plugin results
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PluginListResult:
+    """Result from /plugins/list."""
+    plugins: List[dict] = field(default_factory=list)
+    plugins_dir: str = ""
+    total: int = 0
+    loaded: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+# ---------------------------------------------------------------------------
 # System results
 # ---------------------------------------------------------------------------
 
