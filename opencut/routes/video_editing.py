@@ -15,6 +15,7 @@ from opencut.errors import safe_error
 from opencut.helpers import (
     _resolve_output_dir,
     _unique_output_path,
+    get_ffmpeg_path,
     get_ffprobe_path,
 )
 from opencut.jobs import (
@@ -137,7 +138,7 @@ def video_reframe(job_id, filepath, data):
                 try:
                     import re as _re
                     cd_cmd = [
-                        "ffmpeg", "-i", filepath,
+                        get_ffmpeg_path(), "-i", filepath,
                         "-vf", "cropdetect=24:16:0",
                         "-frames:v", "120", "-f", "null", "-"
                     ]
@@ -189,7 +190,7 @@ def video_reframe(job_id, filepath, data):
     _update_job(job_id, progress=20, message=f"Reframing ({mode})...")
 
     cmd = [
-        "ffmpeg", "-i", filepath,
+        get_ffmpeg_path(), "-i", filepath,
         "-vf", vf,
         "-c:v", "libx264", "-crf", crf, "-preset", "medium",
         "-c:a", "aac", "-b:a", "192k",
@@ -496,7 +497,7 @@ def video_auto_zoom(job_id, filepath, data):
                 f":d=1:s={src_w}x{src_h}"
             )
             cmd = [
-                "ffmpeg", "-y", "-i", filepath,
+                get_ffmpeg_path(), "-y", "-i", filepath,
                 "-vf", zoompan_filter,
                 "-c:a", "copy",
                 out_path,

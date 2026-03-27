@@ -11,6 +11,8 @@ import tempfile
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
+from opencut.helpers import get_ffmpeg_path
+
 from .silence import TimeSegment
 
 
@@ -41,7 +43,7 @@ def extract_audio_pcm(
     channels = "1" if mono else "2"
 
     cmd = [
-        "ffmpeg",
+        get_ffmpeg_path(),
         "-hide_banner",
         "-loglevel", "error",
         "-i", filepath,
@@ -77,7 +79,7 @@ def extract_audio_wav(filepath: str, output_path: Optional[str] = None, sample_r
         os.close(fd)
 
     cmd = [
-        "ffmpeg",
+        get_ffmpeg_path(),
         "-hide_banner",
         "-loglevel", "error",
         "-y",

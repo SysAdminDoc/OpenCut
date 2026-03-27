@@ -14,7 +14,7 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_ffprobe_path
+from opencut.helpers import get_ffmpeg_path, get_ffprobe_path
 
 logger = logging.getLogger("opencut")
 
@@ -84,7 +84,7 @@ def detect_scenes(
     # Use FFmpeg select filter to detect scene changes
     # This outputs timestamps where scene changes occur
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "info",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "info",
         "-i", input_path,
         "-vf", f"select='gt(scene,{max(0.0, min(1.0, float(threshold)))})',showinfo",
         "-f", "null", "-",

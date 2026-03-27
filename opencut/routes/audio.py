@@ -20,6 +20,7 @@ from opencut.errors import safe_error
 from opencut.helpers import (
     _make_sequence_name,
     _resolve_output_dir,
+    get_ffmpeg_path,
     get_ffprobe_path,
 )
 from opencut.jobs import (
@@ -1360,7 +1361,7 @@ def audio_waveform(job_id, filepath, data):
 
     # Extract raw audio samples as 16-bit PCM
     cmd = [
-        "ffmpeg", "-i", file_path, "-ac", "1", "-ar", "8000",
+        get_ffmpeg_path(), "-i", file_path, "-ac", "1", "-ar", "8000",
         "-f", "s16le", "-acodec", "pcm_s16le", "-v", "error", "-"
     ]
     result = _sp.run(cmd, capture_output=True, timeout=120)

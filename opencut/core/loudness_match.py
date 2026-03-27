@@ -13,12 +13,18 @@ import subprocess as _sp
 from typing import List
 
 try:
+    from ..helpers import get_ffmpeg_path
     from ..helpers import run_ffmpeg as _helpers_run_ffmpeg
 except ImportError:
     try:
+        from opencut.helpers import get_ffmpeg_path
         from opencut.helpers import run_ffmpeg as _helpers_run_ffmpeg
     except ImportError:
         _helpers_run_ffmpeg = None  # type: ignore
+        from shutil import which as _which
+
+        def get_ffmpeg_path() -> str:  # type: ignore[misc]
+            return _which("ffmpeg") or "ffmpeg"
 
 logger = logging.getLogger("opencut")
 
@@ -59,7 +65,7 @@ def measure_loudness(filepath: str) -> dict:
         ValueError: If loudnorm output cannot be parsed.
     """
     cmd = [
-        "ffmpeg", "-hide_banner",
+        get_ffmpeg_path(), "-hide_banner",
         "-i", filepath,
         "-af", "loudnorm=print_format=json",
         "-vn",
@@ -134,7 +140,7 @@ def normalize_to_lufs(
     # --- Pass 1: Measure ---
     logger.debug("Loudness normalisation pass 1 (measure): %s", input_path)
     pass1_cmd = [
-        "ffmpeg", "-hide_banner",
+        get_ffmpeg_path(), "-hide_banner",
         "-i", input_path,
         "-af", f"loudnorm=I={target_lufs}:TP={true_peak}:LRA=11:print_format=json",
         "-vn",
@@ -191,7 +197,7 @@ def normalize_to_lufs(
 
     if is_video:
         pass2_cmd = [
-            "ffmpeg", "-hide_banner", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-y",
             "-i", input_path,
             "-af", loudnorm_filter,
             "-c:v", "copy",
@@ -200,7 +206,7 @@ def normalize_to_lufs(
         ]
     else:
         pass2_cmd = [
-            "ffmpeg", "-hide_banner", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-y",
             "-i", input_path,
             "-af", loudnorm_filter,
             "-c:a", "aac", "-b:a", "192k",

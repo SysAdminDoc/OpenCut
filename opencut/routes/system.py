@@ -24,7 +24,7 @@ except ImportError:
 
 from opencut import __version__
 from opencut.errors import safe_error
-from opencut.helpers import OPENCUT_DIR, _try_import, _try_import_from
+from opencut.helpers import OPENCUT_DIR, _try_import, _try_import_from, get_ffmpeg_path
 from opencut.jobs import (
     _is_cancelled,
     _list_jobs_copy,
@@ -569,7 +569,7 @@ def check_dependencies():
 
     # Check FFmpeg
     try:
-        r = _sp.run(["ffmpeg", "-version"], capture_output=True, text=True, timeout=5)
+        r = _sp.run([get_ffmpeg_path(), "-version"], capture_output=True, text=True, timeout=5)
         line = r.stdout.split("\n")[0] if r.stdout else ""
         deps["ffmpeg"] = {"installed": True, "version": line}
     except Exception:

@@ -11,6 +11,7 @@ import subprocess as _sp
 from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
+from opencut.helpers import get_ffmpeg_path
 from opencut.jobs import (
     _is_cancelled,
     _update_job,
@@ -91,7 +92,7 @@ def timeline_export_from_markers(job_id, filepath, data):
         _update_job(job_id, progress=pct, message=f"Extracting marker '{name}' ({idx + 1}/{total})...")
 
         cmd = [
-            "ffmpeg", "-y",
+            get_ffmpeg_path(), "-y",
             "-i", input_file,
             "-ss", str(start),
             "-t", str(duration),
