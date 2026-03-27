@@ -339,7 +339,7 @@ def video_watermark(job_id, filepath, data):
             _update_job(job_id, progress=95, message="Merging audio...")
             try:
                 _sp.run([
-                    'ffmpeg', '-y',
+                    get_ffmpeg_path(), '-y',
                     '-i', temp_video,
                     '-i', filepath,
                     '-c:v', 'libx264', '-preset', 'fast', '-crf', '18',
