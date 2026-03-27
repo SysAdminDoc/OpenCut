@@ -10,9 +10,10 @@
 ## Key Files
 
 ### Backend (Python)
-- `opencut/server.py` (~800 lines) - Flask app creation, startup, port management, download_models, `_setup_system_site_packages()` for frozen builds. JSON structured logging via python-json-logger (file handler; console stays plain text). `[job_id]` correlation via _JobLogFilter. `/logs/tail` endpoint for filtered log viewing.
+- `opencut/server.py` (~800 lines) - `create_app(config)` factory function for isolated Flask instances, startup, port management, download_models, `_setup_system_site_packages()` for frozen builds. JSON structured logging via python-json-logger (file handler; console stays plain text). `[job_id]` correlation via _JobLogFilter. `/logs/tail` endpoint for filtered log viewing.
+- `opencut/config.py` — `OpenCutConfig` dataclass centralizing env var reads (host, port, debug, cors_origins, log_level, data_dir). Used by `create_app(config)` for testable/isolated instances.
 - `opencut/security.py` (~280 lines) - Path validation, CSRF tokens, safe_pip_install (frozen-build aware via `_find_system_python()`), safe_float/safe_int (with range clamp + inf/nan rejection), validate_filepath, VALID_WHISPER_MODELS, rate_limit/require_rate_limit
-- `opencut/jobs.py` (~240 lines) - Job state, _new_job, _update_job, _kill_job_process, _get_job_copy, _list_jobs_copy, _unregister_job_process, TooManyJobsError, MAX_CONCURRENT_JOBS=10, async_job decorator. Thread-local job_id for log correlation (_thread_local.job_id set in _process, cleared in finally). _safe_error delegates to errors.safe_error for structured classification.
+- `opencut/jobs.py` (~240 lines) - Job state, _new_job, _update_job, _kill_job_process, _get_job_copy, _list_jobs_copy, _unregister_job_process, TooManyJobsError, MAX_CONCURRENT_JOBS=10, async_job decorator (with `filepath_required` and `filepath_param` parameters), `make_install_route()` factory for identical install endpoints. Thread-local job_id for log correlation (_thread_local.job_id set in _process, cleared in finally). _safe_error delegates to errors.safe_error for structured classification.
 - `opencut/helpers.py` (~530 lines) - _try_import, output paths, FFmpegCmd builder, FFmpeg progress runner, deferred temp cleanup, job time tracking, compute_estimate, `run_ffmpeg()`, `ensure_package()`, `get_video_info()`
 - `opencut/errors.py` (~230 lines) - Structured error taxonomy. OpenCutError exception class with code/message/suggestion. `error_response()` helper for routes. `safe_error(exc, context)` classifies exceptions (MemoryError→GPU_OUT_OF_MEMORY, TimeoutError→OPERATION_TIMEOUT, PermissionError→PERMISSION_DENIED, ImportError→MISSING_DEPENDENCY, etc.) and returns structured JSON with recovery suggestions. Factory constructors: missing_dependency, file_not_found, gpu_out_of_memory, invalid_input, invalid_model, operation_failed, rate_limited, queue_full, module_not_available, file_permission_denied, too_many_items, server_busy, install_failed. All errors return `{error, code, suggestion}` JSON.
 - `opencut/checks.py` (~90 lines) - Centralized dependency availability checks (demucs, watermark, pedalboard, audiocraft, edge_tts, rembg, upscale, scenedetect, auto-editor, transnetv2, resemble-enhance, ollama)
@@ -42,11 +43,15 @@
 - `nlp_command.py` - Natural language → API route mapping. COMMAND_MAP with 19 entries. parse_command_keyword(text) → {route, params, confidence, matched_keyword} or None. parse_command_llm(text, config, routes). parse_command(text, llm_config) tries LLM then keyword. extract_params_from_text(text) extracts numbers/language/intensity hints.
 
 ### Route Blueprints (`opencut/routes/`)
-- `__init__.py` - `register_blueprints(app)` registers all 11 Blueprints (added workflow_bp)
-- `system.py` (~1130 lines) - /health, /shutdown, /info, /gpu/*, /dependencies (includes color_match, auto_zoom, footage_search, loudness_match, deliverables, nlp_command checks), /file, /whisper/*, /llm/*
-- `audio.py` (~2175 lines) - /silence, /fillers, /audio/*, /audio/beat-markers (→ beat timestamps for ExtendScript markers), /audio/loudness-match (async, on_progress)
-- `captions.py` (~1590 lines) - /captions/*, /captions/chapters (LLMConfig object, not dict), /captions/repeat-detect (word-level timestamps → detect_repeated_takes)
-- `video.py` (~4021 lines) - /video/*, /video/color-match (async, on_progress), /video/auto-zoom (dynamic resolution via probe — no hardcoded hd1080), /video/multicam-cuts (result.get("cuts") — dict not list)
+- `__init__.py` - `register_blueprints(app)` registers all 17 Blueprints (system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins) + dynamic plugin blueprints
+- `system.py` (~1130 lines) - /health, /shutdown, /info, /gpu/*, /dependencies, /file, /whisper/*, /llm/*. Install routes use `make_install_route()` factory.
+- `audio.py` (~2175 lines) - /silence, /fillers, /audio/*, /audio/beat-markers, /audio/loudness-match. All async routes use `@async_job` decorator.
+- `captions.py` (~1590 lines) - /captions/*, /captions/chapters (LLMConfig object, not dict), /captions/repeat-detect. All async routes use `@async_job`.
+- `video_core.py` (~1395 lines) - /video/export, /video/reframe, /video/trim, /video/merge, /video/concat, /video/pip, /video/blend, /video/stabilize, /video/speed, /video/letterbox, /video/preview-frame, /video/color-match, /video/auto-zoom, /video/multicam-cuts, /video/multicam-xml, /video/highlights
+- `video_editing.py` (~750 lines) - /video/transitions/*, /video/title/*, /video/scenes, /video/denoise, batch processing routes
+- `video_fx.py` (~687 lines) - /video/fx/*, /video/chromakey, /video/lut/*, /video/style/*, /video/particles
+- `video_specialty.py` (~489 lines) - /video/face/*, /video/object/*, /video/watermark, /video/shorts, /video/rembg
+- `video_ai.py` (~443 lines) - /video/ai/*, AI model install routes (depth, emotion, multimodal-diarize, broll-generate, crisper-whisper)
 - `jobs_routes.py` (~330 lines) - /status/*, /cancel/*, /cancel-all, /jobs, /stream/*, /queue/*, /jobs/history (SQLite-backed), /jobs/stats, /jobs/interrupted
 - `settings.py` (~440 lines) - /presets/*, /favorites/*, /workflows/*, /settings/import|export, /settings/llm (GET masks key, POST preserves masked), /settings/loudness-target, /settings/auto-zoom, /settings/chapters, /settings/multicam, /settings/footage-index, /logs/tail (filtered log viewer), /templates/list, /templates/save, /templates/apply
 
@@ -101,7 +106,7 @@
 - `ROADMAP.md` - 7-phase implementation roadmap with priority matrix and success metrics
 
 ### Tests
-- `tests/conftest.py` - Flask test client + CSRF fixtures + test media generators
+- `tests/conftest.py` - Flask test client via `create_app()` factory + CSRF fixtures + test media generators
 - `tests/test_core.py` - Core module unit tests (silence, export, config)
 - `tests/test_integration.py` - Route integration tests (health, CSRF, search, NLP, settings, timeline)
 - `tests/test_new_modules.py` - v1.5 module tests (repeat_detect, chapter_gen, footage_search, deliverables, multicam, nlp_command, loudness_match, auto_zoom, color_match)
@@ -116,6 +121,11 @@
 - `tests/test_batch_parallel.py` - Parallel batch processing (ThreadPoolExecutor, GPU/CPU workers, error isolation, cancellation)
 - `tests/test_batch_executor.py` - BatchExecutor class tests (OperationSpec dispatch, combined progress, cancellation, partial failure)
 - `tests/test_clip_notes_plugin.py` - Clip Notes plugin tests (CRUD notes, export text/CSV)
+- `tests/test_core_modules.py` - Core module unit tests batch 1 (15 modules: silence, fillers, scene_detect, auto_edit, highlights, etc.)
+- `tests/test_core_modules_batch2.py` - Core module unit tests batch 2 (135 tests across 28 modules)
+- `tests/test_integration_ffmpeg.py` - FFmpeg integration tests
+- `tests/test_integration_whisper.py` - Whisper integration tests
+- `tests/jsx_mock.js` - ExtendScript mock harness (38 JSX functions, 35 assertions under Node.js)
 
 ### Example Plugins (`opencut/data/example_plugins/`)
 - `timecode-watermark/` - FFmpeg drawtext timecode overlay plugin
@@ -124,7 +134,7 @@
 ## Architecture
 - Backend runs as standalone process (exe or `python -m opencut.server`)
 - Panel communicates via XHR to localhost:5679
-- **Blueprint-based route organization**: 13 Blueprints (system, audio, captions, video, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins) + dynamically loaded plugin blueprints
+- **Blueprint-based route organization**: 17 Blueprints (system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins) + dynamically loaded plugin blueprints
 - **Shared modules**: security.py (CSRF + path validation), jobs.py (job state), helpers.py (utilities + `run_ffmpeg` + `ensure_package` + `get_video_info`), user_data.py (thread-safe file I/O)
 - **CSRF protection**: Token generated at startup in security.py, returned via /health, sent as `X-OpenCut-Token` header on mutations. `@require_csrf` decorator applied to ALL POST routes.
 - **Path validation**: `validate_path()` checks realpath, null bytes, `..` components, symlinks. `validate_filepath()` adds isfile check. Applied to ALL routes accepting file paths.
@@ -132,7 +142,9 @@
 - **Rate limiting**: `require_rate_limit(key)` decorator prevents concurrent expensive ops (e.g. model installs share `"model_install"` key)
 - **Error taxonomy**: `OpenCutError` with typed codes (`MISSING_DEPENDENCY`, `GPU_OUT_OF_MEMORY`, etc.) — frontend `enhanceError()` adds actionable hints
 - **Job safety**: `TooManyJobsError` (429), `_get_job_copy()`/`_list_jobs_copy()` for thread-safe reads, `_unregister_job_process()` for cleanup
-- **Async job decorator**: `@async_job("type")` wraps routes in standard thread + try/catch + update pattern. Sets thread-local job_id for log correlation. Auto-persists terminal jobs to SQLite via _persist_job.
+- **Async job decorator**: `@async_job("type")` wraps routes in standard thread + try/catch + update pattern. Extended with `filepath_required` (auto-validates input file) and `filepath_param` (custom param name) parameters. Sets thread-local job_id for log correlation. Auto-persists terminal jobs to SQLite via _persist_job. All 97 async routes now use this decorator (no manual _new_job/Thread patterns remain).
+- **Install route factory**: `make_install_route(package, pip_name, check_fn, key)` in jobs.py generates identical install endpoint handlers. Used by 6 routes (depth, emotion, multimodal-diarize, broll-generate, face, crisper-whisper).
+- **App factory**: `create_app(config)` in server.py creates isolated Flask instances. `OpenCutConfig` dataclass in config.py centralizes env var reads. Tests use independent app instances. Module-level `app = create_app()` preserved for backward compat.
 - Job system: `_new_job()` creates job, thread pool processes, SSE/polling for status. SQLite persistence at `~/.opencut/jobs.db` (WAL mode). `mark_interrupted()` on startup recovers jobs from previous crashes.
 - **Workflow engine**: `core/workflow.py` chains steps sequentially via Flask test client, polls sub-jobs to completion, checks parent cancellation between steps. `routes/workflow.py` serves 6 built-in presets + user custom workflows.
 - **Request size limit**: 100 MB `MAX_CONTENT_LENGTH` with 413 error handler
@@ -160,7 +172,7 @@
 - Optional deps: `pip install -e ".[ai]"` (CPU), `pip install -e ".[ai-gpu]"` (GPU with onnxruntime-gpu), `pip install -e ".[all]"` (everything)
 
 ## Dev Tooling
-- `scripts/sync_version.py` - Syncs version from `__init__.py` to all 6 target locations (`python scripts/sync_version.py --set X.Y.Z`)
+- `scripts/sync_version.py` - Syncs version from `__init__.py` to all 19 targets (`python scripts/sync_version.py --set X.Y.Z`). `--check` flag for CI enforcement.
 - `.editorconfig` - Editor indent/encoding rules (4-space Python, 2-space JS/CSS/HTML)
 - `.pre-commit-config.yaml` - ruff lint+format, trailing whitespace, EOF fixer, YAML/JSON checks
 - `DEVELOPMENT.md` - Developer setup guide (backend, CEP, building, linting)
@@ -168,11 +180,15 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.0**
-- All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge
-- Use `python scripts/sync_version.py --set X.Y.Z` to update all 18 targets at once (including UXP files)
+- Current: **v1.9.3**
+- All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
+- Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
+- Use `python scripts/sync_version.py --check` in CI to verify all targets match
 
 ## Gotchas
+- **video.py was split** — `video.py` no longer exists. Routes are in `video_core.py`, `video_editing.py`, `video_fx.py`, `video_specialty.py`, `video_ai.py`. All URL paths unchanged. All 5 files share the `/video` URL prefix.
+- **No manual _new_job/Thread patterns** — All async routes MUST use `@async_job("type")` decorator. Never write manual `_new_job()` + `threading.Thread` + `_update_job(status="complete")`. The decorator handles job creation, thread spawning, error handling, cancellation race conditions, and SQLite persistence.
+- **Install routes use factory** — New install endpoints should use `make_install_route(package, pip_name, check_fn, key)` from jobs.py instead of duplicating the install handler pattern.
 - `subprocess.run` must use `_sp.run` (the alias) in route files
 - ExtendScript is ES3: no let/const, no arrow functions, no template literals
 - CEP Chromium needs `user-select: text` override for inputs
@@ -927,4 +943,4 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **NDJSON response mime type** — `application/x-ndjson`. Frontend must parse line-by-line, not `JSON.parse()` the whole body. Each line is a valid JSON object.
 - **Context awareness `score_features` capability check** — The scoring checks for "audio" and "video" capabilities by inferring from tags (e.g., `audio_only` implies has audio but no video). Tags like `talking_head` imply both audio and video are present.
 - **`rate_limit("ai_gpu")` scope** — Shared across all AI routes. If upscale is running, music generation returns 429. This is intentional to prevent GPU memory conflicts.
-- **13 Blueprints** — Route registration list in `__init__.py` is now: system, audio, captions, video, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins. Plus dynamic plugin blueprints.
+- **17 Blueprints** — Route registration list in `__init__.py` is now: system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins. Plus dynamic plugin blueprints.
