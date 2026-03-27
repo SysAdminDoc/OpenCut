@@ -7,7 +7,7 @@
   "targets": {
     ".NETCoreApp,Version=v9.0": {},
     ".NETCoreApp,Version=v9.0/win-x64": {
-      "OpenCut-Setup/1.9.0": {
+      "OpenCut-Setup/1.9.3": {
         "dependencies": {
           "runtimepack.Microsoft.NETCore.App.Runtime.win-x64": "9.0.14",
           "runtimepack.Microsoft.WindowsDesktop.App.Runtime.win-x64": "9.0.14"
@@ -943,7 +943,7 @@
     }
   },
   "libraries": {
-    "OpenCut-Setup/1.9.0": {
+    "OpenCut-Setup/1.9.3": {
       "type": "project",
       "serviceable": false,
       "sha512": ""

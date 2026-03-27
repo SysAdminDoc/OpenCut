@@ -104,6 +104,12 @@ TARGETS = [
         r'(#define MyAppVersion\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
         r'\g<1>{v}\g<2>',
     ),
+    # CEP package.json
+    (
+        "extension/com.opencut.panel/package.json",
+        r'("version":\s*")[0-9]+\.[0-9]+\.[0-9]+(")',
+        r'\g<1>{v}\g<2>',
+    ),
     # UXP manifest.json
     (
         "extension/com.opencut.uxp/manifest.json",
@@ -147,6 +153,26 @@ def set_version(new_ver: str) -> None:
     print(f"  SET  {INIT_PY.relative_to(ROOT)}  ->  {new_ver}")
 
 
+def check_file(rel_path: str, pattern: str, version: str) -> bool:
+    """Check if a file's version matches. Returns True if in sync."""
+    fpath = ROOT / rel_path
+    if not fpath.exists():
+        return True  # Missing files are OK (optional targets)
+
+    text = fpath.read_text(encoding="utf-8")
+    m = re.search(pattern, text, flags=re.MULTILINE)
+    if not m:
+        return True  # Pattern not found — nothing to check
+
+    # Extract current version from the matched text
+    matched = m.group(0)
+    if version in matched:
+        return True
+
+    print(f"  MISMATCH {rel_path}  (expected {version})")
+    return False
+
+
 def sync_file(rel_path: str, pattern: str, replacement: str, version: str) -> bool:
     """Update a single version occurrence in a file. Returns True if changed."""
     fpath = ROOT / rel_path
@@ -171,6 +197,8 @@ def main() -> None:
     parser = argparse.ArgumentParser(description="Sync OpenCut version across all files")
     parser.add_argument("--set", dest="new_version", metavar="X.Y.Z",
                         help="Set a new version in __init__.py before syncing")
+    parser.add_argument("--check", action="store_true",
+                        help="Check all files are in sync (exit 1 if not). Does not modify files.")
     args = parser.parse_args()
 
     if args.new_version:
@@ -180,6 +208,20 @@ def main() -> None:
         set_version(args.new_version)
 
     version = read_version()
+
+    if args.check:
+        print(f"\nChecking version {version} across project files:\n")
+        all_ok = True
+        for rel_path, pattern, _replacement in TARGETS:
+            if not check_file(rel_path, pattern, version):
+                all_ok = False
+        if all_ok:
+            print(f"\nAll files in sync at v{version}.")
+        else:
+            print(f"\nVersion mismatch detected! Run: python scripts/sync_version.py")
+            sys.exit(1)
+        return
+
     print(f"\nSyncing version {version} across project files:\n")
 
     changed = 0

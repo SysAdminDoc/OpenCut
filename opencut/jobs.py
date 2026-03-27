@@ -212,13 +212,29 @@ def _cleanup_old_jobs():
             _job_processes.pop(jid, None)
 
 
-def async_job(job_type: str):
+def async_job(job_type: str, *, filepath_required: bool = True,
+              filepath_param: str = "filepath"):
     """
     Decorator that wraps a route handler in the standard async job pattern.
 
     The decorated function receives ``(job_id, filepath, data)`` and should
     return a result dict on success.  Exceptions are caught and recorded as
-    job errors automatically.
+    job errors automatically.  The decorator handles:
+
+    - JSON parsing and filepath validation
+    - ``TooManyJobsError`` → HTTP 429
+    - Background thread via ``WorkerPool``
+    - Cancellation check before marking complete
+    - Job-ID log correlation on the worker thread
+
+    Args:
+        job_type: Job type string for tracking (e.g. "silence", "export").
+        filepath_required: If True (default), validates that a filepath is
+            present and passes ``validate_filepath()`` checks.  Set to False
+            for routes that don't need an input file (install, TTS, etc.).
+        filepath_param: JSON field name for the primary filepath.  Defaults
+            to ``"filepath"``.  Use ``"video_path"``, ``"input_file"``, etc.
+            for routes that use a different field.
 
     Usage::
 
@@ -228,6 +244,18 @@ def async_job(job_type: str):
         def silence_remove(job_id, filepath, data):
             # ... do work, call _update_job(job_id, progress=50) ...
             return {"segments": 42}
+
+        @video_bp.route("/video/depth/install", methods=["POST"])
+        @require_csrf
+        @async_job("install", filepath_required=False)
+        def depth_install(job_id, filepath, data):
+            # filepath will be "" — no input file needed
+            safe_pip_install("transformers", timeout=600)
+            return {"component": "depth_effects"}
+
+    For edge cases (GPU rate limiting, pre-validation, multi-file),
+    handle them inside the handler body — raise ``ValueError`` for
+    validation failures (recorded as job error).
     """
     import functools
 
@@ -238,20 +266,32 @@ def async_job(job_type: str):
         def wrapper(*args, **kwargs):
             from opencut.security import validate_filepath
             data = request.get_json(force=True) or {}
-            filepath = data.get("filepath", "")
-            try:
-                filepath = validate_filepath(filepath)
-            except ValueError as e:
-                return jsonify({"error": str(e)}), 400
+            filepath = data.get(filepath_param, "")
+            if isinstance(filepath, str):
+                filepath = filepath.strip()
 
+            if filepath_required:
+                if not filepath:
+                    return jsonify({"error": "No file path provided"}), 400
+                try:
+                    filepath = validate_filepath(filepath)
+                except ValueError as e:
+                    return jsonify({"error": str(e)}), 400
+            elif filepath:
+                # Optional filepath provided — still validate it
+                try:
+                    filepath = validate_filepath(filepath)
+                except ValueError as e:
+                    return jsonify({"error": str(e)}), 400
+
+            job_label = filepath or job_type
             try:
-                job_id = _new_job(job_type, filepath)
+                job_id = _new_job(job_type, job_label)
             except TooManyJobsError as e:
                 return jsonify({"error": str(e)}), 429
 
             def _process():
                 _thread_local.job_id = job_id
-                # Also set on server's log filter thread-local if available
                 try:
                     from opencut.server import _log_thread_local
                     _log_thread_local.job_id = job_id
@@ -282,3 +322,49 @@ def async_job(job_type: str):
             return jsonify({"job_id": job_id})
         return wrapper
     return decorator
+
+
+def make_install_route(blueprint, url_path, component_name, packages,
+                       *, doc=None):
+    """Factory that creates a standard install route on *blueprint*.
+
+    Eliminates boilerplate for the ~10 identical install endpoints.  Each
+    generated route:
+
+    * ``POST url_path`` with CSRF
+    * Rate-limits under ``"model_install"``
+    * Iterates *packages* with progress updates
+    * Returns ``{"component": component_name}``
+
+    Args:
+        blueprint: Flask Blueprint to register the route on.
+        url_path:  URL rule, e.g. ``"/video/depth/install"``.
+        component_name: Value returned in ``{"component": ...}``.
+        packages:  List of pip package specifiers.
+        doc:       Optional docstring override.
+    """
+    from opencut.security import rate_limit as _rl
+    from opencut.security import rate_limit_release as _rlr
+    from opencut.security import require_csrf as _csrf
+    from opencut.security import safe_pip_install as _spi
+
+    @blueprint.route(url_path, methods=["POST"])
+    @_csrf
+    @async_job("install", filepath_required=False)
+    def _install_handler(job_id, filepath, data):
+        if not _rl("model_install"):
+            raise ValueError("A model_install operation is already running. Please wait.")
+        try:
+            for i, pkg in enumerate(packages):
+                pct = int((i / len(packages)) * 90)
+                _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+                _spi(pkg, timeout=600)
+            return {"component": component_name}
+        finally:
+            _rlr("model_install")
+
+    _install_handler.__name__ = f"install_{component_name}"
+    _install_handler.__qualname__ = f"install_{component_name}"
+    if doc:
+        _install_handler.__doc__ = doc
+    return _install_handler
