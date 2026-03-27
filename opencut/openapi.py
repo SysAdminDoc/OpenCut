@@ -13,18 +13,25 @@ from opencut import __version__
 from opencut.schemas import (
     AutoZoomResult,
     BeatMarkersResult,
+    BrollPlanResult,
     ChaptersResult,
     ColorMatchResult,
+    ContextAnalysisResult,
     DeliverableResult,
+    DepthMapResult,
     ExportMarkersResult,
     IndexResult,
     JobResponse,
     LoudnessMatchResult,
     MulticamResult,
+    PluginListResult,
     RepeatDetectResult,
     SearchResult,
+    ShortsPipelineResult,
     SilenceResult,
     UpdateCheckResult,
+    VideoAIResult,
+    WorkflowResult,
 )
 
 # ---------------------------------------------------------------------------
@@ -48,6 +55,18 @@ _ENDPOINT_SCHEMAS: Dict[str, type] = {
     "/video/multicam-cuts": MulticamResult,
     "/captions/chapters": ChaptersResult,
     "/captions/repeat-detect": RepeatDetectResult,
+    "/context/analyze": ContextAnalysisResult,
+    "/workflow/run": WorkflowResult,
+    "/video/ai/upscale": VideoAIResult,
+    "/video/ai/rembg": VideoAIResult,
+    "/video/ai/interpolate": VideoAIResult,
+    "/video/ai/denoise": VideoAIResult,
+    "/video/shorts-pipeline": ShortsPipelineResult,
+    "/video/depth/map": DepthMapResult,
+    "/video/depth/bokeh": DepthMapResult,
+    "/video/depth/parallax": DepthMapResult,
+    "/video/broll-plan": BrollPlanResult,
+    "/plugins/list": PluginListResult,
 }
 
 # Endpoints that return a JobResponse (async job-based routes)
@@ -58,6 +77,15 @@ _JOB_ENDPOINTS = {
     "/audio/loudness-match", "/audio/beat-markers",
     "/captions/chapters", "/captions/repeat-detect",
     "/workflow/run",
+    "/video/ai/upscale", "/video/ai/rembg", "/video/ai/interpolate",
+    "/video/ai/denoise", "/video/shorts-pipeline",
+    "/video/depth/map", "/video/depth/bokeh", "/video/depth/parallax",
+    "/video/broll-plan",
+    "/video/face/blur", "/video/face/enhance", "/video/face/swap",
+    "/video/style/apply", "/video/style/arbitrary",
+    "/video/remove/watermark", "/video/upscale/run",
+    "/audio/denoise", "/audio/normalize", "/audio/enhance",
+    "/audio/separate", "/audio/tts/generate",
 }
 
 # Methods to skip (HEAD is auto-added by Flask; OPTIONS for CORS)

@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.9.8] - 2026-03-27
+
+### Added
+- **9 new response schemas** — `WorkflowResult`, `ContextAnalysisResult`, `VideoAIResult`, `ShortsPipelineResult`, `DepthMapResult`, `BrollPlanResult`, `BatchResult`, `PluginListResult` (22 total schemas, up from 13). All mapped into OpenAPI spec.
+- **OpenAPI endpoint coverage +15** — 15 more async routes registered in `_JOB_ENDPOINTS` and `_ENDPOINT_SCHEMAS` for typed OpenAPI responses.
+
+### Fixed (Batch 40)
+- **3 more bare `"ffprobe"` in routes/utils** — `audio.py` waveform probe, `video_editing.py` reframe probe, `utils/media.py` media probe.
+- **2 broken tests fixed** — `test_info_with_csrf` expected 200 from `/info` with no filepath (returns 400), `test_file_no_path` expected 400 but route returns 404.
+- **pytest hanging on exit** — WorkerPool daemon threads prevented clean exit. Added session-scoped `_shutdown_worker_pool` fixture in conftest.py.
+
 ## [1.9.7] - 2026-03-27
 
 ### Added
