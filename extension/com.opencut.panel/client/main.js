@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.4
+   OpenCut CEP Panel - Main Controller v1.9.5
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -410,6 +410,7 @@
         
         wrapper.appendChild(trigger);
         wrapper.appendChild(dropdown);
+        if (!select.parentNode) return;
         select.parentNode.insertBefore(wrapper, select.nextSibling);
         
         buildOptions();

@@ -14,6 +14,8 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import get_ffprobe_path
+
 logger = logging.getLogger("opencut")
 
 
@@ -61,7 +63,7 @@ def detect_scenes(
 
     # Get video duration first
     probe_cmd = [
-        "ffprobe", "-v", "quiet",
+        get_ffprobe_path(), "-v", "quiet",
         "-print_format", "json",
         "-show_format",
         input_path,
@@ -341,7 +343,7 @@ def detect_scenes_ml(
 
     # Get video info
     probe_cmd = [
-        "ffprobe", "-v", "quiet",
+        get_ffprobe_path(), "-v", "quiet",
         "-print_format", "json",
         "-show_format", "-show_streams",
         "-select_streams", "v:0",

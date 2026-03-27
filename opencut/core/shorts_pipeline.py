@@ -15,6 +15,8 @@ import tempfile
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
+from opencut.helpers import get_ffprobe_path
+
 logger = logging.getLogger("opencut")
 
 
@@ -62,7 +64,7 @@ def _probe_duration(filepath: str) -> float:
     try:
         import json
         result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-print_format", "json",
+            [get_ffprobe_path(), "-v", "quiet", "-print_format", "json",
              "-show_format", filepath],
             capture_output=True, text=True, timeout=30,
         )

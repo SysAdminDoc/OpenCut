@@ -193,14 +193,16 @@ def get_video_info(filepath: str) -> dict:
         "-of", "json", filepath,
     ]
     result = _sp.run(cmd, capture_output=True, timeout=30)
+    _defaults = {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
     if result.returncode != 0:
-        logger.warning("ffprobe failed (rc=%d) for %s", result.returncode, filepath)
-        return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
+        logger.warning("ffprobe failed (rc=%d) for %s — using defaults", result.returncode, filepath)
+        return _defaults
     try:
         data = _json.loads(result.stdout.decode())
         streams = data.get("streams", [])
         if not streams:
-            return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
+            logger.warning("ffprobe returned no streams for %s — using defaults", filepath)
+            return _defaults
         s = streams[0]
         fps_p = s.get("r_frame_rate", "30/1").split("/")
         fps = (float(fps_p[0]) / float(fps_p[1])) if len(fps_p) == 2 and float(fps_p[1]) else 30.0
@@ -214,8 +216,8 @@ def get_video_info(filepath: str) -> dict:
             "duration": duration,
         }
     except Exception as e:
-        logger.debug("Failed to parse ffprobe output for %s: %s", filepath, e)
-        return {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
+        logger.warning("Failed to parse ffprobe output for %s: %s — using defaults", filepath, e)
+        return _defaults
 
 
 # ---------------------------------------------------------------------------
@@ -316,11 +318,11 @@ def _unique_output_path(path: str) -> str:
     if not os.path.exists(path):
         return path
     base, ext = os.path.splitext(path)
-    for counter in range(2, 10000):
+    for counter in range(2, 102):
         candidate = f"{base}_{counter}{ext}"
         if not os.path.exists(candidate):
             return candidate
-    raise RuntimeError(f"Could not find unique output path after 9998 attempts: {path}")
+    raise RuntimeError(f"Could not find unique output path after 100 attempts: {path}")
 
 
 def _make_sequence_name(filepath: str, suffix: str = "") -> str:

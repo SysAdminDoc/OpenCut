@@ -218,9 +218,11 @@ def generate_multicam_xml(
 
 def _path_to_url(filepath):
     """Convert a local file path to a file:// URL for FCP XML."""
+    import urllib.parse
     # Normalize path separators
     path = filepath.replace("\\", "/")
     if not path.startswith("/"):
         # Windows drive letter (C:/...)
         path = "/" + path
-    return "file://localhost" + path
+    # URI-encode spaces and special chars (but preserve / and :)
+    return "file://localhost" + urllib.parse.quote(path, safe="/:")

@@ -511,8 +511,9 @@ def extract_frames_for_vision(
     import subprocess
     import tempfile
 
+    from opencut.helpers import get_ffprobe_path
     duration_cmd = subprocess.run(
-        ["ffprobe", "-v", "quiet", "-show_entries", "format=duration",
+        [get_ffprobe_path(), "-v", "quiet", "-show_entries", "format=duration",
          "-of", "default=nw=1:nk=1", video_path],
         capture_output=True, text=True, timeout=30,
     )

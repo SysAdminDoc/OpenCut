@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import get_ffprobe_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -235,7 +235,7 @@ def overlay_title(
         vh = 1080
         try:
             info_cmd = subprocess.run(
-                ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
+                [get_ffprobe_path(), "-v", "quiet", "-select_streams", "v:0",
                  "-show_entries", "stream=height", "-of", "csv=p=0", video_path],
                 capture_output=True, timeout=10)
             vh = int(info_cmd.stdout.decode().strip())

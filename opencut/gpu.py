@@ -50,9 +50,15 @@ def check_vram(min_gb: float = 0) -> tuple:
         return (0.0, 0.0)
 
     try:
-        free, total = torch.cuda.mem_get_info()
+        import concurrent.futures
+        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+            future = pool.submit(torch.cuda.mem_get_info)
+            free, total = future.result(timeout=5)
         available_gb = free / (1024 ** 3)
         total_gb = total / (1024 ** 3)
+    except concurrent.futures.TimeoutError:
+        logger.warning("VRAM query timed out (>5s) — NVIDIA driver may be hung")
+        return (0.0, 0.0)
     except Exception as exc:
         logger.warning("Failed to query VRAM: %s", exc)
         return (0.0, 0.0)

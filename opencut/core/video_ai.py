@@ -36,8 +36,9 @@ os.makedirs(MODELS_DIR, exist_ok=True)
 
 def _count_frames(filepath: str) -> int:
     """Count total frames in video."""
+    from opencut.helpers import get_ffprobe_path
     cmd = [
-        "ffprobe", "-v", "quiet", "-count_frames",
+        get_ffprobe_path(), "-v", "quiet", "-count_frames",
         "-select_streams", "v:0",
         "-show_entries", "stream=nb_read_frames",
         "-of", "default=nw=1:nk=1", filepath,
