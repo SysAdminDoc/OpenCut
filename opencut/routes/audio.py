@@ -20,6 +20,7 @@ from opencut.errors import safe_error
 from opencut.helpers import (
     _make_sequence_name,
     _resolve_output_dir,
+    get_ffprobe_path,
 )
 from opencut.jobs import (
     _is_cancelled,
@@ -1343,7 +1344,7 @@ def audio_waveform(job_id, filepath, data):
 
     # Use FFmpeg to extract peak amplitude per chunk
     cmd = [
-        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        get_ffprobe_path(), "-v", "error", "-show_entries", "format=duration",
         "-of", "json", file_path
     ]
     dur_result = _sp.run(cmd, capture_output=True, text=True, timeout=10)
