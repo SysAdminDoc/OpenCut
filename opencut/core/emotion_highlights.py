@@ -12,8 +12,6 @@ Requires: pip install deepface opencv-python-headless
 
 import logging
 import os
-import subprocess
-import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
@@ -73,8 +71,7 @@ def analyze_video_emotions(
         EmotionCurve with samples and detected peaks.
     """
     try:
-        import cv2
-        import numpy as np
+        import cv2  # noqa: F401
     except ImportError:
         raise ImportError("OpenCV required. Install: pip install opencv-python-headless")
 

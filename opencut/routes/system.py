@@ -4,6 +4,7 @@ OpenCut System Routes
 Health, shutdown, GPU, dependencies, model management, whisper installation.
 """
 
+import importlib
 import logging
 import os
 import platform
@@ -22,13 +23,14 @@ except ImportError:
     psutil = None
 
 from opencut import __version__
+from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, _try_import, _try_import_from
 from opencut.jobs import (
+    TooManyJobsError,
     _is_cancelled,
     _list_jobs_copy,
     _new_job,
     _register_job_process,
-    _safe_error,
     _unregister_job_process,
     _update_job,
     job_lock,
@@ -41,6 +43,7 @@ from opencut.security import (
     rate_limit_release,
     require_csrf,
     require_rate_limit,
+    safe_float,
     safe_int,
     safe_pip_install,
     validate_filepath,
@@ -110,7 +113,7 @@ def health():
         caps["whisper_backend"] = "none"
 
     # Check Silero VAD availability (neural silence detection)
-    from opencut.checks import check_silero_vad_available, check_otio_available, check_crisper_whisper_available
+    from opencut.checks import check_crisper_whisper_available, check_otio_available, check_silero_vad_available
     caps["silero_vad"] = check_silero_vad_available()
     caps["crisper_whisper"] = check_crisper_whisper_available()
     caps["otio"] = check_otio_available()
@@ -198,6 +201,45 @@ def health():
 
     # Caption burn-in always available (FFmpeg-based)
     caps["burnin"] = True
+
+    # Depth effects (Depth Anything V2)
+    from opencut.checks import check_depth_available
+    caps["depth_effects"] = check_depth_available()
+
+    # DaVinci Resolve bridge
+    from opencut.checks import check_resolve_available
+    caps["resolve"] = check_resolve_available()
+
+    # Emotion analysis (deepface)
+    from opencut.checks import check_deepface_available
+    caps["deepface"] = check_deepface_available()
+
+    # Multimodal diarization (audio + face recognition)
+    from opencut.checks import check_multimodal_diarize_available
+    caps["multimodal_diarize"] = check_multimodal_diarize_available()
+
+    # AI B-roll generation (text-to-video)
+    from opencut.checks import check_broll_generate_available
+    caps["broll_generate"] = check_broll_generate_available()
+
+    # WebSocket bridge
+    from opencut.checks import check_websocket_available
+    caps["websocket"] = check_websocket_available()
+
+    # Social media posting
+    from opencut.checks import check_social_post_available
+    caps["social_post"] = check_social_post_available()
+
+    # Engine registry status
+    try:
+        from opencut.core.engine_registry import get_registry
+        reg = get_registry()
+        caps["engine_registry"] = {
+            "domains": len(reg.get_all_domains()),
+            "total_engines": sum(len(reg.get_engines(d)) for d in reg.get_all_domains()),
+        }
+    except Exception:
+        caps["engine_registry"] = {}
 
     return jsonify({
         "status": "ok",
@@ -287,7 +329,7 @@ def media_info():
             }
         return jsonify(result)
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "media_info")
 
 
 # ---------------------------------------------------------------------------
@@ -520,7 +562,7 @@ def check_dependencies():
     }
     for name, module in checks.items():
         try:
-            mod = __import__(module.split(".")[0])
+            mod = importlib.import_module(module.split(".")[0])
             version = getattr(mod, "__version__", getattr(mod, "VERSION", "installed"))
             deps[name] = {"installed": True, "version": str(version)}
         except ImportError:
@@ -1145,7 +1187,7 @@ def whisper_reinstall():
                 if proc.returncode == 0:
                     install_ok = True
                     break
-                logger.warning(f"Reinstall pip variant failed, trying next")
+                logger.warning("Reinstall pip variant failed, trying next")
 
             if not install_ok:
                 _update_job(
@@ -1218,11 +1260,9 @@ def install_demucs():
         safe_pip_install("demucs", timeout=600)
         return jsonify({"success": True, "message": "Demucs installed successfully"})
     except RuntimeError as e:
-        return jsonify({"error": str(e)}), 500
+        return safe_error(e, "install_demucs")
     except Exception as e:
-        return _safe_error(e)
-    finally:
-        rate_limit_release("model_install")
+        return safe_error(e, "install_demucs")
 
 
 # ---------------------------------------------------------------------------
@@ -1251,13 +1291,15 @@ def install_watermark():
                 failed.append(pkg)
 
         if failed:
-            return jsonify({"error": f"Failed to install: {', '.join(failed)}"}), 500
+            from opencut.errors import error_response
+            return error_response("INSTALL_FAILED",
+                                  f"Failed to install: {', '.join(failed)}",
+                                  status=500,
+                                  suggestion="Try running as administrator or install manually via pip.")
         return jsonify({"success": True, "message": "Watermark remover installed successfully"})
 
     except Exception as e:
-        return _safe_error(e)
-    finally:
-        rate_limit_release("model_install")
+        return safe_error(e, "install_watermark")
 
 
 # ---------------------------------------------------------------------------
@@ -1355,7 +1397,7 @@ def delete_model():
             _models_cache["ts"] = 0
         return jsonify({"success": True})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return safe_error(e, "delete_model")
 
 
 # ---------------------------------------------------------------------------
@@ -1416,7 +1458,7 @@ def llm_test():
             "model": response.model,
         })
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        return safe_error(e, "llm_test")
 
 
 # ---------------------------------------------------------------------------
@@ -1479,3 +1521,668 @@ def check_for_update():
         _update_cache["ts"] = now
 
     return jsonify(result)
+
+
+# ---------------------------------------------------------------------------
+# DaVinci Resolve Integration
+# ---------------------------------------------------------------------------
+@system_bp.route("/resolve/status", methods=["GET"])
+def resolve_status():
+    """Check DaVinci Resolve connection status and project info."""
+    try:
+        from opencut.core.resolve_bridge import ResolveBridge
+        bridge = ResolveBridge()
+        if not bridge.is_connected():
+            return jsonify({"connected": False, "message": "DaVinci Resolve not running or not accessible"})
+        info = bridge.get_project_info()
+        return jsonify({"connected": True, "project": info})
+    except ImportError:
+        return jsonify({"connected": False, "message": "Resolve scripting module not found"})
+    except Exception as e:
+        return jsonify({"connected": False, "message": str(e)})
+
+
+@system_bp.route("/resolve/media", methods=["GET"])
+def resolve_media():
+    """Get all clips from the Resolve media pool."""
+    try:
+        from opencut.core.resolve_bridge import ResolveBridge
+        bridge = ResolveBridge()
+        if not bridge.is_connected():
+            return jsonify({"error": "Resolve not connected"}), 503
+        clips = bridge.get_media_pool_clips()
+        return jsonify({"media": clips, "count": len(clips)})
+    except Exception as e:
+        return safe_error(e, "resolve_media")
+
+
+@system_bp.route("/resolve/import", methods=["POST"])
+@require_csrf
+def resolve_import():
+    """Import a file into the Resolve media pool."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    bin_name = data.get("bin_name", "OpenCut Output")
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    try:
+        from opencut.core.resolve_bridge import ResolveBridge
+        bridge = ResolveBridge()
+        if not bridge.is_connected():
+            return jsonify({"error": "Resolve not connected"}), 503
+        success = bridge.import_file(filepath, bin_name=bin_name)
+        if success:
+            return jsonify({"success": True, "message": f"Imported to {bin_name}"})
+        from opencut.errors import error_response
+        return error_response("OPERATION_FAILED", "Resolve import failed",
+                              status=500, suggestion="Check that the file format is supported by DaVinci Resolve.")
+    except Exception as e:
+        return safe_error(e, "resolve_import")
+
+
+@system_bp.route("/resolve/markers", methods=["POST"])
+@require_csrf
+def resolve_markers():
+    """Add markers to the current Resolve timeline."""
+    data = request.get_json(force=True)
+    markers = data.get("markers", [])
+    if not markers:
+        return jsonify({"error": "No markers provided"}), 400
+    try:
+        from opencut.core.resolve_bridge import ResolveBridge
+        bridge = ResolveBridge()
+        if not bridge.is_connected():
+            return jsonify({"error": "Resolve not connected"}), 503
+        added = bridge.add_markers(markers)
+        return jsonify({"added": added, "total": len(markers)})
+    except Exception as e:
+        return safe_error(e, "resolve_markers")
+
+
+@system_bp.route("/resolve/timeline", methods=["GET"])
+def resolve_timeline():
+    """Get current Resolve timeline info."""
+    try:
+        from opencut.core.resolve_bridge import ResolveBridge
+        bridge = ResolveBridge()
+        if not bridge.is_connected():
+            return jsonify({"error": "Resolve not connected"}), 503
+        info = bridge.get_timeline_info()
+        if info:
+            return jsonify(info)
+        return jsonify({"error": "No timeline open"}), 404
+    except Exception as e:
+        return safe_error(e, "resolve_timeline")
+
+
+# ---------------------------------------------------------------------------
+# Chat-Driven Editing Assistant
+# ---------------------------------------------------------------------------
+@system_bp.route("/chat", methods=["POST"])
+@require_csrf
+def chat_message():
+    """Send a message to the AI editing assistant.
+
+    Maintains conversation context across messages. Returns the assistant's
+    response with any editing actions to execute.
+    """
+    data = request.get_json(force=True)
+    message = data.get("message", "").strip()
+    session_id = data.get("session_id", "default")
+    filepath = data.get("filepath", "")
+    clip_info = data.get("clip_info", {})
+
+    if not message:
+        return jsonify({"error": "No message provided"}), 400
+    if len(message) > 2000:
+        return jsonify({"error": "Message too long (max 2000 chars)"}), 400
+
+    try:
+        from opencut.core.chat_editor import chat
+        from opencut.core.llm import LLMConfig
+
+        # Build LLM config from settings or request
+        provider = data.get("llm_provider", "ollama")
+        model = data.get("llm_model", "")
+        api_key = data.get("llm_api_key", "")
+
+        llm_config = LLMConfig(
+            provider=provider,
+            model=model,
+            api_key=api_key,
+        )
+
+        result = chat(
+            session_id=session_id,
+            user_message=message,
+            filepath=filepath,
+            clip_info=clip_info,
+            llm_config=llm_config,
+        )
+
+        return jsonify(result)
+
+    except ImportError as e:
+        return jsonify({"error": f"Chat requires LLM module: {e}"}), 400
+    except Exception as e:
+        logger.exception("Chat error")
+        return safe_error(e, "chat_message")
+
+
+@system_bp.route("/chat/clear", methods=["POST"])
+@require_csrf
+def chat_clear():
+    """Clear a chat session's history."""
+    data = request.get_json(force=True)
+    session_id = data.get("session_id", "default")
+    try:
+        from opencut.core.chat_editor import clear_session
+        clear_session(session_id)
+        return jsonify({"success": True, "message": "Session cleared"})
+    except Exception as e:
+        return safe_error(e, "chat_clear")
+
+
+@system_bp.route("/chat/sessions", methods=["GET"])
+def chat_sessions():
+    """List all active chat sessions."""
+    try:
+        from opencut.core.chat_editor import list_sessions
+        return jsonify({"sessions": list_sessions()})
+    except Exception as e:
+        return safe_error(e, "chat_sessions")
+
+
+# ---------------------------------------------------------------------------
+# Multimodal Diarization (Audio + Face)
+# ---------------------------------------------------------------------------
+@system_bp.route("/video/multimodal-diarize", methods=["POST"])
+@require_csrf
+def video_multimodal_diarize():
+    """Run multimodal speaker diarization combining audio and face recognition.
+
+    Returns speaker segments enriched with face IDs for accurate multicam switching.
+    """
+    if not rate_limit("gpu_job"):
+        return jsonify({"error": "A GPU-intensive job is already running. Please wait."}), 429
+
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+
+    if not filepath:
+        rate_limit_release("gpu_job")
+        return jsonify({"error": "No file path provided"}), 400
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        rate_limit_release("gpu_job")
+        return jsonify({"error": str(e)}), 400
+
+    num_speakers = data.get("num_speakers")
+    if num_speakers is not None:
+        num_speakers = safe_int(num_speakers, None, min_val=1, max_val=20)
+    sample_fps = safe_float(data.get("sample_fps", 2.0), 2.0, min_val=0.5, max_val=10.0)
+    min_face_confidence = safe_float(data.get("min_face_confidence", 0.5), 0.5, min_val=0.1, max_val=1.0)
+
+    try:
+        job_id = _new_job("multimodal-diarize", filepath)
+    except TooManyJobsError:
+        rate_limit_release("gpu_job")
+        raise
+
+    def _process():
+        try:
+            from opencut.core.multimodal_diarize import multimodal_diarize
+
+            def _on_progress(pct, msg=""):
+                if _is_cancelled(job_id):
+                    raise InterruptedError("Job cancelled")
+                _update_job(job_id, progress=pct, message=msg)
+
+            result = multimodal_diarize(
+                filepath,
+                num_speakers=num_speakers,
+                sample_fps=sample_fps,
+                min_face_confidence=min_face_confidence,
+                on_progress=_on_progress,
+            )
+
+            # Build enriched cuts
+            cuts = result.to_enriched_cuts()
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Diarization complete: {result.num_speakers} speakers, {result.num_faces} faces",
+                result={
+                    "speaker_segments": result.speaker_segments,
+                    "face_segments": [
+                        {"face_id": f.face_id, "start": f.start, "end": f.end,
+                         "confidence": f.confidence, "bbox": list(f.bbox)}
+                        for f in result.face_segments
+                    ],
+                    "mappings": [
+                        {"speaker": m.speaker, "face_id": m.face_id,
+                         "confidence": m.confidence, "overlap_seconds": m.overlap_seconds}
+                        for m in result.mappings
+                    ],
+                    "cuts": cuts,
+                    "num_speakers": result.num_speakers,
+                    "num_faces": result.num_faces,
+                },
+            )
+        except ImportError as e:
+            _update_job(job_id, status="error", error=f"Missing dependency: {e}",
+                        message="Install face detection deps: pip install insightface onnxruntime")
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Multimodal diarization error")
+        finally:
+            rate_limit_release("gpu_job")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# AI B-Roll Generation (Text-to-Video)
+# ---------------------------------------------------------------------------
+@system_bp.route("/video/broll-generate", methods=["POST"])
+@require_csrf
+def video_broll_generate():
+    """Generate a B-roll video clip from a text description using AI."""
+    if not rate_limit("gpu_job"):
+        return jsonify({"error": "A GPU-intensive job is already running. Please wait."}), 429
+
+    data = request.get_json(force=True)
+    prompt = data.get("prompt", "").strip()
+
+    if not prompt:
+        rate_limit_release("gpu_job")
+        return jsonify({"error": "No prompt provided"}), 400
+    if len(prompt) > 500:
+        rate_limit_release("gpu_job")
+        return jsonify({"error": "Prompt too long (max 500 chars)"}), 400
+
+    output_dir = data.get("output_dir", "")
+    backend = data.get("backend", "auto")
+    seed = data.get("seed")
+    if seed is not None:
+        seed = safe_int(seed, None, min_val=0, max_val=2**31)
+    reference_image = data.get("reference_image", "")
+    if reference_image:
+        try:
+            reference_image = validate_filepath(reference_image)
+        except (ValueError, FileNotFoundError):
+            return jsonify({"error": "Invalid reference_image path"}), 400
+
+    try:
+        job_id = _new_job("broll-generate", prompt[:80])
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
+
+    def _process():
+        try:
+            from opencut.core.broll_generate import generate_broll
+
+            def _on_progress(pct, msg=""):
+                if _is_cancelled(job_id):
+                    raise InterruptedError("Job cancelled")
+                _update_job(job_id, progress=pct, message=msg)
+
+            effective_dir = None
+            if output_dir:
+                try:
+                    effective_dir = validate_path(output_dir)
+                except ValueError:
+                    effective_dir = None
+
+            result = generate_broll(
+                prompt=prompt,
+                output_dir=effective_dir,
+                backend=backend,
+                seed=seed,
+                reference_image=reference_image if reference_image else None,
+                on_progress=_on_progress,
+            )
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"B-roll generated: {result.duration}s clip ({result.backend})",
+                result={
+                    "output_path": result.output_path,
+                    "prompt": result.prompt,
+                    "duration": result.duration,
+                    "resolution": result.resolution,
+                    "backend": result.backend,
+                    "generation_time": result.generation_time,
+                    "seed": result.seed,
+                },
+            )
+        except ImportError as e:
+            _update_job(job_id, status="error", error=f"Missing dependency: {e}",
+                        message="Install: pip install diffusers torch transformers accelerate")
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("B-roll generation error")
+        finally:
+            rate_limit_release("gpu_job")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+@system_bp.route("/video/broll-backends", methods=["GET"])
+def video_broll_backends():
+    """List available text-to-video backends."""
+    try:
+        from opencut.core.broll_generate import get_available_backends
+        return jsonify({"backends": get_available_backends()})
+    except Exception:
+        return jsonify({"backends": []})
+
+
+# ---------------------------------------------------------------------------
+# Social Media Direct Posting
+# ---------------------------------------------------------------------------
+@system_bp.route("/social/platforms", methods=["GET"])
+def social_platforms():
+    """List connected social media platforms."""
+    try:
+        from opencut.core.social_post import get_connected_platforms
+        return jsonify({"platforms": get_connected_platforms()})
+    except Exception as e:
+        return safe_error(e, "social_platforms")
+
+
+@system_bp.route("/social/auth-url", methods=["POST"])
+@require_csrf
+def social_auth_url():
+    """Get OAuth authorization URL for a platform."""
+    data = request.get_json(force=True)
+    platform = data.get("platform", "").strip().lower()
+
+    if platform not in ("youtube", "tiktok", "instagram"):
+        return jsonify({"error": "Unsupported platform. Use: youtube, tiktok, instagram"}), 400
+
+    try:
+        from opencut.core.social_post import get_oauth_url
+        url = get_oauth_url(platform)
+        if not url:
+            return jsonify({"error": f"OAuth not configured for {platform}. Set API credentials in env vars."}), 400
+        return jsonify({"auth_url": url, "platform": platform})
+    except Exception as e:
+        return safe_error(e, "social_auth_url")
+
+
+@system_bp.route("/social/connect", methods=["POST"])
+@require_csrf
+def social_connect():
+    """Store OAuth credentials after authorization callback."""
+    data = request.get_json(force=True)
+    platform = data.get("platform", "").strip().lower()
+    access_token = data.get("access_token", "").strip()
+
+    if not platform or not access_token:
+        return jsonify({"error": "Platform and access_token required"}), 400
+
+    if platform not in ("youtube", "tiktok", "instagram"):
+        return jsonify({"error": "Unsupported platform. Use: youtube, tiktok, instagram"}), 400
+
+    try:
+        from opencut.core.social_post import store_auth
+        store_auth(
+            platform=platform,
+            access_token=access_token,
+            refresh_token=data.get("refresh_token"),
+            expires_in=data.get("expires_in"),
+            user_id=data.get("user_id"),
+            username=data.get("username"),
+        )
+        return jsonify({"success": True, "message": f"Connected to {platform}"})
+    except Exception as e:
+        return safe_error(e, "social_connect")
+
+
+@system_bp.route("/social/disconnect", methods=["POST"])
+@require_csrf
+def social_disconnect():
+    """Remove stored credentials for a platform."""
+    data = request.get_json(force=True)
+    platform = data.get("platform", "").strip().lower()
+
+    if not platform:
+        return jsonify({"error": "Platform required"}), 400
+
+    if platform not in ("youtube", "tiktok", "instagram"):
+        return jsonify({"error": "Unsupported platform. Use: youtube, tiktok, instagram"}), 400
+
+    try:
+        from opencut.core.social_post import disconnect_platform
+        disconnect_platform(platform)
+        return jsonify({"success": True, "message": f"Disconnected from {platform}"})
+    except Exception as e:
+        return safe_error(e, "social_disconnect")
+
+
+@system_bp.route("/social/upload", methods=["POST"])
+@require_csrf
+def social_upload():
+    """Upload a video to a social media platform."""
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    platform = data.get("platform", "").strip().lower()
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+    if not platform:
+        return jsonify({"error": "No platform specified"}), 400
+
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    title = data.get("title", "")[:100]
+    description = data.get("description", "")[:5000]
+    tags = data.get("tags", [])
+    if isinstance(tags, list):
+        tags = tags[:30]
+    privacy = data.get("privacy", "private")
+
+    try:
+        job_id = _new_job("social-upload", f"{platform}: {os.path.basename(filepath)}")
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
+
+    def _process():
+        try:
+            from opencut.core.social_post import upload_to_platform
+
+            def _on_progress(pct, msg=""):
+                _update_job(job_id, progress=pct, message=msg)
+
+            result = upload_to_platform(
+                filepath=filepath,
+                platform=platform,
+                title=title,
+                description=description,
+                tags=tags,
+                privacy=privacy,
+                on_progress=_on_progress,
+            )
+
+            if result.success:
+                _update_job(
+                    job_id, status="complete", progress=100,
+                    message=f"Uploaded to {platform}!",
+                    result={
+                        "platform": result.platform,
+                        "video_id": result.video_id,
+                        "url": result.url,
+                        "upload_time": result.upload_time,
+                    },
+                )
+            else:
+                _update_job(job_id, status="error", error=result.error,
+                            message=f"Upload failed: {result.error}")
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Social upload error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# WebSocket Bridge Control
+# ---------------------------------------------------------------------------
+@system_bp.route("/ws/status", methods=["GET"])
+def ws_status():
+    """Get WebSocket bridge status."""
+    try:
+        from opencut.core.ws_bridge import get_bridge
+        bridge = get_bridge()
+        if bridge and bridge.is_running:
+            return jsonify({
+                "running": True,
+                "clients": bridge.client_count,
+            })
+        return jsonify({"running": False, "clients": 0})
+    except Exception:
+        return jsonify({"running": False, "clients": 0})
+
+
+@system_bp.route("/ws/start", methods=["POST"])
+@require_csrf
+def ws_start():
+    """Start the WebSocket bridge."""
+    try:
+        from opencut.core.ws_bridge import check_websocket_available, init_bridge
+        if not check_websocket_available():
+            return jsonify({"error": "websockets package not installed. pip install websockets"}), 400
+        data = request.get_json(force=True) if request.is_json else {}
+        port = safe_int(data.get("port", 5680), 5680, min_val=1024, max_val=65535)
+        init_bridge(port=port)
+        return jsonify({"success": True, "message": f"WebSocket bridge started on port {port}"})
+    except Exception as e:
+        return safe_error(e, "ws_start")
+
+
+@system_bp.route("/ws/stop", methods=["POST"])
+@require_csrf
+def ws_stop():
+    """Stop the WebSocket bridge."""
+    try:
+        from opencut.core.ws_bridge import stop_bridge
+        stop_bridge()
+        return jsonify({"success": True, "message": "WebSocket bridge stopped"})
+    except Exception as e:
+        return safe_error(e, "ws_stop")
+
+
+# ---------------------------------------------------------------------------
+# Engine Registry (Multi-Engine Backend)
+# ---------------------------------------------------------------------------
+@system_bp.route("/engines", methods=["GET"])
+def engine_list():
+    """List all registered AI engine backends and their status."""
+    try:
+        from opencut.core.engine_registry import get_registry
+        reg = get_registry()
+        return jsonify({"engines": reg.get_status()})
+    except Exception as e:
+        return safe_error(e, "engine_list")
+
+
+@system_bp.route("/engines/preference", methods=["POST"])
+@require_csrf
+def engine_set_preference():
+    """Set the preferred engine for a feature domain."""
+    data = request.get_json(force=True)
+    domain = data.get("domain", "").strip()
+    engine = data.get("engine", "").strip()
+
+    if not domain or not engine:
+        return jsonify({"error": "domain and engine required"}), 400
+
+    try:
+        from opencut.core.engine_registry import get_registry
+        reg = get_registry()
+
+        # Validate domain and engine exist
+        info = reg.get_engine(domain, engine)
+        if not info:
+            available = [e.name for e in reg.get_engines(domain)]
+            return jsonify({
+                "error": f"Engine '{engine}' not found in domain '{domain}'",
+                "available": available,
+            }), 400
+
+        reg.set_preference(domain, engine)
+        return jsonify({
+            "success": True,
+            "domain": domain,
+            "engine": engine,
+            "available": info.is_available,
+        })
+    except Exception as e:
+        return safe_error(e, "engine_set_preference")
+
+
+@system_bp.route("/engines/preferences", methods=["GET"])
+def engine_get_preferences():
+    """Get all engine preferences."""
+    try:
+        from opencut.core.engine_registry import get_registry
+        reg = get_registry()
+        return jsonify({"preferences": reg.export_preferences()})
+    except Exception as e:
+        return safe_error(e, "engine_get_preferences")
+
+
+@system_bp.route("/engines/resolve", methods=["POST"])
+@require_csrf
+def engine_resolve():
+    """Resolve which engine to use for a domain, considering availability and preferences."""
+    data = request.get_json(force=True)
+    domain = data.get("domain", "").strip()
+    requested = data.get("engine", "")
+
+    if not domain:
+        return jsonify({"error": "domain required"}), 400
+
+    try:
+        from opencut.core.engine_registry import get_registry
+        reg = get_registry()
+        engine = reg.resolve_engine(domain, requested if requested else None)
+
+        if engine:
+            return jsonify({
+                "domain": domain,
+                "engine": engine.name,
+                "display_name": engine.display_name,
+                "available": engine.is_available,
+                "vram_mb": engine.vram_mb,
+                "speed": engine.speed_rating,
+                "quality": engine.quality_rating,
+            })
+        else:
+            return jsonify({"error": f"No available engine for domain: {domain}"}), 404
+    except Exception as e:
+        return safe_error(e, "engine_resolve")

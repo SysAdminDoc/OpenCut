@@ -10,10 +10,11 @@ import threading
 
 from flask import Blueprint, jsonify, request
 
+from opencut.errors import safe_error
 from opencut.jobs import (
+    TooManyJobsError,
     _is_cancelled,
     _new_job,
-    _safe_error,
     _update_job,
     job_lock,
     jobs,
@@ -78,7 +79,10 @@ def search_index():
     if model not in VALID_WHISPER_MODELS:
         return jsonify({"error": f"Invalid model: {model}"}), 400
 
-    job_id = _new_job("search-index", validated_files[0] if validated_files else "")
+    try:
+        job_id = _new_job("search-index", validated_files[0] if validated_files else "")
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -168,7 +172,7 @@ def search_footage():
     except ImportError:
         return jsonify({"error": "footage_search module not available"}), 503
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "search_footage")
 
 
 # ---------------------------------------------------------------------------
@@ -185,4 +189,115 @@ def search_clear_index():
     except ImportError:
         return jsonify({"error": "footage_search module not available"}), 503
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "search_clear_index")
+
+
+# ---------------------------------------------------------------------------
+# Search: Auto-Index Project Files (SQLite)
+# ---------------------------------------------------------------------------
+@search_bp.route("/search/auto-index", methods=["POST"])
+@require_csrf
+def auto_index_project():
+    """Trigger background indexing for all project media files.
+
+    Expects JSON body:
+    {
+        "files": [{"path": "/path/to/file.mp4", "duration": 120.5}, ...]
+    }
+
+    Only files that need re-indexing (new or modified) will be processed.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    files = data.get("files", [])
+
+    if not files or not isinstance(files, list):
+        return jsonify({"error": "files must be a non-empty list"}), 400
+
+    try:
+        from opencut.core.footage_index_db import init_db, needs_reindex
+        init_db()
+    except Exception as e:
+        logger.error("Failed to init footage index DB: %s", e)
+        return safe_error(e, "auto_index_project")
+
+    # Filter to only files that need indexing
+    to_index = []
+    for f in files:
+        path = f.get("path", "") if isinstance(f, dict) else str(f)
+        if path and os.path.isfile(path) and needs_reindex(path):
+            to_index.append(f if isinstance(f, dict) else {"path": path})
+
+    if not to_index:
+        return jsonify({
+            "message": "All files are up to date",
+            "queued": 0,
+            "skipped": len(files),
+        })
+
+    # Queue each file for background transcription + indexing
+    return jsonify({
+        "message": f"Queued {len(to_index)} files for indexing",
+        "queued": len(to_index),
+        "skipped": len(files) - len(to_index),
+        "files": [f.get("path", "") if isinstance(f, dict) else str(f) for f in to_index],
+    })
+
+
+# ---------------------------------------------------------------------------
+# Search: FTS5 Database Search
+# ---------------------------------------------------------------------------
+@search_bp.route("/search/db-search", methods=["POST"])
+@require_csrf
+def search_footage_db():
+    """Search indexed footage using SQLite FTS5.
+
+    Expects JSON body: {"query": "search terms", "limit": 50}
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    query = str(data.get("query", "")).strip()
+
+    if not query:
+        return jsonify({"error": "query is required"}), 400
+
+    limit = safe_int(data.get("limit", 50), min_val=1, max_val=200)
+
+    try:
+        from opencut.core.footage_index_db import init_db, search
+        init_db()
+        results = search(query, limit=limit)
+        return jsonify({"results": results, "count": len(results)})
+    except Exception as e:
+        logger.error("FTS search failed: %s", e)
+        return safe_error(e, "search_footage_db")
+
+
+# ---------------------------------------------------------------------------
+# Search: Database Stats
+# ---------------------------------------------------------------------------
+@search_bp.route("/search/db-stats", methods=["GET"])
+def search_db_stats():
+    """Get SQLite footage index statistics."""
+    try:
+        from opencut.core.footage_index_db import get_stats, init_db
+        init_db()
+        stats = get_stats()
+        return jsonify(stats)
+    except Exception as e:
+        logger.error("Failed to get index stats: %s", e)
+        return safe_error(e, "search_db_stats")
+
+
+# ---------------------------------------------------------------------------
+# Search: Cleanup Missing Files
+# ---------------------------------------------------------------------------
+@search_bp.route("/search/cleanup", methods=["POST"])
+@require_csrf
+def cleanup_index():
+    """Remove index entries for files that no longer exist."""
+    try:
+        from opencut.core.footage_index_db import init_db, remove_missing_files
+        init_db()
+        removed = remove_missing_files()
+        return jsonify({"removed": removed})
+    except Exception as e:
+        return safe_error(e, "cleanup_index")

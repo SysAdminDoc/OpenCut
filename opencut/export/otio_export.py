@@ -15,7 +15,7 @@ Requires: pip install opentimelineio
 
 import logging
 import os
-from typing import List, Optional
+from typing import List
 
 from ..core.silence import TimeSegment
 

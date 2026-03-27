@@ -1,0 +1,18 @@
+{
+    "name": "clip-notes",
+    "version": "1.0.0",
+    "description": "Save timestamped notes for clips and export as plain text or CSV",
+    "author": "OpenCut",
+    "enabled": true,
+    "routes": [
+        {"method": "POST", "path": "/note", "description": "Save a timestamped note for a clip"},
+        {"method": "GET", "path": "/notes", "description": "Get all notes for a clip"},
+        {"method": "DELETE", "path": "/note", "description": "Delete a note by ID"},
+        {"method": "GET", "path": "/export", "description": "Export all notes as plain text or CSV"}
+    ],
+    "ui": {
+        "tab": "organize",
+        "label": "Clip Notes",
+        "icon": "note"
+    }
+}

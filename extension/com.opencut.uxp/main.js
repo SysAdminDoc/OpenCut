@@ -23,7 +23,7 @@ const BACKEND_DEFAULT  = "http://127.0.0.1:5679";
 const BACKEND_MAX_PORT = 5689;
 const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
-const VERSION          = "1.9.0";
+const VERSION          = "1.9.2";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
@@ -248,7 +248,74 @@ const PProBridge = (() => {
     return items;
   }
 
-  return { init, available: () => available, getActiveSequence, getSequenceInfo, addMarkers, applyCuts, invalidateCache, getProjectItems };
+  /**
+   * Returns the selected clips in the active sequence.
+   * @returns {Promise<Array<{name: string, start: number, end: number, trackIndex: number}>>}
+   */
+  async function getSelectedClips() {
+    const seq = await getActiveSequence();
+    if (!seq) return [];
+    try {
+      const selection = await seq.getSelection();
+      if (!selection || selection.length === 0) return [];
+      const clips = [];
+      for (const item of selection) {
+        try {
+          clips.push({
+            name: await item.getName?.() ?? "",
+            start: (await item.getInPoint?.())?.seconds ?? 0,
+            end: (await item.getOutPoint?.())?.seconds ?? 0,
+            trackIndex: await item.getTrackIndex?.() ?? 0,
+          });
+        } catch (_) { /* skip inaccessible */ }
+      }
+      return clips;
+    } catch (e) {
+      console.warn("[PProBridge] getSelectedClips failed:", e.message);
+      return [];
+    }
+  }
+
+  /**
+   * Import files into the project media pool.
+   * @param {string[]} filePaths — array of absolute file paths
+   * @param {string} [binName] — optional target bin name
+   * @returns {Promise<{ok: boolean, imported?: number, reason?: string}>}
+   */
+  async function importFiles(filePaths, binName) {
+    if (!available || !ppro) return { ok: false, reason: "UXP API unavailable" };
+    try {
+      const projList = await ppro.app.getProjectList();
+      if (!projList || projList.length === 0) return { ok: false, reason: "No open project" };
+      const proj = projList[0];
+
+      // If binName specified, find or create it
+      if (binName) {
+        try {
+          const root = await proj.getRootItem();
+          const children = await root.getItems();
+          let targetBin = null;
+          for (const child of (children || [])) {
+            if ((await child.isFolder?.()) && (await child.getName?.()) === binName) {
+              targetBin = child;
+              break;
+            }
+          }
+          if (!targetBin) {
+            targetBin = await proj.createBin(binName);
+          }
+        } catch (_) { /* bin creation is best-effort */ }
+      }
+
+      const imported = await proj.importFiles(filePaths);
+      return { ok: true, imported: imported ? filePaths.length : 0 };
+    } catch (e) {
+      console.warn("[PProBridge] importFiles failed:", e.message);
+      return { ok: false, reason: e.message };
+    }
+  }
+
+  return { init, available: () => available, getActiveSequence, getSequenceInfo, addMarkers, applyCuts, invalidateCache, getProjectItems, getSelectedClips, importFiles };
 })();
 
 // ─────────────────────────────────────────────────────────────
@@ -303,9 +370,28 @@ const BackendClient = (() => {
    * Ping /health endpoint.
    * @returns {Promise<boolean>}
    */
+  let _capabilities = {};
+
   async function checkHealth() {
     const r = await get("/health");
+    if (r.ok && r.data?.capabilities) {
+      _capabilities = r.data.capabilities;
+      _updateCapabilityHints();
+    }
     return r.ok;
+  }
+
+  function getCapabilities() { return _capabilities; }
+
+  function _updateCapabilityHints() {
+    // Show/hide install hints based on backend capabilities
+    const hints = {
+      depthHintUxp: _capabilities.depth_effects !== false,
+    };
+    for (const [id, available] of Object.entries(hints)) {
+      const el = document.getElementById(id);
+      if (el) el.style.display = available ? "none" : "block";
+    }
   }
 
   /**
@@ -318,7 +404,7 @@ const BackendClient = (() => {
     }
   }
 
-  return { call, get, post, del: del, checkHealth, fetchCsrf };
+  return { call, get, post, del: del, checkHealth, fetchCsrf, getCapabilities };
 })();
 
 // ─────────────────────────────────────────────────────────────
@@ -1525,6 +1611,102 @@ async function runFullReport() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// AI B-Roll Generation
+// ─────────────────────────────────────────────────────────────
+async function runBrollGenerate() {
+  const prompt = document.getElementById("brollGenPromptUxp")?.value?.trim();
+  if (!prompt) { UIController.showToast("Enter a B-roll description.", "warning"); return; }
+  const backend = document.getElementById("brollGenBackendUxp")?.value ?? "auto";
+  const seedEl = document.getElementById("brollGenSeedUxp");
+  const payload = { prompt, backend };
+  if (seedEl?.value) payload.seed = parseInt(seedEl.value);
+  UIController.setButtonLoading("runBrollGenBtnUxp", true);
+  UIController.showProcessing("Generating AI B-roll...");
+  const r = await BackendClient.post("/video/broll-generate", payload);
+  if (r.ok && r.data?.job_id) {
+    const result = await JobPoller.poll(r.data.job_id);
+    if (result?.output_path) {
+      UIController.showToast(`B-roll generated: ${result.output_path.split(/[/\\]/).pop()}`, "success");
+    }
+  } else {
+    UIController.showToast(`B-roll generation failed: ${r.error}`, "error");
+  }
+  UIController.hideProcessing();
+  UIController.setButtonLoading("runBrollGenBtnUxp", false);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Multimodal Diarization
+// ─────────────────────────────────────────────────────────────
+async function runMultimodalDiarize() {
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim();
+  if (!clipPath) { UIController.showToast("Select a video clip first.", "warning"); return; }
+  const numSpeakers = document.getElementById("mmDiarizeNumSpeakersUxp")?.value || "";
+  const payload = { filepath: clipPath, sample_fps: 2.0, min_face_confidence: 0.5 };
+  if (numSpeakers) payload.num_speakers = parseInt(numSpeakers);
+  UIController.setButtonLoading("runMmDiarizeBtnUxp", true);
+  UIController.showProcessing("Running multimodal diarization...");
+  const r = await BackendClient.post("/video/multimodal-diarize", payload);
+  if (r.ok && r.data?.job_id) {
+    const result = await JobPoller.poll(r.data.job_id);
+    if (result) {
+      const msg = `${result.num_speakers ?? 0} speakers, ${result.num_faces ?? 0} faces, ${(result.mappings ?? []).length} mapped`;
+      UIController.showToast(`Diarization complete: ${msg}`, "success");
+      UIController.setStatus(msg);
+    }
+  } else {
+    UIController.showToast(`Diarization failed: ${r.error}`, "error");
+  }
+  UIController.hideProcessing();
+  UIController.setButtonLoading("runMmDiarizeBtnUxp", false);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Social Media Upload
+// ─────────────────────────────────────────────────────────────
+async function runSocialUpload() {
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim();
+  if (!clipPath) { UIController.showToast("Select a video to upload.", "warning"); return; }
+  const platform = document.getElementById("socialPlatformUxp")?.value ?? "youtube";
+  const title = document.getElementById("socialTitleUxp")?.value ?? "";
+  const description = document.getElementById("socialDescriptionUxp")?.value ?? "";
+  const privacy = document.getElementById("socialPrivacyUxp")?.value ?? "private";
+  UIController.setButtonLoading("socialUploadBtnUxp", true);
+  UIController.showProcessing(`Uploading to ${platform}...`);
+  const r = await BackendClient.post("/social/upload", {
+    filepath: clipPath, platform, title, description, privacy,
+  });
+  if (r.ok && r.data?.job_id) {
+    const result = await JobPoller.poll(r.data.job_id);
+    if (result?.url) {
+      UIController.showToast(`Uploaded! View at: ${result.url}`, "success");
+    } else if (result) {
+      UIController.showToast(`Uploaded to ${platform}!`, "success");
+    }
+  } else {
+    UIController.showToast(`Upload failed: ${r.error}`, "error");
+  }
+  UIController.hideProcessing();
+  UIController.setButtonLoading("socialUploadBtnUxp", false);
+}
+
+async function socialConnectUxp() {
+  const platform = document.getElementById("socialPlatformUxp")?.value ?? "youtube";
+  const r = await BackendClient.post("/social/auth-url", { platform });
+  if (r.ok && r.data?.auth_url) {
+    // Open in system browser
+    try {
+      const shell = require("uxp").shell;
+      await shell.openExternal(r.data.auth_url);
+    } catch (_) {
+      UIController.showToast("Open this URL in your browser: " + r.data.auth_url, "info", 10000);
+    }
+  } else {
+    UIController.showToast(`OAuth not configured for ${platform}. Set API credentials.`, "warning");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────
 function formatTimecode(seconds) {
@@ -1708,6 +1890,44 @@ function bindEvents() {
   document.getElementById("delivMusicCueBtn")?.addEventListener("click",  () => runDeliverables("music_cue_sheet"));
   document.getElementById("delivAssetListBtn")?.addEventListener("click", () => runDeliverables("asset_list"));
   document.getElementById("runFullReportBtn")?.addEventListener("click",  runFullReport);
+
+  // ── Depth Effects ──
+  document.getElementById("runDepthBtnUxp")?.addEventListener("click", runDepthEffect);
+  document.getElementById("installDepthBtnUxp")?.addEventListener("click", async () => {
+    const r = await BackendClient.post("/video/depth/install", {});
+    if (r.ok) UIController.showToast("Installing Depth Anything V2...", "info");
+    else UIController.showToast("Install failed: " + (r.error || "unknown"), "error");
+  });
+
+  // ── Emotion Highlights ──
+  document.getElementById("runEmotionBtnUxp")?.addEventListener("click", runEmotionHighlights);
+
+  // ── B-Roll Analysis ──
+  document.getElementById("runBrollPlanBtnUxp")?.addEventListener("click", runBrollAnalysis);
+
+  // ── Chat Editor ──
+  document.getElementById("chatSendBtnUxp")?.addEventListener("click", sendChatMessage);
+  document.getElementById("chatInputUxp")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") sendChatMessage();
+  });
+
+  // ── AI B-Roll Generation ──
+  document.getElementById("runBrollGenBtnUxp")?.addEventListener("click", runBrollGenerate);
+
+  // ── Multimodal Diarization ──
+  document.getElementById("runMmDiarizeBtnUxp")?.addEventListener("click", runMultimodalDiarize);
+
+  // ── Social Media ──
+  document.getElementById("socialConnectBtnUxp")?.addEventListener("click", socialConnectUxp);
+  document.getElementById("socialUploadBtnUxp")?.addEventListener("click", runSocialUpload);
+
+  // ── Settings: WebSocket ──
+  document.getElementById("uxpWsStartBtn")?.addEventListener("click", uxpWsStartBridge);
+  document.getElementById("uxpWsStopBtn")?.addEventListener("click", uxpWsStopBridge);
+  document.getElementById("uxpWsConnectBtn")?.addEventListener("click", uxpWsConnect);
+
+  // ── Settings: Engine Registry ──
+  document.getElementById("uxpRefreshEnginesBtn")?.addEventListener("click", uxpLoadEngines);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1724,6 +1944,301 @@ function bindSliders() {
   UIController.bindSlider("beatSensitivity",   "beatSensitivityVal",  v => `${v}%`);
   UIController.bindSlider("colorMatchStrength","colorMatchStrengthVal",v => `${v}%`);
   UIController.bindSlider("zoomFactor",        "zoomFactorVal",       v => `${v.toFixed(2)}x`);
+}
+
+// ─────────────────────────────────────────────────────────────
+// Depth Effects
+// ─────────────────────────────────────────────────────────────
+async function runDepthEffect() {
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+  const effect = document.getElementById("depthEffectUxp")?.value ?? "depth_map";
+  const modelSize = document.getElementById("depthModelSizeUxp")?.value ?? "small";
+
+  const endpointMap = {
+    depth_map: "/video/depth/map",
+    bokeh: "/video/depth/bokeh",
+    parallax: "/video/depth/parallax",
+  };
+  const endpoint = endpointMap[effect] || "/video/depth/map";
+  const payload = { filepath: clipPath, model_size: modelSize };
+
+  UIController.setButtonLoading("runDepthBtnUxp", true);
+  const r = await BackendClient.post(endpoint, payload);
+  if (r.ok && r.data?.job_id) {
+    activeJobId = r.data.job_id;
+    UIController.showProcessing("Running depth effect...");
+    JobPoller.start(r.data.job_id, (job) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runDepthBtnUxp", false);
+      if (job.status === "complete") {
+        UIController.showToast(`Depth effect complete: ${job.result?.output_path?.split(/[/\\]/).pop() ?? "done"}`, "success");
+      } else {
+        UIController.showToast(`Depth effect failed: ${job.error || "unknown"}`, "error");
+      }
+    });
+  } else {
+    UIController.setButtonLoading("runDepthBtnUxp", false);
+    UIController.showToast(`Error: ${r.error || "Failed to start depth effect"}`, "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Emotion Highlights
+// ─────────────────────────────────────────────────────────────
+async function runEmotionHighlights() {
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+
+  UIController.setButtonLoading("runEmotionBtnUxp", true);
+  const r = await BackendClient.post("/video/emotion-highlights", { filepath: clipPath });
+  if (r.ok && r.data?.job_id) {
+    activeJobId = r.data.job_id;
+    UIController.showProcessing("Analyzing emotions...");
+    JobPoller.start(r.data.job_id, (job) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runEmotionBtnUxp", false);
+      if (job.status === "complete") {
+        const peaks = job.result?.peaks?.length ?? 0;
+        UIController.showToast(`Emotion analysis complete: ${peaks} emotional peaks found.`, "success");
+      } else {
+        UIController.showToast(`Emotion analysis failed: ${job.error || "unknown"}`, "error");
+      }
+    });
+  } else {
+    UIController.setButtonLoading("runEmotionBtnUxp", false);
+    UIController.showToast(`Error: ${r.error || "Failed to start emotion analysis"}`, "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// B-Roll Analysis
+// ─────────────────────────────────────────────────────────────
+async function runBrollAnalysis() {
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+  if (!clipPath) { UIController.showToast("Select a clip first.", "warning"); return; }
+
+  UIController.setButtonLoading("runBrollPlanBtnUxp", true);
+  const r = await BackendClient.post("/video/broll-plan", { filepath: clipPath });
+  if (r.ok && r.data?.job_id) {
+    activeJobId = r.data.job_id;
+    UIController.showProcessing("Analyzing B-roll points...");
+    JobPoller.start(r.data.job_id, (job) => {
+      UIController.hideProcessing();
+      UIController.setButtonLoading("runBrollPlanBtnUxp", false);
+      if (job.status === "complete") {
+        const windows = job.result?.windows?.length ?? 0;
+        UIController.showToast(`B-roll analysis complete: ${windows} insertion points found.`, "success");
+      } else {
+        UIController.showToast(`B-roll analysis failed: ${job.error || "unknown"}`, "error");
+      }
+    });
+  } else {
+    UIController.setButtonLoading("runBrollPlanBtnUxp", false);
+    UIController.showToast(`Error: ${r.error || "Failed to start B-roll analysis"}`, "error");
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Chat Editor
+// ─────────────────────────────────────────────────────────────
+let _chatSessionId = "";
+
+async function sendChatMessage() {
+  const input = document.getElementById("chatInputUxp");
+  const message = input?.value?.trim() ?? "";
+  if (!message) return;
+
+  const clipPath = document.getElementById("clipPathVideo")?.value?.trim() ?? "";
+  const history = document.getElementById("chatHistory");
+
+  // Show user message (text-safe to prevent XSS)
+  if (history) {
+    const userDiv = document.createElement("div");
+    userDiv.className = "oc-chat-user";
+    userDiv.textContent = "You: " + message;
+    history.appendChild(userDiv);
+    history.scrollTop = history.scrollHeight;
+  }
+  input.value = "";
+
+  if (!_chatSessionId) _chatSessionId = `uxp-${Date.now()}`;
+
+  const r = await BackendClient.post("/chat/message", {
+    session_id: _chatSessionId,
+    message: message,
+    filepath: clipPath,
+  });
+
+  if (r.ok && r.data) {
+    const reply = r.data.response || "No response.";
+    if (history) {
+      const replyDiv = document.createElement("div");
+      replyDiv.className = "oc-chat-assistant";
+      replyDiv.textContent = "OpenCut: " + reply;
+      history.appendChild(replyDiv);
+      history.scrollTop = history.scrollHeight;
+    }
+    // Auto-execute actions if present
+    const actions = r.data.actions || [];
+    if (actions.length > 0) {
+      UIController.showToast(`Executing ${actions.length} action(s)...`, "info");
+    }
+  } else {
+    if (history) {
+      const errDiv = document.createElement("div");
+      errDiv.className = "oc-chat-error";
+      errDiv.textContent = "Error: " + (r.error || "Failed");
+      history.appendChild(errDiv);
+    }
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// WebSocket Client
+// ─────────────────────────────────────────────────────────────
+let _uxpWs = null;
+let _uxpWsReconnectTimer = null;
+let _uxpWsConnected = false;
+
+function uxpWsConnect() {
+  if (_uxpWs && (_uxpWs.readyState === WebSocket.OPEN || _uxpWs.readyState === WebSocket.CONNECTING)) {
+    UIController.showToast("WebSocket already connected.", "info");
+    return;
+  }
+  try {
+    _uxpWs = new WebSocket("ws://127.0.0.1:5680");
+  } catch (e) {
+    UIController.showToast("WebSocket connection failed.", "warning");
+    return;
+  }
+
+  _uxpWs.onopen = () => {
+    _uxpWsConnected = true;
+    _uxpWs.send(JSON.stringify({ type: "identify", client_type: "uxp", id: "uxp-1" }));
+    _uxpWs.send(JSON.stringify({ type: "command", action: "subscribe", params: { events: ["progress", "job_complete", "job_error"] }, id: "sub-1" }));
+    uxpUpdateWsStatus();
+    UIController.showToast("WebSocket connected.", "success");
+  };
+
+  _uxpWs.onmessage = (evt) => {
+    try {
+      const msg = JSON.parse(evt.data);
+      if (msg.type === "progress" && msg.job_id) {
+        const pct = msg.percent || 0;
+        const message = msg.message || "";
+        const fill = document.getElementById("progressFill");
+        const msgEl = document.getElementById("processingMsg");
+        if (fill) fill.style.width = `${pct}%`;
+        if (msgEl && message) msgEl.textContent = message;
+      }
+    } catch (e) { /* ignore */ }
+  };
+
+  _uxpWs.onclose = () => {
+    _uxpWsConnected = false;
+    _uxpWs = null;
+    uxpUpdateWsStatus();
+    if (!_uxpWsReconnectTimer) {
+      _uxpWsReconnectTimer = setTimeout(() => {
+        _uxpWsReconnectTimer = null;
+        uxpWsConnect();
+      }, 5000);
+    }
+  };
+
+  _uxpWs.onerror = () => { _uxpWsConnected = false; };
+}
+
+function uxpWsDisconnect() {
+  if (_uxpWsReconnectTimer) { clearTimeout(_uxpWsReconnectTimer); _uxpWsReconnectTimer = null; }
+  if (_uxpWs) { _uxpWs.close(); _uxpWs = null; }
+  _uxpWsConnected = false;
+  uxpUpdateWsStatus();
+}
+
+async function uxpUpdateWsStatus() {
+  const statusEl = document.getElementById("uxpWsStatus");
+  const countEl = document.getElementById("uxpWsClients");
+  if (_uxpWsConnected) {
+    if (statusEl) { statusEl.textContent = "Connected"; statusEl.style.color = "var(--accent)"; }
+  } else {
+    if (statusEl) { statusEl.textContent = "Disconnected"; statusEl.style.color = ""; }
+  }
+  const r = await BackendClient.get("/ws/status");
+  if (r.ok && r.data) {
+    if (countEl) countEl.textContent = r.data.clients || 0;
+    if (!r.data.running && statusEl && !_uxpWsConnected) statusEl.textContent = "Server stopped";
+  }
+}
+
+async function uxpWsStartBridge() {
+  const r = await BackendClient.post("/ws/start", {});
+  if (r.ok && r.data?.success) {
+    UIController.showToast("WebSocket bridge started.", "success");
+    setTimeout(() => uxpWsConnect(), 500);
+  } else {
+    UIController.showToast(r.error || "Failed to start bridge.", "error");
+  }
+}
+
+async function uxpWsStopBridge() {
+  uxpWsDisconnect();
+  const r = await BackendClient.post("/ws/stop", {});
+  if (r.ok) {
+    UIController.showToast("WebSocket bridge stopped.", "success");
+    uxpUpdateWsStatus();
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
+// Engine Registry UI
+// ─────────────────────────────────────────────────────────────
+async function uxpLoadEngines() {
+  const grid = document.getElementById("uxpEngineGrid");
+  if (!grid) return;
+  grid.innerHTML = '<p class="oc-hint">Loading engines...</p>';
+
+  const r = await BackendClient.get("/engines");
+  if (!r.ok || !r.data?.engines) {
+    grid.innerHTML = '<p class="oc-hint">Could not load engine data.</p>';
+    return;
+  }
+
+  const engines = r.data.engines;
+  const domains = Object.keys(engines).sort();
+  let html = "";
+
+  for (const domain of domains) {
+    const info = engines[domain];
+    const active = info.active || "";
+    const preferred = info.preferred || "";
+
+    html += `<div class="oc-field-row"><label class="oc-label">${domain.replace(/_/g, " ")}</label>`;
+    html += `<select class="oc-select oc-engine-sel" data-domain="${domain}">`;
+    html += `<option value="">Auto (highest priority)</option>`;
+    for (const eng of info.engines) {
+      const sel = (preferred === eng.name) ? " selected" : "";
+      const avail = eng.available ? "" : " (unavailable)";
+      const label = `${eng.display_name} — ${eng.quality}/${eng.speed}${avail}${eng.name === active ? " *" : ""}`;
+      html += `<option value="${eng.name}"${sel}>${label}</option>`;
+    }
+    html += `</select></div>`;
+  }
+
+  grid.innerHTML = html;
+
+  grid.querySelectorAll(".oc-engine-sel").forEach(sel => {
+    sel.addEventListener("change", async () => {
+      const dom = sel.dataset.domain;
+      const eng = sel.value;
+      if (eng) {
+        const pr = await BackendClient.post("/engines/preference", { domain: dom, engine: eng });
+        if (pr.ok && pr.data?.success) UIController.showToast("Engine preference saved.", "success");
+        else UIController.showToast(pr.error || "Failed to save preference.", "error");
+      }
+    });
+  });
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1773,6 +2288,9 @@ async function initApp() {
     await BackendClient.fetchCsrf();
     await loadLlmSettings();
     UIController.showToast("OpenCut backend connected.", "success");
+
+    // Auto-connect WebSocket for real-time progress
+    uxpWsConnect();
 
     // Scan project media so clip path inputs have autocomplete
     await scanProjectClips();

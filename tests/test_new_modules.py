@@ -11,7 +11,7 @@ import os
 import sys
 import tempfile
 import unittest
-from unittest.mock import MagicMock, patch, mock_open
+from unittest.mock import MagicMock, patch
 
 # Add project root to path
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -133,7 +133,7 @@ class TestChapterGen(unittest.TestCase):
     """Tests for chapter_gen.py."""
 
     def setUp(self):
-        from opencut.core.chapter_gen import generate_chapters, _time_str_to_seconds
+        from opencut.core.chapter_gen import _time_str_to_seconds, generate_chapters
         self.generate = generate_chapters
         self.time_to_secs = _time_str_to_seconds
 
@@ -179,7 +179,7 @@ class TestChapterGen(unittest.TestCase):
         with patch("opencut.core.chapter_gen.query_llm", side_effect=Exception("no LLM")):
             result = self.generate(segs, llm_config=None)
         block = result.get("description_block", "")
-        lines = [l for l in block.strip().split("\n") if l.strip()]
+        lines = [ln for ln in block.strip().split("\n") if ln.strip()]
         if lines:
             self.assertRegex(lines[0], r"\d+:\d+")
 
@@ -251,8 +251,13 @@ class TestFootageSearch(unittest.TestCase):
 
     def setUp(self):
         from opencut.core.footage_search import (
-            index_file, load_index, save_index, search_footage,
-            remove_missing_files, get_index_stats, clear_index
+            clear_index,
+            get_index_stats,
+            index_file,
+            load_index,
+            remove_missing_files,
+            save_index,
+            search_footage,
         )
         self.index_file = index_file
         self.load_index = load_index
@@ -398,9 +403,12 @@ class TestDeliverables(unittest.TestCase):
 
     def setUp(self):
         from opencut.core.deliverables import (
-            generate_vfx_sheet, generate_adr_list,
-            generate_music_cue_sheet, generate_asset_list,
-            _seconds_to_tc, _seconds_to_readable
+            _seconds_to_readable,
+            _seconds_to_tc,
+            generate_adr_list,
+            generate_asset_list,
+            generate_music_cue_sheet,
+            generate_vfx_sheet,
         )
         self.vfx = generate_vfx_sheet
         self.adr = generate_adr_list
@@ -555,10 +563,7 @@ class TestMulticam(unittest.TestCase):
     """Tests for multicam.py — pure Python."""
 
     def setUp(self):
-        from opencut.core.multicam import (
-            generate_multicam_cuts, auto_assign_speakers,
-            merge_diarization_segments
-        )
+        from opencut.core.multicam import auto_assign_speakers, generate_multicam_cuts, merge_diarization_segments
         self.gen_cuts = generate_multicam_cuts
         self.auto_assign = auto_assign_speakers
         self.merge = merge_diarization_segments
@@ -672,9 +677,7 @@ class TestNlpCommand(unittest.TestCase):
     """Tests for nlp_command.py — pure Python."""
 
     def setUp(self):
-        from opencut.core.nlp_command import (
-            parse_command_keyword, extract_params_from_text, COMMAND_MAP
-        )
+        from opencut.core.nlp_command import COMMAND_MAP, extract_params_from_text, parse_command_keyword
         self.parse_kw = parse_command_keyword
         self.extract = extract_params_from_text
         self.map = COMMAND_MAP
@@ -994,8 +997,8 @@ class TestColorMatchInterface(unittest.TestCase):
     def test_color_match_video_calls_require_cv2(self):
         """color_match_video should fail gracefully if cv2 is unavailable."""
         try:
-            from opencut.core.color_match import color_match_video
             import opencut.core.color_match as cm
+            from opencut.core.color_match import color_match_video
             original_cv2 = cm._CV2_AVAILABLE
             original_np = cm._NP_AVAILABLE
             try:
@@ -1012,8 +1015,8 @@ class TestColorMatchInterface(unittest.TestCase):
     def test_extract_color_stats_requires_cv2(self):
         """extract_color_stats should raise RuntimeError when cv2 unavailable."""
         try:
-            from opencut.core.color_match import extract_color_stats
             import opencut.core.color_match as cm
+            from opencut.core.color_match import extract_color_stats
             original_cv2 = cm._CV2_AVAILABLE
             try:
                 cm._CV2_AVAILABLE = False
@@ -1028,6 +1031,7 @@ class TestColorMatchInterface(unittest.TestCase):
         """_build_cumulative_hist should produce a valid CDF array."""
         try:
             import numpy as np
+
             from opencut.core.color_match import _build_cumulative_hist
 
             # Create simple test frames: 4x4x3 arrays with known values
@@ -1047,6 +1051,7 @@ class TestColorMatchInterface(unittest.TestCase):
         """_build_lut should return a LUT with values in [0, 255]."""
         try:
             import numpy as np
+
             from opencut.core.color_match import _build_lut
 
             # Use uniform CDFs — LUT should be identity-like

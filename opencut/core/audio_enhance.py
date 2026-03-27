@@ -81,7 +81,7 @@ def _extract_audio(input_path, output_wav):
     if not os.path.isfile(output_wav) or os.path.getsize(output_wav) == 0:
         raise RuntimeError(f"Audio extraction produced empty output for '{os.path.basename(input_path)}'")
 
-    logger.info("Extracted audio: %s -> %s", input_path, output_wav)
+    logger.debug("Extracted audio: %s -> %s", input_path, output_wav)
 
 
 # ---------------------------------------------------------------------------
@@ -167,19 +167,19 @@ def enhance_speech(
             on_progress(15, "Loading audio data...")
 
         audio, sr = torchaudio.load(audio_path)
-        logger.info("Loaded audio: %s (sr=%d, shape=%s)", audio_path, sr, audio.shape)
+        logger.debug("Loaded audio: %s (sr=%d, shape=%s)", audio_path, sr, audio.shape)
 
         # Select device
         device = "cuda" if torch.cuda.is_available() else "cpu"
         if device == "cuda":
-            logger.info("Using GPU for audio enhancement")
+            logger.debug("Using GPU for audio enhancement")
 
         # Denoising pass
         if denoise:
             if on_progress:
                 on_progress(30, "Denoising speech...")
 
-            logger.info("Running denoiser (device=%s)...", device)
+            logger.debug("Running denoiser (device=%s)...", device)
             # squeeze(0) is a no-op on stereo (2,N) — explicitly mix to mono
             if audio.shape[0] > 1:
                 mono = audio.mean(dim=0)
@@ -190,14 +190,14 @@ def enhance_speech(
             if audio.dim() == 1:
                 audio = audio.unsqueeze(0)
 
-            logger.info("Denoising complete (sr=%d)", sr)
+            logger.debug("Denoising complete (sr=%d)", sr)
 
         # Enhancement/super-resolution pass
         if enhance:
             if on_progress:
                 on_progress(70, "Enhancing speech quality...")
 
-            logger.info("Running enhancer (solver=%s, nfe=%d, device=%s)...", solver, nfe, device)
+            logger.debug("Running enhancer (solver=%s, nfe=%d, device=%s)...", solver, nfe, device)
             # squeeze(0) is a no-op on stereo (2,N) — explicitly mix to mono
             if audio.shape[0] > 1:
                 mono = audio.mean(dim=0)
@@ -214,7 +214,7 @@ def enhance_speech(
             if audio.dim() == 1:
                 audio = audio.unsqueeze(0)
 
-            logger.info("Enhancement complete (sr=%d)", sr)
+            logger.debug("Enhancement complete (sr=%d)", sr)
 
         # Build output path
         if output_path is None:

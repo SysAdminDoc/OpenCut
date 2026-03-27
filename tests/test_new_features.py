@@ -12,7 +12,6 @@ Covers:
   - New /fillers filler_backend parameter
 """
 
-import json
 import os
 import sys
 import tempfile
@@ -31,9 +30,10 @@ class TestSilenceVAD(unittest.TestCase):
 
     def test_detect_speech_accepts_method_param(self):
         """detect_speech() should accept method='energy' without error."""
-        from opencut.core.silence import detect_speech, TimeSegment
         # Can't run actual detection without a file, but verify the function signature
         import inspect
+
+        from opencut.core.silence import detect_speech
         sig = inspect.signature(detect_speech)
         self.assertIn("method", sig.parameters)
         # Default should be "energy"
@@ -41,8 +41,9 @@ class TestSilenceVAD(unittest.TestCase):
 
     def test_detect_speech_method_values(self):
         """The method parameter should support energy, vad, and auto."""
-        from opencut.core.silence import detect_speech
         import inspect
+
+        from opencut.core.silence import detect_speech
         sig = inspect.signature(detect_speech)
         # Just verify it's a string param with a default
         self.assertIsNotNone(sig.parameters["method"].default)
@@ -69,14 +70,12 @@ class TestSilenceVAD(unittest.TestCase):
 
     def test_detect_silences_vad_import_error(self):
         """detect_silences_vad should raise ImportError if torch is not installed."""
-        from opencut.core.silence import detect_silences_vad
         with patch.dict("sys.modules", {"torch": None}):
             # Force re-import to hit the ImportError
             pass  # This test verifies the function exists and has proper signature
 
     def test_vad_timestamp_handling_dict_format(self):
         """VAD should handle dict format timestamps {"start": x, "end": y}."""
-        from opencut.core.silence import TimeSegment
         # Simulate the timestamp handling logic
         ts = {"start": 1.0, "end": 3.0}
         if isinstance(ts, dict):
@@ -117,9 +116,10 @@ class TestCrisperWhisper(unittest.TestCase):
 
     def test_detect_fillers_crisper_requires_torch(self):
         """detect_fillers_crisper should raise ImportError without dependencies."""
-        from opencut.core.crisper_whisper import detect_fillers_crisper
         # The function should have proper error handling for missing deps
         import inspect
+
+        from opencut.core.crisper_whisper import detect_fillers_crisper
         sig = inspect.signature(detect_fillers_crisper)
         self.assertIn("filepath", sig.parameters)
         self.assertIn("language", sig.parameters)
@@ -128,8 +128,9 @@ class TestCrisperWhisper(unittest.TestCase):
 
     def test_fallback_function_exists(self):
         """_fallback_filler_detection should exist as a fallback path."""
-        from opencut.core.crisper_whisper import _fallback_filler_detection
         import inspect
+
+        from opencut.core.crisper_whisper import _fallback_filler_detection
         sig = inspect.signature(_fallback_filler_detection)
         self.assertIn("filepath", sig.parameters)
         self.assertIn("custom_words", sig.parameters)
@@ -217,8 +218,9 @@ class TestOTIOExport(unittest.TestCase):
 
     def test_export_otio_markers_function_exists(self):
         """export_otio_markers should be importable with correct signature."""
-        from opencut.export.otio_export import export_otio_markers
         import inspect
+
+        from opencut.export.otio_export import export_otio_markers
         sig = inspect.signature(export_otio_markers)
         self.assertIn("filepath", sig.parameters)
         self.assertIn("markers", sig.parameters)
@@ -308,7 +310,7 @@ class TestSilenceRouteMethod(unittest.TestCase):
             "method": "energy",
         })
         # Will fail with file not found, but should NOT fail with invalid param
-        data = resp.get_json()
+        resp.get_json()
         # Either a job started (202) or file error (400) — not 500
         self.assertIn(resp.status_code, [200, 400, 404])
 
@@ -420,6 +422,321 @@ class TestOTIORoute(unittest.TestCase):
         })
         # Should not crash — either processes as default or returns error
         self.assertIn(resp.status_code, [200, 400, 404])
+
+
+# ============================================================
+# TestChatEditor
+# ============================================================
+class TestChatEditor(unittest.TestCase):
+    """Tests for chat_editor.py session management and TTL eviction."""
+
+    def test_session_creation(self):
+        """get_or_create_session should create a new session."""
+        from opencut.core.chat_editor import _sessions, get_or_create_session
+        sid = "test-session-create-001"
+        try:
+            session = get_or_create_session(sid, "/fake/video.mp4")
+            self.assertEqual(session.session_id, sid)
+            self.assertEqual(session.filepath, "/fake/video.mp4")
+        finally:
+            _sessions.pop(sid, None)
+
+    def test_session_reuse(self):
+        """Calling get_or_create_session twice should return the same session."""
+        from opencut.core.chat_editor import _sessions, get_or_create_session
+        sid = "test-session-reuse-001"
+        try:
+            s1 = get_or_create_session(sid, "/fake/v.mp4")
+            s2 = get_or_create_session(sid, "/fake/v.mp4")
+            self.assertIs(s1, s2)
+        finally:
+            _sessions.pop(sid, None)
+
+    def test_session_ttl_constants(self):
+        """Session TTL and max sessions constants should be defined."""
+        from opencut.core.chat_editor import _MAX_SESSIONS, _SESSION_TTL
+        self.assertGreater(_SESSION_TTL, 0)
+        self.assertGreater(_MAX_SESSIONS, 0)
+
+    def test_evict_stale_sessions(self):
+        """_evict_stale_sessions should remove old sessions."""
+        import time as _time
+
+        from opencut.core.chat_editor import (
+            _SESSION_TTL,
+            ChatMessage,
+            ChatSession,
+            _evict_stale_sessions,
+            _sessions,
+        )
+        sid = "test-stale-session-001"
+        try:
+            session = ChatSession(session_id=sid, filepath="", context={})
+            # Add a message with an old timestamp
+            old_msg = ChatMessage(
+                role="user", content="old",
+                timestamp=_time.time() - _SESSION_TTL - 100,
+            )
+            session.history.append(old_msg)
+            _sessions[sid] = session
+            _evict_stale_sessions()
+            self.assertNotIn(sid, _sessions)
+        finally:
+            _sessions.pop(sid, None)
+
+
+# ============================================================
+# TestEngineRegistry
+# ============================================================
+class TestEngineRegistry(unittest.TestCase):
+    """Tests for engine_registry.py plugin architecture."""
+
+    def test_registry_singleton(self):
+        """get_registry should return the same instance."""
+        from opencut.core.engine_registry import get_registry
+        r1 = get_registry()
+        r2 = get_registry()
+        self.assertIs(r1, r2)
+
+    def test_registry_has_builtin_engines(self):
+        """Registry should have built-in engines registered."""
+        from opencut.core.engine_registry import get_registry
+        reg = get_registry()
+        status = reg.get_status()
+        self.assertIn("domains", status)
+        self.assertGreater(len(status["domains"]), 0)
+
+    def test_resolve_engine_returns_string(self):
+        """resolve_engine should return a string engine name or None."""
+        from opencut.core.engine_registry import get_registry
+        reg = get_registry()
+        # Try resolving for a known domain
+        result = reg.resolve_engine("silence")
+        # Could be None if no engines available, or a string
+        self.assertTrue(result is None or isinstance(result, str))
+
+
+# ============================================================
+# TestDepthEffects
+# ============================================================
+class TestDepthEffects(unittest.TestCase):
+    """Tests for depth_effects.py functions."""
+
+    def test_check_depth_available_returns_bool(self):
+        from opencut.core.depth_effects import check_depth_available
+        result = check_depth_available()
+        self.assertIsInstance(result, bool)
+
+    def test_estimate_depth_map_requires_file(self):
+        """estimate_depth_map should raise FileNotFoundError for missing input."""
+        from opencut.core.depth_effects import check_depth_available
+        if not check_depth_available():
+            self.skipTest("Depth deps not installed")
+        from opencut.core.depth_effects import estimate_depth_map
+        with self.assertRaises(FileNotFoundError):
+            estimate_depth_map("/nonexistent/video.mp4")
+
+    def test_apply_bokeh_effect_signature(self):
+        """apply_bokeh_effect should have expected parameters."""
+        import inspect
+
+        from opencut.core.depth_effects import apply_bokeh_effect
+        sig = inspect.signature(apply_bokeh_effect)
+        self.assertIn("input_path", sig.parameters)
+        self.assertIn("focus_point", sig.parameters)
+        self.assertIn("blur_strength", sig.parameters)
+
+
+# ============================================================
+# TestResolveBridge
+# ============================================================
+class TestResolveBridge(unittest.TestCase):
+    """Tests for resolve_bridge.py."""
+
+    def test_resolve_bridge_instantiation(self):
+        """ResolveBridge should instantiate without error."""
+        from opencut.core.resolve_bridge import ResolveBridge
+        bridge = ResolveBridge()
+        self.assertIsNotNone(bridge)
+
+    def test_resolve_bridge_not_connected_by_default(self):
+        """Bridge should not be connected when Resolve isn't running."""
+        from opencut.core.resolve_bridge import ResolveBridge
+        bridge = ResolveBridge()
+        # Without Resolve running, should not be connected
+        self.assertFalse(bridge.is_connected())
+
+    def test_resolve_bridge_has_reconnect(self):
+        """Bridge should have reconnect and _ensure_connected methods."""
+        from opencut.core.resolve_bridge import ResolveBridge
+        bridge = ResolveBridge()
+        self.assertTrue(hasattr(bridge, "reconnect"))
+        self.assertTrue(hasattr(bridge, "_ensure_connected"))
+
+
+# ============================================================
+# TestWebSocketBridge
+# ============================================================
+class TestWebSocketBridge(unittest.TestCase):
+    """Tests for ws_bridge.py."""
+
+    def test_bridge_instantiation(self):
+        """WebSocketBridge should instantiate."""
+        try:
+            from opencut.core.ws_bridge import WebSocketBridge
+        except ImportError:
+            self.skipTest("websockets not installed")
+        bridge = WebSocketBridge()
+        self.assertIsNotNone(bridge)
+
+    def test_bridge_default_port(self):
+        """Default port should be 5680."""
+        try:
+            from opencut.core.ws_bridge import WebSocketBridge
+        except ImportError:
+            self.skipTest("websockets not installed")
+        bridge = WebSocketBridge()
+        self.assertEqual(bridge.port, 5680)
+
+
+# ============================================================
+# TestNewHealthCapabilities
+# ============================================================
+class TestNewHealthCapabilities(unittest.TestCase):
+    """Tests for /health capabilities added in Round 14."""
+
+    def setUp(self):
+        from opencut.server import app
+        app.config["TESTING"] = True
+        self.client = app.test_client()
+
+    def test_health_includes_depth_effects(self):
+        resp = self.client.get("/health")
+        data = resp.get_json()
+        self.assertIn("depth_effects", data["capabilities"])
+
+    def test_health_includes_resolve(self):
+        resp = self.client.get("/health")
+        data = resp.get_json()
+        self.assertIn("resolve", data["capabilities"])
+
+    def test_health_includes_multimodal_diarize(self):
+        resp = self.client.get("/health")
+        data = resp.get_json()
+        self.assertIn("multimodal_diarize", data["capabilities"])
+
+
+# ============================================================
+# TestNewInstallRoutes
+# ============================================================
+class TestNewInstallRoutes(unittest.TestCase):
+    """Tests that new install endpoints exist and accept POST."""
+
+    def setUp(self):
+        from opencut.server import app
+        app.config["TESTING"] = True
+        self.client = app.test_client()
+        resp = self.client.get("/health")
+        self.csrf = resp.get_json().get("csrf_token", "")
+
+    def _headers(self):
+        return {"X-OpenCut-Token": self.csrf, "Content-Type": "application/json"}
+
+    def test_depth_install_route_exists(self):
+        resp = self.client.post("/video/depth/install", headers=self._headers(), json={})
+        self.assertNotEqual(resp.status_code, 404)
+        self.assertNotEqual(resp.status_code, 405)
+
+    def test_emotion_install_route_exists(self):
+        resp = self.client.post("/video/emotion/install", headers=self._headers(), json={})
+        self.assertNotEqual(resp.status_code, 404)
+        self.assertNotEqual(resp.status_code, 405)
+
+    def test_broll_generate_install_route_exists(self):
+        resp = self.client.post("/video/broll-generate/install", headers=self._headers(), json={})
+        self.assertNotEqual(resp.status_code, 404)
+        self.assertNotEqual(resp.status_code, 405)
+
+    def test_crisper_whisper_install_route_exists(self):
+        resp = self.client.post("/audio/crisper-whisper/install", headers=self._headers(), json={})
+        self.assertNotEqual(resp.status_code, 404)
+        self.assertNotEqual(resp.status_code, 405)
+
+
+# ============================================================
+# TestGPURateLimiting
+# ============================================================
+class TestGPURateLimiting(unittest.TestCase):
+    """Tests that GPU-heavy endpoints have rate limiting."""
+
+    def setUp(self):
+        from opencut.server import app
+        app.config["TESTING"] = True
+        self.client = app.test_client()
+        resp = self.client.get("/health")
+        self.csrf = resp.get_json().get("csrf_token", "")
+
+    def _headers(self):
+        return {"X-OpenCut-Token": self.csrf, "Content-Type": "application/json"}
+
+    def test_depth_map_rate_limited(self):
+        """Depth map route should return 429 when GPU slot is occupied."""
+        from opencut.security import rate_limit, rate_limit_release
+        # Acquire the GPU slot
+        rate_limit("gpu_job")
+        try:
+            resp = self.client.post("/video/depth/map", headers=self._headers(), json={
+                "filepath": "/fake.mp4",
+            })
+            self.assertEqual(resp.status_code, 429)
+        finally:
+            rate_limit_release("gpu_job")
+
+    def test_emotion_rate_limited(self):
+        """Emotion highlights route should return 429 when GPU slot is occupied."""
+        from opencut.security import rate_limit, rate_limit_release
+        rate_limit("gpu_job")
+        try:
+            resp = self.client.post("/video/emotion-highlights", headers=self._headers(), json={
+                "filepath": "/fake.mp4",
+            })
+            self.assertEqual(resp.status_code, 429)
+        finally:
+            rate_limit_release("gpu_job")
+
+
+# ============================================================
+# TestSocialPlatformValidation
+# ============================================================
+class TestSocialPlatformValidation(unittest.TestCase):
+    """Tests for social platform validation on connect/disconnect routes."""
+
+    def setUp(self):
+        from opencut.server import app
+        app.config["TESTING"] = True
+        self.client = app.test_client()
+        resp = self.client.get("/health")
+        self.csrf = resp.get_json().get("csrf_token", "")
+
+    def _headers(self):
+        return {"X-OpenCut-Token": self.csrf, "Content-Type": "application/json"}
+
+    def test_social_connect_rejects_invalid_platform(self):
+        resp = self.client.post("/social/connect", headers=self._headers(), json={
+            "platform": "myspace",
+            "access_token": "fake_token",
+        })
+        self.assertEqual(resp.status_code, 400)
+        data = resp.get_json()
+        self.assertIn("Unsupported platform", data.get("error", ""))
+
+    def test_social_disconnect_rejects_invalid_platform(self):
+        resp = self.client.post("/social/disconnect", headers=self._headers(), json={
+            "platform": "friendster",
+        })
+        self.assertEqual(resp.status_code, 400)
+        data = resp.get_json()
+        self.assertIn("Unsupported platform", data.get("error", ""))
 
 
 if __name__ == "__main__":

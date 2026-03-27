@@ -324,7 +324,7 @@ def parse_command(text: str, llm_config: Optional[LLMConfig] = None) -> Optional
             logger.info("NLP command matched via keyword: %s (conf=%.2f)", result["route"], result["confidence"])
 
     if result is None:
-        logger.info("NLP command not matched: %r", text)
+        logger.debug("NLP command not matched: %r", text)
         return None
 
     # Enrich params with values extracted from the text

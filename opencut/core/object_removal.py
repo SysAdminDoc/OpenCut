@@ -435,7 +435,7 @@ def detect_watermark_region(
     """
     try:
         import torch
-        from transformers import AutoProcessor, AutoModelForCausalLM
+        from transformers import AutoModelForCausalLM, AutoProcessor
     except ImportError:
         raise ImportError("Florence-2 requires transformers and torch. Install: pip install transformers torch")
 

@@ -10,7 +10,7 @@
 ## Key Files
 
 ### Backend (Python)
-- `opencut/server.py` (~730 lines) - Flask app creation, startup, port management, download_models, `_setup_system_site_packages()` for frozen builds. Log format includes `[job_id]` for correlation via _JobLogFilter. `/logs/tail` endpoint for filtered log viewing.
+- `opencut/server.py` (~800 lines) - Flask app creation, startup, port management, download_models, `_setup_system_site_packages()` for frozen builds. JSON structured logging via python-json-logger (file handler; console stays plain text). `[job_id]` correlation via _JobLogFilter. `/logs/tail` endpoint for filtered log viewing.
 - `opencut/security.py` (~280 lines) - Path validation, CSRF tokens, safe_pip_install (frozen-build aware via `_find_system_python()`), safe_float/safe_int (with range clamp + inf/nan rejection), validate_filepath, VALID_WHISPER_MODELS, rate_limit/require_rate_limit
 - `opencut/jobs.py` (~240 lines) - Job state, _new_job, _update_job, _kill_job_process, _get_job_copy, _list_jobs_copy, _unregister_job_process, TooManyJobsError, MAX_CONCURRENT_JOBS=10, async_job decorator. Thread-local job_id for log correlation (_thread_local.job_id set in _process, cleared in finally). _safe_error delegates to errors.safe_error for structured classification.
 - `opencut/helpers.py` (~530 lines) - _try_import, output paths, FFmpegCmd builder, FFmpeg progress runner, deferred temp cleanup, job time tracking, compute_estimate, `run_ffmpeg()`, `ensure_package()`, `get_video_info()`
@@ -56,6 +56,15 @@
 - `deliverables.py` - POST /deliverables/vfx-sheet|adr-list|music-cue-sheet|asset-list → {output, rows}. All handle dict return from core functions via isinstance guard.
 - `nlp.py` - POST /nlp/command → LLMConfig object (not dict), explanation falls back to param_source
 - `workflow.py` - POST /workflow/run (chained multi-step processing), GET /workflow/presets, POST /workflow/save, DELETE /workflow/delete
+- `context.py` - POST /context/analyze (clip metadata → feature scores + guidance), GET /context/features (list all features)
+- `plugins.py` - GET /plugins/list, GET /plugins/loaded, POST /plugins/install, POST /plugins/uninstall
+
+**New in v1.9.0:**
+- `context_awareness.py` (`core/`) — 35-feature relevance scoring based on clip metadata. classify_clip(metadata) → tags, score_features(tags) → scored list, get_guidance_message() → contextual help.
+- `plugins.py` (`core/`) — Plugin loader. discover_plugins() scans ~/.opencut/plugins/, load_all_plugins(app) registers Flask Blueprints under /plugins/<name>/. Validates plugin.json manifests.
+- `multicam_xml.py` (`core/`) — FCP XML generation from multicam cuts. generate_multicam_xml(cuts, source_files, ...) → {xml, output, cuts_count, duration}.
+- `footage_index_db.py` (`core/`) — SQLite FTS5 footage index at ~/.opencut/footage_index.db. WAL mode, thread-local connections. index_file, search (FTS5 with LIKE fallback), needs_reindex (mtime comparison), get_stats, clear_index, remove_missing_files.
+- `streaming.py` (`core/`) — NDJSON streaming utilities. ndjson_generator (batched), ndjson_item_generator (per-item), ndjson_progress_generator, make_ndjson_response.
 
 ### Persistence (`opencut/`)
 - `job_store.py` (~200 lines) - SQLite job persistence at ~/.opencut/jobs.db. WAL mode, thread-local connections. save_job, get_job, list_jobs, mark_interrupted (on startup), cleanup_old_jobs (7-day TTL), get_job_stats. Jobs auto-persisted on terminal status via _persist_job in jobs.py.
@@ -63,6 +72,7 @@
 ### Data Files (`opencut/data/`)
 - `workflow_presets.json` - 6 built-in workflow presets (Clean Interview, Podcast Polish, Social Clip, YouTube Upload, Documentary Rough, Studio Audio)
 - `project_templates.json` - 6 project templates (YouTube, Shorts, TikTok/Reels, Podcast, Cinema, Broadcast)
+- `example_plugins/timecode-watermark/` - Example plugin with plugin.json manifest and routes.py Blueprint
 
 ### Frontend (CEP Panel)
 - `extension/com.opencut.panel/client/main.js` (~7730 lines) - Frontend controller. New systems: keyboard shortcut registry (DEFAULT_SHORTCUTS + localStorage persistence + matchesShortcut), lazy tab rendering (_tabRendered + initTabOnFirstVisit), cut review panel (showCutReview + formatTimecode), status bar (pollSystemStatus), i18n (loadLocale + t() + applyI18nToDOM), workflow preset loader (loadWorkflowPresets + server-side POST /workflow/run), project templates (initProjectTemplates + loadTemplateList), preset export/import (exportPresetFile + importPresetFile), quick action buttons (one-click workflows on Cut/Captions/Audio/Video tabs), toast reflow (_reflowToasts), enhanced error display (showAlert reads structured error.suggestion), job history loads from backend on init, interrupted jobs alert on first connect.
@@ -98,11 +108,23 @@
 - `tests/test_route_smoke.py` (~950 lines) - 107+ smoke tests across all 11 blueprints + structured error tests + CSRF enforcement
 - `tests/test_job_store.py` - SQLite persistence tests (save, get, list, filter, update, mark_interrupted, cleanup, stats, pagination)
 - `tests/test_workflow.py` - Workflow engine tests (validation, presets, save/delete, built-in protection)
+- `tests/test_context.py` - Context awareness tests (classify_clip, score_features, guidance, route integration)
+- `tests/test_plugins.py` - Plugin discovery, manifest validation, route endpoint tests
+- `tests/test_multicam_xml.py` - Multicam XML generation (basic, file output, NTSC, path-to-url)
+- `tests/test_footage_index_db.py` - SQLite FTS5 index (index, search, upsert, reindex, stats, cleanup)
+- `tests/test_streaming.py` - NDJSON streaming (batched, per-item, progress generators)
+- `tests/test_batch_parallel.py` - Parallel batch processing (ThreadPoolExecutor, GPU/CPU workers, error isolation, cancellation)
+- `tests/test_batch_executor.py` - BatchExecutor class tests (OperationSpec dispatch, combined progress, cancellation, partial failure)
+- `tests/test_clip_notes_plugin.py` - Clip Notes plugin tests (CRUD notes, export text/CSV)
+
+### Example Plugins (`opencut/data/example_plugins/`)
+- `timecode-watermark/` - FFmpeg drawtext timecode overlay plugin
+- `clip-notes/` - SQLite-backed per-clip timestamped notes with export (text/CSV)
 
 ## Architecture
 - Backend runs as standalone process (exe or `python -m opencut.server`)
 - Panel communicates via XHR to localhost:5679
-- **Blueprint-based route organization**: 11 Blueprints (system, audio, captions, video, jobs, settings, timeline, search, deliverables, nlp, workflow)
+- **Blueprint-based route organization**: 13 Blueprints (system, audio, captions, video, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins) + dynamically loaded plugin blueprints
 - **Shared modules**: security.py (CSRF + path validation), jobs.py (job state), helpers.py (utilities + `run_ffmpeg` + `ensure_package` + `get_video_info`), user_data.py (thread-safe file I/O)
 - **CSRF protection**: Token generated at startup in security.py, returned via /health, sent as `X-OpenCut-Token` header on mutations. `@require_csrf` decorator applied to ALL POST routes.
 - **Path validation**: `validate_path()` checks realpath, null bytes, `..` components, symlinks. `validate_filepath()` adds isfile check. Applied to ALL routes accepting file paths.
@@ -880,3 +902,29 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **export_video partial file leak** — Failed FFmpeg runs left corrupt partial output files on disk. Added cleanup on non-zero exit.
 - **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.
 - **pip install permission denied** — `safe_pip_install()` failed on Windows when both normal and `--user` installs hit Errno 13 (Microsoft Store Python, OneDrive-synced user dirs, restrictive ACLs). Added `--target ~/.opencut/packages` as third fallback strategy. server.py adds `~/.opencut/packages` to `sys.path` at startup.
+
+## v1.9.0 Features Added
+
+### Backend Infrastructure
+- **Contextual Awareness** (`core/context_awareness.py` + `routes/context.py`) — 35-feature relevance scoring based on clip metadata. `classify_clip()` produces tags (talking_head, audio_only, long_duration, etc.), `score_features()` scores 0-100, `get_guidance_message()` generates contextual help text. POST /context/analyze, GET /context/features.
+- **Plugin System** (`core/plugins.py` + `routes/plugins.py`) — Plugin loader scans `~/.opencut/plugins/` for directories with `plugin.json` manifests. Validates name/version/description, loads Flask Blueprints under `/plugins/<name>/`. Auto-loaded on server startup via `load_all_plugins(app)`. GET /plugins/list, /plugins/loaded, POST /plugins/install, /plugins/uninstall.
+- **Multicam XML Export** (`core/multicam_xml.py`) — FCP XML generation for Premiere Pro import. `generate_multicam_xml(cuts, source_files, ...)` produces `<xmeml>` with video/audio tracks, NTSC detection, file URL references. POST /video/multicam-xml. CLI multicam command now exports XML.
+- **SQLite FTS5 Footage Index** (`core/footage_index_db.py`) — Replaces JSON index with SQLite + FTS5 at `~/.opencut/footage_index.db`. WAL mode, thread-local connections, triggers for FTS sync. `needs_reindex()` compares mtime for incremental updates. POST /search/auto-index, /search/db-search, GET /search/db-stats, POST /search/cleanup.
+- **NDJSON Response Streaming** (`core/streaming.py`) — Batched and per-item streaming for large result sets. `ndjson_generator()` batches items, `make_ndjson_response()` wraps in Flask Response with correct headers. GET /jobs/stream-result/<job_id> streams completed job arrays.
+
+### Security & Reliability Hardening
+- **TooManyJobsError handling** — All 96 manual `_new_job()` calls across video.py, audio.py, captions.py now catch `TooManyJobsError` and return 429 instead of 500.
+- **AI GPU rate limiting** — `rate_limit("ai_gpu")` on 6 GPU-heavy routes (upscale, rembg, shorts pipeline, 3 music AI routes) prevents concurrent GPU OOM.
+- **Settings import validation** — Workflow steps validated (require endpoint + label) before import.
+- **Input bounds** — preview_frame width (32-3840), detection_skip (1-30).
+- **Secure tempfile** — preview_frame uses `tempfile.mkstemp()` not predictable paths.
+
+### Gotchas (v1.9.0 additions)
+- **Plugin route prefix** — Plugin Blueprints are registered under `/plugins/<plugin_name>/`. Plugin routes.py defines `plugin_bp` (not any other name). The Blueprint's internal URL rules are relative, so a plugin route `@plugin_bp.route("/apply")` becomes `/plugins/timecode-watermark/apply`.
+- **Plugin loading order** — Plugins load AFTER all built-in blueprints in `create_app()`. Plugin route collisions with built-in routes will silently fail — Flask uses the first registered route.
+- **FTS5 query syntax** — `footage_index_db.search()` wraps words in quotes for safety. Raw FTS5 operators (AND, OR, NOT, NEAR) in user queries may cause OperationalError — the function falls back to LIKE search automatically.
+- **`needs_reindex()` uses mtime** — If a file is re-transcribed without changing on disk, `needs_reindex()` returns False. Force re-index by calling `index_file()` directly.
+- **NDJSON response mime type** — `application/x-ndjson`. Frontend must parse line-by-line, not `JSON.parse()` the whole body. Each line is a valid JSON object.
+- **Context awareness `score_features` capability check** — The scoring checks for "audio" and "video" capabilities by inferring from tags (e.g., `audio_only` implies has audio but no video). Tags like `talking_head` imply both audio and video are present.
+- **`rate_limit("ai_gpu")` scope** — Shared across all AI routes. If upscale is running, music generation returns 429. This is intentional to prevent GPU memory conflicts.
+- **13 Blueprints** — Route registration list in `__init__.py` is now: system, audio, captions, video, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins. Plus dynamic plugin blueprints.

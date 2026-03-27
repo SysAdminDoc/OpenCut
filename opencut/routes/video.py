@@ -19,6 +19,7 @@ import uuid
 from flask import Blueprint, jsonify, request
 
 from opencut.checks import check_watermark_available
+from opencut.errors import safe_error
 from opencut.helpers import (
     _get_file_duration,
     _resolve_output_dir,
@@ -27,10 +28,10 @@ from opencut.helpers import (
 )
 from opencut.jobs import (
     MAX_BATCH_FILES,
+    TooManyJobsError,
     _is_cancelled,
     _new_job,
     _register_job_process,
-    _safe_error,
     _unregister_job_process,
     _update_job,
     job_lock,
@@ -86,7 +87,7 @@ def video_auto_detect_watermark():
     except ImportError as e:
         return jsonify({"error": str(e), "suggestion": "Install: pip install transformers torch opencv-python-headless"}), 400
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "video_auto_detect_watermark")
 
 
 @video_bp.route("/video/watermark", methods=["POST"])
@@ -98,7 +99,7 @@ def video_watermark():
     output_dir = data.get("output_dir", "")
     max_bbox_percent = safe_int(data.get("max_bbox_percent", 10), 10, min_val=1, max_val=100)
     detection_prompt = data.get("detection_prompt", "watermark")[:200]
-    detection_skip = safe_int(data.get("detection_skip", 3), 3)
+    detection_skip = safe_int(data.get("detection_skip", 3), 3, min_val=1, max_val=30)
     transparent = data.get("transparent", False)
     preview = data.get("preview", False)
     auto_import = data.get("auto_import", True)
@@ -114,7 +115,10 @@ def video_watermark():
     if not check_watermark_available():
         return jsonify({"error": "Watermark remover not installed. Please install it first."}), 400
 
-    job_id = _new_job("watermark", filepath)
+    try:
+        job_id = _new_job("watermark", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -445,7 +449,10 @@ def video_scenes():
     threshold = safe_float(data.get("threshold", 0.3), 0.3)
     min_scene = safe_float(data.get("min_scene_length", 2.0), 2.0)
 
-    job_id = _new_job("scenes", filepath)
+    try:
+        job_id = _new_job("scenes", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     method = data.get("method", "ffmpeg").strip().lower()
     if method not in ("ffmpeg", "ml", "pyscenedetect"):
@@ -564,7 +571,10 @@ def export_video():
     if audio_only:
         output_format = audio_format_ext
 
-    job_id = _new_job("export-video", filepath)
+    try:
+        job_id = _new_job("export-video", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
 
@@ -822,7 +832,7 @@ def video_fx_list():
         from opencut.core.video_fx import get_available_video_effects
         return jsonify({"effects": get_available_video_effects()})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "video_fx_list")
 
 
 @video_bp.route("/video/fx/apply", methods=["POST"])
@@ -846,7 +856,10 @@ def video_fx_apply():
     if not effect:
         return jsonify({"error": "No effect specified"}), 400
 
-    job_id = _new_job("video-fx", filepath)
+    try:
+        job_id = _new_job("video-fx", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -955,7 +968,7 @@ def video_ai_capabilities():
         from opencut.core.video_ai import get_ai_capabilities
         return jsonify(get_ai_capabilities())
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "video_ai_capabilities")
 
 
 @video_bp.route("/video/ai/upscale", methods=["POST"])
@@ -978,7 +991,14 @@ def video_ai_upscale():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("ai-upscale", filepath)
+    if not rate_limit("ai_gpu"):
+        return jsonify({"error": "An AI operation is already running. Please wait."}), 429
+
+    try:
+        job_id = _new_job("ai-upscale", filepath)
+    except TooManyJobsError as e:
+        rate_limit_release("ai_gpu")
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1001,6 +1021,8 @@ def video_ai_upscale():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
             logger.exception("AI upscale error")
+        finally:
+            rate_limit_release("ai_gpu")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -1041,7 +1063,14 @@ def video_ai_rembg():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("ai-rembg", filepath)
+    if not rate_limit("ai_gpu"):
+        return jsonify({"error": "An AI operation is already running. Please wait."}), 429
+
+    try:
+        job_id = _new_job("ai-rembg", filepath)
+    except TooManyJobsError as e:
+        rate_limit_release("ai_gpu")
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1066,6 +1095,8 @@ def video_ai_rembg():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
             logger.exception("AI rembg error")
+        finally:
+            rate_limit_release("ai_gpu")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -1092,7 +1123,10 @@ def video_ai_interpolate():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("ai-interpolate", filepath)
+    try:
+        job_id = _new_job("ai-interpolate", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1144,7 +1178,10 @@ def video_ai_denoise():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("video-denoise", filepath)
+    try:
+        job_id = _new_job("video-denoise", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1238,7 +1275,7 @@ def face_capabilities():
         from opencut.core.face_tools import check_face_tools_available
         return jsonify(check_face_tools_available())
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "face_capabilities")
 
 
 @video_bp.route("/video/face/detect", methods=["POST"])
@@ -1264,7 +1301,7 @@ def face_detect():
         result = detect_faces_in_frame(filepath, detector=detector)
         return jsonify(result)
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "face_detect")
 
 
 @video_bp.route("/video/face/blur", methods=["POST"])
@@ -1290,7 +1327,10 @@ def face_blur():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("face-blur", filepath)
+    try:
+        job_id = _new_job("face-blur", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1368,7 +1408,7 @@ def style_list():
         from opencut.core.style_transfer import get_available_styles
         return jsonify({"styles": get_available_styles()})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "style_list")
 
 
 @video_bp.route("/video/style/apply", methods=["POST"])
@@ -1392,7 +1432,10 @@ def style_apply():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("style-transfer", filepath)
+    try:
+        job_id = _new_job("style-transfer", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1445,7 +1488,10 @@ def style_arbitrary():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("style-arbitrary", filepath)
+    try:
+        job_id = _new_job("style-arbitrary", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1491,7 +1537,7 @@ def export_presets_list():
             "categories": get_preset_categories(),
         })
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "export_presets_list")
 
 
 @video_bp.route("/export/preset", methods=["POST"])
@@ -1511,7 +1557,10 @@ def export_with_preset_route():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("export-preset", filepath)
+    try:
+        job_id = _new_job("export-preset", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1566,7 +1615,10 @@ def generate_thumbnails_route():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("thumbnails", filepath)
+    try:
+        job_id = _new_job("thumbnails", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1627,51 +1679,73 @@ def batch_create():
             return jsonify({"error": str(e)}), 400
     filepaths = validated_paths
 
-    try:
-        from opencut.core.batch_process import create_batch, finalize_batch, update_batch_item
+    parallel = data.get("parallel", True)
 
-        batch_id = str(uuid.uuid4())[:8]
+    try:
+        from opencut.core.batch_process import (
+            create_batch,
+            finalize_batch,
+            process_batch_parallel,
+            update_batch_item,
+        )
+
+        batch_id = str(uuid.uuid4()).replace("-", "")[:16]
         batch = create_batch(batch_id, operation, filepaths, params)
 
-        # Process items sequentially in a background thread
-        def _process_batch():
-            for idx, item in enumerate(batch.items):
-                if batch.status == "cancelled":
-                    break
-                if item.status == "skipped":
-                    continue
+        if parallel:
+            # Process items concurrently via ThreadPoolExecutor
+            def _process_batch_parallel():
+                process_batch_parallel(
+                    batch_id, filepaths, operation, params,
+                )
 
-                update_batch_item(batch_id, idx,
-                                  status="running", started_at=time.time(),
-                                  message="Processing...")
+            thread = threading.Thread(target=_process_batch_parallel, daemon=True)
+        else:
+            # Process items sequentially in a background thread
+            def _process_batch():
+                for idx, item in enumerate(batch.items):
+                    if batch.status == "cancelled":
+                        break
+                    if item.status == "skipped":
+                        continue
 
-                try:
-                    # Route the operation to the appropriate function
-                    result = _execute_batch_item(
-                        operation, item.filepath, params,
-                        lambda pct, msg: update_batch_item(
-                            batch_id, idx, progress=pct, message=msg
-                        ),
-                    )
                     update_batch_item(batch_id, idx,
-                                      status="complete", progress=100,
-                                      output_path=result,
-                                      message="Done",
-                                      finished_at=time.time())
-                except Exception as e:
-                    update_batch_item(batch_id, idx,
-                                      status="error", error=str(e),
-                                      message=f"Error: {e}",
-                                      finished_at=time.time())
+                                      status="running", started_at=time.time(),
+                                      message="Processing...")
 
-            finalize_batch(batch_id)
+                    try:
+                        # Route the operation to the appropriate function
+                        result = _execute_batch_item(
+                            operation, item.filepath, params,
+                            lambda pct, msg: update_batch_item(
+                                batch_id, idx, progress=pct, message=msg
+                            ),
+                        )
+                        update_batch_item(batch_id, idx,
+                                          status="complete", progress=100,
+                                          output_path=result,
+                                          message="Done",
+                                          finished_at=time.time())
+                    except Exception as e:
+                        update_batch_item(batch_id, idx,
+                                          status="error", error=str(e),
+                                          message=f"Error: {e}",
+                                          finished_at=time.time())
 
-        thread = threading.Thread(target=_process_batch, daemon=True)
+                finalize_batch(batch_id)
+
+            thread = threading.Thread(target=_process_batch, daemon=True)
+
         thread.start()
 
-        return jsonify({"batch_id": batch_id, "status": "running", "total": batch.total})
+        return jsonify({
+            "batch_id": batch_id,
+            "status": "running",
+            "total": batch.total,
+            "parallel": parallel,
+        })
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "batch_create")
 
 
 @video_bp.route("/batch/<batch_id>", methods=["GET"])
@@ -1684,7 +1758,7 @@ def batch_status(batch_id):
             return jsonify({"error": "Batch not found"}), 404
         return jsonify(batch.summary)
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "batch_status")
 
 
 @video_bp.route("/batch/<batch_id>/cancel", methods=["POST"])
@@ -1697,7 +1771,7 @@ def batch_cancel(batch_id):
             return jsonify({"status": "cancelled"})
         return jsonify({"error": "Batch not found"}), 404
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "batch_cancel")
 
 
 @video_bp.route("/batch/list", methods=["GET"])
@@ -1707,7 +1781,197 @@ def batch_list():
         from opencut.core.batch_process import list_batches
         return jsonify({"batches": list_batches()})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "batch_list")
+
+
+# ---------------------------------------------------------------------------
+# Parallel Batch Processing (Phase 5.4)
+# ---------------------------------------------------------------------------
+@video_bp.route("/batch/parallel", methods=["POST"])
+@require_csrf
+def batch_parallel():
+    """Run multiple operations in parallel.
+
+    Accepts a list of operations, each with an endpoint path and payload.
+    Operations are executed concurrently using a configurable thread pool.
+
+    Request body::
+
+        {
+            "operations": [
+                {"endpoint": "/video/stabilize", "payload": {"filepath": "...", ...}},
+                {"endpoint": "/audio/denoise",   "payload": {"filepath": "...", ...}},
+            ],
+            "max_workers": 2
+        }
+    """
+    from opencut.core.batch_executor import BatchExecutor, OperationSpec
+    from opencut.jobs import TooManyJobsError
+
+    data = request.get_json(force=True)
+    operations = data.get("operations", [])
+    max_workers = safe_int(data.get("max_workers", 2), 2, min_val=1, max_val=8)
+
+    if not operations:
+        return jsonify({"error": "No operations specified"}), 400
+    if len(operations) > MAX_BATCH_FILES:
+        return jsonify({"error": f"Too many operations. Maximum is {MAX_BATCH_FILES}."}), 400
+
+    # Build operation specs and validate filepaths
+    specs = []
+    for i, op in enumerate(operations):
+        endpoint = op.get("endpoint", "")
+        payload = op.get("payload", {})
+        if not endpoint:
+            return jsonify({"error": f"Operation {i}: missing endpoint"}), 400
+        fp = payload.get("filepath", "")
+        if fp:
+            try:
+                payload["filepath"] = validate_filepath(fp)
+            except ValueError as e:
+                return jsonify({"error": f"Operation {i}: {e}"}), 400
+        specs.append(OperationSpec(endpoint=endpoint, payload=payload))
+
+    # Create a parent job to track overall progress
+    try:
+        job_id = _new_job("batch_parallel", f"{len(specs)} operations")
+    except TooManyJobsError:
+        return jsonify({"error": "Too many concurrent jobs. Please wait for existing jobs to finish."}), 429
+
+    executor = BatchExecutor(
+        operations=specs,
+        max_workers=max_workers,
+        job_id=job_id,
+    )
+
+    def _run():
+        try:
+            results = executor.run(_dispatch_parallel_op)
+            success = sum(1 for r in results if r.status == "complete")
+            failed = sum(1 for r in results if r.status == "error")
+            _update_job(
+                job_id,
+                status="complete",
+                progress=100,
+                result=executor.summary,
+                message=f"Done: {success} succeeded, {failed} failed",
+            )
+        except Exception as e:
+            logger.exception("Parallel batch %s failed", job_id)
+            _update_job(job_id, status="error", error=str(e),
+                        message=f"Error: {e}")
+
+    thread = threading.Thread(target=_run, daemon=True)
+    thread.start()
+
+    return jsonify({"job_id": job_id, "total": len(specs), "max_workers": max_workers})
+
+
+def _dispatch_parallel_op(op, progress_cb):
+    """Dispatch a single parallel batch operation to its handler.
+
+    Maps the endpoint path to the appropriate core function, similar
+    to ``_execute_batch_item`` but using endpoint + payload style.
+    """
+    endpoint = op.endpoint
+    payload = op.payload
+    filepath = payload.get("filepath", "")
+    output_dir = payload.get("output_dir", os.path.dirname(filepath) if filepath else "")
+
+    if endpoint in ("/video/stabilize",):
+        from opencut.core.video_fx import stabilize_video
+        return stabilize_video(
+            filepath, output_dir=output_dir,
+            smoothing=safe_int(payload.get("smoothing", 10), 10, min_val=1, max_val=100),
+            on_progress=progress_cb,
+        )
+    elif endpoint in ("/audio/denoise",):
+        from opencut.core.audio_suite import denoise_audio
+        out_path = os.path.join(
+            output_dir,
+            os.path.splitext(os.path.basename(filepath))[0] + "_denoised" + os.path.splitext(filepath)[1],
+        )
+        return denoise_audio(
+            filepath, output_path=out_path,
+            strength=safe_float(payload.get("strength", 0.5), 0.5, min_val=0.0, max_val=1.0),
+            on_progress=progress_cb,
+        )
+    elif endpoint in ("/audio/normalize",):
+        from opencut.core.audio_suite import normalize_loudness
+        out_path = os.path.join(
+            output_dir,
+            os.path.splitext(os.path.basename(filepath))[0] + "_normalized" + os.path.splitext(filepath)[1],
+        )
+        return normalize_loudness(
+            filepath, output_path=out_path,
+            target_lufs=safe_float(payload.get("target_lufs", -16), -16.0, min_val=-70.0, max_val=0.0),
+            on_progress=progress_cb,
+        )
+    elif endpoint in ("/video/face-blur",):
+        from opencut.core.face_tools import blur_faces
+        _valid_blur = {"gaussian", "pixelate", "black"}
+        _blur_method = payload.get("method", "gaussian")
+        if _blur_method not in _valid_blur:
+            _blur_method = "gaussian"
+        return blur_faces(
+            filepath, output_dir=output_dir,
+            method=_blur_method,
+            strength=safe_int(payload.get("strength", 51), 51, min_val=1, max_val=99),
+            on_progress=progress_cb,
+        )
+    elif endpoint in ("/video/export-preset",):
+        from opencut.core.export_presets import export_with_preset
+        return export_with_preset(
+            filepath, payload.get("preset", "youtube_1080p"),
+            output_dir=output_dir,
+            on_progress=progress_cb,
+        )
+    elif endpoint in ("/video/vignette",):
+        from opencut.core.video_fx import apply_vignette
+        return apply_vignette(
+            filepath, output_dir=output_dir,
+            intensity=safe_float(payload.get("intensity", 0.5), 0.5, min_val=0.0, max_val=2.0),
+            on_progress=progress_cb,
+        )
+    elif endpoint in ("/video/film-grain",):
+        from opencut.core.video_fx import apply_film_grain
+        return apply_film_grain(
+            filepath, output_dir=output_dir,
+            intensity=safe_float(payload.get("intensity", 0.5), 0.5, min_val=0.0, max_val=2.0),
+            on_progress=progress_cb,
+        )
+    elif endpoint in ("/video/letterbox",):
+        from opencut.core.video_fx import apply_letterbox
+        _valid_aspects = {"2.39:1", "2.35:1", "1.85:1", "16:9", "4:3", "1:1", "21:9"}
+        _aspect = payload.get("aspect", "2.39:1")
+        if _aspect not in _valid_aspects:
+            _aspect = "2.39:1"
+        return apply_letterbox(
+            filepath, output_dir=output_dir,
+            aspect=_aspect,
+            on_progress=progress_cb,
+        )
+    elif endpoint in ("/video/style-transfer",):
+        from opencut.core.style_transfer import style_transfer_video
+        _valid_styles = {"candy", "mosaic", "rain_princess", "udnie", "starry_night",
+                         "la_muse", "the_scream", "pointilism"}
+        _style = payload.get("style", "candy")
+        if _style not in _valid_styles:
+            _style = "candy"
+        return style_transfer_video(
+            filepath, style_name=_style,
+            output_dir=output_dir,
+            intensity=safe_float(payload.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0),
+            on_progress=progress_cb,
+        )
+    elif endpoint in ("/video/watermark",):
+        from opencut.core.object_removal import remove_watermark
+        return remove_watermark(
+            filepath, output_dir=output_dir,
+            on_progress=progress_cb,
+        )
+    else:
+        raise ValueError(f"Unsupported parallel batch endpoint: {endpoint}")
 
 
 def _execute_batch_item(operation, filepath, params, on_progress):
@@ -1810,7 +2074,7 @@ def speed_ramp_presets():
             "easings": list(EASING_FUNCTIONS.keys()),
         })
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "speed_ramp_presets")
 
 
 @video_bp.route("/video/speed/change", methods=["POST"])
@@ -1830,7 +2094,10 @@ def speed_change_route():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("speed", filepath)
+    try:
+        job_id = _new_job("speed", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1878,7 +2145,10 @@ def speed_reverse_route():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("reverse", filepath)
+    try:
+        job_id = _new_job("reverse", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1927,7 +2197,10 @@ def speed_ramp_route():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("speed-ramp", filepath)
+    try:
+        job_id = _new_job("speed-ramp", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1981,7 +2254,7 @@ def lut_list():
         from opencut.core.lut_library import get_lut_list
         return jsonify({"luts": get_lut_list()})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "lut_list")
 
 
 @video_bp.route("/video/lut/apply", methods=["POST"])
@@ -2002,7 +2275,10 @@ def lut_apply():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("lut", filepath)
+    try:
+        job_id = _new_job("lut", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2038,7 +2314,10 @@ def lut_apply():
 @require_csrf
 def lut_generate_all():
     """Pre-generate all built-in LUT .cube files."""
-    job_id = _new_job("lut-gen", "all")
+    try:
+        job_id = _new_job("lut-gen", "all")
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2091,7 +2370,10 @@ def chromakey_route():
     except ValueError as e:
         return jsonify({"error": f"Background: {e}"}), 400
 
-    job_id = _new_job("chromakey", fg)
+    try:
+        job_id = _new_job("chromakey", fg)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2144,7 +2426,10 @@ def pip_route():
     except ValueError as e:
         return jsonify({"error": f"PiP file: {e}"}), 400
 
-    job_id = _new_job("pip", main)
+    try:
+        job_id = _new_job("pip", main)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2191,7 +2476,10 @@ def blend_route():
     except ValueError as e:
         return jsonify({"error": f"Overlay: {e}"}), 400
 
-    job_id = _new_job("blend", base)
+    try:
+        job_id = _new_job("blend", base)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2229,7 +2517,7 @@ def removal_capabilities():
         from opencut.core.object_removal import get_removal_capabilities
         return jsonify(get_removal_capabilities())
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "removal_capabilities")
 
 
 @video_bp.route("/video/remove/watermark", methods=["POST"])
@@ -2253,7 +2541,10 @@ def remove_watermark_route():
 
     if not region:
         return jsonify({"error": "No region specified"}), 400
-    job_id = _new_job("watermark", fp)
+    try:
+        job_id = _new_job("watermark", fp)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2287,7 +2578,7 @@ def title_presets():
         from opencut.core.motion_graphics import get_title_presets
         return jsonify({"presets": get_title_presets()})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "title_presets")
 
 
 @video_bp.route("/video/title/render", methods=["POST"])
@@ -2303,7 +2594,10 @@ def title_render():
     subtitle = data.get("subtitle", "")
     if len(subtitle) > 500:
         return jsonify({"error": "Subtitle too long (max 500 chars)"}), 400
-    job_id = _new_job("title", text[:40])
+    try:
+        job_id = _new_job("title", text[:40])
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2361,7 +2655,10 @@ def title_overlay():
         return jsonify({"error": "No text"}), 400
     if len(text) > 500:
         return jsonify({"error": "Title text too long (max 500 chars)"}), 400
-    job_id = _new_job("title-overlay", fp)
+    try:
+        job_id = _new_job("title-overlay", fp)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2401,7 +2698,7 @@ def transitions_list():
         from opencut.core.transitions_3d import get_transition_list
         return jsonify({"transitions": get_transition_list()})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "transitions_list")
 
 
 @video_bp.route("/video/transitions/apply", methods=["POST"])
@@ -2427,7 +2724,10 @@ def transitions_apply():
     except ValueError as e:
         return jsonify({"error": f"Clip B: {e}"}), 400
 
-    job_id = _new_job("transition", a)
+    try:
+        job_id = _new_job("transition", a)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2476,7 +2776,10 @@ def transitions_join():
             return jsonify({"error": str(e)}), 400
     clips = validated_clips
 
-    job_id = _new_job("join", f"{len(clips)} clips")
+    try:
+        job_id = _new_job("join", f"{len(clips)} clips")
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2514,7 +2817,7 @@ def particle_presets():
         from opencut.core.particles import get_particle_presets
         return jsonify({"presets": get_particle_presets()})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "particle_presets")
 
 
 @video_bp.route("/video/particles/apply", methods=["POST"])
@@ -2532,7 +2835,10 @@ def particle_apply():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("particles", fp)
+    try:
+        job_id = _new_job("particles", fp)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2566,7 +2872,7 @@ def face_swap_capabilities():
         from opencut.core.face_swap import get_face_capabilities
         return jsonify(get_face_capabilities())
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "face_swap_capabilities")
 
 
 @video_bp.route("/video/face/enhance", methods=["POST"])
@@ -2588,7 +2894,10 @@ def face_enhance_route():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("face-enhance", fp)
+    try:
+        job_id = _new_job("face-enhance", fp)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2633,7 +2942,10 @@ def face_swap_route():
     except ValueError as e:
         return jsonify({"error": f"Reference face: {e}"}), 400
 
-    job_id = _new_job("face-swap", fp)
+    try:
+        job_id = _new_job("face-swap", fp)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2664,7 +2976,7 @@ def upscale_capabilities():
         from opencut.core.upscale_pro import get_upscale_capabilities
         return jsonify(get_upscale_capabilities())
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "upscale_capabilities")
 
 
 @video_bp.route("/video/upscale/run", methods=["POST"])
@@ -2682,7 +2994,10 @@ def upscale_run():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("upscale", fp)
+    try:
+        job_id = _new_job("upscale", fp)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2715,7 +3030,7 @@ def color_capabilities():
         from opencut.core.color_management import get_color_capabilities
         return jsonify(get_color_capabilities())
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "color_capabilities")
 
 
 @video_bp.route("/video/color/correct", methods=["POST"])
@@ -2733,7 +3048,10 @@ def color_correct_route():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("color", fp)
+    try:
+        job_id = _new_job("color", fp)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2779,7 +3097,10 @@ def color_convert_route():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("colorspace", fp)
+    try:
+        job_id = _new_job("colorspace", fp)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2829,7 +3150,10 @@ def color_external_lut_route():
     except ValueError as e:
         return jsonify({"error": f"LUT file: {e}"}), 400
 
-    job_id = _new_job("ext-lut", fp)
+    try:
+        job_id = _new_job("ext-lut", fp)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2886,8 +3210,8 @@ def video_reframe():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    target_w = safe_int(data.get("width", 1080), 1080)
-    target_h = safe_int(data.get("height", 1920), 1920)
+    target_w = safe_int(data.get("width", 1080), 1080, min_val=16, max_val=7680)
+    target_h = safe_int(data.get("height", 1920), 1920, min_val=16, max_val=7680)
     _VALID_REFRAME_MODES = {"crop", "pad", "stretch"}
     mode = data.get("mode", "crop")
     if mode not in _VALID_REFRAME_MODES:
@@ -2907,7 +3231,10 @@ def video_reframe():
     if target_w < 16 or target_h < 16:
         return jsonify({"error": "Target dimensions too small (min 16x16)"}), 400
 
-    job_id = _new_job("reframe", filepath)
+    try:
+        job_id = _new_job("reframe", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -3089,7 +3416,10 @@ def video_merge():
     quality = data.get("quality", "high")
     output_dir = data.get("output_dir", "")
 
-    job_id = _new_job("merge", files[0])
+    try:
+        job_id = _new_job("merge", files[0])
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -3218,7 +3548,10 @@ def video_trim():
     if not _time_re.match(str(start_time)) or not _time_re.match(str(end_time)):
         return jsonify({"error": "Invalid time format. Use HH:MM:SS or HH:MM:SS.xxx"}), 400
 
-    job_id = _new_job("trim", filepath)
+    try:
+        job_id = _new_job("trim", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -3298,7 +3631,7 @@ def preview_frame():
     data = request.get_json(force=True)
     file_path = data.get("filepath", data.get("file", ""))
     timestamp = str(data.get("timestamp", "00:00:01"))
-    width = safe_int(data.get("width", 640), 640)
+    width = safe_int(data.get("width", 640), 640, min_val=32, max_val=3840)
 
     # Validate timestamp format (e.g. "00:01:30", "90", "1:30.5")
     import re as _re
@@ -3313,11 +3646,15 @@ def preview_frame():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("preview-frame", file_path)
+    try:
+        job_id = _new_job("preview-frame", file_path)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         import base64
-        tmp = os.path.join(tempfile.gettempdir(), f"opencut_preview_{uuid.uuid4().hex[:8]}.jpg")
+        _fd, tmp = tempfile.mkstemp(suffix=".jpg", prefix="opencut_preview_")
+        os.close(_fd)
         try:
             _update_job(job_id, progress=10, message="Extracting frame...")
             cmd = [
@@ -3398,7 +3735,10 @@ def video_auto_edit():
     min_clip = safe_float(data.get("min_clip_length", 0.5), 0.5, min_val=0.1, max_val=10.0)
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
 
-    job_id = _new_job("auto-edit", filepath)
+    try:
+        job_id = _new_job("auto-edit", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -3474,7 +3814,10 @@ def video_reframe_face():
     face_padding = safe_float(data.get("face_padding", 0.3), 0.3, min_val=0.0, max_val=1.0)
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
 
-    job_id = _new_job("face-reframe", filepath)
+    try:
+        job_id = _new_job("face-reframe", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -3541,7 +3884,10 @@ def video_highlights():
     llm_api_key = data.get("llm_api_key", "")
     llm_base_url = data.get("llm_base_url", "")
 
-    job_id = _new_job("highlights", filepath)
+    try:
+        job_id = _new_job("highlights", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -3647,7 +3993,10 @@ def video_lut_from_ref():
         method = "histogram"
     strength = safe_float(data.get("strength", 0.8), 0.8, min_val=0.1, max_val=1.0)
 
-    job_id = _new_job("lut-gen-ref", reference_path)
+    try:
+        job_id = _new_job("lut-gen-ref", reference_path)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -3701,7 +4050,10 @@ def video_lut_ai():
     if lut_name and (lut_name.upper().split(".")[0] in _RESERVED or re.search(r'[<>:"/\\|?*]', lut_name)):
         return jsonify({"error": "Invalid LUT name"}), 400
 
-    job_id = _new_job("lut-gen-ai", reference_path)
+    try:
+        job_id = _new_job("lut-gen-ai", reference_path)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -3747,7 +4099,7 @@ def video_lut_blend():
         cube_path = blend_luts(lut_a, lut_b, blend=blend_val, output_name=data.get("output_name", ""))
         return jsonify({"success": True, "lut_path": cube_path})
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return safe_error(e, "video_lut_blend")
 
 
 # ---------------------------------------------------------------------------
@@ -3770,7 +4122,14 @@ def video_shorts_pipeline():
 
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
 
-    job_id = _new_job("shorts-pipeline", filepath)
+    if not rate_limit("ai_gpu"):
+        return jsonify({"error": "An AI operation is already running. Please wait."}), 429
+
+    try:
+        job_id = _new_job("shorts-pipeline", filepath)
+    except TooManyJobsError as e:
+        rate_limit_release("ai_gpu")
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -3845,6 +4204,8 @@ def video_shorts_pipeline():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
             logger.exception("Shorts pipeline error")
+        finally:
+            rate_limit_release("ai_gpu")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -3891,7 +4252,10 @@ def video_color_match():
     else:
         output_dir = os.path.dirname(source)
 
-    job_id = _new_job("color-match", source)
+    try:
+        job_id = _new_job("color-match", source)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -3963,7 +4327,10 @@ def video_auto_zoom():
     else:
         output_dir = os.path.dirname(filepath)
 
-    job_id = _new_job("auto-zoom", filepath)
+    try:
+        job_id = _new_job("auto-zoom", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -4110,7 +4477,7 @@ def video_multicam_cuts():
         except ImportError:
             return jsonify({"error": "Transcription modules not available. Provide segments directly."}), 503
         except Exception as exc:
-            return jsonify({"error": f"Transcription failed: {exc}"}), 500
+            return safe_error(exc, "multicam_xml_transcription")
 
     if not isinstance(effective_segments, list) or not effective_segments:
         return jsonify({"error": "No valid segments found"}), 400
@@ -4141,7 +4508,77 @@ def video_multicam_cuts():
     except ImportError:
         return jsonify({"error": "multicam module not available"}), 503
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "video_multicam_cuts")
+
+
+# ---------------------------------------------------------------------------
+# Video: Multicam XML Export
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/multicam-xml", methods=["POST"])
+@require_csrf
+def multicam_xml_export():
+    """Export multicam cuts as Premiere-compatible FCP XML.
+
+    Expects JSON body:
+    {
+        "cuts": [{"start": 0.0, "end": 5.2, "speaker": "SPEAKER_00", "track": 1}, ...],
+        "source_files": {"SPEAKER_00": "/path/to/cam1.mp4", ...},
+        "sequence_name": "My Multicam Edit",
+        "fps": 29.97,
+        "width": 1920,
+        "height": 1080,
+        "output_dir": ""
+    }
+    """
+    data = request.get_json(force=True, silent=True) or {}
+
+    cuts = data.get("cuts", [])
+    if not cuts or not isinstance(cuts, list):
+        return jsonify({"error": "cuts must be a non-empty list"}), 400
+
+    source_files = data.get("source_files", {})
+    sequence_name = str(data.get("sequence_name", "OpenCut Multicam"))
+    fps_val = safe_float(data.get("fps", 29.97), 29.97, min_val=1, max_val=120)
+    width_val = safe_int(data.get("width", 1920), 1920, min_val=1, max_val=7680)
+    height_val = safe_int(data.get("height", 1080), 1080, min_val=1, max_val=4320)
+
+    # Determine output path
+    output_dir = data.get("output_dir", "")
+    if output_dir:
+        validate_path(output_dir)
+    else:
+        output_dir = os.path.join(os.path.expanduser("~"), ".opencut", "exports")
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Sanitize sequence name for filename
+    safe_name = "".join(c if c.isalnum() or c in " _-" else "_" for c in sequence_name).strip()
+    if not safe_name:
+        safe_name = "multicam"
+    output_path = os.path.join(output_dir, f"{safe_name}.xml")
+
+    try:
+        from opencut.core.multicam_xml import generate_multicam_xml
+
+        result = generate_multicam_xml(
+            cuts=cuts,
+            source_files=source_files,
+            sequence_name=sequence_name,
+            fps=fps_val,
+            width=width_val,
+            height=height_val,
+            output_path=output_path,
+        )
+
+        return jsonify({
+            "success": True,
+            "output": result["output"],
+            "cuts_count": result["cuts_count"],
+            "duration": result["duration"],
+        })
+
+    except Exception as e:
+        logger.error("Multicam XML export failed: %s", e)
+        return safe_error(e, "multicam XML export")
 
 
 # ---------------------------------------------------------------------------
@@ -4155,22 +4592,30 @@ def video_emotion_highlights():
     Analyzes facial expressions across frames to build an emotion curve,
     then identifies peaks as potential highlight moments.
     """
+    if not rate_limit("gpu_job"):
+        return jsonify({"error": "A GPU-intensive job is already running. Please wait."}), 429
+
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
 
     if not filepath:
+        rate_limit_release("gpu_job")
         return jsonify({"error": "No file path provided"}), 400
 
     try:
         filepath = validate_filepath(filepath)
     except ValueError as e:
+        rate_limit_release("gpu_job")
         return jsonify({"error": str(e)}), 400
 
     sample_interval = safe_float(data.get("sample_interval", 1.0), 1.0, min_val=0.25, max_val=10.0)
     min_intensity = safe_float(data.get("min_intensity", 0.6), 0.6, min_val=0.1, max_val=1.0)
     min_duration = safe_float(data.get("min_duration", 2.0), 2.0, min_val=0.5, max_val=30.0)
 
-    job_id = _new_job("emotion-highlights", filepath)
+    try:
+        job_id = _new_job("emotion-highlights", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -4180,6 +4625,8 @@ def video_emotion_highlights():
             )
 
             def _on_progress(pct, msg=""):
+                if _is_cancelled(job_id):
+                    raise InterruptedError("Job cancelled")
                 _update_job(job_id, progress=pct, message=msg)
 
             curve = analyze_video_emotions(
@@ -4222,6 +4669,451 @@ def video_emotion_highlights():
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
             logger.exception("Emotion highlights error")
+        finally:
+            rate_limit_release("gpu_job")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Video: Depth Effects (Depth Anything V2)
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/depth/map", methods=["POST"])
+@require_csrf
+def video_depth_map():
+    """Generate a depth map video using Depth Anything V2."""
+    if not rate_limit("gpu_job"):
+        return jsonify({"error": "A GPU-intensive job is already running. Please wait."}), 429
+
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    output_dir = data.get("output_dir", "")
+    model_size = data.get("model_size", "small")
+    if model_size not in ("small", "base", "large"):
+        model_size = "small"
+
+    if not filepath:
+        rate_limit_release("gpu_job")
+        return jsonify({"error": "No file path provided"}), 400
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        rate_limit_release("gpu_job")
+        return jsonify({"error": str(e)}), 400
+
+    try:
+        job_id = _new_job("depth-map", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
+
+    def _process():
+        try:
+            from opencut.core.depth_effects import estimate_depth_map
+
+            def _on_progress(pct, msg=""):
+                if _is_cancelled(job_id):
+                    raise InterruptedError("Job cancelled")
+                _update_job(job_id, progress=pct, message=msg)
+
+            effective_dir = _resolve_output_dir(filepath, output_dir)
+            out = estimate_depth_map(filepath, output_dir=effective_dir, model_size=model_size, on_progress=_on_progress)
+            _update_job(job_id, status="complete", progress=100, message="Depth map generated!", result={"output_path": out})
+        except ImportError as e:
+            _update_job(job_id, status="error", error=str(e), message="Install: pip install torch transformers")
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Depth map error")
+        finally:
+            rate_limit_release("gpu_job")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+@video_bp.route("/video/depth/bokeh", methods=["POST"])
+@require_csrf
+def video_depth_bokeh():
+    """Apply depth-of-field (bokeh) simulation using depth estimation."""
+    if not rate_limit("gpu_job"):
+        return jsonify({"error": "A GPU-intensive job is already running. Please wait."}), 429
+
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    output_dir = data.get("output_dir", "")
+    focus_point = safe_float(data.get("focus_point", 0.5), 0.5, min_val=0.0, max_val=1.0)
+    blur_strength = safe_int(data.get("blur_strength", 25), 25, min_val=3, max_val=99)
+    model_size = data.get("model_size", "small")
+    if model_size not in ("small", "base", "large"):
+        model_size = "small"
+
+    if not filepath:
+        rate_limit_release("gpu_job")
+        return jsonify({"error": "No file path provided"}), 400
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        rate_limit_release("gpu_job")
+        return jsonify({"error": str(e)}), 400
+
+    try:
+        job_id = _new_job("depth-bokeh", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
+
+    def _process():
+        try:
+            from opencut.core.depth_effects import apply_bokeh_effect
+
+            def _on_progress(pct, msg=""):
+                if _is_cancelled(job_id):
+                    raise InterruptedError("Job cancelled")
+                _update_job(job_id, progress=pct, message=msg)
+
+            effective_dir = _resolve_output_dir(filepath, output_dir)
+            out = apply_bokeh_effect(
+                filepath, output_dir=effective_dir,
+                focus_point=focus_point, blur_strength=blur_strength,
+                model_size=model_size, on_progress=_on_progress,
+            )
+            _update_job(job_id, status="complete", progress=100, message="Bokeh effect applied!", result={"output_path": out})
+        except ImportError as e:
+            _update_job(job_id, status="error", error=str(e), message="Install: pip install torch transformers")
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Depth bokeh error")
+        finally:
+            rate_limit_release("gpu_job")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+@video_bp.route("/video/depth/parallax", methods=["POST"])
+@require_csrf
+def video_depth_parallax():
+    """Apply 3D parallax zoom (Ken Burns) effect using depth estimation."""
+    if not rate_limit("gpu_job"):
+        return jsonify({"error": "A GPU-intensive job is already running. Please wait."}), 429
+
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    output_dir = data.get("output_dir", "")
+    zoom_amount = safe_float(data.get("zoom_amount", 1.15), 1.15, min_val=1.01, max_val=2.0)
+    model_size = data.get("model_size", "small")
+    if model_size not in ("small", "base", "large"):
+        model_size = "small"
+
+    if not filepath:
+        rate_limit_release("gpu_job")
+        return jsonify({"error": "No file path provided"}), 400
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        rate_limit_release("gpu_job")
+        return jsonify({"error": str(e)}), 400
+
+    try:
+        job_id = _new_job("depth-parallax", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
+
+    def _process():
+        try:
+            from opencut.core.depth_effects import apply_parallax_zoom
+
+            def _on_progress(pct, msg=""):
+                if _is_cancelled(job_id):
+                    raise InterruptedError("Job cancelled")
+                _update_job(job_id, progress=pct, message=msg)
+
+            effective_dir = _resolve_output_dir(filepath, output_dir)
+            out = apply_parallax_zoom(
+                filepath, output_dir=effective_dir,
+                zoom_amount=zoom_amount, model_size=model_size,
+                on_progress=_on_progress,
+            )
+            _update_job(job_id, status="complete", progress=100, message="Parallax effect applied!", result={"output_path": out})
+        except ImportError as e:
+            _update_job(job_id, status="error", error=str(e), message="Install: pip install torch transformers")
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Depth parallax error")
+        finally:
+            rate_limit_release("gpu_job")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Video: Auto B-Roll Insertion Analysis
+# ---------------------------------------------------------------------------
+@video_bp.route("/video/broll-plan", methods=["POST"])
+@require_csrf
+def video_broll_plan():
+    """Analyze transcript to identify B-roll insertion opportunities.
+
+    Requires a transcribed clip. Returns a list of time windows where B-roll
+    would naturally fit, with suggested search keywords for matching.
+    """
+    data = request.get_json(force=True)
+    filepath = data.get("filepath", "").strip()
+    min_gap = safe_float(data.get("min_gap", 1.0), 1.0, min_val=0.3, max_val=10.0)
+    max_results = safe_int(data.get("max_results", 15), 15, min_val=1, max_val=50)
+
+    if not filepath:
+        return jsonify({"error": "No file path provided"}), 400
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    try:
+        job_id = _new_job("broll-plan", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
+
+    def _process():
+        try:
+            # Step 1: Transcribe the clip
+            _update_job(job_id, progress=5, message="Transcribing for B-roll analysis...")
+
+            from opencut.core.captions import check_whisper_available, transcribe
+            available, backend = check_whisper_available()
+            if not available:
+                _update_job(job_id, status="error", error="Whisper required for B-roll analysis. Install from Settings.")
+                return
+
+            from opencut.utils.config import CaptionConfig
+            transcript = transcribe(filepath, config=CaptionConfig(model="base"))
+
+            segments = []
+            if hasattr(transcript, "segments"):
+                for seg in transcript.segments:
+                    if isinstance(seg, dict):
+                        segments.append(seg)
+                    elif hasattr(seg, "start"):
+                        segments.append({"start": seg.start, "end": seg.end, "text": getattr(seg, "text", "")})
+            elif isinstance(transcript, dict):
+                segments = transcript.get("segments", [])
+
+            if not segments:
+                _update_job(job_id, status="complete", progress=100, message="No speech found in clip.",
+                            result={"windows": [], "total_windows": 0})
+                return
+
+            _update_job(job_id, progress=60, message=f"Analyzing {len(segments)} segments for B-roll opportunities...")
+
+            # Step 2: Analyze for B-roll insertion points
+            from opencut.core.broll_insert import analyze_broll_opportunities
+
+            plan = analyze_broll_opportunities(
+                segments,
+                min_gap=min_gap,
+                max_results=max_results,
+            )
+
+            _update_job(
+                job_id, status="complete", progress=100,
+                message=f"Found {plan.total_windows} B-roll insertion point(s) ({plan.total_broll_time:.1f}s total)",
+                result={
+                    "windows": [
+                        {
+                            "start": w.start,
+                            "end": w.end,
+                            "duration": w.duration,
+                            "reason": w.reason,
+                            "keywords": w.keywords,
+                            "score": w.score,
+                            "context": w.context,
+                        }
+                        for w in plan.windows
+                    ],
+                    "total_windows": plan.total_windows,
+                    "total_broll_time": plan.total_broll_time,
+                    "keywords_used": plan.keywords_used,
+                },
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("B-roll plan error")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+# ---------------------------------------------------------------------------
+# Install Endpoints for New AI Features
+# ---------------------------------------------------------------------------
+
+@video_bp.route("/video/depth/install", methods=["POST"])
+@require_csrf
+def depth_install():
+    """Install Depth Anything V2 dependencies (torch + transformers)."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
+
+    pkgs = ["torch", "torchvision", "transformers", "opencv-python-headless", "Pillow"]
+    try:
+        job_id = _new_job("install", "depth_effects")
+    except Exception:
+        rate_limit_release("model_install")
+        raise
+
+    def _process():
+        try:
+            for i, pkg in enumerate(pkgs):
+                pct = int((i / len(pkgs)) * 90)
+                _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+                safe_pip_install(pkg, timeout=600)
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="Depth Anything V2 installed!",
+                result={"component": "depth_effects"},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Depth install error")
+        finally:
+            rate_limit_release("model_install")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+@video_bp.route("/video/emotion/install", methods=["POST"])
+@require_csrf
+def emotion_install():
+    """Install emotion analysis dependencies (deepface)."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
+
+    pkgs = ["deepface", "opencv-python-headless"]
+    try:
+        job_id = _new_job("install", "emotion_highlights")
+    except Exception:
+        rate_limit_release("model_install")
+        raise
+
+    def _process():
+        try:
+            for i, pkg in enumerate(pkgs):
+                pct = int((i / len(pkgs)) * 90)
+                _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+                safe_pip_install(pkg, timeout=600)
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="Emotion analysis installed!",
+                result={"component": "emotion_highlights"},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Emotion install error")
+        finally:
+            rate_limit_release("model_install")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+@video_bp.route("/video/multimodal-diarize/install", methods=["POST"])
+@require_csrf
+def multimodal_diarize_install():
+    """Install multimodal diarization dependencies (face detection + embeddings)."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
+
+    pkgs = ["opencv-python-headless", "insightface", "onnxruntime"]
+    try:
+        job_id = _new_job("install", "multimodal_diarize")
+    except Exception:
+        rate_limit_release("model_install")
+        raise
+
+    def _process():
+        try:
+            for i, pkg in enumerate(pkgs):
+                pct = int((i / len(pkgs)) * 90)
+                _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+                safe_pip_install(pkg, timeout=600)
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="Multimodal diarization installed!",
+                result={"component": "multimodal_diarize"},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("Multimodal diarize install error")
+        finally:
+            rate_limit_release("model_install")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
+@video_bp.route("/video/broll-generate/install", methods=["POST"])
+@require_csrf
+def broll_generate_install():
+    """Install AI B-roll generation dependencies (diffusers + torch)."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
+
+    pkgs = ["torch", "torchvision", "diffusers", "transformers", "accelerate"]
+    try:
+        job_id = _new_job("install", "broll_generate")
+    except Exception:
+        rate_limit_release("model_install")
+        raise
+
+    def _process():
+        try:
+            for i, pkg in enumerate(pkgs):
+                pct = int((i / len(pkgs)) * 90)
+                _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+                safe_pip_install(pkg, timeout=600)
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="AI B-roll generation installed!",
+                result={"component": "broll_generate"},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("B-roll generate install error")
+        finally:
+            rate_limit_release("model_install")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()

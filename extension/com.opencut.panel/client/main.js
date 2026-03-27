@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.0
+   OpenCut CEP Panel - Main Controller v1.9.2
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -34,6 +34,7 @@
     var elapsedTimer = null;
     var activeStream = null;
     var batchPollTimer = null;
+    var mediaScanTimer = null;
     var transcriptData = null; // stored transcript for editing/export
     var lastJobEndpoint = "";  // for retry
     var lastJobPayload = null; // for retry
@@ -1183,6 +1184,10 @@
                 el.backendPort.textContent = BACKEND.replace("http://127.0.0.1:", "Port ");
                 updateButtons();
                 loadCapabilities();
+                // Auto-connect WebSocket if available
+                if (!_wsConnected && capabilities.websocket !== false) {
+                    wsConnect();
+                }
                 // One-time checks after server connects
                 if (!_updateCheckDone) {
                     _updateCheckDone = true;
@@ -1485,6 +1490,8 @@
                     if (data.file_size_mb) meta += " | " + safeFixed(data.file_size_mb, 1) + " MB";
                     if (lastTranscriptSegments) meta += " | Transcript cached";
                     if (meta) el.fileMetaDisplay.textContent = meta;
+                    // Phase 3.2: Analyze clip context for feature relevance
+                    analyzeClipContext(data);
                 } else { el.fileMetaDisplay.textContent = path; }
             });
         }
@@ -1612,7 +1619,7 @@
         "runColorBtn", "runRemoveBtn", "runFaceAiBtn", "runAnimCapBtn",
         "runExpTranscriptBtn", "loadWaveformBtn", "previewVfxBtn", "runTrimBtn",
         "runAutoEditBtn", "runHighlightsBtn", "runEmotionHighlightsBtn", "runEnhanceBtn", "runShortsBtn",
-        "autoDetectWatermarkBtn",
+        "autoDetectWatermarkBtn", "runDepthBtn", "runBrollPlanBtn", "runBrollGenBtn", "runMmDiarizeBtn", "socialUploadBtn",
         "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runMulticamBtn",
         "runLoudMatchBtn", "runFootageSearchBtn",
         "quickCleanInterview", "quickYouTube", "quickPodcast",
@@ -1698,6 +1705,21 @@
         _setHint(el.otioHint, null, capabilities.otio === false);
         var otioBtn = document.getElementById("exportOtioBtn");
         if (otioBtn) otioBtn.disabled = !canRun || capabilities.otio === false;
+
+        // AI B-Roll generation hint
+        _setHint(el.brollGenHint, el.runBrollGenBtn, capabilities.broll_generate === false);
+
+        // Multimodal diarization hint
+        _setHint(el.mmDiarizeHint, el.runMmDiarizeBtn, capabilities.multimodal_diarize === false);
+
+        // Depth effects hint
+        _setHint(el.depthHint, el.runDepthBtn, capabilities.depth_effects === false);
+
+        // Emotion highlights hint
+        _setHint(el.emotionHint, el.runEmotionBtn, capabilities.deepface === false);
+
+        // Social media posting hint
+        _setHint(el.socialHint, null, capabilities.social_post === false);
     }
 
     // ================================================================
@@ -1846,6 +1868,7 @@
         fetchTimeEstimate(endpoint.replace(/^\//, "").replace(/\//g, "_"));
 
         jobStartTime = Date.now();
+        if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
         elapsedTimer = setInterval(function () {
             var s = Math.floor((Date.now() - jobStartTime) / 1000);
             var timeStr = s < 60 ? s + "s" : Math.floor(s / 60) + "m " + (s % 60) + "s";
@@ -1890,7 +1913,9 @@
                     activeStream = null;
                     onJobDone(job);
                 }
-            } catch (ex) {}
+            } catch (ex) {
+                console.error("SSE JSON parse error:", ex);
+            }
         };
         es.onerror = function () {
             if (!activeStream) return;
@@ -1902,6 +1927,7 @@
     }
 
     function trackJobPoll(jobId) {
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         pollTimer = setInterval(function () {
             api("GET", "/status/" + jobId, null, function (err, job) {
                 if (err || !job) return;
@@ -1928,13 +1954,37 @@
         el.processingMsg.textContent = msg;
     }
 
+    // Structured error code -> actionable guidance map
+    var ERROR_CODE_ACTIONS = {
+        "GPU_OUT_OF_MEMORY": { tab: "settings", msg: "GPU ran out of memory. Try CPU mode in Settings." },
+        "MISSING_DEPENDENCY": { tab: "settings", sub: "dependencies", msg: null },
+        "FILE_NOT_FOUND": { msg: "File not found. Re-select your clip." },
+        "RATE_LIMITED": { msg: null },
+        "TOO_MANY_JOBS": { msg: "Too many jobs running. Wait or cancel one." },
+        "INSTALL_FAILED": { tab: "settings", msg: null },
+        "UNSUPPORTED_FORMAT": { msg: null },
+        "FFMPEG_ERROR": { msg: null },
+        "PERMISSION_DENIED": { msg: null },
+        "OPERATION_TIMEOUT": { msg: null },
+        "SERVER_BUSY": { msg: null }
+    };
+
     function enhanceError(msg, errorData) {
-        // If the server returned a structured error with suggestion, use it directly
+        // 1. Check structured error code FIRST
+        if (errorData && errorData.code && ERROR_CODE_ACTIONS[errorData.code]) {
+            var action = ERROR_CODE_ACTIONS[errorData.code];
+            var base = action.msg || errorData.error || msg;
+            if (errorData.suggestion) {
+                base = base + " \u2014 " + errorData.suggestion;
+            }
+            return base;
+        }
+        // 2. If the server returned a suggestion without a known code, use it directly
         if (errorData && errorData.suggestion) {
             return (errorData.error || msg) + " \u2014 " + errorData.suggestion;
         }
         if (!msg) return msg;
-        // Fallback: regex-based enhancement for legacy/unstructured errors
+        // 3. Fallback: regex-based enhancement for legacy/unstructured errors
         if (/not installed|No module named/i.test(msg)) {
             return msg + " \u2014 You can install this from the Settings tab.";
         }
@@ -1954,6 +2004,11 @@
             return msg + " \u2014 Make sure the OpenCut server is running.";
         }
         return msg;
+    }
+
+    function getErrorCodeAction(errorData) {
+        if (!errorData || !errorData.code) return null;
+        return ERROR_CODE_ACTIONS[errorData.code] || null;
     }
 
     function onJobDone(job) {
@@ -1977,6 +2032,10 @@
             // Show retry button if we have a last job to retry
             if (lastJobEndpoint) {
                 el.retryJobBtn.classList.remove("hidden");
+            }
+            // Also show alert banner with action link for code-aware errors
+            if (job.code) {
+                showErrorWithAction(job);
             }
             return;
         }
@@ -2422,6 +2481,48 @@
         });
     }
     
+    function installDepth() {
+        if (el.depthHint) el.depthHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing Depth Anything V2... This may take several minutes.</span>';
+        apiWithSpinner(el.installDepthBtn, "POST", "/video/depth/install", {}, function(err, data) {
+            if (err || (data && data.error)) {
+                var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : "Unknown error";
+                if (el.depthHint) el.depthHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(errMsg) + "</span>";
+            } else {
+                if (el.depthHint) el.depthHint.classList.add("hidden");
+                capabilities.depth_effects = true;
+                updateButtons();
+                showAlert("Depth Anything V2 installed successfully!");
+            }
+        }, 300000);
+    }
+
+    function installEmotion() {
+        if (el.emotionHint) el.emotionHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing emotion analysis... This may take a few minutes.</span>';
+        apiWithSpinner(el.installEmotionBtn, "POST", "/video/emotion/install", {}, function(err, data) {
+            if (err || (data && data.error)) {
+                var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : "Unknown error";
+                if (el.emotionHint) el.emotionHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(errMsg) + "</span>";
+            } else {
+                if (el.emotionHint) el.emotionHint.classList.add("hidden");
+                capabilities.deepface = true;
+                updateButtons();
+                showAlert("Emotion analysis installed successfully!");
+            }
+        }, 300000);
+    }
+
+    function installCrisperWhisper() {
+        api("POST", "/audio/crisper-whisper/install", {}, function(err, data) {
+            if (err || (data && data.error)) {
+                showAlert("CrisperWhisper install failed: " + (data ? data.error : err.message));
+            } else {
+                capabilities.crisper_whisper = true;
+                updateButtons();
+                showAlert("CrisperWhisper installed successfully!");
+            }
+        }, 300000);
+    }
+
     function installWatermark() {
         el.watermarkHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing watermark remover... This may take several minutes.</span>';
         apiWithSpinner(el.installWatermarkBtn, "POST", "/watermark/install", {}, function(err, data) {
@@ -2472,6 +2573,300 @@
             sample_interval: 1.0,
             min_intensity: 0.6,
             min_duration: 2.0,
+        });
+    }
+
+    function runDepthEffect() {
+        var effect = (document.getElementById("depthEffect") || {}).value || "bokeh";
+        var modelSize = (document.getElementById("depthModelSize") || {}).value || "small";
+        var endpoint = "/video/depth/" + effect;
+        var payload = { filepath: selectedPath, output_dir: projectFolder, model_size: modelSize };
+        if (effect === "bokeh") {
+            payload.focus_point = parseFloat((document.getElementById("depthFocusPoint") || {}).value || "0.5");
+            payload.blur_strength = parseInt((document.getElementById("depthBlurStrength") || {}).value || "25");
+        } else if (effect === "parallax") {
+            payload.zoom_amount = parseFloat((document.getElementById("depthZoomAmount") || {}).value || "1.15");
+        }
+        startJob(endpoint, payload);
+    }
+
+    function showDepthParams() {
+        var effect = (document.getElementById("depthEffect") || {}).value || "bokeh";
+        var bokehParams = document.getElementById("depthBokehParams");
+        var parallaxParams = document.getElementById("depthParallaxParams");
+        if (bokehParams) bokehParams.classList.toggle("hidden", effect !== "bokeh");
+        if (parallaxParams) parallaxParams.classList.toggle("hidden", effect !== "parallax");
+    }
+
+    function runBrollPlan() {
+        startJob("/video/broll-plan", { filepath: selectedPath, min_gap: 1.0, max_results: 15 });
+    }
+
+    function runBrollGenerate() {
+        var prompt = (document.getElementById("brollGenPrompt") || {}).value || "";
+        if (!prompt.trim()) { showAlert("Enter a description for the B-roll clip."); return; }
+        var backend = (document.getElementById("brollGenBackend") || {}).value || "auto";
+        var seedEl = document.getElementById("brollGenSeed");
+        var seed = seedEl && seedEl.value ? parseInt(seedEl.value) : null;
+        var payload = { prompt: prompt.trim(), backend: backend, output_dir: projectFolder, no_input: true };
+        if (seed !== null && !isNaN(seed)) payload.seed = seed;
+        startJob("/video/broll-generate", payload);
+    }
+
+    function runMultimodalDiarize() {
+        var numSpeakers = (document.getElementById("mmDiarizeNumSpeakers") || {}).value || "";
+        var sampleFps = parseFloat((document.getElementById("mmDiarizeSampleFps") || {}).value || "2");
+        var confidence = parseFloat((document.getElementById("mmDiarizeConfidence") || {}).value || "0.5");
+        var payload = { filepath: selectedPath, sample_fps: sampleFps, min_face_confidence: confidence };
+        if (numSpeakers) payload.num_speakers = parseInt(numSpeakers);
+        startJob("/video/multimodal-diarize", payload);
+    }
+
+    // Called from job completion handler to update multimodal diarize results
+    function _onMmDiarizeComplete(result) {
+        var resEl = document.getElementById("mmDiarizeResults");
+        if (resEl) resEl.classList.remove("hidden");
+        var r = result || {};
+        var spkEl = document.getElementById("mmDiarizeSpeakers");
+        var faceEl = document.getElementById("mmDiarizeFaces");
+        var mapEl = document.getElementById("mmDiarizeMappings");
+        if (spkEl) spkEl.textContent = r.num_speakers || 0;
+        if (faceEl) faceEl.textContent = r.num_faces || 0;
+        if (mapEl) mapEl.textContent = (r.mappings || []).length;
+    }
+
+    function socialConnect() {
+        var platform = (document.getElementById("socialPlatform") || {}).value || "youtube";
+        api("POST", "/social/auth-url", { platform: platform }, function(err, r) {
+            if (err) { showAlert("OAuth error: " + err.message); return; }
+            if (r && r.auth_url) {
+                // Validate auth URL before passing to shell — prevent command injection
+                var authUrl = String(r.auth_url);
+                if (!/^https?:\/\//i.test(authUrl)) {
+                    showAlert("Invalid authorization URL received from server.");
+                    return;
+                }
+                // Open OAuth URL in user's browser
+                if (typeof cep_node !== "undefined" && cep_node.require) {
+                    cep_node.require("child_process").execFile("cmd", ["/c", "start", "", authUrl]);
+                } else {
+                    window.open(authUrl, "_blank");
+                }
+                showToast("Opening " + platform + " authorization page...", "info");
+            } else {
+                showAlert("OAuth not configured for " + platform + ". Set API credentials in environment variables.");
+            }
+        });
+    }
+
+    function socialUpload() {
+        var platform = (document.getElementById("socialPlatform") || {}).value || "youtube";
+        var title = (document.getElementById("socialTitle") || {}).value || "";
+        var description = (document.getElementById("socialDescription") || {}).value || "";
+        var privacy = (document.getElementById("socialPrivacy") || {}).value || "private";
+        var payload = {
+            filepath: selectedPath,
+            platform: platform,
+            title: title,
+            description: description,
+            privacy: privacy,
+        };
+        startJob("/social/upload", payload, function(result) {
+            var resEl = document.getElementById("socialResult");
+            if (resEl) resEl.classList.remove("hidden");
+            var urlEl = document.getElementById("socialResultUrl");
+            if (urlEl && result && result.url) {
+                urlEl.href = result.url;
+                urlEl.textContent = "View on " + platform;
+            }
+        });
+    }
+
+    function loadSocialPlatforms() {
+        api("GET", "/social/platforms", null, function(err, r) {
+            if (err) return;
+            if (r && r.platforms) {
+                var platform = (document.getElementById("socialPlatform") || {}).value || "";
+                for (var i = 0; i < r.platforms.length; i++) {
+                    if (r.platforms[i].platform === platform && r.platforms[i].connected) {
+                        var badge = document.getElementById("socialConnectedBadge");
+                        if (badge) { badge.classList.remove("hidden"); badge.textContent = "Connected as " + (r.platforms[i].username || ""); }
+                        return;
+                    }
+                }
+            }
+        });
+    }
+
+    // ---- WebSocket Client ----
+    var _ws = null;
+    var _wsReconnectTimer = null;
+    var _wsConnected = false;
+
+    function wsConnect() {
+        if (_ws && (_ws.readyState === WebSocket.OPEN || _ws.readyState === WebSocket.CONNECTING)) {
+            showToast("WebSocket already connected", "info");
+            return;
+        }
+        var port = 5680;
+        var url = "ws://127.0.0.1:" + port;
+        try {
+            _ws = new WebSocket(url);
+        } catch (e) {
+            showToast("WebSocket connection failed", "warning");
+            return;
+        }
+
+        _ws.onopen = function () {
+            _wsConnected = true;
+            _ws.send(JSON.stringify({ type: "identify", client_type: "cep", id: "cep-1" }));
+            _ws.send(JSON.stringify({ type: "command", action: "subscribe", params: { events: ["progress", "job_complete", "job_error", "timeline"] }, id: "sub-1" }));
+            _updateWsStatus();
+            showToast("WebSocket connected", "success");
+        };
+
+        _ws.onmessage = function (evt) {
+            try {
+                var msg = JSON.parse(evt.data);
+                _handleWsMessage(msg);
+            } catch (e) { /* ignore parse errors */ }
+        };
+
+        _ws.onclose = function () {
+            _wsConnected = false;
+            _ws = null;
+            _updateWsStatus();
+            // Auto-reconnect after 5s
+            if (!_wsReconnectTimer) {
+                _wsReconnectTimer = setTimeout(function () {
+                    _wsReconnectTimer = null;
+                    wsConnect();
+                }, 5000);
+            }
+        };
+
+        _ws.onerror = function () {
+            _wsConnected = false;
+        };
+    }
+
+    function wsDisconnect() {
+        if (_wsReconnectTimer) { clearTimeout(_wsReconnectTimer); _wsReconnectTimer = null; }
+        if (_ws) { _ws.close(); _ws = null; }
+        _wsConnected = false;
+        _updateWsStatus();
+    }
+
+    function _handleWsMessage(msg) {
+        if (msg.type === "progress" && msg.job_id) {
+            // Update progress bar in real-time (no polling needed)
+            var pct = msg.percent || 0;
+            var message = msg.message || "";
+            if (el.processingFill) el.processingFill.style.width = pct + "%";
+            if (el.processingMsg && message) el.processingMsg.textContent = message;
+        } else if (msg.type === "event" && msg.event === "job_complete") {
+            // Job completed via WS — trigger poll to pick up result
+            if (currentJob) pollJob();
+        } else if (msg.type === "event" && msg.event === "job_error") {
+            if (currentJob) pollJob();
+        }
+    }
+
+    function _updateWsStatus() {
+        var statusEl = document.getElementById("wsStatusText");
+        var countEl = document.getElementById("wsClientCount");
+        if (_wsConnected) {
+            if (statusEl) statusEl.textContent = "Connected";
+            if (statusEl) statusEl.style.color = "var(--accent)";
+        } else {
+            if (statusEl) statusEl.textContent = "Disconnected";
+            if (statusEl) statusEl.style.color = "";
+        }
+        // Also fetch server-side status
+        api("GET", "/ws/status", null, function (err, r) {
+            if (err) return;
+            if (r) {
+                if (countEl) countEl.textContent = r.clients || 0;
+                if (!r.running && statusEl && !_wsConnected) statusEl.textContent = "Server stopped";
+            }
+        });
+    }
+
+    function wsStartBridge() {
+        api("POST", "/ws/start", {}, function (err, r) {
+            if (err) { showAlert("WS start error: " + err.message); return; }
+            if (r && r.success) {
+                showToast("WebSocket bridge started", "success");
+                setTimeout(function () { wsConnect(); }, 500);
+            } else {
+                showAlert(r && r.error ? r.error : "Failed to start WebSocket bridge");
+            }
+        });
+    }
+
+    function wsStopBridge() {
+        wsDisconnect();
+        api("POST", "/ws/stop", {}, function (err, r) {
+            if (err) return;
+            if (r && r.success) {
+                showToast("WebSocket bridge stopped", "success");
+                _updateWsStatus();
+            }
+        });
+    }
+
+    // ---- Engine Registry UI ----
+    function loadEngineRegistry() {
+        var grid = document.getElementById("engineRegistryGrid");
+        if (!grid) return;
+        grid.innerHTML = '<div class="hint">Loading engines...</div>';
+
+        api("GET", "/engines", null, function (err, r) {
+            if (err || !r || !r.engines) {
+                grid.innerHTML = '<div class="hint">Could not load engine data.</div>';
+                return;
+            }
+            var html = "";
+            var domains = Object.keys(r.engines).sort();
+            for (var i = 0; i < domains.length; i++) {
+                var domain = domains[i];
+                var info = r.engines[domain];
+                var engines = info.engines || [];
+                var active = info.active || "";
+                var preferred = info.preferred || "";
+
+                html += '<div class="engine-domain">';
+                html += '<label class="param-label">' + esc(domain.replace(/_/g, " ")) + '</label>';
+                html += '<select class="engine-select" data-domain="' + esc(domain) + '">';
+                html += '<option value="">Auto (highest priority)</option>';
+                for (var j = 0; j < engines.length; j++) {
+                    var eng = engines[j];
+                    var selected = (preferred === eng.name) ? " selected" : "";
+                    var avail = eng.available ? "" : " (unavailable)";
+                    var label = esc(eng.display_name) + " — " + esc(eng.quality) + "/" + esc(eng.speed) + avail;
+                    if (eng.name === active) label += " *";
+                    html += '<option value="' + esc(eng.name) + '"' + selected + '>' + label + '</option>';
+                }
+                html += '</select>';
+                html += '</div>';
+            }
+            grid.innerHTML = html;
+
+            // Bind change events for preference setting
+            var selects = grid.querySelectorAll(".engine-select");
+            for (var k = 0; k < selects.length; k++) {
+                selects[k].addEventListener("change", function () {
+                    var dom = this.getAttribute("data-domain");
+                    var eng = this.value;
+                    if (eng) {
+                        api("POST", "/engines/preference", { domain: dom, engine: eng }, function (perr, r) {
+                            if (perr) { showAlert("Error: " + perr.message); return; }
+                            if (r && r.success) showToast("Engine preference saved", "success");
+                            else showAlert(r && r.error ? r.error : "Failed to save preference");
+                        });
+                    }
+                });
+            }
         });
     }
 
@@ -3887,14 +4282,34 @@
     // ================================================================
     var _alertTimer = null;
     function showAlert(msg, errorData) {
-        // If errorData has structured suggestion from the server, use it directly
-        var display = (errorData && errorData.suggestion)
-            ? msg + " \u2014 " + errorData.suggestion
-            : enhanceError(msg);
+        var display = enhanceError(msg, errorData);
         el.alertText.textContent = display;
+        // Remove any previous action link
+        var oldLink = el.alertBanner.querySelector(".alert-action-link");
+        if (oldLink) oldLink.parentNode.removeChild(oldLink);
+        // If errorData has an error code with a tab action, add a clickable nav link
+        var action = getErrorCodeAction(errorData);
+        if (action && action.tab) {
+            var link = document.createElement("span");
+            link.className = "alert-action-link";
+            link.textContent = " Go to " + action.tab.charAt(0).toUpperCase() + action.tab.slice(1) + " \u2192";
+            link.style.cursor = "pointer";
+            link.style.textDecoration = "underline";
+            link.style.marginLeft = "6px";
+            link.addEventListener("click", function () {
+                navigateToTab(action.tab, action.sub || null);
+                el.alertBanner.classList.add("hidden");
+            });
+            el.alertText.parentNode.insertBefore(link, el.alertText.nextSibling);
+        }
         el.alertBanner.classList.remove("hidden");
         if (_alertTimer) clearTimeout(_alertTimer);
         _alertTimer = setTimeout(function () { el.alertBanner.classList.add("hidden"); }, 15000);
+    }
+
+    function showErrorWithAction(errorData) {
+        var msg = errorData.error || errorData.message || "Unknown error";
+        showAlert(msg, errorData);
     }
 
     function esc(s) {
@@ -7384,6 +7799,181 @@
         }
     });
 
+    // Multimodal diarization results
+    addJobDoneListener(function (job) {
+        if (job.type !== "multimodal-diarize" || job.status !== "complete" || !job.result) return;
+        _onMmDiarizeComplete(job.result);
+    });
+
+    // B-roll generation results — auto-import generated clip
+    addJobDoneListener(function (job) {
+        if (job.type !== "broll-generate" || job.status !== "complete" || !job.result) return;
+        var path = job.result.output_path;
+        if (path) {
+            showToast("B-roll generated: " + path.split("/").pop().split("\\").pop(), "success");
+        }
+    });
+
+    // Social upload results
+    addJobDoneListener(function (job) {
+        if (job.type !== "social-upload" || job.status !== "complete" || !job.result) return;
+        var r = job.result;
+        var resEl = document.getElementById("socialResult");
+        if (resEl) resEl.classList.remove("hidden");
+        var urlEl = document.getElementById("socialResultUrl");
+        if (urlEl && r.url) {
+            urlEl.href = r.url;
+            urlEl.textContent = "View on " + r.platform;
+        }
+        showToast("Uploaded to " + r.platform + "!", "success");
+    });
+
+    // ================================================================
+    // Context Awareness (Phase 3.2)
+    // ================================================================
+    var _lastContextResult = null;
+
+    function analyzeClipContext(infoData) {
+        if (!connected) return;
+        var payload = {
+            has_audio: !!infoData.audio,
+            has_video: !!infoData.video,
+            duration: infoData.duration || 0,
+            width: infoData.video ? infoData.video.width : 0,
+            height: infoData.video ? infoData.video.height : 0,
+            frame_rate: infoData.video ? infoData.video.fps : 0,
+            num_audio_channels: infoData.audio ? (infoData.audio.channels || 2) : 0
+        };
+        api("POST", "/context/analyze", payload, function (err, data) {
+            if (err || !data || data.error) return;
+            _lastContextResult = data;
+            showContextGuidance(data.guidance, data.tab_scores);
+            highlightSuggestedTabs(data.features);
+        });
+    }
+
+    function showContextGuidance(guidance, tabScores) {
+        var banner = el.contextGuidanceBanner;
+        var textEl = el.contextGuidanceText;
+        if (!banner || !textEl) return;
+        if (!guidance) {
+            banner.classList.add("hidden");
+            return;
+        }
+        textEl.textContent = guidance;
+        banner.classList.remove("hidden");
+    }
+
+    // Stores original sub-tab order per container so we can restore it
+    var _originalTabOrders = {};
+
+    function highlightSuggestedTabs(features) {
+        // Remove previous highlights
+        var allSubs = document.querySelectorAll(".sub-tab.context-suggested");
+        for (var i = 0; i < allSubs.length; i++) {
+            allSubs[i].classList.remove("context-suggested");
+        }
+        if (!features) return;
+
+        // Highlight sub-tabs for top-scoring features (score >= 65)
+        for (var i = 0; i < features.length && i < 10; i++) {
+            var f = features[i];
+            if (f.score < 65) break;
+            var subTab = document.querySelector('.sub-tab[data-sub="' + f.id + '"]');
+            if (subTab) subTab.classList.add("context-suggested");
+        }
+
+        // Reorder sub-tabs within each panel based on relevance scores
+        _reorderSubTabs(features);
+    }
+
+    function _reorderSubTabs(features) {
+        var tabPanelMap = {
+            cut: "#panel-cut .sub-tabs",
+            captions: "#panel-captions .sub-tabs",
+            audio: "#panel-audio .sub-tabs",
+            video: "#panel-video .sub-tabs"
+        };
+
+        // Group features by tab, keyed by feature id for quick lookup
+        var scoreMap = {};
+        for (var i = 0; i < features.length; i++) {
+            scoreMap[features[i].id] = features[i].score;
+        }
+
+        // Group features by tab field
+        var tabGroups = {};
+        for (var i = 0; i < features.length; i++) {
+            var tab = features[i].tab;
+            if (!tabGroups[tab]) tabGroups[tab] = [];
+            tabGroups[tab].push(features[i]);
+        }
+
+        // Process each tab panel
+        for (var tabKey in tabPanelMap) {
+            if (!tabPanelMap.hasOwnProperty(tabKey)) continue;
+            var container = document.querySelector(tabPanelMap[tabKey]);
+            if (!container) continue;
+            var buttons = container.querySelectorAll(".sub-tab");
+            if (!buttons.length) continue;
+
+            // Save original order on first call (keyed by selector)
+            var selectorKey = tabPanelMap[tabKey];
+            if (!_originalTabOrders[selectorKey]) {
+                _originalTabOrders[selectorKey] = [];
+                for (var j = 0; j < buttons.length; j++) {
+                    _originalTabOrders[selectorKey].push(buttons[j]);
+                }
+            }
+
+            // Build an array of {element, score, originalIndex} for sorting
+            var items = [];
+            var origOrder = _originalTabOrders[selectorKey];
+            for (var j = 0; j < buttons.length; j++) {
+                var btn = buttons[j];
+                var subId = btn.getAttribute("data-sub");
+                var score = (subId && scoreMap[subId] !== undefined) ? scoreMap[subId] : -1;
+                // Find original index for stable fallback sort
+                var origIdx = 0;
+                for (var k = 0; k < origOrder.length; k++) {
+                    if (origOrder[k] === btn) { origIdx = k; break; }
+                }
+                items.push({ el: btn, score: score, origIdx: origIdx });
+            }
+
+            // Sort: scored items first (descending by score), then unscored in original order
+            items.sort(function (a, b) {
+                if (a.score >= 0 && b.score >= 0) return b.score - a.score || a.origIdx - b.origIdx;
+                if (a.score >= 0) return -1;
+                if (b.score >= 0) return 1;
+                return a.origIdx - b.origIdx;
+            });
+
+            // Reappend in new order (DOM reorder)
+            for (var j = 0; j < items.length; j++) {
+                container.appendChild(items[j].el);
+            }
+        }
+    }
+
+    function resetTabOrder() {
+        // Remove all context-suggested highlights
+        var allSubs = document.querySelectorAll(".sub-tab.context-suggested");
+        for (var i = 0; i < allSubs.length; i++) {
+            allSubs[i].classList.remove("context-suggested");
+        }
+        // Restore original tab order for each saved container
+        for (var selectorKey in _originalTabOrders) {
+            if (!_originalTabOrders.hasOwnProperty(selectorKey)) continue;
+            var container = document.querySelector(selectorKey);
+            if (!container) continue;
+            var origOrder = _originalTabOrders[selectorKey];
+            for (var i = 0; i < origOrder.length; i++) {
+                container.appendChild(origOrder[i]);
+            }
+        }
+    }
+
     // ================================================================
     // Init
     // ================================================================
@@ -7405,6 +7995,9 @@
         }
 
         // Event listeners - Clip selection
+        _on("contextGuidanceDismiss", "click", function () {
+            if (el.contextGuidanceBanner) el.contextGuidanceBanner.classList.add("hidden");
+        });
         _on("refreshAllBtn", "click", refreshAll);
         _on("clipSelect", "change", function () {
             var opt = this.selectedIndex >= 0 ? this.options[this.selectedIndex] : null;
@@ -7501,6 +8094,8 @@
         // TTS buttons
         _on("runTtsBtn", "click", runTts);
         _on("installEdgeTtsBtn", "click", installEdgeTts);
+        _on("installDepthBtn", "click", installDepth);
+        _on("installEmotionBtn", "click", installEmotion);
 
         // SFX buttons
         _on("runSfxBtn", "click", runSfx);
@@ -7600,6 +8195,48 @@
         if (el.runAutoEditBtn) el.runAutoEditBtn.addEventListener("click", runAutoEdit);
         if (el.runHighlightsBtn) el.runHighlightsBtn.addEventListener("click", runHighlights);
         if (document.getElementById("runEmotionHighlightsBtn")) document.getElementById("runEmotionHighlightsBtn").addEventListener("click", runEmotionHighlights);
+
+        // Depth effects
+        var depthBtn = document.getElementById("runDepthBtn");
+        if (depthBtn) depthBtn.addEventListener("click", runDepthEffect);
+        var depthSelect = document.getElementById("depthEffect");
+        if (depthSelect) depthSelect.addEventListener("change", showDepthParams);
+
+        // B-roll analysis
+        var brollBtn = document.getElementById("runBrollPlanBtn");
+        if (brollBtn) brollBtn.addEventListener("click", runBrollPlan);
+
+        // AI B-roll generation
+        _on("runBrollGenBtn", "click", runBrollGenerate);
+
+        // Multimodal diarization
+        _on("runMmDiarizeBtn", "click", runMultimodalDiarize);
+        _on("mmDiarizeSampleFps", "input", function() {
+            var valEl = document.getElementById("mmDiarizeSampleFpsVal");
+            if (valEl) valEl.textContent = parseFloat(this.value).toFixed(1);
+        });
+        _on("mmDiarizeConfidence", "input", function() {
+            var valEl = document.getElementById("mmDiarizeConfidenceVal");
+            if (valEl) valEl.textContent = parseFloat(this.value).toFixed(2);
+        });
+
+        // Social media posting
+        _on("socialConnectBtn", "click", socialConnect);
+        _on("socialUploadBtn", "click", socialUpload);
+        _on("socialPlatform", "change", loadSocialPlatforms);
+
+        // WebSocket bridge controls
+        var wsStartBtn = document.getElementById("wsStartBtn");
+        var wsStopBtn = document.getElementById("wsStopBtn");
+        var wsConnectBtn = document.getElementById("wsConnectBtn");
+        if (wsStartBtn) wsStartBtn.addEventListener("click", wsStartBridge);
+        if (wsStopBtn) wsStopBtn.addEventListener("click", wsStopBridge);
+        if (wsConnectBtn) wsConnectBtn.addEventListener("click", wsConnect);
+
+        // Engine registry
+        var refreshEnginesBtn = document.getElementById("refreshEnginesBtn");
+        if (refreshEnginesBtn) refreshEnginesBtn.addEventListener("click", loadEngineRegistry);
+
         if (el.runEnhanceBtn) el.runEnhanceBtn.addEventListener("click", runEnhance);
         if (el.runShortsBtn) el.runShortsBtn.addEventListener("click", runShorts);
         if (el.summarizeTranscriptBtn) el.summarizeTranscriptBtn.addEventListener("click", runSummarize);
@@ -7682,9 +8319,11 @@
         }
 
         // Alert dismiss
-        el.alertDismiss.addEventListener("click", function () {
-            el.alertBanner.classList.add("hidden");
-        });
+        if (el.alertDismiss) {
+            el.alertDismiss.addEventListener("click", function () {
+                el.alertBanner.classList.add("hidden");
+            });
+        }
 
         // Health check loop
         checkHealth();
@@ -7698,7 +8337,7 @@
         // Periodic soft re-scan: picks up media imported outside OpenCut
         // (e.g. user dragging files into Premiere, or Media Browser imports)
         var MEDIA_POLL_MS = 20000; // 20 seconds
-        setInterval(function () {
+        mediaScanTimer = setInterval(function () {
             if (connected && inPremiere && !currentJob) {
                 scanProjectMedia();
             }
@@ -7837,8 +8476,14 @@
             }
         });
 
-        // Cleanup SSE connections and timers on panel close/navigation
+        // Auto-connect WebSocket after first successful health check
+        addJobDoneListener(function () {}); // no-op, WS auto-connect handled below
+        var _wsAutoConnected = false;
+        var _origOnHealth = null;
+
+        // Cleanup SSE/WS connections and timers on panel close/navigation
         window.addEventListener("beforeunload", function () {
+            wsDisconnect();
             if (activeStream) {
                 activeStream.close();
                 activeStream = null;
@@ -7858,6 +8503,10 @@
             if (batchPollTimer) {
                 clearInterval(batchPollTimer);
                 batchPollTimer = null;
+            }
+            if (mediaScanTimer) {
+                clearInterval(mediaScanTimer);
+                mediaScanTimer = null;
             }
             if (_statusTimer) {
                 clearInterval(_statusTimer);

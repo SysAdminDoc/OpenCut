@@ -17,15 +17,16 @@ import threading
 from flask import Blueprint, jsonify, request
 
 from opencut.checks import check_demucs_available
+from opencut.errors import safe_error
 from opencut.helpers import (
     _make_sequence_name,
     _resolve_output_dir,
 )
 from opencut.jobs import (
+    TooManyJobsError,
     _is_cancelled,
     _new_job,
     _register_job_process,
-    _safe_error,
     _unregister_job_process,
     _update_job,
     async_job,
@@ -92,7 +93,10 @@ def silence_remove():
     if detection_method not in ("energy", "vad", "auto"):
         detection_method = "auto"
 
-    job_id = _new_job("silence", filepath)
+    try:
+        job_id = _new_job("silence", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -203,7 +207,10 @@ def filler_removal():
     if filler_backend not in ("whisper", "crisper"):
         filler_backend = "whisper"
 
-    job_id = _new_job("fillers", filepath)
+    try:
+        job_id = _new_job("fillers", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -247,7 +254,7 @@ def filler_removal():
                     )
                     return
                 except ImportError as e:
-                    logger.info("CrisperWhisper unavailable (%s), falling back to Whisper", e)
+                    logger.warning("CrisperWhisper unavailable (%s), falling back to Whisper", e)
                     _update_job(job_id, progress=5, message="CrisperWhisper unavailable, falling back to Whisper...")
                     # Fall through to standard Whisper path
                 except Exception as e:
@@ -494,9 +501,13 @@ def audio_separate():
     if backend == "demucs" and not check_demucs_available():
         return jsonify({"error": "Demucs not installed. Please install it first."}), 400
 
-    job_id = _new_job("separate", filepath)
+    try:
+        job_id = _new_job("separate", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
+        temp_audio = None
         try:
             import shutil
 
@@ -508,7 +519,6 @@ def audio_separate():
             # Extract audio if video file
             video_exts = {'.mp4', '.mov', '.avi', '.mkv', '.webm', '.m4v'}
             file_ext = os.path.splitext(filepath)[1].lower()
-            temp_audio = None
 
             if file_ext in video_exts:
                 with tempfile.NamedTemporaryFile(suffix='.wav', delete=False) as tmp:
@@ -676,9 +686,9 @@ def audio_separate():
             _unregister_job_process(job_id)
             # Cleanup temp audio extracted from video
             try:
-                if file_ext in video_exts and temp_audio and os.path.exists(temp_audio):
+                if temp_audio and os.path.exists(temp_audio):
                     os.unlink(temp_audio)
-            except OSError:
+            except (OSError, NameError):
                 pass
 
     thread = threading.Thread(target=_process, daemon=True)
@@ -760,7 +770,7 @@ def audio_measure():
             "loudness_range_lu": info.input_lra,
         })
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "audio_measure")
 
 
 # ---------------------------------------------------------------------------
@@ -799,7 +809,7 @@ def audio_effects_list():
         from opencut.core.audio_suite import get_available_effects
         return jsonify({"effects": get_available_effects()})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "audio_effects_list")
 
 
 @audio_bp.route("/audio/effects/apply", methods=["POST"])
@@ -822,7 +832,10 @@ def audio_effects_apply():
     if not effect:
         return jsonify({"error": "No effect specified"}), 400
 
-    job_id = _new_job("audio-effect", filepath)
+    try:
+        job_id = _new_job("audio-effect", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -874,7 +887,7 @@ def loudness_presets():
             })
         return jsonify({"presets": presets})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "loudness_presets")
 
 
 # ---------------------------------------------------------------------------
@@ -890,7 +903,7 @@ def audio_pro_effects():
             "available": check_pedalboard_available(),
         })
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "audio_pro_effects")
 
 
 @audio_bp.route("/audio/pro/apply", methods=["POST"])
@@ -914,7 +927,10 @@ def audio_pro_apply():
     if not effect:
         return jsonify({"error": "No effect specified"}), 400
 
-    job_id = _new_job("audio-pro", filepath)
+    try:
+        job_id = _new_job("audio-pro", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -985,7 +1001,10 @@ def audio_pro_install():
         rate_limit_release("model_install")
         return jsonify({"error": f"Unknown component: {component}"}), 400
 
-    job_id = _new_job("install", component)
+    try:
+        job_id = _new_job("install", component)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1036,7 +1055,7 @@ def tts_voices():
             },
         })
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "tts_voices")
 
 
 @audio_bp.route("/audio/tts/generate", methods=["POST"])
@@ -1069,7 +1088,10 @@ def tts_generate():
     if len(text) > 50000:
         return jsonify({"error": "Text too long (max 50000 chars)"}), 400
 
-    job_id = _new_job("tts", text[:50])
+    try:
+        job_id = _new_job("tts", text[:50])
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1142,7 +1164,10 @@ def tts_subtitled():
     if len(text) > 50000:
         return jsonify({"error": "Text too long (max 50000 chars)"}), 400
 
-    job_id = _new_job("tts-sub", text[:50])
+    try:
+        job_id = _new_job("tts-sub", text[:50])
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1191,7 +1216,10 @@ def tts_install():
         rate_limit_release("model_install")
         return jsonify({"error": f"Unknown component: {component}"}), 400
 
-    job_id = _new_job("install", component)
+    try:
+        job_id = _new_job("install", component)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1216,6 +1244,45 @@ def tts_install():
     return jsonify({"job_id": job_id, "status": "running"})
 
 
+@audio_bp.route("/audio/crisper-whisper/install", methods=["POST"])
+@require_csrf
+def crisper_whisper_install():
+    """Install CrisperWhisper dependencies (transformers + torch)."""
+    if not rate_limit("model_install"):
+        return jsonify({"error": "Another model_install operation is already running. Please wait."}), 429
+
+    pkgs = ["torch", "transformers"]
+    try:
+        job_id = _new_job("install", "crisper_whisper")
+    except Exception:
+        rate_limit_release("model_install")
+        raise
+
+    def _process():
+        try:
+            for i, pkg in enumerate(pkgs):
+                pct = int((i / len(pkgs)) * 90)
+                _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
+                safe_pip_install(pkg, timeout=600)
+            _update_job(
+                job_id, status="complete", progress=100,
+                message="CrisperWhisper installed!",
+                result={"component": "crisper_whisper"},
+            )
+        except Exception as e:
+            _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+            logger.exception("CrisperWhisper install error")
+        finally:
+            rate_limit_release("model_install")
+
+    thread = threading.Thread(target=_process, daemon=True)
+    thread.start()
+    with job_lock:
+        if job_id in jobs:
+            jobs[job_id]["_thread"] = thread
+    return jsonify({"job_id": job_id, "status": "running"})
+
+
 # ---------------------------------------------------------------------------
 # Music & SFX Generation
 # ---------------------------------------------------------------------------
@@ -1226,7 +1293,7 @@ def audio_gen_capabilities():
         from opencut.core.music_gen import get_audio_generators
         return jsonify(get_audio_generators())
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "audio_gen_capabilities")
 
 
 @audio_bp.route("/audio/gen/tone", methods=["POST"])
@@ -1241,7 +1308,10 @@ def audio_gen_tone():
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("tone", f"{data.get('frequency', 440)}Hz")
+    try:
+        job_id = _new_job("tone", f"{data.get('frequency', 440)}Hz")
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1290,7 +1360,10 @@ def audio_gen_sfx():
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("sfx", preset)
+    try:
+        job_id = _new_job("sfx", preset)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1340,7 +1413,7 @@ def audio_gen_silence():
         out = generate_silence(duration=duration, output_dir=output_dir or tempfile.gettempdir())
         return jsonify({"output_path": out})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "audio_gen_silence")
 
 
 # ---------------------------------------------------------------------------
@@ -1370,7 +1443,10 @@ def audio_duck_route():
     except ValueError as e:
         return jsonify({"error": f"Voice file: {e}"}), 400
 
-    job_id = _new_job("duck", music_path)
+    try:
+        job_id = _new_job("duck", music_path)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1428,7 +1504,10 @@ def audio_mix_duck_route():
     except ValueError as e:
         return jsonify({"error": f"Music file: {e}"}), 400
 
-    job_id = _new_job("mix-duck", voice_path)
+    try:
+        job_id = _new_job("mix-duck", voice_path)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1484,7 +1563,10 @@ def audio_duck_video_route():
     except ValueError as e:
         return jsonify({"error": f"Music file: {e}"}), 400
 
-    job_id = _new_job("duck-video", video_path)
+    try:
+        job_id = _new_job("duck-video", video_path)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1544,7 +1626,10 @@ def audio_mix_route():
             except ValueError as e:
                 return jsonify({"error": f"Track {i + 1}: {e}"}), 400
 
-    job_id = _new_job("mix", f"{len(tracks)} tracks")
+    try:
+        job_id = _new_job("mix", f"{len(tracks)} tracks")
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1587,7 +1672,7 @@ def music_ai_capabilities():
         from opencut.core.music_ai import get_music_ai_capabilities
         return jsonify(get_music_ai_capabilities())
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "music_ai_capabilities")
 
 
 @audio_bp.route("/audio/music-ai/generate", methods=["POST"])
@@ -1598,7 +1683,13 @@ def music_ai_generate():
     prompt = data.get("prompt", "").strip()
     if not prompt:
         return jsonify({"error": "No prompt"}), 400
-    job_id = _new_job("musicgen", prompt[:40])
+    if not rate_limit("ai_gpu"):
+        return jsonify({"error": "Another AI GPU operation is already running. Please wait."}), 429
+    try:
+        job_id = _new_job("musicgen", prompt[:40])
+    except TooManyJobsError as e:
+        rate_limit_release("ai_gpu")
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1627,6 +1718,8 @@ def music_ai_generate():
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+        finally:
+            rate_limit_release("ai_gpu")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -1648,7 +1741,13 @@ def music_ai_ace_step():
     if len(lyrics) > 10000:
         return jsonify({"error": "Lyrics too long (max 10000 chars)"}), 400
 
-    job_id = _new_job("ace-step", prompt[:40])
+    if not rate_limit("ai_gpu"):
+        return jsonify({"error": "Another AI GPU operation is already running. Please wait."}), 429
+    try:
+        job_id = _new_job("ace-step", prompt[:40])
+    except TooManyJobsError as e:
+        rate_limit_release("ai_gpu")
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1674,6 +1773,8 @@ def music_ai_ace_step():
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+        finally:
+            rate_limit_release("ai_gpu")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -1700,7 +1801,13 @@ def music_ai_melody():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("musicgen-melody", prompt[:40])
+    if not rate_limit("ai_gpu"):
+        return jsonify({"error": "Another AI GPU operation is already running. Please wait."}), 429
+    try:
+        job_id = _new_job("musicgen-melody", prompt[:40])
+    except TooManyJobsError as e:
+        rate_limit_release("ai_gpu")
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1724,6 +1831,8 @@ def music_ai_melody():
             _update_job(job_id, status="complete", progress=100, result={"output_path": out})
         except Exception as e:
             _update_job(job_id, status="error", error=str(e), message=f"Error: {e}")
+        finally:
+            rate_limit_release("ai_gpu")
 
     thread = threading.Thread(target=_process, daemon=True)
     thread.start()
@@ -1754,7 +1863,10 @@ def audio_waveform():
     samples = safe_int(data.get("samples", 500), 500)
     samples = max(100, min(samples, 2000))
 
-    job_id = _new_job("waveform", file_path)
+    try:
+        job_id = _new_job("waveform", file_path)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1845,7 +1957,10 @@ def silence_speed_up():
     min_duration = safe_float(data.get("min_duration", 0.5), 0.5, min_val=0.1, max_val=5.0)
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
 
-    job_id = _new_job("speed-silence", filepath)
+    try:
+        job_id = _new_job("speed-silence", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1917,7 +2032,10 @@ def audio_enhance():
     if backend == "resemble" and not denoise and not enhance:
         return jsonify({"error": "At least one of 'denoise' or 'enhance' must be True"}), 400
 
-    job_id = _new_job("audio-enhance", filepath)
+    try:
+        job_id = _new_job("audio-enhance", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1979,7 +2097,10 @@ def audio_beat_markers():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
-    job_id = _new_job("beat-markers", filepath)
+    try:
+        job_id = _new_job("beat-markers", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -2060,7 +2181,10 @@ def audio_loudness_match():
             return jsonify({"error": str(exc)}), 400
         os.makedirs(output_dir, exist_ok=True)
 
-    job_id = _new_job("loudness-match", validated_files[0] if validated_files else "")
+    try:
+        job_id = _new_job("loudness-match", validated_files[0] if validated_files else "")
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:

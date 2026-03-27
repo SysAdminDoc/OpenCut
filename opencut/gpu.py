@@ -133,10 +133,11 @@ class GPUContext:
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        # Delete registered models / tensors
+        # Move registered models to CPU and release references
         for obj in self._models:
             try:
-                del obj
+                if hasattr(obj, "cpu"):
+                    obj.cpu()
             except Exception:
                 pass
         self._models.clear()

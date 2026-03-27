@@ -211,26 +211,26 @@ All new ML models follow the existing pattern:
 | 2.7 TransNetV2 | ALREADY EXISTED | `scene_detect.py` — `detect_scenes_ml()` |
 | 2.8 CodeFormer | ALREADY EXISTED | `face_swap.py` — fidelity slider |
 
-### Phase 3 — In Progress
+### Phase 3 — Complete
 | Item | Status | Notes |
 |------|--------|-------|
-| 3.1 Video Depth Anything | NOT STARTED | Needs new module + route |
+| 3.1 Video Depth Anything | DONE | `depth_effects.py`: depth map, bokeh sim, parallax zoom. 3 routes added |
 | 3.2 Emotion Highlights | DONE | New `emotion_highlights.py`, route `/video/emotion-highlights` |
-| 3.3 Multimodal Diarization | NOT STARTED | 3D-Speaker integration |
-| 3.4 Chat-Driven Editing | NOT STARTED | Frame-style conversational agent |
-| 3.5 AI B-Roll Generation | NOT STARTED | HunyuanVideo/Wan integration |
-| 3.6 WebSocket Bridge | NOT STARTED | PremiereRemote pattern |
-| 3.7 Auto B-Roll Insertion | NOT STARTED | Diarization + keyword matching |
-| 3.8 Smart Thumbnails | EXISTS (basic) | `thumbnail.py` has face scoring, could add composition |
-| 3.9 Social Posting | NOT STARTED | Platform APIs |
-| 3.10 Florence-2 Watermark | NOT STARTED | Better detection model |
+| 3.3 Multimodal Diarization | DONE | `multimodal_diarize.py`: audio+face cross-modal alignment. InsightFace/facenet/Haar backends. Route + CEP/UXP UI |
+| 3.4 Chat-Driven Editing | DONE | `chat_editor.py`: multi-turn LLM agent, session mgmt, action parsing. 3 routes |
+| 3.5 AI B-Roll Generation | DONE | `broll_generate.py`: CogVideoX/Wan/HunyuanVideo/SVD backends. Text-to-video + image-to-video. Route + CEP/UXP UI |
+| 3.6 WebSocket Bridge | DONE | `ws_bridge.py`: asyncio WebSocket server on port 5680. Real-time progress/events/commands. Start/stop/status routes |
+| 3.7 Auto B-Roll Insertion | DONE | `broll_insert.py`: gap detection, topic shifts, visual refs. Route + plan output |
+| 3.8 Smart Thumbnails | DONE | `thumbnail.py` has face scoring + composition balance + center interest + blur penalty |
+| 3.9 Social Posting | DONE | `social_post.py`: YouTube resumable upload, TikTok Content Posting API, Instagram Graph API. OAuth flow + credential storage. 5 routes + CEP/UXP UI |
+| 3.10 Florence-2 Watermark | DONE | `detect_watermark_region()` + edge fallback + route + UI button |
 
 ### Phase 4 — Architecture
 | Item | Status | Notes |
 |------|--------|-------|
-| 4.1 UXP Migration | PLANNED | `UXP_MIGRATION.md` complete, implementation pending |
-| 4.2 DaVinci Resolve | NOT STARTED | Python scripting API |
-| 4.3 Multi-Engine Backend | PARTIAL | Stem separation has multi-backend, others don't |
+| 4.1 UXP Migration | IN PROGRESS | `UXP_MIGRATION.md` complete. UXP panel has full feature parity: settings tab, engine registry, WebSocket, depth/emotion/chat/broll-plan features |
+| 4.2 DaVinci Resolve | DONE | `resolve_bridge.py`: project info, media pool, markers, import, render. 5 API routes |
+| 4.3 Multi-Engine Backend | DONE | `engine_registry.py`: plugin architecture with 18+ engines across 12 domains. Priority-based resolution, user preferences, availability cache. `/engines` routes for status/preference/resolve |
 
 ---
 
@@ -249,4 +249,7 @@ All new ML models follow the existing pattern:
 | Timeline export | Premiere XML only | XML + OTIO (universal) | ACHIEVED |
 | Highlight scoring | LLM-only 0-1 | Blended LLM + engagement heuristics | ACHIEVED |
 | Emotion analysis | None | deepface emotion curve + peak detection | ACHIEVED |
-| NLE support | Premiere only | Premiere + DaVinci Resolve | PLANNED |
+| NLE support | Premiere only | Premiere + DaVinci Resolve | ACHIEVED |
+| Real-time progress | HTTP polling only | WebSocket + polling fallback | ACHIEVED |
+| Engine selection | Hardcoded backends | Plugin registry, 18+ engines, user prefs | ACHIEVED |
+| UXP feature parity | CEP only | CEP + UXP with settings, engines, WS, chat | ACHIEVED |

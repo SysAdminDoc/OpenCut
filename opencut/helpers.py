@@ -22,6 +22,7 @@ logger = logging.getLogger("opencut")
 # Ensure ~/.opencut/packages is on sys.path (pip --target fallback dir)
 # ---------------------------------------------------------------------------
 import sys as _sys
+
 _opencut_pkg_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
 if os.path.isdir(_opencut_pkg_dir) and _opencut_pkg_dir not in _sys.path:
     _sys.path.insert(0, _opencut_pkg_dir)
@@ -157,8 +158,9 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0) -> str:
 # ---------------------------------------------------------------------------
 def ensure_package(pkg: str, pip_name: str = None, on_progress=None) -> bool:
     """Import package, auto-install via safe_pip_install if missing. Returns True on success."""
+    import importlib
     try:
-        __import__(pkg)
+        importlib.import_module(pkg)
         return True
     except ImportError:
         pip_name = pip_name or pkg
@@ -171,7 +173,7 @@ def ensure_package(pkg: str, pip_name: str = None, on_progress=None) -> bool:
         except RuntimeError:
             return False
         try:
-            __import__(pkg)
+            importlib.import_module(pkg)
             return True
         except ImportError:
             return False

@@ -9,7 +9,7 @@ import logging
 
 from flask import Blueprint, jsonify, request
 
-from opencut.jobs import _safe_error
+from opencut.errors import safe_error
 from opencut.security import require_csrf
 
 try:
@@ -77,4 +77,4 @@ def nlp_command():
     except ImportError:
         return jsonify({"error": "nlp_command module not available"}), 503
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "nlp_command")

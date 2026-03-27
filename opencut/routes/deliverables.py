@@ -9,7 +9,7 @@ import os
 
 from flask import Blueprint, jsonify, request
 
-from opencut.jobs import _safe_error
+from opencut.errors import safe_error
 from opencut.security import (
     require_csrf,
     validate_path,
@@ -66,7 +66,7 @@ def deliverables_vfx_sheet():
     except ImportError:
         return jsonify({"error": "deliverables module not available"}), 503
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "deliverables")
 
 
 # ---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ def deliverables_adr_list():
     except ImportError:
         return jsonify({"error": "deliverables module not available"}), 503
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "deliverables")
 
 
 # ---------------------------------------------------------------------------
@@ -132,7 +132,7 @@ def deliverables_music_cue_sheet():
     except ImportError:
         return jsonify({"error": "deliverables module not available"}), 503
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "deliverables")
 
 
 # ---------------------------------------------------------------------------
@@ -165,4 +165,4 @@ def deliverables_asset_list():
     except ImportError:
         return jsonify({"error": "deliverables module not available"}), 503
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "deliverables")

@@ -158,3 +158,47 @@ def check_deepface_available() -> bool:
 def check_rvm_available() -> bool:
     """Check if Robust Video Matting (temporal bg removal) is available."""
     return _try_import("torch") is not None
+
+
+def check_depth_available() -> bool:
+    """Check if Depth Anything (depth estimation) is available."""
+    return _try_import("torch") is not None and _try_import("transformers") is not None
+
+
+def check_resolve_available() -> bool:
+    """Check if DaVinci Resolve scripting API is available."""
+    try:
+        from opencut.core.resolve_bridge import check_resolve_available as _check
+        return _check()
+    except Exception:
+        return False
+
+
+def check_multimodal_diarize_available() -> bool:
+    """Check if multimodal diarization (face detection + audio) is available."""
+    # Needs at least one face detection backend + cv2
+    if _try_import("cv2") is None:
+        return False
+    if _try_import("insightface") is not None:
+        return True
+    if _try_import("facenet_pytorch") is not None:
+        return True
+    # Haar cascade fallback is always available with cv2
+    return True
+
+
+def check_broll_generate_available() -> bool:
+    """Check if AI B-roll generation (text-to-video) is available."""
+    return _try_import("diffusers") is not None and _try_import("torch") is not None
+
+
+def check_websocket_available() -> bool:
+    """Check if WebSocket bridge (websockets package) is available."""
+    return _try_import("websockets") is not None
+
+
+def check_social_post_available() -> bool:
+    """Check if social media posting credentials exist."""
+    import os
+    creds_path = os.path.join(os.path.expanduser("~"), ".opencut", "social_credentials.json")
+    return os.path.isfile(creds_path)

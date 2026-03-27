@@ -993,7 +993,7 @@ def render_styled_caption_video(
         output_path,
     ]
 
-    logger.info(f"FFmpeg command: {' '.join(cmd)}")
+    logger.debug(f"FFmpeg command: {' '.join(cmd)}")
 
     proc = subprocess.Popen(
         cmd,

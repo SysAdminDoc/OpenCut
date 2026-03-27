@@ -139,6 +139,10 @@
                     <div class="file-name" id="fileNameDisplay"></div>
                     <div class="file-meta" id="fileMetaDisplay"></div>
                 </div>
+                <div class="context-guidance hidden" id="contextGuidanceBanner">
+                    <span class="context-guidance-text" id="contextGuidanceText"></span>
+                    <button type="button" class="context-guidance-dismiss" id="contextGuidanceDismiss" title="Dismiss">&times;</button>
+                </div>
                 <div class="drop-zone" id="dropZone">
                     <div class="drop-zone-icon">
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
@@ -157,7 +161,7 @@
         <div class="favorites-bar hidden" id="favoritesBar">
             <div class="favorites-label">
                 <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
-                Favorites
+                <span data-i18n="favorites.title">Favorites</span>
             </div>
             <div class="favorites-items" id="favoritesItems"></div>
         </div>
@@ -165,24 +169,24 @@
             <!-- ======== TAB: CUT ======== -->
             <div class="nav-panel active" id="panel-cut" role="tabpanel" aria-label="Cut & Clean">
                 <div class="quick-actions" id="quickActionsCut">
-                    <button type="button" class="quick-action-btn" id="quickCleanInterview" disabled title="Remove silence + normalize audio">Clean Up</button>
-                    <button type="button" class="quick-action-btn" id="quickYouTube" disabled title="Silence removal + normalize + loudness match">YouTube Ready</button>
-                    <button type="button" class="quick-action-btn" id="quickPodcast" disabled title="Denoise + normalize + loudness match">Podcast Polish</button>
+                    <button type="button" class="quick-action-btn" id="quickCleanInterview" disabled title="Remove silence + normalize audio" data-i18n="cut.clean_up">Clean Up</button>
+                    <button type="button" class="quick-action-btn" id="quickYouTube" disabled title="Silence removal + normalize + loudness match" data-i18n="cut.youtube_ready">YouTube Ready</button>
+                    <button type="button" class="quick-action-btn" id="quickPodcast" disabled title="Denoise + normalize + loudness match" data-i18n="cut.podcast_polish">Podcast Polish</button>
                 </div>
                 <div class="sub-tabs" role="tablist" id="cutSubTabs">
-                    <button type="button" class="sub-tab active" data-sub="silence">Silence</button>
-                    <button type="button" class="sub-tab" data-sub="fillers">Fillers</button>
-                    <button type="button" class="sub-tab" data-sub="full">Full Edit</button>
-                    <button type="button" class="sub-tab" data-sub="trim">Trim</button>
-                    <button type="button" class="sub-tab" data-sub="auto-edit">Auto-Edit</button>
-                    <button type="button" class="sub-tab" data-sub="highlights">Highlights</button>
+                    <button type="button" class="sub-tab active" data-sub="silence" data-i18n="subtabs.silence">Silence</button>
+                    <button type="button" class="sub-tab" data-sub="fillers" data-i18n="subtabs.fillers">Fillers</button>
+                    <button type="button" class="sub-tab" data-sub="full" data-i18n="subtabs.full_edit">Full Edit</button>
+                    <button type="button" class="sub-tab" data-sub="trim" data-i18n="subtabs.trim">Trim</button>
+                    <button type="button" class="sub-tab" data-sub="auto-edit" data-i18n="subtabs.auto_edit">Auto-Edit</button>
+                    <button type="button" class="sub-tab" data-sub="highlights" data-i18n="subtabs.highlights">Highlights</button>
                 </div>
 
                 <div class="sub-panel active" id="sub-silence">
                     <section class="card">
-                        <p class="card-desc">Detect and remove silent pauses from your clip. Choose a preset or fine-tune the detection.</p>
+                        <p class="card-desc" data-i18n="cut.silence_desc">Detect and remove silent pauses from your clip. Choose a preset or fine-tune the detection.</p>
                         <div class="form-group">
-                            <label>Preset</label>
+                            <label data-i18n="forms.preset">Preset</label>
                             <select id="silencePreset">
                                 <option value="youtube" selected>YouTube (-28dB, 0.4s)</option>
                                 <option value="default">Default (-30dB, 0.5s)</option>
@@ -194,21 +198,21 @@
                         </div>
                         <div class="custom-settings hidden" id="customSilenceSettings">
                             <div class="form-group">
-                                <label>Noise Threshold</label>
+                                <label data-i18n="silence.threshold">Noise Threshold</label>
                                 <div class="slider-row">
                                     <input type="range" id="threshold" min="-60" max="-10" value="-30" step="1" title="Audio level below which is considered silence (lower = more sensitive)">
                                     <span class="slider-val" id="thresholdVal">-30 dB</span>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>Min Silence Length</label>
+                                <label data-i18n="silence.min_duration">Min Silence Length</label>
                                 <div class="slider-row">
                                     <input type="range" id="minDuration" min="0.1" max="3.0" value="0.5" step="0.1" title="Minimum length of silence to remove (shorter = more aggressive)">
                                     <span class="slider-val" id="minDurationVal">0.5s</span>
                                 </div>
                             </div>
                             <div class="form-group">
-                                <label>Keep Padding (before / after)</label>
+                                <label data-i18n="silence.padding">Keep Padding (before / after)</label>
                                 <div class="input-pair">
                                     <input type="number" id="padBefore" value="0.1" min="0" max="2" step="0.05">
                                     <span>/</span>
@@ -223,7 +227,7 @@
                             <div class="waveform-label">Waveform &mdash; drag threshold line to adjust</div>
                         </div>
                         <div class="form-group">
-                            <label>Detection Method</label>
+                            <label data-i18n="cut.detection_method">Detection Method</label>
                             <select id="silenceDetectMethod" aria-label="Silence detection method">
                                 <option value="auto" selected>Auto (AI if available, fallback to threshold)</option>
                                 <option value="vad">Silero VAD (AI neural detection)</option>
@@ -232,36 +236,36 @@
                             <div class="hint hidden" id="vadHint">Silero VAD not available. <button type="button" class="btn-text btn-xs" id="installVadBtn">Install PyTorch</button></div>
                         </div>
                         <div class="form-group">
-                            <label>Silence Mode</label>
+                            <label data-i18n="silence.mode">Silence Mode</label>
                             <select id="silenceMode">
                                 <option value="remove" selected>Remove Silent Segments</option>
                                 <option value="speedup">Speed Up Silent Segments</option>
                             </select>
                         </div>
                         <div class="form-group hidden" id="silenceSpeedGroup">
-                            <label>Speed Factor</label>
+                            <label data-i18n="silence.speed_factor">Speed Factor</label>
                             <div class="slider-row">
                                 <input type="range" id="silenceSpeedFactor" min="1.5" max="8" value="4" step="0.5" title="How fast to play silent segments (higher = shorter pauses)">
                                 <span class="slider-val" id="silenceSpeedVal">4x</span>
                             </div>
                         </div>
-                        <button type="button" class="btn-outline btn-sm mb-sm" id="loadWaveformBtn" disabled>Preview Waveform</button>
-                        <button type="button" class="btn-primary" id="runSilenceBtn" disabled title="Ctrl+Shift+S">Remove Silences</button>
+                        <button type="button" class="btn-outline btn-sm mb-sm" id="loadWaveformBtn" disabled data-i18n="silence.preview_waveform">Preview Waveform</button>
+                        <button type="button" class="btn-primary" id="runSilenceBtn" disabled title="Ctrl+Shift+S" data-i18n="silence.remove">Remove Silences</button>
                     </section>
                 </div>
 
                 <div class="sub-panel" id="sub-fillers">
                     <section class="card">
-                        <p class="card-desc">Find and remove filler words like "um", "uh", "like", and "you know" using AI speech recognition.</p>
+                        <p class="card-desc" data-i18n="cut.filler_desc">Find and remove filler words like "um", "uh", "like", and "you know" using AI speech recognition.</p>
                         <div class="form-group">
-                            <label>Detection Backend</label>
+                            <label data-i18n="forms.backend">Detection Backend</label>
                             <select id="fillerBackend" aria-label="Filler detection backend">
                                 <option value="whisper" selected>Whisper (standard — fast)</option>
                                 <option value="crisper">CrisperWhisper (verbatim — most accurate)</option>
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Whisper Model</label>
+                            <label data-i18n="forms.model">Whisper Model</label>
                             <select id="fillerModel">
                                 <option value="tiny">Tiny (fastest)</option>
                                 <option value="base" selected>Base (balanced)</option>
@@ -270,7 +274,7 @@
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Remove These Fillers</label>
+                            <label data-i18n="cut.filler_words">Remove These Fillers</label>
                             <div class="filler-checks" id="fillerChecks">
                                 <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="um" checked> um / umm</label>
                                 <label class="checkbox-row cb-sm"><input type="checkbox" data-filler="uh" checked> uh / uhh</label>
@@ -290,17 +294,17 @@
                             <label>Custom Fillers <span class="hint-inline">(comma-separated)</span></label>
                             <input type="text" id="fillerCustom" placeholder="e.g. whatever, totally, honestly" class="text-input">
                         </div>
-                        <label class="checkbox-row"><input type="checkbox" id="fillerSilence" checked> Also remove silences</label>
-                        <button type="button" class="btn-primary" id="runFillersBtn" disabled>Clean Filler Words</button>
+                        <label class="checkbox-row"><input type="checkbox" id="fillerSilence" checked> <span data-i18n="cut.filler_also_silence">Also remove silences</span></label>
+                        <button type="button" class="btn-primary" id="runFillersBtn" disabled data-i18n="cut.clean_fillers">Clean Filler Words</button>
                         <div class="hint hidden" id="fillersHint">Requires Whisper. Install from Settings tab.</div>
                     </section>
                 </div>
 
                 <div class="sub-panel" id="sub-full">
                     <section class="card">
-                        <p class="card-desc">One-click cleanup: remove silences, strip fillers, add captions, and auto-zoom — all at once.</p>
+                        <p class="card-desc" data-i18n="cut.full_desc">One-click cleanup: remove silences, strip fillers, add captions, and auto-zoom — all at once.</p>
                         <div class="form-group">
-                            <label>Preset</label>
+                            <label data-i18n="forms.preset">Preset</label>
                             <select id="fullPreset">
                                 <option value="youtube" selected>YouTube</option>
                                 <option value="default">Default</option>
@@ -309,10 +313,10 @@
                                 <option value="podcast">Podcast</option>
                             </select>
                         </div>
-                        <label class="checkbox-row"><input type="checkbox" id="fullZoom" checked> Auto Zoom</label>
-                        <label class="checkbox-row"><input type="checkbox" id="fullCaptions" checked> Captions (SRT)</label>
-                        <label class="checkbox-row"><input type="checkbox" id="fullFillers"> Remove Filler Words</label>
-                        <button type="button" class="btn-primary" id="runFullBtn" disabled>Run Full Pipeline</button>
+                        <label class="checkbox-row"><input type="checkbox" id="fullZoom" checked> <span data-i18n="cut.auto_zoom">Auto Zoom</span></label>
+                        <label class="checkbox-row"><input type="checkbox" id="fullCaptions" checked> <span data-i18n="cut.captions_srt">Captions (SRT)</span></label>
+                        <label class="checkbox-row"><input type="checkbox" id="fullFillers"> <span data-i18n="cut.remove_fillers">Remove Filler Words</span></label>
+                        <button type="button" class="btn-primary" id="runFullBtn" disabled data-i18n="cut.full_run">Run Full Pipeline</button>
                     </section>
                 </div>
 
@@ -322,10 +326,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>
-                                Trim Clip
+                                <span data-i18n="cut.trim_clip">Trim Clip</span>
                             </div>
                         </div>
-                        <p class="card-desc">Set in/out points to extract a portion of your clip. Use timecodes or seconds.</p>
+                        <p class="card-desc" data-i18n="cut.trim_desc">Set in/out points to extract a portion of your clip. Use timecodes or seconds.</p>
 
                         <div class="form-group">
                             <label>Start Time</label>
@@ -356,13 +360,13 @@
                             </select>
                         </div>
 
-                        <button type="button" class="btn-primary" id="runTrimBtn" disabled>Trim Clip</button>
+                        <button type="button" class="btn-primary" id="runTrimBtn" disabled data-i18n="cut.trim_run">Trim Clip</button>
                     </section>
                 </div>
                 <div class="sub-panel" id="sub-auto-edit">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Auto-Edit (Motion Detection)</div></div>
-                        <p class="card-desc">Detect and remove static/boring segments using visual motion analysis.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.auto_edit">Auto-Edit (Motion Detection)</div></div>
+                        <p class="card-desc" data-i18n="cut.auto_edit_desc">Detect and remove static/boring segments using visual motion analysis.</p>
                         <div class="form-group">
                             <label>Detection Method</label>
                             <select id="autoEditMethod">
@@ -392,7 +396,7 @@
                                 <span class="slider-val" id="autoEditMinClipVal">0.5s</span>
                             </div>
                         </div>
-                        <button type="button" class="btn-primary" id="runAutoEditBtn" disabled>Run Auto-Edit</button>
+                        <button type="button" class="btn-primary" id="runAutoEditBtn" disabled data-i18n="cut.auto_edit_run">Run Auto-Edit</button>
                         <div class="result-area hidden" id="autoEditResult">
                             <div class="result-stats" id="autoEditStats"></div>
                         </div>
@@ -401,8 +405,8 @@
 
                 <div class="sub-panel" id="sub-highlights">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">AI Highlight Extraction</div></div>
-                        <p class="card-desc">Use AI to find the most interesting/viral moments in your video.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.highlights">AI Highlight Extraction</div></div>
+                        <p class="card-desc" data-i18n="cut.highlights_desc">Use AI to find the most interesting/viral moments in your video.</p>
                         <div class="form-group">
                             <label>Max Highlights</label>
                             <div class="slider-row">
@@ -418,8 +422,13 @@
                                 <input type="number" id="highlightMaxDur" value="60" min="10" max="600" step="5">
                             </div>
                         </div>
-                        <button type="button" class="btn-primary" id="runHighlightsBtn" disabled>Extract Highlights (LLM)</button>
-                        <button type="button" class="btn-outline btn-sm mt-xs" id="runEmotionHighlightsBtn" disabled aria-label="Detect emotion-based highlights">Emotion Highlights (Face AI)</button>
+                        <button type="button" class="btn-primary" id="runHighlightsBtn" disabled data-i18n="cut.highlights_extract">Extract Highlights (LLM)</button>
+                        <button type="button" class="btn-outline btn-sm mt-xs" id="runEmotionHighlightsBtn" disabled aria-label="Detect emotion-based highlights" data-i18n="cut.highlights_emotion">Emotion Highlights (Face AI)</button>
+                        <div class="hint hidden" id="emotionHint">
+                            Emotion analysis (deepface) not installed.
+                            <button type="button" class="btn-install" id="installEmotionBtn">Install Now</button>
+                            <div class="install-alt">Requires: <code>pip install deepface</code></div>
+                        </div>
                         <div class="result-area hidden" id="highlightResult">
                             <div id="highlightList"></div>
                         </div>
@@ -430,20 +439,20 @@
             <!-- ======== TAB: CAPTIONS ======== -->
             <div class="nav-panel" id="panel-captions" role="tabpanel" aria-label="Captions">
                 <div class="quick-actions" id="quickActionsCaptions">
-                    <button type="button" class="quick-action-btn" id="quickAutoSubtitle" disabled title="Transcribe + export SRT subtitles">Auto Subtitle</button>
-                    <button type="button" class="quick-action-btn" id="quickTranslate" disabled title="Transcribe + translate to another language">Translate</button>
+                    <button type="button" class="quick-action-btn" id="quickAutoSubtitle" disabled title="Transcribe + export SRT subtitles" data-i18n="captions.subtitle_export">Auto Subtitle</button>
+                    <button type="button" class="quick-action-btn" id="quickTranslate" disabled title="Transcribe + translate to another language" data-i18n="captions.translate">Translate</button>
                 </div>
                 <div class="sub-tabs" role="tablist" id="captionSubTabs">
-                    <button type="button" class="sub-tab active" data-sub="cap-styled">Styled</button>
-                    <button type="button" class="sub-tab" data-sub="cap-subtitle">Subtitle</button>
-                    <button type="button" class="sub-tab" data-sub="cap-transcript">Transcript</button>
-                    <button type="button" class="sub-tab" data-sub="cap-translate">Translate</button>
-                    <button type="button" class="sub-tab" data-sub="cap-karaoke">Karaoke</button>
-                    <button type="button" class="sub-tab" data-sub="cap-burnin">Burn-in</button>
-                    <button type="button" class="sub-tab" data-sub="cap-animated">Animated</button>
-                    <button type="button" class="sub-tab" data-sub="cap-repeat">Repeats</button>
-                    <button type="button" class="sub-tab" data-sub="cap-chapters">Chapters</button>
-                    <button type="button" class="sub-tab" data-sub="cap-srt-import">SRT Import</button>
+                    <button type="button" class="sub-tab active" data-sub="cap-styled" data-i18n="subtabs.styled">Styled</button>
+                    <button type="button" class="sub-tab" data-sub="cap-subtitle" data-i18n="subtabs.subtitle">Subtitle</button>
+                    <button type="button" class="sub-tab" data-sub="cap-transcript" data-i18n="subtabs.transcript">Transcript</button>
+                    <button type="button" class="sub-tab" data-sub="cap-translate" data-i18n="subtabs.translate">Translate</button>
+                    <button type="button" class="sub-tab" data-sub="cap-karaoke" data-i18n="subtabs.karaoke">Karaoke</button>
+                    <button type="button" class="sub-tab" data-sub="cap-burnin" data-i18n="subtabs.burnin">Burn-in</button>
+                    <button type="button" class="sub-tab" data-sub="cap-animated" data-i18n="subtabs.animated">Animated</button>
+                    <button type="button" class="sub-tab" data-sub="cap-repeat" data-i18n="subtabs.repeats">Repeats</button>
+                    <button type="button" class="sub-tab" data-sub="cap-chapters" data-i18n="subtabs.chapters">Chapters</button>
+                    <button type="button" class="sub-tab" data-sub="cap-srt-import" data-i18n="subtabs.srt_import">SRT Import</button>
                 </div>
 
                 <div class="sub-panel active" id="sub-cap-styled">
@@ -523,14 +532,14 @@
                                 <span class="sp-legend-item"><span class="sp-dot sp-dot-act"></span> Action word</span>
                             </div>
                         </div>
-                        <label class="checkbox-row"><input type="checkbox" id="captionWordHighlight" checked> Word-by-word highlight</label>
-                        <label class="checkbox-row"><input type="checkbox" id="captionAutoAction" checked> Auto-detect action words</label>
-                        <label class="checkbox-row"><input type="checkbox" id="captionAutoEmoji"> Auto-insert emoji</label>
+                        <label class="checkbox-row"><input type="checkbox" id="captionWordHighlight" checked> <span data-i18n="captions.word_highlight">Word-by-word highlight</span></label>
+                        <label class="checkbox-row"><input type="checkbox" id="captionAutoAction" checked> <span data-i18n="captions.auto_action">Auto-detect action words</span></label>
+                        <label class="checkbox-row"><input type="checkbox" id="captionAutoEmoji"> <span data-i18n="captions.auto_emoji">Auto-insert emoji</span></label>
                         <div class="form-group">
                             <label>Custom Action Words <span class="hint-inline">(comma-separated)</span></label>
                             <input type="text" id="actionWordsInput" placeholder="e.g. amazing, subscribe, click" class="text-input">
                         </div>
-                        <button type="button" class="btn-primary" id="runStyledCaptionsBtn" disabled title="Ctrl+Shift+C">Generate Styled Captions</button>
+                        <button type="button" class="btn-primary" id="runStyledCaptionsBtn" disabled title="Ctrl+Shift+C" data-i18n="captions.generate_styled">Generate Styled Captions</button>
                         <div class="hint hidden" id="captionsHint">
                             Whisper not installed.
                             <button type="button" class="btn-install" id="installWhisperBtn">Install Whisper Now</button>
@@ -577,7 +586,7 @@
                                 <option value="json">JSON (Word-level)</option>
                             </select>
                         </div>
-                        <button type="button" class="btn-primary" id="runSubtitleBtn" disabled>Export Subtitles</button>
+                        <button type="button" class="btn-primary" id="runSubtitleBtn" disabled data-i18n="captions.subtitle_export">Export Subtitles</button>
                     </section>
                 </div>
 
@@ -592,7 +601,7 @@
                                 <option value="medium">Medium (great)</option>
                             </select>
                         </div>
-                        <button type="button" class="btn-primary" id="runTranscriptBtn" disabled>Transcribe</button>
+                        <button type="button" class="btn-primary" id="runTranscriptBtn" disabled data-i18n="captions.transcribe">Transcribe</button>
                         <div class="transcript-editor hidden" id="transcriptEditor">
                             <div class="transcript-header">
                                 <span class="transcript-info" id="transcriptInfo"></span>
@@ -631,10 +640,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"/></svg>
-                                Caption Translation
+                                <span data-i18n="captions.translate">Caption Translation</span>
                             </div>
                         </div>
-                        <p class="card-desc">Translate your captions into 200+ languages. Runs fully offline after a one-time model download.</p>
+                        <p class="card-desc" data-i18n="captions.translate_desc">Translate your captions into 200+ languages. Runs fully offline after a one-time model download.</p>
 
                         <div class="form-group">
                             <label>Step 1: Transcribe (if needed)</label>
@@ -697,7 +706,7 @@
                             </select>
                         </div>
 
-                        <button type="button" class="btn-primary" id="runTranslateBtn" disabled>Transcribe &amp; Translate</button>
+                        <button type="button" class="btn-primary" id="runTranslateBtn" disabled data-i18n="captions.translate_run">Transcribe &amp; Translate</button>
 
                         <div class="hint hidden" id="translateHint">
                             NLLB translation model not installed.
@@ -712,10 +721,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>
-                                Karaoke Captions
+                                <span data-i18n="subtabs.karaoke">Karaoke Captions</span>
                             </div>
                         </div>
-                        <p class="card-desc">Word-by-word karaoke-style captions with smooth fill animation. Perfect for lyric videos and music content.</p>
+                        <p class="card-desc" data-i18n="captions.karaoke_desc">Word-by-word karaoke-style captions with smooth fill animation. Perfect for lyric videos and music content.</p>
 
                         <div class="form-group">
                             <label>Whisper Model</label>
@@ -749,7 +758,7 @@
                             Enable speaker labels (requires HuggingFace token)
                         </label>
 
-                        <button type="button" class="btn-primary" id="runKaraokeBtn" disabled>Generate Karaoke</button>
+                        <button type="button" class="btn-primary" id="runKaraokeBtn" disabled data-i18n="captions.karaoke_generate">Generate Karaoke</button>
 
                         <div class="hint hidden" id="karaokeHint">
                             WhisperX not installed (required for word-level timing).
@@ -764,10 +773,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2"/><line x1="7" y1="15" x2="17" y2="15"/><line x1="7" y1="18" x2="14" y2="18"/></svg>
-                                Caption Burn-in
+                                <span data-i18n="captions.burn_in">Caption Burn-in</span>
                             </div>
                         </div>
-                        <p class="card-desc">Permanently burn captions into the video. Use when your platform doesn't support subtitle files.</p>
+                        <p class="card-desc" data-i18n="captions.burnin_desc">Permanently burn captions into the video. Use when your platform doesn't support subtitle files.</p>
 
                         <div class="form-group">
                             <label>Burn-in Style</label>
@@ -795,30 +804,30 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runBurninBtn" disabled>Burn Captions into Video</button>
+                        <button type="button" class="btn-primary" id="runBurninBtn" disabled data-i18n="captions.burnin_run">Burn Captions into Video</button>
                     </section>
                 </div>
 
                 <!-- ANIMATED CAPTIONS -->
                 <div class="sub-panel" id="sub-cap-animated">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Animated Captions</div></div>
-                        <p class="card-desc">CapCut-style animated word-by-word captions with pop, fade, bounce, and glow effects.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.animated">Animated Captions</div></div>
+                        <p class="card-desc" data-i18n="captions.animated_desc">CapCut-style animated word-by-word captions with pop, fade, bounce, and glow effects.</p>
                         <div class="form-group"><label>Animation</label>
                             <select id="animCapPreset"><option value="pop">Pop (CapCut style)</option><option value="fade">Fade</option><option value="slide_up">Slide Up</option><option value="typewriter">Typewriter</option><option value="bounce">Bounce</option><option value="glow">Glow</option><option value="highlight_box">Highlight Box</option></select></div>
                         <div class="form-group"><label>Font Size</label><div class="slider-row"><input type="range" id="animCapFontSize" min="28" max="96" value="56" step="2"><span class="slider-val" id="animCapFontSizeVal">56</span></div></div>
                         <div class="form-group"><label>Words Per Line</label><div class="slider-row"><input type="range" id="animCapWpl" min="2" max="10" value="6" step="1"><span class="slider-val" id="animCapWplVal">6</span></div></div>
                         <div class="form-group"><label>Whisper Model</label>
                             <select id="animCapModel"><option value="tiny">Tiny (fastest)</option><option value="base" selected>Base (balanced)</option><option value="small">Small (accurate)</option></select></div>
-                        <button type="button" class="btn-primary" id="runAnimCapBtn" disabled>Render Animated Captions</button>
+                        <button type="button" class="btn-primary" id="runAnimCapBtn" disabled data-i18n="captions.render_animated">Render Animated Captions</button>
                     </section>
                 </div>
 
                 <!-- REPEAT TAKE DETECTION -->
                 <div class="sub-panel" id="sub-cap-repeat">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Remove Repeated Takes</div></div>
-                        <p class="card-desc">Detect and cut duplicate or repeated spoken takes using transcript similarity.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.repeats">Remove Repeated Takes</div></div>
+                        <p class="card-desc" data-i18n="captions.repeat_desc">Detect and cut duplicate or repeated spoken takes using transcript similarity.</p>
                         <div class="form-group">
                             <label>Whisper Model</label>
                             <select id="repeatModel">
@@ -835,11 +844,11 @@
                                 <span class="slider-val" id="repeatThresholdVal">0.60</span>
                             </div>
                         </div>
-                        <button type="button" class="btn-primary" id="runRepeatDetectBtn" disabled>Detect Repeats</button>
+                        <button type="button" class="btn-primary" id="runRepeatDetectBtn" disabled data-i18n="captions.repeat_detect">Detect Repeats</button>
                         <div class="result-area hidden" id="repeatResults">
                             <div class="hint" id="repeatSummary"></div>
                             <div id="repeatList" class="scrollable-sm mt-xs"></div>
-                            <button type="button" class="btn-primary mt-sm" id="applyRepeatCutsBtn">Apply Cuts to Timeline</button>
+                            <button type="button" class="btn-primary mt-sm" id="applyRepeatCutsBtn" data-i18n="captions.repeat_apply">Apply Cuts to Timeline</button>
                         </div>
                     </section>
                 </div>
@@ -847,8 +856,8 @@
                 <!-- YOUTUBE CHAPTERS -->
                 <div class="sub-panel" id="sub-cap-chapters">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Generate Chapters</div></div>
-                        <p class="card-desc">Use an LLM to generate YouTube chapter markers from the transcript.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="captions.chapters_generate">Generate Chapters</div></div>
+                        <p class="card-desc" data-i18n="captions.chapters_desc">Use an LLM to generate YouTube chapter markers from the transcript.</p>
                         <div class="form-group">
                             <label>LLM Provider</label>
                             <select id="chaptersLlmProvider">
@@ -872,7 +881,7 @@
                                 <span class="slider-val" id="chaptersMaxVal">15</span>
                             </div>
                         </div>
-                        <button type="button" class="btn-primary" id="runChaptersBtn" disabled>Generate Chapters</button>
+                        <button type="button" class="btn-primary" id="runChaptersBtn" disabled data-i18n="captions.chapters_generate">Generate Chapters</button>
                         <div class="result-area hidden" id="chaptersResult">
                             <label>Chapter List</label>
                             <textarea class="text-area mt-xs" id="chaptersText" rows="6" readonly></textarea>
@@ -887,8 +896,8 @@
                 <!-- SRT TO NATIVE CAPTIONS (moved to captions tab) -->
                 <div class="sub-panel" id="sub-cap-srt-import">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Import SRT as Native Captions</div></div>
-                        <p class="card-desc">Parse an SRT file and inject caption segments into the active Premiere sequence as native captions.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.srt_import">Import SRT as Native Captions</div></div>
+                        <p class="card-desc" data-i18n="captions.srt_import_desc">Parse an SRT file and inject caption segments into the active Premiere sequence as native captions.</p>
                         <div class="form-group">
                             <label>SRT File</label>
                             <div class="input-row">
@@ -896,7 +905,7 @@
                                 <button type="button" class="btn-sm btn-browse" data-target="srtImportPath">Browse</button>
                             </div>
                         </div>
-                        <button type="button" class="btn-primary" id="runSrtImportBtn">Import Captions</button>
+                        <button type="button" class="btn-primary" id="runSrtImportBtn" data-i18n="captions.srt_import_run">Import Captions</button>
                         <div class="hint hidden" id="srtImportStatus"></div>
                     </section>
                 </div>
@@ -909,18 +918,18 @@
                     <button type="button" class="quick-action-btn" id="quickDenoise" disabled title="One-click noise removal">Quick Denoise</button>
                 </div>
                 <div class="sub-tabs" role="tablist" id="audioSubTabs">
-                    <button type="button" class="sub-tab active" data-sub="aud-separate">Stems</button>
-                    <button type="button" class="sub-tab" data-sub="aud-denoise">Denoise</button>
-                    <button type="button" class="sub-tab" data-sub="aud-pro">Studio FX</button>
-                    <button type="button" class="sub-tab" data-sub="aud-normalize">Normalize</button>
-                    <button type="button" class="sub-tab" data-sub="aud-beats">Beats</button>
-                    <button type="button" class="sub-tab" data-sub="aud-effects">Effects</button>
-                    <button type="button" class="sub-tab" data-sub="aud-tts">Voice Gen</button>
-                    <button type="button" class="sub-tab" data-sub="aud-sfx">Sound FX</button>
-                    <button type="button" class="sub-tab" data-sub="aud-duck">Ducking</button>
-                    <button type="button" class="sub-tab" data-sub="aud-musicai">Music AI</button>
-                    <button type="button" class="sub-tab" data-sub="aud-enhance">Enhance</button>
-                    <button type="button" class="sub-tab" data-sub="aud-loudmatch">Loudness</button>
+                    <button type="button" class="sub-tab active" data-sub="aud-separate" data-i18n="subtabs.stems">Stems</button>
+                    <button type="button" class="sub-tab" data-sub="aud-denoise" data-i18n="subtabs.denoise">Denoise</button>
+                    <button type="button" class="sub-tab" data-sub="aud-pro" data-i18n="subtabs.studio_fx">Studio FX</button>
+                    <button type="button" class="sub-tab" data-sub="aud-normalize" data-i18n="subtabs.normalize">Normalize</button>
+                    <button type="button" class="sub-tab" data-sub="aud-beats" data-i18n="subtabs.beats">Beats</button>
+                    <button type="button" class="sub-tab" data-sub="aud-effects" data-i18n="subtabs.effects">Effects</button>
+                    <button type="button" class="sub-tab" data-sub="aud-tts" data-i18n="subtabs.voice_gen">Voice Gen</button>
+                    <button type="button" class="sub-tab" data-sub="aud-sfx" data-i18n="subtabs.sfx">Sound FX</button>
+                    <button type="button" class="sub-tab" data-sub="aud-duck" data-i18n="subtabs.ducking">Ducking</button>
+                    <button type="button" class="sub-tab" data-sub="aud-musicai" data-i18n="subtabs.music_ai">Music AI</button>
+                    <button type="button" class="sub-tab" data-sub="aud-enhance" data-i18n="subtabs.enhance">Enhance</button>
+                    <button type="button" class="sub-tab" data-sub="aud-loudmatch" data-i18n="subtabs.loudness">Loudness</button>
                 </div>
 
                 <div class="sub-panel active" id="sub-aud-separate">
@@ -928,10 +937,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M2 12h20"/></svg>
-                                AI Stem Separation
+                                <span data-i18n="audio.separate">AI Stem Separation</span>
                             </div>
                         </div>
-                        <p class="card-desc">Split audio into vocals, drums, bass, and instruments. Extract vocals for remixes or remove music from dialogue.</p>
+                        <p class="card-desc" data-i18n="audio.separate_desc">Split audio into vocals, drums, bass, and instruments. Extract vocals for remixes or remove music from dialogue.</p>
                         
                         <div class="form-group">
                             <label>Model</label>
@@ -968,7 +977,7 @@
                             Auto-import stems to project
                         </label>
                         
-                        <button type="button" class="btn-primary" id="runSeparateBtn" disabled>Separate Audio</button>
+                        <button type="button" class="btn-primary" id="runSeparateBtn" disabled data-i18n="audio.separate">Separate Audio</button>
                         
                         <div class="hint hidden" id="separateHint">
                             Demucs not installed.
@@ -980,7 +989,7 @@
 
                 <div class="sub-panel" id="sub-aud-denoise">
                     <section class="card">
-                        <p class="card-desc">Reduce background noise, hum, and hiss from your audio.</p>
+                        <p class="card-desc" data-i18n="audio.denoise_desc">Reduce background noise, hum, and hiss from your audio.</p>
                         <div class="form-group">
                             <label>Method</label>
                             <select id="denoiseMethod">
@@ -996,7 +1005,7 @@
                             </div>
                             <span class="hint-inline">Higher = more noise removed, but may affect voice quality</span>
                         </div>
-                        <button type="button" class="btn-primary" id="runDenoiseBtn" disabled title="Ctrl+Shift+D">Remove Noise</button>
+                        <button type="button" class="btn-primary" id="runDenoiseBtn" disabled title="Ctrl+Shift+D" data-i18n="audio.remove_noise">Remove Noise</button>
                     </section>
                 </div>
 
@@ -1005,10 +1014,10 @@
                         <div class="card-header" data-collapsible="true">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
-                                Studio Effects (Pedalboard)
+                                <span data-i18n="subtabs.studio_fx">Studio Effects (Pedalboard)</span>
                             </div>
                         </div>
-                        <p class="card-desc">Studio-grade compressor, EQ, de-esser, limiter, reverb, and more. Processes audio in real-time.</p>
+                        <p class="card-desc" data-i18n="audio.studio_desc">Studio-grade compressor, EQ, de-esser, limiter, reverb, and more. Processes audio in real-time.</p>
 
                         <div class="form-group">
                             <label>Category</label>
@@ -1038,7 +1047,7 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runProFxBtn" disabled>Apply Studio Effect</button>
+                        <button type="button" class="btn-primary" id="runProFxBtn" disabled data-i18n="audio.studio_apply">Apply Studio Effect</button>
 
                         <div class="hint hidden" id="proFxHint">
                             Pedalboard not installed.
@@ -1061,7 +1070,7 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runDeepFilterBtn" disabled>AI Denoise</button>
+                        <button type="button" class="btn-primary" id="runDeepFilterBtn" disabled data-i18n="subtabs.denoise">AI Denoise</button>
 
                         <div class="hint hidden" id="deepFilterHint">
                             DeepFilterNet not installed.
@@ -1073,7 +1082,7 @@
 
                 <div class="sub-panel" id="sub-aud-normalize">
                     <section class="card">
-                        <p class="card-desc">Match your audio loudness to platform standards so your content sounds consistent everywhere.</p>
+                        <p class="card-desc" data-i18n="audio.normalize_desc">Match your audio loudness to platform standards so your content sounds consistent everywhere.</p>
                         <div class="form-group">
                             <label>Platform Preset</label>
                             <select id="normalizePreset">
@@ -1091,15 +1100,15 @@
                             <div class="meter-row"><span class="meter-label">Range</span><span class="meter-value" id="meterLRA">-- LU</span></div>
                         </div>
                         <div class="btn-row-split">
-                            <button type="button" class="btn-outline btn-half" id="measureLoudnessBtn" disabled>Measure</button>
-                            <button type="button" class="btn-primary btn-half" id="runNormalizeBtn" disabled title="Ctrl+Shift+N">Normalize</button>
+                            <button type="button" class="btn-outline btn-half" id="measureLoudnessBtn" disabled data-i18n="audio.measure">Measure</button>
+                            <button type="button" class="btn-primary btn-half" id="runNormalizeBtn" disabled title="Ctrl+Shift+N" data-i18n="audio.normalize">Normalize</button>
                         </div>
                     </section>
                 </div>
 
                 <div class="sub-panel" id="sub-aud-beats">
                     <section class="card">
-                        <p class="card-desc">Detect the tempo and beat positions in your music for rhythm-synced editing.</p>
+                        <p class="card-desc" data-i18n="audio.beats_desc">Detect the tempo and beat positions in your music for rhythm-synced editing.</p>
                         <div class="form-group">
                             <label>Sensitivity</label>
                             <div class="slider-row">
@@ -1108,7 +1117,7 @@
                             </div>
                             <span class="hint-inline">Lower = fewer, stronger beats</span>
                         </div>
-                        <button type="button" class="btn-primary" id="runBeatsBtn" disabled>Detect Beats</button>
+                        <button type="button" class="btn-primary" id="runBeatsBtn" disabled data-i18n="timeline.detect_beats">Detect Beats</button>
                         <div class="beat-results hidden" id="beatResults">
                             <div class="stat-grid">
                                 <div class="stat-item"><span class="stat-value" id="bpmValue">--</span><span class="stat-label">BPM</span></div>
@@ -1121,7 +1130,7 @@
 
                 <div class="sub-panel" id="sub-aud-effects">
                     <section class="card">
-                        <p class="card-desc">Quick audio effects — reverb, echo, pitch shift, bass boost, and creative voice transforms.</p>
+                        <p class="card-desc" data-i18n="audio.effects_desc">Quick audio effects — reverb, echo, pitch shift, bass boost, and creative voice transforms.</p>
                         <div class="form-group">
                             <label>Effect</label>
                             <select id="audioEffect">
@@ -1147,10 +1156,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/></svg>
-                                Voice Generation (TTS)
+                                <span data-i18n="subtabs.voice_gen">Voice Generation (TTS)</span>
                             </div>
                         </div>
-                        <p class="card-desc">Generate voiceovers and narration from text. 400+ natural voices in 75+ languages.</p>
+                        <p class="card-desc" data-i18n="audio.tts_desc">Generate voiceovers and narration from text. 400+ natural voices in 75+ languages.</p>
 
                         <div class="form-group">
                             <label>Engine</label>
@@ -1197,7 +1206,7 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runTtsBtn">Generate Speech</button>
+                        <button type="button" class="btn-primary" id="runTtsBtn" data-i18n="audio.tts_generate">Generate Speech</button>
 
                         <div class="hint hidden" id="ttsHint">
                             Edge TTS not installed.
@@ -1212,10 +1221,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 010 14.14"/><path d="M15.54 8.46a5 5 0 010 7.07"/></svg>
-                                SFX &amp; Tone Generator
+                                <span data-i18n="subtabs.sfx">SFX &amp; Tone Generator</span>
                             </div>
                         </div>
-                        <p class="card-desc">Create swooshes, impacts, risers, and tones for transitions and alerts. No extra installs needed.</p>
+                        <p class="card-desc" data-i18n="audio.sfx_desc">Create swooshes, impacts, risers, and tones for transitions and alerts. No extra installs needed.</p>
 
                         <div class="form-group">
                             <label>Generator</label>
@@ -1275,7 +1284,7 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runSfxBtn">Generate Sound</button>
+                        <button type="button" class="btn-primary" id="runSfxBtn" data-i18n="audio.sfx_generate">Generate Sound</button>
                     </section>
                 </div>
 
@@ -1285,10 +1294,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12h4l3-9 6 18 3-9h4"/></svg>
-                                Audio Ducking
+                                <span data-i18n="audio.duck">Audio Ducking</span>
                             </div>
                         </div>
-                        <p class="card-desc">Automatically lower background music when someone is speaking. Select your voice clip above, then provide the music file below.</p>
+                        <p class="card-desc" data-i18n="audio.duck_desc">Automatically lower background music when someone is speaking. Select your voice clip above, then provide the music file below.</p>
 
                         <div class="form-group">
                             <label>Music File Path</label>
@@ -1323,8 +1332,8 @@
                 <!-- MUSIC AI (MusicGen) -->
                 <div class="sub-panel" id="sub-aud-musicai">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">AI Music Generation</div></div>
-                        <p class="card-desc">Generate original music from a text description. Describe a mood, genre, or style and get a unique track. GPU recommended.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.music_ai">AI Music Generation</div></div>
+                        <p class="card-desc" data-i18n="audio.music_ai_desc">Generate original music from a text description. Describe a mood, genre, or style and get a unique track. GPU recommended.</p>
                         <div class="form-group"><label>Prompt</label>
                             <textarea id="musicAiPrompt" rows="3" placeholder="upbeat electronic dance music with driving bassline and synth arpeggios"></textarea></div>
                         <div class="form-group"><label>Model</label>
@@ -1332,25 +1341,25 @@
                         <div class="form-group"><label>Duration (sec)</label><div class="slider-row"><input type="range" id="musicAiDur" min="5" max="30" value="10" step="1"><span class="slider-val" id="musicAiDurVal">10</span></div></div>
                         <div class="form-group"><label>Temperature</label><div class="slider-row"><input type="range" id="musicAiTemp" min="0.5" max="1.5" value="1.0" step="0.05"><span class="slider-val" id="musicAiTempVal">1.0</span></div></div>
                         <label class="checkbox-row"><input type="checkbox" id="musicAiAutoImport" checked>Auto-import result to project</label>
-                        <button type="button" class="btn-primary" id="runMusicAiBtn">Generate Music</button>
+                        <button type="button" class="btn-primary" id="runMusicAiBtn" data-i18n="audio.music_generate">Generate Music</button>
                     </section>
                 </div>
 
                 <div class="sub-panel" id="sub-aud-enhance">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Speech Enhancement</div></div>
-                        <p class="card-desc">Upgrade low-quality speech to studio quality using AI super-resolution.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="audio.enhance">Speech Enhancement</div></div>
+                        <p class="card-desc" data-i18n="audio.enhance_desc">Upgrade low-quality speech to studio quality using AI super-resolution.</p>
                         <label class="checkbox-row"><input type="checkbox" id="enhanceDenoise" checked>Denoise</label>
                         <label class="checkbox-row"><input type="checkbox" id="enhanceUpscale" checked>Super-Resolution</label>
-                        <button type="button" class="btn-primary" id="runEnhanceBtn" disabled>Enhance Speech</button>
+                        <button type="button" class="btn-primary" id="runEnhanceBtn" disabled data-i18n="audio.enhance_speech">Enhance Speech</button>
                     </section>
                 </div>
 
                 <!-- LOUDNESS MATCH -->
                 <div class="sub-panel" id="sub-aud-loudmatch">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Loudness Match</div></div>
-                        <p class="card-desc">Normalize multiple clips to a common integrated LUFS target.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.loudness">Loudness Match</div></div>
+                        <p class="card-desc" data-i18n="audio.loudmatch_desc">Normalize multiple clips to a common integrated LUFS target.</p>
                         <div class="form-group">
                             <label>Target LUFS</label>
                             <div class="slider-row">
@@ -1365,7 +1374,7 @@
                                 <button type="button" class="btn-sm btn-browse" data-target="loudMatchOutputDir">Browse</button>
                             </div>
                         </div>
-                        <button type="button" class="btn-primary" id="runLoudMatchBtn" disabled>Normalize All to Target</button>
+                        <button type="button" class="btn-primary" id="runLoudMatchBtn" disabled data-i18n="audio.normalize_all">Normalize All to Target</button>
                         <div class="result-area hidden" id="loudMatchResults">
                             <div id="loudMatchTable" class="text-sm scrollable-sm"></div>
                         </div>
@@ -1380,24 +1389,28 @@
                     <button type="button" class="quick-action-btn" id="quickSocialReframe" disabled title="Reframe to 9:16 for TikTok/Reels/Shorts">Social Reframe</button>
                 </div>
                 <div class="sub-tabs" role="tablist" id="videoSubTabs">
-                    <button type="button" class="sub-tab active" data-sub="vid-effects">Effects</button>
-                    <button type="button" class="sub-tab" data-sub="vid-color">Color</button>
-                    <button type="button" class="sub-tab" data-sub="vid-lut">LUTs</button>
-                    <button type="button" class="sub-tab" data-sub="vid-speed">Speed</button>
-                    <button type="button" class="sub-tab" data-sub="vid-reframe">Reframe</button>
-                    <button type="button" class="sub-tab" data-sub="vid-chroma">Composite</button>
-                    <button type="button" class="sub-tab" data-sub="vid-transition">Transitions</button>
-                    <button type="button" class="sub-tab" data-sub="vid-titles">Titles</button>
-                    <button type="button" class="sub-tab" data-sub="vid-scenes">Scenes</button>
-                    <button type="button" class="sub-tab" data-sub="vid-merge">Merge</button>
-                    <button type="button" class="sub-tab" data-sub="vid-ai">AI Tools</button>
-                    <button type="button" class="sub-tab" data-sub="vid-upscale">Upscale</button>
-                    <button type="button" class="sub-tab" data-sub="vid-face">Face Blur</button>
-                    <button type="button" class="sub-tab" data-sub="vid-faceswap">Face AI</button>
-                    <button type="button" class="sub-tab" data-sub="vid-style">Style</button>
-                    <button type="button" class="sub-tab" data-sub="vid-particles">Particles</button>
-                    <button type="button" class="sub-tab" data-sub="vid-watermark">Watermark</button>
-                    <button type="button" class="sub-tab" data-sub="vid-remove">De-Logo</button>
+                    <button type="button" class="sub-tab active" data-sub="vid-effects" data-i18n="subtabs.effects">Effects</button>
+                    <button type="button" class="sub-tab" data-sub="vid-color" data-i18n="subtabs.color">Color</button>
+                    <button type="button" class="sub-tab" data-sub="vid-lut" data-i18n="subtabs.luts">LUTs</button>
+                    <button type="button" class="sub-tab" data-sub="vid-speed" data-i18n="subtabs.speed">Speed</button>
+                    <button type="button" class="sub-tab" data-sub="vid-reframe" data-i18n="subtabs.reframe">Reframe</button>
+                    <button type="button" class="sub-tab" data-sub="vid-chroma" data-i18n="subtabs.composite">Composite</button>
+                    <button type="button" class="sub-tab" data-sub="vid-transition" data-i18n="subtabs.transitions">Transitions</button>
+                    <button type="button" class="sub-tab" data-sub="vid-titles" data-i18n="subtabs.titles">Titles</button>
+                    <button type="button" class="sub-tab" data-sub="vid-scenes" data-i18n="subtabs.scenes">Scenes</button>
+                    <button type="button" class="sub-tab" data-sub="vid-merge" data-i18n="subtabs.merge">Merge</button>
+                    <button type="button" class="sub-tab" data-sub="vid-ai" data-i18n="subtabs.ai_tools">AI Tools</button>
+                    <button type="button" class="sub-tab" data-sub="vid-upscale" data-i18n="subtabs.upscale">Upscale</button>
+                    <button type="button" class="sub-tab" data-sub="vid-face" data-i18n="subtabs.face_blur">Face Blur</button>
+                    <button type="button" class="sub-tab" data-sub="vid-faceswap" data-i18n="subtabs.face_ai">Face AI</button>
+                    <button type="button" class="sub-tab" data-sub="vid-style" data-i18n="subtabs.style">Style</button>
+                    <button type="button" class="sub-tab" data-sub="vid-particles" data-i18n="subtabs.particles">Particles</button>
+                    <button type="button" class="sub-tab" data-sub="vid-watermark" data-i18n="subtabs.watermark">Watermark</button>
+                    <button type="button" class="sub-tab" data-sub="vid-remove" data-i18n="subtabs.de_logo">De-Logo</button>
+                    <button type="button" class="sub-tab" data-sub="vid-depth" data-i18n="subtabs.depth_fx">Depth FX</button>
+                    <button type="button" class="sub-tab" data-sub="vid-brollgen" data-i18n="subtabs.ai_broll">AI B-Roll</button>
+                    <button type="button" class="sub-tab" data-sub="vid-multimodal" data-i18n="subtabs.diarize">Diarize+</button>
+                    <button type="button" class="sub-tab" data-sub="vid-social" data-i18n="subtabs.social_post">Social Post</button>
                 </div>
 
                 <!-- VIDEO EFFECTS (FFmpeg-based, always available) -->
@@ -1406,10 +1419,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 000 20 14.5 14.5 0 000-20"/><path d="M2 12h20"/></svg>
-                                Video Effects
+                                <span data-i18n="video.effects">Video Effects</span>
                             </div>
                         </div>
-                        <p class="card-desc">Stabilization, vignette, film grain, letterbox, chromakey, LUT, and color correction. No extra installs needed.</p>
+                        <p class="card-desc" data-i18n="video.effects_desc">Stabilization, vignette, film grain, letterbox, chromakey, LUT, and color correction. No extra installs needed.</p>
 
                         <div class="form-group">
                             <label>Effect</label>
@@ -1522,13 +1535,13 @@
                         <!-- Color match params (none needed) -->
                         <div class="vfx-params hidden" id="vfxParams-color_match"></div>
 
-                        <button type="button" class="btn-outline btn-sm mb-xs" id="previewVfxBtn" disabled>Preview Effect</button>
+                        <button type="button" class="btn-outline btn-sm mb-xs" id="previewVfxBtn" disabled data-i18n="video.preview_effect">Preview Effect</button>
                         <label class="checkbox-row">
                             <input type="checkbox" id="vfxAutoImport" checked>
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runVfxBtn" disabled>Apply Video Effect</button>
+                        <button type="button" class="btn-primary" id="runVfxBtn" disabled data-i18n="video.apply_vfx">Apply Video Effect</button>
                     </section>
                 </div>
 
@@ -1538,10 +1551,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-                                AI Video Tools
+                                <span data-i18n="subtabs.ai_tools">AI Video Tools</span>
                             </div>
                         </div>
-                        <p class="card-desc">AI upscaling, background removal, frame interpolation, and video denoising.</p>
+                        <p class="card-desc" data-i18n="video.ai_desc">AI upscaling, background removal, frame interpolation, and video denoising.</p>
 
                         <div class="form-group">
                             <label>Tool</label>
@@ -1642,7 +1655,7 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runVidAiBtn" disabled>Process with AI</button>
+                        <button type="button" class="btn-primary" id="runVidAiBtn" disabled data-i18n="video.ai_process">Process with AI</button>
 
                         <div class="hint hidden" id="vidAiHint">
                             <span id="vidAiHintText">AI model not installed.</span>
@@ -1657,10 +1670,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="5"/><path d="M3 21v-2a7 7 0 0114 0v2"/></svg>
-                                Face Blur / Auto-Censor
+                                <span data-i18n="video.face_blur">Face Blur / Auto-Censor</span>
                             </div>
                         </div>
-                        <p class="card-desc">Automatically detect and blur all faces in your video for privacy. Choose between blur, pixelate, or black box.</p>
+                        <p class="card-desc" data-i18n="video.face_blur_desc">Automatically detect and blur all faces in your video for privacy. Choose between blur, pixelate, or black box.</p>
 
                         <div class="form-group">
                             <label>Blur Method</label>
@@ -1693,7 +1706,7 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runFaceBlurBtn" disabled>Blur Faces</button>
+                        <button type="button" class="btn-primary" id="runFaceBlurBtn" disabled data-i18n="video.blur_faces">Blur Faces</button>
 
                         <div class="hint hidden" id="faceHint">
                             MediaPipe not installed. Using OpenCV Haar fallback.
@@ -1708,10 +1721,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
-                                AI Style Transfer
+                                <span data-i18n="subtabs.style">AI Style Transfer</span>
                             </div>
                         </div>
-                        <p class="card-desc">Transform your video into a painting — Van Gogh, Munch, stained glass, and more. Models download automatically on first use.</p>
+                        <p class="card-desc" data-i18n="video.style_desc">Transform your video into a painting — Van Gogh, Munch, stained glass, and more. Models download automatically on first use.</p>
 
                         <div class="form-group">
                             <label>Style</label>
@@ -1741,7 +1754,7 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runStyleBtn" disabled>Apply Style</button>
+                        <button type="button" class="btn-primary" id="runStyleBtn" disabled data-i18n="video.apply_style">Apply Style</button>
                     </section>
                 </div>
 
@@ -1750,10 +1763,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><line x1="4" y1="4" x2="20" y2="20"/></svg>
-                                AI Watermark Removal
+                                <span data-i18n="subtabs.watermark">AI Watermark Removal</span>
                             </div>
                         </div>
-                        <p class="card-desc">Automatically detect and remove watermarks from videos and images. Works with AI-generated content and stock footage.</p>
+                        <p class="card-desc" data-i18n="video.watermark_desc">Automatically detect and remove watermarks from videos and images. Works with AI-generated content and stock footage.</p>
                         
                         <div class="form-group">
                             <label>Detection Sensitivity</label>
@@ -1795,12 +1808,169 @@
                         
                         <button type="button" class="btn-outline btn-sm mb-sm" id="autoDetectWatermarkBtn" disabled aria-label="Auto-detect watermark location">Auto-Detect Watermark (Florence-2)</button>
                         <div class="hint hidden mb-sm" id="wmDetectResult"></div>
-                        <button type="button" class="btn-primary" id="runWatermarkBtn" disabled>Remove Watermark</button>
+                        <button type="button" class="btn-primary" id="runWatermarkBtn" disabled data-i18n="video.remove_watermark">Remove Watermark</button>
 
                         <div class="hint hidden" id="watermarkHint">
                             Watermark remover not installed.
                             <button type="button" class="btn-install" id="installWatermarkBtn">Install Now</button>
                             <div class="install-alt">Requires: <code>pip install transformers simple-lama-inpainting</code></div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- DEPTH EFFECTS -->
+                <div class="sub-panel" id="sub-vid-depth">
+                    <section class="card">
+                        <p class="card-desc" data-i18n="video.depth_desc">AI depth estimation for bokeh simulation, parallax zoom, and depth map export.</p>
+                        <div class="form-group">
+                            <label>Effect</label>
+                            <select id="depthEffect" aria-label="Depth effect type">
+                                <option value="bokeh" selected>Bokeh / Depth-of-Field</option>
+                                <option value="parallax">3D Parallax Zoom</option>
+                                <option value="map">Depth Map Export</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="depthBokehParams">
+                            <label>Focus Point</label>
+                            <div class="slider-row">
+                                <input type="range" id="depthFocusPoint" min="0" max="1" value="0.5" step="0.05">
+                                <span class="slider-val" id="depthFocusPointVal">0.50</span>
+                            </div>
+                            <label>Blur Strength</label>
+                            <div class="slider-row">
+                                <input type="range" id="depthBlurStrength" min="3" max="75" value="25" step="2">
+                                <span class="slider-val" id="depthBlurStrengthVal">25</span>
+                            </div>
+                        </div>
+                        <div class="form-group hidden" id="depthParallaxParams">
+                            <label>Zoom Amount</label>
+                            <div class="slider-row">
+                                <input type="range" id="depthZoomAmount" min="1.05" max="1.8" value="1.15" step="0.05">
+                                <span class="slider-val" id="depthZoomAmountVal">1.15x</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Model</label>
+                            <select id="depthModelSize" aria-label="Depth model size">
+                                <option value="small" selected>Small (fast)</option>
+                                <option value="base">Base (balanced)</option>
+                                <option value="large">Large (best quality)</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-primary" id="runDepthBtn" disabled data-i18n="video.depth_apply">Apply Depth Effect</button>
+
+                        <div class="hint hidden" id="depthHint">
+                            Depth Anything V2 not installed.
+                            <button type="button" class="btn-install" id="installDepthBtn">Install Now</button>
+                            <div class="install-alt">Requires: <code>pip install torch transformers</code></div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- AI B-ROLL GENERATION -->
+                <div class="sub-panel" id="sub-vid-brollgen">
+                    <section class="card">
+                        <p class="card-desc" data-i18n="video.broll_desc">Generate B-roll video clips from text descriptions using AI text-to-video models.</p>
+                        <div class="form-group">
+                            <label for="brollGenPrompt">Description</label>
+                            <textarea class="text-area" id="brollGenPrompt" rows="3" placeholder="e.g. aerial shot of cityscape at sunset, slow motion water droplets, abstract data visualization" aria-label="B-roll description"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Backend</label>
+                            <select id="brollGenBackend" aria-label="Text-to-video backend">
+                                <option value="auto" selected>Auto (best available)</option>
+                                <option value="cogvideox">CogVideoX</option>
+                                <option value="wan">Wan 2.2</option>
+                                <option value="hunyuan">HunyuanVideo</option>
+                                <option value="svd">Stable Video Diffusion</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Seed (optional)</label>
+                            <input type="number" class="text-input" id="brollGenSeed" placeholder="Random" min="0" step="1" aria-label="Random seed">
+                        </div>
+                        <button type="button" class="btn-primary" id="runBrollGenBtn" disabled data-i18n="video.broll_generate">Generate B-Roll</button>
+                        <p class="cap-hint hidden" id="brollGenHint">Requires: pip install diffusers torch transformers</p>
+                    </section>
+                </div>
+
+                <!-- MULTIMODAL DIARIZATION -->
+                <div class="sub-panel" id="sub-vid-multimodal">
+                    <section class="card">
+                        <p class="card-desc" data-i18n="video.diarize_desc">Combine audio speaker diarization with face recognition for accurate multicam speaker-camera mapping.</p>
+                        <div class="form-group">
+                            <label>Expected Speakers</label>
+                            <select id="mmDiarizeNumSpeakers" aria-label="Number of speakers">
+                                <option value="" selected>Auto-detect</option>
+                                <option value="2">2</option>
+                                <option value="3">3</option>
+                                <option value="4">4</option>
+                                <option value="5">5</option>
+                                <option value="6">6</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Face Sample Rate (fps)</label>
+                            <div class="slider-row">
+                                <input type="range" id="mmDiarizeSampleFps" min="0.5" max="5" value="2" step="0.5">
+                                <span class="slider-val" id="mmDiarizeSampleFpsVal">2.0</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label>Min Face Confidence</label>
+                            <div class="slider-row">
+                                <input type="range" id="mmDiarizeConfidence" min="0.2" max="0.9" value="0.5" step="0.05">
+                                <span class="slider-val" id="mmDiarizeConfidenceVal">0.50</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-primary" id="runMmDiarizeBtn" disabled data-i18n="video.diarize_run">Run Multimodal Diarization</button>
+                        <p class="cap-hint hidden" id="mmDiarizeHint">Requires: pip install insightface onnxruntime (or facenet-pytorch)</p>
+                        <div class="hidden" id="mmDiarizeResults">
+                            <div class="stat-grid">
+                                <div class="stat-item"><span class="stat-value" id="mmDiarizeSpeakers">--</span><span class="stat-label">Speakers</span></div>
+                                <div class="stat-item"><span class="stat-value" id="mmDiarizeFaces">--</span><span class="stat-label">Faces</span></div>
+                                <div class="stat-item"><span class="stat-value" id="mmDiarizeMappings">--</span><span class="stat-label">Mapped</span></div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- SOCIAL MEDIA POSTING -->
+                <div class="sub-panel" id="sub-vid-social">
+                    <section class="card">
+                        <p class="card-desc" data-i18n="video.social_desc">Upload exported videos directly to social media platforms.</p>
+                        <div class="form-group">
+                            <label>Platform</label>
+                            <select id="socialPlatform" aria-label="Social media platform">
+                                <option value="youtube" selected>YouTube</option>
+                                <option value="tiktok">TikTok</option>
+                                <option value="instagram">Instagram Reels</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="socialTitle">Title</label>
+                            <input type="text" class="text-input" id="socialTitle" maxlength="100" placeholder="Video title" aria-label="Video title">
+                        </div>
+                        <div class="form-group">
+                            <label for="socialDescription">Description</label>
+                            <textarea class="text-area" id="socialDescription" rows="3" maxlength="2200" placeholder="Video description / caption" aria-label="Video description"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label>Privacy</label>
+                            <select id="socialPrivacy" aria-label="Privacy level">
+                                <option value="private" selected>Private</option>
+                                <option value="unlisted">Unlisted</option>
+                                <option value="public">Public</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <span class="badge hidden" id="socialConnectedBadge">Connected</span>
+                            <button type="button" class="btn-sm" id="socialConnectBtn">Connect Account</button>
+                        </div>
+                        <button type="button" class="btn-primary" id="socialUploadBtn" disabled data-i18n="video.social_upload">Upload to Platform</button>
+                        <p class="cap-hint hidden" id="socialHint">Connect your account first to enable uploads.</p>
+                        <div class="hidden" id="socialResult">
+                            <p>Uploaded! <a href="#" id="socialResultUrl" target="_blank" rel="noopener">View on platform</a></p>
                         </div>
                     </section>
                 </div>
@@ -1828,7 +1998,7 @@
                                 <span class="slider-val" id="minSceneLenVal">2.0s</span>
                             </div>
                         </div>
-                        <button type="button" class="btn-primary" id="runScenesBtn" disabled>Detect Scenes</button>
+                        <button type="button" class="btn-primary" id="runScenesBtn" disabled data-i18n="video.scenes_detect">Detect Scenes</button>
                         <div class="scene-results hidden" id="sceneResults">
                             <div class="stat-grid">
                                 <div class="stat-item"><span class="stat-value" id="sceneCount">--</span><span class="stat-label">Scenes</span></div>
@@ -1848,10 +2018,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                Speed &amp; Ramp
+                                <span data-i18n="subtabs.speed">Speed &amp; Ramp</span>
                             </div>
                         </div>
-                        <p class="card-desc">Constant speed change, reverse playback, or keyframe-based speed ramps with easing presets.</p>
+                        <p class="card-desc" data-i18n="video.speed_desc">Constant speed change, reverse playback, or keyframe-based speed ramps with easing presets.</p>
 
                         <div class="form-group">
                             <label>Mode</label>
@@ -1896,7 +2066,7 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runSpeedBtn" disabled>Apply Speed</button>
+                        <button type="button" class="btn-primary" id="runSpeedBtn" disabled data-i18n="video.apply_speed">Apply Speed</button>
                     </section>
                 </div>
 
@@ -1906,10 +2076,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2.69l5.66 5.66a8 8 0 11-11.31 0z"/></svg>
-                                Color LUTs
+                                <span data-i18n="subtabs.luts">Color LUTs</span>
                             </div>
                         </div>
-                        <p class="card-desc">Apply cinematic color grading via mathematically-generated .cube LUTs. 10 built-in looks + support for custom .cube files.</p>
+                        <p class="card-desc" data-i18n="video.lut_desc">Apply cinematic color grading via mathematically-generated .cube LUTs. 10 built-in looks + support for custom .cube files.</p>
 
                         <div class="form-group">
                             <label>Category</label>
@@ -1951,10 +2121,10 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runLutBtn" disabled>Apply LUT</button>
+                        <button type="button" class="btn-primary" id="runLutBtn" disabled data-i18n="video.apply_lut">Apply LUT</button>
 
                         <div class="border-t">
-                            <div class="card-header"><div class="card-title">Generate LUT from Reference</div></div>
+                            <div class="card-header"><div class="card-title" data-i18n="video.lut_ref">Generate LUT from Reference</div></div>
                             <div class="form-group">
                                 <label>Reference Image</label>
                                 <div class="path-input-row">
@@ -1973,7 +2143,7 @@
                                     <span class="slider-val" id="lutRefStrengthVal">0.8</span>
                                 </div>
                             </div>
-                            <button type="button" class="btn-outline" id="generateLutBtn">Generate LUT</button>
+                            <button type="button" class="btn-outline" id="generateLutBtn" data-i18n="video.generate_lut">Generate LUT</button>
                         </div>
                     </section>
                 </div>
@@ -1981,8 +2151,8 @@
                 <!-- CHROMAKEY -->
                 <div class="sub-panel" id="sub-vid-chroma">
                     <section class="card">
-                        <div class="card-header" data-collapsible="true"><div class="card-title">Compositing &amp; Keying</div></div>
-                        <p class="card-desc">Green/blue screen removal, PiP overlay, and blend modes. Select a foreground clip above.</p>
+                        <div class="card-header" data-collapsible="true"><div class="card-title" data-i18n="subtabs.composite">Compositing &amp; Keying</div></div>
+                        <p class="card-desc" data-i18n="video.composite_desc">Green/blue screen removal, PiP overlay, and blend modes. Select a foreground clip above.</p>
                         <div class="form-group"><label>Mode</label>
                             <select id="chromaMode"><option value="chromakey">Green / Blue Screen Removal</option><option value="pip">Picture-in-Picture Overlay</option><option value="blend">Blend Two Clips</option></select></div>
                         <div id="chromakeyParams">
@@ -2006,41 +2176,41 @@
                                 <select id="blendMode"><option value="overlay">Overlay</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="softlight">Soft Light</option><option value="hardlight">Hard Light</option><option value="difference">Difference</option><option value="addition">Addition</option><option value="dodge">Dodge</option><option value="burn">Burn</option></select></div>
                             <div class="form-group"><label>Opacity</label><div class="slider-row"><input type="range" id="blendOpacity" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="blendOpacityVal">0.5</span></div></div>
                         </div>
-                        <button type="button" class="btn-primary" id="runChromaBtn" disabled>Apply Composite</button>
+                        <button type="button" class="btn-primary" id="runChromaBtn" disabled data-i18n="video.apply_composite">Apply Composite</button>
                     </section>
                 </div>
 
                 <!-- TRANSITIONS -->
                 <div class="sub-panel" id="sub-vid-transition">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Transitions</div></div>
-                        <p class="card-desc">34 FFmpeg xfade transitions between clips. Select a clip above, provide a second clip path.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.transitions">Transitions</div></div>
+                        <p class="card-desc" data-i18n="video.transition_desc">34 FFmpeg xfade transitions between clips. Select a clip above, provide a second clip path.</p>
                         <div class="form-group"><label>Second Clip Path</label>
                             <div class="path-input-row"><input type="text" id="transClipB" class="text-input" placeholder="/path/to/clip_b.mp4"><button type="button" class="btn-browse" data-target="transClipB">Browse</button></div></div>
                         <div class="form-group"><label>Transition</label>
                             <select id="transType"><option value="fade">Crossfade</option><option value="wipeleft">Wipe Left</option><option value="wiperight">Wipe Right</option><option value="slideleft">Slide Left</option><option value="slideright">Slide Right</option><option value="circlecrop">Circle Crop</option><option value="circleopen">Circle Open</option><option value="dissolve">Dissolve</option><option value="pixelize">Pixelize</option><option value="diagtl">Diagonal TL</option><option value="radial">Radial</option><option value="zoomin">Zoom In</option><option value="fadeblack">Fade Black</option><option value="fadewhite">Fade White</option><option value="smoothleft">Smooth Left</option><option value="squeezeh">Squeeze H</option></select></div>
                         <div class="form-group"><label>Duration (sec)</label><div class="slider-row"><input type="range" id="transDur" min="0.3" max="3.0" value="1.0" step="0.1"><span class="slider-val" id="transDurVal">1.0</span></div></div>
-                        <button type="button" class="btn-primary" id="runTransBtn" disabled>Apply Transition</button>
+                        <button type="button" class="btn-primary" id="runTransBtn" disabled data-i18n="video.apply_transition">Apply Transition</button>
                     </section>
                 </div>
 
                 <!-- PARTICLES -->
                 <div class="sub-panel" id="sub-vid-particles">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Particle Effects</div></div>
-                        <p class="card-desc">Add confetti, sparkles, snow, rain, fire embers, smoke, or bubbles over your video.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.particles">Particle Effects</div></div>
+                        <p class="card-desc" data-i18n="video.particles_desc">Add confetti, sparkles, snow, rain, fire embers, smoke, or bubbles over your video.</p>
                         <div class="form-group"><label>Preset</label>
                             <select id="particlePreset"><option value="confetti">Confetti</option><option value="sparkles">Sparkles</option><option value="snow">Snow</option><option value="rain">Rain</option><option value="fire_embers">Fire Embers</option><option value="smoke">Smoke</option><option value="bubbles">Bubbles</option></select></div>
                         <div class="form-group"><label>Density</label><div class="slider-row"><input type="range" id="particleDensity" min="0.3" max="3.0" value="1.0" step="0.1"><span class="slider-val" id="particleDensityVal">1.0</span></div><span class="hint-inline">Higher = more particles on screen</span></div>
-                        <button type="button" class="btn-primary" id="runParticlesBtn" disabled>Apply Particles</button>
+                        <button type="button" class="btn-primary" id="runParticlesBtn" disabled data-i18n="video.apply_particles">Apply Particles</button>
                     </section>
                 </div>
 
                 <!-- TITLES / MOTION GRAPHICS -->
                 <div class="sub-panel" id="sub-vid-titles">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Titles &amp; Motion Graphics</div></div>
-                        <p class="card-desc">Create animated title cards and lower thirds with fade, slide, typewriter, and bounce effects.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.titles">Titles &amp; Motion Graphics</div></div>
+                        <p class="card-desc" data-i18n="video.titles_desc">Create animated title cards and lower thirds with fade, slide, typewriter, and bounce effects.</p>
                         <div class="form-group"><label>Title Text</label>
                             <input type="text" id="titleText" class="text-input" placeholder="Your Title Here"></div>
                         <div class="form-group"><label>Subtitle</label>
@@ -2049,8 +2219,8 @@
                             <select id="titlePreset"><option value="fade_center">Fade Center</option><option value="slide_left">Slide From Left</option><option value="typewriter">Typewriter</option><option value="lower_third">Lower Third</option><option value="countdown">Countdown</option><option value="kinetic_bounce">Kinetic Bounce</option></select></div>
                         <div class="form-group"><label>Duration (sec)</label><div class="slider-row"><input type="range" id="titleDur" min="1" max="15" value="5" step="0.5"><span class="slider-val" id="titleDurVal">5</span></div></div>
                         <div class="form-group"><label>Font Size</label><div class="slider-row"><input type="range" id="titleFontSize" min="24" max="150" value="72" step="2"><span class="slider-val" id="titleFontSizeVal">72</span></div></div>
-                        <button type="button" class="btn-primary" id="runTitleOverlayBtn" disabled>Overlay on Video</button>
-                        <button type="button" class="btn-secondary" id="runTitleCardBtn">Render Title Card</button>
+                        <button type="button" class="btn-primary" id="runTitleOverlayBtn" disabled data-i18n="video.overlay_on_video">Overlay on Video</button>
+                        <button type="button" class="btn-secondary" id="runTitleCardBtn" data-i18n="video.render_title_card">Render Title Card</button>
                     </section>
                 </div>
 
@@ -2060,10 +2230,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18.01"/></svg>
-                                Reframe for Phone / Social
+                                <span data-i18n="subtabs.reframe">Reframe for Phone / Social</span>
                             </div>
                         </div>
-                        <p class="card-desc">Resize and crop video to fit vertical (TikTok, Shorts, Reels), square, or custom dimensions. Smart crop keeps the important center content.</p>
+                        <p class="card-desc" data-i18n="video.reframe_desc">Resize and crop video to fit vertical (TikTok, Shorts, Reels), square, or custom dimensions. Smart crop keeps the important center content.</p>
 
                         <div class="form-group">
                             <label>Target Format</label>
@@ -2138,7 +2308,7 @@
 
                         <div class="hint-inline" id="reframeInfo"></div>
 
-                        <button type="button" class="btn-primary" id="runReframeBtn" disabled>Reframe Video</button>
+                        <button type="button" class="btn-primary" id="runReframeBtn" disabled data-i18n="video.reframe_run">Reframe Video</button>
                     </section>
                 </div>
 
@@ -2148,10 +2318,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
-                                Merge / Concatenate Clips
+                                <span data-i18n="subtabs.merge">Merge / Concatenate Clips</span>
                             </div>
                         </div>
-                        <p class="card-desc">Join multiple clips into a single video file. Add clips using the batch picker or drag and drop.</p>
+                        <p class="card-desc" data-i18n="video.merge_desc">Join multiple clips into a single video file. Add clips using the batch picker or drag and drop.</p>
 
                         <div class="form-group">
                             <label>Merge Files</label>
@@ -2182,43 +2352,43 @@
                             </select>
                         </div>
 
-                        <button type="button" class="btn-primary" id="runMergeBtn" disabled>Merge Clips</button>
+                        <button type="button" class="btn-primary" id="runMergeBtn" disabled data-i18n="video.merge_clips">Merge Clips</button>
                     </section>
                 </div>
 
                 <!-- PRO UPSCALE -->
                 <div class="sub-panel" id="sub-vid-upscale">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Pro Upscaling</div></div>
-                        <p class="card-desc">Upscale low-resolution video to 2x, 3x, or 4x. Choose fast CPU or AI-powered GPU quality.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.upscale">Pro Upscaling</div></div>
+                        <p class="card-desc" data-i18n="video.upscale_desc">Upscale low-resolution video to 2x, 3x, or 4x. Choose fast CPU or AI-powered GPU quality.</p>
                         <div class="form-group"><label>Quality Preset</label>
                             <select id="upscalePreset"><option value="fast">Fast (CPU, good quality)</option><option value="balanced">Balanced (AI, great quality)</option><option value="premium_v2x">Premium (AI, best quality)</option></select></div>
                         <div class="form-group"><label>Scale</label>
                             <select id="upscaleScale"><option value="2" selected>2x</option><option value="3">3x</option><option value="4">4x</option></select></div>
-                        <button type="button" class="btn-primary" id="runUpscaleBtn" disabled>Upscale Video</button>
+                        <button type="button" class="btn-primary" id="runUpscaleBtn" disabled data-i18n="video.upscale_run">Upscale Video</button>
                     </section>
                 </div>
 
                 <!-- COLOR CORRECTION -->
                 <div class="sub-panel" id="sub-vid-color">
                     <section class="card">
-                        <div class="card-header" data-collapsible="true"><div class="card-title">Color Correction</div></div>
-                        <p class="card-desc">Professional color controls: exposure, contrast, saturation, temperature, lift/gamma/gain.</p>
+                        <div class="card-header" data-collapsible="true"><div class="card-title" data-i18n="subtabs.color">Color Correction</div></div>
+                        <p class="card-desc" data-i18n="video.color_desc">Professional color controls: exposure, contrast, saturation, temperature, lift/gamma/gain.</p>
                         <div class="form-group"><label>Exposure</label><div class="slider-row"><input type="range" id="ccExposure" min="-3" max="3" value="0" step="0.1"><span class="slider-val" id="ccExposureVal">0</span></div></div>
                         <div class="form-group"><label>Contrast</label><div class="slider-row"><input type="range" id="ccContrast" min="0.5" max="2.0" value="1.0" step="0.05"><span class="slider-val" id="ccContrastVal">1.0</span></div></div>
                         <div class="form-group"><label>Saturation</label><div class="slider-row"><input type="range" id="ccSaturation" min="0" max="3.0" value="1.0" step="0.05"><span class="slider-val" id="ccSaturationVal">1.0</span></div></div>
                         <div class="form-group"><label>Temperature</label><div class="slider-row"><input type="range" id="ccTemp" min="-1" max="1" value="0" step="0.05"><span class="slider-val" id="ccTempVal">0</span></div></div>
                         <div class="form-group"><label>Shadows</label><div class="slider-row"><input type="range" id="ccShadows" min="-1" max="1" value="0" step="0.05"><span class="slider-val" id="ccShadowsVal">0</span></div></div>
                         <div class="form-group"><label>Highlights</label><div class="slider-row"><input type="range" id="ccHighlights" min="-1" max="1" value="0" step="0.05"><span class="slider-val" id="ccHighlightsVal">0</span></div></div>
-                        <button type="button" class="btn-primary" id="runColorBtn" disabled>Apply Color Correction</button>
+                        <button type="button" class="btn-primary" id="runColorBtn" disabled data-i18n="video.apply_color">Apply Color Correction</button>
                     </section>
                 </div>
 
                 <!-- OBJECT/WATERMARK REMOVAL -->
                 <div class="sub-panel" id="sub-vid-remove">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Object &amp; Watermark Removal</div></div>
-                        <p class="card-desc">Remove a logo or watermark from a specific region of your video. Draw the area to erase.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.de_logo">Object &amp; Watermark Removal</div></div>
+                        <p class="card-desc" data-i18n="video.remove_desc">Remove a logo or watermark from a specific region of your video. Draw the area to erase.</p>
                         <div class="form-group">
                             <label>Method</label>
                             <select id="removeMethod">
@@ -2248,22 +2418,22 @@
                             </div>
                             <span class="hint-inline">Pixel coordinates of the area to remove</span>
                         </div>
-                        <button type="button" class="btn-primary" id="runRemoveBtn" disabled>Erase Region</button>
+                        <button type="button" class="btn-primary" id="runRemoveBtn" disabled data-i18n="video.erase_region">Erase Region</button>
                     </section>
                 </div>
 
                 <!-- FACE SWAP / ENHANCE -->
                 <div class="sub-panel" id="sub-vid-faceswap">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Face AI</div></div>
-                        <p class="card-desc">Enhance facial detail in low-quality footage, or swap faces between subjects. GPU recommended.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.face_ai">Face AI</div></div>
+                        <p class="card-desc" data-i18n="video.face_ai_desc">Enhance facial detail in low-quality footage, or swap faces between subjects. GPU recommended.</p>
                         <div class="form-group"><label>Mode</label>
                             <select id="faceAiMode"><option value="enhance">Enhance Facial Detail</option><option value="swap">Swap Faces</option></select></div>
                         <div id="faceSwapParams" class="hidden">
                             <div class="form-group"><label>Reference Face Image</label>
                                 <div class="path-input-row"><input type="text" id="faceRefPath" class="text-input" placeholder="/path/to/face_reference.jpg"><button type="button" class="btn-browse" data-target="faceRefPath">Browse</button></div></div>
                         </div>
-                        <button type="button" class="btn-primary" id="runFaceAiBtn" disabled>Enhance Faces</button>
+                        <button type="button" class="btn-primary" id="runFaceAiBtn" disabled data-i18n="video.enhance_faces">Enhance Faces</button>
                     </section>
                 </div>
             </div>
@@ -2271,12 +2441,12 @@
             <!-- ======== TAB: EXPORT ======== -->
             <div class="nav-panel" id="panel-export" role="tabpanel" aria-label="Export">
                 <div class="sub-tabs" role="tablist" id="exportSubTabs">
-                    <button type="button" class="sub-tab active" data-sub="exp-platform">Presets</button>
-                    <button type="button" class="sub-tab" data-sub="exp-transcript">Transcript</button>
-                    <button type="button" class="sub-tab" data-sub="exp-shorts">Auto Shorts</button>
-                    <button type="button" class="sub-tab" data-sub="exp-thumbnail">Thumbnails</button>
-                    <button type="button" class="sub-tab" data-sub="exp-batch">Batch</button>
-                    <button type="button" class="sub-tab" data-sub="exp-deliverables">Deliverables</button>
+                    <button type="button" class="sub-tab active" data-sub="exp-platform" data-i18n="subtabs.presets">Presets</button>
+                    <button type="button" class="sub-tab" data-sub="exp-transcript" data-i18n="subtabs.transcript">Transcript</button>
+                    <button type="button" class="sub-tab" data-sub="exp-shorts" data-i18n="subtabs.shorts">Auto Shorts</button>
+                    <button type="button" class="sub-tab" data-sub="exp-thumbnail" data-i18n="export.thumbnails">Thumbnails</button>
+                    <button type="button" class="sub-tab" data-sub="exp-batch" data-i18n="subtabs.batch">Batch</button>
+                    <button type="button" class="sub-tab" data-sub="exp-deliverables" data-i18n="subtabs.deliverables">Deliverables</button>
                 </div>
 
                 <div class="sub-panel" id="sub-exp-transcript">
@@ -2301,7 +2471,7 @@
                                 <option value="medium">Medium (best)</option>
                             </select>
                         </div>
-                        <button type="button" class="btn-primary" id="runExpTranscriptBtn" disabled>Export Transcript</button>
+                        <button type="button" class="btn-primary" id="runExpTranscriptBtn" disabled data-i18n="export.run_transcript">Export Transcript</button>
                     </section>
                 </div>
 
@@ -2311,10 +2481,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                                Platform Export Presets
+                                <span data-i18n="export.platform_preset">Platform Export Presets</span>
                             </div>
                         </div>
-                        <p class="card-desc">One-click export optimized for each platform's format, resolution, codec, and file size requirements.</p>
+                        <p class="card-desc" data-i18n="export.platform_desc">One-click export optimized for each platform's format, resolution, codec, and file size requirements.</p>
 
                         <div class="form-group">
                             <label>Category</label>
@@ -2341,7 +2511,7 @@
                             Auto-import result to project
                         </label>
 
-                        <button type="button" class="btn-primary" id="runExportPresetBtn" disabled title="Ctrl+Shift+E">Export</button>
+                        <button type="button" class="btn-primary" id="runExportPresetBtn" disabled title="Ctrl+Shift+E" data-i18n="export.export">Export</button>
                     </section>
                 </div>
 
@@ -2351,10 +2521,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
-                                Auto-Thumbnails
+                                <span data-i18n="export.thumbnails">Auto-Thumbnails</span>
                             </div>
                         </div>
-                        <p class="card-desc">AI-scored thumbnail candidates from your video. Scores frames on sharpness, color, contrast, face presence, and composition.</p>
+                        <p class="card-desc" data-i18n="export.thumbnail_desc">AI-scored thumbnail candidates from your video. Scores frames on sharpness, color, contrast, face presence, and composition.</p>
 
                         <div class="form-group">
                             <label>Number of Candidates</label>
@@ -2379,7 +2549,7 @@
                             Boost frames with faces
                         </label>
 
-                        <button type="button" class="btn-primary" id="runThumbBtn" disabled>Generate Thumbnails</button>
+                        <button type="button" class="btn-primary" id="runThumbBtn" disabled data-i18n="export.generate_thumbnails">Generate Thumbnails</button>
                     </section>
                 </div>
 
@@ -2389,10 +2559,10 @@
                         <div class="card-header">
                             <div class="card-title">
                                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v16"/></svg>
-                                Batch Processing
+                                <span data-i18n="export.batch">Batch Processing</span>
                             </div>
                         </div>
-                        <p class="card-desc">Apply the same operation to multiple files. Add files from your project bin, pick an operation, and run.</p>
+                        <p class="card-desc" data-i18n="export.batch_desc">Apply the same operation to multiple files. Add files from your project bin, pick an operation, and run.</p>
 
                         <div class="form-group">
                             <label>Operation</label>
@@ -2422,7 +2592,7 @@
                             </div>
                         </div>
 
-                        <button type="button" class="btn-primary" id="runBatchBtn" disabled>Run Batch (All Clips)</button>
+                        <button type="button" class="btn-primary" id="runBatchBtn" disabled data-i18n="export.batch_run">Run Batch (All Clips)</button>
 
                         <div class="hidden" id="batchResults">
                             <div class="batch-status" id="batchStatusText"></div>
@@ -2430,7 +2600,7 @@
                     </section>
 
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Workflow Presets</div></div>
+                        <div class="card-header"><div class="card-title" data-i18n="workflow.title">Workflow Presets</div></div>
                         <p class="card-desc">Run a multi-step pipeline on the selected clip. Each step runs automatically after the previous one finishes.</p>
 
                         <div class="form-group">
@@ -2441,7 +2611,7 @@
                             <div class="hint" id="workflowPresetDesc"></div>
                         </div>
 
-                        <button type="button" class="btn-primary" id="runWorkflowBtn" disabled>Run Workflow</button>
+                        <button type="button" class="btn-primary" id="runWorkflowBtn" disabled data-i18n="workflow.run">Run Workflow</button>
                         <div class="border-t">
                             <div class="card-header card-header--flush"><div class="card-title card-title--sm">Custom Workflows</div></div>
                             <div class="form-group">
@@ -2485,8 +2655,8 @@
 
                 <div class="sub-panel" id="sub-exp-shorts">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">One-Click Shorts Pipeline</div></div>
-                        <p class="card-desc">Auto-generate short clips: transcribe, find highlights, reframe, add captions.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.shorts">One-Click Shorts Pipeline</div></div>
+                        <p class="card-desc" data-i18n="export.auto_shorts_desc">Auto-generate short clips: transcribe, find highlights, reframe, add captions.</p>
                         <div class="form-group">
                             <label>Platform</label>
                             <select id="shortsPlatform">
@@ -2513,7 +2683,7 @@
                         </div>
                         <label class="checkbox-row"><input type="checkbox" id="shortsFaceTrack" checked>Face Tracking</label>
                         <label class="checkbox-row"><input type="checkbox" id="shortsCaptions" checked>Burn-in Captions</label>
-                        <button type="button" class="btn-primary" id="runShortsBtn" disabled>Generate Shorts</button>
+                        <button type="button" class="btn-primary" id="runShortsBtn" disabled data-i18n="export.generate_shorts">Generate Shorts</button>
                         <div class="result-area hidden" id="shortsResult">
                             <div id="shortsList"></div>
                         </div>
@@ -2523,8 +2693,8 @@
                 <!-- DELIVERABLES -->
                 <div class="sub-panel" id="sub-exp-deliverables">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Deliverables</div></div>
-                        <p class="card-desc">Generate post-production documents (VFX sheet, ADR list, music cue sheet, asset list) from the active sequence.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.deliverables">Deliverables</div></div>
+                        <p class="card-desc" data-i18n="export.deliverables_desc">Generate post-production documents (VFX sheet, ADR list, music cue sheet, asset list) from the active sequence.</p>
                         <button type="button" class="btn-outline btn-sm" id="loadSeqInfoBtn">Load Sequence Info</button>
                         <div class="hint hidden mt-xs" id="seqInfoStatus"></div>
                         <div class="form-group mt-sm">
@@ -2551,25 +2721,25 @@
             <!-- ======== TAB: TIMELINE ======== -->
             <div class="nav-panel" id="panel-timeline" role="tabpanel" aria-label="Timeline Tools">
                 <div class="sub-tabs" role="tablist" id="timelineSubTabs">
-                    <button type="button" class="sub-tab active" data-sub="tl-writeback">Write-Back</button>
-                    <button type="button" class="sub-tab" data-sub="tl-beats">Beat Markers</button>
-                    <button type="button" class="sub-tab" data-sub="tl-multicam">Multicam</button>
-                    <button type="button" class="sub-tab" data-sub="tl-export-markers">Export Clips</button>
-                    <button type="button" class="sub-tab" data-sub="tl-rename">Rename</button>
-                    <button type="button" class="sub-tab" data-sub="tl-bins">Smart Bins</button>
+                    <button type="button" class="sub-tab active" data-sub="tl-writeback" data-i18n="subtabs.write_back">Write-Back</button>
+                    <button type="button" class="sub-tab" data-sub="tl-beats" data-i18n="subtabs.beat_markers">Beat Markers</button>
+                    <button type="button" class="sub-tab" data-sub="tl-multicam" data-i18n="subtabs.multicam">Multicam</button>
+                    <button type="button" class="sub-tab" data-sub="tl-export-markers" data-i18n="subtabs.export_clips">Export Clips</button>
+                    <button type="button" class="sub-tab" data-sub="tl-rename" data-i18n="subtabs.rename">Rename</button>
+                    <button type="button" class="sub-tab" data-sub="tl-bins" data-i18n="subtabs.smart_bins">Smart Bins</button>
                 </div>
 
                 <!-- TIMELINE WRITE-BACK -->
                 <div class="sub-panel active" id="sub-tl-writeback">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Apply Cuts to Timeline</div></div>
-                        <p class="card-desc">Apply silence removal or repeat detection cuts directly to the active Premiere sequence.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="timeline.apply_cuts">Apply Cuts to Timeline</div></div>
+                        <p class="card-desc" data-i18n="timeline.apply_cuts_desc">Apply silence removal or repeat detection cuts directly to the active Premiere sequence.</p>
                         <div class="hint mb-sm" id="tlWritebackStatus">No cuts loaded. Run Silence Removal or Repeat Detection first.</div>
-                        <button type="button" class="btn-primary" id="applySeqCutsBtn">Apply Last Cuts to Timeline</button>
+                        <button type="button" class="btn-primary" id="applySeqCutsBtn" data-i18n="timeline.apply_last_cuts">Apply Last Cuts to Timeline</button>
                     </section>
                     <section class="card mt-sm">
-                        <div class="card-header"><div class="card-title">Export as OTIO (Universal)</div></div>
-                        <p class="card-desc">Export cuts/markers as OpenTimelineIO for DaVinci Resolve, Final Cut Pro, Avid, or any OTIO-compatible editor.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="timeline.export_otio">Export as OTIO (Universal)</div></div>
+                        <p class="card-desc" data-i18n="timeline.export_otio_desc">Export cuts/markers as OpenTimelineIO for DaVinci Resolve, Final Cut Pro, Avid, or any OTIO-compatible editor.</p>
                         <div class="form-group">
                             <label>Export Mode</label>
                             <select id="otioExportMode" aria-label="OTIO export mode">
@@ -2586,8 +2756,8 @@
                 <!-- BEAT MARKERS -->
                 <div class="sub-panel" id="sub-tl-beats">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Sync Beat Markers</div></div>
-                        <p class="card-desc">Detect beats in an audio track and add them as markers to the active Premiere sequence.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.beat_markers">Sync Beat Markers</div></div>
+                        <p class="card-desc" data-i18n="timeline.beat_markers_desc">Detect beats in an audio track and add them as markers to the active Premiere sequence.</p>
                         <div class="form-group">
                             <label>Subdivisions</label>
                             <select id="beatMarkerSubs">
@@ -2597,7 +2767,7 @@
                                 <option value="8">8 (eighth beats)</option>
                             </select>
                         </div>
-                        <button type="button" class="btn-primary" id="runBeatMarkersBtn" disabled>Detect Beats</button>
+                        <button type="button" class="btn-primary" id="runBeatMarkersBtn" disabled data-i18n="timeline.detect_beats">Detect Beats</button>
                         <div class="result-area hidden" id="beatMarkersResult">
                             <div class="hint" id="beatMarkersSummary"></div>
                             <button type="button" class="btn-sm btn-secondary mt-xs" id="addBeatMarkersBtn">Add Markers to Sequence</button>
@@ -2608,8 +2778,8 @@
                 <!-- MULTICAM AUTO-SWITCH -->
                 <div class="sub-panel" id="sub-tl-multicam">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Podcast Multicam Switcher</div></div>
-                        <p class="card-desc">Detect speakers and generate cut decisions for a multicam podcast timeline.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.multicam">Podcast Multicam Switcher</div></div>
+                        <p class="card-desc" data-i18n="timeline.multicam_desc">Detect speakers and generate cut decisions for a multicam podcast timeline.</p>
                         <div class="form-group">
                             <label>Speakers</label>
                             <input type="number" id="multicamSpeakers" value="2" min="2" max="8" class="dim-input">
@@ -2622,7 +2792,7 @@
                             <label>Speaker-to-Track Mapping</label>
                             <div id="multicamTrackMap" class="mt-xs"></div>
                         </div>
-                        <button type="button" class="btn-primary" id="runMulticamBtn" disabled>Generate Cuts</button>
+                        <button type="button" class="btn-primary" id="runMulticamBtn" disabled data-i18n="timeline.multicam_generate">Generate Cuts</button>
                         <div class="result-area hidden" id="multicamResult">
                             <div class="hint" id="multicamSummary"></div>
                             <button type="button" class="btn-sm btn-secondary mt-xs" id="applyMulticamCutsBtn">Apply Cuts to Sequence</button>
@@ -2633,8 +2803,8 @@
                 <!-- EXPORT CLIPS FROM MARKERS -->
                 <div class="sub-panel" id="sub-tl-export-markers">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Export Clips from Markers</div></div>
-                        <p class="card-desc">Read chapter/range markers from the active sequence and export each as a separate clip.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.export_clips">Export Clips from Markers</div></div>
+                        <p class="card-desc" data-i18n="timeline.export_clips_desc">Read chapter/range markers from the active sequence and export each as a separate clip.</p>
                         <div class="form-group">
                             <label>Output Directory</label>
                             <div class="input-row">
@@ -2656,8 +2826,8 @@
                 <!-- BATCH RENAME CLIPS -->
                 <div class="sub-panel" id="sub-tl-rename">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Batch Rename Clips</div></div>
-                        <p class="card-desc">Rename project items in bulk with find/replace patterns or individual edits.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.rename">Batch Rename Clips</div></div>
+                        <p class="card-desc" data-i18n="timeline.rename_desc">Rename project items in bulk with find/replace patterns or individual edits.</p>
                         <button type="button" class="btn-outline btn-sm" id="loadProjectItemsBtn">Load Project Items</button>
                         <div id="renameItemsList" class="scrollable-sm mt-sm"></div>
                         <div class="form-group mt-sm">
@@ -2678,8 +2848,8 @@
                 <!-- SMART BINS -->
                 <div class="sub-panel" id="sub-tl-bins">
                     <section class="card">
-                        <div class="card-header"><div class="card-title">Smart Bins</div></div>
-                        <p class="card-desc">Automatically organise project items into bins based on custom rules.</p>
+                        <div class="card-header"><div class="card-title" data-i18n="subtabs.smart_bins">Smart Bins</div></div>
+                        <p class="card-desc" data-i18n="timeline.smart_bins_desc">Automatically organise project items into bins based on custom rules.</p>
                         <div id="smartBinRules" class="mb-sm"></div>
                         <button type="button" class="btn-sm btn-outline" id="addBinRuleBtn">+ Add Rule</button>
                         <button type="button" class="btn-primary mt-md" id="createSmartBinsBtn">Create Bins</button>
@@ -2690,8 +2860,8 @@
             <!-- ======== TAB: NLP / SEARCH ======== -->
             <div class="nav-panel" id="panel-nlp" role="tabpanel" aria-label="Search &amp; NLP">
                 <div class="sub-tabs" role="tablist" id="nlpSubTabs">
-                    <button type="button" class="sub-tab active" data-sub="nlp-search">Footage Search</button>
-                    <button type="button" class="sub-tab" data-sub="nlp-command">AI Command</button>
+                    <button type="button" class="sub-tab active" data-sub="nlp-search" data-i18n="subtabs.footage_search">Footage Search</button>
+                    <button type="button" class="sub-tab" data-sub="nlp-command" data-i18n="subtabs.command">AI Command</button>
                 </div>
 
                 <!-- FOOTAGE SEARCH -->
@@ -2773,9 +2943,9 @@
                     </div>
                     <p class="hint-inline mt-xs mb-sm">Enable CPU mode if transcription hangs or produces errors.</p>
                     <div class="btn-row gap-xs">
-                        <button type="button" class="btn-outline btn-sm" id="settingsInstallWhisperBtn">Install</button>
-                        <button type="button" class="btn-outline btn-sm" id="settingsReinstallWhisperBtn">Reinstall</button>
-                        <button type="button" class="btn-outline btn-sm" id="settingsClearCacheBtn">Clear Cache</button>
+                        <button type="button" class="btn-outline btn-sm" id="settingsInstallWhisperBtn" data-i18n="common.install">Install</button>
+                        <button type="button" class="btn-outline btn-sm" id="settingsReinstallWhisperBtn" data-i18n="common.reinstall">Reinstall</button>
+                        <button type="button" class="btn-outline btn-sm" id="settingsClearCacheBtn" data-i18n="settings.clear_cache">Clear Cache</button>
                     </div>
                 </section>
 
@@ -2794,14 +2964,14 @@
                         <span class="settings-value" id="backendPort">--</span>
                     </div>
                     <div class="btn-row mt-md">
-                        <button type="button" class="btn-outline btn-sm" id="restartBackendBtn">Restart Backend</button>
-                        <button type="button" class="btn-outline btn-sm" id="openLogsBtn">View Logs</button>
+                        <button type="button" class="btn-outline btn-sm" id="restartBackendBtn" data-i18n="settings.restart_backend">Restart Backend</button>
+                        <button type="button" class="btn-outline btn-sm" id="openLogsBtn" data-i18n="settings.open_logs">View Logs</button>
                     </div>
                 </section>
 
                 <section class="card">
                     <div class="card-header">
-                        <div class="card-title">Dependency Health</div>
+                        <div class="card-title" data-i18n="settings.dep_health">Dependency Health</div>
                         <button type="button" class="link-btn" id="refreshDepsBtn" title="Refresh dependency status">
                             <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
                             Check
@@ -2983,8 +3153,43 @@
                 </section>
 
                 <section class="card">
+                    <div class="card-header">
+                        <div class="card-title" data-i18n="settings.ai_engine_prefs">AI Engine Preferences</div>
+                        <button type="button" class="link-btn" id="refreshEnginesBtn" title="Refresh engine status">
+                            <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
+                            Refresh
+                        </button>
+                    </div>
+                    <p class="card-desc">Select preferred AI backend per feature. Higher quality engines use more VRAM.</p>
+                    <div id="engineRegistryGrid" class="dep-grid">
+                        <div class="hint">Press Refresh to load available engines.</div>
+                    </div>
+                </section>
+
+                <section class="card">
+                    <div class="card-header">
+                        <div class="card-title" data-i18n="settings.ws_bridge">WebSocket Bridge</div>
+                    </div>
+                    <p class="card-desc">Real-time progress streaming between backend and panel.</p>
+                    <div class="settings-row">
+                        <span class="settings-label">Status</span>
+                        <span class="settings-value" id="wsStatusText">Unknown</span>
+                    </div>
+                    <div class="settings-row">
+                        <span class="settings-label">Clients</span>
+                        <span class="settings-value" id="wsClientCount">0</span>
+                    </div>
+                    <div class="btn-row gap-xs mt-sm">
+                        <button type="button" class="btn-outline btn-sm" id="wsStartBtn">Start Bridge</button>
+                        <button type="button" class="btn-outline btn-sm" id="wsStopBtn">Stop Bridge</button>
+                        <button type="button" class="btn-outline btn-sm" id="wsConnectBtn">Connect Panel</button>
+                    </div>
+                    <div class="hint mt-xs" id="wsHint">WebSocket enables real-time job progress without polling.</div>
+                </section>
+
+                <section class="card">
                     <div class="card-header" data-collapsible="true">
-                        <div class="card-title">Audio &amp; Zoom Defaults</div>
+                        <div class="card-title" data-i18n="settings.audio_zoom">Audio &amp; Zoom Defaults</div>
                     </div>
                     <div class="form-group">
                         <label>Default Loudness Target</label>
@@ -3009,12 +3214,12 @@
                             <option value="linear">Linear</option>
                         </select>
                     </div>
-                    <button type="button" class="btn-outline btn-sm" id="saveAudioZoomDefaultsBtn">Save Defaults</button>
+                    <button type="button" class="btn-outline btn-sm" id="saveAudioZoomDefaultsBtn" data-i18n="settings.save_defaults">Save Defaults</button>
                 </section>
 
                 <section class="card">
                     <div class="card-header">
-                        <div class="card-title">GPU Recommendation</div>
+                        <div class="card-title" data-i18n="settings.gpu_rec">GPU Recommendation</div>
                     </div>
                     <div id="gpuRecContent">
                         <button type="button" class="btn-outline btn-sm" id="getGpuRecBtn">Get Recommendation</button>
@@ -3038,7 +3243,7 @@
                 </section>
 
                 <section class="card">
-                    <div class="card-header"><div class="card-title">Keyboard Shortcuts</div></div>
+                    <div class="card-header"><div class="card-title" data-i18n="settings.keyboard_shortcuts">Keyboard Shortcuts</div></div>
                     <div class="shortcut-reference" id="shortcutReference">
                         <div class="shortcut-row"><kbd>Ctrl+K</kbd><span>Command Palette</span></div>
                         <div class="shortcut-row"><kbd>Ctrl+Shift+S</kbd><span>Remove Silences</span></div>
@@ -3057,7 +3262,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.9.0</span>
+                        <span class="settings-value">1.9.2</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>
@@ -3077,20 +3282,20 @@
                     <span class="progress-elapsed" id="progressElapsed"></span>
                 </div>
                 <div class="progress-row">
-                    <span class="progress-label" id="progressLabel">Starting...</span>
-                    <button type="button" class="btn-cancel hidden" id="cancelBtn" title="Cancel processing">Cancel</button>
+                    <span class="progress-label" id="progressLabel" data-i18n="progress.starting">Starting...</span>
+                    <button type="button" class="btn-cancel hidden" id="cancelBtn" title="Cancel processing" data-i18n="progress.cancel">Cancel</button>
                 </div>
             </section>
 
             <!-- ======== RESULTS ======== -->
             <section class="card hidden" id="resultsSection">
                 <div class="results-card" id="resultsCard">
-                    <div class="results-title" id="resultsTitle">Complete</div>
+                    <div class="results-title" id="resultsTitle" data-i18n="progress.complete">Complete</div>
                     <div class="results-stats" id="resultsStats"></div>
                     <div class="results-path" id="resultsPath" title="Output file path"></div>
                     <div class="results-actions">
-                        <button type="button" class="btn-outline" id="newJobBtn">New Job</button>
-                        <button type="button" class="btn-outline btn-retry hidden" id="retryJobBtn">Retry</button>
+                        <button type="button" class="btn-outline" id="newJobBtn" data-i18n="common.new_job">New Job</button>
+                        <button type="button" class="btn-outline btn-retry hidden" id="retryJobBtn" data-i18n="common.retry">Retry</button>
                     </div>
                 </div>
             </section>
@@ -3098,15 +3303,15 @@
             <!-- Cut Review Panel (Phase 3.3 — Preview Before Commit) -->
             <section id="cutReviewPanel" class="card hidden">
                 <div class="card-header">
-                    <div class="card-title">Review Cuts</div>
+                    <div class="card-title" data-i18n="review.title">Review Cuts</div>
                     <div class="card-desc" id="cutReviewSummary">0 cuts selected</div>
                     <button type="button" class="cut-review-close" id="cutReviewClose" aria-label="Close review panel">&times;</button>
                 </div>
                 <div class="scrollable-md" id="cutReviewList"></div>
                 <div class="form-actions mt-sm">
-                    <button type="button" class="btn btn-secondary" id="cutReviewSelectAll">Select All</button>
-                    <button type="button" class="btn btn-secondary" id="cutReviewDeselectAll">Deselect All</button>
-                    <button type="button" class="btn btn-primary" id="cutReviewApply">Apply Selected Cuts</button>
+                    <button type="button" class="btn btn-secondary" id="cutReviewSelectAll" data-i18n="review.select_all">Select All</button>
+                    <button type="button" class="btn btn-secondary" id="cutReviewDeselectAll" data-i18n="review.deselect_all">Deselect All</button>
+                    <button type="button" class="btn btn-primary" id="cutReviewApply" data-i18n="review.apply">Apply Selected Cuts</button>
                 </div>
             </section>
 
@@ -3148,11 +3353,11 @@
             <!-- System Status Bar -->
             <div class="status-bar" id="statusBar" role="status" aria-label="Server status">
                 <span class="status-dot" id="statusDot" aria-hidden="true"></span>
-                <span class="status-text" id="statusText">Connecting...</span>
+                <span class="status-text" id="statusText" data-i18n="status.connecting">Connecting...</span>
                 <span class="status-separator" aria-hidden="true">|</span>
-                <span class="status-gpu" id="statusGpu">GPU: --</span>
+                <span class="status-gpu" id="statusGpu" data-i18n="status.gpu_none">GPU: --</span>
                 <span class="status-separator" aria-hidden="true">|</span>
-                <span class="status-jobs" id="statusJobs">Jobs: 0</span>
+                <span class="status-jobs" id="statusJobs" data-i18n="status.jobs_none">Jobs: 0</span>
             </div>
 
         </div><!-- end content-area -->

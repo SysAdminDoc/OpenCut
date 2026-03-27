@@ -156,7 +156,6 @@ def detect_silences_vad(
     Raises:
         ImportError: If torch/silero is not installed.
     """
-    import numpy as np
 
     try:
         import torch
@@ -179,9 +178,10 @@ def detect_silences_vad(
         wav = read_audio(filepath, sampling_rate=16000)
     except Exception:
         # Fallback: extract audio with FFmpeg first, then load
-        import tempfile
         import os
-        tmp_wav = os.path.join(tempfile.gettempdir(), "opencut_vad_tmp.wav")
+        import tempfile
+        fd, tmp_wav = tempfile.mkstemp(suffix=".wav", prefix="opencut_vad_")
+        os.close(fd)
         _extract_audio_wav(filepath, tmp_wav)
         if not os.path.isfile(tmp_wav):
             raise RuntimeError(f"Audio extraction failed for '{filepath}' — FFmpeg produced no output")
@@ -313,7 +313,7 @@ def detect_speech(
             )
             logger.info("Using Silero VAD for silence detection")
         except (ImportError, Exception) as e:
-            logger.info("Silero VAD unavailable (%s), falling back to energy-based detection", e)
+            logger.warning("Silero VAD unavailable (%s), falling back to energy-based detection", e)
             silences = detect_silences(
                 filepath,
                 threshold_db=config.threshold_db,

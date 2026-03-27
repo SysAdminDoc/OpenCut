@@ -132,7 +132,7 @@ def normalize_to_lufs(
     true_peak = max(-10.0, min(0.0, float(true_peak)))
 
     # --- Pass 1: Measure ---
-    logger.info("Loudness normalisation pass 1 (measure): %s", input_path)
+    logger.debug("Loudness normalisation pass 1 (measure): %s", input_path)
     pass1_cmd = [
         "ffmpeg", "-hide_banner",
         "-i", input_path,
@@ -172,7 +172,7 @@ def normalize_to_lufs(
     offset = _mv("target_offset", "0.0")
 
     # --- Pass 2: Apply with measured values ---
-    logger.info("Loudness normalisation pass 2 (apply): %s → %s", input_path, output_path)
+    logger.debug("Loudness normalisation pass 2 (apply): %s → %s", input_path, output_path)
 
     loudnorm_filter = (
         f"loudnorm=I={target_lufs}:TP={true_peak}:LRA=11"
@@ -242,7 +242,7 @@ def batch_loudness_match(
     results = []
 
     for i, filepath in enumerate(filepaths):
-        logger.info("Batch loudness match %d/%d: %s", i + 1, len(filepaths), filepath)
+        logger.debug("Batch loudness match %d/%d: %s", i + 1, len(filepaths), filepath)
 
         base = os.path.splitext(os.path.basename(filepath))[0]
         ext = os.path.splitext(filepath)[1] or ".mp4"

@@ -11,10 +11,11 @@ import threading
 
 from flask import Blueprint, jsonify, request
 
+from opencut.errors import safe_error
 from opencut.jobs import (
+    TooManyJobsError,
     _is_cancelled,
     _new_job,
-    _safe_error,
     _update_job,
     job_lock,
     jobs,
@@ -75,7 +76,10 @@ def timeline_export_from_markers():
     else:
         output_dir = os.path.dirname(input_file)
 
-    job_id = _new_job("timeline-export", input_file)
+    try:
+        job_id = _new_job("timeline-export", input_file)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -272,7 +276,7 @@ def timeline_srt_to_captions():
         parsed = _parse_srt(srt_path)
         return jsonify({"segments": parsed, "count": len(parsed)})
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "timeline_srt_to_captions")
 
 
 def _parse_srt(path: str) -> list:
@@ -333,7 +337,7 @@ def timeline_index_status():
     except ImportError:
         return jsonify({"total_files": 0, "total_segments": 0, "index_size_bytes": 0})
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "timeline_index_status")
 
 
 # ---------------------------------------------------------------------------
@@ -380,10 +384,10 @@ def timeline_export_otio():
 
     try:
         from opencut.export.otio_export import (
+            check_otio_available,
             export_otio,
             export_otio_from_cuts,
             export_otio_markers,
-            check_otio_available,
         )
 
         if not check_otio_available():
@@ -451,4 +455,4 @@ def timeline_export_otio():
             "suggestion": "Install with: pip install opentimelineio",
         }), 400
     except Exception as exc:
-        return _safe_error(exc)
+        return safe_error(exc, "timeline_export_otio")

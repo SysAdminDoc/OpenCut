@@ -12,8 +12,9 @@ import threading
 
 from flask import Blueprint, jsonify, request
 
+from opencut.errors import safe_error
 from opencut.helpers import _make_sequence_name, _resolve_output_dir
-from opencut.jobs import _is_cancelled, _new_job, _safe_error, _update_job, job_lock, jobs
+from opencut.jobs import TooManyJobsError, _is_cancelled, _new_job, _update_job, job_lock, jobs
 from opencut.security import (
     VALID_WHISPER_MODELS,
     rate_limit,
@@ -142,7 +143,10 @@ def generate_captions():
         sub_format = "srt"
     word_timestamps = data.get("word_timestamps", True)
 
-    job_id = _new_job("captions", filepath)
+    try:
+        job_id = _new_job("captions", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -251,7 +255,7 @@ def get_caption_styles():
         from opencut.core.styled_captions import get_style_info
         return jsonify({"styles": get_style_info()})
     except Exception as e:
-        return _safe_error(e, context="caption styles")
+        return safe_error(e, "caption styles")
 
 
 @captions_bp.route("/styled-captions", methods=["POST"])
@@ -279,7 +283,10 @@ def styled_captions_route():
     # Optional: pre-existing speech segments for remapping
     remap_segments_raw = data.get("remap_segments", None)
 
-    job_id = _new_job("styled-captions", filepath)
+    try:
+        job_id = _new_job("styled-captions", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -423,7 +430,10 @@ def get_transcript():
         return jsonify({"error": f"Invalid model: {model}"}), 400
     language = data.get("language", None)
 
-    job_id = _new_job("transcript", filepath)
+    try:
+        job_id = _new_job("transcript", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -558,7 +568,7 @@ def export_edited_transcript():
 
         return jsonify({"output_path": out_path, "format": sub_format})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "export_edited_transcript")
 
 
 # ---------------------------------------------------------------------------
@@ -637,7 +647,10 @@ def full_pipeline():
     remove_fillers = data.get("remove_fillers", False)
     seq_name = data.get("sequence_name", "")
 
-    job_id = _new_job("full", filepath)
+    try:
+        job_id = _new_job("full", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -838,7 +851,7 @@ def captions_enhanced_capabilities():
             "languages": TRANSLATION_LANGUAGES,
         })
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "captions_enhanced_capabilities")
 
 
 @captions_bp.route("/captions/whisperx", methods=["POST"])
@@ -861,7 +874,10 @@ def captions_whisperx():
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    job_id = _new_job("whisperx", filepath)
+    try:
+        job_id = _new_job("whisperx", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -916,7 +932,10 @@ def captions_translate():
     if len(segments) > 10000:
         return jsonify({"error": "Too many segments (max 10000)"}), 400
 
-    job_id = _new_job("translate", filepath or "captions")
+    try:
+        job_id = _new_job("translate", filepath or "captions")
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1000,7 +1019,10 @@ def captions_karaoke():
     if len(segments) > 10000:
         return jsonify({"error": "Too many segments (max 10000)"}), 400
 
-    job_id = _new_job("karaoke", filepath or "captions")
+    try:
+        job_id = _new_job("karaoke", filepath or "captions")
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1058,7 +1080,7 @@ def captions_convert():
         out = convert_subtitle_format(filepath, output_format=target_format)
         return jsonify({"output_path": out})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "captions_convert")
 
 
 @captions_bp.route("/captions/enhanced/install", methods=["POST"])
@@ -1122,7 +1144,7 @@ def burnin_styles():
         from opencut.core.caption_burnin import get_burnin_styles
         return jsonify({"styles": get_burnin_styles()})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "burnin_styles")
 
 
 @captions_bp.route("/captions/burnin/file", methods=["POST"])
@@ -1147,7 +1169,10 @@ def burnin_from_file():
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 
-    job_id = _new_job("burnin", video_path)
+    try:
+        job_id = _new_job("burnin", video_path)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1205,7 +1230,10 @@ def burnin_from_segments():
     if len(segments) > 10000:
         return jsonify({"error": "Too many segments (max 10000)"}), 400
 
-    job_id = _new_job("burnin-seg", video_path)
+    try:
+        job_id = _new_job("burnin-seg", video_path)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1245,7 +1273,7 @@ def animated_caption_presets():
         from opencut.core.animated_captions import get_animation_presets
         return jsonify({"presets": get_animation_presets()})
     except Exception as e:
-        return _safe_error(e)
+        return safe_error(e, "animated_caption_presets")
 
 
 @captions_bp.route("/captions/animated/render", methods=["POST"])
@@ -1267,7 +1295,10 @@ def animated_caption_render():
     if len(words) > 50000:
         return jsonify({"error": "Too many word segments (max 50000)"}), 400
 
-    job_id = _new_job("anim-cap", fp)
+    try:
+        job_id = _new_job("anim-cap", fp)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1325,7 +1356,10 @@ def transcript_summarize():
     llm_api_key = data.get("llm_api_key", "")
     llm_base_url = data.get("llm_base_url", "")
 
-    job_id = _new_job("summarize", filepath)
+    try:
+        job_id = _new_job("summarize", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1419,7 +1453,10 @@ def captions_chapters():
     if transcribe_model not in VALID_WHISPER_MODELS:
         transcribe_model = "base"
 
-    job_id = _new_job("chapters", filepath or "segments")
+    try:
+        job_id = _new_job("chapters", filepath or "segments")
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
@@ -1526,7 +1563,10 @@ def captions_repeat_detect():
     if model not in VALID_WHISPER_MODELS:
         model = "base"
 
-    job_id = _new_job("repeat-detect", filepath)
+    try:
+        job_id = _new_job("repeat-detect", filepath)
+    except TooManyJobsError as e:
+        return jsonify({"error": str(e)}), 429
 
     def _process():
         try:
