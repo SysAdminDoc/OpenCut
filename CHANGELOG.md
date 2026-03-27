@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.9.10] - 2026-03-27
+
+### Added
+- **CLI: `denoise` command** — Remove background noise from audio/video via FFmpeg filters (afftdn, highpass, gate) with adjustable strength.
+- **CLI: `scene-detect` command** — Detect scene boundaries with method selection (ffmpeg/ml/pyscenedetect), threshold control, and optional JSON export. Rich table output.
+
+### Fixed (Batch 42 — CLI Crash Bugs)
+- **CLI `color-match` crash** — Imported non-existent `from .core.color import match_color`. Fixed to `from .core.color_match import color_match_video`.
+- **CLI `loudness-match` crash** — Imported non-existent `from .core.loudness import normalize_loudness`. Fixed to `from .core.loudness_match import batch_loudness_match` with correct call signature.
+- **CLI `auto-zoom` crash** — Imported non-existent `from .core.zoom import apply_auto_zoom`. Fixed to `from .core.auto_zoom import generate_zoom_keyframes` with FFmpeg zoompan apply step.
+- **CLI `deliverables` crash** — Imported non-existent `generate_deliverables()` function. Fixed to import individual generators (`generate_vfx_sheet`, `generate_adr_list`, etc.) and dispatch based on `--type` flag. Now properly loads sequence JSON and routes to correct generator.
+
 ## [1.9.9] - 2026-03-27
 
 ### Added
