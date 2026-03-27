@@ -23,6 +23,7 @@ from opencut.helpers import (
     _resolve_output_dir,
     _run_ffmpeg_with_progress,
     _unique_output_path,
+    get_ffmpeg_path,
 )
 from opencut.jobs import (
     MAX_BATCH_FILES,
@@ -536,7 +537,7 @@ def export_video(job_id, filepath, data):
         _update_job(job_id, progress=15, message=f"Rendering {n} segments to {output_format.upper()} (audio only)...")
 
         cmd = [
-            "ffmpeg", "-hide_banner", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-y",
             "-i", filepath,
             "-filter_complex", filter_complex,
             "-map", "[outa]", "-vn",
@@ -585,7 +586,7 @@ def export_video(job_id, filepath, data):
         _update_job(job_id, progress=15, message=f"Rendering {n} segments to {output_format.upper()}...")
 
         cmd = [
-            "ffmpeg", "-hide_banner", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-y",
             "-i", filepath,
             "-filter_complex", filter_complex,
             "-map", "[outv]", "-map", "[outa]",
@@ -1216,7 +1217,7 @@ def video_merge(job_id, filepath, data):
         crf_map = {"low": "28", "medium": "23", "high": "18"}
         crf = crf_map.get(quality, "18")
 
-        cmd = ["ffmpeg"] + inputs + [
+        cmd = [get_ffmpeg_path()] + inputs + [
             "-filter_complex", filter_parts,
             "-map", "[outv]", "-map", "[outa]",
             "-c:v", "libx264", "-crf", crf, "-preset", "medium",
@@ -1238,7 +1239,7 @@ def video_merge(job_id, filepath, data):
                     cf.write(f"file '{safe}'\n")
 
             cmd = [
-                "ffmpeg", "-f", "concat", "-safe", "0",
+                get_ffmpeg_path(), "-f", "concat", "-safe", "0",
                 "-i", concat_file, "-c", "copy",
                 "-movflags", "+faststart",
                 "-y", output_path
@@ -1303,7 +1304,7 @@ def video_trim(job_id, filepath, data):
 
     if quality == "copy":
         cmd = [
-            "ffmpeg", "-ss", str(start_time), "-to", str(end_time),
+            get_ffmpeg_path(), "-ss", str(start_time), "-to", str(end_time),
             "-i", filepath,
             "-c", "copy",
             "-movflags", "+faststart",
@@ -1313,7 +1314,7 @@ def video_trim(job_id, filepath, data):
         crf_map = {"low": "28", "medium": "23", "high": "18"}
         crf = crf_map.get(quality, "18")
         cmd = [
-            "ffmpeg", "-ss", str(start_time), "-to", str(end_time),
+            get_ffmpeg_path(), "-ss", str(start_time), "-to", str(end_time),
             "-i", filepath,
             "-c:v", "libx264", "-crf", crf,
             "-c:a", "aac",
@@ -1362,7 +1363,7 @@ def preview_frame(job_id, filepath, data):
     try:
         _update_job(job_id, progress=10, message="Extracting frame...")
         cmd = [
-            "ffmpeg", "-ss", str(timestamp), "-i", filepath,
+            get_ffmpeg_path(), "-ss", str(timestamp), "-i", filepath,
             "-vframes", "1", "-vf", f"scale={width}:-1",
             "-q:v", "2", "-y", tmp
         ]
