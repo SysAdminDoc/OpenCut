@@ -180,7 +180,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.9**
+- Current: **v1.9.10**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -918,6 +918,11 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **export_video partial file leak** — Failed FFmpeg runs left corrupt partial output files on disk. Added cleanup on non-zero exit.
 - **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.
 - **pip install permission denied** — `safe_pip_install()` failed on Windows when both normal and `--user` installs hit Errno 13 (Microsoft Store Python, OneDrive-synced user dirs, restrictive ACLs). Added `--target ~/.opencut/packages` as third fallback strategy. server.py adds `~/.opencut/packages` to `sys.path` at startup.
+
+## v1.9.10 Batch 42 (CLI Crash Fixes + New Commands)
+- **4 CLI commands were completely broken** — color-match, loudness-match, auto-zoom, deliverables all imported from wrong modules. Fixed all 4.
+- **2 new CLI commands** — `denoise` (FFmpeg noise reduction) and `scene-detect` (scene boundaries with rich table output).
+- CLI now has 16 commands (up from 14).
 
 ## v1.9.9 Batch 41 (UXP Feature Parity)
 - **4 new UXP Video features** — AI Upscale, Scene Detection, Style Transfer, Shorts Pipeline. Full HTML cards + JS handlers with job polling.
