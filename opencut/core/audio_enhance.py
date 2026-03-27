@@ -13,6 +13,8 @@ import os
 import subprocess
 import tempfile
 
+from opencut.helpers import get_ffprobe_path
+
 logger = logging.getLogger("opencut")
 
 
@@ -33,7 +35,7 @@ def _is_video(filepath):
     # Unknown extension — probe for video stream
     try:
         result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
+            [get_ffprobe_path(), "-v", "quiet", "-select_streams", "v:0",
              "-show_entries", "stream=codec_type", "-of", "csv=p=0", filepath],
             capture_output=True, text=True, timeout=10,
         )
