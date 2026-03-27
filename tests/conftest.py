@@ -8,7 +8,10 @@ import pytest
 @pytest.fixture
 def app():
     """Create a Flask app instance configured for testing."""
-    from opencut.server import app as flask_app
+    from opencut.config import OpenCutConfig
+    from opencut.server import create_app
+    test_config = OpenCutConfig()
+    flask_app = create_app(config=test_config)
     flask_app.config["TESTING"] = True
     return flask_app
 

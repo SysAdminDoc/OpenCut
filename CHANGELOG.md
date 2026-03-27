@@ -1,6 +1,6 @@
 # Changelog
 
-## [1.9.2] - 2026-03-26
+## [1.9.3] - 2026-03-27
 
 ### Added
 - **JSON Structured Logging** (Phase 0.3) — File handler now outputs JSON via `python-json-logger`. Each log line includes `timestamp`, `level`, `module`, `job_id`, `message`. Console handler stays plain text. Graceful fallback if `python-json-logger` not installed.
@@ -14,6 +14,13 @@
 - **Log Levels Audit** (Phase 0.3) — 22 log calls across 10 files corrected: verbose processing steps downgraded INFO→DEBUG, fallback/degraded paths upgraded INFO→WARNING. No secrets found in logging.
 - **Core Module Unit Tests Batch 2** (Phase 0.1) — 135 additional tests across 28 previously untested core modules (animated_captions, audio_enhance, audio_pro, audio_suite, caption_burnin, captions_enhanced, color_management, emotion_highlights, face_swap, face_tools, lut_library, motion_graphics, music_ai, music_gen, object_removal, particles, shorts_pipeline, style_transfer, styled_captions, transitions_3d, upscale_pro, video_ai, voice_gen, zoom, broll_insert, broll_generate, multimodal_diarize, social_post).
 - **ExtendScript Mock Harness** (Phase 0.1) — `tests/jsx_mock.js` provides fake Premiere Pro DOM (app.project, activeSequence, tracks, markers, ProjectItem). Tests 38 ExtendScript functions including ocApplySequenceCuts, ocBatchRenameProjectItems, ocAddSequenceMarkers, ocAddNativeCaptionTrack. 35 assertions pass under Node.js.
+
+### Refactored
+- **`async_job` decorator adoption** — All 97 manual `_new_job()` + `threading.Thread` + `_update_job(status="complete")` patterns across 6 route files converted to `@async_job` decorator. Fixes race condition where cancelled jobs could be overwritten to "complete". Removes ~2,800 lines of boilerplate. Decorator extended with `filepath_required` and `filepath_param` parameters.
+- **Split `video.py` into 5 domain blueprints** — Monolithic 3636-line `video.py` split into `video_core.py` (1395), `video_editing.py` (750), `video_fx.py` (687), `video_specialty.py` (489), `video_ai.py` (443). No file exceeds 1400 lines. All URL paths unchanged.
+- **App factory pattern** — `server.py` now exposes `create_app(config)` for isolated Flask instances. New `opencut/config.py` centralizes env var reads into `OpenCutConfig` dataclass. Tests use independent app instances. Module-level `app = create_app()` preserved for backward compat.
+- **Install route factory** — `make_install_route()` in `opencut/jobs.py` replaces 6 identical install endpoint handlers (depth, emotion, multimodal-diarize, broll-generate, face, crisper-whisper) with a single factory call per route.
+- **Version sync CI enforcement** — `scripts/sync_version.py` now includes `package.json` in targets and supports `--check` flag for CI. Added to `.github/workflows/build.yml`.
 
 ### Security
 - Replaced all `__import__()` calls with `importlib.import_module()` / `importlib.util.find_spec()` in helpers.py, system.py, engine_registry.py, plugins.py
