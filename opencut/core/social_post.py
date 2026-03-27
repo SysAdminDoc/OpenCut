@@ -691,14 +691,20 @@ def upload_to_platform(
     return result
 
 
-def get_oauth_url(platform: str) -> Optional[str]:
+def get_oauth_url(platform: str, port: int = 5679) -> Optional[str]:
     """
     Get the OAuth authorization URL for a platform.
 
     The user visits this URL to authorize OpenCut, then the callback
     stores the credentials via store_auth().
+
+    Args:
+        platform: "youtube", "tiktok", or "instagram"
+        port: Server port for redirect URI (default 5679)
     """
     import urllib.parse
+
+    base_url = f"http://localhost:{port}"
 
     if platform == "youtube":
         client_id = os.environ.get("OPENCUT_YOUTUBE_CLIENT_ID", "")
@@ -706,7 +712,7 @@ def get_oauth_url(platform: str) -> Optional[str]:
             return None
         params = urllib.parse.urlencode({
             "client_id": client_id,
-            "redirect_uri": "http://localhost:5679/auth/youtube/callback",
+            "redirect_uri": f"{base_url}/auth/youtube/callback",
             "response_type": "code",
             "scope": "https://www.googleapis.com/auth/youtube.upload",
             "access_type": "offline",
@@ -720,7 +726,7 @@ def get_oauth_url(platform: str) -> Optional[str]:
             return None
         params = urllib.parse.urlencode({
             "client_key": client_key,
-            "redirect_uri": "http://localhost:5679/auth/tiktok/callback",
+            "redirect_uri": f"{base_url}/auth/tiktok/callback",
             "response_type": "code",
             "scope": "video.upload,video.publish",
         })
@@ -732,7 +738,7 @@ def get_oauth_url(platform: str) -> Optional[str]:
             return None
         params = urllib.parse.urlencode({
             "client_id": app_id,
-            "redirect_uri": "http://localhost:5679/auth/instagram/callback",
+            "redirect_uri": f"{base_url}/auth/instagram/callback",
             "response_type": "code",
             "scope": "instagram_basic,instagram_content_publish",
         })
