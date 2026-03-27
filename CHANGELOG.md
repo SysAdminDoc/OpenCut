@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.6] - 2026-03-27
+
+### Fixed (Batch 38 — Route Cleanup & Remaining Crash Bugs)
+- **10 remaining `_p(pct, msg)` closures missing `msg=""` default** — Found in `audio.py` (3), `video_fx.py` (5), `captions.py` (1), `workflow.py` (1). All core modules call `on_progress(pct)` with 1 arg, causing TypeError crash on every job using these routes. All now have `msg=""` default.
+- **Redundant filepath re-validation in 7 routes** — `face_enhance`, `face_swap`, `upscale_run`, `remove_watermark`, `title_overlay`, `particle_apply`, `color_correct`, `color_convert`, `color_external_lut` all re-read `data.get("filepath")` and re-validated despite `@async_job` already doing this. Removed ~80 lines of dead validation code, now using the decorator-provided `filepath` param directly.
+- **Unused `validate_filepath` import** — Removed from `video_specialty.py` after watermark/title routes stopped re-validating.
+
 ## [1.9.5] - 2026-03-27
 
 ### Fixed (Batch 37 — Infrastructure & Hardening)

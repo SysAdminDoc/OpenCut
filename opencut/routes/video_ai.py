@@ -362,24 +362,17 @@ def face_swap_capabilities():
 @async_job("face_enhance")
 def face_enhance_route(job_id, filepath, data):
     """Enhance/restore faces in video using GFPGAN or CodeFormer."""
-    fp = data.get("filepath", "").strip()
     _enhance_model = data.get("model", "gfpgan")
     if _enhance_model not in ("gfpgan", "codeformer"):
         _enhance_model = "gfpgan"
     _fidelity = safe_float(data.get("fidelity", 0.5), 0.5, min_val=0.0, max_val=1.0)
-    if not fp:
-        raise ValueError("File not found")
-    try:
-        fp = validate_filepath(fp)
-    except ValueError as e:
-        raise ValueError(str(e))
 
     from opencut.core.face_swap import enhance_faces
 
     def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(fp, data.get("output_dir", ""))
-    out = enhance_faces(fp, output_dir=d, model=_enhance_model, upscale=safe_int(data.get("upscale", 2), 2, min_val=1, max_val=4), fidelity=_fidelity, on_progress=_p)
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    out = enhance_faces(filepath, output_dir=d, model=_enhance_model, upscale=safe_int(data.get("upscale", 2), 2, min_val=1, max_val=4), fidelity=_fidelity, on_progress=_p)
     return {"output_path": out}
 
 
@@ -388,27 +381,17 @@ def face_enhance_route(job_id, filepath, data):
 @async_job("face_swap")
 def face_swap_route(job_id, filepath, data):
     """Swap faces in video with a reference image."""
-    fp = data.get("filepath", "").strip()
     ref = data.get("reference_face", "").strip()
-    if not fp:
-        raise ValueError("Video not found")
     if not ref:
         raise ValueError("Reference face not found")
-    try:
-        fp = validate_filepath(fp)
-    except ValueError as e:
-        raise ValueError(f"Video: {e}")
-    try:
-        ref = validate_filepath(ref)
-    except ValueError as e:
-        raise ValueError(f"Reference face: {e}")
+    ref = validate_filepath(ref)
 
     from opencut.core.face_swap import swap_face
 
     def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(fp, data.get("output_dir", ""))
-    out = swap_face(fp, ref, output_dir=d, on_progress=_p)
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    out = swap_face(filepath, ref, output_dir=d, on_progress=_p)
     return {"output_path": out}
 
 
@@ -429,20 +412,12 @@ def upscale_capabilities():
 @async_job("upscale")
 def upscale_run(job_id, filepath, data):
     """Upscale video with quality preset."""
-    fp = data.get("filepath", "").strip()
-    if not fp:
-        raise ValueError("File not found")
-    try:
-        fp = validate_filepath(fp)
-    except ValueError as e:
-        raise ValueError(str(e))
-
     from opencut.core.upscale_pro import upscale_with_preset
 
     def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(fp, data.get("output_dir", ""))
-    out = upscale_with_preset(fp, preset=data.get("preset", "fast"),
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    out = upscale_with_preset(filepath, preset=data.get("preset", "fast"),
                                scale=safe_int(data.get("scale", 2), 2, min_val=1, max_val=4),
                                output_dir=d, on_progress=_p)
     return {"output_path": out}
