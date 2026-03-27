@@ -167,6 +167,14 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/timeline/export-from-markers", "/search/index",
     # v2.0 additions
     "/workflow/run",
+    # v1.9.0 additions
+    "/video/ai/interpolate",
+    "/video/depth/map", "/video/depth/bokeh", "/video/depth/parallax",
+    "/video/broll-plan",
+    "/video/remove/watermark",
+    "/video/upscale/run",
+    "/video/multicam-xml",
+    "/search/auto-index",
 })
 
 
