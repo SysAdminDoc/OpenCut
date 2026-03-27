@@ -15,7 +15,7 @@ import os
 import subprocess as _sp
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_video_info, run_ffmpeg
+from opencut.helpers import get_ffprobe_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -72,7 +72,7 @@ def _has_audio_stream(filepath: str) -> bool:
     """Check whether a media file contains at least one audio stream."""
     try:
         r = _sp.run(
-            ["ffprobe", "-v", "quiet", "-select_streams", "a",
+            [get_ffprobe_path(), "-v", "quiet", "-select_streams", "a",
              "-show_entries", "stream=codec_type", "-of", "csv=p=0", filepath],
             capture_output=True, timeout=10,
         )

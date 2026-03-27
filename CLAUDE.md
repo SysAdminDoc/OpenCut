@@ -180,7 +180,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.4**
+- Current: **v1.9.5**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -918,6 +918,18 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **export_video partial file leak** — Failed FFmpeg runs left corrupt partial output files on disk. Added cleanup on non-zero exit.
 - **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.
 - **pip install permission denied** — `safe_pip_install()` failed on Windows when both normal and `--user` installs hit Errno 13 (Microsoft Store Python, OneDrive-synced user dirs, restrictive ACLs). Added `--target ~/.opencut/packages` as third fallback strategy. server.py adds `~/.opencut/packages` to `sys.path` at startup.
+
+## v1.9.5 Batch 37 Bug Fixes (Infrastructure & Hardening)
+- **Bare ffprobe in 8 core modules** — audio_enhance, color_management, highlights, motion_graphics, scene_detect (2), shorts_pipeline, transitions_3d, video_ai all used `"ffprobe"` in subprocess. Fixed to `get_ffprobe_path()`.
+- **GPU VRAM check timeout** — `check_vram()` blocked forever on hung NVIDIA drivers. Added 5s timeout.
+- **safe_error GPU OOM false positives** — `"cuda" in lower and "memory" in lower` too broad. Tightened to exact "cuda out of memory" phrases.
+- **_unique_output_path 10K loop** — capped at 100 (was 9998).
+- **get_video_info silent defaults** — upgraded fallback logging from DEBUG to WARNING.
+- **Job cleanup on every creation** — removed synchronous `_cleanup_old_jobs()` from `_new_job()`. Periodic thread handles it.
+- **proc.poll() crash** — wrapped stale Popen handle poll in try/except.
+- **async_job future race** — stored `_thread` immediately after submit.
+- **multicam_xml path encoding** — added `urllib.parse.quote()` for spaces/special chars.
+- **main.js parentNode null guard** — prevent crash on orphaned select elements.
 
 ## v1.9.4 Batch 36 Bug Fixes
 - **face_enhance/face_swap/upscale `_p(pct, msg)` crash** — 3 `on_progress` closures missing `msg=""` default; TypeError when core modules call with 1 arg. Fixed all 3.
