@@ -22,6 +22,13 @@ class OpenCutConfig:
     max_content_length: int = 100 * 1024 * 1024  # 100 MB
     cors_origins: list = field(default_factory=lambda: ["null", "file://"])
 
+    # Job system defaults (single source of truth; mirrored as module-level
+    # constants in opencut/jobs.py for use outside Flask app context)
+    job_max_age: int = 3600              # Auto-clean jobs older than 1 hour
+    max_concurrent_jobs: int = 10        # Prevent job spam / GPU OOM
+    max_batch_files: int = 100           # Max files per batch request
+    job_stuck_timeout: int = 7200        # Mark running jobs as error after 2 hours
+
     @classmethod
     def from_env(cls) -> "OpenCutConfig":
         """Create config from environment variables (single source of truth)."""

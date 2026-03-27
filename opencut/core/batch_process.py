@@ -63,7 +63,7 @@ class BatchJob:
     def progress(self) -> int:
         if not self.items:
             return 0
-        return int((self.completed / self.total) * 100)
+        return min(100, int((self.completed / self.total) * 100))
 
     @property
     def summary(self) -> Dict:
@@ -100,6 +100,35 @@ _batches: Dict[str, BatchJob] = {}
 _batch_lock = threading.Lock()
 _BATCH_MAX_AGE = 3600  # Auto-clean batches older than 1 hour
 _BATCH_MAX_COUNT = 200  # Hard cap on stored batches
+_BATCH_CLEANUP_INTERVAL = 300  # 5 minutes
+_batch_cleanup_started = False
+_batch_cleanup_start_lock = threading.Lock()
+
+
+def _start_periodic_batch_cleanup():
+    """Lazily start a daemon thread that cleans old batches every 5 minutes.
+
+    Called on first batch creation.  Idempotent and daemon so it won't block
+    shutdown or run during tests that never create batches.
+    """
+    global _batch_cleanup_started
+    with _batch_cleanup_start_lock:
+        if _batch_cleanup_started:
+            return
+        _batch_cleanup_started = True
+
+    def _loop():
+        while True:
+            time.sleep(_BATCH_CLEANUP_INTERVAL)
+            try:
+                with _batch_lock:
+                    _cleanup_old_batches()
+            except Exception as e:
+                logger.debug("Periodic batch cleanup error: %s", e)
+
+    t = threading.Thread(target=_loop, daemon=True, name="opencut-batch-cleanup")
+    t.start()
+    logger.debug("Started periodic batch cleanup thread (every %ds)", _BATCH_CLEANUP_INTERVAL)
 
 
 def _cleanup_old_batches():
@@ -148,6 +177,7 @@ def create_batch(
         _cleanup_old_batches()
         _batches[batch_id] = batch
 
+    _start_periodic_batch_cleanup()
     return batch
 
 

@@ -126,18 +126,23 @@ def video_ai_interpolate(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     multiplier = safe_int(data.get("multiplier", 2), 2, min_val=2, max_val=8)
 
-    from opencut.core.video_ai import frame_interpolate
+    if not rate_limit("ai_gpu"):
+        raise ValueError("A ai_gpu operation is already running. Please wait.")
+    try:
+        from opencut.core.video_ai import frame_interpolate
 
-    def _on_progress(pct, msg=""):
-        _update_job(job_id, progress=pct, message=msg)
+        def _on_progress(pct, msg=""):
+            _update_job(job_id, progress=pct, message=msg)
 
-    effective_dir = _resolve_output_dir(filepath, output_dir)
-    out = frame_interpolate(
-        filepath, output_dir=effective_dir,
-        multiplier=multiplier,
-        on_progress=_on_progress,
-    )
-    return {"output_path": out}
+        effective_dir = _resolve_output_dir(filepath, output_dir)
+        out = frame_interpolate(
+            filepath, output_dir=effective_dir,
+            multiplier=multiplier,
+            on_progress=_on_progress,
+        )
+        return {"output_path": out}
+    finally:
+        rate_limit_release("ai_gpu")
 
 
 @video_ai_bp.route("/video/ai/denoise", methods=["POST"])
@@ -151,18 +156,26 @@ def video_ai_denoise(job_id, filepath, data):
         method = "nlmeans"
     strength = safe_float(data.get("strength", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
-    from opencut.core.video_ai import video_denoise
+    _needs_gpu = method == "basicvsr"
+    if _needs_gpu:
+        if not rate_limit("ai_gpu"):
+            raise ValueError("A ai_gpu operation is already running. Please wait.")
+    try:
+        from opencut.core.video_ai import video_denoise
 
-    def _on_progress(pct, msg=""):
-        _update_job(job_id, progress=pct, message=msg)
+        def _on_progress(pct, msg=""):
+            _update_job(job_id, progress=pct, message=msg)
 
-    effective_dir = _resolve_output_dir(filepath, output_dir)
-    out = video_denoise(
-        filepath, output_dir=effective_dir,
-        method=method, strength=strength,
-        on_progress=_on_progress,
-    )
-    return {"output_path": out}
+        effective_dir = _resolve_output_dir(filepath, output_dir)
+        out = video_denoise(
+            filepath, output_dir=effective_dir,
+            method=method, strength=strength,
+            on_progress=_on_progress,
+        )
+        return {"output_path": out}
+    finally:
+        if _needs_gpu:
+            rate_limit_release("ai_gpu")
 
 
 @video_ai_bp.route("/video/ai/install", methods=["POST"])
@@ -315,6 +328,7 @@ def style_arbitrary(job_id, filepath, data):
     intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=1.0)
     if not style_image:
         raise ValueError("No style image provided")
+    style_image = validate_filepath(style_image)
 
     from opencut.core.style_transfer import arbitrary_style_transfer
 
@@ -362,7 +376,7 @@ def face_enhance_route(job_id, filepath, data):
 
     from opencut.core.face_swap import enhance_faces
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(fp, data.get("output_dir", ""))
     out = enhance_faces(fp, output_dir=d, model=_enhance_model, upscale=safe_int(data.get("upscale", 2), 2, min_val=1, max_val=4), fidelity=_fidelity, on_progress=_p)
@@ -391,7 +405,7 @@ def face_swap_route(job_id, filepath, data):
 
     from opencut.core.face_swap import swap_face
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(fp, data.get("output_dir", ""))
     out = swap_face(fp, ref, output_dir=d, on_progress=_p)
@@ -425,7 +439,7 @@ def upscale_run(job_id, filepath, data):
 
     from opencut.core.upscale_pro import upscale_with_preset
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(fp, data.get("output_dir", ""))
     out = upscale_with_preset(fp, preset=data.get("preset", "fast"),

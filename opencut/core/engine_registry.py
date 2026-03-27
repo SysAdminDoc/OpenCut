@@ -99,15 +99,17 @@ class EngineRegistry:
 
         for e in engines:
             # Check cache
-            cached = self._availability_cache.get(e.name)
+            with self._lock:
+                cached = self._availability_cache.get(e.name)
             if cached and (now - cached[1]) < self._cache_ttl:
                 if cached[0]:
                     available.append(e)
                 continue
 
-            # Check availability
+            # Check availability (outside lock — check_fn may be slow)
             is_avail = e.is_available
-            self._availability_cache[e.name] = (is_avail, now)
+            with self._lock:
+                self._availability_cache[e.name] = (is_avail, now)
             if is_avail:
                 available.append(e)
 

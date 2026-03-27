@@ -180,7 +180,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.3**
+- Current: **v1.9.4**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -918,6 +918,23 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **export_video partial file leak** — Failed FFmpeg runs left corrupt partial output files on disk. Added cleanup on non-zero exit.
 - **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.
 - **pip install permission denied** — `safe_pip_install()` failed on Windows when both normal and `--user` installs hit Errno 13 (Microsoft Store Python, OneDrive-synced user dirs, restrictive ACLs). Added `--target ~/.opencut/packages` as third fallback strategy. server.py adds `~/.opencut/packages` to `sys.path` at startup.
+
+## v1.9.4 Batch 36 Bug Fixes
+- **face_enhance/face_swap/upscale `_p(pct, msg)` crash** — 3 `on_progress` closures missing `msg=""` default; TypeError when core modules call with 1 arg. Fixed all 3.
+- **engagement attribute crash** — shorts pipeline response used direct attribute access; switched to `getattr()` with defaults for all 5 engagement fields.
+- **broll_plan inconsistent response** — empty result returned 2 keys, success returned 4. Frontend expects all 4. Fixed + `plan is None` guard + `getattr()` on window fields.
+- **style_arbitrary path traversal** — `style_image` not validated via `validate_filepath()`. Added.
+- **plugin install path traversal** — `source` not validated via `validate_path()`. Added.
+- **plugin uninstall symlink escape** — resolved path not verified to stay within `PLUGINS_DIR`. Added `os.path.realpath()` containment check.
+- **depth_effects model_id injection** — `model_size` interpolated into HuggingFace model ID without allowlist in `apply_bokeh_effect()` and `apply_parallax_zoom()`. Added allowlist in all 3 functions.
+- **GPU rate limit gaps** — interpolate + basicvsr denoise bypassed `rate_limit("ai_gpu")`. Added guards.
+- **Queue allowlist +9 routes** — interpolate, depth/map/bokeh/parallax, broll-plan, remove/watermark, upscale/run, multicam-xml, search/auto-index.
+- **title_overlay preset allowlist** — Missing `lower_third`, `countdown`, `kinetic_bounce`.
+- **Engine registry cache race** — `_availability_cache` reads/writes outside lock. Fixed.
+- **main.js timer leak** — `_scanDebounceTimer` missing from `cleanupTimers()`.
+- **main.js safeFixed** — zoom slider used raw `toFixed()`.
+- **FFmpeg stderr truncation** — now prepends `"...[truncated] "` marker.
+- **Test fix** — `test_system_gpu` expected wrong key name.
 
 ## v1.9.0 Features Added
 

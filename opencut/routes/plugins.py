@@ -10,7 +10,7 @@ import os
 from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
-from opencut.security import require_csrf
+from opencut.security import require_csrf, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -84,6 +84,11 @@ def install_plugin():
     if not source:
         return jsonify({"error": "source path is required"}), 400
 
+    try:
+        source = validate_path(source)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
     if not os.path.isdir(source):
         return jsonify({"error": "source must be an existing directory"}), 400
 
@@ -144,6 +149,11 @@ def uninstall_plugin():
         return jsonify({"error": f"Invalid plugin name: {name}"}), 400
 
     plugin_dir = os.path.join(PLUGINS_DIR, name)
+    # Verify resolved path stays within PLUGINS_DIR (prevent symlink escape)
+    real_plugin = os.path.realpath(plugin_dir)
+    real_plugins = os.path.realpath(PLUGINS_DIR)
+    if not real_plugin.startswith(real_plugins + os.sep) and real_plugin != real_plugins:
+        return jsonify({"error": "Invalid plugin path"}), 400
     if not os.path.isdir(plugin_dir):
         return jsonify({"error": f"Plugin '{name}' not found"}), 404
 
@@ -158,7 +168,7 @@ def uninstall_plugin():
         from opencut.core.plugins import unload_plugin
         unload_plugin(name)
     except ImportError:
-        pass
+        logger.warning("Could not unload plugin %s (unload_plugin not available)", name)
 
     logger.info("Plugin uninstalled: %s", name)
     return jsonify({"success": True, "message": f"Plugin '{name}' removed."})

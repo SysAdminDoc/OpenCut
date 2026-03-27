@@ -78,6 +78,9 @@ def estimate_depth_map(
     if on_progress:
         on_progress(5, f"Loading Depth Anything V2 ({model_size})...")
 
+    _allowed_sizes = ("small", "base", "large")
+    if model_size not in _allowed_sizes:
+        model_size = "small"
     model_id = f"depth-anything/Depth-Anything-V2-{model_size.capitalize()}-hf"
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -206,6 +209,9 @@ def apply_bokeh_effect(
         base = os.path.splitext(os.path.basename(input_path))[0]
         directory = output_dir or os.path.dirname(input_path)
         output_path = os.path.join(directory, f"{base}_bokeh.mp4")
+
+    if model_size not in ("small", "base", "large"):
+        model_size = "small"
 
     if on_progress:
         on_progress(5, f"Loading Depth Anything V2 ({model_size})...")
@@ -344,6 +350,9 @@ def apply_parallax_zoom(
         output_path = os.path.join(directory, f"{base}_parallax.mp4")
 
     zoom_amount = max(1.01, min(2.0, zoom_amount))
+
+    if model_size not in ("small", "base", "large"):
+        model_size = "small"
 
     if on_progress:
         on_progress(5, f"Loading Depth Anything V2 ({model_size})...")

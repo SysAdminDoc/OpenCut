@@ -1,5 +1,24 @@
 # Changelog
 
+## [1.9.4] - 2026-03-27
+
+### Fixed (Batch 36 Audit)
+- **P0: face_enhance/face_swap/upscale `_p(pct, msg)` crash** — 3 `on_progress` closures in video_ai.py missing `msg=""` default; core modules call with 1 arg → TypeError. Added default.
+- **P0: engagement attribute crash** — shorts pipeline response accessed `c.engagement.hook_strength` directly; switched to `getattr()` with defaults for all 5 engagement fields.
+- **P0: broll_plan inconsistent response** — empty segments returned 2 keys but success path returned 4; frontend expects all 4. Fixed + added `plan is None` guard + `getattr()` for all window fields.
+- **Security: style_arbitrary path traversal** — `/video/style/arbitrary` accepted `style_image` without `validate_filepath()`; attacker could read arbitrary files. Added validation.
+- **Security: plugin install path traversal** — `/plugins/install` accepted arbitrary `source` directory without `validate_path()`. Added validation.
+- **Security: plugin uninstall symlink escape** — `/plugins/uninstall` didn't verify resolved `plugin_dir` stays within `PLUGINS_DIR`. Added `os.path.realpath()` containment check.
+- **Security: depth_effects model_id injection** — `model_size` param interpolated into HuggingFace model ID without validation in `apply_bokeh_effect()` and `apply_parallax_zoom()`. Added allowlist in all 3 functions.
+- **GPU rate limiting gaps** — `/video/ai/interpolate` and `/video/ai/denoise` (basicvsr method) bypassed `rate_limit("ai_gpu")`, allowing concurrent GPU OOM. Added guards.
+- **Queue allowlist +9 routes** — 9 newer routes missing from `_ALLOWED_QUEUE_ENDPOINTS`: interpolate, depth/map/bokeh/parallax, broll-plan, remove/watermark, upscale/run, multicam-xml, search/auto-index.
+- **title_overlay preset allowlist** — Missing `lower_third`, `countdown`, `kinetic_bounce` presets (present in title_render but not title_overlay).
+- **Engine registry cache race** — `_availability_cache` reads/writes in `get_available_engines()` were outside `_lock`; added lock protection.
+- **main.js timer leak** — `_scanDebounceTimer` missing from `cleanupTimers()`; leaked on panel close.
+- **main.js safeFixed** — `defaultZoomVal` slider used raw `toFixed()` instead of `safeFixed()` wrapper.
+- **FFmpeg stderr truncation UX** — `run_ffmpeg()` truncated stderr silently; now prepends `"...[truncated] "` marker when truncating.
+- **Test fix** — `test_system_gpu` expected `gpu_available` key but API returns `available`.
+
 ## [1.9.3] - 2026-03-27
 
 ### Added

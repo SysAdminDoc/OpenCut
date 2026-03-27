@@ -23,7 +23,10 @@ const BACKEND_DEFAULT  = "http://127.0.0.1:5679";
 const BACKEND_MAX_PORT = 5689;
 const POLL_INTERVAL_MS = 1200;
 const HEALTH_CHECK_MS  = 8000;
-const VERSION          = "1.9.2";
+const HEALTH_MAX_MS    = 60000;
+const MEDIA_SCAN_MS    = 30000;
+const SSE_AVAILABLE    = typeof EventSource !== "undefined";
+const VERSION          = "1.9.4";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
@@ -57,6 +60,11 @@ let elapsedTimer  = null;
 let elapsedSec    = 0;
 let lastCuts      = [];     // cuts array from last silence/filler run
 let lastMarkers   = [];     // marker array from last beat detection
+
+// ---- SSE / health-check state ----
+let _activeSSE       = null;  // current EventSource instance
+let _healthBackoff   = HEALTH_CHECK_MS;
+let _mediaScanTimer  = null;
 
 // ---- Premiere Pro state cache (reduces UXP API round-trips) ----
 const _pproCache = { seq: null, ts: 0 };
@@ -435,7 +443,57 @@ const JobPoller = (() => {
     }
 
     activeJobId = jobId;
-    pollJob(jobId, onProgress, onComplete, onError);
+
+    // Prefer SSE for real-time progress; fall back to polling
+    if (SSE_AVAILABLE) {
+      trackJobSSE(jobId, onProgress, onComplete, onError);
+    } else {
+      pollJob(jobId, onProgress, onComplete, onError);
+    }
+  }
+
+  /**
+   * Track job progress via Server-Sent Events (SSE).
+   * Falls back to polling on connection error.
+   */
+  function trackJobSSE(jobId, onProgress, onComplete, onError) {
+    if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
+
+    const es = new EventSource(`${BACKEND}/stream/${jobId}`);
+    _activeSSE = es;
+
+    es.onmessage = (event) => {
+      try {
+        const job = JSON.parse(event.data);
+        const status = job.status ?? "running";
+        const pct    = typeof job.progress === "number" ? job.progress : 0;
+        const msg    = job.message ?? job.msg ?? "Processing...";
+
+        onProgress(pct, msg);
+
+        if (status === "done" || status === "complete" || status === "success") {
+          es.close();
+          _activeSSE = null;
+          activeJobId = null;
+          onComplete(job.result ?? job);
+          _fireCompletionHooks();
+        } else if (status === "error" || status === "failed" || status === "cancelled") {
+          es.close();
+          _activeSSE = null;
+          activeJobId = null;
+          onError(job.error ?? job.message ?? "Job failed");
+          _fireCompletionHooks();
+        }
+      } catch (_) { /* ignore parse errors in SSE stream */ }
+    };
+
+    es.onerror = () => {
+      if (!_activeSSE) return;
+      es.close();
+      _activeSSE = null;
+      // Fallback to polling on SSE failure
+      pollJob(jobId, onProgress, onComplete, onError);
+    };
   }
 
   async function pollJob(jobId, onProgress, onComplete, onError) {
@@ -488,6 +546,8 @@ const JobPoller = (() => {
 
   async function cancel() {
     if (!activeJobId) return;
+    // Close SSE stream first to prevent stale events after cancel
+    if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
     await BackendClient.post(`/cancel/${activeJobId}`, {});
     activeJobId = null;
     _fireCompletionHooks();
@@ -537,7 +597,11 @@ const UIController = (() => {
 
   function setProgress(pct) {
     const fill = document.getElementById("progressFill");
-    if (fill) fill.style.width = `${Math.min(100, Math.max(0, pct))}%`;
+    if (fill) {
+      const clamped = Math.min(100, Math.max(0, pct));
+      fill.style.width = `${clamped}%`;
+      fill.setAttribute("aria-valuenow", String(Math.round(clamped)));
+    }
   }
 
   function startElapsedTimer() {
@@ -1731,6 +1795,13 @@ async function checkConnection() {
   const alive = r.ok;
   if (alive && r.data?.csrf_token) csrfToken = r.data.csrf_token;
   UIController.setConnection(alive ? "connected" : "disconnected");
+
+  // Visual indicator: toggle a class on the status bar so CSS can style it
+  const statusBar = document.getElementById("statusBar");
+  if (statusBar) {
+    statusBar.classList.toggle("backend-down", !alive);
+  }
+
   if (alive) {
     UIController.setStatus("Server online");
     UIController.setStatusRight(`v${VERSION}`);
@@ -1740,7 +1811,8 @@ async function checkConnection() {
   }
 
   // Toggle all action buttons based on connection state
-  if (_lastConnectionState !== alive) {
+  const wasAlive = _lastConnectionState;
+  if (wasAlive !== alive) {
     _lastConnectionState = alive;
     document.querySelectorAll(".oc-btn-primary").forEach(btn => {
       // Don't override buttons already disabled for other reasons (loading state)
@@ -1749,12 +1821,122 @@ async function checkConnection() {
       }
     });
     // Show reconnection toast when server comes back
-    if (alive && _lastConnectionState === false) {
+    if (alive && wasAlive === false) {
       UIController.showToast("Server reconnected.", "success");
     }
   }
 
   return alive;
+}
+
+// ─────────────────────────────────────────────────────────────
+// Keyboard Shortcuts
+// ─────────────────────────────────────────────────────────────
+const SHORTCUT_DEFS = {
+  "silence-detect":    { keys: "Ctrl+Shift+S", label: "Detect Silence" },
+  "caption-generate":  { keys: "Ctrl+Shift+C", label: "Generate Captions" },
+  "audio-normalize":   { keys: "Ctrl+Shift+N", label: "Normalize Audio" },
+  "audio-denoise":     { keys: "Ctrl+Shift+D", label: "Denoise Audio" },
+  "export-video":      { keys: "Ctrl+Shift+E", label: "Export Video" },
+  "cancel-job":        { keys: "Escape",        label: "Cancel Current Job" },
+};
+
+const _shortcutActions = {
+  "silence-detect":   () => { const b = document.getElementById("runSilenceBtn"); if (b && !b.disabled) b.click(); },
+  "caption-generate": () => { const b = document.getElementById("runTranscribeBtn"); if (b && !b.disabled) b.click(); },
+  "audio-normalize":  () => { const b = document.getElementById("runNormalizeBtn"); if (b && !b.disabled) b.click(); },
+  "audio-denoise":    () => { const b = document.getElementById("runDenoiseBtn"); if (b && !b.disabled) b.click(); },
+  "export-video":     () => { const b = document.getElementById("runBatchExportBtn"); if (b && !b.disabled) b.click(); },
+  "cancel-job":       () => { if (activeJobId) JobPoller.cancel().then(() => {
+    UIController.hideProcessing();
+    UIController.showToast("Job cancelled.", "warning");
+  }); },
+};
+
+/**
+ * Match a keyboard event against a shortcut string like "Ctrl+Shift+S" or "Escape".
+ */
+function matchesShortcut(e, keysStr) {
+  const parts = keysStr.split("+");
+  let needCtrl = false, needShift = false, needAlt = false, needMeta = false;
+  let keyPart = "";
+  for (const p of parts) {
+    const lp = p.trim().toLowerCase();
+    if (lp === "ctrl")               needCtrl  = true;
+    else if (lp === "shift")         needShift = true;
+    else if (lp === "alt")           needAlt   = true;
+    else if (lp === "meta" || lp === "cmd") needMeta  = true;
+    else                             keyPart   = lp;
+  }
+  if (e.ctrlKey !== needCtrl)  return false;
+  if (e.shiftKey !== needShift) return false;
+  if (e.altKey !== needAlt)    return false;
+  if (e.metaKey !== needMeta)  return false;
+  const eventKey = e.key.toLowerCase();
+  if (keyPart === "escape") return eventKey === "escape";
+  return eventKey === keyPart;
+}
+
+function initKeyboardShortcuts() {
+  document.addEventListener("keydown", (e) => {
+    // Escape / cancel-job always works, even inside inputs
+    if (!e.defaultPrevented && matchesShortcut(e, SHORTCUT_DEFS["cancel-job"].keys) && activeJobId) {
+      _shortcutActions["cancel-job"]();
+      return;
+    }
+
+    // Don't fire other shortcuts when typing in inputs
+    const tag = e.target.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT" || e.target.isContentEditable) return;
+
+    for (const id of Object.keys(SHORTCUT_DEFS)) {
+      if (id === "cancel-job") continue;
+      if (matchesShortcut(e, SHORTCUT_DEFS[id].keys)) {
+        e.preventDefault();
+        if (_shortcutActions[id]) _shortcutActions[id]();
+        return;
+      }
+    }
+
+    // Enter to activate the primary button on the visible tab
+    if (e.key === "Enter" && !activeJobId) {
+      const activePanel = document.querySelector(".oc-tab-panel.active");
+      if (!activePanel) return;
+      const primaryBtn = activePanel.querySelector(".oc-btn-primary:not([disabled])");
+      if (primaryBtn) {
+        e.preventDefault();
+        primaryBtn.click();
+      }
+    }
+
+    // Number keys 1-8 to switch tabs (only when focus is on body)
+    if (e.key >= "1" && e.key <= "8" && !e.ctrlKey && !e.altKey && !e.metaKey && !e.shiftKey
+        && e.target === document.body) {
+      const tabBtns = document.querySelectorAll(".oc-tab");
+      const idx = parseInt(e.key) - 1;
+      if (tabBtns[idx]) {
+        e.preventDefault();
+        tabBtns[idx].click();
+      }
+    }
+  });
+}
+
+// ─────────────────────────────────────────────────────────────
+// Periodic media scan — notify backend to re-scan active timeline media
+// ─────────────────────────────────────────────────────────────
+function startMediaScanInterval() {
+  if (_mediaScanTimer) clearInterval(_mediaScanTimer);
+  _mediaScanTimer = setInterval(async () => {
+    if (activeJobId) return; // skip during active jobs
+    try {
+      await BackendClient.get("/project/media");
+    } catch (_) { /* ignore scan failures */ }
+  }, MEDIA_SCAN_MS);
+}
+
+function stopMediaScanInterval() {
+  if (_mediaScanTimer) { clearInterval(_mediaScanTimer); _mediaScanTimer = null; }
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -2129,7 +2311,10 @@ function uxpWsConnect() {
         const message = msg.message || "";
         const fill = document.getElementById("progressFill");
         const msgEl = document.getElementById("processingMsg");
-        if (fill) fill.style.width = `${pct}%`;
+        if (fill) {
+          fill.style.width = `${pct}%`;
+          fill.setAttribute("aria-valuenow", String(Math.round(pct)));
+        }
         if (msgEl && message) msgEl.textContent = message;
       }
     } catch (e) { /* ignore */ }
@@ -2281,10 +2466,12 @@ async function initApp() {
   UIController.initCollapsibles();
   bindSliders();
   bindEvents();
+  initKeyboardShortcuts();
 
   // Initial connection check
   const alive = await checkConnection();
   if (alive) {
+    _healthBackoff = HEALTH_CHECK_MS; // reset backoff on initial success
     await BackendClient.fetchCsrf();
     await loadLlmSettings();
     UIController.showToast("OpenCut backend connected.", "success");
@@ -2294,6 +2481,9 @@ async function initApp() {
 
     // Scan project media so clip path inputs have autocomplete
     await scanProjectClips();
+
+    // Start periodic backend media scan
+    startMediaScanInterval();
 
     // One-time update check
     const ur = await BackendClient.get("/system/update-check");
@@ -2321,15 +2511,33 @@ async function initApp() {
     if (!document.hidden) scanProjectClips();
   });
 
-  // Periodic health checks — schedule next check only after current one completes
-  // to prevent overlapping async calls when backend is slow/down
+  // Periodic health checks with exponential backoff on failure.
+  // Schedule next check only after current one completes to prevent
+  // overlapping async calls when backend is slow/down.
   function scheduleHealthCheck() {
     setTimeout(async () => {
-      await checkConnection();
+      const ok = await checkConnection();
+      if (ok) {
+        // Reset backoff on success
+        if (_healthBackoff !== HEALTH_CHECK_MS) {
+          _healthBackoff = HEALTH_CHECK_MS;
+          startMediaScanInterval(); // resume media scans on reconnect
+        }
+      } else {
+        // Exponential backoff: double interval on failure, cap at HEALTH_MAX_MS
+        _healthBackoff = Math.min(_healthBackoff * 2, HEALTH_MAX_MS);
+        stopMediaScanInterval(); // pause media scans while disconnected
+      }
       scheduleHealthCheck();
-    }, HEALTH_CHECK_MS);
+    }, _healthBackoff);
   }
   scheduleHealthCheck();
+
+  // Clean up SSE connections on panel close/navigation
+  window.addEventListener("beforeunload", () => {
+    if (_activeSSE) { _activeSSE.close(); _activeSSE = null; }
+    stopMediaScanInterval();
+  });
 
   console.log("[OpenCut UXP] Ready.");
 }

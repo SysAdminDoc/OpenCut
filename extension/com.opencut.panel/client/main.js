@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.2
+   OpenCut CEP Panel - Main Controller v1.9.4
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -38,6 +38,17 @@
     var transcriptData = null; // stored transcript for editing/export
     var lastJobEndpoint = "";  // for retry
     var lastJobPayload = null; // for retry
+
+    // ---- Centralized Timer Cleanup ----
+    function cleanupTimers() {
+        if (healthTimer) { clearInterval(healthTimer); healthTimer = null; }
+        if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
+        if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
+        if (mediaScanTimer) { clearInterval(mediaScanTimer); mediaScanTimer = null; }
+        if (_statusTimer) { clearInterval(_statusTimer); _statusTimer = null; }
+        if (_scanDebounceTimer) { clearTimeout(_scanDebounceTimer); _scanDebounceTimer = null; }
+    }
 
     // ---- Style Preview CSS Map (loaded from backend) ----
     var stylePreviewMap = {};
@@ -1210,9 +1221,10 @@
                 if (el.serverStatusMsg) el.serverStatusMsg.textContent = "Server disconnected. Reconnecting...";
             }
             connected = false;
+            // Clean up all active timers on disconnect
+            cleanupTimers();
             // Exponential backoff: double interval on failure, cap at 60s
             healthBackoff = Math.min(healthBackoff * 2, HEALTH_MAX_MS);
-            clearInterval(healthTimer);
             healthTimer = setInterval(checkHealth, healthBackoff);
             if (!portScanPending) { portScanPending = true; scanForServer(); }
         }, 10000);
@@ -1785,6 +1797,8 @@
     // ================================================================
     var workflowQueue = [];
     var workflowActive = false;
+    var jobStepCurrent = 0;
+    var jobStepTotal = 0;
 
     function runWorkflow(steps) {
         // steps: [{endpoint, payload, label}, ...]
@@ -1848,12 +1862,14 @@
         el.processingBanner.classList.remove("hidden");
         el.processingMsg.textContent = stepPrefix + "Starting...";
         el.processingFill.style.width = "0%";
+        el.processingFill.setAttribute("aria-valuenow", "0");
         el.processingElapsed.textContent = "0s";
 
         // Show inline progress section too
         el.progressSection.classList.remove("hidden");
         el.resultsSection.classList.add("hidden");
         el.progressBar.style.width = "0%";
+        el.progressBar.setAttribute("aria-valuenow", "0");
         el.progressLabel.textContent = stepPrefix + "Starting...";
         el.cancelBtn.classList.remove("hidden");
 
@@ -1878,13 +1894,17 @@
 
         try {
             api("POST", endpoint, payload, function (err, data) {
-                jobStarting = false;
                 if (err || !data || data.error) {
+                    jobStarting = false;
                     showAlert(data ? data.error : "Failed to start job", data);
                     hideProgress();
                     return;
                 }
+                // Set currentJob BEFORE clearing jobStarting to prevent
+                // double-click race where a second job could start between
+                // jobStarting=false and currentJob assignment.
                 currentJob = data.job_id;
+                jobStarting = false;
 
                 if (SSE_OK) {
                     trackJobSSE(data.job_id);
@@ -1948,9 +1968,11 @@
             msg = "Step " + jobStepCurrent + "/" + jobStepTotal + ": " + msg;
         }
         el.progressBar.style.width = pct;
+        el.progressBar.setAttribute("aria-valuenow", String(job.progress || 0));
         el.progressLabel.textContent = msg;
         // Sync to persistent banner
         el.processingFill.style.width = pct;
+        el.processingFill.setAttribute("aria-valuenow", String(job.progress || 0));
         el.processingMsg.textContent = msg;
     }
 
@@ -3094,8 +3116,6 @@
     var pendingBurnin = false;
     var pendingAnimCap = false;
     var pendingTranslate = false;
-    var jobStepCurrent = 0;
-    var jobStepTotal = 0;
 
     function runTranslate() {
         if (lastTranscriptSegments) {
@@ -5609,7 +5629,9 @@
     }
 
     function saveFavorites() {
-        api("POST", "/favorites/save", { favorites: _favorites }, function () {});
+        api("POST", "/favorites/save", { favorites: _favorites }, function (err) {
+            if (err) console.warn("API call failed:", err);
+        });
     }
 
     // ================================================================
@@ -6814,7 +6836,9 @@
         var lufs = parseFloat((document.getElementById("defaultLufs") || {}).value || -14);
         var zoom = parseFloat((document.getElementById("defaultZoom") || {}).value || 1.15);
         var easing = (document.getElementById("defaultZoomEasing") || {}).value || "ease_in_out";
-        api("POST", "/settings/loudness-target", { target_lufs: lufs }, function () {});
+        api("POST", "/settings/loudness-target", { target_lufs: lufs }, function (err) {
+            if (err) console.warn("API call failed:", err);
+        });
         api("POST", "/settings/auto-zoom", { zoom_amount: zoom, easing: easing }, function (err) {
             if (err) showToast("Failed to save defaults", "error");
             else showToast("Defaults saved", "success");
@@ -8288,7 +8312,7 @@
         var defaultZoomValEl = $("defaultZoomVal");
         if (defaultZoomSlider && defaultZoomValEl) {
             defaultZoomSlider.addEventListener("input", function () {
-                defaultZoomValEl.innerHTML = parseFloat(this.value).toFixed(2) + "&times;";
+                defaultZoomValEl.innerHTML = safeFixed(this.value, 2) + "&times;";
             });
         }
 
@@ -8488,30 +8512,7 @@
                 activeStream.close();
                 activeStream = null;
             }
-            if (healthTimer) {
-                clearInterval(healthTimer);
-                healthTimer = null;
-            }
-            if (pollTimer) {
-                clearInterval(pollTimer);
-                pollTimer = null;
-            }
-            if (elapsedTimer) {
-                clearInterval(elapsedTimer);
-                elapsedTimer = null;
-            }
-            if (batchPollTimer) {
-                clearInterval(batchPollTimer);
-                batchPollTimer = null;
-            }
-            if (mediaScanTimer) {
-                clearInterval(mediaScanTimer);
-                mediaScanTimer = null;
-            }
-            if (_statusTimer) {
-                clearInterval(_statusTimer);
-                _statusTimer = null;
-            }
+            cleanupTimers();
         });
     });
 

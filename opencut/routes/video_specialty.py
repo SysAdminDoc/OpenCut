@@ -66,7 +66,7 @@ def remove_watermark_route(job_id, filepath, data):
     if not region:
         raise ValueError("No region specified")
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(fp, data.get("output_dir", ""))
     if method == "lama":
@@ -106,7 +106,7 @@ def title_render(job_id, filepath, data):
 
     from opencut.core.motion_graphics import render_title_card
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = data.get("output_dir", "")
     if d:
@@ -148,11 +148,11 @@ def title_overlay(job_id, filepath, data):
 
     from opencut.core.motion_graphics import overlay_title
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(fp, data.get("output_dir", ""))
     _title_preset2 = data.get("preset", "fade_center")
-    if _title_preset2 not in ("fade_center", "slide_left", "typewriter"):
+    if _title_preset2 not in ("fade_center", "slide_left", "typewriter", "lower_third", "countdown", "kinetic_bounce"):
         _title_preset2 = "fade_center"
     out = overlay_title(fp, text, output_dir=d,
                          preset=_title_preset2,
@@ -230,12 +230,12 @@ def video_shorts_pipeline(job_id, filepath, data):
                     "title": c.title,
                     "score": round(c.score, 3) if c.score else 0,
                     "engagement": {
-                        "hook_strength": c.engagement.hook_strength if hasattr(c, "engagement") and c.engagement else 0,
-                        "emotional_peak": c.engagement.emotional_peak if hasattr(c, "engagement") and c.engagement else 0,
-                        "pacing": c.engagement.pacing if hasattr(c, "engagement") and c.engagement else 0,
-                        "quotability": c.engagement.quotability if hasattr(c, "engagement") and c.engagement else 0,
-                        "overall": c.engagement.overall if hasattr(c, "engagement") and c.engagement else 0,
-                    } if hasattr(c, "engagement") and c.engagement else None,
+                        "hook_strength": getattr(c.engagement, "hook_strength", 0),
+                        "emotional_peak": getattr(c.engagement, "emotional_peak", 0),
+                        "pacing": getattr(c.engagement, "pacing", 0),
+                        "quotability": getattr(c.engagement, "quotability", 0),
+                        "overall": getattr(c.engagement, "overall", 0),
+                    } if getattr(c, "engagement", None) else None,
                 }
                 for c in clips
             ],
@@ -376,7 +376,7 @@ def video_broll_plan(job_id, filepath, data):
         segments = transcript.get("segments", [])
 
     if not segments:
-        return {"windows": [], "total_windows": 0}
+        return {"windows": [], "total_windows": 0, "total_broll_time": 0, "keywords_used": []}
 
     _update_job(job_id, progress=60, message=f"Analyzing {len(segments)} segments for B-roll opportunities...")
 
@@ -389,22 +389,25 @@ def video_broll_plan(job_id, filepath, data):
         max_results=max_results,
     )
 
+    if plan is None:
+        return {"windows": [], "total_windows": 0, "total_broll_time": 0, "keywords_used": []}
+
     return {
             "windows": [
                 {
-                    "start": w.start,
-                    "end": w.end,
-                    "duration": w.duration,
-                    "reason": w.reason,
-                    "keywords": w.keywords,
-                    "score": w.score,
-                    "context": w.context,
+                    "start": getattr(w, "start", 0),
+                    "end": getattr(w, "end", 0),
+                    "duration": getattr(w, "duration", 0),
+                    "reason": getattr(w, "reason", ""),
+                    "keywords": getattr(w, "keywords", []),
+                    "score": getattr(w, "score", 0),
+                    "context": getattr(w, "context", ""),
                 }
-                for w in plan.windows
+                for w in getattr(plan, "windows", [])
             ],
-            "total_windows": plan.total_windows,
-            "total_broll_time": plan.total_broll_time,
-            "keywords_used": plan.keywords_used,
+            "total_windows": getattr(plan, "total_windows", 0),
+            "total_broll_time": getattr(plan, "total_broll_time", 0),
+            "keywords_used": getattr(plan, "keywords_used", []),
         }
 
 
