@@ -355,6 +355,45 @@ def job_history():
     return jsonify(results)
 
 
+@jobs_bp.route("/jobs/stream-result/<job_id>", methods=["GET"])
+def stream_job_result(job_id):
+    """Stream a completed job's result as NDJSON.
+
+    Useful for large results (caption segments, scene lists, thumbnails)
+    that would be too large for a single JSON response.
+
+    The job must be complete. Returns 404 if not found, 409 if still running.
+    """
+    safe = _get_job_copy(job_id)
+    if not safe:
+        return jsonify({"error": "Job not found"}), 404
+
+    if safe.get("status") != "complete":
+        return jsonify({"error": "Job not yet complete", "status": safe.get("status")}), 409
+
+    result = safe.get("result", {})
+    if not result:
+        return jsonify({"error": "Job has no result data"}), 404
+
+    # Find the streamable array in the result
+    stream_data = None
+    for key in ("segments", "scenes", "thumbnails", "cuts", "results",
+                "items", "chapters", "speakers", "keyframes"):
+        if key in result and isinstance(result[key], list):
+            stream_data = result[key]
+            break
+
+    if stream_data is None:
+        return jsonify(result)
+
+    try:
+        from opencut.core.streaming import make_ndjson_response, ndjson_generator
+        gen = ndjson_generator(stream_data, chunk_size=50)
+        return make_ndjson_response(gen, Response)
+    except ImportError:
+        return jsonify(result)
+
+
 @jobs_bp.route("/jobs/stats", methods=["GET"])
 def job_stats():
     """Return aggregate job statistics."""

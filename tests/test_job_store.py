@@ -2,8 +2,6 @@
 Tests for OpenCut Job Store (SQLite persistence).
 """
 
-import os
-import tempfile
 import time
 from unittest.mock import patch
 

@@ -12,8 +12,9 @@ import time
 from flask import Blueprint, jsonify, request, send_file
 
 from opencut import __version__
+from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, compute_estimate
-from opencut.security import require_csrf, safe_float
+from opencut.security import require_csrf, safe_float, safe_int
 from opencut.user_data import (
     load_favorites,
     load_presets,
@@ -186,7 +187,20 @@ def import_settings():
         imported.append("favorites")
     if "workflows" in data and isinstance(data["workflows"], list):
         wfs = data["workflows"][:100]  # Cap at 100 workflows
-        save_workflows(wfs)
+        # Validate workflow steps before importing
+        valid_wfs = []
+        for wf in wfs:
+            if not isinstance(wf, dict):
+                continue
+            if not wf.get("name"):
+                continue
+            steps = wf.get("steps", [])
+            if isinstance(steps, list) and all(
+                isinstance(s, dict) and s.get("endpoint") and s.get("label")
+                for s in steps
+            ):
+                valid_wfs.append(wf)
+        save_workflows(valid_wfs)
         imported.append("workflows")
     return jsonify({"success": True, "imported": imported})
 
@@ -260,7 +274,7 @@ def clear_logs():
             os.unlink(crash_log)
         return jsonify({"success": True})
     except OSError as e:
-        return jsonify({"error": str(e)}), 500
+        return safe_error(e, "clear_logs")
 
 
 # ---------------------------------------------------------------------------

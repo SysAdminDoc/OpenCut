@@ -363,7 +363,7 @@ def _run_auto_edit(input_path, method, threshold, margin, min_clip_length,
         "--output", json_output,
     ]
 
-    logger.info("Running auto-editor: %s", " ".join(cmd))
+    logger.debug("Running auto-editor: %s", " ".join(cmd))
 
     # Scale timeout: base 120s + 5x duration (long videos need time)
     timeout = max(120, int(total_duration * 5) + 120) if total_duration > 0 else 1800

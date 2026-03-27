@@ -9,9 +9,8 @@ import time
 
 from flask import Blueprint, current_app, jsonify, request
 
-from opencut.helpers import OPENCUT_DIR
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, validate_filepath
+from opencut.security import require_csrf
 from opencut.user_data import load_workflows, save_workflows
 
 logger = logging.getLogger("opencut")

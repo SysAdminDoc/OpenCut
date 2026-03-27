@@ -16,7 +16,7 @@
           <path d="M4 2.5a3 3 0 00-1.76 5.43L7.33 11l-5.09 3.07A3 3 0 104.8 19.5a3 3 0 001.76-5.43L8.93 12.6 16.5 17V5L8.93 9.4 6.56 7.93A3 3 0 004 2.5z" fill="var(--accent)"/>
         </svg>
         <span class="oc-logo">OpenCut</span>
-        <span class="oc-version">v1.9.0</span>
+        <span class="oc-version">v1.9.2</span>
       </div>
       <div class="oc-header-right">
         <div class="oc-connection" id="connectionStatus" title="Backend connection status">
@@ -71,6 +71,10 @@
       <button class="oc-tab" data-tab="deliverables" role="tab" aria-selected="false" aria-controls="tab-deliverables">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M9.293.879A1 1 0 0110 1.586V4h2.5A1.5 1.5 0 0114 5.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 14.5v-13A1.5 1.5 0 013.5 0H9a1 1 0 01.293.293L9.293.879zM9 1.586L3.5 1a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h9a.5.5 0 00.5-.5v-9H10a1 1 0 01-1-1V1.586zM5 7.5a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0 2.5a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5A.5.5 0 015 10zm0 2.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z"/></svg>
         <span>Deliverables</span>
+      </button>
+      <button class="oc-tab" data-tab="settings" role="tab" aria-selected="false" aria-controls="tab-settings">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 001.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.084.303a.96.96 0 001.187 1.187l.303-.084c.961-.275 1.65.918.931 1.613l-.211.205a.96.96 0 00.434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 00-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.303-.084a.96.96 0 00-1.187 1.187l.084.303c.275.961-.918 1.65-1.613.931l-.205-.211a.96.96 0 00-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 00-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.084-.303a.96.96 0 00-1.187-1.187l-.303.084c-.961.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 00-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071A.96.96 0 001.39 4.22l-.211-.205c-.719-.695-.03-1.888.931-1.613l.303.084a.96.96 0 001.187-1.187l-.084-.303C3.241.035 4.434-.654 5.13.065l.205.211A.96.96 0 006.997.71l.071-.286zM8 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
+        <span>Settings</span>
       </button>
     </nav>
 
@@ -471,6 +475,161 @@
             <button class="oc-btn oc-btn-primary oc-btn-full" id="runMulticamBtn">Generate Multicam Cuts</button>
           </div>
         </div>
+
+        <div class="oc-section-title">Multimodal Diarization</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="mmDiarizeBody">
+            <span>Audio + Face Speaker Mapping</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="mmDiarizeBody">
+            <div class="oc-field-row">
+              <label for="mmDiarizeNumSpeakersUxp">Speakers</label>
+              <select id="mmDiarizeNumSpeakersUxp" class="oc-select" aria-label="Number of speakers">
+                <option value="" selected>Auto</option>
+                <option value="2">2</option>
+                <option value="3">3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runMmDiarizeBtnUxp">Run Multimodal Diarize</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">AI B-Roll Generation</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="brollGenBody">
+            <span>Generate B-Roll from Text</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="brollGenBody">
+            <div class="oc-field-row">
+              <label for="brollGenPromptUxp">Description</label>
+              <textarea id="brollGenPromptUxp" class="oc-textarea" rows="2" placeholder="e.g. aerial cityscape at sunset" aria-label="B-roll description"></textarea>
+            </div>
+            <div class="oc-field-row">
+              <label for="brollGenBackendUxp">Backend</label>
+              <select id="brollGenBackendUxp" class="oc-select" aria-label="Video generation backend">
+                <option value="auto" selected>Auto</option>
+                <option value="cogvideox">CogVideoX</option>
+                <option value="wan">Wan 2.2</option>
+                <option value="hunyuan">HunyuanVideo</option>
+                <option value="svd">SVD</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label for="brollGenSeedUxp">Seed</label>
+              <input type="number" id="brollGenSeedUxp" class="oc-input" placeholder="Random" min="0" aria-label="Random seed">
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runBrollGenBtnUxp">Generate B-Roll</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Depth Effects</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="depthBody">
+            <span>Depth Map / Bokeh / Parallax</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="depthBody">
+            <div class="oc-field-row">
+              <label for="depthEffectUxp">Effect</label>
+              <select id="depthEffectUxp" class="oc-select">
+                <option value="depth_map" selected>Depth Map</option>
+                <option value="bokeh">Bokeh (Depth-of-Field)</option>
+                <option value="parallax">Parallax Zoom</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label for="depthModelSizeUxp">Model</label>
+              <select id="depthModelSizeUxp" class="oc-select">
+                <option value="small" selected>Small (fast)</option>
+                <option value="base">Base</option>
+                <option value="large">Large (best)</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runDepthBtnUxp">Apply Depth Effect</button>
+            <div class="oc-hint" id="depthHintUxp" style="display:none;">Depth Anything V2 not installed. <button class="oc-btn oc-btn-sm" id="installDepthBtnUxp">Install</button></div>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Emotion Highlights</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="emotionBody">
+            <span>Emotion-Based Highlight Detection</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="emotionBody">
+            <p class="oc-hint">Detect emotional peaks in video (happy, surprise, etc.) for automatic highlight extraction.</p>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runEmotionBtnUxp">Detect Emotion Peaks</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">B-Roll Analysis</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="brollPlanBody">
+            <span>Find B-Roll Insertion Points</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="brollPlanBody">
+            <p class="oc-hint">Analyze transcript to find natural B-roll insertion windows and keywords.</p>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="runBrollPlanBtnUxp">Analyze B-Roll Points</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Chat Editor</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="chatEditorBody">
+            <span>AI Editing Assistant</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="chatEditorBody">
+            <div class="oc-chat-area" id="chatHistory" style="max-height:200px;overflow-y:auto;margin-bottom:8px;">
+              <p class="oc-hint">Chat with OpenCut's AI to edit your video using natural language.</p>
+            </div>
+            <div class="oc-field-row">
+              <input type="text" id="chatInputUxp" class="oc-input" placeholder='e.g. "Remove all silences and normalize audio"' aria-label="Chat message">
+              <button class="oc-btn oc-btn-primary" id="chatSendBtnUxp">Send</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Social Media Upload</div>
+        <div class="oc-card">
+          <div class="oc-card-header collapsible" data-target="socialBody">
+            <span>Post to Social Media</span>
+            <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
+          </div>
+          <div class="oc-card-body" id="socialBody">
+            <div class="oc-field-row">
+              <label for="socialPlatformUxp">Platform</label>
+              <select id="socialPlatformUxp" class="oc-select" aria-label="Social media platform">
+                <option value="youtube" selected>YouTube</option>
+                <option value="tiktok">TikTok</option>
+                <option value="instagram">Instagram Reels</option>
+              </select>
+            </div>
+            <div class="oc-field-row">
+              <label for="socialTitleUxp">Title</label>
+              <input type="text" id="socialTitleUxp" class="oc-input" maxlength="100" placeholder="Video title" aria-label="Video title">
+            </div>
+            <div class="oc-field-row">
+              <label for="socialDescriptionUxp">Description</label>
+              <textarea id="socialDescriptionUxp" class="oc-textarea" rows="2" maxlength="2200" placeholder="Caption" aria-label="Description"></textarea>
+            </div>
+            <div class="oc-field-row">
+              <label for="socialPrivacyUxp">Privacy</label>
+              <select id="socialPrivacyUxp" class="oc-select" aria-label="Privacy level">
+                <option value="private" selected>Private</option>
+                <option value="unlisted">Unlisted</option>
+                <option value="public">Public</option>
+              </select>
+            </div>
+            <button class="oc-btn oc-btn-secondary oc-btn-full" id="socialConnectBtnUxp">Connect Account</button>
+            <button class="oc-btn oc-btn-primary oc-btn-full" id="socialUploadBtnUxp">Upload</button>
+          </div>
+        </div>
       </div>
 
       <!-- ==================== TIMELINE TAB ==================== -->
@@ -786,6 +945,49 @@
               </select>
             </div>
             <button class="oc-btn oc-btn-primary oc-btn-full" id="runFullReportBtn">Generate Full Report</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ==================== SETTINGS TAB ==================== -->
+      <div class="oc-tab-panel" id="tab-settings" role="tabpanel">
+
+        <div class="oc-section-title">AI Engine Preferences</div>
+        <div class="oc-card">
+          <p class="oc-hint">Select preferred AI backend per feature domain.</p>
+          <div id="uxpEngineGrid" class="oc-engine-grid">
+            <p class="oc-hint">Loading engines...</p>
+          </div>
+          <button class="oc-btn oc-btn-secondary" id="uxpRefreshEnginesBtn">Refresh Engines</button>
+        </div>
+
+        <div class="oc-section-title">WebSocket Bridge</div>
+        <div class="oc-card">
+          <p class="oc-hint">Real-time progress streaming. No polling needed.</p>
+          <div class="oc-field-row">
+            <span class="oc-label">Status</span>
+            <span id="uxpWsStatus">Unknown</span>
+          </div>
+          <div class="oc-field-row">
+            <span class="oc-label">Clients</span>
+            <span id="uxpWsClients">0</span>
+          </div>
+          <div class="oc-btn-row">
+            <button class="oc-btn oc-btn-secondary" id="uxpWsStartBtn">Start Bridge</button>
+            <button class="oc-btn oc-btn-secondary" id="uxpWsStopBtn">Stop Bridge</button>
+            <button class="oc-btn oc-btn-primary" id="uxpWsConnectBtn">Connect Panel</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">About</div>
+        <div class="oc-card">
+          <div class="oc-field-row">
+            <span class="oc-label">Version</span>
+            <span>1.9.2 (UXP)</span>
+          </div>
+          <div class="oc-field-row">
+            <span class="oc-label">Panel</span>
+            <span>UXP (Premiere Pro 25.6+)</span>
           </div>
         </div>
       </div>

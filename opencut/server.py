@@ -31,6 +31,7 @@ logger.setLevel(logging.DEBUG)
 # Job-ID correlation filter — injects job_id into every log record
 # Inline to avoid circular import with opencut.jobs
 import threading as _log_threading
+
 _log_thread_local = _log_threading.local()
 
 class _JobLogFilter(logging.Filter):
@@ -41,15 +42,38 @@ class _JobLogFilter(logging.Filter):
 _job_filter = _JobLogFilter()
 logger.addFilter(_job_filter)
 
+# JSON formatter for structured log file (Phase 0.3)
+try:
+    from pythonjsonlogger import jsonlogger
+
+    class _OpenCutJsonFormatter(jsonlogger.JsonFormatter):
+        def add_fields(self, log_record, record, message_dict):
+            super().add_fields(log_record, record, message_dict)
+            log_record["level"] = record.levelname
+            log_record["module"] = record.module
+            log_record["job_id"] = getattr(record, "job_id", "")
+            log_record.pop("levelname", None)
+            log_record.pop("taskName", None)
+
+    _json_formatter = _OpenCutJsonFormatter(
+        "%(asctime)s %(levelname)s %(module)s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S",
+    )
+except ImportError:
+    _json_formatter = None
+
 _file_handler = logging.handlers.RotatingFileHandler(
     LOG_FILE, maxBytes=5 * 1024 * 1024, backupCount=3, encoding="utf-8"
 )
 _file_handler.setLevel(logging.DEBUG)
-_file_handler.setFormatter(logging.Formatter(
-    "%(asctime)s [%(levelname)s] [%(job_id)s] %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-    defaults={"job_id": ""},
-))
+if _json_formatter:
+    _file_handler.setFormatter(_json_formatter)
+else:
+    _file_handler.setFormatter(logging.Formatter(
+        "%(asctime)s [%(levelname)s] [%(job_id)s] %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        defaults={"job_id": ""},
+    ))
 logger.addHandler(_file_handler)
 
 _console_handler = logging.StreamHandler(sys.stdout)
@@ -248,6 +272,17 @@ def handle_internal_error(e):
 from opencut.routes import register_blueprints  # noqa: E402
 
 register_blueprints(app)
+
+# ---------------------------------------------------------------------------
+# Load Plugins
+# ---------------------------------------------------------------------------
+try:
+    from opencut.core.plugins import load_all_plugins
+    plugin_result = load_all_plugins(app)
+    if plugin_result["loaded"]:
+        logger.info("Plugins: %d loaded", len(plugin_result["loaded"]))
+except Exception as e:
+    logger.warning("Plugin loading failed: %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -546,7 +581,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
 
     # Mark any jobs that were running when the server last died as interrupted
     try:
-        from opencut.job_store import mark_interrupted, cleanup_old_jobs
+        from opencut.job_store import cleanup_old_jobs, mark_interrupted
         mark_interrupted()
         cleanup_old_jobs()
     except Exception as e:
@@ -598,7 +633,8 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     atexit.register(shutdown_pool)
 
     print("")
-    print("  OpenCut Backend Server v1.9.0")
+    from opencut import __version__
+    print(f"  OpenCut Backend Server v{__version__}")
     print(f"  Listening on http://{host}:{effective_port}")
     print(f"  PID: {os.getpid()}")
     print(f"  Log file: {LOG_FILE}")

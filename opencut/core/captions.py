@@ -225,9 +225,9 @@ def transcribe(
         )
 
     # Extract audio to WAV for consistent input
-    logger.info(f"Extracting audio from {filepath}")
+    logger.debug(f"Extracting audio from {filepath}")
     wav_path = extract_audio_wav(filepath, sample_rate=16000)
-    logger.info(f"Audio extracted to {wav_path}")
+    logger.debug(f"Audio extracted to {wav_path}")
 
     def _do_transcribe():
         if backend == "whisperx":
@@ -358,7 +358,7 @@ def _download_model(model_name: str):
         logger.info(f"Model '{repo_id}' downloaded successfully.")
     except ImportError:
         # huggingface_hub not available — faster-whisper will download on load
-        logger.info("huggingface_hub not available, relying on faster-whisper auto-download")
+        logger.debug("huggingface_hub not available, relying on faster-whisper auto-download")
     except Exception as e:
         logger.warning(f"Model download via huggingface_hub failed: {e}")
 
@@ -366,7 +366,7 @@ def _download_model(model_name: str):
 def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> TranscriptionResult:
     """Transcribe using faster-whisper (CTranslate2 backend)."""
     from faster_whisper import WhisperModel
-    
+
     # Check for forced CPU mode from settings
     force_cpu = False
     try:
@@ -378,34 +378,34 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 force_cpu = settings.get("cpu_mode", False)
     except Exception:
         pass
-    
+
     # Determine device and compute type
     if force_cpu:
-        logger.info("CPU mode enabled via settings - skipping GPU")
+        logger.debug("CPU mode enabled via settings - skipping GPU")
         device = "cpu"
         compute_type = "int8"
     else:
         # Try to detect best device - GPU with fallback to CPU
         device = "cuda"
         compute_type = "auto"
-        
+
         # Check if CUDA is actually available
         try:
             import torch
             if not torch.cuda.is_available():
-                logger.info("CUDA not available, using CPU")
+                logger.debug("CUDA not available, using CPU")
                 device = "cpu"
                 compute_type = "int8"
         except ImportError:
             # No torch, let faster-whisper decide but be ready to fall back
             pass
-    
+
     # Try to load model with auto-repair on corrupt cache
     model = None
     max_attempts = 3
     for attempt in range(max_attempts):
         try:
-            logger.info(f"Loading Whisper model '{config.model}' on {device} (attempt {attempt + 1}/{max_attempts})")
+            logger.debug(f"Loading Whisper model '{config.model}' on {device} (attempt {attempt + 1}/{max_attempts})")
             model = WhisperModel(config.model, device=device, compute_type=compute_type)
             break
         except RuntimeError as e:
@@ -447,11 +447,11 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                     raise
             else:
                 raise
-    
+
     task = "translate" if config.translate else "transcribe"
-    
+
     logger.info(f"Starting transcription of {wav_path}")
-    
+
     # Also wrap transcription in case CUDA fails mid-process
     try:
         result_segments, info = model.transcribe(
@@ -477,7 +477,7 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
             result_segments = list(result_segments)
         else:
             raise
-    
+
     logger.info(f"Transcription complete: {len(result_segments)} segments")
 
     segments = []
