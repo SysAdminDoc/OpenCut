@@ -7,18 +7,14 @@ Marker-based export, batch rename, smart bins, SRT-to-captions, index status.
 import logging
 import os
 import subprocess as _sp
-import threading
 
 from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import (
-    TooManyJobsError,
     _is_cancelled,
-    _new_job,
     _update_job,
-    job_lock,
-    jobs,
+    async_job,
 )
 from opencut.security import (
     require_csrf,
@@ -41,110 +37,77 @@ _VALID_RULE_FIELDS = {"name", "label", "comment", "media_type", "file_path", "du
 # ---------------------------------------------------------------------------
 @timeline_bp.route("/timeline/export-from-markers", methods=["POST"])
 @require_csrf
-def timeline_export_from_markers():
+@async_job("timeline-export", filepath_required=False)
+def timeline_export_from_markers(job_id, filepath, data):
     """Use FFmpeg to extract clip segments defined by timeline markers."""
-    data = request.get_json(force=True)
     input_file = data.get("input_file", data.get("filepath", "")).strip()
+    if not input_file:
+        raise ValueError("No input_file provided")
+    input_file = validate_filepath(input_file)
+
     markers = data.get("markers", [])
     output_dir = data.get("output_dir", "").strip()
     fmt = data.get("format", "mp4").strip().lower()
 
-    if not input_file:
-        return jsonify({"error": "No input_file provided"}), 400
-
-    try:
-        input_file = validate_filepath(input_file)
-    except ValueError as exc:
-        return jsonify({"error": str(exc)}), 400
-
     if not isinstance(markers, list) or not markers:
-        return jsonify({"error": "No markers provided"}), 400
+        raise ValueError("No markers provided")
 
     if len(markers) > 500:
-        return jsonify({"error": "Too many markers (max 500)"}), 400
+        raise ValueError("Too many markers (max 500)")
 
     if fmt not in {"mp4", "mov", "mkv", "mxf"}:
         fmt = "mp4"
 
     # Resolve output directory
     if output_dir:
-        try:
-            output_dir = validate_path(output_dir)
-        except ValueError as exc:
-            return jsonify({"error": str(exc)}), 400
+        output_dir = validate_path(output_dir)
         os.makedirs(output_dir, exist_ok=True)
     else:
         output_dir = os.path.dirname(input_file)
 
-    try:
-        job_id = _new_job("timeline-export", input_file)
-    except TooManyJobsError as e:
-        return jsonify({"error": str(e)}), 429
+    outputs = []
+    valid_markers = [
+        m for m in markers
+        if isinstance(m, dict) and safe_float(m.get("duration", 0), 0) > 0
+    ]
+    total = len(valid_markers)
+    if total == 0:
+        return {"outputs": [], "count": 0}
 
-    def _process():
+    base_name = os.path.splitext(os.path.basename(input_file))[0]
+
+    for idx, marker in enumerate(valid_markers):
+        if _is_cancelled(job_id):
+            return {"outputs": outputs, "count": len(outputs)}
+
+        pct = int((idx / total) * 90)
+        name = str(marker.get("name", f"marker_{idx}"))[:100]
+        start = safe_float(marker.get("time", 0), 0, min_val=0.0)
+        duration = safe_float(marker.get("duration", 0), 0, min_val=0.0)
+
+        safe_name = "".join(c if c.isalnum() or c in "-_ " else "_" for c in name)
+        out_path = os.path.join(output_dir, f"{base_name}_{safe_name}_{idx}.{fmt}")
+
+        _update_job(job_id, progress=pct, message=f"Extracting marker '{name}' ({idx + 1}/{total})...")
+
+        cmd = [
+            "ffmpeg", "-y",
+            "-i", input_file,
+            "-ss", str(start),
+            "-t", str(duration),
+            "-c", "copy",
+            out_path,
+        ]
         try:
-            outputs = []
-            valid_markers = [
-                m for m in markers
-                if isinstance(m, dict) and safe_float(m.get("duration", 0), 0) > 0
-            ]
-            total = len(valid_markers)
-            if total == 0:
-                _update_job(
-                    job_id, status="complete", progress=100,
-                    message="No markers with duration > 0",
-                    result={"outputs": [], "count": 0},
-                )
-                return
+            result = _sp.run(cmd, capture_output=True, timeout=300)
+            if result.returncode == 0:
+                outputs.append({"marker": name, "path": out_path})
+            else:
+                logger.warning("FFmpeg failed for marker '%s': %s", name, result.stderr.decode(errors="replace")[:200])
+        except Exception as ffmpeg_exc:
+            logger.warning("FFmpeg error for marker '%s': %s", name, ffmpeg_exc)
 
-            base_name = os.path.splitext(os.path.basename(input_file))[0]
-
-            for idx, marker in enumerate(valid_markers):
-                if _is_cancelled(job_id):
-                    return
-
-                pct = int((idx / total) * 90)
-                name = str(marker.get("name", f"marker_{idx}"))[:100]
-                start = safe_float(marker.get("time", 0), 0, min_val=0.0)
-                duration = safe_float(marker.get("duration", 0), 0, min_val=0.0)
-
-                safe_name = "".join(c if c.isalnum() or c in "-_ " else "_" for c in name)
-                out_path = os.path.join(output_dir, f"{base_name}_{safe_name}_{idx}.{fmt}")
-
-                _update_job(job_id, progress=pct, message=f"Extracting marker '{name}' ({idx + 1}/{total})...")
-
-                cmd = [
-                    "ffmpeg", "-y",
-                    "-i", input_file,
-                    "-ss", str(start),
-                    "-t", str(duration),
-                    "-c", "copy",
-                    out_path,
-                ]
-                try:
-                    result = _sp.run(cmd, capture_output=True, timeout=300)
-                    if result.returncode == 0:
-                        outputs.append({"marker": name, "path": out_path})
-                    else:
-                        logger.warning("FFmpeg failed for marker '%s': %s", name, result.stderr.decode(errors="replace")[:200])
-                except Exception as ffmpeg_exc:
-                    logger.warning("FFmpeg error for marker '%s': %s", name, ffmpeg_exc)
-
-            _update_job(
-                job_id, status="complete", progress=100,
-                message=f"Exported {len(outputs)} clips from markers",
-                result={"outputs": outputs, "count": len(outputs)},
-            )
-        except Exception as exc:
-            _update_job(job_id, status="error", error=str(exc), message=f"Error: {exc}")
-            logger.exception("timeline-export error")
-
-    thread = threading.Thread(target=_process, daemon=True)
-    thread.start()
-    with job_lock:
-        if job_id in jobs:
-            jobs[job_id]["_thread"] = thread
-    return jsonify({"job_id": job_id, "status": "running"})
+    return {"outputs": outputs, "count": len(outputs)}
 
 
 # ---------------------------------------------------------------------------

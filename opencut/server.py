@@ -85,17 +85,18 @@ _console_handler.setFormatter(logging.Formatter(
 logger.addHandler(_console_handler)
 
 # ---------------------------------------------------------------------------
-# Bundled Installation Detection
+# Bundled Installation Detection (centralized in opencut.config)
 # ---------------------------------------------------------------------------
-# When running from the standalone installer, these env vars are set by the launcher
-BUNDLED_MODE = os.environ.get("OPENCUT_BUNDLED", "").lower() == "true" or \
-               os.environ.get("WHISPER_MODELS_DIR") is not None
+from opencut.config import OpenCutConfig  # noqa: E402
 
-# Model paths - use bundled paths if available, otherwise default to cache dirs
-WHISPER_MODELS_DIR = os.environ.get("WHISPER_MODELS_DIR", None)
-TORCH_HOME = os.environ.get("TORCH_HOME", None)
-FLORENCE_MODEL_DIR = os.environ.get("OPENCUT_FLORENCE_DIR", None)
-LAMA_MODEL_DIR = os.environ.get("OPENCUT_LAMA_DIR", None)
+_default_config = OpenCutConfig.from_env()
+
+# Backward-compat aliases — existing code may reference these module globals
+BUNDLED_MODE = _default_config.bundled_mode
+WHISPER_MODELS_DIR = _default_config.whisper_models_dir
+TORCH_HOME = _default_config.torch_home
+FLORENCE_MODEL_DIR = _default_config.florence_model_dir
+LAMA_MODEL_DIR = _default_config.lama_model_dir
 
 if BUNDLED_MODE:
     logger.info("Running in bundled mode")
@@ -225,64 +226,73 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
-# Flask App
+# Flask App Factory
 # ---------------------------------------------------------------------------
-app = Flask(__name__)
-app.config['MAX_CONTENT_LENGTH'] = 100 * 1024 * 1024  # 100 MB request size limit
-CORS(app, origins=["null", "file://"])  # CEP panels use null origin; file:// for local dev
+def create_app(config=None):
+    """Create and configure the Flask application.
 
+    Args:
+        config: An ``OpenCutConfig`` instance.  When *None* (the default),
+            the module-level ``_default_config`` built from env vars is used.
 
-from opencut.errors import register_error_handlers  # noqa: E402
+    Returns:
+        Configured Flask app with all blueprints registered.
+    """
+    if config is None:
+        config = _default_config
 
-register_error_handlers(app)
+    _app = Flask(__name__)
+    _app.config["OPENCUT"] = config
+    _app.config["MAX_CONTENT_LENGTH"] = config.max_content_length
+    CORS(_app, origins=config.cors_origins)
 
+    from opencut.errors import register_error_handlers  # noqa: E402
+    register_error_handlers(_app)
 
-@app.errorhandler(413)
-def handle_large_request(e):
-    """Return 413 when request payload exceeds MAX_CONTENT_LENGTH."""
-    return jsonify({"error": "Request too large (max 100 MB)"}), 413
+    @_app.errorhandler(413)
+    def handle_large_request(e):
+        """Return 413 when request payload exceeds MAX_CONTENT_LENGTH."""
+        return jsonify({"error": "Request too large (max 100 MB)"}), 413
 
+    @_app.errorhandler(RuntimeError)
+    def handle_runtime_error(e):
+        """Return 500 for unhandled RuntimeErrors."""
+        logger.exception("Unhandled RuntimeError: %s", e)
+        return jsonify({"error": str(e)}), 500
 
-@app.errorhandler(RuntimeError)
-def handle_runtime_error(e):
-    """Return 500 for unhandled RuntimeErrors."""
-    logger.exception("Unhandled RuntimeError: %s", e)
-    return jsonify({"error": str(e)}), 500
+    @_app.errorhandler(500)
+    def handle_internal_error(e):
+        """Log unhandled 500 errors to crash log for post-mortem debugging."""
+        import traceback as _tb
+        logger.exception("Unhandled 500 error: %s", e)
+        try:
+            _crash_log = os.path.join(LOG_DIR, "crash.log")
+            with open(_crash_log, "a", encoding="utf-8") as _f:
+                _f.write(f"\n--- {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
+                _f.write(f"Endpoint: {request.path} [{request.method}]\n")
+                _tb.print_exc(file=_f)
+        except Exception:
+            pass
+        return jsonify({"error": "An internal error occurred. Check server logs for details."}), 500
 
+    # Register Blueprints (all routes are in opencut/routes/)
+    from opencut.routes import register_blueprints  # noqa: E402
+    register_blueprints(_app)
 
-@app.errorhandler(500)
-def handle_internal_error(e):
-    """Log unhandled 500 errors to crash log for post-mortem debugging."""
-    import traceback as _tb
-    logger.exception("Unhandled 500 error: %s", e)
+    # Load Plugins
     try:
-        _crash_log = os.path.join(LOG_DIR, "crash.log")
-        with open(_crash_log, "a", encoding="utf-8") as _f:
-            _f.write(f"\n--- {time.strftime('%Y-%m-%d %H:%M:%S')} ---\n")
-            _f.write(f"Endpoint: {request.path} [{request.method}]\n")
-            _tb.print_exc(file=_f)
-    except Exception:
-        pass
-    return jsonify({"error": "An internal error occurred. Check server logs for details."}), 500
+        from opencut.core.plugins import load_all_plugins
+        plugin_result = load_all_plugins(_app)
+        if plugin_result["loaded"]:
+            logger.info("Plugins: %d loaded", len(plugin_result["loaded"]))
+    except Exception as e:
+        logger.warning("Plugin loading failed: %s", e)
+
+    return _app
 
 
-# ---------------------------------------------------------------------------
-# Register Blueprints (all routes are in opencut/routes/)
-# ---------------------------------------------------------------------------
-from opencut.routes import register_blueprints  # noqa: E402
-
-register_blueprints(app)
-
-# ---------------------------------------------------------------------------
-# Load Plugins
-# ---------------------------------------------------------------------------
-try:
-    from opencut.core.plugins import load_all_plugins
-    plugin_result = load_all_plugins(app)
-    if plugin_result["loaded"]:
-        logger.info("Plugins: %d loaded", len(plugin_result["loaded"]))
-except Exception as e:
-    logger.warning("Plugin loading failed: %s", e)
+# Backward-compat: module-level singleton used by entry points and tests
+app = create_app()
 
 
 # ---------------------------------------------------------------------------

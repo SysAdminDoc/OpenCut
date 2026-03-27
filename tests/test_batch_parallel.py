@@ -77,7 +77,7 @@ class TestParallelProcessing:
     """Test the process_batch_parallel function."""
 
     @patch("opencut.core.batch_process.get_batch")
-    @patch("opencut.routes.video._execute_batch_item")
+    @patch("opencut.routes.video_core._execute_batch_item")
     def test_all_items_succeed(self, mock_execute, mock_get_batch, tmp_path):
         """All items complete successfully."""
         paths = _make_temp_files(tmp_path, 3)
@@ -95,7 +95,7 @@ class TestParallelProcessing:
         _cleanup_batch(batch_id)
 
     @patch("opencut.core.batch_process.get_batch")
-    @patch("opencut.routes.video._execute_batch_item")
+    @patch("opencut.routes.video_core._execute_batch_item")
     def test_one_item_fails(self, mock_execute, mock_get_batch, tmp_path):
         """One item fails; others still complete (error isolation)."""
         paths = _make_temp_files(tmp_path, 3)
@@ -119,7 +119,7 @@ class TestParallelProcessing:
         _cleanup_batch(batch_id)
 
     @patch("opencut.core.batch_process.get_batch")
-    @patch("opencut.routes.video._execute_batch_item")
+    @patch("opencut.routes.video_core._execute_batch_item")
     def test_callbacks_invoked(self, mock_execute, mock_get_batch, tmp_path):
         """on_item_complete and on_item_error callbacks are called."""
         paths = _make_temp_files(tmp_path, 2)
@@ -152,7 +152,7 @@ class TestParallelProcessing:
         _cleanup_batch(batch_id)
 
     @patch("opencut.core.batch_process.get_batch")
-    @patch("opencut.routes.video._execute_batch_item")
+    @patch("opencut.routes.video_core._execute_batch_item")
     def test_gpu_operation_limited_workers(self, mock_execute, mock_get_batch, tmp_path):
         """GPU operations should use max 2 workers."""
         paths = _make_temp_files(tmp_path, 5)
@@ -183,7 +183,7 @@ class TestParallelProcessing:
         assert max_concurrent[0] <= 2, f"GPU op used {max_concurrent[0]} concurrent threads (expected <= 2)"
         _cleanup_batch(batch_id)
 
-    @patch("opencut.routes.video._execute_batch_item")
+    @patch("opencut.routes.video_core._execute_batch_item")
     def test_skipped_items_preserved(self, mock_execute, tmp_path):
         """Items already marked as 'skipped' should not be processed."""
         real_path = tmp_path / "real.mp4"
@@ -207,7 +207,7 @@ class TestParallelProcessing:
         assert mock_execute.call_count == 1
         _cleanup_batch(batch_id)
 
-    @patch("opencut.routes.video._execute_batch_item")
+    @patch("opencut.routes.video_core._execute_batch_item")
     def test_empty_batch(self, mock_execute):
         """Empty item list returns zero counts."""
         batch_id = "test-empty-01"
@@ -248,7 +248,7 @@ class TestParallelBatchRoute:
             "Content-Type": "application/json",
         }
 
-    @patch("opencut.routes.video._execute_batch_item")
+    @patch("opencut.routes.video_core._execute_batch_item")
     def test_batch_create_parallel_true(self, mock_execute, client, csrf_token, tmp_path):
         """POST /batch/create with parallel=true returns parallel flag."""
         p = tmp_path / "test.mp4"
@@ -272,7 +272,7 @@ class TestParallelBatchRoute:
         assert data["parallel"] is True
         assert "batch_id" in data
 
-    @patch("opencut.routes.video._execute_batch_item")
+    @patch("opencut.routes.video_core._execute_batch_item")
     def test_batch_create_parallel_false(self, mock_execute, client, csrf_token, tmp_path):
         """POST /batch/create with parallel=false uses sequential mode."""
         p = tmp_path / "test.mp4"
@@ -294,7 +294,7 @@ class TestParallelBatchRoute:
         data = resp.get_json()
         assert data["parallel"] is False
 
-    @patch("opencut.routes.video._execute_batch_item")
+    @patch("opencut.routes.video_core._execute_batch_item")
     def test_batch_create_default_parallel(self, mock_execute, client, csrf_token, tmp_path):
         """POST /batch/create without parallel flag defaults to True."""
         p = tmp_path / "test.mp4"

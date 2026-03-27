@@ -50,6 +50,9 @@ jobs:
           pip install pytest-cov
           python -m pytest tests/ -v --tb=short --cov=opencut --cov-report=term-missing --cov-fail-under=50
 
+      - name: Check version sync
+        run: python scripts/sync_version.py --check
+
       - name: Smoke test imports
         run: |
           python -c "from opencut.server import app; print('Import OK')"

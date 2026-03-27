@@ -5,7 +5,7 @@
   },
   "projects": {
     "C:\\Users\\--\\repos\\OpenCut\\installer\\src\\OpenCut.Installer\\OpenCut.Installer.csproj": {
-      "version": "1.9.0",
+      "version": "1.9.3",
       "restore": {
         "projectUniqueName": "C:\\Users\\--\\repos\\OpenCut\\installer\\src\\OpenCut.Installer\\OpenCut.Installer.csproj",
         "projectName": "OpenCut-Setup",
