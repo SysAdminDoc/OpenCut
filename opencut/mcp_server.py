@@ -6,11 +6,13 @@ allowing AI clients (Claude Code, Cursor, etc.) to drive video
 editing operations programmatically.
 
 Usage:
-    python -m opencut.mcp_server          # stdio transport (default)
-    python -m opencut.mcp_server --sse    # SSE transport on port 5680
+    python -m opencut.mcp_server          # stdio JSON-RPC transport
 
 The MCP server proxies requests to the running OpenCut Flask backend
 on localhost:5679. Start the backend first: python -m opencut.server
+
+Protocol: JSON-RPC 2.0 over stdio (one JSON object per line).
+Supports: initialize, tools/list, tools/call, resources/list.
 """
 
 import json
@@ -525,6 +527,18 @@ def run_mcp_stdio():
                 "result": {
                     "content": [{"type": "text", "text": json.dumps(result, indent=2)}],
                 },
+            }
+        elif method == "resources/list":
+            response = {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {"resources": []},
+            }
+        elif method == "prompts/list":
+            response = {
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "result": {"prompts": []},
             }
         elif method == "notifications/initialized":
             continue  # No response needed for notifications
