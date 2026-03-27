@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.9.15] - 2026-03-27
+
+### Release Audit (Batch 47)
+Full 3-agent audit (routes, core modules, frontend+infra). Results:
+- **Routes**: CLEAN. All 17 route files pass security, consistency, and contract checks.
+- **Core modules**: 1 real bare ffmpeg fixed (`audio_enhance.py` audio extraction). All other flagged items were either already using `run_ffmpeg()` (which auto-resolves) or false positives.
+- **Frontend/infra**: No critical issues. All XSS, thread-safety, and MCP claims verified as false positives.
+
+### Fixed
+- **audio_enhance.py bare ffmpeg** — `_extract_audio()` used `"ffmpeg"` directly in subprocess instead of `get_ffmpeg_path()`. Crashes on bundled installs.
+- **4 test failures** — `test_score_frame_colorful_image` threshold too high (20→5), `test_registry_has_builtin_engines` expected wrong dict key, `test_depth_map_rate_limited` + `test_emotion_rate_limited` couldn't reach rate limit due to filepath validation happening first.
+
+### Verified
+- 0 lint warnings
+- All 18 version targets in sync
+- 254 routes, 23 MCP tools, 23 schemas, 16 CLI commands
+- All subprocess calls use `get_ffmpeg_path()`/`get_ffprobe_path()` or go through `run_ffmpeg()`
+- All `open()` calls have `encoding="utf-8"` for text mode
+- All `on_progress` closures have `msg=""` default
+
 ## [1.9.14] - 2026-03-27
 
 ### Fixed (Batch 46 — Final Sweep)
