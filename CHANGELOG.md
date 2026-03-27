@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.14] - 2026-03-27
+
+### Fixed (Batch 46 — Final Sweep)
+- **4 more bare `"ffmpeg"` missed by agents** — `audio.py` (3 in stem separation format conversion + audio extraction) and `video_core.py` (1 in stabilize audio merge). All replaced with `get_ffmpeg_path()`.
+- **MCP server stale docstring** — Claimed `--sse` mode existed but was never implemented. Fixed docstring to accurately describe stdio-only transport.
+- **MCP `resources/list` and `prompts/list`** — Added empty handlers required by MCP spec. Modern MCP clients (Claude Code) expect these methods to exist.
+
 ## [1.9.13] - 2026-03-27
 
 ### Fixed (Batch 45 — Complete ffmpeg/ffprobe Path Resolution)
