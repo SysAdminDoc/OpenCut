@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.9.11] - 2026-03-27
+
+### Fixed (Batch 43 — Encoding, Docker, CI)
+- **13 `open()` calls missing `encoding="utf-8"`** — 6 core modules (captions, footage_search, lut_library, motion_graphics, social_post, speed_ramp) and 1 route (video_core) used system-locale encoding on Windows, causing `UnicodeDecodeError` on non-ASCII file content.
+- **Docker GPU variant** — `docker-compose.yml` GPU service now usable via `docker compose --profile gpu up` instead of requiring manual uncommenting. Added WebSocket port 5680 to EXPOSE. Added `psutil` and `python-json-logger` to Dockerfile deps. Plugin dir created at build time.
+- **CI smoke tests expanded** — Added imports for `create_app` (factory pattern), `WorkerPool`/`JobPriority`, `MCP_TOOLS` (count check), `cli.commands` (count check), `WorkflowResult` schema.
+
 ## [1.9.10] - 2026-03-27
 
 ### Added

@@ -18,24 +18,34 @@ services:
       timeout: 5s
       retries: 3
 
-  # GPU-enabled variant (uncomment to use)
-  # opencut-server-gpu:
-  #   build: .
-  #   ports:
-  #     - "5679:5679"
-  #   volumes:
-  #     - opencut-data:/root/.opencut
-  #   environment:
-  #     - OPENCUT_BUNDLED=false
-  #     - PYTHONUNBUFFERED=1
-  #   deploy:
-  #     resources:
-  #       reservations:
-  #         devices:
-  #           - driver: nvidia
-  #             count: 1
-  #             capabilities: [gpu]
-  #   restart: unless-stopped
+  # GPU-enabled variant — use: docker compose --profile gpu up
+  opencut-server-gpu:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "5679:5679"
+    volumes:
+      - opencut-data:/root/.opencut
+    environment:
+      - OPENCUT_BUNDLED=false
+      - PYTHONUNBUFFERED=1
+      - NVIDIA_VISIBLE_DEVICES=all
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5679/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    profiles:
+      - gpu
 
 volumes:
   opencut-data:
