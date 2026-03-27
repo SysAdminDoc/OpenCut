@@ -17,7 +17,7 @@ import os
 import subprocess
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import get_ffprobe_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -197,7 +197,7 @@ def analyze_colors(
 
     # Basic analysis via ffprobe
     cmd2 = [
-        "ffprobe", "-v", "quiet", "-select_streams", "v:0",
+        get_ffprobe_path(), "-v", "quiet", "-select_streams", "v:0",
         "-show_entries", "stream=color_space,color_transfer,color_primaries",
         "-of", "json", video_path,
     ]

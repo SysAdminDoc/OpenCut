@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.9.5] - 2026-03-27
+
+### Fixed (Batch 37 — Infrastructure & Hardening)
+- **Bare ffprobe in 8 core modules** — `audio_enhance`, `color_management`, `highlights`, `motion_graphics`, `scene_detect` (2 sites), `shorts_pipeline`, `transitions_3d`, and `video_ai` all used `"ffprobe"` directly in subprocess commands. On systems where ffprobe is bundled (not in PATH), all of these would crash. Fixed to use `get_ffprobe_path()`.
+- **GPU VRAM check can hang** — `check_vram()` in `gpu.py` called `torch.cuda.mem_get_info()` with no timeout. On hung NVIDIA drivers, this blocked forever. Added 5-second timeout via ThreadPoolExecutor.
+- **safe_error GPU OOM false positives** — `errors.py` pattern `"cuda" in lower and "memory" in lower` matched unrelated errors like "CUDA device not found in memory". Tightened to exact phrases `"cuda out of memory"` / `"cuda error: out of memory"`.
+- **_unique_output_path 10K stat loop** — `helpers.py` looped up to 9,998 times trying filenames. On full disk or permission errors, wasted thousands of stat() calls. Capped at 100.
+- **get_video_info silent defaults** — Fallback to 1920x1080@30fps was logged at DEBUG level (invisible). Upgraded all 3 fallback paths to WARNING so users know when probe data is missing.
+- **Job cleanup on every creation** — `_new_job()` called `_cleanup_old_jobs()` synchronously on every job creation. With 1000+ old jobs, blocked the HTTP handler. Removed — periodic cleanup thread (already running every 5 minutes) handles this.
+- **proc.poll() crash on stale handles** — `_cleanup_old_jobs()` called `.poll()` on potentially corrupt Popen objects. Added try/except per handle.
+- **async_job future not stored for cancel** — Race window between `_new_job()` returning job_id and storing the future. Cancel requests during that window couldn't find the future. Now stores `_thread` reference immediately after submit.
+- **multicam_xml path encoding** — `_path_to_url()` didn't URI-encode spaces or special characters in filenames. Premiere Pro rejected the XML. Added `urllib.parse.quote()`.
+- **main.js parentNode null guard** — `select.parentNode.insertBefore()` could crash if select element had no parent. Added null check.
+
 ## [1.9.4] - 2026-03-27
 
 ### Fixed (Batch 36 Audit)

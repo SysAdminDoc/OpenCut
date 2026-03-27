@@ -88,7 +88,7 @@ def safe_error(exc, context=""):
     if isinstance(exc, OpenCutError):
         return exc.to_response()
 
-    if isinstance(exc, MemoryError) or "out of memory" in lower or ("cuda" in lower and "memory" in lower):
+    if isinstance(exc, MemoryError) or "out of memory" in lower or "cuda out of memory" in lower or "cuda error: out of memory" in lower:
         code = "GPU_OUT_OF_MEMORY"
         user_msg = "Ran out of memory during processing."
         suggestion = "Try a shorter clip, lower quality setting, or switch to CPU mode in Settings."

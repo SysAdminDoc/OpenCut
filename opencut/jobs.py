@@ -74,7 +74,6 @@ def _new_job(job_type: str, filepath: str) -> str:
             "created": time.time(),
             "_thread": None,
         }
-    _cleanup_old_jobs()
     _start_periodic_cleanup()
     return job_id
 
@@ -244,10 +243,13 @@ def _cleanup_old_jobs():
             del jobs[jid]
             _job_processes.pop(jid, None)
         # Clean up _job_processes entries where the process has already terminated
-        stale_procs = [
-            jid for jid, proc in _job_processes.items()
-            if proc.poll() is not None
-        ]
+        stale_procs = []
+        for jid, proc in _job_processes.items():
+            try:
+                if proc.poll() is not None:
+                    stale_procs.append(jid)
+            except Exception:
+                stale_procs.append(jid)
         for jid in stale_procs:
             _job_processes.pop(jid, None)
 
@@ -356,9 +358,11 @@ def async_job(job_type: str, *, filepath_required: bool = True,
 
             from opencut.workers import get_pool
             future = get_pool().submit(job_id, _process)
+            # Store future immediately (before returning) so cancel can find it
             with job_lock:
                 if job_id in jobs:
                     jobs[job_id]["_future"] = future
+                    jobs[job_id]["_thread"] = future
             return jsonify({"job_id": job_id})
         return wrapper
     return decorator
