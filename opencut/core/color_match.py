@@ -217,8 +217,8 @@ def color_match_video(
 
     strength = max(0.0, min(1.0, float(strength)))
 
-    logger.info("Building reference color histogram from %s (%d frames)",
-                reference_path, sample_frame_count)
+    logger.debug("Building reference color histogram from %s (%d frames)",
+                 reference_path, sample_frame_count)
 
     # Sample frames from reference and build YCbCr histograms
     ref_bgr = _sample_frames(reference_path, sample_frame_count)
@@ -239,7 +239,7 @@ def color_match_video(
         ref_cdf = _build_cumulative_hist(ref_ycbcr, ch)
         luts.append(_build_lut(src_cdf, ref_cdf))
 
-    logger.info("Processing source video frame-by-frame: %s", source_path)
+    logger.debug("Processing source video frame-by-frame: %s", source_path)
 
     # Open source for frame-by-frame processing
     cap = cv2.VideoCapture(source_path)

@@ -1,0 +1,15 @@
+{
+    "name": "timecode-watermark",
+    "version": "1.0.0",
+    "description": "Burns a timecode overlay onto exported videos",
+    "author": "OpenCut",
+    "enabled": true,
+    "routes": [
+        {"method": "POST", "path": "/apply", "description": "Apply timecode watermark to a video"}
+    ],
+    "ui": {
+        "tab": "export",
+        "label": "Timecode Watermark",
+        "icon": "clock"
+    }
+}

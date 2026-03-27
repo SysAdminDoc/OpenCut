@@ -12,7 +12,7 @@ Paper: https://github.com/nyrahealth/CrisperWhisper
 """
 
 import logging
-from typing import List, Optional, Callable
+from typing import Callable, List, Optional
 
 logger = logging.getLogger("opencut")
 
@@ -91,66 +91,71 @@ def detect_fillers_crisper(
         return_timestamps="word",
     )
 
-    generate_kwargs = {}
-    if language:
-        generate_kwargs["language"] = language
+    try:
+        generate_kwargs = {}
+        if language:
+            generate_kwargs["language"] = language
 
-    result = pipe(filepath, generate_kwargs=generate_kwargs)
+        result = pipe(filepath, generate_kwargs=generate_kwargs)
 
-    if on_progress:
-        on_progress(70, "Analyzing filler words...")
+        if on_progress:
+            on_progress(70, "Analyzing filler words...")
 
-    # Build filler detection set
-    filler_set = set(FILLER_TOKENS)
-    if custom_words:
-        for w in custom_words:
-            filler_set.add(w.strip().lower())
+        # Build filler detection set
+        filler_set = set(FILLER_TOKENS)
+        if custom_words:
+            for w in custom_words:
+                filler_set.add(w.strip().lower())
 
-    # Extract fillers from word-level timestamps
-    fillers = []
-    chunks = result.get("chunks", [])
+        # Extract fillers from word-level timestamps
+        fillers = []
+        chunks = result.get("chunks", [])
 
-    for chunk in chunks:
-        word = chunk.get("text", "").strip()
-        timestamps = chunk.get("timestamp", (None, None))
+        for chunk in chunks:
+            word = chunk.get("text", "").strip()
+            timestamps = chunk.get("timestamp", (None, None))
 
-        if timestamps[0] is None or timestamps[1] is None:
-            continue
+            if timestamps[0] is None or timestamps[1] is None:
+                continue
 
-        start = float(timestamps[0])
-        end = float(timestamps[1])
+            start = float(timestamps[0])
+            end = float(timestamps[1])
 
-        # Check if this is a filler token ([UH], [UM]) or a text-match filler
-        word_clean = word.strip(".,!?;:\"'()[]{}").lower()
-        is_filler = (
-            word in FILLER_TOKENS
-            or word_clean in FILLER_TOKENS
-            or word_clean in filler_set
-            or word_clean in TEXT_FILLERS
-        )
+            # Check if this is a filler token ([UH], [UM]) or a text-match filler
+            word_clean = word.strip(".,!?;:\"'()[]{}").lower()
+            is_filler = (
+                word in FILLER_TOKENS
+                or word_clean in FILLER_TOKENS
+                or word_clean in filler_set
+                or word_clean in TEXT_FILLERS
+            )
 
-        if is_filler:
-            fillers.append({
-                "word": word,
-                "start": round(start, 3),
-                "end": round(end, 3),
-            })
+            if is_filler:
+                fillers.append({
+                    "word": word,
+                    "start": round(start, 3),
+                    "end": round(end, 3),
+                })
 
-    if on_progress:
-        on_progress(90, f"Found {len(fillers)} filler(s)...")
+        if on_progress:
+            on_progress(90, f"Found {len(fillers)} filler(s)...")
 
-    # Build cuts (regions to remove)
-    total_filler_time = sum(f["end"] - f["start"] for f in fillers)
-    cuts = [{"start": f["start"], "end": f["end"]} for f in fillers]
+        # Build cuts (regions to remove)
+        total_filler_time = sum(f["end"] - f["start"] for f in fillers)
+        cuts = [{"start": f["start"], "end": f["end"]} for f in fillers]
 
-    return {
-        "fillers": fillers,
-        "count": len(fillers),
-        "total_filler_time": round(total_filler_time, 3),
-        "cuts": cuts,
-        "transcript": result.get("text", ""),
-        "method": "crisper_whisper",
-    }
+        return {
+            "fillers": fillers,
+            "count": len(fillers),
+            "total_filler_time": round(total_filler_time, 3),
+            "cuts": cuts,
+            "transcript": result.get("text", ""),
+            "method": "crisper_whisper",
+        }
+    finally:
+        del pipe, model, processor
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 
 def _fallback_filler_detection(
@@ -176,41 +181,50 @@ def _fallback_filler_detection(
 
     model = WhisperModel("base", device="auto", compute_type="auto")
 
-    segments, info = model.transcribe(
-        filepath,
-        word_timestamps=True,
-        vad_filter=True,
-    )
+    try:
+        segments, info = model.transcribe(
+            filepath,
+            word_timestamps=True,
+            vad_filter=True,
+        )
 
-    if on_progress:
-        on_progress(50, "Scanning for filler words...")
+        if on_progress:
+            on_progress(50, "Scanning for filler words...")
 
-    filler_set = set(TEXT_FILLERS)
-    if custom_words:
-        for w in custom_words:
-            filler_set.add(w.strip().lower())
+        filler_set = set(TEXT_FILLERS)
+        if custom_words:
+            for w in custom_words:
+                filler_set.add(w.strip().lower())
 
-    fillers = []
-    for segment in segments:
-        if not segment.words:
-            continue
-        for word in segment.words:
-            word_clean = word.word.strip(".,!?;:\"'()[]{}").strip().lower()
-            if word_clean in filler_set:
-                fillers.append({
-                    "word": word.word.strip(),
-                    "start": round(word.start, 3),
-                    "end": round(word.end, 3),
-                })
+        fillers = []
+        for segment in segments:
+            if not segment.words:
+                continue
+            for word in segment.words:
+                word_clean = word.word.strip(".,!?;:\"'()[]{}").strip().lower()
+                if word_clean in filler_set:
+                    fillers.append({
+                        "word": word.word.strip(),
+                        "start": round(word.start, 3),
+                        "end": round(word.end, 3),
+                    })
 
-    total_filler_time = sum(f["end"] - f["start"] for f in fillers)
-    cuts = [{"start": f["start"], "end": f["end"]} for f in fillers]
+        total_filler_time = sum(f["end"] - f["start"] for f in fillers)
+        cuts = [{"start": f["start"], "end": f["end"]} for f in fillers]
 
-    return {
-        "fillers": fillers,
-        "count": len(fillers),
-        "total_filler_time": round(total_filler_time, 3),
-        "cuts": cuts,
-        "transcript": "",
-        "method": "faster_whisper_fallback",
-    }
+        return {
+            "fillers": fillers,
+            "count": len(fillers),
+            "total_filler_time": round(total_filler_time, 3),
+            "cuts": cuts,
+            "transcript": "",
+            "method": "faster_whisper_fallback",
+        }
+    finally:
+        del model
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except ImportError:
+            pass
