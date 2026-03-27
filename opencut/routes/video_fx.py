@@ -305,7 +305,7 @@ def chromakey_route(job_id, filepath, data):
 
     from opencut.core.chromakey import chromakey_video
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(fg, output_dir)
     _valid_chroma = {"green", "blue", "red", "custom"}
@@ -341,7 +341,7 @@ def pip_route(job_id, filepath, data):
 
     from opencut.core.chromakey import picture_in_picture
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(main, data.get("output_dir", ""))
     out = picture_in_picture(main, pip, output_dir=d,
@@ -372,7 +372,7 @@ def blend_route(job_id, filepath, data):
 
     from opencut.core.chromakey import blend_videos
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(base, data.get("output_dir", ""))
     _blend_mode = data.get("mode", "overlay")
@@ -420,7 +420,7 @@ def transitions_apply(job_id, filepath, data):
 
     from opencut.core.transitions_3d import apply_transition
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(a, data.get("output_dir", ""))
     from opencut.core.transitions_3d import XFADE_TRANSITIONS
@@ -451,7 +451,7 @@ def transitions_join(job_id, filepath, data):
 
     from opencut.core.transitions_3d import join_with_transitions
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(clips[0], data.get("output_dir", ""))
     from opencut.core.transitions_3d import XFADE_TRANSITIONS
@@ -482,20 +482,12 @@ def particle_presets():
 @async_job("particles")
 def particle_apply(job_id, filepath, data):
     """Overlay particle effects on video."""
-    fp = data.get("filepath", "").strip()
-    if not fp:
-        raise ValueError("File not found")
-    try:
-        fp = validate_filepath(fp)
-    except ValueError as e:
-        raise ValueError(str(e))
-
     from opencut.core.particles import overlay_particles
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(fp, data.get("output_dir", ""))
-    out = overlay_particles(fp, output_dir=d,
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    out = overlay_particles(filepath, output_dir=d,
                              preset=data.get("preset", "confetti"),
                              density=safe_float(data.get("density", 1.0), 1.0, min_val=0.1, max_val=5.0),
                              on_progress=_p)
@@ -519,20 +511,12 @@ def color_capabilities():
 @async_job("color_correct")
 def color_correct_route(job_id, filepath, data):
     """Apply color correction (exposure, contrast, saturation, temperature, etc.)."""
-    fp = data.get("filepath", "").strip()
-    if not fp:
-        raise ValueError("File not found")
-    try:
-        fp = validate_filepath(fp)
-    except ValueError as e:
-        raise ValueError(str(e))
-
     from opencut.core.color_management import color_correct
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(fp, data.get("output_dir", ""))
-    out = color_correct(fp, output_dir=d,
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    out = color_correct(filepath, output_dir=d,
                          exposure=safe_float(data.get("exposure", 0), 0.0, min_val=-5.0, max_val=5.0),
                          contrast=safe_float(data.get("contrast", 1.0), 1.0, min_val=0.0, max_val=3.0),
                          saturation=safe_float(data.get("saturation", 1.0), 1.0, min_val=0.0, max_val=3.0),
@@ -550,24 +534,16 @@ def color_correct_route(job_id, filepath, data):
 @async_job("color_convert")
 def color_convert_route(job_id, filepath, data):
     """Convert video color space."""
-    fp = data.get("filepath", "").strip()
-    if not fp:
-        raise ValueError("File not found")
-    try:
-        fp = validate_filepath(fp)
-    except ValueError as e:
-        raise ValueError(str(e))
-
     from opencut.core.color_management import convert_colorspace
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(fp, data.get("output_dir", ""))
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
     _VALID_COLORSPACES = {"rec709", "rec2020", "srgb", "dci_p3"}
     target_cs = data.get("target", "rec709")
     if target_cs not in _VALID_COLORSPACES:
         target_cs = "rec709"
-    out = convert_colorspace(fp, target=target_cs,
+    out = convert_colorspace(filepath, target=target_cs,
                               output_dir=d, on_progress=_p)
     return {"output_path": out}
 
@@ -577,27 +553,17 @@ def color_convert_route(job_id, filepath, data):
 @async_job("color_external_lut")
 def color_external_lut_route(job_id, filepath, data):
     """Apply external .cube/.3dl LUT file."""
-    fp = data.get("filepath", "").strip()
     lut = data.get("lut_path", "").strip()
-    if not fp:
-        raise ValueError("Video not found")
     if not lut:
         raise ValueError("LUT file not found")
-    try:
-        fp = validate_filepath(fp)
-    except ValueError as e:
-        raise ValueError(f"Video: {e}")
-    try:
-        lut = validate_filepath(lut)
-    except ValueError as e:
-        raise ValueError(f"LUT file: {e}")
+    lut = validate_filepath(lut)
 
     from opencut.core.color_management import apply_external_lut
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(fp, data.get("output_dir", ""))
-    out = apply_external_lut(fp, lut, intensity=safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0),
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    out = apply_external_lut(filepath, lut, intensity=safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0),
                               output_dir=d, on_progress=_p)
     return {"output_path": out}
 

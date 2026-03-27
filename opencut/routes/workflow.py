@@ -115,7 +115,7 @@ def run_workflow_route(job_id, filepath, data):
     # Grab a CSRF token for internal requests
     csrf_token = get_csrf_token()
 
-    def _on_progress(pct, msg):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
 
     result = run_workflow(
