@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.9.7] - 2026-03-27
+
+### Added
+- **5 new MCP tools** — `opencut_denoise_audio`, `opencut_upscale`, `opencut_scene_detect`, `opencut_depth_map`, `opencut_shorts_pipeline` (23 total, up from 18). AI clients can now drive denoising, upscaling, scene detection, depth mapping, and the full shorts pipeline.
+- **WorkerPool priority queue** — Replaced FIFO `ThreadPoolExecutor` with custom `PriorityQueue`-backed pool. `JobPriority.CRITICAL` (0) jobs now leapfrog `BACKGROUND` (200) work when all workers are busy. Equal-priority jobs still run in FIFO order.
+
+### Fixed (Batch 39)
+- **3 more bare `"ffprobe"` in routes/utils** — `audio.py` waveform probe, `video_editing.py` reframe probe, `utils/media.py` media probe — all crash on bundled installs where ffprobe isn't in PATH.
+- **FFmpeg/ffprobe path warning** — `get_ffmpeg_path()` and `get_ffprobe_path()` now log WARNING when binary not found in PATH (was silently falling back to bare name, causing confusing subprocess errors later).
+
 ## [1.9.6] - 2026-03-27
 
 ### Fixed (Batch 38 — Route Cleanup & Remaining Crash Bugs)
