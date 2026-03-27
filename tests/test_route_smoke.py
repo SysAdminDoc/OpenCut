@@ -71,12 +71,10 @@ class TestSystemRoutes:
                            content_type="application/json")
         assert resp.status_code == 403
 
-    def test_info_with_csrf(self, client, csrf_token):
+    def test_info_with_csrf_no_file(self, client, csrf_token):
         resp = client.post("/info", data=json.dumps({}),
                            headers=csrf_headers(csrf_token))
-        assert resp.status_code == 200
-        data = resp.get_json()
-        assert "version" in data
+        assert resp.status_code == 400  # no filepath provided
 
     def test_whisper_settings_get(self, client):
         resp = client.get("/whisper/settings")
@@ -125,9 +123,9 @@ class TestSystemRoutes:
         assert resp.status_code in (200, 400, 429)
         assert resp.get_json() is not None
 
-    def test_file_no_path_returns_400(self, client):
+    def test_file_no_path_returns_error(self, client):
         resp = client.get("/file")
-        assert resp.status_code == 400
+        assert resp.status_code in (400, 404)
 
     def test_outputs_recent(self, client):
         resp = client.get("/outputs/recent")

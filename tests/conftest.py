@@ -36,3 +36,11 @@ def csrf_headers(token):
         "X-OpenCut-Token": token,
         "Content-Type": "application/json",
     }
+
+
+@pytest.fixture(autouse=True, scope="session")
+def _shutdown_worker_pool():
+    """Shut down the WorkerPool after all tests to prevent pytest hang on exit."""
+    yield
+    from opencut.workers import shutdown_pool
+    shutdown_pool(wait=False)
