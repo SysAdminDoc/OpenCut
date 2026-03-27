@@ -13,7 +13,7 @@ import os
 import subprocess
 import tempfile
 
-from opencut.helpers import get_ffprobe_path
+from opencut.helpers import get_ffmpeg_path, get_ffprobe_path
 
 logger = logging.getLogger("opencut")
 
@@ -59,7 +59,7 @@ def _extract_audio(input_path, output_wav):
         RuntimeError: If FFmpeg extraction fails.
     """
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-y",
         "-i", input_path,
         "-vn",

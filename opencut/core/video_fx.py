@@ -17,8 +17,8 @@ import os
 import tempfile
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import get_ffmpeg_path, run_ffmpeg
 from opencut.helpers import output_path as _output_path
-from opencut.helpers import run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -62,7 +62,7 @@ def stabilize_video(
         # interpreted as FFmpeg filter option separators.
         trf_safe = transforms_file.replace("\\", "/").replace("'", "\\'")
         cmd1 = [
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             "-vf", f"vidstabdetect=shakiness=10:accuracy=15:result='{trf_safe}'",
             "-f", "null", "-",
@@ -75,7 +75,7 @@ def stabilize_video(
         # Pass 2: Apply stabilization
         vf = f"vidstabtransform=input='{trf_safe}':smoothing={int(smoothing)}:crop={crop}:zoom={int(zoom)}:interpol=linear"
         cmd2 = [
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             "-vf", vf,
             "-c:a", "copy",
@@ -133,7 +133,7 @@ def chromakey(
     if background and os.path.isfile(background):
         # Composite onto background
         cmd = [
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path, "-i", background,
             "-filter_complex",
             f"[0:v]colorkey={color}:{float(similarity)}:{float(blend)}[fg];[1:v][fg]overlay=shortest=1",
@@ -143,7 +143,7 @@ def chromakey(
     else:
         # Output with alpha channel (ProRes 4444 or webm/vp9)
         cmd = [
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             "-vf", f"colorkey={color}:{float(similarity)}:{float(blend)}",
             "-c:v", "prores_ks", "-profile:v", "4",
@@ -199,7 +199,7 @@ def apply_lut(
         vf_flag = "-filter_complex"
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-y", "-i", input_path,
         vf_flag, vf,
         "-c:a", "copy",
@@ -235,7 +235,7 @@ def apply_vignette(
 
     angle = f"PI/{max(1, int(5 - intensity * 4))}"
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-y", "-i", input_path,
         "-vf", f"vignette=angle={angle}",
         "-c:a", "copy",
@@ -271,7 +271,7 @@ def apply_film_grain(
 
     strength = int(5 + intensity * 35)
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-y", "-i", input_path,
         "-vf", f"noise=alls={strength}:allf=t+u",
         "-c:a", "copy",
@@ -331,7 +331,7 @@ def apply_letterbox(
     vf = f"pad=iw:iw/{target_ratio}:(ow-iw)/2:(oh-ih)/2:{color}"
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-y", "-i", input_path,
         "-vf", vf,
         "-c:a", "copy",
@@ -367,7 +367,7 @@ def color_match(
     # histogram equalization approach: normalize source to reference colors
     if reference_path and os.path.isfile(reference_path):
         cmd = [
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path, "-i", reference_path,
             "-filter_complex",
             "[1:v]scale=1:1,format=rgba[ref];"
@@ -378,7 +378,7 @@ def color_match(
     else:
         # Fallback: auto-normalize without reference
         cmd = [
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             "-vf", "normalize=blackpt=black:whitept=white:smoothing=20",
             "-c:a", "copy",

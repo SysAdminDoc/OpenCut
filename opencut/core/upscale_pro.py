@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
+from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -68,7 +68,7 @@ def upscale_lanczos(
         on_progress(10, f"Upscaling {info['width']}x{info['height']} -> {new_w}x{new_h} (lanczos)...")
 
     run_ffmpeg([
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", video_path,
         "-vf", f"scale={new_w}:{new_h}:flags=lanczos",
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",
@@ -167,7 +167,7 @@ def upscale_realesrgan(
 
     try:
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-i", tmp_video, "-i", video_path,
             "-map", "0:v", "-map", "1:a?",
             "-c:v", "libx264", "-crf", "18", "-preset", "medium",

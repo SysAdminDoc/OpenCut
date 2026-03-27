@@ -112,7 +112,7 @@ def denoise_audio(
         on_progress(30, f"Applying noise reduction ({method})...")
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-y", "-i", input_path,
         "-af", af_filter,
         "-c:v", "copy",  # Pass video through unchanged
@@ -176,7 +176,7 @@ def isolate_voice(
     )
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-y", "-i", input_path,
         "-af", af_filter,
         "-c:v", "copy",
@@ -360,7 +360,7 @@ def detect_beats(
     # Extract audio as raw PCM
     sample_rate = 44100
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-i", input_path,
         "-vn", "-acodec", "pcm_s16le",
         "-ar", str(sample_rate), "-ac", "1",
@@ -513,7 +513,7 @@ def generate_ducking_keyframes(
 
     sample_rate = 16000
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-i", input_path,
         "-vn", "-acodec", "pcm_s16le",
         "-ar", str(sample_rate), "-ac", "1",
@@ -700,7 +700,7 @@ def apply_audio_effect(
         on_progress(20, f"Applying {effect['label']} effect...")
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-y", "-i", input_path,
         "-af", effect["filter"],
         "-c:v", "copy",
