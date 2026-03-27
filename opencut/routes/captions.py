@@ -978,7 +978,7 @@ def animated_caption_render(job_id, filepath, data):
 
     from opencut.core.animated_captions import render_animated_captions
 
-    def _p(pct, msg):
+    def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
 
     d = _resolve_output_dir(filepath, data.get("output_dir", ""))

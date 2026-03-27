@@ -180,7 +180,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.5**
+- Current: **v1.9.6**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -918,6 +918,11 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **export_video partial file leak** — Failed FFmpeg runs left corrupt partial output files on disk. Added cleanup on non-zero exit.
 - **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.
 - **pip install permission denied** — `safe_pip_install()` failed on Windows when both normal and `--user` installs hit Errno 13 (Microsoft Store Python, OneDrive-synced user dirs, restrictive ACLs). Added `--target ~/.opencut/packages` as third fallback strategy. server.py adds `~/.opencut/packages` to `sys.path` at startup.
+
+## v1.9.6 Batch 38 Bug Fixes (Route Cleanup)
+- **10 remaining `_p(pct, msg)` closures** — audio.py (3), video_fx.py (5), captions.py (1), workflow.py (1) all crashed with TypeError when core modules called on_progress with 1 arg. Fixed all to `msg=""`.
+- **Redundant filepath re-validation in 7+ routes** — face_enhance, face_swap, upscale_run, remove_watermark, title_overlay, particle_apply, color_correct, color_convert, color_external_lut all re-read `data.get("filepath")` despite @async_job handling it. Removed ~80 lines of dead code.
+- **Unused validate_filepath import** — removed from video_specialty.py.
 
 ## v1.9.5 Batch 37 Bug Fixes (Infrastructure & Hardening)
 - **Bare ffprobe in 8 core modules** — audio_enhance, color_management, highlights, motion_graphics, scene_detect (2), shorts_pipeline, transitions_3d, video_ai all used `"ffprobe"` in subprocess. Fixed to `get_ffprobe_path()`.

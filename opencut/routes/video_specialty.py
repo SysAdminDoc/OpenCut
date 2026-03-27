@@ -26,7 +26,6 @@ from opencut.security import (
     require_csrf,
     safe_float,
     safe_int,
-    validate_filepath,
     validate_path,
 )
 
@@ -52,29 +51,22 @@ def removal_capabilities():
 @async_job("remove_watermark")
 def remove_watermark_route(job_id, filepath, data):
     """Remove watermark using delogo or LaMA."""
-    fp = data.get("filepath", "").strip()
     region = data.get("region", {})
     method = data.get("method", "delogo")
     if method not in ("delogo", "lama"):
         method = "delogo"
-    if not fp:
-        raise ValueError("File not found")
-    try:
-        fp = validate_filepath(fp)
-    except ValueError as e:
-        raise ValueError(str(e))
     if not region:
         raise ValueError("No region specified")
 
     def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(fp, data.get("output_dir", ""))
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
     if method == "lama":
         from opencut.core.object_removal import remove_watermark_lama
-        out = remove_watermark_lama(fp, region, output_dir=d, on_progress=_p)
+        out = remove_watermark_lama(filepath, region, output_dir=d, on_progress=_p)
     else:
         from opencut.core.object_removal import remove_watermark_delogo
-        out = remove_watermark_delogo(fp, region, output_dir=d, on_progress=_p)
+        out = remove_watermark_delogo(filepath, region, output_dir=d, on_progress=_p)
     return {"output_path": out}
 
 
@@ -133,14 +125,7 @@ def title_render(job_id, filepath, data):
 @async_job("title_overlay")
 def title_overlay(job_id, filepath, data):
     """Overlay animated title onto existing video."""
-    fp = data.get("filepath", "").strip()
     text = data.get("text", "").strip()
-    if not fp:
-        raise ValueError("File not found")
-    try:
-        fp = validate_filepath(fp)
-    except ValueError as e:
-        raise ValueError(str(e))
     if not text:
         raise ValueError("No text")
     if len(text) > 500:
@@ -150,11 +135,11 @@ def title_overlay(job_id, filepath, data):
 
     def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(fp, data.get("output_dir", ""))
+    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
     _title_preset2 = data.get("preset", "fade_center")
     if _title_preset2 not in ("fade_center", "slide_left", "typewriter", "lower_third", "countdown", "kinetic_bounce"):
         _title_preset2 = "fade_center"
-    out = overlay_title(fp, text, output_dir=d,
+    out = overlay_title(filepath, text, output_dir=d,
                          preset=_title_preset2,
                          font_size=safe_int(data.get("font_size", 72), 72, min_val=8, max_val=500),
                          start_time=safe_float(data.get("start_time", 0), 0.0, min_val=0.0, max_val=86400.0),

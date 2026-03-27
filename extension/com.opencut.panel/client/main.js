@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.5
+   OpenCut CEP Panel - Main Controller v1.9.6
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {

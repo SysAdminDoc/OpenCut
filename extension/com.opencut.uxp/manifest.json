@@ -1,7 +1,7 @@
 {
   "id": "com.opencut.uxp",
   "name": "OpenCut UXP",
-  "version": "1.9.5",
+  "version": "1.9.6",
   "main": "index.html",
   "host": [
     {
