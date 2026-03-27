@@ -84,7 +84,7 @@ def _load_credentials() -> Dict[str, PlatformAuth]:
     if not os.path.isfile(CREDENTIALS_PATH):
         return {}
     try:
-        with open(CREDENTIALS_PATH, "r") as f:
+        with open(CREDENTIALS_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
         return {
             platform: PlatformAuth(
@@ -116,7 +116,7 @@ def _save_credentials(creds: Dict[str, PlatformAuth]):
         for platform, auth in creds.items()
     }
     try:
-        with open(CREDENTIALS_PATH, "w") as f:
+        with open(CREDENTIALS_PATH, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=2)
         # Restrict file permissions on Unix
         try:

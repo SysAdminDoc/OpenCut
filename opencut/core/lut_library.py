@@ -36,7 +36,7 @@ def _generate_cube_lut(name: str, transform_fn, size: int = 33) -> str:
     os.makedirs(LUTS_DIR, exist_ok=True)
     path = os.path.join(LUTS_DIR, f"{name}.cube")
 
-    with open(path, "w") as f:
+    with open(path, "w", encoding="utf-8") as f:
         f.write(f"TITLE \"{name}\"\n")
         f.write(f"LUT_SIZE {size}\n\n")
 
@@ -537,7 +537,7 @@ def generate_lut_from_reference(
     if not os.path.realpath(cube_path).startswith(os.path.realpath(user_dir) + os.sep):
         raise ValueError(f"Invalid LUT path: {lut_name}")
 
-    with open(cube_path, "w") as f:
+    with open(cube_path, "w", encoding="utf-8") as f:
         f.write(f"TITLE \"{lut_name}\"\n")
         f.write(f"# Generated from: {os.path.basename(reference_path)}\n")
         f.write(f"# Method: {method}, Strength: {strength}\n")
@@ -667,7 +667,7 @@ def generate_lut_ai(
     if not os.path.realpath(cube_path).startswith(os.path.realpath(user_dir) + os.sep):
         raise ValueError(f"Invalid LUT path: {lut_name}")
 
-    with open(cube_path, "w") as f:
+    with open(cube_path, "w", encoding="utf-8") as f:
         f.write(f'TITLE "{lut_name}"\n')
         f.write(f"# AI color grade from: {os.path.basename(reference_path)}\n")
         f.write("# Method: LAB perceptual matching\n")
@@ -806,7 +806,7 @@ def blend_luts(
     def _parse_cube(path):
         values = []
         lut_size = 0
-        with open(path, "r") as f:
+        with open(path, "r", encoding="utf-8") as f:
             for line in f:
                 line = line.strip()
                 if line.startswith("LUT_SIZE"):
@@ -836,7 +836,7 @@ def blend_luts(
 
     # If LUTs are same size and match output, do direct blend
     total_entries = size ** 3
-    with open(cube_path, "w") as f:
+    with open(cube_path, "w", encoding="utf-8") as f:
         f.write(f'TITLE "{output_name}"\n')
         f.write(f"# Blend of {lut_a_name} ({1-blend:.0%}) + {lut_b_name} ({blend:.0%})\n")
         f.write(f"LUT_SIZE {size}\n\n")

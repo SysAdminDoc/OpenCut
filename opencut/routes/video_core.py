@@ -1388,7 +1388,7 @@ def social_presets():
     import json as _json
     presets_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "social_presets.json")
     try:
-        with open(presets_path, "r") as f:
+        with open(presets_path, "r", encoding="utf-8") as f:
             return jsonify({"presets": _json.load(f)})
     except (FileNotFoundError, _json.JSONDecodeError) as e:
         logger.warning("Could not load social_presets.json: %s", e)

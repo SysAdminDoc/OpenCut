@@ -55,12 +55,15 @@ jobs:
 
       - name: Smoke test imports
         run: |
-          python -c "from opencut.server import app; print('Import OK')"
+          python -c "from opencut.server import create_app; app = create_app(); print('Server OK')"
           python -c "from opencut.security import get_csrf_token; print('Security OK')"
           python -c "from opencut.jobs import _new_job; print('Jobs OK')"
+          python -c "from opencut.workers import get_pool, JobPriority; print('Workers OK')"
           python -c "from opencut.core.repeat_detect import detect_repeated_takes; print('Core OK')"
           python -c "from opencut.core.nlp_command import parse_command; print('NLP OK')"
-          python -c "from opencut.cli import cli; print('CLI OK')"
+          python -c "from opencut.mcp_server import MCP_TOOLS; print(f'MCP: {len(MCP_TOOLS)} tools')"
+          python -c "from opencut.cli import cli; print(f'CLI: {len(cli.commands)} commands')"
+          python -c "from opencut.schemas import WorkflowResult; print('Schemas OK')"
 
       - name: Build with PyInstaller
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
