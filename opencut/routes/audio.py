@@ -1234,7 +1234,7 @@ def music_ai_generate(job_id, filepath, data):
         raise ValueError("Another AI GPU operation is already running. Please wait.")
 
     try:
-        def _p(pct, msg):
+        def _p(pct, msg=""):
             _update_job(job_id, progress=pct, message=msg)
 
         d = data.get("output_dir", "")
@@ -1274,7 +1274,7 @@ def music_ai_ace_step(job_id, filepath, data):
         raise ValueError("Another AI GPU operation is already running. Please wait.")
 
     try:
-        def _p(pct, msg):
+        def _p(pct, msg=""):
             _update_job(job_id, progress=pct, message=msg)
 
         d = data.get("output_dir", "")
@@ -1309,7 +1309,7 @@ def music_ai_melody(job_id, filepath, data):
         raise ValueError("Another AI GPU operation is already running. Please wait.")
 
     try:
-        def _p(pct, msg):
+        def _p(pct, msg=""):
             _update_job(job_id, progress=pct, message=msg)
 
         d = data.get("output_dir", "")
