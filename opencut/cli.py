@@ -697,10 +697,10 @@ def color_match(source, reference, output_dir, strength):
     print_banner()
 
     try:
-        from .core.color import match_color
+        from .core.color_match import color_match_video
     except ImportError as e:
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
-        console.print("Ensure opencut[color] extras are installed.")
+        console.print("Ensure opencv-python and numpy are installed.")
         sys.exit(1)
 
     base = _resolve_output_dir(source, output_dir)
@@ -719,7 +719,7 @@ def color_match(source, reference, output_dir, strength):
     ) as progress:
         task = progress.add_task("Applying color match...", total=None)
         start_time = time.time()
-        match_color(source, reference, output_path, strength=strength)
+        color_match_video(source, reference, output_path, strength=strength)
         elapsed = time.time() - start_time
         progress.update(task, description=f"[green]Color match complete ({elapsed:.1f}s)")
         progress.stop()
@@ -736,10 +736,10 @@ def loudness_match(files, target_lufs, output_dir):
     print_banner()
 
     try:
-        from .core.loudness import normalize_loudness
+        from .core.loudness_match import batch_loudness_match
     except ImportError as e:
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
-        console.print("Ensure opencut[loudness] extras are installed.")
+        console.print("FFmpeg must be installed for loudness normalization.")
         sys.exit(1)
 
     if output_dir:
@@ -757,13 +757,14 @@ def loudness_match(files, target_lufs, output_dir):
     ) as progress:
         task = progress.add_task(f"Normalizing {len(files)} file(s)...", total=None)
         start_time = time.time()
-        output_paths = normalize_loudness(files, target_lufs=target_lufs, output_dir=output_dir)
+        results = batch_loudness_match(list(files), output_dir=output_dir or os.path.dirname(files[0]), target_lufs=target_lufs)
         elapsed = time.time() - start_time
         progress.update(task, description=f"[green]Normalization complete ({elapsed:.1f}s)")
         progress.stop()
 
     console.print(f"\n[green bold]Normalized {len(files)} file(s):[/green bold]")
-    for path in output_paths:
+    for r in results:
+        path = r.get("output", r) if isinstance(r, dict) else r
         console.print(f"  {path}")
     console.print()
 
@@ -779,15 +780,14 @@ def auto_zoom(file, zoom_amount, easing, output_dir, apply):
     print_banner()
 
     try:
-        from .core.zoom import apply_auto_zoom
+        from .core.auto_zoom import generate_zoom_keyframes
     except ImportError as e:
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
-        console.print("Ensure opencut[zoom] extras are installed.")
+        console.print("Ensure opencv-python is installed: pip install opencv-python-headless")
         sys.exit(1)
 
     base = _resolve_output_dir(file, output_dir)
     ext = os.path.splitext(file)[1]
-    output_path = f"{base}_autozoom{ext}"
     keyframes_path = f"{base}_autozoom_keyframes.json"
 
     console.print(f"\n[bold]Auto-zoom:[/bold] {file}")
@@ -800,22 +800,38 @@ def auto_zoom(file, zoom_amount, easing, output_dir, apply):
         TimeElapsedColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("Detecting faces and applying zoom...", total=None)
+        task = progress.add_task("Detecting faces and generating keyframes...", total=None)
         start_time = time.time()
-        apply_auto_zoom(
-            file,
-            zoom_amount=zoom_amount,
-            easing=easing,
-            output_path=output_path if apply else None,
-            keyframes_path=keyframes_path if not apply else None,
+        result = generate_zoom_keyframes(
+            file, zoom_amount=zoom_amount, easing=easing,
         )
         elapsed = time.time() - start_time
-        progress.update(task, description=f"[green]Auto-zoom complete ({elapsed:.1f}s)")
+        progress.update(task, description=f"[green]Keyframe generation complete ({elapsed:.1f}s)")
         progress.stop()
 
-    if apply:
+    keyframes = result.get("keyframes", []) if isinstance(result, dict) else result
+    console.print(f"\n[bold]Generated {len(keyframes)} zoom keyframes[/bold]")
+
+    if apply and keyframes:
+        # Apply zoom via FFmpeg zoompan filter
+        from .helpers import get_video_info, run_ffmpeg
+        info = get_video_info(file)
+        fps = info.get("fps", 30)
+        output_path = f"{base}_autozoom{ext}"
+        console.print("[bold]Applying zoom to video...[/bold]")
+        # Build zoompan filter — simplified: use first keyframe zoom for now
+        zoom_val = keyframes[0].get("zoom", zoom_amount) if keyframes else zoom_amount
+        run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-i", file,
+            "-vf", f"zoompan=z={zoom_val}:d=1:s={info['width']}x{info['height']}:fps={fps}",
+            "-c:a", "copy", output_path,
+        ])
         console.print(f"\n[green bold]Saved:[/green bold] {output_path}\n")
     else:
+        import json as _json
+        with open(keyframes_path, "w", encoding="utf-8") as f:
+            _json.dump(keyframes, f, indent=2)
         console.print(f"\n[green bold]Keyframes saved:[/green bold] {keyframes_path}\n")
 
 
@@ -827,32 +843,56 @@ def deliverables(sequence_json, output_dir, doc_type):
     """Generate post-production deliverable documents from sequence data."""
     print_banner()
 
+    import json as _json
+
     try:
-        from .core.deliverables import generate_deliverables
+        from .core.deliverables import (
+            generate_adr_list,
+            generate_asset_list,
+            generate_music_cue_sheet,
+            generate_vfx_sheet,
+        )
     except ImportError as e:
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
-        console.print("Ensure opencut[deliverables] extras are installed.")
         sys.exit(1)
 
     if output_dir:
         os.makedirs(output_dir, exist_ok=True)
 
+    # Load sequence data JSON
+    try:
+        with open(sequence_json, "r", encoding="utf-8") as f:
+            seq_data = _json.load(f)
+    except Exception as e:
+        console.print(f"[red bold]Error:[/red bold] Could not read sequence JSON: {e}")
+        sys.exit(1)
+
     console.print(f"\n[bold]Generating deliverables:[/bold] {sequence_json}")
     console.print(f"[dim]Type: {doc_type} | Output dir: {output_dir or '(same as input)'}[/dim]\n")
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TimeElapsedColumn(),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Generating deliverable documents...", total=None)
-        start_time = time.time()
-        docs = generate_deliverables(sequence_json, doc_type=doc_type, output_dir=output_dir)
-        elapsed = time.time() - start_time
-        progress.update(task, description=f"[green]Generation complete ({elapsed:.1f}s)")
-        progress.stop()
+    generators = {
+        "vfx": ("VFX Sheet", generate_vfx_sheet),
+        "adr": ("ADR List", generate_adr_list),
+        "music": ("Music Cue Sheet", generate_music_cue_sheet),
+        "asset": ("Asset List", generate_asset_list),
+    }
+
+    if doc_type == "all":
+        gen_list = list(generators.values())
+    else:
+        gen_list = [generators[doc_type]] if doc_type in generators else []
+
+    docs = []
+    out_dir = output_dir or os.path.dirname(sequence_json)
+    for label, gen_fn in gen_list:
+        console.print(f"  Generating {label}...")
+        base_name = os.path.splitext(os.path.basename(sequence_json))[0]
+        out_path = os.path.join(out_dir, f"{base_name}_{label.lower().replace(' ', '_')}.csv")
+        result = gen_fn(seq_data, out_path)
+        if isinstance(result, dict):
+            docs.append(result.get("output", out_path))
+        else:
+            docs.append(out_path)
 
     console.print(f"\n[green bold]Generated {len(docs)} document(s):[/green bold]")
     for doc in docs:
@@ -918,6 +958,118 @@ def nlp(command_text, file, provider, model, api_key):
         console.print(f"\n[green bold]Done:[/green bold] {result}\n")
     else:
         console.print("[dim]Pass --file to execute the command.[/dim]\n")
+
+
+@cli.command()
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option("-o", "--output", type=click.Path(), default=None, help="Output file path")
+@click.option("--method", type=click.Choice(["afftdn", "highpass", "gate"]), default="afftdn", help="Denoise method")
+@click.option("--strength", type=float, default=0.5, help="Denoise strength 0-1")
+def denoise(input_file, output, method, strength):
+    """Remove background noise from audio/video."""
+    print_banner()
+
+    from .helpers import output_path as _out_path
+    from .helpers import run_ffmpeg
+
+    if output is None:
+        output = _out_path(input_file, "denoised")
+
+    console.print(f"\n[bold]Denoising:[/bold] {input_file}")
+    console.print(f"[dim]Method: {method} | Strength: {strength}[/dim]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Applying noise reduction...", total=None)
+        start_time = time.time()
+
+        if method == "afftdn":
+            nf = int(strength * 97)  # 0-97 range
+            af = f"afftdn=nf=-{max(1, nf)}"
+        elif method == "highpass":
+            freq = int(100 + strength * 200)  # 100-300 Hz
+            af = f"highpass=f={freq}"
+        else:
+            af = f"agate=threshold={0.01 + strength * 0.04}"
+
+        run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-i", input_file, "-af", af,
+            "-c:v", "copy", output,
+        ])
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Denoise complete ({elapsed:.1f}s)")
+        progress.stop()
+
+    console.print(f"\n[green bold]Saved:[/green bold] {output}\n")
+
+
+@cli.command("scene-detect")
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option("--method", type=click.Choice(["ffmpeg", "ml", "pyscenedetect"]), default="ffmpeg", help="Detection method")
+@click.option("--threshold", type=float, default=0.3, help="Detection sensitivity 0-1")
+@click.option("--output", "-o", type=click.Path(), default=None, help="Output JSON file")
+def scene_detect(input_file, method, threshold, output):
+    """Detect scene boundaries/cuts in a video."""
+    print_banner()
+
+    try:
+        from .core.scene_detect import detect_scenes, detect_scenes_ml
+    except ImportError as e:
+        console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
+        sys.exit(1)
+
+    console.print(f"\n[bold]Scene detection:[/bold] {input_file}")
+    console.print(f"[dim]Method: {method} | Threshold: {threshold}[/dim]\n")
+
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Detecting scenes...", total=None)
+        start_time = time.time()
+        if method == "ml":
+            scenes = detect_scenes_ml(input_file, threshold=threshold)
+        else:
+            scenes = detect_scenes(input_file, threshold=threshold, method=method)
+        elapsed = time.time() - start_time
+        progress.update(task, description=f"[green]Detection complete ({elapsed:.1f}s)")
+        progress.stop()
+
+    scene_list = scenes if isinstance(scenes, list) else scenes.get("scenes", []) if isinstance(scenes, dict) else []
+    console.print(f"\n[bold]Scenes found:[/bold] {len(scene_list)}")
+
+    if scene_list:
+        table = Table(title="Scene Boundaries", box=box.ROUNDED)
+        table.add_column("#", style="cyan", justify="right")
+        table.add_column("Start", justify="right")
+        table.add_column("End", justify="right")
+        table.add_column("Duration", justify="right")
+
+        for i, s in enumerate(scene_list[:30], 1):
+            data = s if isinstance(s, dict) else {"start": s}
+            start = data.get("start", 0)
+            end = data.get("end", start)
+            dur = end - start
+            table.add_row(str(i), f"{start:.2f}s", f"{end:.2f}s", f"{dur:.2f}s")
+
+        if len(scene_list) > 30:
+            console.print(f"[dim](showing first 30 of {len(scene_list)})[/dim]")
+        console.print(table)
+
+    if output:
+        import json as _json
+        with open(output, "w", encoding="utf-8") as f:
+            _json.dump(scene_list, f, indent=2)
+        console.print(f"\n[green bold]Saved:[/green bold] {output}")
+
+    console.print()
 
 
 def main():
