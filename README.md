@@ -1,6 +1,6 @@
 # OpenCut
 
-![Version](https://img.shields.io/badge/version-1.9.2-blue)
+![Version](https://img.shields.io/badge/version-1.9.16-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
@@ -23,7 +23,7 @@
 
 **Option A -- Installer (recommended):**
 
-Download `OpenCut-Setup-1.9.2.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Handles everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
+Download `OpenCut-Setup-1.9.16.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Handles everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
 
 **Option B -- From source:**
 
@@ -57,7 +57,7 @@ docker-compose -f docker-compose.gpu.yml up  # With GPU
 
 ## Feature Overview
 
-OpenCut v1.9.2 includes **254 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.9.16 includes **254 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
