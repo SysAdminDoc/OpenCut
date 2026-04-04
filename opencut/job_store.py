@@ -38,6 +38,8 @@ _DB_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "jobs.db")
 _LOCAL = threading.local()
 _INIT_LOCK = threading.Lock()
 _INITIALIZED = False
+_ALL_CONNECTIONS = []  # Track connections for shutdown cleanup
+_CONN_LOCK = threading.Lock()
 
 # How long to keep completed jobs in the database
 COMPLETED_JOB_TTL = 7 * 24 * 3600  # 7 days
@@ -53,7 +55,21 @@ def _get_conn() -> sqlite3.Connection:
         conn.execute("PRAGMA journal_mode=WAL")
         conn.execute("PRAGMA synchronous=NORMAL")
         _LOCAL.conn = conn
+        with _CONN_LOCK:
+            _ALL_CONNECTIONS.append(conn)
     return conn
+
+
+def close_all_connections():
+    """Close all tracked SQLite connections. Call on server shutdown."""
+    with _CONN_LOCK:
+        for conn in _ALL_CONNECTIONS:
+            try:
+                conn.close()
+            except Exception:
+                pass
+        _ALL_CONNECTIONS.clear()
+    logger.debug("All job store connections closed")
 
 
 def init_db():

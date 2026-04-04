@@ -15,6 +15,7 @@ import os
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import suppress
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
@@ -358,23 +359,19 @@ def process_batch_parallel(
                     errors[idx] = err
                     failed += 1
                     if on_item_error:
-                        try:
+                        with suppress(Exception):
                             on_item_error(idx, err)
-                        except Exception:
-                            pass
                 else:
                     results[idx] = result_dict
                     completed += 1
                     if on_item_complete:
-                        try:
+                        with suppress(Exception):
                             on_item_complete(idx, result_dict)
-                        except Exception:
-                            pass
 
     finalize_batch(batch_id)
 
     logger.info(
-        "Batch %s: parallel processing done — %d completed, %d failed",
+        "Batch %s: parallel processing done - %d completed, %d failed",
         batch_id, completed, failed,
     )
 
