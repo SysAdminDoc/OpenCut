@@ -513,7 +513,7 @@ def video_auto_zoom(job_id, filepath, data):
     if output_path:
         result_dict["output"] = output_path
 
-    return {}
+    return result_dict
 
 
 # ---------------------------------------------------------------------------

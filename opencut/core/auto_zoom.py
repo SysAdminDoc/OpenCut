@@ -8,6 +8,7 @@ Uses OpenCV face detection (Haar cascade fallback if no DNN model available).
 
 import logging
 import os
+import threading
 from typing import List, Optional
 
 logger = logging.getLogger("opencut")
@@ -70,39 +71,45 @@ def _ease(t: float, mode: str) -> float:
 # ---------------------------------------------------------------------------
 
 _CASCADE: Optional[object] = None
+_CASCADE_LOCK = threading.Lock()
 
 
 def _get_cascade():
-    """Load the frontal-face Haar cascade (cached after first load)."""
+    """Load the frontal-face Haar cascade (cached after first load). Thread-safe."""
     global _CASCADE
     if _CASCADE is not None:
         return _CASCADE
 
-    # Try the built-in OpenCV data path first
-    cascade_name = "haarcascade_frontalface_default.xml"
-    builtin_path = cv2.data.haarcascades + cascade_name  # type: ignore[union-attr]
-    if os.path.exists(builtin_path):
-        _CASCADE = cv2.CascadeClassifier(builtin_path)
-        return _CASCADE
-
-    # Fallback: search common locations
-    candidates = [
-        os.path.join(os.path.dirname(__file__), cascade_name),
-        os.path.join(os.path.expanduser("~"), ".opencut", cascade_name),
-    ]
-    for path in candidates:
-        if os.path.exists(path):
-            _CASCADE = cv2.CascadeClassifier(path)
+    with _CASCADE_LOCK:
+        # Double-check after acquiring lock
+        if _CASCADE is not None:
             return _CASCADE
 
-    # Return empty classifier — detection will always return no faces,
-    # and we fall back to centre-crop anchors.
-    logger.warning(
-        "Haar cascade not found at %s; face detection disabled, using centre crop.",
-        builtin_path,
-    )
-    _CASCADE = cv2.CascadeClassifier()
-    return _CASCADE
+        # Try the built-in OpenCV data path first
+        cascade_name = "haarcascade_frontalface_default.xml"
+        builtin_path = cv2.data.haarcascades + cascade_name  # type: ignore[union-attr]
+        if os.path.exists(builtin_path):
+            _CASCADE = cv2.CascadeClassifier(builtin_path)
+            return _CASCADE
+
+        # Fallback: search common locations
+        candidates = [
+            os.path.join(os.path.dirname(__file__), cascade_name),
+            os.path.join(os.path.expanduser("~"), ".opencut", cascade_name),
+        ]
+        for path in candidates:
+            if os.path.exists(path):
+                _CASCADE = cv2.CascadeClassifier(path)
+                return _CASCADE
+
+        # Return empty classifier — detection will always return no faces,
+        # and we fall back to centre-crop anchors.
+        logger.warning(
+            "Haar cascade not found at %s; face detection disabled, using centre crop.",
+            builtin_path,
+        )
+        _CASCADE = cv2.CascadeClassifier()
+        return _CASCADE
 
 
 # ---------------------------------------------------------------------------

@@ -18,6 +18,7 @@ from opencut.jobs import (
     _is_cancelled,
     _update_job,
     async_job,
+    make_install_route,
 )
 from opencut.security import (
     VALID_WHISPER_MODELS,
@@ -403,8 +404,6 @@ def video_broll_plan(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 # Install Endpoints (generated via factory)
 # ---------------------------------------------------------------------------
-from opencut.jobs import make_install_route
-
 make_install_route(video_specialty_bp, "/video/depth/install", "depth_effects",
                    ["torch", "torchvision", "transformers", "opencv-python-headless", "Pillow"],
                    doc="Install Depth Anything V2 dependencies.")

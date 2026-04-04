@@ -119,7 +119,7 @@ def denoise_audio(
         output_path,
     ]
 
-    result = subprocess.run(cmd, capture_output=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, timeout=600, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"Noise reduction failed: {result.stderr.decode(errors='replace')}")
 
@@ -183,7 +183,7 @@ def isolate_voice(
         output_path,
     ]
 
-    result = subprocess.run(cmd, capture_output=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, timeout=600, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"Voice isolation failed: {result.stderr.decode(errors='replace')}")
 
@@ -222,7 +222,10 @@ def measure_loudness(input_path: str) -> LoudnessInfo:
         "-f", "null", "-",
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=False)
+    if result.returncode != 0:
+        stderr = result.stderr.strip()[-500:] if result.stderr else "unknown error"
+        raise RuntimeError(f"Loudness analysis failed: {stderr}")
     # loudnorm prints JSON to stderr
     output = result.stderr
 
@@ -318,7 +321,7 @@ def normalize_loudness(
         output_path,
     ]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, text=True, timeout=600, check=False)
     if result.returncode != 0:
         stderr = result.stderr.strip()[-500:] if result.stderr else "unknown error"
         raise RuntimeError(f"Loudness normalization failed: {stderr}")
@@ -367,7 +370,7 @@ def detect_beats(
         "-f", "s16le", "-",
     ]
 
-    result = subprocess.run(cmd, capture_output=True, timeout=300)
+    result = subprocess.run(cmd, capture_output=True, timeout=300, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"Audio extraction failed: {result.stderr.decode(errors='replace')}")
 
@@ -520,7 +523,7 @@ def generate_ducking_keyframes(
         "-f", "s16le", "-",
     ]
 
-    result = subprocess.run(cmd, capture_output=True, timeout=300)
+    result = subprocess.run(cmd, capture_output=True, timeout=300, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"Audio extraction failed: {result.stderr.decode(errors='replace')}")
 
@@ -707,7 +710,7 @@ def apply_audio_effect(
         output_path,
     ]
 
-    result = subprocess.run(cmd, capture_output=True, timeout=600)
+    result = subprocess.run(cmd, capture_output=True, timeout=600, check=False)
     if result.returncode != 0:
         raise RuntimeError(f"Audio effect failed: {result.stderr.decode(errors='replace')}")
 

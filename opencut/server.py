@@ -12,8 +12,10 @@ import os
 import socket
 import subprocess as _sp
 import sys
+import threading as _log_threading
 import time
 import traceback
+from contextlib import suppress
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
@@ -29,9 +31,6 @@ logger = logging.getLogger("opencut")
 logger.setLevel(logging.DEBUG)
 
 # Job-ID correlation filter — injects job_id into every log record
-# Inline to avoid circular import with opencut.jobs
-import threading as _log_threading
-
 _log_thread_local = _log_threading.local()
 
 class _JobLogFilter(logging.Filter):
@@ -174,7 +173,7 @@ def _setup_system_site_packages():
         try:
             result = _sp.run(
                 [python, "-c", "import site, json; print(json.dumps(site.getsitepackages()))"],
-                capture_output=True, text=True, timeout=10
+                capture_output=True, text=True, timeout=10, check=False
             )
             if result.returncode == 0:
                 import json
@@ -187,7 +186,7 @@ def _setup_system_site_packages():
                 # Also check user site-packages
                 result2 = _sp.run(
                     [python, "-c", "import site; print(site.getusersitepackages())"],
-                    capture_output=True, text=True, timeout=10
+                    capture_output=True, text=True, timeout=10, check=False
                 )
                 if result2.returncode == 0:
                     user_sp = result2.stdout.strip()
@@ -314,10 +313,8 @@ def _write_pid(port: int):
                 f.write(f"{os.getpid()}\n{port}\n")
             os.replace(tmp_path, PID_FILE)
         except BaseException:
-            try:
+            with suppress(OSError):
                 os.unlink(tmp_path)
-            except OSError:
-                pass
             raise
         logger.debug(f"Wrote PID file: pid={os.getpid()} port={port}")
     except Exception as e:
@@ -355,7 +352,7 @@ def _is_pid_alive(pid: int) -> bool:
         if sys.platform == "win32":
             result = _sp.run(
                 ["tasklist", "/FI", f"PID eq {pid}", "/NH"],
-                capture_output=True, text=True, timeout=5
+                capture_output=True, text=True, timeout=5, check=False
             )
             return str(pid) in result.stdout
         else:
@@ -441,14 +438,12 @@ def _kill_via_pid(pid: int) -> bool:
         if sys.platform == "win32":
             # /F = force, /T = kill entire process tree (bat launcher + python)
             _sp.run(["taskkill", "/F", "/T", "/PID", str(pid)],
-                    capture_output=True, timeout=10)
+                    capture_output=True, timeout=10, check=False)
         else:
             os.kill(pid, 9)  # SIGKILL
             # Reap zombie if it happens to be our child
-            try:
+            with suppress(ChildProcessError):
                 os.waitpid(pid, os.WNOHANG)
-            except ChildProcessError:
-                pass  # Not our child - init will reap it
 
         # Verify kill worked (retry a few times)
         for _ in range(6):
@@ -469,7 +464,7 @@ def _kill_via_netstat(host: str, port: int) -> bool:
         if sys.platform == "win32":
             result = _sp.run(
                 ["netstat", "-ano", "-p", "TCP"],
-                capture_output=True, text=True, timeout=10
+                capture_output=True, text=True, timeout=10, check=False
             )
             for line in result.stdout.splitlines():
                 # Only match LISTENING state with exact port
@@ -483,12 +478,12 @@ def _kill_via_netstat(host: str, port: int) -> bool:
                             print(f"  Found process {pid} on port {port}, killing...")
                             logger.info(f"Killing PID {pid} found on port {port}")
                             _sp.run(["taskkill", "/F", "/T", "/PID", pid],
-                                    capture_output=True, timeout=10)
+                                    capture_output=True, timeout=10, check=False)
                             killed_any = True
         else:
             result = _sp.run(
                 ["lsof", "-ti", f":{port}"],
-                capture_output=True, text=True, timeout=5
+                capture_output=True, text=True, timeout=5, check=False
             )
             for pid in result.stdout.strip().split():
                 if pid.isdigit() and int(pid) != os.getpid():
@@ -562,7 +557,7 @@ def _show_startup_notification(port):
     """Show a Windows toast notification so user knows the server started."""
     if sys.platform != "win32":
         return
-    try:
+    with suppress(Exception):
         # Use PowerShell to show a native Windows toast (no extra deps needed)
         _sp.Popen(
             ["powershell", "-WindowStyle", "Hidden", "-Command",
@@ -578,8 +573,6 @@ def _show_startup_notification(port):
             creationflags=0x08000000,  # CREATE_NO_WINDOW
             stdout=_sp.DEVNULL, stderr=_sp.DEVNULL
         )
-    except Exception:
-        pass  # Non-critical — if toast fails, server still runs
 
 
 # ---------------------------------------------------------------------------

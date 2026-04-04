@@ -6,7 +6,7 @@ External dependencies (whisper, ffmpeg, LLM) are mocked where needed.
 """
 
 import json
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from tests.conftest import csrf_headers
 
@@ -63,6 +63,15 @@ class TestDependencies:
         assert "numpy" in data
         for key, val in data.items():
             assert "installed" in val
+
+    def test_dependencies_marks_ffmpeg_missing_when_probe_fails(self, client):
+        mock_result = MagicMock(returncode=1, stdout="", stderr="ffmpeg startup failed")
+        with patch("opencut.routes.system._sp.run", return_value=mock_result):
+            resp = client.get("/system/dependencies")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["ffmpeg"]["installed"] is False
+        assert data["ffmpeg"]["version"] is None
 
 
 # =====================================================================

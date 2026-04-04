@@ -11,6 +11,7 @@ import logging
 import os
 import shutil
 import subprocess as _sp
+import sys as _sys
 import tempfile
 import threading
 import time
@@ -21,8 +22,6 @@ logger = logging.getLogger("opencut")
 # ---------------------------------------------------------------------------
 # Ensure ~/.opencut/packages is on sys.path (pip --target fallback dir)
 # ---------------------------------------------------------------------------
-import sys as _sys
-
 _opencut_pkg_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
 if os.path.isdir(_opencut_pkg_dir) and _opencut_pkg_dir not in _sys.path:
     _sys.path.insert(0, _opencut_pkg_dir)
@@ -83,6 +82,48 @@ def output_path(input_path: str, suffix: str, output_dir: str = "") -> str:
 # ---------------------------------------------------------------------------
 _cleanup_scheduled = set()
 _cleanup_schedule_lock = threading.Lock()
+# Single daemon thread handles all deferred deletions to avoid Timer thread spam
+_cleanup_queue: list = []
+_cleanup_event = threading.Event()
+
+
+def _cleanup_worker():
+    """Background worker that processes deferred file deletions."""
+    while True:
+        _cleanup_event.wait(timeout=5.0)
+        _cleanup_event.clear()
+        now = time.time()
+        remaining = []
+        with _cleanup_schedule_lock:
+            pending = list(_cleanup_queue)
+            _cleanup_queue.clear()
+        for entry in pending:
+            path, attempt, max_attempts, ready_at, backoff = entry
+            if now < ready_at:
+                remaining.append(entry)
+                continue
+            try:
+                if os.path.isfile(path):
+                    os.unlink(path)
+                    logger.debug("Cleaned up temp file: %s", path)
+                with _cleanup_schedule_lock:
+                    _cleanup_scheduled.discard(os.path.normcase(os.path.abspath(path)))
+            except OSError:
+                if attempt < max_attempts:
+                    remaining.append((path, attempt + 1, max_attempts, now + backoff, backoff * 2))
+                else:
+                    with _cleanup_schedule_lock:
+                        _cleanup_scheduled.discard(os.path.normcase(os.path.abspath(path)))
+                    logger.warning("Failed to clean up temp file after %d attempts: %s",
+                                   max_attempts, path)
+        if remaining:
+            with _cleanup_schedule_lock:
+                _cleanup_queue.extend(remaining)
+
+
+_cleanup_thread = threading.Thread(target=_cleanup_worker, daemon=True,
+                                   name="opencut-temp-cleanup")
+_cleanup_thread.start()
 
 
 def _schedule_temp_cleanup(filepath: str, delay: float = 5.0, retries: int = 3):
@@ -91,32 +132,15 @@ def _schedule_temp_cleanup(filepath: str, delay: float = 5.0, retries: int = 3):
     On Windows, FFmpeg may still hold a file handle when the job thread
     finishes.  This retries deletion with exponential backoff.
     Deduplicates: won't schedule the same path twice.
+    Uses a single background thread instead of spawning Timer threads.
     """
     norm = os.path.normcase(os.path.abspath(filepath))
     with _cleanup_schedule_lock:
         if norm in _cleanup_scheduled:
             return
         _cleanup_scheduled.add(norm)
-
-    def _try_delete(path, attempt, max_attempts, wait):
-        try:
-            if os.path.isfile(path):
-                os.unlink(path)
-                logger.debug("Cleaned up temp file: %s", path)
-            with _cleanup_schedule_lock:
-                _cleanup_scheduled.discard(os.path.normcase(os.path.abspath(path)))
-        except OSError:
-            if attempt < max_attempts:
-                threading.Timer(wait, _try_delete,
-                                args=(path, attempt + 1, max_attempts, wait * 2)).start()
-            else:
-                with _cleanup_schedule_lock:
-                    _cleanup_scheduled.discard(os.path.normcase(os.path.abspath(path)))
-                logger.warning("Failed to clean up temp file after %d attempts: %s",
-                               max_attempts, path)
-
-    threading.Timer(delay, _try_delete,
-                    args=(filepath, 1, retries, delay)).start()
+        _cleanup_queue.append((filepath, 1, retries, time.time() + delay, delay))
+    _cleanup_event.set()
 
 # ---------------------------------------------------------------------------
 # Disk Space Preflight Check

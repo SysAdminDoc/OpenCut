@@ -201,6 +201,14 @@ class TestAudioSuite(unittest.TestCase):
         self.assertAlmostEqual(info.input_i, -18.5)
         self.assertAlmostEqual(info.input_tp, -0.8)
 
+    @patch("subprocess.run")
+    def test_measure_loudness_raises_on_ffmpeg_failure(self, mock_run):
+        from opencut.core.audio_suite import measure_loudness
+        mock_run.return_value = MagicMock(returncode=1, stderr="invalid data found")
+        with self.assertRaises(RuntimeError) as ctx:
+            measure_loudness("/input.wav")
+        self.assertIn("Loudness analysis failed", str(ctx.exception))
+
     def test_get_available_effects_returns_list(self):
         from opencut.core.audio_suite import get_available_effects
         effects = get_available_effects()

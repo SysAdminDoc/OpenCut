@@ -12,6 +12,7 @@ import logging
 import os
 import subprocess
 import tempfile
+from contextlib import suppress
 
 from opencut.helpers import get_ffmpeg_path, get_ffprobe_path
 
@@ -25,6 +26,19 @@ _VIDEO_EXTENSIONS = frozenset({".mp4", ".mkv", ".avi", ".mov", ".webm", ".flv", 
 _AUDIO_EXTENSIONS = frozenset({".wav", ".mp3", ".flac", ".aac", ".ogg", ".m4a", ".wma", ".opus"})
 
 
+def _binary_env(resolved_path):
+    """Prefer invoking ffmpeg/ffprobe by name while honoring bundled binaries."""
+    if not resolved_path:
+        return None
+    binary_dir = os.path.dirname(resolved_path)
+    if not binary_dir:
+        return None
+    env = os.environ.copy()
+    current_path = env.get("PATH", "")
+    env["PATH"] = binary_dir if not current_path else binary_dir + os.pathsep + current_path
+    return env
+
+
 def _is_video(filepath):
     """Check if file is a video (vs pure audio) by extension."""
     ext = os.path.splitext(filepath)[1].lower()
@@ -34,10 +48,11 @@ def _is_video(filepath):
         return False
     # Unknown extension — probe for video stream
     try:
+        ffprobe_path = get_ffprobe_path()
         result = subprocess.run(
-            [get_ffprobe_path(), "-v", "quiet", "-select_streams", "v:0",
+            ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
              "-show_entries", "stream=codec_type", "-of", "csv=p=0", filepath],
-            capture_output=True, text=True, timeout=10,
+            capture_output=True, text=True, timeout=10, env=_binary_env(ffprobe_path), check=False,
         )
         return "video" in result.stdout.lower()
     except Exception:
@@ -58,8 +73,9 @@ def _extract_audio(input_path, output_wav):
     Raises:
         RuntimeError: If FFmpeg extraction fails.
     """
+    ffmpeg_path = get_ffmpeg_path()
     cmd = [
-        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
+        "ffmpeg", "-hide_banner", "-loglevel", "error",
         "-y",
         "-i", input_path,
         "-vn",
@@ -70,11 +86,18 @@ def _extract_audio(input_path, output_wav):
     ]
 
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-    except FileNotFoundError:
-        raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
-    except subprocess.TimeoutExpired:
-        raise RuntimeError(f"Audio extraction timed out for '{os.path.basename(input_path)}'")
+        result = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            timeout=300,
+            env=_binary_env(ffmpeg_path),
+            check=False,
+        )
+    except FileNotFoundError as err:
+        raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html") from err
+    except subprocess.TimeoutExpired as err:
+        raise RuntimeError(f"Audio extraction timed out for '{os.path.basename(input_path)}'") from err
 
     if result.returncode != 0:
         stderr = result.stderr.strip()[-500:] if result.stderr else "unknown error"
@@ -134,20 +157,20 @@ def enhance_speech(
     try:
         import torch
         import torchaudio
-    except ImportError:
+    except ImportError as err:
         raise RuntimeError(
             "torch and torchaudio are required. Install with: "
             "pip install torch torchaudio"
-        )
+        ) from err
 
     try:
         from resemble_enhance.enhancer.inference import denoise as _denoise_fn
         from resemble_enhance.enhancer.inference import enhance as _enhance_fn
-    except ImportError:
+    except ImportError as err:
         raise RuntimeError(
             "resemble-enhance is required. Install with: "
             "pip install resemble-enhance"
-        )
+        ) from err
 
     # If input is video, extract audio to temp WAV
     temp_wav = None
@@ -157,9 +180,12 @@ def enhance_speech(
         if on_progress:
             on_progress(10, "Extracting audio from video...")
 
-        _tmp = tempfile.NamedTemporaryFile(suffix=".wav", prefix="opencut_enhance_", delete=False)
-        temp_wav = _tmp.name
-        _tmp.close()
+        with tempfile.NamedTemporaryFile(
+            suffix=".wav",
+            prefix="opencut_enhance_",
+            delete=False,
+        ) as _tmp:
+            temp_wav = _tmp.name
         _extract_audio(input_path, temp_wav)
         audio_path = temp_wav
 
@@ -249,20 +275,19 @@ def enhance_speech(
     finally:
         # Clean up temp file
         if temp_wav and os.path.isfile(temp_wav):
-            try:
+            with suppress(OSError):
                 os.remove(temp_wav)
-            except OSError:
-                pass
-        # Free GPU memory
-        try:
-            del audio  # noqa: F821
-        except Exception:
-            pass
-        try:
+        # Free GPU memory — delete all tensor references before clearing cache
+        for _var in ("audio", "mono", "sr"):
+            with suppress(Exception):
+                if _var in locals():
+                    obj = locals()[_var]
+                    if hasattr(obj, "cpu"):
+                        obj.cpu()  # move off GPU before delete
+                    del obj
+        with suppress(Exception):
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-        except Exception:
-            pass
 
 
 # ---------------------------------------------------------------------------
@@ -304,10 +329,10 @@ def enhance_speech_clearvoice(
 
     try:
         from clearvoice import ClearVoice
-    except ImportError:
+    except ImportError as err:
         raise RuntimeError(
             "clearvoice is required. Install with: pip install clearvoice"
-        )
+        ) from err
 
     # If input is video, extract audio to temp WAV
     temp_wav = None
@@ -317,9 +342,12 @@ def enhance_speech_clearvoice(
         if on_progress:
             on_progress(10, "Extracting audio from video...")
 
-        _tmp = tempfile.NamedTemporaryFile(suffix=".wav", prefix="opencut_cv_", delete=False)
-        temp_wav = _tmp.name
-        _tmp.close()
+        with tempfile.NamedTemporaryFile(
+            suffix=".wav",
+            prefix="opencut_cv_",
+            delete=False,
+        ) as _tmp:
+            temp_wav = _tmp.name
         _extract_audio(input_path, temp_wav)
         audio_path = temp_wav
 
@@ -361,13 +389,14 @@ def enhance_speech_clearvoice(
 
     finally:
         if temp_wav and os.path.isfile(temp_wav):
-            try:
+            with suppress(OSError):
                 os.remove(temp_wav)
-            except OSError:
-                pass
-        try:
+        # Release model and result tensors before clearing GPU cache
+        for _var in ("cv", "result"):
+            with suppress(Exception):
+                if _var in locals():
+                    del locals()[_var]
+        with suppress(Exception):
             import torch
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
-        except Exception:
-            pass

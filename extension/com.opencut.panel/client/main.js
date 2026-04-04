@@ -79,6 +79,8 @@
         "quick-workflow": { keys: "Ctrl+Shift+W", label: "Run Quick Workflow" }
     };
     var _shortcutRegistry = {};
+    var WORKSPACE_STATE_KEY = "opencut_workspace_state";
+    var _workspaceState = loadWorkspaceState();
 
     function loadShortcuts() {
         var saved = {};
@@ -116,6 +118,89 @@
             _shortcutRegistry[actionId].keys = newKeys;
             saveShortcuts();
         }
+    }
+
+    function normalizeWorkspaceState(saved) {
+        return {
+            activeNav: saved && typeof saved.activeNav === "string" ? saved.activeNav : "cut",
+            activeSubs: saved && saved.activeSubs && typeof saved.activeSubs === "object" ? saved.activeSubs : {},
+            selectedPath: saved && typeof saved.selectedPath === "string" ? saved.selectedPath : "",
+            selectedName: saved && typeof saved.selectedName === "string" ? saved.selectedName : ""
+        };
+    }
+
+    function loadWorkspaceState() {
+        try {
+            var saved = localStorage.getItem(WORKSPACE_STATE_KEY);
+            if (saved) return normalizeWorkspaceState(JSON.parse(saved));
+        } catch (e) {}
+        return normalizeWorkspaceState({});
+    }
+
+    function persistWorkspaceState() {
+        try {
+            localStorage.setItem(WORKSPACE_STATE_KEY, JSON.stringify(_workspaceState));
+        } catch (e) {}
+    }
+
+    function rememberWorkspaceTab(tabName) {
+        _workspaceState.activeNav = tabName || "cut";
+        persistWorkspaceState();
+    }
+
+    function rememberWorkspaceSub(tabName, subName) {
+        if (!_workspaceState.activeSubs || typeof _workspaceState.activeSubs !== "object") {
+            _workspaceState.activeSubs = {};
+        }
+        if (tabName && subName) _workspaceState.activeSubs[tabName] = subName;
+        persistWorkspaceState();
+    }
+
+    function rememberWorkspaceSelection(path, name) {
+        _workspaceState.selectedPath = path || "";
+        _workspaceState.selectedName = name || "";
+        persistWorkspaceState();
+    }
+
+    function findSelectOptionByValue(select, value) {
+        if (!select || !value) return null;
+        for (var i = 0; i < select.options.length; i++) {
+            if (select.options[i].value === value) return select.options[i];
+        }
+        return null;
+    }
+
+    function syncClipSelectValue(path) {
+        if (!el.clipSelect) return null;
+        var option = path ? findSelectOptionByValue(el.clipSelect, path) : null;
+        el.clipSelect.value = option ? path : "";
+        if (el.clipSelect._customDropdown) el.clipSelect._customDropdown.updateText();
+        return option;
+    }
+
+    function getPanelTabName(panel) {
+        if (!panel || !panel.id) return "";
+        return panel.id.indexOf("panel-") === 0 ? panel.id.substring(6) : panel.id;
+    }
+
+    function getVisibleTabButtons(container, selector) {
+        var buttons = container ? container.querySelectorAll(selector) : [];
+        var visible = [];
+        for (var i = 0; i < buttons.length; i++) {
+            if (window.getComputedStyle(buttons[i]).display !== "none") visible.push(buttons[i]);
+        }
+        return visible;
+    }
+
+    function moveFocusAndActivate(buttons, currentButton, direction) {
+        if (!buttons || !buttons.length || !currentButton) return;
+        var currentIndex = buttons.indexOf(currentButton);
+        if (currentIndex === -1) currentIndex = 0;
+        var nextIndex = currentIndex + direction;
+        if (nextIndex < 0) nextIndex = buttons.length - 1;
+        if (nextIndex >= buttons.length) nextIndex = 0;
+        buttons[nextIndex].focus();
+        buttons[nextIndex].click();
     }
 
     function matchesShortcut(e, keysStr) {
@@ -437,6 +522,8 @@
             var trig = openDropdowns[i].querySelector('.custom-dropdown-trigger');
             if (trig) trig.setAttribute("aria-expanded", "false");
         }
+        hideRecentClipsDropdown(false);
+        closeCommandPalette({ restoreFocus: false });
     }
     
     function updateCustomDropdown(selectId) {
@@ -457,11 +544,31 @@
         }
     });
     function $(id) { return document.getElementById(id); }
+    function setExpanded(node, expanded) {
+        if (node) node.setAttribute("aria-expanded", expanded ? "true" : "false");
+    }
+
+    function focusClipPicker(openDropdown) {
+        if (!el.clipSelect) return;
+        var trigger = null;
+        if (el.clipSelect.parentNode) {
+            trigger = el.clipSelect.parentNode.querySelector(".custom-dropdown-trigger");
+        }
+        if (trigger) {
+            trigger.focus();
+            if (openDropdown) trigger.click();
+            return;
+        }
+        try { el.clipSelect.focus(); } catch (e) {}
+    }
 
     function initDOM() {
         // Content header
         el.contentTitle = $("contentTitle");
+        el.contentSubtitle = $("contentSubtitle");
+        el.workspaceClipStatus = $("workspaceClipStatus");
         el.connDot = $("connDot");
+        el.connStatus = $("connStatus");
         el.connLabel = $("connLabel");
         el.refreshAllBtn = $("refreshAllBtn");
         el.alertBanner = $("alertBanner");
@@ -476,6 +583,13 @@
         el.refreshClipsBtn = $("refreshClipsBtn");
         el.useSelectionBtn = $("useSelectionBtn");
         el.browseFileBtn = $("browseFileBtn");
+        el.stageChooseMediaBtn = $("stageChooseMediaBtn");
+        el.stageUseTimelineBtn = $("stageUseTimelineBtn");
+        el.stageBrowseMediaBtn = $("stageBrowseMediaBtn");
+        el.stageCommandPaletteBtn = $("stageCommandPaletteBtn");
+        el.workspaceStageSource = $("workspaceStageSource");
+        el.workspaceStageSuite = $("workspaceStageSuite");
+        el.workspaceStageStatus = $("workspaceStageStatus");
 
         // Cut tab
         el.silencePreset = $("silencePreset");
@@ -1018,6 +1132,7 @@
         el.commandPaletteOverlay = $("commandPaletteOverlay");
         el.commandPaletteInput = $("commandPaletteInput");
         el.commandPaletteResults = $("commandPaletteResults");
+        el.commandPaletteStatus = $("commandPaletteStatus");
 
         // v1.3.0 - Trim
         el.trimStart = $("trimStart");
@@ -1037,8 +1152,28 @@
         el.runMergeBtn = $("runMergeBtn");
 
         // v1.3.0 - Server Status
+        el.statusBar = $("statusBar");
+        el.statusDot = $("statusDot");
+        el.statusText = $("statusText");
+        el.statusGpu = $("statusGpu");
+        el.statusJobs = $("statusJobs");
         el.serverStatusBanner = $("serverStatusBanner");
         el.serverStatusMsg = $("serverStatusMsg");
+        if (el.connStatus) el.connStatus.setAttribute("data-state", "offline");
+        if (el.statusBar) el.statusBar.setAttribute("data-state", "offline");
+    }
+
+    function setConnectionBadge(state, label) {
+        if (el.connLabel) el.connLabel.textContent = label;
+        if (el.connStatus) {
+            el.connStatus.setAttribute("data-state", state);
+            el.connStatus.title = label;
+        }
+        if (el.connDot) {
+            el.connDot.className = state === "online" ? "conn-dot on" : "conn-dot off";
+            el.connDot.setAttribute("aria-label", state === "online" ? "Server connected" : "Server disconnected");
+        }
+        updateWorkspaceStageSession();
     }
 
     // ================================================================
@@ -1189,8 +1324,7 @@
                     showToast("Server reconnected", "success");
                 }
                 connected = true;
-                el.connDot.className = "conn-dot on";
-                el.connLabel.textContent = "Connected";
+                setConnectionBadge("online", "Connected");
                 if (data.csrf_token) csrfToken = data.csrf_token;
                 if (data.capabilities) capabilities = data.capabilities;
                 el.backendPort.textContent = BACKEND.replace("http://127.0.0.1:", "Port ");
@@ -1226,6 +1360,7 @@
             cleanupTimers();
             // Exponential backoff: double interval on failure, cap at 60s
             healthBackoff = Math.min(healthBackoff * 2, HEALTH_MAX_MS);
+            clearInterval(healthTimer);
             healthTimer = setInterval(checkHealth, healthBackoff);
             if (!portScanPending) { portScanPending = true; scanForServer(); }
         }, 10000);
@@ -1252,8 +1387,7 @@
                             BACKEND = testUrl;
                             connected = true;
                             if (data.csrf_token) csrfToken = data.csrf_token;
-                            el.connDot.className = "conn-dot on";
-                            el.connLabel.textContent = "Connected" + (port !== BACKEND_BASE_PORT ? " (:" + port + ")" : "");
+                            setConnectionBadge("online", "Connected" + (port !== BACKEND_BASE_PORT ? " (:" + port + ")" : ""));
                             el.backendPort.textContent = "Port " + port;
                             if (data.capabilities) capabilities = data.capabilities;
                             healthBackoff = HEALTH_MS;
@@ -1277,8 +1411,7 @@
         function finishScan() {
             portScanPending = false;
             connected = false;
-            el.connDot.className = "conn-dot off";
-            el.connLabel.textContent = "Disconnected";
+            setConnectionBadge("offline", "Disconnected");
             // Clear capability cache so buttons get re-evaluated when server returns
             capabilitiesLoaded = false;
             capabilities = {};
@@ -1303,6 +1436,77 @@
         _scanDebounceTimer = setTimeout(_doScanProjectMedia, 300);
     }
 
+    function setHintContent(container, message) {
+        if (!container) return;
+        container.innerHTML = "";
+        var hint = document.createElement("div");
+        hint.className = "hint";
+        hint.textContent = message;
+        container.appendChild(hint);
+    }
+
+    function clearSelectedFileState() {
+        selectedPath = "";
+        selectedName = "";
+        transcriptData = null;
+        lastTranscriptSegments = null;
+        syncClipSelectValue("");
+        rememberWorkspaceSelection("", "");
+        if (el.fileInfoBox) el.fileInfoBox.classList.add("hidden");
+        if (el.fileNameDisplay) el.fileNameDisplay.textContent = "";
+        if (el.fileMetaDisplay) el.fileMetaDisplay.textContent = "";
+        document.body.classList.remove("has-clip");
+        updateWorkspaceClipStatus();
+        updateButtons();
+        updateClipPreview();
+        if (el.recentClipsDropdown && !el.recentClipsDropdown.classList.contains("hidden")) {
+            renderRecentClipsDropdown();
+        }
+    }
+
+    function updateProjectMediaList(media, folder) {
+        var files = Array.isArray(media) ? media : [];
+        var desiredPath = selectedPath || _workspaceState.selectedPath || "";
+        var desiredName = selectedName || _workspaceState.selectedName || "";
+        projectMedia = files;
+        projectFolder = folder || "";
+        if (!el.clipSelect) return;
+        el.clipSelect.innerHTML = "";
+        var placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.selected = true;
+        placeholder.textContent = files.length ? "-- Select a clip --" : "No project media found";
+        el.clipSelect.appendChild(placeholder);
+        for (var i = 0; i < files.length; i++) {
+            var clip = files[i] || {};
+            var clipPath = clip.path || "";
+            var clipName = clip.name || (clipPath ? clipPath.split(/[/\\]/).pop() : "Untitled clip");
+            var option = document.createElement("option");
+            option.value = clipPath;
+            option.textContent = clipName;
+            option.setAttribute("data-name", clipName);
+            el.clipSelect.appendChild(option);
+        }
+        populateRecentFiles();
+        var restoredOption = syncClipSelectValue(desiredPath);
+        if (restoredOption && restoredOption.value) {
+            var restoredName = restoredOption.getAttribute("data-name") || desiredName || restoredOption.textContent || desiredPath.split(/[/\\]/).pop();
+            if (desiredPath === selectedPath && restoredName === selectedName && el.fileInfoBox && !el.fileInfoBox.classList.contains("hidden")) {
+                selectedPath = desiredPath;
+                selectedName = restoredName;
+                rememberWorkspaceSelection(selectedPath, selectedName);
+                updateWorkspaceClipStatus();
+                updateButtons();
+                updateClipPreview();
+                if (el.fileNameDisplay && !el.fileNameDisplay.textContent) el.fileNameDisplay.textContent = restoredName;
+            } else {
+                selectFile(desiredPath, restoredName);
+            }
+        } else {
+            clearSelectedFileState();
+        }
+    }
+
     function _doScanProjectMedia() {
         _scanDebounceTimer = null;
         if (_scanInProgress) return;
@@ -1312,17 +1516,8 @@
             if (connected) {
                 api("GET", "/project/media", null, function (err, data) {
                     _scanInProgress = false;
-                    if (!err && data && data.media && data.media.length > 0) {
-                        projectMedia = data.media;
-                        projectFolder = data.projectFolder || "";
-                        var html = '<option value="">-- Select a clip --</option>';
-                        for (var i = 0; i < projectMedia.length; i++) {
-                            var m = projectMedia[i];
-                            html += '<option value="' + esc(m.path) + '" data-name="' + esc(m.name) + '">' + esc(m.name) + '</option>';
-                        }
-                        el.clipSelect.innerHTML = html;
-                        populateRecentFiles();
-                        refreshClipDropdown();
+                    if (!err && data && Array.isArray(data.media)) {
+                        updateProjectMediaList(data.media, data.projectFolder);
                     }
                 });
             } else {
@@ -1347,16 +1542,7 @@
             if (!result || result === "null" || result === "undefined") return;
             try {
                 var data = JSON.parse(result);
-                projectMedia = data.media || [];
-                projectFolder = data.projectFolder || "";
-                var html = '<option value="">-- Select a clip --</option>';
-                for (var i = 0; i < projectMedia.length; i++) {
-                    var m = projectMedia[i];
-                    html += '<option value="' + esc(m.path) + '" data-name="' + esc(m.name) + '">' + esc(m.name) + '</option>';
-                }
-                el.clipSelect.innerHTML = html;
-                populateRecentFiles();
-                refreshClipDropdown();
+                updateProjectMediaList(data.media, data.projectFolder);
             } catch (e) {
                 console.error("scanProjectMedia parse error:", e, result);
                 showAlert("Couldn't read project media. Make sure a project is open in Premiere Pro.");
@@ -1439,20 +1625,21 @@
 
     function populateRecentFiles() {
         var recent = getRecentFiles();
-        if (!recent.length) return;
         // Check if optgroup already exists
         var existing = el.clipSelect.querySelector('optgroup[label="Recent Files"]');
         if (existing) existing.parentNode.removeChild(existing);
-        var group = document.createElement("optgroup");
-        group.label = "Recent Files";
-        for (var i = 0; i < recent.length; i++) {
-            var opt = document.createElement("option");
-            opt.value = recent[i].path;
-            opt.textContent = recent[i].name;
-            opt.setAttribute("data-name", recent[i].name);
-            group.appendChild(opt);
+        if (recent.length) {
+            var group = document.createElement("optgroup");
+            group.label = "Recent Files";
+            for (var i = 0; i < recent.length; i++) {
+                var opt = document.createElement("option");
+                opt.value = recent[i].path;
+                opt.textContent = recent[i].name;
+                opt.setAttribute("data-name", recent[i].name);
+                group.appendChild(opt);
+            }
+            el.clipSelect.appendChild(group);
         }
-        el.clipSelect.appendChild(group);
         refreshClipDropdown();
     }
 
@@ -1472,12 +1659,23 @@
     }
 
     function selectFile(path, name) {
+        if (!path) {
+            clearSelectedFileState();
+            return;
+        }
         selectedPath = path;
         selectedName = name || path.split(/[/\\]/).pop();
+        addRecentClip(path);
+        addRecentFile(path, selectedName);
+        populateRecentFiles();
+        var selectedOption = syncClipSelectValue(path);
+        if (selectedOption) {
+            selectedName = selectedOption.getAttribute("data-name") || selectedOption.textContent || selectedName;
+        }
+        rememberWorkspaceSelection(path, selectedName);
         lastTranscriptSegments = loadCachedTranscript(path);
         transcriptData = null;
-        addRecentFile(path, selectedName);
-        addRecentClip(path);
+        updateWorkspaceClipStatus();
         el.fileInfoBox.classList.remove("hidden");
         el.fileNameDisplay.textContent = selectedName;
         el.fileMetaDisplay.innerHTML = '<span class="skeleton skeleton-wide"></span>';
@@ -1486,6 +1684,9 @@
         else document.body.classList.remove("has-clip");
         updateButtons();
         updateClipPreview();
+        if (el.recentClipsDropdown && !el.recentClipsDropdown.classList.contains("hidden")) {
+            renderRecentClipsDropdown();
+        }
 
         if (connected) {
             api("POST", "/info", { filepath: path }, function (err, data) {
@@ -1513,64 +1714,255 @@
     // ================================================================
     // Tab Navigation
     // ================================================================
+    var TAB_DESCRIPTIONS = {
+        cut: "Trim dead space, fillers, and rough pacing with a tighter review flow.",
+        captions: "Transcribe, refine, and style captions without leaving the panel.",
+        audio: "Balance dialogue, stems, loudness, and polish from one focused surface.",
+        video: "Repair, enhance, and shape the image with cleaner finishing controls.",
+        export: "Package platform-ready deliverables with fewer passes and clearer status.",
+        timeline: "Write back markers, bins, and sequence edits with confidence.",
+        nlp: "Search footage and trigger edit actions with natural-language commands.",
+        settings: "Tune models, defaults, and workspace behavior for the whole studio."
+    };
+
+    function updateContentHeader(tabName, titleText) {
+        if (el.contentTitle) {
+            el.contentTitle.textContent = titleText || tabName;
+        }
+        if (el.contentSubtitle) {
+            el.contentSubtitle.textContent = TAB_DESCRIPTIONS[tabName] || "Focused tools for the current editing workflow.";
+        }
+        updateWorkspaceStageSession(titleText || tabName);
+    }
+
+    function updateWorkspaceStageSession(activeTitle) {
+        if (el.workspaceStageSource) {
+            el.workspaceStageSource.textContent = selectedName || "Awaiting media";
+            el.workspaceStageSource.title = selectedPath || "Choose a clip or drop media to start";
+        }
+        if (el.workspaceStageSuite) {
+            el.workspaceStageSuite.textContent = activeTitle || (el.contentTitle ? el.contentTitle.textContent : "Cut & Clean");
+        }
+        if (el.workspaceStageStatus) {
+            if (!connected) {
+                el.workspaceStageStatus.textContent = "Backend offline";
+            } else if (selectedPath) {
+                el.workspaceStageStatus.textContent = "Ready to process";
+            } else {
+                el.workspaceStageStatus.textContent = "Awaiting media";
+            }
+        }
+    }
+
+    function updateWorkspaceClipStatus() {
+        if (!el.workspaceClipStatus) return;
+        if (selectedName) {
+            el.workspaceClipStatus.textContent = selectedName;
+            el.workspaceClipStatus.title = selectedPath || selectedName;
+            el.workspaceClipStatus.classList.add("is-active");
+        } else {
+            el.workspaceClipStatus.textContent = "No media selected";
+            el.workspaceClipStatus.title = "Choose a clip or drop media to start";
+            el.workspaceClipStatus.classList.remove("is-active");
+        }
+        updateWorkspaceStageSession();
+    }
+
+    function setPanelVisibility(panel, active) {
+        if (!panel) return;
+        panel.classList.toggle("active", !!active);
+        panel.hidden = !active;
+        panel.setAttribute("aria-hidden", active ? "false" : "true");
+    }
+
+    function activateSubTab(tabName, subName, options) {
+        var panel = $("panel-" + tabName);
+        if (!panel) return null;
+        var container = panel.querySelector(".sub-tabs");
+        if (!container) return null;
+        var remember = !options || options.remember !== false;
+        var scroll = !options || options.scroll !== false;
+        var buttons = getVisibleTabButtons(container, ".sub-tab");
+        if (!buttons.length) return null;
+
+        var targetButton = null;
+        var i;
+        if (subName) {
+            for (i = 0; i < buttons.length; i++) {
+                if (buttons[i].getAttribute("data-sub") === subName) {
+                    targetButton = buttons[i];
+                    break;
+                }
+            }
+        }
+        if (!targetButton) {
+            var activeButton = container.querySelector(".sub-tab.active");
+            if (activeButton && buttons.indexOf(activeButton) !== -1) {
+                targetButton = activeButton;
+            }
+        }
+        if (!targetButton) targetButton = buttons[0];
+
+        for (i = 0; i < buttons.length; i++) {
+            var isActiveButton = buttons[i] === targetButton;
+            buttons[i].classList.toggle("active", isActiveButton);
+            buttons[i].setAttribute("aria-selected", isActiveButton ? "true" : "false");
+            buttons[i].tabIndex = isActiveButton ? 0 : -1;
+        }
+
+        var targetPanelId = "sub-" + targetButton.getAttribute("data-sub");
+        var panels = panel.querySelectorAll(".sub-panel");
+        for (i = 0; i < panels.length; i++) {
+            var isActivePanel = panels[i].id === targetPanelId;
+            setPanelVisibility(panels[i], isActivePanel);
+            if (isActivePanel) panels[i].setAttribute("aria-labelledby", targetButton.id);
+        }
+
+        if (remember) rememberWorkspaceSub(tabName, targetButton.getAttribute("data-sub"));
+        if (scroll && targetButton.scrollIntoView) {
+            targetButton.scrollIntoView({ block: "nearest", inline: "nearest" });
+        }
+        return targetButton;
+    }
+
+    function activateNavTab(tabName, options) {
+        var navBtns = document.querySelectorAll(".nav-tab");
+        if (!navBtns.length) return null;
+        var remember = !options || options.remember !== false;
+        var scroll = !options || options.scroll !== false;
+        var targetButton = null;
+        var i;
+        for (i = 0; i < navBtns.length; i++) {
+            if (navBtns[i].getAttribute("data-nav") === tabName) {
+                targetButton = navBtns[i];
+                break;
+            }
+        }
+        if (!targetButton) targetButton = document.querySelector(".nav-tab.active") || navBtns[0];
+
+        for (i = 0; i < navBtns.length; i++) {
+            var isActiveNav = navBtns[i] === targetButton;
+            navBtns[i].classList.toggle("active", isActiveNav);
+            navBtns[i].setAttribute("aria-selected", isActiveNav ? "true" : "false");
+            navBtns[i].tabIndex = isActiveNav ? 0 : -1;
+            setPanelVisibility($("panel-" + navBtns[i].getAttribute("data-nav")), isActiveNav);
+        }
+
+        var activeTabName = targetButton.getAttribute("data-nav") || "cut";
+        if (remember) rememberWorkspaceTab(activeTabName);
+        updateContentHeader(activeTabName, targetButton.getAttribute("title") || activeTabName);
+        _pproCache.seq = null;
+        _pproCache.clips = null;
+        _pproCache.bins = null;
+        checkSubTabOverflow();
+        if (activeTabName === "settings") loadSettingsInfo();
+        initTabOnFirstVisit(activeTabName);
+        activateSubTab(activeTabName, (options && options.sub) || (_workspaceState.activeSubs || {})[activeTabName], {
+            remember: remember,
+            scroll: scroll
+        });
+        if (options && options.focus) targetButton.focus();
+        return targetButton;
+    }
+
     function setupNavTabs() {
-        // Main nav tabs
+        var navContainer = $("navTabs");
+        if (navContainer) navContainer.setAttribute("aria-orientation", "vertical");
+
         var navBtns = document.querySelectorAll(".nav-tab");
         for (var i = 0; i < navBtns.length; i++) {
+            var navName = navBtns[i].getAttribute("data-nav") || ("tab-" + i);
+            navBtns[i].id = navBtns[i].id || ("nav-tab-" + navName);
+            navBtns[i].setAttribute("aria-controls", "panel-" + navName);
+            navBtns[i].tabIndex = navBtns[i].classList.contains("active") ? 0 : -1;
+            var controlledPanel = $("panel-" + navName);
+            if (controlledPanel) {
+                controlledPanel.setAttribute("aria-labelledby", navBtns[i].id);
+                controlledPanel.setAttribute("aria-hidden", controlledPanel.classList.contains("active") ? "false" : "true");
+                controlledPanel.hidden = !controlledPanel.classList.contains("active");
+            }
+
             navBtns[i].addEventListener("click", function () {
-                var target = this.getAttribute("data-nav");
-                // Deactivate all
-                var all = document.querySelectorAll(".nav-tab");
-                for (var j = 0; j < all.length; j++) {
-                    all[j].classList.remove("active");
-                    all[j].setAttribute("aria-selected", "false");
+                activateNavTab(this.getAttribute("data-nav"));
+            });
+            navBtns[i].addEventListener("keydown", function (e) {
+                var buttons = getVisibleTabButtons(this.parentElement, ".nav-tab");
+                if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+                    e.preventDefault();
+                    moveFocusAndActivate(buttons, this, 1);
+                } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+                    e.preventDefault();
+                    moveFocusAndActivate(buttons, this, -1);
+                } else if (e.key === "Home" && buttons.length) {
+                    e.preventDefault();
+                    buttons[0].focus();
+                    buttons[0].click();
+                } else if (e.key === "End" && buttons.length) {
+                    e.preventDefault();
+                    buttons[buttons.length - 1].focus();
+                    buttons[buttons.length - 1].click();
                 }
-                var panels = document.querySelectorAll(".nav-panel");
-                for (var j = 0; j < panels.length; j++) panels[j].classList.remove("active");
-                // Activate target
-                this.classList.add("active");
-                this.setAttribute("aria-selected", "true");
-                var panel = $("panel-" + target);
-                if (panel) panel.classList.add("active");
-                // Update content header title
-                if (el.contentTitle) {
-                    el.contentTitle.textContent = this.getAttribute("title") || target;
-                }
-                // Invalidate Premiere state cache on tab switch
-                _pproCache.seq = null;
-                _pproCache.clips = null;
-                _pproCache.bins = null;
-                // Check sub-tab overflow after tab switch
-                checkSubTabOverflow();
-                // Load settings info on first visit
-                if (target === "settings") loadSettingsInfo();
-                // Lazy tab rendering: init tab features on first visit
-                initTabOnFirstVisit(target);
             });
         }
 
-        // Sub-tabs (generic handler for all sub-tab groups)
         var subTabContainers = document.querySelectorAll(".sub-tabs");
         for (var i = 0; i < subTabContainers.length; i++) {
             (function (container) {
                 var btns = container.querySelectorAll(".sub-tab");
-                var parent = container.parentElement;
+                var parentPanel = container.closest(".nav-panel");
+                var parentTabName = getPanelTabName(parentPanel);
+                container.setAttribute("aria-orientation", "horizontal");
                 for (var j = 0; j < btns.length; j++) {
+                    var subName = btns[j].getAttribute("data-sub") || (parentTabName + "-sub-" + j);
+                    btns[j].id = btns[j].id || ("sub-tab-" + subName);
+                    btns[j].setAttribute("role", "tab");
+                    btns[j].setAttribute("aria-controls", "sub-" + subName);
+                    btns[j].setAttribute("aria-selected", btns[j].classList.contains("active") ? "true" : "false");
+                    btns[j].tabIndex = btns[j].classList.contains("active") ? 0 : -1;
+                    var subPanel = $("sub-" + subName);
+                    if (subPanel) {
+                        subPanel.setAttribute("role", "tabpanel");
+                        subPanel.setAttribute("aria-labelledby", btns[j].id);
+                        subPanel.setAttribute("aria-hidden", subPanel.classList.contains("active") ? "false" : "true");
+                        subPanel.hidden = !subPanel.classList.contains("active");
+                    }
+
                     btns[j].addEventListener("click", function () {
-                        var target = this.getAttribute("data-sub");
-                        // Deactivate siblings
-                        var siblings = container.querySelectorAll(".sub-tab");
-                        for (var k = 0; k < siblings.length; k++) siblings[k].classList.remove("active");
-                        var panels = parent.querySelectorAll(".sub-panel");
-                        for (var k = 0; k < panels.length; k++) panels[k].classList.remove("active");
-                        // Activate
-                        this.classList.add("active");
-                        var panel = $("sub-" + target);
-                        if (panel) panel.classList.add("active");
+                        activateSubTab(parentTabName, this.getAttribute("data-sub"));
+                    });
+                    btns[j].addEventListener("keydown", function (e) {
+                        var buttons = getVisibleTabButtons(container, ".sub-tab");
+                        if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                            e.preventDefault();
+                            moveFocusAndActivate(buttons, this, 1);
+                        } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                            e.preventDefault();
+                            moveFocusAndActivate(buttons, this, -1);
+                        } else if (e.key === "Home" && buttons.length) {
+                            e.preventDefault();
+                            buttons[0].focus();
+                            buttons[0].click();
+                        } else if (e.key === "End" && buttons.length) {
+                            e.preventDefault();
+                            buttons[buttons.length - 1].focus();
+                            buttons[buttons.length - 1].click();
+                        }
                     });
                 }
+
+                activateSubTab(parentTabName, (_workspaceState.activeSubs || {})[parentTabName], {
+                    remember: false,
+                    scroll: false
+                });
             })(subTabContainers[i]);
         }
+
+        var initiallyActiveNav = document.querySelector(".nav-tab.active");
+        activateNavTab(_workspaceState.activeNav || (initiallyActiveNav ? initiallyActiveNav.getAttribute("data-nav") : "") || "cut", {
+            remember: false,
+            scroll: false
+        });
+        updateWorkspaceClipStatus();
     }
 
     // ================================================================
@@ -1760,7 +2152,7 @@
         api("GET", "/video/ai/capabilities", null, function (err, data) {
             if (err || !data || data.error) return;
             if (data.gpu_name) {
-                el.connLabel.textContent = "Connected (" + data.gpu_name + ")";
+                setConnectionBadge("online", "Connected (" + data.gpu_name + ")");
             }
         });
     }
@@ -4546,7 +4938,7 @@
     // ================================================================
     var THEME_LIST = [
         { value: "_dark", label: "— Dark —", separator: true },
-        { value: "cyberpunk", label: "Cyberpunk Neon" },
+        { value: "cyberpunk", label: "Studio Graphite" },
         { value: "midnight", label: "Midnight OLED" },
         { value: "catppuccin", label: "Catppuccin Mocha" },
         { value: "github", label: "GitHub Dark" },
@@ -4567,7 +4959,7 @@
             if (THEME_LIST[i].separator) {
                 html += '<div class="theme-menu-separator">' + THEME_LIST[i].label + '</div>';
             } else {
-                html += '<button class="theme-menu-item" data-theme="' + THEME_LIST[i].value + '">' + THEME_LIST[i].label + '</button>';
+                html += '<button type="button" class="theme-menu-item" role="menuitemradio" aria-checked="false" data-theme="' + THEME_LIST[i].value + '">' + THEME_LIST[i].label + '</button>';
             }
         }
         el.themeMenu.innerHTML = html;
@@ -4576,6 +4968,7 @@
             e.stopPropagation();
             var isOpen = el.themeMenu.classList.contains("open");
             el.themeMenu.classList.toggle("open");
+            setExpanded(el.themeToggleBtn, !isOpen);
             if (!isOpen) updateThemeMenuActive();
         });
 
@@ -4590,10 +4983,12 @@
             }
             saveLocalSettings();
             el.themeMenu.classList.remove("open");
+            setExpanded(el.themeToggleBtn, false);
         });
 
         document.addEventListener("click", function () {
             el.themeMenu.classList.remove("open");
+            setExpanded(el.themeToggleBtn, false);
         });
     }
 
@@ -4603,8 +4998,10 @@
         for (var i = 0; i < items.length; i++) {
             if (items[i].getAttribute("data-theme") === current) {
                 items[i].classList.add("active");
+                items[i].setAttribute("aria-checked", "true");
             } else {
                 items[i].classList.remove("active");
+                items[i].setAttribute("aria-checked", "false");
             }
         }
     }
@@ -4632,9 +5029,22 @@
         // duplicate notifications on every job completion.
     }
 
+    function setToggleButtonCount(button, label, count) {
+        if (!button) return;
+        var labelEl = button.querySelector(".toggle-label");
+        var countEl = button.querySelector(".toggle-count");
+        if (labelEl && countEl) {
+            labelEl.textContent = label;
+            countEl.textContent = "(" + count + ")";
+        } else {
+            button.textContent = label + " (" + count + ")";
+        }
+        button.setAttribute("aria-label", label + " (" + count + ")");
+    }
+
     function renderJobHistory() {
         if (!el.jobHistory || !el.jobHistoryToggle) return;
-        el.jobHistoryToggle.textContent = "History (" + jobHistoryList.length + ")";
+        setToggleButtonCount(el.jobHistoryToggle, "History", jobHistoryList.length);
         var html = "";
         for (var i = 0; i < jobHistoryList.length; i++) {
             var h = jobHistoryList[i];
@@ -4671,7 +5081,8 @@
         if (!el.jobHistoryToggle || !el.jobHistory) return;
         ensureJobHistoryDelegation();
         el.jobHistoryToggle.addEventListener("click", function () {
-            el.jobHistory.classList.toggle("open");
+            var isOpen = el.jobHistory.classList.toggle("open");
+            setExpanded(el.jobHistoryToggle, isOpen);
         });
 
         // Add listener to record finished jobs
@@ -5103,53 +5514,87 @@
     // ================================================================
     // Model Management
     // ================================================================
+    var _modelListDelegationAdded = false;
+
+    function ensureModelListDelegation() {
+        if (_modelListDelegationAdded || !el.modelList) return;
+        _modelListDelegationAdded = true;
+        el.modelList.addEventListener("click", function (e) {
+            var btn = e.target.closest(".model-item-delete");
+            if (!btn) return;
+            var path = btn.dataset.path || "";
+            if (!path) {
+                showAlert("Couldn't determine which model to delete.");
+                return;
+            }
+            btn.disabled = true;
+            btn.textContent = "Deleting...";
+            api("POST", "/models/delete", { path: path }, function (err, data) {
+                if (!err && data && data.success) {
+                    showToast("Model deleted", "success");
+                    refreshModelList();
+                } else {
+                    btn.disabled = false;
+                    btn.textContent = "Delete";
+                    showAlert("Failed to delete model.");
+                }
+            });
+        });
+    }
+
     function initModelManagement() {
         if (!el.refreshModelsBtn) return;
+        ensureModelListDelegation();
         el.refreshModelsBtn.addEventListener("click", refreshModelList);
     }
 
     function refreshModelList() {
         if (!el.modelList) return;
-        el.modelList.innerHTML = '<div class="hint">Scanning...</div>';
+        ensureModelListDelegation();
+        setHintContent(el.modelList, "Scanning...");
         api("GET", "/models/list", null, function (err, data) {
             if (err || !data) {
-                el.modelList.innerHTML = '<div class="hint">Failed to load models.</div>';
+                setHintContent(el.modelList, "Failed to load models.");
                 return;
             }
             if (!data.models || data.models.length === 0) {
-                el.modelList.innerHTML = '<div class="hint">No models found.</div>';
+                setHintContent(el.modelList, "No models found.");
                 if (el.modelsTotalSize) el.modelsTotalSize.textContent = "0 MB";
                 return;
             }
-            var html = "";
+            var frag = document.createDocumentFragment();
             for (var i = 0; i < data.models.length; i++) {
                 var m = data.models[i];
                 var sizeStr = m.size_mb >= 1024 ? safeFixed(m.size_mb / 1024, 1) + " GB" : safeFixed(m.size_mb, 0) + " MB";
-                html += '<div class="model-item">' +
-                    '<div class="model-item-info"><span class="model-item-name">' + esc(m.name) + '</span>' +
-                    '<span class="model-item-meta">' + sizeStr + ' - ' + esc(m.source) + '</span></div>' +
-                    '<button class="model-item-delete" data-path="' + esc(m.path) + '" title="Delete model">Delete</button>' +
-                    '</div>';
+                var item = document.createElement("div");
+                item.className = "model-item";
+                var info = document.createElement("div");
+                info.className = "model-item-info";
+                var name = document.createElement("span");
+                name.className = "model-item-name";
+                name.textContent = m.name || "Unknown model";
+                var meta = document.createElement("span");
+                meta.className = "model-item-meta";
+                meta.textContent = sizeStr + " - " + (m.source || "Unknown source");
+                var deleteBtn = document.createElement("button");
+                deleteBtn.type = "button";
+                deleteBtn.className = "model-item-delete";
+                deleteBtn.textContent = "Delete";
+                deleteBtn.title = "Delete model";
+                deleteBtn.setAttribute("aria-label", "Delete model " + (m.name || "Unknown model"));
+                deleteBtn.dataset.path = m.path || "";
+                deleteBtn.disabled = !m.path;
+                info.appendChild(name);
+                info.appendChild(meta);
+                item.appendChild(info);
+                item.appendChild(deleteBtn);
+                frag.appendChild(item);
             }
-            el.modelList.innerHTML = html;
+            el.modelList.innerHTML = "";
+            el.modelList.appendChild(frag);
             if (el.modelsTotalSize) {
                 var totalStr = data.total_mb >= 1024 ? safeFixed(data.total_mb / 1024, 1) + " GB" : safeFixed(data.total_mb, 0) + " MB";
                 el.modelsTotalSize.textContent = totalStr;
-            }
-            // Attach delete handlers
-            var delBtns = el.modelList.querySelectorAll(".model-item-delete");
-            for (var j = 0; j < delBtns.length; j++) {
-                delBtns[j].addEventListener("click", function () {
-                    var path = this.getAttribute("data-path");
-                    api("POST", "/models/delete", { path: path }, function (err2, data2) {
-                        if (!err2 && data2 && data2.success) {
-                            showToast("Model deleted", "success");
-                            refreshModelList();
-                        } else {
-                            showAlert("Failed to delete model.");
-                        }
-                    });
-                });
             }
         }, 30000);
     }
@@ -5264,6 +5709,8 @@
         var toast = document.createElement("div");
         toast.className = "toast-notification " + (type || "info");
         toast.textContent = message;
+        toast.setAttribute("role", type === "error" ? "alert" : "status");
+        toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
         // Stack toasts upward from the bottom
         var liveToasts = document.querySelectorAll(".toast-notification");
         var offset = 48 + liveToasts.length * 44;
@@ -5576,48 +6023,67 @@
         if (!_favDelegationAdded) {
             _favDelegationAdded = true;
             el.favoritesItems.addEventListener("click", function (e) {
-                var chip = e.target.closest(".fav-chip");
-                if (!chip) return;
-                var favId = chip.dataset.fav;
-                // Remove button clicked
-                if (e.target.closest(".fav-chip-remove")) {
-                    e.stopPropagation();
-                    _favorites = _favorites.filter(function (f) { return f !== favId; });
+                var removeBtn = e.target.closest(".fav-chip-remove");
+                if (removeBtn) {
+                    var removeId = removeBtn.dataset.fav;
+                    _favorites = _favorites.filter(function (f) { return f !== removeId; });
                     saveFavorites();
                     renderFavorites();
                     showToast("Removed from favorites", "info");
                     return;
                 }
-                // Navigate on label click
+                var chip = e.target.closest(".fav-chip");
+                if (!chip) return;
+                var favId = chip.dataset.fav;
                 var op = _favoriteOps[favId];
                 if (op) navigateToTab(op.tab, op.sub);
             });
         }
         var frag = document.createDocumentFragment();
+        var visibleCount = 0;
         for (var i = 0; i < _favorites.length; i++) {
             var favId = _favorites[i];
             var op = _favoriteOps[favId];
             if (!op) continue;
-            var chip = document.createElement("div");
+            var group = document.createElement("div");
+            group.className = "favorite-chip-group";
+            var chip = document.createElement("button");
+            chip.type = "button";
             chip.className = "fav-chip";
             chip.dataset.fav = favId;
-            chip.innerHTML = '<span>' + esc(op.label) + '</span><span class="fav-chip-remove">&times;</span>';
-            frag.appendChild(chip);
+            chip.textContent = op.label;
+            chip.title = op.label;
+            chip.setAttribute("aria-label", "Open favorite " + op.label);
+            var removeBtn = document.createElement("button");
+            removeBtn.type = "button";
+            removeBtn.className = "fav-chip-remove";
+            removeBtn.dataset.fav = favId;
+            removeBtn.textContent = "x";
+            removeBtn.title = "Remove favorite";
+            removeBtn.setAttribute("aria-label", "Remove favorite " + op.label);
+            group.appendChild(chip);
+            group.appendChild(removeBtn);
+            frag.appendChild(group);
+            visibleCount++;
+        }
+        if (!visibleCount) {
+            el.favoritesItems.innerHTML = "";
+            el.favoritesBar.classList.add("hidden");
+            return;
         }
         el.favoritesItems.innerHTML = "";
         el.favoritesItems.appendChild(frag);
     }
 
     function navigateToTab(tab, sub) {
-        // Click the main tab
-        var navBtn = document.querySelector('.nav-tab[data-nav="' + tab + '"]');
-        if (navBtn) navBtn.click();
-        // Then click sub-tab
+        var navBtn = activateNavTab(tab, { sub: sub, focus: false });
+        if (!navBtn) return;
         if (sub) {
-            setTimeout(function () {
-                var subBtn = document.querySelector('.sub-tab[data-sub="' + sub + '"]');
-                if (subBtn) subBtn.click();
-            }, 50);
+            var panel = $("panel-" + tab);
+            var subBtn = panel ? panel.querySelector('.sub-tab[data-sub="' + sub + '"]') : null;
+            if (subBtn) subBtn.focus();
+        } else {
+            navBtn.focus();
         }
     }
 
@@ -5638,10 +6104,17 @@
     // ================================================================
     // Side-by-Side Preview
     // ================================================================
+    function closePreviewModal() {
+        if (el.previewModal) el.previewModal.classList.add("hidden");
+    }
+
     function initPreviewModal() {
         if (el.previewModalClose) {
-            el.previewModalClose.addEventListener("click", function () {
-                if (el.previewModal) el.previewModal.classList.add("hidden");
+            el.previewModalClose.addEventListener("click", closePreviewModal);
+        }
+        if (el.previewModal) {
+            el.previewModal.addEventListener("click", function (e) {
+                if (e.target === el.previewModal) closePreviewModal();
             });
         }
         if (el.previewRefreshBtn) {
@@ -5666,21 +6139,24 @@
             if (el.previewOriginal) el.previewOriginal.src = "data:image/jpeg;base64," + data.image;
             if (el.previewProcessed) el.previewProcessed.src = "data:image/jpeg;base64," + data.image;
             if (el.previewModal) el.previewModal.classList.remove("hidden");
+            if (el.previewModalClose) el.previewModalClose.focus();
         });
     }
 
     // ================================================================
     // Audio Preview Player
     // ================================================================
+    function closeAudioPreview() {
+        if (el.audioPreview) el.audioPreview.classList.add("hidden");
+        if (el.audioPreviewPlayer) {
+            el.audioPreviewPlayer.pause();
+            el.audioPreviewPlayer.src = "";
+        }
+    }
+
     function initAudioPreview() {
         if (el.audioPreviewClose) {
-            el.audioPreviewClose.addEventListener("click", function () {
-                if (el.audioPreview) el.audioPreview.classList.add("hidden");
-                if (el.audioPreviewPlayer) {
-                    el.audioPreviewPlayer.pause();
-                    el.audioPreviewPlayer.src = "";
-                }
-            });
+            el.audioPreviewClose.addEventListener("click", closeAudioPreview);
         }
     }
 
@@ -5688,6 +6164,7 @@
         if (!el.audioPreview || !el.audioPreviewPlayer) return;
         el.audioPreviewPlayer.src = BACKEND + "/file?path=" + encodeURIComponent(filePath);
         el.audioPreview.classList.remove("hidden");
+        if (el.audioPreviewClose) el.audioPreviewClose.focus();
         try { el.audioPreviewPlayer.play().catch(function() {}); } catch (e) {}
     }
 
@@ -5709,6 +6186,8 @@
                 var top = Math.min(e.clientY, window.innerHeight - menuH - 4);
                 el.contextMenu.style.left = Math.max(0, left) + "px";
                 el.contextMenu.style.top = Math.max(0, top) + "px";
+                var firstItem = el.contextMenu.querySelector(".context-menu-item");
+                if (firstItem) firstItem.focus();
             });
         }
         // Handle menu item clicks
@@ -5747,13 +6226,56 @@
                 el.contextMenu.classList.add("hidden");
             }
         });
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") {
+                el.contextMenu.classList.add("hidden");
+            }
+        });
     }
 
     // ================================================================
     // First-Run Wizard
     // ================================================================
+    var _globalEscapeHandlersAdded = false;
+
+    function closeWizard() {
+        if (!el.wizardOverlay) return;
+        el.wizardOverlay.classList.add("hidden");
+        try {
+            var s = JSON.parse(localStorage.getItem("opencut_settings") || "{}");
+            s.wizardDismissed = true;
+            localStorage.setItem("opencut_settings", JSON.stringify(s));
+        } catch (e) {}
+    }
+
     function initWizard() {
         if (!el.wizardOverlay) return;
+        if (!_globalEscapeHandlersAdded) {
+            _globalEscapeHandlersAdded = true;
+            document.addEventListener("keydown", function (e) {
+                if (e.key === "Escape" && el.wizardOverlay && !el.wizardOverlay.classList.contains("hidden")) {
+                    closeWizard();
+                }
+                if (e.key === "Escape" && el.previewModal && !el.previewModal.classList.contains("hidden")) {
+                    closePreviewModal();
+                }
+                if (e.key === "Escape" && el.audioPreview && !el.audioPreview.classList.contains("hidden")) {
+                    closeAudioPreview();
+                }
+                if (e.key === "Escape" && el.themeMenu && el.themeMenu.classList.contains("open")) {
+                    el.themeMenu.classList.remove("open");
+                    setExpanded(el.themeToggleBtn, false);
+                }
+                if (e.key === "Escape" && el.recentClipsDropdown && !el.recentClipsDropdown.classList.contains("hidden")) {
+                    hideRecentClipsDropdown(false);
+                }
+                if (e.key === "Escape" && el.outputBrowser && !el.outputBrowser.classList.contains("hidden")) {
+                    _outputBrowserOpen = false;
+                    el.outputBrowser.classList.add("hidden");
+                    setExpanded(el.outputBrowserToggle, false);
+                }
+            });
+        }
         // Check if user has dismissed the wizard before
         try {
             var settings = JSON.parse(localStorage.getItem("opencut_settings") || "{}");
@@ -5761,6 +6283,7 @@
         } catch (e) {}
         // Show wizard
         el.wizardOverlay.classList.remove("hidden");
+        if (el.wizardCloseBtn) el.wizardCloseBtn.focus();
         // Animate steps
         var steps = el.wizardOverlay.querySelectorAll(".wizard-step");
         for (var i = 1; i < steps.length; i++) {
@@ -5769,16 +6292,11 @@
             })(i);
         }
         if (el.wizardCloseBtn) {
-            el.wizardCloseBtn.addEventListener("click", function () {
-                el.wizardOverlay.classList.add("hidden");
-                // Always dismiss permanently — wizard is one-time onboarding
-                try {
-                    var s = JSON.parse(localStorage.getItem("opencut_settings") || "{}");
-                    s.wizardDismissed = true;
-                    localStorage.setItem("opencut_settings", JSON.stringify(s));
-                } catch (e) {}
-            });
+            el.wizardCloseBtn.addEventListener("click", closeWizard);
         }
+        el.wizardOverlay.addEventListener("click", function (e) {
+            if (e.target === el.wizardOverlay) closeWizard();
+        });
     }
 
     // ================================================================
@@ -5793,6 +6311,7 @@
                 if (el.outputBrowser) {
                     el.outputBrowser.classList.toggle("hidden", !_outputBrowserOpen);
                 }
+                setExpanded(el.outputBrowserToggle, _outputBrowserOpen);
                 if (_outputBrowserOpen) refreshOutputs();
             });
         }
@@ -5800,6 +6319,7 @@
             el.outputBrowserClose.addEventListener("click", function () {
                 _outputBrowserOpen = false;
                 if (el.outputBrowser) el.outputBrowser.classList.add("hidden");
+                setExpanded(el.outputBrowserToggle, false);
             });
         }
         if (el.refreshOutputsBtn) {
@@ -5811,27 +6331,63 @@
         api("GET", "/outputs/recent", null, function (err, data) {
             if (err || !data || !Array.isArray(data)) return;
             if (el.outputBrowserToggle) {
-                el.outputBrowserToggle.textContent = "Outputs (" + data.length + ")";
+                setToggleButtonCount(el.outputBrowserToggle, "Outputs", data.length);
             }
             if (!el.outputBrowserList) return;
-            el.outputBrowserList.innerHTML = "";
+            el.outputBrowserList.textContent = "";
             if (data.length === 0) {
-                el.outputBrowserList.innerHTML = '<div class="hint" style="padding: 8px 12px;">No recent outputs.</div>';
+                var emptyHint = document.createElement("div");
+                emptyHint.className = "hint";
+                emptyHint.style.padding = "8px 12px";
+                emptyHint.textContent = "No recent outputs.";
+                el.outputBrowserList.appendChild(emptyHint);
                 return;
             }
             for (var i = 0; i < data.length; i++) {
-                var item = data[i];
-                var div = document.createElement("div");
-                div.className = "output-item";
-                div.innerHTML = '<div class="output-item-info"><div class="output-item-name">' + esc(item.name) + '</div><div class="output-item-meta">' + safeFixed(item.size_mb, 1) + ' MB &mdash; ' + esc(item.type || "") + '</div></div><div class="output-item-actions"><button type="button" class="btn-sm" data-path="' + esc(item.path) + '">Import</button></div>';
-                div.querySelector(".btn-sm").addEventListener("click", function () {
-                    var p = this.dataset.path;
+                var item = data[i] || {};
+                var row = document.createElement("div");
+                row.className = "output-item";
+
+                var info = document.createElement("div");
+                info.className = "output-item-info";
+
+                var nameEl = document.createElement("div");
+                nameEl.className = "output-item-name";
+                nameEl.textContent = item.name || (item.path ? item.path.split(/[/\\]/).pop() : "Untitled output");
+
+                var metaEl = document.createElement("div");
+                metaEl.className = "output-item-meta";
+                metaEl.textContent = safeFixed(item.size_mb, 1) + " MB" + (item.type ? " - " + item.type : "");
+
+                info.appendChild(nameEl);
+                info.appendChild(metaEl);
+
+                var actions = document.createElement("div");
+                actions.className = "output-item-actions";
+
+                var importBtn = document.createElement("button");
+                importBtn.type = "button";
+                importBtn.className = "btn-sm";
+                importBtn.textContent = "Import";
+                importBtn.dataset.path = item.path || "";
+                importBtn.disabled = !item.path;
+                importBtn.setAttribute("aria-label", "Import " + nameEl.textContent);
+                importBtn.addEventListener("click", function () {
+                    var p = this.dataset.path || "";
+                    if (!p) {
+                        showToast("This output is missing a file path.", "error");
+                        return;
+                    }
                     if (inPremiere && cs) {
                         PremiereBridge.autoImport(p, "output");
                         showToast("Imported: " + p.split(/[/\\]/).pop(), "success");
                     }
                 });
-                el.outputBrowserList.appendChild(div);
+
+                actions.appendChild(importBtn);
+                row.appendChild(info);
+                row.appendChild(actions);
+                el.outputBrowserList.appendChild(row);
             }
         });
     }
@@ -6212,6 +6768,7 @@
             if (err || !data || !data.connected) {
                 // Disconnected
                 dot.className = "status-dot";
+                if (el.statusBar) el.statusBar.setAttribute("data-state", "offline");
                 text.textContent = "Disconnected";
                 gpu.textContent = "GPU: --";
                 jobsEl.textContent = "Jobs: --";
@@ -6221,8 +6778,10 @@
             // Determine dot state
             if (data.gpu && data.gpu.available) {
                 dot.className = "status-dot connected";
+                if (el.statusBar) el.statusBar.setAttribute("data-state", "online");
             } else {
                 dot.className = "status-dot degraded";
+                if (el.statusBar) el.statusBar.setAttribute("data-state", "degraded");
             }
 
             // Uptime text
@@ -6283,7 +6842,11 @@
         var els = document.querySelectorAll("[data-i18n]");
         for (var i = 0; i < els.length; i++) {
             var k = els[i].getAttribute("data-i18n");
-            if (k) els[i].textContent = t(k);
+            if (!k) continue;
+            var translated = t(k);
+            var labelTarget = els[i].querySelector(".btn-label, .i18n-text");
+            if (labelTarget) labelTarget.textContent = translated;
+            else els[i].textContent = translated;
         }
     }
 
@@ -6418,21 +6981,124 @@
         saveRecentClips();
     }
 
-    function showRecentClips() {
+    function getRecentClipItems() {
+        if (!el.recentClipsDropdown) return [];
+        return Array.prototype.slice.call(el.recentClipsDropdown.querySelectorAll(".recent-clip-item"));
+    }
+
+    function getRecentClipButtons() {
+        var buttons = getRecentClipItems();
+        if (!el.recentClipsDropdown) return buttons;
+        var clearBtn = el.recentClipsDropdown.querySelector(".recent-clips-clear");
+        if (clearBtn) buttons.push(clearBtn);
+        return buttons;
+    }
+
+    function focusRecentClipItem(position) {
+        var items = getRecentClipItems();
+        if (items.length) {
+            items[position === "last" ? items.length - 1 : 0].focus();
+            return;
+        }
+        var buttons = getRecentClipButtons();
+        if (buttons.length) buttons[0].focus();
+    }
+
+    function hideRecentClipsDropdown(returnFocus) {
+        if (!el.recentClipsDropdown) return;
+        el.recentClipsDropdown.classList.add("hidden");
+        setExpanded(el.recentClipsBtn, false);
+        if (returnFocus && el.recentClipsBtn) el.recentClipsBtn.focus();
+    }
+
+    function clearRecentClipsHistory() {
+        _recentClips = [];
+        saveRecentClips();
+        renderRecentClipsDropdown();
+        showToast("Cleared recent clips", "info");
+    }
+
+    function renderRecentClipsDropdown() {
         if (!el.recentClipsDropdown) return;
         loadRecentClips();
         if (_recentClips.length === 0) {
-            el.recentClipsDropdown.innerHTML = '<div class="hint" style="padding:8px 12px;">No recent clips.</div>';
-        } else {
-            var html = "";
-            for (var i = 0; i < _recentClips.length; i++) {
-                var name = _recentClips[i].split(/[/\\]/).pop();
-                html += '<div class="recent-clip-item" data-path="' + esc(_recentClips[i]) + '">' + esc(name) + '</div>';
-            }
-            el.recentClipsDropdown.innerHTML = html;
+            setHintContent(el.recentClipsDropdown, "No recent clips yet.");
+            return;
         }
-        // Explicit show (not toggle) avoids race with outside-click dismiss handler
+
+        el.recentClipsDropdown.innerHTML = "";
+        var header = document.createElement("div");
+        header.className = "recent-clips-header";
+
+        var copy = document.createElement("div");
+        copy.className = "recent-clips-copy";
+
+        var title = document.createElement("div");
+        title.className = "recent-clips-title";
+        title.textContent = "Recent clips";
+        copy.appendChild(title);
+
+        var subtitle = document.createElement("div");
+        subtitle.className = "recent-clips-subtitle";
+        subtitle.textContent = "Jump back into a source without rescanning.";
+        copy.appendChild(subtitle);
+        header.appendChild(copy);
+
+        var clearBtn = document.createElement("button");
+        clearBtn.type = "button";
+        clearBtn.className = "recent-clips-clear";
+        clearBtn.setAttribute("data-action", "clear");
+        clearBtn.setAttribute("aria-label", "Clear recent clip history");
+        clearBtn.textContent = "Clear";
+        header.appendChild(clearBtn);
+        el.recentClipsDropdown.appendChild(header);
+
+        var list = document.createElement("div");
+        list.className = "recent-clips-list";
+
+        for (var i = 0; i < _recentClips.length; i++) {
+            var path = _recentClips[i];
+            var name = path.split(/[/\\]/).pop();
+            var item = document.createElement("button");
+            item.type = "button";
+            item.className = "recent-clip-item";
+            item.setAttribute("data-path", path);
+            item.setAttribute("data-name", name);
+            item.title = path;
+            item.setAttribute("aria-label", "Open recent clip " + name);
+            if (path === selectedPath) {
+                item.classList.add("is-current");
+                item.setAttribute("aria-current", "true");
+            }
+
+            var nameNode = document.createElement("span");
+            nameNode.className = "recent-clip-name";
+            nameNode.textContent = name;
+            item.appendChild(nameNode);
+
+            var pathNode = document.createElement("span");
+            pathNode.className = "recent-clip-path";
+            pathNode.textContent = path;
+            item.appendChild(pathNode);
+
+            list.appendChild(item);
+        }
+        el.recentClipsDropdown.appendChild(list);
+    }
+
+    function showRecentClips(options) {
+        if (!el.recentClipsDropdown) return;
+        closeAllDropdowns();
+        renderRecentClipsDropdown();
         el.recentClipsDropdown.classList.remove("hidden");
+        setExpanded(el.recentClipsBtn, true);
+        if (options && options.focus) focusRecentClipItem(options.focus === "last" ? "last" : "first");
+    }
+
+    function toggleRecentClips(options) {
+        if (!el.recentClipsDropdown) return;
+        if (el.recentClipsDropdown.classList.contains("hidden")) showRecentClips(options);
+        else hideRecentClipsDropdown(options && options.returnFocus);
     }
 
     // ================================================================
@@ -6483,89 +7149,589 @@
         { name: "Job History",        tab: "settings", sub: "set-system",      keywords: "job history log past completed failed" },
     ];
 
-    var _paletteSelectedIdx = 0;
-    var _paletteResults = [];
+    var PALETTE_HISTORY_KEY = "opencut_palette_history";
+    var MAX_PALETTE_HISTORY = 8;
+    var PALETTE_DESCRIPTION_MAP = {
+        "Silence Removal::cut::silence": "Strip dead air and tighten spoken takes.",
+        "Styled Captions::captions::cap-styled": "Create branded subtitles with faster review passes.",
+        "Denoise::audio::aud-denoise": "Clean dialogue and reduce room noise before finishing.",
+        "Reframe::video::vid-reframe": "Recompose shots for vertical, square, and alternate aspect ratios.",
+        "Export Presets::export::exp-platform": "Package platform-ready outputs without rebuilding settings.",
+        "Footage Search::nlp::nlp-search": "Find usable shots from transcripts and semantic matches.",
+        "AI Command::nlp::nlp-command": "Jump to tools and edit actions from natural-language prompts."
+    };
 
-    function openCommandPalette() {
-        if (!el.commandPaletteOverlay || !el.commandPaletteInput || !el.commandPaletteResults) return;
-        el.commandPaletteOverlay.classList.remove("hidden");
-        el.commandPaletteInput.value = "";
-        renderPaletteResults("");
-        setTimeout(function() { if (el.commandPaletteInput) el.commandPaletteInput.focus(); }, 50);
+    var _paletteSelectedIdx = -1;
+    var _paletteResults = [];
+    var _paletteReturnFocusEl = null;
+
+    function normalizePaletteText(value) {
+        return (value || "").toLowerCase().replace(/\s+/g, " ").trim();
     }
 
-    function closeCommandPalette() {
-        if (el.commandPaletteOverlay) el.commandPaletteOverlay.classList.add("hidden");
+    function formatPaletteLabel(value) {
+        return (value || "").replace(/[-_]+/g, " ").replace(/\b[a-z]/g, function (letter) {
+            return letter.toUpperCase();
+        });
+    }
+
+    function getPaletteItemKey(item) {
+        if (!item) return "";
+        return [item.name || "", item.tab || "", item.sub || ""].join("::");
+    }
+
+    function loadPaletteHistory() {
+        try {
+            var saved = localStorage.getItem(PALETTE_HISTORY_KEY);
+            var parsed = saved ? JSON.parse(saved) : [];
+            return Array.isArray(parsed) ? parsed : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function savePaletteHistory(history) {
+        try {
+            localStorage.setItem(PALETTE_HISTORY_KEY, JSON.stringify((history || []).slice(0, MAX_PALETTE_HISTORY)));
+        } catch (e) {
+            // localStorage may not be available in CEP
+        }
+    }
+
+    function getPaletteItemByKey(key) {
+        for (var i = 0; i < _commandIndex.length; i++) {
+            if (getPaletteItemKey(_commandIndex[i]) === key) return _commandIndex[i];
+        }
+        return null;
+    }
+
+    function rememberPaletteItem(item) {
+        var key = getPaletteItemKey(item);
+        if (!key) return;
+        var history = loadPaletteHistory().filter(function (entry) { return entry !== key; });
+        history.unshift(key);
+        savePaletteHistory(history);
+    }
+
+    function getPaletteTabLabel(tab) {
+        var navBtn = document.querySelector('.nav-tab[data-nav="' + (tab || "") + '"]');
+        if (!navBtn) return formatPaletteLabel(tab);
+        return (navBtn.getAttribute("title") || navBtn.textContent || formatPaletteLabel(tab)).replace(/\s+/g, " ").trim();
+    }
+
+    function getPaletteSubLabel(sub) {
+        var subBtn = document.querySelector('.sub-tab[data-sub="' + (sub || "") + '"]');
+        if (!subBtn) return formatPaletteLabel(sub);
+        return (subBtn.textContent || formatPaletteLabel(sub)).replace(/\s+/g, " ").trim();
+    }
+
+    function getActivePaletteTabName() {
+        var activeNav = document.querySelector(".nav-tab.active");
+        return activeNav ? (activeNav.getAttribute("data-nav") || "") : "";
+    }
+
+    function getPaletteFavoriteId(item) {
+        if (!item) return "";
+        var normalizedName = normalizePaletteText(item.name);
+        var fallback = "";
+        for (var favId in _favoriteOps) {
+            if (!_favoriteOps.hasOwnProperty(favId)) continue;
+            var op = _favoriteOps[favId];
+            if (op.tab !== item.tab || op.sub !== item.sub) continue;
+            if (normalizePaletteText(op.label) === normalizedName) return favId;
+            if (!fallback) fallback = favId;
+        }
+        return fallback;
+    }
+
+    function getPaletteItemForFavorite(favId) {
+        var op = _favoriteOps[favId];
+        if (!op) return null;
+        var preferredLabel = normalizePaletteText(op.label);
+        var fallback = null;
+        for (var i = 0; i < _commandIndex.length; i++) {
+            var item = _commandIndex[i];
+            if (item.tab !== op.tab || item.sub !== op.sub) continue;
+            if (normalizePaletteText(item.name) === preferredLabel) return item;
+            if (!fallback) fallback = item;
+        }
+        return fallback;
+    }
+
+    function getPaletteItemDescription(item) {
+        var itemKey = getPaletteItemKey(item);
+        if (PALETTE_DESCRIPTION_MAP[itemKey]) return PALETTE_DESCRIPTION_MAP[itemKey];
+        if (!item) return "Open tools across the editing workflow.";
+        switch (item.tab) {
+        case "cut":
+            return "Tighten pacing, trims, and spoken edits from one focused cut workflow.";
+        case "captions":
+            return "Transcribe, translate, and shape subtitle deliverables without leaving the panel.";
+        case "audio":
+            return "Polish dialogue, stems, loudness, and generated sound from one audio surface.";
+        case "video":
+            return "Repair, reframe, and finish image work with cleaner visual controls.";
+        case "export":
+            return "Build deliverables, thumbnails, and repeatable output presets faster.";
+        case "timeline":
+            return "Write sequence edits and timeline metadata back into Premiere with more control.";
+        case "nlp":
+            return "Use search and language-driven tools to find footage or trigger edit actions.";
+        case "settings":
+            return "Adjust workspace defaults, templates, and system-level behavior.";
+        default:
+            return "Open this tool and jump directly to the matching workspace.";
+        }
+    }
+
+    function scorePaletteItem(item, query) {
+        var q = normalizePaletteText(query);
+        if (!q) return 0;
+
+        var name = normalizePaletteText(item.name);
+        var keywords = normalizePaletteText(item.keywords);
+        var tabLabel = normalizePaletteText(getPaletteTabLabel(item.tab));
+        var subLabel = normalizePaletteText(getPaletteSubLabel(item.sub));
+        var score = 0;
+        var matchedTokens = 0;
+        var tokens = q.split(" ");
+        var favoriteId = getPaletteFavoriteId(item);
+
+        if (name === q) score += 220;
+        else if (name.indexOf(q) === 0) score += 140;
+        else if (name.indexOf(q) !== -1) score += 96;
+
+        if (keywords.indexOf(q) !== -1) score += 56;
+        if (tabLabel.indexOf(q) !== -1) score += 24;
+        if (subLabel.indexOf(q) !== -1) score += 28;
+
+        for (var i = 0; i < tokens.length; i++) {
+            var token = tokens[i];
+            if (!token) continue;
+            if (name.indexOf(token) !== -1) {
+                score += 32;
+                matchedTokens++;
+            } else if (keywords.indexOf(token) !== -1) {
+                score += 18;
+                matchedTokens++;
+            } else if (tabLabel.indexOf(token) !== -1 || subLabel.indexOf(token) !== -1) {
+                score += 10;
+                matchedTokens++;
+            }
+        }
+
+        if (!score && !matchedTokens) return 0;
+        if (matchedTokens > 1) score += matchedTokens * 8;
+        if (favoriteId && _favorites.indexOf(favoriteId) !== -1) score += 16;
+        if (item.tab === getActivePaletteTabName()) score += 12;
+        return score;
+    }
+
+    function createPaletteEntry(item, extras) {
+        extras = extras || {};
+        var key = getPaletteItemKey(item);
+        var favoriteId = getPaletteFavoriteId(item);
+        var tabLabel = getPaletteTabLabel(item.tab);
+        var subLabel = getPaletteSubLabel(item.sub);
+        return {
+            item: item,
+            key: key,
+            description: getPaletteItemDescription(item),
+            tabLabel: tabLabel,
+            subLabel: subLabel,
+            location: subLabel ? (tabLabel + " / " + subLabel) : tabLabel,
+            favoriteId: favoriteId,
+            isFavorite: favoriteId ? _favorites.indexOf(favoriteId) !== -1 : false,
+            isRecent: !!extras.isRecent,
+            isCurrent: !!extras.isCurrent,
+            score: extras.score || 0
+        };
+    }
+
+    function buildPaletteEntries(items, resolver, seen) {
+        var entries = [];
+        for (var i = 0; i < items.length; i++) {
+            var item = items[i];
+            if (!item) continue;
+            var key = getPaletteItemKey(item);
+            if (seen && seen[key]) continue;
+            if (seen) seen[key] = true;
+            entries.push(createPaletteEntry(item, resolver ? resolver(item, key, i) : null));
+        }
+        return entries;
+    }
+
+    function addPaletteSection(sections, label, items, resolver, seen) {
+        var entries = buildPaletteEntries(items, resolver, seen);
+        if (entries.length) sections.push({ label: label, entries: entries });
+    }
+
+    function buildPaletteSections(query) {
+        var q = normalizePaletteText(query);
+        var sections = [];
+        var activeTab = getActivePaletteTabName();
+        var historyKeys = loadPaletteHistory();
+        var historyLookup = {};
+        for (var i = 0; i < historyKeys.length; i++) historyLookup[historyKeys[i]] = true;
+
+        if (!q) {
+            var seen = {};
+            var recentItems = [];
+            for (i = 0; i < historyKeys.length; i++) {
+                var historyItem = getPaletteItemByKey(historyKeys[i]);
+                if (historyItem) recentItems.push(historyItem);
+            }
+
+            var favoriteItems = [];
+            for (i = 0; i < _favorites.length; i++) {
+                favoriteItems.push(getPaletteItemForFavorite(_favorites[i]));
+            }
+
+            var currentItems = [];
+            for (i = 0; i < _commandIndex.length; i++) {
+                if (_commandIndex[i].tab === activeTab) currentItems.push(_commandIndex[i]);
+            }
+
+            var browseItems = _commandIndex.slice(0);
+            browseItems.sort(function (a, b) {
+                var tabCompare = getPaletteTabLabel(a.tab).localeCompare(getPaletteTabLabel(b.tab));
+                if (tabCompare !== 0) return tabCompare;
+                return a.name.localeCompare(b.name);
+            });
+
+            addPaletteSection(sections, "Recent", recentItems, function (item) {
+                return {
+                    isRecent: true,
+                    isCurrent: item.tab === activeTab
+                };
+            }, seen);
+
+            addPaletteSection(sections, "Favorites", favoriteItems, function (item, key) {
+                return {
+                    isRecent: !!historyLookup[key],
+                    isCurrent: item.tab === activeTab
+                };
+            }, seen);
+
+            addPaletteSection(sections, activeTab ? "Current Workspace" : "Suggested Tools", currentItems, function (item, key) {
+                return {
+                    isRecent: !!historyLookup[key],
+                    isCurrent: true
+                };
+            }, seen);
+
+            addPaletteSection(sections, "Browse All", browseItems, function (item, key) {
+                return {
+                    isRecent: !!historyLookup[key],
+                    isCurrent: item.tab === activeTab
+                };
+            }, seen);
+            return sections;
+        }
+
+        var matches = [];
+        for (i = 0; i < _commandIndex.length; i++) {
+            var commandItem = _commandIndex[i];
+            var score = scorePaletteItem(commandItem, q);
+            if (!score) continue;
+            matches.push(createPaletteEntry(commandItem, {
+                score: score,
+                isRecent: !!historyLookup[getPaletteItemKey(commandItem)],
+                isCurrent: commandItem.tab === activeTab
+            }));
+        }
+
+        matches.sort(function (a, b) {
+            if (b.score !== a.score) return b.score - a.score;
+            if (a.isFavorite !== b.isFavorite) return a.isFavorite ? -1 : 1;
+            if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1;
+            return a.item.name.localeCompare(b.item.name);
+        });
+
+        if (matches.length) sections.push({ label: "Matching Tools", entries: matches });
+        return sections;
+    }
+
+    function createPaletteBadge(label, extraClass) {
+        var badge = document.createElement("span");
+        badge.className = "command-palette-badge" + (extraClass ? (" " + extraClass) : "");
+        badge.textContent = label;
+        return badge;
+    }
+
+    function renderPaletteItem(entry, idx) {
+        var itemNode = document.createElement("button");
+        itemNode.type = "button";
+        itemNode.className = "command-palette-item";
+        itemNode.id = "commandPaletteOption" + idx;
+        itemNode.setAttribute("role", "option");
+        itemNode.setAttribute("aria-selected", "false");
+        itemNode.setAttribute("data-idx", String(idx));
+        itemNode.setAttribute("data-key", entry.key);
+        itemNode.setAttribute("data-tab", entry.item.tab);
+        itemNode.setAttribute("data-sub", entry.item.sub);
+        itemNode.setAttribute("aria-label", entry.item.name + ". " + entry.description + ". " + entry.location + ".");
+
+        var main = document.createElement("div");
+        main.className = "command-palette-item-main";
+
+        var top = document.createElement("div");
+        top.className = "command-palette-item-top";
+
+        var name = document.createElement("span");
+        name.className = "command-palette-name";
+        name.textContent = entry.item.name;
+        top.appendChild(name);
+
+        var badges = document.createElement("span");
+        badges.className = "command-palette-badges";
+        if (entry.isFavorite) badges.appendChild(createPaletteBadge("Pinned", "is-favorite"));
+        if (entry.isRecent) badges.appendChild(createPaletteBadge("Recent", "is-recent"));
+        if (entry.isCurrent) badges.appendChild(createPaletteBadge("Current", "is-current"));
+        top.appendChild(badges);
+
+        var desc = document.createElement("div");
+        desc.className = "command-palette-desc";
+        desc.textContent = entry.description;
+
+        var meta = document.createElement("div");
+        meta.className = "command-palette-meta";
+
+        var location = document.createElement("span");
+        location.className = "command-palette-location";
+        location.textContent = entry.location;
+        meta.appendChild(location);
+
+        var chevron = document.createElement("span");
+        chevron.className = "command-palette-chevron";
+        chevron.setAttribute("aria-hidden", "true");
+        chevron.textContent = "Open";
+        meta.appendChild(chevron);
+
+        main.appendChild(top);
+        main.appendChild(desc);
+        main.appendChild(meta);
+        itemNode.appendChild(main);
+        return itemNode;
+    }
+
+    function updatePaletteStatus(query) {
+        if (!el.commandPaletteStatus) return;
+        if (!query) {
+            var activeTab = getActivePaletteTabName();
+            var activeLabel = activeTab ? getPaletteTabLabel(activeTab) : "All Tools";
+            el.commandPaletteStatus.textContent = _paletteResults.length ?
+                (activeLabel + " tools plus recent actions and pinned shortcuts.") :
+                "Run tools or pin favorites to make the launcher smarter.";
+            return;
+        }
+
+        if (_paletteResults.length === 0) {
+            el.commandPaletteStatus.textContent = 'No matches for "' + query + '"';
+            return;
+        }
+
+        el.commandPaletteStatus.textContent = _paletteResults.length + (_paletteResults.length === 1 ? ' match for "' : ' matches for "') + query + '"';
+    }
+
+    function renderPaletteEmptyState(query) {
+        if (!el.commandPaletteResults) return;
+        var empty = document.createElement("div");
+        empty.className = "command-palette-empty";
+
+        var title = document.createElement("div");
+        title.className = "command-palette-empty-title";
+        title.textContent = query ? "No Matching Tools" : "Launcher Ready";
+        empty.appendChild(title);
+
+        var copy = document.createElement("div");
+        copy.className = "command-palette-empty-copy";
+        copy.textContent = query ?
+            'Try a broader term like "audio", "captions", or "export".' :
+            "Recent actions and pinned favorites will appear here once you start using the workspace.";
+        empty.appendChild(copy);
+
+        el.commandPaletteResults.appendChild(empty);
+        updatePaletteStatus(query);
+        setPaletteSelectedIndex(-1, false);
+    }
+
+    function setPaletteSelectedIndex(index, shouldScroll) {
+        if (!el.commandPaletteResults) return;
+        var items = el.commandPaletteResults.querySelectorAll(".command-palette-item");
+        if (!items.length || index < 0 || !_paletteResults.length) {
+            _paletteSelectedIdx = -1;
+            if (el.commandPaletteInput) el.commandPaletteInput.removeAttribute("aria-activedescendant");
+            return;
+        }
+
+        if (index >= _paletteResults.length) index = 0;
+        if (index < 0) index = _paletteResults.length - 1;
+        _paletteSelectedIdx = index;
+
+        for (var i = 0; i < items.length; i++) {
+            var isSelected = i === index;
+            items[i].classList.toggle("selected", isSelected);
+            items[i].setAttribute("aria-selected", isSelected ? "true" : "false");
+        }
+
+        if (!items[index]) return;
+        if (el.commandPaletteInput) el.commandPaletteInput.setAttribute("aria-activedescendant", items[index].id);
+        if (shouldScroll !== false && items[index].scrollIntoView) {
+            items[index].scrollIntoView({ block: "nearest" });
+        }
     }
 
     function renderPaletteResults(query) {
+        if (!el.commandPaletteResults) return;
+        var q = (query || "").replace(/\s+/g, " ").trim();
+        var sections = buildPaletteSections(q);
         _paletteResults = [];
-        var q = query.toLowerCase().trim();
-        for (var i = 0; i < _commandIndex.length; i++) {
-            var item = _commandIndex[i];
-            if (!q || item.name.toLowerCase().indexOf(q) !== -1 || item.keywords.indexOf(q) !== -1) {
-                _paletteResults.push(item);
+        el.commandPaletteResults.innerHTML = "";
+        el.commandPaletteResults.scrollTop = 0;
+
+        if (!sections.length) {
+            renderPaletteEmptyState(q);
+            return;
+        }
+
+        var frag = document.createDocumentFragment();
+        for (var i = 0; i < sections.length; i++) {
+            var sectionNode = document.createElement("section");
+            sectionNode.className = "command-palette-section";
+
+            var label = document.createElement("div");
+            label.className = "command-palette-section-label";
+            label.textContent = sections[i].label;
+            sectionNode.appendChild(label);
+
+            var group = document.createElement("div");
+            group.className = "command-palette-section-items";
+            group.setAttribute("role", "group");
+            group.setAttribute("aria-label", sections[i].label);
+
+            for (var j = 0; j < sections[i].entries.length; j++) {
+                var idx = _paletteResults.length;
+                _paletteResults.push(sections[i].entries[j]);
+                group.appendChild(renderPaletteItem(sections[i].entries[j], idx));
             }
+
+            sectionNode.appendChild(group);
+            frag.appendChild(sectionNode);
         }
-        _paletteSelectedIdx = 0;
-        var html = "";
-        for (var j = 0; j < _paletteResults.length; j++) {
-            html += '<div class="command-palette-item' + (j === 0 ? ' selected' : '') + '" data-idx="' + j + '" data-tab="' + _paletteResults[j].tab + '" data-sub="' + _paletteResults[j].sub + '">' + esc(_paletteResults[j].name) + ' <span class="command-palette-tab">' + esc(_paletteResults[j].tab) + '</span></div>';
-        }
-        if (_paletteResults.length === 0) {
-            html = '<div class="command-palette-empty">No matching operations</div>';
-        }
-        if (el.commandPaletteResults) el.commandPaletteResults.innerHTML = html;
+
+        el.commandPaletteResults.appendChild(frag);
+        updatePaletteStatus(q);
+        setPaletteSelectedIndex(_paletteResults.length ? 0 : -1, false);
     }
 
-    function executePaletteItem(tab, sub) {
+    function openCommandPalette() {
+        if (!el.commandPaletteOverlay || !el.commandPaletteInput || !el.commandPaletteResults) return;
+        var previousFocus = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+        closeAllDropdowns();
+        _paletteReturnFocusEl = previousFocus;
+        el.commandPaletteOverlay.classList.remove("hidden");
+        setExpanded(el.commandPaletteInput, true);
+        el.commandPaletteInput.value = "";
+        el.commandPaletteInput.removeAttribute("aria-activedescendant");
+        renderPaletteResults("");
+        setTimeout(function () {
+            if (el.commandPaletteInput) el.commandPaletteInput.focus();
+        }, 50);
+    }
+
+    function closeCommandPalette(options) {
+        var restoreFocus = !options || options.restoreFocus !== false;
+        if (el.commandPaletteOverlay) el.commandPaletteOverlay.classList.add("hidden");
+        if (el.commandPaletteInput) {
+            setExpanded(el.commandPaletteInput, false);
+            el.commandPaletteInput.removeAttribute("aria-activedescendant");
+        }
+        _paletteSelectedIdx = -1;
+        if (restoreFocus && _paletteReturnFocusEl && typeof _paletteReturnFocusEl.focus === "function") {
+            try { _paletteReturnFocusEl.focus(); } catch (e) {}
+        }
+        _paletteReturnFocusEl = null;
+    }
+
+    function executePaletteItem(itemOrTab, sub) {
+        var item = itemOrTab && typeof itemOrTab === "object" ? itemOrTab : null;
+        if (!item) {
+            for (var i = 0; i < _commandIndex.length; i++) {
+                if (_commandIndex[i].tab === itemOrTab && _commandIndex[i].sub === sub) {
+                    item = _commandIndex[i];
+                    break;
+                }
+            }
+        }
+        if (!item) return;
+        rememberPaletteItem(item);
         closeCommandPalette();
-        navigateToTab(tab, sub);
+        navigateToTab(item.tab, item.sub);
     }
 
     function paletteNavigate(dir) {
-        if (!_paletteResults.length || !el.commandPaletteResults) return;
-        var items = el.commandPaletteResults.querySelectorAll(".command-palette-item");
-        if (items[_paletteSelectedIdx]) items[_paletteSelectedIdx].classList.remove("selected");
-        _paletteSelectedIdx += dir;
-        if (_paletteSelectedIdx < 0) _paletteSelectedIdx = _paletteResults.length - 1;
-        if (_paletteSelectedIdx >= _paletteResults.length) _paletteSelectedIdx = 0;
-        if (items[_paletteSelectedIdx]) {
-            items[_paletteSelectedIdx].classList.add("selected");
-            items[_paletteSelectedIdx].scrollIntoView({ block: "nearest" });
+        if (!_paletteResults.length) return;
+        if (_paletteSelectedIdx < 0) {
+            setPaletteSelectedIndex(dir > 0 ? 0 : (_paletteResults.length - 1), true);
+            return;
         }
+        setPaletteSelectedIndex(_paletteSelectedIdx + dir, true);
     }
 
     function paletteExecuteSelected() {
-        if (_paletteResults.length > 0 && _paletteResults[_paletteSelectedIdx]) {
-            var item = _paletteResults[_paletteSelectedIdx];
-            executePaletteItem(item.tab, item.sub);
-        }
+        if (_paletteSelectedIdx < 0 || !_paletteResults[_paletteSelectedIdx]) return;
+        executePaletteItem(_paletteResults[_paletteSelectedIdx].item);
     }
 
     function initCommandPalette() {
         if (!el.commandPaletteOverlay || !el.commandPaletteInput || !el.commandPaletteResults) return;
 
-        el.commandPaletteInput.addEventListener("input", function() {
+        el.commandPaletteInput.addEventListener("input", function () {
             renderPaletteResults(this.value);
         });
 
-        el.commandPaletteInput.addEventListener("keydown", function(e) {
-            if (e.key === "ArrowDown") { e.preventDefault(); paletteNavigate(1); }
-            else if (e.key === "ArrowUp") { e.preventDefault(); paletteNavigate(-1); }
-            else if (e.key === "Enter") { e.preventDefault(); paletteExecuteSelected(); }
-            else if (e.key === "Escape") { e.preventDefault(); closeCommandPalette(); }
+        el.commandPaletteInput.addEventListener("keydown", function (e) {
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                paletteNavigate(1);
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                paletteNavigate(-1);
+            } else if (e.key === "Home" && _paletteResults.length) {
+                e.preventDefault();
+                setPaletteSelectedIndex(0, true);
+            } else if (e.key === "End" && _paletteResults.length) {
+                e.preventDefault();
+                setPaletteSelectedIndex(_paletteResults.length - 1, true);
+            } else if (e.key === "Enter") {
+                e.preventDefault();
+                paletteExecuteSelected();
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                closeCommandPalette();
+            }
         });
 
-        el.commandPaletteOverlay.addEventListener("click", function(e) {
+        el.commandPaletteOverlay.addEventListener("click", function (e) {
             if (e.target === el.commandPaletteOverlay) closeCommandPalette();
         });
 
-        el.commandPaletteResults.addEventListener("click", function(e) {
+        el.commandPaletteResults.addEventListener("mousemove", function (e) {
             var item = e.target.closest(".command-palette-item");
-            if (item) {
-                executePaletteItem(item.getAttribute("data-tab"), item.getAttribute("data-sub"));
+            if (!item) return;
+            var idx = parseInt(item.getAttribute("data-idx"), 10);
+            if (!isNaN(idx) && idx !== _paletteSelectedIdx) {
+                setPaletteSelectedIndex(idx, false);
             }
+        });
+
+        el.commandPaletteResults.addEventListener("click", function (e) {
+            var itemNode = e.target.closest(".command-palette-item");
+            if (!itemNode) return;
+            var idx = parseInt(itemNode.getAttribute("data-idx"), 10);
+            if (isNaN(idx) || !_paletteResults[idx]) return;
+            executePaletteItem(_paletteResults[idx].item);
         });
 
         // Note: Ctrl+K is now handled by the keyboard shortcut registry in initKeyboardShortcuts
@@ -7517,20 +8683,44 @@
         api("POST", "/search/footage", { query: query, top_k: maxResults }, function (err, data) {
             var res = document.getElementById("footageSearchResults");
             if (!res) return;
-            if (err || !data) { res.innerHTML = '<div class="hint">Search failed.</div>'; return; }
+            if (err || !data) { setHintContent(res, "Search failed."); return; }
             var results = data.results || [];
-            if (!results.length) { res.innerHTML = '<div class="hint">No results found.</div>'; return; }
-            var html = "";
+            if (!results.length) { setHintContent(res, "No results found."); return; }
+            var frag = document.createDocumentFragment();
             for (var i = 0; i < results.length; i++) {
                 var r = results[i];
-                var name = (r.path || "").split(/[/\\]/).pop();
+                var path = r.path || "";
+                var name = path ? path.split(/[/\\]/).pop() : "Clip unavailable";
                 var timeRange = r.start != null ? fmtDur(r.start) + " - " + fmtDur(r.end || r.start) : "";
-                html += '<div class="footage-result-item" data-path="' + esc(r.path || "") + '" style="padding:6px;border-bottom:1px solid var(--border);cursor:pointer;" title="Click to select">'
-                    + '<div style="font-size:11px;font-weight:600;">' + esc(name) + (timeRange ? ' &mdash; ' + timeRange : '') + '</div>'
-                    + (r.text ? '<div style="font-size:10px;color:var(--text-muted);margin-top:2px;">' + esc(r.text.substring(0, 80)) + '</div>' : '')
-                    + '</div>';
+                var item = document.createElement("button");
+                item.type = "button";
+                item.className = "footage-result-item";
+                item.dataset.path = path;
+                item.disabled = !path;
+                if (!path) item.classList.add("is-disabled");
+                item.title = path ? "Select clip" : "Clip path unavailable";
+                item.setAttribute("aria-label", path ? "Select clip " + name : "Unavailable clip result");
+                var title = document.createElement("div");
+                title.className = "footage-result-title";
+                title.textContent = name;
+                if (timeRange) {
+                    title.appendChild(document.createTextNode(" - "));
+                    var range = document.createElement("span");
+                    range.className = "footage-result-range";
+                    range.textContent = timeRange;
+                    title.appendChild(range);
+                }
+                item.appendChild(title);
+                if (r.text) {
+                    var snippet = document.createElement("div");
+                    snippet.className = "footage-result-snippet";
+                    snippet.textContent = r.text.substring(0, 80) + (r.text.length > 80 ? "..." : "");
+                    item.appendChild(snippet);
+                }
+                frag.appendChild(item);
             }
-            res.innerHTML = html;
+            res.innerHTML = "";
+            res.appendChild(frag);
         });
     }
 
@@ -7544,7 +8734,7 @@
         res.addEventListener("click", function (e) {
             var item = e.target.closest(".footage-result-item");
             if (!item) return;
-            var p = item.getAttribute("data-path");
+            var p = item.dataset.path || "";
             if (p) selectFile(p, p.split(/[/\\]/).pop());
         });
     }
@@ -8031,6 +9221,14 @@
         _on("refreshClipsBtn", "click", scanProjectMedia);
         _on("useSelectionBtn", "click", useTimelineSelection);
         _on("browseFileBtn", "click", browseForFile);
+        _on("stageChooseMediaBtn", "click", function () { focusClipPicker(true); });
+        _on("stageUseTimelineBtn", "click", function () {
+            if (el.useSelectionBtn) el.useSelectionBtn.click();
+        });
+        _on("stageBrowseMediaBtn", "click", function () {
+            if (el.browseFileBtn) el.browseFileBtn.click();
+        });
+        _on("stageCommandPaletteBtn", "click", openCommandPalette);
 
         // Cut tab buttons
         _on("runSilenceBtn", "click", runSilence);
@@ -8192,22 +9390,64 @@
         if (el.runMergeBtn) el.runMergeBtn.addEventListener("click", runMerge);
 
         // v1.3.0 - Recent Clips
-        if (el.recentClipsBtn) el.recentClipsBtn.addEventListener("click", showRecentClips);
+        if (el.recentClipsBtn) el.recentClipsBtn.addEventListener("click", function () {
+            toggleRecentClips({ returnFocus: false });
+        });
+        if (el.recentClipsBtn) el.recentClipsBtn.addEventListener("keydown", function (e) {
+            if (e.key === "ArrowDown") {
+                e.preventDefault();
+                showRecentClips({ focus: true });
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                showRecentClips({ focus: "last" });
+            } else if (e.key === "Escape" && el.recentClipsDropdown && !el.recentClipsDropdown.classList.contains("hidden")) {
+                e.preventDefault();
+                hideRecentClipsDropdown(true);
+            }
+        });
         // Close recent clips dropdown on outside click
         document.addEventListener("click", function(e) {
             if (el.recentClipsDropdown && !el.recentClipsDropdown.classList.contains("hidden") &&
                 !e.target.closest("#recentClipsBtn") && !e.target.closest("#recentClipsDropdown")) {
-                el.recentClipsDropdown.classList.add("hidden");
+                hideRecentClipsDropdown(false);
             }
         });
         if (el.recentClipsDropdown) el.recentClipsDropdown.addEventListener("click", function(e) {
+            var clearBtn = e.target.closest(".recent-clips-clear");
+            if (clearBtn) {
+                clearRecentClipsHistory();
+                if (!getRecentClipItems().length && el.recentClipsBtn) el.recentClipsBtn.focus();
+                return;
+            }
             var item = e.target.closest(".recent-clip-item");
             if (item) {
                 var path = item.getAttribute("data-path");
                 if (path) {
-                    selectFile(path, path.split(/[/\\]/).pop());
-                    el.recentClipsDropdown.classList.add("hidden");
+                    selectFile(path, item.getAttribute("data-name") || path.split(/[/\\]/).pop());
+                    hideRecentClipsDropdown(true);
                 }
+            }
+        });
+        if (el.recentClipsDropdown) el.recentClipsDropdown.addEventListener("keydown", function (e) {
+            var buttons = getRecentClipButtons();
+            if (!buttons.length) return;
+            var currentIndex = buttons.indexOf(document.activeElement);
+            if (currentIndex === -1) currentIndex = 0;
+            if (e.key === "Escape") {
+                e.preventDefault();
+                hideRecentClipsDropdown(true);
+            } else if (e.key === "ArrowDown") {
+                e.preventDefault();
+                buttons[(currentIndex + 1 + buttons.length) % buttons.length].focus();
+            } else if (e.key === "ArrowUp") {
+                e.preventDefault();
+                buttons[(currentIndex - 1 + buttons.length) % buttons.length].focus();
+            } else if (e.key === "Home") {
+                e.preventDefault();
+                buttons[0].focus();
+            } else if (e.key === "End") {
+                e.preventDefault();
+                buttons[buttons.length - 1].focus();
             }
         });
 

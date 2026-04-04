@@ -29,6 +29,7 @@ from opencut.jobs import (
     _unregister_job_process,
     _update_job,
     async_job,
+    make_install_route,
 )
 from opencut.security import (
     VALID_WHISPER_MODELS,
@@ -980,9 +981,6 @@ def tts_install(job_id, filepath, data):
         return {"component": component}
     finally:
         rate_limit_release("model_install")
-
-
-from opencut.jobs import make_install_route
 
 make_install_route(audio_bp, "/audio/crisper-whisper/install", "crisper_whisper",
                    ["torch", "transformers"],

@@ -64,6 +64,7 @@ def check_auto_editor_version():
         result = subprocess.run(
             ["auto-editor", "--version"],
             capture_output=True, text=True, timeout=10,
+            check=False,
         )
         if result.returncode == 0:
             return result.stdout.strip()
@@ -75,6 +76,7 @@ def check_auto_editor_version():
         result = subprocess.run(
             [sys.executable, "-m", "auto_editor", "--version"],
             capture_output=True, text=True, timeout=10,
+            check=False,
         )
         if result.returncode == 0:
             return result.stdout.strip()
@@ -374,11 +376,12 @@ def _run_auto_edit(input_path, method, threshold, margin, min_clip_length,
     try:
         result = subprocess.run(
             cmd, capture_output=True, text=True, timeout=timeout,
+            check=False,
         )
-    except subprocess.TimeoutExpired:
+    except subprocess.TimeoutExpired as err:
         raise RuntimeError(
             f"auto-editor timed out after {timeout}s processing '{os.path.basename(input_path)}'"
-        )
+        ) from err
 
     if result.returncode != 0:
         stderr = result.stderr.strip()[-500:] if result.stderr else "unknown error"

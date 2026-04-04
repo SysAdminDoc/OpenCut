@@ -17,6 +17,7 @@ from opencut.helpers import (
 from opencut.jobs import (
     _update_job,
     async_job,
+    make_install_route,
 )
 from opencut.security import (
     rate_limit,
@@ -270,9 +271,6 @@ def face_blur(job_id, filepath, data):
         detector=detector, on_progress=_on_progress,
     )
     return {"output_path": out}
-
-
-from opencut.jobs import make_install_route
 
 make_install_route(video_ai_bp, "/video/face/install", "mediapipe",
                    ["mediapipe", "opencv-python-headless"],
