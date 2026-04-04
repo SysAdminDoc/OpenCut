@@ -109,9 +109,9 @@ var
 begin
   // Kill all OpenCut-Server.exe processes
   Exec('taskkill.exe', '/F /IM OpenCut-Server.exe', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  // Kill any wscript running our launcher
-  Exec('taskkill.exe', '/F /FI "WINDOWTITLE eq OpenCut*"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
-  // Kill python server if running from source
+  // Kill any wscript running our launcher (by image name, NOT window title — window title match can kill explorer.exe)
+  Exec('taskkill.exe', '/F /IM wscript.exe /FI "WINDOWTITLE eq OpenCut-Launcher"', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
+  // Kill python server if running from source (port 5679)
   Exec('cmd.exe', '/c for /f "tokens=5" %a in (''netstat -ano ^| findstr :5679 ^| findstr LISTENING'') do taskkill /F /PID %a', '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
   // Brief pause to let processes die
   Sleep(500);
