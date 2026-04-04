@@ -180,7 +180,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.15**
+- Current: **v1.9.16**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -209,7 +209,7 @@
 - **Consolidated helpers** — `run_ffmpeg()`, `ensure_package()`, `get_video_info()` live in `opencut/helpers.py`. All core modules import from there. Never define local `_run_ffmpeg`/`_ensure_package`/`_get_video_info` copies.
 - `ensure_package()` routes through `safe_pip_install()` from security.py — never bypass this with raw `subprocess.run(["pip", ...])` in core modules
 - `get_video_info()` includes format-duration fallback for containers where stream-level duration is unavailable
-- Deferred temp cleanup: `_schedule_temp_cleanup(path)` retries with exponential backoff on Windows
+- Deferred temp cleanup: `_schedule_temp_cleanup(path)` uses a single background worker thread with exponential backoff (not Timer-per-retry)
 - **LLMConfig is a dataclass, not a dict** — routes must instantiate `LLMConfig(provider=..., model=..., api_key=...)`, never pass `{"provider": ...}` dicts to core functions. Import pattern: try relative `..core.llm`, fallback absolute `opencut.core.llm`, guard with `if LLMConfig is not None`.
 - **Deliverables return dict, not string** — `generate_vfx_sheet/adr_list/music_cue_sheet/asset_list()` return `{"output": path, "rows": N}`. Routes use `isinstance(result, dict)` guard with `.get("output", fallback)`.
 - **Multicam result is a dict** — `generate_multicam_cuts()` returns `{"cuts": [...], "total_cuts": N, "speaker_to_track": {...}}`. Unpack with `result.get("cuts", [])`, not direct iteration.
@@ -231,6 +231,10 @@
 - **Duplicate HTML `class` attributes** — HTML parser silently discards the second `class=` attribute. Always merge into a single `class="cls1 cls2"`. Grep with `class=".+" class="` to detect.
 - **pip `--target` fallback** — `safe_pip_install()` has 3 strategies: normal → `--user` → `--target ~/.opencut/packages`. The `--target` dir is created at install time and added to `sys.path` both in security.py (immediately) and server.py (on startup). Packages installed via `--target` are importable without restart.
 - **`cancelJob()` order** — Close SSE/poll streams BEFORE nulling `currentJob` to prevent in-flight events from triggering `onJobDone` after cancel.
+- **Never spawn raw threads for I/O** — Use `_io_pool.submit()` from jobs.py for persistence/timing tasks. Raw `threading.Thread(target=...).start()` leaks under batch load. The `_io_pool` (ThreadPoolExecutor, 2 workers) bounds concurrency.
+- **Rate limit acquire/release pairing** — If `rate_limit(key)` returns False (slot not acquired), do NOT enter the `try/finally` that calls `rate_limit_release(key)`. Use an `acquired` flag or raise before the try block.
+- **GPU tensor cleanup pattern** — `del tensor` only removes the Python reference; call `.cpu()` first to move off GPU, then `del`, then `torch.cuda.empty_cache()`. Always wrap in `finally` block. Applies to all ML modules (audio_enhance, captions_enhanced, music_gen, diarize, scene_detect).
+- **Thread-safe singletons** — Global cached objects (like `auto_zoom._CASCADE`) must use double-checked locking (`if X is None: with lock: if X is None: X = ...`). Flask serves requests on multiple threads.
 - **Never `git add -A`** — `installer/bin/`, `installer/obj/`, `installer/publish/` are build artifacts NOT in `.gitignore` (they're tracked in the repo). Use specific file paths when staging.
 - **Frozen builds** — `sys.executable` points to the exe, not Python. `safe_pip_install()` and `_setup_system_site_packages()` detect frozen state and find system Python from PATH instead.
 - **Ruff CI rules** — CI runs `ruff check opencut/ --select E,F,I --ignore E501`. Codebase is fully lint-clean as of v1.3.0. Use `# noqa: F401` for intentional lazy imports, `# noqa: E402` for delayed imports, `# noqa: F821` for closure-scoped forward refs.
@@ -347,7 +351,7 @@
 
 ### Gotchas (v2.0 additions)
 - **Workflow cancellation** — `run_workflow()` checks `_is_cancelled(parent_job_id)` between steps. Cancelled sub-jobs also stop the workflow. Pass `parent_job_id` when calling from routes.
-- **Job persistence** — `_update_job()` auto-calls `_persist_job()` for terminal statuses (complete/error/cancelled). `_cleanup_old_jobs()` also persists stuck-job error status. Background thread avoids I/O under lock.
+- **Job persistence** — `_update_job()` auto-calls `_persist_job()` for terminal statuses (complete/error/cancelled). `_cleanup_old_jobs()` also persists stuck-job error status. Bounded `_io_pool` (ThreadPoolExecutor, 2 workers) handles persistence I/O — never spawn raw threads for persistence/time recording.
 - **`get_interrupted_jobs()`** queries `status='interrupted'` (not 'running') — `mark_interrupted()` changes status on startup.
 - **Workflow step output chaining** — `_extract_output_path(resp_data)` checks `output`, `output_file`, `filepath`, `result.output` keys. If no output found, reuses current_input for next step.
 - **Quick action buttons** — Added to `_clipButtons` array so `updateButtons()` enables/disables them with connection + file selection state. Click handlers call `_quickWorkflow(name)` which looks up preset from `_workflowPresets` loaded from backend.
@@ -918,6 +922,21 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **export_video partial file leak** — Failed FFmpeg runs left corrupt partial output files on disk. Added cleanup on non-zero exit.
 - **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.
 - **pip install permission denied** — `safe_pip_install()` failed on Windows when both normal and `--user` installs hit Errno 13 (Microsoft Store Python, OneDrive-synced user dirs, restrictive ACLs). Added `--target ~/.opencut/packages` as third fallback strategy. server.py adds `~/.opencut/packages` to `sys.path` at startup.
+
+## v1.9.16 Performance Audit & Memory Leak Fixes
+- **`/video/auto-zoom` broken return** — route returned `{}` instead of `result_dict` (keyframes + output path discarded)
+- **Unbounded thread spawning** — `_persist_job()` and `_schedule_record_time()` spawned raw `threading.Thread` per call; replaced with bounded `_io_pool = ThreadPoolExecutor(2)`. Prevents 200+ thread leak under batch load.
+- **Rate limit slot leak** — `make_install_route()` lost rate_limit slot permanently when `rate_limit()` returned False (ValueError raised before `try/finally`). Added `acquired` guard.
+- **GPU memory leak in audio_enhance** — `del audio` alone doesn't free CUDA tensors; now deletes all tensor refs (`audio`, `mono`, `sr`) and calls `.cpu()` before `torch.cuda.empty_cache()`
+- **Timer thread spam** — `_schedule_temp_cleanup()` spawned new `threading.Timer` per retry (300+ threads on Windows batch cleanup); replaced with single `_cleanup_worker` daemon thread + event-driven queue
+- **Haar cascade race condition** — `auto_zoom._get_cascade()` wrote global `_CASCADE` from multiple threads; added `_CASCADE_LOCK` with double-checked locking
+- **Color match frame buffer waste** — BGR frames kept alongside YCbCr copies (~124MB at 1080p); now freed immediately after conversion with explicit `del`
+- **SQLite connection leak** — `job_store.py` thread-local connections never closed on shutdown; added `_ALL_CONNECTIONS` tracking + `close_all_connections()`
+- **CEP health timer leak** — `setInterval` reassigned without `clearInterval` on failure path, accumulating parallel health check intervals
+- **Prior session cleanup merged** — `subprocess.run(check=False)` across all bare calls, exception chaining, `contextlib.suppress` patterns, import ordering, clip-notes plugin SQLite upgrade, CEP workspace state persistence, theme overhaul
+
+## v1.9.15 Batch 47 (Release Audit)
+- 3-agent sweep: 4 test fixes, 1 ffmpeg path fix.
 
 ## v1.9.14 Batch 46 (Final Sweep)
 - **4 more bare ffmpeg** missed by agent (audio.py stem conversion + video_core.py stabilize merge).
