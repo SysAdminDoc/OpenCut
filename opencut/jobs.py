@@ -8,8 +8,13 @@ import logging
 import threading
 import time
 import uuid
+from concurrent.futures import ThreadPoolExecutor
 
 logger = logging.getLogger("opencut")
+
+# Bounded thread pool for background I/O (persistence, time recording)
+# Prevents unbounded thread creation under batch load
+_io_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="oc-job-io")
 
 # ---------------------------------------------------------------------------
 # Thread-local job ID for log correlation
@@ -116,14 +121,14 @@ def _update_job(job_id: str, **kwargs):
 
 
 def _persist_job(job_dict):
-    """Persist a job to SQLite in a background thread to avoid I/O under lock."""
+    """Persist a job to SQLite via bounded I/O pool to avoid I/O under lock."""
     def _save():
         try:
             from opencut.job_store import save_job
             save_job(job_dict)
         except Exception as e:
             logger.debug("Failed to persist job %s: %s", job_dict.get("id"), e)
-    threading.Thread(target=_save, daemon=True).start()
+    _io_pool.submit(_save)
 
 
 def _schedule_record_time(job_type, elapsed, filepath):
@@ -138,7 +143,7 @@ def _schedule_record_time(job_type, elapsed, filepath):
             _record_job_time(job_type, elapsed, file_dur)
         except Exception as e:
             logger.debug("Failed to record job time for %s: %s", job_type, e)
-    threading.Thread(target=_record, daemon=True).start()
+    _io_pool.submit(_record)
 
 
 def _is_cancelled(job_id: str) -> bool:
@@ -397,7 +402,9 @@ def make_install_route(blueprint, url_path, component_name, packages,
     @async_job("install", filepath_required=False)
     def _install_handler(job_id, filepath, data):
         if not _rl("model_install"):
+            # Not acquired — don't release in finally
             raise ValueError("A model_install operation is already running. Please wait.")
+        acquired = True
         try:
             for i, pkg in enumerate(packages):
                 pct = int((i / len(packages)) * 90)
@@ -405,7 +412,8 @@ def make_install_route(blueprint, url_path, component_name, packages,
                 _spi(pkg, timeout=600)
             return {"component": component_name}
         finally:
-            _rlr("model_install")
+            if acquired:
+                _rlr("model_install")
 
     _install_handler.__name__ = f"install_{component_name}"
     _install_handler.__qualname__ = f"install_{component_name}"

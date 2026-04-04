@@ -14,6 +14,7 @@ import sys
 import tempfile
 import threading
 import time
+from contextlib import suppress
 
 from flask import Blueprint, jsonify, request, send_file
 
@@ -350,7 +351,7 @@ def _detect_gpu():
         result = _sp.run(
             ["nvidia-smi", "--query-gpu=name,memory.total",
              "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True, text=True, timeout=5, check=False,
         )
         if result.returncode == 0 and result.stdout.strip():
             line = result.stdout.strip().split("\n")[0]  # First GPU only
@@ -392,7 +393,7 @@ def _get_vram_used():
         result = _sp.run(
             ["nvidia-smi", "--query-gpu=memory.used",
              "--format=csv,noheader,nounits"],
-            capture_output=True, text=True, timeout=5,
+            capture_output=True, text=True, timeout=5, check=False,
         )
         if result.returncode == 0 and result.stdout.strip():
             used = safe_int(result.stdout.strip().split("\n")[0].strip())
@@ -569,9 +570,18 @@ def check_dependencies():
 
     # Check FFmpeg
     try:
-        r = _sp.run([get_ffmpeg_path(), "-version"], capture_output=True, text=True, timeout=5)
-        line = r.stdout.split("\n")[0] if r.stdout else ""
-        deps["ffmpeg"] = {"installed": True, "version": line}
+        r = _sp.run(
+            [get_ffmpeg_path(), "-version"],
+            capture_output=True,
+            text=True,
+            timeout=5,
+            check=False,
+        )
+        line = r.stdout.split("\n")[0].strip() if r.stdout else ""
+        deps["ffmpeg"] = {
+            "installed": r.returncode == 0 and bool(line),
+            "version": line if r.returncode == 0 and line else None,
+        }
     except Exception:
         deps["ffmpeg"] = {"installed": False, "version": None}
 
@@ -815,7 +825,13 @@ def install_whisper(job_id, filepath, data):
             if "pre_cmds" in strat:
                 for pre_cmd in strat["pre_cmds"]:
                     try:
-                        pre_result = _sp.run(pre_cmd, capture_output=True, text=True, timeout=120)
+                        pre_result = _sp.run(
+                            pre_cmd,
+                            capture_output=True,
+                            text=True,
+                            timeout=120,
+                            check=False,
+                        )
                         if pre_result.returncode == 0:
                             logger.debug(f"Pre-command succeeded: {' '.join(pre_cmd[:5])}")
                             break
@@ -896,7 +912,13 @@ def install_whisper(job_id, filepath, data):
                         verify_cmd = [_pip_python, "-c", f"import {actual_backend}; print('ok')"]
 
                 # Also try importing directly in-process (for --target installs)
-                verify = _sp.run(verify_cmd, capture_output=True, text=True, timeout=30)
+                verify = _sp.run(
+                    verify_cmd,
+                    capture_output=True,
+                    text=True,
+                    timeout=30,
+                    check=False,
+                )
 
                 if verify.returncode == 0 and "ok" in verify.stdout:
                     logger.info(f"Whisper installed via strategy {si+1}: {actual_backend}")
@@ -1038,7 +1060,13 @@ def whisper_reinstall(job_id, filepath, data):
             result = None
             for variant in [base, base + ["--user"], base + ["--target", _target_dir]]:
                 try:
-                    result = _sp.run(variant, capture_output=True, text=True, timeout=timeout)
+                    result = _sp.run(
+                        variant,
+                        capture_output=True,
+                        text=True,
+                        timeout=timeout,
+                        check=False,
+                    )
                     if result.returncode == 0:
                         return result
                 except Exception:
@@ -1051,13 +1079,11 @@ def whisper_reinstall(job_id, filepath, data):
 
         uninstall_pkgs = ["faster-whisper", "openai-whisper", "whisperx"]
         for pkg in uninstall_pkgs:
-            try:
+            with suppress(Exception):
                 _sp.run(
                     [_pip_python, "-m", "pip", "uninstall", pkg, "-y"],
-                    capture_output=True, timeout=60
+                    capture_output=True, timeout=60, check=False
                 )
-            except Exception:
-                pass
 
         if _is_cancelled(job_id):
             return {"backend": backend, "installed": False, "cancelled": True}
@@ -1090,17 +1116,15 @@ def whisper_reinstall(job_id, filepath, data):
 
         # Step 3: Clear pip cache for these packages
         _update_job(job_id, progress=30, message="Clearing pip cache...")
-        try:
+        with suppress(Exception):
             _sp.run(
                 [_pip_python, "-m", "pip", "cache", "remove", "faster_whisper"],
-                capture_output=True, timeout=30
+                capture_output=True, timeout=30, check=False
             )
             _sp.run(
                 [_pip_python, "-m", "pip", "cache", "remove", "ctranslate2"],
-                capture_output=True, timeout=30
+                capture_output=True, timeout=30, check=False
             )
-        except Exception:
-            pass
 
         if _is_cancelled(job_id):
             return {"backend": backend, "installed": False, "cancelled": True}
@@ -1175,7 +1199,13 @@ def whisper_reinstall(job_id, filepath, data):
         else:
             verify_cmd = [_pip_python, "-c", "import whisper; print('ok')"]
 
-        verify = _sp.run(verify_cmd, capture_output=True, text=True, timeout=30)
+        verify = _sp.run(
+            verify_cmd,
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
 
         if verify.returncode == 0 and "ok" in verify.stdout:
             logger.info(f"Whisper reinstalled: {backend}, cpu_mode={cpu_mode}")
@@ -1264,10 +1294,8 @@ def list_models():
                 size = 0
                 for root, dirs, files in os.walk(path):
                     for f in files:
-                        try:
+                        with suppress(OSError):
                             size += os.path.getsize(os.path.join(root, f))
-                        except OSError:
-                            pass
                 models.append({"name": name, "path": path, "size_mb": round(size / (1024 * 1024), 1), "source": "huggingface"})
     # Check torch hub cache
     torch_cache = os.environ.get("TORCH_HOME", os.path.join(os.path.expanduser("~"), ".cache", "torch", "hub"))
@@ -1287,10 +1315,8 @@ def list_models():
                 size = 0
                 for root, dirs, files in os.walk(path):
                     for f in files:
-                        try:
+                        with suppress(OSError):
                             size += os.path.getsize(os.path.join(root, f))
-                        except OSError:
-                            pass
                 models.append({"name": "whisper/" + entry, "path": path, "size_mb": round(size / (1024 * 1024), 1), "source": "whisper"})
 
     result = {"models": models, "total_mb": round(sum(m["size_mb"] for m in models), 1)}

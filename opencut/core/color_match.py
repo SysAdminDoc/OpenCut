@@ -220,17 +220,19 @@ def color_match_video(
     logger.debug("Building reference color histogram from %s (%d frames)",
                  reference_path, sample_frame_count)
 
-    # Sample frames from reference and build YCbCr histograms
+    # Sample frames from reference and convert to YCbCr (release BGR immediately)
     ref_bgr = _sample_frames(reference_path, sample_frame_count)
     if not ref_bgr:
         raise RuntimeError(f"Could not extract frames from reference: {reference_path}")
     ref_ycbcr = [cv2.cvtColor(f, cv2.COLOR_BGR2YCrCb) for f in ref_bgr]
+    del ref_bgr  # Free ~31MB per 5 frames at 1080p
 
-    # Also sample source for CDF building
+    # Also sample source for CDF building (release BGR immediately)
     src_bgr_samples = _sample_frames(source_path, sample_frame_count)
     if not src_bgr_samples:
         raise RuntimeError(f"Could not extract frames from source: {source_path}")
     src_ycbcr_samples = [cv2.cvtColor(f, cv2.COLOR_BGR2YCrCb) for f in src_bgr_samples]
+    del src_bgr_samples  # Free ~31MB
 
     # Build LUTs for each channel
     luts = []
@@ -238,6 +240,9 @@ def color_match_video(
         src_cdf = _build_cumulative_hist(src_ycbcr_samples, ch)
         ref_cdf = _build_cumulative_hist(ref_ycbcr, ch)
         luts.append(_build_lut(src_cdf, ref_cdf))
+
+    # Free histogram source frames — only LUTs needed from here
+    del ref_ycbcr, src_ycbcr_samples
 
     logger.debug("Processing source video frame-by-frame: %s", source_path)
 
