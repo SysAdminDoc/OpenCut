@@ -151,12 +151,12 @@ def probe(filepath: str) -> MediaInfo:
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
-    except FileNotFoundError:
-        raise RuntimeError("ffprobe not found. Install FFmpeg: https://ffmpeg.org/download.html")
+    except FileNotFoundError as err:
+        raise RuntimeError("ffprobe not found. Install FFmpeg: https://ffmpeg.org/download.html") from err
     except subprocess.CalledProcessError as e:
-        raise RuntimeError(f"ffprobe failed on '{filepath}': {e.stderr}")
-    except subprocess.TimeoutExpired:
-        raise RuntimeError(f"ffprobe timed out on '{filepath}'")
+        raise RuntimeError(f"ffprobe failed on '{filepath}': {e.stderr}") from e
+    except subprocess.TimeoutExpired as err:
+        raise RuntimeError(f"ffprobe timed out on '{filepath}'") from err
 
     try:
         data = json.loads(result.stdout)
