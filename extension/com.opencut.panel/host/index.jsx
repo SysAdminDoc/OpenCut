@@ -30,7 +30,7 @@ function ocPing() {
  * Returns JSON string: [{name, path, duration, type, nodeId}, ...]
  */
 function getAllProjectMedia() {
-    var items = [];
+    var scan = null;
     try {
         if (!app || !app.project) {
             return JSON.stringify({ error: "No project open" });
@@ -39,12 +39,12 @@ function getAllProjectMedia() {
         if (!root) {
             return JSON.stringify({ error: "Cannot access project root" });
         }
-        _walkProjectItems(root, items, 0);
+        scan = _collectProjectMedia(root, 5, 80);
     } catch (e) {
         _ocLog("getAllProjectMedia error: " + e.toString());
         return JSON.stringify({ error: "ExtendScript: " + e.toString() });
     }
-    return JSON.stringify(items);
+    return JSON.stringify(scan ? scan.items : []);
 }
 
 
@@ -53,15 +53,15 @@ function getAllProjectMedia() {
  * Returns JSON string: {media: [...], projectFolder: "..."}
  */
 function getProjectMedia() {
-    var items = [];
+    var scan = null;
     var projectFolder = "";
     try {
         if (!app || !app.project) {
-            return JSON.stringify({ error: "No project open", media: [], projectFolder: "" });
+            return JSON.stringify({ error: "No project open", media: [], projectFolder: "", rootChildren: 0, scanAttempts: 0 });
         }
         var root = app.project.rootItem;
         if (!root) {
-            return JSON.stringify({ error: "Cannot access project root", media: [], projectFolder: "" });
+            return JSON.stringify({ error: "Cannot access project root", media: [], projectFolder: "", rootChildren: 0, scanAttempts: 0 });
         }
         
         // Get project folder path
@@ -75,18 +75,69 @@ function getProjectMedia() {
             _ocLog("getProjectMedia projectFolder error: " + e2.toString());
         }
         
-        _walkProjectItems(root, items, 0);
+        scan = _collectProjectMedia(root, 6, 100);
     } catch (e) {
         _ocLog("getProjectMedia error: " + e.toString());
-        return JSON.stringify({ error: "ExtendScript: " + e.toString(), media: [], projectFolder: "" });
+        return JSON.stringify({ error: "ExtendScript: " + e.toString(), media: [], projectFolder: "", rootChildren: 0, scanAttempts: 0 });
     }
-    return JSON.stringify({ media: items, projectFolder: projectFolder });
+    return JSON.stringify({
+        media: scan ? scan.items : [],
+        projectFolder: projectFolder,
+        rootChildren: scan ? scan.rootChildren : 0,
+        scanAttempts: scan ? scan.attempts : 0
+    });
 }
 
-function _walkProjectItems(parent, items, depth) {
+function _getProjectChildCount(parent) {
+    try {
+        if (parent && parent.children) return parent.children.numItems || 0;
+    } catch (e) {}
+    return 0;
+}
+
+function _normalizeMediaPath(path) {
+    if (!path || typeof path !== "string") return "";
+    var normalized = path;
+    try { normalized = decodeURI(normalized); } catch (e) {}
+    normalized = normalized.replace(/^file:\/*/i, "");
+    normalized = normalized.replace(/^([A-Za-z])\|/, "$1:");
+    try {
+        if (Folder && Folder.fs === "Windows") {
+            if (/^\/[A-Za-z]:/.test(normalized)) normalized = normalized.substring(1);
+            normalized = normalized.replace(/\//g, "\\");
+        }
+    } catch (e2) {}
+    return normalized;
+}
+
+function _collectProjectMedia(root, maxAttempts, delayMs) {
+    var attempts = 0;
+    var rootChildren = 0;
+    var items = [];
+    if (!maxAttempts || maxAttempts < 1) maxAttempts = 1;
+    if (!delayMs || delayMs < 0) delayMs = 0;
+
+    while (attempts < maxAttempts) {
+        attempts++;
+        rootChildren = _getProjectChildCount(root);
+        items = [];
+        _walkProjectItems(root, items, {}, 0);
+        if (items.length > 0) break;
+        if (rootChildren === 0 || attempts >= maxAttempts) break;
+        if (delayMs > 0) $.sleep(delayMs);
+    }
+
+    return {
+        items: items,
+        rootChildren: rootChildren,
+        attempts: attempts
+    };
+}
+
+function _walkProjectItems(parent, items, seenPaths, depth) {
     if (depth > 20) return;
-    var numChildren = 0;
-    try { numChildren = parent.children.numItems; } catch (e) { return; }
+    var numChildren = _getProjectChildCount(parent);
+    if (!numChildren) return;
 
     for (var i = 0; i < numChildren; i++) {
         var item = null;
@@ -102,12 +153,16 @@ function _walkProjectItems(parent, items, depth) {
             }
 
             if (isBin) {
-                _walkProjectItems(item, items, depth + 1);
+                _walkProjectItems(item, items, seenPaths, depth + 1);
             } else {
                 var mediaPath = "";
-                try { mediaPath = item.getMediaPath(); } catch (e4) { mediaPath = ""; }
+                try { mediaPath = _normalizeMediaPath(item.getMediaPath()); } catch (e4) { mediaPath = ""; }
 
                 if (mediaPath && mediaPath.length > 0) {
+                    var dedupeKey = mediaPath.toLowerCase();
+                    if (seenPaths && seenPaths[dedupeKey]) continue;
+                    if (seenPaths) seenPaths[dedupeKey] = true;
+
                     var dur = 0;
                     try {
                         var outPt = item.getOutPoint();
@@ -160,7 +215,7 @@ function getSelectedClips() {
                         try {
                             var pi = clip.projectItem;
                             if (pi) {
-                                var p = pi.getMediaPath();
+                                var p = _normalizeMediaPath(pi.getMediaPath());
                                 if (p) results.push({ name: clip.name || pi.name || "", path: p });
                             }
                         } catch (e2) {}
@@ -177,7 +232,7 @@ function getSelectedClips() {
                         try {
                             var api = aclip.projectItem;
                             if (api) {
-                                var ap = api.getMediaPath();
+                                var ap = _normalizeMediaPath(api.getMediaPath());
                                 if (ap) {
                                     var dup = false;
                                     for (var d = 0; d < results.length; d++) {
@@ -202,7 +257,7 @@ function getSelectedClips() {
                 if (selItems && selItems.length > 0) {
                     for (var s = 0; s < selItems.length; s++) {
                         try {
-                            var sp = selItems[s].getMediaPath();
+                            var sp = _normalizeMediaPath(selItems[s].getMediaPath());
                             if (sp) results.push({ name: selItems[s].name || "", path: sp });
                         } catch (e6) {}
                     }
@@ -216,7 +271,7 @@ function getSelectedClips() {
         try {
             var srcMon = app.sourceMonitor;
             if (srcMon && srcMon.projectItem) {
-                var smp = srcMon.projectItem.getMediaPath();
+                var smp = _normalizeMediaPath(srcMon.projectItem.getMediaPath());
                 if (smp) results.push({ name: srcMon.projectItem.name || "", path: smp });
             }
         } catch (e8) {}
@@ -372,7 +427,7 @@ function getSequenceClips() {
             for (var c = 0; c < track.clips.numItems; c++) {
                 var clip = track.clips[c];
                 var path = "";
-                try { path = clip.projectItem.getMediaPath(); } catch (e) { _ocLog(e.toString()); }
+                try { path = _normalizeMediaPath(clip.projectItem.getMediaPath()); } catch (e) { _ocLog(e.toString()); }
                 clips.push({
                     name: clip.name || "",
                     path: path,
@@ -389,7 +444,7 @@ function getSequenceClips() {
             for (var ac = 0; ac < aTrack.clips.numItems; ac++) {
                 var aClip = aTrack.clips[ac];
                 var aPath = "";
-                try { aPath = aClip.projectItem.getMediaPath(); } catch (e2) { _ocLog(e2.toString()); }
+                try { aPath = _normalizeMediaPath(aClip.projectItem.getMediaPath()); } catch (e2) { _ocLog(e2.toString()); }
                 clips.push({
                     name: aClip.name || "",
                     path: aPath,
@@ -656,24 +711,24 @@ function applyEditsToTimeline(segmentsJson, mediaPath) {
  */
 function _findProjectItemByPath(parent, targetPath, depth) {
     if (depth > 50) return null;
-    var numChildren = 0;
-    try { numChildren = parent.children.numItems; } catch (e) { return null; }
+    // Normalize target once at the top-level call (depth 0), reuse on recursion
+    var normalizedTarget = (depth === 0) ? _normalizeMediaPath(targetPath).toLowerCase() : targetPath;
+    var numChildren = _getProjectChildCount(parent);
+    if (!numChildren) return null;
     for (var i = 0; i < numChildren; i++) {
         try {
             var item = parent.children[i];
-            if (item.type === 2) {
-                // Bin -- recurse into it
-                var found = _findProjectItemByPath(item, targetPath, depth + 1);
+            if (!item) continue;
+            var isBin = false;
+            try { isBin = (item.type === 2); } catch (e2) {}
+            if (isBin) {
+                // Bin -- recurse with already-normalized target
+                var found = _findProjectItemByPath(item, normalizedTarget, depth + 1);
                 if (found) return found;
             } else {
                 var p = "";
-                try { p = item.getMediaPath(); } catch (e) { _ocLog(e.toString()); }
-                if (p) {
-                    var dp, dt;
-                    try { dp = decodeURI(p); } catch (e) { dp = p; }
-                    try { dt = decodeURI(targetPath); } catch (e) { dt = targetPath; }
-                    if (dp.toLowerCase() === dt.toLowerCase()) return item;
-                }
+                try { p = _normalizeMediaPath(item.getMediaPath()); } catch (e3) { _ocLog(e3.toString()); }
+                if (p && p.toLowerCase() === normalizedTarget) return item;
             }
         } catch (e) { _ocLog(e.toString()); }
     }
@@ -1354,7 +1409,7 @@ function ocGetSequenceInfo() {
                 for (var vc = 0; vc < vTrack.clips.numItems; vc++) {
                     var vClip = vTrack.clips[vc];
                     var vPath = "";
-                    try { vPath = vClip.projectItem.getMediaPath(); } catch (e) {}
+                    try { vPath = _normalizeMediaPath(vClip.projectItem.getMediaPath()); } catch (e) {}
                     var vStart = 0;
                     var vEnd = 0;
                     try { vStart = vClip.start ? vClip.start.seconds : 0; } catch (e) {}
@@ -1396,7 +1451,7 @@ function ocGetSequenceInfo() {
                 for (var ac = 0; ac < aTrack.clips.numItems; ac++) {
                     var aClip = aTrack.clips[ac];
                     var aPath = "";
-                    try { aPath = aClip.projectItem.getMediaPath(); } catch (e) {}
+                    try { aPath = _normalizeMediaPath(aClip.projectItem.getMediaPath()); } catch (e) {}
                     var aStart = 0;
                     var aEnd = 0;
                     try { aStart = aClip.start ? aClip.start.seconds : 0; } catch (e) {}
@@ -1846,7 +1901,7 @@ function ocBatchRenameProjectItems(renamesJSON) {
         for (var i = 0; i < renames.length; i++) {
             var rename = renames[i];
             try {
-                if (!rename.nodeId || typeof rename.newName !== "string" || rename.newName.length === 0) {
+                if (!rename || !rename.nodeId || typeof rename.newName !== "string" || rename.newName.length === 0) {
                     errors.push("Rename " + i + ": missing nodeId or newName");
                     continue;
                 }

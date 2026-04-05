@@ -82,7 +82,7 @@
 ### Frontend (CEP Panel)
 - `extension/com.opencut.panel/client/main.js` (~7730 lines) - Frontend controller. New systems: keyboard shortcut registry (DEFAULT_SHORTCUTS + localStorage persistence + matchesShortcut), lazy tab rendering (_tabRendered + initTabOnFirstVisit), cut review panel (showCutReview + formatTimecode), status bar (pollSystemStatus), i18n (loadLocale + t() + applyI18nToDOM), workflow preset loader (loadWorkflowPresets + server-side POST /workflow/run), project templates (initProjectTemplates + loadTemplateList), preset export/import (exportPresetFile + importPresetFile), quick action buttons (one-click workflows on Cut/Captions/Audio/Video tabs), toast reflow (_reflowToasts), enhanced error display (showAlert reads structured error.suggestion), job history loads from backend on init, interrupted jobs alert on first connect.
 - `extension/com.opencut.panel/client/index.html` (~3210 lines) - Quick action bars on Cut/Captions/Audio/Video tabs. Cut review panel. Status bar with role="status" + aria-label. Keyboard shortcuts reference card. Project templates card. Preset export/import buttons. Zero inline styles. data-i18n attributes on ~25 elements.
-- `extension/com.opencut.panel/client/style.css` (~4900 lines) - 10 complete themes (6 dark + 4 light: snowlight, latte, solarized, paper). Light-theme overrides for ~40 components including scrollbar (--scrollbar-thumb-color/--scrollbar-hover-color tokens), hovers (--light-hover/--light-border-accent), toast, command palette, job history. 4px spacing rhythm enforced (eliminated 10.5px/11.5px font sizes, normalized 10px/14px/18px/28px margins). 4 responsive breakpoints (800px wide, 480px compact, 440px mid-narrow, 380px very small). Complete interactive states for all button variants (btn-outline :disabled/:active, btn-ghost :active/:disabled, btn-text :disabled, range :focus-visible/:disabled, checkbox :focus-visible/:disabled). Focus-visible rings on 15 interactive elements. Quick action button styles. Shortcut reference card styles. Unified input styling (.text-input matches standard inputs).
+- `extension/com.opencut.panel/client/style.css` (~4100 lines) - Single "Studio Graphite" dark theme (multi-theme system removed in v1.9.16). Studio Shell pass widens sidebar to 124px with responsive breakpoints (900px, 560px). Workspace stage max-width 1160px. 4px spacing rhythm enforced. 4 responsive breakpoints. Complete interactive states for all button variants. Focus-visible rings on 15 interactive elements. Quick action button styles. Shortcut reference card styles. Unified input styling (.text-input matches standard inputs).
 - `extension/com.opencut.panel/host/index.jsx` (~2230 lines) - ExtendScript host. **New functions (lines 1315–2230):** ocGetSequenceInfo, ocAddSequenceMarkers, ocGetSequenceMarkers, ocApplySequenceCuts, ocApplyClipKeyframes, ocBatchRenameProjectItems, ocCreateSmartBins, ocAddNativeCaptionTrack, ocGetProjectBins, ocExportSequenceRange. Private helpers: _findByNodeId, _collectMediaItems, _collectBins. Markers use getFirstMarker/getNextMarker iterator (not indexed access).
 
 ### UXP Panel (Premiere Pro 25.6+)
@@ -251,7 +251,7 @@
 - Toast notifications for job completion
 - Transcript search with navigation
 - Social platform export presets (YouTube Shorts, TikTok, Instagram, etc.)
-- Premiere Pro theme sync (CSInterface skin detection)
+- Premiere Pro theme sync (removed in v1.9.16 — single Studio Graphite theme now)
 - Universal auto-import ExtendScript function
 
 ## v1.2.0 Features Added
@@ -339,10 +339,8 @@
 - **Enhanced errors** — `showAlert()` and `enhanceError()` read structured `suggestion` field from server. Install errors (Demucs, WhisperX) show recovery guidance.
 - **Command palette** — 4 new entries (Workflow Presets, Project Templates, Keyboard Shortcuts, Job History).
 
-### CSS/Theme Improvements
-- **4 light themes** — Snowlight (clean white/blue), Catppuccin Latte (warm cream), Solarized Light, Paper (monochrome). `color-scheme: light` + scrollbar tokens + ~40 component overrides.
-- **Light-theme scrollbar** — `--scrollbar-thumb-color` / `--scrollbar-hover-color` tokens. Dark themes: rgba(255,255,255,...), light themes: rgba(0,0,0,...). Visible on all 10 themes.
-- **20+ light-theme hover overrides** — nav-tab, header-btn, job-history-item, model-item, fav-chip, batch-file-item, merge-file-item, recent-clip-item, context-menu-item, custom-dropdown-item, btn-ghost, btn-outline. Uses `--light-hover` / `--light-border-accent` tokens.
+### CSS/Theme
+- **Single theme ("Studio Graphite")** — Multi-theme system (10 themes) removed in v1.9.16. Theme toggle UI, `data-theme` attributes, `applyTheme()`, `initPremiereThemeSync()`, and 9 alternate theme blocks all deleted. Only the root dark theme remains.
 - **Typography cleanup** — Eliminated 10.5px→11px and 11.5px→12px fractional sizes. Clean integer scale: 9/10/11/12/13/14/16/17/18/20/22px.
 - **4px spacing rhythm** — Normalized card-header (14px→12px), alert-banner (18px→16px), hints (14px→12px), wizard (28px→24px), slider-row (14px→12px), checkbox-row (10px→8px), margins (10px→8px, 14px→12px).
 - **4 responsive breakpoints** — 800px (wide: 4-col stat grid, wider cards), 480px (compact), 440px (mid-narrow: stacked buttons, single-col), 380px (tiny sidebar).
@@ -355,8 +353,7 @@
 - **`get_interrupted_jobs()`** queries `status='interrupted'` (not 'running') — `mark_interrupted()` changes status on startup.
 - **Workflow step output chaining** — `_extract_output_path(resp_data)` checks `output`, `output_file`, `filepath`, `result.output` keys. If no output found, reuses current_input for next step.
 - **Quick action buttons** — Added to `_clipButtons` array so `updateButtons()` enables/disables them with connection + file selection state. Click handlers call `_quickWorkflow(name)` which looks up preset from `_workflowPresets` loaded from backend.
-- **Scrollbar tokens** — Use `var(--scrollbar-thumb-color)` and `var(--scrollbar-hover-color)` for scrollbar styling. Light themes define dark-alpha versions. Never use hardcoded rgba for scrollbar colors.
-- **Light-theme hover pattern** — Use `var(--light-hover)` / `var(--light-border-accent)` tokens (defined in light theme shared block). For new components, add `:root[data-theme="snowlight/latte/solarized/paper"] .component:hover { background: var(--light-hover); }`.
+- **Scrollbar tokens** — Use `var(--scrollbar-thumb-color)` and `var(--scrollbar-hover-color)` for scrollbar styling. Never use hardcoded rgba for scrollbar colors.
 - **safe_int for query params** — All GET endpoints accepting numeric query params (limit, offset, lines) must use `safe_int()` from security.py, not bare `int()`. Bare int() causes 500 on non-numeric input.
 - **14 new settings routes** — GET+POST pairs for llm, loudness-target, auto-zoom, chapters, multicam, footage-index
 - **6 new social presets** — Snapchat Story, Facebook Reel, Facebook Post, YouTube Long Form, Pinterest Video, Podcast MP3 (13 total)

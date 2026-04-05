@@ -646,6 +646,19 @@ def check_dependencies():
 
 
 # ---------------------------------------------------------------------------
+# Project Media (stub for non-Premiere dev mode)
+# ---------------------------------------------------------------------------
+@system_bp.route("/project/media", methods=["GET"])
+def project_media():
+    """Return project media list. Stub for dev mode (outside Premiere).
+
+    Inside Premiere the CEP panel uses ExtendScript directly; this endpoint
+    exists so the panel doesn't 404 when running in a browser for development.
+    """
+    return jsonify({"media": [], "projectFolder": "", "rootChildren": 0})
+
+
+# ---------------------------------------------------------------------------
 # File Serving (for audio preview player)
 # ---------------------------------------------------------------------------
 @system_bp.route("/file", methods=["GET"])

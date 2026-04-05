@@ -220,8 +220,8 @@ OpenCut v1.9.16 includes **254 API routes**, **8 panel tabs** with **50+ sub-tab
 | Per-Operation Presets | Save/load settings per operation |
 | Settings Import/Export | Bundle all settings as JSON for backup or sharing |
 | Server Health Monitor | Auto-reconnect with exponential backoff when backend goes offline |
-| 10 Themes | 6 dark (Cyberpunk, Midnight OLED, Catppuccin Mocha, GitHub Dark, Stealth, Ember) + 4 light (Snowlight, Latte, Solarized, Paper) |
-| Premiere Theme Sync | Auto-detect Premiere's UI brightness |
+| Studio Graphite UI | Single premium theme tuned for the CEP editing workspace |
+| Workspace Polish | Premium shell, command palette, history, and output surfaces |
 | Toast Notifications | Non-intrusive slide-in alerts for job completion |
 | Keyboard Shortcuts | Configurable shortcuts with reference card (Ctrl+Shift+S for silence, etc.) |
 | Quick Action Buttons | One-click workflows on Cut, Captions, Audio, and Video tabs |
@@ -260,7 +260,7 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
 |  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  254 API routes       |
-|  10 themes, i18n      | <~~~~~~~~~~~~~~~>  |  68 core modules      |
+|  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  68 core modules      |
 |  Keyboard shortcuts   |   SSE streaming    |  11 route blueprints  |
 +-----------+-----------+                    +-----------+-----------+
             |                                            |
