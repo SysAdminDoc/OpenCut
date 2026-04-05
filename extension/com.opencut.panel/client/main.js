@@ -48,6 +48,9 @@
         if (mediaScanTimer) { clearInterval(mediaScanTimer); mediaScanTimer = null; }
         if (_statusTimer) { clearInterval(_statusTimer); _statusTimer = null; }
         if (_scanDebounceTimer) { clearTimeout(_scanDebounceTimer); _scanDebounceTimer = null; }
+        if (_projectMediaRetryTimer) { clearTimeout(_projectMediaRetryTimer); _projectMediaRetryTimer = null; }
+        if (editDebounceTimer) { clearTimeout(editDebounceTimer); editDebounceTimer = null; }
+        if (_alertTimer) { clearTimeout(_alertTimer); _alertTimer = null; }
     }
 
     // ---- Style Preview CSS Map (loaded from backend) ----
@@ -982,7 +985,6 @@
         el.settingsReinstallWhisperBtn = $("settingsReinstallWhisperBtn");
         el.settingsClearCacheBtn = $("settingsClearCacheBtn");
         el.settingsAutoImport = $("settingsAutoImport");
-        el.settingsTheme = $("settingsTheme");
         el.settingsAutoOpen = $("settingsAutoOpen");
         el.settingsShowNotifications = $("settingsShowNotifications");
         el.settingsOutputDir = $("settingsOutputDir");
@@ -1015,10 +1017,6 @@
 
         // Drop zone
         el.dropZone = $("dropZone");
-
-        // Theme toggle
-        el.themeToggleBtn = $("themeToggleBtn");
-        el.themeMenu = $("themeMenu");
 
         // Job history
         el.jobHistoryToggle = $("jobHistoryToggle");
@@ -1429,11 +1427,98 @@
     var _projectSaveWarned = false;
     var _scanInProgress = false;
     var _scanDebounceTimer = null;
+    var _projectMediaRetryTimer = null;
+    var _projectMediaRetryCount = 0;
+    var _projectMediaRetryNoticeShown = false;
+    var PROJECT_MEDIA_RETRY_DELAYS = [800, 1600, 3200, 5000];
 
     function scanProjectMedia() {
         // Debounce: if multiple scan triggers fire in quick succession, only run once
         if (_scanDebounceTimer) clearTimeout(_scanDebounceTimer);
         _scanDebounceTimer = setTimeout(_doScanProjectMedia, 300);
+    }
+
+    function setProjectMediaPlaceholder(message) {
+        if (!el.clipSelect || (projectMedia && projectMedia.length)) return;
+        el.clipSelect.innerHTML = "";
+        var placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.selected = true;
+        placeholder.textContent = message;
+        el.clipSelect.appendChild(placeholder);
+        refreshClipDropdown();
+    }
+
+    function resetProjectMediaRetryState() {
+        if (_projectMediaRetryTimer) {
+            clearTimeout(_projectMediaRetryTimer);
+            _projectMediaRetryTimer = null;
+        }
+        _projectMediaRetryCount = 0;
+        _projectMediaRetryNoticeShown = false;
+    }
+
+    function scheduleProjectMediaRetry(reason) {
+        if (!inPremiere) return false;
+        if (_projectMediaRetryTimer) return true;
+        if (_projectMediaRetryCount >= PROJECT_MEDIA_RETRY_DELAYS.length) return false;
+        var delay = PROJECT_MEDIA_RETRY_DELAYS[_projectMediaRetryCount];
+        _projectMediaRetryCount++;
+        if (!projectMedia.length) {
+            setProjectMediaPlaceholder("Scanning Premiere project media...");
+        }
+        if (!_projectMediaRetryNoticeShown && _projectMediaRetryCount > 1) {
+            showToast("Refreshing Premiere project media...", "info");
+            _projectMediaRetryNoticeShown = true;
+        }
+        console.warn("[OpenCut] Retrying project media scan in " + delay + "ms:", reason || "pending");
+        _projectMediaRetryTimer = setTimeout(function () {
+            _projectMediaRetryTimer = null;
+            scanProjectMedia();
+        }, delay);
+        return true;
+    }
+
+    function isEvalScriptFailure(result) {
+        return typeof result === "string" &&
+            (result.indexOf("EvalScript error.") !== -1 || result.indexOf("EvalScript_ErrMessage") !== -1);
+    }
+
+    function applyProjectMediaScanData(data) {
+        if (!data || typeof data !== "object") return false;
+        if (data.error) {
+            console.warn("[OpenCut] getProjectMedia error:", data.error);
+            if (!scheduleProjectMediaRetry(data.error) && !projectMedia.length) {
+                setProjectMediaPlaceholder("Couldn't load Premiere project media");
+            }
+            return false;
+        }
+
+        var media = Array.isArray(data.media) ? data.media : [];
+        var nextProjectFolder = data.projectFolder || "";
+        var folderChanged = nextProjectFolder !== (projectFolder || "");
+
+        if (!media.length && inPremiere && Number(data.rootChildren || 0) > 0 && projectMedia.length && !folderChanged) {
+            scheduleProjectMediaRetry("project items present but media list is temporarily empty");
+            return false;
+        }
+
+        updateProjectMediaList(media, nextProjectFolder);
+
+        if (media.length) {
+            resetProjectMediaRetryState();
+            return true;
+        }
+
+        if (inPremiere && Number(data.rootChildren || 0) > 0) {
+            if (!scheduleProjectMediaRetry("project items present but media list is empty") && !projectMedia.length) {
+                setProjectMediaPlaceholder("No importable project media found");
+            }
+            return false;
+        }
+
+        resetProjectMediaRetryState();
+        return true;
     }
 
     function setHintContent(container, message) {
@@ -1516,8 +1601,8 @@
             if (connected) {
                 api("GET", "/project/media", null, function (err, data) {
                     _scanInProgress = false;
-                    if (!err && data && Array.isArray(data.media)) {
-                        updateProjectMediaList(data.media, data.projectFolder);
+                    if (!err && data) {
+                        applyProjectMediaScanData(data);
                     }
                 });
             } else {
@@ -1539,13 +1624,28 @@
         }
         PremiereBridge.getProjectMedia(function (result) {
             _scanInProgress = false;
-            if (!result || result === "null" || result === "undefined") return;
+            if (!result || result === "null" || result === "undefined") {
+                if (!scheduleProjectMediaRetry("empty ExtendScript response") && !projectMedia.length) {
+                    setProjectMediaPlaceholder("Couldn't load Premiere project media");
+                }
+                return;
+            }
+            if (isEvalScriptFailure(result)) {
+                console.error("scanProjectMedia ExtendScript error:", result);
+                if (!scheduleProjectMediaRetry(result) && !projectMedia.length) {
+                    setProjectMediaPlaceholder("Couldn't load Premiere project media");
+                }
+                return;
+            }
             try {
                 var data = JSON.parse(result);
-                updateProjectMediaList(data.media, data.projectFolder);
+                applyProjectMediaScanData(data);
             } catch (e) {
                 console.error("scanProjectMedia parse error:", e, result);
-                showAlert("Couldn't read project media. Make sure a project is open in Premiere Pro.");
+                if (!scheduleProjectMediaRetry("parse error") && !projectMedia.length) {
+                    setProjectMediaPlaceholder("Couldn't load Premiere project media");
+                    showAlert("Couldn't read project media. Make sure a project is open in Premiere Pro.");
+                }
             }
         });
     }
@@ -4528,7 +4628,6 @@
             showNotifications: el.settingsShowNotifications ? el.settingsShowNotifications.checked : true,
             outputDir: el.settingsOutputDir ? el.settingsOutputDir.value : "",
             defaultModel: el.settingsDefaultModel ? el.settingsDefaultModel.value : "medium",
-            theme: el.settingsTheme ? el.settingsTheme.value : "cyberpunk",
             lang: el.settingsLang ? el.settingsLang.value : "en"
         };
         try {
@@ -4549,25 +4648,10 @@
                 if (settings.showNotifications !== undefined && el.settingsShowNotifications) el.settingsShowNotifications.checked = settings.showNotifications;
                 if (settings.outputDir && el.settingsOutputDir) el.settingsOutputDir.value = settings.outputDir;
                 if (settings.defaultModel && el.settingsDefaultModel) el.settingsDefaultModel.value = settings.defaultModel;
-                if (settings.theme && el.settingsTheme) el.settingsTheme.value = settings.theme;
             }
         } catch (e) {
             // localStorage may not be available
         }
-        // Always apply current theme on load
-        var themeName = (el.settingsTheme && el.settingsTheme.value) ? el.settingsTheme.value : "cyberpunk";
-        applyTheme(themeName);
-    }
-
-    function applyTheme(themeName) {
-        if (themeName === "cyberpunk") {
-            document.documentElement.removeAttribute("data-theme");
-        } else {
-            document.documentElement.setAttribute("data-theme", themeName);
-        }
-        // Also set on body for CSS selectors that target body
-        document.body.setAttribute("data-theme", themeName === "cyberpunk" ? "" : themeName);
-        closeAllDropdowns();
     }
     
     function getLocalSetting(key, defaultVal) {
@@ -4931,79 +5015,6 @@
         dz.addEventListener("click", function () {
             browseForFile();
         });
-    }
-
-    // ================================================================
-    // Theme Quick Toggle
-    // ================================================================
-    var THEME_LIST = [
-        { value: "_dark", label: "— Dark —", separator: true },
-        { value: "cyberpunk", label: "Studio Graphite" },
-        { value: "midnight", label: "Midnight OLED" },
-        { value: "catppuccin", label: "Catppuccin Mocha" },
-        { value: "github", label: "GitHub Dark" },
-        { value: "stealth", label: "Stealth" },
-        { value: "ember", label: "Ember" },
-        { value: "_light", label: "— Light —", separator: true },
-        { value: "snowlight", label: "Snowlight" },
-        { value: "latte", label: "Catppuccin Latte" },
-        { value: "solarized", label: "Solarized Light" },
-        { value: "paper", label: "Paper" }
-    ];
-
-    function initThemeToggle() {
-        if (!el.themeToggleBtn || !el.themeMenu) return;
-        // Build menu items
-        var html = "";
-        for (var i = 0; i < THEME_LIST.length; i++) {
-            if (THEME_LIST[i].separator) {
-                html += '<div class="theme-menu-separator">' + THEME_LIST[i].label + '</div>';
-            } else {
-                html += '<button type="button" class="theme-menu-item" role="menuitemradio" aria-checked="false" data-theme="' + THEME_LIST[i].value + '">' + THEME_LIST[i].label + '</button>';
-            }
-        }
-        el.themeMenu.innerHTML = html;
-
-        el.themeToggleBtn.addEventListener("click", function (e) {
-            e.stopPropagation();
-            var isOpen = el.themeMenu.classList.contains("open");
-            el.themeMenu.classList.toggle("open");
-            setExpanded(el.themeToggleBtn, !isOpen);
-            if (!isOpen) updateThemeMenuActive();
-        });
-
-        el.themeMenu.addEventListener("click", function (e) {
-            var item = e.target.closest(".theme-menu-item");
-            if (!item) return;
-            var theme = item.getAttribute("data-theme");
-            applyTheme(theme);
-            if (el.settingsTheme) {
-                el.settingsTheme.value = theme;
-                if (el.settingsTheme._customDropdown) el.settingsTheme._customDropdown.updateText();
-            }
-            saveLocalSettings();
-            el.themeMenu.classList.remove("open");
-            setExpanded(el.themeToggleBtn, false);
-        });
-
-        document.addEventListener("click", function () {
-            el.themeMenu.classList.remove("open");
-            setExpanded(el.themeToggleBtn, false);
-        });
-    }
-
-    function updateThemeMenuActive() {
-        var current = el.settingsTheme ? el.settingsTheme.value : "cyberpunk";
-        var items = el.themeMenu.querySelectorAll(".theme-menu-item");
-        for (var i = 0; i < items.length; i++) {
-            if (items[i].getAttribute("data-theme") === current) {
-                items[i].classList.add("active");
-                items[i].setAttribute("aria-checked", "true");
-            } else {
-                items[i].classList.remove("active");
-                items[i].setAttribute("aria-checked", "false");
-            }
-        }
     }
 
     // ================================================================
@@ -5845,42 +5856,6 @@
         }
     }
 
-    // ================================================================
-    // Premiere Pro Theme Sync
-    // ================================================================
-    var _themeSyncRegistered = false;
-    function initPremiereThemeSync() {
-        if (!inPremiere || !cs) return;
-        // CSInterface provides app skin info
-        try {
-            var skinInfo = cs.getHostEnvironment();
-            if (skinInfo && skinInfo.appSkinInfo) {
-                var bgColor = skinInfo.appSkinInfo.panelBackgroundColor;
-                if (bgColor && bgColor.color) {
-                    var r = bgColor.color.red || 0;
-                    var g = bgColor.color.green || 0;
-                    var b = bgColor.color.blue || 0;
-                    var brightness = (r + g + b) / 3;
-                    // If Premiere is using a light theme (brightness > 128),
-                    // we could switch, but all our themes are dark, so just note it
-                    if (brightness > 160) {
-                        // Premiere is in a lighter mode - show a subtle note
-                        logger("Premiere using light theme (brightness " + Math.round(brightness) + ")");
-                    }
-                }
-            }
-            // Register for theme change events (once only — prevent exponential listener leak)
-            if (!_themeSyncRegistered) {
-                _themeSyncRegistered = true;
-                cs.addEventListener("com.adobe.csxs.events.ThemeColorChanged", function () {
-                    initPremiereThemeSync();
-                });
-            }
-        } catch (e) {
-            // CSInterface theme API not available
-        }
-    }
-
     function logger(msg) {
         if (typeof console !== "undefined" && console.log) console.log("[OpenCut] " + msg);
     }
@@ -6261,10 +6236,6 @@
                 }
                 if (e.key === "Escape" && el.audioPreview && !el.audioPreview.classList.contains("hidden")) {
                     closeAudioPreview();
-                }
-                if (e.key === "Escape" && el.themeMenu && el.themeMenu.classList.contains("open")) {
-                    el.themeMenu.classList.remove("open");
-                    setExpanded(el.themeToggleBtn, false);
                 }
                 if (e.key === "Escape" && el.recentClipsDropdown && !el.recentClipsDropdown.classList.contains("hidden")) {
                     hideRecentClipsDropdown(false);
@@ -8307,7 +8278,11 @@
         cs.evalScript('getAllProjectMedia()', function (result) {
             try {
                 var items = JSON.parse(result);
-                renameItemsData = items || [];
+                if (!Array.isArray(items)) {
+                    showAlert("Error loading items: " + ((items && items.error) || "Unexpected Premiere response"));
+                    return;
+                }
+                renameItemsData = items;
                 _pproCache.clips = renameItemsData;
                 _pproCache.ts = Date.now();
                 renderRenameItems();
@@ -9534,10 +9509,6 @@
         if (el.settingsShowNotifications) el.settingsShowNotifications.addEventListener("change", saveLocalSettings);
         if (el.settingsOutputDir) el.settingsOutputDir.addEventListener("change", saveLocalSettings);
         if (el.settingsDefaultModel) el.settingsDefaultModel.addEventListener("change", saveLocalSettings);
-        if (el.settingsTheme) el.settingsTheme.addEventListener("change", function () {
-            applyTheme(this.value);
-            saveLocalSettings();
-        });
         
         // Audio / Zoom defaults card
         var saveAudioZoomBtn = $("saveAudioZoomDefaultsBtn");
@@ -9603,19 +9574,19 @@
         // (e.g. user dragging files into Premiere, or Media Browser imports)
         var MEDIA_POLL_MS = 20000; // 20 seconds
         mediaScanTimer = setInterval(function () {
-            if (connected && inPremiere && !currentJob) {
+            if (!currentJob && (inPremiere || connected)) {
                 scanProjectMedia();
             }
         }, MEDIA_POLL_MS);
 
         // Re-scan when panel regains focus or becomes visible
         document.addEventListener("visibilitychange", function () {
-            if (!document.hidden && connected && inPremiere) {
+            if (!document.hidden && (inPremiere || connected)) {
                 scanProjectMedia();
             }
         });
         window.addEventListener("focus", function () {
-            if (connected && inPremiere) {
+            if (!currentJob && (inPremiere || connected)) {
                 scanProjectMedia();
             }
         });
@@ -9635,9 +9606,9 @@
         // New features — each wrapped in try/catch so a single feature failure
         // doesn't prevent the rest of the panel from initialising
         var _featureInits = [
-            initDropZone, initEnhancedDragDrop, initThemeToggle, initJobHistory,
+            initDropZone, initEnhancedDragDrop, initJobHistory,
             initKeyboardShortcuts, initPresets, initModelManagement, initGpuRecommendation,
-            initQueue, initTranscriptSearch, initPremiereThemeSync, initWaveform,
+            initQueue, initTranscriptSearch, initWaveform,
             initFavorites, initPreviewModal, initAudioPreview, initContextMenu,
             initWizard, initOutputBrowser, initBatchPicker, initDepDashboard,
             initSettingsIO, initWorkflowBuilder, loadWorkflowPresets,
