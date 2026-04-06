@@ -126,21 +126,21 @@ All pure Python, no external dependencies. Includes: zoom.py, auto_zoom.py (cv2)
 | 9 | CodeFormer > GFPGAN for degraded faces | `face_swap.py` | Wire CodeFormer as default enhancer | DONE (pre-existing) — Already fully implemented with model="codeformer" + fidelity slider |
 | 10 | Depth Anything checkpoint verification | `depth_effects.py` | Verify latest HuggingFace checkpoints | DONE (2026-04-06) — Docstring corrected to current HF org |
 | 11 | Two-stage scene detection pipeline | `scene_detect.py` | Add `method="hybrid"` (PySceneDetect + TransNetV2) | DONE (2026-04-06) — detect_scenes_hybrid() with 0.5s dedup, TransNetV2 fallback |
-| 12 | .t7 style transfer models are 2017-era | `style_transfer.py` | Research AesPA-Net / InST for temporal consistency | TODO |
+| 12 | .t7 style transfer models are 2017-era | `style_transfer.py` | Research AesPA-Net / InST for temporal consistency | RESEARCHED — Best path: ONNX migration (same models, GPU accel via onnxruntime). Magenta arbitrary style ONNX model (~12MB) would replace LAB histogram hack with real neural AdaIN. AesPA-Net/InST too heavy for video. See research notes below. |
 | 13 | Stable Audio Open vs MusicGen | `music_ai.py` | Add as backend option | DONE (2026-04-06) — generate_music_stable_audio() + route + queue allowlist |
 | 14 | AV1 export preset (40% smaller files) | `export_presets.py` | Add SVT-AV1 + NVENC AV1 presets | DONE (2026-04-06) — Added av1_1080p, av1_4k, hevc_1080p presets + preset int bug fix |
-| 15 | Gyroflow integration for camera stabilization | `video_fx.py` | Research integration path | TODO |
-| 16 | Caption rendering performance (Pillow bottleneck) | `styled_captions.py` | Research skia-python or FFmpeg drawvg (Cairo) | TODO |
+| 15 | Gyroflow integration for camera stabilization | `video_fx.py` | Research integration path | DEFERRED — Gyroflow v1.6.3 requires camera gyro data (GoPro, Sony, Insta360). Niche use case. vid.stab remains best for general stabilization. |
+| 16 | Caption rendering performance (Pillow bottleneck) | `styled_captions.py` | Research skia-python or FFmpeg drawvg (Cairo) | RESEARCHED — skia-python is clear winner: 10/10 style coverage, 2-5x CPU / 10-50x GPU speedup, excellent cross-platform. drawvg has NO text support. Cairo marginal (1.5x, bad Windows). Wand slower than Pillow. See research notes below. |
 
 ### TIER 3 -- Verify & Maintain (Working Well)
 
 | # | Module | Action | Status |
 |---|--------|--------|--------|
-| 17 | `captions.py` | Verify faster-whisper>=1.1 compat, test turbo-ct2 model | TODO |
-| 18 | `diarize.py` | Verify pyannote 3.1 still latest | TODO |
-| 19 | `audio_enhance.py` | Verify Resemble Enhance + ClearerVoice current | TODO |
-| 20 | `video_ai.py` (upscale) | Verify Real-ESRGAN x4plus current, research 4x-UltraSharp | TODO |
-| 21 | `object_removal.py` | Verify SAM2 + ProPainter current | TODO |
+| 17 | `captions.py` | Verify faster-whisper>=1.1 compat, test turbo-ct2 model | DONE (2026-04-06) — All current, model names in VALID_WHISPER_MODELS up to date |
+| 18 | `diarize.py` | Verify pyannote 3.1 still latest | DONE (2026-04-06) — 3.1 still latest. Fixed use_auth_token->token for pyannote 4.0+ |
+| 19 | `audio_enhance.py` | Verify Resemble Enhance + ClearerVoice current | DONE (2026-04-06) — Both current, imports and model names verified |
+| 20 | `video_ai.py` (upscale) | Verify Real-ESRGAN x4plus current, research 4x-UltraSharp | DONE (2026-04-06) — x4plus still current, rembg birefnet-general correct, RVM v1.0 unchanged |
+| 21 | `object_removal.py` | Verify SAM2 + ProPainter current | DONE (2026-04-06) — Updated SAM 2.0->2.1 model IDs, ProPainter/LaMA current |
 | 22-35 | Remaining modules | No external dep changes needed | OK |
 
 ---
@@ -185,6 +185,29 @@ All pure Python, no external dependencies. Includes: zoom.py, auto_zoom.py (cv2)
 2. Caption rendering performance (Skia/Cairo)
 3. Modern style transfer (temporal consistency)
 4. FFmpeg 8.x feature adoption
+
+---
+
+## Research Notes (2026-04-06)
+
+### Style Transfer — ONNX Migration Path
+- Current .t7 models (Johnson et al. 2016) work but use dated OpenCV DNN runtime
+- **Recommended**: Swap to ONNX versions of same models (available on HuggingFace onnxmodelzoo). Drop-in replacement using `onnxruntime.InferenceSession()` instead of `cv2.dnn.readNetFromTorch()`. GPU acceleration via onnxruntime-gpu (already an optional dep).
+- **Arbitrary style upgrade**: Replace LAB histogram matching with Magenta arbitrary style ONNX model (~12MB total). Real neural AdaIN vs current color-only transfer. Source: [pdn-styletransfer](https://github.com/patlevin/pdn-styletransfer)
+- **Skip**: AesPA-Net (no pip package, Windows .t7 compat issues), InST (too slow for video — 2-5s/frame), SD img2img (way too heavy)
+- **Future**: EFDM from ComfyUI-StyleTransferPlus is a promising fast arbitrary style method
+
+### Caption Rendering — skia-python Recommended
+- **Winner**: `skia-python` (pip install) — 10/10 style coverage, 2-5x faster CPU, 10-50x GPU, excellent Windows/macOS/Linux support
+- Reproduces all 18 OpenCut styles: native drop shadow (no multi-offset hack), gradient text fills, stroke, rounded rect backgrounds
+- Integration: replace `render_frame()` internals, keep pre-render + pipe-to-FFmpeg architecture
+- **Skip**: FFmpeg drawvg (zero text support), Wand/ImageMagick (slower than Pillow), pycairo (marginal speedup, bad Windows font handling)
+- **Also**: animated_captions.py should switch from OpenCV decode/encode per frame to transparent overlay + FFmpeg composite (architectural win independent of rendering engine)
+
+### Gyroflow — Deferred
+- Gyroflow v1.6.3 requires camera gyroscope data (GoPro, Sony, Insta360 specific)
+- Not applicable to general video stabilization workflow
+- vid.stab remains the best scriptable stabilization option for arbitrary video
 
 ---
 
