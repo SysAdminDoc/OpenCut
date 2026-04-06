@@ -393,7 +393,7 @@ def video_scenes(job_id, filepath, data):
     threshold = safe_float(data.get("threshold", 0.3), 0.3, min_val=0.01, max_val=1.0)
     min_scene = safe_float(data.get("min_scene_length", 2.0), 2.0, min_val=0.1, max_val=300.0)
     method = data.get("method", "ffmpeg").strip().lower()
-    if method not in ("ffmpeg", "ml", "pyscenedetect"):
+    if method not in ("ffmpeg", "ml", "pyscenedetect", "hybrid"):
         method = "ffmpeg"
 
     from opencut.core.scene_detect import detect_scenes, generate_chapter_markers
@@ -412,6 +412,13 @@ def video_scenes(job_id, filepath, data):
         from opencut.core.scene_detect import detect_scenes_pyscenedetect
         info = detect_scenes_pyscenedetect(
             filepath, threshold=safe_float(data.get("threshold", 27.0), 27.0, min_val=5.0, max_val=80.0),
+            min_scene_length=min_scene,
+            on_progress=_on_progress,
+        )
+    elif method == "hybrid":
+        from opencut.core.scene_detect import detect_scenes_hybrid
+        info = detect_scenes_hybrid(
+            filepath, threshold=threshold,
             min_scene_length=min_scene,
             on_progress=_on_progress,
         )
