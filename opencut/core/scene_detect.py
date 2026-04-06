@@ -540,6 +540,109 @@ def detect_scenes_pyscenedetect(
     )
 
 
+def detect_scenes_hybrid(
+    filepath: str,
+    threshold: float = 0.4,
+    min_scene_length: float = 1.0,
+    on_progress: Optional[Callable] = None,
+) -> SceneInfo:
+    """
+    Two-stage scene detection: PySceneDetect fast pass + TransNetV2 refinement.
+
+    Stage 1: PySceneDetect ContentDetector finds candidate boundaries quickly.
+    Stage 2: TransNetV2 validates and adds missed boundaries near candidates.
+    Merged result removes duplicates within 0.5s tolerance.
+    """
+    DEDUP_TOLERANCE = 0.5
+
+    def _stage_progress(stage_start, stage_end):
+        """Return a progress callback scoped to a stage range."""
+        def _cb(pct, msg=""):
+            scaled = stage_start + (pct / 100.0) * (stage_end - stage_start)
+            if on_progress:
+                on_progress(int(scaled), msg)
+        return _cb
+
+    # ------ Stage 1: PySceneDetect (fast) — progress 0-40% ------
+    if on_progress:
+        on_progress(0, "Stage 1: PySceneDetect fast pass...")
+
+    pyscene_info = detect_scenes_pyscenedetect(
+        filepath,
+        threshold=27.0,
+        min_scene_length=min_scene_length,
+        on_progress=_stage_progress(0, 40),
+    )
+    pyscene_times = [b.time for b in pyscene_info.boundaries]
+
+    # ------ Stage 2: TransNetV2 refinement — progress 40-80% ------
+    ml_boundaries = []
+    try:
+        from transnetv2 import TransNetV2  # noqa: F401
+
+        if on_progress:
+            on_progress(40, "Stage 2: TransNetV2 refinement...")
+
+        ml_info = detect_scenes_ml(
+            filepath,
+            threshold=threshold,
+            min_scene_length=min_scene_length,
+            on_progress=_stage_progress(40, 80),
+        )
+        ml_boundaries = ml_info.boundaries
+    except (ImportError, RuntimeError):
+        logger.warning(
+            "TransNetV2 not available — returning PySceneDetect results only"
+        )
+        if on_progress:
+            on_progress(80, "TransNetV2 unavailable, using PySceneDetect only")
+
+    # ------ Stage 3: Merge & deduplicate — progress 80-100% ------
+    if on_progress:
+        on_progress(85, "Merging results...")
+
+    # Start with all PySceneDetect boundaries
+    merged = list(pyscene_info.boundaries)
+
+    # Add ML boundaries that are >0.5s from any PySceneDetect boundary
+    for ml_b in ml_boundaries:
+        too_close = any(
+            abs(ml_b.time - ps_t) <= DEDUP_TOLERANCE for ps_t in pyscene_times
+        )
+        if not too_close:
+            merged.append(ml_b)
+
+    # Sort by timestamp
+    merged.sort(key=lambda b: b.time)
+
+    # Deduplicate within tolerance (keep first occurrence)
+    deduped: List[SceneBoundary] = []
+    for b in merged:
+        if not deduped or (b.time - deduped[-1].time) > DEDUP_TOLERANCE:
+            deduped.append(b)
+
+    # Re-label sequentially
+    for i, b in enumerate(deduped):
+        if i == 0 and b.time < 0.01:
+            b.label = "Start"
+        else:
+            b.label = f"Scene {i + 1}"
+
+    total_scenes = len(deduped)
+    duration = pyscene_info.duration
+    avg_scene = duration / total_scenes if total_scenes > 0 else duration
+
+    if on_progress:
+        on_progress(100, f"Found {total_scenes} scenes (hybrid)")
+
+    return SceneInfo(
+        boundaries=deduped,
+        total_scenes=total_scenes,
+        duration=duration,
+        avg_scene_length=round(avg_scene, 2),
+    )
+
+
 SPEED_RAMP_PRESETS = [
     {"name": "dramatic_pause", "label": "Dramatic Pause", "description": "Slow down in the middle for impact"},
     {"name": "smooth_ramp_up", "label": "Smooth Ramp Up", "description": "Gradually accelerate"},
