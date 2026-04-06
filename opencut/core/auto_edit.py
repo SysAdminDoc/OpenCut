@@ -4,7 +4,13 @@ OpenCut Auto-Edit Module
 Motion-based editing using auto-editor. Detects static/boring segments
 by visual motion analysis and creates edit lists of segments to keep.
 
-Requires: pip install auto-editor
+Supports two auto-editor backends:
+  - Native Nim binary (v30+): install from GitHub releases, place on PATH
+  - Legacy pip package (v29.x, frozen): pip install auto-editor
+
+The Nim binary is preferred when available. Core CLI syntax
+(``auto-editor input.mp4 --export json``) is the same across both versions,
+though the native binary may introduce new flags over time.
 """
 
 import html
@@ -53,16 +59,37 @@ class AutoEditResult:
 # ---------------------------------------------------------------------------
 # Availability
 # ---------------------------------------------------------------------------
+def _find_auto_editor():
+    """
+    Find auto-editor binary. Prefers native Nim binary (v30+) over pip package (v29.x).
+
+    Returns:
+        List of command tokens, e.g. ["C:/path/auto-editor.exe"] or
+        ["python", "-m", "auto_editor"].
+    """
+    # Check for native Nim binary first (v30+)
+    native = shutil.which("auto-editor")
+    if native:
+        return [native]
+    # Fallback to legacy pip package (v29.x)
+    return [sys.executable, "-m", "auto_editor"]
+
+
 def check_auto_editor_version():
     """
     Check auto-editor availability and version.
 
+    Checks for the native Nim binary (v30+) first, then falls back to the
+    pip package (v29.x).
+
     Returns:
-        Version string (e.g. "24w51a") or None if not installed.
+        Version string (e.g. "24w51a" for pip, "30.0" for Nim) or None if
+        not installed.
     """
+    cmd = _find_auto_editor()
     try:
         result = subprocess.run(
-            ["auto-editor", "--version"],
+            cmd + ["--version"],
             capture_output=True, text=True, timeout=10,
             check=False,
         )
@@ -71,27 +98,21 @@ def check_auto_editor_version():
     except (FileNotFoundError, subprocess.TimeoutExpired):
         pass
 
-    # Fallback: try as Python module
-    try:
-        result = subprocess.run(
-            [sys.executable, "-m", "auto_editor", "--version"],
-            capture_output=True, text=True, timeout=10,
-            check=False,
-        )
-        if result.returncode == 0:
-            return result.stdout.strip()
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        pass
+    # If _find_auto_editor returned the native path but it failed,
+    # explicitly try the pip fallback as a last resort
+    if cmd[0] != sys.executable:
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "auto_editor", "--version"],
+                capture_output=True, text=True, timeout=10,
+                check=False,
+            )
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except (FileNotFoundError, subprocess.TimeoutExpired):
+            pass
 
     return None
-
-
-def _get_auto_editor_cmd():
-    """Get the auto-editor command (standalone or python -m)."""
-    if shutil.which("auto-editor"):
-        return ["auto-editor"]
-    # Try as python module
-    return [sys.executable, "-m", "auto_editor"]
 
 
 def _probe_media_info(input_path):
@@ -290,7 +311,9 @@ def auto_edit(
     version = check_auto_editor_version()
     if version is None:
         raise RuntimeError(
-            "auto-editor not found. Install with: pip install auto-editor"
+            "auto-editor not found. Install the native binary (v30+) from "
+            "https://github.com/WyattBlue/auto-editor/releases or the pip "
+            "package (v29.x): pip install auto-editor"
         )
 
     if on_progress:
@@ -340,8 +363,8 @@ def _run_auto_edit(input_path, method, threshold, margin, min_clip_length,
     if on_progress:
         on_progress(10, f"Analyzing video ({method} detection)...")
 
-    # Build auto-editor command
-    base_cmd = _get_auto_editor_cmd()
+    # Build auto-editor command (native Nim binary v30+ or pip package v29.x)
+    base_cmd = _find_auto_editor()
     cmd = base_cmd + [input_path]
 
     # Coerce to float for safe interpolation into command args
