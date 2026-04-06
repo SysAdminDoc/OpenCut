@@ -83,10 +83,10 @@ def generate_masks_sam2(
 
     # Model checkpoint mapping
     model_map = {
-        "tiny": "facebook/sam2-hiera-tiny",
-        "small": "facebook/sam2-hiera-small",
-        "base": "facebook/sam2-hiera-base-plus",
-        "large": "facebook/sam2-hiera-large",
+        "tiny": "facebook/sam2.1-hiera-tiny",
+        "small": "facebook/sam2.1-hiera-small",
+        "base": "facebook/sam2.1-hiera-base-plus",
+        "large": "facebook/sam2.1-hiera-large",
     }
     model_id = model_map.get(model_size, model_map["tiny"])
 
