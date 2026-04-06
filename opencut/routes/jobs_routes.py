@@ -174,7 +174,6 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/remove/watermark",
     "/video/upscale/run",
     "/video/multicam-xml",
-    "/search/auto-index",
 })
 
 

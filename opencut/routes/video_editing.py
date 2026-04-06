@@ -656,7 +656,10 @@ def multicam_xml_export():
     # Determine output path
     output_dir = data.get("output_dir", "")
     if output_dir:
-        validate_path(output_dir)
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
     else:
         output_dir = os.path.join(os.path.expanduser("~"), ".opencut", "exports")
     os.makedirs(output_dir, exist_ok=True)

@@ -94,7 +94,7 @@ class WorkerPool:
                     return
                 continue
 
-            if item is None:
+            if item[2] is None:
                 # Poison pill — shutdown signal
                 return
 
@@ -124,7 +124,7 @@ class WorkerPool:
         self._shutdown = True
         # Send poison pills to all workers
         for _ in self._workers:
-            self._work_queue.put(None)
+            self._work_queue.put((-1, -1, None))
         if wait:
             for t in self._workers:
                 t.join(timeout=10)
@@ -149,6 +149,8 @@ def get_pool(max_workers=10) -> WorkerPool:
 def shutdown_pool(wait=True):
     """Shut down the global pool. Called on server exit."""
     global _pool
-    if _pool is not None:
-        _pool.shutdown(wait=wait)
+    with _pool_lock:
+        pool = _pool
         _pool = None
+    if pool is not None:
+        pool.shutdown(wait=wait)

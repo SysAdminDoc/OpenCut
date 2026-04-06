@@ -387,7 +387,7 @@ def timeline_export_otio():
                 return jsonify({"error": "No segments provided"}), 400
             from opencut.core.silence import TimeSegment
             segments = [
-                TimeSegment(start=float(s.get("start", 0)), end=float(s.get("end", 0)), label="speech")
+                TimeSegment(start=safe_float(s.get("start", 0), 0.0, min_val=0.0), end=safe_float(s.get("end", 0), 0.0, min_val=0.0), label="speech")
                 for s in segments_data
             ]
             result_path = export_otio(
