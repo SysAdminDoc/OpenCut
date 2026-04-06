@@ -188,7 +188,13 @@ def auto_index_project():
     to_index = []
     for f in files:
         path = f.get("path", "") if isinstance(f, dict) else str(f)
-        if path and os.path.isfile(path) and needs_reindex(path):
+        if not path:
+            continue
+        try:
+            path = validate_filepath(path.strip())
+        except ValueError:
+            continue
+        if needs_reindex(path):
             to_index.append(f if isinstance(f, dict) else {"path": path})
 
     if not to_index:

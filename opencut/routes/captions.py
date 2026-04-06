@@ -305,7 +305,7 @@ def styled_captions_route(job_id, filepath, data):
     base_name = os.path.splitext(os.path.basename(filepath))[0]
     overlay_path = os.path.join(effective_dir, f"{base_name}_captions.mov")
 
-    def _on_render_progress(pct, msg):
+    def _on_render_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
 
     result = render_styled_caption_video(
