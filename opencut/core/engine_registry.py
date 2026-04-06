@@ -203,7 +203,8 @@ class EngineRegistry:
 
     def clear_cache(self):
         """Clear the availability cache."""
-        self._availability_cache.clear()
+        with self._lock:
+            self._availability_cache.clear()
 
 
 # ---------------------------------------------------------------------------
