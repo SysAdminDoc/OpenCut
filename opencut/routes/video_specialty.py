@@ -171,7 +171,7 @@ def video_shorts_pipeline(job_id, filepath, data):
             _update_job(job_id, progress=pct, message=msg)
 
         _shorts_provider = data.get("llm_provider", "ollama")
-        if _shorts_provider not in ("ollama", "openai", "anthropic"):
+        if _shorts_provider not in ("ollama", "openai", "anthropic", "gemini"):
             _shorts_provider = "ollama"
         llm_config = LLMConfig(
             provider=_shorts_provider,

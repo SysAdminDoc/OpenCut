@@ -36,7 +36,7 @@ def nlp_command():
     command = data.get("command", "").strip()
     file_path = data.get("filepath", data.get("file", "")).strip()
     llm_provider = data.get("llm_provider", "ollama").strip()
-    if llm_provider not in ("ollama", "openai", "anthropic"):
+    if llm_provider not in ("ollama", "openai", "anthropic", "gemini"):
         llm_provider = "ollama"
     llm_model = data.get("llm_model", "llama3").strip()
     api_key = data.get("api_key", "").strip()

@@ -166,10 +166,18 @@ def detect_silences_vad(
             "Silero VAD requires PyTorch. Install with: pip install torch"
         )
 
-    # Load Silero VAD model (cached after first load)
+    # Load Silero VAD v6 model (cached after first load)
+    # ONNX mode avoids GPU memory overhead for inference
+    use_onnx = True
+    try:
+        import onnxruntime  # noqa: F401
+    except ImportError:
+        use_onnx = False
+
     model, utils = torch.hub.load(
         repo_or_dir="snakers4/silero-vad",
         model="silero_vad",
+        onnx=use_onnx,
         force_reload=False,
         trust_repo=True,
     )
