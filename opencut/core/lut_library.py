@@ -810,7 +810,12 @@ def blend_luts(
             for line in f:
                 line = line.strip()
                 if line.startswith("LUT_SIZE"):
-                    lut_size = int(line.split()[-1])
+                    parts = line.split()
+                    if len(parts) >= 2:
+                        try:
+                            lut_size = int(parts[-1])
+                        except ValueError:
+                            pass
                 elif line and not line.startswith("#") and not line.startswith("TITLE") and not line.startswith("DOMAIN"):
                     parts = line.split()
                     if len(parts) == 3:
