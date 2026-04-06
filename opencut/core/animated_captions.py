@@ -17,7 +17,7 @@ import os
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
+from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -264,7 +264,7 @@ def render_animated_captions(
 
     try:
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-i", tmp_video, "-i", video_path,
             "-map", "0:v", "-map", "1:a?",
             "-c:v", "libx264", "-crf", "18", "-preset", "medium",
@@ -295,16 +295,16 @@ def _group_words_into_lines(words: List[Dict], max_per_line: int) -> List[Dict]:
         if len(current_words) >= max_per_line:
             lines.append({
                 "words": current_words,
-                "start": current_words[0]["start"],
-                "end": current_words[-1]["end"],
+                "start": current_words[0].get("start", 0),
+                "end": current_words[-1].get("end", 0),
             })
             current_words = []
 
     if current_words:
         lines.append({
             "words": current_words,
-            "start": current_words[0]["start"],
-            "end": current_words[-1]["end"],
+            "start": current_words[0].get("start", 0),
+            "end": current_words[-1].get("end", 0),
         })
 
     return lines
