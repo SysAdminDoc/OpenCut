@@ -838,6 +838,16 @@ Comprehensive multi-phase audit across all 138 files (~82,500 lines). 103 issues
 - **music_ai soundfile** — Missing `ensure_package("soundfile")` in ace_step
 - **Ruff lint** — 7 import sorting issues auto-fixed in depth_effects.py
 
+## v1.9.18 Batch 28 Bug Fixes (Second-Pass Audit — 35 issues)
+- **Rate limit acquired flag (8 more sites)** — audio.py (5: pro_install, tts_install, music_ai x3), video_editing.py (emotion_highlights), captions.py (enhanced_install), system.py (install_whisper + whisper_reinstall double-release fix)
+- **Bare ffmpeg in speed_ramp.py** — 4 bare `"ffmpeg"` strings replaced with `get_ffmpeg_path()` (missed in batch 27 sweep)
+- **Queue allowlist +18 endpoints** — Added /captions, /transcript, /full, /captions/whisperx, /video/emotion-highlights, /video/speed/change, /video/speed/reverse, /video/speed/ramp, /video/lut/generate-all, /video/particles/apply, /video/color/correct, /video/color/convert, /video/color/external-lut, /video/lut/generate-from-ref, /video/lut/generate-ai, /video/face/blur, /video/face/swap, /video/ai/install to `_ALLOWED_QUEUE_ENDPOINTS`
+- **Info disclosure** — `safe_error()` detail truncated to 200 chars, `file_not_found()` uses `os.path.basename()`, `handle_runtime_error` truncated + structured code field
+- **social_post.py TikTok OOM** — Entire video was read into memory; changed to chunked 10MB upload. OAuth `result["access_token"]` KeyError guarded. 8 `urlopen` calls wrapped in `with` context managers
+- **animated_captions.py KeyError** — Bare `info["width"]`/`info["height"]` changed to `.get()` with defaults. 6 bare Whisper word segment accesses (`["start"]`/`["end"]`/`["word"]`) changed to `.get()` with defaults
+- **video_ai.py fps KeyError** — Bare `info["fps"]` changed to `info.get("fps", 30)` in `frame_interpolate()`
+- **CSS missing rules** — Added `.cap-hint`, `.badge`, `.btn-xs`, `.result-stats` rules. Fixed duplicate `.result-area` border-radius inconsistency (18px → var(--r-md))
+
 ## Phase 1 — Competitive Upgrades (Quick Wins)
 - **rembg default → BiRefNet** — Changed default model from `u2net` to `birefnet-general` in route + module + UI. Added `birefnet-massive` as highest-quality option. Dramatically sharper edge detection.
 - **Whisper default → turbo** — Changed default model from `base` to `turbo` (6x faster, near large-v3 accuracy). Updated all 3 UI selectors + user_data defaults + installer.
