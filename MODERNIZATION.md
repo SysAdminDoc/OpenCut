@@ -126,11 +126,11 @@ All pure Python, no external dependencies. Includes: zoom.py, auto_zoom.py (cv2)
 | 9 | CodeFormer > GFPGAN for degraded faces | `face_swap.py` | Wire CodeFormer as default enhancer | DONE (pre-existing) — Already fully implemented with model="codeformer" + fidelity slider |
 | 10 | Depth Anything checkpoint verification | `depth_effects.py` | Verify latest HuggingFace checkpoints | DONE (2026-04-06) — Docstring corrected to current HF org |
 | 11 | Two-stage scene detection pipeline | `scene_detect.py` | Add `method="hybrid"` (PySceneDetect + TransNetV2) | DONE (2026-04-06) — detect_scenes_hybrid() with 0.5s dedup, TransNetV2 fallback |
-| 12 | .t7 style transfer models are 2017-era | `style_transfer.py` | Research AesPA-Net / InST for temporal consistency | RESEARCHED — Best path: ONNX migration (same models, GPU accel via onnxruntime). Magenta arbitrary style ONNX model (~12MB) would replace LAB histogram hack with real neural AdaIN. AesPA-Net/InST too heavy for video. See research notes below. |
+| 12 | .t7 style transfer models are 2017-era | `style_transfer.py` | Research AesPA-Net / InST for temporal consistency | DONE (2026-04-06) — Dual-backend: 5 styles use ONNX (GPU accel), 3 retain .t7. Session cache, atomic downloads, auto-selects best backend. |
 | 13 | Stable Audio Open vs MusicGen | `music_ai.py` | Add as backend option | DONE (2026-04-06) — generate_music_stable_audio() + route + queue allowlist |
 | 14 | AV1 export preset (40% smaller files) | `export_presets.py` | Add SVT-AV1 + NVENC AV1 presets | DONE (2026-04-06) — Added av1_1080p, av1_4k, hevc_1080p presets + preset int bug fix |
 | 15 | Gyroflow integration for camera stabilization | `video_fx.py` | Research integration path | DEFERRED — Gyroflow v1.6.3 requires camera gyro data (GoPro, Sony, Insta360). Niche use case. vid.stab remains best for general stabilization. |
-| 16 | Caption rendering performance (Pillow bottleneck) | `styled_captions.py` | Research skia-python or FFmpeg drawvg (Cairo) | RESEARCHED — skia-python is clear winner: 10/10 style coverage, 2-5x CPU / 10-50x GPU speedup, excellent cross-platform. drawvg has NO text support. Cairo marginal (1.5x, bad Windows). Wand slower than Pillow. See research notes below. |
+| 16 | Caption rendering performance (Pillow bottleneck) | `styled_captions.py` | Research skia-python or FFmpeg drawvg (Cairo) | DONE (2026-04-06) — Skia renderer added as optional fast path. Native DropShadow, stroke, rounded rect. Falls back to Pillow if skia not installed. |
 
 ### TIER 3 -- Verify & Maintain (Working Well)
 
