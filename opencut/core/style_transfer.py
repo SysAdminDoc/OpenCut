@@ -1,14 +1,15 @@
 """
-OpenCut Style Transfer Module v0.7.1
+OpenCut Style Transfer Module v0.8.0
 
 Neural style transfer applied to video:
 - Pre-trained fast style transfer models (Candy, Mosaic, Pointilism, etc.)
-- OpenCV DNN backend (no PyTorch required, runs on any system)
+- ONNX Runtime backend with GPU acceleration (preferred)
+- OpenCV DNN backend fallback (no PyTorch required, runs on any system)
 - Adjustable style intensity via blending
 - Frame-by-frame processing with FFmpeg reassembly
 
 Uses the fast neural style transfer approach (Johnson et al.) with
-pre-trained .t7 models from the OpenCV DNN samples.
+ONNX models (GPU-accelerated) or .t7 models (OpenCV DNN fallback).
 """
 
 import logging
@@ -23,41 +24,63 @@ from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
+# Check if onnxruntime is available
+_ONNX_AVAILABLE = False
+try:
+    import onnxruntime  # noqa: F401
+    _ONNX_AVAILABLE = True
+except ImportError:
+    pass
+
+# Module-level ONNX session cache (keyed by model path)
+_onnx_session_cache: Dict[str, "onnxruntime.InferenceSession"] = {}
+
 MODELS_DIR = os.path.join(os.path.expanduser("~"), ".opencut", "models", "style_transfer")
 os.makedirs(MODELS_DIR, exist_ok=True)
 
 # Pre-trained fast style transfer models
-# These are Torch .t7 models compatible with OpenCV's DNN module
+# ONNX models preferred (GPU-accelerated via ONNX Runtime), .t7 fallback for OpenCV DNN
+# Styles with ONNX versions available include onnx_url/onnx_filename fields
 STYLE_MODELS = {
     "candy": {
         "label": "Candy",
         "description": "Bright, colorful candy-like style",
         "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/candy.t7",
         "filename": "candy.t7",
+        "onnx_url": "https://huggingface.co/onnxmodelzoo/fast_neural_style/resolve/main/candy.onnx",
+        "onnx_filename": "candy.onnx",
     },
     "mosaic": {
         "label": "Mosaic",
         "description": "Stained glass mosaic pattern",
         "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/mosaic.t7",
         "filename": "mosaic.t7",
+        "onnx_url": "https://huggingface.co/onnxmodelzoo/fast_neural_style/resolve/main/mosaic.onnx",
+        "onnx_filename": "mosaic.onnx",
     },
     "rain_princess": {
         "label": "Rain Princess",
         "description": "Painterly impressionist style",
         "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/rain_princess.t7",
         "filename": "rain_princess.t7",
+        "onnx_url": "https://huggingface.co/onnxmodelzoo/fast_neural_style/resolve/main/rain_princess.onnx",
+        "onnx_filename": "rain_princess.onnx",
     },
     "udnie": {
         "label": "Udnie",
         "description": "Abstract cubist painting style",
         "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/eccv16/udnie.t7",
         "filename": "udnie.t7",
+        "onnx_url": "https://huggingface.co/onnxmodelzoo/fast_neural_style/resolve/main/udnie.onnx",
+        "onnx_filename": "udnie.onnx",
     },
     "pointilism": {
         "label": "Pointilism",
         "description": "Dot-based pointilist painting",
         "url": "https://cs.stanford.edu/people/jcjohns/fast-neural-style/models/instance_norm/feathers.t7",
         "filename": "pointilism.t7",
+        "onnx_url": "https://huggingface.co/onnxmodelzoo/fast_neural_style/resolve/main/pointilism.onnx",
+        "onnx_filename": "pointilism.onnx",
     },
     "la_muse": {
         "label": "La Muse",
@@ -79,26 +102,11 @@ STYLE_MODELS = {
     },
 }
 
-def _download_model(style_name: str, on_progress: Optional[Callable] = None) -> str:
-    """Download style model if not cached."""
-    if style_name not in STYLE_MODELS:
-        raise ValueError(f"Unknown style: {style_name}")
-
-    info = STYLE_MODELS[style_name]
-    model_path = os.path.join(MODELS_DIR, info["filename"])
-
-    if os.path.isfile(model_path):
-        return model_path
-
-    if on_progress:
-        on_progress(5, f"Downloading {info['label']} style model...")
-
-    logger.info(f"Downloading style model: {info['url']}")
-    tmp_path = model_path + ".tmp"
+def _download_file(url: str, dest_path: str) -> None:
+    """Download a file from URL to dest_path atomically."""
+    tmp_path = dest_path + ".tmp"
     try:
-        # Use a custom opener with per-request timeout instead of
-        # process-global socket.setdefaulttimeout (not thread-safe)
-        req = urllib.request.Request(info["url"])
+        req = urllib.request.Request(url)
         with urllib.request.urlopen(req, timeout=120) as resp:
             with open(tmp_path, "wb") as f:
                 while True:
@@ -106,15 +114,137 @@ def _download_model(style_name: str, on_progress: Optional[Callable] = None) -> 
                     if not chunk:
                         break
                     f.write(chunk)
-        os.replace(tmp_path, model_path)
+        os.replace(tmp_path, dest_path)
     except Exception:
-        # Remove partial download
         try:
             os.unlink(tmp_path)
         except OSError:
             pass
         raise
-    return model_path
+
+
+def _download_model(style_name: str, on_progress: Optional[Callable] = None) -> str:
+    """Download style model if not cached.
+
+    Prefers ONNX format when available (GPU-accelerated via ONNX Runtime).
+    Falls back to .t7 for styles without ONNX versions or if ONNX download fails.
+    Returns the path to whichever model file is available.
+    """
+    if style_name not in STYLE_MODELS:
+        raise ValueError(f"Unknown style: {style_name}")
+
+    info = STYLE_MODELS[style_name]
+
+    # Check for existing ONNX model first
+    if "onnx_filename" in info:
+        onnx_path = os.path.join(MODELS_DIR, info["onnx_filename"])
+        if os.path.isfile(onnx_path):
+            return onnx_path
+
+    # Check for existing .t7 model
+    t7_path = os.path.join(MODELS_DIR, info["filename"])
+    if os.path.isfile(t7_path):
+        return t7_path
+
+    if on_progress:
+        on_progress(5, f"Downloading {info['label']} style model...")
+
+    # Try ONNX download first if available and runtime is present
+    if "onnx_url" in info and _ONNX_AVAILABLE:
+        onnx_path = os.path.join(MODELS_DIR, info["onnx_filename"])
+        try:
+            logger.info(f"Downloading ONNX style model: {info['onnx_url']}")
+            _download_file(info["onnx_url"], onnx_path)
+            return onnx_path
+        except Exception as exc:
+            logger.warning(f"ONNX model download failed, falling back to .t7: {exc}")
+
+    # Fall back to .t7 download
+    logger.info(f"Downloading style model: {info['url']}")
+    _download_file(info["url"], t7_path)
+    return t7_path
+
+
+# ---------------------------------------------------------------------------
+# ONNX Runtime Inference
+# ---------------------------------------------------------------------------
+def _get_onnx_session(model_path: str) -> "onnxruntime.InferenceSession":
+    """Get or create a cached ONNX Runtime inference session."""
+    if model_path in _onnx_session_cache:
+        return _onnx_session_cache[model_path]
+
+    import onnxruntime as ort
+
+    providers = []
+    available = ort.get_available_providers()
+    if "CUDAExecutionProvider" in available:
+        providers.append("CUDAExecutionProvider")
+    providers.append("CPUExecutionProvider")
+
+    session = ort.InferenceSession(model_path, providers=providers)
+    _onnx_session_cache[model_path] = session
+    logger.info(f"ONNX session created for {os.path.basename(model_path)} "
+                f"(providers: {session.get_providers()})")
+    return session
+
+
+def _apply_style_onnx(frame, model_path: str):
+    """Apply style transfer using ONNX Runtime (GPU-accelerated).
+
+    The ONNX models use the same Johnson et al. TransformerNet architecture
+    as the .t7 models. Input: (1, 3, H, W) float32 [0-255]. Output: same shape.
+    """
+    import numpy as np
+
+    session = _get_onnx_session(model_path)
+
+    h, w = frame.shape[:2]
+
+    # Preprocess: BGR -> RGB, float32, transpose to NCHW, add batch dim
+    rgb = frame[:, :, ::-1].astype(np.float32)  # BGR -> RGB
+    nchw = np.transpose(rgb, (2, 0, 1))  # HWC -> CHW
+    batch = np.expand_dims(nchw, axis=0)  # Add batch: (1, 3, H, W)
+
+    # Run inference
+    input_name = session.get_inputs()[0].name
+    output = session.run(None, {input_name: batch})[0]
+
+    # Postprocess: squeeze batch, transpose back to HWC, clip, RGB -> BGR
+    result = output.squeeze(0)  # (3, H, W)
+    result = np.transpose(result, (1, 2, 0))  # CHW -> HWC
+    result = np.clip(result, 0, 255).astype(np.uint8)
+    result = result[:, :, ::-1]  # RGB -> BGR
+
+    return result
+
+
+def _apply_style_cv2dnn(frame, model_path: str, net=None):
+    """Apply style transfer using OpenCV DNN (.t7 model).
+
+    Returns (styled_frame, net) so the net can be reused across frames.
+    """
+    import cv2
+    import numpy as np
+
+    if net is None:
+        net = cv2.dnn.readNetFromTorch(model_path)
+        net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+        net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+
+    h, w = frame.shape[:2]
+    blob = cv2.dnn.blobFromImage(frame, 1.0, (w, h),
+                                 (103.939, 116.779, 123.680), swapRB=False, crop=False)
+    net.setInput(blob)
+    styled = net.forward()
+
+    styled = styled.reshape(3, styled.shape[2], styled.shape[3])
+    styled[0] += 103.939
+    styled[1] += 116.779
+    styled[2] += 123.680
+    styled = styled.transpose(1, 2, 0)
+    styled = np.clip(styled, 0, 255).astype(np.uint8)
+
+    return styled, net
 
 
 # ---------------------------------------------------------------------------
@@ -122,15 +252,21 @@ def _download_model(style_name: str, on_progress: Optional[Callable] = None) -> 
 # ---------------------------------------------------------------------------
 def get_available_styles() -> List[Dict]:
     """Return available style transfer models."""
-    return [
-        {
+    styles = []
+    for k, v in STYLE_MODELS.items():
+        # Check both ONNX and .t7 file presence
+        t7_downloaded = os.path.isfile(os.path.join(MODELS_DIR, v["filename"]))
+        onnx_downloaded = False
+        if "onnx_filename" in v:
+            onnx_downloaded = os.path.isfile(os.path.join(MODELS_DIR, v["onnx_filename"]))
+        styles.append({
             "name": k,
             "label": v["label"],
             "description": v["description"],
-            "downloaded": os.path.isfile(os.path.join(MODELS_DIR, v["filename"])),
-        }
-        for k, v in STYLE_MODELS.items()
-    ]
+            "downloaded": t7_downloaded or onnx_downloaded,
+            "backend": "onnx" if (onnx_downloaded and _ONNX_AVAILABLE) else ("cv2dnn" if t7_downloaded else None),
+        })
+    return styles
 
 
 def style_transfer_video(
@@ -144,6 +280,8 @@ def style_transfer_video(
     """
     Apply neural style transfer to video.
 
+    Uses ONNX Runtime (GPU-accelerated) when available, falls back to OpenCV DNN.
+
     Args:
         style_name: Name from STYLE_MODELS (candy, mosaic, etc.).
         intensity: Style blend intensity (0.0-1.0). 1.0 = full style.
@@ -151,7 +289,6 @@ def style_transfer_video(
     if not ensure_package("cv2", "opencv-python-headless", on_progress):
         raise RuntimeError("Failed to install opencv-python-headless. Install manually: pip install opencv-python-headless")
     import cv2
-    import numpy as np
 
     if output_path is None:
         base = os.path.splitext(os.path.basename(input_path))[0]
@@ -162,13 +299,23 @@ def style_transfer_video(
     # Download model if needed
     model_path = _download_model(style_name, on_progress)
 
-    if on_progress:
-        on_progress(10, f"Loading {STYLE_MODELS[style_name]['label']} model...")
+    # Determine backend based on model file extension
+    use_onnx = model_path.endswith(".onnx") and _ONNX_AVAILABLE
+    backend_label = "ONNX Runtime" if use_onnx else "OpenCV DNN"
 
-    # Load neural style model via OpenCV DNN
-    net = cv2.dnn.readNetFromTorch(model_path)
-    net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
-    net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
+    if on_progress:
+        on_progress(10, f"Loading {STYLE_MODELS[style_name]['label']} model ({backend_label})...")
+
+    logger.info(f"Style transfer backend: {backend_label} for {os.path.basename(model_path)}")
+
+    # Pre-load the model/session before frame loop
+    cv2_net = None
+    if use_onnx:
+        _get_onnx_session(model_path)  # Warm up / cache the session
+    else:
+        cv2_net = cv2.dnn.readNetFromTorch(model_path)
+        cv2_net.setPreferableBackend(cv2.dnn.DNN_BACKEND_OPENCV)
+        cv2_net.setPreferableTarget(cv2.dnn.DNN_TARGET_CPU)
 
     info = get_video_info(input_path)
     tmp_dir = tempfile.mkdtemp(prefix="opencut_style_")
@@ -193,28 +340,18 @@ def style_transfer_video(
             raise RuntimeError("No frames extracted")
 
         if on_progress:
-            on_progress(15, f"Styling {total} frames...")
+            on_progress(15, f"Styling {total} frames ({backend_label})...")
 
         for i, fp in enumerate(frame_files):
             frame = cv2.imread(str(fp))
             if frame is None:
                 continue
 
-            h, w = frame.shape[:2]
-
-            # Create blob and run through network
-            blob = cv2.dnn.blobFromImage(frame, 1.0, (w, h),
-                                         (103.939, 116.779, 123.680), swapRB=False, crop=False)
-            net.setInput(blob)
-            styled = net.forward()
-
-            # Post-process output
-            styled = styled.reshape(3, styled.shape[2], styled.shape[3])
-            styled[0] += 103.939
-            styled[1] += 116.779
-            styled[2] += 123.680
-            styled = styled.transpose(1, 2, 0)
-            styled = np.clip(styled, 0, 255).astype(np.uint8)
+            # Apply style transfer via selected backend
+            if use_onnx:
+                styled = _apply_style_onnx(frame, model_path)
+            else:
+                styled, cv2_net = _apply_style_cv2dnn(frame, model_path, cv2_net)
 
             # Blend with original based on intensity
             if intensity < 1.0:
@@ -242,7 +379,7 @@ def style_transfer_video(
         ])
 
         if on_progress:
-            on_progress(100, f"Style transfer complete ({STYLE_MODELS[style_name]['label']})")
+            on_progress(100, f"Style transfer complete ({STYLE_MODELS[style_name]['label']}, {backend_label})")
         return output_path
 
     finally:
