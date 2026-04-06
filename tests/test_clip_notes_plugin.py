@@ -1,67 +1,40 @@
-"""Tests for the Clip Notes plugin."""
+"""Tests for the Clip Notes plugin (legacy routes)."""
 
+import importlib.util
 import os
 
 import pytest
+from flask import Flask
 
 
-@pytest.fixture(autouse=True)
-def temp_db(tmp_path, monkeypatch):
-    """Use a temp database for all tests."""
-    # Need to patch BEFORE import
-    db_path = str(tmp_path / "test_clip_notes.db")
-
-    # We need to patch the module's _DB_PATH
-    # Import the routes module and patch it
-    import importlib.util
+@pytest.fixture
+def plugin_module(tmp_path):
+    """Load the clip-notes routes module with a temp notes file."""
     plugin_path = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)),
-        "opencut", "data", "example_plugins", "clip-notes", "routes.py"
+        os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+        "opencut", "data", "example_plugins", "clip-notes", "routes.py",
     )
-    spec = importlib.util.spec_from_file_location("clip_notes_routes", plugin_path)
+    spec = importlib.util.spec_from_file_location("clip_notes_legacy_test", plugin_path)
     mod = importlib.util.module_from_spec(spec)
-    monkeypatch.setattr(mod, "_DB_PATH", db_path) if hasattr(mod, "_DB_PATH") else None
+    spec.loader.exec_module(mod)
 
-    # Alternative simpler approach: just test the plugin via HTTP using Flask test client
-    yield db_path
+    # Redirect JSON storage to temp directory
+    mod._NOTES_PATH = str(tmp_path / "notes.json")
+
+    return mod
+
+
+@pytest.fixture
+def client(plugin_module):
+    """Create a Flask test client with the plugin blueprint registered."""
+    app = Flask(__name__)
+    app.config["TESTING"] = True
+    app.register_blueprint(plugin_module.plugin_bp, url_prefix="/plugins/clip-notes")
+    with app.test_client() as c:
+        yield c
 
 
 class TestClipNotesPlugin:
-
-    @pytest.fixture
-    def app(self, tmp_path):
-        """Create a minimal Flask app with the plugin loaded."""
-        import importlib.util
-
-        from flask import Flask
-
-        app = Flask(__name__)
-        app.config["TESTING"] = True
-
-        plugin_path = os.path.join(
-            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
-            "opencut", "data", "example_plugins", "clip-notes", "routes.py"
-        )
-
-        spec = importlib.util.spec_from_file_location("clip_notes_test", plugin_path)
-        mod = importlib.util.module_from_spec(spec)
-
-        # Patch DB path before exec
-        db_path = str(tmp_path / "notes.db")
-
-        # We'll patch after loading
-        spec.loader.exec_module(mod)
-        mod._DB_PATH = db_path
-        mod._thread_local.conn = None  # Reset connection
-        mod._init_db()
-
-        app.register_blueprint(mod.plugin_bp, url_prefix="/plugins/clip-notes")
-        return app
-
-    @pytest.fixture
-    def client(self, app):
-        with app.test_client() as c:
-            yield c
 
     def test_list_empty(self, client):
         r = client.get("/plugins/clip-notes/list")

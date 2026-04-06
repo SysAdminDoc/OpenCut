@@ -2885,7 +2885,7 @@
             language: transcriptData.language || "en",
         }, function (err, data) {
             if (!err && data && data.output_path) {
-                showAlert("Exported to: " + data.output_path.split(/[/\\]/).pop());
+                showAlert("Exported to: " + String(data.output_path).split(/[/\\]/).pop());
             } else {
                 showAlert("Export failed: " + (data ? data.error : "Unknown error"));
             }
@@ -8794,7 +8794,7 @@
                 }
                 showToast("OTIO exported: " + (data.output_path || "").split(/[/\\]/).pop(), "success");
                 var otioRes = document.getElementById("otioResult");
-                if (otioRes) { otioRes.classList.remove("hidden"); otioRes.textContent = "Saved: " + data.output_path; }
+                if (otioRes) { otioRes.classList.remove("hidden"); otioRes.textContent = "Saved: " + (data.output_path || ""); }
             });
         });
         // OTIO install button
@@ -8984,7 +8984,7 @@
         if (job.status === "complete" && job.result) {
             var r = job.result;
             var msg = "Workflow complete: " + (r.steps_completed || 0) + " steps processed.";
-            if (r.output) msg += " Output: " + r.output.split("/").pop().split("\\").pop();
+            if (r.output) msg += " Output: " + String(r.output).split("/").pop().split("\\").pop();
             showToast(msg, "success");
         }
     });
