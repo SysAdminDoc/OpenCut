@@ -25,6 +25,7 @@ Uses: opencut.core.llm for LLM calls, opencut.core.nlp_command for action mappin
 """
 
 import logging
+import threading
 import time
 from dataclasses import dataclass, field
 from typing import Dict, List, Optional
@@ -105,6 +106,7 @@ class ChatSession:
 
 # Active sessions (in-memory, keyed by session_id)
 _sessions: Dict[str, ChatSession] = {}
+_sessions_lock = threading.Lock()
 
 # Session TTL: evict sessions inactive for more than 2 hours
 _SESSION_TTL = 2 * 60 * 60  # seconds
@@ -112,7 +114,7 @@ _MAX_SESSIONS = 100
 
 
 def _evict_stale_sessions():
-    """Remove sessions that haven't been active within the TTL."""
+    """Remove sessions that haven't been active within the TTL. Must hold _sessions_lock."""
     now = time.time()
     stale = [
         sid for sid, s in _sessions.items()
@@ -136,28 +138,30 @@ def get_or_create_session(
     clip_info: Optional[Dict] = None,
 ) -> ChatSession:
     """Get an existing chat session or create a new one."""
-    _evict_stale_sessions()
+    with _sessions_lock:
+        _evict_stale_sessions()
 
-    if session_id in _sessions:
-        session = _sessions[session_id]
-        # Update filepath if changed
-        if filepath and filepath != session.filepath:
-            session.filepath = filepath
-            session.context = clip_info or {}
+        if session_id in _sessions:
+            session = _sessions[session_id]
+            # Update filepath if changed
+            if filepath and filepath != session.filepath:
+                session.filepath = filepath
+                session.context = clip_info or {}
+            return session
+
+        session = ChatSession(
+            session_id=session_id,
+            filepath=filepath,
+            context=clip_info or {},
+        )
+        _sessions[session_id] = session
         return session
-
-    session = ChatSession(
-        session_id=session_id,
-        filepath=filepath,
-        context=clip_info or {},
-    )
-    _sessions[session_id] = session
-    return session
 
 
 def clear_session(session_id: str):
     """Clear a chat session's history."""
-    _sessions.pop(session_id, None)
+    with _sessions_lock:
+        _sessions.pop(session_id, None)
 
 
 def chat(
@@ -209,12 +213,24 @@ def chat(
     # Query LLM with full conversation history
     messages = session.get_llm_messages()
 
+    # Build a combined prompt with conversation context
+    # query_llm() only supports single prompt + system_prompt,
+    # so we include recent history in the prompt itself
+    context_msgs = messages[1:-1]  # Skip system and current user msg
+    if context_msgs:
+        history_text = "\n".join(
+            f"{'User' if m['role'] == 'user' else 'Assistant'}: {m['content']}"
+            for m in context_msgs[-10:]  # Last 10 messages for context
+        )
+        full_prompt = f"Previous conversation:\n{history_text}\n\nUser: {user_message}"
+    else:
+        full_prompt = user_message
+
     try:
         response = query_llm(
-            prompt=user_message,
+            prompt=full_prompt,
             config=llm_config,
             system_prompt=system_prompt,
-            messages=messages[1:],  # Skip system (passed separately)
         )
         response_text = response.text if hasattr(response, "text") else str(response)
     except Exception as e:

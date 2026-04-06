@@ -749,7 +749,6 @@ def install_whisper(job_id, filepath, data):
     backend = data.get("backend", "faster-whisper")
     allowed = {"faster-whisper", "openai-whisper", "whisperx"}
     if backend not in allowed:
-        rate_limit_release("model_install")
         raise ValueError(f"Unknown backend: {backend}")
 
     try:
@@ -1050,7 +1049,6 @@ def whisper_reinstall(job_id, filepath, data):
     backend = data.get("backend", "faster-whisper")
     allowed_backends = {"faster-whisper", "openai-whisper", "whisperx"}
     if backend not in allowed_backends:
-        rate_limit_release("model_install")
         raise ValueError(f"Unknown backend: {backend}")
 
     cpu_mode = data.get("cpu_mode", False)

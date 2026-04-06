@@ -11,12 +11,13 @@ import tempfile
 from typing import List
 
 try:
-    from ..helpers import run_ffmpeg
+    from ..helpers import get_ffmpeg_path, run_ffmpeg
 except ImportError:
     try:
-        from opencut.helpers import run_ffmpeg
+        from opencut.helpers import get_ffmpeg_path, run_ffmpeg
     except ImportError:
         run_ffmpeg = None  # type: ignore
+        get_ffmpeg_path = None  # type: ignore
 
 logger = logging.getLogger("opencut")
 
@@ -311,8 +312,9 @@ def color_match_video(
     logger.info("Merging audio from source into color-matched output")
 
     # Merge original audio from source using FFmpeg
+    _ffmpeg = get_ffmpeg_path() if get_ffmpeg_path else "ffmpeg"
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        _ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
         "-i", temp_video,
         "-i", source_path,
         "-map", "0:v:0",

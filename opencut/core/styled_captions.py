@@ -19,6 +19,8 @@ import threading
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
+from opencut.helpers import get_ffmpeg_path
+
 from .captions import TranscriptionResult, Word
 
 logger = logging.getLogger("opencut.styled_captions")
@@ -992,7 +994,7 @@ def render_styled_caption_video(
     # Pipe raw RGBA frames to FFmpeg
     # -------------------------------------------------------------------
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "warning", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "warning", "-y",
         "-f", "rawvideo",
         "-pix_fmt", "rgba",
         "-s", f"{video_width}x{video_height}",
