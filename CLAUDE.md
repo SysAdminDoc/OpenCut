@@ -236,6 +236,8 @@
 - **GPU tensor cleanup pattern** — `del tensor` only removes the Python reference; call `.cpu()` first to move off GPU, then `del`, then `torch.cuda.empty_cache()`. Always wrap in `finally` block. Applies to all ML modules (audio_enhance, captions_enhanced, music_gen, diarize, scene_detect).
 - **Thread-safe singletons** — Global cached objects (like `auto_zoom._CASCADE`) must use double-checked locking (`if X is None: with lock: if X is None: X = ...`). Flask serves requests on multiple threads.
 - **Never `git add -A`** — `installer/bin/`, `installer/obj/`, `installer/publish/` are build artifacts NOT in `.gitignore` (they're tracked in the repo). Use specific file paths when staging.
+- **Clip-notes plugin test pattern** — `test_clip_notes_plugin.py` tests legacy routes via JSON storage backend (`_NOTES_PATH`). Do NOT use the SQLite backend (`_DB_PATH`/`_thread_local`) in tests — it requires manual connection management that breaks across platforms. Follow the pattern in `test_plugin_clip_notes.py`: load module via `importlib`, set `mod._NOTES_PATH` to a temp path, register blueprint, test via Flask test client.
+- **LUT `.cube` file parsing** — `_parse_cube()` in `lut_library.py` must guard `LUT_SIZE` line parsing against malformed files (missing value, non-numeric). Always check `len(parts) >= 2` before `int(parts[-1])`.
 - **Frozen builds** — `sys.executable` points to the exe, not Python. `safe_pip_install()` and `_setup_system_site_packages()` detect frozen state and find system Python from PATH instead.
 - **Ruff CI rules** — CI runs `ruff check opencut/ --select E,F,I --ignore E501`. Codebase is fully lint-clean as of v1.3.0. Use `# noqa: F401` for intentional lazy imports, `# noqa: E402` for delayed imports, `# noqa: F821` for closure-scoped forward refs.
 - **PyInstaller spec paths** — `opencut_server.spec` must use `os.path.join()` for all paths (not backslashes). Backslash paths break Linux/macOS CI runners.
@@ -919,6 +921,12 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **export_video partial file leak** — Failed FFmpeg runs left corrupt partial output files on disk. Added cleanup on non-zero exit.
 - **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.
 - **pip install permission denied** — `safe_pip_install()` failed on Windows when both normal and `--user` installs hit Errno 13 (Microsoft Store Python, OneDrive-synced user dirs, restrictive ACLs). Added `--target ~/.opencut/packages` as third fallback strategy. server.py adds `~/.opencut/packages` to `sys.path` at startup.
+
+## v1.9.17 Full Audit & Repair (April 2026)
+- **test_clip_notes_plugin.py rewrite** — Old test fixture accessed `mod._thread_local.conn` after flaky `importlib` module load, causing `AttributeError` on Windows. The `temp_db` autouse fixture was a dead no-op (created module without executing it). Rewrote entire test file to use JSON storage backend (matching `test_plugin_clip_notes.py` pattern), eliminating `_thread_local` dependency. All 10 legacy route tests pass cleanly.
+- **LUT_SIZE parsing crash** — `_parse_cube()` in `lut_library.py` called `int(line.split()[-1])` without checking `split()` returned ≥2 parts. Malformed `.cube` files with bare `LUT_SIZE` keyword (no value) crashed with `ValueError`. Added `len(parts) >= 2` guard + `try/except ValueError`.
+- **CEP main.js unsafe `.split()` calls** — 3 call sites could crash on undefined/null values: OTIO export result display (`data.output_path`), caption export filename extraction, and workflow completion output display. Wrapped in `String()` coercion and `|| ""` fallbacks.
+- **Audit results**: 867 tests passing (4 skipped for optional deps), ruff lint clean, exit code 0.
 
 ## v1.9.16 Performance Audit & Memory Leak Fixes
 - **`/video/auto-zoom` broken return** — route returned `{}` instead of `result_dict` (keyframes + output path discarded)
