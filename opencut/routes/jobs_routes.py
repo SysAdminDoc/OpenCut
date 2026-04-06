@@ -160,6 +160,7 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/style/apply", "/video/style/arbitrary", "/video/ai/rembg",
     "/video/lut/generate-ai", "/video/lut/blend",
     "/audio/music-ai/ace-step",
+    "/audio/music-ai/stable-audio",
     # v1.5.0 additions
     "/audio/beat-markers", "/audio/loudness-match",
     "/captions/chapters", "/captions/repeat-detect",
