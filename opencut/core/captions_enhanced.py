@@ -431,6 +431,85 @@ def translate_text_seamless(
 
 
 # ---------------------------------------------------------------------------
+# Unified Translation (SeamlessM4T > NLLB fallback)
+# ---------------------------------------------------------------------------
+def translate(
+    text: str,
+    source_lang: str = "eng",
+    target_lang: str = "spa",
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """Translate text using best available backend (SeamlessM4T > NLLB)."""
+    try:
+        return translate_text_seamless(text, source_lang, target_lang, on_progress)
+    except (ImportError, RuntimeError) as e:
+        logger.info("SeamlessM4T unavailable (%s), falling back to NLLB", e)
+        return translate_text(text, source_lang, target_lang, on_progress)
+
+
+def translate_segments_auto(
+    segments: List[Dict],
+    source_lang: str = "en",
+    target_lang: str = "es",
+    on_progress: Optional[Callable] = None,
+) -> List[Dict]:
+    """Translate segments using best available backend (SeamlessM4T > NLLB)."""
+    try:
+        # SeamlessM4T uses 3-letter codes (eng, spa); convert if needed
+        if not ensure_package("transformers", "transformers", on_progress):
+            raise ImportError("transformers not available")
+
+        if on_progress:
+            on_progress(10, "Loading SeamlessM4T v2...")
+
+        import torch
+        from transformers import AutoProcessor, SeamlessM4Tv2ForTextToText
+
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model_id = "facebook/seamless-m4t-v2-large"
+
+        processor = AutoProcessor.from_pretrained(model_id)
+        model = SeamlessM4Tv2ForTextToText.from_pretrained(model_id).to(device)
+
+        try:
+            translated_segments = []
+            total = len(segments)
+            for i, seg in enumerate(segments):
+                text = seg.get("text", "").strip()
+                if not text:
+                    translated_segments.append(seg.copy())
+                    continue
+                inputs = processor(text=text, src_lang=source_lang, return_tensors="pt").to(device)
+                with torch.inference_mode():
+                    output_tokens = model.generate(**inputs, tgt_lang=target_lang, max_new_tokens=512)
+                translated_text = processor.decode(output_tokens[0].tolist(), skip_special_tokens=True)
+
+                new_seg = seg.copy()
+                new_seg["text"] = translated_text
+                new_seg["original_text"] = text
+                translated_segments.append(new_seg)
+
+                if on_progress and i % max(1, total // 10) == 0:
+                    pct = 10 + int((i / total) * 85)
+                    on_progress(pct, f"Translating {i+1}/{total} (SeamlessM4T)...")
+        finally:
+            del model
+            try:
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except Exception:
+                pass
+
+        if on_progress:
+            on_progress(100, "Translation complete (SeamlessM4T)")
+        return translated_segments
+
+    except (ImportError, RuntimeError) as e:
+        logger.info("SeamlessM4T unavailable for segments (%s), falling back to NLLB", e)
+        return translate_segments(segments, source_lang, target_lang, on_progress)
+
+
+# ---------------------------------------------------------------------------
 # ASS Karaoke Export
 # ---------------------------------------------------------------------------
 def segments_to_ass_karaoke(

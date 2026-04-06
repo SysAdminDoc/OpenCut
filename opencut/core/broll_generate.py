@@ -6,6 +6,7 @@ Supports multiple backends:
 - HunyuanVideo (Tencent) — highest quality, requires significant VRAM
 - Wan 2.2 (Alibaba) — good balance of quality and speed
 - Stable Video Diffusion (Stability AI) — image-to-video variant
+- Wan 2.1 (Alibaba) — lightweight, fits in 8GB VRAM
 - CogVideoX (THUDM) — open source, moderate VRAM requirements
 
 Typical workflow:
@@ -24,7 +25,7 @@ from typing import Callable, List, Optional
 logger = logging.getLogger("opencut")
 
 # Supported backends in order of preference
-BACKENDS = ["cogvideox", "wan", "hunyuan", "svd"]
+BACKENDS = ["wan2.1", "cogvideox", "wan", "hunyuan", "svd"]
 
 
 @dataclass
@@ -37,6 +38,16 @@ class GeneratedClip:
     backend: str         # which model was used
     generation_time: float  # seconds to generate
     seed: int
+
+
+def check_wan21_available() -> bool:
+    """Check if Wan 2.1 text-to-video is available (requires diffusers>=0.32)."""
+    try:
+        import diffusers  # noqa: F401
+        import torch  # noqa: F401
+        return True
+    except ImportError:
+        return False
 
 
 def check_cogvideox_available() -> bool:
@@ -82,6 +93,7 @@ def check_svd_available() -> bool:
 def check_broll_generate_available() -> bool:
     """Check if any text-to-video backend is available."""
     return any([
+        check_wan21_available(),
         check_cogvideox_available(),
         check_wan_available(),
         check_hunyuan_available(),
@@ -93,6 +105,7 @@ def get_available_backends() -> List[str]:
     """Return list of available text-to-video backends."""
     available = []
     checks = {
+        "wan2.1": check_wan21_available,
         "cogvideox": check_cogvideox_available,
         "wan": check_wan_available,
         "hunyuan": check_hunyuan_available,
@@ -102,6 +115,102 @@ def get_available_backends() -> List[str]:
         if check():
             available.append(name)
     return available
+
+
+def _generate_wan21(
+    prompt: str,
+    output_path: str,
+    num_frames: int = 81,
+    width: int = 832,
+    height: int = 480,
+    num_inference_steps: int = 50,
+    guidance_scale: float = 5.0,
+    quality: str = "default",
+    seed: Optional[int] = None,
+    on_progress: Optional[Callable] = None,
+) -> GeneratedClip:
+    """Generate video using Wan 2.1 (Alibaba).
+
+    Args:
+        quality: "default" uses 1.3B model (fits 8GB VRAM),
+                 "high" uses 14B model (requires significant VRAM).
+    """
+    from opencut.helpers import ensure_package
+
+    ensure_package("diffusers", pip_name="diffusers>=0.32")
+    ensure_package("torch")
+
+    import torch
+    from diffusers import WanPipeline
+    from diffusers.utils import export_to_video
+
+    if on_progress:
+        on_progress(10, "Loading Wan 2.1 model...")
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    dtype = torch.float16 if device == "cuda" else torch.float32
+
+    model_id = (
+        "Wan-AI/Wan2.1-T2V-14B" if quality == "high"
+        else "Wan-AI/Wan2.1-T2V-1.3B"
+    )
+
+    pipe = WanPipeline.from_pretrained(
+        model_id,
+        torch_dtype=dtype,
+    )
+    pipe.to(device)
+
+    try:
+        if device == "cuda":
+            try:
+                pipe.enable_model_cpu_offload()
+            except Exception:
+                pass
+
+        if on_progress:
+            on_progress(30, "Generating video frames...")
+
+        generator = torch.Generator(device=device)
+        if seed is not None:
+            generator.manual_seed(seed)
+        else:
+            seed = generator.seed()
+
+        t0 = time.monotonic()
+
+        output = pipe(
+            prompt=prompt,
+            num_frames=num_frames,
+            width=width,
+            height=height,
+            num_inference_steps=num_inference_steps,
+            guidance_scale=guidance_scale,
+            generator=generator,
+        )
+        video_frames = output.frames[0]
+
+        if on_progress:
+            on_progress(85, "Encoding video...")
+
+        export_to_video(video_frames, output_path, fps=16)
+
+        gen_time = time.monotonic() - t0
+        duration = num_frames / 16.0
+
+        return GeneratedClip(
+            output_path=output_path,
+            prompt=prompt,
+            duration=round(duration, 2),
+            resolution=f"{width}x{height}",
+            backend="wan2.1",
+            generation_time=round(gen_time, 2),
+            seed=seed,
+        )
+    finally:
+        del pipe
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 
 def _generate_cogvideox(
@@ -480,7 +589,7 @@ def generate_broll(
     Args:
         prompt: Text description of desired B-roll (e.g. "aerial cityscape at sunset").
         output_dir: Directory to save output. Uses temp if None.
-        backend: Model backend ("cogvideox", "wan", "hunyuan", "svd", or "auto").
+        backend: Model backend ("wan2.1", "cogvideox", "wan", "hunyuan", "svd", or "auto").
         num_frames: Number of frames to generate (backend-specific defaults if None).
         width: Output width (backend-specific defaults if None).
         height: Output height (backend-specific defaults if None).
@@ -518,7 +627,7 @@ def generate_broll(
             raise RuntimeError(
                 "No text-to-video backend available. Install one of:\n"
                 "  pip install diffusers torch transformers accelerate\n"
-                "Supported models: CogVideoX, Wan 2.2, HunyuanVideo, Stable Video Diffusion"
+                "Supported models: Wan 2.1, CogVideoX, Wan 2.2, HunyuanVideo, Stable Video Diffusion"
             )
         backend = available[0]
         logger.info("Auto-selected backend: %s", backend)
@@ -527,6 +636,7 @@ def generate_broll(
         on_progress(0, f"Starting B-roll generation ({backend})...")
 
     generators = {
+        "wan2.1": _generate_wan21,
         "cogvideox": _generate_cogvideox,
         "wan": _generate_wan,
         "hunyuan": _generate_hunyuan,
