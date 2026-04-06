@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <title>OpenCut</title>
@@ -650,6 +650,10 @@
                                 <span class="sp-legend-item"><span class="sp-dot sp-dot-hl"></span> Current word</span>
                                 <span class="sp-legend-item"><span class="sp-dot sp-dot-act"></span> Action word</span>
                             </div>
+                        </div>
+                        <div class="form-group">
+                            <label for="captionFontSize">Font Size</label>
+                            <input type="number" id="captionFontSize" class="text-input" value="48" min="8" max="200" style="width:70px">
                         </div>
                         <label class="checkbox-row"><input type="checkbox" id="captionWordHighlight" checked> <span data-i18n="captions.word_highlight">Word-by-word highlight</span></label>
                         <label class="checkbox-row"><input type="checkbox" id="captionAutoAction" checked> <span data-i18n="captions.auto_action">Auto-detect action words</span></label>
@@ -2008,6 +2012,7 @@
                             <label for="brollGenSeed">Seed (optional)</label>
                             <input type="number" class="text-input" id="brollGenSeed" placeholder="Random" min="0" step="1" aria-label="Random seed">
                         </div>
+                        <button type="button" class="btn-primary" id="runBrollPlanBtn" disabled>Analyze for B-Roll</button>
                         <button type="button" class="btn-primary" id="runBrollGenBtn" disabled data-i18n="video.broll_generate">Generate B-Roll</button>
                         <p class="cap-hint hidden" id="brollGenHint">Requires: pip install diffusers torch transformers</p>
                     </section>

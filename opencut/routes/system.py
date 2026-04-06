@@ -1626,6 +1626,8 @@ def chat_message():
 
         # Build LLM config from settings or request
         provider = data.get("llm_provider", "ollama")
+        if provider not in ("ollama", "openai", "anthropic"):
+            return jsonify({"error": "Invalid provider", "code": "INVALID_INPUT", "suggestion": "Use ollama, openai, or anthropic"}), 400
         model = data.get("llm_model", "")
         api_key = data.get("llm_api_key", "")
 
@@ -1687,7 +1689,8 @@ def video_multimodal_diarize(job_id, filepath, data):
 
     Returns speaker segments enriched with face IDs for accurate multicam switching.
     """
-    if not rate_limit("gpu_job"):
+    acquired = rate_limit("gpu_job")
+    if not acquired:
         raise ValueError("A GPU-intensive job is already running. Please wait.")
 
     try:
@@ -1732,7 +1735,8 @@ def video_multimodal_diarize(job_id, filepath, data):
             "num_faces": result.num_faces,
         }
     finally:
-        rate_limit_release("gpu_job")
+        if acquired:
+            rate_limit_release("gpu_job")
 
 
 # ---------------------------------------------------------------------------
@@ -1743,7 +1747,8 @@ def video_multimodal_diarize(job_id, filepath, data):
 @async_job("broll-generate", filepath_required=False)
 def video_broll_generate(job_id, filepath, data):
     """Generate a B-roll video clip from a text description using AI."""
-    if not rate_limit("gpu_job"):
+    acquired = rate_limit("gpu_job")
+    if not acquired:
         raise ValueError("A GPU-intensive job is already running. Please wait.")
 
     try:
@@ -1756,6 +1761,9 @@ def video_broll_generate(job_id, filepath, data):
 
         output_dir = data.get("output_dir", "")
         backend = data.get("backend", "auto")
+        _valid_backends = {"auto", "stable_diffusion", "dall_e", "replicate"}
+        if backend not in _valid_backends:
+            backend = "auto"
         seed = data.get("seed")
         if seed is not None:
             seed = safe_int(seed, None, min_val=0, max_val=2**31)
@@ -1796,7 +1804,8 @@ def video_broll_generate(job_id, filepath, data):
             "seed": result.seed,
         }
     finally:
-        rate_limit_release("gpu_job")
+        if acquired:
+            rate_limit_release("gpu_job")
 
 
 @system_bp.route("/video/broll-backends", methods=["GET"])
@@ -1898,6 +1907,9 @@ def social_disconnect():
 def social_upload(job_id, filepath, data):
     """Upload a video to a social media platform."""
     platform = data.get("platform", "").strip().lower()
+    _valid_platforms = {"youtube", "tiktok", "instagram", "twitter", "linkedin", "snapchat", "facebook", "pinterest"}
+    if platform and platform not in _valid_platforms:
+        raise ValueError(f"Invalid platform. Use one of: {', '.join(sorted(_valid_platforms))}")
 
     if not platform:
         raise ValueError("No platform specified")

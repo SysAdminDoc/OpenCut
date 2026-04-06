@@ -17,7 +17,7 @@ import os
 import subprocess
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import get_ffprobe_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -66,7 +66,7 @@ def convert_colorspace(
     )
 
     run_ffmpeg([
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", video_path, "-vf", vf,
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",
         "-pix_fmt", "yuv420p", "-c:a", "copy",
@@ -164,7 +164,7 @@ def color_correct(
     vf = ",".join(filters)
 
     run_ffmpeg([
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", video_path, "-vf", vf,
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",
         "-pix_fmt", "yuv420p", "-c:a", "copy",
@@ -265,7 +265,7 @@ def apply_external_lut(
             f"[lut][b]blend=all_mode=normal:all_opacity={intensity}"
         )
 
-    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", video_path]
+    cmd = [get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y", "-i", video_path]
     if intensity >= 0.99:
         cmd += ["-vf", vf]
     else:

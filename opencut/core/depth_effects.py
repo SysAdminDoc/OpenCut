@@ -16,8 +16,9 @@ References:
 
 import logging
 import os
-import subprocess
 from typing import Callable, Optional
+
+from opencut.helpers import ensure_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -55,17 +56,22 @@ def estimate_depth_map(
     Returns:
         Path to the depth map video.
     """
-    try:
-        import cv2
-        import numpy as np
-        import torch
-    except ImportError:
-        raise ImportError("Depth effects require torch, numpy, and opencv. Install: pip install torch opencv-python-headless")
+    if not ensure_package("cv2", "opencv-python-headless"):
+        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("numpy", "numpy"):
+        raise RuntimeError("Failed to install numpy")
+    if not ensure_package("torch", "torch"):
+        raise RuntimeError("Failed to install torch")
+    if not ensure_package("transformers", "transformers"):
+        raise RuntimeError("Failed to install transformers")
+    if not ensure_package("PIL", "Pillow"):
+        raise RuntimeError("Failed to install Pillow")
 
-    try:
-        from transformers import pipeline
-    except ImportError:
-        raise ImportError("Depth effects require transformers. Install: pip install transformers")
+    import cv2
+    import numpy as np
+    import torch
+    from PIL import Image
+    from transformers import pipeline
 
     if not os.path.isfile(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
@@ -90,6 +96,7 @@ def estimate_depth_map(
         device=device,
     )
 
+    tmp_path = output_path + ".tmp.mp4"
     try:
         if on_progress:
             on_progress(15, "Opening video...")
@@ -103,15 +110,12 @@ def estimate_depth_map(
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        tmp_path = output_path + ".tmp.mp4"
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = cv2.VideoWriter(tmp_path, fourcc, fps, (width, height), isColor=False)
 
         if not writer.isOpened():
             cap.release()
             raise RuntimeError("Failed to initialize video writer")
-
-        from PIL import Image
 
         frame_idx = 0
         try:
@@ -148,15 +152,15 @@ def estimate_depth_map(
             on_progress(93, "Encoding depth map...")
 
         _ffmpeg_encode(tmp_path, input_path, output_path, fps, has_audio=False)
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
 
         if on_progress:
             on_progress(100, "Depth map generated!")
         return output_path
     finally:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
         del depth_pipe
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -190,17 +194,22 @@ def apply_bokeh_effect(
     Returns:
         Path to the output video with bokeh effect.
     """
-    try:
-        import cv2
-        import numpy as np
-        import torch
-    except ImportError:
-        raise ImportError("Depth effects require torch, numpy, and opencv.")
+    if not ensure_package("cv2", "opencv-python-headless"):
+        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("numpy", "numpy"):
+        raise RuntimeError("Failed to install numpy")
+    if not ensure_package("torch", "torch"):
+        raise RuntimeError("Failed to install torch")
+    if not ensure_package("transformers", "transformers"):
+        raise RuntimeError("Failed to install transformers")
+    if not ensure_package("PIL", "Pillow"):
+        raise RuntimeError("Failed to install Pillow")
 
-    try:
-        from transformers import pipeline
-    except ImportError:
-        raise ImportError("Depth effects require transformers.")
+    import cv2
+    import numpy as np
+    import torch
+    from PIL import Image
+    from transformers import pipeline
 
     if not os.path.isfile(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
@@ -220,6 +229,7 @@ def apply_bokeh_effect(
     device = "cuda" if torch.cuda.is_available() else "cpu"
     depth_pipe = pipeline("depth-estimation", model=model_id, device=device)
 
+    tmp_path = output_path + ".tmp.mp4"
     try:
         if on_progress:
             on_progress(15, "Processing video with bokeh effect...")
@@ -233,15 +243,12 @@ def apply_bokeh_effect(
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        tmp_path = output_path + ".tmp.mp4"
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = cv2.VideoWriter(tmp_path, fourcc, fps, (width, height))
 
         if not writer.isOpened():
             cap.release()
             raise RuntimeError("Failed to initialize video writer")
-
-        from PIL import Image
 
         blur_strength = max(3, blur_strength | 1)
 
@@ -288,15 +295,15 @@ def apply_bokeh_effect(
             on_progress(93, "Encoding output...")
 
         _ffmpeg_encode(tmp_path, input_path, output_path, fps)
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
 
         if on_progress:
             on_progress(100, "Bokeh effect applied!")
         return output_path
     finally:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
         del depth_pipe
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -329,17 +336,22 @@ def apply_parallax_zoom(
     Returns:
         Path to output video with parallax effect.
     """
-    try:
-        import cv2
-        import numpy as np
-        import torch
-    except ImportError:
-        raise ImportError("Depth effects require torch, numpy, and opencv.")
+    if not ensure_package("cv2", "opencv-python-headless"):
+        raise RuntimeError("Failed to install opencv-python-headless")
+    if not ensure_package("numpy", "numpy"):
+        raise RuntimeError("Failed to install numpy")
+    if not ensure_package("torch", "torch"):
+        raise RuntimeError("Failed to install torch")
+    if not ensure_package("transformers", "transformers"):
+        raise RuntimeError("Failed to install transformers")
+    if not ensure_package("PIL", "Pillow"):
+        raise RuntimeError("Failed to install Pillow")
 
-    try:
-        from transformers import pipeline
-    except ImportError:
-        raise ImportError("Depth effects require transformers.")
+    import cv2
+    import numpy as np
+    import torch
+    from PIL import Image
+    from transformers import pipeline
 
     if not os.path.isfile(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
@@ -361,6 +373,7 @@ def apply_parallax_zoom(
     device = "cuda" if torch.cuda.is_available() else "cpu"
     depth_pipe = pipeline("depth-estimation", model=model_id, device=device)
 
+    tmp_path = output_path + ".tmp.mp4"
     try:
         cap = cv2.VideoCapture(input_path)
         if not cap.isOpened():
@@ -380,15 +393,12 @@ def apply_parallax_zoom(
         if on_progress:
             on_progress(15, "Applying 3D parallax zoom...")
 
-        tmp_path = output_path + ".tmp.mp4"
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = cv2.VideoWriter(tmp_path, fourcc, fps, (width, height))
 
         if not writer.isOpened():
             cap.release()
             raise RuntimeError("Failed to initialize video writer")
-
-        from PIL import Image
 
         frame_idx = 0
         try:
@@ -439,15 +449,15 @@ def apply_parallax_zoom(
             on_progress(93, "Encoding output...")
 
         _ffmpeg_encode(tmp_path, input_path, output_path, fps)
-        try:
-            os.remove(tmp_path)
-        except OSError:
-            pass
 
         if on_progress:
             on_progress(100, "Parallax zoom applied!")
         return output_path
     finally:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
         del depth_pipe
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
@@ -472,7 +482,4 @@ def _ffmpeg_encode(tmp_video: str, original: str, output: str, fps: float, has_a
         cmd += ["-c:a", "copy"]
     cmd += ["-shortest", output]
 
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
-    if result.returncode != 0:
-        stderr = result.stderr[-300:] if result.stderr else "unknown"
-        raise RuntimeError(f"FFmpeg encoding failed: {stderr}")
+    run_ffmpeg(cmd, timeout=3600)

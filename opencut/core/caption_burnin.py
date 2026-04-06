@@ -17,7 +17,7 @@ import re as _re
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_video_info, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -84,7 +84,7 @@ def burnin_subtitles(
             vf = f"subtitles='{escaped_sub}'"
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", video_path,
         "-vf", vf,
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",
