@@ -195,6 +195,37 @@ EXPORT_PRESETS = {
         "pix_fmt": "yuv420p",
         "ext": ".webm",
     },
+    # === AV1 / HEVC ===
+    "av1_1080p": {
+        "label": "AV1 1080p",
+        "description": "AV1 codec — 40% smaller files than H.264 at same quality",
+        "category": "web",
+        "width": 1920, "height": 1080,
+        "codec": "libsvtav1", "crf": 28, "preset": 6,
+        "audio_codec": "libopus", "audio_bitrate": "128k",
+        "pix_fmt": "yuv420p10le",
+        "ext": ".mp4",
+    },
+    "av1_4k": {
+        "label": "AV1 4K",
+        "description": "AV1 4K — excellent quality-to-size ratio for archival",
+        "category": "web",
+        "width": 3840, "height": 2160,
+        "codec": "libsvtav1", "crf": 30, "preset": 4,
+        "audio_codec": "libopus", "audio_bitrate": "192k",
+        "pix_fmt": "yuv420p10le",
+        "ext": ".mp4",
+    },
+    "hevc_1080p": {
+        "label": "HEVC 1080p",
+        "description": "H.265/HEVC — 30% smaller than H.264, wide device support",
+        "category": "web",
+        "width": 1920, "height": 1080,
+        "codec": "libx265", "crf": 23, "preset": "medium",
+        "audio_codec": "aac", "audio_bitrate": "192k",
+        "pix_fmt": "yuv420p",
+        "ext": ".mp4",
+    },
     # === GIF ===
     "gif_high": {
         "label": "GIF (High Quality)",
@@ -302,8 +333,8 @@ def export_with_preset(
 
     if preset.get("crf") is not None:
         cmd += ["-crf", str(preset["crf"])]
-    if preset.get("preset"):
-        cmd += ["-preset", preset["preset"]]
+    if preset.get("preset") is not None:
+        cmd += ["-preset", str(preset["preset"])]
     if preset.get("profile"):
         if codec == "prores_ks":
             cmd += ["-profile:v", preset["profile"]]
