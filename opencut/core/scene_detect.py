@@ -376,7 +376,7 @@ def detect_scenes_ml(
     # TransNetV2 expects 48x27 resolution frames
     frame_w, frame_h = 48, 27
     extract_cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-i", input_path,
         "-vf", f"scale={frame_w}:{frame_h}",
         "-pix_fmt", "rgb24",
