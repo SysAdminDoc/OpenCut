@@ -26,6 +26,17 @@ from .captions import TranscriptionResult, Word
 logger = logging.getLogger("opencut.styled_captions")
 
 # ---------------------------------------------------------------------------
+# Optional Skia fast path
+# ---------------------------------------------------------------------------
+
+try:
+    import skia
+    _HAS_SKIA = True
+    logger.info("skia-python available — using Skia renderer for styled captions")
+except ImportError:
+    _HAS_SKIA = False
+
+# ---------------------------------------------------------------------------
 # Style definitions
 # ---------------------------------------------------------------------------
 
@@ -757,13 +768,190 @@ def layout_caption_text(
 # Frame rendering
 # ---------------------------------------------------------------------------
 
+def _load_skia_typeface(style: "CaptionStyle"):
+    """Load a Skia Typeface for the given style, with fallbacks."""
+    font_path = find_font(style.font_file)
+    if font_path:
+        try:
+            tf = skia.Typeface.MakeFromFile(font_path)
+            if tf is not None:
+                return tf
+        except Exception:
+            pass
+
+    # Try common fallbacks
+    for fallback in [
+        "arialbd.ttf", "arial.ttf", "ARIALBD.TTF", "ARIAL.TTF",
+        "DejaVuSans-Bold.ttf", "DejaVuSans.ttf",
+        "LiberationSans-Bold.ttf", "LiberationSans-Regular.ttf",
+    ]:
+        fp = find_font(fallback)
+        if fp:
+            try:
+                tf = skia.Typeface.MakeFromFile(fp)
+                if tf is not None:
+                    return tf
+            except Exception:
+                continue
+
+    logger.warning(
+        f"Could not load Skia typeface for '{style.font_file}'. "
+        f"Using Skia default typeface."
+    )
+    return skia.Typeface()
+
+
+def _render_frame_skia(
+    layouts: List[WordLayout],
+    style: CaptionStyle,
+    video_size: Tuple[int, int],
+    pil_font,
+):  # returns PIL Image (RGBA)
+    """Render a single caption frame using skia-python.
+
+    Drop-in replacement for the Pillow render_frame(). Returns a PIL Image
+    so the caller (render_styled_caption_video) can call .tobytes() as usual.
+    """
+    from PIL import Image
+
+    width, height = video_size
+
+    surface = skia.Surface(width, height)
+    canvas = surface.getCanvas()
+    canvas.clear(skia.Color4f(0, 0, 0, 0))
+
+    if not layouts:
+        data = surface.makeImageSnapshot().tobytes()
+        return Image.frombytes("RGBA", video_size, data)
+
+    # Build Skia font from style
+    typeface = _load_skia_typeface(style)
+    sk_font = skia.Font(typeface, style.font_size)
+    sk_font.setEdging(skia.Font.Edging.kAntiAlias)
+    sk_font.setSubpixel(True)
+
+    # Skia drawString uses baseline Y, Pillow uses top-left Y.
+    # Compute the ascent offset so text lands in the same position.
+    fm = sk_font.getMetrics()
+    # fm.fAscent is negative (distance above baseline)
+    baseline_offset = -fm.fAscent
+
+    # --- Background box ---
+    if style.bg_color[3] > 0:
+        pad_h, pad_v = style.bg_padding
+        min_x = min(wl.x for wl in layouts) - pad_h
+        max_x = max(wl.x + wl.width for wl in layouts) + pad_h
+        min_y = min(wl.y for wl in layouts) - pad_v
+        # Use Skia font metrics for consistent bottom edge
+        line_height = -fm.fAscent + fm.fDescent
+        max_y = max(wl.y for wl in layouts) + line_height + pad_v
+
+        bg_r, bg_g, bg_b, bg_a = style.bg_color
+        box_paint = skia.Paint(
+            Color=skia.Color(bg_r, bg_g, bg_b, bg_a),
+            AntiAlias=True,
+        )
+        rect = skia.Rect.MakeXYWH(
+            float(min_x), float(min_y),
+            float(max_x - min_x), float(max_y - min_y),
+        )
+        radius = float(style.bg_radius)
+        canvas.drawRoundRect(rect, radius, radius, box_paint)
+
+    # --- Per-word rendering ---
+    for wl in layouts:
+        if wl.is_action:
+            color = style.action_color
+        elif wl.is_highlight:
+            color = style.highlight_color
+        else:
+            color = style.text_color
+
+        x = float(wl.x)
+        # Convert top-left Y to baseline Y
+        y = float(wl.y) + baseline_offset
+
+        # Shadow / glow pass
+        if style.shadow_color[3] > 0:
+            sr, sg, sb, sa = style.shadow_color
+            shadow_sk_color = skia.Color(sr, sg, sb, sa)
+
+            if style.shadow_offset == (0, 0):
+                # Glow effect: use DropShadow image filter
+                sigma = 2.0
+                shadow_filter = skia.ImageFilters.DropShadow(
+                    0, 0, sigma, sigma, shadow_sk_color,
+                )
+                glow_paint = skia.Paint(
+                    Color=shadow_sk_color,
+                    AntiAlias=True,
+                    ImageFilter=shadow_filter,
+                )
+                canvas.drawString(wl.text, x, y, sk_font, glow_paint)
+            else:
+                sx = x + style.shadow_offset[0]
+                sy = y + style.shadow_offset[1]
+                shadow_paint = skia.Paint(
+                    Color=shadow_sk_color,
+                    AntiAlias=True,
+                )
+                canvas.drawString(wl.text, sx, sy, sk_font, shadow_paint)
+
+        # Stroke pass
+        if style.stroke_width > 0:
+            sc_r, sc_g, sc_b, sc_a = style.stroke_color
+            stroke_paint = skia.Paint(
+                Color=skia.Color(sc_r, sc_g, sc_b, sc_a),
+                AntiAlias=True,
+            )
+            stroke_paint.setStyle(skia.Paint.kStroke_Style)
+            stroke_paint.setStrokeWidth(float(style.stroke_width * 2))
+            stroke_paint.setStrokeJoin(skia.Paint.Join.kRound_Join)
+            canvas.drawString(wl.text, x, y, sk_font, stroke_paint)
+
+        # Fill pass
+        cr, cg, cb, ca = color
+        fill_paint = skia.Paint(
+            Color=skia.Color(cr, cg, cb, ca),
+            AntiAlias=True,
+        )
+        canvas.drawString(wl.text, x, y, sk_font, fill_paint)
+
+    # Convert Skia surface to PIL Image
+    sk_image = surface.makeImageSnapshot()
+    data = sk_image.tobytes()
+    return Image.frombytes("RGBA", video_size, data)
+
+
 def render_frame(
     layouts: List[WordLayout],
     style: CaptionStyle,
     video_size: Tuple[int, int],
     font,
 ):  # returns PIL Image
-    """Render a single caption frame as a transparent RGBA image."""
+    """Render a single caption frame as a transparent RGBA image.
+
+    Dispatches to the Skia fast path when skia-python is available,
+    otherwise falls back to the Pillow renderer.
+    """
+    if _HAS_SKIA:
+        try:
+            return _render_frame_skia(layouts, style, video_size, font)
+        except Exception as exc:
+            logger.warning(
+                f"Skia render failed, falling back to Pillow: {exc}"
+            )
+
+    return _render_frame_pillow(layouts, style, video_size, font)
+
+
+def _render_frame_pillow(
+    layouts: List[WordLayout],
+    style: CaptionStyle,
+    video_size: Tuple[int, int],
+    font,
+):  # returns PIL Image
+    """Render a single caption frame using Pillow (original renderer)."""
     from PIL import Image, ImageDraw
 
     img = Image.new("RGBA", video_size, (0, 0, 0, 0))
