@@ -809,7 +809,8 @@ def audio_pro_deepfilter(job_id, filepath, data):
 @async_job("install", filepath_required=False)
 def audio_pro_install(job_id, filepath, data):
     """Install audio pro dependencies."""
-    if not rate_limit("model_install"):
+    acquired = rate_limit("model_install")
+    if not acquired:
         raise ValueError("Another model_install operation is already running. Please wait.")
 
     try:
@@ -831,7 +832,8 @@ def audio_pro_install(job_id, filepath, data):
 
         return {"component": component}
     finally:
-        rate_limit_release("model_install")
+        if acquired:
+            rate_limit_release("model_install")
 
 
 # ---------------------------------------------------------------------------
@@ -960,7 +962,8 @@ def tts_subtitled(job_id, filepath, data):
 @async_job("install", filepath_required=False)
 def tts_install(job_id, filepath, data):
     """Install TTS engine dependencies."""
-    if not rate_limit("model_install"):
+    acquired = rate_limit("model_install")
+    if not acquired:
         raise ValueError("Another model_install operation is already running. Please wait.")
 
     try:
@@ -980,7 +983,8 @@ def tts_install(job_id, filepath, data):
 
         return {"component": component}
     finally:
-        rate_limit_release("model_install")
+        if acquired:
+            rate_limit_release("model_install")
 
 make_install_route(audio_bp, "/audio/crisper-whisper/install", "crisper_whisper",
                    ["torch", "transformers"],
@@ -1230,7 +1234,8 @@ def music_ai_generate(job_id, filepath, data):
     if not prompt:
         raise ValueError("No prompt")
 
-    if not rate_limit("ai_gpu"):
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
         raise ValueError("Another AI GPU operation is already running. Please wait.")
 
     try:
@@ -1253,7 +1258,8 @@ def music_ai_generate(job_id, filepath, data):
 
         return {"output_path": out}
     finally:
-        rate_limit_release("ai_gpu")
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 @audio_bp.route("/audio/music-ai/ace-step", methods=["POST"])
@@ -1270,7 +1276,8 @@ def music_ai_ace_step(job_id, filepath, data):
     if len(lyrics) > 10000:
         raise ValueError("Lyrics too long (max 10000 chars)")
 
-    if not rate_limit("ai_gpu"):
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
         raise ValueError("Another AI GPU operation is already running. Please wait.")
 
     try:
@@ -1290,7 +1297,8 @@ def music_ai_ace_step(job_id, filepath, data):
 
         return {"output_path": out}
     finally:
-        rate_limit_release("ai_gpu")
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 @audio_bp.route("/audio/music-ai/melody", methods=["POST"])
@@ -1305,7 +1313,8 @@ def music_ai_melody(job_id, filepath, data):
     if not prompt:
         raise ValueError("No prompt")
 
-    if not rate_limit("ai_gpu"):
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
         raise ValueError("Another AI GPU operation is already running. Please wait.")
 
     try:
@@ -1323,7 +1332,8 @@ def music_ai_melody(job_id, filepath, data):
 
         return {"output_path": out}
     finally:
-        rate_limit_release("ai_gpu")
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 # ---------------------------------------------------------------------------
