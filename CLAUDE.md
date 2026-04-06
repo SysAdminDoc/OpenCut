@@ -104,6 +104,7 @@
 - `extension/com.opencut.panel/tsconfig.json` - TypeScript config (allowJs, strict:false for incremental migration)
 - `extension/com.opencut.panel/client/locales/en.json` - English locale (~150 i18n strings)
 - `ROADMAP.md` - 7-phase implementation roadmap with priority matrix and success metrics
+- `MODERNIZATION.md` - Module-by-module dependency audit, hardcoded model registry, and upgrade action plan (68 modules, 35 deps, 15+ models)
 
 ### Tests
 - `tests/conftest.py` - Flask test client via `create_app()` factory + CSRF fixtures + test media generators
