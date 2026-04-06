@@ -257,8 +257,8 @@ def kokoro_generate(
         voice: Kokoro voice preset (af_heart, af_bella, am_adam, am_michael, etc.)
         speed: Playback speed multiplier.
     """
-    if not ensure_package("kokoro", "kokoro>=0.3", on_progress):
-        raise RuntimeError("Failed to install kokoro. Install manually: pip install kokoro>=0.3")
+    if not ensure_package("kokoro", "kokoro>=0.9", on_progress):
+        raise RuntimeError("Failed to install kokoro. Install manually: pip install kokoro>=0.9")
     import kokoro
 
     if output_path is None:

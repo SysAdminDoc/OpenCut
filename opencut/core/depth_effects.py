@@ -7,7 +7,7 @@ Uses monocular depth estimation to enable:
 - Depth map export for compositing
 
 Requires: pip install torch torchvision transformers
-Models: LiheYoung/depth-anything-v2-small (or base/large)
+Models: depth-anything/Depth-Anything-V2-Small-hf (or Base/Large)
 
 References:
   - Depth Anything V2: https://github.com/DepthAnything/Depth-Anything-V2
