@@ -51,7 +51,7 @@ class TestSilenceVAD(unittest.TestCase):
     def test_extract_audio_wav_checks_ffmpeg(self):
         """_extract_audio_wav should raise if FFmpeg is not available."""
         from opencut.core.silence import _extract_audio_wav
-        with patch("shutil.which", return_value=None):
+        with patch("opencut.core.silence.get_ffmpeg_path", return_value=None):
             with self.assertRaises(RuntimeError) as ctx:
                 _extract_audio_wav("/nonexistent/input.mp4", "/tmp/out.wav")
             self.assertIn("FFmpeg not found", str(ctx.exception))

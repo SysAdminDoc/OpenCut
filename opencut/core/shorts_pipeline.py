@@ -15,7 +15,7 @@ import tempfile
 from dataclasses import dataclass
 from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffprobe_path
+from opencut.helpers import get_ffmpeg_path, get_ffprobe_path
 
 logger = logging.getLogger("opencut")
 
@@ -86,7 +86,7 @@ def _trim_clip(input_path: str, start: float, end: float, output_path: str):
     if math.isnan(end) or math.isinf(end) or end <= start:
         raise ValueError(f"Invalid trim range: start={start}, end={end}")
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-ss", str(start),
         "-i", input_path,
         "-to", str(end - start),
@@ -98,7 +98,7 @@ def _trim_clip(input_path: str, start: float, end: float, output_path: str):
     if result.returncode != 0:
         # Fallback to re-encode if stream copy fails
         cmd = [
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-ss", str(start),
             "-i", input_path,
             "-to", str(end - start),
@@ -285,7 +285,7 @@ def generate_shorts(
                     # Fallback: simple center crop via FFmpeg
                     cropped_path = os.path.join(temp_dir, f"cropped_{i + 1}.mp4")
                     crop_cmd = [
-                        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
                         "-i", current_path,
                         "-vf", f"crop=ih*{int(config.target_w)}/{int(config.target_h)}:ih,"
                                f"scale={int(config.target_w)}:{int(config.target_h)}",
