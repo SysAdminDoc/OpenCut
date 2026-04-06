@@ -130,6 +130,9 @@ def video_ai_interpolate(job_id, filepath, data):
     """AI frame interpolation."""
     output_dir = data.get("output_dir", "")
     multiplier = safe_int(data.get("multiplier", 2), 2, min_val=2, max_val=8)
+    method = data.get("method", "auto")
+    if method not in ("auto", "rife", "minterpolate"):
+        method = "auto"
 
     acquired = rate_limit("ai_gpu")
     if not acquired:
@@ -144,6 +147,7 @@ def video_ai_interpolate(job_id, filepath, data):
         out = frame_interpolate(
             filepath, output_dir=effective_dir,
             multiplier=multiplier,
+            method=method,
             on_progress=_on_progress,
         )
         return {"output_path": out}

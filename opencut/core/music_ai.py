@@ -278,6 +278,14 @@ def check_ace_step_available() -> bool:
         return False
 
 
+def check_stable_audio_available() -> bool:
+    try:
+        import diffusers  # noqa: F401
+        return True
+    except ImportError:
+        return False
+
+
 # ---------------------------------------------------------------------------
 # ACE-Step Music Generation (full songs with vocals + lyrics)
 # ---------------------------------------------------------------------------
@@ -369,10 +377,90 @@ def generate_music_ace_step(
     return output_path
 
 
+def generate_music_stable_audio(
+    prompt: str,
+    duration: float = 30.0,
+    output_path: str = "",
+    output_dir: str = "",
+    on_progress: Optional[Callable] = None,
+) -> Dict:
+    """Generate music using Stable Audio Open (Stability AI).
+
+    Stable Audio Open generates up to 47s of stereo audio at 44.1kHz.
+    Model: stabilityai/stable-audio-open-1.0 (~1.2B params)
+    """
+    if not ensure_package("diffusers", "diffusers>=0.32", on_progress):
+        raise RuntimeError(
+            "diffusers not installed. Run: pip install 'diffusers>=0.32'\n"
+            "Requires PyTorch with CUDA support."
+        )
+    if not ensure_package("soundfile", "soundfile", on_progress):
+        raise RuntimeError("soundfile not installed. Run: pip install soundfile")
+
+    if on_progress:
+        on_progress(5, "Loading Stable Audio Open model...")
+
+    import re
+
+    import soundfile
+    import torch
+    from diffusers import StableAudioPipeline
+
+    duration = max(1.0, min(47.0, duration))
+
+    if not output_path:
+        directory = output_dir or tempfile.gettempdir()
+        safe_prompt = re.sub(r'[^\w\-]', '_', prompt[:30]).strip('_')
+        output_path = os.path.join(directory, f"stable_audio_{safe_prompt}.wav")
+
+    pipe = None
+    try:
+        if on_progress:
+            on_progress(10, "Downloading/loading Stable Audio Open pipeline...")
+
+        pipe = StableAudioPipeline.from_pretrained(
+            "stabilityai/stable-audio-open-1.0",
+            torch_dtype=torch.float16,
+        )
+        pipe.to("cuda")
+
+        if on_progress:
+            on_progress(25, f"Generating audio: '{prompt[:50]}'...")
+
+        audio = pipe(
+            prompt=prompt,
+            negative_prompt="low quality",
+            num_inference_steps=200,
+            audio_end_in_s=duration,
+        ).audios[0]  # numpy array
+
+        if on_progress:
+            on_progress(85, "Saving audio...")
+
+        # Transpose if needed: (channels, samples) -> (samples, channels)
+        if audio.ndim == 2 and audio.shape[0] < audio.shape[1]:
+            audio = audio.T
+
+        soundfile.write(output_path, audio, samplerate=44100)
+    finally:
+        with suppress(Exception):
+            del pipe
+        with suppress(Exception):
+            del audio  # noqa: F821
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+
+    if on_progress:
+        on_progress(100, "Stable Audio generation complete!")
+
+    return {"output": output_path, "duration": duration, "backend": "stable_audio"}
+
+
 def get_music_ai_capabilities() -> Dict:
     return {
         "audiocraft": check_audiocraft_available(),
         "ace_step": check_ace_step_available(),
+        "stable_audio": check_stable_audio_available(),
         "cuda": check_torch_cuda(),
         "models": MUSICGEN_MODELS,
     }

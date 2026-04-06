@@ -594,35 +594,152 @@ def check_rife_available() -> bool:
         return False
 
 
-def frame_interpolate(
+def check_rife_ncnn_available() -> bool:
+    """Check if rife-ncnn-vulkan binary is available on PATH."""
+    return shutil.which("rife-ncnn-vulkan") is not None
+
+
+def _interpolate_rife(
     input_path: str,
-    output_path: Optional[str] = None,
-    output_dir: str = "",
+    output_path: str,
     multiplier: int = 2,
     on_progress: Optional[Callable] = None,
 ) -> str:
     """
-    AI frame interpolation to increase framerate.
+    Frame interpolation using RIFE (rife-ncnn-vulkan binary).
 
-    Uses FFmpeg minterpolate as a reliable cross-platform solution,
-    with optical flow motion estimation for high quality.
+    GPU-accelerated, cross-platform, no Python ML dependencies required.
+    Install from: https://github.com/nihui/rife-ncnn-vulkan/releases
+
+    Workflow:
+        1. Extract frames with FFmpeg
+        2. Run rife-ncnn-vulkan for interpolation
+        3. Reassemble interpolated frames with FFmpeg (preserving audio)
 
     Args:
-        multiplier: Frame rate multiplier (2 = double, 4 = quadruple).
-    """
-    if output_path is None:
-        output_path = _output_path(input_path, f"interp_{multiplier}x", output_dir)
+        input_path: Source video file.
+        output_path: Destination video file.
+        multiplier: Frame rate multiplier (2, 4, 8).
+        on_progress: Optional progress callback(pct, msg).
 
+    Note: A Python-based RIFE backend (e.g. practical-rife / torch) could be
+    added later as an alternative when the binary is unavailable.
+    """
+    rife_bin = shutil.which("rife-ncnn-vulkan")
+    if not rife_bin:
+        raise RuntimeError(
+            "rife-ncnn-vulkan not found on PATH. "
+            "Install from https://github.com/nihui/rife-ncnn-vulkan/releases"
+        )
+
+    info = get_video_info(input_path)
+    src_fps = info.get("fps", 30)
+    target_fps = src_fps * multiplier
+
+    if on_progress:
+        on_progress(5, "Creating temp directories for RIFE...")
+
+    tmp_dir = tempfile.mkdtemp(prefix="opencut_rife_")
+    frames_in = os.path.join(tmp_dir, "frames")
+    frames_out = os.path.join(tmp_dir, "interp")
+    os.makedirs(frames_in, exist_ok=True)
+    os.makedirs(frames_out, exist_ok=True)
+
+    try:
+        # 1. Extract frames
+        if on_progress:
+            on_progress(10, "Extracting frames...")
+
+        run_ffmpeg([
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
+            "-y", "-i", input_path,
+            "-qscale:v", "2",
+            os.path.join(frames_in, "%08d.png"),
+        ])
+
+        frame_files = sorted(Path(frames_in).glob("*.png"))
+        if not frame_files:
+            raise RuntimeError("No frames extracted from video")
+
+        if on_progress:
+            on_progress(20, f"Extracted {len(frame_files)} frames, running RIFE ({multiplier}x)...")
+
+        # 2. Run rife-ncnn-vulkan
+        # -n flag is the number of interpolated frames between each pair.
+        # For 2x: insert 1 frame between each pair (n=2 means output 2 frames per input pair).
+        # rife-ncnn-vulkan uses -n as the multiplier directly in recent versions.
+        rife_cmd = [
+            rife_bin,
+            "-i", frames_in,
+            "-o", frames_out,
+            "-m", "rife-v4.6",
+            "-n", str(multiplier),
+        ]
+
+        proc = subprocess.run(
+            rife_cmd, capture_output=True, timeout=7200
+        )
+        if proc.returncode != 0:
+            stderr_msg = proc.stderr.decode(errors="replace")[-500:]
+            raise RuntimeError(f"rife-ncnn-vulkan failed (exit {proc.returncode}): {stderr_msg}")
+
+        interp_files = sorted(Path(frames_out).glob("*.png"))
+        if not interp_files:
+            raise RuntimeError("RIFE produced no output frames")
+
+        if on_progress:
+            on_progress(80, f"RIFE produced {len(interp_files)} frames, reassembling video...")
+
+        # 3. Reassemble with FFmpeg — map interpolated video + original audio
+        run_ffmpeg([
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
+            "-y",
+            "-framerate", str(target_fps),
+            "-i", os.path.join(frames_out, "%08d.png"),
+            "-i", input_path,
+            "-map", "0:v", "-map", "1:a?",
+            "-c:v", "libx264", "-crf", "18", "-preset", "medium",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "copy",
+            "-shortest",
+            output_path,
+        ])
+
+        if on_progress:
+            on_progress(100, f"RIFE interpolated to {target_fps:.0f}fps")
+        return output_path
+
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def _interpolate_minterpolate(
+    input_path: str,
+    output_path: str,
+    multiplier: int = 2,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    Frame interpolation using FFmpeg minterpolate filter.
+
+    CPU-based, always available (no external dependencies).
+    Uses optical flow motion estimation for reasonable quality.
+
+    Args:
+        input_path: Source video file.
+        output_path: Destination video file.
+        multiplier: Frame rate multiplier (2, 4, 8).
+        on_progress: Optional progress callback(pct, msg).
+    """
     info = get_video_info(input_path)
     target_fps = info.get("fps", 30) * multiplier
 
     if on_progress:
-        on_progress(10, f"Interpolating {info['fps']:.0f}fps -> {target_fps:.0f}fps...")
+        on_progress(10, f"Interpolating {info.get('fps', 30):.0f}fps -> {target_fps:.0f}fps...")
 
-    # Use minterpolate with motion-compensated interpolation
-    mi_mode = "mci"  # motion compensated interpolation
-    mc_mode = "aobmc"  # adaptive overlapped block motion compensation
-    me_mode = "bidir"  # bidirectional motion estimation
+    mi_mode = "mci"
+    mc_mode = "aobmc"
+    me_mode = "bidir"
 
     vf = (
         f"minterpolate=fps={target_fps}:mi_mode={mi_mode}"
@@ -643,6 +760,36 @@ def frame_interpolate(
     if on_progress:
         on_progress(100, f"Interpolated to {target_fps:.0f}fps")
     return output_path
+
+
+def frame_interpolate(
+    input_path: str,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    multiplier: int = 2,
+    method: str = "auto",
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """
+    AI frame interpolation to increase framerate.
+
+    Args:
+        multiplier: Frame rate multiplier (2 = double, 4 = quadruple).
+        method: Interpolation method — "rife" (rife-ncnn-vulkan, GPU),
+                "minterpolate" (FFmpeg, CPU), or "auto" (RIFE if available,
+                else minterpolate).
+    """
+    if output_path is None:
+        output_path = _output_path(input_path, f"interp_{multiplier}x", output_dir)
+
+    # Resolve "auto" — prefer RIFE if binary is on PATH
+    if method == "auto":
+        method = "rife" if check_rife_ncnn_available() else "minterpolate"
+
+    if method == "rife":
+        return _interpolate_rife(input_path, output_path, multiplier, on_progress)
+    else:
+        return _interpolate_minterpolate(input_path, output_path, multiplier, on_progress)
 
 
 # ---------------------------------------------------------------------------
@@ -838,7 +985,8 @@ def get_ai_capabilities() -> Dict:
         "upscale": check_upscale_available(),
         "rembg": check_rembg_available(),
         "rvm": check_rvm_available(),
-        "frame_interp": True,  # Uses FFmpeg minterpolate, always available
+        "frame_interp": True,  # minterpolate always available; RIFE if binary found
+        "rife_ncnn": check_rife_ncnn_available(),
         "video_denoise": True,  # Uses FFmpeg, always available
     }
     # Check GPU

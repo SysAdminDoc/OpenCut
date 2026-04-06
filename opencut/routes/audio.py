@@ -1301,6 +1301,42 @@ def music_ai_ace_step(job_id, filepath, data):
             rate_limit_release("ai_gpu")
 
 
+@audio_bp.route("/audio/music-ai/stable-audio", methods=["POST"])
+@require_csrf
+@async_job("stable-audio", filepath_required=False)
+def music_ai_stable_audio(job_id, filepath, data):
+    """Generate music using Stable Audio Open (Stability AI)."""
+    from opencut.core.music_ai import generate_music_stable_audio
+
+    prompt = data.get("prompt", "").strip()
+    if not prompt:
+        raise ValueError("No prompt")
+
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
+        raise ValueError("Another AI GPU operation is already running. Please wait.")
+
+    try:
+        def _p(pct, msg=""):
+            _update_job(job_id, progress=pct, message=msg)
+
+        d = data.get("output_dir", "")
+        if d:
+            d = validate_path(d)
+        else:
+            d = tempfile.gettempdir()
+        result = generate_music_stable_audio(
+            prompt, output_dir=d,
+            duration=safe_float(data.get("duration", 30), 30.0, min_val=1.0, max_val=47.0),
+            on_progress=_p,
+        )
+
+        return {"output_path": result["output"], "duration": result["duration"], "backend": result["backend"]}
+    finally:
+        if acquired:
+            rate_limit_release("ai_gpu")
+
+
 @audio_bp.route("/audio/music-ai/melody", methods=["POST"])
 @require_csrf
 @async_job("musicgen-melody", filepath_param="melody_path")
