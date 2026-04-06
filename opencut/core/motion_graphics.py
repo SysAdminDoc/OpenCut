@@ -18,7 +18,7 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_ffprobe_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -186,7 +186,7 @@ def render_title_card(
         vf = ",".join(parts) if parts else f"drawtext=text='{escaped_text}':fontsize={font_size}:fontcolor={font_color}:x=(w-text_w)/2:y=(h-text_h)/2"
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-f", "lavfi", "-i", f"color=c={bg_color}:s={width}x{height}:d={duration}:r={fps}",
         "-vf", vf,
         "-c:v", "libx264", "-crf", "18", "-pix_fmt", "yuv420p",
@@ -272,7 +272,7 @@ def overlay_title(
             )
 
     run_ffmpeg([
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", video_path, "-vf", vf,
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",
         "-pix_fmt", "yuv420p", "-c:a", "copy",

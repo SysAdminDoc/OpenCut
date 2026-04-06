@@ -323,40 +323,46 @@ def generate_music_ace_step(
     if on_progress:
         on_progress(20, f"Generating music: '{prompt[:50]}'...")
 
-    with torch.inference_mode():
-        result = model.generate(
-            prompt=prompt,
-            lyrics=lyrics or None,
-            duration=duration,
-        )
-
-    if on_progress:
-        on_progress(80, "Saving audio...")
-
-    # Save output
-    import soundfile as sf
-    if isinstance(result, dict):
-        audio_data = result.get("audio")
-    elif hasattr(result, "cpu"):
-        audio_data = result  # tensor returned directly
-    else:
-        raise RuntimeError(f"Unexpected ACE-Step result type: {type(result)}")
-    if audio_data is None:
-        raise RuntimeError("ACE-Step produced no audio output")
-    if hasattr(audio_data, "cpu"):
-        audio_data = audio_data.cpu().numpy()
-    if audio_data.ndim == 2:
-        audio_data = audio_data.T
-    sr = result.get("sample_rate", 44100) if isinstance(result, dict) else 44100
-    sf.write(output_path, audio_data, sr)
-
-    # Free GPU
     try:
-        del model
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-    except Exception:
-        pass
+        with torch.inference_mode():
+            result = model.generate(
+                prompt=prompt,
+                lyrics=lyrics or None,
+                duration=duration,
+            )
+
+        if on_progress:
+            on_progress(80, "Saving audio...")
+
+        # Save output
+        if not ensure_package("soundfile", "soundfile"):
+            raise RuntimeError("Failed to install soundfile")
+        import soundfile as sf
+        if isinstance(result, dict):
+            audio_data = result.get("audio")
+        elif hasattr(result, "cpu"):
+            audio_data = result  # tensor returned directly
+        else:
+            raise RuntimeError(f"Unexpected ACE-Step result type: {type(result)}")
+        if audio_data is None:
+            raise RuntimeError("ACE-Step produced no audio output")
+        if hasattr(audio_data, "cpu"):
+            audio_data = audio_data.cpu().numpy()
+        if audio_data.ndim == 2:
+            audio_data = audio_data.T
+        sr = result.get("sample_rate", 44100) if isinstance(result, dict) else 44100
+        sf.write(output_path, audio_data, sr)
+    finally:
+        # Free GPU
+        try:
+            del model
+        except Exception:
+            pass
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
     if on_progress:
         on_progress(100, "Music generated with ACE-Step!")

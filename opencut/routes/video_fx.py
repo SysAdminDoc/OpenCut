@@ -248,6 +248,9 @@ def lut_list():
 def lut_apply(job_id, filepath, data):
     """Apply a color LUT to video."""
     lut_name = data.get("lut", "teal_orange")
+    _RESERVED = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "LPT1", "LPT2", "LPT3"}
+    if lut_name and (lut_name.upper().split(".")[0] in _RESERVED or re.search(r'[<>:"/\\|?*]', lut_name)):
+        raise ValueError("Invalid LUT name")
     intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0)
     output_dir = data.get("output_dir", "")
 
@@ -345,7 +348,7 @@ def pip_route(job_id, filepath, data):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(main, data.get("output_dir", ""))
     out = picture_in_picture(main, pip, output_dir=d,
-                              position=data.get("position", "bottom_right"),
+                              position=data.get("position", "bottom_right") if data.get("position", "bottom_right") in {"top_left", "top_right", "bottom_left", "bottom_right", "center"} else "bottom_right",
                               scale=safe_float(data.get("scale", 0.25), 0.25, min_val=0.05, max_val=1.0), on_progress=_p)
     return {"output_path": out}
 
@@ -487,8 +490,12 @@ def particle_apply(job_id, filepath, data):
     def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+    _valid_particle_presets = {"confetti", "snow", "rain", "sparks", "dust", "bubbles", "fireflies", "smoke", "stars", "embers"}
+    _preset = data.get("preset", "confetti")
+    if _preset not in _valid_particle_presets:
+        _preset = "confetti"
     out = overlay_particles(filepath, output_dir=d,
-                             preset=data.get("preset", "confetti"),
+                             preset=_preset,
                              density=safe_float(data.get("density", 1.0), 1.0, min_val=0.1, max_val=5.0),
                              on_progress=_p)
     return {"output_path": out}
@@ -584,6 +591,9 @@ def video_lut_from_ref(job_id, filepath, data):
     except ValueError as e:
         raise ValueError(str(e))
     lut_name = data.get("lut_name", "").strip() or "custom_ref_lut"
+    _RESERVED = {"CON", "PRN", "AUX", "NUL", "COM1", "COM2", "COM3", "COM4", "LPT1", "LPT2", "LPT3"}
+    if lut_name and (lut_name.upper().split(".")[0] in _RESERVED or re.search(r'[<>:"/\\|?*]', lut_name)):
+        raise ValueError("Invalid LUT name")
     method = data.get("method", "histogram").strip()
     if method not in ("histogram", "average"):
         method = "histogram"
