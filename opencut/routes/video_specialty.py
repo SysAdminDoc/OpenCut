@@ -191,7 +191,7 @@ def video_shorts_pipeline(job_id, filepath, data):
             target_h=safe_int(data.get("height", 1920), 1920, min_val=100, max_val=7680),
             face_track=bool(data.get("face_track", True)),
             burn_captions=bool(data.get("burn_captions", True)),
-            caption_style=data.get("caption_style", "default"),
+            caption_style=data.get("caption_style", "default") if data.get("caption_style", "default") in ("default", "bold_yellow", "boxed_dark", "neon_cyan", "cinematic_serif", "top_center") else "default",
             llm_provider=llm_config.provider,
             llm_model=llm_config.model,
             llm_api_key=llm_config.api_key,

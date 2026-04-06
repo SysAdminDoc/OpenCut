@@ -87,7 +87,7 @@ class TestAudioEnhance(unittest.TestCase):
             _extract_audio("/input/video.mp4", out_path)
             mock_run.assert_called_once()
             cmd = mock_run.call_args[0][0]
-            self.assertEqual(cmd[0], "ffmpeg")
+            self.assertTrue("ffmpeg" in cmd[0].lower(), f"Expected ffmpeg binary, got: {cmd[0]}")
             self.assertIn("-vn", cmd)
         finally:
             os.unlink(out_path)

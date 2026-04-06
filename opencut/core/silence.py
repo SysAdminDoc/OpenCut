@@ -243,12 +243,12 @@ def detect_silences_vad(
 
 def _extract_audio_wav(input_path: str, output_path: str) -> None:
     """Extract audio from a media file as 16kHz mono WAV for VAD processing."""
-    import shutil
-    if not shutil.which("ffmpeg"):
+    ffmpeg = get_ffmpeg_path()
+    if not ffmpeg:
         raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
 
     cmd = [
-        get_ffmpeg_path(), "-hide_banner", "-y",
+        ffmpeg, "-hide_banner", "-y",
         "-i", input_path,
         "-vn", "-acodec", "pcm_s16le",
         "-ar", "16000", "-ac", "1",

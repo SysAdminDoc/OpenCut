@@ -802,11 +802,7 @@ class TestLoudnessMatchInterface(unittest.TestCase):
             "input_lra": "7.0",
             "input_thresh": "-29.0",
         })
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stderr = fake_json  # loudnorm block is extracted with regex
-
-        with patch("opencut.core.loudness_match._run_ffmpeg", return_value=mock_result):
+        with patch("opencut.core.loudness_match._run_ffmpeg_raw", return_value=fake_json):
             result = measure_loudness("/fake/file.mp4")
 
         self.assertIn("lufs", result)
@@ -820,11 +816,7 @@ class TestLoudnessMatchInterface(unittest.TestCase):
         """measure_loudness should raise ValueError if no JSON block in stderr."""
         from opencut.core.loudness_match import measure_loudness
 
-        mock_result = MagicMock()
-        mock_result.returncode = 0
-        mock_result.stderr = "no JSON here at all"
-
-        with patch("opencut.core.loudness_match._run_ffmpeg", return_value=mock_result):
+        with patch("opencut.core.loudness_match._run_ffmpeg_raw", return_value="no JSON here at all"):
             with self.assertRaises(ValueError):
                 measure_loudness("/fake/file.mp4")
 
@@ -832,7 +824,7 @@ class TestLoudnessMatchInterface(unittest.TestCase):
         """measure_loudness should raise RuntimeError when FFmpeg binary is missing."""
         from opencut.core.loudness_match import measure_loudness
 
-        with patch("opencut.core.loudness_match._run_ffmpeg", side_effect=RuntimeError("FFmpeg not found")):
+        with patch("opencut.core.loudness_match._run_ffmpeg_raw", side_effect=RuntimeError("FFmpeg not found")):
             with self.assertRaises(RuntimeError):
                 measure_loudness("/fake/file.mp4")
 
@@ -885,17 +877,9 @@ class TestLoudnessMatchInterface(unittest.TestCase):
             "input_thresh": "-28.0",
             "target_offset": "0.0",
         })
-        mock_pass1 = MagicMock()
-        mock_pass1.returncode = 0
-        mock_pass1.stderr = fake_measured_json
-
-        mock_pass2 = MagicMock()
-        mock_pass2.returncode = 0
-        mock_pass2.stderr = ""
-
         with tempfile.TemporaryDirectory() as tmpdir:
             output_path = os.path.join(tmpdir, "out.mp4")
-            with patch("opencut.core.loudness_match._run_ffmpeg", side_effect=[mock_pass1, mock_pass2]) as mock_run:
+            with patch("opencut.core.loudness_match._run_ffmpeg_raw", side_effect=[fake_measured_json, ""]) as mock_run:
                 normalize_to_lufs("/fake/in.mp4", output_path, target_lufs=-14.0)
         self.assertEqual(mock_run.call_count, 2)
 

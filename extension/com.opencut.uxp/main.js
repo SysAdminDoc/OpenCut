@@ -26,7 +26,7 @@ const HEALTH_CHECK_MS  = 8000;
 const HEALTH_MAX_MS    = 60000;
 const MEDIA_SCAN_MS    = 30000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
-const VERSION          = "1.9.16";
+const VERSION          = "1.9.18";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
@@ -349,7 +349,7 @@ const BackendClient = (() => {
       const resp = await fetch(url, opts);
 
       // Refresh CSRF token if provided in response headers
-      const newToken = resp.headers.get("X-CSRF-Token");
+      const newToken = resp.headers.get("X-OpenCut-Token");
       if (newToken) csrfToken = newToken;
 
       let data;
@@ -553,7 +553,25 @@ const JobPoller = (() => {
     _fireCompletionHooks();
   }
 
-  return { start, cancel, onJobFinished };
+  /**
+   * Poll an already-started job by ID until completion.
+   * Returns the final result object or throws.
+   */
+  function poll(jobId) {
+    return new Promise((resolve, reject) => {
+      activeJobId = jobId;
+      const onProgress = () => {};
+      const onComplete = (result) => resolve(result);
+      const onError = (msg) => reject(new Error(msg));
+      if (SSE_AVAILABLE) {
+        trackJobSSE(jobId, onProgress, onComplete, onError);
+      } else {
+        pollJob(jobId, onProgress, onComplete, onError);
+      }
+    });
+  }
+
+  return { start, poll, cancel, onJobFinished };
 })();
 
 // ─────────────────────────────────────────────────────────────
@@ -890,7 +908,7 @@ function showCutResult(result) {
   if (!area || !body) return;
   area.classList.remove("hidden");
   const lines = (result.cuts ?? []).map((c, i) =>
-    `Cut ${i + 1}: ${c.start.toFixed(3)}s → ${c.end.toFixed(3)}s (${((c.end - c.start) * 1000).toFixed(0)} ms)`
+    `Cut ${i + 1}: ${Number(c.start).toFixed(3)}s → ${Number(c.end).toFixed(3)}s (${((Number(c.end) - Number(c.start)) * 1000).toFixed(0)} ms)`
   );
   body.textContent = lines.join("\n") || "No cuts.";
 }
@@ -1569,10 +1587,9 @@ async function loadSequenceInfo() {
     info = await PProBridge.getSequenceInfo();
   }
 
-  // Fall back to backend
+  // No backend equivalent for sequence-info; PProBridge is the only source
   if (!info) {
-    const r = await BackendClient.get("/sequence-info");
-    if (r.ok) info = r.data;
+    info = null;
   }
 
   UIController.setButtonLoading("loadSeqInfoBtn", false);
@@ -2162,17 +2179,15 @@ async function runDepthEffect() {
   UIController.setButtonLoading("runDepthBtnUxp", true);
   const r = await BackendClient.post(endpoint, payload);
   if (r.ok && r.data?.job_id) {
-    activeJobId = r.data.job_id;
     UIController.showProcessing("Running depth effect...");
-    JobPoller.start(r.data.job_id, (job) => {
-      UIController.hideProcessing();
-      UIController.setButtonLoading("runDepthBtnUxp", false);
-      if (job.status === "complete") {
-        UIController.showToast(`Depth effect complete: ${job.result?.output_path?.split(/[/\\]/).pop() ?? "done"}`, "success");
-      } else {
-        UIController.showToast(`Depth effect failed: ${job.error || "unknown"}`, "error");
-      }
-    });
+    try {
+      const result = await JobPoller.poll(r.data.job_id);
+      UIController.showToast(`Depth effect complete: ${result?.output_path?.split(/[/\\]/).pop() ?? "done"}`, "success");
+    } catch (e) {
+      UIController.showToast(`Depth effect failed: ${e.message || "unknown"}`, "error");
+    }
+    UIController.hideProcessing();
+    UIController.setButtonLoading("runDepthBtnUxp", false);
   } else {
     UIController.setButtonLoading("runDepthBtnUxp", false);
     UIController.showToast(`Error: ${r.error || "Failed to start depth effect"}`, "error");
@@ -2189,18 +2204,16 @@ async function runEmotionHighlights() {
   UIController.setButtonLoading("runEmotionBtnUxp", true);
   const r = await BackendClient.post("/video/emotion-highlights", { filepath: clipPath });
   if (r.ok && r.data?.job_id) {
-    activeJobId = r.data.job_id;
     UIController.showProcessing("Analyzing emotions...");
-    JobPoller.start(r.data.job_id, (job) => {
-      UIController.hideProcessing();
-      UIController.setButtonLoading("runEmotionBtnUxp", false);
-      if (job.status === "complete") {
-        const peaks = job.result?.peaks?.length ?? 0;
-        UIController.showToast(`Emotion analysis complete: ${peaks} emotional peaks found.`, "success");
-      } else {
-        UIController.showToast(`Emotion analysis failed: ${job.error || "unknown"}`, "error");
-      }
-    });
+    try {
+      const result = await JobPoller.poll(r.data.job_id);
+      const peaks = result?.peaks?.length ?? 0;
+      UIController.showToast(`Emotion analysis complete: ${peaks} emotional peaks found.`, "success");
+    } catch (e) {
+      UIController.showToast(`Emotion analysis failed: ${e.message || "unknown"}`, "error");
+    }
+    UIController.hideProcessing();
+    UIController.setButtonLoading("runEmotionBtnUxp", false);
   } else {
     UIController.setButtonLoading("runEmotionBtnUxp", false);
     UIController.showToast(`Error: ${r.error || "Failed to start emotion analysis"}`, "error");
@@ -2217,18 +2230,16 @@ async function runBrollAnalysis() {
   UIController.setButtonLoading("runBrollPlanBtnUxp", true);
   const r = await BackendClient.post("/video/broll-plan", { filepath: clipPath });
   if (r.ok && r.data?.job_id) {
-    activeJobId = r.data.job_id;
     UIController.showProcessing("Analyzing B-roll points...");
-    JobPoller.start(r.data.job_id, (job) => {
-      UIController.hideProcessing();
-      UIController.setButtonLoading("runBrollPlanBtnUxp", false);
-      if (job.status === "complete") {
-        const windows = job.result?.windows?.length ?? 0;
-        UIController.showToast(`B-roll analysis complete: ${windows} insertion points found.`, "success");
-      } else {
-        UIController.showToast(`B-roll analysis failed: ${job.error || "unknown"}`, "error");
-      }
-    });
+    try {
+      const result = await JobPoller.poll(r.data.job_id);
+      const windows = result?.windows?.length ?? 0;
+      UIController.showToast(`B-roll analysis complete: ${windows} insertion points found.`, "success");
+    } catch (e) {
+      UIController.showToast(`B-roll analysis failed: ${e.message || "unknown"}`, "error");
+    }
+    UIController.hideProcessing();
+    UIController.setButtonLoading("runBrollPlanBtnUxp", false);
   } else {
     UIController.setButtonLoading("runBrollPlanBtnUxp", false);
     UIController.showToast(`Error: ${r.error || "Failed to start B-roll analysis"}`, "error");
@@ -2260,7 +2271,7 @@ async function sendChatMessage() {
 
   if (!_chatSessionId) _chatSessionId = `uxp-${Date.now()}`;
 
-  const r = await BackendClient.post("/chat/message", {
+  const r = await BackendClient.post("/chat", {
     session_id: _chatSessionId,
     message: message,
     filepath: clipPath,
@@ -2474,9 +2485,12 @@ async function runUpscaleUxp() {
   UIController.setButtonLoading("runUpscaleBtnUxp", false);
 
   if (r.ok && r.data?.job_id) {
-    JobPoller.start(r.data.job_id, (result) => {
+    try {
+      const result = await JobPoller.poll(r.data.job_id);
       UIController.showToast(`Upscaled: ${result?.output_path || "done"}`, "success");
-    });
+    } catch (e) {
+      UIController.showToast(`Upscale failed: ${e.message}`, "error");
+    }
   } else {
     UIController.showToast(r.data?.error || "Upscale failed.", "error");
   }
@@ -2496,10 +2510,13 @@ async function runSceneDetectUxp() {
   UIController.setButtonLoading("runSceneDetectBtnUxp", false);
 
   if (r.ok && r.data?.job_id) {
-    JobPoller.start(r.data.job_id, (result) => {
+    try {
+      const result = await JobPoller.poll(r.data.job_id);
       const count = result?.scenes?.length || result?.total_scenes || 0;
       UIController.showToast(`Found ${count} scene boundaries.`, "success");
-    });
+    } catch (e) {
+      UIController.showToast(`Scene detection failed: ${e.message}`, "error");
+    }
   } else {
     UIController.showToast(r.data?.error || "Scene detection failed.", "error");
   }
@@ -2519,9 +2536,12 @@ async function runStyleTransferUxp() {
   UIController.setButtonLoading("runStyleTransferBtnUxp", false);
 
   if (r.ok && r.data?.job_id) {
-    JobPoller.start(r.data.job_id, (result) => {
+    try {
+      const result = await JobPoller.poll(r.data.job_id);
       UIController.showToast(`Style applied: ${result?.output_path || "done"}`, "success");
-    });
+    } catch (e) {
+      UIController.showToast(`Style transfer failed: ${e.message}`, "error");
+    }
   } else {
     UIController.showToast(r.data?.error || "Style transfer failed.", "error");
   }
@@ -2547,10 +2567,13 @@ async function runShortsPipelineUxp() {
   UIController.setButtonLoading("runShortsPipelineBtnUxp", false);
 
   if (r.ok && r.data?.job_id) {
-    JobPoller.start(r.data.job_id, (result) => {
+    try {
+      const result = await JobPoller.poll(r.data.job_id);
       const count = result?.total_clips || result?.clips?.length || 0;
       UIController.showToast(`Generated ${count} short-form clips.`, "success");
-    });
+    } catch (e) {
+      UIController.showToast(`Shorts pipeline failed: ${e.message}`, "error");
+    }
   } else {
     UIController.showToast(r.data?.error || "Shorts pipeline failed.", "error");
   }

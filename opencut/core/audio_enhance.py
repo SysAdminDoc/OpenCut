@@ -75,7 +75,7 @@ def _extract_audio(input_path, output_wav):
     """
     ffmpeg_path = get_ffmpeg_path()
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        ffmpeg_path, "-hide_banner", "-loglevel", "error",
         "-y",
         "-i", input_path,
         "-vn",

@@ -13,6 +13,7 @@ Falls back to the SFX/tone generators in music_gen.py for CPU-only systems.
 import logging
 import os
 import tempfile
+from contextlib import suppress
 from typing import Callable, Dict, Optional
 
 from opencut.helpers import ensure_package
@@ -94,20 +95,28 @@ def generate_music(
         on_progress(20, f"Generating music: '{prompt[:50]}'...")
 
     # Generate
-    with torch.inference_mode():
-        wav = model.generate([prompt])
+    try:
+        with torch.inference_mode():
+            wav = model.generate([prompt])
 
-    # wav shape: [batch, channels, samples] at 32000Hz
-    audio_data = wav[0].cpu().numpy()
-    if audio_data.ndim == 2:
-        audio_data = audio_data.T  # [samples, channels]
-    elif audio_data.ndim == 1:
-        pass  # mono
+        # wav shape: [batch, channels, samples] at 32000Hz
+        audio_data = wav[0].cpu().numpy()
+        if audio_data.ndim == 2:
+            audio_data = audio_data.T  # [samples, channels]
+        elif audio_data.ndim == 1:
+            pass  # mono
 
-    if on_progress:
-        on_progress(85, "Saving audio...")
+        if on_progress:
+            on_progress(85, "Saving audio...")
 
-    sf.write(output_path, audio_data, 32000)
+        sf.write(output_path, audio_data, 32000)
+    finally:
+        with suppress(Exception):
+            del model
+        with suppress(Exception):
+            del wav
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     if on_progress:
         on_progress(100, "Music generated!")
@@ -163,14 +172,22 @@ def generate_music_with_melody(
     if on_progress:
         on_progress(25, "Generating with melody conditioning...")
 
-    with torch.inference_mode():
-        wav = model.generate_with_chroma([prompt], melody_wav.expand(1, -1, -1), sr)
+    try:
+        with torch.inference_mode():
+            wav = model.generate_with_chroma([prompt], melody_wav.expand(1, -1, -1), sr)
 
-    audio_data = wav[0].cpu().numpy()
-    if audio_data.ndim == 2:
-        audio_data = audio_data.T
+        audio_data = wav[0].cpu().numpy()
+        if audio_data.ndim == 2:
+            audio_data = audio_data.T
 
-    sf.write(output_path, audio_data, 32000)
+        sf.write(output_path, audio_data, 32000)
+    finally:
+        with suppress(Exception):
+            del model
+        with suppress(Exception):
+            del wav
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     if on_progress:
         on_progress(100, "Melody-conditioned music generated!")
@@ -216,18 +233,26 @@ def continue_audio(
     if on_progress:
         on_progress(20, "Generating continuation...")
 
-    with torch.inference_mode():
-        if prompt:
-            wav = model.generate_continuation(audio_wav.expand(1, -1, -1), sr,
-                                               descriptions=[prompt])
-        else:
-            wav = model.generate_continuation(audio_wav.expand(1, -1, -1), sr)
+    try:
+        with torch.inference_mode():
+            if prompt:
+                wav = model.generate_continuation(audio_wav.expand(1, -1, -1), sr,
+                                                   descriptions=[prompt])
+            else:
+                wav = model.generate_continuation(audio_wav.expand(1, -1, -1), sr)
 
-    audio_data = wav[0].cpu().numpy()
-    if audio_data.ndim == 2:
-        audio_data = audio_data.T
+        audio_data = wav[0].cpu().numpy()
+        if audio_data.ndim == 2:
+            audio_data = audio_data.T
 
-    sf.write(output_path, audio_data, 32000)
+        sf.write(output_path, audio_data, 32000)
+    finally:
+        with suppress(Exception):
+            del model
+        with suppress(Exception):
+            del wav
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     if on_progress:
         on_progress(100, "Audio continued!")

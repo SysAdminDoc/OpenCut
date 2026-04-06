@@ -148,6 +148,16 @@ def generate_masks_sam2(
                     on_progress(pct, f"Tracking object: frame {frame_idx}/{total}...")
     finally:
         shutil.rmtree(frames_dir, ignore_errors=True)
+        try:
+            del predictor
+        except Exception:
+            pass
+        try:
+            del state
+        except Exception:
+            pass
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     if on_progress:
         on_progress(90, "Masks generated!")
@@ -486,16 +496,24 @@ def detect_watermark_region(
 
     inputs = processor(text=task + text_input, images=pil_frame, return_tensors="pt").to(device, torch_dtype)
 
-    with torch.no_grad():
-        generated_ids = model.generate(
-            input_ids=inputs["input_ids"],
-            pixel_values=inputs["pixel_values"],
-            max_new_tokens=1024,
-            num_beams=3,
-        )
+    try:
+        with torch.no_grad():
+            generated_ids = model.generate(
+                input_ids=inputs["input_ids"],
+                pixel_values=inputs["pixel_values"],
+                max_new_tokens=1024,
+                num_beams=3,
+            )
 
-    generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
-    result = processor.post_process_generation(generated_text, task=task, image_size=(pil_frame.width, pil_frame.height))
+        generated_text = processor.batch_decode(generated_ids, skip_special_tokens=False)[0]
+        result = processor.post_process_generation(generated_text, task=task, image_size=(pil_frame.width, pil_frame.height))
+    finally:
+        try:
+            del model, processor, inputs, generated_ids
+        except Exception:
+            pass
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     # Parse detection results
     if result and task in result:

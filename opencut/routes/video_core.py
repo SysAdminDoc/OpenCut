@@ -390,8 +390,8 @@ def video_watermark(job_id, filepath, data):
 @async_job("scenes")
 def video_scenes(job_id, filepath, data):
     """Detect scene changes in a video."""
-    threshold = safe_float(data.get("threshold", 0.3), 0.3)
-    min_scene = safe_float(data.get("min_scene_length", 2.0), 2.0)
+    threshold = safe_float(data.get("threshold", 0.3), 0.3, min_val=0.01, max_val=1.0)
+    min_scene = safe_float(data.get("min_scene_length", 2.0), 2.0, min_val=0.1, max_val=300.0)
     method = data.get("method", "ffmpeg").strip().lower()
     if method not in ("ffmpeg", "ml", "pyscenedetect"):
         method = "ffmpeg"
