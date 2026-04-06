@@ -734,13 +734,13 @@ def captions_whisperx(job_id, filepath, data):
 @require_csrf
 @async_job("translate", filepath_required=False)
 def captions_translate(job_id, filepath, data):
-    """Translate caption segments using NLLB or SeamlessM4T v2."""
+    """Translate caption segments. Backend: auto (SeamlessM4T > NLLB), seamless, or nllb."""
     segments = data.get("segments", [])
     source_lang = data.get("source_lang", "en")
     target_lang = data.get("target_lang", "es")
-    backend = data.get("backend", "nllb")
-    if backend not in ("nllb", "seamless"):
-        backend = "nllb"
+    backend = data.get("backend", "auto")
+    if backend not in ("nllb", "seamless", "auto"):
+        backend = "auto"
 
     if not segments:
         raise ValueError("No segments provided")
@@ -750,7 +750,14 @@ def captions_translate(job_id, filepath, data):
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
 
-    if backend == "seamless":
+    if backend == "auto":
+        # Unified: tries SeamlessM4T first, falls back to NLLB
+        from opencut.core.captions_enhanced import translate_segments_auto
+        translated = translate_segments_auto(
+            segments, source_lang=source_lang,
+            target_lang=target_lang, on_progress=_on_progress,
+        )
+    elif backend == "seamless":
         # SeamlessM4T v2 -- load model ONCE, translate all segments
         _on_progress(10, "Loading SeamlessM4T v2 model...")
         import torch
