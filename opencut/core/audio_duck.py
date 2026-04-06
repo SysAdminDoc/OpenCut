@@ -15,7 +15,7 @@ import logging
 import os
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -68,7 +68,7 @@ def sidechain_duck(
     )
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", music_path, "-i", voice_path,
         "-filter_complex", af,
         "-c:a", "pcm_s16le",
@@ -126,7 +126,7 @@ def mix_with_duck(
     )
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", voice_path, "-i", music_path,
         "-filter_complex", fc,
         "-c:a", "pcm_s16le",
@@ -178,7 +178,7 @@ def auto_duck_video(
     )
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", video_path, "-i", music_path,
         "-filter_complex", fc,
         "-map", "0:v", "-map", "[mixed]",
@@ -231,7 +231,7 @@ def mix_audio_tracks(
     mix_inputs = "".join(f"[a{i}]" for i in range(len(tracks)))
     fc = ";".join(volume_filters) + f";{mix_inputs}amix=inputs={len(tracks)}:duration={duration_mode}:dropout_transition=2"
 
-    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y"]
+    cmd = [get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y"]
     cmd += inputs
     cmd += ["-filter_complex", fc, "-c:a", "pcm_s16le", output_path]
     run_ffmpeg(cmd)
