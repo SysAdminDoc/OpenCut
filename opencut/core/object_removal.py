@@ -146,6 +146,10 @@ def generate_masks_sam2(
                 if on_progress and frame_idx % 30 == 0:
                     pct = 25 + int((frame_idx / max(total, 1)) * 60)
                     on_progress(pct, f"Tracking object: frame {frame_idx}/{total}...")
+    except Exception:
+        # Clean up mask_dir on failure (caller needs it on success)
+        shutil.rmtree(mask_dir, ignore_errors=True)
+        raise
     finally:
         shutil.rmtree(frames_dir, ignore_errors=True)
         try:

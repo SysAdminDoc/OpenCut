@@ -354,27 +354,31 @@ def chatterbox_generate(
     if on_progress:
         on_progress(40, "Synthesizing speech...")
 
-    wav = model.generate(
-        text,
-        audio_prompt_path=voice_ref,
-        exaggeration=exaggeration,
-        cfg_weight=cfg_weight,
-    )
-
-    if on_progress:
-        on_progress(80, "Saving audio...")
-
-    import torchaudio
-    sample_rate = getattr(model, "sr", getattr(model, "sample_rate", 24000))
-    torchaudio.save(output_path, wav, sample_rate)
-
-    # Free GPU memory
     try:
-        del model
-        if torch.cuda.is_available():
-            torch.cuda.empty_cache()
-    except Exception:
-        pass
+        wav = model.generate(
+            text,
+            audio_prompt_path=voice_ref,
+            exaggeration=exaggeration,
+            cfg_weight=cfg_weight,
+        )
+
+        if on_progress:
+            on_progress(80, "Saving audio...")
+
+        import torchaudio
+        sample_rate = getattr(model, "sr", getattr(model, "sample_rate", 24000))
+        torchaudio.save(output_path, wav, sample_rate)
+    finally:
+        # Free GPU memory
+        try:
+            del model
+        except Exception:
+            pass
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
     if on_progress:
         on_progress(100, "Chatterbox speech generated!")

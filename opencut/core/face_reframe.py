@@ -13,7 +13,7 @@ import os
 from dataclasses import dataclass
 from typing import Callable, List, Optional, Tuple
 
-from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
+from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -330,7 +330,7 @@ def face_reframe(input_path: str, target_w: int = 1080, target_h: int = 1920,
     # Build FFmpeg command
     vf = f"crop={crop_w}:{crop_h}:{x_expr}:{y_expr},scale={target_w}:{target_h}"
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", input_path,
         "-vf", vf,
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",

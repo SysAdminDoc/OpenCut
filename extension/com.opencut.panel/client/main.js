@@ -51,6 +51,7 @@
         if (_projectMediaRetryTimer) { clearTimeout(_projectMediaRetryTimer); _projectMediaRetryTimer = null; }
         if (editDebounceTimer) { clearTimeout(editDebounceTimer); editDebounceTimer = null; }
         if (_alertTimer) { clearTimeout(_alertTimer); _alertTimer = null; }
+        if (_wsReconnectTimer) { clearTimeout(_wsReconnectTimer); _wsReconnectTimer = null; }
     }
 
     // ---- Style Preview CSS Map (loaded from backend) ----
@@ -9453,11 +9454,11 @@
         _on("runMmDiarizeBtn", "click", runMultimodalDiarize);
         _on("mmDiarizeSampleFps", "input", function() {
             var valEl = document.getElementById("mmDiarizeSampleFpsVal");
-            if (valEl) valEl.textContent = parseFloat(this.value).toFixed(1);
+            if (valEl) valEl.textContent = safeFixed(parseFloat(this.value), 1);
         });
         _on("mmDiarizeConfidence", "input", function() {
             var valEl = document.getElementById("mmDiarizeConfidenceVal");
-            if (valEl) valEl.textContent = parseFloat(this.value).toFixed(2);
+            if (valEl) valEl.textContent = safeFixed(parseFloat(this.value), 2);
         });
 
         // Social media posting

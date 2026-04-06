@@ -1070,7 +1070,7 @@ def _dispatch_parallel_op(op, progress_cb):
         return style_transfer_video(
             filepath, style_name=_style,
             output_dir=output_dir,
-            intensity=safe_float(payload.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0),
+            intensity=safe_float(payload.get("intensity", 1.0), 1.0, min_val=0.0, max_val=1.0),
             on_progress=progress_cb,
         )
     elif endpoint in ("/video/watermark",):
@@ -1163,7 +1163,7 @@ def _execute_batch_item(operation, filepath, params, on_progress):
         return style_transfer_video(
             filepath, style_name=_style,
             output_dir=output_dir,
-            intensity=safe_float(params.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0),
+            intensity=safe_float(params.get("intensity", 1.0), 1.0, min_val=0.0, max_val=1.0),
             on_progress=on_progress,
         )
     else:
@@ -1188,6 +1188,8 @@ def video_merge(job_id, filepath, data):
         validated_files.append(validate_filepath(f))
     files = validated_files
     merge_mode = data.get("mode", "concat_demux")  # concat_demux | concat_filter
+    if merge_mode not in ("concat_demux", "concat_filter"):
+        merge_mode = "concat_demux"
     quality = data.get("quality", "high")
     output_dir = data.get("output_dir", "")
 

@@ -139,6 +139,11 @@ def generate_shorts(
     if config is None:
         config = ShortsPipelineConfig()
 
+    if config.target_h <= 0:
+        raise ValueError("target_h must be positive")
+    if config.target_w <= 0:
+        raise ValueError("target_w must be positive")
+
     if not os.path.isfile(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
