@@ -51,7 +51,11 @@ def check_scenedetect_available():
 
 
 def check_auto_editor_available():
-    """Check if auto-editor (motion-based editing) is installed."""
+    """Check if auto-editor (motion-based editing) is available.
+
+    Checks for native Nim binary (v30+) on PATH first, then falls back
+    to the legacy pip package (v29.x).
+    """
     import shutil
     return shutil.which("auto-editor") is not None or _try_import("auto_editor") is not None
 
