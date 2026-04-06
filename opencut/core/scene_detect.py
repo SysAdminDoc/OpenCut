@@ -414,49 +414,60 @@ def detect_scenes_ml(
     frames = np.frombuffer(raw_frames[:n_frames * frame_size], dtype=np.uint8)
     frames = frames.reshape(n_frames, frame_h, frame_w, 3)
 
+    threshold = float(threshold)
+
     # Run TransNetV2
     model = TransNetV2()
-    predictions, _ = model.predict_frames(frames)
+    try:
+        predictions, _ = model.predict_frames(frames)
 
-    if on_progress:
-        on_progress(80, "Processing predictions...")
+        if on_progress:
+            on_progress(80, "Processing predictions...")
 
-    # Find scene boundaries from predictions
-    boundaries = [SceneBoundary(time=0.0, frame=0, score=1.0, label="Start")]
+        # Find scene boundaries from predictions
+        boundaries = [SceneBoundary(time=0.0, frame=0, score=1.0, label="Start")]
 
-    min_frames = int(min_scene_length * fps)
-    last_boundary_frame = 0
+        min_frames = int(min_scene_length * fps)
+        last_boundary_frame = 0
 
-    for i, score in enumerate(predictions):
-        pred_score = float(score)
-        if pred_score >= threshold:
-            # Check minimum distance from last boundary
-            if (i - last_boundary_frame) >= min_frames:
-                time_val = i / fps
-                boundaries.append(SceneBoundary(
-                    time=round(time_val, 3),
-                    frame=i,
-                    score=round(pred_score, 4),
-                ))
-                last_boundary_frame = i
+        for i, score in enumerate(predictions):
+            pred_score = float(score)
+            if pred_score >= threshold:
+                # Check minimum distance from last boundary
+                if (i - last_boundary_frame) >= min_frames:
+                    time_val = i / fps
+                    boundaries.append(SceneBoundary(
+                        time=round(time_val, 3),
+                        frame=i,
+                        score=round(pred_score, 4),
+                    ))
+                    last_boundary_frame = i
 
-    # Label scenes
-    for i, b in enumerate(boundaries):
-        if not b.label:
-            b.label = f"Scene {i + 1}"
+        # Label scenes
+        for i, b in enumerate(boundaries):
+            if not b.label:
+                b.label = f"Scene {i + 1}"
 
-    total_scenes = len(boundaries)
-    avg_scene = duration / total_scenes if total_scenes > 0 else duration
+        total_scenes = len(boundaries)
+        avg_scene = duration / total_scenes if total_scenes > 0 else duration
 
-    if on_progress:
-        on_progress(100, f"Found {total_scenes} scenes (ML)")
+        if on_progress:
+            on_progress(100, f"Found {total_scenes} scenes (ML)")
 
-    return SceneInfo(
-        boundaries=boundaries,
-        total_scenes=total_scenes,
-        duration=duration,
-        avg_scene_length=round(avg_scene, 2),
-    )
+        return SceneInfo(
+            boundaries=boundaries,
+            total_scenes=total_scenes,
+            duration=duration,
+            avg_scene_length=round(avg_scene, 2),
+        )
+    finally:
+        del model
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
 
 # ---------------------------------------------------------------------------

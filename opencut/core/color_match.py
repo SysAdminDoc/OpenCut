@@ -127,12 +127,14 @@ def _sample_frames(video_path: str, n: int) -> List["np.ndarray"]:
 
     positions = [int(i * total / n) for i in range(n)]
     frames = []
-    for pos in positions:
-        cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
-        ret, frame = cap.read()
-        if ret and frame is not None:
-            frames.append(frame)
-    cap.release()
+    try:
+        for pos in positions:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, pos)
+            ret, frame = cap.read()
+            if ret and frame is not None:
+                frames.append(frame)
+    finally:
+        cap.release()
     return frames
 
 

@@ -138,7 +138,8 @@ def render_animated_captions(
 
     preset = ANIMATION_PRESETS.get(animation, ANIMATION_PRESETS["pop"])
     info = get_video_info(video_path)
-    w, h, fps = info["width"], info["height"], info["fps"]
+    w, h = info["width"], info["height"]
+    fps = float(info.get("fps", 30))
 
     if on_progress:
         on_progress(5, "Loading video for caption overlay...")
@@ -213,8 +214,8 @@ def render_animated_captions(
 
                 x = x_start
                 for i, wd in enumerate(words):
-                    is_active = wd["start"] <= current_time <= wd["end"]
-                    is_past = current_time > wd["end"]
+                    is_active = float(wd["start"]) <= current_time <= float(wd["end"])
+                    is_past = current_time > float(wd["end"])
 
                     if is_active:
                         color = highlight_color + (int(preset["active_opacity"] * 255),)

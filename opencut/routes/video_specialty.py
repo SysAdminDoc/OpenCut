@@ -160,7 +160,8 @@ def video_shorts_pipeline(job_id, filepath, data):
     """Generate short-form clips from a long video (transcribe + highlight + reframe + captions)."""
     output_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
 
-    if not rate_limit("ai_gpu"):
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
         raise ValueError("A ai_gpu operation is already running. Please wait.")
     try:
         from opencut.core.llm import LLMConfig
@@ -228,7 +229,8 @@ def video_shorts_pipeline(job_id, filepath, data):
             "total_clips": len(clips),
         }
     finally:
-        rate_limit_release("ai_gpu")
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 # ---------------------------------------------------------------------------
@@ -244,7 +246,8 @@ def video_depth_map(job_id, filepath, data):
     if model_size not in ("small", "base", "large"):
         model_size = "small"
 
-    if not rate_limit("gpu_job"):
+    acquired = rate_limit("gpu_job")
+    if not acquired:
         raise ValueError("A gpu_job operation is already running. Please wait.")
     try:
         from opencut.core.depth_effects import estimate_depth_map
@@ -258,7 +261,8 @@ def video_depth_map(job_id, filepath, data):
         out = estimate_depth_map(filepath, output_dir=effective_dir, model_size=model_size, on_progress=_on_progress)
         return {"output_path": out}
     finally:
-        rate_limit_release("gpu_job")
+        if acquired:
+            rate_limit_release("gpu_job")
 
 
 @video_specialty_bp.route("/video/depth/bokeh", methods=["POST"])
@@ -273,7 +277,8 @@ def video_depth_bokeh(job_id, filepath, data):
     if model_size not in ("small", "base", "large"):
         model_size = "small"
 
-    if not rate_limit("gpu_job"):
+    acquired = rate_limit("gpu_job")
+    if not acquired:
         raise ValueError("A gpu_job operation is already running. Please wait.")
     try:
         from opencut.core.depth_effects import apply_bokeh_effect
@@ -291,7 +296,8 @@ def video_depth_bokeh(job_id, filepath, data):
         )
         return {"output_path": out}
     finally:
-        rate_limit_release("gpu_job")
+        if acquired:
+            rate_limit_release("gpu_job")
 
 
 @video_specialty_bp.route("/video/depth/parallax", methods=["POST"])
@@ -305,7 +311,8 @@ def video_depth_parallax(job_id, filepath, data):
     if model_size not in ("small", "base", "large"):
         model_size = "small"
 
-    if not rate_limit("gpu_job"):
+    acquired = rate_limit("gpu_job")
+    if not acquired:
         raise ValueError("A gpu_job operation is already running. Please wait.")
     try:
         from opencut.core.depth_effects import apply_parallax_zoom
@@ -323,7 +330,8 @@ def video_depth_parallax(job_id, filepath, data):
         )
         return {"output_path": out}
     finally:
-        rate_limit_release("gpu_job")
+        if acquired:
+            rate_limit_release("gpu_job")
 
 
 # ---------------------------------------------------------------------------

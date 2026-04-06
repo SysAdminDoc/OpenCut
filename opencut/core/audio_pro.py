@@ -17,7 +17,7 @@ import subprocess
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import ensure_package, run_ffmpeg
+from opencut.helpers import ensure_package, get_ffmpeg_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -287,7 +287,7 @@ def apply_pedalboard_effect(
             temp_audio = _ntf.name
             _ntf.close()
             run_ffmpeg([
-                "ffmpeg", "-hide_banner", "-loglevel", "error",
+                get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                 "-y", "-i", input_path,
                 "-vn", "-acodec", "pcm_s16le", "-ar", "44100",
                 temp_audio,
@@ -304,7 +304,7 @@ def apply_pedalboard_effect(
                 temp_audio = _ntf.name
                 _ntf.close()
                 run_ffmpeg([
-                    "ffmpeg", "-hide_banner", "-loglevel", "error",
+                    get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                     "-y", "-i", input_path,
                     "-acodec", "pcm_s16le", "-ar", "44100",
                     temp_audio,
@@ -346,7 +346,7 @@ def apply_pedalboard_effect(
         # Remux if video
         if is_video:
             run_ffmpeg([
-                "ffmpeg", "-hide_banner", "-loglevel", "error",
+                get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                 "-y", "-i", input_path, "-i", temp_output,
                 "-map", "0:v", "-map", "1:a",
                 "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
@@ -356,7 +356,7 @@ def apply_pedalboard_effect(
         elif ext not in (".wav", ".flac", ".aiff"):
             # Re-encode to original format
             run_ffmpeg([
-                "ffmpeg", "-hide_banner", "-loglevel", "error",
+                get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                 "-y", "-i", temp_output,
                 output_path,
             ], timeout=1800)
@@ -550,7 +550,7 @@ def deepfilter_denoise(
         temp_audio_in = _ntf.name
         _ntf.close()
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             "-vn", "-acodec", "pcm_s16le", "-ar", "48000", "-ac", "1",
             temp_audio_in,
@@ -580,7 +580,7 @@ def deepfilter_denoise(
 
         if is_video:
             run_ffmpeg([
-                "ffmpeg", "-hide_banner", "-loglevel", "error",
+                get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                 "-y", "-i", input_path, "-i", temp_audio_out,
                 "-map", "0:v", "-map", "1:a",
                 "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
@@ -589,7 +589,7 @@ def deepfilter_denoise(
             ], timeout=1800)
         else:
             run_ffmpeg([
-                "ffmpeg", "-hide_banner", "-loglevel", "error",
+                get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                 "-y", "-i", temp_audio_out,
                 output_path,
             ], timeout=1800)

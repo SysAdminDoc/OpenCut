@@ -229,7 +229,7 @@ def search_footage_db():
     if not query:
         return jsonify({"error": "query is required"}), 400
 
-    limit = safe_int(data.get("limit", 50), min_val=1, max_val=200)
+    limit = safe_int(data.get("limit", 50), 50, min_val=1, max_val=200)
 
     try:
         from opencut.core.footage_index_db import init_db, search

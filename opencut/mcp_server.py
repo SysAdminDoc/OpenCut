@@ -38,8 +38,8 @@ def _refresh_csrf():
         with urllib.request.urlopen(req, timeout=5) as resp:
             body = json.loads(resp.read())
             _csrf_token = body.get("csrf_token", "")
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("CSRF refresh failed: %s", exc)
 
 
 def _api(method, path, data=None):
@@ -69,8 +69,8 @@ def _api(method, path, data=None):
             try:
                 with urllib.request.urlopen(req2, timeout=120) as resp2:
                     return json.loads(resp2.read())
-            except Exception:
-                pass
+            except Exception as retry_exc:
+                return {"error": f"Retry failed after CSRF refresh: {retry_exc}"}
         error_body = e.read().decode(errors="replace")
         try:
             return json.loads(error_body)
@@ -426,6 +426,8 @@ def _validate_mcp_filepath(args, key="filepath"):
     path = args.get(key, "")
     if not isinstance(path, str):
         return False
+    if not path:
+        return False
     if ".." in path or "\x00" in path:
         return False
     if path.startswith("\\\\") or path.startswith("//"):
@@ -520,6 +522,8 @@ def run_mcp_stdio():
         elif method == "tools/call":
             tool_name = params.get("name", "")
             arguments = params.get("arguments", {})
+            if not isinstance(arguments, dict):
+                arguments = {}
             result = handle_tool_call(tool_name, arguments)
             response = {
                 "jsonrpc": "2.0",

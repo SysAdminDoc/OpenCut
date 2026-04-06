@@ -14,6 +14,8 @@ import threading
 from concurrent.futures import Future
 from enum import IntEnum
 
+from opencut.jobs import _update_job
+
 logger = logging.getLogger("opencut")
 
 
@@ -106,6 +108,8 @@ class WorkerPool:
                     future.set_result(result)
                 except Exception as exc:
                     future.set_exception(exc)
+            else:
+                _update_job(job_id, status="cancelled", message="Cancelled before starting")
 
             with self._lock:
                 self._futures.pop(job_id, None)

@@ -452,21 +452,9 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
 
     logger.info(f"Starting transcription of {wav_path}")
 
-    # Also wrap transcription in case CUDA fails mid-process
     try:
-        result_segments, info = model.transcribe(
-            wav_path,
-            language=config.language,
-            task=task,
-            word_timestamps=config.word_timestamps,
-            vad_filter=True,
-        )
-        # Consume the generator to catch any CUDA errors during processing
-        result_segments = list(result_segments)
-    except RuntimeError as e:
-        if "cuda" in str(e).lower() or "cublas" in str(e).lower() or "cudnn" in str(e).lower():
-            logger.warning(f"CUDA error during transcription, retrying with CPU: {e}")
-            model = WhisperModel(config.model, device="cpu", compute_type="int8")
+        # Also wrap transcription in case CUDA fails mid-process
+        try:
             result_segments, info = model.transcribe(
                 wav_path,
                 language=config.language,
@@ -474,35 +462,59 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                 word_timestamps=config.word_timestamps,
                 vad_filter=True,
             )
+            # Consume the generator to catch any CUDA errors during processing
             result_segments = list(result_segments)
-        else:
-            raise
+        except RuntimeError as e:
+            if "cuda" in str(e).lower() or "cublas" in str(e).lower() or "cudnn" in str(e).lower():
+                logger.warning(f"CUDA error during transcription, retrying with CPU: {e}")
+                model = WhisperModel(config.model, device="cpu", compute_type="int8")
+                result_segments, info = model.transcribe(
+                    wav_path,
+                    language=config.language,
+                    task=task,
+                    word_timestamps=config.word_timestamps,
+                    vad_filter=True,
+                )
+                result_segments = list(result_segments)
+            else:
+                raise
 
-    logger.info(f"Transcription complete: {len(result_segments)} segments")
+        logger.info(f"Transcription complete: {len(result_segments)} segments")
 
-    segments = []
-    for seg in result_segments:
-        words = []
-        if config.word_timestamps and seg.words:
-            for w in seg.words:
-                words.append(Word(
-                    text=w.word,
-                    start=w.start,
-                    end=w.end,
-                    confidence=w.probability,
-                ))
+        segments = []
+        for seg in result_segments:
+            words = []
+            if config.word_timestamps and seg.words:
+                for w in seg.words:
+                    words.append(Word(
+                        text=w.word,
+                        start=w.start,
+                        end=w.end,
+                        confidence=w.probability,
+                    ))
 
-        segments.append(CaptionSegment(
-            text=seg.text.strip(),
-            start=seg.start,
-            end=seg.end,
-            words=words,
-        ))
+            segments.append(CaptionSegment(
+                text=seg.text.strip(),
+                start=seg.start,
+                end=seg.end,
+                words=words,
+            ))
 
-    return TranscriptionResult(
-        segments=segments,
-        language=info.language or config.language or "en",
-    )
+        return TranscriptionResult(
+            segments=segments,
+            language=info.language or config.language or "en",
+        )
+    finally:
+        try:
+            del model
+        except Exception:
+            pass
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
 
 def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionResult:

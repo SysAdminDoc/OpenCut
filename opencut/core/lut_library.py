@@ -17,7 +17,7 @@ import math
 import os
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -386,7 +386,7 @@ def apply_lut(
         )
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", input_path,
     ]
 

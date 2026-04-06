@@ -58,7 +58,8 @@ def video_ai_upscale(job_id, filepath, data):
     if model not in ("realesrgan-x4plus", "realesrgan-x4plus-anime", "realesrgan-x2plus"):
         model = "realesrgan-x4plus"
 
-    if not rate_limit("ai_gpu"):
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
         raise ValueError("A ai_gpu operation is already running. Please wait.")
     try:
         from opencut.core.video_ai import upscale_video
@@ -74,7 +75,8 @@ def video_ai_upscale(job_id, filepath, data):
         )
         return {"output_path": out}
     finally:
-        rate_limit_release("ai_gpu")
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 @video_ai_bp.route("/video/ai/rembg", methods=["POST"])
@@ -98,7 +100,8 @@ def video_ai_rembg(job_id, filepath, data):
         bg_color = ""
     alpha_only = data.get("alpha_only", False)
 
-    if not rate_limit("ai_gpu"):
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
         raise ValueError("A ai_gpu operation is already running. Please wait.")
     try:
         from opencut.core.video_ai import remove_background
@@ -116,7 +119,8 @@ def video_ai_rembg(job_id, filepath, data):
         )
         return {"output_path": out}
     finally:
-        rate_limit_release("ai_gpu")
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 @video_ai_bp.route("/video/ai/interpolate", methods=["POST"])
@@ -127,7 +131,8 @@ def video_ai_interpolate(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     multiplier = safe_int(data.get("multiplier", 2), 2, min_val=2, max_val=8)
 
-    if not rate_limit("ai_gpu"):
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
         raise ValueError("A ai_gpu operation is already running. Please wait.")
     try:
         from opencut.core.video_ai import frame_interpolate
@@ -143,7 +148,8 @@ def video_ai_interpolate(job_id, filepath, data):
         )
         return {"output_path": out}
     finally:
-        rate_limit_release("ai_gpu")
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 @video_ai_bp.route("/video/ai/denoise", methods=["POST"])
@@ -158,8 +164,10 @@ def video_ai_denoise(job_id, filepath, data):
     strength = safe_float(data.get("strength", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
     _needs_gpu = method == "basicvsr"
+    _gpu_acquired = False
     if _needs_gpu:
-        if not rate_limit("ai_gpu"):
+        _gpu_acquired = rate_limit("ai_gpu")
+        if not _gpu_acquired:
             raise ValueError("A ai_gpu operation is already running. Please wait.")
     try:
         from opencut.core.video_ai import video_denoise
@@ -175,7 +183,7 @@ def video_ai_denoise(job_id, filepath, data):
         )
         return {"output_path": out}
     finally:
-        if _needs_gpu:
+        if _gpu_acquired:
             rate_limit_release("ai_gpu")
 
 
@@ -194,7 +202,8 @@ def video_ai_install(job_id, filepath, data):
     if not pkgs:
         raise ValueError(f"Unknown component: {component}")
 
-    if not rate_limit("model_install"):
+    acquired = rate_limit("model_install")
+    if not acquired:
         raise ValueError("A model_install operation is already running. Please wait.")
     try:
         for i, pkg in enumerate(pkgs):
@@ -203,7 +212,8 @@ def video_ai_install(job_id, filepath, data):
             safe_pip_install(pkg, timeout=600)
         return {"component": component}
     finally:
-        rate_limit_release("model_install")
+        if acquired:
+            rate_limit_release("model_install")
 
 
 # ---------------------------------------------------------------------------
@@ -415,7 +425,11 @@ def upscale_run(job_id, filepath, data):
     def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
     d = _resolve_output_dir(filepath, data.get("output_dir", ""))
-    out = upscale_with_preset(filepath, preset=data.get("preset", "fast"),
+    _valid_presets = {"fast", "balanced", "quality"}
+    _preset = data.get("preset", "fast")
+    if _preset not in _valid_presets:
+        _preset = "fast"
+    out = upscale_with_preset(filepath, preset=_preset,
                                scale=safe_int(data.get("scale", 2), 2, min_val=1, max_val=4),
                                output_dir=d, on_progress=_p)
     return {"output_path": out}

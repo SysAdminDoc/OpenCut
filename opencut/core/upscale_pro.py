@@ -161,6 +161,16 @@ def upscale_realesrgan(
             cap.release()
         if writer is not None:
             writer.release()
+        # Free GPU memory
+        try:
+            del upsampler
+        except Exception:
+            pass
+        try:
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
     if on_progress:
         on_progress(92, "Encoding with audio...")

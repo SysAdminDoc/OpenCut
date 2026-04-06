@@ -4,6 +4,7 @@ OpenCut Job System
 Shared job tracking state and helper functions used across all route modules.
 """
 
+import atexit
 import logging
 import threading
 import time
@@ -15,6 +16,7 @@ logger = logging.getLogger("opencut")
 # Bounded thread pool for background I/O (persistence, time recording)
 # Prevents unbounded thread creation under batch load
 _io_pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="oc-job-io")
+atexit.register(_io_pool.shutdown, wait=True)
 
 # ---------------------------------------------------------------------------
 # Thread-local job ID for log correlation
@@ -107,6 +109,7 @@ def _list_jobs_copy() -> list:
 
 def _update_job(job_id: str, **kwargs):
     """Update job fields. Records timing data on completion."""
+    job_copy_to_persist = None
     with job_lock:
         if job_id in jobs:
             jobs[job_id].update(kwargs)
@@ -117,7 +120,10 @@ def _update_job(job_id: str, **kwargs):
                 _schedule_record_time(job.get("type", ""), elapsed, job.get("filepath", ""))
             # Persist terminal job states to SQLite
             if kwargs.get("status") in ("complete", "error", "cancelled"):
-                _persist_job(jobs[job_id].copy())
+                job_copy_to_persist = jobs[job_id].copy()
+                _job_processes.pop(job_id, None)
+    if job_copy_to_persist is not None:
+        _persist_job(job_copy_to_persist)
 
 
 def _persist_job(job_dict):
@@ -219,10 +225,15 @@ def _start_periodic_cleanup():
             except Exception as e:
                 logger.debug("Periodic job cleanup error: %s", e)
 
-    t = threading.Thread(target=_periodic_cleanup_loop, daemon=True,
-                         name="opencut-job-cleanup")
-    t.start()
-    logger.debug("Started periodic job cleanup thread (every %ds)", _CLEANUP_INTERVAL)
+    try:
+        t = threading.Thread(target=_periodic_cleanup_loop, daemon=True,
+                             name="opencut-job-cleanup")
+        t.start()
+        logger.debug("Started periodic job cleanup thread (every %ds)", _CLEANUP_INTERVAL)
+    except Exception as e:
+        logger.warning("Failed to start cleanup thread: %s", e)
+        with _cleanup_timer_lock:
+            _cleanup_timer_started = False
 
 
 def _cleanup_old_jobs():

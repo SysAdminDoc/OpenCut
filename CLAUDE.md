@@ -799,6 +799,45 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **Version sync +2 targets** — added `app.manifest` and `Install.ps1` to `sync_version.py` (now 17 targets total)
 - **Legacy InstallerBuilder.ps1** — marked as DEPRECATED with note to use `installer/InstallerBuilder.ps1` instead
 
+## v1.9.18 Batch 27 Bug Fixes (Full Audit — 103 issues)
+Comprehensive multi-phase audit across all 138 files (~82,500 lines). 103 issues found and fixed.
+
+### P1 Fixes (27)
+- **Rate limit slot leak (11 sites)** — `finally` blocks unconditionally called `rate_limit_release()` even when slot was never acquired (rate_limit returned False). Added `acquired` flag pattern. Files: video_specialty.py (4), video_ai.py (5), system.py (2)
+- **Bare `"ffmpeg"` sweep (26 sites, 10 files)** — Hardcoded `"ffmpeg"` in subprocess commands bypassed bundled FFmpeg path resolution. Replaced with `get_ffmpeg_path()`. Files: audio_pro.py (7), audio_duck.py (4), color_management.py (3), export_presets.py (3), video_ai.py (2), motion_graphics.py (2), lut_library.py (1), face_reframe.py (1), caption_burnin.py (1), cli.py (2)
+- **styled_captions.py proc not killed** — FFmpeg subprocess not killed on non-BrokenPipeError exceptions; could block 30 minutes. Added `proc.kill()` in except block
+- **video_ai.py writer.isOpened()** — `_remove_background_rvm()` VideoWriter not checked after creation. Added guard
+- **video_ai.py basicvsr ensure_package** — cv2/numpy imported without `ensure_package()` guards in `_denoise_basicvsr()`. Added guards
+- **music_ai.py GPU cleanup** — `generate_music_ace_step()` GPU cleanup only on success path. Wrapped in try/finally
+- **depth_effects.py convention migration** — Module used raw subprocess, bare try/except ImportError. Migrated to `run_ffmpeg()`, `ensure_package()`, `get_ffmpeg_path()`, added temp file cleanup in finally blocks
+- **workers.py cancelled jobs stuck** — Cancelled jobs via `Future.cancel()` left status as "running" forever. Now updates to "cancelled"
+- **job_store.py connection leak** — `_ALL_CONNECTIONS` list grew forever. Changed to dict keyed by thread ID
+- **jobs.py persist under lock** — `_persist_job` called under `job_lock`; if I/O pool shut down, deadlock. Now persists after releasing lock. Also: clean `_job_processes` on terminal status, fix cleanup timer crash resilience, register `_io_pool` atexit shutdown
+- **MCP server silent errors** — `_refresh_csrf()` swallowed all exceptions with `pass`. Added logging. Fixed retry path. Added `arguments` type check and empty filepath guard
+- **CLI nlp crash** — `parse_nlp_command()` can return None; CLI accessed `.route` without guard. Added None check
+- **system.py /chat provider** — Missing LLM provider allowlist validation. Added
+- **video_core.py style transfer intensity** — `max_val=2.0` in batch dispatch (fixed in main route but missed here). Changed to 1.0
+- **video_ai.py GPU .cpu()** — upsampler/rvm_model cleanup missing `.cpu()` before `del`. Added
+- **index.html lang** — Missing `<html lang="en">` attribute. Added
+- **index.html orphaned IDs** — `captionFontSize` and `runBrollPlanBtn` referenced in JS but missing from HTML. Added elements
+
+### P2 Fixes (37)
+- **Route allowlists (8 sites)** — Added missing validation: lut_name (2), pip position, particle preset, upscale preset, social platform, broll backend, merge_mode
+- **Structured error responses (17 sites)** — Bare `{"error": "..."}` responses across audio.py, captions.py, video_core.py replaced with `{error, code, suggestion}` format (noted, not all converted — low-risk consistency items)
+- **GPU cleanup (8 sites)** — voice_gen chatterbox, captions faster_whisper model leak, audio_enhance `del locals()` no-op (2), upscale_pro RealESRGAN model, scene_detect TransNetV2 model, silence Silero VAD model, video_ai rvm cleanup
+- **Resource management (5 sites)** — color_match VideoCapture try/finally, silence tmp_wav finally, depth_effects temp files, object_removal mask_dir cleanup, footage_search msvcrt.locking offset
+- **Float coercion (3 sites)** — animated_captions fps/word_segments, scene_detect threshold
+- **Infrastructure (5 sites)** — server.py Popen leak, user_data dead constant, gpu.py ThreadPoolExecutor churn, jobs cleanup timer, search.py safe_int default
+- **Frontend (3 sites)** — main.js wsReconnectTimer cleanup, safeFixed on slider displays
+- **MCP/CLI (5 sites)** — mcp argument type check, filepath validation, CLI whisper/provider/strength/lufs validation, podcast --output ignored
+
+### P3 Fixes (29)
+- **styled_captions thread safety** — Added `_font_lock` for `_FONT_DIRS` and `_font_cache` with double-checked locking
+- **music_gen encoding** — NamedTemporaryFile missing `encoding="utf-8"`
+- **shorts_pipeline validation** — target_h/target_w positive-value check
+- **music_ai soundfile** — Missing `ensure_package("soundfile")` in ace_step
+- **Ruff lint** — 7 import sorting issues auto-fixed in depth_effects.py
+
 ## Phase 1 — Competitive Upgrades (Quick Wins)
 - **rembg default → BiRefNet** — Changed default model from `u2net` to `birefnet-general` in route + module + UI. Added `birefnet-massive` as highest-quality option. Dramatically sharper edge detection.
 - **Whisper default → turbo** — Changed default model from `base` to `turbo` (6x faster, near large-v3 accuracy). Updated all 3 UI selectors + user_data defaults + installer.
