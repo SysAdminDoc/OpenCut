@@ -17,7 +17,6 @@ OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
 
 # Per-file locks to prevent concurrent read-modify-write corruption.
 # Bounded: only OpenCut user-data files should be locked (< 20 files).
-_MAX_FILE_LOCKS = 50
 _file_locks = {}
 _file_locks_guard = threading.Lock()
 

@@ -15,6 +15,7 @@ import logging
 import math
 import os
 import subprocess
+import threading
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Set, Tuple
 
@@ -552,6 +553,7 @@ def get_action_word_indices(
 
 _FONT_DIRS = []
 _font_cache: Dict[str, str] = {}
+_font_lock = threading.Lock()
 
 
 def _get_font_dirs() -> List[str]:
@@ -560,24 +562,28 @@ def _get_font_dirs() -> List[str]:
     if _FONT_DIRS:
         return _FONT_DIRS
 
-    dirs = []
-    if os.name == "nt":
-        windir = os.environ.get("WINDIR", r"C:\Windows")
-        dirs.append(os.path.join(windir, "Fonts"))
-        localappdata = os.environ.get("LOCALAPPDATA", "")
-        if localappdata:
-            dirs.append(os.path.join(localappdata, "Microsoft", "Windows", "Fonts"))
-    else:
-        dirs.extend([
-            "/usr/share/fonts",
-            "/usr/local/share/fonts",
-            os.path.expanduser("~/.fonts"),
-            os.path.expanduser("~/.local/share/fonts"),
-            "/Library/Fonts",
-            "/System/Library/Fonts",
-        ])
+    with _font_lock:
+        if _FONT_DIRS:
+            return _FONT_DIRS
 
-    _FONT_DIRS = [d for d in dirs if os.path.isdir(d)]
+        dirs = []
+        if os.name == "nt":
+            windir = os.environ.get("WINDIR", r"C:\Windows")
+            dirs.append(os.path.join(windir, "Fonts"))
+            localappdata = os.environ.get("LOCALAPPDATA", "")
+            if localappdata:
+                dirs.append(os.path.join(localappdata, "Microsoft", "Windows", "Fonts"))
+        else:
+            dirs.extend([
+                "/usr/share/fonts",
+                "/usr/local/share/fonts",
+                os.path.expanduser("~/.fonts"),
+                os.path.expanduser("~/.local/share/fonts"),
+                "/Library/Fonts",
+                "/System/Library/Fonts",
+            ])
+
+        _FONT_DIRS = [d for d in dirs if os.path.isdir(d)]
     return _FONT_DIRS
 
 
@@ -586,18 +592,22 @@ def find_font(filename: str) -> Optional[str]:
     if filename in _font_cache:
         return _font_cache[filename]
 
-    if os.path.isfile(filename):
-        _font_cache[filename] = filename
-        return filename
+    with _font_lock:
+        if filename in _font_cache:
+            return _font_cache[filename]
 
-    fn_lower = filename.lower()
-    for d in _get_font_dirs():
-        for root, _, files in os.walk(d):
-            for f in files:
-                if f.lower() == fn_lower:
-                    path = os.path.join(root, f)
-                    _font_cache[filename] = path
-                    return path
+        if os.path.isfile(filename):
+            _font_cache[filename] = filename
+            return filename
+
+        fn_lower = filename.lower()
+        for d in _get_font_dirs():
+            for root, _, files in os.walk(d):
+                for f in files:
+                    if f.lower() == fn_lower:
+                        path = os.path.join(root, f)
+                        _font_cache[filename] = path
+                        return path
 
     return None
 
@@ -1029,6 +1039,12 @@ def render_styled_caption_video(
 
     except BrokenPipeError:
         logger.warning("FFmpeg pipe closed early")
+    except Exception:
+        try:
+            proc.kill()
+        except Exception:
+            pass
+        raise
     finally:
         try:
             proc.stdin.close()

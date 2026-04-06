@@ -296,7 +296,7 @@ def concatenate_audio(
         on_progress(10, f"Concatenating {len(input_paths)} audio files...")
 
     # Create concat list file
-    list_file = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False)
+    list_file = tempfile.NamedTemporaryFile(mode="w", suffix=".txt", delete=False, encoding="utf-8")
     try:
         for p in input_paths:
             escaped = p.replace("'", "'\\''")

@@ -559,7 +559,7 @@ def _show_startup_notification(port):
         return
     with suppress(Exception):
         # Use PowerShell to show a native Windows toast (no extra deps needed)
-        _sp.Popen(
+        _sp.run(
             ["powershell", "-WindowStyle", "Hidden", "-Command",
              "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] | Out-Null; "
              "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null; "
@@ -571,7 +571,8 @@ def _show_startup_notification(port):
              "$toast = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('OpenCut'); "
              "$toast.Show([Windows.UI.Notifications.ToastNotification]::new($xml))"],
             creationflags=0x08000000,  # CREATE_NO_WINDOW
-            stdout=_sp.DEVNULL, stderr=_sp.DEVNULL
+            stdout=_sp.DEVNULL, stderr=_sp.DEVNULL,
+            timeout=10, check=False
         )
 
 

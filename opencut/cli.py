@@ -291,12 +291,11 @@ def podcast(input_file, output, speakers, hf_token, min_segment, seq_name):
     for i, speaker in enumerate(result.speakers):
         source_map[speaker] = input_file  # Same file, different tracks
 
-    output_xml = os.path.splitext(input_file)[0] + "_multicam.xml"
     xml_result = generate_multicam_xml(
         cuts=switches,
         source_files=source_map,
         sequence_name=f"Multicam - {os.path.basename(input_file)}",
-        output_path=output_xml,
+        output_path=output,
     )
     console.print(f"\n[green]Multicam XML exported:[/green] {xml_result['output']}")
     console.print(f"  Cuts: {xml_result['cuts_count']}, Duration: {xml_result['duration']:.1f}s\n")
@@ -814,7 +813,7 @@ def auto_zoom(file, zoom_amount, easing, output_dir, apply):
 
     if apply and keyframes:
         # Apply zoom via FFmpeg zoompan filter
-        from .helpers import get_video_info, run_ffmpeg
+        from .helpers import get_ffmpeg_path, get_video_info, run_ffmpeg
         info = get_video_info(file)
         fps = info.get("fps", 30)
         output_path = f"{base}_autozoom{ext}"
@@ -822,7 +821,7 @@ def auto_zoom(file, zoom_amount, easing, output_dir, apply):
         # Build zoompan filter — simplified: use first keyframe zoom for now
         zoom_val = keyframes[0].get("zoom", zoom_amount) if keyframes else zoom_amount
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-i", file,
             "-vf", f"zoompan=z={zoom_val}:d=1:s={info['width']}x{info['height']}:fps={fps}",
             "-c:a", "copy", output_path,
@@ -938,6 +937,10 @@ def nlp(command_text, file, provider, model, api_key):
         progress.update(task, description=f"[green]Parsed ({elapsed:.1f}s)")
         progress.stop()
 
+    if parsed is None:
+        console.print("[red]Could not parse command.[/red]")
+        return
+
     console.print(f"[bold]Matched route:[/bold] [cyan]{parsed.route}[/cyan]")
     console.print(f"[bold]Parameters:[/bold] {parsed.params}\n")
 
@@ -969,8 +972,8 @@ def denoise(input_file, output, method, strength):
     """Remove background noise from audio/video."""
     print_banner()
 
+    from .helpers import get_ffmpeg_path, run_ffmpeg
     from .helpers import output_path as _out_path
-    from .helpers import run_ffmpeg
 
     if output is None:
         output = _out_path(input_file, "denoised")
@@ -997,7 +1000,7 @@ def denoise(input_file, output, method, strength):
             af = f"agate=threshold={0.01 + strength * 0.04}"
 
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-i", input_file, "-af", af,
             "-c:v", "copy", output,
         ])

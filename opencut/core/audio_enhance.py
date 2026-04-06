@@ -278,13 +278,22 @@ def enhance_speech(
             with suppress(OSError):
                 os.remove(temp_wav)
         # Free GPU memory — delete all tensor references before clearing cache
-        for _var in ("audio", "mono", "sr"):
-            with suppress(Exception):
-                if _var in locals():
-                    obj = locals()[_var]
-                    if hasattr(obj, "cpu"):
-                        obj.cpu()  # move off GPU before delete
-                    del obj
+        try:
+            if hasattr(audio, "cpu"):  # noqa: F821
+                audio.cpu()  # noqa: F821
+            del audio  # noqa: F821
+        except Exception:
+            pass
+        try:
+            if hasattr(mono, "cpu"):  # noqa: F821
+                mono.cpu()  # noqa: F821
+            del mono  # noqa: F821
+        except Exception:
+            pass
+        try:
+            del sr  # noqa: F821
+        except Exception:
+            pass
         with suppress(Exception):
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
@@ -392,10 +401,14 @@ def enhance_speech_clearvoice(
             with suppress(OSError):
                 os.remove(temp_wav)
         # Release model and result tensors before clearing GPU cache
-        for _var in ("cv", "result"):
-            with suppress(Exception):
-                if _var in locals():
-                    del locals()[_var]
+        try:
+            del cv  # noqa: F821
+        except Exception:
+            pass
+        try:
+            del result  # noqa: F821
+        except Exception:
+            pass
         with suppress(Exception):
             import torch
             if torch.cuda.is_available():

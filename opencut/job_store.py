@@ -38,7 +38,7 @@ _DB_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "jobs.db")
 _LOCAL = threading.local()
 _INIT_LOCK = threading.Lock()
 _INITIALIZED = False
-_ALL_CONNECTIONS = []  # Track connections for shutdown cleanup
+_ALL_CONNECTIONS = {}  # thread_id -> Connection; dead thread entries cleaned in close_all
 _CONN_LOCK = threading.Lock()
 
 # How long to keep completed jobs in the database
@@ -56,14 +56,17 @@ def _get_conn() -> sqlite3.Connection:
         conn.execute("PRAGMA synchronous=NORMAL")
         _LOCAL.conn = conn
         with _CONN_LOCK:
-            _ALL_CONNECTIONS.append(conn)
+            _ALL_CONNECTIONS[threading.get_ident()] = conn
     return conn
 
 
 def close_all_connections():
-    """Close all tracked SQLite connections. Call on server shutdown."""
+    """Close all tracked SQLite connections. Call on server shutdown.
+
+    Also prunes connections from threads that are no longer alive.
+    """
     with _CONN_LOCK:
-        for conn in _ALL_CONNECTIONS:
+        for conn in _ALL_CONNECTIONS.values():
             try:
                 conn.close()
             except Exception:

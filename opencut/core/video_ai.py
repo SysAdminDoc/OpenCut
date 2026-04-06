@@ -19,7 +19,7 @@ import tempfile
 from pathlib import Path
 from typing import Callable, Dict, Optional
 
-from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
+from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info, run_ffmpeg
 from opencut.helpers import output_path as _output_path
 
 logger = logging.getLogger("opencut")
@@ -136,7 +136,7 @@ def upscale_video(
         # Extract frames
         info = get_video_info(input_path)
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             os.path.join(frames_in, "frame_%06d.png"),
         ])
@@ -169,7 +169,7 @@ def upscale_video(
 
         # Reassemble with audio
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y",
             "-framerate", str(info["fps"]),
             "-i", os.path.join(frames_out, "frame_%06d.png"),
@@ -190,6 +190,7 @@ def upscale_video(
         shutil.rmtree(tmp_dir, ignore_errors=True)
         # Free GPU memory
         try:
+            upsampler.cpu()
             del upsampler
             if device == "cuda":
                 import torch
@@ -277,7 +278,7 @@ def remove_background(
             on_progress(10, "Extracting frames...")
 
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             os.path.join(frames_in, "frame_%06d.png"),
         ])
@@ -319,7 +320,7 @@ def remove_background(
         # Use ProRes for alpha, H.264 for opaque
         if not bg_color and not bg_image and not alpha_only:
             run_ffmpeg([
-                "ffmpeg", "-hide_banner", "-loglevel", "error",
+                get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                 "-y",
                 "-framerate", str(info["fps"]),
                 "-i", os.path.join(frames_out, "frame_%06d.png"),
@@ -332,7 +333,7 @@ def remove_background(
             ])
         else:
             run_ffmpeg([
-                "ffmpeg", "-hide_banner", "-loglevel", "error",
+                get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
                 "-y",
                 "-framerate", str(info["fps"]),
                 "-i", os.path.join(frames_out, "frame_%06d.png"),
@@ -440,6 +441,8 @@ def _remove_background_rvm(
             fps,
             (width, height),
         )
+        if not writer.isOpened():
+            raise RuntimeError("Cannot create video writer")
         tmp_dir = None
 
     try:
@@ -512,7 +515,7 @@ def _remove_background_rvm(
             if not bg_color and not alpha_only:
                 # ProRes 4444 for alpha
                 run_ffmpeg([
-                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
                     "-framerate", str(fps),
                     "-i", os.path.join(frames_out, "frame_%06d.png"),
                     "-i", input_path,
@@ -524,7 +527,7 @@ def _remove_background_rvm(
                 ])
             else:
                 run_ffmpeg([
-                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
                     "-framerate", str(fps),
                     "-i", os.path.join(frames_out, "frame_%06d.png"),
                     "-i", input_path,
@@ -540,7 +543,7 @@ def _remove_background_rvm(
             temp_no_audio = output_path + ".tmp.mp4"
             os.rename(output_path, temp_no_audio)
             run_ffmpeg([
-                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
                 "-i", temp_no_audio, "-i", input_path,
                 "-map", "0:v", "-map", "1:a?",
                 "-c:v", "copy", "-c:a", "aac", "-b:a", "192k",
@@ -570,7 +573,9 @@ def _remove_background_rvm(
             shutil.rmtree(tmp_dir, ignore_errors=True)
         # Free GPU memory
         try:
+            rvm_model.cpu()
             del rvm_model
+            del rec
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
         except Exception:
@@ -625,7 +630,7 @@ def frame_interpolate(
     )
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-y", "-i", input_path,
         "-vf", vf,
         "-c:v", "libx264", "-crf", "18", "-preset", "medium",
@@ -676,7 +681,7 @@ def video_denoise(
         vf = f"hqdn3d={s}:{s}:{s*0.6}:{s*0.6}"
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
         "-y", "-i", input_path,
         "-vf", vf,
         "-c:a", "copy",
@@ -703,6 +708,10 @@ def _denoise_basicvsr(
     """
     if not ensure_package("basicsr", "basicsr", on_progress):
         raise RuntimeError("basicsr not installed. Run: pip install basicsr")
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("opencv not installed. Run: pip install opencv-python-headless")
+    if not ensure_package("numpy", "numpy", on_progress):
+        raise RuntimeError("numpy not installed. Run: pip install numpy")
 
     import cv2
     import numpy as np
@@ -802,7 +811,7 @@ def _denoise_basicvsr(
 
     try:
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-i", tmp_video, "-i", input_path,
             "-map", "0:v", "-map", "1:a?",
             "-c:v", "libx264", "-crf", "18", "-preset", "medium",

@@ -19,7 +19,7 @@ import logging
 import os
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -259,7 +259,7 @@ def export_with_preset(
         return _export_gif(input_path, output_path, preset, on_progress)
 
     # Build FFmpeg command
-    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", input_path]
+    cmd = [get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y", "-i", input_path]
 
     # Audio-only export
     if preset.get("audio_only"):
@@ -369,7 +369,7 @@ def _export_gif(
         if on_progress:
             on_progress(20, "Generating color palette...")
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path,
             "-vf", f"fps={fps},scale={w}:-1:flags=lanczos,palettegen=stats_mode=diff",
             palette,
@@ -379,7 +379,7 @@ def _export_gif(
         if on_progress:
             on_progress(50, "Encoding GIF...")
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error",
             "-y", "-i", input_path, "-i", palette,
             "-lavfi", f"fps={fps},scale={w}:-1:flags=lanczos[x];[x][1:v]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle",
             output_path,

@@ -55,6 +55,7 @@ class _FileLock:
             try:
                 self._fh.write(" ")
                 self._fh.flush()
+                self._fh.seek(0)
                 msvcrt.locking(self._fh.fileno(), msvcrt.LK_LOCK, 1)
             except Exception:
                 pass

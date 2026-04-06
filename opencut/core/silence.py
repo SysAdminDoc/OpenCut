@@ -175,70 +175,83 @@ def detect_silences_vad(
     )
     (get_speech_timestamps, _, read_audio, _, _) = utils
 
-    # Silero VAD requires 16kHz mono audio — read_audio handles conversion
+    tmp_wav = None
     try:
-        wav = read_audio(filepath, sampling_rate=16000)
-    except Exception:
-        # Fallback: extract audio with FFmpeg first, then load
-        import os
-        import tempfile
-        fd, tmp_wav = tempfile.mkstemp(suffix=".wav", prefix="opencut_vad_")
-        os.close(fd)
-        _extract_audio_wav(filepath, tmp_wav)
-        if not os.path.isfile(tmp_wav):
-            raise RuntimeError(f"Audio extraction failed for '{filepath}' — FFmpeg produced no output")
-        wav = read_audio(tmp_wav, sampling_rate=16000)
+        # Silero VAD requires 16kHz mono audio — read_audio handles conversion
         try:
-            os.remove(tmp_wav)
-        except OSError:
-            pass
+            wav = read_audio(filepath, sampling_rate=16000)
+        except Exception:
+            # Fallback: extract audio with FFmpeg first, then load
+            import os
+            import tempfile
+            fd, tmp_wav = tempfile.mkstemp(suffix=".wav", prefix="opencut_vad_")
+            os.close(fd)
+            _extract_audio_wav(filepath, tmp_wav)
+            if not os.path.isfile(tmp_wav):
+                raise RuntimeError(f"Audio extraction failed for '{filepath}' — FFmpeg produced no output")
+            wav = read_audio(tmp_wav, sampling_rate=16000)
 
-    # Get speech timestamps from Silero VAD
-    speech_timestamps = get_speech_timestamps(
-        wav,
-        model,
-        sampling_rate=16000,
-        min_silence_duration_ms=int(min_duration * 1000),
-        min_speech_duration_ms=100,
-        return_seconds=True,
-    )
+        # Get speech timestamps from Silero VAD
+        speech_timestamps = get_speech_timestamps(
+            wav,
+            model,
+            sampling_rate=16000,
+            min_silence_duration_ms=int(min_duration * 1000),
+            min_speech_duration_ms=100,
+            return_seconds=True,
+        )
 
-    # Determine total duration
-    if file_duration <= 0:
-        file_duration = len(wav) / 16000.0
+        # Determine total duration
+        if file_duration <= 0:
+            file_duration = len(wav) / 16000.0
 
-    # Invert speech timestamps to get silence segments
-    silences = []
-    prev_end = 0.0
+        # Invert speech timestamps to get silence segments
+        silences = []
+        prev_end = 0.0
 
-    for ts in speech_timestamps:
-        # Handle both dict format {"start": x, "end": y} and tuple format (start, end)
-        if isinstance(ts, dict):
-            speech_start = float(ts.get("start", 0))
-            speech_end = float(ts.get("end", 0))
-        elif isinstance(ts, (list, tuple)) and len(ts) >= 2:
-            speech_start = float(ts[0])
-            speech_end = float(ts[1])
-        else:
-            continue
+        for ts in speech_timestamps:
+            # Handle both dict format {"start": x, "end": y} and tuple format (start, end)
+            if isinstance(ts, dict):
+                speech_start = float(ts.get("start", 0))
+                speech_end = float(ts.get("end", 0))
+            elif isinstance(ts, (list, tuple)) and len(ts) >= 2:
+                speech_start = float(ts[0])
+                speech_end = float(ts[1])
+            else:
+                continue
 
-        if speech_start > prev_end + min_duration:
+            if speech_start > prev_end + min_duration:
+                silences.append(TimeSegment(
+                    start=prev_end,
+                    end=speech_start,
+                    label="silence",
+                ))
+            prev_end = speech_end
+
+        # Trailing silence
+        if file_duration > prev_end + min_duration:
             silences.append(TimeSegment(
                 start=prev_end,
-                end=speech_start,
+                end=file_duration,
                 label="silence",
             ))
-        prev_end = speech_end
 
-    # Trailing silence
-    if file_duration > prev_end + min_duration:
-        silences.append(TimeSegment(
-            start=prev_end,
-            end=file_duration,
-            label="silence",
-        ))
-
-    return silences
+        return silences
+    finally:
+        # Clean up temp file
+        if tmp_wav is not None:
+            try:
+                import os
+                os.remove(tmp_wav)
+            except OSError:
+                pass
+        # Free GPU memory
+        try:
+            del model
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
 
 def _extract_audio_wav(input_path: str, output_path: str) -> None:
