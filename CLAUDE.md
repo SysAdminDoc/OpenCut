@@ -848,6 +848,14 @@ Comprehensive multi-phase audit across all 138 files (~82,500 lines). 103 issues
 - **video_ai.py fps KeyError** — Bare `info["fps"]` changed to `info.get("fps", 30)` in `frame_interpolate()`
 - **CSS missing rules** — Added `.cap-hint`, `.badge`, `.btn-xs`, `.result-stats` rules. Fixed duplicate `.result-area` border-radius inconsistency (18px → var(--r-md))
 
+## v1.9.18 Batch 29 Bug Fixes (Third-Pass Audit — 12 issues)
+- **chat_editor.py multi-turn broken (P1)** — `query_llm()` called with non-existent `messages` kwarg (TypeError at runtime). Multi-turn conversation completely non-functional. Fixed by embedding conversation history in the prompt text. Also added `_sessions_lock` for thread-safe session dict access
+- **Bare ffmpeg/ffprobe (3 final)** — styled_captions.py Popen used bare `"ffmpeg"` (bypasses run_ffmpeg auto-resolve), audio_enhance.py used bare `"ffprobe"` despite resolving ffprobe_path, color_match.py fallback subprocess.run path used bare `"ffmpeg"`. All replaced with `get_ffmpeg_path()`/`ffprobe_path`
+- **system.py double rate_limit_release** — install_whisper and whisper_reinstall had explicit `rate_limit_release()` before raise + finally release. Removed explicit calls (acquired flag handles it)
+- **animated_captions.py** — bare `"ffmpeg"` replaced with `get_ffmpeg_path()`, `_group_words_into_lines` bare dict access changed to `.get()` with defaults
+- **engine_registry.py** — `clear_cache()` now acquires `self._lock` (was mutating dict without lock)
+- **server.py** — PID file `open()` calls now have `encoding="utf-8"`
+
 ## Phase 1 — Competitive Upgrades (Quick Wins)
 - **rembg default → BiRefNet** — Changed default model from `u2net` to `birefnet-general` in route + module + UI. Added `birefnet-massive` as highest-quality option. Dramatically sharper edge detection.
 - **Whisper default → turbo** — Changed default model from `base` to `turbo` (6x faster, near large-v3 accuracy). Updated all 3 UI selectors + user_data defaults + installer.
