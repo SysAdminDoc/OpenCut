@@ -50,7 +50,7 @@ def _is_video(filepath):
     try:
         ffprobe_path = get_ffprobe_path()
         result = subprocess.run(
-            ["ffprobe", "-v", "quiet", "-select_streams", "v:0",
+            [ffprobe_path, "-v", "quiet", "-select_streams", "v:0",
              "-show_entries", "stream=codec_type", "-of", "csv=p=0", filepath],
             capture_output=True, text=True, timeout=10, env=_binary_env(ffprobe_path), check=False,
         )

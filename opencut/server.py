@@ -310,7 +310,7 @@ def _write_pid(port: int):
         # Atomic write: temp file + rename to prevent partial reads
         fd, tmp_path = tempfile.mkstemp(dir=pid_dir, suffix=".tmp", prefix="server.pid.")
         try:
-            with os.fdopen(fd, "w") as f:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
                 f.write(f"{os.getpid()}\n{port}\n")
             os.replace(tmp_path, PID_FILE)
         except BaseException:
@@ -326,7 +326,7 @@ def _read_pid():
     """Read PID and port from file. Returns (pid, port) or (None, None)."""
     try:
         if os.path.exists(PID_FILE):
-            with open(PID_FILE, "r") as f:
+            with open(PID_FILE, "r", encoding="utf-8") as f:
                 lines = f.read().strip().split("\n")
             pid = int(lines[0]) if lines else None
             port = int(lines[1]) if len(lines) > 1 else None
