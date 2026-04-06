@@ -313,7 +313,7 @@ def video_highlights(job_id, filepath, data):
     max_duration = safe_float(data.get("max_duration", 60.0), 60.0, min_val=10.0, max_val=600.0)
     transcript = data.get("transcript", None)
     llm_provider = data.get("llm_provider", "ollama")
-    if llm_provider not in ("ollama", "openai", "anthropic"):
+    if llm_provider not in ("ollama", "openai", "anthropic", "gemini"):
         llm_provider = "ollama"
     llm_model = data.get("llm_model", "")
     llm_api_key = data.get("llm_api_key", "")

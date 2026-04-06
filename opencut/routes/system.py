@@ -1411,7 +1411,7 @@ def llm_test():
     """Test LLM connectivity with a simple prompt."""
     data = request.get_json(force=True)
 
-    _VALID_LLM_PROVIDERS = {"ollama", "openai", "anthropic"}
+    _VALID_LLM_PROVIDERS = {"ollama", "openai", "anthropic", "gemini"}
     provider = data.get("provider", "ollama").strip().lower()
     if provider not in _VALID_LLM_PROVIDERS:
         return jsonify({"success": False, "error": f"Invalid provider: {provider}. Must be one of: {', '.join(sorted(_VALID_LLM_PROVIDERS))}"}), 400
@@ -1628,8 +1628,8 @@ def chat_message():
 
         # Build LLM config from settings or request
         provider = data.get("llm_provider", "ollama")
-        if provider not in ("ollama", "openai", "anthropic"):
-            return jsonify({"error": "Invalid provider", "code": "INVALID_INPUT", "suggestion": "Use ollama, openai, or anthropic"}), 400
+        if provider not in ("ollama", "openai", "anthropic", "gemini"):
+            return jsonify({"error": "Invalid provider", "code": "INVALID_INPUT", "suggestion": "Use ollama, openai, anthropic, or gemini"}), 400
         model = data.get("llm_model", "")
         api_key = data.get("llm_api_key", "")
 

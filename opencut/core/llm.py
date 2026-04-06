@@ -2,7 +2,7 @@
 OpenCut LLM Abstraction Module
 
 Shared LLM interface for highlight extraction, video summarization,
-and the shorts pipeline. Supports Ollama (local), OpenAI, and Anthropic.
+and the shorts pipeline. Supports Ollama (local), OpenAI, Anthropic, and Google Gemini.
 
 Uses stdlib urllib.request — zero pip dependencies.
 """
@@ -22,8 +22,8 @@ logger = logging.getLogger("opencut")
 @dataclass
 class LLMConfig:
     """Configuration for LLM provider."""
-    provider: str = "ollama"  # "ollama", "openai", "anthropic"
-    model: str = "llama3"
+    provider: str = "ollama"  # "ollama", "openai", "anthropic", "gemini"
+    model: str = "llama3.2"
     api_key: str = ""
     base_url: str = "http://localhost:11434"
     temperature: float = 0.3
@@ -123,7 +123,7 @@ def _query_openai(prompt, system_prompt, config):
         "model": config.model,
         "messages": messages,
         "temperature": config.temperature,
-        "max_tokens": config.max_tokens,
+        "max_completion_tokens": config.max_tokens,
     }
 
     data = _http_json(url, data=body, headers=headers, timeout=60)
@@ -189,6 +189,48 @@ def _query_anthropic(prompt, system_prompt, config):
     )
 
 
+def _query_gemini(prompt, system_prompt, config):
+    """Query Google Gemini API."""
+    if not config.api_key:
+        raise RuntimeError("Gemini API key is required. Set config.api_key.")
+
+    url = (
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{config.model}:generateContent?key={config.api_key}"
+    )
+
+    body = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": config.temperature,
+            "maxOutputTokens": config.max_tokens,
+        },
+    }
+    if system_prompt:
+        body["systemInstruction"] = {"parts": [{"text": system_prompt}]}
+
+    data = _http_json(url, data=body, timeout=60)
+
+    text = ""
+    tokens = 0
+    try:
+        text = data["candidates"][0]["content"]["parts"][0]["text"]
+    except (KeyError, IndexError):
+        text = json.dumps(data)
+    try:
+        usage = data.get("usageMetadata", {})
+        tokens = usage.get("promptTokenCount", 0) + usage.get("candidatesTokenCount", 0)
+    except Exception:
+        pass
+
+    return LLMResponse(
+        text=text,
+        provider="gemini",
+        model=config.model,
+        tokens_used=tokens,
+    )
+
+
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
@@ -196,6 +238,7 @@ _PROVIDERS = {
     "ollama": _query_ollama,
     "openai": _query_openai,
     "anthropic": _query_anthropic,
+    "gemini": _query_gemini,
 }
 
 
@@ -219,7 +262,7 @@ def query_llm(prompt, config=None, system_prompt="", on_progress=None):
     handler = _PROVIDERS.get(provider)
     if handler is None:
         return LLMResponse(
-            text=f"Unknown LLM provider: '{provider}'. Use 'ollama', 'openai', or 'anthropic'.",
+            text=f"Unknown LLM provider: '{provider}'. Use 'ollama', 'openai', 'anthropic', or 'gemini'.",
             provider=provider,
             model=config.model,
         )
@@ -278,6 +321,13 @@ def check_llm_reachable(config=None):
             result["models"] = [config.model]
         else:
             result["error"] = "Anthropic API key not configured"
+
+    elif provider == "gemini":
+        if config.api_key:
+            result["available"] = True
+            result["models"] = [config.model]
+        else:
+            result["error"] = "Gemini API key not configured"
 
     else:
         result["error"] = f"Unknown provider: {provider}"
