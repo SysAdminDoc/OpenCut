@@ -174,6 +174,25 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/remove/watermark",
     "/video/upscale/run",
     "/video/multicam-xml",
+    # v1.9.18 additions
+    "/captions",
+    "/captions/whisperx",
+    "/full",
+    "/transcript",
+    "/video/ai/install",
+    "/video/color/convert",
+    "/video/color/correct",
+    "/video/color/external-lut",
+    "/video/emotion-highlights",
+    "/video/face/blur",
+    "/video/face/swap",
+    "/video/lut/generate-ai",
+    "/video/lut/generate-all",
+    "/video/lut/generate-from-ref",
+    "/video/particles/apply",
+    "/video/speed/change",
+    "/video/speed/ramp",
+    "/video/speed/reverse",
 })
 
 

@@ -266,9 +266,8 @@ def _upload_youtube(
             },
             method="POST",
         )
-        resp = urllib.request.urlopen(req, timeout=30)
-        upload_url = resp.headers.get("Location")
-        resp.close()
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            upload_url = resp.headers.get("Location")
 
         if not upload_url:
             return UploadResult(platform="youtube", success=False, error="Failed to get upload URL")
@@ -296,9 +295,8 @@ def _upload_youtube(
                 }
                 req = urllib.request.Request(upload_url, data=chunk, headers=headers, method="PUT")
                 try:
-                    resp = urllib.request.urlopen(req, timeout=300)
-                    body = resp.read()
-                    resp.close()
+                    with urllib.request.urlopen(req, timeout=300) as resp:
+                        body = resp.read()
                 except urllib.error.HTTPError as e:
                     if e.code == 308:
                         # Resume incomplete — read and discard response
@@ -364,11 +362,14 @@ def _refresh_youtube_token(auth: PlatformAuth) -> Optional[PlatformAuth]:
             data=data,
             headers={"Content-Type": "application/x-www-form-urlencoded"},
         )
-        resp = urllib.request.urlopen(req, timeout=10)
-        result = json.loads(resp.read())
-        resp.close()
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            result = json.loads(resp.read())
 
-        auth.access_token = result["access_token"]
+        new_token = result.get("access_token")
+        if not new_token:
+            logger.error("YouTube token refresh response missing access_token")
+            return None
+        auth.access_token = new_token
         auth.expires_at = time.time() + result.get("expires_in", 3600)
 
         creds = _load_credentials()
@@ -439,9 +440,8 @@ def _upload_tiktok(
                 "Content-Type": "application/json; charset=UTF-8",
             },
         )
-        resp = urllib.request.urlopen(req, timeout=30)
-        init_result = json.loads(resp.read())
-        resp.close()
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            init_result = json.loads(resp.read())
 
         publish_id = init_result.get("data", {}).get("publish_id", "")
         upload_url = init_result.get("data", {}).get("upload_url", "")
@@ -452,22 +452,33 @@ def _upload_tiktok(
         if on_progress:
             on_progress(15, "Uploading to TikTok...")
 
-        # Step 2: Upload file
-        with open(filepath, "rb") as f:
-            video_data = f.read()
+        # Step 2: Upload file in 10MB chunks
+        chunk_size = 10 * 1024 * 1024
+        uploaded = 0
 
-        req = urllib.request.Request(
-            upload_url,
-            data=video_data,
-            headers={
-                "Content-Type": "video/mp4",
-                "Content-Length": str(len(video_data)),
-                "Content-Range": f"bytes 0-{len(video_data) - 1}/{len(video_data)}",
-            },
-            method="PUT",
-        )
-        resp = urllib.request.urlopen(req, timeout=600)
-        resp.close()
+        with open(filepath, "rb") as f:
+            while uploaded < file_size:
+                chunk = f.read(chunk_size)
+                if not chunk:
+                    break
+                end = min(uploaded + len(chunk), file_size)
+                req = urllib.request.Request(
+                    upload_url,
+                    data=chunk,
+                    headers={
+                        "Content-Type": "video/mp4",
+                        "Content-Length": str(len(chunk)),
+                        "Content-Range": f"bytes {uploaded}-{end - 1}/{file_size}",
+                    },
+                    method="PUT",
+                )
+                with urllib.request.urlopen(req, timeout=300) as resp:
+                    resp.read()
+
+                uploaded += len(chunk)
+                if on_progress:
+                    pct = 15 + int(uploaded / file_size * 70)
+                    on_progress(pct, f"Uploading... {uploaded / (1024*1024):.0f}MB / {file_size / (1024*1024):.0f}MB")
 
         if on_progress:
             on_progress(90, "Finalizing...")
@@ -482,9 +493,8 @@ def _upload_tiktok(
                 "Content-Type": "application/json",
             },
         )
-        resp = urllib.request.urlopen(req, timeout=30)
-        resp.read()  # Consume response body
-        resp.close()
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            resp.read()  # Consume response body
 
         if on_progress:
             on_progress(100, "Upload complete!")
@@ -561,9 +571,8 @@ def _upload_instagram(
                 "Content-Type": "application/json",
             },
         )
-        resp = urllib.request.urlopen(req, timeout=30)
-        create_result = json.loads(resp.read())
-        resp.close()
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            create_result = json.loads(resp.read())
 
         container_id = create_result.get("id", "")
         if not container_id:
@@ -580,9 +589,8 @@ def _upload_instagram(
                 f"https://graph.facebook.com/v19.0/{container_id}?fields=status_code",
                 headers={"Authorization": f"Bearer {auth.access_token}"},
             )
-            resp = urllib.request.urlopen(req, timeout=10)
-            status = json.loads(resp.read())
-            resp.close()
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                status = json.loads(resp.read())
 
             code = status.get("status_code", "")
             if code == "FINISHED":
@@ -610,9 +618,8 @@ def _upload_instagram(
                 "Content-Type": "application/json",
             },
         )
-        resp = urllib.request.urlopen(req, timeout=30)
-        pub_result = json.loads(resp.read())
-        resp.close()
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            pub_result = json.loads(resp.read())
 
         media_id = pub_result.get("id", "")
 

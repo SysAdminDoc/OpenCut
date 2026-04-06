@@ -711,7 +711,8 @@ def video_emotion_highlights(job_id, filepath, data):
     min_intensity = safe_float(data.get("min_intensity", 0.6), 0.6, min_val=0.1, max_val=1.0)
     min_duration = safe_float(data.get("min_duration", 2.0), 2.0, min_val=0.5, max_val=30.0)
 
-    if not rate_limit("gpu_job"):
+    acquired = rate_limit("gpu_job")
+    if not acquired:
         raise ValueError("A gpu_job operation is already running. Please wait.")
     try:
         from opencut.core.emotion_highlights import (
@@ -752,4 +753,5 @@ def video_emotion_highlights(job_id, filepath, data):
             "samples_analyzed": len(curve.samples),
         }
     finally:
-        rate_limit_release("gpu_job")
+        if acquired:
+            rate_limit_release("gpu_job")

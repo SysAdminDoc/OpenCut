@@ -257,7 +257,8 @@ def create_app(config=None):
     def handle_runtime_error(e):
         """Return 500 for unhandled RuntimeErrors."""
         logger.exception("Unhandled RuntimeError: %s", e)
-        return jsonify({"error": str(e)}), 500
+        err_msg = str(e)[:200] if str(e) else "Internal server error"
+        return jsonify({"error": err_msg, "code": "INTERNAL_ERROR"}), 500
 
     @_app.errorhandler(500)
     def handle_internal_error(e):

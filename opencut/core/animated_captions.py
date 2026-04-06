@@ -138,7 +138,8 @@ def render_animated_captions(
 
     preset = ANIMATION_PRESETS.get(animation, ANIMATION_PRESETS["pop"])
     info = get_video_info(video_path)
-    w, h = info["width"], info["height"]
+    w = int(info.get("width", 1920))
+    h = int(info.get("height", 1080))
     fps = float(info.get("fps", 30))
 
     if on_progress:
@@ -206,7 +207,7 @@ def render_animated_captions(
                 word_widths = []
                 space_w = draw.textlength(" ", font=font) if hasattr(draw, 'textlength') else font_size * 0.3
                 for wd in words:
-                    tw = draw.textlength(wd["word"], font=font) if hasattr(draw, 'textlength') else len(wd["word"]) * font_size * 0.6
+                    tw = draw.textlength(wd.get("word", ""), font=font) if hasattr(draw, 'textlength') else len(wd.get("word", "")) * font_size * 0.6
                     word_widths.append(tw)
                 total_w = sum(word_widths) + space_w * (len(words) - 1)
                 x_start = (w - total_w) / 2
@@ -214,8 +215,8 @@ def render_animated_captions(
 
                 x = x_start
                 for i, wd in enumerate(words):
-                    is_active = float(wd["start"]) <= current_time <= float(wd["end"])
-                    is_past = current_time > float(wd["end"])
+                    is_active = float(wd.get("start", 0)) <= current_time <= float(wd.get("end", 0))
+                    is_past = current_time > float(wd.get("end", 0))
 
                     if is_active:
                         color = highlight_color + (int(preset["active_opacity"] * 255),)
@@ -230,7 +231,7 @@ def render_animated_captions(
                         for dx in range(-stroke_width, stroke_width + 1):
                             for dy in range(-stroke_width, stroke_width + 1):
                                 if dx * dx + dy * dy <= stroke_width * stroke_width:
-                                    draw.text((x + dx, y_pos + dy), wd["word"], font=font, fill=sc)
+                                    draw.text((x + dx, y_pos + dy), wd.get("word", ""), font=font, fill=sc)
 
                     # Draw highlight box for that preset
                     if animation == "highlight_box" and is_active:
@@ -240,7 +241,7 @@ def render_animated_captions(
                                         x + word_widths[i] + pad, y_pos + font_size + pad],
                                        fill=bx_color)
 
-                    draw.text((x, y_pos), wd["word"], font=font, fill=color)
+                    draw.text((x, y_pos), wd.get("word", ""), font=font, fill=color)
                     x += word_widths[i] + space_w
 
                 # Composite

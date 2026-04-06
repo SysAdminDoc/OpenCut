@@ -742,7 +742,8 @@ def recent_outputs():
 @async_job("install-whisper", filepath_required=False)
 def install_whisper(job_id, filepath, data):
     """Install faster-whisper via pip (on-demand from panel)."""
-    if not rate_limit("model_install"):
+    acquired = rate_limit("model_install")
+    if not acquired:
         raise ValueError("Another model_install operation is already running. Please wait.")
 
     backend = data.get("backend", "faster-whisper")
@@ -963,7 +964,8 @@ def install_whisper(job_id, filepath, data):
         logger.error(f"All whisper install strategies failed. Last error: {last_error[:500]}")
         raise RuntimeError(helpful)
     finally:
-        rate_limit_release("model_install")
+        if acquired:
+            rate_limit_release("model_install")
         _unregister_job_process(job_id)
 
 
@@ -1041,7 +1043,8 @@ def whisper_clear_cache():
 @async_job("reinstall-whisper", filepath_required=False)
 def whisper_reinstall(job_id, filepath, data):
     """Complete Whisper reinstall: uninstall, clear cache, reinstall fresh."""
-    if not rate_limit("model_install"):
+    acquired = rate_limit("model_install")
+    if not acquired:
         raise ValueError("Another model_install operation is already running. Please wait.")
 
     backend = data.get("backend", "faster-whisper")
@@ -1227,7 +1230,8 @@ def whisper_reinstall(job_id, filepath, data):
             raise RuntimeError(f"Verification failed: {verify.stderr[:200]}")
 
     finally:
-        rate_limit_release("model_install")
+        if acquired:
+            rate_limit_release("model_install")
         _unregister_job_process(job_id)
 
 

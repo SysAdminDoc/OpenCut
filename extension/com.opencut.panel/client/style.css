@@ -7789,7 +7789,7 @@ textarea:hover,
 .result-area {
     margin-top: 14px;
     padding: 14px 16px;
-    border-radius: 18px;
+    border-radius: var(--r-md);
     border: 1px solid rgba(236, 230, 218, 0.08);
     background:
         linear-gradient(180deg, rgba(16, 23, 33, 0.96), rgba(12, 17, 25, 0.92));
@@ -8495,6 +8495,31 @@ body.has-clip .media-sidecar-empty {
     .main {
         padding: 18px 16px 24px;
     }
+}
+
+.cap-hint {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin: 4px 0 8px;
+    line-height: 1.4;
+}
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 10px;
+    border-radius: 10px;
+    background: var(--green);
+    color: var(--bg);
+    font-weight: 600;
+}
+.btn-xs {
+    padding: 4px 8px;
+    font-size: 10px;
+}
+.result-stats {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 8px;
 }
 
 @media (max-width: 380px) {

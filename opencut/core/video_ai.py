@@ -614,7 +614,7 @@ def frame_interpolate(
         output_path = _output_path(input_path, f"interp_{multiplier}x", output_dir)
 
     info = get_video_info(input_path)
-    target_fps = info["fps"] * multiplier
+    target_fps = info.get("fps", 30) * multiplier
 
     if on_progress:
         on_progress(10, f"Interpolating {info['fps']:.0f}fps -> {target_fps:.0f}fps...")
