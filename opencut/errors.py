@@ -12,6 +12,7 @@ Every error carries:
 """
 
 import logging
+import os
 
 from flask import jsonify
 
@@ -128,7 +129,7 @@ def safe_error(exc, context=""):
     logger.exception("Error [%s]%s: %s", code, log_ctx, exc)
 
     return error_response(code, user_msg, status=status,
-                          suggestion=suggestion, detail=msg)
+                          suggestion=suggestion, detail=msg[:200] if msg else None)
 
 
 # ---------------------------------------------------------------------------
@@ -148,7 +149,7 @@ def missing_dependency(name: str) -> OpenCutError:
 def file_not_found(path: str) -> OpenCutError:
     return OpenCutError(
         code="FILE_NOT_FOUND",
-        message=f"File not found: {path}",
+        message=f"File not found: {os.path.basename(path) if path else 'unknown'}",
         suggestion="Check that the file has not been moved or deleted.",
         status=404,
     )
