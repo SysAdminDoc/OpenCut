@@ -17,7 +17,7 @@ import os
 import tempfile
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import get_video_info, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_video_info, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -88,7 +88,7 @@ def change_speed(
     # Audio: atempo filter (chained for extreme values)
     af_parts = _build_atempo_chain(speed, maintain_pitch)
 
-    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y", "-i", input_path]
+    cmd = [get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y", "-i", input_path]
     cmd += ["-vf", vf]
     if af_parts:
         cmd += ["-af", af_parts]
@@ -147,7 +147,7 @@ def reverse_video(
         on_progress(10, "Reversing video...")
 
     cmd = [
-        "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
         "-i", input_path,
         "-vf", "reverse",
     ]
@@ -237,7 +237,7 @@ def speed_ramp(
             af = _build_atempo_chain(avg_speed)
 
             cmd = [
-                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
                 "-ss", str(start_time), "-to", str(end_time),
                 "-i", input_path,
                 "-vf", vf,
@@ -265,7 +265,7 @@ def speed_ramp(
                 f.write(f"file '{seg}'\n")
 
         run_ffmpeg([
-            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
             "-f", "concat", "-safe", "0", "-i", list_file,
             "-c", "copy",
             output_path,

@@ -854,7 +854,8 @@ def captions_convert():
 @async_job("install", filepath_required=False)
 def captions_enhanced_install(job_id, filepath, data):
     """Install enhanced caption dependencies."""
-    if not rate_limit("model_install"):
+    acquired = rate_limit("model_install")
+    if not acquired:
         raise ValueError("Another model_install operation is already running. Please wait.")
 
     try:
@@ -876,7 +877,8 @@ def captions_enhanced_install(job_id, filepath, data):
             safe_pip_install(pkg)
         return {"component": component}
     finally:
-        rate_limit_release("model_install")
+        if acquired:
+            rate_limit_release("model_install")
 
 
 # ---------------------------------------------------------------------------
