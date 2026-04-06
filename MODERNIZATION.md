@@ -111,7 +111,7 @@ All pure Python, no external dependencies. Includes: zoom.py, auto_zoom.py (cv2)
 | # | Issue | Module | Action | Status |
 |---|-------|--------|--------|--------|
 | 1 | auto-editor v30 rewritten in Nim; pip package frozen at v29.3.1 | `auto_edit.py` | Detect native Nim binary, pip fallback | TODO |
-| 2 | Anthropic API version stale (`2023-06-01`) | `llm.py` | Update version string, add latest model IDs | TODO |
+| 2 | Anthropic API version stale (`2023-06-01`) | `llm.py` | Update version string, add latest model IDs | DONE (2026-04-06) — Added Gemini provider, updated default model to llama3.2, OpenAI max_completion_tokens |
 | 3 | CTranslate2 in maintenance mode | `captions_enhanced.py` | Make SeamlessM4T primary, NLLB fallback | TODO |
 | 4 | FFmpeg minterpolate slow + artifacting | `video_ai.py` | Add RIFE neural interpolation as `method="rife"` | TODO |
 | 5 | B-roll gen backends outdated (SVD superseded) | `broll_generate.py` | Add Wan 2.1 as primary, remove SVD | TODO |
@@ -120,15 +120,15 @@ All pure Python, no external dependencies. Includes: zoom.py, auto_zoom.py (cv2)
 
 | # | Improvement | Module | Action | Status |
 |---|-------------|--------|--------|--------|
-| 6 | Silero VAD v5 (2x faster, ONNX) | `silence.py` | Upgrade torch.hub model, add ONNX path | TODO |
-| 7 | Kokoro v1.0 ONNX model available | `voice_gen.py` | Verify version, test ONNX inference | TODO |
-| 8 | DeepFilterNet3 improvements | `audio_pro.py` | Verify v0.5.x installed | TODO |
+| 6 | Silero VAD v6 (ONNX support) | `silence.py` | Upgrade torch.hub model, add ONNX path | DONE (2026-04-06) — VAD now at v6.2.1, ONNX inference when onnxruntime available |
+| 7 | Kokoro v1.0 ONNX model available | `voice_gen.py` | Verify version, test ONNX inference | DONE (2026-04-06) — Version pin updated to >=0.9 |
+| 8 | DeepFilterNet3 improvements | `audio_pro.py` | Verify v0.5.x installed | DONE (2026-04-06) — Verified current, imports correct |
 | 9 | CodeFormer > GFPGAN for degraded faces | `face_swap.py` | Wire CodeFormer as default enhancer | TODO |
-| 10 | Depth Anything checkpoint verification | `depth_effects.py` | Verify latest HuggingFace checkpoints | TODO |
+| 10 | Depth Anything checkpoint verification | `depth_effects.py` | Verify latest HuggingFace checkpoints | DONE (2026-04-06) — Docstring corrected to current HF org |
 | 11 | Two-stage scene detection pipeline | `scene_detect.py` | Add `method="hybrid"` (PySceneDetect + TransNetV2) | TODO |
 | 12 | .t7 style transfer models are 2017-era | `style_transfer.py` | Research AesPA-Net / InST for temporal consistency | TODO |
 | 13 | Stable Audio Open vs MusicGen | `music_ai.py` | Add as backend option | TODO |
-| 14 | AV1 export preset (40% smaller files) | `export_presets.py` | Add SVT-AV1 + NVENC AV1 presets | TODO |
+| 14 | AV1 export preset (40% smaller files) | `export_presets.py` | Add SVT-AV1 + NVENC AV1 presets | DONE (2026-04-06) — Added av1_1080p, av1_4k, hevc_1080p presets + preset int bug fix |
 | 15 | Gyroflow integration for camera stabilization | `video_fx.py` | Research integration path | TODO |
 | 16 | Caption rendering performance (Pillow bottleneck) | `styled_captions.py` | Research skia-python or FFmpeg drawvg (Cairo) | TODO |
 
