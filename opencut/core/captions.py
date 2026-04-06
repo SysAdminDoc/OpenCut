@@ -515,22 +515,36 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
 
     # Load model and transcribe
     model = whisperx.load_model(config.model, device, compute_type=compute_type)
-    audio = whisperx.load_audio(wav_path)
-    result = model.transcribe(audio, batch_size=16, language=config.language)
+    align_model = None
+    try:
+        audio = whisperx.load_audio(wav_path)
+        result = model.transcribe(audio, batch_size=16, language=config.language)
 
-    # Align for word-level timestamps
-    if config.word_timestamps:
-        align_model, metadata = whisperx.load_align_model(
-            language_code=result.get("language", "en"),
-            device=device,
-        )
-        result = whisperx.align(
-            result["segments"],
-            align_model,
-            metadata,
-            audio,
-            device,
-        )
+        # Align for word-level timestamps
+        if config.word_timestamps:
+            align_model, metadata = whisperx.load_align_model(
+                language_code=result.get("language", "en"),
+                device=device,
+            )
+            result = whisperx.align(
+                result["segments"],
+                align_model,
+                metadata,
+                audio,
+                device,
+            )
+    finally:
+        try:
+            del model
+        except Exception:
+            pass
+        if align_model is not None:
+            try:
+                del align_model
+            except Exception:
+                pass
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
     segments = []
     for seg in result.get("segments", []):
