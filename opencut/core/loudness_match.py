@@ -29,8 +29,12 @@ except ImportError:
 logger = logging.getLogger("opencut")
 
 
-def _run_ffmpeg(cmd: List[str], timeout: int = 3600) -> "_sp.CompletedProcess":
-    """Run an FFmpeg command using consolidated helper when available."""
+def _run_ffmpeg_raw(cmd: List[str], timeout: int = 3600) -> str:
+    """Run an FFmpeg command and return stderr text.
+
+    Uses consolidated helper when available (raises RuntimeError on failure,
+    returns stderr as str).  Falls back to raw subprocess.
+    """
     if _helpers_run_ffmpeg is not None:
         return _helpers_run_ffmpeg(cmd, timeout=timeout)
     try:
@@ -39,7 +43,9 @@ def _run_ffmpeg(cmd: List[str], timeout: int = 3600) -> "_sp.CompletedProcess":
         raise RuntimeError("FFmpeg not found. Install FFmpeg: https://ffmpeg.org/download.html")
     except _sp.TimeoutExpired:
         raise RuntimeError(f"FFmpeg timed out running: {' '.join(cmd[:6])}")
-    return result
+    if result.returncode != 0:
+        raise RuntimeError(f"FFmpeg failed: {(result.stderr or '')[-500:]}")
+    return result.stderr or ""
 
 
 # ---------------------------------------------------------------------------
@@ -72,12 +78,8 @@ def measure_loudness(filepath: str) -> dict:
         "-f", "null", "-",
     ]
 
-    result = _run_ffmpeg(cmd)
-    if result.returncode != 0:
-        logger.warning("FFmpeg loudness measurement returned non-zero for %s", filepath)
-
-    # loudnorm writes its JSON block to stderr between { } on multiple lines
-    stderr = result.stderr
+    # run_ffmpeg raises RuntimeError on non-zero exit; returns stderr as str
+    stderr = _run_ffmpeg_raw(cmd)
     json_match = re.search(r"\{[^{}]+\}", stderr, re.DOTALL)
     if not json_match:
         logger.debug("loudnorm stderr:\n%s", stderr[-800:])
@@ -146,11 +148,7 @@ def normalize_to_lufs(
         "-vn",
         "-f", "null", "-",
     ]
-    pass1 = _run_ffmpeg(pass1_cmd)
-    if pass1.returncode != 0:
-        logger.warning("Loudnorm pass 1 returned non-zero for %s", input_path)
-
-    stderr = pass1.stderr
+    stderr = _run_ffmpeg_raw(pass1_cmd)
     json_match = re.search(r"\{[^{}]+\}", stderr, re.DOTALL)
     if not json_match:
         raise ValueError(
@@ -213,10 +211,8 @@ def normalize_to_lufs(
             output_path,
         ]
 
-    pass2 = _run_ffmpeg(pass2_cmd)
-    if pass2.returncode != 0:
-        stderr_tail = pass2.stderr[-500:] if pass2.stderr else "unknown error"
-        raise RuntimeError(f"FFmpeg loudnorm pass 2 failed: {stderr_tail}")
+    # run_ffmpeg raises RuntimeError on non-zero exit
+    _run_ffmpeg_raw(pass2_cmd)
 
     logger.info("Normalised to %.1f LUFS: %s", target_lufs, output_path)
     return output_path

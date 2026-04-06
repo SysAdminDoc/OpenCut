@@ -922,6 +922,44 @@ enhance = ["resemble-enhance>=0.0.1"]
 - **10 duplicate class attributes in HTML** — 10 elements had two `class=` attributes; HTML parser silently ignores the second, losing spacing utilities (mt-xs, mt-sm, mb-sm, mt-md). All merged into single attributes.
 - **pip install permission denied** — `safe_pip_install()` failed on Windows when both normal and `--user` installs hit Errno 13 (Microsoft Store Python, OneDrive-synced user dirs, restrictive ACLs). Added `--target ~/.opencut/packages` as third fallback strategy. server.py adds `~/.opencut/packages` to `sys.path` at startup.
 
+## v1.9.18 Comprehensive 6-Phase Audit (April 2026)
+
+### P0 Fixes
+- **loudness_match COMPLETELY BROKEN** — `_run_ffmpeg()` wrapper returned consolidated helper's `str` but callers accessed `.returncode`/`.stderr` (CompletedProcess attributes). `measure_loudness()`, `normalize_to_lufs()`, `batch_loudness_match()` all crashed with `AttributeError`. Renamed to `_run_ffmpeg_raw()`, made it always return `str` and raise `RuntimeError` on failure. Removed all `.returncode`/`.stderr` access from callers.
+- **UXP CSRF token refresh reads wrong header** — `resp.headers.get("X-CSRF-Token")` instead of `"X-OpenCut-Token"`. After backend restarts, all UXP POST requests used stale token → 403 failures.
+- **UXP chat endpoint 404** — Posted to `/chat/message` but backend route is `/chat`. Chat completely non-functional in UXP.
+- **UXP sequence-info 404** — Fell back to non-existent `/sequence-info` endpoint. Removed dead backend fallback; PProBridge is the only source.
+
+### P1 Fixes
+- **WorkerPool shutdown TypeError** — `shutdown()` put `None` poison pills into `PriorityQueue`, but `None` is not comparable with `(int, int, tuple)` work items during heap insertion. Server shutdown crashed with `TypeError` if any jobs were queued. Fixed: poison pill is now `(-1, -1, None)`, worker loop checks `item[2] is None`.
+- **Styled captions progress crash** — `_on_render_progress(pct, msg)` in captions.py missing `msg=""` default. `render_styled_caption_video()` calls `on_progress(int)` with 1 arg → `TypeError` every time.
+- **scene_detect bare "ffmpeg"** — `detect_scenes_ml()` used bare `"ffmpeg"` in `extract_cmd` instead of `get_ffmpeg_path()`. TransNetV2 ML scene detection failed on bundled installs.
+- **shorts_pipeline 3x bare "ffmpeg"** — `_trim_clip()` and fallback crop in `generate_shorts()` all used bare `"ffmpeg"`. Added `get_ffmpeg_path` import and replaced all 3.
+- **silence.py spurious FFmpeg check** — `_extract_audio_wav()` checked `shutil.which("ffmpeg")` which returns `None` on bundled installs even though `get_ffmpeg_path()` resolves it. Changed to check `get_ffmpeg_path()` return value.
+- **audio_enhance bare "ffmpeg"** — `_extract_audio()` assigned `get_ffmpeg_path()` to `ffmpeg_path` but then used bare `"ffmpeg"` in the command list. Fixed to use `ffmpeg_path`.
+- **MusicGen GPU memory leak** — `generate_music()`, `generate_music_with_melody()`, and `continue_audio()` never freed 1.2-13GB MusicGen models after generation. Added `try/finally` with `del model` + `torch.cuda.empty_cache()` to all 3 functions.
+- **SAM2 GPU memory leak** — `generate_masks_sam2()` loaded SAM2 predictor (1-4GB VRAM) but never cleaned up. Added `del predictor, state` + `torch.cuda.empty_cache()` to existing `finally` block.
+- **Florence-2 GPU memory leak** — `detect_watermark_region()` loaded Florence-2 (~450MB) but never freed it. Added `try/finally` with cleanup around inference block.
+
+### P2 Fixes
+- **timeline.py bare float()** — OTIO segment export used `float(s.get("start", 0))` on user input; 500 on non-numeric. Changed to `safe_float()`.
+- **search/auto-index path traversal** — File paths validated only with `os.path.isfile()`, no null byte/symlink/traversal check. Added `validate_filepath()` on each path.
+- **search/auto-index in queue allowlist** — Sync route was in `_ALLOWED_QUEUE_ENDPOINTS`, causing queue entries to silently fail (no job_id returned). Removed from allowlist.
+- **video_core.py unbounded safe_float** — `threshold` and `min_scene_length` in scene detection had no `min_val`/`max_val` bounds. Added clamps.
+- **video_editing.py validate_path crash** — `multicam_xml_export()` called `validate_path()` without catching `ValueError`. Added try/except returning 400.
+- **video_specialty.py caption_style** — Unsanitized user string passed into shorts pipeline config. Added allowlist validation.
+- **WorkerPool shutdown_pool race** — `_pool = None` set without `_pool_lock`, allowing another thread to create a zombie pool. Now acquires lock before clearing.
+
+### Frontend Fixes (Phase 4)
+- **UXP JobPoller.start() wrong signature (7 handlers)** — `runDepthEffect`, `runEmotionHighlights`, `runBrollAnalysis`, `runUpscaleUxp`, `runSceneDetectUxp`, `runStyleTransferUxp`, `runShortsPipelineUxp` all passed `(jobId, callback)` to `JobPoller.start()` which expects `(endpoint, body, onProgress, onComplete, onError)`. All 7 handlers now use new `JobPoller.poll(jobId)` method (added to IIFE return).
+- **UXP .toFixed() crash** — Cut result display used raw `.toFixed()` on potentially string values. Added `Number()` coercion.
+- **CEP reframe "face" value** — HTML `<option value="face">` but backend expects `"auto"` since batch 22. Changed to `value="auto"`.
+
+### Test Updates
+- **test_core_modules_batch2** — `test_extract_audio_calls_ffmpeg` updated to accept resolved FFmpeg path (not bare `"ffmpeg"` string).
+- **test_new_features** — `test_extract_audio_wav_checks_ffmpeg` updated to mock `opencut.core.silence.get_ffmpeg_path` instead of `shutil.which`.
+- **test_new_modules** — 4 loudness_match tests updated: mock target changed from `_run_ffmpeg` to `_run_ffmpeg_raw`, mock return values changed from `MagicMock(returncode=0, stderr=...)` to plain `str`.
+
 ## v1.9.17 Full Audit & Repair (April 2026)
 - **test_clip_notes_plugin.py rewrite** — Old test fixture accessed `mod._thread_local.conn` after flaky `importlib` module load, causing `AttributeError` on Windows. The `temp_db` autouse fixture was a dead no-op (created module without executing it). Rewrote entire test file to use JSON storage backend (matching `test_plugin_clip_notes.py` pattern), eliminating `_thread_local` dependency. All 10 legacy route tests pass cleanly.
 - **LUT_SIZE parsing crash** — `_parse_cube()` in `lut_library.py` called `int(line.split()[-1])` without checking `split()` returned ≥2 parts. Malformed `.cube` files with bare `LUT_SIZE` keyword (no value) crashed with `ValueError`. Added `len(parts) >= 2` guard + `try/except ValueError`.
