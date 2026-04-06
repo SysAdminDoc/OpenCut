@@ -335,7 +335,11 @@ def async_job(job_type: str, *, filepath_required: bool = True,
             try:
                 job_id = _new_job(job_type, job_label)
             except TooManyJobsError as e:
-                return jsonify({"error": str(e)}), 429
+                return jsonify({
+                    "error": str(e),
+                    "code": "TOO_MANY_JOBS",
+                    "suggestion": "Wait for a job to finish or cancel one from the processing bar.",
+                }), 429
 
             def _process():
                 _thread_local.job_id = job_id

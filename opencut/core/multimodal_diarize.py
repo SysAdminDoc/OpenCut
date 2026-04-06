@@ -229,6 +229,21 @@ def _extract_face_segments(
 
     finally:
         cap.release()
+        # Free GPU memory from face detection models
+        try:
+            del detector
+        except Exception:
+            pass
+        try:
+            del embedder
+        except Exception:
+            pass
+        try:
+            import torch
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+        except Exception:
+            pass
 
 
 def _cluster_faces(
