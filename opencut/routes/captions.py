@@ -1010,7 +1010,7 @@ def transcript_summarize(job_id, filepath, data):
 
     # LLM config from request
     llm_provider = data.get("llm_provider", "ollama")
-    if llm_provider not in ("ollama", "openai", "anthropic"):
+    if llm_provider not in ("ollama", "openai", "anthropic", "gemini"):
         llm_provider = "ollama"
     llm_model = data.get("llm_model", "")
     llm_api_key = data.get("llm_api_key", "")
@@ -1072,7 +1072,7 @@ def captions_chapters(job_id, filepath, data):
 
     segments = data.get("segments", None)
     llm_provider = data.get("llm_provider", "ollama")
-    if llm_provider not in ("ollama", "openai", "anthropic"):
+    if llm_provider not in ("ollama", "openai", "anthropic", "gemini"):
         llm_provider = "ollama"
     llm_model = data.get("llm_model", "llama3")
     api_key = data.get("api_key", "")
