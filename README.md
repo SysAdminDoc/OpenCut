@@ -1,12 +1,12 @@
 # OpenCut
 
-![Version](https://img.shields.io/badge/version-1.9.16-blue)
+![Version](https://img.shields.io/badge/version-1.9.17-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-254-orange)
-![Tests](https://img.shields.io/badge/Tests-826-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-867-brightgreen)
 
 > A free, open-source Premiere Pro extension that brings AI-powered video editing automation, caption generation, audio processing, and visual effects -- all running locally on your machine. No subscriptions, no cloud, no API keys required.
 
@@ -23,7 +23,7 @@
 
 **Option A -- Installer (recommended):**
 
-Download `OpenCut-Setup-1.9.16.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Handles everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
+Download `OpenCut-Setup-1.9.17.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Handles everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
 
 **Option B -- From source:**
 
@@ -57,7 +57,7 @@ docker-compose -f docker-compose.gpu.yml up  # With GPU
 
 ## Feature Overview
 
-OpenCut v1.9.16 includes **254 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.9.17 includes **254 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -449,7 +449,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-826 tests across 6 test files covering route smoke tests, core module unit tests, feature integration tests, and ExtendScript mock harness.
+867 tests across 22 test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -510,7 +510,7 @@ extension/
     main.js          # UXP panel (~1700 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (826 tests)
+tests/               # pytest test suite (867 tests)
 docs/
   RESEARCH.md        # Open source feature research (80+ projects analyzed)
   ROADMAP.md         # Implementation roadmap with status tracking
