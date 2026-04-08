@@ -575,9 +575,11 @@
         el.connStatus = $("connStatus");
         el.connLabel = $("connLabel");
         el.refreshAllBtn = $("refreshAllBtn");
-        el.alertBanner = $("alertBanner");
-        el.alertText = $("alertText");
-        el.alertDismiss = $("alertDismiss");
+    el.alertBanner = $("alertBanner");
+    el.alertIcon = $("alertIcon");
+    el.alertEyebrow = $("alertEyebrow");
+    el.alertText = $("alertText");
+    el.alertDismiss = $("alertDismiss");
 
         // Clip
         el.clipSelect = $("clipSelect");
@@ -616,6 +618,9 @@
         el.fullCaptions = $("fullCaptions");
         el.fullFillers = $("fullFillers");
         el.runFullBtn = $("runFullBtn");
+        el.runEmotionHighlightsBtn = $("runEmotionHighlightsBtn");
+        el.emotionHint = $("emotionHint");
+        el.installEmotionBtn = $("installEmotionBtn");
 
         // Captions tab
         el.captionModel = $("captionModel");
@@ -635,9 +640,13 @@
         el.runSubtitleBtn = $("runSubtitleBtn");
         el.transcriptModel = $("transcriptModel");
         el.runTranscriptBtn = $("runTranscriptBtn");
-        el.transcriptEditor = $("transcriptEditor");
-        el.transcriptInfo = $("transcriptInfo");
-        el.transcriptSegments = $("transcriptSegments");
+    el.transcriptEditor = $("transcriptEditor");
+    el.transcriptInfo = $("transcriptInfo");
+    el.transcriptTimeline = $("transcriptTimeline");
+    el.transcriptTimelineRuler = $("transcriptTimelineRuler");
+    el.transcriptTimelineStatus = $("transcriptTimelineStatus");
+    el.transcriptTimelineMeta = $("transcriptTimelineMeta");
+    el.transcriptSegments = $("transcriptSegments");
         el.transcriptExportFormat = $("transcriptExportFormat");
         el.exportTranscriptBtn = $("exportTranscriptBtn");
         el.transcriptUndoBtn = $("transcriptUndoBtn");
@@ -691,6 +700,9 @@
         el.runWatermarkBtn = $("runWatermarkBtn");
         el.watermarkHint = $("watermarkHint");
         el.installWatermarkBtn = $("installWatermarkBtn");
+        el.runDepthBtn = $("runDepthBtn");
+        el.depthHint = $("depthHint");
+        el.installDepthBtn = $("installDepthBtn");
         
         // Video tab - Scene Detection
         el.sceneThreshold = $("sceneThreshold");
@@ -1293,7 +1305,7 @@
     function apiWithSpinner(btn, method, path, body, callback, timeout) {
         var origText = btn.textContent;
         btn.disabled = true;
-        btn.textContent = "Working...";
+        btn.textContent = "Working…";
         api(method, path, body, function (err, data) {
             btn.disabled = false;
             btn.textContent = origText;
@@ -1352,7 +1364,7 @@
             }
             if (connected && el.serverStatusBanner) {
                 el.serverStatusBanner.classList.remove("hidden");
-                if (el.serverStatusMsg) el.serverStatusMsg.textContent = "Server disconnected. Reconnecting...";
+        if (el.serverStatusMsg) el.serverStatusMsg.textContent = "Server disconnected. Reconnecting…";
             }
             connected = false;
             // Clean up all active timers on disconnect
@@ -1466,10 +1478,10 @@
         var delay = PROJECT_MEDIA_RETRY_DELAYS[_projectMediaRetryCount];
         _projectMediaRetryCount++;
         if (!projectMedia.length) {
-            setProjectMediaPlaceholder("Scanning Premiere project media...");
+        setProjectMediaPlaceholder("Scanning Premiere project media…");
         }
         if (!_projectMediaRetryNoticeShown && _projectMediaRetryCount > 1) {
-            showToast("Refreshing Premiere project media...", "info");
+        showToast("Refreshing Premiere project media…", "info");
             _projectMediaRetryNoticeShown = true;
         }
         console.warn("[OpenCut] Retrying project media scan in " + delay + "ms:", reason || "pending");
@@ -1529,6 +1541,68 @@
         hint.className = "hint";
         hint.textContent = message;
         container.appendChild(hint);
+    }
+
+    var HINT_STATE_CLASSES = ["is-info", "is-error", "is-success", "is-warning"];
+
+    function getHintCopyNode(hintEl) {
+        if (!hintEl) return null;
+        var copy = hintEl.querySelector(".hint-copy");
+        if (copy) return copy;
+        var firstEl = hintEl.firstElementChild;
+        if (firstEl && firstEl.tagName !== "BUTTON" && !firstEl.classList.contains("btn-install") && !firstEl.classList.contains("btn-text")) {
+            firstEl.classList.add("hint-copy");
+            return firstEl;
+        }
+        copy = document.createElement("span");
+        copy.className = "hint-copy";
+        var child = hintEl.firstChild;
+        while (child) {
+            var next = child.nextSibling;
+            if (child.nodeType === 3) hintEl.removeChild(child);
+            child = next;
+        }
+        hintEl.insertBefore(copy, hintEl.firstChild);
+        return copy;
+    }
+
+    function setHintState(hintEl, message, tone, actionBtn) {
+        if (!hintEl) return;
+        var copy = getHintCopyNode(hintEl);
+        for (var i = 0; i < HINT_STATE_CLASSES.length; i++) {
+            hintEl.classList.remove(HINT_STATE_CLASSES[i]);
+        }
+        hintEl.classList.add("is-" + (tone || "info"));
+        hintEl.classList.remove("hidden");
+        if (copy) copy.textContent = message || "";
+        if (actionBtn) {
+            var pending = tone === "info";
+            actionBtn.classList.toggle("hidden", pending);
+            actionBtn.disabled = pending;
+        }
+    }
+
+    function hideHintState(hintEl, actionBtn) {
+        if (!hintEl) return;
+        hintEl.classList.add("hidden");
+        for (var i = 0; i < HINT_STATE_CLASSES.length; i++) {
+            hintEl.classList.remove(HINT_STATE_CLASSES[i]);
+        }
+        if (actionBtn) {
+            actionBtn.classList.remove("hidden");
+            actionBtn.disabled = false;
+        }
+    }
+
+    function buildEmptyHintMarkup(title, copy, tone) {
+        var classes = "hint hint-empty is-" + (tone || "info");
+        var html = '<div class="' + classes + '">' +
+            '<span class="hint-title">' + esc(title || "") + '</span>';
+        if (copy) {
+            html += '<span class="hint-copy">' + esc(copy) + '</span>';
+        }
+        html += "</div>";
+        return html;
     }
 
     function clearSelectedFileState() {
@@ -2150,6 +2224,11 @@
         function _setHint(hintEl, btnEl, showHint) {
             if (hintEl) hintEl.classList.toggle("hidden", !showHint);
             if (btnEl && showHint) btnEl.disabled = true;
+            var actionBtn = hintEl ? hintEl.querySelector(".btn-install, .btn-text") : null;
+            if (actionBtn && (!hintEl || !hintEl.classList.contains("is-info"))) {
+                actionBtn.classList.remove("hidden");
+                actionBtn.disabled = false;
+            }
         }
 
         // Whisper hints
@@ -2222,7 +2301,7 @@
         _setHint(el.depthHint, el.runDepthBtn, capabilities.depth_effects === false);
 
         // Emotion highlights hint
-        _setHint(el.emotionHint, el.runEmotionBtn, capabilities.deepface === false);
+        _setHint(el.emotionHint, el.runEmotionHighlightsBtn, capabilities.deepface === false);
 
         // Social media posting hint
         _setHint(el.socialHint, null, capabilities.social_post === false);
@@ -2354,7 +2433,7 @@
         // Show persistent processing banner
         var stepPrefix = (jobStepTotal > 1) ? "Step " + jobStepCurrent + "/" + jobStepTotal + ": " : "";
         el.processingBanner.classList.remove("hidden");
-        el.processingMsg.textContent = stepPrefix + "Starting...";
+        el.processingMsg.textContent = stepPrefix + "Starting…";
         el.processingFill.style.width = "0%";
         el.processingFill.setAttribute("aria-valuenow", "0");
         el.processingElapsed.textContent = "0s";
@@ -2364,7 +2443,7 @@
         el.resultsSection.classList.add("hidden");
         el.progressBar.style.width = "0%";
         el.progressBar.setAttribute("aria-valuenow", "0");
-        el.progressLabel.textContent = stepPrefix + "Starting...";
+        el.progressLabel.textContent = stepPrefix + "Starting…";
         el.cancelBtn.classList.remove("hidden");
 
         // Lock the entire UI
@@ -2457,7 +2536,7 @@
 
     function updateProgress(job) {
         var pct = (job.progress || 0) + "%";
-        var msg = job.message || "Processing...";
+        var msg = job.message || "Processing…";
         if (jobStepTotal > 1) {
             msg = "Step " + jobStepCurrent + "/" + jobStepTotal + ": " + msg;
         }
@@ -2752,9 +2831,9 @@
     function cancelJob() {
         if (currentJob) {
             var cancellingJob = currentJob;
-            el.processingCancel.textContent = "Cancelling...";
+            el.processingCancel.textContent = "Cancelling…";
             el.processingCancel.disabled = true;
-            el.cancelBtn.textContent = "Cancelling...";
+            el.cancelBtn.textContent = "Cancelling…";
             el.cancelBtn.disabled = true;
             // Close SSE/poll FIRST to prevent "complete" events from firing
             if (pollTimer) {
@@ -2928,13 +3007,13 @@
     }
     
     function installDemucs() {
-        el.separateHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing Demucs... This may take a few minutes.</span>';
+        setHintState(el.separateHint, "Installing Demucs… This may take a few minutes.", "info", el.installDemucsBtn);
         apiWithSpinner(el.installDemucsBtn, "POST", "/demucs/install", {}, function(err, data) {
             if (err || (data && data.error)) {
                 var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : 'Unknown error';
-                el.separateHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(errMsg) + '</span>';
+                setHintState(el.separateHint, "Installation failed: " + errMsg, "error", el.installDemucsBtn);
             } else {
-                el.separateHint.classList.add("hidden");
+                hideHintState(el.separateHint, el.installDemucsBtn);
                 capabilities.separation = true;
                 updateButtons();
                 showAlert("Demucs installed successfully!");
@@ -2944,7 +3023,7 @@
 
     function measureLoudness() {
         el.loudnessMeter.classList.remove("hidden");
-        el.meterLUFS.textContent = "Measuring...";
+        el.meterLUFS.textContent = "Measuring…";
         el.meterTP.textContent = "--";
         el.meterLRA.textContent = "--";
 
@@ -2998,13 +3077,13 @@
     }
     
     function installDepth() {
-        if (el.depthHint) el.depthHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing Depth Anything V2... This may take several minutes.</span>';
+        setHintState(el.depthHint, "Installing Depth Anything V2… This may take several minutes.", "info", el.installDepthBtn);
         apiWithSpinner(el.installDepthBtn, "POST", "/video/depth/install", {}, function(err, data) {
             if (err || (data && data.error)) {
                 var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : "Unknown error";
-                if (el.depthHint) el.depthHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(errMsg) + "</span>";
+                setHintState(el.depthHint, "Installation failed: " + errMsg, "error", el.installDepthBtn);
             } else {
-                if (el.depthHint) el.depthHint.classList.add("hidden");
+                hideHintState(el.depthHint, el.installDepthBtn);
                 capabilities.depth_effects = true;
                 updateButtons();
                 showAlert("Depth Anything V2 installed successfully!");
@@ -3013,13 +3092,13 @@
     }
 
     function installEmotion() {
-        if (el.emotionHint) el.emotionHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing emotion analysis... This may take a few minutes.</span>';
+        setHintState(el.emotionHint, "Installing emotion analysis… This may take a few minutes.", "info", el.installEmotionBtn);
         apiWithSpinner(el.installEmotionBtn, "POST", "/video/emotion/install", {}, function(err, data) {
             if (err || (data && data.error)) {
                 var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : "Unknown error";
-                if (el.emotionHint) el.emotionHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(errMsg) + "</span>";
+                setHintState(el.emotionHint, "Installation failed: " + errMsg, "error", el.installEmotionBtn);
             } else {
-                if (el.emotionHint) el.emotionHint.classList.add("hidden");
+                hideHintState(el.emotionHint, el.installEmotionBtn);
                 capabilities.deepface = true;
                 updateButtons();
                 showAlert("Emotion analysis installed successfully!");
@@ -3040,13 +3119,13 @@
     }
 
     function installWatermark() {
-        el.watermarkHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing watermark remover... This may take several minutes.</span>';
+        setHintState(el.watermarkHint, "Installing watermark remover… This may take several minutes.", "info", el.installWatermarkBtn);
         apiWithSpinner(el.installWatermarkBtn, "POST", "/watermark/install", {}, function(err, data) {
             if (err || (data && data.error)) {
                 var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : 'Unknown error';
-                el.watermarkHint.innerHTML = '<span style="color: var(--neon-red);">Installation failed: ' + esc(errMsg) + '</span>';
+                setHintState(el.watermarkHint, "Installation failed: " + errMsg, "error", el.installWatermarkBtn);
             } else {
-                el.watermarkHint.classList.add("hidden");
+                hideHintState(el.watermarkHint, el.installWatermarkBtn);
                 capabilities.watermark_removal = true;
                 updateButtons();
                 showAlert("Watermark remover installed successfully!");
@@ -3058,15 +3137,15 @@
         if (!selectedPath) return;
         var btn = document.getElementById("autoDetectWatermarkBtn");
         var resEl = document.getElementById("wmDetectResult");
-        if (btn) { btn.disabled = true; btn.textContent = "Detecting..."; }
+        if (btn) { btn.disabled = true; btn.textContent = "Detecting…"; }
         api("POST", "/video/auto-detect-watermark", { filepath: selectedPath, prompt: (el.wmPrompt ? el.wmPrompt.value.trim() : "watermark") || "watermark" }, function (err, data) {
             if (btn) { btn.disabled = false; btn.textContent = "Auto-Detect Watermark (Florence-2)"; }
             if (err || !data) {
-                if (resEl) { resEl.classList.remove("hidden"); resEl.textContent = "Detection failed: " + ((err && err.message) || "Unknown error"); }
+                setHintState(resEl, "Detection failed: " + ((err && err.message) || "Unknown error"), "error");
                 return;
             }
             if (data.error) {
-                if (resEl) { resEl.classList.remove("hidden"); resEl.textContent = data.error + (data.suggestion ? " — " + data.suggestion : ""); }
+                setHintState(resEl, data.error + (data.suggestion ? " — " + data.suggestion : ""), "error");
                 return;
             }
             if (data.x !== undefined) {
@@ -3075,10 +3154,10 @@
                 if (el.removeY) el.removeY.value = data.y;
                 if (el.removeW) el.removeW.value = data.width;
                 if (el.removeH) el.removeH.value = data.height;
-                if (resEl) { resEl.classList.remove("hidden"); resEl.textContent = "Detected at (" + data.x + ", " + data.y + ") — " + data.width + "×" + data.height + " px (" + (data.method || "auto") + ", " + safeFixed((data.confidence || 0) * 100, 0) + "% confidence)"; }
+                setHintState(resEl, "Detected at (" + data.x + ", " + data.y + ") — " + data.width + "×" + data.height + " px (" + (data.method || "auto") + ", " + safeFixed((data.confidence || 0) * 100, 0) + "% confidence)", "success");
                 showToast("Watermark detected — region auto-filled", "success");
             } else {
-                if (resEl) { resEl.classList.remove("hidden"); resEl.textContent = "No watermark detected. Try adjusting the prompt."; }
+                setHintState(resEl, "No watermark detected. Try adjusting the prompt.", "warning");
             }
         });
     }
@@ -3168,7 +3247,7 @@
                 } else {
                     window.open(authUrl, "_blank");
                 }
-                showToast("Opening " + platform + " authorization page...", "info");
+            showToast("Opening " + platform + " authorization page…", "info");
             } else {
                 showAlert("OAuth not configured for " + platform + ". Set API credentials in environment variables.");
             }
@@ -3335,7 +3414,7 @@
     function loadEngineRegistry() {
         var grid = document.getElementById("engineRegistryGrid");
         if (!grid) return;
-        grid.innerHTML = '<div class="hint">Loading engines...</div>';
+            grid.innerHTML = '<div class="hint">Loading engines…</div>';
 
         api("GET", "/engines", null, function (err, r) {
             if (err || !r || !r.engines) {
@@ -3482,7 +3561,7 @@
     function installVidAi() {
         var tool = el.vidAiTool.value;
         var component = tool === "rembg" ? "rembg_cpu" : tool;
-        el.vidAiHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing... This may take several minutes.</span>';
+        setHintState(el.vidAiHint, "Installing… This may take several minutes.", "info", el.installVidAiBtn);
         startJob("/video/ai/install", { component: component, no_input: true });
     }
 
@@ -3563,7 +3642,7 @@
     }
 
     function installPedalboard() {
-        el.proFxHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing Pedalboard...</span>';
+        setHintState(el.proFxHint, "Installing Pedalboard…", "info", el.installPedalboardBtn);
         startJob("/audio/pro/install", { component: "pedalboard", no_input: true });
     }
 
@@ -3575,7 +3654,7 @@
     }
 
     function installDeepFilter() {
-        el.deepFilterHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing DeepFilterNet...</span>';
+        setHintState(el.deepFilterHint, "Installing DeepFilterNet…", "info", el.installDeepFilterBtn);
         startJob("/audio/pro/install", { component: "deepfilter", no_input: true });
     }
 
@@ -3591,7 +3670,7 @@
     }
 
     function installMediapipe() {
-        el.faceHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing MediaPipe...</span>';
+        setHintState(el.faceHint, "Installing MediaPipe…", "info", el.installMediapipeBtn);
         startJob("/video/face/install", { no_input: true });
     }
 
@@ -3624,7 +3703,7 @@
             });
         } else {
             // Need to transcribe first, then auto-chain into translation
-            showAlert("Step 1/2: Transcribing first, then translating...");
+        showAlert("Step 1/2: Transcribing first, then translating…");
             pendingTranslate = true;
             jobStepCurrent = 1;
             jobStepTotal = 2;
@@ -3636,7 +3715,7 @@
     }
 
     function installNllb() {
-        el.translateHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing NLLB translation...</span>';
+        setHintState(el.translateHint, "Installing NLLB translation…", "info", el.installNllbBtn);
         startJob("/captions/enhanced/install", { component: "nllb", no_input: true });
     }
 
@@ -3651,7 +3730,7 @@
     }
 
     function installWhisperx() {
-        el.karaokeHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing WhisperX...</span>';
+        setHintState(el.karaokeHint, "Installing WhisperX…", "info", el.installWhisperxBtn);
         startJob("/captions/enhanced/install", { component: "whisperx", no_input: true });
     }
 
@@ -3726,7 +3805,7 @@
 
         var op = el.batchOperation.value;
         el.batchResults.classList.remove("hidden");
-        el.batchStatusText.textContent = "Starting batch: " + paths.length + " files...";
+        el.batchStatusText.textContent = "Starting batch: " + paths.length + " files…";
 
         api("POST", "/batch/create", {
             operation: op,
@@ -3738,7 +3817,7 @@
                 return;
             }
             var batchId = data.batch_id;
-            el.batchStatusText.textContent = "Batch running: 0/" + data.total + " complete...";
+        el.batchStatusText.textContent = "Batch running: 0/" + data.total + " complete…";
             // Poll for status (with error limit to prevent infinite polling)
             var pollErrors = 0;
             if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
@@ -3870,7 +3949,7 @@
     }
 
     function installEdgeTts() {
-        el.ttsHint.innerHTML = '<span style="color: var(--neon-cyan);">Installing Edge TTS...</span>';
+        setHintState(el.ttsHint, "Installing Edge TTS…", "info", el.installEdgeTtsBtn);
         startJob("/audio/tts/install", { component: "edge_tts", no_input: true });
     }
 
@@ -3917,7 +3996,7 @@
             });
         } else {
             // Transcribe first
-            showAlert("Step 1/2: Transcribing first, then burning in captions...");
+        showAlert("Step 1/2: Transcribing first, then burning in captions…");
             pendingBurnin = true;
             jobStepCurrent = 1;
             jobStepTotal = 2;
@@ -4153,7 +4232,7 @@
             });
         } else {
             // Transcribe first with word-level timing
-            showAlert("Step 1/2: Transcribing with word-level timing first...");
+        showAlert("Step 1/2: Transcribing with word-level timing first…");
             pendingAnimCap = true;
             jobStepCurrent = 1;
             jobStepTotal = 2;
@@ -4224,7 +4303,7 @@
         if (pendingBurnin && job.result.segments) {
             pendingBurnin = false;
             jobStepCurrent = 2;
-            showAlert("Step 2/2: Burning in captions...");
+        showAlert("Step 2/2: Burning in captions…");
             startJob("/captions/burnin/segments", {
                 filepath: selectedPath,
                 segments: job.result.segments,
@@ -4238,7 +4317,7 @@
         if (pendingAnimCap && job.result.segments) {
             pendingAnimCap = false;
             jobStepCurrent = 2;
-            showAlert("Step 2/2: Rendering animated captions...");
+        showAlert("Step 2/2: Rendering animated captions…");
             startJob("/captions/animated/render", {
                 filepath: selectedPath,
                 word_segments: extractWordSegments(job.result.segments),
@@ -4254,7 +4333,7 @@
         if (pendingTranslate && job.result.segments) {
             pendingTranslate = false;
             jobStepCurrent = 2;
-            showAlert("Step 2/2: Translating captions...");
+        showAlert("Step 2/2: Translating captions…");
             startJob("/captions/translate", {
                 filepath: selectedPath,
                 segments: job.result.segments,
@@ -4324,6 +4403,186 @@
     var transcriptHistory = [];
     var transcriptHistoryIdx = -1;
     var MAX_TRANSCRIPT_HISTORY = 50;
+    var _activeTranscriptSegmentIdx = -1;
+
+    function getTranscriptSegments() {
+        return transcriptData && transcriptData.segments ? transcriptData.segments : [];
+    }
+
+    function getTranscriptTotalDuration(data) {
+        var segments = data && data.segments ? data.segments : [];
+        var maxEnd = 0;
+        for (var i = 0; i < segments.length; i++) {
+            maxEnd = Math.max(maxEnd, Number(segments[i].end || segments[i].start || 0));
+        }
+        return maxEnd;
+    }
+
+    function renderTranscriptTimelineMeta(data) {
+        if (!el.transcriptTimelineMeta) return;
+        var segments = data && data.segments ? data.segments : [];
+        if (!segments.length) {
+            el.transcriptTimelineMeta.innerHTML =
+                '<div class="transcript-timeline-stat is-empty">' +
+                '<span class="transcript-timeline-stat-label">Editor</span>' +
+                '<span class="transcript-timeline-stat-value">Awaiting transcript segments</span>' +
+                '</div>';
+            return;
+        }
+
+        var totalDuration = getTranscriptTotalDuration(data);
+        var wordCount = Number(data && data.word_count || 0);
+        var longest = 0;
+        for (var i = 0; i < segments.length; i++) {
+            longest = Math.max(longest, Math.max(0, Number(segments[i].end || 0) - Number(segments[i].start || 0)));
+        }
+        var avgDuration = segments.length ? (totalDuration / segments.length) : 0;
+        el.transcriptTimelineMeta.innerHTML =
+            '<div class="transcript-timeline-stat">' +
+            '<span class="transcript-timeline-stat-label">Segments</span>' +
+            '<span class="transcript-timeline-stat-value">' + segments.length + '</span>' +
+            '</div>' +
+            '<div class="transcript-timeline-stat">' +
+            '<span class="transcript-timeline-stat-label">Runtime</span>' +
+            '<span class="transcript-timeline-stat-value">' + fmtDur(totalDuration) + '</span>' +
+            '</div>' +
+            '<div class="transcript-timeline-stat">' +
+            '<span class="transcript-timeline-stat-label">Pace</span>' +
+            '<span class="transcript-timeline-stat-value">' + safeFixed(avgDuration, 1) + 's avg</span>' +
+            '</div>' +
+            '<div class="transcript-timeline-stat">' +
+            '<span class="transcript-timeline-stat-label">Longest</span>' +
+            '<span class="transcript-timeline-stat-value">' + safeFixed(longest, 1) + 's</span>' +
+            '</div>';
+    }
+
+    function updateTranscriptTimelineStatus(idx) {
+        if (!el.transcriptTimelineStatus) return;
+        var segments = getTranscriptSegments();
+        if (idx == null || idx < 0 || idx >= segments.length) {
+            el.transcriptTimelineStatus.textContent = "Select a segment to focus the edit.";
+            return;
+        }
+        var seg = segments[idx];
+        var duration = Math.max(0, Number(seg.end || 0) - Number(seg.start || 0));
+        el.transcriptTimelineStatus.textContent = "Segment " + (idx + 1) + " · " + fmtDur(seg.start || 0) + " to " + fmtDur(seg.end || 0) + " · " + safeFixed(duration, 1) + "s";
+    }
+
+    function setTranscriptTimelineEmptyState(message) {
+        if (!el.transcriptTimeline) return;
+        el.transcriptTimeline.removeAttribute("aria-activedescendant");
+        el.transcriptTimeline.innerHTML =
+            '<div class="transcript-timeline-empty">' + esc(message || "Transcript segments will appear here.") + '</div>';
+    }
+
+    function updateTranscriptTimelinePlayhead(idx) {
+        if (!el.transcriptTimeline) return;
+        var playhead = el.transcriptTimeline.querySelector(".transcript-timeline-playhead");
+        if (!playhead) return;
+        var segments = getTranscriptSegments();
+        var totalDuration = getTranscriptTotalDuration({ segments: segments });
+        if (idx == null || idx < 0 || idx >= segments.length || totalDuration <= 0) {
+            playhead.classList.remove("is-visible");
+            playhead.style.left = "0%";
+            return;
+        }
+        var seg = segments[idx];
+        var start = Math.max(0, Number(seg.start || 0));
+        var left = Math.max(0, Math.min(100, (start / totalDuration) * 100));
+        playhead.style.left = left.toFixed(3) + "%";
+        playhead.classList.add("is-visible");
+    }
+
+    function renderTranscriptTimeline(data) {
+        if (!el.transcriptTimeline || !el.transcriptTimelineRuler) return;
+        var segments = data && data.segments ? data.segments : [];
+        var totalDuration = getTranscriptTotalDuration(data);
+        renderTranscriptTimelineMeta(data);
+        if (!segments.length || totalDuration <= 0) {
+            el.transcriptTimelineRuler.innerHTML = '<span>0:00</span><span>0:00</span><span>0:00</span>';
+            setTranscriptTimelineEmptyState("Transcript segments will appear here once the clip is ready.");
+            updateTranscriptTimelineStatus(-1);
+            return;
+        }
+
+        el.transcriptTimelineRuler.innerHTML =
+            '<span>0:00</span>' +
+            '<span>' + fmtDur(totalDuration / 2) + '</span>' +
+            '<span>' + fmtDur(totalDuration) + '</span>';
+
+        var html = "";
+        for (var i = 0; i < segments.length; i++) {
+            var seg = segments[i];
+            var start = Math.max(0, Number(seg.start || 0));
+            var end = Math.max(start, Number(seg.end || seg.start || 0));
+            var duration = Math.max(0.12, end - start);
+            var left = Math.min(96, (start / totalDuration) * 100);
+            var width = Math.max(2.8, (duration / totalDuration) * 100);
+            if (left + width > 100) width = Math.max(2.8, 100 - left);
+            var preview = String(seg.text || "").replace(/\s+/g, " ").trim();
+            if (preview.length > 72) preview = preview.substring(0, 72) + "…";
+            html += '<button type="button" class="transcript-timeline-seg" data-idx="' + i + '" ' +
+                'id="transcriptTimelineSeg' + i + '" role="option" tabindex="-1" ' +
+                'style="left:' + left.toFixed(3) + '%;width:' + width.toFixed(3) + '%;" ' +
+                'aria-selected="false" ' +
+                'aria-label="Segment ' + (i + 1) + ', ' + fmtDur(start) + ' to ' + fmtDur(end) + (preview ? ', ' + esc(preview) : '') + '" ' +
+                'title="' + esc(preview || ('Segment ' + (i + 1))) + '">' +
+                '<span class="transcript-timeline-chip">' + (i + 1) + '</span>' +
+                '</button>';
+        }
+        el.transcriptTimeline.innerHTML = '<span class="transcript-timeline-playhead" aria-hidden="true"></span>' + html;
+        updateTranscriptTimelinePlayhead(_activeTranscriptSegmentIdx);
+    }
+
+    function focusTranscriptSegment(idx, options) {
+        if (!el.transcriptSegments) return;
+        var rows = el.transcriptSegments.querySelectorAll(".transcript-seg");
+        var clips = el.transcriptTimeline ? el.transcriptTimeline.querySelectorAll(".transcript-timeline-seg") : [];
+        var activeClip = null;
+        for (var i = 0; i < rows.length; i++) {
+            rows[i].classList.toggle("is-active", i === idx);
+        }
+        for (var j = 0; j < clips.length; j++) {
+            var isActive = j === idx;
+            clips[j].classList.toggle("is-active", isActive);
+            clips[j].setAttribute("aria-selected", isActive ? "true" : "false");
+            clips[j].tabIndex = isActive ? 0 : -1;
+            if (isActive) activeClip = clips[j];
+        }
+        if (idx == null || idx < 0 || idx >= rows.length) {
+            _activeTranscriptSegmentIdx = -1;
+            if (el.transcriptTimeline) el.transcriptTimeline.removeAttribute("aria-activedescendant");
+            updateTranscriptTimelineStatus(-1);
+            updateTranscriptTimelinePlayhead(-1);
+            return;
+        }
+        _activeTranscriptSegmentIdx = idx;
+        if (el.transcriptTimeline && activeClip) {
+            el.transcriptTimeline.setAttribute("aria-activedescendant", activeClip.id);
+        }
+        updateTranscriptTimelineStatus(idx);
+        updateTranscriptTimelinePlayhead(idx);
+
+        var row = rows[idx];
+        if (row && (!options || options.scroll !== false) && row.scrollIntoView) {
+            row.scrollIntoView({ block: "nearest", behavior: options && options.instant ? "auto" : "smooth" });
+        }
+        if (activeClip && (!options || options.scrollTimeline !== false) && activeClip.scrollIntoView) {
+            activeClip.scrollIntoView({ block: "nearest", inline: "nearest", behavior: options && options.instant ? "auto" : "smooth" });
+        }
+        if (options && options.focusControl === "timeline" && activeClip && activeClip.focus) {
+            activeClip.focus();
+        }
+        if (options && (options.focusInput || options.focusControl === "input") && row) {
+            var ta = row.querySelector(".transcript-seg-text");
+            if (ta) ta.focus();
+        }
+    }
+
+    function refreshTranscriptSearch() {
+        if (!el.transcriptSearchInput) return;
+        doTranscriptSearch((el.transcriptSearchInput.value || "").trim());
+    }
 
     function snapshotTranscript() {
         if (!transcriptData || !transcriptData.segments) return;
@@ -4360,6 +4619,7 @@
                 lastTranscriptSegments[i].text = snap[i];
             }
         }
+        refreshTranscriptSearch();
     }
 
     function undoTranscript() {
@@ -4391,19 +4651,40 @@
         el.transcriptEditor.classList.remove("hidden");
         var wordCount = data.word_count || 0;
         var segCount = data.segments ? data.segments.length : 0;
-        el.transcriptInfo.textContent = wordCount + " words | " + segCount + " segments | " + (data.language || "en");
-        if (!data.segments || !data.segments.length) return;
+        var runtime = getTranscriptTotalDuration(data);
+        var lang = (data.language || "en").toUpperCase();
+        el.transcriptInfo.textContent = wordCount + " words · " + segCount + " segments · " + fmtDur(runtime) + " runtime · " + lang;
+        if (!data.segments || !data.segments.length) {
+            el.transcriptSegments.innerHTML = '<div class="transcript-empty-state">Transcribe a clip to start shaping dialogue, timing, and cut decisions.</div>';
+            renderTranscriptTimeline(data);
+            transcriptHistory = [];
+            transcriptHistoryIdx = -1;
+            updateUndoRedoButtons();
+            focusTranscriptSegment(-1, { scroll: false, scrollTimeline: false, instant: true });
+            refreshTranscriptSearch();
+            return;
+        }
 
         var html = "";
         for (var i = 0; i < data.segments.length; i++) {
             var seg = data.segments[i];
-            var timeStr = fmtDur(seg.start) + " - " + fmtDur(seg.end);
-            html += '<div class="transcript-seg" data-idx="' + i + '">'
-                + '<div class="transcript-seg-time">' + timeStr + '</div>'
-                + '<textarea class="transcript-seg-text" data-idx="' + i + '" rows="1">' + esc(seg.text) + '</textarea>'
-                + '</div>';
+            var start = Number(seg.start || 0);
+            var end = Number(seg.end || seg.start || 0);
+            var timeStr = fmtDur(start) + " - " + fmtDur(end);
+            var duration = Math.max(0, end - start);
+            html += '<article class="transcript-seg" data-idx="' + i + '">'
+                + '<div class="transcript-seg-header">'
+                + '<div class="transcript-seg-primary">'
+                + '<span class="transcript-seg-index">' + (i + 1) + '</span>'
+                + '<span class="transcript-seg-time">' + timeStr + '</span>'
+                + '</div>'
+                + '<span class="transcript-seg-duration">' + safeFixed(duration, 1) + 's</span>'
+                + '</div>'
+                + '<textarea class="transcript-seg-text" data-idx="' + i + '" rows="1" aria-label="Transcript segment ' + (i + 1) + '">' + esc(seg.text) + '</textarea>'
+                + '</article>';
         }
         el.transcriptSegments.innerHTML = html;
+        renderTranscriptTimeline(data);
 
         // Auto-resize textareas
         var textareas = el.transcriptSegments.querySelectorAll(".transcript-seg-text");
@@ -4415,6 +4696,8 @@
         transcriptHistory = [];
         transcriptHistoryIdx = -1;
         snapshotTranscript();
+        focusTranscriptSegment(Math.min(Math.max(_activeTranscriptSegmentIdx, 0), segCount - 1), { scroll: false, scrollTimeline: false, instant: true });
+        refreshTranscriptSearch();
     }
 
     function autoResize(textarea) {
@@ -4438,6 +4721,53 @@
             if (editDebounceTimer) clearTimeout(editDebounceTimer);
             editDebounceTimer = setTimeout(function () { snapshotTranscript(); }, 500);
         });
+        el.transcriptSegments.addEventListener("click", function (e) {
+            var row = e.target.closest(".transcript-seg");
+            if (!row) return;
+            var idx = parseInt(row.getAttribute("data-idx"), 10);
+            if (!(idx >= 0)) return;
+            focusTranscriptSegment(idx, { scroll: false, scrollTimeline: true });
+            if (!e.target.classList.contains("transcript-seg-text")) {
+                var ta = row.querySelector(".transcript-seg-text");
+                if (ta) ta.focus();
+            }
+        });
+        el.transcriptSegments.addEventListener("focusin", function (e) {
+            var ta = e.target;
+            if (!ta || !ta.classList.contains("transcript-seg-text")) return;
+            var idx = parseInt(ta.getAttribute("data-idx"), 10);
+            if (idx >= 0) focusTranscriptSegment(idx, { scroll: true, scrollTimeline: true });
+        });
+        if (el.transcriptTimeline) {
+            el.transcriptTimeline.addEventListener("click", function (e) {
+                var btn = e.target.closest(".transcript-timeline-seg");
+                if (!btn) return;
+                var idx = parseInt(btn.getAttribute("data-idx"), 10);
+                if (idx >= 0) focusTranscriptSegment(idx, { focusInput: true });
+            });
+            el.transcriptTimeline.addEventListener("keydown", function (e) {
+                var btn = e.target.closest(".transcript-timeline-seg");
+                if (!btn) return;
+                var idx = parseInt(btn.getAttribute("data-idx"), 10);
+                if (!(idx >= 0)) return;
+                if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+                    e.preventDefault();
+                    focusTranscriptSegment(Math.min(idx + 1, getTranscriptSegments().length - 1), { focusControl: "timeline" });
+                } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+                    e.preventDefault();
+                    focusTranscriptSegment(Math.max(idx - 1, 0), { focusControl: "timeline" });
+                } else if (e.key === "Home") {
+                    e.preventDefault();
+                    focusTranscriptSegment(0, { focusControl: "timeline" });
+                } else if (e.key === "End") {
+                    e.preventDefault();
+                    focusTranscriptSegment(getTranscriptSegments().length - 1, { focusControl: "timeline" });
+                } else if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    focusTranscriptSegment(idx, { focusInput: true });
+                }
+            });
+        }
     }
 
     // ================================================================
@@ -4534,18 +4864,18 @@
     }
 
     function installWhisper() {
-        showAlert("Installing faster-whisper... This may take a minute.");
+        showAlert("Installing faster-whisper… This may take a minute.");
         startJob("/install-whisper", { backend: "faster-whisper" });
     }
 
     function reinstallWhisper() {
         var cpuMode = el.whisperCpuMode.checked;
-        showAlert("Reinstalling Whisper" + (cpuMode ? " in CPU mode" : "") + "... Please wait.");
+        showAlert("Reinstalling Whisper" + (cpuMode ? " in CPU mode" : "") + "… Please wait.");
         startJob("/whisper/reinstall", { backend: "faster-whisper", cpu_mode: cpuMode, no_input: true });
     }
 
     function clearWhisperCache() {
-        showAlert("Clearing Whisper cache...");
+        showAlert("Clearing Whisper cache…");
         api("POST", "/whisper/clear-cache", {}, function (err, data) {
             if (!err && data) {
                 if (data.success) {
@@ -4581,7 +4911,7 @@
     }
 
     function restartBackend() {
-        showAlert("Restarting backend...");
+        showAlert("Restarting backend…");
         api("POST", "/shutdown", {}, function () {
             // Backend will shut down, then auto-restart via launcher
             setTimeout(function () {
@@ -4779,8 +5109,78 @@
     // Utility
     // ================================================================
     var _alertTimer = null;
+
+    var NOTIFICATION_TONE_CLASSES = ["is-info", "is-success", "is-warning", "is-error"];
+
+    function applyNotificationTone(node, tone) {
+        if (!node) return;
+        for (var i = 0; i < NOTIFICATION_TONE_CLASSES.length; i++) {
+            node.classList.remove(NOTIFICATION_TONE_CLASSES[i]);
+        }
+        node.classList.add("is-" + (tone || "info"));
+    }
+
+    function inferNotificationTone(message, errorData, explicitType) {
+        if (explicitType && /^(success|error|warning|info)$/.test(explicitType)) {
+            return explicitType;
+        }
+        var lower = String(message || "").toLowerCase();
+        if (errorData && (errorData.error || errorData.message || errorData.code)) {
+            return "error";
+        }
+        if (/(^error\b|failed|failure|couldn't|could not|invalid|unable|not configured|unexpected|import error|oauth error)/.test(lower)) {
+            return "error";
+        }
+        if (/(success|saved|loaded|opened|exported|installed successfully|complete|completed|deleted|enabled|disabled|cleared|copied|refreshed|queue cleared|succeeded)/.test(lower)) {
+            return "success";
+        }
+        if (/(select|choose|enter|make sure|no clip|no clips|no cuts|no markers|no items|no project media|required|another task is in progress|connection required)/.test(lower)) {
+            return "warning";
+        }
+        return "info";
+    }
+
+    function getNotificationHeading(tone, message) {
+        var lower = String(message || "").toLowerCase();
+        if (tone === "success") {
+            return /(saved|loaded|opened|exported|copied|ready)/.test(lower) ? "Ready" : "Done";
+        }
+        if (tone === "warning") {
+            return /(select|choose|enter|required)/.test(lower) ? "Action needed" : "Heads up";
+        }
+        if (tone === "error") {
+            return "Needs attention";
+        }
+        if (/(step \d+\/\d+|installing|reinstalling|restarting|loading|checking|processing|transcribing|translating|burning|indexing)/.test(lower)) {
+            return "In progress";
+        }
+        return "Status update";
+    }
+
+    function getNotificationIconSvg(tone) {
+        switch (tone) {
+            case "success":
+                return '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.25"/><path d="M6.8 10.2l2.1 2.15 4.3-4.45"/></svg>';
+            case "warning":
+                return '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3.4 16.2 14a1.15 1.15 0 0 1-.99 1.72H4.79A1.15 1.15 0 0 1 3.8 14L10 3.4Z"/><path d="M10 7.35v3.9"/><circle cx="10" cy="13.45" r="0.9" fill="currentColor" stroke="none"/></svg>';
+            case "error":
+                return '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.25"/><path d="m7.35 7.35 5.3 5.3"/><path d="m12.65 7.35-5.3 5.3"/></svg>';
+            default:
+                return '<svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.25"/><path d="M10 6.4v4.45"/><circle cx="10" cy="13.85" r="0.9" fill="currentColor" stroke="none"/></svg>';
+        }
+    }
+
     function showAlert(msg, errorData) {
         var display = enhanceError(msg, errorData);
+        var tone = inferNotificationTone(display, errorData);
+        var heading = getNotificationHeading(tone, display);
+        applyNotificationTone(el.alertBanner, tone);
+        if (el.alertIcon) {
+            el.alertIcon.innerHTML = getNotificationIconSvg(tone);
+        }
+        if (el.alertEyebrow) {
+            el.alertEyebrow.textContent = heading;
+        }
         el.alertText.textContent = display;
         // Remove any previous action link
         var oldLink = el.alertBanner.querySelector(".alert-action-link");
@@ -4788,17 +5188,15 @@
         // If errorData has an error code with a tab action, add a clickable nav link
         var action = getErrorCodeAction(errorData);
         if (action && action.tab) {
-            var link = document.createElement("span");
+            var link = document.createElement("button");
+            link.type = "button";
             link.className = "alert-action-link";
-            link.textContent = " Go to " + action.tab.charAt(0).toUpperCase() + action.tab.slice(1) + " \u2192";
-            link.style.cursor = "pointer";
-            link.style.textDecoration = "underline";
-            link.style.marginLeft = "6px";
+            link.textContent = "Open " + action.tab.charAt(0).toUpperCase() + action.tab.slice(1);
             link.addEventListener("click", function () {
                 navigateToTab(action.tab, action.sub || null);
                 el.alertBanner.classList.add("hidden");
             });
-            el.alertText.parentNode.insertBefore(link, el.alertText.nextSibling);
+            el.alertText.parentNode.appendChild(link);
         }
         el.alertBanner.classList.remove("hidden");
         if (_alertTimer) clearTimeout(_alertTimer);
@@ -4878,7 +5276,7 @@
                 totalDuration += parseFloat(boxes[i].getAttribute("data-duration") || 0);
             }
         }
-        summary.textContent = checked + " of " + boxes.length + " cuts selected (" + safeFixed(totalDuration, 1) + "s)";
+        summary.textContent = checked + " of " + boxes.length + " cuts selected · " + safeFixed(totalDuration, 1) + "s marked for write-back";
     }
 
     /**
@@ -4897,6 +5295,10 @@
 
         _cutReviewApplyCallback = onApply;
 
+        var totalDuration = 0;
+        for (var t = 0; t < cuts.length; t++) {
+            totalDuration = Math.max(totalDuration, Number(cuts[t].end || cuts[t].start || 0));
+        }
         var html = "";
         for (var i = 0; i < cuts.length; i++) {
             var c = cuts[i];
@@ -4904,13 +5306,25 @@
             var endSec = Number(c.end || 0);
             var dur = Math.max(0, endSec - startSec);
             var label = c.label || c.text || c.reason || ("Cut " + (i + 1));
-            html += '<div class="cut-review-row">'
-                + '<input type="checkbox" checked data-index="' + i + '" data-duration="' + dur.toFixed(2) + '">'
+            var left = totalDuration > 0 ? Math.max(0, Math.min(100, (startSec / totalDuration) * 100)) : 0;
+            var width = totalDuration > 0 ? Math.max(3, (dur / totalDuration) * 100) : 100;
+            if (left + width > 100) width = Math.max(3, 100 - left);
+            var checkboxLabel = "Include cut " + (i + 1) + ", " + formatTimecode(startSec) + " to " + formatTimecode(endSec);
+            html += '<label class="cut-review-row" data-idx="' + i + '">'
+                + '<input type="checkbox" checked data-index="' + i + '" data-duration="' + dur.toFixed(2) + '" aria-label="' + esc(checkboxLabel) + '">'
+                + '<div class="cut-review-main">'
+                + '<div class="cut-review-top">'
+                + '<div class="cut-review-meta">'
+                + '<span class="cut-review-index">' + (i + 1) + '</span>'
                 + '<span class="cut-review-time">' + formatTimecode(startSec) + '</span>'
                 + '<span class="cut-review-time">' + formatTimecode(endSec) + '</span>'
                 + '<span class="cut-review-duration">' + safeFixed(dur, 1) + 's</span>'
-                + '<span class="cut-review-label">' + esc(String(label).substring(0, 80)) + '</span>'
-                + '</div>';
+                + '</div>'
+                + '<span class="cut-review-label">' + esc(String(label).substring(0, 120)) + '</span>'
+                + '</div>'
+                + '<div class="cut-review-track"><span class="cut-review-track-fill" style="left:' + left.toFixed(3) + '%;width:' + width.toFixed(3) + '%;"></span></div>'
+                + '</div>'
+                + '</label>';
         }
         list.innerHTML = html;
 
@@ -5062,12 +5476,14 @@
             var h = jobHistoryList[i];
             var statusClass = h.status === "complete" ? "complete" : (h.status === "cancelled" ? "cancelled" : "error");
             html += '<div class="job-history-item" data-idx="' + i + '">' +
-                '<span style="display:flex;align-items:center;gap:4px"><span class="job-history-status ' + statusClass + '"></span>' +
-                esc(h.type) + '</span>' +
-                '<span style="display:flex;align-items:center;gap:6px">' +
-                '<span style="font-size:10px;color:var(--text-muted)">' + esc(h.time) + '</span>' +
-                (h.endpoint ? '<button type="button" class="btn-sm job-history-rerun" data-idx="' + i + '" title="Re-run this job" style="padding:1px 5px;font-size:9px">Re-run</button>' : '') +
-                '</span></div>';
+                '<div class="job-history-main">' +
+                '<span class="job-history-status ' + statusClass + '"></span>' +
+                '<span class="job-history-type">' + esc(h.type) + '</span>' +
+                '</div>' +
+                '<div class="job-history-meta">' +
+                '<span class="job-history-time">' + esc(h.time) + '</span>' +
+                (h.endpoint ? '<button type="button" class="btn-sm job-history-rerun" data-idx="' + i + '" title="Re-run this job">Re-run</button>' : '') +
+                '</div></div>';
         }
         el.jobHistory.innerHTML = html;
     }
@@ -5246,7 +5662,7 @@
             if (keys.length === 0) {
                 html = '<option value="" disabled selected>No presets saved</option>';
             } else {
-                html = '<option value="" disabled selected>Select preset...</option>';
+                    html = '<option value="" disabled selected>Select preset…</option>';
                 for (var i = 0; i < keys.length; i++) {
                     html += '<option value="' + esc(keys[i]) + '">' + esc(keys[i]) + '</option>';
                 }
@@ -5491,7 +5907,7 @@
         api("GET", "/templates/list", null, function (err, data) {
             if (err || !data) return;
             _projectTemplates = (data.builtin || []).concat(data.user || []);
-            var html = '<option value="" disabled selected>Select a template...</option>';
+                var html = '<option value="" disabled selected>Select a template…</option>';
             if (data.builtin && data.builtin.length) {
                 html += '<optgroup label="Built-in">';
                 for (var i = 0; i < data.builtin.length; i++) {
@@ -5540,7 +5956,7 @@
                 return;
             }
             btn.disabled = true;
-            btn.textContent = "Deleting...";
+                btn.textContent = "Deleting…";
             api("POST", "/models/delete", { path: path }, function (err, data) {
                 if (!err && data && data.success) {
                     showToast("Model deleted", "success");
@@ -5563,7 +5979,7 @@
     function refreshModelList() {
         if (!el.modelList) return;
         ensureModelListDelegation();
-        setHintContent(el.modelList, "Scanning...");
+        setHintContent(el.modelList, "Scanning…");
         api("GET", "/models/list", null, function (err, data) {
             if (err || !data) {
                 setHintContent(el.modelList, "Failed to load models.");
@@ -5617,7 +6033,7 @@
     function initGpuRecommendation() {
         if (!el.getGpuRecBtn) return;
         el.getGpuRecBtn.addEventListener("click", function () {
-            el.getGpuRecBtn.textContent = "Checking...";
+            el.getGpuRecBtn.textContent = "Checking…";
             el.getGpuRecBtn.disabled = true;
             api("GET", "/system/gpu-recommend", null, function (err, data) {
                 el.getGpuRecBtn.textContent = "Get Recommendation";
@@ -5702,8 +6118,10 @@
     var MAX_TOASTS = 5;
     function _reflowToasts() {
         var live = document.querySelectorAll(".toast-notification");
+        var offset = 24;
         for (var ri = 0; ri < live.length; ri++) {
-            live[ri].style.bottom = (48 + ri * 44) + "px";
+            live[ri].style.bottom = offset + "px";
+            offset += live[ri].offsetHeight + 12;
         }
     }
 
@@ -5719,22 +6137,25 @@
             _reflowToasts();
         }
         var toast = document.createElement("div");
-        toast.className = "toast-notification " + (type || "info");
-        toast.textContent = message;
-        toast.setAttribute("role", type === "error" ? "alert" : "status");
-        toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
-        // Stack toasts upward from the bottom
-        var liveToasts = document.querySelectorAll(".toast-notification");
-        var offset = 48 + liveToasts.length * 44;
-        toast.style.bottom = offset + "px";
+        var tone = inferNotificationTone(message, null, type);
+        toast.className = "toast-notification " + tone + " is-" + tone;
+        toast.innerHTML = '<span class="toast-icon" aria-hidden="true">' + getNotificationIconSvg(tone) + '</span>' +
+            '<span class="toast-copy">' +
+            '<span class="toast-title">' + esc(getNotificationHeading(tone, message)) + '</span>' +
+            '<span class="toast-message">' + esc(message) + '</span>' +
+            '</span>';
+        toast.setAttribute("role", tone === "error" ? "alert" : "status");
+        toast.setAttribute("aria-live", tone === "error" ? "assertive" : "polite");
+        toast.setAttribute("aria-atomic", "true");
         document.body.appendChild(toast);
+        _reflowToasts();
         setTimeout(function () {
             toast.classList.add("fade-out");
             setTimeout(function () {
                 if (toast.parentNode) toast.parentNode.removeChild(toast);
                 _reflowToasts();
             }, 300);
-        }, 3000);
+        }, tone === "error" ? 4200 : 3200);
     }
 
     // ================================================================
@@ -5796,6 +6217,15 @@
         el.transcriptSearchInput.addEventListener("input", function () {
             doTranscriptSearch(this.value.trim());
         });
+        el.transcriptSearchInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter" && _searchMatches.length) {
+                e.preventDefault();
+                _searchIndex = e.shiftKey
+                    ? (_searchIndex - 1 + _searchMatches.length) % _searchMatches.length
+                    : (_searchIndex + 1) % _searchMatches.length;
+                highlightSearchMatch();
+            }
+        });
 
         if (el.transcriptSearchNext) el.transcriptSearchNext.addEventListener("click", function () {
             if (_searchMatches.length === 0) return;
@@ -5815,9 +6245,13 @@
         _searchIndex = -1;
 
         // Clear previous highlights
-        var segments = document.querySelectorAll(".transcript-seg");
+        var segments = el.transcriptSegments ? el.transcriptSegments.querySelectorAll(".transcript-seg") : [];
+        var clips = el.transcriptTimeline ? el.transcriptTimeline.querySelectorAll(".transcript-timeline-seg") : [];
         for (var i = 0; i < segments.length; i++) {
             segments[i].classList.remove("search-highlight", "search-active");
+        }
+        for (var j = 0; j < clips.length; j++) {
+            clips[j].classList.remove("search-highlight", "search-active");
         }
 
         if (!query) {
@@ -5826,11 +6260,13 @@
         }
 
         var lower = query.toLowerCase();
-        for (var i = 0; i < segments.length; i++) {
-            var text = segments[i].textContent || "";
+        for (var k = 0; k < segments.length; k++) {
+            var textarea = segments[k].querySelector(".transcript-seg-text");
+            var text = textarea ? textarea.value : (segments[k].textContent || "");
             if (text.toLowerCase().indexOf(lower) !== -1) {
-                _searchMatches.push(segments[i]);
-                segments[i].classList.add("search-highlight");
+                _searchMatches.push(k);
+                segments[k].classList.add("search-highlight");
+                if (clips[k]) clips[k].classList.add("search-highlight");
             }
         }
 
@@ -5845,12 +6281,18 @@
     }
 
     function highlightSearchMatch() {
+        var segments = el.transcriptSegments ? el.transcriptSegments.querySelectorAll(".transcript-seg") : [];
+        var clips = el.transcriptTimeline ? el.transcriptTimeline.querySelectorAll(".transcript-timeline-seg") : [];
         for (var i = 0; i < _searchMatches.length; i++) {
-            _searchMatches[i].classList.remove("search-active");
+            var idx = _searchMatches[i];
+            if (segments[idx]) segments[idx].classList.remove("search-active");
+            if (clips[idx]) clips[idx].classList.remove("search-active");
         }
         if (_searchIndex >= 0 && _searchIndex < _searchMatches.length) {
-            _searchMatches[_searchIndex].classList.add("search-active");
-            _searchMatches[_searchIndex].scrollIntoView({ block: "nearest", behavior: "smooth" });
+            var activeIdx = _searchMatches[_searchIndex];
+            if (segments[activeIdx]) segments[activeIdx].classList.add("search-active");
+            if (clips[activeIdx]) clips[activeIdx].classList.add("search-active");
+            focusTranscriptSegment(activeIdx, { scroll: true, scrollTimeline: true });
             if (el.transcriptSearchCount) {
                 el.transcriptSearchCount.textContent = (_searchIndex + 1) + "/" + _searchMatches.length;
             }
@@ -5882,7 +6324,7 @@
                 return;
             }
 
-            el.loadWaveformBtn.textContent = "Loading...";
+        el.loadWaveformBtn.textContent = "Loading…";
             el.loadWaveformBtn.disabled = true;
             var fetchPath = selectedPath; // capture for closure
             api("POST", "/audio/waveform", { file: fetchPath, samples: 500 }, function (err, data) {
@@ -6218,10 +6660,11 @@
         if (!el.wizardOverlay) return;
         el.wizardOverlay.classList.add("hidden");
         try {
-            var s = JSON.parse(localStorage.getItem("opencut_settings") || "{}");
-            s.wizardDismissed = true;
-            localStorage.setItem("opencut_settings", JSON.stringify(s));
+            var s = JSON.parse(localStorage.getItem(LOCAL_SETTINGS_KEY) || "{}");
+            s.wizardDismissed = !!(el.wizardDontShow && el.wizardDontShow.checked);
+            localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(s));
         } catch (e) {}
+        if (el.stageChooseMediaBtn) el.stageChooseMediaBtn.focus();
     }
 
     function initWizard() {
@@ -6250,10 +6693,11 @@
         }
         // Check if user has dismissed the wizard before
         try {
-            var settings = JSON.parse(localStorage.getItem("opencut_settings") || "{}");
+            var settings = JSON.parse(localStorage.getItem(LOCAL_SETTINGS_KEY) || "{}");
             if (settings.wizardDismissed) return;
         } catch (e) {}
         // Show wizard
+        if (el.wizardDontShow) el.wizardDontShow.checked = false;
         el.wizardOverlay.classList.remove("hidden");
         if (el.wizardCloseBtn) el.wizardCloseBtn.focus();
         // Animate steps
@@ -6411,7 +6855,7 @@
     function renderBatchFiles() {
         if (!el.batchFileList) return;
         if (_batchFiles.length === 0) {
-            el.batchFileList.innerHTML = '<div class="hint">No files added. Use "Add Selected" or drag files.</div>';
+            el.batchFileList.innerHTML = buildEmptyHintMarkup("No files added", 'Use "Add Selected" or drag files.');
             return;
         }
         var frag = document.createDocumentFragment();
@@ -6419,7 +6863,11 @@
             var item = document.createElement("div");
             item.className = "batch-file-item";
             var name = _batchFiles[i].split(/[/\\]/).pop();
-            item.innerHTML = '<span>' + (i + 1) + '. ' + esc(name) + '</span><button type="button" class="batch-file-remove" data-idx="' + i + '">&times;</button>';
+            item.innerHTML = '<div class="batch-file-main">' +
+                '<span class="batch-file-index">' + (i + 1) + '</span>' +
+                '<span class="batch-file-name">' + esc(name) + '</span>' +
+                '</div>' +
+                '<button type="button" class="batch-file-remove" data-idx="' + i + '">Remove</button>';
             frag.appendChild(item);
         }
         el.batchFileList.innerHTML = "";
@@ -6437,7 +6885,7 @@
 
     function refreshDeps() {
         if (!el.depGrid) return;
-        el.depGrid.innerHTML = '<div class="hint">Checking dependencies...</div>';
+        el.depGrid.innerHTML = '<div class="hint">Checking dependencies…</div>';
         api("GET", "/system/dependencies", null, function (err, data) {
             if (err || !data) {
                 el.depGrid.innerHTML = '<div class="hint">Failed to check dependencies.</div>';
@@ -6623,7 +7071,7 @@
     function renderWorkflowSteps() {
         if (!el.workflowStepList) return;
         if (_workflowSteps.length === 0) {
-            el.workflowStepList.innerHTML = '<div class="hint">Add steps to build a custom workflow.</div>';
+            el.workflowStepList.innerHTML = buildEmptyHintMarkup("Workflow is empty", "Add steps to build a custom workflow.");
             if (el.runCustomWorkflowBtn) el.runCustomWorkflowBtn.disabled = true;
             return;
         }
@@ -6632,7 +7080,11 @@
         for (var i = 0; i < _workflowSteps.length; i++) {
             var item = document.createElement("div");
             item.className = "workflow-step-item";
-            item.innerHTML = '<span class="workflow-step-num">' + (i + 1) + '</span><span>' + esc(_workflowSteps[i].label) + '</span><button type="button" class="workflow-step-remove" data-idx="' + i + '">&times;</button>';
+            item.innerHTML = '<div class="workflow-step-main">' +
+                '<span class="workflow-step-num">' + (i + 1) + '</span>' +
+                '<span class="workflow-step-label">' + esc(_workflowSteps[i].label) + '</span>' +
+                '</div>' +
+                '<button type="button" class="workflow-step-remove" data-idx="' + i + '">Remove</button>';
             frag.appendChild(item);
         }
         el.workflowStepList.innerHTML = "";
@@ -7782,14 +8234,20 @@
     function renderMergeFiles() {
         if (!el.mergeFileList) return;
         if (_mergeFiles.length === 0) {
-            el.mergeFileList.innerHTML = '<div class="hint" style="padding:8px 12px;">No files added.</div>';
+            el.mergeFileList.innerHTML = buildEmptyHintMarkup("Nothing queued", "Add two or more files to merge in sequence.");
             if (el.runMergeBtn) el.runMergeBtn.disabled = true;
             return;
         }
         var html = "";
         for (var i = 0; i < _mergeFiles.length; i++) {
             var name = _mergeFiles[i].split(/[/\\]/).pop();
-            html += '<div class="merge-file-item"><span class="merge-file-name">' + esc(name) + '</span><button type="button" class="btn-ghost btn-xs merge-file-remove" data-idx="' + i + '">&times;</button></div>';
+            html += '<div class="merge-file-item">' +
+                '<div class="merge-file-main">' +
+                '<span class="merge-file-index">' + (i + 1) + '</span>' +
+                '<span class="merge-file-name">' + esc(name) + '</span>' +
+                '</div>' +
+                '<button type="button" class="merge-file-remove" data-idx="' + i + '">Remove</button>' +
+                '</div>';
         }
         el.mergeFileList.innerHTML = html;
         if (el.runMergeBtn) el.runMergeBtn.disabled = _mergeFiles.length < 2;
@@ -7923,7 +8381,7 @@
 
     function testLLM() {
         var cfg = getLLMConfig();
-        if (el.llmStatus) el.llmStatus.textContent = "Testing...";
+        if (el.llmStatus) el.llmStatus.textContent = "Testing…";
         api("POST", "/llm/test", { prompt: "Say hello in one sentence.", provider: cfg.provider, model: cfg.model || "", api_key: cfg.api_key || "", base_url: cfg.base_url || "" }, function (err, resp) {
             if (err || !resp || !resp.success) {
                 var msg = (resp && resp.error) ? resp.error : (err && typeof err === "object" && err.message) ? err.message : "Couldn't reach the LLM provider";
@@ -8043,7 +8501,7 @@
     function runSummarize() {
         var llm = getLLMConfig();
         if (el.summaryResult) el.summaryResult.classList.remove("hidden");
-        if (el.summaryContent) el.summaryContent.textContent = "Summarizing...";
+        if (el.summaryContent) el.summaryContent.textContent = "Summarizing…";
         startJob("/transcript/summarize", {
             filepath: selectedPath,
             style: "bullets",
@@ -8207,10 +8665,10 @@
         if (!container) return;
         var html = "";
         for (var i = 0; i < n; i++) {
-            html += '<div class="multicam-track-row" style="display:flex;align-items:center;gap:6px;margin-bottom:4px;">'
-                + '<span style="font-size:11px;color:var(--text-secondary);min-width:70px;">Speaker ' + (i + 1) + '</span>'
-                + '<span style="font-size:11px;color:var(--text-muted);">\u2192 Track</span>'
-                + '<input type="number" class="multicam-track-input" value="' + i + '" min="0" max="20" style="width:50px;">'
+            html += '<div class="multicam-track-row">'
+                + '<span class="multicam-track-label">Speaker ' + (i + 1) + '</span>'
+                + '<span class="multicam-track-arrow">\u2192 Track</span>'
+                + '<input type="number" class="multicam-track-input" value="' + i + '" min="0" max="20">'
                 + '</div>';
         }
         container.innerHTML = html;
@@ -8233,8 +8691,12 @@
                         for (var i = 0; i < markers.length; i++) {
                             var m = markers[i];
                             var dur = m.duration != null ? safeFixed(m.duration, 2) + "s" : "--";
-                            html += '<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border);">'
-                                + esc(m.name || ("Marker " + (i + 1))) + ' &mdash; ' + fmtDur(m.start || 0) + ' (' + dur + ')'
+                            html += '<div class="marker-export-item">'
+                                + '<div class="marker-export-main">'
+                                + '<span class="marker-export-name">' + esc(m.name || ("Marker " + (i + 1))) + '</span>'
+                                + '<span class="marker-export-time">' + fmtDur(m.start || 0) + '</span>'
+                                + '</div>'
+                                + '<span class="marker-export-duration">' + dur + '</span>'
                                 + '</div>';
                         }
                         listEl.innerHTML = html;
@@ -8305,8 +8767,9 @@
         var html = "";
         for (var i = 0; i < renameItemsData.length; i++) {
             var item = renameItemsData[i];
-            html += '<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">'
-                + '<input type="text" class="text-input rename-name-input" data-idx="' + i + '" value="' + esc(item.name || "") + '" style="flex:1;font-size:11px;">'
+            html += '<div class="rename-item">'
+                + '<span class="rename-item-index">' + (i + 1) + '</span>'
+                + '<input type="text" class="text-input rename-name-input" data-idx="' + i + '" value="' + esc(item.name || "") + '">'
                 + '</div>';
         }
         container.innerHTML = html;
@@ -8369,20 +8832,24 @@
         var html = "";
         for (var i = 0; i < smartBinRules.length; i++) {
             var r = smartBinRules[i];
-            html += '<div class="smart-bin-rule" data-idx="' + i + '" style="display:flex;gap:4px;align-items:center;margin-bottom:6px;flex-wrap:wrap;">'
-                + '<input type="text" class="text-input bin-name" data-idx="' + i + '" placeholder="Bin name" value="' + esc(r.bin_name) + '" style="width:80px;font-size:11px;">'
-                + '<select class="bin-rule-type" data-idx="' + i + '" style="font-size:11px;">'
+            html += '<div class="smart-bin-rule" data-idx="' + i + '">'
+                + '<div class="smart-bin-rule-main">'
+                + '<input type="text" class="text-input bin-name" data-idx="' + i + '" placeholder="Bin name" value="' + esc(r.bin_name) + '">'
+                + '<button type="button" class="bin-rule-remove" data-idx="' + i + '">Remove</button>'
+                + '</div>'
+                + '<div class="smart-bin-rule-fields">'
+                + '<select class="bin-rule-type" data-idx="' + i + '">'
                 + ['contains','starts_with','ends_with','type_is','duration_gt','duration_lt'].map(function(v) {
                     return '<option value="' + v + '"' + (r.rule_type === v ? ' selected' : '') + '>' + v + '</option>';
                 }).join('')
                 + '</select>'
-                + '<select class="bin-field" data-idx="' + i + '" style="font-size:11px;">'
+                + '<select class="bin-field" data-idx="' + i + '">'
                 + ['name','type','duration'].map(function(v) {
                     return '<option value="' + v + '"' + (r.field === v ? ' selected' : '') + '>' + v + '</option>';
                 }).join('')
                 + '</select>'
-                + '<input type="text" class="text-input bin-value" data-idx="' + i + '" placeholder="Value" value="' + esc(r.value) + '" style="width:70px;font-size:11px;">'
-                + '<button type="button" class="btn-ghost btn-xs bin-rule-remove" data-idx="' + i + '">&times;</button>'
+                + '<input type="text" class="text-input bin-value" data-idx="' + i + '" placeholder="Value" value="' + esc(r.value) + '">'
+                + '</div>'
                 + '</div>';
         }
         container.innerHTML = html;
@@ -8446,9 +8913,12 @@
             var html = "";
             for (var i = 0; i < repeatCutsData.length; i++) {
                 var c = repeatCutsData[i];
-                html += '<div style="font-size:11px;padding:3px 0;border-bottom:1px solid var(--border);">'
-                    + fmtDur(c.start || 0) + " - " + fmtDur(c.end || 0)
-                    + (c.text ? ' &mdash; <em>' + esc(c.text.substring(0, 60)) + '</em>' : '')
+                html += '<div class="analysis-item">'
+                    + '<div class="analysis-item-main">'
+                    + '<span class="analysis-item-title">' + fmtDur(c.start || 0) + " - " + fmtDur(c.end || 0) + '</span>'
+                    + (c.text ? '<span class="analysis-item-copy">' + esc(c.text.substring(0, 60)) + '</span>' : '')
+                    + '</div>'
+                    + '<span class="analysis-item-badge">Repeat</span>'
                     + '</div>';
             }
             list.innerHTML = html || '<div class="hint">No repeats found.</div>';
@@ -8543,7 +9013,7 @@
                 } catch (e) { showAlert("Error: " + (result || e.message)); }
             });
             var statusEl = document.getElementById("srtImportStatus");
-            if (statusEl) { statusEl.textContent = "Imported " + segments.length + " caption segments."; statusEl.classList.remove("hidden"); }
+            setHintState(statusEl, "Imported " + segments.length + " caption segments.", "success");
         });
     }
 
@@ -8570,17 +9040,22 @@
         if (res) res.classList.remove("hidden");
         var outputs = r.outputs || r.clips || [];
         if (table && outputs.length) {
-            var html = '<table style="width:100%;font-size:11px;border-collapse:collapse;">'
-                + '<tr><th style="text-align:left;padding:2px 4px;">Clip</th><th>Original LUFS</th><th>Status</th></tr>';
+            var html = '<div class="report-table">';
+            html += '<div class="report-table-row report-table-head">'
+                + '<span>Clip</span><span>Original LUFS</span><span>Status</span></div>';
             for (var i = 0; i < outputs.length; i++) {
                 var c = outputs[i];
                 var name = (c.input || c.path || c.name || "").split(/[/\\]/).pop();
-                html += '<tr><td style="padding:2px 4px;">' + esc(name) + '</td>'
-                    + '<td style="text-align:center;">' + safeFixed(c.original_lufs, 1) + '</td>'
-                    + '<td style="text-align:center;color:' + (c.job_ok || c.success ? 'var(--success)' : 'var(--error)') + ';">' + (c.job_ok || c.success ? "OK" : "Failed") + '</td></tr>';
+                html += '<div class="report-table-row">'
+                    + '<span class="report-table-cell report-table-primary">' + esc(name) + '</span>'
+                    + '<span class="report-table-cell">' + safeFixed(c.original_lufs, 1) + '</span>'
+                    + '<span class="report-table-cell"><span class="report-status ' + ((c.job_ok || c.success) ? 'is-success' : 'is-error') + '">' + ((c.job_ok || c.success) ? "OK" : "Failed") + '</span></span>'
+                    + '</div>';
             }
-            html += '</table>';
+            html += '</div>';
             table.innerHTML = html;
+        } else if (table) {
+            table.innerHTML = '<div class="hint">No loudness results available.</div>';
         }
     });
 
@@ -8641,7 +9116,7 @@
         var paths = projectMedia.map(function(m) { return m.path || m; }).filter(Boolean);
         if (!paths.length) { showAlert("No project media found."); return; }
         var btn = document.getElementById("indexAllClipsBtn");
-        if (btn) { btn.disabled = true; btn.textContent = "Indexing..."; }
+        if (btn) { btn.disabled = true; btn.textContent = "Indexing…"; }
         api("POST", "/search/index", { files: paths }, function (err, data) {
             if (btn) { btn.disabled = false; btn.textContent = "Index All Project Clips"; }
             if (err || (data && data.error)) { showAlert("Indexing failed: " + (data ? data.error : "Network error")); return; }
@@ -8690,8 +9165,25 @@
                 if (r.text) {
                     var snippet = document.createElement("div");
                     snippet.className = "footage-result-snippet";
-                    snippet.textContent = r.text.substring(0, 80) + (r.text.length > 80 ? "..." : "");
+        snippet.textContent = r.text.substring(0, 80) + (r.text.length > 80 ? "…" : "");
                     item.appendChild(snippet);
+                }
+                if (timeRange || typeof r.score === "number") {
+                    var meta = document.createElement("div");
+                    meta.className = "footage-result-meta";
+                    if (timeRange) {
+                        var metaRange = document.createElement("span");
+                        metaRange.className = "footage-result-range";
+                        metaRange.textContent = timeRange;
+                        meta.appendChild(metaRange);
+                    }
+                    if (typeof r.score === "number") {
+                        var score = document.createElement("span");
+                        score.className = "footage-result-score";
+                        score.textContent = "Score " + safeFixed(r.score, 2);
+                        meta.appendChild(score);
+                    }
+                    item.appendChild(meta);
                 }
                 frag.appendChild(item);
             }
@@ -8723,9 +9215,9 @@
         // Capture state at command time so async callback uses the correct clip
         var snapPath = selectedPath;
         var snapFolder = projectFolder;
-        if (btn) { btn.disabled = true; btn.textContent = "Processing..."; }
+        if (btn) { btn.disabled = true; btn.textContent = "Processing…"; }
         api("POST", "/nlp/command", { command: text, filepath: snapPath, llm_provider: provider }, function (err, data) {
-            if (btn) { btn.disabled = false; btn.textContent = "Execute"; }
+            if (btn) { btn.disabled = false; btn.textContent = "Run Command"; }
             var res = document.getElementById("nlpCommandResult");
             var routeEl = document.getElementById("nlpCommandRoute");
             var confEl = document.getElementById("nlpCommandConf");
@@ -8784,18 +9276,18 @@
                 }
             }
             otioBtn.disabled = true;
-            otioBtn.textContent = "Exporting...";
+        otioBtn.textContent = "Exporting…";
             api("POST", "/timeline/export-otio", payload, function (err, data) {
                 otioBtn.disabled = false;
                 otioBtn.textContent = "Export .otio File";
                 if (err || !data || data.error) {
                     var otioRes = document.getElementById("otioResult");
-                    if (otioRes) { otioRes.classList.remove("hidden"); otioRes.textContent = "Error: " + ((data && data.error) || (err && err.message) || "Unknown"); }
+                    setHintState(otioRes, "Error: " + ((data && data.error) || (err && err.message) || "Unknown"), "error");
                     return;
                 }
                 showToast("OTIO exported: " + (data.output_path || "").split(/[/\\]/).pop(), "success");
                 var otioRes = document.getElementById("otioResult");
-                if (otioRes) { otioRes.classList.remove("hidden"); otioRes.textContent = "Saved: " + (data.output_path || ""); }
+                setHintState(otioRes, "Saved: " + (data.output_path || ""), "success");
             });
         });
         // OTIO install button
