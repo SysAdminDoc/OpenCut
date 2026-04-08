@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>OpenCut</title>
     <link rel="icon" type="image/png" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB6ElEQVR4nMWXUU4CMRCG/5nsBSQrmCgiGM/gITiGb8aoT8YoMb6qxMTEB/UcchsJECNqqGcYH7aF0i24xWXpy26myXzt/PO3u7R3MIKQAAQI6ycBYEmeU3EBWM+TQBhO3OTR8wQnns4feSZlyXCy83PBcIBF7PxcMNzkFxPnFcBNXIQALrLhfHFeJXxSgRXBQeK64H/wr8sahcCFYbsgh50jDG65IDv843pLufDPi+3O13mtIyKv32e1Tla4kIBDdw4Aw6uqGraqykA2bgZN2CMjXBjg4LJbw0C+z3eo0u433fhfcExckF3z1E4JKN/1RAgo3yeLGJ3WO/Pg0O/aBYENZ1fA03DrD72kEnPgjgvCut2Myu0g9nX76KSuAOyro4bylX16UYJoEatN79DR3Bo/h7sKANZe3mKxym7nj0JPOACotPuxD66O68peQOm5G7uau/mj4OPVaO+x2hj81I1d/X1wIQFttt6TqzGns91ntVlwEIjzvFgC4bYL8oXP09yVmxeBq9MGuXCZY7VZcOuLKHDncCHZGi4tt5i7IKzspceuLKq5DdcVKFZzN39UVLe78LEEq4DDHFw0+S+gIsuu85PlAkkWEQAPsdosOFgQOZME/ceyLM1tuL4NU2VPHTJ5aj4VZ+AX8o+DeqiKjVUAAAAASUVORK5CYII=">
     <link rel="stylesheet" href="style.css">
@@ -86,7 +87,7 @@
         <div class="processing-banner hidden" id="processingBanner" role="status" aria-live="polite">
             <div class="processing-inner">
                 <div class="processing-spinner"></div>
-                <span class="processing-msg" id="processingMsg" data-i18n="common.processing">Processing...</span>
+                <span class="processing-msg" id="processingMsg" data-i18n="common.processing">Processing…</span>
             </div>
             <div class="processing-right">
                 <span class="processing-elapsed" id="processingElapsed">0s</span>
@@ -99,8 +100,13 @@
         <!-- Alert Banner -->
         <div class="alert-banner hidden" id="alertBanner" role="alert" aria-live="assertive">
             <div class="alert-inner">
-                <svg class="alert-icon" width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
-                <span class="alert-text" id="alertText"></span>
+                <span class="alert-icon" id="alertIcon" aria-hidden="true">
+                    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="7.25"/><path d="M10 6.4v4.45"/><circle cx="10" cy="13.85" r="0.9" fill="currentColor" stroke="none"/></svg>
+                </span>
+                <div class="alert-copy">
+                    <span class="alert-eyebrow" id="alertEyebrow">Status update</span>
+                    <span class="alert-text" id="alertText"></span>
+                </div>
             </div>
             <button type="button" class="alert-dismiss utility-icon-btn banner-dismiss-btn" id="alertDismiss" title="Dismiss alert" aria-label="Dismiss alert">
                 <span class="btn-icon" aria-hidden="true">
@@ -208,7 +214,7 @@
                 <div class="media-intake-shell">
                     <div class="media-intake-main">
                         <select class="clip-select" id="clipSelect" aria-label="Select project clip">
-                            <option value="" disabled selected>Loading project media...</option>
+                            <option value="" disabled selected>Loading project media…</option>
                         </select>
                         <div class="recent-clips-row">
                             <button type="button" class="btn-sm btn-ghost utility-btn" id="recentClipsBtn" title="Recent clips" aria-expanded="false" aria-controls="recentClipsDropdown">
@@ -288,9 +294,42 @@
             <!-- ======== TAB: CUT ======== -->
             <div class="nav-panel active" id="panel-cut" role="tabpanel" aria-label="Cut & Clean">
                 <div class="quick-actions" id="quickActionsCut">
-                    <button type="button" class="quick-action-btn" id="quickCleanInterview" disabled title="Remove silence + normalize audio" data-i18n="cut.clean_up">Clean Up</button>
-                    <button type="button" class="quick-action-btn" id="quickYouTube" disabled title="Silence removal + normalize + loudness match" data-i18n="cut.youtube_ready">YouTube Ready</button>
-                    <button type="button" class="quick-action-btn" id="quickPodcast" disabled title="Denoise + normalize + loudness match" data-i18n="cut.podcast_polish">Podcast Polish</button>
+                    <button type="button" class="quick-action-btn" id="quickCleanInterview" disabled title="Remove silence + normalize audio" data-i18n="cut.clean_up">
+                        <span class="quick-action-head">
+                            <span class="quick-action-icon" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.25h3l1.7-4.25 2.1 8.5 1.45-4.25h2.75"/></svg>
+                            </span>
+                            <span class="quick-action-copy">
+                                <span class="btn-label">Clean Up</span>
+                                <span class="quick-action-meta">Silence trim plus balanced loudness</span>
+                            </span>
+                        </span>
+                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                    </button>
+                    <button type="button" class="quick-action-btn" id="quickYouTube" disabled title="Silence removal + normalize + loudness match" data-i18n="cut.youtube_ready">
+                        <span class="quick-action-head">
+                            <span class="quick-action-icon" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="13" height="11" rx="2.5"/><path d="m8.5 8 4 2-4 2z"/></svg>
+                            </span>
+                            <span class="quick-action-copy">
+                                <span class="btn-label">YouTube Ready</span>
+                                <span class="quick-action-meta">Fast cleanup for creator delivery</span>
+                            </span>
+                        </span>
+                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                    </button>
+                    <button type="button" class="quick-action-btn" id="quickPodcast" disabled title="Denoise + normalize + loudness match" data-i18n="cut.podcast_polish">
+                        <span class="quick-action-head">
+                            <span class="quick-action-icon" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7.25" y="3.5" width="5.5" height="8.5" rx="2.75"/><path d="M5.25 9.5a4.75 4.75 0 0 0 9.5 0"/><path d="M10 14.25v2.25"/><path d="M7.75 16.5h4.5"/></svg>
+                            </span>
+                            <span class="quick-action-copy">
+                                <span class="btn-label">Podcast Polish</span>
+                                <span class="quick-action-meta">Dialogue-first cleanup for spoken edits</span>
+                            </span>
+                        </span>
+                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                    </button>
                 </div>
                 <div class="sub-tabs" role="tablist" id="cutSubTabs">
                     <button type="button" class="sub-tab active" data-sub="silence" data-i18n="subtabs.silence">Silence</button>
@@ -312,7 +351,7 @@
                                 <option value="aggressive">Aggressive (-25dB, 0.3s)</option>
                                 <option value="conservative">Conservative (-40dB, 1.0s)</option>
                                 <option value="podcast">Podcast (-35dB, 0.75s)</option>
-                                <option value="">Custom...</option>
+                                <option value="">Custom…</option>
                             </select>
                         </div>
                         <div class="custom-settings hidden" id="customSilenceSettings">
@@ -558,8 +597,30 @@
             <!-- ======== TAB: CAPTIONS ======== -->
             <div class="nav-panel" id="panel-captions" role="tabpanel" aria-label="Captions">
                 <div class="quick-actions" id="quickActionsCaptions">
-                    <button type="button" class="quick-action-btn" id="quickAutoSubtitle" disabled title="Transcribe + export SRT subtitles" data-i18n="captions.subtitle_export">Auto Subtitle</button>
-                    <button type="button" class="quick-action-btn" id="quickTranslate" disabled title="Transcribe + translate to another language" data-i18n="captions.translate">Translate</button>
+                    <button type="button" class="quick-action-btn" id="quickAutoSubtitle" disabled title="Transcribe + export SRT subtitles" data-i18n="captions.subtitle_export">
+                        <span class="quick-action-head">
+                            <span class="quick-action-icon" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4" width="13" height="10" rx="2"/><path d="M6.5 8h7"/><path d="M6.5 10.75h4.5"/><path d="M8.75 14v2"/></svg>
+                            </span>
+                            <span class="quick-action-copy">
+                                <span class="btn-label">Auto Subtitle</span>
+                                <span class="quick-action-meta">Transcript to subtitle file in one pass</span>
+                            </span>
+                        </span>
+                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                    </button>
+                    <button type="button" class="quick-action-btn" id="quickTranslate" disabled title="Transcribe + translate to another language" data-i18n="captions.translate">
+                        <span class="quick-action-head">
+                            <span class="quick-action-icon" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 6.25h7"/><path d="M8 4v2.25c0 2.9-1.8 5.3-4.25 6.4"/><path d="M6.25 8.75c.7 1.65 1.95 3.05 3.75 4.15"/><path d="M12.5 6.25h3"/><path d="m14 4.5 2.5 7"/><path d="m12.75 9.5 2.5-5 2.5 5"/></svg>
+                            </span>
+                            <span class="quick-action-copy">
+                                <span class="btn-label">Translate</span>
+                                <span class="quick-action-meta">Generate multilingual captions from source speech</span>
+                            </span>
+                        </span>
+                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                    </button>
                 </div>
                 <div class="sub-tabs" role="tablist" id="captionSubTabs">
                     <button type="button" class="sub-tab active" data-sub="cap-styled" data-i18n="subtabs.styled">Styled</button>
@@ -729,8 +790,8 @@
                             <div class="transcript-header">
                                 <span class="transcript-info" id="transcriptInfo"></span>
                                 <div class="transcript-actions">
-                                    <button type="button" class="btn-sm btn-secondary" id="transcriptUndoBtn" disabled title="Undo">&#8630;</button>
-                                    <button type="button" class="btn-sm btn-secondary" id="transcriptRedoBtn" disabled title="Redo">&#8631;</button>
+                                    <button type="button" class="btn-sm btn-secondary" id="transcriptUndoBtn" disabled title="Undo" aria-label="Undo transcript edit">&#8630;</button>
+                                    <button type="button" class="btn-sm btn-secondary" id="transcriptRedoBtn" disabled title="Redo" aria-label="Redo transcript edit">&#8631;</button>
                                     <select id="transcriptExportFormat" class="inline-select" aria-label="Transcript export format">
                                         <option value="srt">SRT</option>
                                         <option value="vtt">VTT</option>
@@ -742,12 +803,27 @@
                                 </div>
                             </div>
                             <div class="transcript-search" id="transcriptSearch">
-                                <input type="text" id="transcriptSearchInput" class="text-input" placeholder="Search transcript...">
+                                <input type="text" id="transcriptSearchInput" class="text-input" placeholder="Search transcript…">
                                 <span class="transcript-search-count" id="transcriptSearchCount"></span>
-                                <button type="button" class="btn-sm" id="transcriptSearchPrev" title="Previous">&uarr;</button>
-                                <button type="button" class="btn-sm" id="transcriptSearchNext" title="Next">&darr;</button>
+                                <button type="button" class="btn-sm" id="transcriptSearchPrev" title="Previous" aria-label="Previous transcript search result">&uarr;</button>
+                                <button type="button" class="btn-sm" id="transcriptSearchNext" title="Next" aria-label="Next transcript search result">&darr;</button>
                             </div>
-                            <div class="transcript-segments" id="transcriptSegments"></div>
+                            <div class="transcript-workspace">
+                                <section class="transcript-timeline-panel" aria-labelledby="transcriptTimelineHeading">
+                                    <div class="transcript-timeline-header">
+                                        <div class="transcript-timeline-copy">
+                                            <span class="transcript-timeline-kicker">Edit Timeline</span>
+                                            <span class="transcript-timeline-heading" id="transcriptTimelineHeading">Transcript rhythm overview</span>
+                                        </div>
+                                        <span class="transcript-timeline-status" id="transcriptTimelineStatus">Select a segment to focus the edit.</span>
+                                    </div>
+                                    <div class="transcript-timeline-meta" id="transcriptTimelineMeta" aria-label="Transcript timeline stats"></div>
+                                    <div class="transcript-timeline-ruler" id="transcriptTimelineRuler" aria-hidden="true"></div>
+                                    <div class="transcript-timeline" id="transcriptTimeline" role="listbox" aria-label="Transcript timeline"></div>
+                                    <p class="transcript-timeline-hint">Arrow keys move between segments. Press Enter to jump into the current text.</p>
+                                </section>
+                                <div class="transcript-segments" id="transcriptSegments"></div>
+                            </div>
                         </div>
                         <div class="result-area hidden" id="summaryResult">
                             <div class="card-header"><div class="card-title">Summary</div></div>
@@ -991,11 +1067,11 @@
                         </div>
                         <div class="form-group">
                             <label for="chaptersLlmModel">Model</label>
-                            <input type="text" id="chaptersLlmModel" class="text-input" value="llama3" placeholder="llama3">
+                            <input type="text" id="chaptersLlmModel" class="text-input" value="llama3" placeholder="llama3" autocomplete="off" spellcheck="false">
                         </div>
                         <div class="form-group hidden" id="chaptersApiKeyGroup">
                             <label for="chaptersApiKey">API Key</label>
-                            <input type="password" id="chaptersApiKey" class="text-input" placeholder="sk-...">
+                            <input type="password" id="chaptersApiKey" class="text-input" placeholder="sk-…" autocomplete="off" spellcheck="false">
                         </div>
                         <div class="form-group">
                             <label for="chaptersMax">Max Chapters</label>
@@ -1024,7 +1100,7 @@
                         <div class="form-group">
                             <label for="srtImportPath">SRT File</label>
                             <div class="input-row">
-                                <input type="text" id="srtImportPath" class="text-input" placeholder="Path to .srt file..." readonly>
+                                <input type="text" id="srtImportPath" class="text-input" placeholder="Path to .srt file…" readonly autocomplete="off" spellcheck="false">
                                 <button type="button" class="btn-sm btn-browse" data-target="srtImportPath">Browse</button>
                             </div>
                         </div>
@@ -1037,8 +1113,30 @@
             <!-- ======== TAB: AUDIO ======== -->
             <div class="nav-panel" id="panel-audio" role="tabpanel" aria-label="Audio">
                 <div class="quick-actions" id="quickActionsAudio">
-                    <button type="button" class="quick-action-btn" id="quickStudioAudio" disabled title="Denoise + normalize + loudness match">Studio Polish</button>
-                    <button type="button" class="quick-action-btn" id="quickDenoise" disabled title="One-click noise removal">Quick Denoise</button>
+                    <button type="button" class="quick-action-btn" id="quickStudioAudio" disabled title="Denoise + normalize + loudness match">
+                        <span class="quick-action-head">
+                            <span class="quick-action-icon" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.5h2.25l1.25-3.5 2.1 7 1.55-4.25h3.85"/></svg>
+                            </span>
+                            <span class="quick-action-copy">
+                                <span class="btn-label">Studio Polish</span>
+                                <span class="quick-action-meta">Cleaner dialogue with matched loudness</span>
+                            </span>
+                        </span>
+                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                    </button>
+                    <button type="button" class="quick-action-btn" id="quickDenoise" disabled title="One-click noise removal">
+                        <span class="quick-action-head">
+                            <span class="quick-action-icon" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 8.25a5 5 0 1 1 8.7 3.35"/><path d="M10 6.25v4.5"/><path d="m8 14.5 4-2"/></svg>
+                            </span>
+                            <span class="quick-action-copy">
+                                <span class="btn-label">Quick Denoise</span>
+                                <span class="quick-action-meta">Remove room noise without leaving the panel</span>
+                            </span>
+                        </span>
+                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                    </button>
                 </div>
                 <div class="sub-tabs" role="tablist" id="audioSubTabs">
                     <button type="button" class="sub-tab active" data-sub="aud-separate" data-i18n="subtabs.stems">Stems</button>
@@ -1321,7 +1419,7 @@
 
                         <div class="form-group">
                             <label for="ttsText">Text</label>
-                            <textarea id="ttsText" rows="4" placeholder="Enter text to speak..."></textarea>
+                            <textarea id="ttsText" rows="4" placeholder="Enter text to speak…"></textarea>
                         </div>
 
                         <label class="checkbox-row">
@@ -1424,7 +1522,7 @@
 
                         <div class="form-group">
                             <label for="duckMusicPath">Music File Path</label>
-                            <div class="path-input-row"><input type="text" id="duckMusicPath" class="text-input" placeholder="/path/to/background_music.mp3"><button type="button" class="btn-browse" data-target="duckMusicPath">Browse</button></div>
+                            <div class="path-input-row"><input type="text" id="duckMusicPath" class="text-input" placeholder="/path/to/background_music.mp3" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="duckMusicPath">Browse</button></div>
                         </div>
 
                         <div class="form-group">
@@ -1508,8 +1606,30 @@
             <!-- ======== TAB: VIDEO ======== -->
             <div class="nav-panel" id="panel-video" role="tabpanel" aria-label="Video">
                 <div class="quick-actions" id="quickActionsVideo">
-                    <button type="button" class="quick-action-btn" id="quickAutoColor" disabled title="One-click color correction">Auto Color</button>
-                    <button type="button" class="quick-action-btn" id="quickSocialReframe" disabled title="Reframe to 9:16 for TikTok/Reels/Shorts">Social Reframe</button>
+                    <button type="button" class="quick-action-btn" id="quickAutoColor" disabled title="One-click color correction">
+                        <span class="quick-action-head">
+                            <span class="quick-action-icon" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="10" cy="10" r="5.5"/><path d="M10 4.5v11"/><path d="M5.25 12.25h9.5"/></svg>
+                            </span>
+                            <span class="quick-action-copy">
+                                <span class="btn-label">Auto Color</span>
+                                <span class="quick-action-meta">Fast tonal balance for rough finishing</span>
+                            </span>
+                        </span>
+                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                    </button>
+                    <button type="button" class="quick-action-btn" id="quickSocialReframe" disabled title="Reframe to 9:16 for TikTok/Reels/Shorts">
+                        <span class="quick-action-head">
+                            <span class="quick-action-icon" aria-hidden="true">
+                                <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="6.25" y="3.5" width="7.5" height="13" rx="1.75"/><path d="M8.25 6.5h3.5"/><path d="M8.25 13.5h3.5"/></svg>
+                            </span>
+                            <span class="quick-action-copy">
+                                <span class="btn-label">Social Reframe</span>
+                                <span class="quick-action-meta">Vertical composition for reels and shorts</span>
+                            </span>
+                        </span>
+                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                    </button>
                 </div>
                 <div class="sub-tabs" role="tablist" id="videoSubTabs">
                     <button type="button" class="sub-tab active" data-sub="vid-effects" data-i18n="subtabs.effects">Effects</button>
@@ -1644,7 +1764,7 @@
                         <div class="vfx-params hidden" id="vfxParams-lut">
                             <div class="form-group">
                                 <label for="vfxLutPath">LUT File Path</label>
-                                <div class="path-input-row"><input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube"><button type="button" class="btn-browse" data-target="vfxLutPath">Browse</button></div>
+                            <div class="path-input-row"><input type="text" id="vfxLutPath" class="text-input" placeholder="/path/to/look.cube" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="vfxLutPath">Browse</button></div>
                             </div>
                             <div class="form-group">
                                 <label for="vfxLutIntensity">Intensity</label>
@@ -2257,7 +2377,7 @@
                             <div class="form-group">
                                 <label for="lutRefPath">Reference Image</label>
                                 <div class="path-input-row">
-                                    <input type="text" id="lutRefPath" class="text-input" placeholder="Path to reference image...">
+                                    <input type="text" id="lutRefPath" class="text-input" placeholder="Path to reference image…" autocomplete="off" spellcheck="false">
                                     <button type="button" class="btn-sm btn-browse" data-target="lutRefPath">Browse</button>
                                 </div>
                             </div>
@@ -2560,7 +2680,7 @@
                             <select id="faceAiMode"><option value="enhance">Enhance Facial Detail</option><option value="swap">Swap Faces</option></select></div>
                         <div id="faceSwapParams" class="hidden">
                             <div class="form-group"><label for="faceRefPath">Reference Face Image</label>
-                                <div class="path-input-row"><input type="text" id="faceRefPath" class="text-input" placeholder="/path/to/face_reference.jpg"><button type="button" class="btn-browse" data-target="faceRefPath">Browse</button></div></div>
+                                <div class="path-input-row"><input type="text" id="faceRefPath" class="text-input" placeholder="/path/to/face_reference.jpg" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="faceRefPath">Browse</button></div></div>
                         </div>
                         <button type="button" class="btn-primary" id="runFaceAiBtn" disabled data-i18n="video.enhance_faces">Enhance Faces</button>
                     </section>
@@ -2735,7 +2855,7 @@
                         <div class="form-group">
                             <label for="workflowPreset">Preset</label>
                             <select id="workflowPreset">
-                                <option value="" disabled selected>Loading presets...</option>
+                            <option value="" disabled selected>Loading presets…</option>
                             </select>
                             <div class="hint" id="workflowPresetDesc"></div>
                         </div>
@@ -2829,7 +2949,7 @@
                         <div class="form-group mt-sm">
                             <label for="deliverablesOutputDir">Output Directory</label>
                             <div class="input-row">
-                                <input type="text" id="deliverablesOutputDir" class="text-input" placeholder="Same as project if blank">
+                                <input type="text" id="deliverablesOutputDir" class="text-input" placeholder="Same as project if blank" autocomplete="off" spellcheck="false">
                                 <button type="button" class="btn-sm btn-browse" data-target="deliverablesOutputDir">Browse</button>
                             </div>
                         </div>
@@ -2942,7 +3062,7 @@
                         <div class="form-group">
                             <label for="markerExportDir">Output Directory</label>
                             <div class="input-row">
-                                <input type="text" id="markerExportDir" class="text-input" placeholder="Output folder...">
+                                <input type="text" id="markerExportDir" class="text-input" placeholder="Output folder…" autocomplete="off" spellcheck="false">
                                 <button type="button" class="btn-sm btn-browse" data-target="markerExportDir">Browse</button>
                             </div>
                         </div>
@@ -2966,11 +3086,11 @@
                         <div id="renameItemsList" class="scrollable-sm mt-sm"></div>
                         <div class="form-group mt-sm">
                             <label for="renameFindText">Find</label>
-                            <input type="text" id="renameFindText" class="text-input" placeholder="Find text...">
+                            <input type="text" id="renameFindText" class="text-input" placeholder="Find text…" autocomplete="off">
                         </div>
                         <div class="form-group">
                             <label for="renameReplaceText">Replace</label>
-                            <input type="text" id="renameReplaceText" class="text-input" placeholder="Replace with...">
+                            <input type="text" id="renameReplaceText" class="text-input" placeholder="Replace with…" autocomplete="off">
                         </div>
                         <div class="btn-row gap-xs">
                             <button type="button" class="btn-sm btn-secondary" id="applyRenamePatternBtn" disabled>Apply Pattern</button>
@@ -3007,8 +3127,8 @@
                         <button type="button" class="btn-outline btn-sm" id="indexAllClipsBtn">Index All Project Clips</button>
                         <div class="border-t"></div>
                         <div class="form-group">
-                            <label for="footageSearchQuery">Search For...</label>
-                            <input type="text" id="footageSearchQuery" class="text-input" placeholder="e.g. interview about climate...">
+                            <label for="footageSearchQuery">Search For…</label>
+                            <input type="text" id="footageSearchQuery" class="text-input" placeholder="e.g. interview about climate…">
                         </div>
                         <div class="form-group">
                             <label for="footageSearchMax">Max Results</label>
@@ -3052,7 +3172,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.whisper_ai">Whisper AI</div></div>
                     <div class="settings-row" id="whisperStatus">
                         <span class="settings-label">Status</span>
-                        <span class="settings-value" id="whisperStatusText">Checking...</span>
+                        <span class="settings-value" id="whisperStatusText">Checking…</span>
                     </div>
                     <div class="settings-row">
                         <span class="settings-label">Device</span>
@@ -3087,7 +3207,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.system">System</div></div>
                     <div class="settings-row">
                         <span class="settings-label">GPU</span>
-                        <span class="settings-value" id="gpuName">Checking...</span>
+                        <span class="settings-value" id="gpuName">Checking…</span>
                     </div>
                     <div class="settings-row">
                         <span class="settings-label">VRAM</span>
@@ -3147,7 +3267,7 @@
                         <select id="settingsOutputDir">
                             <option value="source" selected>Same as source file</option>
                             <option value="project">Project folder</option>
-                            <option value="custom">Custom location...</option>
+                                    <option value="custom">Custom location…</option>
                         </select>
                     </div>
                     <div class="form-group mt-md">
@@ -3186,7 +3306,7 @@
                     </div>
                     <div class="form-group hidden" id="llmApiKeyGroup">
                         <label for="llmApiKey">API Key</label>
-                        <input type="password" id="llmApiKey" class="text-input" placeholder="sk-...">
+                        <input type="password" id="llmApiKey" class="text-input" placeholder="sk-…" autocomplete="off" spellcheck="false">
                     </div>
                     <div class="form-group">
                         <label for="llmBaseUrl">Base URL</label>
@@ -3246,7 +3366,7 @@
                     <div class="form-group">
                         <label for="templateSelect">Template</label>
                         <select id="templateSelect">
-                            <option value="" disabled selected>Select a template...</option>
+                            <option value="" disabled selected>Select a template…</option>
                         </select>
                     </div>
                     <div class="hint" id="templateDesc"></div>
@@ -3413,7 +3533,7 @@
                     <span class="progress-elapsed" id="progressElapsed"></span>
                 </div>
                 <div class="progress-row">
-                    <span class="progress-label" id="progressLabel" data-i18n="progress.starting">Starting...</span>
+                    <span class="progress-label" id="progressLabel" data-i18n="progress.starting">Starting…</span>
                     <button type="button" class="btn-cancel hidden" id="cancelBtn" title="Cancel processing" data-i18n="progress.cancel">Cancel</button>
                 </div>
             </section>
@@ -3509,7 +3629,7 @@
             <!-- System Status Bar -->
             <div class="status-bar" id="statusBar" data-state="offline" role="status" aria-label="Server status">
                 <span class="status-dot" id="statusDot" aria-hidden="true"></span>
-                <span class="status-text" id="statusText" data-i18n="status.connecting">Connecting...</span>
+                <span class="status-text" id="statusText" data-i18n="status.connecting">Connecting…</span>
                 <span class="status-separator" aria-hidden="true">|</span>
                 <span class="status-gpu" id="statusGpu" data-i18n="status.gpu_none">GPU: --</span>
                 <span class="status-separator" aria-hidden="true">|</span>
