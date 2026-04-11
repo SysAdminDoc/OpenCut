@@ -391,7 +391,7 @@
                                 <option value="vad">Silero VAD (AI neural detection)</option>
                                 <option value="energy">Energy Threshold (classic FFmpeg)</option>
                             </select>
-                            <div class="hint hidden" id="vadHint">Silero VAD not available. <button type="button" class="btn-text btn-xs" id="installVadBtn">Install PyTorch</button></div>
+                            <div class="hint hidden" id="vadHint"><span class="hint-copy">Silero VAD requires PyTorch. Switch to Energy Threshold for now, or install PyTorch manually to unlock neural detection.</span></div>
                         </div>
                         <div class="form-group">
                             <label for="silenceMode" data-i18n="silence.mode">Silence Mode</label>
@@ -454,7 +454,10 @@
                         </div>
                         <label class="checkbox-row"><input type="checkbox" id="fillerSilence" checked> <span data-i18n="cut.filler_also_silence">Also remove silences</span></label>
                         <button type="button" class="btn-primary" id="runFillersBtn" disabled data-i18n="cut.clean_fillers">Clean Filler Words</button>
-                        <div class="hint hidden" id="fillersHint">Requires Whisper. Install from Settings tab.</div>
+                        <div class="hint hidden" id="fillersHint">
+                            <span class="hint-copy">No filler detection backend is installed yet. Add Whisper from Settings or install CrisperWhisper here for verbatim filler detection.</span>
+                            <button type="button" class="btn-text btn-xs hidden" id="installCrisperWhisperBtn">Install CrisperWhisper</button>
+                        </div>
                     </section>
                 </div>
 
@@ -2134,7 +2137,11 @@
                         </div>
                         <button type="button" class="btn-primary" id="runBrollPlanBtn" disabled>Analyze for B-Roll</button>
                         <button type="button" class="btn-primary" id="runBrollGenBtn" disabled data-i18n="video.broll_generate">Generate B-Roll</button>
-                        <p class="cap-hint hidden" id="brollGenHint">Requires: pip install diffusers torch transformers</p>
+                        <div class="hint hidden" id="brollGenHint">
+                            <span class="hint-copy">AI B-roll generation dependencies are not installed.</span>
+                            <button type="button" class="btn-install" id="installBrollGenBtn">Install Now</button>
+                            <div class="install-alt">Requires: <code>pip install torch torchvision diffusers transformers accelerate</code></div>
+                        </div>
                     </section>
                 </div>
 
@@ -2168,7 +2175,11 @@
                             </div>
                         </div>
                         <button type="button" class="btn-primary" id="runMmDiarizeBtn" disabled data-i18n="video.diarize_run">Run Multimodal Diarization</button>
-                        <p class="cap-hint hidden" id="mmDiarizeHint">Requires: pip install insightface onnxruntime (or facenet-pytorch)</p>
+                        <div class="hint hidden" id="mmDiarizeHint">
+                            <span class="hint-copy">Multimodal diarization dependencies are not installed.</span>
+                            <button type="button" class="btn-install" id="installMmDiarizeBtn">Install Now</button>
+                            <div class="install-alt">Requires: <code>pip install opencv-python-headless insightface onnxruntime</code></div>
+                        </div>
                         <div class="hidden" id="mmDiarizeResults">
                             <div class="stat-grid">
                                 <div class="stat-item"><span class="stat-value" id="mmDiarizeSpeakers">--</span><span class="stat-label">Speakers</span></div>
@@ -2408,19 +2419,19 @@
                             <div class="form-group"><label for="chromaColor">Key Color</label>
                                 <select id="chromaColor"><option value="green">Green</option><option value="blue">Blue</option><option value="red">Red</option></select></div>
                             <div class="form-group"><label for="chromaBgPath">Background Path</label>
-                                <div class="path-input-row"><input type="text" id="chromaBgPath" class="text-input" placeholder="/path/to/background.mp4"><button type="button" class="btn-browse" data-target="chromaBgPath">Browse</button></div></div>
+                                <div class="path-input-row"><input type="text" id="chromaBgPath" name="chroma_bg_path" class="text-input" placeholder="/path/to/background.mp4" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="chromaBgPath">Browse</button></div></div>
                             <div class="form-group"><label for="chromaTol">Tolerance</label><div class="slider-row"><input type="range" id="chromaTol" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="chromaTolVal">0.5</span></div></div>
                         </div>
                         <div id="pipParams" class="hidden">
                             <div class="form-group"><label for="pipPath">PiP Video Path</label>
-                                <div class="path-input-row"><input type="text" id="pipPath" class="text-input" placeholder="/path/to/pip_video.mp4"><button type="button" class="btn-browse" data-target="pipPath">Browse</button></div></div>
+                                <div class="path-input-row"><input type="text" id="pipPath" name="pip_path" class="text-input" placeholder="/path/to/pip_video.mp4" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="pipPath">Browse</button></div></div>
                             <div class="form-group"><label for="pipPosition">Position</label>
                                 <select id="pipPosition"><option value="bottom_right">Bottom Right</option><option value="bottom_left">Bottom Left</option><option value="top_right">Top Right</option><option value="top_left">Top Left</option><option value="center">Center</option></select></div>
                             <div class="form-group"><label for="pipScale">Scale</label><div class="slider-row"><input type="range" id="pipScale" min="0.1" max="0.6" value="0.25" step="0.05"><span class="slider-val" id="pipScaleVal">0.25</span></div></div>
                         </div>
                         <div id="blendParams" class="hidden">
                             <div class="form-group"><label for="blendOverlay">Overlay Path</label>
-                                <div class="path-input-row"><input type="text" id="blendOverlay" class="text-input" placeholder="/path/to/overlay.mp4"><button type="button" class="btn-browse" data-target="blendOverlay">Browse</button></div></div>
+                                <div class="path-input-row"><input type="text" id="blendOverlay" name="blend_overlay_path" class="text-input" placeholder="/path/to/overlay.mp4" autocomplete="off" spellcheck="false"><button type="button" class="btn-browse" data-target="blendOverlay">Browse</button></div></div>
                             <div class="form-group"><label for="blendMode">Blend Mode</label>
                                 <select id="blendMode"><option value="overlay">Overlay</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="softlight">Soft Light</option><option value="hardlight">Hard Light</option><option value="difference">Difference</option><option value="addition">Addition</option><option value="dodge">Dodge</option><option value="burn">Burn</option></select></div>
                             <div class="form-group"><label for="blendOpacity">Opacity</label><div class="slider-row"><input type="range" id="blendOpacity" min="0.1" max="1.0" value="0.5" step="0.05"><span class="slider-val" id="blendOpacityVal">0.5</span></div></div>
@@ -3302,7 +3313,7 @@
                     </div>
                     <div class="form-group">
                         <label for="llmModel">Model</label>
-                        <input type="text" id="llmModel" class="text-input" placeholder="llama3.1">
+                        <input type="text" id="llmModel" name="llm_model" class="text-input" placeholder="llama3.1" autocomplete="off" spellcheck="false">
                     </div>
                     <div class="form-group hidden" id="llmApiKeyGroup">
                         <label for="llmApiKey">API Key</label>
@@ -3310,7 +3321,7 @@
                     </div>
                     <div class="form-group">
                         <label for="llmBaseUrl">Base URL</label>
-                        <input type="text" id="llmBaseUrl" class="text-input" placeholder="http://localhost:11434">
+                        <input type="url" id="llmBaseUrl" name="llm_base_url" class="text-input" placeholder="http://localhost:11434" inputmode="url" autocomplete="url" spellcheck="false">
                     </div>
                     <div class="hint" id="llmStatus">Not tested yet.</div>
                 </section>
@@ -3513,7 +3524,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.9.20</span>
+                        <span class="settings-value">1.9.21</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>
@@ -3658,9 +3669,9 @@
         </div>
 
         <!-- Side-by-Side Preview Modal -->
-        <div class="preview-modal hidden" id="previewModal" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle">
+        <div class="preview-modal hidden is-single" id="previewModal" role="dialog" aria-modal="true" aria-labelledby="previewModalTitle">
             <div class="preview-modal-header">
-                <span class="preview-modal-title" id="previewModalTitle">Before / After Preview</span>
+                <span class="preview-modal-title" id="previewModalTitle">Frame Preview</span>
                     <button type="button" class="preview-modal-close utility-icon-btn modal-close-btn" id="previewModalClose" aria-label="Close preview">
                         <span class="btn-icon" aria-hidden="true">
                             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 5l10 10"/><path d="M15 5 5 15"/></svg>
@@ -3669,12 +3680,12 @@
             </div>
             <div class="preview-modal-body">
                 <div class="preview-pane">
-                    <div class="preview-label">Original</div>
+                    <div class="preview-label" id="previewOriginalLabel">Selected Frame</div>
                     <img id="previewOriginal" class="preview-img" alt="Original">
                 </div>
-                <div class="preview-divider"></div>
-                <div class="preview-pane">
-                    <div class="preview-label">Preview</div>
+                <div class="preview-divider" id="previewDivider" aria-hidden="true"></div>
+                <div class="preview-pane preview-pane-secondary" id="previewProcessedPane" aria-hidden="true">
+                    <div class="preview-label" id="previewProcessedLabel">Processed Preview</div>
                     <img id="previewProcessed" class="preview-img" alt="Preview">
                 </div>
             </div>
@@ -3683,10 +3694,10 @@
                     <span class="btn-icon" aria-hidden="true">
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.75 8.25A6.75 6.75 0 0 0 5.27 4.11"/><path d="M4 1.75v3.5h3.5"/><path d="M3.25 11.75a6.75 6.75 0 0 0 11.48 4.14"/><path d="M16 18.25v-3.5h-3.5"/></svg>
                     </span>
-                    <span class="btn-label">Refresh Preview</span>
+                    <span class="btn-label">Refresh Frame</span>
                 </button>
                 <span class="preview-timestamp-label">Timestamp:</span>
-                <input type="text" id="previewTimestamp" class="text-input dim-input" value="00:00:01" aria-label="Preview timestamp">
+                <input type="text" id="previewTimestamp" name="preview_timestamp" class="text-input dim-input" value="00:00:01" aria-label="Preview timestamp" inputmode="numeric" pattern="[0-9:.]*" autocomplete="off" spellcheck="false">
             </div>
         </div>
 

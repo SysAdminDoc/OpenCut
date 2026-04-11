@@ -658,10 +658,54 @@ class TestNewInstallRoutes(unittest.TestCase):
         self.assertNotEqual(resp.status_code, 404)
         self.assertNotEqual(resp.status_code, 405)
 
+    def test_multimodal_diarize_install_route_exists(self):
+        resp = self.client.post("/video/multimodal-diarize/install", headers=self._headers(), json={})
+        self.assertNotEqual(resp.status_code, 404)
+        self.assertNotEqual(resp.status_code, 405)
+
     def test_crisper_whisper_install_route_exists(self):
         resp = self.client.post("/audio/crisper-whisper/install", headers=self._headers(), json={})
         self.assertNotEqual(resp.status_code, 404)
         self.assertNotEqual(resp.status_code, 405)
+
+    def test_otio_install_route_exists(self):
+        resp = self.client.post("/timeline/otio/install", headers=self._headers(), json={})
+        self.assertNotEqual(resp.status_code, 404)
+        self.assertNotEqual(resp.status_code, 405)
+
+
+# ============================================================
+# TestPreviewFileServing
+# ============================================================
+class TestPreviewFileServing(unittest.TestCase):
+    """Tests for the local media preview file route."""
+
+    def setUp(self):
+        from opencut.server import app
+        app.config["TESTING"] = True
+        self.client = app.test_client()
+
+    def test_file_route_serves_repo_local_media_file(self):
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with tempfile.TemporaryDirectory(dir=repo_root) as tmpdir:
+            media_path = os.path.join(tmpdir, "preview.wav")
+            with open(media_path, "wb") as f:
+                f.write(b"RIFF\x24\x00\x00\x00WAVEfmt ")
+
+            resp = self.client.get("/file", query_string={"path": media_path})
+            self.assertEqual(resp.status_code, 200)
+            self.assertTrue((resp.mimetype or "").startswith("audio/"))
+            resp.close()
+
+    def test_file_route_blocks_non_media_file_types(self):
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with tempfile.TemporaryDirectory(dir=repo_root) as tmpdir:
+            text_path = os.path.join(tmpdir, "notes.txt")
+            with open(text_path, "w", encoding="utf-8") as f:
+                f.write("not a media file")
+
+            resp = self.client.get("/file", query_string={"path": text_path})
+            self.assertEqual(resp.status_code, 403)
 
 
 # ============================================================
