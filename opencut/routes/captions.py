@@ -20,6 +20,7 @@ from opencut.security import (
     rate_limit,
     rate_limit_release,
     require_csrf,
+    safe_bool,
     safe_float,
     safe_int,
     safe_pip_install,
@@ -133,7 +134,7 @@ def generate_captions(job_id, filepath, data):
     sub_format = data.get("format", "srt")
     if sub_format not in ("srt", "vtt", "json", "ass"):
         sub_format = "srt"
-    word_timestamps = data.get("word_timestamps", True)
+    word_timestamps = safe_bool(data.get("word_timestamps", True), True)
 
     from opencut.core.captions import check_whisper_available, transcribe
 
@@ -233,7 +234,7 @@ def styled_captions_route(job_id, filepath, data):
         raise ValueError(f"Invalid model: {model}")
     language = data.get("language", None)
     custom_action_words = data.get("action_words", [])
-    auto_detect_energy = data.get("auto_detect_energy", True)
+    auto_detect_energy = safe_bool(data.get("auto_detect_energy", True), True)
     # Optional: pre-existing speech segments for remapping
     remap_segments_raw = data.get("remap_segments", None)
 
@@ -521,9 +522,9 @@ def full_pipeline(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
 
     preset = data.get("preset", "youtube")
-    skip_captions = data.get("skip_captions", False)
-    skip_zoom = data.get("skip_zoom", False)
-    remove_fillers = data.get("remove_fillers", False)
+    skip_captions = safe_bool(data.get("skip_captions", False), False)
+    skip_zoom = safe_bool(data.get("skip_zoom", False), False)
+    remove_fillers = safe_bool(data.get("remove_fillers", False), False)
     seq_name = data.get("sequence_name", "")
 
     cfg = get_preset(preset)
@@ -714,7 +715,7 @@ def captions_whisperx(job_id, filepath, data):
     if model_size not in VALID_WHISPER_MODELS:
         raise ValueError(f"Invalid model: {model_size}")
     language = data.get("language", "")
-    diarize = data.get("diarize", False)
+    diarize = safe_bool(data.get("diarize", False), False)
     hf_token = data.get("hf_token", "")
 
     from opencut.core.captions_enhanced import whisperx_transcribe

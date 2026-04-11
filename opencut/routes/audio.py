@@ -152,12 +152,12 @@ def filler_removal(job_id, filepath, data):
     if model not in VALID_WHISPER_MODELS:
         model = "base"
     language = data.get("language", None)
-    include_context = data.get("include_context_fillers", True)
+    include_context = safe_bool(data.get("include_context_fillers", True), True)
     custom_words = data.get("custom_words", [])
     # Which filler types to actually remove (empty = all detected)
     remove_keys = data.get("remove_fillers", [])
     # Also remove silences?
-    remove_silence = data.get("remove_silence", True)
+    remove_silence = safe_bool(data.get("remove_silence", True), True)
     silence_preset = data.get("silence_preset", "youtube")
     seq_name = data.get("sequence_name", "")
     # Filler detection backend: "whisper" (default) or "crisper" (CrisperWhisper verbatim)
@@ -408,7 +408,7 @@ def audio_separate(job_id, filepath, data):
     output_format = data.get("format", "wav")
     if output_format not in ("wav", "mp3", "flac"):
         output_format = "wav"
-    auto_import = data.get("auto_import", True)
+    auto_import = safe_bool(data.get("auto_import", True), True)
 
     if backend == "demucs" and not check_demucs_available():
         raise ValueError("Demucs not installed. Please install it first.")
