@@ -243,9 +243,11 @@ def extract_highlights(
     if on_progress:
         on_progress(80, "Parsing highlights...")
 
-    if response.text.startswith("LLM error:"):
-        logger.error("LLM query failed: %s", response.text)
-        return HighlightResult(llm_provider=response.provider, llm_model=response.model)
+    if not response or not response.text or response.text.startswith("LLM error:"):
+        logger.error("LLM query failed: %s", getattr(response, "text", None))
+        provider = getattr(response, "provider", "")
+        model = getattr(response, "model", "")
+        return HighlightResult(llm_provider=provider, llm_model=model)
 
     highlights = _parse_highlights_json(response.text)
 
