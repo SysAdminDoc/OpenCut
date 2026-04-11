@@ -351,7 +351,7 @@ def video_highlights(job_id, filepath, data):
         except Exception as te:
             raise RuntimeError(f"Transcription failed: {te}")
 
-    use_vision = data.get("use_vision", False)
+    use_vision = safe_bool(data.get("use_vision", False), False)
     if use_vision:
         from opencut.core.highlights import extract_highlights_with_vision
         result = extract_highlights_with_vision(
