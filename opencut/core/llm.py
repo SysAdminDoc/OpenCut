@@ -42,6 +42,16 @@ class LLMResponse:
 # ---------------------------------------------------------------------------
 # Provider implementations
 # ---------------------------------------------------------------------------
+def _sanitize_url(url):
+    """Strip query strings to avoid leaking credentials in error messages."""
+    try:
+        from urllib.parse import urlsplit, urlunsplit
+        parts = urlsplit(url)
+        return urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+    except Exception:
+        return url.split("?", 1)[0]
+
+
 def _http_json(url, data=None, headers=None, timeout=60):
     """Make an HTTP request and return parsed JSON response."""
     headers = headers or {}
@@ -56,6 +66,7 @@ def _http_json(url, data=None, headers=None, timeout=60):
     method = "POST" if body else "GET"
     req.get_method = lambda: method
 
+    safe_url = _sanitize_url(url)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
             raw = resp.read().decode("utf-8")
@@ -67,10 +78,10 @@ def _http_json(url, data=None, headers=None, timeout=60):
         except Exception:
             pass
         raise RuntimeError(
-            f"HTTP {exc.code} from {url}: {err_body}"
+            f"HTTP {exc.code} from {safe_url}: {err_body}"
         ) from exc
     except urllib.error.URLError as exc:
-        raise RuntimeError(f"Connection failed to {url}: {exc.reason}") from exc
+        raise RuntimeError(f"Connection failed to {safe_url}: {exc.reason}") from exc
 
 
 def _query_ollama(prompt, system_prompt, config):
@@ -196,8 +207,12 @@ def _query_gemini(prompt, system_prompt, config):
 
     url = (
         f"https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{config.model}:generateContent?key={config.api_key}"
+        f"{config.model}:generateContent"
     )
+    headers = {
+        "x-goog-api-key": config.api_key,
+        "Content-Type": "application/json",
+    }
 
     body = {
         "contents": [{"parts": [{"text": prompt}]}],
@@ -209,7 +224,7 @@ def _query_gemini(prompt, system_prompt, config):
     if system_prompt:
         body["systemInstruction"] = {"parts": [{"text": system_prompt}]}
 
-    data = _http_json(url, data=body, timeout=60)
+    data = _http_json(url, data=body, headers=headers, timeout=60)
 
     text = ""
     tokens = 0
