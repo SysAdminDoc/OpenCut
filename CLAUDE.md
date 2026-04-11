@@ -181,7 +181,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.25**
+- Current: **v1.9.26**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -1066,6 +1066,34 @@ Comprehensive multi-phase audit across all 138 files (~82,500 lines). 103 issues
 ## v1.9.9 Batch 41 (UXP Feature Parity)
 - **4 new UXP Video features** — AI Upscale, Scene Detection, Style Transfer, Shorts Pipeline. Full HTML cards + JS handlers with job polling.
 - **UXP stale version fixed** — Settings showed "1.9.2" hardcoded. Now synced via version script.
+
+## v1.9.26 Install-route rate limit + structured filepath errors
+Two real bugs caught during a deep behavioral smoke test on the v1.9.25 binary:
+
+### 1. Install routes returned 200 + job_id on rate-limited retries, then failed async
+`make_install_route()` was checking `rate_limit("model_install")` **inside** the `@async_job` body, which meant the rate limit violation only manifested AFTER:
+1. `@async_job` validated the filepath (200 response on success)
+2. `_new_job()` created a job record
+3. The worker pool spawned a thread
+4. The handler body raised `ValueError("A model_install operation is already running")`
+5. `_update_job(status="error")` captured it
+
+The client got `200 OK + {"job_id": "..."}` and had to poll `/status/<id>` to discover the error. **Fix:** moved the rate-limit check to the synchronous Flask handler layer — now returns `429 RATE_LIMITED` immediately with no job spawned. Verified:
+```
+first call:  200 {"job_id": "..."}           (install begins in worker)
+second call: 429 {"code": "RATE_LIMITED",    ← synchronous
+                  "error": "A model_install operation is already running...",
+                  "suggestion": "Wait for the current install to finish, then retry."}
+```
+
+### 2. `@async_job` filepath errors lacked `code` + `suggestion`
+When a route returned a filepath error through `@async_job`, the response was `{"error": "No file path provided"}` with no structured `code` field. The CEP/UXP panels have `ERROR_CODE_ACTIONS` that rely on `code` to pick the right recovery hint — without it, users just saw the raw message. **Fix:** `@async_job` now classifies filepath failures into `INVALID_INPUT` (empty, traversal, null byte, UNC prefix) vs `FILE_NOT_FOUND` (missing, not-a-file) and attaches a suggestion:
+```json
+{"error": "No file path provided",
+ "code": "INVALID_INPUT",
+ "suggestion": "Select a clip in Premiere or pass `filepath` in the request body."}
+```
+Applies to all 97 async routes that go through the decorator.
 
 ## v1.9.25 `/system/dependencies` TTL cache (5s → 0ms)
 Caught during the v1.9.24 binary smoke test: `/system/dependencies` took ~6.5 s on the first cold call because it runs 20+ `importlib.import_module()` probes (torch, mediapipe, audiocraft, pyannote, onnxruntime, rembg, realesrgan, gfpgan, insightface, ...) plus an `ffmpeg -version` subprocess plus an ollama HTTP probe — all synchronously in one request. This blocks the Settings tab render on first open.
