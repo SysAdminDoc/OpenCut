@@ -36,6 +36,7 @@ from opencut.jobs import (
 )
 from opencut.security import (
     require_csrf,
+    safe_bool,
     safe_float,
     safe_int,
     validate_filepath,
@@ -91,9 +92,9 @@ def video_watermark(job_id, filepath, data):
     max_bbox_percent = safe_int(data.get("max_bbox_percent", 10), 10, min_val=1, max_val=100)
     detection_prompt = data.get("detection_prompt", "watermark")[:200]
     detection_skip = safe_int(data.get("detection_skip", 3), 3, min_val=1, max_val=30)
-    transparent = data.get("transparent", False)
-    preview = data.get("preview", False)
-    auto_import = data.get("auto_import", True)
+    transparent = safe_bool(data.get("transparent", False), False)
+    preview = safe_bool(data.get("preview", False), False)
+    auto_import = safe_bool(data.get("auto_import", True), True)
     if not check_watermark_available():
         raise ValueError("Watermark remover not installed. Please install it first.")
 
@@ -473,7 +474,7 @@ def export_video(job_id, filepath, data):
         audio_codec = "aac"
     quality = data.get("quality", "medium")  # low, medium, high, lossless
     output_format = data.get("output_format", "mp4")
-    audio_only = data.get("audio_only", False)
+    audio_only = safe_bool(data.get("audio_only", False), False)
     audio_format_ext = data.get("audio_format", "mp3")  # mp3, wav, flac
     _VALID_VIDEO_FORMATS = {"mp4", "mov", "mkv", "webm", "avi"}
     _VALID_AUDIO_FORMATS = {"mp3", "wav", "flac", "aac", "ogg"}
@@ -750,7 +751,7 @@ def generate_thumbnails_route(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     count = safe_int(data.get("count", 5), 5, min_val=1, max_val=20)
     width = safe_int(data.get("width", 1920), 1920, min_val=160, max_val=3840)
-    use_faces = data.get("use_faces", True)
+    use_faces = safe_bool(data.get("use_faces", True), True)
 
     from opencut.core.thumbnail import generate_thumbnails
 
@@ -795,7 +796,7 @@ def batch_create():
             return jsonify({"error": str(e)}), 400
     filepaths = validated_paths
 
-    parallel = data.get("parallel", True)
+    parallel = safe_bool(data.get("parallel", True), True)
 
     try:
         from opencut.core.batch_process import (

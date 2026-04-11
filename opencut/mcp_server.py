@@ -553,7 +553,18 @@ def run_mcp_stdio():
                 "error": {"code": -32601, "message": f"Method not found: {method}"},
             }
 
-        sys.stdout.write(json.dumps(response) + "\n")
+        # Fall back to an error response if the result contained a
+        # non-JSON-serializable value — never leave the client hanging
+        # without a reply for a request that has an id.
+        try:
+            payload = json.dumps(response, default=str)
+        except (TypeError, ValueError) as e:
+            payload = json.dumps({
+                "jsonrpc": "2.0",
+                "id": msg_id,
+                "error": {"code": -32603, "message": f"Serialization error: {e}"},
+            })
+        sys.stdout.write(payload + "\n")
         sys.stdout.flush()
 
 

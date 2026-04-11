@@ -26,7 +26,7 @@ const HEALTH_CHECK_MS  = 8000;
 const HEALTH_MAX_MS    = 60000;
 const MEDIA_SCAN_MS    = 30000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
-const VERSION          = "1.9.21";
+const VERSION          = "1.9.22";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
@@ -398,7 +398,7 @@ const BackendClient = (() => {
     };
     for (const [id, available] of Object.entries(hints)) {
       const el = document.getElementById(id);
-      if (el) el.style.display = available ? "none" : "block";
+      if (el) el.classList.toggle("oc-hidden", available);
     }
   }
 
@@ -1571,7 +1571,7 @@ function showNlpResult(result) {
   const area = document.getElementById("nlpResultArea");
   const body = document.getElementById("nlpResultBody");
   if (!area || !body) return;
-  area.style.display = "flex";
+  area.classList.remove("oc-hidden");
   body.textContent = JSON.stringify(result.action ?? result, null, 2);
 }
 

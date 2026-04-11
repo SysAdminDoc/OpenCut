@@ -1,8 +1,74 @@
 import json
+import math
 import time
 from unittest.mock import patch
 
+import pytest
+
+from opencut.security import safe_bool
 from tests.conftest import csrf_headers
+
+
+# ---------------------------------------------------------------------------
+# Unit tests for safe_bool() edge cases (v1.9.22 hardening)
+# ---------------------------------------------------------------------------
+@pytest.mark.parametrize("value,expected", [
+    (True, True),
+    (False, False),
+    (None, False),
+    (1, True),
+    (0, False),
+    (-1, True),
+    (1.0, True),
+    (0.0, False),
+    ("true", True),
+    ("True", True),
+    ("false", False),
+    ("FALSE", False),
+    ("yes", True),
+    ("no", False),
+    ("on", True),
+    ("off", False),
+    ("1", True),
+    ("0", False),
+    ("", False),
+    ("null", False),
+    ("none", False),
+    (b"true", True),
+    (b"false", False),
+    (bytearray(b"yes"), True),
+    (bytearray(b"no"), False),
+])
+def test_safe_bool_accepts_common_forms(value, expected):
+    assert safe_bool(value, default=False) is expected
+
+
+@pytest.mark.parametrize("value", [
+    float("nan"),
+    float("inf"),
+    float("-inf"),
+    [True],
+    [],
+    {"key": "value"},
+    {},
+    (1, 2),
+    set(),
+    object(),
+])
+def test_safe_bool_rejects_unsafe_inputs(value):
+    # Ambiguous / unsafe inputs must fall back to the caller-supplied default
+    assert safe_bool(value, default=False) is False
+    assert safe_bool(value, default=True) is True
+
+
+def test_safe_bool_unknown_string_uses_default():
+    assert safe_bool("maybe", default=True) is True
+    assert safe_bool("maybe", default=False) is False
+
+
+def test_safe_bool_nan_float_uses_default():
+    assert safe_bool(math.nan, default=True) is True
+    assert safe_bool(math.nan, default=False) is False
 
 
 def poll_job(client, job_id, timeout=10):
