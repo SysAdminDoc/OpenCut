@@ -194,6 +194,26 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/speed/change",
     "/video/speed/ramp",
     "/video/speed/reverse",
+    # v1.9.20 additions — previously missing async routes
+    "/audio/beats",
+    "/audio/duck-video",
+    "/audio/effects/apply",
+    "/audio/gen/sfx",
+    "/audio/gen/tone",
+    "/audio/isolate",
+    "/audio/mix",
+    "/audio/mix-duck",
+    "/audio/music-ai/generate",
+    "/audio/music-ai/melody",
+    "/audio/pro/deepfilter",
+    "/audio/waveform",
+    "/export/preset",
+    "/export/thumbnails",
+    "/social/upload",
+    "/video/broll-generate",
+    "/video/multimodal-diarize",
+    "/video/transitions/apply",
+    "/video/transitions/join",
 })
 
 
