@@ -36,6 +36,7 @@ from opencut.security import (
     rate_limit,
     rate_limit_release,
     require_csrf,
+    safe_bool,
     safe_float,
     safe_int,
     safe_pip_install,
@@ -1481,8 +1482,8 @@ def audio_enhance(job_id, filepath, data):
         if not check_resemble_enhance_available():
             raise ValueError("resemble-enhance not installed. Install with: pip install resemble-enhance")
 
-    denoise = bool(data.get("denoise", True))
-    enhance = bool(data.get("enhance", True))
+    denoise = safe_bool(data.get("denoise", True), True)
+    enhance = safe_bool(data.get("enhance", True), True)
     cv_model = data.get("model", "MossFormer2_SE_48K")
     _allowed_cv_models = {"MossFormer2_SE_48K", "FRCRN_SE_16K", "MossFormerGAN_SE_16K"}
     if cv_model not in _allowed_cv_models:

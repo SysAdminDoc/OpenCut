@@ -8,7 +8,7 @@ import logging
 
 from flask import Blueprint, jsonify, request
 
-from opencut.security import require_csrf, safe_float, safe_int
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int
 
 logger = logging.getLogger("opencut")
 
@@ -18,8 +18,6 @@ try:
     from ..core.context_awareness import classify_clip, get_guidance_message, score_features
 except ImportError:
     from opencut.core.context_awareness import classify_clip, get_guidance_message, score_features
-
-
 @context_bp.route("/context/analyze", methods=["POST"])
 @require_csrf
 def analyze_clip_context():
@@ -49,8 +47,8 @@ def analyze_clip_context():
     data = request.get_json(force=True, silent=True) or {}
 
     metadata = {
-        "has_audio": bool(data.get("has_audio", False)),
-        "has_video": bool(data.get("has_video", False)),
+        "has_audio": safe_bool(data.get("has_audio", False), False),
+        "has_video": safe_bool(data.get("has_video", False), False),
         "duration": safe_float(data.get("duration", 0), min_val=0),
         "width": safe_int(data.get("width", 0), min_val=0),
         "height": safe_int(data.get("height", 0), min_val=0),

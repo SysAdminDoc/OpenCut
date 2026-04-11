@@ -43,6 +43,7 @@ from opencut.security import (
     rate_limit_release,
     require_csrf,
     require_rate_limit,
+    safe_bool,
     safe_float,
     safe_int,
     safe_pip_install,
@@ -663,7 +664,7 @@ def project_media():
 # ---------------------------------------------------------------------------
 @system_bp.route("/file", methods=["GET"])
 def serve_file():
-    """Serve a local file for audio/video preview. Only serves from output dirs."""
+    """Serve a validated local media file for preview."""
     import mimetypes
     filepath = request.args.get("path", "")
 
@@ -674,17 +675,13 @@ def serve_file():
         filepath = validate_filepath(filepath)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
-
-    # Security: only serve files from temp or opencut output directories
-    abs_path = os.path.realpath(filepath)
-    allowed_prefixes = [
-        os.path.realpath(tempfile.gettempdir()),
-        os.path.realpath(OPENCUT_DIR),
-    ]
-    # Ensure prefix check uses path separators to avoid partial matches
-    if not any(abs_path == p or abs_path.startswith(p + os.sep) for p in allowed_prefixes):
-        return jsonify({"error": "Access denied"}), 403
     mime_type = mimetypes.guess_type(filepath)[0] or "application/octet-stream"
+
+    # Preview is intentionally limited to media assets so this endpoint cannot
+    # be used as a generic local-file reader.
+    if not mime_type.startswith(("audio/", "video/", "image/")):
+        return jsonify({"error": "Unsupported preview file type"}), 403
+
     return send_file(filepath, mimetype=mime_type)
 
 
@@ -984,7 +981,7 @@ def whisper_settings():
     settings = load_whisper_settings()
 
     if "cpu_mode" in data:
-        settings["cpu_mode"] = bool(data["cpu_mode"])
+        settings["cpu_mode"] = safe_bool(data["cpu_mode"], False)
     if "model" in data:
         _m = str(data["model"])
         if _m in VALID_WHISPER_MODELS:

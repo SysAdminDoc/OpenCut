@@ -27,6 +27,7 @@ from opencut.security import (
     rate_limit,
     rate_limit_release,
     require_csrf,
+    safe_bool,
     safe_float,
     safe_int,
     validate_filepath,
@@ -450,7 +451,7 @@ def video_auto_zoom(job_id, filepath, data):
     zoom_amount = safe_float(data.get("zoom_amount", 1.15), 1.15, min_val=1.0, max_val=4.0)
     easing = data.get("easing", "ease_in_out").strip()
     output_dir = data.get("output_dir", "").strip()
-    apply_to_file = bool(data.get("apply_to_file", False))
+    apply_to_file = safe_bool(data.get("apply_to_file", False), False)
     _VALID_EASINGS = {"ease_in", "ease_out", "ease_in_out", "linear"}
     if easing not in _VALID_EASINGS:
         easing = "ease_in_out"
