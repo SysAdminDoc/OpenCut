@@ -11,7 +11,6 @@ import platform
 import shutil
 import subprocess as _sp
 import sys
-import tempfile
 import threading
 import time
 from contextlib import suppress
@@ -25,7 +24,7 @@ except ImportError:
 
 from opencut import __version__
 from opencut.errors import safe_error
-from opencut.helpers import OPENCUT_DIR, _try_import, _try_import_from, get_ffmpeg_path
+from opencut.helpers import _try_import, _try_import_from, get_ffmpeg_path
 from opencut.jobs import (
     _is_cancelled,
     _list_jobs_copy,
@@ -664,8 +663,25 @@ def project_media():
 # ---------------------------------------------------------------------------
 @system_bp.route("/file", methods=["GET"])
 def serve_file():
-    """Serve a validated local media file for preview."""
+    """Serve a validated local media file for preview.
+
+    Defence-in-depth:
+
+    1. ``validate_filepath`` rejects null bytes, traversal, and UNC paths.
+    2. The resolved realpath must live under an approved root — either the
+       per-user ``~/.opencut`` directory (job outputs) or the system temp
+       directory (short-lived work files). Arbitrary local media files
+       elsewhere on disk are NOT served even if they look like audio/video.
+       This prevents any same-browser origin from enumerating personal
+       media via ``<img>``/``<audio>`` side-channels.
+    3. The guessed MIME type must be audio/video/image so this endpoint
+       can never act as a generic local-file reader.
+    """
     import mimetypes
+    import tempfile
+
+    from opencut.helpers import OPENCUT_DIR
+
     filepath = request.args.get("path", "")
 
     if not filepath:
@@ -675,10 +691,18 @@ def serve_file():
         filepath = validate_filepath(filepath)
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
-    mime_type = mimetypes.guess_type(filepath)[0] or "application/octet-stream"
 
-    # Preview is intentionally limited to media assets so this endpoint cannot
-    # be used as a generic local-file reader.
+    # Approved roots: OpenCut user data dir + system temp dir. All legitimate
+    # preview files (TTS/SFX/music outputs, intermediate renders) land here.
+    abs_path = os.path.realpath(filepath)
+    allowed_roots = [
+        os.path.realpath(tempfile.gettempdir()),
+        os.path.realpath(OPENCUT_DIR),
+    ]
+    if not any(abs_path == root or abs_path.startswith(root + os.sep) for root in allowed_roots):
+        return jsonify({"error": "Access denied"}), 403
+
+    mime_type = mimetypes.guess_type(filepath)[0] or "application/octet-stream"
     if not mime_type.startswith(("audio/", "video/", "image/")):
         return jsonify({"error": "Unsupported preview file type"}), 403
 
@@ -1048,7 +1072,7 @@ def whisper_reinstall(job_id, filepath, data):
     if backend not in allowed_backends:
         raise ValueError(f"Unknown backend: {backend}")
 
-    cpu_mode = data.get("cpu_mode", False)
+    cpu_mode = safe_bool(data.get("cpu_mode", False), False)
 
     try:
         import subprocess as _sp

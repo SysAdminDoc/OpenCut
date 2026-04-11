@@ -23,6 +23,7 @@ from opencut.security import (
     rate_limit,
     rate_limit_release,
     require_csrf,
+    safe_bool,
     safe_float,
     safe_int,
     safe_pip_install,
@@ -98,7 +99,7 @@ def video_ai_rembg(job_id, filepath, data):
     bg_color = data.get("bg_color", "")
     if bg_color and not re.match(r'^[a-zA-Z0-9#]+$', bg_color):
         bg_color = ""
-    alpha_only = data.get("alpha_only", False)
+    alpha_only = safe_bool(data.get("alpha_only", False), False)
 
     acquired = rate_limit("ai_gpu")
     if not acquired:
