@@ -355,15 +355,37 @@ def safe_bool(value, default: bool = False) -> bool:
     """Convert common string/numeric flag values to bool.
 
     Accepts native booleans, 0/1 style numbers, and common string forms
-    like ``"true"`` / ``"false"``. Falls back to *default* for unknown
-    string values instead of treating every non-empty string as ``True``.
+    like ``"true"`` / ``"false"``. Falls back to *default* for unknown,
+    ambiguous, or structurally unsafe inputs instead of treating every
+    non-empty value as ``True``.
+
+    Hardened edge cases:
+
+    * ``None`` returns ``default``.
+    * ``NaN`` / ``inf`` floats return ``default`` (consistent with
+      ``safe_float``).
+    * ``bytes`` / ``bytearray`` are decoded as UTF-8 then parsed as
+      strings, so ``b"false"`` correctly returns ``False``.
+    * Lists, tuples, sets, and dicts return ``default`` — a flag with a
+      container value is a client bug, not a truth signal.
+    * Unknown string forms return ``default``.
     """
     if isinstance(value, bool):
         return value
     if value is None:
         return default
-    if isinstance(value, (int, float)):
+    if isinstance(value, float):
+        # NaN and infinities are never valid flag values.
+        if value != value or value == float("inf") or value == float("-inf"):
+            return default
         return value != 0
+    if isinstance(value, int):
+        return value != 0
+    if isinstance(value, (bytes, bytearray)):
+        try:
+            value = value.decode("utf-8", errors="ignore")
+        except Exception:
+            return default
     if isinstance(value, str):
         normalized = value.strip().lower()
         if normalized in {"1", "true", "yes", "on"}:
@@ -371,7 +393,8 @@ def safe_bool(value, default: bool = False) -> bool:
         if normalized in {"0", "false", "no", "off", "", "null", "none"}:
             return False
         return default
-    return bool(value)
+    # Containers and arbitrary objects should not be silently coerced.
+    return default
 
 
 # ---------------------------------------------------------------------------

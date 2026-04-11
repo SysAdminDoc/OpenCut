@@ -927,3 +927,14 @@ body {
   .oc-slider { width: 100%; }
   .oc-deliverable-grid { grid-template-columns: 1fr; }
 }
+
+/* =========================================================
+   UTILITY CLASSES (replaces inline style="display:none;" etc.)
+   ========================================================= */
+.oc-hidden { display: none !important; }
+
+.oc-chat-history {
+  max-height: 200px;
+  overflow-y: auto;
+  margin-bottom: 8px;
+}

@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.21
+   OpenCut CEP Panel - Main Controller v1.9.22
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -66,6 +66,29 @@
         if (editDebounceTimer) { clearTimeout(editDebounceTimer); editDebounceTimer = null; }
         if (_alertTimer) { clearTimeout(_alertTimer); _alertTimer = null; }
         if (_wsReconnectTimer) { clearTimeout(_wsReconnectTimer); _wsReconnectTimer = null; }
+    }
+
+    // ---- Background poller restart hook ----
+    //
+    // cleanupTimers() nukes mediaScanTimer / _statusTimer on every disconnect.
+    // Without this hook only the initial init path would restart them, so
+    // after the first disconnect/reconnect cycle the media scan and system
+    // status bar would stop polling forever. Called from checkHealth() on
+    // every reconnect and from the DOMContentLoaded bootstrap.
+    var MEDIA_POLL_MS = 20000; // 20 seconds
+    function startBackgroundPollers() {
+        if (!mediaScanTimer) {
+            mediaScanTimer = setInterval(function () {
+                if (!currentJob && (inPremiere || connected)) {
+                    scanProjectMedia();
+                }
+            }, MEDIA_POLL_MS);
+        }
+        // initStatusBar() is idempotent — it guards against duplicate timers
+        // via its own _statusTimer check, so it is safe to call on reconnect.
+        if (typeof initStatusBar === "function" && !_statusTimer) {
+            initStatusBar();
+        }
     }
 
     // ---- Style Preview CSS Map (loaded from backend) ----
@@ -1482,6 +1505,10 @@
                 el.backendPort.textContent = BACKEND.replace("http://127.0.0.1:", "Port ");
                 updateButtons();
                 loadCapabilities();
+                // Restart media scan + status bar pollers after a reconnect.
+                // cleanupTimers() killed them on the preceding disconnect and
+                // without this they would never come back until full reload.
+                startBackgroundPollers();
                 // Auto-connect WebSocket if available
                 if (!_wsConnected && capabilities.websocket !== false) {
                     wsConnect();
@@ -7705,7 +7732,8 @@
     // ================================================================
     // Status Bar — Health Monitoring (Phase 4.3)
     // ================================================================
-    var _statusTimer = null;
+    // NOTE: _statusTimer is declared once at module scope (line ~49) so
+    // cleanupTimers() can clear it. Do NOT redeclare it here.
     var _STATUS_POLL_MS = 5000;
 
     var _statusBarRetries = 0;
@@ -7718,6 +7746,10 @@
             }
             return;
         }
+        // Idempotent: skip if a poller is already running (re-entry from
+        // startBackgroundPollers() on reconnect, or from a second init call).
+        if (_statusTimer) return;
+        _statusBarRetries = 0;
         pollSystemStatus();
         _statusTimer = setInterval(pollSystemStatus, _STATUS_POLL_MS);
     }
@@ -10695,13 +10727,10 @@
         populateRecentFiles();
 
         // Periodic soft re-scan: picks up media imported outside OpenCut
-        // (e.g. user dragging files into Premiere, or Media Browser imports)
-        var MEDIA_POLL_MS = 20000; // 20 seconds
-        mediaScanTimer = setInterval(function () {
-            if (!currentJob && (inPremiere || connected)) {
-                scanProjectMedia();
-            }
-        }, MEDIA_POLL_MS);
+        // (e.g. user dragging files into Premiere, or Media Browser imports).
+        // Shared helper so the reconnect path can restart this after
+        // cleanupTimers() kills it on disconnect.
+        startBackgroundPollers();
 
         // Re-scan when panel regains focus or becomes visible
         document.addEventListener("visibilitychange", function () {

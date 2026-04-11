@@ -678,16 +678,19 @@ class TestNewInstallRoutes(unittest.TestCase):
 # TestPreviewFileServing
 # ============================================================
 class TestPreviewFileServing(unittest.TestCase):
-    """Tests for the local media preview file route."""
+    """Tests for the local media preview file route.
+
+    ``/file`` is locked to temp dir + ``~/.opencut`` so browser origins
+    cannot enumerate arbitrary local media via ``<img>``/``<audio>`` tags.
+    """
 
     def setUp(self):
         from opencut.server import app
         app.config["TESTING"] = True
         self.client = app.test_client()
 
-    def test_file_route_serves_repo_local_media_file(self):
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        with tempfile.TemporaryDirectory(dir=repo_root) as tmpdir:
+    def test_file_route_serves_media_under_tempdir(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
             media_path = os.path.join(tmpdir, "preview.wav")
             with open(media_path, "wb") as f:
                 f.write(b"RIFF\x24\x00\x00\x00WAVEfmt ")
@@ -698,13 +701,25 @@ class TestPreviewFileServing(unittest.TestCase):
             resp.close()
 
     def test_file_route_blocks_non_media_file_types(self):
-        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        with tempfile.TemporaryDirectory(dir=repo_root) as tmpdir:
+        with tempfile.TemporaryDirectory() as tmpdir:
             text_path = os.path.join(tmpdir, "notes.txt")
             with open(text_path, "w", encoding="utf-8") as f:
                 f.write("not a media file")
 
             resp = self.client.get("/file", query_string={"path": text_path})
+            self.assertEqual(resp.status_code, 403)
+
+    def test_file_route_blocks_media_outside_approved_roots(self):
+        """A media file outside tempdir + ~/.opencut must be denied even if
+        the MIME guesser says audio/video/image.
+        """
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        with tempfile.TemporaryDirectory(dir=repo_root) as tmpdir:
+            media_path = os.path.join(tmpdir, "outside.wav")
+            with open(media_path, "wb") as f:
+                f.write(b"RIFF\x24\x00\x00\x00WAVEfmt ")
+
+            resp = self.client.get("/file", query_string={"path": media_path})
             self.assertEqual(resp.status_code, 403)
 
 
