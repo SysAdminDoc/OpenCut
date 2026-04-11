@@ -181,7 +181,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.23**
+- Current: **v1.9.24**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -1066,6 +1066,13 @@ Comprehensive multi-phase audit across all 138 files (~82,500 lines). 103 issues
 ## v1.9.9 Batch 41 (UXP Feature Parity)
 - **4 new UXP Video features** — AI Upscale, Scene Detection, Style Transfer, Shorts Pipeline. Full HTML cards + JS handlers with job polling.
 - **UXP stale version fixed** — Settings showed "1.9.2" hardcoded. Now synced via version script.
+
+## v1.9.24 Env-var config (`OPENCUT_PORT` / `OPENCUT_HOST` / `OPENCUT_DEBUG`)
+Found during a binary smoke test — `OPENCUT_PORT=5789 ./OpenCut-Server.exe` silently ignored the env var and always bound to 5679. CLAUDE.md had long advertised env-based config, but `opencut/server.py::main()` only read `argparse` flags with hardcoded defaults. Fixed so that:
+- `OPENCUT_HOST` (default `127.0.0.1`)
+- `OPENCUT_PORT` (default 5679, clamped to 1–65535, falls back on non-int)
+- `OPENCUT_DEBUG` (default off; accepts `1`/`true`/`yes`/`on`)
+…are all read first, then argparse uses them as defaults (CLI flags still override). Docker-compose and the VBS launcher can now configure the backend entirely via env vars.
 
 ## v1.9.23 UXP a11y polish (Round-2 follow-up)
 Follow-up commit on top of v1.9.22 that lands the remaining accessibility and

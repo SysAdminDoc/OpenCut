@@ -763,13 +763,31 @@ def download_models(model_size="base"):
 
 
 def main():
-    """Entry point for `opencut-server` console script (pyproject.toml)."""
+    """Entry point for `opencut-server` console script (pyproject.toml).
+
+    CLI flags override env vars; env vars override the built-in defaults.
+    Supported env vars:
+        OPENCUT_HOST   — bind address (default 127.0.0.1)
+        OPENCUT_PORT   — listen port (default 5679)
+        OPENCUT_DEBUG  — enable Flask debug mode when set to "true"/"1"
+    """
     try:
         import argparse
+
+        # Env var defaults — let docker-compose / launchers configure without --flags.
+        env_host = os.environ.get("OPENCUT_HOST", "127.0.0.1").strip() or "127.0.0.1"
+        try:
+            env_port = int(os.environ.get("OPENCUT_PORT", "5679"))
+            if not (1 <= env_port <= 65535):
+                env_port = 5679
+        except ValueError:
+            env_port = 5679
+        env_debug = os.environ.get("OPENCUT_DEBUG", "").strip().lower() in ("1", "true", "yes", "on")
+
         parser = argparse.ArgumentParser(description="OpenCut Backend Server")
-        parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
-        parser.add_argument("--port", type=int, default=5679, help="Port to listen on")
-        parser.add_argument("--debug", action="store_true", help="Enable debug mode")
+        parser.add_argument("--host", default=env_host, help="Host to bind to")
+        parser.add_argument("--port", type=int, default=env_port, help="Port to listen on")
+        parser.add_argument("--debug", action="store_true", default=env_debug, help="Enable debug mode")
         parser.add_argument("--download-models", nargs="?", const="base", default=None,
                             metavar="MODEL",
                             help="Download Whisper model (tiny/base/small/medium/large-v3/turbo)")
