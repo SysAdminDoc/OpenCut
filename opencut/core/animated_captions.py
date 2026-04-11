@@ -176,6 +176,10 @@ def render_animated_captions(
     writer = cv2.VideoWriter(tmp_video, fourcc, fps, (w, h))
     if not writer.isOpened():
         cap.release()
+        try:
+            os.unlink(tmp_video)
+        except OSError:
+            pass
         raise RuntimeError(f"Cannot create video writer for {tmp_video}")
 
     total_frames = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
