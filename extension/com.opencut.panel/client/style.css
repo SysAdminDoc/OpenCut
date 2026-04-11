@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.9.20 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.9.21 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -4402,6 +4402,12 @@ textarea:focus-visible,
     flex: 1;
 }
 
+.input-row:focus-within .btn-browse {
+    border-color: rgba(216, 184, 135, 0.24);
+    background: rgba(216, 184, 135, 0.12);
+    color: rgba(245, 233, 209, 0.92);
+}
+
 /* ============================================================
    UTILITY CLASSES
    ============================================================ */
@@ -7586,6 +7592,20 @@ body:not(.has-clip) #panel-video.active .quick-action-btn:disabled::after {
     background: linear-gradient(180deg, transparent, rgba(236, 230, 218, 0.18), transparent);
 }
 
+.preview-modal.is-single .preview-modal-body {
+    justify-content: center;
+}
+
+.preview-modal.is-single .preview-pane {
+    max-width: min(1080px, 100%);
+    width: 100%;
+}
+
+.preview-modal.is-single .preview-pane-secondary,
+.preview-modal.is-single .preview-divider {
+    display: none;
+}
+
 .waveform-container {
     border-radius: 20px;
     border-color: rgba(236, 230, 218, 0.08);
@@ -9494,6 +9514,12 @@ textarea::placeholder,
 
 .path-input-row input {
     min-width: 0;
+}
+
+.path-input-row:focus-within .btn-browse {
+    border-color: rgba(216, 184, 135, 0.24);
+    background: rgba(216, 184, 135, 0.12);
+    color: rgba(245, 233, 209, 0.92);
 }
 
 .btn-browse {
@@ -12100,6 +12126,16 @@ body:not(.has-clip) .media-sidecar .file-info {
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.03),
         0 0 0 1px rgba(216, 184, 135, 0.08);
+}
+
+.transcript-seg:focus-within {
+    border-color: rgba(216, 184, 135, 0.22);
+    background:
+        linear-gradient(180deg, rgba(216, 184, 135, 0.14), rgba(255, 255, 255, 0.03));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.03),
+        0 0 0 1px rgba(216, 184, 135, 0.09),
+        0 18px 38px rgba(4, 8, 14, 0.22);
 }
 
 .transcript-seg.is-active::before,
