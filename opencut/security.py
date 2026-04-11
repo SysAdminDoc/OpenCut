@@ -351,6 +351,29 @@ def safe_int(value, default: int = 0, min_val: int = None, max_val: int = None) 
     return result
 
 
+def safe_bool(value, default: bool = False) -> bool:
+    """Convert common string/numeric flag values to bool.
+
+    Accepts native booleans, 0/1 style numbers, and common string forms
+    like ``"true"`` / ``"false"``. Falls back to *default* for unknown
+    string values instead of treating every non-empty string as ``True``.
+    """
+    if isinstance(value, bool):
+        return value
+    if value is None:
+        return default
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in {"1", "true", "yes", "on"}:
+            return True
+        if normalized in {"0", "false", "no", "off", "", "null", "none"}:
+            return False
+        return default
+    return bool(value)
+
+
 # ---------------------------------------------------------------------------
 # Rate Limiting (in-memory, per-endpoint)
 # ---------------------------------------------------------------------------

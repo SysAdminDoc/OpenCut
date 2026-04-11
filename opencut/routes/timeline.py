@@ -16,6 +16,7 @@ from opencut.jobs import (
     _is_cancelled,
     _update_job,
     async_job,
+    make_install_route,
 )
 from opencut.security import (
     require_csrf,
@@ -31,6 +32,14 @@ timeline_bp = Blueprint("timeline", __name__)
 # Valid smart-bin rule types and fields
 _VALID_RULE_TYPES = {"contains", "starts_with", "ends_with", "equals", "regex"}
 _VALID_RULE_FIELDS = {"name", "label", "comment", "media_type", "file_path", "duration"}
+
+make_install_route(
+    timeline_bp,
+    "/timeline/otio/install",
+    "otio",
+    ["opentimelineio"],
+    doc="Install OpenTimelineIO dependencies.",
+)
 
 
 # ---------------------------------------------------------------------------

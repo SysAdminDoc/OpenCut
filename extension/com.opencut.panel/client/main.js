@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.20
+   OpenCut CEP Panel - Main Controller v1.9.21
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -38,6 +38,11 @@
     var transcriptData = null; // stored transcript for editing/export
     var lastJobEndpoint = "";  // for retry
     var lastJobPayload = null; // for retry
+    var jobLifecycleHandlers = {};
+    var _utilityJobSeq = 0;
+    var _waveformRequestSeq = 0;
+    var _previewModalRequestSeq = 0;
+    var _clipThumbRequestSeq = 0;
 
     // Hoist timers referenced by cleanupTimers() — strict mode would throw
     // ReferenceError if these were only declared inside their nested helpers.
@@ -78,7 +83,15 @@
     var chaptersData = null;        // generated chapters
 
     // ---- Premiere Pro state cache (reduces evalScript round-trips) ----
-    var _pproCache = { seq: null, clips: null, bins: null, ts: 0, ttl: 8000 };
+    var _pproCache = {
+        seq: null,
+        seqTs: 0,
+        clips: null,
+        clipsTs: 0,
+        bins: null,
+        binsTs: 0,
+        ttl: 8000
+    };
 
     // ---- Keyboard Shortcut Registry (Phase 3.4) ----
     var DEFAULT_SHORTCUTS = {
@@ -605,6 +618,8 @@
         el.workspaceStageSource = $("workspaceStageSource");
         el.workspaceStageSuite = $("workspaceStageSuite");
         el.workspaceStageStatus = $("workspaceStageStatus");
+        el.contextGuidanceBanner = $("contextGuidanceBanner");
+        el.contextGuidanceText = $("contextGuidanceText");
 
         // Cut tab
         el.silencePreset = $("silencePreset");
@@ -615,21 +630,43 @@
         el.minDurationVal = $("minDurationVal");
         el.padBefore = $("padBefore");
         el.padAfter = $("padAfter");
+        el.silenceDetectMethod = $("silenceDetectMethod");
+        el.silenceMode = $("silenceMode");
+        el.silenceSpeedGroup = $("silenceSpeedGroup");
+        el.silenceSpeedFactor = $("silenceSpeedFactor");
         el.runSilenceBtn = $("runSilenceBtn");
         el.fillerModel = $("fillerModel");
+        el.fillerBackend = $("fillerBackend");
         el.fillerChecks = $("fillerChecks");
         el.fillerCustom = $("fillerCustom");
         el.fillerSilence = $("fillerSilence");
         el.fillersHint = $("fillersHint");
+        el.installCrisperWhisperBtn = $("installCrisperWhisperBtn");
         el.runFillersBtn = $("runFillersBtn");
+        el.vadHint = $("vadHint");
         el.fullPreset = $("fullPreset");
         el.fullZoom = $("fullZoom");
         el.fullCaptions = $("fullCaptions");
         el.fullFillers = $("fullFillers");
         el.runFullBtn = $("runFullBtn");
+        el.autoEditMethod = $("autoEditMethod");
+        el.autoEditThreshold = $("autoEditThreshold");
+        el.autoEditMargin = $("autoEditMargin");
+        el.autoEditMinClip = $("autoEditMinClip");
+        el.runAutoEditBtn = $("runAutoEditBtn");
+        el.highlightMax = $("highlightMax");
+        el.highlightMinDur = $("highlightMinDur");
+        el.highlightMaxDur = $("highlightMaxDur");
+        el.runHighlightsBtn = $("runHighlightsBtn");
         el.runEmotionHighlightsBtn = $("runEmotionHighlightsBtn");
         el.emotionHint = $("emotionHint");
         el.installEmotionBtn = $("installEmotionBtn");
+        el.otioHint = $("otioHint");
+        el.brollGenHint = $("brollGenHint");
+        el.installBrollGenBtn = $("installBrollGenBtn");
+        el.mmDiarizeHint = $("mmDiarizeHint");
+        el.installMmDiarizeBtn = $("installMmDiarizeBtn");
+        el.socialHint = $("socialHint");
 
         // Captions tab
         el.captionModel = $("captionModel");
@@ -660,6 +697,10 @@
         el.exportTranscriptBtn = $("exportTranscriptBtn");
         el.transcriptUndoBtn = $("transcriptUndoBtn");
         el.transcriptRedoBtn = $("transcriptRedoBtn");
+        el.summarizeTranscriptBtn = $("summarizeTranscriptBtn");
+        el.summaryResult = $("summaryResult");
+        el.summaryContent = $("summaryContent");
+        el.copySummaryBtn = $("copySummaryBtn");
 
         // Audio tab - Separation
         el.separateModel = $("separateModel");
@@ -712,12 +753,15 @@
         el.runDepthBtn = $("runDepthBtn");
         el.depthHint = $("depthHint");
         el.installDepthBtn = $("installDepthBtn");
+        el.runBrollGenBtn = $("runBrollGenBtn");
+        el.runMmDiarizeBtn = $("runMmDiarizeBtn");
         
         // Video tab - Scene Detection
         el.sceneThreshold = $("sceneThreshold");
         el.sceneThresholdVal = $("sceneThresholdVal");
         el.minSceneLen = $("minSceneLen");
         el.minSceneLenVal = $("minSceneLenVal");
+        el.sceneMethod = $("sceneMethod");
         el.runScenesBtn = $("runScenesBtn");
         el.sceneResults = $("sceneResults");
         el.sceneCount = $("sceneCount");
@@ -757,6 +801,7 @@
         el.installVidAiBtn = $("installVidAiBtn");
         el.vidAiUpscaleScale = $("vidAiUpscaleScale");
         el.vidAiUpscaleModel = $("vidAiUpscaleModel");
+        el.vidAiRembgBackend = $("vidAiRembgBackend");
         el.vidAiRembgModel = $("vidAiRembgModel");
         el.vidAiRembgBg = $("vidAiRembgBg");
         el.vidAiRembgAlpha = $("vidAiRembgAlpha");
@@ -787,6 +832,9 @@
         el.runFaceBlurBtn = $("runFaceBlurBtn");
         el.faceHint = $("faceHint");
         el.installMediapipeBtn = $("installMediapipeBtn");
+        el.enhanceDenoise = $("enhanceDenoise");
+        el.enhanceUpscale = $("enhanceUpscale");
+        el.runEnhanceBtn = $("runEnhanceBtn");
 
         // Video tab - Style Transfer
         el.styleModel = $("styleModel");
@@ -835,6 +883,7 @@
 
         // Workflow presets
         el.workflowPreset = $("workflowPreset");
+        el.workflowPresetDesc = $("workflowPresetDesc");
         el.runWorkflowBtn = $("runWorkflowBtn");
 
         // Audio tab - TTS
@@ -883,6 +932,10 @@
         el.lutSelect = $("lutSelect");
         el.lutIntensity = $("lutIntensity");
         el.lutIntensityVal = $("lutIntensityVal");
+        el.lutRefPath = $("lutRefPath");
+        el.lutRefName = $("lutRefName");
+        el.lutRefStrength = $("lutRefStrength");
+        el.generateLutBtn = $("generateLutBtn");
         el.lutAutoImport = $("lutAutoImport");
         el.runLutBtn = $("runLutBtn");
 
@@ -949,6 +1002,8 @@
         el.reframeCustomW = $("reframeCustomW");
         el.reframeCustomH = $("reframeCustomH");
         el.reframeMode = $("reframeMode");
+        el.reframeFaceSmoothing = $("reframeFaceSmoothing");
+        el.faceSmoothing = $("faceSmoothing");
         el.reframeCropPosGroup = $("reframeCropPosGroup");
         el.reframeCropPos = $("reframeCropPos");
         el.reframePadColorGroup = $("reframePadColorGroup");
@@ -997,6 +1052,26 @@
         el.expTranscriptFormat = $("expTranscriptFormat");
         el.expModel = $("expModel");
         el.runExpTranscriptBtn = $("runExpTranscriptBtn");
+        el.shortsPlatform = $("shortsPlatform");
+        el.shortsMaxClips = $("shortsMaxClips");
+        el.shortsMinDur = $("shortsMinDur");
+        el.shortsMaxDur = $("shortsMaxDur");
+        el.shortsFaceTrack = $("shortsFaceTrack");
+        el.shortsCaptions = $("shortsCaptions");
+        el.runShortsBtn = $("runShortsBtn");
+        el.loadSeqInfoBtn = $("loadSeqInfoBtn");
+        el.genVfxSheetBtn = $("genVfxSheetBtn");
+        el.genAdrListBtn = $("genAdrListBtn");
+        el.genMusicCueBtn = $("genMusicCueBtn");
+        el.genAssetListBtn = $("genAssetListBtn");
+        el.getSeqMarkersBtn = $("getSeqMarkersBtn");
+        el.exportMarkedClipsBtn = $("exportMarkedClipsBtn");
+        el.loadProjectItemsBtn = $("loadProjectItemsBtn");
+        el.applyRenamePatternBtn = $("applyRenamePatternBtn");
+        el.renameAllBtn = $("renameAllBtn");
+        el.createSmartBinsBtn = $("createSmartBinsBtn");
+        el.runSrtImportBtn = $("runSrtImportBtn");
+        el.indexAllClipsBtn = $("indexAllClipsBtn");
 
         // Settings tab
         el.whisperStatusText = $("whisperStatusText");
@@ -1015,6 +1090,13 @@
         el.gpuName = $("gpuName");
         el.gpuVram = $("gpuVram");
         el.backendPort = $("backendPort");
+        el.testLLMBtn = $("testLLMBtn");
+        el.llmProvider = $("llmProvider");
+        el.llmModel = $("llmModel");
+        el.llmApiKeyGroup = $("llmApiKeyGroup");
+        el.llmApiKey = $("llmApiKey");
+        el.llmBaseUrl = $("llmBaseUrl");
+        el.llmStatus = $("llmStatus");
 
         // Progress / Results
         el.progressSection = $("progressSection");
@@ -1257,6 +1339,7 @@
     // ================================================================
     var _inflightRequests = {};
     function api(method, path, body, callback, timeout) {
+        callback = typeof callback === "function" ? callback : function () {};
         var key = method + " " + path;
         // Deduplicate in-flight GET requests (F6)
         if (method === "GET" && _inflightRequests[key]) {
@@ -1310,16 +1393,65 @@
         xhr.send(body ? JSON.stringify(body) : null);
     }
 
+    function getButtonLabelNode(btn) {
+        if (!btn || typeof btn.querySelector !== "function") return null;
+        return btn.querySelector(".btn-label");
+    }
+
+    function getButtonText(btn) {
+        if (!btn) return "";
+        var labelNode = getButtonLabelNode(btn);
+        return labelNode ? labelNode.textContent : btn.textContent;
+    }
+
+    function rememberButtonText(btn) {
+        if (!btn) return "";
+        var cached = btn.getAttribute("data-oc-default-text");
+        if (cached !== null) return cached;
+        var text = getButtonText(btn);
+        btn.setAttribute("data-oc-default-text", text);
+        return text;
+    }
+
+    function setButtonText(btn, text) {
+        if (!btn) return;
+        var labelNode = getButtonLabelNode(btn);
+        if (labelNode) labelNode.textContent = text;
+        else btn.textContent = text;
+    }
+
     // Wrapper: api call with button spinner feedback
     function apiWithSpinner(btn, method, path, body, callback, timeout) {
-        var origText = btn.textContent;
+        var origText = rememberButtonText(btn);
         btn.disabled = true;
-        btn.textContent = "Working…";
+        setButtonText(btn, "Working…");
         api(method, path, body, function (err, data) {
             btn.disabled = false;
-            btn.textContent = origText;
+            setButtonText(btn, origText);
             callback(err, data);
         }, timeout);
+    }
+
+    function formatInstallError(detail, fallback) {
+        if (!detail) return fallback || "Unknown error";
+        if (typeof detail === "string") return detail;
+
+        var result = detail.result && typeof detail.result === "object" ? detail.result : null;
+        var error = "";
+        var suggestion = "";
+
+        if (result) {
+            error = result.error || result.message || "";
+            suggestion = result.suggestion || "";
+        }
+        if (!error) error = detail.error || "";
+        if (!suggestion) suggestion = detail.suggestion || "";
+        if (!error && detail.status === "cancelled") error = "Cancelled";
+        if (!error && detail.message) error = detail.message;
+        if (!error && detail.code) error = detail.code;
+
+        if (!error) return fallback || "Unknown error";
+        return suggestion ? error + " — " + suggestion : error;
     }
 
     // ================================================================
@@ -1614,6 +1746,54 @@
         return html;
     }
 
+    var _clipInfoCache = {};
+    var _CLIP_INFO_CACHE_MAX = 12;
+
+    function cacheClipInfo(path, data) {
+        if (!path || !data) return;
+        if (!_clipInfoCache[path]) {
+            var keys = Object.keys(_clipInfoCache);
+            if (keys.length >= _CLIP_INFO_CACHE_MAX) {
+                delete _clipInfoCache[keys[0]];
+            }
+        }
+        _clipInfoCache[path] = data;
+    }
+
+    function clearClipPreviewMeta() {
+        if (el.clipMetaRes) el.clipMetaRes.textContent = "";
+        if (el.clipMetaDur) el.clipMetaDur.textContent = "";
+        if (el.clipMetaSize) el.clipMetaSize.textContent = "";
+    }
+
+    function applyClipPreviewMeta(path, data) {
+        if (!data || path !== selectedPath) return;
+        if (el.clipMetaDur) el.clipMetaDur.textContent = data.duration ? fmtDur(data.duration) : "";
+        if (el.clipMetaRes) {
+            el.clipMetaRes.textContent = data.video ? (data.video.width + "x" + data.video.height) : "";
+        }
+        if (el.clipMetaSize) {
+            el.clipMetaSize.textContent = data.file_size_mb ? (safeFixed(data.file_size_mb, 1) + " MB") : "";
+        }
+    }
+
+    function buildClipMetaText(path, data) {
+        if (!data) return path || "";
+        var meta = "";
+        if (data.duration) meta += fmtDur(data.duration);
+        if (data.video) {
+            meta += " | " + data.video.width + "x" + data.video.height + " @ " + safeFixed(data.video.fps, 2) + " fps";
+            if (data.video.codec) meta += " (" + data.video.codec + ")";
+        }
+        if (data.audio) {
+            meta += " | " + safeFixed(data.audio.sample_rate / 1000, 1) + " kHz";
+            if (data.audio.codec) meta += " (" + data.audio.codec + ")";
+        }
+        if (data.file_size_mb) meta += " | " + safeFixed(data.file_size_mb, 1) + " MB";
+        if (lastTranscriptSegments) meta += " | Transcript cached";
+        return meta || (path || "");
+    }
+
     function clearSelectedFileState() {
         selectedPath = "";
         selectedName = "";
@@ -1624,6 +1804,7 @@
         if (el.fileInfoBox) el.fileInfoBox.classList.add("hidden");
         if (el.fileNameDisplay) el.fileNameDisplay.textContent = "";
         if (el.fileMetaDisplay) el.fileMetaDisplay.textContent = "";
+        clearClipPreviewMeta();
         document.body.classList.remove("has-clip");
         updateWorkspaceClipStatus();
         updateButtons();
@@ -1867,30 +2048,24 @@
         if (path) document.body.classList.add("has-clip");
         else document.body.classList.remove("has-clip");
         updateButtons();
-        updateClipPreview();
+        updateClipPreview(path);
         if (el.recentClipsDropdown && !el.recentClipsDropdown.classList.contains("hidden")) {
             renderRecentClipsDropdown();
         }
 
         if (connected) {
-            api("POST", "/info", { filepath: path }, function (err, data) {
+            var infoPath = path;
+            api("POST", "/info", { filepath: infoPath }, function (err, data) {
+                if (infoPath !== selectedPath) return;
                 if (!err && data && !data.error) {
-                    var meta = "";
-                    if (data.duration) meta += fmtDur(data.duration);
-                    if (data.video) {
-                        meta += " | " + data.video.width + "x" + data.video.height + " @ " + safeFixed(data.video.fps, 2) + " fps";
-                        if (data.video.codec) meta += " (" + data.video.codec + ")";
-                    }
-                    if (data.audio) {
-                        meta += " | " + safeFixed(data.audio.sample_rate / 1000, 1) + " kHz";
-                        if (data.audio.codec) meta += " (" + data.audio.codec + ")";
-                    }
-                    if (data.file_size_mb) meta += " | " + safeFixed(data.file_size_mb, 1) + " MB";
-                    if (lastTranscriptSegments) meta += " | Transcript cached";
-                    if (meta) el.fileMetaDisplay.textContent = meta;
-                    // Phase 3.2: Analyze clip context for feature relevance
-                    analyzeClipContext(data);
-                } else { el.fileMetaDisplay.textContent = path; }
+                    cacheClipInfo(infoPath, data);
+                    if (el.fileMetaDisplay) el.fileMetaDisplay.textContent = buildClipMetaText(infoPath, data);
+                    applyClipPreviewMeta(infoPath, data);
+                    analyzeClipContext(data, infoPath);
+                } else {
+                    if (el.fileMetaDisplay) el.fileMetaDisplay.textContent = infoPath;
+                    clearClipPreviewMeta();
+                }
             });
         }
     }
@@ -2036,8 +2211,11 @@
         if (remember) rememberWorkspaceTab(activeTabName);
         updateContentHeader(activeTabName, targetButton.getAttribute("title") || activeTabName);
         _pproCache.seq = null;
+        _pproCache.seqTs = 0;
         _pproCache.clips = null;
+        _pproCache.clipsTs = 0;
         _pproCache.bins = null;
+        _pproCache.binsTs = 0;
         checkSubTabOverflow();
         if (activeTabName === "settings") loadSettingsInfo();
         initTabOnFirstVisit(activeTabName);
@@ -2200,7 +2378,7 @@
         "runProFxBtn", "runDeepFilterBtn",
         "runFaceBlurBtn", "runStyleBtn",
         "runTranslateBtn", "runKaraokeBtn",
-        "runExportPresetBtn", "runThumbBtn", "runBatchBtn", "runWorkflowBtn",
+        "runExportPresetBtn", "runThumbBtn", "runWorkflowBtn",
         "runBurninBtn",
         "runSpeedBtn", "runLutBtn", "runDuckBtn",
         "runChromaBtn", "runTransBtn", "runParticlesBtn",
@@ -2210,7 +2388,6 @@
         "runAutoEditBtn", "runHighlightsBtn", "runEmotionHighlightsBtn", "runEnhanceBtn", "runShortsBtn",
         "autoDetectWatermarkBtn", "runDepthBtn", "runBrollPlanBtn", "runBrollGenBtn", "runMmDiarizeBtn", "socialUploadBtn",
         "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runMulticamBtn",
-        "runLoudMatchBtn", "runFootageSearchBtn",
         "quickCleanInterview", "quickYouTube", "quickPodcast",
         "quickAutoSubtitle", "quickTranslate",
         "quickStudioAudio", "quickDenoise",
@@ -2219,6 +2396,11 @@
 
     function updateButtons() {
         var canRun = connected && selectedPath;
+        var hasProjectMedia = Array.isArray(projectMedia) && projectMedia.length > 0;
+        var hasSequenceInfo = !!(sequenceInfo && typeof sequenceInfo === "object" && !sequenceInfo.error);
+        var hasSequenceMarkers = Array.isArray(seqMarkersData) && seqMarkersData.length > 0;
+        var hasRenameItems = Array.isArray(renameItemsData) && renameItemsData.length > 0;
+        var hasSmartBinRules = Array.isArray(smartBinRules) && smartBinRules.length > 0;
 
         // Batch-disable all clip-dependent buttons
         for (var i = 0; i < _clipButtons.length; i++) {
@@ -2227,7 +2409,34 @@
         }
 
         // Merge has special logic
-        if (el.runMergeBtn) el.runMergeBtn.disabled = _mergeFiles.length < 2;
+        if (el.runMergeBtn) el.runMergeBtn.disabled = !connected || _mergeFiles.length < 2;
+        var batchCandidateCount = _batchFiles && _batchFiles.length ? _batchFiles.length : projectMedia.length;
+        if (!batchCandidateCount && el.clipSelect && el.clipSelect.options) {
+            for (var batchIdx = 0; batchIdx < el.clipSelect.options.length; batchIdx++) {
+                if (el.clipSelect.options[batchIdx].value) batchCandidateCount++;
+            }
+        }
+        if (el.runBatchBtn) el.runBatchBtn.disabled = !connected || batchCandidateCount < 2;
+        if (el.runLoudMatchBtn) el.runLoudMatchBtn.disabled = !connected || !hasProjectMedia;
+        if (el.runFootageSearchBtn) el.runFootageSearchBtn.disabled = !connected;
+        if (el.runNlpCommandBtn) el.runNlpCommandBtn.disabled = !connected;
+        if (el.generateLutBtn) el.generateLutBtn.disabled = !connected;
+        if (el.testLLMBtn) el.testLLMBtn.disabled = !connected;
+        if (el.settingsInstallWhisperBtn) el.settingsInstallWhisperBtn.disabled = !connected;
+        if (el.settingsReinstallWhisperBtn) el.settingsReinstallWhisperBtn.disabled = !connected;
+        if (el.loadSeqInfoBtn) el.loadSeqInfoBtn.disabled = !inPremiere;
+        if (el.genVfxSheetBtn) el.genVfxSheetBtn.disabled = !connected || !inPremiere || !hasSequenceInfo;
+        if (el.genAdrListBtn) el.genAdrListBtn.disabled = !connected || !inPremiere || !hasSequenceInfo;
+        if (el.genMusicCueBtn) el.genMusicCueBtn.disabled = !connected || !inPremiere || !hasSequenceInfo;
+        if (el.genAssetListBtn) el.genAssetListBtn.disabled = !connected || !inPremiere || !hasSequenceInfo;
+        if (el.getSeqMarkersBtn) el.getSeqMarkersBtn.disabled = !inPremiere;
+        if (el.exportMarkedClipsBtn) el.exportMarkedClipsBtn.disabled = !connected || !inPremiere || !selectedPath || !hasSequenceMarkers;
+        if (el.loadProjectItemsBtn) el.loadProjectItemsBtn.disabled = !inPremiere;
+        if (el.applyRenamePatternBtn) el.applyRenamePatternBtn.disabled = !hasRenameItems;
+        if (el.renameAllBtn) el.renameAllBtn.disabled = !connected || !hasRenameItems;
+        if (el.createSmartBinsBtn) el.createSmartBinsBtn.disabled = !connected || !hasSmartBinRules;
+        if (el.runSrtImportBtn) el.runSrtImportBtn.disabled = !connected || !inPremiere;
+        if (el.indexAllClipsBtn) el.indexAllClipsBtn.disabled = !connected || !hasProjectMedia;
 
         // Helper to safely toggle hint visibility and optionally disable a button
         function _setHint(hintEl, btnEl, showHint) {
@@ -2240,9 +2449,47 @@
             }
         }
 
+        var whisperAvailable = capabilities.captions !== false;
+        var crisperAvailable = capabilities.crisper_whisper !== false;
+        var showFillersHint = false;
+        var showCrisperInstallAction = false;
+        var fillersHintMessage = "No filler detection backend is installed yet. Add Whisper from Settings or install CrisperWhisper here for verbatim filler detection.";
+
+        if (el.fillerBackend) {
+            var whisperOpt = el.fillerBackend.querySelector('option[value="whisper"]');
+            var crisperOpt = el.fillerBackend.querySelector('option[value="crisper"]');
+            var selectedFillerBackend = el.fillerBackend.value || "whisper";
+
+            if (whisperOpt) whisperOpt.disabled = !whisperAvailable;
+            if (crisperOpt) crisperOpt.disabled = !crisperAvailable;
+
+            if (selectedFillerBackend === "whisper" && !whisperAvailable && crisperAvailable) {
+                el.fillerBackend.value = "crisper";
+            } else if (selectedFillerBackend === "crisper" && !crisperAvailable && whisperAvailable) {
+                el.fillerBackend.value = "whisper";
+            }
+
+            if (el.fillerBackend._customDropdown) el.fillerBackend._customDropdown.updateText();
+        }
+
+        if (!whisperAvailable && !crisperAvailable) {
+            showFillersHint = true;
+            showCrisperInstallAction = true;
+        }
+
+        if (el.fillersHint) {
+            var fillersHintCopy = getHintCopyNode(el.fillersHint);
+            if (fillersHintCopy) fillersHintCopy.textContent = fillersHintMessage;
+        }
+
         // Whisper hints
         _setHint(el.captionsHint, null, capabilities.captions === false);
-        _setHint(el.fillersHint, null, capabilities.captions === false);
+        _setHint(el.fillersHint, el.runFillersBtn, showFillersHint);
+        if (el.installCrisperWhisperBtn) {
+            var hideCrisperAction = !showFillersHint || !showCrisperInstallAction || (el.fillersHint && el.fillersHint.classList.contains("is-info"));
+            el.installCrisperWhisperBtn.classList.toggle("hidden", hideCrisperAction);
+            el.installCrisperWhisperBtn.disabled = hideCrisperAction;
+        }
 
         // Demucs hint
         _setHint(el.separateHint, el.runSeparateBtn, capabilities.separation === false);
@@ -2282,18 +2529,8 @@
         // Edge TTS hint
         _setHint(el.ttsHint, null, capabilities.edge_tts === false);
 
-        // Silero VAD hint (show install button if not available)
+        // Silero VAD hint
         _setHint(el.vadHint, null, capabilities.silero_vad === false);
-
-        // CrisperWhisper hint — update filler backend dropdown availability
-        if (el.fillerBackend && capabilities.crisper_whisper === false) {
-            // Disable the CrisperWhisper option but keep Whisper available
-            var crisperOpt = el.fillerBackend.querySelector('option[value="crisper"]');
-            if (crisperOpt) crisperOpt.disabled = true;
-        } else if (el.fillerBackend) {
-            var crisperOpt2 = el.fillerBackend.querySelector('option[value="crisper"]');
-            if (crisperOpt2) crisperOpt2.disabled = false;
-        }
 
         // OTIO export hint
         _setHint(el.otioHint, null, capabilities.otio === false);
@@ -2426,14 +2663,187 @@
     // ================================================================
     var jobStarting = false;
 
-    function startJob(endpoint, payload) {
+    function normalizeJobOptions(options) {
+        if (typeof options === "function") {
+            return { onComplete: options };
+        }
+        return options || {};
+    }
+
+    function runStartJobErrorHook(options, detail) {
+        if (options && typeof options.onStartError === "function") {
+            try {
+                options.onStartError(detail);
+            } catch (hookErr) {
+                console.error("startJob onStartError hook failed:", hookErr);
+            }
+        }
+    }
+
+    function settleJobLifecycle(job) {
+        var jobId = job && (job.id || job.job_id);
+        if (!jobId || !jobLifecycleHandlers[jobId]) return;
+        var hooks = jobLifecycleHandlers[jobId];
+        delete jobLifecycleHandlers[jobId];
+        try {
+            if (job.status === "complete" && typeof hooks.onComplete === "function") {
+                hooks.onComplete(job.result || {}, job);
+            } else if (job.status === "error" && typeof hooks.onError === "function") {
+                hooks.onError(job);
+            } else if (job.status === "cancelled" && typeof hooks.onCancel === "function") {
+                hooks.onCancel(job);
+            }
+        } catch (hookErr) {
+            console.error("startJob lifecycle hook failed:", hookErr);
+        }
+        if (typeof hooks.onFinally === "function") {
+            try {
+                hooks.onFinally(job);
+            } catch (finalErr) {
+                console.error("startJob onFinally hook failed:", finalErr);
+            }
+        }
+    }
+
+    function startUtilityJob(endpoint, payload, options) {
+        var opts = options || {};
+        var requestSeq = ++_utilityJobSeq;
+        var isStale = typeof opts.isStale === "function" ? opts.isStale : null;
+
+        function isAbandoned() {
+            return !!(isStale && isStale(requestSeq));
+        }
+
+        function finish(job) {
+            if (typeof opts.onFinally === "function") {
+                try {
+                    opts.onFinally(job, requestSeq);
+                } catch (finalErr) {
+                    console.error("utility job onFinally hook failed:", finalErr);
+                }
+            }
+        }
+
+        api("POST", endpoint, payload, function (err, data) {
+            if (isAbandoned()) {
+                finish(null);
+                return;
+            }
+            if (err || !data || data.error || !data.job_id) {
+                if (typeof opts.onError === "function") {
+                    try {
+                        opts.onError(data || err || { error: "Failed to start request" }, requestSeq);
+                    } catch (hookErr) {
+                        console.error("utility job onError hook failed:", hookErr);
+                    }
+                }
+                finish(data || err || null);
+                return;
+            }
+
+            var jobId = data.job_id;
+            function poll() {
+                if (isAbandoned()) {
+                    finish(null);
+                    return;
+                }
+                api("GET", "/status/" + jobId, null, function (statusErr, job) {
+                    if (isAbandoned()) {
+                        finish(job || null);
+                        return;
+                    }
+                    if (statusErr || !job) {
+                        setTimeout(poll, Math.max(250, POLL_MS));
+                        return;
+                    }
+                    if (typeof opts.onProgress === "function" && job.status === "running") {
+                        try {
+                            opts.onProgress(job, requestSeq);
+                        } catch (progressErr) {
+                            console.error("utility job onProgress hook failed:", progressErr);
+                        }
+                    }
+                    if (job.status === "complete") {
+                        if (typeof opts.onComplete === "function") {
+                            try {
+                                opts.onComplete(job.result || {}, job, requestSeq);
+                            } catch (hookErr) {
+                                console.error("utility job onComplete hook failed:", hookErr);
+                            }
+                        }
+                        finish(job);
+                        return;
+                    }
+                    if (job.status === "error" || job.status === "cancelled") {
+                        if (typeof opts.onError === "function") {
+                            try {
+                                opts.onError(job, requestSeq);
+                            } catch (hookErr) {
+                                console.error("utility job onError hook failed:", hookErr);
+                            }
+                        }
+                        finish(job);
+                        return;
+                    }
+                    setTimeout(poll, Math.max(250, POLL_MS));
+                });
+            }
+            poll();
+        });
+
+        return requestSeq;
+    }
+
+    function startInlineInstallJob(config) {
+        if (!config || !config.endpoint) return;
+
+        var hintEl = config.hintEl || null;
+        var actionBtn = config.actionBtn || null;
+        var startMessage = config.startMessage || "Installing…";
+
+        if (hintEl) {
+            setHintState(hintEl, startMessage, "info", actionBtn);
+        } else if (actionBtn) {
+            actionBtn.disabled = true;
+        }
+
+        startUtilityJob(config.endpoint, config.payload || {}, {
+            onProgress: function(job) {
+                if (hintEl) {
+                    setHintState(hintEl, (job && job.message) || startMessage, "info", actionBtn);
+                }
+            },
+            onComplete: function(result, job) {
+                if (hintEl) hideHintState(hintEl, actionBtn);
+                if (typeof config.onSuccess === "function") config.onSuccess(result || {}, job || null);
+            },
+            onError: function(detail) {
+                var errMsg = formatInstallError(detail, "Unknown error");
+                if (hintEl) {
+                    setHintState(hintEl, "Installation failed: " + errMsg, "error", actionBtn);
+                } else if (actionBtn) {
+                    actionBtn.disabled = false;
+                }
+                if (typeof config.onError === "function") config.onError(detail, errMsg);
+            },
+            onFinally: function(job) {
+                if (!hintEl && actionBtn) actionBtn.disabled = false;
+                if (typeof config.onFinally === "function") config.onFinally(job || null);
+            }
+        });
+    }
+
+    function startJob(endpoint, payload, options) {
+        var opts = normalizeJobOptions(options);
         if (currentJob || jobStarting) {
             showAlert("Another task is in progress. You can cancel it from the processing bar above.");
-            return;
+            runStartJobErrorHook(opts, { reason: "busy" });
+            return false;
         }
         if (!selectedPath && payload && !payload.filepath && !payload.no_input) {
             showAlert("Choose a clip from the Media section above to get started.");
-            return;
+            runStartJobErrorHook(opts, { reason: "missing-input" });
+            return false;
         }
 
         // Lock immediately to prevent double-click race
@@ -2480,6 +2890,7 @@
                     jobStarting = false;
                     showAlert(data ? data.error : "Failed to start job", data);
                     hideProgress();
+                    runStartJobErrorHook(opts, { reason: "request-failed", err: err, data: data });
                     return;
                 }
                 // Set currentJob BEFORE clearing jobStarting to prevent
@@ -2487,6 +2898,9 @@
                 // jobStarting=false and currentJob assignment.
                 currentJob = data.job_id;
                 jobStarting = false;
+                if (opts.onComplete || opts.onError || opts.onCancel || opts.onFinally) {
+                    jobLifecycleHandlers[data.job_id] = opts;
+                }
 
                 if (SSE_OK) {
                     trackJobSSE(data.job_id);
@@ -2494,10 +2908,13 @@
                     trackJobPoll(data.job_id);
                 }
             });
+            return true;
         } catch (e) {
             jobStarting = false;
             hideProgress();
             showAlert("Failed to start job: " + e.message);
+            runStartJobErrorHook(opts, { reason: "exception", error: e });
+            return false;
         }
     }
 
@@ -2645,11 +3062,13 @@
             if (job.code) {
                 showErrorWithAction(job);
             }
+            settleJobLifecycle(job);
             return;
         }
 
         if (job.status === "cancelled") {
             hideProgress();
+            settleJobLifecycle(job);
             return;
         }
 
@@ -2657,6 +3076,7 @@
         hideProgress();
         el.retryJobBtn.classList.add("hidden");
         showResults(job);
+        settleJobLifecycle(job);
 
         // Auto-import into Premiere (respect global setting)
         var autoImportEnabled = el.settingsAutoImport ? el.settingsAutoImport.checked : true;
@@ -2771,10 +3191,10 @@
     function hideProgress() {
         el.progressSection.classList.add("hidden");
         el.cancelBtn.classList.add("hidden");
-        el.cancelBtn.textContent = "Cancel";
+        setButtonText(el.cancelBtn, rememberButtonText(el.cancelBtn));
         el.cancelBtn.disabled = false;
         el.processingBanner.classList.add("hidden");
-        el.processingCancel.textContent = "Cancel";
+        setButtonText(el.processingCancel, rememberButtonText(el.processingCancel));
         el.processingCancel.disabled = false;
         document.body.classList.remove("job-active");
         if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
@@ -2836,6 +3256,12 @@
         if (r.total_scenes) {
             stats += (stats ? "<br>" : "") + "Scenes: " + Number(r.total_scenes) + " | Avg: " + safeFixed(r.avg_scene_length, 1) + "s";
         }
+        if (r.indexed !== undefined && r.total !== undefined) {
+            stats += (stats ? "<br>" : "") + Number(r.indexed) + " of " + Number(r.total) + " files indexed";
+            if (r.errors && r.errors.length) {
+                stats += " | " + Number(r.errors.length) + " error" + (r.errors.length === 1 ? "" : "s");
+            }
+        }
 
         el.resultsStats.innerHTML = stats || "Processing complete.";
         el.resultsPath.textContent = r.xml_path || r.output_path || r.overlay_path || (r.output_paths ? r.output_paths.length + " files exported" : "");
@@ -2844,9 +3270,11 @@
     function cancelJob() {
         if (currentJob) {
             var cancellingJob = currentJob;
-            el.processingCancel.textContent = "Cancelling…";
+            rememberButtonText(el.processingCancel);
+            setButtonText(el.processingCancel, "Cancelling…");
             el.processingCancel.disabled = true;
-            el.cancelBtn.textContent = "Cancelling…";
+            rememberButtonText(el.cancelBtn);
+            setButtonText(el.cancelBtn, "Cancelling…");
             el.cancelBtn.disabled = true;
             // Close SSE/poll FIRST to prevent "complete" events from firing
             if (pollTimer) {
@@ -3090,45 +3518,77 @@
     }
     
     function installDepth() {
-        setHintState(el.depthHint, "Installing Depth Anything V2… This may take several minutes.", "info", el.installDepthBtn);
-        apiWithSpinner(el.installDepthBtn, "POST", "/video/depth/install", {}, function(err, data) {
-            if (err || (data && data.error)) {
-                var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : "Unknown error";
-                setHintState(el.depthHint, "Installation failed: " + errMsg, "error", el.installDepthBtn);
-            } else {
-                hideHintState(el.depthHint, el.installDepthBtn);
+        startInlineInstallJob({
+            endpoint: "/video/depth/install",
+            hintEl: el.depthHint,
+            actionBtn: el.installDepthBtn,
+            startMessage: "Installing Depth Anything V2… This may take several minutes.",
+            onSuccess: function() {
                 capabilities.depth_effects = true;
                 updateButtons();
                 showAlert("Depth Anything V2 installed successfully!");
             }
-        }, 300000);
+        });
     }
 
     function installEmotion() {
-        setHintState(el.emotionHint, "Installing emotion analysis… This may take a few minutes.", "info", el.installEmotionBtn);
-        apiWithSpinner(el.installEmotionBtn, "POST", "/video/emotion/install", {}, function(err, data) {
-            if (err || (data && data.error)) {
-                var errMsg = data ? (data.suggestion ? data.error + " \u2014 " + data.suggestion : data.error) : "Unknown error";
-                setHintState(el.emotionHint, "Installation failed: " + errMsg, "error", el.installEmotionBtn);
-            } else {
-                hideHintState(el.emotionHint, el.installEmotionBtn);
+        startInlineInstallJob({
+            endpoint: "/video/emotion/install",
+            hintEl: el.emotionHint,
+            actionBtn: el.installEmotionBtn,
+            startMessage: "Installing emotion analysis… This may take a few minutes.",
+            onSuccess: function() {
                 capabilities.deepface = true;
                 updateButtons();
                 showAlert("Emotion analysis installed successfully!");
             }
-        }, 300000);
+        });
     }
 
     function installCrisperWhisper() {
-        api("POST", "/audio/crisper-whisper/install", {}, function(err, data) {
-            if (err || (data && data.error)) {
-                showAlert("CrisperWhisper install failed: " + (data ? data.error : err.message));
-            } else {
+        startInlineInstallJob({
+            endpoint: "/audio/crisper-whisper/install",
+            hintEl: el.fillersHint,
+            actionBtn: el.installCrisperWhisperBtn,
+            startMessage: "Installing CrisperWhisper… This may take a few minutes.",
+            onSuccess: function() {
                 capabilities.crisper_whisper = true;
+                if (el.fillerBackend) {
+                    el.fillerBackend.value = "crisper";
+                    if (el.fillerBackend._customDropdown) el.fillerBackend._customDropdown.updateText();
+                }
                 updateButtons();
                 showAlert("CrisperWhisper installed successfully!");
             }
-        }, 300000);
+        });
+    }
+
+    function installBrollGenerate() {
+        startInlineInstallJob({
+            endpoint: "/video/broll-generate/install",
+            hintEl: el.brollGenHint,
+            actionBtn: el.installBrollGenBtn,
+            startMessage: "Installing AI B-roll generation dependencies… This may take several minutes.",
+            onSuccess: function() {
+                capabilities.broll_generate = true;
+                updateButtons();
+                showAlert("AI B-roll generation installed successfully!");
+            }
+        });
+    }
+
+    function installMultimodalDiarize() {
+        startInlineInstallJob({
+            endpoint: "/video/multimodal-diarize/install",
+            hintEl: el.mmDiarizeHint,
+            actionBtn: el.installMmDiarizeBtn,
+            startMessage: "Installing multimodal diarization dependencies… This may take several minutes.",
+            onSuccess: function() {
+                capabilities.multimodal_diarize = true;
+                updateButtons();
+                showAlert("Multimodal diarization installed successfully!");
+            }
+        });
     }
 
     function installWatermark() {
@@ -3150,9 +3610,10 @@
         if (!selectedPath) return;
         var btn = document.getElementById("autoDetectWatermarkBtn");
         var resEl = document.getElementById("wmDetectResult");
-        if (btn) { btn.disabled = true; btn.textContent = "Detecting…"; }
+        var originalBtnText = rememberButtonText(btn);
+        if (btn) { btn.disabled = true; setButtonText(btn, "Detecting…"); }
         api("POST", "/video/auto-detect-watermark", { filepath: selectedPath, prompt: (el.wmPrompt ? el.wmPrompt.value.trim() : "watermark") || "watermark" }, function (err, data) {
-            if (btn) { btn.disabled = false; btn.textContent = "Auto-Detect Watermark (Florence-2)"; }
+            if (btn) { btn.disabled = false; setButtonText(btn, originalBtnText); }
             if (err || !data) {
                 setHintState(resEl, "Detection failed: " + ((err && err.message) || "Unknown error"), "error");
                 return;
@@ -4878,7 +5339,7 @@
 
     function installWhisper() {
         showAlert("Installing faster-whisper… This may take a minute.");
-        startJob("/install-whisper", { backend: "faster-whisper" });
+        startJob("/install-whisper", { backend: "faster-whisper", no_input: true });
     }
 
     function reinstallWhisper() {
@@ -5267,10 +5728,12 @@
      */
     function formatTimecode(seconds) {
         if (!seconds && seconds !== 0) return "00:00.0";
-        var s = Math.abs(Number(seconds));
-        var m = Math.floor(s / 60);
-        var sec = s % 60;
-        return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec.toFixed(1);
+        var totalTenths = Math.round(Math.abs(Number(seconds) || 0) * 10);
+        var totalSec = Math.floor(totalTenths / 10);
+        var tenths = totalTenths % 10;
+        var m = Math.floor(totalSec / 60);
+        var sec = totalSec % 60;
+        return (m < 10 ? "0" : "") + m + ":" + (sec < 10 ? "0" : "") + sec + "." + tenths;
     }
 
     /**
@@ -6046,10 +6509,11 @@
     function initGpuRecommendation() {
         if (!el.getGpuRecBtn) return;
         el.getGpuRecBtn.addEventListener("click", function () {
-            el.getGpuRecBtn.textContent = "Checking…";
+            var originalBtnText = rememberButtonText(el.getGpuRecBtn);
+            setButtonText(el.getGpuRecBtn, "Checking…");
             el.getGpuRecBtn.disabled = true;
             api("GET", "/system/gpu-recommend", null, function (err, data) {
-                el.getGpuRecBtn.textContent = "Get Recommendation";
+                setButtonText(el.getGpuRecBtn, originalBtnText);
                 el.getGpuRecBtn.disabled = false;
                 if (err || !data) { showAlert("Failed to get GPU recommendation."); return; }
                 if (el.gpuRecModel) el.gpuRecModel.textContent = data.whisper_model || "N/A";
@@ -6337,26 +6801,41 @@
                 return;
             }
 
-        el.loadWaveformBtn.textContent = "Loading…";
+            var originalWaveformBtnText = rememberButtonText(el.loadWaveformBtn);
+            setButtonText(el.loadWaveformBtn, "Loading…");
             el.loadWaveformBtn.disabled = true;
             var fetchPath = selectedPath; // capture for closure
-            api("POST", "/audio/waveform", { file: fetchPath, samples: 500 }, function (err, data) {
-                el.loadWaveformBtn.textContent = "Preview Waveform";
-                el.loadWaveformBtn.disabled = !selectedPath;
-                if (err || !data || !data.peaks) {
-                    showToast("Failed to load waveform", "error");
-                    return;
+            var requestSeq = ++_waveformRequestSeq;
+            startUtilityJob("/audio/waveform", { file: fetchPath, samples: 500 }, {
+                isStale: function () {
+                    return requestSeq !== _waveformRequestSeq || fetchPath !== selectedPath;
+                },
+                onComplete: function (data) {
+                    // Cache even if the user switched clips while it was loading.
+                    var keys = Object.keys(_waveformCache);
+                    if (keys.length >= _WAVEFORM_CACHE_MAX && !_waveformCache[fetchPath]) {
+                        delete _waveformCache[keys[0]];
+                    }
+                    _waveformCache[fetchPath] = data;
+                    if (requestSeq !== _waveformRequestSeq || fetchPath !== selectedPath) return;
+                    if (!data || !data.peaks) {
+                        showToast("Failed to load waveform", "error");
+                        return;
+                    }
+                    _waveformData = data;
+                    if (el.waveformContainer) el.waveformContainer.classList.remove("hidden");
+                    drawWaveform(data.peaks);
+                    updateThresholdLine();
+                },
+                onError: function (job) {
+                    if (requestSeq !== _waveformRequestSeq || fetchPath !== selectedPath) return;
+                    showToast((job && (job.error || job.message)) ? "Failed to load waveform: " + (job.error || job.message) : "Failed to load waveform", "error");
+                },
+                onFinally: function () {
+                    if (requestSeq !== _waveformRequestSeq) return;
+                    setButtonText(el.loadWaveformBtn, originalWaveformBtnText);
+                    el.loadWaveformBtn.disabled = !selectedPath;
                 }
-                _waveformData = data;
-                // Cache with FIFO eviction
-                var keys = Object.keys(_waveformCache);
-                if (keys.length >= _WAVEFORM_CACHE_MAX) {
-                    delete _waveformCache[keys[0]];
-                }
-                _waveformCache[fetchPath] = data;
-                if (el.waveformContainer) el.waveformContainer.classList.remove("hidden");
-                drawWaveform(data.peaks);
-                updateThresholdLine();
             });
         });
         // Drag threshold line
@@ -6535,8 +7014,28 @@
     // ================================================================
     // Side-by-Side Preview
     // ================================================================
+    function setPreviewModalMode(mode) {
+        var single = mode !== "compare";
+        var title = document.getElementById("previewModalTitle");
+        var originalLabel = document.getElementById("previewOriginalLabel");
+        var processedLabel = document.getElementById("previewProcessedLabel");
+        var processedPane = document.getElementById("previewProcessedPane");
+        var divider = document.getElementById("previewDivider");
+        if (el.previewModal) {
+            el.previewModal.classList.toggle("is-single", single);
+        }
+        if (title) title.textContent = single ? "Frame Preview" : "Before / After Preview";
+        if (originalLabel) originalLabel.textContent = single ? "Selected Frame" : "Original";
+        if (processedLabel) processedLabel.textContent = "Processed Preview";
+        if (processedPane) processedPane.setAttribute("aria-hidden", single ? "true" : "false");
+        if (divider) divider.setAttribute("aria-hidden", single ? "true" : "false");
+    }
+
     function closePreviewModal() {
         if (el.previewModal) el.previewModal.classList.add("hidden");
+        setPreviewModalMode("single");
+        if (el.previewOriginal) el.previewOriginal.removeAttribute("src");
+        if (el.previewProcessed) el.previewProcessed.removeAttribute("src");
     }
 
     function initPreviewModal() {
@@ -6564,13 +7063,42 @@
     function loadPreviewFrame() {
         if (!selectedPath) return;
         var ts = el.previewTimestamp ? el.previewTimestamp.value : "00:00:01";
+        var previewPath = selectedPath;
+        var requestSeq = ++_previewModalRequestSeq;
+        setPreviewModalMode("single");
+        if (el.previewRefreshBtn) {
+            el.previewRefreshBtn.disabled = true;
+            var refreshLabel = el.previewRefreshBtn.querySelector(".btn-label");
+            if (refreshLabel) refreshLabel.textContent = "Loading…";
+        }
         // Load original frame
-        api("POST", "/video/preview-frame", { file: selectedPath, timestamp: ts }, function (err, data) {
-            if (err || !data || !data.image) return;
-            if (el.previewOriginal) el.previewOriginal.src = "data:image/jpeg;base64," + data.image;
-            if (el.previewProcessed) el.previewProcessed.src = "data:image/jpeg;base64," + data.image;
-            if (el.previewModal) el.previewModal.classList.remove("hidden");
-            if (el.previewModalClose) el.previewModalClose.focus();
+        startUtilityJob("/video/preview-frame", { filepath: previewPath, timestamp: ts }, {
+            isStale: function () {
+                return requestSeq !== _previewModalRequestSeq || previewPath !== selectedPath;
+            },
+            onComplete: function (data) {
+                if (requestSeq !== _previewModalRequestSeq || previewPath !== selectedPath) return;
+                if (!data || !data.image) {
+                    showToast("Preview frame unavailable", "error");
+                    return;
+                }
+                if (el.previewOriginal) el.previewOriginal.src = "data:image/jpeg;base64," + data.image;
+                if (el.previewProcessed) el.previewProcessed.removeAttribute("src");
+                if (el.previewModal) el.previewModal.classList.remove("hidden");
+                if (el.previewModalClose) el.previewModalClose.focus();
+            },
+            onError: function (job) {
+                if (requestSeq !== _previewModalRequestSeq || previewPath !== selectedPath) return;
+                showToast((job && (job.error || job.message)) ? "Preview failed: " + (job.error || job.message) : "Preview failed", "error");
+            },
+            onFinally: function () {
+                if (requestSeq !== _previewModalRequestSeq) return;
+                if (el.previewRefreshBtn) {
+                    el.previewRefreshBtn.disabled = false;
+                    var refreshLabel = el.previewRefreshBtn.querySelector(".btn-label");
+                    if (refreshLabel) refreshLabel.textContent = "Refresh Frame";
+                }
+            }
         });
     }
 
@@ -7354,41 +7882,45 @@
     // ================================================================
     // v1.3.0 - Clip Preview Thumbnail
     // ================================================================
-    function updateClipPreview() {
+    function updateClipPreview(pathOverride) {
         if (!el.clipPreviewRow) return;
-        if (!selectedPath) {
+        var clipPath = pathOverride || selectedPath;
+        if (!clipPath) {
             el.clipPreviewRow.classList.add("hidden");
+            if (el.clipThumb) el.clipThumb.innerHTML = "";
+            clearClipPreviewMeta();
             return;
         }
         el.clipPreviewRow.classList.remove("hidden");
         if (el.clipThumb) el.clipThumb.innerHTML = '<div class="clip-thumb-loading"></div>';
-        if (el.clipMetaRes) el.clipMetaRes.textContent = "";
-        if (el.clipMetaDur) el.clipMetaDur.textContent = "";
-        if (el.clipMetaSize) el.clipMetaSize.textContent = "";
+        clearClipPreviewMeta();
+        if (_clipInfoCache[clipPath]) {
+            applyClipPreviewMeta(clipPath, _clipInfoCache[clipPath]);
+        }
         // Fetch thumbnail
-        api("POST", "/video/preview-frame", { file: selectedPath, timestamp: "00:00:01", width: 160 }, function(err, data) {
-            if (err || !data || !data.image) {
+        var previewPath = clipPath;
+        var requestSeq = ++_clipThumbRequestSeq;
+        startUtilityJob("/video/preview-frame", { filepath: previewPath, timestamp: "00:00:01", width: 160 }, {
+            isStale: function () {
+                return requestSeq !== _clipThumbRequestSeq || previewPath !== selectedPath;
+            },
+            onComplete: function(data) {
+                if (requestSeq !== _clipThumbRequestSeq || previewPath !== selectedPath) return;
+                if (!data || !data.image) {
+                    if (el.clipThumb) el.clipThumb.innerHTML = '<div class="clip-thumb-none">No Preview</div>';
+                    return;
+                }
+                if (el.clipThumb) {
+                    var img = document.createElement("img");
+                    img.src = "data:image/jpeg;base64," + data.image;
+                    img.alt = (selectedName || previewPath.split(/[/\\]/).pop() || "Clip") + " preview frame";
+                    el.clipThumb.innerHTML = "";
+                    el.clipThumb.appendChild(img);
+                }
+            },
+            onError: function() {
+                if (requestSeq !== _clipThumbRequestSeq || previewPath !== selectedPath) return;
                 if (el.clipThumb) el.clipThumb.innerHTML = '<div class="clip-thumb-none">No Preview</div>';
-                return;
-            }
-            if (el.clipThumb) {
-                var img = document.createElement("img");
-                img.src = "data:image/jpeg;base64," + data.image;
-                img.alt = "preview";
-                el.clipThumb.innerHTML = "";
-                el.clipThumb.appendChild(img);
-            }
-        });
-        // Fetch metadata via lightweight probe (reuses /info endpoint)
-        api("POST", "/info", { filepath: selectedPath }, function(err, data) {
-            if (!err && data && data.duration) {
-                if (el.clipMetaDur) el.clipMetaDur.textContent = fmtDur(data.duration);
-            }
-            if (!err && data && data.video) {
-                if (el.clipMetaRes) el.clipMetaRes.textContent = data.video.width + "x" + data.video.height;
-            }
-            if (!err && data && data.file_size_mb) {
-                if (el.clipMetaSize) el.clipMetaSize.textContent = safeFixed(data.file_size_mb, 1) + " MB";
             }
         });
     }
@@ -8248,7 +8780,7 @@
         if (!el.mergeFileList) return;
         if (_mergeFiles.length === 0) {
             el.mergeFileList.innerHTML = buildEmptyHintMarkup("Nothing queued", "Add two or more files to merge in sequence.");
-            if (el.runMergeBtn) el.runMergeBtn.disabled = true;
+            if (el.runMergeBtn) el.runMergeBtn.disabled = !connected || _mergeFiles.length < 2;
             return;
         }
         var html = "";
@@ -8263,7 +8795,7 @@
                 '</div>';
         }
         el.mergeFileList.innerHTML = html;
-        if (el.runMergeBtn) el.runMergeBtn.disabled = _mergeFiles.length < 2;
+        if (el.runMergeBtn) el.runMergeBtn.disabled = !connected || _mergeFiles.length < 2;
     }
 
     // Event delegation for merge file remove buttons (avoids listener accumulation)
@@ -8288,7 +8820,8 @@
             files: _mergeFiles,
             output_dir: projectFolder,
             mode: el.mergeMode ? el.mergeMode.value : "concat",
-            quality: el.mergeQuality ? el.mergeQuality.value : "medium"
+            quality: el.mergeQuality ? el.mergeQuality.value : "medium",
+            no_input: true
         });
     }
 
@@ -8355,24 +8888,53 @@
         return config;
     }
 
-    function saveLLMSettings() {
+    function applyLLMConfig(cfg, fillBlankOnly) {
+        if (!cfg) return;
+        var assign = function (input, value) {
+            if (!input || value == null || value === "") return;
+            if (fillBlankOnly && input.value) return;
+            input.value = value;
+        };
+        assign(el.llmProvider, cfg.provider);
+        assign(el.llmModel, cfg.model);
+        assign(el.llmApiKey, cfg.api_key);
+        assign(el.llmBaseUrl, cfg.base_url);
+        updateLLMProviderUI();
+    }
+
+    function saveLLMSettings(options) {
+        var cfg = getLLMConfig();
         try {
-            var cfg = getLLMConfig();
             localStorage.setItem("opencut_llm", JSON.stringify(cfg));
         } catch (e) {}
+        if (options && options.localOnly) return;
+        api("POST", "/settings/llm", cfg, function (err) {
+            if (err) {
+                if (!options || !options.silent) showToast("Failed to save LLM settings", "error");
+                return;
+            }
+            if (options && options.toastSuccess) showToast("LLM settings saved", "success");
+        });
     }
 
     function loadLLMSettings() {
+        var hasLocalSettings = false;
         try {
             var saved = localStorage.getItem("opencut_llm");
-            if (!saved) return;
-            var cfg = JSON.parse(saved);
-            if (cfg.provider && el.llmProvider) el.llmProvider.value = cfg.provider;
-            if (cfg.model && el.llmModel) el.llmModel.value = cfg.model;
-            if (cfg.api_key && el.llmApiKey) el.llmApiKey.value = cfg.api_key;
-            if (cfg.base_url && el.llmBaseUrl) el.llmBaseUrl.value = cfg.base_url;
-            updateLLMProviderUI();
+            if (saved) {
+                hasLocalSettings = true;
+                applyLLMConfig(JSON.parse(saved), false);
+            }
         } catch (e) {}
+        api("GET", "/settings/llm", null, function (err, s) {
+            if (err || !s) return;
+            applyLLMConfig({
+                provider: s.provider || "",
+                model: s.model || "",
+                api_key: s.api_key && s.api_key !== "****" ? s.api_key : "",
+                base_url: s.base_url || ""
+            }, hasLocalSettings);
+        });
     }
 
     function updateLLMProviderUI() {
@@ -8402,44 +8964,18 @@
                 return;
             }
             if (el.llmStatus) el.llmStatus.textContent = "Connected: " + resp.provider + "/" + resp.model;
-            saveLLMSettings();
+            saveLLMSettings({ silent: true });
             showToast("LLM connected", "success");
         });
     }
 
     // --- Silence mode toggle ---
     function loadLlmSettings() {
-        api("GET", "/settings/llm", null, function (err, s) {
-            if (err || !s) return;
-            if (s.provider) {
-                var sel = document.getElementById("llmProvider");
-                if (sel) sel.value = s.provider;
-            }
-            if (s.model) {
-                var m = document.getElementById("llmModel");
-                if (m) m.value = s.model;
-            }
-            if (s.api_key && s.api_key !== "****") {
-                var k = document.getElementById("llmApiKey");
-                if (k) k.value = s.api_key;
-            }
-            if (s.base_url) {
-                var u = document.getElementById("llmBaseUrl");
-                if (u) u.value = s.base_url;
-            }
-            updateLLMProviderUI();
-        });
+        loadLLMSettings();
     }
 
     function saveLlmSettings() {
-        var provider = (document.getElementById("llmProvider") || {}).value || "ollama";
-        var model = (document.getElementById("llmModel") || {}).value || "llama3";
-        var apiKey = (document.getElementById("llmApiKey") || {}).value || "";
-        var baseUrl = (document.getElementById("llmBaseUrl") || {}).value || "";
-        api("POST", "/settings/llm", { provider: provider, model: model, api_key: apiKey, base_url: baseUrl }, function (err) {
-            if (err) showToast("Failed to save LLM settings", "error");
-            else showToast("LLM settings saved", "success");
-        });
+        saveLLMSettings({ toastSuccess: true });
     }
 
     function saveAudioZoomDefaults() {
@@ -8535,6 +9071,7 @@
             reference_path: refPath,
             lut_name: lutName,
             strength: el.lutRefStrength ? parseFloat(el.lutRefStrength.value) : 1.0,
+            no_input: true,
         });
     }
 
@@ -8690,11 +9227,13 @@
     function getSeqMarkers() {
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
         cs.evalScript('ocGetSequenceMarkers()', function (result) {
+            var listEl = document.getElementById("markerExportList");
             try {
                 var markers = JSON.parse(result);
+                if (!Array.isArray(markers)) {
+                    throw new Error((markers && markers.error) || "Unexpected Premiere response");
+                }
                 seqMarkersData = markers;
-                var listEl = document.getElementById("markerExportList");
-                var exportBtn = document.getElementById("exportMarkedClipsBtn");
                 if (listEl) {
                     listEl.classList.remove("hidden");
                     if (!markers || !markers.length) {
@@ -8715,8 +9254,16 @@
                         listEl.innerHTML = html;
                     }
                 }
-                if (exportBtn) exportBtn.disabled = !(markers && markers.length);
-            } catch (e) { showAlert("Error reading markers: " + (result || e.message)); }
+                updateButtons();
+            } catch (e) {
+                seqMarkersData = null;
+                if (listEl) {
+                    listEl.classList.remove("hidden");
+                    listEl.innerHTML = '<div class="hint">Could not read sequence markers.</div>';
+                }
+                updateButtons();
+                showAlert("Error reading markers: " + (result || e.message));
+            }
         });
     }
 
@@ -8742,13 +9289,10 @@
     function loadProjectItems() {
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
         // Return cached project media if still fresh
-        if (_pproCache.clips && (Date.now() - _pproCache.ts < _pproCache.ttl)) {
+        if (Array.isArray(_pproCache.clips) && (Date.now() - _pproCache.clipsTs < _pproCache.ttl)) {
             renameItemsData = _pproCache.clips;
             renderRenameItems();
-            var applyBtn = document.getElementById("applyRenamePatternBtn");
-            var renameBtn = document.getElementById("renameAllBtn");
-            if (applyBtn) applyBtn.disabled = !renameItemsData.length;
-            if (renameBtn) renameBtn.disabled = !renameItemsData.length;
+            updateButtons();
             return;
         }
         cs.evalScript('getAllProjectMedia()', function (result) {
@@ -8760,13 +9304,14 @@
                 }
                 renameItemsData = items;
                 _pproCache.clips = renameItemsData;
-                _pproCache.ts = Date.now();
+                _pproCache.clipsTs = Date.now();
                 renderRenameItems();
-                var applyBtn = document.getElementById("applyRenamePatternBtn");
-                var renameBtn = document.getElementById("renameAllBtn");
-                if (applyBtn) applyBtn.disabled = !renameItemsData.length;
-                if (renameBtn) renameBtn.disabled = !renameItemsData.length;
-            } catch (e) { showAlert("Error loading items: " + (result || e.message)); }
+                updateButtons();
+            } catch (e) {
+                renameItemsData = [];
+                updateButtons();
+                showAlert("Error loading items: " + (result || e.message));
+            }
         });
     }
 
@@ -8840,6 +9385,7 @@
         if (!container) return;
         if (!smartBinRules.length) {
             container.innerHTML = '<div class="hint">No rules yet. Click "+ Add Rule".</div>';
+            updateButtons();
             return;
         }
         var html = "";
@@ -8882,6 +9428,7 @@
         container.querySelectorAll('.bin-rule-remove').forEach(function(el2) {
             el2.addEventListener('click', function() { removeBinRule(parseInt(this.dataset.idx)); });
         });
+        updateButtons();
     }
 
     function createSmartBins() {
@@ -9042,6 +9589,7 @@
             files: paths,
             target_lufs: parseFloat(document.getElementById("loudMatchTarget").value || "-14"),
             output_dir: outDir,
+            no_input: true,
         });
     }
 
@@ -9079,7 +9627,7 @@
     function loadSeqInfo() {
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
         // Return cached sequence info if still fresh
-        if (_pproCache.seq && (Date.now() - _pproCache.ts < _pproCache.ttl)) {
+        if (_pproCache.seq && typeof _pproCache.seq === "object" && !_pproCache.seq.error && (Date.now() - _pproCache.seqTs < _pproCache.ttl)) {
             var cached = _pproCache.seq;
             sequenceInfo = cached;
             var statusEl = document.getElementById("seqInfoStatus");
@@ -9087,24 +9635,35 @@
                 statusEl.textContent = "Loaded: " + (cached.name || "Unknown") + " — " + (cached.clip_count || 0) + " clips (cached)";
                 statusEl.classList.remove("hidden");
             }
-            var btns = ["genVfxSheetBtn","genAdrListBtn","genMusicCueBtn","genAssetListBtn"];
-            btns.forEach(function(id) { var b = document.getElementById(id); if (b) b.disabled = false; });
+            updateButtons();
             return;
         }
         cs.evalScript('ocGetSequenceInfo()', function (result) {
+            var statusEl = document.getElementById("seqInfoStatus");
             try {
                 sequenceInfo = JSON.parse(result);
+                if (!sequenceInfo || typeof sequenceInfo !== "object" || sequenceInfo.error) {
+                    throw new Error((sequenceInfo && sequenceInfo.error) || "Unexpected Premiere response");
+                }
                 _pproCache.seq = sequenceInfo;
-                _pproCache.ts = Date.now();
-                var statusEl = document.getElementById("seqInfoStatus");
+                _pproCache.seqTs = Date.now();
                 if (statusEl) {
                     statusEl.textContent = "Loaded: " + (sequenceInfo.name || "Unknown") + " — " + (sequenceInfo.clip_count || 0) + " clips";
                     statusEl.classList.remove("hidden");
                 }
-                var btns = ["genVfxSheetBtn","genAdrListBtn","genMusicCueBtn","genAssetListBtn"];
-                btns.forEach(function(id) { var b = document.getElementById(id); if (b) b.disabled = false; });
+                updateButtons();
                 showToast("Sequence info loaded", "success");
-            } catch (e) { showAlert("Error loading sequence info: " + (result || e.message)); }
+            } catch (e) {
+                sequenceInfo = null;
+                _pproCache.seq = null;
+                _pproCache.seqTs = 0;
+                if (statusEl) {
+                    statusEl.textContent = "Couldn't load the active sequence.";
+                    statusEl.classList.remove("hidden");
+                }
+                updateButtons();
+                showAlert("Error loading sequence info: " + (result || e.message));
+            }
         });
     }
 
@@ -9125,18 +9684,56 @@
     // v1.5.0 — NLP Tab Functions
     // ================================================================
 
+    function renderSearchIndexStats(stats) {
+        var statsEl = document.getElementById("searchIndexStats");
+        footageIndex = stats || {};
+        if (!statsEl) return;
+        var totalFiles = Number((stats && stats.total_files) || 0);
+        var totalSegments = Number((stats && stats.total_segments) || 0);
+        if (!totalFiles) {
+            statsEl.textContent = "Search index is empty. Index project clips to enable footage search.";
+            return;
+        }
+        statsEl.textContent = "Index: " + totalFiles + " file" + (totalFiles === 1 ? "" : "s") + ", " + totalSegments + " segment" + (totalSegments === 1 ? "" : "s") + ".";
+    }
+
+    function refreshSearchIndexStatus() {
+        api("GET", "/timeline/index-status", null, function (err, data) {
+            if (err || !data) return;
+            renderSearchIndexStats(data);
+        });
+    }
+
     function indexAllClips() {
         var paths = projectMedia.map(function(m) { return m.path || m; }).filter(Boolean);
         if (!paths.length) { showAlert("No project media found."); return; }
         var btn = document.getElementById("indexAllClipsBtn");
-        if (btn) { btn.disabled = true; btn.textContent = "Indexing…"; }
-        api("POST", "/search/index", { files: paths }, function (err, data) {
-            if (btn) { btn.disabled = false; btn.textContent = "Index All Project Clips"; }
-            if (err || (data && data.error)) { showAlert("Indexing failed: " + (data ? data.error : "Network error")); return; }
-            footageIndex = data;
-            var statsEl = document.getElementById("searchIndexStats");
-            if (statsEl) statsEl.textContent = "Index: " + (data.total_files || paths.length) + " files, " + (data.total_segments || 0) + " segments.";
-            showToast("Indexing complete", "success");
+        if (currentJob || jobStarting) {
+            showAlert("Another task is in progress. You can cancel it from the processing bar above.");
+            return;
+        }
+        var originalBtnText = rememberButtonText(btn);
+        if (btn) { btn.disabled = true; setButtonText(btn, "Indexing…"); }
+        startJob("/search/index", { files: paths, no_input: true }, {
+            onComplete: function (result) {
+                refreshSearchIndexStatus();
+                var indexed = Number((result && result.indexed) || 0);
+                var total = Number((result && result.total) || paths.length);
+                var errors = (result && result.errors) || [];
+                showToast("Indexed " + indexed + " of " + total + " project clips" + (errors.length ? " with " + errors.length + " issue" + (errors.length === 1 ? "" : "s") : "") + ".", errors.length ? "warning" : "success");
+            },
+            onFinally: function () {
+                if (btn) {
+                    btn.disabled = false;
+                    setButtonText(btn, originalBtnText);
+                }
+            },
+            onStartError: function () {
+                if (btn) {
+                    btn.disabled = false;
+                    setButtonText(btn, originalBtnText);
+                }
+            }
         });
     }
 
@@ -9225,12 +9822,13 @@
         if (!text) { showAlert("Enter a command."); return; }
         var provider = (document.getElementById("nlpLlmProvider") || {}).value || "ollama";
         var btn = document.getElementById("runNlpCommandBtn");
+        var originalBtnText = rememberButtonText(btn);
         // Capture state at command time so async callback uses the correct clip
         var snapPath = selectedPath;
         var snapFolder = projectFolder;
-        if (btn) { btn.disabled = true; btn.textContent = "Processing…"; }
+        if (btn) { btn.disabled = true; setButtonText(btn, "Processing…"); }
         api("POST", "/nlp/command", { command: text, filepath: snapPath, llm_provider: provider }, function (err, data) {
-            if (btn) { btn.disabled = false; btn.textContent = "Run Command"; }
+            if (btn) { btn.disabled = false; setButtonText(btn, originalBtnText); }
             var res = document.getElementById("nlpCommandResult");
             var routeEl = document.getElementById("nlpCommandRoute");
             var confEl = document.getElementById("nlpCommandConf");
@@ -9289,10 +9887,11 @@
                 }
             }
             otioBtn.disabled = true;
-        otioBtn.textContent = "Exporting…";
+            var originalOtioText = rememberButtonText(otioBtn);
+            setButtonText(otioBtn, "Exporting…");
             api("POST", "/timeline/export-otio", payload, function (err, data) {
                 otioBtn.disabled = false;
-                otioBtn.textContent = "Export .otio File";
+                setButtonText(otioBtn, originalOtioText);
                 if (err || !data || data.error) {
                     var otioRes = document.getElementById("otioResult");
                     setHintState(otioRes, "Error: " + ((data && data.error) || (err && err.message) || "Unknown"), "error");
@@ -9306,7 +9905,17 @@
         // OTIO install button
         var installOtioBtn = document.getElementById("installOtioBtn");
         if (installOtioBtn) installOtioBtn.addEventListener("click", function () {
-            startJob("/install-pip", { package: "opentimelineio", no_input: true });
+            startInlineInstallJob({
+                endpoint: "/timeline/otio/install",
+                hintEl: el.otioHint || document.getElementById("otioHint"),
+                actionBtn: installOtioBtn,
+                startMessage: "Installing OpenTimelineIO… This may take a minute.",
+                onSuccess: function() {
+                    capabilities.otio = true;
+                    updateButtons();
+                    showToast("OpenTimelineIO installed successfully", "success");
+                }
+            });
         });
 
         // Beat markers
@@ -9432,6 +10041,7 @@
         var nlpBtn = document.getElementById("runNlpCommandBtn");
         if (nlpBtn) nlpBtn.addEventListener("click", runNlpCommand);
         ensureFootageDelegation();
+        refreshSearchIndexStatus();
     }
 
     // Hook silence result to update lastTimelineCuts and show review panel
@@ -9529,7 +10139,7 @@
     // ================================================================
     var _lastContextResult = null;
 
-    function analyzeClipContext(infoData) {
+    function analyzeClipContext(infoData, pathSnapshot) {
         if (!connected) return;
         var payload = {
             has_audio: !!infoData.audio,
@@ -9542,6 +10152,7 @@
         };
         api("POST", "/context/analyze", payload, function (err, data) {
             if (err || !data || data.error) return;
+            if (pathSnapshot && pathSnapshot !== selectedPath) return;
             _lastContextResult = data;
             showContextGuidance(data.guidance, data.tab_scores);
             highlightSuggestedTabs(data.features);
@@ -9715,6 +10326,7 @@
         _on("runSilenceBtn", "click", runSilence);
         _on("runFillersBtn", "click", runFillers);
         _on("runFullBtn", "click", runFull);
+        _on("fillerBackend", "change", updateButtons);
 
         // Captions tab buttons
         _on("runStyledCaptionsBtn", "click", runStyledCaptions);
@@ -9798,8 +10410,11 @@
         // TTS buttons
         _on("runTtsBtn", "click", runTts);
         _on("installEdgeTtsBtn", "click", installEdgeTts);
+        _on("installCrisperWhisperBtn", "click", installCrisperWhisper);
         _on("installDepthBtn", "click", installDepth);
         _on("installEmotionBtn", "click", installEmotion);
+        _on("installBrollGenBtn", "click", installBrollGenerate);
+        _on("installMmDiarizeBtn", "click", installMultimodalDiarize);
 
         // SFX buttons
         _on("runSfxBtn", "click", runSfx);
@@ -9990,8 +10605,11 @@
         if (el.testLLMBtn) el.testLLMBtn.addEventListener("click", testLLM);
         if (el.llmProvider) el.llmProvider.addEventListener("change", function () {
             updateLLMProviderUI();
-            saveLLMSettings();
+            saveLLMSettings({ silent: true });
         });
+        if (el.llmModel) el.llmModel.addEventListener("change", function () { saveLLMSettings({ silent: true }); });
+        if (el.llmApiKey) el.llmApiKey.addEventListener("change", function () { saveLLMSettings({ silent: true }); });
+        if (el.llmBaseUrl) el.llmBaseUrl.addEventListener("change", function () { saveLLMSettings({ silent: true }); });
         if (el.copySummaryBtn) el.copySummaryBtn.addEventListener("click", function () {
             var text = el.summaryContent ? el.summaryContent.textContent : "";
             if (navigator.clipboard) {
@@ -10139,7 +10757,6 @@
         renderMergeFiles();
         initNewSliderDisplays();
         loadLLMSettings();
-        loadLlmSettings();
         updateSilenceModeUI();
         updateFaceTrackingUI();
 
