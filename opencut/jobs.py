@@ -330,17 +330,35 @@ def async_job(job_type: str, *, filepath_required: bool = True,
 
             if filepath_required:
                 if not filepath:
-                    return jsonify({"error": "No file path provided"}), 400
+                    return jsonify({
+                        "error": "No file path provided",
+                        "code": "INVALID_INPUT",
+                        "suggestion": "Select a clip in Premiere or pass `filepath` in the request body.",
+                    }), 400
                 try:
                     filepath = validate_filepath(filepath)
                 except ValueError as e:
-                    return jsonify({"error": str(e)}), 400
+                    msg = str(e)
+                    # Classify: path traversal / null byte / UNC → INVALID_INPUT,
+                    # not-found / not-a-file → FILE_NOT_FOUND.
+                    lower = msg.lower()
+                    if "not found" in lower or "not a file" in lower or "does not exist" in lower:
+                        code, hint = "FILE_NOT_FOUND", "Check the path exists and is accessible."
+                    else:
+                        code, hint = "INVALID_INPUT", "Use a plain absolute path with no traversal, null bytes, or UNC prefix."
+                    return jsonify({"error": msg, "code": code, "suggestion": hint}), 400
             elif filepath:
                 # Optional filepath provided — still validate it
                 try:
                     filepath = validate_filepath(filepath)
                 except ValueError as e:
-                    return jsonify({"error": str(e)}), 400
+                    msg = str(e)
+                    lower = msg.lower()
+                    if "not found" in lower or "not a file" in lower or "does not exist" in lower:
+                        code, hint = "FILE_NOT_FOUND", "Check the path exists and is accessible."
+                    else:
+                        code, hint = "INVALID_INPUT", "Use a plain absolute path with no traversal, null bytes, or UNC prefix."
+                    return jsonify({"error": msg, "code": code, "suggestion": hint}), 400
 
             job_label = filepath or job_type
             try:
@@ -396,7 +414,11 @@ def make_install_route(blueprint, url_path, component_name, packages,
     generated route:
 
     * ``POST url_path`` with CSRF
-    * Rate-limits under ``"model_install"``
+    * Rate-limits under ``"model_install"`` — returns **429 synchronously** when
+      another install is already running (the caller must wait). Previously the
+      rate limit check happened inside the async body which meant clients got
+      an initial 200 + job_id and only discovered the failure by polling the
+      job status.
     * Iterates *packages* with progress updates
     * Returns ``{"component": component_name}``
 
@@ -407,19 +429,19 @@ def make_install_route(blueprint, url_path, component_name, packages,
         packages:  List of pip package specifiers.
         doc:       Optional docstring override.
     """
+    from flask import jsonify
+
     from opencut.security import rate_limit as _rl
     from opencut.security import rate_limit_release as _rlr
     from opencut.security import require_csrf as _csrf
     from opencut.security import safe_pip_install as _spi
 
-    @blueprint.route(url_path, methods=["POST"])
-    @_csrf
+    # Inner function that actually performs the install. Runs in a worker thread
+    # via @async_job. The outer Flask handler below acquires the rate-limit slot
+    # before spawning the job, so `rate_limit` is already held when _install_body
+    # starts — we just need to release it in the `finally`.
     @async_job("install", filepath_required=False)
-    def _install_handler(job_id, filepath, data):
-        if not _rl("model_install"):
-            # Not acquired — don't release in finally
-            raise ValueError("A model_install operation is already running. Please wait.")
-        acquired = True
+    def _install_body(job_id, filepath, data):
         try:
             for i, pkg in enumerate(packages):
                 pct = int((i / len(packages)) * 90)
@@ -427,8 +449,25 @@ def make_install_route(blueprint, url_path, component_name, packages,
                 _spi(pkg, timeout=600)
             return {"component": component_name}
         finally:
-            if acquired:
-                _rlr("model_install")
+            _rlr("model_install")
+
+    @blueprint.route(url_path, methods=["POST"])
+    @_csrf
+    def _install_handler():
+        if not _rl("model_install"):
+            return jsonify({
+                "error": "A model_install operation is already running. Please wait.",
+                "code": "RATE_LIMITED",
+                "suggestion": "Wait for the current install to finish, then retry.",
+            }), 429
+        try:
+            return _install_body()
+        except Exception:
+            # _install_body only raises before spawning the worker thread
+            # (e.g., TooManyJobsError). Release the slot so the next caller
+            # isn't permanently locked out.
+            _rlr("model_install")
+            raise
 
     _install_handler.__name__ = f"install_{component_name}"
     _install_handler.__qualname__ = f"install_{component_name}"
