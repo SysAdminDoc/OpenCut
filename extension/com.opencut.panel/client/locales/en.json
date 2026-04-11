@@ -392,7 +392,7 @@
     "video.merge_desc": "Join multiple clips into a single video file. Add clips using the batch picker or drag and drop.",
     "video.overlay_on_video": "Overlay on Video",
     "video.particles_desc": "Add confetti, sparkles, snow, rain, fire embers, smoke, or bubbles over your video.",
-    "video.preview_effect": "Preview Effect",
+    "video.preview_effect": "Inspect Frame",
     "video.reframe_desc": "Resize and crop video to fit vertical (TikTok, Shorts, Reels), square, or custom dimensions. Smart crop keeps the important center content.",
     "video.reframe_run": "Reframe Video",
     "video.remove_desc": "Remove a logo or watermark from a specific region of your video. Draw the area to erase.",

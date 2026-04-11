@@ -154,6 +154,19 @@ class TestContextRoute:
         data = resp.get_json()
         assert "features" in data
 
+    def test_analyze_string_booleans_do_not_turn_true(self, client):
+        resp = self._post(client, "/context/analyze", {
+            "has_audio": "false",
+            "has_video": "false",
+            "duration": "30",
+            "width": "1920",
+            "height": "1080",
+        })
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "audio_only" not in data["tags"]
+        assert "video_only" not in data["tags"]
+
     def test_list_features(self, client):
         resp = client.get("/context/features")
         assert resp.status_code == 200
