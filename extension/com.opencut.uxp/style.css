@@ -931,6 +931,7 @@ body {
 /* =========================================================
    UTILITY CLASSES (replaces inline style="display:none;" etc.)
    ========================================================= */
+.hidden,
 .oc-hidden { display: none !important; }
 
 .oc-chat-history {
