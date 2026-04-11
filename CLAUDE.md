@@ -181,7 +181,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.20**
+- Current: **v1.9.23**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -1066,6 +1066,17 @@ Comprehensive multi-phase audit across all 138 files (~82,500 lines). 103 issues
 ## v1.9.9 Batch 41 (UXP Feature Parity)
 - **4 new UXP Video features** — AI Upscale, Scene Detection, Style Transfer, Shorts Pipeline. Full HTML cards + JS handlers with job polling.
 - **UXP stale version fixed** — Settings showed "1.9.2" hardcoded. Now synced via version script.
+
+## v1.9.23 UXP a11y polish (Round-2 follow-up)
+Follow-up commit on top of v1.9.22 that lands the remaining accessibility and
+utility-class fixes found during the second audit round:
+- **All 7 UXP tab panels now have working `aria-labelledby`** — previously the first panel had `aria-labelledby=""` (orphan) and the other 6 were missing the attribute entirely. Assigned `id="tabBtn{Cut,Captions,Audio,Video,Timeline,Search,Deliverables,Settings}"` to each tab button and wired each panel's `aria-labelledby` to the matching id.
+- **All 72 UXP `<button>` elements now carry explicit `type="button"`** — CLAUDE.md mandates this for all buttons. Previously 61/72 were missing it. No functional impact (no `<form>` elements in the UXP doc) but closes the gap with the CEP panel's 179/179 coverage.
+- **`.hidden` and `.oc-hidden` unified as `display: none !important`** — CSS previously had `.oc-result-area.hidden { display: none; }` and `.oc-processing-banner.hidden { display: none; }` as scoped selectors, so toggling `.hidden` on elements outside those two classes was a silent no-op. New global rule `.hidden, .oc-hidden { display: none !important; }` makes the utility class work regardless of element type.
+- Rolls forward to v1.9.23 across all 18 version targets.
+
+## v1.9.22 (upstream) — Route-level audit, /file regression fix, safe_bool sweep
+See commit `04d068c` for the full v1.9.22 changelog — `/file` allowlist restored, `safe_bool()` hardened against NaN/inf/containers, 15 new safe_bool call sites, MCP serialization fallback, `highlights.py` None-text guard, `routes/system.py` lint cleanup.
 
 ## v1.9.20 Audit Round (Security, Injection, Queue Allowlist, Race Guards)
 - **Gemini API key URL leak** — `core/llm.py` passed `?key={api_key}` in query string, which leaked through `_http_json()` HTTPError messages. Moved to `x-goog-api-key` header; added `_sanitize_url()` that strips query strings from all error messages.
