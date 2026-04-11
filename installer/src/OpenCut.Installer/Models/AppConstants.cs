@@ -3,7 +3,7 @@ namespace OpenCut.Installer.Models;
 public static class AppConstants
 {
     public const string AppName = "OpenCut";
-    public const string AppVersion = "1.9.24";
+    public const string AppVersion = "1.9.25";
     public const string AppDisplayName = $"{AppName} v{AppVersion}";
     public const string AppPublisher = "SysAdminDoc";
     public const string AppUrl = "https://github.com/SysAdminDoc/OpenCut";

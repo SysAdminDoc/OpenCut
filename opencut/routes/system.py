@@ -531,9 +531,27 @@ def gpu_recommend():
 # ---------------------------------------------------------------------------
 # Dependency Health Dashboard
 # ---------------------------------------------------------------------------
+# Cold call invokes 20+ importlib.import_module() + ffprobe/ffmpeg subprocess +
+# an ollama HTTP probe. On first hit (Settings tab open) this takes ~5 s
+# which blocks the frontend. Cache the result for 60 s across all requests.
+_deps_cache = {"data": None, "ts": 0.0}
+_deps_cache_lock = threading.Lock()
+_DEPS_CACHE_TTL = 60.0
+
+
 @system_bp.route("/system/dependencies", methods=["GET"])
 def check_dependencies():
-    """Check all optional dependencies and return their status."""
+    """Check all optional dependencies and return their status.
+
+    Supports `?fresh=1` to bypass the 60 s TTL cache when the user explicitly
+    triggers a re-check (e.g., after an install finishes).
+    """
+    fresh = request.args.get("fresh", "").lower() in ("1", "true", "yes")
+    if not fresh:
+        with _deps_cache_lock:
+            if _deps_cache["data"] is not None and (time.time() - _deps_cache["ts"]) < _DEPS_CACHE_TTL:
+                return jsonify(_deps_cache["data"])
+
     deps = {}
     checks = {
         "faster-whisper": "faster_whisper",
@@ -641,6 +659,10 @@ def check_dependencies():
         deps["nlp_command"] = {"installed": nlp_ok, "version": nlp_backend}
     except Exception:
         deps["nlp_command"] = {"installed": False, "version": None}
+
+    with _deps_cache_lock:
+        _deps_cache["data"] = deps
+        _deps_cache["ts"] = time.time()
 
     return jsonify(deps)
 

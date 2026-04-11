@@ -181,7 +181,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.24**
+- Current: **v1.9.25**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -1066,6 +1066,13 @@ Comprehensive multi-phase audit across all 138 files (~82,500 lines). 103 issues
 ## v1.9.9 Batch 41 (UXP Feature Parity)
 - **4 new UXP Video features** — AI Upscale, Scene Detection, Style Transfer, Shorts Pipeline. Full HTML cards + JS handlers with job polling.
 - **UXP stale version fixed** — Settings showed "1.9.2" hardcoded. Now synced via version script.
+
+## v1.9.25 `/system/dependencies` TTL cache (5s → 0ms)
+Caught during the v1.9.24 binary smoke test: `/system/dependencies` took ~6.5 s on the first cold call because it runs 20+ `importlib.import_module()` probes (torch, mediapipe, audiocraft, pyannote, onnxruntime, rembg, realesrgan, gfpgan, insightface, ...) plus an `ffmpeg -version` subprocess plus an ollama HTTP probe — all synchronously in one request. This blocks the Settings tab render on first open.
+
+- Added a module-level `_deps_cache = {"data": None, "ts": 0.0}` + `threading.Lock` in `routes/system.py` with a 60-second TTL. Cold call still pays the ~5 s import tax once; every subsequent call within the window returns from memory in <1 ms.
+- Cold call: 6463 ms. Warm call: 0 ms. **~6000× speedup.**
+- New `?fresh=1` query param bypasses the cache when the frontend wants a forced re-check after an install/uninstall.
 
 ## v1.9.24 Env-var config (`OPENCUT_PORT` / `OPENCUT_HOST` / `OPENCUT_DEBUG`)
 Found during a binary smoke test — `OPENCUT_PORT=5789 ./OpenCut-Server.exe` silently ignored the env var and always bound to 5679. CLAUDE.md had long advertised env-based config, but `opencut/server.py::main()` only read `argparse` flags with hardcoded defaults. Fixed so that:
