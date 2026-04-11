@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.19
+   OpenCut CEP Panel - Main Controller v1.9.20
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -38,6 +38,15 @@
     var transcriptData = null; // stored transcript for editing/export
     var lastJobEndpoint = "";  // for retry
     var lastJobPayload = null; // for retry
+
+    // Hoist timers referenced by cleanupTimers() — strict mode would throw
+    // ReferenceError if these were only declared inside their nested helpers.
+    var _statusTimer = null;
+    var _scanDebounceTimer = null;
+    var _projectMediaRetryTimer = null;
+    var editDebounceTimer = null;
+    var _alertTimer = null;
+    var _wsReconnectTimer = null;
 
     // ---- Centralized Timer Cleanup ----
     function cleanupTimers() {
@@ -2498,6 +2507,8 @@
         activeStream = es;
 
         es.onmessage = function (e) {
+            // Guard against stale events firing after cancelJob()
+            if (!currentJob || activeStream !== es) { try { es.close(); } catch (_) {} return; }
             try {
                 var job = JSON.parse(e.data);
                 updateProgress(job);
@@ -2523,6 +2534,8 @@
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         pollTimer = setInterval(function () {
             api("GET", "/status/" + jobId, null, function (err, job) {
+                // Guard against in-flight polls returning after cancelJob()
+                if (!currentJob || currentJob !== jobId) return;
                 if (err || !job) return;
                 updateProgress(job);
                 if (job.status === "complete" || job.status === "error" || job.status === "cancelled") {

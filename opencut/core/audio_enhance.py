@@ -277,16 +277,14 @@ def enhance_speech(
         if temp_wav and os.path.isfile(temp_wav):
             with suppress(OSError):
                 os.remove(temp_wav)
-        # Free GPU memory — delete all tensor references before clearing cache
+        # Free GPU memory — dropping the Python reference is what releases the GPU
+        # tensor; calling .cpu() without assignment does nothing (it returns a new
+        # CPU copy that is immediately discarded).
         try:
-            if hasattr(audio, "cpu"):  # noqa: F821
-                audio.cpu()  # noqa: F821
             del audio  # noqa: F821
         except Exception:
             pass
         try:
-            if hasattr(mono, "cpu"):  # noqa: F821
-                mono.cpu()  # noqa: F821
             del mono  # noqa: F821
         except Exception:
             pass

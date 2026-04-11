@@ -181,7 +181,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.19**
+- Current: **v1.9.20**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -1066,6 +1066,15 @@ Comprehensive multi-phase audit across all 138 files (~82,500 lines). 103 issues
 ## v1.9.9 Batch 41 (UXP Feature Parity)
 - **4 new UXP Video features** — AI Upscale, Scene Detection, Style Transfer, Shorts Pipeline. Full HTML cards + JS handlers with job polling.
 - **UXP stale version fixed** — Settings showed "1.9.2" hardcoded. Now synced via version script.
+
+## v1.9.20 Audit Round (Security, Injection, Queue Allowlist, Race Guards)
+- **Gemini API key URL leak** — `core/llm.py` passed `?key={api_key}` in query string, which leaked through `_http_json()` HTTPError messages. Moved to `x-goog-api-key` header; added `_sanitize_url()` that strips query strings from all error messages.
+- **motion_graphics drawtext colon injection** — 3 drawtext builders were escaping `:` and `;` inside single-quoted filter values, producing literal `\:` / `\;` in the rendered video (user text like "Chapter 1:" became "Chapter 1\:"). Inside single-quoted drawtext values only `\` and `'` need escaping. Removed the wrong escapes in `render_title_card`, `overlay_title`, and the typewriter word-reveal loop.
+- **Queue allowlist missing 19 async routes** — `_ALLOWED_QUEUE_ENDPOINTS` was out of sync: `/audio/beats`, `/audio/duck-video`, `/audio/effects/apply`, `/audio/gen/{tone,sfx}`, `/audio/isolate`, `/audio/mix`, `/audio/mix-duck`, `/audio/music-ai/{generate,melody}`, `/audio/pro/deepfilter`, `/audio/waveform`, `/export/{preset,thumbnails}`, `/social/upload`, `/video/broll-generate`, `/video/multimodal-diarize`, `/video/transitions/{apply,join}` all silently failed on `/queue/add`. All 19 added to allowlist (total 101 endpoints).
+- **CEP SSE/poll cancel race** — `es.onmessage` and `pollJob` callbacks could call `onJobDone()` for a job that `cancelJob()` had already cleared. Added `if (!currentJob || ...) return;` guard in both handlers so stale events after cancel are dropped.
+- **audio_enhance GPU cleanup no-op** — `audio.cpu()` / `mono.cpu()` were called without assignment before `del`, which creates a discarded CPU copy instead of freeing the GPU tensor. The `del` alone releases the reference; `.cpu()` was wasted work. Removed the no-op `.cpu()` calls.
+- **animated_captions temp file leak on VideoWriter failure** — if `cv2.VideoWriter.isOpened()` returned False, the `tempfile.NamedTemporaryFile` created on line 168 was never unlinked. Added `os.unlink(tmp_video)` in the early-error branch.
+- **main.js defensive timer hoist** — hoisted 6 timer variable declarations (`_statusTimer`, `_scanDebounceTimer`, `_projectMediaRetryTimer`, `editDebounceTimer`, `_alertTimer`, `_wsReconnectTimer`) to the outer IIFE scope so `cleanupTimers()` has a stable reference chain independent of nested-function initialization order.
 
 ## v1.9.8 Batch 40 (Schemas, OpenAPI, Test Fixes)
 - **9 new response schemas** — WorkflowResult, ContextAnalysisResult, VideoAIResult, ShortsPipelineResult, DepthMapResult, BrollPlanResult, BatchResult, PluginListResult (22 total).

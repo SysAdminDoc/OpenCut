@@ -93,8 +93,10 @@ def render_title_card(
     if on_progress:
         on_progress(10, f"Rendering title: {preset}...")
 
-    escaped_text = text.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:").replace(";", "\\;")
-    escaped_sub = subtitle.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:").replace(";", "\\;") if subtitle else ""
+    # Inside single-quoted drawtext values, `:` and `;` are safe (they only delimit at
+    # the filter-option level). Escaping them produces literal `\:` / `\;` in the output.
+    escaped_text = text.replace("\\", "\\\\").replace("'", "\\'")
+    escaped_sub = subtitle.replace("\\", "\\\\").replace("'", "\\'") if subtitle else ""
 
     if preset == "fade_center":
         fade_in = min(1.0, duration * 0.2)
@@ -174,7 +176,7 @@ def render_title_card(
         word_dur = min(duration * 0.7, len(words) * 0.4) / max(len(words), 1)
         parts = []
         for i, word in enumerate(words):
-            ew = word.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:").replace(";", "\\;")
+            ew = word.replace("\\", "\\\\").replace("'", "\\'")
             t_start = i * word_dur + 0.2
             parts.append(
                 f"drawtext=text='{ew} ':fontsize={font_size}:fontcolor={font_color}:"
@@ -224,8 +226,10 @@ def overlay_title(
     if on_progress:
         on_progress(10, "Overlaying title...")
 
-    escaped_text = text.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:").replace(";", "\\;")
-    escaped_sub = subtitle.replace("\\", "\\\\").replace("'", "\\'").replace(":", "\\:").replace(";", "\\;") if subtitle else ""
+    # Inside single-quoted drawtext values, `:` and `;` are safe (they only delimit at
+    # the filter-option level). Escaping them produces literal `\:` / `\;` in the output.
+    escaped_text = text.replace("\\", "\\\\").replace("'", "\\'")
+    escaped_sub = subtitle.replace("\\", "\\\\").replace("'", "\\'") if subtitle else ""
     end_time = start_time + duration
 
     fade_in = min(1.0, duration * 0.2)
