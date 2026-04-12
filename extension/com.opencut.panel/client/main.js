@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.27
+   OpenCut CEP Panel - Main Controller v1.9.28
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -628,6 +628,9 @@
     el.sessionContext = $("sessionContext");
     el.sessionContextBody = $("sessionContextBody");
     el.sessionContextDismiss = $("sessionContextDismiss");
+    el.journalList = $("journalList");
+    el.journalRefreshBtn = $("journalRefreshBtn");
+    el.journalClearBtn = $("journalClearBtn");
 
         // Clip
         el.clipSelect = $("clipSelect");
@@ -1357,8 +1360,64 @@
         },
         isProjectSaved: function (cb) {
             jsx("isProjectSaved()", cb);
+        },
+        // Journal inverse helpers (v1.9.28)
+        removeSequenceMarkers: function (payload, cb) {
+            var json = JSON.stringify(payload);
+            jsx("ocRemoveSequenceMarkers('" + json.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", cb);
+        },
+        unrenameItems: function (payload, cb) {
+            var json = JSON.stringify(payload);
+            jsx("ocUnrenameItems('" + json.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", cb);
+        },
+        removeImportedSequence: function (payload, cb) {
+            var json = JSON.stringify(payload);
+            jsx("ocRemoveImportedSequence('" + json.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", cb);
+        },
+        removeImportedItem: function (payload, cb) {
+            var json = JSON.stringify(payload);
+            jsx("ocRemoveImportedItem('" + json.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", cb);
         }
     };
+
+    // ================================================================
+    // Operation Journal (v1.9.28) — frontend record + rollback
+    // ================================================================
+    // Every ExtendScript operation that mutates the Premiere project calls
+    // journalRecord() after success. The Journal sub-tab under Settings
+    // renders the history and dispatches inverse calls via PremiereBridge.
+    function journalRecord(action, label, inversePayload, clipPath) {
+        if (!connected) return;
+        api("POST", "/journal/record", {
+            action: action,
+            label: label || "",
+            clip_path: clipPath || "",
+            inverse: inversePayload || {}
+        }, function (err, entry) {
+            if (err) {
+                // Never surface journal-record failures to the user — the
+                // forward operation already succeeded.
+                try { console.warn("journal record failed:", err); } catch (_) {}
+                return;
+            }
+            // Nudge the journal tab if it's currently visible.
+            if (typeof renderJournalList === "function" && el.journalList &&
+                el.journalList.offsetParent !== null) {
+                renderJournalList();
+            }
+        });
+    }
+
+    // Helpers to extract the label/inverse from a forward-operation result.
+    function _journalLabelForMarkers(count, clipName) {
+        var n = count | 0;
+        return n + " marker" + (n === 1 ? "" : "s") +
+               (clipName ? " on '" + clipName + "'" : "");
+    }
+    function _journalLabelForRename(count) {
+        var n = count | 0;
+        return "Renamed " + n + " project item" + (n === 1 ? "" : "s");
+    }
 
     // ================================================================
     // Backend Communication
@@ -3121,12 +3180,18 @@
                             showAlert("Import error: " + r.error);
                         } else if (r.sequence_name) {
                             showAlert("Opened: " + r.sequence_name);
+                            journalRecord(
+                                "import_sequence",
+                                _sessionCtxOpText(job) + " → '" + r.sequence_name + "'",
+                                { name: r.sequence_name },
+                                selectedPath
+                            );
                         }
                     } catch (e) { console.error("XML import parse error:", e); }
                 });
                 lastXmlPath = xmlPath;
             }
-            
+
             // Styled caption overlay video (.mov with alpha)
             var overlayPath = job.result.overlay_path;
             if (overlayPath) {
@@ -5931,6 +5996,161 @@
         if (!el.sessionContext) return;
         el.sessionContext.classList.add("hidden");
         _sessionCtxDismissedAt = Date.now();
+    }
+
+    // ================================================================
+    // Operation Journal UI (v1.9.28)
+    // ================================================================
+    function _journalActionLabel(action) {
+        return ({
+            add_markers:       "Add markers",
+            batch_rename:      "Batch rename",
+            import_sequence:   "Import sequence",
+            import_overlay:    "Import overlay",
+            import_captions:   "Import captions",
+            create_smart_bins: "Create bins"
+        })[action] || action;
+    }
+
+    function renderJournalList() {
+        if (!el.journalList) return;
+        el.journalList.innerHTML = '<div class="journal-empty">Loading recent operations…</div>';
+        api("GET", "/journal/list?limit=30", null, function (err, data) {
+            if (err) {
+                el.journalList.innerHTML =
+                    '<div class="journal-empty journal-error">Couldn\'t load journal: ' +
+                    esc(err.error || err.message || "Unknown error") + '</div>';
+                return;
+            }
+            if (!Array.isArray(data) || !data.length) {
+                el.journalList.innerHTML =
+                    '<div class="journal-empty">No operations recorded yet. Run an action that writes to your Premiere project and it will appear here.</div>';
+                return;
+            }
+            el.journalList.innerHTML = "";
+            var frag = document.createDocumentFragment();
+            for (var i = 0; i < data.length; i++) {
+                frag.appendChild(_buildJournalRow(data[i]));
+            }
+            el.journalList.appendChild(frag);
+        });
+    }
+
+    function _buildJournalRow(entry) {
+        var row = document.createElement("div");
+        row.className = "journal-row" + (entry.reverted ? " journal-row-reverted" : "");
+        row.setAttribute("data-id", entry.id);
+
+        var copy = document.createElement("div");
+        copy.className = "journal-row-copy";
+
+        var title = document.createElement("div");
+        title.className = "journal-row-title";
+        title.textContent = _journalActionLabel(entry.action);
+
+        var meta = document.createElement("div");
+        meta.className = "journal-row-meta";
+        var parts = [_sessionCtxRelativeTime(entry.created_at)];
+        if (entry.label) parts.push(entry.label);
+        meta.textContent = parts.join(" · ");
+
+        copy.appendChild(title);
+        copy.appendChild(meta);
+        row.appendChild(copy);
+
+        var actions = document.createElement("div");
+        actions.className = "journal-row-actions";
+
+        if (entry.reverted) {
+            var pill = document.createElement("span");
+            pill.className = "journal-pill journal-pill-reverted";
+            pill.textContent = "Reverted";
+            actions.appendChild(pill);
+        } else if (!entry.revertible) {
+            var pill2 = document.createElement("span");
+            pill2.className = "journal-pill journal-pill-info";
+            pill2.textContent = "No auto-revert";
+            pill2.title = "This action type has no ExtendScript inverse. It's recorded for context only.";
+            actions.appendChild(pill2);
+        } else {
+            var revertBtn = document.createElement("button");
+            revertBtn.type = "button";
+            revertBtn.className = "btn btn-secondary btn-sm journal-revert-btn";
+            revertBtn.textContent = "Revert";
+            revertBtn.addEventListener("click", function () {
+                _journalRevert(entry, revertBtn);
+            });
+            actions.appendChild(revertBtn);
+        }
+
+        row.appendChild(actions);
+        return row;
+    }
+
+    function _journalRevert(entry, btn) {
+        if (!inPremiere) { showAlert("Premiere Pro connection required to revert."); return; }
+        if (!entry.revertible) { return; }
+
+        btn.disabled = true;
+        btn.textContent = "Reverting…";
+
+        var dispatch = {
+            add_markers:     function (p, cb) { PremiereBridge.removeSequenceMarkers(p, cb); },
+            batch_rename:    function (p, cb) { PremiereBridge.unrenameItems(p, cb); },
+            import_sequence: function (p, cb) { PremiereBridge.removeImportedSequence(p, cb); },
+            import_overlay:  function (p, cb) { PremiereBridge.removeImportedItem(p, cb); }
+        }[entry.action];
+
+        if (!dispatch) {
+            btn.disabled = false;
+            btn.textContent = "Revert";
+            showAlert("This action can't be reverted automatically.");
+            return;
+        }
+
+        dispatch(entry.inverse || {}, function (result) {
+            var r;
+            try { r = JSON.parse(result || "{}"); } catch (e) { r = { error: result || "Parse error" }; }
+            if (r.error) {
+                btn.disabled = false;
+                btn.textContent = "Revert";
+                showAlert("Revert failed: " + r.error);
+                return;
+            }
+            // Mark server-side so the UI reflects the new state.
+            api("POST", "/journal/mark-reverted/" + entry.id, {}, function (err) {
+                if (err) {
+                    showToast("Reverted in Premiere but couldn't update the journal", "warn");
+                } else {
+                    showToast("Reverted: " + _journalActionLabel(entry.action), "success");
+                }
+                renderJournalList();
+            });
+        });
+    }
+
+    function initJournal() {
+        if (!el.journalList) return;
+        if (el.journalRefreshBtn) {
+            el.journalRefreshBtn.addEventListener("click", renderJournalList);
+        }
+        if (el.journalClearBtn) {
+            el.journalClearBtn.addEventListener("click", function () {
+                if (!confirm("Clear all journal entries? This does not undo anything in Premiere.")) return;
+                api("POST", "/journal/clear", {}, function (err) {
+                    if (err) { showAlert("Could not clear: " + (err.error || err)); return; }
+                    showToast("Journal cleared", "success");
+                    renderJournalList();
+                });
+            });
+        }
+        // Lazy render the first time the user actually opens Settings.
+        var settingsTab = document.querySelector('[data-nav="settings"]');
+        if (settingsTab) {
+            settingsTab.addEventListener("click", function () {
+                setTimeout(renderJournalList, 50);
+            });
+        }
     }
 
     function esc(s) {
@@ -9423,6 +9643,24 @@
             try {
                 var r = JSON.parse(result);
                 showToast("Added " + (r.added || beatMarkerTimes.length) + " markers", "success");
+                if (!r.error) {
+                    // Journal the op for one-click rollback. Fingerprint each
+                    // marker by its {time, comment} pair so the inverse can
+                    // find+delete exactly these rows.
+                    var fingerprints = [];
+                    for (var k = 0; k < markers.length; k++) {
+                        fingerprints.push({
+                            time: markers[k].time,
+                            comment: markers[k].name || "Beat"
+                        });
+                    }
+                    journalRecord(
+                        "add_markers",
+                        _journalLabelForMarkers(markers.length, selectedName),
+                        { markers: fingerprints },
+                        selectedPath
+                    );
+                }
             } catch (e) { showAlert("Error adding markers: " + (result || e.message)); }
         });
     }
@@ -9618,6 +9856,32 @@
                 try {
                     var r = JSON.parse(result);
                     showToast("Renamed " + (r.renamed || renames.length) + " items", "success");
+                    if (!r.error) {
+                        // Journal each (nodeId -> oldName) pair so Unrename
+                        // can restore the previous names.
+                        var reverseList = [];
+                        for (var k = 0; k < renames.length; k++) {
+                            var idx = -1;
+                            for (var j = 0; j < renameItemsData.length; j++) {
+                                if ((renameItemsData[j].nodeId || renameItemsData[j].id ||
+                                     renameItemsData[j].path) === renames[k].nodeId) {
+                                    idx = j; break;
+                                }
+                            }
+                            if (idx >= 0) {
+                                reverseList.push({
+                                    nodeId: renames[k].nodeId,
+                                    oldName: renameItemsData[idx].name,
+                                    currentName: renames[k].newName
+                                });
+                            }
+                        }
+                        journalRecord(
+                            "batch_rename",
+                            _journalLabelForRename(reverseList.length),
+                            { renames: reverseList }
+                        );
+                    }
                 } catch (e) { showAlert("Error: " + (result || e.message)); }
             });
         });
@@ -10992,7 +11256,8 @@
             initFavorites, initPreviewModal, initAudioPreview, initContextMenu,
             initWizard, initOutputBrowser, initBatchPicker, initDepDashboard,
             initSettingsIO, initWorkflowBuilder, loadWorkflowPresets,
-            initCollapsibleCards, initI18n, initProjectTemplates
+            initCollapsibleCards, initI18n, initProjectTemplates,
+            initJournal
         ];
         for (var fi = 0; fi < _featureInits.length; fi++) {
             try { _featureInits[fi](); }

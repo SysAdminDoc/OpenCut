@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.9.27 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.9.28 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -12578,6 +12578,119 @@ body:not(.has-clip) .media-sidecar .file-info {
     }
 
     .session-context-item-actions {
+        justify-content: flex-end;
+    }
+}
+
+/* ============================================================
+   OPERATION JOURNAL (v1.9.28)
+   Settings-tab card listing every OpenCut op that modified the
+   Premiere project, with one-click Revert for supported actions.
+   ============================================================ */
+.journal-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 10px;
+}
+
+.journal-empty {
+    padding: 14px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px dashed rgba(236, 230, 218, 0.1);
+    border-radius: 10px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.journal-empty.journal-error {
+    color: #e7604c;
+    border-color: rgba(231, 96, 76, 0.3);
+    background: rgba(231, 96, 76, 0.06);
+}
+
+.journal-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(236, 230, 218, 0.07);
+    background: rgba(255, 255, 255, 0.02);
+    transition: background 0.15s ease, border-color 0.15s ease, opacity 0.2s ease;
+}
+
+.journal-row:hover {
+    background: rgba(136, 178, 255, 0.06);
+    border-color: rgba(136, 178, 255, 0.18);
+}
+
+.journal-row-reverted {
+    opacity: 0.55;
+}
+
+.journal-row-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.journal-row-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.journal-row-meta {
+    font-size: 10px;
+    color: var(--text-secondary);
+    opacity: 0.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.journal-row-actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+.journal-pill {
+    display: inline-block;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    border: 1px solid transparent;
+}
+
+.journal-pill-reverted {
+    color: rgba(236, 230, 218, 0.6);
+    background: rgba(255, 255, 255, 0.04);
+    border-color: rgba(236, 230, 218, 0.12);
+}
+
+.journal-pill-info {
+    color: rgba(255, 200, 120, 0.85);
+    background: rgba(255, 200, 120, 0.08);
+    border-color: rgba(255, 200, 120, 0.22);
+}
+
+@media (max-width: 720px) {
+    .journal-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .journal-row-actions {
         justify-content: flex-end;
     }
 }

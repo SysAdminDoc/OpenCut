@@ -648,6 +648,11 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
         atexit.register(_close_footage_db)
     except ImportError:
         pass
+    try:
+        from opencut.journal import close_all_connections as _close_journal_db
+        atexit.register(_close_journal_db)
+    except ImportError:
+        pass
 
     print("")
     from opencut import __version__
