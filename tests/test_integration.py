@@ -67,7 +67,8 @@ class TestDependencies:
     def test_dependencies_marks_ffmpeg_missing_when_probe_fails(self, client):
         mock_result = MagicMock(returncode=1, stdout="", stderr="ffmpeg startup failed")
         with patch("opencut.routes.system._sp.run", return_value=mock_result):
-            resp = client.get("/system/dependencies")
+            # Bypass the 60 s TTL cache that was populated by the previous test
+            resp = client.get("/system/dependencies?fresh=1")
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["ffmpeg"]["installed"] is False
