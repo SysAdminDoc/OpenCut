@@ -5,6 +5,6 @@ Automatically remove silences, generate captions, switch podcast cameras,
 and more. Exports Premiere Pro / DaVinci Resolve / FCP XML.
 """
 
-__version__ = "1.9.28"
+__version__ = "1.9.29"
 __author__ = "OpenCut Contributors"
 __license__ = "MIT"

@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.9.28 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.9.29 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -12692,5 +12692,159 @@ body:not(.has-clip) .media-sidecar .file-info {
 
     .journal-row-actions {
         justify-content: flex-end;
+    }
+}
+
+/* ============================================================
+   INTERVIEW POLISH (v1.9.29)
+   One-click 6-step pipeline card on the Cut tab with step-by-step
+   progress checklist and action-bar footer.
+   ============================================================ */
+.interview-polish-card {
+    border: 1px solid rgba(136, 178, 255, 0.25);
+    background:
+        linear-gradient(180deg, rgba(22, 32, 52, 0.98), rgba(14, 20, 32, 0.95));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.card-subtitle {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    line-height: 1.4;
+}
+
+.interview-polish-options {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 12px 0;
+}
+
+.interview-polish-run {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+}
+
+.interview-polish-hint {
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.8;
+}
+
+.polish-steps {
+    list-style: none;
+    margin: 14px 0 0;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(236, 230, 218, 0.07);
+    background: rgba(255, 255, 255, 0.02);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.polish-step {
+    display: grid;
+    grid-template-columns: 22px 1fr auto;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 4px;
+    font-size: 12px;
+    color: var(--text-primary);
+    border-radius: 6px;
+    transition: background 0.15s ease;
+}
+
+.polish-step-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1.5px solid rgba(236, 230, 218, 0.2);
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.04);
+}
+
+.polish-step-pending .polish-step-icon {
+    animation: polishDot 1.4s ease-in-out infinite;
+}
+
+@keyframes polishDot {
+    0%, 100% { opacity: 0.35; }
+    50%      { opacity: 1; }
+}
+
+.polish-step-ok .polish-step-icon {
+    color: #35c372;
+    border-color: rgba(53, 195, 114, 0.5);
+    background: rgba(53, 195, 114, 0.12);
+}
+
+.polish-step-fail .polish-step-icon {
+    color: #e7604c;
+    border-color: rgba(231, 96, 76, 0.5);
+    background: rgba(231, 96, 76, 0.12);
+}
+
+.polish-step-skipped .polish-step-icon {
+    color: rgba(236, 230, 218, 0.45);
+    border-color: rgba(236, 230, 218, 0.15);
+}
+
+.polish-step-skipped .polish-step-label {
+    color: var(--text-secondary);
+}
+
+.polish-step-label {
+    font-weight: 600;
+}
+
+.polish-step-meta {
+    font-size: 11px;
+    color: var(--text-secondary);
+    opacity: 0.75;
+    white-space: nowrap;
+    max-width: 50%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.polish-result {
+    margin-top: 12px;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(53, 195, 114, 0.3);
+    background: rgba(53, 195, 114, 0.06);
+}
+
+.polish-result-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 10px;
+}
+
+.polish-result-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+@media (max-width: 720px) {
+    .polish-step {
+        grid-template-columns: 22px 1fr;
+    }
+    .polish-step-meta {
+        grid-column: 2 / 3;
+        max-width: 100%;
+        opacity: 0.65;
     }
 }
