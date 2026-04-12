@@ -95,8 +95,22 @@ def check_watermark_available():
 # ---------------------------------------------------------------------------
 # Health
 # ---------------------------------------------------------------------------
-@system_bp.route("/health", methods=["GET"])
-def health():
+# Capabilities change only when deps are installed/uninstalled — no need to
+# re-probe 20+ modules on every 4-second health check.  Cache for 30 s.
+_caps_cache = {"data": None, "ts": 0.0}
+_caps_cache_lock = threading.Lock()
+_CAPS_CACHE_TTL = 30.0
+
+
+def invalidate_caps_cache():
+    """Called after install routes modify available dependencies."""
+    with _caps_cache_lock:
+        _caps_cache["data"] = None
+        _caps_cache["ts"] = 0.0
+
+
+def _build_capabilities():
+    """Probe all optional dependencies and return a capabilities dict."""
     caps = {"silence": True, "zoom": True, "ffmpeg": True,
             "audio_suite": True, "scene_detect": True}
     try:
@@ -240,6 +254,24 @@ def health():
         }
     except Exception:
         caps["engine_registry"] = {}
+
+    return caps
+
+
+@system_bp.route("/health", methods=["GET"])
+def health():
+    # Serve cached capabilities; rebuild at most once per 30 s.
+    with _caps_cache_lock:
+        if _caps_cache["data"] is not None and (time.time() - _caps_cache["ts"]) < _CAPS_CACHE_TTL:
+            caps = _caps_cache["data"]
+        else:
+            caps = None
+
+    if caps is None:
+        caps = _build_capabilities()
+        with _caps_cache_lock:
+            _caps_cache["data"] = caps
+            _caps_cache["ts"] = time.time()
 
     return jsonify({
         "status": "ok",
