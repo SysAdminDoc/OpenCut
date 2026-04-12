@@ -115,6 +115,24 @@
             </button>
         </div>
 
+        <!-- Session Context — "Where you left off" -->
+        <section class="session-context hidden" id="sessionContext" role="region" aria-label="Resume from your last session">
+            <header class="session-context-header">
+                <div class="session-context-title-group">
+                    <span class="session-context-eyebrow">Welcome back</span>
+                    <h3 class="session-context-title" id="sessionContextTitle">Here's where you left off</h3>
+                </div>
+                <button type="button" class="utility-icon-btn banner-dismiss-btn" id="sessionContextDismiss" title="Dismiss" aria-label="Dismiss welcome back card">
+                    <span class="btn-icon" aria-hidden="true">
+                        <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M5 5l10 10"/><path d="M15 5 5 15"/></svg>
+                    </span>
+                </button>
+            </header>
+            <div class="session-context-body" id="sessionContextBody" aria-live="polite">
+                <!-- populated by renderSessionContext() -->
+            </div>
+        </section>
+
         <main class="main">
             <div class="server-status-banner hidden" id="serverStatusBanner">
                 <span id="serverStatusMsg">Server disconnected. Reconnecting…</span>
@@ -3524,7 +3542,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.9.26</span>
+                        <span class="settings-value">1.9.27</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>
