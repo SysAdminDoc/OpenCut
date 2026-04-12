@@ -12,6 +12,7 @@ Covers:
   - New /fillers filler_backend parameter
 """
 
+import json
 import os
 import sys
 import tempfile
@@ -721,6 +722,85 @@ class TestPreviewFileServing(unittest.TestCase):
 
             resp = self.client.get("/file", query_string={"path": media_path})
             self.assertEqual(resp.status_code, 403)
+
+
+# ============================================================
+# TestOpenPath — session-context "Open" / "Reveal" endpoint (v1.9.27)
+# ============================================================
+class TestOpenPath(unittest.TestCase):
+    """Tests for the POST /system/open-path endpoint."""
+
+    def setUp(self):
+        from opencut.server import app
+        app.config["TESTING"] = True
+        self.client = app.test_client()
+        resp = self.client.get("/health")
+        self.csrf = resp.get_json().get("csrf_token", "")
+
+    def _headers(self):
+        return {"Content-Type": "application/json", "X-OpenCut-Token": self.csrf}
+
+    def test_requires_csrf(self):
+        resp = self.client.post("/system/open-path", json={"path": "x", "mode": "open"})
+        self.assertEqual(resp.status_code, 403)
+
+    def test_rejects_empty_path(self):
+        resp = self.client.post("/system/open-path",
+                                data=json.dumps({"path": "", "mode": "open"}),
+                                headers=self._headers())
+        self.assertEqual(resp.status_code, 400)
+
+    def test_rejects_bad_mode(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            fp = os.path.join(tmp, "a.wav")
+            with open(fp, "wb") as f:
+                f.write(b"RIFF")
+            resp = self.client.post("/system/open-path",
+                                    data=json.dumps({"path": fp, "mode": "eval"}),
+                                    headers=self._headers())
+            self.assertEqual(resp.status_code, 400)
+
+    def test_rejects_missing_file(self):
+        resp = self.client.post("/system/open-path",
+                                data=json.dumps({
+                                    "path": "/nonexistent/path/xyz.wav",
+                                    "mode": "open",
+                                }),
+                                headers=self._headers())
+        self.assertEqual(resp.status_code, 400)
+
+    def test_rejects_traversal(self):
+        resp = self.client.post("/system/open-path",
+                                data=json.dumps({
+                                    "path": "../../etc/passwd",
+                                    "mode": "open",
+                                }),
+                                headers=self._headers())
+        self.assertEqual(resp.status_code, 400)
+
+    def test_open_dispatches_to_os(self):
+        """With _sp.Popen + os.startfile mocked, a valid path returns ok:true."""
+        import sys as _sys
+        with tempfile.TemporaryDirectory() as tmp:
+            fp = os.path.join(tmp, "a.wav")
+            with open(fp, "wb") as f:
+                f.write(b"RIFF")
+            if _sys.platform == "win32":
+                with patch("os.startfile", create=True) as mock_start:
+                    resp = self.client.post("/system/open-path",
+                                            data=json.dumps({"path": fp, "mode": "open"}),
+                                            headers=self._headers())
+                self.assertEqual(resp.status_code, 200)
+                self.assertTrue(resp.get_json().get("ok"))
+                mock_start.assert_called_once()
+            else:
+                with patch("opencut.routes.system._sp.Popen") as mock_popen:
+                    resp = self.client.post("/system/open-path",
+                                            data=json.dumps({"path": fp, "mode": "open"}),
+                                            headers=self._headers())
+                self.assertEqual(resp.status_code, 200)
+                self.assertTrue(resp.get_json().get("ok"))
+                mock_popen.assert_called_once()
 
 
 # ============================================================

@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.26
+   OpenCut CEP Panel - Main Controller v1.9.27
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -625,6 +625,9 @@
     el.alertEyebrow = $("alertEyebrow");
     el.alertText = $("alertText");
     el.alertDismiss = $("alertDismiss");
+    el.sessionContext = $("sessionContext");
+    el.sessionContextBody = $("sessionContextBody");
+    el.sessionContextDismiss = $("sessionContextDismiss");
 
         // Clip
         el.clipSelect = $("clipSelect");
@@ -1521,12 +1524,9 @@
                             showToast("OpenCut v" + udata.latest_version + " available \u2014 visit GitHub to update", "info");
                         }
                     });
-                    // Check for interrupted jobs from previous session
-                    api("GET", "/jobs/interrupted", null, function (ierr, idata) {
-                        if (!ierr && idata && idata.length > 0) {
-                            showAlert(idata.length + " job(s) were interrupted when the server restarted. Check job history to retry.");
-                        }
-                    });
+                    // Surface last-session history + interrupted jobs in a
+                    // dedicated "Welcome back" card (replaces the older alert).
+                    showSessionContext();
                 }
                 return;
             }
@@ -5710,6 +5710,227 @@
     function showErrorWithAction(errorData) {
         var msg = errorData.error || errorData.message || "Unknown error";
         showAlert(msg, errorData);
+    }
+
+    // ================================================================
+    // Session Context — "Where you left off" (v1.9.27)
+    // ================================================================
+    // Dismissal is persisted per-session; a new connect will re-show
+    // only when new completed/interrupted jobs exist.
+    var _sessionCtxLoaded = false;
+    var _sessionCtxDismissedAt = 0;
+
+    function _sessionCtxRelativeTime(unixSec) {
+        if (!unixSec) return "";
+        var delta = Date.now() / 1000 - unixSec;
+        if (delta < 45) return "just now";
+        if (delta < 90) return "1 min ago";
+        if (delta < 3600) return Math.round(delta / 60) + " min ago";
+        if (delta < 7200) return "1 hr ago";
+        if (delta < 86400) return Math.round(delta / 3600) + " hr ago";
+        if (delta < 172800) return "yesterday";
+        return Math.round(delta / 86400) + " days ago";
+    }
+
+    function _sessionCtxClipName(job) {
+        var path = job.filepath || "";
+        if (!path) return "No clip";
+        var parts = path.split(/[\\/]/);
+        return parts[parts.length - 1] || path;
+    }
+
+    function _sessionCtxOpText(job) {
+        var t = (job.type || "unknown").replace(/[_-]/g, " ");
+        return t.charAt(0).toUpperCase() + t.slice(1);
+    }
+
+    function _sessionCtxResultPath(job) {
+        var r = job.result;
+        if (!r || typeof r !== "object") return "";
+        return r.output_path || r.xml_path || r.overlay_path || r.srt_path ||
+               (Array.isArray(r.output_paths) && r.output_paths[0]) || "";
+    }
+
+    function showSessionContext() {
+        if (_sessionCtxLoaded) return;
+        _sessionCtxLoaded = true;
+        if (!el.sessionContext || !el.sessionContextBody) return;
+
+        el.sessionContext.classList.remove("hidden");
+        el.sessionContextBody.innerHTML =
+            '<div class="session-context-loading">Loading recent work…</div>';
+
+        var historyPending = true, interruptedPending = true;
+        var historyData = [], interruptedData = [];
+
+        function _maybeRender() {
+            if (historyPending || interruptedPending) return;
+            renderSessionContext(historyData, interruptedData);
+        }
+
+        api("GET", "/jobs/history?limit=5&status=complete", null, function (err, data) {
+            historyData = (!err && Array.isArray(data)) ? data : [];
+            historyPending = false;
+            _maybeRender();
+        });
+        api("GET", "/jobs/interrupted", null, function (err, data) {
+            interruptedData = (!err && Array.isArray(data)) ? data : [];
+            interruptedPending = false;
+            _maybeRender();
+        });
+    }
+
+    function renderSessionContext(history, interrupted) {
+        if (!el.sessionContextBody) return;
+
+        // Nothing to show — hide the card silently. First run of the app
+        // on a clean machine ends up here.
+        if ((!history || !history.length) && (!interrupted || !interrupted.length)) {
+            el.sessionContext.classList.add("hidden");
+            return;
+        }
+
+        el.sessionContextBody.innerHTML = "";
+        var frag = document.createDocumentFragment();
+
+        // Interrupted banner (at most one even if multiple; users just
+        // need to know it happened, details are in the history tab).
+        if (interrupted && interrupted.length) {
+            var warn = document.createElement("div");
+            warn.className = "session-context-interrupted";
+            warn.setAttribute("role", "status");
+            var msg = document.createElement("span");
+            msg.className = "session-context-interrupted-msg";
+            msg.textContent = interrupted.length +
+                " job" + (interrupted.length === 1 ? "" : "s") +
+                " interrupted when the server restarted.";
+            var openHistory = document.createElement("button");
+            openHistory.type = "button";
+            openHistory.className = "session-context-action session-context-interrupted-btn";
+            openHistory.textContent = "View history";
+            openHistory.addEventListener("click", function () {
+                dismissSessionContext();
+                if (el.jobHistory && !el.jobHistory.classList.contains("open")) {
+                    el.jobHistory.classList.add("open");
+                }
+                if (el.jobHistoryToggle) {
+                    setExpanded(el.jobHistoryToggle, true);
+                    el.jobHistoryToggle.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+            });
+            warn.appendChild(msg);
+            warn.appendChild(openHistory);
+            frag.appendChild(warn);
+        }
+
+        if (history && history.length) {
+            var list = document.createElement("ul");
+            list.className = "session-context-list";
+            for (var i = 0; i < history.length; i++) {
+                list.appendChild(_buildSessionRow(history[i]));
+            }
+            frag.appendChild(list);
+        }
+
+        el.sessionContextBody.appendChild(frag);
+    }
+
+    function _buildSessionRow(job) {
+        var row = document.createElement("li");
+        row.className = "session-context-item";
+
+        var copy = document.createElement("div");
+        copy.className = "session-context-item-copy";
+
+        var title = document.createElement("div");
+        title.className = "session-context-item-title";
+        var dot = document.createElement("span");
+        dot.className = "session-context-item-status";
+        dot.setAttribute("data-status", job.status || "complete");
+        dot.setAttribute("aria-hidden", "true");
+        title.appendChild(dot);
+        var label = document.createElement("span");
+        label.textContent = _sessionCtxOpText(job) + " · " + _sessionCtxClipName(job);
+        title.appendChild(label);
+
+        var meta = document.createElement("div");
+        meta.className = "session-context-item-meta";
+        meta.textContent = _sessionCtxRelativeTime(job.created);
+
+        copy.appendChild(title);
+        copy.appendChild(meta);
+        row.appendChild(copy);
+
+        var actions = document.createElement("div");
+        actions.className = "session-context-item-actions";
+
+        var outputPath = _sessionCtxResultPath(job);
+        if (outputPath) {
+            var openBtn = _sessionCtxActionBtn("Open", "Open output file", function () {
+                _sessionCtxOpenPath(outputPath, "open");
+            });
+            actions.appendChild(openBtn);
+
+            var revealBtn = _sessionCtxActionBtn("Reveal", "Reveal in file manager", function () {
+                _sessionCtxOpenPath(outputPath, "reveal");
+            });
+            actions.appendChild(revealBtn);
+        }
+
+        if (job.endpoint && job.payload) {
+            var rerunBtn = _sessionCtxActionBtn("Re-run", "Run the same job again", function () {
+                _sessionCtxRerun(job);
+            });
+            actions.appendChild(rerunBtn);
+        }
+
+        row.appendChild(actions);
+        return row;
+    }
+
+    function _sessionCtxActionBtn(label, title, onClick) {
+        var b = document.createElement("button");
+        b.type = "button";
+        b.className = "session-context-action";
+        b.textContent = label;
+        b.title = title;
+        b.addEventListener("click", onClick);
+        return b;
+    }
+
+    function _sessionCtxOpenPath(path, mode) {
+        api("POST", "/system/open-path", { path: path, mode: mode }, function (err, data) {
+            if (err) {
+                showToast("Couldn't " + mode + ": " + (err.error || err.message || err), "error");
+            } else if (data && data.ok) {
+                showToast(mode === "reveal" ? "Revealed in file manager" : "Opened", "success");
+            }
+        });
+    }
+
+    function _sessionCtxRerun(job) {
+        if (!job.endpoint || !job.payload) {
+            showToast("Nothing to re-run — this job wasn't recorded with parameters", "warn");
+            return;
+        }
+        dismissSessionContext();
+        showToast("Re-running " + _sessionCtxOpText(job) + "…", "info");
+        api("POST", job.endpoint, job.payload, function (err, data) {
+            if (err) {
+                showAlert("Re-run failed: " + (err.error || err.message || err));
+                return;
+            }
+            if (data && data.job_id) {
+                currentJob = data.job_id;
+                if (SSE_OK) { trackJobSSE(data.job_id); } else { trackJobPoll(data.job_id); }
+            }
+        });
+    }
+
+    function dismissSessionContext() {
+        if (!el.sessionContext) return;
+        el.sessionContext.classList.add("hidden");
+        _sessionCtxDismissedAt = Date.now();
     }
 
     function esc(s) {
@@ -10714,6 +10935,9 @@
         }
 
         // Alert dismiss
+        if (el.sessionContextDismiss) {
+            el.sessionContextDismiss.addEventListener("click", dismissSessionContext);
+        }
         if (el.alertDismiss) {
             el.alertDismiss.addEventListener("click", function () {
                 el.alertBanner.classList.add("hidden");

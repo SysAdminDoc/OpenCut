@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.9.26 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.9.27 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -12340,5 +12340,244 @@ body:not(.has-clip) .media-sidecar .file-info {
 
     .cut-review-main {
         width: 100%;
+    }
+}
+
+/* ============================================================
+   SESSION CONTEXT — "Where you left off" card (v1.9.27)
+   Shows after a reconnect or first connect if there's recent
+   job history to surface.  Sits between the alert banner and
+   the main content, matching the alert-banner shell geometry.
+   ============================================================ */
+.session-context {
+    width: min(calc(100% - 28px), var(--workspace-shell-max));
+    margin: 10px auto 0;
+    padding: 16px 18px;
+    border: 1px solid rgba(136, 178, 255, 0.22);
+    border-radius: 22px;
+    background:
+        linear-gradient(180deg, rgba(21, 30, 48, 0.97), rgba(14, 20, 32, 0.94));
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.04),
+        0 18px 36px rgba(4, 9, 15, 0.22);
+    backdrop-filter: blur(22px);
+    animation: sessionContextSlide 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+@keyframes sessionContextSlide {
+    from { transform: translateY(-8px); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+
+.session-context-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.session-context-title-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.session-context-eyebrow {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--neon-cyan, #88b2ff);
+    opacity: 0.85;
+}
+
+.session-context-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.35;
+}
+
+.session-context-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.session-context-empty,
+.session-context-loading,
+.session-context-error {
+    font-size: 12px;
+    color: var(--text-secondary);
+    padding: 8px 4px;
+    line-height: 1.5;
+}
+
+.session-context-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.session-context-loading::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid rgba(136, 178, 255, 0.25);
+    border-top-color: var(--neon-cyan, #88b2ff);
+    animation: sessionContextSpin 0.8s linear infinite;
+}
+
+@keyframes sessionContextSpin {
+    to { transform: rotate(360deg); }
+}
+
+.session-context-interrupted {
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 136, 0, 0.35);
+    background: rgba(255, 136, 0, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12px;
+    color: var(--text-primary);
+}
+
+.session-context-interrupted-msg {
+    flex: 1;
+    min-width: 0;
+}
+
+.session-context-interrupted-btn {
+    flex-shrink: 0;
+}
+
+.session-context-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.session-context-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(236, 230, 218, 0.06);
+    background: rgba(255, 255, 255, 0.015);
+    transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.session-context-item:hover {
+    background: rgba(136, 178, 255, 0.06);
+    border-color: rgba(136, 178, 255, 0.18);
+}
+
+.session-context-item-copy {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.session-context-item-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.session-context-item-status {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.session-context-item-status[data-status="complete"] {
+    background: #35c372;
+    box-shadow: 0 0 6px rgba(53, 195, 114, 0.55);
+}
+
+.session-context-item-status[data-status="error"] {
+    background: #e7604c;
+    box-shadow: 0 0 6px rgba(231, 96, 76, 0.55);
+}
+
+.session-context-item-status[data-status="cancelled"] {
+    background: rgba(236, 230, 218, 0.3);
+}
+
+.session-context-item-meta {
+    font-size: 10px;
+    color: var(--text-secondary);
+    opacity: 0.75;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.session-context-item-actions {
+    display: flex;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.session-context-action {
+    padding: 4px 8px;
+    border-radius: 8px;
+    border: 1px solid rgba(236, 230, 218, 0.1);
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.session-context-action:hover {
+    background: rgba(136, 178, 255, 0.12);
+    border-color: rgba(136, 178, 255, 0.3);
+    color: var(--text-primary);
+}
+
+.session-context-action:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.session-context-action:focus-visible {
+    outline: 2px solid var(--neon-cyan, #88b2ff);
+    outline-offset: 2px;
+}
+
+@media (max-width: 720px) {
+    .session-context-item {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .session-context-item-actions {
+        justify-content: flex-end;
     }
 }
