@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.28
+   OpenCut CEP Panel - Main Controller v1.9.29
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -631,6 +631,13 @@
     el.journalList = $("journalList");
     el.journalRefreshBtn = $("journalRefreshBtn");
     el.journalClearBtn = $("journalClearBtn");
+    el.polishInterviewBtn = $("polishInterviewBtn");
+    el.polishSteps = $("polishSteps");
+    el.polishResult = $("polishResult");
+    el.interviewPolishHint = $("interviewPolishHint");
+    el.polishDetectRepeats = $("polishDetectRepeats");
+    el.polishRemoveFillers = $("polishRemoveFillers");
+    el.polishGenerateChapters = $("polishGenerateChapters");
 
         // Clip
         el.clipSelect = $("clipSelect");
@@ -2478,6 +2485,7 @@
         "autoDetectWatermarkBtn", "runDepthBtn", "runBrollPlanBtn", "runBrollGenBtn", "runMmDiarizeBtn", "socialUploadBtn",
         "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runMulticamBtn",
         "quickCleanInterview", "quickYouTube", "quickPodcast",
+        "polishInterviewBtn",
         "quickAutoSubtitle", "quickTranslate",
         "quickStudioAudio", "quickDenoise",
         "quickAutoColor", "quickSocialReframe"
@@ -2490,6 +2498,17 @@
         var hasSequenceMarkers = Array.isArray(seqMarkersData) && seqMarkersData.length > 0;
         var hasRenameItems = Array.isArray(renameItemsData) && renameItemsData.length > 0;
         var hasSmartBinRules = Array.isArray(smartBinRules) && smartBinRules.length > 0;
+
+        // Interview polish hint — reflect the same state the button shows
+        if (el.interviewPolishHint) {
+            if (!connected) {
+                el.interviewPolishHint.textContent = "Server disconnected.";
+            } else if (!selectedPath) {
+                el.interviewPolishHint.textContent = "Select a clip to run.";
+            } else {
+                el.interviewPolishHint.textContent = "Runs on '" + (selectedName || selectedPath) + "'.";
+            }
+        }
 
         // Batch-disable all clip-dependent buttons
         for (var i = 0; i < _clipButtons.length; i++) {
@@ -6127,6 +6146,201 @@
                 renderJournalList();
             });
         });
+    }
+
+    // ================================================================
+    // Interview Polish pipeline (v1.9.29)
+    // ================================================================
+    var _polishActive = false;
+    var _polishStepDefs = [
+        { key: "silence",    label: "Detect speech segments" },
+        { key: "transcribe", label: "Transcribe audio" },
+        { key: "repeats",    label: "Find repeated takes" },
+        { key: "fillers",    label: "Remove filler words" },
+        { key: "diarize",    label: "Identify speakers" },
+        { key: "chapters",   label: "Generate chapters" }
+    ];
+
+    function _polishStepRow(def, status, detail) {
+        var li = document.createElement("li");
+        li.className = "polish-step polish-step-" + status;
+        li.setAttribute("data-key", def.key);
+
+        var icon = document.createElement("span");
+        icon.className = "polish-step-icon";
+        icon.setAttribute("aria-hidden", "true");
+        var iconChar = {
+            pending: "\u2022",
+            running: "\u2022",
+            ok:      "\u2713",
+            fail:    "\u00D7",
+            skipped: "\u2013"
+        }[status] || "\u2022";
+        icon.textContent = iconChar;
+
+        var label = document.createElement("span");
+        label.className = "polish-step-label";
+        label.textContent = def.label;
+
+        var meta = document.createElement("span");
+        meta.className = "polish-step-meta";
+        meta.textContent = detail || "";
+
+        li.appendChild(icon);
+        li.appendChild(label);
+        li.appendChild(meta);
+        return li;
+    }
+
+    function renderPolishSteps(stepMap) {
+        if (!el.polishSteps) return;
+        el.polishSteps.classList.remove("hidden");
+        el.polishSteps.innerHTML = "";
+        var frag = document.createDocumentFragment();
+        for (var i = 0; i < _polishStepDefs.length; i++) {
+            var def = _polishStepDefs[i];
+            var entry = stepMap[def.key];
+            var status = "pending";
+            var detail = "";
+            if (entry) {
+                status = entry.ok ? "ok" : (entry.reason ? "skipped" : "fail");
+                if (entry.ok) {
+                    if (entry.removed_fillers != null) detail = entry.removed_fillers + " fillers";
+                    else if (entry.removed_ranges != null) detail = entry.removed_ranges + " repeats";
+                    else if (entry.kept_segments != null) detail = entry.kept_segments + " segments";
+                    else if (entry.word_count) detail = entry.word_count + " words";
+                    else if (entry.count != null) detail = entry.count + " chapters";
+                } else {
+                    detail = entry.reason || "Failed";
+                }
+            }
+            frag.appendChild(_polishStepRow(def, status, detail));
+        }
+        el.polishSteps.appendChild(frag);
+    }
+
+    function _polishStepsFromResult(result) {
+        var map = {};
+        var steps = (result && result.steps) || [];
+        for (var i = 0; i < steps.length; i++) {
+            map[steps[i].key] = steps[i];
+        }
+        return map;
+    }
+
+    function _renderPolishRunning() {
+        if (!el.polishSteps) return;
+        el.polishSteps.classList.remove("hidden");
+        el.polishSteps.innerHTML = "";
+        var frag = document.createDocumentFragment();
+        for (var i = 0; i < _polishStepDefs.length; i++) {
+            frag.appendChild(_polishStepRow(_polishStepDefs[i], "pending", ""));
+        }
+        el.polishSteps.appendChild(frag);
+    }
+
+    function _renderPolishResult(job) {
+        if (!el.polishResult) return;
+        el.polishResult.classList.remove("hidden");
+        el.polishResult.innerHTML = "";
+
+        var r = job.result || {};
+        var header = document.createElement("div");
+        header.className = "polish-result-title";
+        var ratio = r.compression_ratio ? Math.round(r.compression_ratio * 100) : 0;
+        header.textContent = "Compressed to " + ratio + "% of original" +
+            (r.speech_duration ? " (" + fmtDur(r.speech_duration) + ")" : "");
+        el.polishResult.appendChild(header);
+
+        var actions = document.createElement("div");
+        actions.className = "polish-result-actions";
+
+        if (r.xml_path && inPremiere) {
+            var importBtn = document.createElement("button");
+            importBtn.type = "button";
+            importBtn.className = "btn btn-primary btn-sm";
+            importBtn.textContent = "Import to Premiere";
+            importBtn.addEventListener("click", function () {
+                PremiereBridge.importXML(r.xml_path, function (result) {
+                    try {
+                        var jr = JSON.parse(result);
+                        if (jr.error) { showAlert("Import error: " + jr.error); return; }
+                        showToast("Imported '" + (jr.sequence_name || r.sequence_name) + "'", "success");
+                        if (jr.sequence_name) {
+                            journalRecord("import_sequence",
+                                "Interview Polish → '" + jr.sequence_name + "'",
+                                { name: jr.sequence_name }, selectedPath);
+                        }
+                    } catch (e) { showAlert("Import failed: " + (result || e.message)); }
+                });
+            });
+            actions.appendChild(importBtn);
+        }
+
+        if (r.srt_path) {
+            var srtBtn = document.createElement("button");
+            srtBtn.type = "button";
+            srtBtn.className = "btn btn-secondary btn-sm";
+            srtBtn.textContent = "Open SRT";
+            srtBtn.addEventListener("click", function () {
+                api("POST", "/system/open-path", { path: r.srt_path, mode: "open" }, function () {});
+            });
+            actions.appendChild(srtBtn);
+        }
+        if (r.chapters_path) {
+            var chapBtn = document.createElement("button");
+            chapBtn.type = "button";
+            chapBtn.className = "btn btn-secondary btn-sm";
+            chapBtn.textContent = "Open Chapters";
+            chapBtn.addEventListener("click", function () {
+                api("POST", "/system/open-path", { path: r.chapters_path, mode: "open" }, function () {});
+            });
+            actions.appendChild(chapBtn);
+        }
+        el.polishResult.appendChild(actions);
+    }
+
+    function runInterviewPolish() {
+        if (_polishActive) return;
+        if (!selectedPath) { showAlert("Select a clip first."); return; }
+
+        _polishActive = true;
+        el.polishInterviewBtn.disabled = true;
+        el.polishInterviewBtn.textContent = "Polishing…";
+        if (el.polishResult) el.polishResult.classList.add("hidden");
+        _renderPolishRunning();
+
+        var payload = {
+            filepath: selectedPath,
+            output_dir: projectFolder,
+            detect_repeats: el.polishDetectRepeats && el.polishDetectRepeats.checked,
+            remove_fillers: el.polishRemoveFillers && el.polishRemoveFillers.checked,
+            generate_chapters: el.polishGenerateChapters && el.polishGenerateChapters.checked,
+            diarize: false  // diarization is advisory; the step reports how to enable it
+        };
+
+        startJob("/interview-polish", payload, {
+            onComplete: function (job) {
+                renderPolishSteps(_polishStepsFromResult(job.result));
+                _renderPolishResult(job);
+            },
+            onError: function (job) {
+                renderPolishSteps(_polishStepsFromResult(job.result || {}));
+            },
+            onFinally: function () {
+                _polishActive = false;
+                el.polishInterviewBtn.disabled = !selectedPath;
+                el.polishInterviewBtn.textContent = "Polish this interview";
+            }
+        });
+    }
+
+    function initInterviewPolish() {
+        if (!el.polishInterviewBtn) return;
+        el.polishInterviewBtn.addEventListener("click", runInterviewPolish);
+        // Enable/disable whenever a clip selection changes — piggy-back on
+        // the existing updateButtons pass below.
+        updateButtons();
     }
 
     function initJournal() {
@@ -11257,7 +11471,7 @@
             initWizard, initOutputBrowser, initBatchPicker, initDepDashboard,
             initSettingsIO, initWorkflowBuilder, loadWorkflowPresets,
             initCollapsibleCards, initI18n, initProjectTemplates,
-            initJournal
+            initJournal, initInterviewPolish
         ];
         for (var fi = 0; fi < _featureInits.length; fi++) {
             try { _featureInits[fi](); }

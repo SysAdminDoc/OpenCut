@@ -349,6 +349,41 @@
                         <span class="quick-action-tag" aria-hidden="true">Preset</span>
                     </button>
                 </div>
+
+                <!-- Interview Polish one-click pipeline (v1.9.29) -->
+                <section class="card interview-polish-card" id="interviewPolishCard" aria-labelledby="interviewPolishTitle">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="card-title" id="interviewPolishTitle">Interview Polish</div>
+                            <div class="card-subtitle">One click: silence trim → repeated-take detection → filler cut → captions → chapters → Premiere XML</div>
+                        </div>
+                    </div>
+                    <div class="interview-polish-options">
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="polishDetectRepeats" checked>
+                            <span>Detect &amp; remove repeated takes</span>
+                        </label>
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="polishRemoveFillers" checked>
+                            <span>Cut filler words ("um", "uh", "like")</span>
+                        </label>
+                        <label class="checkbox-row">
+                            <input type="checkbox" id="polishGenerateChapters" checked>
+                            <span>Generate YouTube chapters</span>
+                        </label>
+                    </div>
+                    <div class="interview-polish-run">
+                        <button type="button" class="btn btn-primary btn-lg" id="polishInterviewBtn" disabled>
+                            Polish this interview
+                        </button>
+                        <span class="interview-polish-hint" id="interviewPolishHint">Select a clip to run.</span>
+                    </div>
+                    <ul class="polish-steps hidden" id="polishSteps" aria-live="polite" aria-label="Pipeline progress">
+                        <!-- populated by renderPolishSteps() -->
+                    </ul>
+                    <div class="polish-result hidden" id="polishResult"></div>
+                </section>
+
                 <div class="sub-tabs" role="tablist" id="cutSubTabs">
                     <button type="button" class="sub-tab active" data-sub="silence" data-i18n="subtabs.silence">Silence</button>
                     <button type="button" class="sub-tab" data-sub="fillers" data-i18n="subtabs.fillers">Fillers</button>
@@ -3559,7 +3594,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.9.28</span>
+                        <span class="settings-value">1.9.29</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>
