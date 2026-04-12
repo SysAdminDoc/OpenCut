@@ -2298,3 +2298,187 @@ function ocExportSequenceRange(outputPath, startSeconds, endSeconds) {
         return JSON.stringify({ error: e.toString() });
     }
 }
+
+
+// ============================================================================
+// Journal inverse helpers (v1.9.28) — called by the panel's rollback UI.
+//
+// Each inverse function takes a JSON payload that the panel previously stored
+// in the journal at the time of the forward operation, and tries to undo it
+// on a best-effort basis. On ES3 runtimes we cannot use JSON.parse safely in
+// every host, so we fall back to eval when JSON is missing.
+// ============================================================================
+function _ocParse(jsonStr) {
+    if (typeof JSON !== "undefined" && JSON.parse) {
+        return JSON.parse(jsonStr);
+    }
+    // Legacy ExtendScript fallback
+    return eval("(" + jsonStr + ")");  // eslint-disable-line no-eval
+}
+
+// Remove markers matching {time, comment} fingerprints from the active sequence.
+// Accepts either {markers: [{time, comment}, ...]} or a bare array.
+function ocRemoveSequenceMarkers(fingerprintsJSON) {
+    try {
+        if (!app || !app.project || !app.project.activeSequence) {
+            return JSON.stringify({ error: "No active sequence" });
+        }
+        var payload = _ocParse(fingerprintsJSON);
+        var fingerprints = payload && payload.markers ? payload.markers : payload;
+        if (!fingerprints || typeof fingerprints.length !== "number") {
+            return JSON.stringify({ error: "Invalid fingerprints" });
+        }
+
+        var seq = app.project.activeSequence;
+        var markers = seq.markers;
+        if (!markers) return JSON.stringify({ error: "Sequence has no markers collection" });
+
+        // Build a quick lookup by "time|comment" so we don't do O(N*M).
+        var keyFor = function (t, c) {
+            return Number(t).toFixed(4) + "|" + (c || "");
+        };
+        var targetSet = {};
+        var wanted = 0;
+        for (var i = 0; i < fingerprints.length; i++) {
+            var fp = fingerprints[i];
+            if (fp == null) continue;
+            targetSet[keyFor(fp.time, fp.comment || fp.name || "")] = true;
+            wanted++;
+        }
+
+        var removed = 0;
+        var m = markers.getFirstMarker();
+        while (m) {
+            var nextM;
+            try { nextM = markers.getNextMarker(m); } catch (e0) { nextM = null; }
+            var mtime = null;
+            try { mtime = m.start && m.start.seconds != null ? m.start.seconds : m.start; } catch (e1) {}
+            var mcomment = "";
+            try { mcomment = m.comments || m.name || ""; } catch (e2) {}
+            if (mtime != null && targetSet[keyFor(mtime, mcomment)]) {
+                try { markers.deleteMarker(m); removed++; } catch (e3) {}
+            }
+            m = nextM;
+        }
+
+        return JSON.stringify({
+            success: true,
+            removed: removed,
+            wanted: wanted
+        });
+    } catch (e) {
+        _ocLog("ocRemoveSequenceMarkers error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+// Restore previous names for project items. Payload: {renames:[{nodeId,oldName}]}.
+function ocUnrenameItems(mapJSON) {
+    try {
+        if (!app || !app.project) return JSON.stringify({ error: "No project" });
+        var payload = _ocParse(mapJSON);
+        var renames = payload && payload.renames ? payload.renames : payload;
+        if (!renames || typeof renames.length !== "number") {
+            return JSON.stringify({ error: "Invalid renames" });
+        }
+
+        var restored = 0, missed = 0;
+        for (var i = 0; i < renames.length; i++) {
+            var entry = renames[i];
+            if (!entry || !entry.oldName) { missed++; continue; }
+            var item = null;
+            if (entry.nodeId) {
+                try { item = _findByNodeId(entry.nodeId); } catch (e1) { item = null; }
+            }
+            if (!item && entry.currentName) {
+                // Fall back to name lookup
+                var all = _collectMediaItems(app.project.rootItem);
+                for (var j = 0; j < all.length; j++) {
+                    if (all[j].name === entry.currentName) { item = all[j]; break; }
+                }
+            }
+            if (item) {
+                try {
+                    item.name = entry.oldName;
+                    restored++;
+                } catch (e2) {
+                    _ocLog("ocUnrenameItems rename error: " + e2.toString());
+                    missed++;
+                }
+            } else {
+                missed++;
+            }
+        }
+
+        return JSON.stringify({ success: true, restored: restored, missed: missed });
+    } catch (e) {
+        _ocLog("ocUnrenameItems error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+// Remove a previously-imported sequence by name. Payload: {name:"..."}.
+function ocRemoveImportedSequence(payloadJSON) {
+    try {
+        if (!app || !app.project) return JSON.stringify({ error: "No project" });
+        var payload = _ocParse(payloadJSON);
+        var name = payload && payload.name ? payload.name : "";
+        if (!name) return JSON.stringify({ error: "Missing sequence name" });
+
+        var target = null;
+        var seqs = app.project.sequences;
+        if (seqs) {
+            for (var i = 0; i < seqs.numSequences; i++) {
+                var s = seqs[i];
+                if (s && s.name === name) { target = s; break; }
+            }
+        }
+        if (!target) return JSON.stringify({ error: "Sequence '" + name + "' not found" });
+
+        // ProjectItem.deleteItem() for sequences isn't universal across
+        // Premiere versions, so try the rootItem walk first.
+        var items = _collectMediaItems(app.project.rootItem);
+        for (var j = 0; j < items.length; j++) {
+            if (items[j].name === name && items[j].type === ProjectItemType.CLIP) {
+                try {
+                    items[j].deleteAsset ? items[j].deleteAsset() : app.project.deleteSequence(target);
+                    return JSON.stringify({ success: true, removed: name });
+                } catch (e0) {}
+            }
+        }
+        try {
+            app.project.deleteSequence(target);
+            return JSON.stringify({ success: true, removed: name });
+        } catch (e1) {
+            return JSON.stringify({ error: "Could not delete: " + e1.toString() });
+        }
+    } catch (e) {
+        _ocLog("ocRemoveImportedSequence error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
+// Remove an imported project item by node id. Payload: {nodeId:"..."}.
+function ocRemoveImportedItem(payloadJSON) {
+    try {
+        if (!app || !app.project) return JSON.stringify({ error: "No project" });
+        var payload = _ocParse(payloadJSON);
+        var nodeId = payload && payload.nodeId ? payload.nodeId : "";
+        if (!nodeId) return JSON.stringify({ error: "Missing nodeId" });
+
+        var item = _findByNodeId(nodeId);
+        if (!item) return JSON.stringify({ error: "Item not found" });
+
+        try {
+            if (item.deleteAsset) { item.deleteAsset(); }
+            else if (app.project.deleteAsset) { app.project.deleteAsset(item); }
+            else { return JSON.stringify({ error: "No delete API on this item" }); }
+        } catch (eDel) {
+            return JSON.stringify({ error: "deleteAsset failed: " + eDel.toString() });
+        }
+        return JSON.stringify({ success: true, removed: nodeId });
+    } catch (e) {
+        _ocLog("ocRemoveImportedItem error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
