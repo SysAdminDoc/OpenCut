@@ -636,6 +636,18 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     atexit.register(_remove_pid)
     from opencut.workers import shutdown_pool
     atexit.register(shutdown_pool)
+    # Close persistent SQLite connections so the WAL files aren't held
+    # open on Windows after shutdown.
+    try:
+        from opencut.job_store import close_all_connections as _close_job_db
+        atexit.register(_close_job_db)
+    except ImportError:
+        pass
+    try:
+        from opencut.core.footage_index_db import close_all_connections as _close_footage_db
+        atexit.register(_close_footage_db)
+    except ImportError:
+        pass
 
     print("")
     from opencut import __version__

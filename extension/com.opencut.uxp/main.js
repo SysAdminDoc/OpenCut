@@ -337,7 +337,7 @@ const BackendClient = (() => {
    * @param {object|null} body — JSON body for POST/PUT
    * @returns {Promise<{ok: boolean, data?: any, error?: string, status?: number}>}
    */
-  async function call(method, endpoint, body = null) {
+  async function _doFetch(method, endpoint, body) {
     const url = BACKEND + endpoint;
     const headers = { "Content-Type": "application/json" };
     if (csrfToken) headers["X-OpenCut-Token"] = csrfToken;
@@ -345,19 +345,32 @@ const BackendClient = (() => {
     const opts = { method, headers };
     if (body && method !== "GET") opts.body = JSON.stringify(body);
 
+    const resp = await fetch(url, opts);
+
+    // Refresh CSRF token if provided in response headers
+    const newToken = resp.headers.get("X-OpenCut-Token");
+    if (newToken) csrfToken = newToken;
+
+    let data;
+    const ct = resp.headers.get("Content-Type") || "";
+    if (ct.includes("application/json")) {
+      data = await resp.json();
+    } else {
+      data = await resp.text();
+    }
+    return { resp, data };
+  }
+
+  async function call(method, endpoint, body = null) {
     try {
-      const resp = await fetch(url, opts);
+      let { resp, data } = await _doFetch(method, endpoint, body);
 
-      // Refresh CSRF token if provided in response headers
-      const newToken = resp.headers.get("X-OpenCut-Token");
-      if (newToken) csrfToken = newToken;
-
-      let data;
-      const ct = resp.headers.get("Content-Type") || "";
-      if (ct.includes("application/json")) {
-        data = await resp.json();
-      } else {
-        data = await resp.text();
+      // Server-restart recovery: /health issues a new CSRF token on startup,
+      // so a stale in-memory token returns 403. Refresh and retry exactly
+      // once before surfacing the error to the user.
+      if (resp.status === 403 && endpoint !== "/health") {
+        await fetchCsrf();
+        ({ resp, data } = await _doFetch(method, endpoint, body));
       }
 
       if (!resp.ok) {
