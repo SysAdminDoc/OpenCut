@@ -16,6 +16,14 @@ logger = logging.getLogger("opencut")
 _DB_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "footage_index.db")
 _thread_local = threading.local()
 
+# Track all opened connections so close_all_connections() can close them
+# on server shutdown.  Mirrors the pattern in job_store.py — without this
+# the ThreadPoolExecutor keeps thread-local connections open for the life
+# of the process, which holds open the WAL file and prevents clean
+# shutdown on Windows.
+_ALL_CONNECTIONS: "dict[int, sqlite3.Connection]" = {}
+_CONN_LOCK = threading.Lock()
+
 
 def _get_conn():
     """Get a thread-local SQLite connection."""
@@ -27,7 +35,30 @@ def _get_conn():
         conn.execute("PRAGMA synchronous=NORMAL")
         conn.row_factory = sqlite3.Row
         _thread_local.conn = conn
+        with _CONN_LOCK:
+            _ALL_CONNECTIONS[threading.get_ident()] = conn
     return conn
+
+
+def close_all_connections():
+    """Close every tracked connection. Called on server shutdown.
+
+    Silently skips connections whose owning thread has already died — those
+    will be reaped by the OS. Clears thread-local refs on the current thread
+    so subsequent calls re-open fresh connections.
+    """
+    with _CONN_LOCK:
+        for conn in list(_ALL_CONNECTIONS.values()):
+            try:
+                conn.close()
+            except Exception:
+                pass
+        _ALL_CONNECTIONS.clear()
+    try:
+        if getattr(_thread_local, "conn", None) is not None:
+            _thread_local.conn = None
+    except Exception:
+        pass
 
 
 def init_db():
