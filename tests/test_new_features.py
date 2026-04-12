@@ -804,6 +804,47 @@ class TestOpenPath(unittest.TestCase):
 
 
 # ============================================================
+# TestInterviewPolish — one-click pipeline endpoint (v1.9.29)
+# ============================================================
+class TestInterviewPolish(unittest.TestCase):
+    """The full pipeline needs Whisper/ffmpeg + real audio to finish,
+    but we can at least verify the route registers, enforces CSRF, and
+    rejects bad input."""
+
+    def setUp(self):
+        from opencut.server import app
+        app.config["TESTING"] = True
+        self.client = app.test_client()
+        resp = self.client.get("/health")
+        self.csrf = resp.get_json().get("csrf_token", "")
+
+    def _headers(self):
+        return {"Content-Type": "application/json", "X-OpenCut-Token": self.csrf}
+
+    def test_route_registered(self):
+        rules = [r.rule for r in self.client.application.url_map.iter_rules()]
+        self.assertIn("/interview-polish", rules)
+
+    def test_requires_csrf(self):
+        r = self.client.post("/interview-polish", json={"filepath": "x"})
+        self.assertEqual(r.status_code, 403)
+
+    def test_rejects_missing_filepath(self):
+        r = self.client.post("/interview-polish",
+                             data=json.dumps({}),
+                             headers=self._headers())
+        self.assertEqual(r.status_code, 400)
+        body = r.get_json()
+        self.assertEqual(body.get("code"), "INVALID_INPUT")
+
+    def test_rejects_bad_filepath(self):
+        r = self.client.post("/interview-polish",
+                             data=json.dumps({"filepath": "/nope/x.mp4"}),
+                             headers=self._headers())
+        self.assertEqual(r.status_code, 400)
+
+
+# ============================================================
 # TestGPURateLimiting
 # ============================================================
 class TestGPURateLimiting(unittest.TestCase):
