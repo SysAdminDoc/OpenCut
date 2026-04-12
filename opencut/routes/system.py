@@ -713,6 +713,57 @@ def project_media():
 
 
 # ---------------------------------------------------------------------------
+# Open / Reveal Path (for session context "Open Output" / "Reveal in Folder")
+# ---------------------------------------------------------------------------
+@system_bp.route("/system/open-path", methods=["POST"])
+@require_csrf
+def open_path():
+    """Open a file (``mode=open``) or reveal it in the OS file manager
+    (``mode=reveal``). Used by the session-context overlay's job-result
+    quick actions.
+
+    The path must pass ``validate_filepath`` — no traversal, null bytes,
+    or UNC paths. Non-existent files are rejected early.
+    """
+    data = request.get_json(force=True, silent=True) or {}
+    raw_path = data.get("path", "")
+    mode = str(data.get("mode", "open")).strip().lower()
+    if mode not in ("open", "reveal"):
+        return jsonify({"error": "mode must be 'open' or 'reveal'"}), 400
+    if not raw_path:
+        return jsonify({"error": "path is required"}), 400
+
+    try:
+        filepath = validate_filepath(raw_path)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    try:
+        if sys.platform == "win32":
+            if mode == "reveal":
+                _sp.Popen(["explorer", "/select,", filepath],
+                          creationflags=_sp.CREATE_NEW_PROCESS_GROUP
+                          if hasattr(_sp, "CREATE_NEW_PROCESS_GROUP") else 0)
+            else:
+                os.startfile(filepath)  # noqa: S606 — validated path
+        elif sys.platform == "darwin":
+            if mode == "reveal":
+                _sp.Popen(["open", "-R", filepath])
+            else:
+                _sp.Popen(["open", filepath])
+        else:
+            # Linux / BSD — xdg-open has no "reveal" equivalent; open the
+            # containing directory when reveal is requested.
+            target = os.path.dirname(filepath) if mode == "reveal" else filepath
+            _sp.Popen(["xdg-open", target])
+    except Exception as e:
+        logger.exception("open_path failed for %s", filepath)
+        return jsonify({"error": f"Could not open path: {e}"}), 500
+
+    return jsonify({"ok": True, "path": filepath, "mode": mode})
+
+
+# ---------------------------------------------------------------------------
 # File Serving (for audio preview player)
 # ---------------------------------------------------------------------------
 @system_bp.route("/file", methods=["GET"])
