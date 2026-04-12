@@ -2992,7 +2992,7 @@ input[type="checkbox"]:disabled {
     font-size: 12px;
     color: var(--text-primary);
     box-shadow: var(--shadow-lg);
-    z-index: 10000;
+    z-index: 10003;
     max-width: 360px;
     animation: toast-slide-up 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;

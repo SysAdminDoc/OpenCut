@@ -447,6 +447,13 @@ def make_install_route(blueprint, url_path, component_name, packages,
                 pct = int((i / len(packages)) * 90)
                 _update_job(job_id, progress=pct, message=f"Installing {pkg}...")
                 _spi(pkg, timeout=600)
+            # Invalidate the capabilities cache so the next health check
+            # reflects the newly installed package.
+            try:
+                from opencut.routes.system import invalidate_caps_cache
+                invalidate_caps_cache()
+            except ImportError:
+                pass
             return {"component": component_name}
         finally:
             _rlr("model_install")

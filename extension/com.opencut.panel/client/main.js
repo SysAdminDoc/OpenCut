@@ -1848,12 +1848,13 @@
         projectMedia = files;
         projectFolder = folder || "";
         if (!el.clipSelect) return;
-        el.clipSelect.innerHTML = "";
+        // Batch DOM updates via DocumentFragment (one reflow instead of N)
+        var frag = document.createDocumentFragment();
         var placeholder = document.createElement("option");
         placeholder.value = "";
         placeholder.selected = true;
         placeholder.textContent = files.length ? "-- Select a clip --" : "No project media found";
-        el.clipSelect.appendChild(placeholder);
+        frag.appendChild(placeholder);
         for (var i = 0; i < files.length; i++) {
             var clip = files[i] || {};
             var clipPath = clip.path || "";
@@ -1862,8 +1863,10 @@
             option.value = clipPath;
             option.textContent = clipName;
             option.setAttribute("data-name", clipName);
-            el.clipSelect.appendChild(option);
+            frag.appendChild(option);
         }
+        el.clipSelect.innerHTML = "";
+        el.clipSelect.appendChild(frag);
         populateRecentFiles();
         var restoredOption = syncClipSelectValue(desiredPath);
         if (restoredOption && restoredOption.value) {
