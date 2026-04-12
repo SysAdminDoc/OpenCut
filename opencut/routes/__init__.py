@@ -12,6 +12,7 @@ def register_blueprints(app):
     from .context import context_bp
     from .deliverables import deliverables_bp
     from .jobs_routes import jobs_bp
+    from .journal import journal_bp
     from .nlp import nlp_bp
     from .plugins import plugins_bp
     from .search import search_bp
@@ -30,5 +31,5 @@ def register_blueprints(app):
                video_editing_bp, video_specialty_bp,
                jobs_bp, settings_bp,
                timeline_bp, search_bp, deliverables_bp, nlp_bp, workflow_bp,
-               context_bp, plugins_bp]:
+               context_bp, plugins_bp, journal_bp]:
         app.register_blueprint(bp)
