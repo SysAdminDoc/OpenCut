@@ -376,6 +376,9 @@
                         <button type="button" class="btn btn-primary btn-lg" id="polishInterviewBtn" disabled>
                             Polish this interview
                         </button>
+                        <button type="button" class="btn btn-secondary btn-lg hidden" id="polishBatchBtn" title="Polish every file in the batch picker, one after another">
+                            Polish batch (<span id="polishBatchCount">0</span>)
+                        </button>
                         <span class="interview-polish-hint" id="interviewPolishHint">Select a clip to run.</span>
                     </div>
                     <ul class="polish-steps hidden" id="polishSteps" aria-live="polite" aria-label="Pipeline progress">
@@ -3594,7 +3597,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.9.31</span>
+                        <span class="settings-value">1.9.32</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>
