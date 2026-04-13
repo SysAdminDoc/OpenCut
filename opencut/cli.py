@@ -1075,6 +1075,179 @@ def scene_detect(input_file, method, threshold, output):
     console.print()
 
 
+@cli.command()
+@click.argument("input_file", type=click.Path(exists=True))
+@click.option("-o", "--output", type=click.Path(), default=None, help="Output directory")
+@click.option("--port", type=int, default=None, help="Backend port (default: auto-scan 5679-5689)")
+@click.option("--no-repeats", is_flag=True, help="Skip repeated-take detection")
+@click.option("--no-fillers", is_flag=True, help="Skip filler-word removal")
+@click.option("--no-chapters", is_flag=True, help="Skip chapter generation")
+@click.option("--timeout", type=int, default=7200, help="Job timeout in seconds (default 2h)")
+def polish(input_file, output, port, no_repeats, no_fillers, no_chapters, timeout):
+    """Run the full interview polish pipeline on an audio/video file.
+
+    Requires a running OpenCut backend (starts one from source with
+    `opencut-server`). Submits the job to /interview-polish, polls until
+    complete, then prints the result paths.
+
+    Designed for shell scripts, task schedulers, and CI — no Premiere
+    required. Works on raw podcast / interview recordings.
+    """
+    import json as _json
+    import time as _time
+    import urllib.error
+    import urllib.request
+
+    print_banner()
+
+    input_file = os.path.abspath(input_file)
+    output_dir = os.path.abspath(output) if output else ""
+
+    # Locate the running server. Explicit --port wins; otherwise scan.
+    def _probe(p):
+        try:
+            with urllib.request.urlopen(
+                f"http://127.0.0.1:{p}/health", timeout=0.5
+            ) as resp:
+                return _json.loads(resp.read().decode("utf-8"))
+        except Exception:
+            return None
+
+    backend_port = None
+    health = None
+    if port:
+        health = _probe(port)
+        if health:
+            backend_port = port
+    else:
+        for candidate in range(5679, 5690):
+            health = _probe(candidate)
+            if health:
+                backend_port = candidate
+                break
+
+    if not backend_port or not health:
+        console.print(
+            "\n[red bold]No OpenCut backend found.[/red bold] "
+            "Start one with [cyan]opencut-server[/cyan] and retry."
+        )
+        raise SystemExit(2)
+
+    csrf_token = health.get("csrf_token", "")
+    base = f"http://127.0.0.1:{backend_port}"
+    console.print(f"\n[bold]Polishing:[/bold] {input_file}")
+    console.print(f"[dim]Backend: {base} (v{health.get('version', '?')})[/dim]\n")
+
+    # Submit the job
+    payload = {
+        "filepath": input_file,
+        "output_dir": output_dir,
+        "detect_repeats": not no_repeats,
+        "remove_fillers": not no_fillers,
+        "generate_chapters": not no_chapters,
+        "diarize": False,
+    }
+    req = urllib.request.Request(
+        f"{base}/interview-polish",
+        data=_json.dumps(payload).encode("utf-8"),
+        headers={"Content-Type": "application/json", "X-OpenCut-Token": csrf_token},
+        method="POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            submit = _json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            err = _json.loads(e.read().decode("utf-8"))
+            console.print(f"[red]Rejected: {err.get('error', e)}[/red]")
+        except Exception:
+            console.print(f"[red]Rejected: {e}[/red]")
+        raise SystemExit(1)
+
+    job_id = submit.get("job_id")
+    if not job_id:
+        console.print(f"[red]Unexpected submit response: {submit}[/red]")
+        raise SystemExit(1)
+
+    # Poll for completion
+    last_msg = ""
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        TimeElapsedColumn(),
+        console=console,
+    ) as progress:
+        task = progress.add_task("Queued…", total=None)
+        deadline = _time.time() + timeout
+        while _time.time() < deadline:
+            try:
+                with urllib.request.urlopen(
+                    f"{base}/status/{job_id}", timeout=5
+                ) as r:
+                    job = _json.loads(r.read().decode("utf-8"))
+            except Exception:
+                _time.sleep(1.0)
+                continue
+            msg = job.get("message") or job.get("status", "")
+            if msg and msg != last_msg:
+                progress.update(task, description=msg)
+                last_msg = msg
+            status = job.get("status")
+            if status in ("complete", "error", "cancelled"):
+                break
+            _time.sleep(1.0)
+        else:
+            console.print("[red]Timed out waiting for job[/red]")
+            raise SystemExit(1)
+
+    if status != "complete":
+        console.print(
+            f"\n[red bold]Job {status}:[/red bold] {job.get('error', job.get('message', ''))}"
+        )
+        raise SystemExit(1)
+
+    result = job.get("result") or {}
+    console.print("\n[green bold]Polish complete.[/green bold]\n")
+
+    # Step summary
+    steps = result.get("steps") or []
+    if steps:
+        table = Table(title="Steps", show_header=True, header_style="bold")
+        table.add_column("Step", style="cyan")
+        table.add_column("Result")
+        table.add_column("Notes", style="dim")
+        for s in steps:
+            icon = "[green]OK[/green]" if s.get("ok") else (
+                "[yellow]SKIP[/yellow]" if s.get("reason") else "[red]FAIL[/red]"
+            )
+            notes = s.get("reason", "")
+            if s.get("ok"):
+                for k in ("removed_fillers", "removed_ranges", "kept_segments",
+                          "word_count", "count"):
+                    if k in s:
+                        notes = f"{k.replace('_', ' ')}: {s[k]}"
+                        break
+            table.add_row(s.get("label", s.get("key", "?")), icon, notes)
+        console.print(table)
+        console.print()
+
+    # Output files
+    for label, key in (
+        ("Premiere XML", "xml_path"),
+        ("Captions SRT", "srt_path"),
+        ("Chapters MD", "chapters_path"),
+    ):
+        path = result.get(key, "")
+        if path:
+            console.print(f"[bold]{label}:[/bold] {path}")
+
+    if "compression_ratio" in result:
+        pct = int(result["compression_ratio"] * 100)
+        console.print(f"\n[dim]Compressed to {pct}% of original "
+                      f"({result.get('speech_duration', 0):.1f}s / "
+                      f"{result.get('original_duration', 0):.1f}s)[/dim]\n")
+
+
 def main():
     """Entry point."""
     cli()
