@@ -20,7 +20,6 @@ Each suggestion:
 from __future__ import annotations
 
 import logging
-import os
 from typing import Any, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
