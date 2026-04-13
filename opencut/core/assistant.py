@@ -63,19 +63,20 @@ def _pick_clip_path(seq_info: Dict[str, Any]) -> str:
     return best_path
 
 
-def _count_gaps(seq_info: Dict[str, Any], min_sec: float = 0.8) -> int:
-    """Count inter-clip gaps on audio tracks > *min_sec* seconds.
-
-    Signal for "run silence removal on this sequence".
+def _count_gaps(seq_info: Dict[str, Any],
+                min_sec: float = 0.8) -> "tuple[int, list]":
+    """Count inter-clip gaps on audio tracks > *min_sec* seconds and
+    return both the count and up to 5 representative gap details
+    (``{track_name, start, end, duration}``).
     """
     gaps = 0
+    details: list = []
     for track in seq_info.get("tracks") or []:
         if track.get("media_type") and track["media_type"].lower() != "audio":
             continue
         clips = track.get("clips") or []
         if len(clips) < 2:
             continue
-        # Sort by start, accepting either seconds or ticks-as-string
         def _s(c): return _num(c.get("start", c.get("in", 0)))
         sorted_clips = sorted(clips, key=_s)
         for i in range(1, len(sorted_clips)):
@@ -83,9 +84,17 @@ def _count_gaps(seq_info: Dict[str, Any], min_sec: float = 0.8) -> int:
                             _s(sorted_clips[i - 1]) +
                             _num(sorted_clips[i - 1].get("duration"))))
             next_start = _s(sorted_clips[i])
-            if next_start - prev_end > min_sec:
+            gap_len = next_start - prev_end
+            if gap_len > min_sec:
                 gaps += 1
-    return gaps
+                if len(details) < 5:
+                    details.append({
+                        "track": track.get("name") or "",
+                        "start": round(prev_end, 2),
+                        "end": round(next_start, 2),
+                        "duration": round(gap_len, 2),
+                    })
+    return gaps, details
 
 
 def _has_captions_track(seq_info: Dict[str, Any]) -> bool:
@@ -139,7 +148,7 @@ def analyze_sequence(seq_info: Dict[str, Any],
     tracks = seq_info.get("tracks") or []
 
     # 1. Dead air — silence removal
-    gaps = _count_gaps(seq_info, min_sec=0.8)
+    gaps, gap_details = _count_gaps(seq_info, min_sec=0.8)
     if gaps >= 3 and "silence-dead-air" not in dismissed and clip_path:
         out.append({
             "id": "silence-dead-air",
@@ -150,6 +159,12 @@ def analyze_sequence(seq_info: Dict[str, Any],
             "action": {
                 "endpoint": "/silence",
                 "payload": {"filepath": clip_path},
+            },
+            "details": {
+                "total_gaps": gaps,
+                "shown": len(gap_details),
+                "gaps": gap_details,
+                "min_threshold_sec": 0.8,
             },
         })
 
