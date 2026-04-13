@@ -764,6 +764,145 @@ def open_path():
 
 
 # ---------------------------------------------------------------------------
+# Live audio preview (v1.9.36, feature C)
+# ---------------------------------------------------------------------------
+# Renders a short slice of a clip with an effect applied and returns the raw
+# WAV bytes so the panel can A/B-compare settings in ~1s instead of waiting
+# for a full-file job. Budget: 15s slice + FFmpeg-native filters only. Heavy
+# neural processors (Resemble Enhance, Demucs) fall back to full-file jobs.
+_PREVIEW_MAX_SECONDS = 15
+_PREVIEW_FILTERS = {"denoise", "normalize", "compress", "eq", "silence"}
+
+
+@system_bp.route("/preview/audio", methods=["POST"])
+@require_csrf
+def preview_audio():
+    """Render a short audio slice with a filter applied.
+
+    Body::
+
+        {
+          "filepath": "...",
+          "start": 0,                   # seconds into the file
+          "duration": 10,               # seconds of preview (max 15)
+          "filter": "denoise|normalize|compress|eq|silence",
+          "params": {...}               # filter-specific
+        }
+
+    Returns ``audio/wav`` on success, 400 on bad input.
+    """
+    import tempfile
+
+    data = request.get_json(force=True, silent=True) or {}
+    filepath = (data.get("filepath") or "").strip()
+    start = safe_float(data.get("start", 0), 0.0, min_val=0.0)
+    duration = safe_float(data.get("duration", 10), 10.0,
+                          min_val=1.0, max_val=float(_PREVIEW_MAX_SECONDS))
+    flt = str(data.get("filter", "denoise")).lower()
+    params = data.get("params") or {}
+
+    if flt not in _PREVIEW_FILTERS:
+        return jsonify({
+            "error": f"Unsupported preview filter: {flt}",
+            "supported": sorted(_PREVIEW_FILTERS),
+        }), 400
+    if not filepath:
+        return jsonify({"error": "filepath is required"}), 400
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+    # Build an FFmpeg filter chain for the requested filter type. All are
+    # lightweight built-in filters that run in near-realtime on a short
+    # slice — no ML model loads, no model downloads.
+    afilter = None
+    if flt == "denoise":
+        # afftdn is an FFT-based denoiser — maps 0..1 strength to noise
+        # reduction level in dB (0..24).
+        strength = safe_float(params.get("strength", 0.5), 0.5, min_val=0.0, max_val=1.0)
+        nr = round(strength * 24, 1)
+        afilter = f"afftdn=nr={nr}"
+    elif flt == "normalize":
+        target = safe_float(params.get("target_lufs", -16.0), -16.0,
+                            min_val=-40.0, max_val=0.0)
+        afilter = f"loudnorm=I={target}:TP=-1.5:LRA=11"
+    elif flt == "compress":
+        threshold = safe_float(params.get("threshold_db", -20), -20.0,
+                               min_val=-40.0, max_val=0.0)
+        ratio = safe_float(params.get("ratio", 4.0), 4.0, min_val=1.0, max_val=20.0)
+        # acompressor threshold is linear (0..1); approximate from dB.
+        import math as _m
+        thr_lin = 10 ** (threshold / 20.0)
+        afilter = f"acompressor=threshold={thr_lin}:ratio={ratio}:attack=5:release=50"
+    elif flt == "eq":
+        low = safe_float(params.get("low_db", 0), 0.0, min_val=-24.0, max_val=24.0)
+        mid = safe_float(params.get("mid_db", 0), 0.0, min_val=-24.0, max_val=24.0)
+        high = safe_float(params.get("high_db", 0), 0.0, min_val=-24.0, max_val=24.0)
+        afilter = (
+            f"equalizer=f=120:t=h:w=100:g={low},"
+            f"equalizer=f=1000:t=h:w=800:g={mid},"
+            f"equalizer=f=8000:t=h:w=4000:g={high}"
+        )
+    elif flt == "silence":
+        # Preview the impact of a silence threshold by *muting* detected
+        # silent regions in the slice so users can hear what gets cut.
+        thr_db = safe_float(params.get("threshold_db", -30), -30.0,
+                            min_val=-60.0, max_val=0.0)
+        min_dur = safe_float(params.get("min_silence", 0.4), 0.4,
+                             min_val=0.05, max_val=5.0)
+        afilter = f"silenceremove=start_periods=0:stop_periods=-1:stop_threshold={thr_db}dB:stop_duration={min_dur}"
+
+    tmp = tempfile.NamedTemporaryFile(
+        suffix=".wav", prefix="opencut_preview_", delete=False
+    )
+    out_path = tmp.name
+    tmp.close()
+
+    ffmpeg = get_ffmpeg_path()
+    cmd = [
+        ffmpeg, "-y",
+        "-ss", str(start),
+        "-t", str(duration),
+        "-i", filepath,
+        "-vn",
+        "-af", afilter,
+        "-ac", "2",
+        "-ar", "44100",
+        "-f", "wav",
+        out_path,
+    ]
+    try:
+        proc = _sp.run(cmd, capture_output=True, timeout=60)
+        if proc.returncode != 0:
+            os.unlink(out_path)
+            return jsonify({
+                "error": "Preview render failed",
+                "detail": proc.stderr.decode("utf-8", "ignore")[-300:],
+            }), 500
+    except _sp.TimeoutExpired:
+        try: os.unlink(out_path)
+        except Exception: pass
+        return jsonify({"error": "Preview render timed out"}), 504
+    except Exception as e:
+        try: os.unlink(out_path)
+        except Exception: pass
+        return jsonify({"error": f"Preview render failed: {e}"}), 500
+
+    # Read back + return as audio/wav. Schedule deletion of the temp file.
+    try:
+        with open(out_path, "rb") as f:
+            data_bytes = f.read()
+    finally:
+        try: os.unlink(out_path)
+        except Exception: pass
+
+    from flask import Response
+    return Response(data_bytes, mimetype="audio/wav",
+                    headers={"Content-Length": str(len(data_bytes))})
+
+
+# ---------------------------------------------------------------------------
 # Preflight — "can this pipeline succeed?" check (v1.9.33, feature G)
 # ---------------------------------------------------------------------------
 @system_bp.route("/preflight/<pipeline>", methods=["POST"])
