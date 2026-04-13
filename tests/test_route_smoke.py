@@ -1370,7 +1370,7 @@ class TestSearchRoutes:
         assert resp.status_code == 400
 
     def test_search_valid_query(self, client, csrf_token):
-        with patch("opencut.core.footage_search.search_footage", return_value=[]) as mock_fs:
+        with patch("opencut.core.footage_search.search_footage", return_value=[]):
             resp = client.post("/search/footage",
                                data=json.dumps({"query": "sunset shot"}),
                                headers=csrf_headers(csrf_token))

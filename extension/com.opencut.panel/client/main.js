@@ -640,6 +640,7 @@
     el.polishDetectRepeats = $("polishDetectRepeats");
     el.polishRemoveFillers = $("polishRemoveFillers");
     el.polishGenerateChapters = $("polishGenerateChapters");
+    el.polishClearCacheBtn = $("polishClearCacheBtn");
 
         // Clip
         el.clipSelect = $("clipSelect");
@@ -6543,6 +6544,14 @@
         startJob("/interview-polish", payload, {
             onComplete: function (job) {
                 renderPolishSteps(_polishStepsFromResult(job.result));
+                // v1.10.5 (Q): surface cached-transcript savings.
+                var steps = (job.result && job.result.steps) || [];
+                for (var i = 0; i < steps.length; i++) {
+                    if (steps[i].key === "transcribe" && steps[i].cached) {
+                        showToast("Used cached transcript (saved ~2 min).", "info");
+                        break;
+                    }
+                }
                 _renderPolishResult(job);
             },
             onError: function (job) {
@@ -6969,8 +6978,26 @@
         if (el.polishBatchBtn) {
             el.polishBatchBtn.addEventListener("click", runInterviewPolishBatch);
         }
-        // Enable/disable whenever a clip selection changes — piggy-back on
-        // the existing updateButtons pass below.
+        // v1.10.5 (Q): drop the cached Whisper transcript for the current
+        // clip so the next run re-transcribes.
+        if (el.polishClearCacheBtn) {
+            el.polishClearCacheBtn.addEventListener("click", function () {
+                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                api("DELETE", "/interview-polish/state",
+                    { filepath: selectedPath }, function (err, data) {
+                        if (err) {
+                            showAlert("Couldn't clear cache: " +
+                                (err.error || err.message || err));
+                            return;
+                        }
+                        if (data && data.removed) {
+                            showToast("Cached transcript cleared for this clip.", "success");
+                        } else {
+                            showToast("No cached transcript to clear.", "info");
+                        }
+                    });
+            });
+        }
         updateButtons();
     }
 
