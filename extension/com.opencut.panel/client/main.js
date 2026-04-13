@@ -758,6 +758,8 @@
         el.denoiseStrength = $("denoiseStrength");
         el.denoiseStrengthVal = $("denoiseStrengthVal");
         el.runDenoiseBtn = $("runDenoiseBtn");
+        el.denoisePreviewBtn = $("denoisePreviewBtn");
+        el.denoisePreviewPlayer = $("denoisePreviewPlayer");
         el.normalizePreset = $("normalizePreset");
         el.loudnessMeter = $("loudnessMeter");
         el.meterLUFS = $("meterLUFS");
@@ -2491,7 +2493,7 @@
         "autoDetectWatermarkBtn", "runDepthBtn", "runBrollPlanBtn", "runBrollGenBtn", "runMmDiarizeBtn", "socialUploadBtn",
         "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runMulticamBtn",
         "quickCleanInterview", "quickYouTube", "quickPodcast",
-        "polishInterviewBtn",
+        "polishInterviewBtn", "denoisePreviewBtn",
         "quickAutoSubtitle", "quickTranslate",
         "quickStudioAudio", "quickDenoise",
         "quickAutoColor", "quickSocialReframe"
@@ -6598,6 +6600,70 @@
         });
         document.body.appendChild(overlay);
         run.focus();
+    }
+
+    // ================================================================
+    // Live audio preview (v1.9.36, feature C)
+    // ================================================================
+    function initAudioPreviewButtons() {
+        if (!el.denoisePreviewBtn || !el.denoisePreviewPlayer) return;
+        el.denoisePreviewBtn.addEventListener("click", function () {
+            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            var strength = parseFloat(el.denoiseStrength ? el.denoiseStrength.value : 0.7);
+            renderAudioPreview({
+                filepath: selectedPath,
+                start: 0,
+                duration: 10,
+                filter: "denoise",
+                params: { strength: strength }
+            }, el.denoisePreviewPlayer, el.denoisePreviewBtn);
+        });
+    }
+
+    function renderAudioPreview(body, audioEl, btn) {
+        btn.disabled = true;
+        var origText = btn.textContent;
+        btn.textContent = "Rendering…";
+        audioEl.classList.add("hidden");
+
+        // Manual XHR so we can get a Blob response (api() wraps JSON only).
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", BACKEND + "/preview/audio", true);
+        xhr.setRequestHeader("Content-Type", "application/json");
+        if (csrfToken) xhr.setRequestHeader("X-OpenCut-Token", csrfToken);
+        xhr.responseType = "blob";
+        xhr.onload = function () {
+            btn.disabled = false;
+            btn.textContent = origText;
+            if (xhr.status >= 200 && xhr.status < 300) {
+                // Revoke the previous blob URL to avoid leaks
+                if (audioEl._blobUrl) {
+                    try { URL.revokeObjectURL(audioEl._blobUrl); } catch (_) {}
+                }
+                audioEl._blobUrl = URL.createObjectURL(xhr.response);
+                audioEl.src = audioEl._blobUrl;
+                audioEl.classList.remove("hidden");
+                try { audioEl.play().catch(function () {}); } catch (_) {}
+            } else {
+                // Read error JSON from the blob
+                var reader = new FileReader();
+                reader.onload = function () {
+                    try {
+                        var err = JSON.parse(reader.result);
+                        showAlert("Preview failed: " + (err.error || "Unknown"));
+                    } catch (e) {
+                        showAlert("Preview failed (HTTP " + xhr.status + ")");
+                    }
+                };
+                reader.readAsText(xhr.response);
+            }
+        };
+        xhr.onerror = function () {
+            btn.disabled = false;
+            btn.textContent = origText;
+            showAlert("Preview network error");
+        };
+        xhr.send(JSON.stringify(body));
     }
 
     function initInterviewPolish() {
@@ -11845,7 +11911,8 @@
             initWizard, initOutputBrowser, initBatchPicker, initDepDashboard,
             initSettingsIO, initWorkflowBuilder, loadWorkflowPresets,
             initCollapsibleCards, initI18n, initProjectTemplates,
-            initJournal, initInterviewPolish, initLutGrid
+            initJournal, initInterviewPolish, initLutGrid,
+            initAudioPreviewButtons
         ];
         for (var fi = 0; fi < _featureInits.length; fi++) {
             try { _featureInits[fi](); }
