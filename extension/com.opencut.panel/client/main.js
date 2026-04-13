@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.33
+   OpenCut CEP Panel - Main Controller v1.9.34
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -1386,6 +1386,9 @@
         removeImportedItem: function (payload, cb) {
             var json = JSON.stringify(payload);
             jsx("ocRemoveImportedItem('" + json.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", cb);
+        },
+        setPlayhead: function (seconds, cb) {
+            jsx("ocSetSequencePlayhead(" + Number(seconds || 0) + ")", cb);
         }
     };
 
@@ -5005,6 +5008,30 @@
         return transcriptData && transcriptData.segments ? transcriptData.segments : [];
     }
 
+    // v1.9.34 (H): jump the Premiere playhead to a transcript segment's
+    // start time. Quiet no-op outside Premiere so dev-mode use stays clean.
+    function _jumpPlayheadToSegment(idx) {
+        if (!inPremiere) return;
+        var segs = getTranscriptSegments();
+        if (!segs || idx < 0 || idx >= segs.length) return;
+        var t = Number(segs[idx].start || 0);
+        if (!isFinite(t) || t < 0) return;
+        PremiereBridge.setPlayhead(t, function (result) {
+            // Only warn on errors if the first click fails; subsequent
+            // ones stay quiet to avoid spamming toasts on every tap.
+            if (!_playheadSyncWarned && result && result.indexOf("error") !== -1) {
+                try {
+                    var r = JSON.parse(result);
+                    if (r && r.error) {
+                        _playheadSyncWarned = true;
+                        showToast("Playhead sync unavailable: " + r.error, "warn");
+                    }
+                } catch (e) {}
+            }
+        });
+    }
+    var _playheadSyncWarned = false;
+
     function getTranscriptTotalDuration(data) {
         var segments = data && data.segments ? data.segments : [];
         var maxEnd = 0;
@@ -5323,6 +5350,9 @@
             var idx = parseInt(row.getAttribute("data-idx"), 10);
             if (!(idx >= 0)) return;
             focusTranscriptSegment(idx, { scroll: false, scrollTimeline: true });
+            // v1.9.34 (H): jump the Premiere playhead to this segment's
+            // start time. Silently no-op when outside Premiere.
+            _jumpPlayheadToSegment(idx);
             if (!e.target.classList.contains("transcript-seg-text")) {
                 var ta = row.querySelector(".transcript-seg-text");
                 if (ta) ta.focus();
@@ -5339,7 +5369,10 @@
                 var btn = e.target.closest(".transcript-timeline-seg");
                 if (!btn) return;
                 var idx = parseInt(btn.getAttribute("data-idx"), 10);
-                if (idx >= 0) focusTranscriptSegment(idx, { focusInput: true });
+                if (idx >= 0) {
+                    focusTranscriptSegment(idx, { focusInput: true });
+                    _jumpPlayheadToSegment(idx);
+                }
             });
             el.transcriptTimeline.addEventListener("keydown", function (e) {
                 var btn = e.target.closest(".transcript-timeline-seg");
