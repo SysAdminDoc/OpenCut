@@ -480,6 +480,11 @@
                             </div>
                         </div>
                         <button type="button" class="btn-outline btn-sm mb-sm" id="loadWaveformBtn" disabled data-i18n="silence.preview_waveform">Preview Waveform</button>
+                        <!-- v1.10.2 (M): hear what gets cut with current threshold -->
+                        <div class="audio-preview-row">
+                            <button type="button" class="btn-secondary btn-sm" id="silencePreviewBtn" disabled title="Hear a 10s preview with silent regions removed">Preview 10s</button>
+                            <audio id="silencePreviewPlayer" class="audio-preview-inline hidden" controls preload="none"></audio>
+                        </div>
                         <button type="button" class="btn-primary" id="runSilenceBtn" disabled title="Ctrl+Shift+S" data-i18n="silence.remove">Remove Silences</button>
                     </section>
                 </div>
@@ -1403,6 +1408,11 @@
                         <div class="btn-row-split">
                             <button type="button" class="btn-outline btn-half" id="measureLoudnessBtn" disabled data-i18n="audio.measure">Measure</button>
                             <button type="button" class="btn-primary btn-half" id="runNormalizeBtn" disabled title="Ctrl+Shift+N" data-i18n="audio.normalize">Normalize</button>
+                        </div>
+                        <!-- v1.10.2 (M): live 10s preview at target LUFS -->
+                        <div class="audio-preview-row">
+                            <button type="button" class="btn-secondary btn-sm" id="normalizePreviewBtn" disabled title="Render a 10s preview at the target LUFS">Preview 10s</button>
+                            <audio id="normalizePreviewPlayer" class="audio-preview-inline hidden" controls preload="none"></audio>
                         </div>
                     </section>
                 </div>
@@ -3623,7 +3633,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.10.0</span>
+                        <span class="settings-value">1.10.1</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>
