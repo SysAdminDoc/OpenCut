@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.31
+   OpenCut CEP Panel - Main Controller v1.9.32
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -632,6 +632,8 @@
     el.journalRefreshBtn = $("journalRefreshBtn");
     el.journalClearBtn = $("journalClearBtn");
     el.polishInterviewBtn = $("polishInterviewBtn");
+    el.polishBatchBtn = $("polishBatchBtn");
+    el.polishBatchCount = $("polishBatchCount");
     el.polishSteps = $("polishSteps");
     el.polishResult = $("polishResult");
     el.interviewPolishHint = $("interviewPolishHint");
@@ -6368,9 +6370,101 @@
     function initInterviewPolish() {
         if (!el.polishInterviewBtn) return;
         el.polishInterviewBtn.addEventListener("click", runInterviewPolish);
+        if (el.polishBatchBtn) {
+            el.polishBatchBtn.addEventListener("click", runInterviewPolishBatch);
+        }
         // Enable/disable whenever a clip selection changes — piggy-back on
         // the existing updateButtons pass below.
         updateButtons();
+    }
+
+    // ================================================================
+    // Interview Polish — batch mode (v1.9.32, feature F)
+    // ================================================================
+    // Serial (not parallel) to avoid OOM on 8 concurrent Whisper runs.
+    // One parent job_id per file; they show up normally in job history.
+    var _polishBatchQueue = null;
+    var _polishBatchResults = null;
+
+    function updatePolishBatchButton() {
+        if (!el.polishBatchBtn || !el.polishBatchCount) return;
+        var n = (typeof _batchFiles !== "undefined" && _batchFiles) ? _batchFiles.length : 0;
+        if (n < 2) {
+            el.polishBatchBtn.classList.add("hidden");
+        } else {
+            el.polishBatchBtn.classList.remove("hidden");
+            el.polishBatchCount.textContent = n;
+            el.polishBatchBtn.disabled = _polishActive || !connected;
+        }
+    }
+
+    function runInterviewPolishBatch() {
+        if (_polishActive) return;
+        if (!_batchFiles || _batchFiles.length < 2) {
+            showAlert("Add at least 2 files to the batch picker first.");
+            return;
+        }
+        _polishBatchQueue = _batchFiles.slice();
+        _polishBatchResults = [];
+        _polishStartNextBatch();
+    }
+
+    function _polishStartNextBatch() {
+        if (!_polishBatchQueue || !_polishBatchQueue.length) {
+            _polishBatchFinish();
+            return;
+        }
+        var total = _batchFiles.length;
+        var idx = total - _polishBatchQueue.length;
+        var filepath = _polishBatchQueue.shift();
+
+        _polishActive = true;
+        el.polishInterviewBtn.disabled = true;
+        el.polishInterviewBtn.textContent = "Batch " + (idx + 1) + "/" + total + "…";
+        if (el.polishBatchBtn) el.polishBatchBtn.disabled = true;
+        if (el.polishResult) el.polishResult.classList.add("hidden");
+        _renderPolishRunning();
+        showToast("Polishing " + (idx + 1) + " of " + total + ": " +
+                  filepath.split(/[\\/]/).pop(), "info");
+
+        var payload = {
+            filepath: filepath,
+            output_dir: projectFolder,
+            detect_repeats: el.polishDetectRepeats && el.polishDetectRepeats.checked,
+            remove_fillers: el.polishRemoveFillers && el.polishRemoveFillers.checked,
+            generate_chapters: el.polishGenerateChapters && el.polishGenerateChapters.checked,
+            diarize: false
+        };
+        startJob("/interview-polish", payload, {
+            onComplete: function (job) {
+                _polishBatchResults.push({ filepath: filepath, ok: true, result: job.result });
+                renderPolishSteps(_polishStepsFromResult(job.result));
+            },
+            onError: function (job) {
+                _polishBatchResults.push({ filepath: filepath, ok: false,
+                    error: (job && job.error) || "Unknown error" });
+            },
+            onFinally: function () {
+                _polishActive = false;
+                // Move on to the next file — or finish.
+                setTimeout(_polishStartNextBatch, 200);
+            }
+        });
+    }
+
+    function _polishBatchFinish() {
+        _polishActive = false;
+        var ok = 0, failed = 0;
+        for (var i = 0; i < _polishBatchResults.length; i++) {
+            if (_polishBatchResults[i].ok) ok++; else failed++;
+        }
+        el.polishInterviewBtn.disabled = !selectedPath;
+        el.polishInterviewBtn.textContent = "Polish this interview";
+        if (el.polishBatchBtn) el.polishBatchBtn.disabled = false;
+        showAlert("Batch polish done: " + ok + " succeeded" +
+                  (failed ? ", " + failed + " failed" : "") + ".");
+        _polishBatchQueue = null;
+        _polishBatchResults = null;
     }
 
     function initJournal() {
@@ -8124,6 +8218,8 @@
     }
 
     function renderBatchFiles() {
+        // Keep the Cut-tab "Polish batch" button in sync with picker state.
+        if (typeof updatePolishBatchButton === "function") updatePolishBatchButton();
         if (!el.batchFileList) return;
         if (_batchFiles.length === 0) {
             el.batchFileList.innerHTML = buildEmptyHintMarkup("No files added", 'Use "Add Selected" or drag files.');
