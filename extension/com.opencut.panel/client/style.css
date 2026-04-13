@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.9.34 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.9.35 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -12955,4 +12955,63 @@ body:not(.has-clip) .media-sidecar .file-info {
     display: flex;
     justify-content: flex-end;
     gap: 8px;
+}
+
+/* ============================================================
+   LUT GRID (v1.9.35, feature I)
+   ============================================================ */
+.lut-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.lut-card {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 8px;
+    border-radius: 10px;
+    border: 1px solid rgba(236, 230, 218, 0.07);
+    background: rgba(255, 255, 255, 0.02);
+    color: var(--text-primary);
+    cursor: pointer;
+    text-align: left;
+    transition: transform 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.lut-card:hover {
+    transform: translateY(-1px);
+    border-color: rgba(136, 178, 255, 0.3);
+    background: rgba(136, 178, 255, 0.06);
+}
+
+.lut-card.is-active {
+    border-color: var(--neon-cyan, #88b2ff);
+    background: rgba(136, 178, 255, 0.1);
+    box-shadow: 0 0 0 1px var(--neon-cyan, #88b2ff);
+}
+
+.lut-card:focus-visible {
+    outline: 2px solid var(--neon-cyan, #88b2ff);
+    outline-offset: 2px;
+}
+
+.lut-card-swatch {
+    display: block;
+    width: 100%;
+    height: 36px;
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.lut-card-name {
+    font-size: 11px;
+    font-weight: 600;
+    line-height: 1.25;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
