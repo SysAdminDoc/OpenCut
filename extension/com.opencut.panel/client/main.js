@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.29
+   OpenCut CEP Panel - Main Controller v1.9.30
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -2498,6 +2498,12 @@
         var hasSequenceMarkers = Array.isArray(seqMarkersData) && seqMarkersData.length > 0;
         var hasRenameItems = Array.isArray(renameItemsData) && renameItemsData.length > 0;
         var hasSmartBinRules = Array.isArray(smartBinRules) && smartBinRules.length > 0;
+
+        // v1.9.30 (J): selection change toggles the "Apply to selection"
+        // button visibility on history rows. Re-render if the tray is open.
+        if (el.jobHistory && el.jobHistory.classList.contains("open")) {
+            renderJobHistory();
+        }
 
         // Interview polish hint — reflect the same state the button shows
         if (el.interviewPolishHint) {
@@ -5966,6 +5972,17 @@
                 _sessionCtxRerun(job);
             });
             actions.appendChild(rerunBtn);
+            // v1.9.30 (J): if the current selection differs from the original
+            // clip, offer a one-click "apply same params to selection".
+            var originalPath = (job.payload && job.payload.filepath) || "";
+            if (originalPath && selectedPath && selectedPath !== originalPath) {
+                var applyBtn = _sessionCtxActionBtn(
+                    "Apply to selection",
+                    "Re-run on the currently selected clip",
+                    function () { _sessionCtxApplyToSelection(job); }
+                );
+                actions.appendChild(applyBtn);
+            }
         }
 
         row.appendChild(actions);
@@ -6009,6 +6026,19 @@
                 if (SSE_OK) { trackJobSSE(data.job_id); } else { trackJobPoll(data.job_id); }
             }
         });
+    }
+
+    function _sessionCtxApplyToSelection(job) {
+        if (!selectedPath) { showAlert("Select a clip first."); return; }
+        if (!job.endpoint || !job.payload) {
+            showToast("Job params aren't recorded — can't replay.", "warn");
+            return;
+        }
+        var payload = JSON.parse(JSON.stringify(job.payload));
+        payload.filepath = selectedPath;
+        dismissSessionContext();
+        showToast("Applying " + _sessionCtxOpText(job) + " to " + (selectedName || "selection") + "…", "info");
+        startJob(job.endpoint, payload);
     }
 
     function dismissSessionContext() {
@@ -6636,6 +6666,10 @@
         for (var i = 0; i < jobHistoryList.length; i++) {
             var h = jobHistoryList[i];
             var statusClass = h.status === "complete" ? "complete" : (h.status === "cancelled" ? "cancelled" : "error");
+            // Show "Apply to selection" only when there's a different clip selected
+            // from the one this job originally targeted (v1.9.30: feature J).
+            var payloadPath = h.payload && h.payload.filepath ? h.payload.filepath : "";
+            var showApply = h.endpoint && payloadPath && selectedPath && selectedPath !== payloadPath;
             html += '<div class="job-history-item" data-idx="' + i + '">' +
                 '<div class="job-history-main">' +
                 '<span class="job-history-status ' + statusClass + '"></span>' +
@@ -6643,7 +6677,8 @@
                 '</div>' +
                 '<div class="job-history-meta">' +
                 '<span class="job-history-time">' + esc(h.time) + '</span>' +
-                (h.endpoint ? '<button type="button" class="btn-sm job-history-rerun" data-idx="' + i + '" title="Re-run this job">Re-run</button>' : '') +
+                (h.endpoint ? '<button type="button" class="btn-sm job-history-rerun" data-idx="' + i + '" title="Re-run on the original clip with the same params">Re-run</button>' : '') +
+                (showApply ? '<button type="button" class="btn-sm job-history-apply" data-idx="' + i + '" title="Run this job on the currently selected clip with the same params">Apply to selection</button>' : '') +
                 '</div></div>';
         }
         el.jobHistory.innerHTML = html;
@@ -6655,12 +6690,22 @@
         if (_jobHistoryDelegationAdded || !el.jobHistory) return;
         _jobHistoryDelegationAdded = true;
         el.jobHistory.addEventListener("click", function (e) {
-            var btn = e.target.closest(".job-history-rerun");
+            var rerunBtn = e.target.closest(".job-history-rerun");
+            var applyBtn = e.target.closest(".job-history-apply");
+            var btn = rerunBtn || applyBtn;
             if (!btn) return;
             e.stopPropagation();
             var idx = parseInt(btn.getAttribute("data-idx"));
             var entry = jobHistoryList[idx];
-            if (entry && entry.endpoint && entry.payload) {
+            if (!entry || !entry.endpoint || !entry.payload) return;
+            if (applyBtn) {
+                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                // Clone so we don't mutate the stored payload
+                var payload = JSON.parse(JSON.stringify(entry.payload));
+                payload.filepath = selectedPath;
+                showToast("Applying '" + entry.type + "' to " + (selectedName || "selection") + "…", "info");
+                startJob(entry.endpoint, payload);
+            } else {
                 startJob(entry.endpoint, entry.payload);
             }
         });
