@@ -124,6 +124,32 @@ def save_whisper_settings(settings: dict):
 
 
 # ---------------------------------------------------------------------------
+# Assistant dismissed suggestions (v1.10.2, feature O)
+# Persisted per-sequence so "don't suggest chapters" sticks across reloads.
+# ---------------------------------------------------------------------------
+def load_assistant_dismissed(sequence_key: str = "default") -> list:
+    all_data = read_user_file("assistant_dismissed.json", default={}) or {}
+    if not isinstance(all_data, dict):
+        return []
+    ids = all_data.get(sequence_key) or []
+    return [str(i) for i in ids if isinstance(i, (str, int))]
+
+
+def save_assistant_dismissed(sequence_key: str, dismissed_ids: list) -> None:
+    all_data = read_user_file("assistant_dismissed.json", default={}) or {}
+    if not isinstance(all_data, dict):
+        all_data = {}
+    # Dedupe + cap so the file doesn't grow unbounded
+    cleaned: list = []
+    for i in (dismissed_ids or []):
+        s = str(i)
+        if s and s not in cleaned:
+            cleaned.append(s)
+    all_data[sequence_key or "default"] = cleaned[:200]
+    write_user_file("assistant_dismissed.json", all_data)
+
+
+# ---------------------------------------------------------------------------
 # LLM Settings
 # ---------------------------------------------------------------------------
 
