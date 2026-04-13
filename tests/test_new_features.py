@@ -804,6 +804,53 @@ class TestOpenPath(unittest.TestCase):
 
 
 # ============================================================
+# TestPreflight — pre-pipeline checklist (v1.9.33)
+# ============================================================
+class TestPreflight(unittest.TestCase):
+    def setUp(self):
+        from opencut.server import app
+        app.config["TESTING"] = True
+        self.client = app.test_client()
+        resp = self.client.get("/health")
+        self.csrf = resp.get_json().get("csrf_token", "")
+
+    def _h(self):
+        return {"Content-Type": "application/json", "X-OpenCut-Token": self.csrf}
+
+    def test_requires_csrf(self):
+        r = self.client.post("/preflight/interview-polish", json={})
+        self.assertEqual(r.status_code, 403)
+
+    def test_unknown_pipeline_400(self):
+        r = self.client.post("/preflight/nope",
+                             data=json.dumps({}),
+                             headers=self._h())
+        self.assertEqual(r.status_code, 400)
+        self.assertIn("valid", r.get_json())
+
+    def test_returns_full_report_shape(self):
+        r = self.client.post("/preflight/interview-polish",
+                             data=json.dumps({"filepath": "",
+                                              "output_dir": ""}),
+                             headers=self._h())
+        self.assertEqual(r.status_code, 200)
+        body = r.get_json()
+        self.assertIn("pass", body)
+        self.assertIn("blocking", body)
+        self.assertIn("warnings", body)
+        self.assertIn("pipeline", body)
+        self.assertEqual(body["pipeline"], "interview-polish")
+
+    def test_missing_file_lands_in_blocking(self):
+        r = self.client.post("/preflight/interview-polish",
+                             data=json.dumps({"filepath": "/nope/zz.mp4"}),
+                             headers=self._h())
+        body = r.get_json()
+        self.assertFalse(body["pass"])
+        self.assertFalse(body["file"]["ok"])
+
+
+# ============================================================
 # TestInterviewPolish — one-click pipeline endpoint (v1.9.29)
 # ============================================================
 class TestInterviewPolish(unittest.TestCase):
