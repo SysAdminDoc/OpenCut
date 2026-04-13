@@ -2458,6 +2458,48 @@ function ocRemoveImportedSequence(payloadJSON) {
     }
 }
 
+// v1.9.34 (H) — Move the active sequence's playhead to *seconds*. One-arg
+// form for simpler panel invocation. Uses ticks (254016000000 per second)
+// when setPlayerPosition expects a tick string, or falls back to seconds.
+function ocSetSequencePlayhead(seconds) {
+    try {
+        if (!app || !app.project || !app.project.activeSequence) {
+            return JSON.stringify({ error: "No active sequence" });
+        }
+        var secs = Number(seconds);
+        if (!isFinite(secs) || secs < 0) {
+            return JSON.stringify({ error: "Invalid seconds" });
+        }
+        var seq = app.project.activeSequence;
+
+        // Try the modern setPlayerPosition(ticks_as_string) signature first.
+        var ticks = Math.floor(secs * 254016000000);
+        try {
+            seq.setPlayerPosition(ticks.toString());
+            return JSON.stringify({ success: true, seconds: secs });
+        } catch (e1) {}
+
+        // Fallback: some Premiere builds accept a Number
+        try {
+            seq.setPlayerPosition(ticks);
+            return JSON.stringify({ success: true, seconds: secs });
+        } catch (e2) {}
+
+        // Last resort: cursor via Time object
+        try {
+            var t = {};
+            t.ticks = ticks.toString();
+            seq.setPlayerPosition(t);
+            return JSON.stringify({ success: true, seconds: secs });
+        } catch (e3) {
+            return JSON.stringify({ error: "setPlayerPosition failed on this Premiere version" });
+        }
+    } catch (e) {
+        _ocLog("ocSetSequencePlayhead error: " + e.toString());
+        return JSON.stringify({ error: e.toString() });
+    }
+}
+
 // Remove an imported project item by node id. Payload: {nodeId:"..."}.
 function ocRemoveImportedItem(payloadJSON) {
     try {
