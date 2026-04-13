@@ -764,6 +764,39 @@ def open_path():
 
 
 # ---------------------------------------------------------------------------
+# Sequence Assistant (v1.10.0, feature E)
+# ---------------------------------------------------------------------------
+@system_bp.route("/assistant/suggest", methods=["POST"])
+@require_csrf
+def assistant_suggest():
+    """Analyze a sequence snapshot and return ranked editing suggestions.
+
+    Body::
+
+        {
+          "sequence": {...},            # shape of ocGetSequenceInfo JSON
+          "dismissed": ["silence-dead-air", ...]   # optional
+        }
+    """
+    from opencut.core.assistant import analyze_sequence
+
+    data = request.get_json(force=True, silent=True) or {}
+    sequence = data.get("sequence") or {}
+    dismissed = data.get("dismissed") or []
+    if not isinstance(sequence, dict):
+        return jsonify({"error": "sequence must be an object"}), 400
+    if not isinstance(dismissed, list):
+        return jsonify({"error": "dismissed must be a list"}), 400
+
+    try:
+        suggestions = analyze_sequence(sequence, dismissed_ids=dismissed)
+    except Exception as e:
+        logger.exception("assistant_suggest failed")
+        return jsonify({"error": f"Analyze failed: {e}"}), 500
+    return jsonify({"suggestions": suggestions, "count": len(suggestions)})
+
+
+# ---------------------------------------------------------------------------
 # Live audio preview (v1.9.36, feature C)
 # ---------------------------------------------------------------------------
 # Renders a short slice of a clip with an effect applied and returns the raw
