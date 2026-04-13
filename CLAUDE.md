@@ -43,7 +43,7 @@
 - `nlp_command.py` - Natural language → API route mapping. COMMAND_MAP with 19 entries. parse_command_keyword(text) → {route, params, confidence, matched_keyword} or None. parse_command_llm(text, config, routes). parse_command(text, llm_config) tries LLM then keyword. extract_params_from_text(text) extracts numbers/language/intensity hints.
 
 ### Route Blueprints (`opencut/routes/`)
-- `__init__.py` - `register_blueprints(app)` registers all 17 Blueprints (system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins) + dynamic plugin blueprints
+- `__init__.py` - `register_blueprints(app)` registers all 60+ Blueprints (17 original + 43 feature expansion) + dynamic plugin blueprints. 880 total routes.
 - `system.py` (~1130 lines) - /health, /shutdown, /info, /gpu/*, /dependencies, /file, /whisper/*, /llm/*. Install routes use `make_install_route()` factory.
 - `audio.py` (~2175 lines) - /silence, /fillers, /audio/*, /audio/beat-markers, /audio/loudness-match. All async routes use `@async_job` decorator.
 - `captions.py` (~1590 lines) - /captions/*, /captions/chapters (LLMConfig object, not dict), /captions/repeat-detect. All async routes use `@async_job`.
@@ -135,7 +135,7 @@
 ## Architecture
 - Backend runs as standalone process (exe or `python -m opencut.server`)
 - Panel communicates via XHR to localhost:5679
-- **Blueprint-based route organization**: 17 Blueprints (system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins) + dynamically loaded plugin blueprints
+- **Blueprint-based route organization**: 60+ Blueprints (17 original: system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins + 43 feature expansion blueprints) + dynamically loaded plugin blueprints. 880 total routes.
 - **Shared modules**: security.py (CSRF + path validation), jobs.py (job state), helpers.py (utilities + `run_ffmpeg` + `ensure_package` + `get_video_info`), user_data.py (thread-safe file I/O)
 - **CSRF protection**: Token generated at startup in security.py, returned via /health, sent as `X-OpenCut-Token` header on mutations. `@require_csrf` decorator applied to ALL POST routes.
 - **Path validation**: `validate_path()` checks realpath, null bytes, `..` components, symlinks. `validate_filepath()` adds isfile check. Applied to ALL routes accepting file paths.
@@ -181,7 +181,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.9.26**
+- Current: **v1.10.5**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -1203,4 +1203,20 @@ See commit `04d068c` for the full v1.9.22 changelog — `/file` allowlist restor
 - **NDJSON response mime type** — `application/x-ndjson`. Frontend must parse line-by-line, not `JSON.parse()` the whole body. Each line is a valid JSON object.
 - **Context awareness `score_features` capability check** — The scoring checks for "audio" and "video" capabilities by inferring from tags (e.g., `audio_only` implies has audio but no video). Tags like `talking_head` imply both audio and video are present.
 - **`rate_limit("ai_gpu")` scope** — Shared across all AI routes. If upscale is running, music generation returns 429. This is intentional to prevent GPU memory conflicts.
-- **17 Blueprints** — Route registration list in `__init__.py` is now: system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins. Plus dynamic plugin blueprints.
+- **60+ Blueprints** — Route registration in `__init__.py` includes 17 original + 43 feature expansion blueprints (880 total routes). Plus dynamic plugin blueprints.
+
+## v1.10.5 Feature Expansion
+
+### Scale
+- **230 new core modules** (`opencut/core/`) — feature implementations across all 62 categories from `features.md`
+- **43 new route blueprints** (`opencut/routes/`) — 600+ new API endpoints registered via `__init__.py`
+- **43 new test files** (`tests/`) — smoke tests for all new routes
+- **880 total routes** (up from 254 in v1.9.26)
+- **Ruff lint clean** — 1,207 auto-fixed + 45 manual fixes across all new files
+
+### Planning Documents
+- `features.md` — 302 features across 62 categories (12 new categories added: 360/VR, camera correction, video repair, AI generation, privacy/redaction, spectral audio, split-screen, content repurposing, storyboarding, proxy management, composition intelligence, AI dubbing)
+- `ROADMAP.md` — v3.0 implementation roadmap with 7 waves organized by dependency chains (Wave 1: quick wins with 0 new deps → Wave 7: emerging tech)
+
+### New Route Blueprint Files
+`ai_content_routes`, `ai_editing_routes`, `ai_intelligence_routes`, `analysis_routes`, `architecture_routes`, `audio_advanced_routes`, `audio_expansion_routes`, `audio_production_routes`, `batch_data_routes`, `color_mam_routes`, `content_routes`, `creative_routes`, `delivery_routes`, `documentary_routes`, `editing_workflow_routes`, `education_routes`, `encoding_routes`, `format_routes`, `gaming_routes`, `generative_routes`, `hw_routes`, `infrastructure_routes`, `integration_routes`, `music_safety_routes`, `overlay_routes`, `platform_infra_routes`, `platform_ux_routes`, `processing_routes`, `production_routes`, `professional_routes`, `qc_routes`, `remote_realtime_routes`, `solver_agent_routes`, `subtitle_routes`, `tools_routes`, `transcript_edit_routes`, `utility_routes`, `vfx_advanced_routes`, `video_effects_routes`, `video_processing_routes`, `video_vfx_routes`, `workflow_dev_routes`, `workflow_routes`
