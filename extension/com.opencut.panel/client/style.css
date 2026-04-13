@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.9.32 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.9.33 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -12847,4 +12847,112 @@ body:not(.has-clip) .media-sidecar .file-info {
         max-width: 100%;
         opacity: 0.65;
     }
+}
+
+/* ============================================================
+   PREFLIGHT MODAL (v1.9.33, feature G)
+   ============================================================ */
+.preflight-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 10002;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: sessionContextSlide 0.18s ease;
+}
+
+.preflight-modal {
+    width: min(520px, calc(100vw - 40px));
+    max-height: calc(100vh - 60px);
+    overflow: auto;
+    background: linear-gradient(180deg, rgba(22, 30, 48, 0.98), rgba(14, 20, 32, 0.96));
+    border: 1px solid rgba(236, 230, 218, 0.12);
+    border-radius: 18px;
+    box-shadow: 0 28px 80px rgba(0, 0, 0, 0.55);
+    display: flex;
+    flex-direction: column;
+}
+
+.preflight-header {
+    padding: 18px 20px 10px;
+    border-bottom: 1px solid rgba(236, 230, 218, 0.08);
+}
+
+.preflight-title {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.preflight-sub {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 4px;
+    line-height: 1.5;
+}
+
+.preflight-body {
+    padding: 14px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.preflight-section {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.preflight-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    opacity: 0.7;
+}
+
+.preflight-section-blocking .preflight-section-title { color: #e7604c; }
+.preflight-section-warning  .preflight-section-title { color: rgba(255, 200, 120, 0.9); }
+
+.preflight-row {
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(236, 230, 218, 0.06);
+    background: rgba(255, 255, 255, 0.025);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.preflight-section-blocking .preflight-row {
+    border-color: rgba(231, 96, 76, 0.3);
+    background: rgba(231, 96, 76, 0.06);
+}
+
+.preflight-section-warning .preflight-row {
+    border-color: rgba(255, 200, 120, 0.25);
+    background: rgba(255, 200, 120, 0.05);
+}
+
+.preflight-row-label {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.preflight-row-detail {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.preflight-foot {
+    padding: 12px 20px 18px;
+    border-top: 1px solid rgba(236, 230, 218, 0.08);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
 }

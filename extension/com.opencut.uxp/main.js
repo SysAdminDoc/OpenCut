@@ -26,7 +26,7 @@ const HEALTH_CHECK_MS  = 8000;
 const HEALTH_MAX_MS    = 60000;
 const MEDIA_SCAN_MS    = 30000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
-const VERSION          = "1.9.32";
+const VERSION          = "1.9.33";
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does

@@ -764,6 +764,37 @@ def open_path():
 
 
 # ---------------------------------------------------------------------------
+# Preflight — "can this pipeline succeed?" check (v1.9.33, feature G)
+# ---------------------------------------------------------------------------
+@system_bp.route("/preflight/<pipeline>", methods=["POST"])
+@require_csrf
+def preflight_check(pipeline: str):
+    """Run the preflight checklist for *pipeline* before kicking off the job.
+
+    Body::
+
+        {"filepath": "...", "output_dir": "..."}
+
+    Response carries blocking issues (must fix), soft warnings (might
+    degrade but won't abort), and a top-level pass:true/false.
+    """
+    from opencut.preflight import run_preflight
+
+    data = request.get_json(force=True, silent=True) or {}
+    filepath = (data.get("filepath") or "").strip()
+    output_dir = (data.get("output_dir") or "").strip()
+
+    try:
+        report = run_preflight(pipeline, filepath=filepath, output_dir=output_dir)
+    except Exception as e:
+        logger.exception("preflight for %s failed", pipeline)
+        return jsonify({"error": f"Preflight failed: {e}"}), 500
+    if "error" in report:
+        return jsonify(report), 400
+    return jsonify(report)
+
+
+# ---------------------------------------------------------------------------
 # File Serving (for audio preview player)
 # ---------------------------------------------------------------------------
 @system_bp.route("/file", methods=["GET"])
