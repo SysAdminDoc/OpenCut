@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.10.3
+   OpenCut CEP Panel - Main Controller v1.10.4
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -6793,6 +6793,56 @@
         el.assistantBody.appendChild(frag);
     }
 
+    function _assistantDetailView(sug) {
+        var det = sug.details || {};
+        var wrap = document.createElement("div");
+        wrap.className = "assistant-detail-body";
+
+        // Gap-based suggestion: render a small table of the top few gaps.
+        if (Array.isArray(det.gaps) && det.gaps.length) {
+            var intro = document.createElement("div");
+            intro.className = "assistant-detail-intro";
+            intro.textContent = "Top " + det.gaps.length + " of " +
+                (det.total_gaps || det.gaps.length) + " gaps above " +
+                (det.min_threshold_sec || 0.8) + "s:";
+            wrap.appendChild(intro);
+
+            var tbl = document.createElement("div");
+            tbl.className = "assistant-detail-table";
+            for (var i = 0; i < det.gaps.length; i++) {
+                var g = det.gaps[i];
+                var row = document.createElement("div");
+                row.className = "assistant-detail-row";
+                row.innerHTML =
+                    '<span class="assistant-detail-cell">' +
+                        esc(g.track || "audio") + '</span>' +
+                    '<span class="assistant-detail-cell assistant-detail-time">' +
+                        fmtDur(g.start) + " → " + fmtDur(g.end) + '</span>' +
+                    '<span class="assistant-detail-cell assistant-detail-metric">' +
+                        (g.duration || 0).toFixed(2) + 's' + '</span>';
+                tbl.appendChild(row);
+            }
+            wrap.appendChild(tbl);
+            return wrap;
+        }
+
+        // Generic dict: render key/value pairs.
+        var keys = Object.keys(det);
+        if (!keys.length) return null;
+        for (var k = 0; k < keys.length; k++) {
+            var key = keys[k];
+            var val = det[key];
+            if (typeof val === "object") continue;
+            var line = document.createElement("div");
+            line.className = "assistant-detail-row";
+            line.innerHTML =
+                '<span class="assistant-detail-cell">' + esc(key.replace(/_/g, " ")) + '</span>' +
+                '<span class="assistant-detail-cell assistant-detail-metric">' + esc(String(val)) + '</span>';
+            wrap.appendChild(line);
+        }
+        return wrap.children.length ? wrap : null;
+    }
+
     function _assistantCard(sug) {
         var card = document.createElement("div");
         card.className = "assistant-suggestion";
@@ -6807,6 +6857,20 @@
         why.className = "assistant-suggestion-why";
         why.textContent = sug.why;
         card.appendChild(why);
+
+        // v1.10.4 (P): expandable details with the actual signals so the
+        // assistant is explainable instead of opaque.
+        if (sug.details && typeof sug.details === "object") {
+            var detailsBlock = document.createElement("details");
+            detailsBlock.className = "assistant-suggestion-details";
+            var summary = document.createElement("summary");
+            summary.className = "assistant-suggestion-details-summary";
+            summary.textContent = "Why this suggestion?";
+            detailsBlock.appendChild(summary);
+            var inner = _assistantDetailView(sug);
+            if (inner) detailsBlock.appendChild(inner);
+            card.appendChild(detailsBlock);
+        }
 
         var actions = document.createElement("div");
         actions.className = "assistant-suggestion-actions";
