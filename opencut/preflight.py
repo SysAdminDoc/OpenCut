@@ -15,7 +15,6 @@ import os
 import shutil
 from typing import List
 
-
 PIPELINES = {
     "interview-polish": {
         "label": "Interview Polish",
