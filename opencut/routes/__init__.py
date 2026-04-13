@@ -7,29 +7,84 @@ All Flask route handlers organized by domain.
 
 def register_blueprints(app):
     """Register all route Blueprints with the Flask app."""
+    from .ai_content_routes import ai_content_bp
+    from .ai_editing_routes import ai_editing_bp
+    from .ai_intelligence_routes import ai_intel_bp
+    from .analysis_routes import analysis_bp
+    from .architecture_routes import architecture_bp
     from .audio import audio_bp
+    from .audio_advanced_routes import audio_adv_bp
+    from .audio_expansion_routes import audio_expand_bp
+    from .audio_production_routes import audio_prod_bp
+    from .batch_data_routes import batch_data_bp
     from .captions import captions_bp
+    from .color_mam_routes import color_mam_bp
+    from .content_routes import content_bp
     from .context import context_bp
+    from .creative_routes import creative_bp
     from .deliverables import deliverables_bp
+    from .delivery_routes import delivery_bp
+    from .documentary_routes import documentary_bp
+    from .editing_workflow_routes import editing_wf_bp
+    from .education_routes import education_bp
+    from .encoding_routes import encoding_bp
+    from .format_routes import format_bp
+    from .gaming_routes import gaming_bp
+    from .generative_routes import generative_bp
+    from .hw_routes import hw_bp
+    from .infrastructure_routes import infra_bp
+    from .integration_routes import integration_bp
     from .jobs_routes import jobs_bp
     from .journal import journal_bp
+    from .music_safety_routes import music_safety_bp
     from .nlp import nlp_bp
+    from .overlay_routes import overlay_bp
+    from .platform_infra_routes import platform_infra_bp
+    from .platform_ux_routes import platform_ux_bp
     from .plugins import plugins_bp
+    from .processing_routes import processing_bp
+    from .production_routes import production_bp
+    from .professional_routes import professional_bp
+    from .qc_routes import qc_bp
+    from .remote_realtime_routes import remote_realtime_bp
     from .search import search_bp
     from .settings import settings_bp
+    from .solver_agent_routes import solver_agent_bp
+    from .subtitle_routes import subtitle_bp
     from .system import system_bp
     from .timeline import timeline_bp
+    from .tools_routes import tools_bp
+    from .transcript_edit_routes import transcript_edit_bp
+    from .utility_routes import utility_bp
+    from .vfx_advanced_routes import vfx_advanced_bp
     from .video_ai import video_ai_bp
     from .video_core import video_core_bp
     from .video_editing import video_editing_bp
+    from .video_effects_routes import video_effects_bp
     from .video_fx import video_fx_bp
+    from .video_processing_routes import video_proc_bp
     from .video_specialty import video_specialty_bp
+    from .video_vfx_routes import video_vfx_bp
     from .workflow import workflow_bp
+    from .workflow_dev_routes import workflow_dev_bp
+    from .workflow_routes import workflow_auto_bp
 
     for bp in [system_bp, audio_bp, captions_bp,
                video_core_bp, video_fx_bp, video_ai_bp,
                video_editing_bp, video_specialty_bp,
                jobs_bp, settings_bp,
                timeline_bp, search_bp, deliverables_bp, nlp_bp, workflow_bp,
-               context_bp, plugins_bp, journal_bp]:
+               context_bp, plugins_bp, journal_bp, overlay_bp, qc_bp,
+               format_bp, processing_bp, content_bp, hw_bp, creative_bp,
+               subtitle_bp, encoding_bp, utility_bp, production_bp,
+               analysis_bp, workflow_auto_bp, video_proc_bp, audio_prod_bp,
+               ai_content_bp, professional_bp, tools_bp, workflow_dev_bp,
+               infra_bp, video_effects_bp, audio_expand_bp, ai_intel_bp,
+               delivery_bp, gaming_bp, education_bp, documentary_bp,
+               batch_data_bp, music_safety_bp, integration_bp,
+               video_vfx_bp, audio_adv_bp, ai_editing_bp,
+               editing_wf_bp, color_mam_bp, platform_infra_bp,
+               transcript_edit_bp, generative_bp, architecture_bp,
+               remote_realtime_bp, vfx_advanced_bp, solver_agent_bp,
+               platform_ux_bp]:
         app.register_blueprint(bp)

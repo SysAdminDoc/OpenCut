@@ -381,6 +381,10 @@
                         </button>
                         <span class="interview-polish-hint" id="interviewPolishHint">Select a clip to run.</span>
                     </div>
+                    <!-- v1.10.5 (Q): clear the cached transcript if the user wants Whisper to re-run -->
+                    <div class="interview-polish-footer">
+                        <button type="button" class="btn btn-ghost btn-sm" id="polishClearCacheBtn" title="Force a fresh Whisper transcription on the next run">Re-transcribe next run</button>
+                    </div>
                     <ul class="polish-steps hidden" id="polishSteps" aria-live="polite" aria-label="Pipeline progress">
                         <!-- populated by renderPolishSteps() -->
                     </ul>

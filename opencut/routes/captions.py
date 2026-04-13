@@ -5,6 +5,7 @@ Transcription, caption styles, burn-in, animated captions, whisperx,
 translation, karaoke, format conversion.
 """
 
+import copy
 import logging
 import os
 import tempfile
@@ -713,10 +714,19 @@ def interview_polish(job_id, filepath, data):
     )
     from opencut.core.fillers import detect_fillers, remove_fillers_from_segments
     from opencut.core.repeat_detect import detect_repeated_takes, merge_repeat_ranges
+    from opencut.polish_state import (
+        _transcription_from_dict,
+        _transcription_to_dict,
+        load_state,
+        save_state,
+    )
 
     output_dir = data.get("output_dir", "")
     preset = data.get("preset", "youtube")
     seq_name = data.get("sequence_name", "")
+    # v1.10.5 (Q): resume-from-cache is opt-in via request flag; when true
+    # we skip transcription if a valid cache exists for this file.
+    resume = safe_bool(data.get("resume", True), True)
     generate_chapters_flag = safe_bool(data.get("generate_chapters", True), True)
     diarize_flag = safe_bool(data.get("diarize", True), True)
     remove_fillers_flag = safe_bool(data.get("remove_fillers", True), True)
@@ -767,9 +777,25 @@ def interview_polish(job_id, filepath, data):
     step_progress("Transcribing")
     whisper_ok, whisper_backend = check_whisper_available()
     transcription = None
-    if whisper_ok:
+    cached_state = load_state(filepath) if resume else None
+    if cached_state and cached_state.get("transcription"):
+        transcription = _transcription_from_dict(cached_state["transcription"])
+        record_step(
+            "transcribe", "Transcribe audio", True,
+            backend="cache",
+            word_count=getattr(transcription, "word_count", 0),
+            language=getattr(transcription, "language", ""),
+            cached=True,
+        )
+    elif whisper_ok:
         try:
             transcription = transcribe(filepath, config=cfg.captions, timeout=1800)
+            # Persist immediately so a crash in steps 3-6 still lets us
+            # resume from here on the next attempt.
+            try:
+                save_state(filepath, _transcription_to_dict(transcription))
+            except Exception as e:
+                logger.warning("Polish state save failed: %s", e)
             record_step("transcribe", "Transcribe audio", True,
                         backend=whisper_backend,
                         word_count=getattr(transcription, "word_count", 0),
@@ -941,6 +967,27 @@ def interview_polish(job_id, filepath, data):
     if chapters_data:
         result_data["chapters"] = chapters_data.get("chapters", [])
     return result_data
+
+
+@captions_bp.route("/interview-polish/state", methods=["DELETE"])
+@require_csrf
+def interview_polish_clear_state():
+    """Drop the cached transcript for a file so the next /interview-polish
+    call does a fresh transcription. Used by the panel's "Re-transcribe"
+    button in the Interview Polish card.
+    """
+    from opencut.polish_state import clear_state
+
+    data = request.get_json(force=True, silent=True) or {}
+    filepath = (data.get("filepath") or "").strip()
+    if not filepath:
+        return jsonify({"error": "filepath is required"}), 400
+    try:
+        filepath = validate_filepath(filepath)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+    removed = clear_state(filepath)
+    return jsonify({"ok": True, "removed": removed, "filepath": filepath})
 
 
 # ---------------------------------------------------------------------------
