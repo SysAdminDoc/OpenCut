@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.10.2
+   OpenCut CEP Panel - Main Controller v1.10.3
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -1408,14 +1408,18 @@
     // Every ExtendScript operation that mutates the Premiere project calls
     // journalRecord() after success. The Journal sub-tab under Settings
     // renders the history and dispatches inverse calls via PremiereBridge.
-    function journalRecord(action, label, inversePayload, clipPath) {
+    function journalRecord(action, label, inversePayload, clipPath, forwardPayload) {
         if (!connected) return;
-        api("POST", "/journal/record", {
+        var body = {
             action: action,
             label: label || "",
             clip_path: clipPath || "",
             inverse: inversePayload || {}
-        }, function (err, entry) {
+        };
+        // v1.10.3 (N): include forward {endpoint, payload} so journal
+        // rows can later expose "Apply to selection".
+        if (forwardPayload) body.forward = forwardPayload;
+        api("POST", "/journal/record", body, function (err, entry) {
             if (err) {
                 // Never surface journal-record failures to the user — the
                 // forward operation already succeeded.
@@ -3225,7 +3229,12 @@
                                 "import_sequence",
                                 _sessionCtxOpText(job) + " → '" + r.sequence_name + "'",
                                 { name: r.sequence_name },
-                                selectedPath
+                                selectedPath,
+                                // Forward replay = re-run the same job type
+                                // (silence / full / etc) on a different clip.
+                                job.endpoint && job.payload
+                                    ? { endpoint: job.endpoint, payload: job.payload }
+                                    : null
                             );
                         }
                     } catch (e) { console.error("XML import parse error:", e); }
@@ -6252,8 +6261,62 @@
             actions.appendChild(revertBtn);
         }
 
+        // v1.10.3 (N): "Apply to selection" when the journal entry has a
+        // forward payload and the user currently has a different clip
+        // selected than the one the entry ran on.
+        var fwd = entry.forward;
+        var canReplay = fwd && fwd.endpoint &&
+            selectedPath && entry.clip_path && selectedPath !== entry.clip_path;
+        if (canReplay) {
+            var applyBtn = document.createElement("button");
+            applyBtn.type = "button";
+            applyBtn.className = "btn btn-ghost btn-sm";
+            applyBtn.textContent = "Apply to selection";
+            applyBtn.title = "Run the same action on '" +
+                (selectedName || "selection") + "' with the same params";
+            applyBtn.addEventListener("click", function () {
+                _journalApplyToSelection(entry);
+            });
+            actions.appendChild(applyBtn);
+        }
+
         row.appendChild(actions);
         return row;
+    }
+
+    function _journalApplyToSelection(entry) {
+        var fwd = entry && entry.forward;
+        if (!fwd) return;
+        if (!selectedPath) { showAlert("Select a clip first."); return; }
+        // ExtendScript-dispatch actions get a special pseudo-endpoint.
+        if (fwd.endpoint === "__jsx_add_markers__") {
+            if (!inPremiere) {
+                showAlert("Premiere connection required.");
+                return;
+            }
+            var markers = (fwd.payload && fwd.payload.markers) || [];
+            if (!markers.length) { showAlert("No markers to replay."); return; }
+            var payload = JSON.stringify(markers);
+            cs.evalScript(
+                "ocAddSequenceMarkers('" +
+                payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')",
+                function (result) {
+                    try {
+                        var r = JSON.parse(result || "{}");
+                        if (r.error) { showAlert("Apply failed: " + r.error); return; }
+                        showToast("Re-added " + markers.length + " markers on '" +
+                                  (selectedName || "selection") + "'", "success");
+                    } catch (e) { showAlert("Apply failed: " + (result || e.message)); }
+                }
+            );
+            return;
+        }
+        // HTTP endpoints: replace filepath with the current selection
+        var replay = JSON.parse(JSON.stringify(fwd.payload || {}));
+        replay.filepath = selectedPath;
+        showToast("Applying " + _journalActionLabel(entry.action) +
+                  " to '" + (selectedName || "selection") + "'…", "info");
+        startJob(fwd.endpoint, replay);
     }
 
     function _journalRevert(entry, btn) {
@@ -10486,7 +10549,11 @@
                         "add_markers",
                         _journalLabelForMarkers(markers.length, selectedName),
                         { markers: fingerprints },
-                        selectedPath
+                        selectedPath,
+                        // Forward op: re-add the same beat markers on a
+                        // different clip. endpoint dispatches to ExtendScript.
+                        { endpoint: "__jsx_add_markers__",
+                          payload: { markers: markers } }
                     );
                 }
             } catch (e) { showAlert("Error adding markers: " + (result || e.message)); }
@@ -10707,7 +10774,12 @@
                         journalRecord(
                             "batch_rename",
                             _journalLabelForRename(reverseList.length),
-                            { renames: reverseList }
+                            { renames: reverseList },
+                            "",
+                            // Forward replay isn't meaningful for rename —
+                            // the nodeIds are project-scoped and the "new"
+                            // names were project-specific.
+                            null
                         );
                     }
                 } catch (e) { showAlert("Error: " + (result || e.message)); }
