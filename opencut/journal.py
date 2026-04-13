@@ -99,15 +99,26 @@ def init_db() -> None:
         );
         CREATE INDEX IF NOT EXISTS idx_journal_created ON journal(created_at DESC);
     """)
+    # v1.10.3 (N): additive column for the forward op so the panel can
+    # replay it on a different clip. Existing rows get NULL — backfill
+    # isn't possible and the UI shows the button only when forward_json
+    # is present.
+    try:
+        conn.execute("ALTER TABLE journal ADD COLUMN forward_json TEXT")
+    except sqlite3.OperationalError:
+        pass  # Column already exists
     conn.commit()
 
 
 def record(action: str, label: str, inverse_payload: dict,
-           clip_path: str = "") -> dict:
+           clip_path: str = "", forward_payload: "dict | None" = None) -> dict:
     """Persist a new journal entry. Returns the saved row as a dict.
 
     Unknown action types are rejected — adding a new type requires an
     ExtendScript inverse and a frontend dispatch branch.
+
+    *forward_payload* (v1.10.3) stores the original ``{endpoint, payload}``
+    so the panel can replay the forward op on a different clip.
     """
     if action not in VALID_ACTIONS:
         raise ValueError(f"Unknown journal action: {action}")
@@ -118,10 +129,17 @@ def record(action: str, label: str, inverse_payload: dict,
         inverse_json = json.dumps(inverse_payload or {})
     except (TypeError, ValueError):
         inverse_json = "{}"
+    forward_json = None
+    if forward_payload:
+        try:
+            forward_json = json.dumps(forward_payload)
+        except (TypeError, ValueError):
+            forward_json = None
     cur = conn.execute(
-        """INSERT INTO journal (created_at, action, clip_path, label, inverse_json)
-           VALUES (?, ?, ?, ?, ?)""",
-        (now, action, clip_path or "", label or "", inverse_json),
+        """INSERT INTO journal (created_at, action, clip_path, label,
+                                inverse_json, forward_json)
+           VALUES (?, ?, ?, ?, ?, ?)""",
+        (now, action, clip_path or "", label or "", inverse_json, forward_json),
     )
     conn.commit()
     entry_id = cur.lastrowid
@@ -190,6 +208,13 @@ def _row_to_dict(row) -> dict:
         inverse = json.loads(row["inverse_json"])
     except (json.JSONDecodeError, TypeError):
         inverse = {}
+    forward = None
+    try:
+        raw_fwd = row["forward_json"]
+        if raw_fwd:
+            forward = json.loads(raw_fwd)
+    except (IndexError, KeyError, json.JSONDecodeError, TypeError):
+        forward = None
     return {
         "id": row["id"],
         "created_at": row["created_at"],
@@ -197,6 +222,7 @@ def _row_to_dict(row) -> dict:
         "clip_path": row["clip_path"] or "",
         "label": row["label"] or "",
         "inverse": inverse,
+        "forward": forward,
         "reverted": bool(row["reverted"]),
         "reverted_at": row["reverted_at"],
         "revertible": row["action"] in REVERTIBLE_ACTIONS,
