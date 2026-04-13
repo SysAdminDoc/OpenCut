@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.9.36 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.10.0 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -13035,4 +13035,83 @@ body:not(.has-clip) .media-sidecar .file-info {
 
 .audio-preview-inline::-webkit-media-controls-panel {
     background-color: rgba(22, 30, 48, 0.7);
+}
+
+/* ============================================================
+   SEQUENCE ASSISTANT (v1.10.0, feature E)
+   ============================================================ */
+.assistant-card {
+    border: 1px solid rgba(136, 178, 255, 0.18);
+    background: linear-gradient(180deg, rgba(18, 25, 42, 0.96), rgba(12, 18, 28, 0.94));
+}
+
+.assistant-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.assistant-empty {
+    padding: 14px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    background: rgba(255, 255, 255, 0.015);
+    border: 1px dashed rgba(236, 230, 218, 0.1);
+    border-radius: 10px;
+    text-align: center;
+    line-height: 1.5;
+}
+
+.assistant-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.assistant-loading::before {
+    content: "";
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    border: 2px solid rgba(136, 178, 255, 0.25);
+    border-top-color: var(--neon-cyan, #88b2ff);
+    animation: sessionContextSpin 0.8s linear infinite;
+}
+
+.assistant-suggestion {
+    padding: 12px 14px;
+    border-radius: 12px;
+    border: 1px solid rgba(236, 230, 218, 0.08);
+    background: rgba(255, 255, 255, 0.025);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.assistant-suggestion:hover {
+    border-color: rgba(136, 178, 255, 0.3);
+    background: rgba(136, 178, 255, 0.05);
+}
+
+.assistant-suggestion-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.assistant-suggestion-why {
+    font-size: 11px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.assistant-suggestion-actions {
+    display: flex;
+    gap: 6px;
+    margin-top: 4px;
 }
