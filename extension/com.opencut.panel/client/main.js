@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.34
+   OpenCut CEP Panel - Main Controller v1.9.35
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -968,6 +968,7 @@
         // Video tab - LUT
         el.lutCategory = $("lutCategory");
         el.lutSelect = $("lutSelect");
+        el.lutGrid = $("lutGrid");
         el.lutIntensity = $("lutIntensity");
         el.lutIntensityVal = $("lutIntensityVal");
         el.lutRefPath = $("lutRefPath");
@@ -5402,6 +5403,76 @@
     // ================================================================
     // Style Preview
     // ================================================================
+    // ================================================================
+    // LUT visual grid (v1.9.35, feature I)
+    // ================================================================
+    // Each swatch uses a hand-picked 4-color gradient that roughly represents
+    // the LUT's look. Built-ins are hardcoded; user LUTs get a neutral grey
+    // until we can render a real preview.
+    var _LUT_SWATCHES = {
+        teal_orange:     ["#0e2a33", "#1e5266", "#d58d4d", "#f4c28a"],
+        vintage_warm:    ["#2a1e14", "#543220", "#b07b4a", "#e7c79a"],
+        cool_desaturate: ["#1a1f26", "#3a4450", "#6e7c89", "#b8c4d2"],
+        high_contrast_bw:["#020202", "#2f2f2f", "#b6b6b6", "#f4f4f4"],
+        sepia:           ["#1b1308", "#4d3a1c", "#a98256", "#ecd7a8"],
+        cyberpunk:       ["#0b1220", "#2d2f6b", "#9b1f6b", "#ff41a3"],
+        bleach_bypass:   ["#1c1c1a", "#4a4a44", "#8a8a7a", "#d8d3c0"],
+        golden_hour:     ["#2c1408", "#6d3a18", "#d28c3d", "#f8cf7b"],
+        moonlight:       ["#0a1226", "#1e2a4d", "#4b6391", "#a6b8d9"],
+        cross_process:   ["#132222", "#1e5a4a", "#9b8a2e", "#e8e068"]
+    };
+
+    function _lutSwatchCSS(name) {
+        var bare = name.replace(/^user\//, "");
+        var pal = _LUT_SWATCHES[bare];
+        if (!pal) pal = ["#2a2a2a", "#3a3a3a", "#505050", "#7a7a7a"];
+        return "linear-gradient(90deg," + pal.join(",") + ")";
+    }
+
+    function renderLutGrid() {
+        if (!el.lutGrid || !el.lutSelect) return;
+        var category = el.lutCategory ? el.lutCategory.value : "all";
+        el.lutGrid.innerHTML = "";
+        var frag = document.createDocumentFragment();
+        var options = el.lutSelect.options;
+        for (var i = 0; i < options.length; i++) {
+            var opt = options[i];
+            if (!opt.value) continue;
+            var card = document.createElement("button");
+            card.type = "button";
+            card.className = "lut-card" + (opt.value === el.lutSelect.value ? " is-active" : "");
+            card.setAttribute("role", "radio");
+            card.setAttribute("aria-checked", opt.value === el.lutSelect.value ? "true" : "false");
+            card.setAttribute("data-value", opt.value);
+            card.title = opt.textContent;
+            card.innerHTML =
+                '<span class="lut-card-swatch" style="background:' + _lutSwatchCSS(opt.value) + ';"></span>' +
+                '<span class="lut-card-name">' + esc(opt.textContent) + '</span>';
+            card.addEventListener("click", (function (val) {
+                return function () {
+                    el.lutSelect.value = val;
+                    // Fire change so any existing listeners update
+                    try { el.lutSelect.dispatchEvent(new Event("change")); }
+                    catch (_) {}
+                    renderLutGrid();
+                };
+            })(opt.value));
+            frag.appendChild(card);
+        }
+        el.lutGrid.appendChild(frag);
+    }
+
+    function initLutGrid() {
+        if (!el.lutGrid) return;
+        renderLutGrid();
+        if (el.lutSelect) {
+            el.lutSelect.addEventListener("change", renderLutGrid);
+        }
+        if (el.lutCategory) {
+            el.lutCategory.addEventListener("change", renderLutGrid);
+        }
+    }
+
     function loadStylePreview() {
         api("GET", "/caption-styles", null, function (err, data) {
             if (!err && data && data.styles) {
@@ -11774,7 +11845,7 @@
             initWizard, initOutputBrowser, initBatchPicker, initDepDashboard,
             initSettingsIO, initWorkflowBuilder, loadWorkflowPresets,
             initCollapsibleCards, initI18n, initProjectTemplates,
-            initJournal, initInterviewPolish
+            initJournal, initInterviewPolish, initLutGrid
         ];
         for (var fi = 0; fi < _featureInits.length; fi++) {
             try { _featureInits[fi](); }
