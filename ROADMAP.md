@@ -1,488 +1,554 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 2.0 Vision
-**Created**: 2026-03-25
-**Baseline**: v1.7.2 (738-line server.py, 6,850-line main.js, 175+ endpoints, 50+ core modules)
+**Version**: 3.0
+**Updated**: 2026-04-13
+**Baseline**: v1.9.26 (254 routes, 68 core modules, 17 blueprints, 867 tests)
+**Feature Plan**: 302 features across 62 categories (see `features.md`)
 
 ---
 
 ## Guiding Principles
 
-1. **Never break what works** — Every phase ships a working product. No "rewrite everything then test."
+1. **Never break what works** — Every wave ships a working product. No "rewrite everything then test."
 2. **Incremental migration** — New code coexists with old. Feature flags gate rollout. Old paths removed only after new paths are proven.
-3. **User-facing value first** — Each phase delivers visible improvements, not just internal refactors.
+3. **User-facing value first** — Each wave delivers visible improvements, not just internal refactors.
 4. **Measure before optimizing** — Add telemetry/logging before assuming bottlenecks.
+5. **Shared infrastructure first** — When multiple features need the same foundation (e.g., object tracking, spectral analysis), build the foundation once, then fan out.
+6. **One new dependency per feature maximum** — Avoid dep explosion. Prefer extending existing deps (OpenCV, FFmpeg, Pillow) over adding new ones.
 
 ---
 
-## Phase 0: Foundation & Safety Net
+## Completed Work (v1.0 - v1.9.26)
 
-**Goal**: Get the project into a state where large-scale changes are safe.
+The original Phases 0-6 are complete. Summary of what shipped:
 
-### 0.1 — Test Coverage Baseline
+| Phase | What Shipped | Status |
+|-------|-------------|--------|
+| **0.1** Test coverage | 867 tests, 22 test files, JSX mock harness, CI enforcement | DONE |
+| **0.2** Structured errors | `errors.py` with 13 error types, `safe_error()` auto-classification, frontend `enhanceError()` | DONE |
+| **0.3** Structured logging | JSON file handler, `[job_id]` correlation, `/logs/tail` endpoint, log levels audited | DONE |
+| **1.2** Job system | SQLite persistence, priority queue (WorkerPool), interrupted job recovery, job stats | DONE |
+| **2.1** Build system | Vite config, package.json, tsconfig.json scaffolded | DONE |
+| **3.1** Workflow engine | 6 built-in presets, server-side step execution, output chaining, cancellation | DONE |
+| **3.2** Contextual awareness | 35-feature scoring, `classify_clip()`, guidance messages, smart tab reordering | DONE |
+| **3.3** Preview before commit | Waveform preview, cut review panel, side-by-side color preview | DONE |
+| **3.4** Keyboard shortcuts | 8 default bindings, configurable registry, reference card, command palette (30+ entries) | DONE |
+| **4.1** Dependency resolution | 3-tier `safe_pip_install()`, `--target` fallback, post-install verification | DONE |
+| **4.2** Docker | Multi-stage Dockerfile, docker-compose with GPU variant, `.dockerignore` | DONE |
+| **4.3** Health monitoring | `/system/status`, status bar (CPU/RAM/GPU/jobs), exponential backoff reconnect | DONE |
+| **5.1** Lazy tab rendering | 5 heavy tabs deferred, `_tabRendered` tracking | DONE |
+| **5.2** Response streaming | NDJSON generators, batched/per-item/progress modes | DONE |
+| **5.3** Background indexing | SQLite FTS5 at `~/.opencut/footage_index.db`, WAL mode, auto-index | DONE |
+| **5.4** Parallel processing | ThreadPoolExecutor batch processing, GPU/CPU worker separation | DONE |
+| **6.1** Plugin system | Plugin loader, manifest validation, 2 example plugins, dynamic blueprint registration | DONE |
+| **6.2** i18n | `t()` function, `data-i18n` on ~200 elements, `en.json` with 417 keys | DONE |
+| **6.3** Preset export/import | `.opencut-preset` JSON export/import, settings bundling | DONE |
+| **6.4** Project templates | 6 built-in templates, save/apply, dropdown UI | DONE |
+| **Competitive upgrades** | BiRefNet default, Whisper turbo, distil models, audio-separator, ClearerVoice, CodeFormer, InsightFace, ACE-Step, Chatterbox, AI LUT, ProPainter, SeamlessM4T, BasicVSR++, PySceneDetect | DONE |
+| **35 bug-fix batches** | 600+ bugs fixed across 29 audit rounds, full codebase hardening | DONE |
 
-**Current state**: 3 test files, ~100 lines total. No frontend tests. conftest.py has basic Flask test client + CSRF fixture + FFmpeg media generators.
+**What remains from the original roadmap:**
 
-| Task | Detail |
-|------|--------|
-| **Route smoke tests** | Auto-generate one test per POST route: valid CSRF, minimal payload, assert 200 or valid job_id. Target: all 175+ endpoints have at least a "doesn't crash" test. Use conftest.py's `client` and `csrf_token` fixtures. |
-| **Core module unit tests** | For each `opencut/core/*.py` module, test the primary function with the generated test media from conftest.py (`generate_test_audio`, `generate_test_video`). Mock FFmpeg subprocess where needed for speed. |
-| **ExtendScript mock harness** | Create `tests/jsx_mock.js` — a fake Premiere DOM (`app.project.rootItem`, `app.project.activeSequence`, `ProjectItem`, `TrackItem`). Load `host/index.jsx` into Node.js with the mock. Test: `ocApplySequenceCuts`, `ocBatchRenameProjectItems`, `ocAddSequenceMarkers`, `ocAddNativeCaptionTrack`. |
-| **CI enforcement** | Update `.github/workflows/build.yml`: fail build if coverage < 60% (routes) or < 50% (core). Add `pytest-cov` to dev deps. |
-| **Pre-commit hooks** | Add ruff format check + pytest smoke suite to `.pre-commit-config.yaml`. |
-
-**Deliverable**: Coverage report. Every route callable without crash. Every core module's happy path tested.
-
-### 0.2 — Structured Error Taxonomy
-
-**Current state**: Routes return ad-hoc `{"error": "some string"}` or raise unhandled exceptions. No error codes. Toast messages mix "FFmpeg returned code 1" with "Something went wrong."
-
-| Task | Detail |
-|------|--------|
-| **Error code enum** | Create `opencut/errors.py` with categorized error codes: `WHISPER_MODEL_MISSING`, `GPU_OOM`, `FFMPEG_TIMEOUT`, `FFMPEG_CODEC_UNSUPPORTED`, `FILE_NOT_FOUND`, `FILE_PERMISSION_DENIED`, `INVALID_PARAMETER`, `DEPENDENCY_MISSING`, `RATE_LIMITED`, `JOB_CANCELLED`, `SERVER_BUSY`. Each code maps to: (a) HTTP status, (b) user-facing message template, (c) recovery suggestion. |
-| **Error response helper** | `def error_response(code, detail=None) -> tuple[dict, int]` — returns `{"success": false, "error_code": "GPU_OOM", "message": "Your GPU ran out of memory.", "suggestion": "Try reducing clip length or switch to CPU mode.", "detail": "CUDA error: out of memory"}` with correct HTTP status. |
-| **Migrate routes** | Replace all bare `return {"error": str(e)}, 500` patterns across all 11 route files with `error_response()` calls. Grep shows ~180 instances of `"error"` in route files. |
-| **Frontend error mapper** | In `main.js`, update `enhanceError()` to read `error_code` from API response and map to specific guidance. Fall back to `message` field for unknown codes. |
-
-**Deliverable**: Every API error returns a structured, actionable response. Frontend shows recovery steps, not stack traces.
-
-### 0.3 — Structured Logging
-
-**Current state**: `logging.info(f"Processing {filepath}")` scattered inconsistently. Crash log writes to `~/.opencut/crash.log` on 500s only.
-
-| Task | Detail |
-|------|--------|
-| **JSON log format** | Add `python-json-logger` to deps. Configure in `server.py` startup. Every log line includes: `timestamp`, `level`, `module`, `job_id` (from thread-local or context), `endpoint`, `duration_ms`. |
-| **Job correlation** | Thread-local `job_id` set by `@async_job` decorator, read by logger. Every log line during a job is traceable. |
-| **Log levels audit** | Grep all `logging.*` calls (~200). Ensure: DEBUG for verbose processing steps, INFO for job start/complete, WARNING for fallbacks/retries, ERROR for failures. Remove any that log secrets (API keys, tokens). |
-| **Log viewer endpoint** | `GET /logs/tail?lines=100&level=ERROR&job_id=xxx` — returns filtered log lines as JSON array. Wire to a "Logs" card in Settings tab. |
-
-**Deliverable**: Debugging a user-reported issue goes from "send me your crash.log" to "what's the job ID?"
+| Item | Phase | Status | Notes |
+|------|-------|--------|-------|
+| FastAPI migration | 1.1 | PLANNED | Big effort, mostly internal benefit. Defer until Wave 3. |
+| Process isolation (GPU) | 1.3 | PLANNED | Eliminates OOM crashes. Critical for heavy AI features. |
+| TypeScript migration | 2.2 | SCAFFOLDED | tsconfig.json exists. Incremental migration ongoing. |
+| UXP full parity | 7.1-7.3 | IN PROGRESS | UXP panel at ~85% parity. CEP end-of-life ~Sept 2026. |
 
 ---
 
-## Phase 1: Backend Modernization
+## Implementation Waves
 
-**Goal**: Migrate from Flask+threads to FastAPI+async without breaking the CEP/UXP panels.
+Features are organized into 7 waves based on dependency chains, shared infrastructure, and priority. Each wave is independently shippable. Feature numbers reference `features.md`.
 
-### 1.1 — FastAPI Parallel Server
+### Dependency Legend
 
-**Strategy**: Don't rewrite Flask. Stand up FastAPI alongside it. Proxy shared state. Migrate routes one blueprint at a time.
-
-| Task | Detail |
-|------|--------|
-| **FastAPI scaffold** | Create `opencut/api/` directory. `app.py` with FastAPI instance, CORS middleware (same `null`/`file://` origins), CSRF middleware ported from `security.py`. Uvicorn entrypoint. |
-| **Pydantic models** | For each route blueprint, create `opencut/api/models/<blueprint>.py` with request/response models. Replace all `safe_float()`/`safe_int()` hand-validation with Pydantic `Field(ge=0, le=100)` constraints. Generate from existing route code — each `request.json.get()` call maps to a model field. |
-| **OpenAPI auto-generation** | Remove manual `/openapi.json` endpoint. FastAPI generates it automatically. Add response models to every route for full schema. |
-| **Migrate system routes first** | Port `routes/system.py` (simplest, no jobs) to `api/routes/system.py` as FastAPI router. Verify: `/health`, `/info`, `/system/gpu`, dependency checks all work identically. Run old Flask + new FastAPI tests side-by-side. |
-| **Migrate remaining routes** | One blueprint per PR: system → settings → search → nlp → timeline → jobs → captions → audio → video (largest last). Each PR: write FastAPI router, add Pydantic models, write tests, verify parity with Flask route. |
-| **Port CSRF to middleware** | FastAPI middleware that checks `X-OpenCut-Token` header using same rotating token pool from `security.py`. |
-| **Port rate limiting** | FastAPI dependency injection: `Depends(rate_limit("model_install", max_concurrent=1))`. |
-
-**Deliverable**: All 175+ endpoints served by FastAPI. Flask code removed. Automatic API docs at `/docs`.
-
-### 1.2 — Async Job System
-
-**Current state**: `@async_job` spawns `threading.Thread`. Jobs stored in an in-memory dict with `threading.RLock`. No persistence across restarts. No priority. No retry.
-
-| Task | Detail |
-|------|--------|
-| **Job persistence** | SQLite database at `~/.opencut/jobs.db`. Table: `jobs(id, type, status, progress, message, result_json, error, created_at, started_at, completed_at, endpoint, payload_json)`. On server restart, mark all `running` jobs as `interrupted`. |
-| **Job retry** | `POST /jobs/retry/<job_id>` already exists in settings routes. Wire it to actually re-dispatch the original endpoint+payload from the DB. Add exponential backoff for auto-retry on transient errors (timeout, OOM). Max 3 retries. |
-| **Priority queue** | Replace simple list queue with priority levels: `critical` (user-initiated), `normal` (batch), `background` (indexing). Use `heapq` or SQLite ordering. |
-| **Concurrency control** | Config: `max_concurrent_jobs = 2` (1 GPU + 1 CPU). Job dispatcher checks GPU availability before scheduling GPU jobs. |
-| **WebSocket job streaming** | FastAPI WebSocket endpoint `/ws/jobs/<job_id>`. Real-time push replaces SSE polling. Fallback to SSE for CEP panels that don't support WebSocket well. |
-| **Job cleanup** | Cron-style cleanup: delete completed jobs older than 7 days from DB. Delete associated temp files. |
-
-**Deliverable**: Jobs survive server restarts. Failed jobs retry automatically. Multiple jobs can run concurrently (CPU + GPU).
-
-### 1.3 — Process Isolation for GPU Work
-
-**Current state**: All AI models load into the same Python process. WhisperX + Demucs + RealESRGAN competing for GPU memory = OOM crashes.
-
-| Task | Detail |
-|------|--------|
-| **Worker pool architecture** | Create `opencut/workers/` with a `WorkerManager` class. Workers are separate Python processes started via `multiprocessing` or `subprocess`. Each worker loads one model family (whisper, demucs, realesrgan, etc.). |
-| **IPC protocol** | Workers communicate via localhost HTTP (each worker is a minimal FastAPI on a random port) or via `multiprocessing.Queue`. Job dispatcher routes to appropriate worker based on job type. |
-| **GPU memory management** | Worker reports GPU memory usage on startup. Dispatcher won't schedule a GPU job if available VRAM < model's known requirement. Workers release GPU memory and exit after idle timeout (5 min). |
-| **Graceful degradation** | If GPU worker OOMs, catch the error, report to user with specific guidance ("This model needs 4GB VRAM, you have 2GB available. Switching to CPU mode."), and optionally re-dispatch to CPU worker. |
-
-**Deliverable**: No more OOM crashes from model conflicts. GPU utilization visible in UI.
+| Symbol | Meaning |
+|--------|---------|
+| **FFmpeg** | Pure FFmpeg filter — no Python deps beyond subprocess |
+| **Pillow** | Image composition — already installed |
+| **OpenCV** | Computer vision — already installed (`opencv-python-headless`) |
+| **Existing AI** | Uses models already in the codebase (Whisper, Demucs, face detection, etc.) |
+| **New dep** | Requires a new pip dependency |
+| **New model** | Requires downloading a new AI model (potentially large) |
+| **Pipeline** | Orchestrates existing modules — no new deps |
 
 ---
 
-## Phase 2: Frontend Architecture
+## Wave 1: Quick Wins — No New Dependencies
 
-**Goal**: Break the monolithic 6,850-line main.js and 3,100-line index.html into a maintainable, modular system.
+**Goal**: Ship 40+ features using only existing FFmpeg filters, Pillow, NumPy, and current AI models. Maximum user value with minimum risk.
 
-### 2.1 — Build System
+**Timeline**: 4-6 weeks
+**New deps**: Zero
+**New routes**: ~35
 
-**Current state**: No build system. Raw HTML/CSS/JS served directly. No minification, no tree-shaking, no source maps.
+### 1A — FFmpeg Filter Features (14 features)
 
-| Task | Detail |
-|------|--------|
-| **Vite setup** | Create `extension/com.opencut.panel/vite.config.js`. Input: `client/src/main.js`. Output: `client/dist/`. CEP loads `dist/index.html`. Vite dev server not needed (CEP has its own Chromium). |
-| **Entry point split** | `main.js` → `src/main.js` (50 lines: imports + init). Each feature area becomes a module: `src/tabs/cut.js`, `src/tabs/captions.js`, `src/tabs/audio.js`, etc. |
-| **CSS modules or scoped styles** | Each tab module imports its own CSS. Vite bundles them. Global design tokens stay in `src/styles/tokens.css`. Component styles in `src/styles/components/`. |
-| **HTML template system** | Replace 3,100-line monolithic HTML with JS-rendered templates. Each tab module exports a `render()` function that returns HTML string. Tab container calls `render()` on first visit (lazy). |
-| **Source maps** | Enable in Vite config. CEP Chromium DevTools can now map errors to original source files. |
-| **Hot reload for dev** | Vite watch mode + CEP reload shortcut. Edit a file, see changes in 2 seconds instead of manually reloading the panel. |
+These are pure FFmpeg filter additions — each is a new route calling `run_ffmpeg()` with a new filter graph.
 
-**Deliverable**: `npm run build` produces optimized bundle. `npm run dev` enables fast iteration. No behavior change for users.
+| # | Feature | Effort | Dep | Detail |
+|---|---------|--------|-----|--------|
+| 53.2 | Adaptive Deinterlacing | S | FFmpeg | `yadif`/`bwdif` filter. Auto-detect via `ffprobe` `field_order` or `idet` filter. |
+| 52.1 | Lens Distortion Correction | M | FFmpeg | `lenscorrection` filter with k1/k2 coefficients. Ship camera profile JSON (source: lensfun). |
+| 52.3 | Chromatic Aberration Removal | S | FFmpeg | `chromanr` filter or per-channel scale via `split`/`scale`/`merge`. |
+| 53.5 | Frame Rate Conversion (Optical Flow) | M | FFmpeg | `minterpolate` filter for up/down conversion. Preset modes. |
+| 44.1 | Timecode Burn-In Overlay | S | FFmpeg | `drawtext` with `%{pts\:hms}` or `timecode` option. Configurable position/font. |
+| 45.2 | AV1 Encoding Support | M | FFmpeg | `libaom-av1` or `libsvtav1` encoder. Add to export presets and social platform presets. |
+| 45.1 | ProRes Export on Windows | M | FFmpeg | `prores_ks` encoder. Profile selector (Proxy/LT/422/HQ/4444). |
+| 32.1 | Hardware-Accelerated Encoding | M | FFmpeg | Detect NVENC/QSV/AMF. Add `h264_nvenc`/`hevc_nvenc` codec options in export. |
+| 20.4 | Photosensitive Seizure Detection | S | FFmpeg | Frame-to-frame luminance delta analysis. Flag >3 flashes/sec per ITU-R BT.1702. |
+| 38.1 | GIF / WebP / APNG Export | S | FFmpeg | `gif`/`libwebp_anim` output format. Palette optimization via `palettegen`/`paletteuse`. |
+| 3.10 | Film Grain & Vignette (Enhanced) | S | FFmpeg | `noise` + `vignette` filters with presets (Super 8, 16mm, 35mm, VHS). |
+| 25.1 | Dialogue De-Reverb | M | FFmpeg | `arnndn` or `afftdn` with speech-optimized profile. |
+| 42.2 | Timelapse Deflicker | M | FFmpeg | `deflicker` filter or rolling-average luminance normalization per frame. |
+| 30.3 | Freeze Frame Insert | S | FFmpeg | Extract frame at timestamp, generate still clip of configurable duration, splice into sequence. |
 
-### 2.2 — TypeScript Migration
+### 1B — Pillow/Canvas Overlay Features (10 features)
 
-**Strategy**: Incremental. Rename `.js` → `.ts` one module at a time. Start with API layer (highest value — types catch mismatched payloads).
+Image composition overlays using existing Pillow renderer.
 
-| Task | Detail |
-|------|--------|
-| **tsconfig.json** | `strict: false` initially (allow implicit any). Target: ES2020 (CEP Chromium supports it). `allowJs: true` for gradual migration. |
-| **API types** | Create `src/api/types.ts` from FastAPI's OpenAPI schema (auto-generated). Every `api()` call gets typed request/response. Script to regenerate types from `/openapi.json`. |
-| **Core state types** | Type the global state: `currentJob: Job \| null`, `connected: boolean`, `csrfToken: string`, `sequenceInfo: SequenceInfo \| null`. |
-| **Tab module types** | As each tab module is extracted (Phase 2.1), type its params and DOM references. |
-| **Strict mode** | After all modules migrated, enable `strict: true`. Fix remaining ~200 implicit-any errors. |
+| # | Feature | Effort | Dep | Detail |
+|---|---------|--------|-----|--------|
+| 61.1 | Composition Guide Overlay | S | Pillow | Rule-of-thirds, golden ratio, center cross, safe areas on preview frame. Display-only. |
+| 36.1 | Platform Safe Zone Overlay | S | Pillow | TikTok/YouTube/Instagram UI element overlays on preview frame. JSON-driven zone definitions. |
+| 34.1 | Scrolling Credits Generator | M | Pillow | Bottom-to-top scroll rendered as video via Pillow frame sequence + FFmpeg encode. |
+| 34.3 | Lower Third Generator | M | Pillow | Name/title bar with configurable style presets. Burn into video at timestamp range. |
+| 20.3 | Color Blind Simulation Preview | S | Pillow | Apply CVD color matrix (deuteranopia, protanopia, tritanopia) to preview frame. |
+| 11.2 | Click & Keystroke Overlay | M | Pillow | Parse click/key logs → render ripple animations and key badges as overlay frames. |
+| 11.3 | Callout & Annotation Generator | M | Pillow | Numbered callouts, spotlight boxes, blur regions, arrows at timestamps. |
+| 18.2 | Retro VHS / CRT Effect | M | Pillow+FFmpeg | Scanlines, chroma shift, noise, tracking artifacts, date stamp. Preset chain. |
+| 18.3 | Glitch Effect Pack | M | Pillow+FFmpeg | Datamosh, RGB shift, block displacement, scan distortion. Per-frame render. |
+| 48.1 | Highlight Reel Auto-Assembly | M | Pipeline | Score clips by audio energy + motion → select top N → assemble with transitions + music. |
 
-**Deliverable**: Type-safe API calls. Autocomplete in IDE. Compile-time catch for payload mismatches.
+### 1C — Existing AI Extensions (10 features)
 
-### 2.3 — State Management
+Features that extend already-installed AI models with new analysis modes.
 
-**Current state**: State scattered across 20+ closure variables (`currentJob`, `connected`, `csrfToken`, `lastTimelineCuts`, `sequenceInfo`, `footageIndex`, `beatMarkerTimes`, etc.) plus DOM element values plus localStorage.
+| # | Feature | Effort | Dep | Detail |
+|---|---------|--------|-----|--------|
+| 55.3 | Profanity Bleep Automation | S | Existing AI | Whisper word timestamps + configurable word list → 1kHz tone or silence at flagged words. |
+| 61.2 | Shot Type Auto-Classification | M | Existing AI | Face size relative to frame (MediaPipe) → ECU/CU/MCU/MS/WS classification per scene. |
+| 29.1 | Shot Type Search & Tagging | M | Existing AI | Store shot type in footage index (FTS5). Enable search by shot type. |
+| 56.4 | Room Tone Auto-Generation | M | NumPy | Analyze quiet segments → spectral envelope → shape white noise to match → fill cuts. |
+| 61.3 | Intelligent Pacing Analysis | M | Existing AI | Scene detection cut points → mean/median/stddev shot lengths → genre benchmark comparison. |
+| 28.1 | Black Frame / Frozen Frame Detection | S | FFmpeg+OpenCV | `blackdetect` filter + frame differencing for frozen frames. Report timestamps. |
+| 28.2 | Audio Phase & Silence Gap Check | S | FFmpeg | `aphasemeter` + silence detection. Flag phase issues and unnatural gaps. |
+| 4.8 | Best Take Selection | M | Existing AI | Per-take scoring: audio quality (SNR), face visibility, sharpness, duration. Rank takes. |
+| 11.5 | Dead-Time Detection & Speed Ramp | S | Existing AI | Frame differencing (scene_detect) + silence detection → speed-ramp or cut dead time. |
+| 52.4 | Lens Profile Auto-Detection | S | FFmpeg | Parse camera model from `ffprobe` metadata → look up in lensfun JSON database. |
 
-| Task | Detail |
-|------|--------|
-| **Reactive store** | Create `src/store.ts` — a simple pub/sub store (no framework dependency). State tree with typed slices: `{ connection: {...}, job: {...}, media: {...}, settings: {...} }`. |
-| **Subscribe pattern** | `store.subscribe("job.status", (newVal, oldVal) => updateJobUI())`. Tab modules subscribe to their relevant slices. No more manual DOM updates scattered across 50 functions. |
-| **Persistence layer** | `store.persist("settings")` auto-syncs to localStorage. Replace all manual `localStorage.getItem`/`setItem` calls (grep shows ~30). |
-| **DevTools integration** | `window.__OPENCUT_STORE__` exposes state for debugging. Log state transitions in dev mode. |
+### 1D — Split-Screen & Comparison (6 features)
 
-**Deliverable**: Single source of truth. Any component can react to any state change. Debugging = inspect the store.
+New composite video modes using FFmpeg `overlay`/`hstack`/`vstack`.
 
-### 2.4 — Component System
+| # | Feature | Effort | Dep | Detail |
+|---|---------|--------|-----|--------|
+| 57.1 | Split-Screen Layout Templates | M | FFmpeg | JSON layout definitions (cells with x/y/w/h %). Composite via `overlay` filter chain. |
+| 57.2 | Reaction Video Template | M | FFmpeg | Main content + PiP webcam. Auto-sync via audio cross-correlation. Audio ducking. |
+| 57.3 | Before/After Comparison Export | M | FFmpeg | `hstack`/`vstack`, animated wipe via `overlay` + keyframed crop. Label overlay. |
+| 57.4 | Multi-Cam Grid View Export | M | FFmpeg | 2x2 to 4x4 grid. Optional active-speaker highlight border from diarization data. |
+| 6.3 | Side-by-Side Before/After Preview | M | FFmpeg | Preview modal showing original vs processed frame. Slider wipe in panel. |
+| 3.9 | Multi-Camera Audio Sync | M | FFmpeg+NumPy | Audio fingerprint cross-correlation for time offset detection. Multicam XML output. |
 
-**Goal**: Each UI section is a self-contained component with its own template, styles, and logic.
-
-| Task | Detail |
-|------|--------|
-| **Base component class** | `src/components/Component.ts` — `render()`, `mount(container)`, `destroy()`, `on(event, handler)`. No framework, just a pattern. |
-| **Card component** | `CardComponent({ title, description, children })` — replaces the 100+ manual `<section class="card">` blocks in HTML. |
-| **Form components** | `SliderField`, `SelectField`, `CheckboxField`, `FilePickerField` — each handles its own label, hint, validation, disabled state. Eliminates 200+ lines of manual form HTML. |
-| **Tab components** | `TabContainer` manages tab switching, lazy rendering, and cleanup. Each tab is a component that registers its sub-tabs. |
-| **Toast system** | `ToastManager` component. Queue-based, auto-dismiss, action buttons. Replaces the current scattered `showToast()` calls. |
-
-**Deliverable**: Adding a new feature = create one component file. No touching index.html, no touching main.js init.
-
----
-
-## Phase 3: UX Transformation
-
-**Goal**: Turn OpenCut from a feature catalog into a workflow tool.
-
-### 3.1 — Workflow Engine
-
-**Current state**: Every feature is an independent card with its own form. No concept of chaining operations.
-
-| Task | Detail |
-|------|--------|
-| **Workflow definition format** | JSON schema: `{ name: "Clean Interview", steps: [{ action: "silence/detect", params: {...} }, { action: "silence/remove" }, { action: "audio/normalize", params: {...} }] }`. Stored in `~/.opencut/workflows/`. |
-| **Workflow runner** | Backend endpoint `POST /workflow/run` accepts workflow JSON + input file. Executes steps sequentially. Each step's output feeds the next step's input. Progress: `step 2/5 — Normalizing audio`. |
-| **Workflow builder UI** | Drag-and-drop step builder in the existing Workflows section (Settings tab). Each step is a card with collapsible params. Add/remove/reorder steps. Preview estimated time. |
-| **Preset workflows** | Ship 6 built-in workflows: (1) Clean Interview, (2) Podcast Polish, (3) Social Media Clip, (4) Music Video, (5) Documentary Rough Cut, (6) YouTube Upload Ready. |
-| **One-click workflows** | Top of each main tab shows "Quick Actions" — the most common workflow for that context. Cut tab: "Clean Up" button. Audio tab: "Studio Polish" button. Captions tab: "Auto Subtitle" button. |
-
-**Deliverable**: 80% of users complete their task with one click. Power users build custom workflows.
-
-### 3.2 — Contextual Awareness
-
-**Current state**: Panel shows all 40+ sub-tabs regardless of what's selected in Premiere.
-
-| Task | Detail |
-|------|--------|
-| **Clip type detection** | ExtendScript queries active clip metadata: has audio? has video? duration? codec? frame rate? Track type? Send to panel via `evalScript`. |
-| **Feature relevance scoring** | Each feature declares its relevance: `{ requires: ["audio"], suggests: ["talking_head"], irrelevant: ["image_only"] }`. Panel scores each feature against clip metadata. |
-| **Smart tab ordering** | Sub-tabs reorder by relevance score. Irrelevant features move to "More" overflow. Talking-head clip: Silence, Captions, Denoise float to top. B-roll clip: Color, Speed, Transitions float to top. |
-| **Empty state guidance** | When no clip is selected: "Select a clip in your timeline to see relevant tools." When clip type is detected: "Interview clip detected — try Clean Up for quick results." |
-
-**Deliverable**: Panel feels like it understands what you're editing. Reduces cognitive load from 40+ options to 5-10 relevant ones.
-
-### 3.3 — Preview Before Commit
-
-**Current state**: Click "Detect Silence" → wait → cuts applied (or not). No visual feedback before commit.
-
-| Task | Detail |
-|------|--------|
-| **Waveform preview for silence** | After silence detection, render waveform with colored regions (green = keep, red = remove). User can drag region boundaries before applying. Uses `POST /audio/waveform` data. Render in `<canvas>`. |
-| **Caption preview overlay** | After caption generation, show scrollable text with timestamps. Click a line to seek in Premiere. Edit text inline before applying. |
-| **Color grade A/B** | After LUT/color correction, show source vs. processed frame side-by-side. Use `POST /video/preview-frame` to generate comparison frames. |
-| **Cut list review** | After any cut operation (silence, full edit, auto-edit), show a table: `Start → End | Duration | Action | Reason`. Checkboxes to include/exclude individual cuts. "Apply Selected" button. |
-| **Undo integration** | Before applying any timeline modification, create a Premiere undo group via ExtendScript `app.project.activeSequence.undoGroupStart("OpenCut: Remove Silence")`. After, `undoGroupEnd()`. User can Cmd+Z to undo the entire batch. |
-
-**Deliverable**: Users feel in control. No more "click and pray." Errors caught before they happen.
-
-### 3.4 — Keyboard Shortcuts & Command Palette
-
-**Current state**: Command palette exists (Ctrl+K) with ~30 commands. No customizable shortcuts. No vim-style composition.
-
-| Task | Detail |
-|------|--------|
-| **Shortcut registry** | `src/shortcuts.ts` — map of action IDs to key combos. Default set: `Ctrl+Shift+S` (silence), `Ctrl+Shift+C` (captions), `Ctrl+Shift+N` (normalize), `Ctrl+Shift+D` (denoise). |
-| **Customization UI** | Settings → Keyboard Shortcuts card. Table of all actions with editable key combos. Conflict detection. Reset to defaults. |
-| **Shortcut persistence** | Store in localStorage `opencut_shortcuts`. Merge with defaults on load. |
-| **Command palette enhancement** | Fuzzy search (not just startsWith). Show keyboard shortcut next to each command. Recently used commands float to top. "Run workflow..." sub-menu. |
-
-**Deliverable**: Power users never touch the mouse for common operations.
+**Wave 1 Total: ~40 features, 0 new dependencies, ~35 new routes**
 
 ---
 
-## Phase 4: Installation & Reliability
+## Wave 2: Pipeline Orchestration — Chain Existing Modules
 
-**Goal**: Make OpenCut trivially installable and impossible to break.
+**Goal**: Build high-value composite workflows that chain existing modules into new products. These are the features that competitors charge monthly subscriptions for.
 
-### 4.1 — Dependency Resolution Overhaul
+**Timeline**: 3-5 weeks (can overlap with Wave 1)
+**New deps**: Zero (all existing)
+**New routes**: ~20
 
-**Current state**: `safe_pip_install()` has a 3-tier fallback (system, --user, --target). Still fails with Errno 13 on locked directories. No progress feedback during install. No verification after install.
+### 2A — Content Repurposing Pipelines (5 features)
 
-| Task | Detail |
-|------|--------|
-| **Isolated venv per feature group** | Create venvs at `~/.opencut/envs/whisper/`, `~/.opencut/envs/demucs/`, etc. Each feature group gets its own Python environment. No cross-contamination. No system pip. |
-| **Install with progress** | `safe_pip_install()` returns a generator/callback with progress. Parse pip's `--progress-bar` output. Stream to frontend via SSE during install. Show: "Installing WhisperX... Downloading pytorch (340MB/1.2GB)". |
-| **Post-install verification** | After pip install, attempt `import <package>` in a subprocess. If it fails, report the specific error (missing CUDA, wrong Python version, missing C compiler) with actionable guidance. |
-| **Pre-built wheels** | Host pre-compiled wheels for Windows (the hardest platform) on a CDN/GitHub Releases. `safe_pip_install()` checks CDN first before falling back to PyPI. Eliminates "need Rust compiler" errors. |
-| **Dependency dashboard enhancement** | Show per-feature: installed version, latest version, disk usage, GPU requirement, install/update/remove buttons. Not just "installed: yes/no". |
+| # | Feature | Effort | Dep | Detail |
+|---|---------|--------|-----|--------|
+| 58.1 | Long-Form to Multi-Short Extraction | L | Pipeline | Transcribe → LLM highlights (N clips) → per-clip: trim + face-reframe 9:16 + burn captions + export. Folder of numbered shorts + metadata CSV. |
+| 58.4 | Podcast Episode Bundle | M | Pipeline | Denoise + normalize → clean audio export → transcribe → chapters → highlight clips → audiogram → show notes → transcript. All outputs in timestamped folder. |
+| 54.4 | AI Video Summary / Condensed Recap | M | Pipeline | Scene detect → transcript LLM analysis → engagement scoring → select top N shots → trim 3-5s each → assemble with crossfades. Configurable target duration. |
+| 58.2 | Video-to-Blog-Post Generator | M | Pipeline | Transcribe → LLM structured article with section headings → extract key frames at section boundaries → assemble markdown + images folder. |
+| 58.3 | Social Media Caption Generator | S | Pipeline | Per-exported-clip: extract transcript → LLM generates platform-optimized post caption (char limits, hashtags, tone). JSON output alongside each clip. |
 
-**Deliverable**: "Install WhisperX" works on the first click, every time, on every machine.
+### 2B — Advanced Workflow Presets (8 features)
 
-### 4.2 — Docker Deployment Option
+| # | Feature | Effort | Dep | Detail |
+|---|---------|--------|-----|--------|
+| 53.3 | Old Footage Restoration Pipeline | L | Pipeline | Stabilize → deinterlace (53.2) → denoise (temporal) → upscale (Real-ESRGAN) → color restore → frame rate conversion. VHS/8mm/Early Digital presets. |
+| 40.3 | Video Podcast to Audio-Only | S | FFmpeg | Extract audio track, normalize, denoise, export as podcast-ready MP3/WAV with ID3 tags. |
+| 40.4 | Podcast Show Notes Generator | M | Pipeline | Transcribe → LLM: summary, key topics with timestamps, pull quotes, mentioned resources, chapter markers. Markdown/HTML output. |
+| 12.3 | Auto Montage Builder | M | Pipeline | Score clips (audio energy + motion) → select top N → detect beats in music track → trim clips to beat intervals → concatenate with transitions. |
+| 14.1 | Paper Edit / Script Sync | L | Pipeline | Import script text → fuzzy-match against transcript → generate organized clip assembly with confidence scores. |
+| 4.1 | Watch Folder / Hot Folder | M | Pipeline | Monitor directory for new files → auto-run configured workflow → output to destination folder. Background polling with configurable interval. |
+| 4.2 | Render Queue | M | Pipeline | Queue multiple export jobs with different settings. Sequential execution with progress tracking. Notification on batch completion. |
+| 5.1 | Multi-Platform Batch Publish | L | Pipeline | Single source → batch export for YouTube + TikTok + Instagram + LinkedIn with per-platform reframe, caption style, loudness target, and metadata. |
 
-| Task | Detail |
-|------|--------|
-| **Dockerfile** | Multi-stage build: (1) Python 3.12 + CUDA base, (2) pip install all deps, (3) copy OpenCut source, (4) bundle FFmpeg. Final image: ~8GB with all models, ~2GB without. |
-| **docker-compose.yml** | `opencut-server` service with GPU passthrough (`deploy.resources.reservations.devices`). Volume mount for `~/.opencut/` (models, config, jobs DB). Port 5679 exposed. |
-| **Model volume** | Separate named volume for AI models (`~/.opencut/models/`). Persists across container rebuilds. First-run downloads models on demand. |
-| **Health check** | Docker HEALTHCHECK hits `/health` endpoint. Auto-restart on failure. |
-| **One-liner install** | `docker run -d --gpus all -p 5679:5679 -v opencut-data:/root/.opencut opencut/server:latest` |
+### 2C — Composite Feature Enhancements (4 features)
 
-**Deliverable**: Zero-config deployment for users comfortable with Docker. Guaranteed reproducible environment.
+| # | Feature | Effort | Dep | Detail |
+|---|---------|--------|-----|--------|
+| 24.1 | Shot-Change-Aware Subtitle Timing | M | Pipeline | Scene detection (existing) → post-process captions: split at cut boundaries with minimum gap. Integrate into caption generation pipeline. |
+| 16.1 | Beat-Synced Auto-Edit | L | Pipeline | Detect beats (existing librosa) → scene detect → align cuts to nearest beat → assemble. Music video editing automation. |
+| 36.4 | Vertical-First Intelligent Reframe | M | Pipeline | Saliency detection + face tracking → auto-crop to 9:16 with smooth path. Better than center-crop for non-face content. |
+| 30.1 | Ripple Trim / Gap Close | M | ExtendScript | After cut application, auto-close gaps by rippling subsequent clips. ExtendScript `removeEmptyTrackItems()`. |
 
-### 4.3 — Health Monitoring & Crash Recovery
-
-**Current state**: Health check is a simple `/health` ping. No GPU monitoring. No crash recovery. Server dies = user must manually restart.
-
-| Task | Detail |
-|------|--------|
-| **System status endpoint** | `GET /system/status` returns: CPU usage, RAM usage, GPU VRAM used/total, disk space in output dir, active jobs count, queue depth, uptime, Python version, CUDA version. |
-| **Status bar in panel** | Persistent footer bar: `● Connected | GPU: 2.1/8GB | Jobs: 1 running, 2 queued`. Updates every 5 seconds. Red indicators for: disconnected, GPU unavailable, disk full. |
-| **Server auto-restart** | Panel detects disconnection → attempts `/health` with backoff → if server process died, re-launch it (via the existing VBS launcher or direct `subprocess`). Show "Reconnecting..." banner with progress. |
-| **Job recovery** | On server restart, check `jobs.db` for interrupted jobs. Show banner: "1 job was interrupted. [Retry] [Dismiss]". Retry re-dispatches with original params. |
-| **Crash telemetry (opt-in)** | On crash, collect: error code, endpoint, Python version, GPU model, OS version. No file contents or paths. Send to a telemetry endpoint (opt-in with clear toggle in Settings). |
-
-**Deliverable**: The panel always recovers. Users never see "connection lost" without a path back.
+**Wave 2 Total: ~17 features, 0 new dependencies, ~20 new routes**
 
 ---
 
-## Phase 5: Performance & Scale
+## Wave 3: Architecture & Infrastructure
 
-**Goal**: Handle large projects (1000+ clips, 4K+ footage, hour-long timelines) without choking.
+**Goal**: Complete the remaining architectural work that enables heavy AI features in Waves 4-7. These are not user-facing but are prerequisites for scale.
 
-### 5.1 — Lazy Tab Rendering
+**Timeline**: 6-10 weeks (runs in parallel with Waves 1-2)
+**Dependencies**: Internal refactoring
 
-**Current state**: All 40+ sub-tabs exist in the DOM simultaneously. 100+ form controls initialized on page load.
+### 3A — Process Isolation for GPU Workers (P0)
 
-| Task | Detail |
-|------|--------|
-| **Tab lifecycle** | `TabManager` creates tab DOM only on first visit. Destroys DOM after navigating away (or keeps the last 3 visited tabs cached). |
-| **Measured impact** | Profile current memory usage vs. lazy. Expected: 150MB → 40MB DOM footprint. |
-| **Skeleton loading** | Show lightweight placeholder (pulsing card outlines) during tab render. Feels instant even if render takes 50ms. |
-
-### 5.2 — Response Streaming
-
-**Current state**: Large responses (caption lists with 500+ segments, scene detection with 200+ scenes) are returned as one JSON blob.
+The single most important infrastructure change. Every AI feature in Waves 4-7 benefits from this.
 
 | Task | Detail |
 |------|--------|
-| **Streaming JSON** | For endpoints that return large arrays, use NDJSON (newline-delimited JSON). Each line is one item. Frontend parses incrementally and updates UI progressively. |
-| **Chunked caption loading** | Caption endpoints return segments in batches of 50. Frontend renders first batch immediately, loads rest in background. User sees results in <1s instead of waiting 5s for full response. |
-| **Thumbnail streaming** | `POST /export/thumbnails` currently generates all then returns. Switch to: generate one, stream it, generate next. User sees thumbnails appearing one by one. |
+| **Worker pool architecture** | `opencut/workers/` with `WorkerManager`. Workers are separate Python processes per model family (whisper, demucs, realesrgan, depth, generation). |
+| **IPC protocol** | Workers communicate via localhost HTTP (minimal Flask on random port) or `multiprocessing.Queue`. Job dispatcher routes by type. |
+| **GPU memory management** | Worker reports VRAM on startup. Dispatcher checks available VRAM against model's known requirement before scheduling. Workers exit after 5-min idle to free VRAM. |
+| **Graceful degradation** | GPU OOM → specific guidance ("Model needs 4GB VRAM, you have 2GB. Switching to CPU.") → optional CPU re-dispatch. |
+| **Model registry** | `models.json` mapping model name → VRAM requirement, download size, expected load time. UI shows this info. |
 
-### 5.3 — Background Indexing
+**Deliverable**: No more OOM crashes from model conflicts. GPU utilization visible in status bar.
 
-**Current state**: Footage search requires manual "Index" button click. Index is stored in memory (lost on restart).
+### 3B — UXP Full Parity & CEP Migration (P0)
 
-| Task | Detail |
-|------|--------|
-| **Auto-index on project open** | When panel connects and detects a Premiere project, auto-start background indexing of all project items. Low-priority job that yields to user-initiated work. |
-| **Persistent index** | Store footage index in SQLite (`~/.opencut/footage_index.db`). Keyed by project path + item nodeId. Incremental: only re-index changed/new items. |
-| **Search speed** | Full-text search with SQLite FTS5. Sub-100ms search across 10,000+ clips. |
-
-### 5.4 — Parallel Processing
+CEP end-of-life is approximately September 2026. UXP must be production-ready before then.
 
 | Task | Detail |
 |------|--------|
-| **Batch parallelism** | When batch-processing multiple clips (batch export, batch color grade), process N clips in parallel (N = CPU cores or 2 for GPU jobs). Current: serial, one at a time. |
-| **Pipeline parallelism** | In workflows, start the next step's download/preprocessing while the current step finishes. Example: while silence detection runs on CPU, start loading the Whisper model for captions on GPU. |
+| **Shared component library** | `extension/shared/` with framework-agnostic components. Both CEP and UXP import from here. Build system outputs two bundles. |
+| **Feature registry** | `features.json` defines every feature: id, label, endpoint, params schema, requires. Both panels auto-generate UI from this. Adding a feature = one JSON entry + one backend route. |
+| **UXP feature gap closure** | Port remaining ~15% of CEP features to UXP. Mostly: workflow builder, full settings panel, plugin UI. |
+| **Native UXP timeline access** | Replace ExtendScript `evalScript()` with direct `premierepro` UXP module for timeline read/write. 10x faster. |
+| **Premiere menu integration** | Right-click → "OpenCut: Remove Silence" / "Add Captions" / "Normalize Audio" via UXP API. |
+| **CEP deprecation plan** | Mark CEP panel as "legacy" in docs. Freeze CEP feature additions. All new features UXP-only after Wave 3. |
 
-**Deliverable**: Large projects feel as responsive as small ones. Background work happens without user action.
+**Deliverable**: UXP panel at 100% parity. CEP can be removed when Adobe enforces it.
+
+### 3C — FastAPI Migration (P3 — Deferred)
+
+Low priority. Flask works fine at current scale. Migrate only if:
+- Request validation boilerplate becomes unmanageable (>300 routes)
+- WebSocket needs outgrow the current `websockets` library
+- Auto-generated OpenAPI docs become essential for plugin developers
+
+If triggered, migrate one blueprint at a time (system → settings → search → nlp → timeline → jobs → captions → audio → video). Pydantic models replace `safe_float()`/`safe_int()` hand-validation.
+
+### 3D — TypeScript Migration (P3 — Incremental)
+
+Continue incremental migration as files are touched. Priority order:
+1. API layer (`src/api/types.ts` from OpenAPI schema)
+2. Store/state management
+3. Tab modules as they're refactored for new features
+
+No dedicated sprint. Piggyback on feature work.
 
 ---
 
-## Phase 6: Ecosystem & Polish
+## Wave 4: New Feature Domains — Moderate Dependencies
 
-**Goal**: Make OpenCut a platform, not just a tool.
+**Goal**: Add new feature domains that require 1-2 new dependencies each but significantly expand OpenCut's capability.
 
-### 6.1 — Plugin System
+**Timeline**: 6-8 weeks (after Wave 1, can overlap with Wave 3)
+**New deps**: 4-6 new pip packages
+**New routes**: ~30
 
-| Task | Detail |
-|------|--------|
-| **Plugin manifest** | `plugin.json`: `{ name, version, author, description, routes: [...], ui: { tab, icon, component } }`. Plugins are Python packages with FastAPI routers + optional frontend components. |
-| **Plugin loader** | Server scans `~/.opencut/plugins/` on startup. Registers plugin routes under `/plugins/<name>/` prefix. Frontend loads plugin UI into a "Plugins" tab. |
-| **Plugin marketplace** | GitHub-based registry. `GET /plugins/registry` fetches available plugins. One-click install from UI. |
-| **Example plugins** | Ship 2 reference plugins: (1) "Timecode Watermark" — burns timecode overlay on exports. (2) "Clip Notes" — adds searchable notes to project items. |
+### 4A — Privacy & Content Redaction (5 features)
 
-### 6.2 — Localization
+Shared infrastructure: object detection framework, tracking pipeline, audio masking.
 
-**Current state**: All 3,100+ lines of HTML contain hardcoded English strings.
+| # | Feature | Effort | New Dep | Detail |
+|---|---------|--------|---------|--------|
+| 55.1 | License Plate Detection & Blur | M | `paddleocr` or YOLO plate model | Detect plates per frame → track with IoU → Gaussian blur on tracked regions. |
+| 55.3 | Profanity Bleep Automation | S | None (done in Wave 1) | — |
+| 55.2 | OCR-Based PII Redaction | L | `paddleocr` (shared with 55.1) | OCR → regex PII patterns (SSN, phone, email, CC) → NER for names → track text regions → blur. |
+| 55.4 | Document & Screen Redaction | M | OpenCV (existing) | Edge detection → perspective transform → classify as screen/document/whiteboard → blur surface. |
+| 55.5 | Audio Speaker Anonymization | M | Existing (pedalboard) | Diarize → target speaker segments → pitch shift + formant shift or TTS resynthesis. |
 
-| Task | Detail |
-|------|--------|
-| **i18n framework** | `initI18n()` already exists in main.js (currently a stub). Implement: load locale JSON from `client/locales/en.json`. `t("silence.detect_button")` returns localized string. |
-| **String extraction** | Script to extract all user-visible strings from HTML (button text, labels, descriptions, hints, error messages) into `en.json`. ~800 strings estimated. |
-| **Locale files** | Start with: English, Spanish, Japanese, Portuguese, Chinese (Simplified). These cover ~70% of Premiere's user base. |
-| **RTL support** | CSS logical properties (`margin-inline-start` instead of `margin-left`). Test with Arabic locale. |
+**New dependency**: `paddleocr` (or reuse existing Tesseract if sufficient). One dep serves 55.1 + 55.2.
 
-### 6.3 — Collaboration & Sharing
+### 4B — Camera & Lens Correction (3 remaining features)
 
-| Task | Detail |
-|------|--------|
-| **Preset export/import** | Export: serialize all settings for a feature (silence thresholds, caption styles, color presets) as a `.opencut` file (JSON with metadata). Import: drag-drop or file picker. |
-| **Workflow sharing** | Workflows exported as `.opencut-workflow` files. Include all step definitions and default params. Importable via UI or command palette. |
-| **Team presets** | Shared network folder for presets. Settings → Team Presets → point to a folder. All team members see the same presets. |
+| # | Feature | Effort | New Dep | Detail |
+|---|---------|--------|---------|--------|
+| 52.2 | Rolling Shutter Correction | L | `gyroflow` CLI (subprocess) | Integrate Gyroflow as subprocess with lens profiles. Parse gyro metadata from GoPro/DJI. |
+| 13.4 | LOG / Camera Profile Pipeline | M | None | Auto-detect LOG profile from ffprobe metadata → apply bundled technical LUT (free Sony/Canon/Panasonic LUTs). |
+| 43.4 | Color Space Auto-Detection | M | None | Read `color_primaries`/`transfer_characteristics` from ffprobe → auto-apply correct input transform. |
 
-### 6.4 — Project Templates
+**New dependency**: `gyroflow` CLI (optional, subprocess only — not a pip package).
 
-| Task | Detail |
-|------|--------|
-| **Template definitions** | JSON files: `{ name: "YouTube Video", export: { format: "mp4", codec: "h264", resolution: "1080p", bitrate: "15M" }, captions: { style: "youtube-default" }, audio: { loudness: -14, normalize: true }, aspect: "16:9" }`. |
-| **Template selection** | New project wizard or Settings → Active Template. All export/audio/caption defaults auto-configure. |
-| **Built-in templates** | YouTube, Instagram Reels, TikTok, Podcast (audio-only), Cinema (ProRes 4K), Broadcast (EBU R128 loudness). |
-| **Custom templates** | "Save Current Settings as Template" button. Names and saves all current config as a reusable template. |
+### 4C — Spectral Audio Editing (4 features)
 
----
+Shared infrastructure: STFT analysis/resynthesis pipeline.
 
-## Phase 7: UXP Parity & Native Integration
+| # | Feature | Effort | New Dep | Detail |
+|---|---------|--------|---------|--------|
+| 56.4 | Room Tone Auto-Generation | M | None (done in Wave 1) | — |
+| 56.3 | AI Environmental Noise Classifier | M | `tensorflow-lite` or `onnxruntime` (existing) | YAMNet model (521 sound classes, TFLite). Classify → selective removal via spectral masking. |
+| 56.2 | Spectral Repair / Frequency Removal | M | `librosa` (existing) | STFT → identify persistent spectral peaks (hum/buzz) → attenuate → inverse STFT. Auto-detect mode. |
+| 56.1 | Visual Spectrogram Editor | L | `librosa` (existing) | FFmpeg `showspectrumpic` or librosa STFT → zoomable canvas in panel → brush tool mask → inverse STFT reconstruction. |
 
-**Goal**: UXP panel matches CEP feature-for-feature, then surpasses it with native APIs.
+**New dependency**: None if using `onnxruntime` (already installed) for YAMNet. Otherwise `tflite-runtime` (lightweight).
 
-### 7.1 — Shared UI Core
+### 4D — Proxy & Media Management (4 features)
 
-**Current state**: CEP and UXP panels share zero code. 211KB HTML + 311KB JS (CEP) vs 46KB HTML + 68KB JS (UXP).
+| # | Feature | Effort | New Dep | Detail |
+|---|---------|--------|---------|--------|
+| 60.1 | Auto Proxy Generation | L | None | Detect clips >1080p → FFmpeg scale to target res + CRF 28 → store in `~/.opencut/proxies/` with manifest. Background job. |
+| 60.2 | Proxy-to-Full-Res Swap on Export | S | None | Query timeline clip paths via ExtendScript → check against proxy manifest → verify originals exist → report. |
+| 60.3 | Media Relinking Assistant | M | None | ExtendScript: enumerate offline items. Python: recursive search by filename + size matching. Batch relink UI. |
+| 60.4 | Duplicate Media Detection | M | None | File size grouping → partial hash (first+last 64KB) → full hash for matches. Optional pHash for content matches. |
 
-| Task | Detail |
-|------|--------|
-| **Shared component library** | `extension/shared/` directory with framework-agnostic components. Both CEP and UXP import from here. Build system outputs two bundles. |
-| **Feature registry** | `features.json` defines every feature: id, label, description, endpoint, params schema, requires (audio/video/gpu). Both panels read this and auto-generate UI. Adding a feature = add one JSON entry + one backend route. |
-| **UXP feature gap closure** | Port all 40+ CEP sub-tabs to UXP. Estimated: 30 are direct ports (same HTTP calls), 10 need UXP-specific adaptations (native file handling, timeline API). |
+**New dependency**: None.
 
-### 7.2 — Native UXP Timeline Access
+### 4E — Pro Color Science — First Pass (4 features)
 
-**Current state**: CEP uses ExtendScript `evalScript()` for all timeline operations. Round-trip: JS → CEP → ExtendScript → Premiere → ExtendScript → CEP → JS. Slow, serialization-heavy, error-prone.
+| # | Feature | Effort | New Dep | Detail |
+|---|---------|--------|---------|--------|
+| 13.1 | Real-Time Color Scopes | L | FFmpeg+Pillow | FFmpeg `waveform`, `vectorscope`, `histogram` filters render scope images. Display as image grid in panel. |
+| 13.5 | Film Stock Emulation | M | None | Custom 3D LUTs per stock (Kodak/Fuji) + grain overlay + gate weave + halation via blend. Preset package. |
+| 13.4 | LOG Camera Profile Pipeline | M | None (listed in 4B) | — |
+| 43.1 | ACES Color Pipeline | L | None | ACES IDT/ODT via FFmpeg `colorspace` + `lut3d`. Bundled ACES LUTs (free from AMPAS). |
 
-| Task | Detail |
-|------|--------|
-| **Direct timeline read** | UXP's `premierepro` module provides `app.project.activeSequence` directly. Read track items, markers, in/out points without ExtendScript. |
-| **Direct timeline write** | Apply cuts, add markers, rename clips through native UXP API. No serialization. No evalScript latency. |
-| **Performance comparison** | Benchmark: apply 100 cuts via ExtendScript vs UXP native. Expected: 10x faster (eliminate JSON serialization round-trips). |
-| **Hybrid mode** | For Premiere 25.6+ features not yet in UXP API, fall back to ExtendScript via UXP's `script.evalScript()`. Feature-detect at runtime. |
+**New dependency**: None (FFmpeg + bundled LUT files).
 
-### 7.3 — Premiere Menu Integration
-
-| Task | Detail |
-|------|--------|
-| **Context menu items** | Right-click a clip in Premiere → "OpenCut: Remove Silence", "OpenCut: Add Captions", "OpenCut: Normalize Audio". UXP API supports custom menu items. |
-| **Keyboard shortcut registration** | Register shortcuts in Premiere's shortcut system (not just panel-internal). `Ctrl+Alt+S` triggers silence removal from anywhere in Premiere. |
-| **Panel auto-focus** | When a context menu action is triggered, panel opens and navigates to the relevant tab with the selected clip pre-loaded. |
+**Wave 4 Total: ~18 features (excluding duplicates from Wave 1), 1-2 new deps, ~30 new routes**
 
 ---
 
-## Execution Timeline
+## Wave 5: AI Dubbing & Voice Translation
+
+**Goal**: Build the end-to-end AI dubbing pipeline — the single highest-value new AI capability. This is what ElevenLabs, HeyGen, and Rask.ai charge $50-100/month for.
+
+**Timeline**: 4-6 weeks (after Wave 3A process isolation is ready)
+**Prerequisite**: Wave 3A (GPU process isolation) — dubbing loads multiple large models sequentially
+**New deps**: Minimal (leverages existing Chatterbox, Whisper, Demucs, SeamlessM4T)
+
+| # | Feature | Effort | Detail |
+|---|---------|--------|--------|
+| 62.1 | End-to-End AI Dubbing Pipeline | XL | Transcribe → translate (SeamlessM4T) → voice-clone TTS (Chatterbox) with duration constraints → stem-separate original (Demucs, remove dialogue, keep music/SFX) → mix dubbed dialogue + original music/SFX → export. |
+| 62.2 | Isochronous Translation | L | LLM-assisted translation constrained by segment duration. Iterate: translate → estimate TTS duration from syllable count → if too long, ask LLM to rephrase shorter → if too short, expand. Target +-10% of original. |
+| 62.3 | Multi-Language Audio Track Management | M | FFmpeg `-map` to mux multiple audio streams with language metadata. Panel UI: track list with language dropdown, add/remove, default flag. Export multi-track MKV/MP4 or per-language files. |
+| 62.4 | Emotion-Preserving Voice Translation | L | Extract prosody (F0 contour via librosa, RMS energy, speaking rate) from original → generate TTS with neutral prosody → transfer original prosody shape to dubbed audio via WORLD vocoder or pitch manipulation. |
+
+**Workflow chain**: The dubbing pipeline calls 5 existing modules in sequence. The key new code is the orchestrator (`core/dubbing.py`) and the isochronous translation loop (`core/isochron_translate.py`).
+
+**New dependency**: Potentially `pyworld` for vocoder-based prosody transfer (62.4). Everything else is already installed.
+
+**Wave 5 Total: 4 features, 0-1 new deps, ~8 new routes**
+
+---
+
+## Wave 6: Advanced Professional Features
+
+**Goal**: Deep features for professional editors, colorists, and post-production specialists. These differentiate OpenCut from casual tools.
+
+**Timeline**: 8-12 weeks (can be worked on in parallel tracks)
+**New deps**: 2-4
+
+### 6A — Composition & Framing Intelligence (3 features)
+
+| # | Feature | Effort | Detail |
+|---|---------|--------|--------|
+| 61.4 | Saliency-Guided Auto-Crop | M | Face regions (high weight) + motion regions (frame diff) + text regions (OCR) + high-contrast edges → weighted heat map → place crop to maximize saliency. |
+| 13.2 | Three-Way Color Wheels | L | SVG color wheel widgets in panel → map wheel positions to FFmpeg `colorbalance` filter values (lift/gamma/gain). Preview via frame extraction. |
+| 13.3 | HSL Qualifier / Secondary Correction | L | OpenCV HSV range masking with feathered edges → apply corrections to masked region only → composite. Preview matte in panel. |
+
+### 6B — Pre-Production Tools (4 features)
+
+| # | Feature | Effort | Detail |
+|---|---------|--------|--------|
+| 59.4 | Script-to-Rough-Cut Assembly | XL | Batch transcribe all footage → fuzzy-match transcript segments against script text → rank matches by similarity + audio quality + face visibility → assemble best take per segment as OTIO/Premiere XML. |
+| 59.2 | Shot List Generator from Screenplay | M | Parse screenplay format (INT./EXT., ACTION, DIALOGUE) → LLM suggests shot count and camera angles per scene → export as CSV. |
+| 59.1 | AI Storyboard Generation from Script | L | Parse script into shots → generate one image per shot via Stable Diffusion or external API → layout as storyboard grid with descriptions → export PDF. |
+| 59.3 | Mood Board Generator from Footage | M | Extract keyframes → k-means color clustering → style tags (warm/cold, contrast, saturation) → suggest matching LUTs → compile as visual reference image. |
+
+### 6C — Video Repair & Restoration (3 remaining features)
+
+| # | Feature | Effort | Detail |
+|---|---------|--------|--------|
+| 53.1 | Corrupted File Recovery | M | Detect corruption type (missing moov, truncated stream). For missing moov: untrunc algorithm with reference file. For truncated: `ffmpeg -err_detect ignore_err` salvage. Report recovery stats. |
+| 53.4 | SDR-to-HDR Upconversion | L | FFmpeg `zscale` (bt709 → bt2020) + inverse tone mapping. Apply PQ/HLG transfer function. Embed ST.2086 metadata. |
+| 13.6 | Power Windows with Tracking | L | Shape masks (circle, rect, polygon) in panel → track via MediaPipe (face) or SAM2 (object) → apply corrections inside/outside mask via per-frame FFmpeg filter. |
+
+### 6D — Forensic & Legal (3 features)
+
+| # | Feature | Effort | Detail |
+|---|---------|--------|--------|
+| 35.1 | Selective Redaction Tool | M | Click-to-select regions in preview → track across frames → blur/pixelate/black. Export redaction log for audit trail. |
+| 35.2 | Chain of Custody Metadata | S | SHA-256 hash of original + all operations applied + timestamps → embed as metadata or export as sidecar JSON. |
+| 35.3 | Forensic Enhancement | M | Stabilize + denoise + sharpen + contrast stretch + frame interpolation for low-quality surveillance footage. |
+
+### 6E — Accessibility & Compliance (3 features)
+
+| # | Feature | Effort | Detail |
+|---|---------|--------|--------|
+| 20.1 | Caption Compliance Checker | M | Parse captions → check against rulesets (Netflix <=42 CPL, FCC <=32 CPL, BBC <=160 WPM, min duration, CPS). Flag violations with auto-fix suggestions. |
+| 20.2 | Audio Description Track Generator | L | Detect dialogue pauses (existing VAD) → extract key frames during pauses → describe via LLM vision → TTS synthesis → mix into gaps → export as AD track. |
+| 27.1 | C2PA Content Credentials | M | Embed Content Authenticity Initiative metadata (origin, edit history, AI disclosure). `c2pa-python` library. |
+
+**Wave 6 Total: ~16 features, 2-3 new deps, ~25 new routes**
+
+---
+
+## Wave 7: AI Generation, 360, & Emerging Tech
+
+**Goal**: Forward-looking AI capabilities and niche professional features. These are differentiators, not table-stakes.
+
+**Timeline**: Ongoing (8-16 weeks, lowest priority)
+**New deps**: Several (heavy AI models)
+**Prerequisite**: Wave 3A (GPU process isolation) essential for multiple large models
+
+### 7A — AI Video Generation & Synthesis (5 features)
+
+| # | Feature | Effort | New Dep | Detail |
+|---|---------|--------|---------|--------|
+| 54.2 | Image-to-Video Animation | L | `diffusers` (existing) | SVD or CogVideoX with image conditioning → 2-6s clip from still image + motion prompt. |
+| 54.5 | AI Background Replacement | L | `diffusers` (existing) | RVM foreground extraction + Stable Diffusion background from text prompt → composite. |
+| 54.1 | AI Outpainting / Frame Extension | L | `diffusers` (existing) | Extend canvas to target aspect ratio → inpaint borders via ProPainter or SD. Keyframe-based for temporal consistency. |
+| 54.3 | AI Scene Extension | XL | `diffusers` (existing) | Feed last N frames to video prediction model → generate continuation. Best for static scenes. |
+| 21.1 | Multimodal Timeline Copilot | XL | LLM API (existing) | Chat interface backed by multimodal AI that sees video + audio + transcript. Navigate, select, edit via natural language. |
+
+### 7B — 360 / VR / Immersive (4 features)
+
+| # | Feature | Effort | Detail |
+|---|---------|--------|--------|
+| 51.2 | Equirectangular to Flat Projection | M | FFmpeg `v360` filter. Keyframeable yaw/pitch/roll for virtual camera paths. |
+| 51.3 | FOV Region Extraction from 360 | M | Face detection in equirectangular space → per-speaker flat extraction with smooth tracking → multicam XML. |
+| 51.1 | 360 Video Stabilization | L | Parse gyro metadata (GoPro GPMF, Insta360) → apply inverse rotation via FFmpeg `v360`. |
+| 51.4 | Spatial Audio Alignment | L | Map speaker positions from face detection → route mono dialogue to correct ambisonic channel. First-order ambisonics output. |
+
+### 7C — Niche Professional Features
+
+| # | Feature | Effort | Detail |
+|---|---------|--------|--------|
+| 41.1 | DJI Telemetry Data Overlay | M | Parse DJI SRT files → render altitude, speed, GPS, battery as configurable overlay. |
+| 42.1 | Image Sequence Import & Assembly | M | Import folder of images (TIFF, EXR, DPX, PNG) → assemble as video with configurable FPS and transitions. |
+| 39.1 | Elgato Stream Deck Integration | M | WebSocket/HTTP listener for Stream Deck commands → map buttons to OpenCut operations. Plugin for Stream Deck SDK. |
+| 12.1 | Gaming Highlight / Kill Detection | L | Multi-signal fusion: audio peaks + motion intensity + optional OCR on kill feed → score segments → extract top clips. |
+| 33.1 | Lecture Recording Auto-Split | M | Scene detection + chapter generation → split lecture by topic → generate per-topic clips with title cards. |
+| 46.1 | Multi-Step Autonomous Editing Agent | XL | LLM plans editing steps from high-level instruction → executes via OpenCut API → iterates on result quality. Full agent loop with human review checkpoints. |
+
+**Wave 7 Total: ~15 features, 0-2 new deps (most already installed), ~20 new routes**
+
+---
+
+## Implementation Order & Dependencies
 
 ```
-Phase 0: Foundation          ████████░░░░░░░░░░░░░░░░░░░░░░  (Weeks 1-4)
-Phase 1: Backend             ░░░░████████████░░░░░░░░░░░░░░  (Weeks 3-10)
-Phase 2: Frontend            ░░░░░░░░████████████░░░░░░░░░░  (Weeks 6-14)
-Phase 3: UX Transform        ░░░░░░░░░░░░████████████░░░░░░  (Weeks 10-20)
-Phase 4: Install/Reliability ░░░░░░░░░░░░░░░░████████░░░░░░  (Weeks 14-20)
-Phase 5: Performance         ░░░░░░░░░░░░░░░░░░░░████████░░  (Weeks 18-24)
-Phase 6: Ecosystem           ░░░░░░░░░░░░░░░░░░░░░░░░██████  (Weeks 22-28)
-Phase 7: UXP Parity          ░░░░░░░░░░░░░░░░░░████████████  (Weeks 18-28)
+Wave 1 (Quick Wins)          |=============================|
+Wave 2 (Pipelines)           |=======================|
+Wave 3A (GPU Isolation)           |========================|
+Wave 3B (UXP Parity)              |=====================|
+Wave 4 (New Domains)                   |========================|
+Wave 5 (AI Dubbing)                         |================|
+Wave 6 (Pro Features)                            |===========================|
+Wave 7 (Emerging)                                      |=========================>
+                              Wk 1    Wk 6    Wk 12   Wk 18   Wk 24   Wk 30+
 ```
 
-**Overlap is intentional** — phases are parallelizable across developers:
-- Backend dev works Phase 1 while frontend dev starts Phase 2
-- UX work (Phase 3) can start as soon as component system (Phase 2.4) is ready
-- Phase 7 (UXP) is independent and can run in parallel with everything
+**Critical path**: Wave 3A (GPU isolation) must land before Waves 5 and 7A (heavy AI features).
+
+**Parallel tracks**:
+- Wave 1 + Wave 2 can run simultaneously (different developers or even same developer — no conflicts)
+- Wave 3A + Wave 3B are independent
+- Wave 4 can start as soon as Wave 1 is done (shares no code)
+- Wave 6 features are independent of each other (can be cherry-picked)
 
 ---
 
-## Priority Matrix
+## Route Growth Projection
 
-If resources are constrained, do these first (highest user impact per effort):
-
-| Priority | Item | Phase | Impact | Effort |
-|----------|------|-------|--------|--------|
-| Priority | Item | Phase | Impact | Effort | Status |
-|----------|------|-------|--------|--------|--------|
-| **P0** | Test coverage baseline | 0.1 | Enables everything else | Medium | DONE |
-| **P0** | Structured error taxonomy | 0.2 | Fixes #1 user complaint (cryptic errors) | Medium | DONE |
-| **P0** | Structured logging (JSON) | 0.3 | Debugging job failures | Medium | DONE |
-| **P1** | Dependency resolution overhaul | 4.1 | Fixes #2 user complaint (install failures) | High | DONE |
-| **P1** | One-click workflows | 3.1 | Biggest UX improvement possible | High | DONE |
-| **P1** | Preview before commit | 3.3 | Removes fear of using the tool | High | DONE |
-| **P2** | Vite build system | 2.1 | Enables all frontend improvements | Medium | DONE |
-| **P2** | Health monitoring | 4.3 | Eliminates "is it working?" confusion | Medium | DONE |
-| **P2** | Lazy tab rendering | 5.1 | Immediate performance win | Low | DONE |
-| **P2** | Job persistence (SQLite) | 1.2 | Jobs survive restarts | Medium | DONE |
-| **P2** | Keyboard shortcuts | 3.4 | Power user productivity | Low | DONE |
-| **P2** | Docker deployment | 4.2 | Zero-config deployment | Medium | DONE |
-| **P2** | i18n framework | 6.2 | Opens global market | High | DONE |
-| **P2** | Project templates | 6.4 | Quick-start for new users | Low | DONE |
-| **P2** | Preset export/import | 6.3 | Collaboration & sharing | Low | DONE |
-| **P2** | Contextual awareness | 3.2 | Panel adapts to clip type | Medium | DONE |
-| **P2** | Background indexing (SQLite FTS5) | 5.3 | Fast persistent footage search | Medium | DONE |
-| **P2** | Response streaming (NDJSON) | 5.2 | Progressive large result delivery | Low | DONE |
-| **P2** | Plugin system scaffold | 6.1 | Extensibility platform | High | DONE |
-| **P2** | Multicam XML export | — | Premiere import of multicam edits | Low | DONE |
-| **P2** | Parallel batch processing | 5.4 | Multi-clip ops in parallel | Medium | DONE |
-| **P2** | Clip Notes example plugin | 6.1 | Second reference plugin | Low | DONE |
-| **P2** | Frontend context integration | 3.2 | Guidance banner + tab highlighting | Low | DONE |
-| **P2** | Route smoke tests | 0.1 | Every endpoint has a smoke test | Medium | DONE |
-| **P2** | CI coverage enforcement | 0.1 | Builds fail below 50% coverage | Low | DONE |
-| **P2** | Smart tab reordering | 3.2 | Sub-tabs reorder by relevance | Low | DONE |
-| **P2** | Structured error migration | 0.2 | Routes use safe_error() | Medium | DONE |
-| **P2** | __import__() → importlib | — | Security hardening | Low | DONE |
-| **P2** | Frontend error code mapper | 0.2 | Actionable error guidance in UI | Medium | DONE |
-| **P2** | Core module unit tests (15) | 0.1 | 15 most important modules covered | High | DONE |
-| **P2** | i18n string extraction | 6.2 | ~200 elements with data-i18n | Medium | DONE |
-| **P2** | CI on PRs + coverage gate | 0.1 | CI runs on PRs, not just tags | Low | DONE |
-| **P2** | Version string unification | — | Single source of truth for version | Low | DONE |
-| **P2** | Pre-commit hooks | 0.1 | Ruff + pytest on commit/push | Low | DONE |
-| **P2** | Log levels audit | 0.3 | Correct DEBUG/INFO/WARNING usage | Low | DONE |
-| **P2** | Core module unit tests batch 2 (28) | 0.1 | 28 more modules covered (135 tests) | High | DONE |
-| **P2** | ExtendScript mock harness | 0.1 | JSX functions testable under Node.js | Medium | DONE |
-| **P3** | FastAPI migration | 1.1 | Big effort, mostly internal benefit | Very High | PLANNED |
-| **P3** | TypeScript migration | 2.2 | Developer productivity, not user-facing | High | SCAFFOLDED |
-| **P3** | Process isolation (GPU) | 1.3 | Eliminates OOM crashes | Very High | PLANNED |
-| **P3** | UXP parity | 7.1-7.3 | Modern Premiere integration | Very High | PLANNED |
+| Milestone | Routes | Core Modules | Tests (est.) |
+|-----------|--------|-------------|-------------|
+| Current (v1.9.26) | 254 | 68 | 867 |
+| After Wave 1 | ~290 | ~78 | ~1,050 |
+| After Wave 2 | ~310 | ~85 | ~1,200 |
+| After Wave 4 | ~340 | ~95 | ~1,400 |
+| After Wave 5 | ~348 | ~99 | ~1,500 |
+| After Wave 6 | ~373 | ~110 | ~1,700 |
+| After Wave 7 | ~393 | ~120 | ~1,900 |
 
 ---
 
-## Success Metrics
+## Priority Matrix (Updated)
 
-| Metric | Current | Phase 2 Target | Phase 7 Target |
-|--------|---------|----------------|----------------|
-| Time to first useful action | ~2 min (find tab, configure, run) | 30s (one-click workflow) | 10s (context-aware suggestion) |
-| Install success rate | ~60% (permission/CUDA errors) | 90% (isolated venvs) | 99% (Docker/pre-built) |
-| Test coverage (backend) | <5% | 60% | 85% |
-| Test coverage (frontend) | 0% | 30% | 60% |
-| Memory usage (panel) | ~150MB | 60MB (lazy tabs) | 40MB (virtual DOM) |
-| Error messages with recovery steps | ~5% | 80% | 100% |
-| Features available in UXP | ~40% | 70% | 100% |
-| Supported languages | 1 (English) | 1 | 6 |
+### P0 — Critical (Do First)
+
+| # | Feature | Wave | Effort | Why Critical |
+|---|---------|------|--------|-------------|
+| 3A | GPU Process Isolation | 3 | XL | Prerequisite for all heavy AI features. Eliminates OOM crashes. |
+| 3B | UXP Full Parity | 3 | XL | CEP end-of-life ~Sept 2026. Must be ready before then. |
+| 32.1 | Hardware-Accelerated Encoding | 1 | M | Users with GPUs expect NVENC/QSV. Every other tool has this. |
+| 58.1 | Long-Form to Multi-Short Extraction | 2 | L | $228/year competitor (Opus Clip). Highest-value pipeline. |
+
+### P1 — High Impact (Next Priority)
+
+| # | Feature | Wave | Effort | Why High Impact |
+|---|---------|------|--------|----------------|
+| 62.1 | End-to-End AI Dubbing | 5 | XL | $50-100/month competitor category. Uses all existing modules. |
+| 57.1 | Split-Screen Templates | 1 | M | CapCut/iMovie table-stakes. Massive content category. |
+| 55.1 | License Plate Blur | 4 | M | Privacy law compliance. Every content creator needs this. |
+| 55.3 | Profanity Bleep | 1 | S | Broadcast requirement. Trivial to build. |
+| 53.2 | Adaptive Deinterlacing | 1 | S | Every NLE has this. Legacy footage is common. |
+| 52.1 | Lens Distortion Correction | 1 | M | Standard camera correction. lensfun database is free. |
+| 56.4 | Room Tone Auto-Generation | 1 | M | iZotope RX feature. Makes silence removal sound professional. |
+| 60.1 | Auto Proxy Generation | 4 | L | Premiere/Resolve/FCPX all have this. 4K editing prerequisite. |
+| 61.2 | Shot Type Classification | 1 | M | Enables intelligent editing decisions and footage search. |
+| 45.2 | AV1 Encoding | 1 | M | Modern codec with 30-50% bitrate savings. YouTube prefers it. |
+| 45.1 | ProRes Export (Windows) | 1 | M | Professional delivery format. Resolve offers this on Windows. |
+| 13.1 | Real-Time Color Scopes | 6 | L | Every colorist needs scopes. Color tools are blind without them. |
+| 59.4 | Script-to-Rough-Cut | 6 | XL | Biggest time saver in post-production. Avid ScriptSync competitor. |
+| 20.1 | Caption Compliance Checker | 6 | M | Netflix/FCC/BBC requirements. Prevents platform rejection. |
+| 24.1 | Shot-Change-Aware Subtitle Timing | 2 | M | Broadcast QC standard. Simple post-processing. |
+
+### P2 — Valuable (Scheduled)
+
+All remaining Wave 1-6 features not listed above (~60 features).
+
+### P3 — Future (Backlog)
+
+All Wave 7 features + FastAPI migration + TypeScript + niche items (~40 features).
+
+---
+
+## Success Metrics (Updated)
+
+| Metric | v1.9.26 (Current) | After Waves 1-2 | After Waves 3-5 | After Waves 6-7 |
+|--------|--------------------|-----------------|-----------------|-----------------|
+| API routes | 254 | ~310 | ~348 | ~393 |
+| Core modules | 68 | ~85 | ~99 | ~120 |
+| Tests | 867 | ~1,200 | ~1,500 | ~1,900 |
+| Time to first useful action | ~30s (workflow) | ~15s (pipeline) | ~10s (context + agent) | ~5s (copilot) |
+| Install success rate | ~90% | ~92% | ~95% (isolation) | ~99% (Docker) |
+| Competitor features covered | ~60% | ~75% | ~85% | ~95% |
+| Features available in UXP | ~85% | ~90% | 100% | 100% |
+| New deps added | 0 | 0 | 1-2 | 4-6 |
+
+---
+
+## Risk Register
+
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| CEP deprecation before UXP ready | High | Wave 3B is P0. Start immediately. Freeze CEP feature additions. |
+| GPU process isolation complexity | High | Start with simple subprocess model. Upgrade to full worker pool later. Ship incremental improvements. |
+| AI model download sizes | Medium | Models are optional. Clear size warnings in UI. Pre-download in installer. Offer cloud API fallback where possible. |
+| Too many features → quality regression | High | Every new feature gets a smoke test before merge. Ruff lint on CI. No feature without a test. |
+| Dependency conflicts from new packages | Medium | One new dep per feature max. Pin versions. Test in isolated venv before adding to `pyproject.toml`. |
+| Scope creep from 302-feature plan | Medium | Waves are independently shippable. Only commit to one wave at a time. Review and reprioritize between waves. |
+
+---
+
+*This roadmap should be reviewed at the start of each wave and reprioritized based on user feedback, competitive landscape changes, and lessons learned from the previous wave.*
