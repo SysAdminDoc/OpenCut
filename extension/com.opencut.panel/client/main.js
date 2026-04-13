@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.32
+   OpenCut CEP Panel - Main Controller v1.9.33
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -6336,6 +6336,14 @@
         if (_polishActive) return;
         if (!selectedPath) { showAlert("Select a clip first."); return; }
 
+        // v1.9.33 (G): preflight — catches missing Whisper / no disk space
+        // / bad path before the user waits minutes for failure.
+        preflightPipeline("interview-polish", selectedPath, projectFolder, function (go) {
+            if (go) _runInterviewPolishInner();
+        });
+    }
+
+    function _runInterviewPolishInner() {
         _polishActive = true;
         el.polishInterviewBtn.disabled = true;
         el.polishInterviewBtn.textContent = "Polishing…";
@@ -6365,6 +6373,127 @@
                 el.polishInterviewBtn.textContent = "Polish this interview";
             }
         });
+    }
+
+    // ================================================================
+    // Preflight modal (v1.9.33, feature G) — reusable for any pipeline
+    // ================================================================
+    function preflightPipeline(pipeline, filepath, outputDir, cb) {
+        api("POST", "/preflight/" + pipeline,
+            { filepath: filepath || "", output_dir: outputDir || "" },
+            function (err, report) {
+                if (err || !report) {
+                    // Preflight itself failed — be forgiving; don't block
+                    // the user from running their pipeline.
+                    cb(true);
+                    return;
+                }
+                _showPreflightModal(report, cb);
+            });
+    }
+
+    function _showPreflightModal(report, cb) {
+        // Fast path: no blocking + no warnings -> skip the modal, just go.
+        if (report.pass && (!report.warnings || !report.warnings.length)) {
+            cb(true);
+            return;
+        }
+        // Build modal
+        var overlay = document.createElement("div");
+        overlay.className = "preflight-overlay";
+        overlay.setAttribute("role", "dialog");
+        overlay.setAttribute("aria-modal", "true");
+        overlay.setAttribute("aria-label", "Preflight check for " +
+            (report.pipeline_label || report.pipeline));
+
+        var box = document.createElement("div");
+        box.className = "preflight-modal";
+
+        var header = document.createElement("div");
+        header.className = "preflight-header";
+        var h = document.createElement("div");
+        h.className = "preflight-title";
+        h.textContent = "Preflight: " + (report.pipeline_label || report.pipeline);
+        header.appendChild(h);
+        var sub = document.createElement("div");
+        sub.className = "preflight-sub";
+        sub.textContent = report.pass
+            ? "Ready to run. Some optional checks won't be available."
+            : "Fix the items below before running.";
+        header.appendChild(sub);
+        box.appendChild(header);
+
+        var body = document.createElement("div");
+        body.className = "preflight-body";
+
+        function addSection(title, items, tone) {
+            if (!items || !items.length) return;
+            var sect = document.createElement("div");
+            sect.className = "preflight-section preflight-section-" + tone;
+            var st = document.createElement("div");
+            st.className = "preflight-section-title";
+            st.textContent = title;
+            sect.appendChild(st);
+            for (var i = 0; i < items.length; i++) {
+                var it = items[i];
+                var row = document.createElement("div");
+                row.className = "preflight-row";
+                var label = document.createElement("div");
+                label.className = "preflight-row-label";
+                label.textContent = it.label || "";
+                var detail = document.createElement("div");
+                detail.className = "preflight-row-detail";
+                detail.textContent = it.detail || it.fix || "";
+                row.appendChild(label);
+                row.appendChild(detail);
+                sect.appendChild(row);
+            }
+            body.appendChild(sect);
+        }
+
+        if (report.file && !report.file.ok) {
+            addSection("Input file", [{
+                label: "File",
+                detail: (report.file.detail || "not found")
+            }], "blocking");
+        }
+        addSection("Fix before running", report.blocking, "blocking");
+        addSection("Heads-up", report.warnings, "warning");
+
+        box.appendChild(body);
+
+        var foot = document.createElement("div");
+        foot.className = "preflight-foot";
+        var cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.className = "btn btn-ghost";
+        cancel.textContent = "Cancel";
+        cancel.addEventListener("click", function () {
+            document.body.removeChild(overlay);
+            cb(false);
+        });
+        var run = document.createElement("button");
+        run.type = "button";
+        run.className = "btn " + (report.pass ? "btn-primary" : "btn-ghost");
+        run.textContent = report.pass ? "Run anyway" : "Run anyway (may fail)";
+        run.addEventListener("click", function () {
+            document.body.removeChild(overlay);
+            cb(true);
+        });
+        if (!report.pass) {
+            // Still allow override for power users, but emphasise cancel.
+            run.className = "btn btn-secondary";
+        }
+        foot.appendChild(cancel);
+        foot.appendChild(run);
+        box.appendChild(foot);
+
+        overlay.appendChild(box);
+        overlay.addEventListener("click", function (e) {
+            if (e.target === overlay) { document.body.removeChild(overlay); cb(false); }
+        });
+        document.body.appendChild(overlay);
+        run.focus();
     }
 
     function initInterviewPolish() {
