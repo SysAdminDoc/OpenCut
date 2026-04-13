@@ -4,7 +4,6 @@ import json
 import os
 import tempfile
 import unittest
-from unittest.mock import patch
 
 
 def _isolate_journal():
@@ -34,8 +33,10 @@ class TestJournalStore(unittest.TestCase):
 
     def tearDown(self):
         from opencut import journal as jm
-        try: jm.close_all_connections()
-        except Exception: pass
+        try:
+            jm.close_all_connections()
+        except Exception:
+            pass
 
     def test_record_and_list(self):
         from opencut import journal as jm
@@ -102,8 +103,10 @@ class TestJournalRoutes(unittest.TestCase):
 
     def tearDown(self):
         from opencut import journal as jm
-        try: jm.close_all_connections()
-        except Exception: pass
+        try:
+            jm.close_all_connections()
+        except Exception:
+            pass
 
     def _h(self):
         return {"Content-Type": "application/json", "X-OpenCut-Token": self.csrf}

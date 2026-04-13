@@ -914,7 +914,6 @@ def preview_audio():
                                min_val=-40.0, max_val=0.0)
         ratio = safe_float(params.get("ratio", 4.0), 4.0, min_val=1.0, max_val=20.0)
         # acompressor threshold is linear (0..1); approximate from dB.
-        import math as _m
         thr_lin = 10 ** (threshold / 20.0)
         afilter = f"acompressor=threshold={thr_lin}:ratio={ratio}:attack=5:release=50"
     elif flt == "eq":
@@ -963,12 +962,16 @@ def preview_audio():
                 "detail": proc.stderr.decode("utf-8", "ignore")[-300:],
             }), 500
     except _sp.TimeoutExpired:
-        try: os.unlink(out_path)
-        except Exception: pass
+        try:
+            os.unlink(out_path)
+        except Exception:
+            pass
         return jsonify({"error": "Preview render timed out"}), 504
     except Exception as e:
-        try: os.unlink(out_path)
-        except Exception: pass
+        try:
+            os.unlink(out_path)
+        except Exception:
+            pass
         return jsonify({"error": f"Preview render failed: {e}"}), 500
 
     # Read back + return as audio/wav. Schedule deletion of the temp file.
@@ -976,8 +979,10 @@ def preview_audio():
         with open(out_path, "rb") as f:
             data_bytes = f.read()
     finally:
-        try: os.unlink(out_path)
-        except Exception: pass
+        try:
+            os.unlink(out_path)
+        except Exception:
+            pass
 
     from flask import Response
     return Response(data_bytes, mimetype="audio/wav",
