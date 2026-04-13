@@ -13197,3 +13197,10 @@ body:not(.has-clip) .media-sidecar .file-info {
     font-variant-numeric: tabular-nums;
     color: var(--neon-cyan, #88b2ff);
 }
+
+/* v1.10.5 (Q): Interview Polish cache-clear footer */
+.interview-polish-footer {
+    margin-top: 10px;
+    display: flex;
+    justify-content: flex-end;
+}
