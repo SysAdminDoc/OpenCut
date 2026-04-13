@@ -13015,3 +13015,24 @@ body:not(.has-clip) .media-sidecar .file-info {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* ============================================================
+   AUDIO LIVE PREVIEW (v1.9.36, feature C)
+   ============================================================ */
+.audio-preview-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 8px 0 12px;
+    flex-wrap: wrap;
+}
+
+.audio-preview-inline {
+    flex: 1;
+    min-width: 180px;
+    height: 32px;
+}
+
+.audio-preview-inline::-webkit-media-controls-panel {
+    background-color: rgba(22, 30, 48, 0.7);
+}
