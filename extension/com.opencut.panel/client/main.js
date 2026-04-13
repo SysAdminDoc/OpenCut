@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.10.1
+   OpenCut CEP Panel - Main Controller v1.10.2
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -6710,6 +6710,7 @@
     // ================================================================
     var _assistantDismissed = [];
     var _assistantLoading = false;
+    var _assistantSequenceKey = "default";
 
     function _assistantRender(suggestions, emptyMsg) {
         if (!el.assistantBody) return;
@@ -6766,6 +6767,11 @@
             if (_assistantDismissed.indexOf(sug.id) === -1) {
                 _assistantDismissed.push(sug.id);
             }
+            // v1.10.2 (O): persist per-sequence so it survives reload.
+            api("POST", "/assistant/dismiss", {
+                sequence_key: _assistantSequenceKey,
+                id: sug.id
+            }, function () {});
             card.remove();
             if (!el.assistantBody.querySelector(".assistant-suggestion")) {
                 _assistantRender([], "All suggestions dismissed. Refresh to re-scan.");
@@ -6799,17 +6805,22 @@
                 _bail("Open a sequence in Premiere and try again.");
                 return;
             }
-            api("POST", "/assistant/suggest",
-                { sequence: seq, dismissed: _assistantDismissed },
-                function (err, data) {
-                    _assistantLoading = false;
-                    if (err) {
-                        _assistantRender(null, "Couldn't analyze: " +
-                            (err.error || err.message || "Unknown"));
-                        return;
-                    }
-                    _assistantRender(data.suggestions || []);
-                });
+            // Use the Premiere project path as the sequence key so persisted
+            // dismissals follow the project. Falls back to sequence name.
+            _assistantSequenceKey = seq.project_path || seq.name || "default";
+            api("POST", "/assistant/suggest", {
+                sequence: seq,
+                dismissed: _assistantDismissed,
+                sequence_key: _assistantSequenceKey
+            }, function (err, data) {
+                _assistantLoading = false;
+                if (err) {
+                    _assistantRender(null, "Couldn't analyze: " +
+                        (err.error || err.message || "Unknown"));
+                    return;
+                }
+                _assistantRender(data.suggestions || []);
+            });
         });
     }
 
