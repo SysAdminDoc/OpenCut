@@ -59,6 +59,7 @@ def journal_record():
     label = str(data.get("label", "")).strip()
     clip_path = str(data.get("clip_path", "")).strip()
     inverse = data.get("inverse") or {}
+    forward = data.get("forward")  # optional; v1.10.3 "Apply to selection"
 
     if not action:
         return jsonify({"error": "action is required"}), 400
@@ -69,9 +70,12 @@ def journal_record():
         }), 400
     if not isinstance(inverse, dict):
         return jsonify({"error": "inverse must be an object"}), 400
+    if forward is not None and not isinstance(forward, dict):
+        return jsonify({"error": "forward must be an object"}), 400
 
     try:
-        entry = journal.record(action, label, inverse, clip_path=clip_path)
+        entry = journal.record(action, label, inverse, clip_path=clip_path,
+                               forward_payload=forward)
         return jsonify(entry), 201
     except Exception as e:
         logger.exception("journal_record failed")
