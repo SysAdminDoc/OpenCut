@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.10.0
+   OpenCut CEP Panel - Main Controller v1.10.1
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -760,6 +760,10 @@
         el.runDenoiseBtn = $("runDenoiseBtn");
         el.denoisePreviewBtn = $("denoisePreviewBtn");
         el.denoisePreviewPlayer = $("denoisePreviewPlayer");
+        el.normalizePreviewBtn = $("normalizePreviewBtn");
+        el.normalizePreviewPlayer = $("normalizePreviewPlayer");
+        el.silencePreviewBtn = $("silencePreviewBtn");
+        el.silencePreviewPlayer = $("silencePreviewPlayer");
         el.assistantCard = $("assistantCard");
         el.assistantBody = $("assistantBody");
         el.assistantRefreshBtn = $("assistantRefreshBtn");
@@ -2497,6 +2501,7 @@
         "runRepeatDetectBtn", "runChaptersBtn", "runBeatMarkersBtn", "runMulticamBtn",
         "quickCleanInterview", "quickYouTube", "quickPodcast",
         "polishInterviewBtn", "denoisePreviewBtn",
+        "normalizePreviewBtn", "silencePreviewBtn",
         "quickAutoSubtitle", "quickTranslate",
         "quickStudioAudio", "quickDenoise",
         "quickAutoColor", "quickSocialReframe"
@@ -3479,13 +3484,17 @@
     }
 
     function runFull() {
-        startJob("/full", {
-            filepath: selectedPath,
-            output_dir: projectFolder,
-            preset: el.fullPreset.value,
-            skip_zoom: !el.fullZoom.checked,
-            skip_captions: !el.fullCaptions.checked,
-            remove_fillers: el.fullFillers.checked,
+        if (!selectedPath) { showAlert("Select a clip first."); return; }
+        preflightPipeline("full", selectedPath, projectFolder, function (go) {
+            if (!go) return;
+            startJob("/full", {
+                filepath: selectedPath,
+                output_dir: projectFolder,
+                preset: el.fullPreset.value,
+                skip_zoom: !el.fullZoom.checked,
+                skip_captions: !el.fullCaptions.checked,
+                remove_fillers: el.fullFillers.checked,
+            });
         });
     }
 
@@ -6609,18 +6618,45 @@
     // Live audio preview (v1.9.36, feature C)
     // ================================================================
     function initAudioPreviewButtons() {
-        if (!el.denoisePreviewBtn || !el.denoisePreviewPlayer) return;
-        el.denoisePreviewBtn.addEventListener("click", function () {
-            if (!selectedPath) { showAlert("Select a clip first."); return; }
-            var strength = parseFloat(el.denoiseStrength ? el.denoiseStrength.value : 0.7);
-            renderAudioPreview({
-                filepath: selectedPath,
-                start: 0,
-                duration: 10,
-                filter: "denoise",
-                params: { strength: strength }
-            }, el.denoisePreviewPlayer, el.denoisePreviewBtn);
-        });
+        if (el.denoisePreviewBtn && el.denoisePreviewPlayer) {
+            el.denoisePreviewBtn.addEventListener("click", function () {
+                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                var strength = parseFloat(el.denoiseStrength ? el.denoiseStrength.value : 0.7);
+                renderAudioPreview({
+                    filepath: selectedPath, start: 0, duration: 10,
+                    filter: "denoise", params: { strength: strength }
+                }, el.denoisePreviewPlayer, el.denoisePreviewBtn);
+            });
+        }
+        if (el.normalizePreviewBtn && el.normalizePreviewPlayer) {
+            el.normalizePreviewBtn.addEventListener("click", function () {
+                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                // Derive LUFS target from the existing preset dropdown
+                var preset = el.normalizePreset ? el.normalizePreset.value : "youtube";
+                var target = {
+                    youtube: -14, broadcast: -23, tiktok: -14,
+                    streaming: -14, podcast: -16, spotify: -14
+                }[preset] || -16;
+                renderAudioPreview({
+                    filepath: selectedPath, start: 0, duration: 10,
+                    filter: "normalize", params: { target_lufs: target }
+                }, el.normalizePreviewPlayer, el.normalizePreviewBtn);
+            });
+        }
+        if (el.silencePreviewBtn && el.silencePreviewPlayer) {
+            el.silencePreviewBtn.addEventListener("click", function () {
+                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                // Use the current threshold / min-silence params if exposed,
+                // otherwise default to the FFmpeg-friendly -30 dB / 400 ms.
+                var thr = el.silenceThreshold ? parseFloat(el.silenceThreshold.value) : -30;
+                var minDur = el.silenceMinDur ? parseFloat(el.silenceMinDur.value) : 0.4;
+                renderAudioPreview({
+                    filepath: selectedPath, start: 0, duration: 10,
+                    filter: "silence",
+                    params: { threshold_db: thr, min_silence: minDur }
+                }, el.silencePreviewPlayer, el.silencePreviewBtn);
+            });
+        }
     }
 
     function renderAudioPreview(body, audioEl, btn) {
@@ -10330,24 +10366,28 @@
 
     // --- Shorts Pipeline ---
     function runShorts() {
-        var llm = getLLMConfig();
-        var platform = el.shortsPlatform ? el.shortsPlatform.value : "tiktok";
-        var dims = { tiktok: [1080, 1920], shorts: [1080, 1920], reels: [1080, 1920], square: [1080, 1080] };
-        var d = dims[platform] || [1080, 1920];
-        startJob("/video/shorts-pipeline", {
-            filepath: selectedPath,
-            output_dir: projectFolder,
-            width: d[0],
-            height: d[1],
-            max_shorts: el.shortsMaxClips ? parseInt(el.shortsMaxClips.value) : 5,
-            min_duration: el.shortsMinDur ? parseFloat(el.shortsMinDur.value) : 15,
-            max_duration: el.shortsMaxDur ? parseFloat(el.shortsMaxDur.value) : 60,
-            face_track: el.shortsFaceTrack ? el.shortsFaceTrack.checked : false,
-            burn_captions: el.shortsCaptions ? el.shortsCaptions.checked : false,
-            llm_provider: llm.provider,
-            llm_model: llm.model || "",
-            llm_api_key: llm.api_key || "",
-            llm_base_url: llm.base_url || "",
+        if (!selectedPath) { showAlert("Select a clip first."); return; }
+        preflightPipeline("shorts-pipeline", selectedPath, projectFolder, function (go) {
+            if (!go) return;
+            var llm = getLLMConfig();
+            var platform = el.shortsPlatform ? el.shortsPlatform.value : "tiktok";
+            var dims = { tiktok: [1080, 1920], shorts: [1080, 1920], reels: [1080, 1920], square: [1080, 1080] };
+            var d = dims[platform] || [1080, 1920];
+            startJob("/video/shorts-pipeline", {
+                filepath: selectedPath,
+                output_dir: projectFolder,
+                width: d[0],
+                height: d[1],
+                max_shorts: el.shortsMaxClips ? parseInt(el.shortsMaxClips.value) : 5,
+                min_duration: el.shortsMinDur ? parseFloat(el.shortsMinDur.value) : 15,
+                max_duration: el.shortsMaxDur ? parseFloat(el.shortsMaxDur.value) : 60,
+                face_track: el.shortsFaceTrack ? el.shortsFaceTrack.checked : false,
+                burn_captions: el.shortsCaptions ? el.shortsCaptions.checked : false,
+                llm_provider: llm.provider,
+                llm_model: llm.model || "",
+                llm_api_key: llm.api_key || "",
+                llm_base_url: llm.base_url || "",
+            });
         });
     }
 
