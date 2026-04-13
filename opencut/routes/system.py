@@ -774,26 +774,75 @@ def assistant_suggest():
     Body::
 
         {
-          "sequence": {...},            # shape of ocGetSequenceInfo JSON
-          "dismissed": ["silence-dead-air", ...]   # optional
+          "sequence": {...},               # shape of ocGetSequenceInfo JSON
+          "dismissed": ["silence-dead-air"],  # optional, session-scoped
+          "sequence_key": "project.prproj"    # optional, v1.10.2 persistent
         }
+
+    v1.10.2: persisted dismissals are keyed by *sequence_key* (typically
+    the Premiere project path). The server unions session dismissals
+    with the stored per-sequence set so either flavor hides the card.
     """
     from opencut.core.assistant import analyze_sequence
+    from opencut.user_data import load_assistant_dismissed
 
     data = request.get_json(force=True, silent=True) or {}
     sequence = data.get("sequence") or {}
     dismissed = data.get("dismissed") or []
+    sequence_key = (data.get("sequence_key") or "").strip() or "default"
     if not isinstance(sequence, dict):
         return jsonify({"error": "sequence must be an object"}), 400
     if not isinstance(dismissed, list):
         return jsonify({"error": "dismissed must be a list"}), 400
 
+    persisted = load_assistant_dismissed(sequence_key)
+    all_dismissed = list({str(d) for d in dismissed} | set(persisted))
+
     try:
-        suggestions = analyze_sequence(sequence, dismissed_ids=dismissed)
+        suggestions = analyze_sequence(sequence, dismissed_ids=all_dismissed)
     except Exception as e:
         logger.exception("assistant_suggest failed")
         return jsonify({"error": f"Analyze failed: {e}"}), 500
-    return jsonify({"suggestions": suggestions, "count": len(suggestions)})
+    return jsonify({
+        "suggestions": suggestions,
+        "count": len(suggestions),
+        "persisted_dismissed": persisted,
+    })
+
+
+@system_bp.route("/assistant/dismiss", methods=["POST"])
+@require_csrf
+def assistant_dismiss():
+    """Persistently dismiss a suggestion for a sequence.
+
+    Body: ``{"sequence_key": "...", "id": "silence-dead-air"}``
+    Returns the updated list so the panel can reconcile state.
+    """
+    from opencut.user_data import load_assistant_dismissed, save_assistant_dismissed
+
+    data = request.get_json(force=True, silent=True) or {}
+    sequence_key = (data.get("sequence_key") or "").strip() or "default"
+    sug_id = (data.get("id") or "").strip()
+    if not sug_id:
+        return jsonify({"error": "id is required"}), 400
+
+    current = load_assistant_dismissed(sequence_key)
+    if sug_id not in current:
+        current.append(sug_id)
+        save_assistant_dismissed(sequence_key, current)
+    return jsonify({"sequence_key": sequence_key, "dismissed": current})
+
+
+@system_bp.route("/assistant/dismiss-clear", methods=["POST"])
+@require_csrf
+def assistant_dismiss_clear():
+    """Clear every persisted dismissal for a sequence so they reappear."""
+    from opencut.user_data import save_assistant_dismissed
+
+    data = request.get_json(force=True, silent=True) or {}
+    sequence_key = (data.get("sequence_key") or "").strip() or "default"
+    save_assistant_dismissed(sequence_key, [])
+    return jsonify({"sequence_key": sequence_key, "dismissed": []})
 
 
 # ---------------------------------------------------------------------------
