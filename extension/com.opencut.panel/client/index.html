@@ -387,6 +387,22 @@
                     <div class="polish-result hidden" id="polishResult"></div>
                 </section>
 
+                <!-- Sequence Assistant (v1.10.0, feature E) -->
+                <section class="card assistant-card" id="assistantCard" aria-labelledby="assistantCardTitle">
+                    <div class="card-header">
+                        <div class="card-title-group">
+                            <div class="card-title" id="assistantCardTitle">Assistant</div>
+                            <div class="card-subtitle">OpenCut scans the active sequence and suggests the next edit.</div>
+                        </div>
+                        <button type="button" class="icon-btn" id="assistantRefreshBtn" title="Re-scan the current sequence" aria-label="Refresh assistant suggestions">
+                            <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
+                        </button>
+                    </div>
+                    <div class="assistant-body" id="assistantBody" aria-live="polite">
+                        <div class="assistant-empty">Open a sequence in Premiere, then click refresh.</div>
+                    </div>
+                </section>
+
                 <div class="sub-tabs" role="tablist" id="cutSubTabs">
                     <button type="button" class="sub-tab active" data-sub="silence" data-i18n="subtabs.silence">Silence</button>
                     <button type="button" class="sub-tab" data-sub="fillers" data-i18n="subtabs.fillers">Fillers</button>
@@ -3607,7 +3623,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.9.36</span>
+                        <span class="settings-value">1.10.0</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>

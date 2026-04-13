@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.9.36
+   OpenCut CEP Panel - Main Controller v1.10.0
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -760,6 +760,9 @@
         el.runDenoiseBtn = $("runDenoiseBtn");
         el.denoisePreviewBtn = $("denoisePreviewBtn");
         el.denoisePreviewPlayer = $("denoisePreviewPlayer");
+        el.assistantCard = $("assistantCard");
+        el.assistantBody = $("assistantBody");
+        el.assistantRefreshBtn = $("assistantRefreshBtn");
         el.normalizePreset = $("normalizePreset");
         el.loudnessMeter = $("loudnessMeter");
         el.meterLUFS = $("meterLUFS");
@@ -6666,6 +6669,126 @@
         xhr.send(JSON.stringify(body));
     }
 
+    // ================================================================
+    // Sequence Assistant (v1.10.0, feature E)
+    // ================================================================
+    var _assistantDismissed = [];
+    var _assistantLoading = false;
+
+    function _assistantRender(suggestions, emptyMsg) {
+        if (!el.assistantBody) return;
+        el.assistantBody.innerHTML = "";
+        if (!suggestions || !suggestions.length) {
+            var empty = document.createElement("div");
+            empty.className = "assistant-empty";
+            empty.textContent = emptyMsg ||
+                "Your sequence looks good — no obvious next edits.";
+            el.assistantBody.appendChild(empty);
+            return;
+        }
+        var frag = document.createDocumentFragment();
+        for (var i = 0; i < suggestions.length; i++) {
+            frag.appendChild(_assistantCard(suggestions[i]));
+        }
+        el.assistantBody.appendChild(frag);
+    }
+
+    function _assistantCard(sug) {
+        var card = document.createElement("div");
+        card.className = "assistant-suggestion";
+        card.setAttribute("data-id", sug.id);
+
+        var title = document.createElement("div");
+        title.className = "assistant-suggestion-title";
+        title.textContent = sug.title;
+        card.appendChild(title);
+
+        var why = document.createElement("div");
+        why.className = "assistant-suggestion-why";
+        why.textContent = sug.why;
+        card.appendChild(why);
+
+        var actions = document.createElement("div");
+        actions.className = "assistant-suggestion-actions";
+
+        var apply = document.createElement("button");
+        apply.type = "button";
+        apply.className = "btn btn-primary btn-sm";
+        apply.textContent = "Apply";
+        apply.addEventListener("click", function () {
+            if (!sug.action || !sug.action.endpoint) return;
+            showToast("Running " + sug.title + "…", "info");
+            startJob(sug.action.endpoint, sug.action.payload || {});
+        });
+        actions.appendChild(apply);
+
+        var dismiss = document.createElement("button");
+        dismiss.type = "button";
+        dismiss.className = "btn btn-ghost btn-sm";
+        dismiss.textContent = "Dismiss";
+        dismiss.addEventListener("click", function () {
+            if (_assistantDismissed.indexOf(sug.id) === -1) {
+                _assistantDismissed.push(sug.id);
+            }
+            card.remove();
+            if (!el.assistantBody.querySelector(".assistant-suggestion")) {
+                _assistantRender([], "All suggestions dismissed. Refresh to re-scan.");
+            }
+        });
+        actions.appendChild(dismiss);
+
+        card.appendChild(actions);
+        return card;
+    }
+
+    function refreshAssistant() {
+        if (!el.assistantBody || _assistantLoading) return;
+        _assistantLoading = true;
+        el.assistantBody.innerHTML =
+            '<div class="assistant-loading">Scanning sequence…</div>';
+
+        function _bail(msg) {
+            _assistantLoading = false;
+            _assistantRender(null, msg);
+        }
+
+        if (!inPremiere) {
+            _bail("Premiere Pro connection required.");
+            return;
+        }
+        jsx("ocGetSequenceInfo()", function (result) {
+            var seq = null;
+            try { seq = JSON.parse(result || "{}"); } catch (_) {}
+            if (!seq || seq.error || !seq.tracks) {
+                _bail("Open a sequence in Premiere and try again.");
+                return;
+            }
+            api("POST", "/assistant/suggest",
+                { sequence: seq, dismissed: _assistantDismissed },
+                function (err, data) {
+                    _assistantLoading = false;
+                    if (err) {
+                        _assistantRender(null, "Couldn't analyze: " +
+                            (err.error || err.message || "Unknown"));
+                        return;
+                    }
+                    _assistantRender(data.suggestions || []);
+                });
+        });
+    }
+
+    function initAssistant() {
+        if (!el.assistantCard) return;
+        if (el.assistantRefreshBtn) {
+            el.assistantRefreshBtn.addEventListener("click", refreshAssistant);
+        }
+        // Auto-run once on first connect after a short delay to let
+        // the sequence info cache warm up.
+        setTimeout(function () {
+            if (inPremiere && connected) refreshAssistant();
+        }, 3500);
+    }
+
     function initInterviewPolish() {
         if (!el.polishInterviewBtn) return;
         el.polishInterviewBtn.addEventListener("click", runInterviewPolish);
@@ -11912,7 +12035,7 @@
             initSettingsIO, initWorkflowBuilder, loadWorkflowPresets,
             initCollapsibleCards, initI18n, initProjectTemplates,
             initJournal, initInterviewPolish, initLutGrid,
-            initAudioPreviewButtons
+            initAudioPreviewButtons, initAssistant
         ];
         for (var fi = 0; fi < _featureInits.length; fi++) {
             try { _featureInits[fi](); }
