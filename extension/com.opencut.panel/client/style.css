@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.10.3 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.10.4 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -13114,4 +13114,86 @@ body:not(.has-clip) .media-sidecar .file-info {
     display: flex;
     gap: 6px;
     margin-top: 4px;
+}
+
+/* ============================================================
+   ASSISTANT CARD DETAILS (v1.10.4, feature P)
+   ============================================================ */
+.assistant-suggestion-details {
+    border-top: 1px dashed rgba(236, 230, 218, 0.08);
+    padding-top: 6px;
+    margin-top: 4px;
+}
+
+.assistant-suggestion-details-summary {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--neon-cyan, #88b2ff);
+    cursor: pointer;
+    list-style: none;
+    padding: 4px 0;
+    user-select: none;
+}
+
+.assistant-suggestion-details-summary::-webkit-details-marker { display: none; }
+.assistant-suggestion-details-summary::marker { content: ""; }
+
+.assistant-suggestion-details-summary::before {
+    content: "▸ ";
+    display: inline-block;
+    transition: transform 0.15s ease;
+    color: rgba(136, 178, 255, 0.7);
+}
+
+.assistant-suggestion-details[open] .assistant-suggestion-details-summary::before {
+    transform: rotate(90deg);
+}
+
+.assistant-detail-body {
+    margin-top: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.assistant-detail-intro {
+    font-size: 10px;
+    color: var(--text-secondary);
+    opacity: 0.8;
+    margin-bottom: 4px;
+}
+
+.assistant-detail-table {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.assistant-detail-row {
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.02);
+    font-size: 11px;
+    color: var(--text-primary);
+}
+
+.assistant-detail-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.assistant-detail-time {
+    color: var(--text-secondary);
+    font-variant-numeric: tabular-nums;
+}
+
+.assistant-detail-metric {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--neon-cyan, #88b2ff);
 }
