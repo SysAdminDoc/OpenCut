@@ -1285,6 +1285,11 @@
                             </div>
                             <span class="hint-inline">Higher = more noise removed, but may affect voice quality</span>
                         </div>
+                        <!-- v1.9.36 (C): 10s live preview at the current strength -->
+                        <div class="audio-preview-row">
+                            <button type="button" class="btn-secondary btn-sm" id="denoisePreviewBtn" disabled title="Render a 10s preview with current settings">Preview 10s</button>
+                            <audio id="denoisePreviewPlayer" class="audio-preview-inline hidden" controls preload="none"></audio>
+                        </div>
                         <button type="button" class="btn-primary" id="runDenoiseBtn" disabled title="Ctrl+Shift+D" data-i18n="audio.remove_noise">Remove Noise</button>
                     </section>
                 </div>
