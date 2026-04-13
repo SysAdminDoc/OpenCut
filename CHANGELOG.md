@@ -1,5 +1,176 @@
 # Changelog
 
+## [1.10.5] - 2026-04-13
+
+### Added
+- **302-feature expansion plan** (`features.md`) — 62 categories covering every major video editing domain. 12 new categories added: 360/VR, camera correction, video repair, AI generation, privacy/redaction, spectral audio, split-screen, content repurposing, storyboarding, proxy management, composition intelligence, AI dubbing.
+- **ROADMAP v3.0** — 7-wave implementation plan organized by dependency chains (Wave 1: quick wins with 0 new deps through Wave 7: emerging tech). Replaces completed Phases 0-6.
+- **230 new core modules** (`opencut/core/`) — implementations for feature categories including deinterlace, lens correction, room tone, credits generator, retro effects, hardware acceleration, GIF export, ProRes/AV1/DNxHR encoding, color scopes, spectral audio, video repair, proxy generation, split-screen templates, AI dubbing, storyboard generation, pacing analysis, shot classification, and 200+ more.
+- **43 new route blueprints** (`opencut/routes/`) — 600+ new API endpoints covering audio production, video processing, encoding, creative effects, QC checks, gaming, education, documentary, integrations, generative AI, professional workflows, and more.
+- **43 new test files** (`tests/`) — smoke tests for all new route blueprints.
+- **880 total routes** (up from 254 in v1.9.26). All registered via `__init__.py`.
+
+### Fixed
+- **Ruff lint** — 1,207 auto-fixed + 45 manual fixes (F401 noqa for lazy imports, F821 forward refs, E741 ambiguous vars, E701 multi-statement lines) across all new files. Codebase fully lint-clean.
+
+## [1.10.4] - 2026-04-12
+
+### Added
+- **Expandable "Why this suggestion?"** on Sequence Assistant recommendation cards. Click to reveal the reasoning behind each suggestion with context-specific explanation.
+
+## [1.10.3] - 2026-04-12
+
+### Added
+- **Journal "Apply to selection"** — Apply a journal entry's operation to the currently selected clip with one click from the Operation Journal panel.
+
+## [1.10.2] - 2026-04-12
+
+### Added
+- **Persisted Assistant dismissals** — Dismissed Sequence Assistant suggestions are remembered across sessions via localStorage. Prevents the same suggestion from reappearing after panel reload.
+
+## [1.10.1] - 2026-04-12
+
+### Added
+- **Preflight checks for /full and /shorts-pipeline** — Validate dependencies, disk space, and clip metadata before starting long multi-step pipelines. Prevents wasted time on doomed jobs.
+- **More audio preview buttons** — Added waveform preview buttons on additional audio processing sub-tabs.
+
+## [1.10.0] - 2026-04-12
+
+### Added
+- **Sequence Assistant** — "What should I edit next?" AI-powered recommendation engine. Analyzes the current clip and project context to suggest relevant operations (denoise, captions, color correction, etc.) with one-click execution. Displays as a dismissible card panel.
+
+## [1.9.36] - 2026-04-11
+
+### Added
+- **Live audio preview for denoise** — Preview denoised audio in-panel before applying. Streams a short processed sample for A/B comparison.
+
+## [1.9.35] - 2026-04-11
+
+### Added
+- **Visual LUT grid** — Browse available LUTs as a visual grid with thumbnail previews showing each LUT applied to a reference frame. Click to apply.
+
+## [1.9.34] - 2026-04-11
+
+### Added
+- **Transcript-to-timeline scrubber** — Click any word in the transcript view to seek to that position in the Premiere timeline. Bidirectional sync between text and playhead.
+
+## [1.9.33] - 2026-04-11
+
+### Added
+- **Preflight checklist** — Before starting long pipelines (silence + captions + export), display a checklist of required dependencies, available disk space, and estimated processing time. User confirms or cancels.
+
+## [1.9.32] - 2026-04-11
+
+### Added
+- **Batch mode for Interview Polish** — Run the Interview Polish workflow on multiple clips sequentially with a single click. Progress tracking per clip.
+
+## [1.9.31] - 2026-04-11
+
+### Added
+- **CLI `opencut polish`** — Headless interview/podcast cleanup pipeline. Chains denoise + normalize + silence removal + filler removal from the command line.
+
+## [1.9.30] - 2026-04-11
+
+### Added
+- **Replay past job on current clip** — From the job history panel, replay any previous operation on the currently selected clip with the same parameters. One-click re-run.
+
+## [1.9.29] - 2026-04-10
+
+### Added
+- **Interview Polish** — One-click interview/podcast cleanup pipeline. Chains: denoise + normalize + silence removal + filler removal with optimized defaults. Quick Action button on Cut tab.
+
+## [1.9.28] - 2026-04-10
+
+### Added
+- **Operation Journal** — Persistent log of all operations performed on each clip with parameters, timestamps, and results. One-click rollback to undo the last operation.
+
+## [1.9.27] - 2026-04-10
+
+### Added
+- **Session Context** — "Where you left off" welcome-back card on panel open. Shows last clip worked on, last operation performed, and quick resume button.
+
+## [1.9.26] - 2026-04-09
+
+### Fixed
+- **Install route rate limit timing** — `make_install_route()` checked `rate_limit("model_install")` inside the `@async_job` body (async thread), so concurrent installs returned `200 + job_id` then failed asynchronously. Moved check to synchronous Flask handler — now returns `429 RATE_LIMITED` immediately with no job spawned.
+- **`@async_job` filepath errors lacked structured codes** — Filepath validation failures returned bare `{"error": "..."}` without `code` or `suggestion` fields. Now classifies into `INVALID_INPUT` vs `FILE_NOT_FOUND` with actionable suggestions. Applies to all 97 async routes.
+
+## [1.9.25] - 2026-04-09
+
+### Fixed
+- **`/system/dependencies` cold call 6.5s** — 20+ `importlib.import_module()` probes + subprocess calls ran synchronously. Added 60-second TTL cache. Cold: 6,463ms. Warm: <1ms (~6,000x speedup). `?fresh=1` param bypasses cache.
+
+## [1.9.24] - 2026-04-09
+
+### Fixed
+- **Env var config ignored** — `OPENCUT_PORT`, `OPENCUT_HOST`, `OPENCUT_DEBUG` env vars were silently ignored. `server.py::main()` only read argparse with hardcoded defaults. Now reads env vars first, argparse overrides.
+
+## [1.9.23] - 2026-04-09
+
+### Fixed
+- **UXP accessibility** — All 7 tab panels now have `aria-labelledby`. All 72 buttons have `type="button"`. `.hidden` utility class unified as global `display: none !important`.
+
+## [1.9.22] - 2026-04-08
+
+### Fixed
+- **`/file` preview route allowlist restored** — Regression had removed the security allowlist.
+- **`safe_bool()` hardened** — Rejects NaN, inf, containers. 15 new call sites across route files.
+- **MCP serialization fallback** — Added JSON fallback for non-serializable job results.
+- **`highlights.py` None-text guard** — Prevents crash on segments with null text.
+
+## [1.9.21] - 2026-04-08
+
+### Added
+- **CEP panel UX polish** — Friendlier error messages, clearer button labels, improved alert formatting.
+
+### Fixed
+- **Boolean coercion hardening** — `safe_bool()` added to all 26 boolean flag sites across 8 route files. Prevents `"false"` string coercing to `True`.
+
+## [1.9.20] - 2026-04-07
+
+### Fixed
+- **Gemini API key URL leak** — `core/llm.py` passed API key as query string, leaking through error messages. Moved to `x-goog-api-key` header. Added `_sanitize_url()`.
+- **motion_graphics drawtext colon injection** — 3 drawtext builders escaped `:` inside single-quoted values, producing literal `\:` in rendered text. Removed wrong escapes.
+- **Queue allowlist +19 routes** — 19 async routes missing from `_ALLOWED_QUEUE_ENDPOINTS` (total now 101).
+- **CEP SSE/poll cancel race** — Stale events after cancel could trigger `onJobDone()`. Added guard.
+- **audio_enhance no-op .cpu() calls** — Removed ineffective `.cpu()` calls before `del`.
+- **animated_captions temp file leak** — Unlinked orphan tempfile on VideoWriter failure.
+
+## [1.9.19] - 2026-04-06
+
+### Changed
+- Comprehensive audit + full modernization pass.
+
+## [1.9.18] - 2026-04-05
+
+### Fixed (Comprehensive 6-Phase Audit — 103+ issues)
+- **P0: loudness_match completely broken** — `_run_ffmpeg()` returned `str` but callers accessed `.returncode`/`.stderr`. Renamed to `_run_ffmpeg_raw()`.
+- **P0: UXP CSRF token refresh wrong header** — Read `X-CSRF-Token` instead of `X-OpenCut-Token`.
+- **P0: UXP chat endpoint 404** — Posted to `/chat/message` but route is `/chat`.
+- **P1: WorkerPool shutdown TypeError** — `None` poison pills not comparable with `PriorityQueue` items.
+- **P1: styled captions progress crash** — Missing `msg=""` default.
+- **P1: scene_detect + shorts_pipeline bare ffmpeg** — 4 bare `"ffmpeg"` strings.
+- **P1: 3 GPU memory leaks** — MusicGen (1.2-13GB), SAM2 (1-4GB), Florence-2 (450MB) models never freed.
+- **P2: 37 additional fixes** — Route allowlists, float coercion, structured errors, resource cleanup, font thread safety, CSS missing rules.
+
+## [1.9.17] - 2026-04-03
+
+### Changed
+- README update with comprehensive feature documentation and audit prompt.
+
+## [1.9.16] - 2026-04-02
+
+### Fixed (Performance Audit & Memory Leak Fixes)
+- **`/video/auto-zoom` broken return** — Route returned `{}` instead of `result_dict`.
+- **Unbounded thread spawning** — `_persist_job()` and `_schedule_record_time()` spawned raw threads per call. Replaced with bounded `_io_pool = ThreadPoolExecutor(2)`.
+- **Rate limit slot leak** — `make_install_route()` leaked permanently when `rate_limit()` returned False.
+- **GPU memory leak in audio_enhance** — Now deletes all tensor refs + `.cpu()` + `torch.cuda.empty_cache()`.
+- **Timer thread spam** — `_schedule_temp_cleanup()` replaced with single `_cleanup_worker` daemon thread + event queue.
+- **Haar cascade race condition** — Added `_CASCADE_LOCK` with double-checked locking.
+- **SQLite connection leak** — Added `close_all_connections()` shutdown hook.
+- **CEP health timer leak** — `setInterval` reassigned without `clearInterval`.
+- **Single theme ("Studio Graphite")** — Removed multi-theme system (10 themes). Only root dark theme remains.
+
 ## [1.9.15] - 2026-03-27
 
 ### Release Audit (Batch 47)
