@@ -11,8 +11,12 @@ Uses FFmpeg astats, aloop, acrossfade, and volume-based gap detection.
 
 import json
 import logging
+import math
 import os
-from typing import Callable, Optional
+import struct
+import tempfile
+import wave
+from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, run_ffmpeg
 from opencut.helpers import output_path as _output_path
@@ -369,3 +373,349 @@ def fill_gaps_with_tone(
         "gaps_filled": len(gaps),
         "total_gap_duration": round(total_gap_dur, 3),
     }
+
+
+# ---------------------------------------------------------------------------
+# Enhanced Room Tone: Spectral Envelope Analysis & Synthesis
+# ---------------------------------------------------------------------------
+
+def analyze_room_tone(
+    audio_path: str,
+    n_fft: int = 2048,
+    hop_length: int = 512,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """
+    Analyze room tone spectral envelope profile.
+
+    Extracts the spectral shape of ambient room tone from the quietest
+    segments of audio, producing a profile that can be used to synthesize
+    matching room tone.
+
+    Args:
+        audio_path: Source audio/video file.
+        n_fft: FFT window size for spectral analysis.
+        hop_length: STFT hop length.
+        on_progress: Progress callback(pct, msg).
+
+    Returns:
+        dict with spectral_envelope (list of {freq, magnitude_db}),
+        rms_db, duration, sample_rate, method.
+    """
+    n_fft = max(256, min(8192, int(n_fft)))
+    hop_length = max(64, min(n_fft, int(hop_length)))
+
+    if on_progress:
+        on_progress(10, "Analyzing room tone spectral envelope...")
+
+    # Try librosa path for detailed spectral analysis
+    try:
+        import librosa
+        import numpy as np
+
+        y, sr = librosa.load(audio_path, sr=None, mono=True)
+        duration = len(y) / sr
+
+        # Find quietest 2-second segment
+        chunk_samples = int(2.0 * sr)
+        min_rms = float("inf")
+        best_start = 0
+        for i in range(0, len(y) - chunk_samples, chunk_samples // 2):
+            chunk = y[i:i + chunk_samples]
+            rms = float(np.sqrt(np.mean(chunk ** 2)))
+            if 0 < rms < min_rms:
+                min_rms = rms
+                best_start = i
+
+        tone_segment = y[best_start:best_start + chunk_samples]
+
+        # Compute STFT
+        stft = librosa.stft(tone_segment, n_fft=n_fft, hop_length=hop_length)
+        magnitude = np.abs(stft)
+        # Average across time to get spectral envelope
+        avg_magnitude = np.mean(magnitude, axis=1)
+        mag_db = librosa.amplitude_to_db(avg_magnitude, ref=np.max)
+
+        freq_resolution = sr / n_fft
+        envelope = []
+        for i, db_val in enumerate(mag_db):
+            freq = i * freq_resolution
+            envelope.append({
+                "freq": round(freq, 1),
+                "magnitude_db": round(float(db_val), 2),
+            })
+
+        rms_db = round(20 * np.log10(min_rms + 1e-10), 1)
+
+        if on_progress:
+            on_progress(100, "Room tone analysis complete")
+
+        return {
+            "spectral_envelope": envelope,
+            "rms_db": rms_db,
+            "duration": round(duration, 3),
+            "sample_rate": int(sr),
+            "n_fft": n_fft,
+            "method": "librosa",
+        }
+    except ImportError:
+        pass
+
+    # Fallback: use FFmpeg astats for basic analysis
+    if on_progress:
+        on_progress(50, "Analyzing with FFmpeg (basic)...")
+
+    quietest = _find_quietest_segments(audio_path, chunk_seconds=2.0)
+    rms_db = quietest[0][1] if quietest else -60.0
+
+    # Generate a simplified spectral envelope via FFmpeg
+    # This is a rough approximation without full FFT analysis
+    envelope = [
+        {"freq": 50.0, "magnitude_db": rms_db - 5},
+        {"freq": 100.0, "magnitude_db": rms_db - 3},
+        {"freq": 200.0, "magnitude_db": rms_db - 2},
+        {"freq": 500.0, "magnitude_db": rms_db - 4},
+        {"freq": 1000.0, "magnitude_db": rms_db - 8},
+        {"freq": 2000.0, "magnitude_db": rms_db - 15},
+        {"freq": 4000.0, "magnitude_db": rms_db - 25},
+        {"freq": 8000.0, "magnitude_db": rms_db - 40},
+    ]
+
+    total_dur = _get_duration(audio_path)
+
+    if on_progress:
+        on_progress(100, "Room tone analysis complete (basic)")
+
+    return {
+        "spectral_envelope": envelope,
+        "rms_db": round(rms_db, 1),
+        "duration": round(total_dur, 3),
+        "sample_rate": 48000,
+        "n_fft": n_fft,
+        "method": "ffmpeg_basic",
+    }
+
+
+def synthesize_room_tone(
+    profile: dict,
+    duration: float = 10.0,
+    output_path_str: Optional[str] = None,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """
+    Synthesize room tone matching a spectral envelope profile.
+
+    Generates pink-noise-like audio shaped to match the spectral profile
+    from analyze_room_tone().
+
+    Args:
+        profile: Spectral profile dict from analyze_room_tone().
+        duration: Desired output duration in seconds.
+        output_path_str: Output WAV path (auto-generated if None).
+        on_progress: Progress callback(pct, msg).
+
+    Returns:
+        dict with output_path, duration, method.
+    """
+    duration = max(0.5, min(3600.0, float(duration)))
+    envelope = profile.get("spectral_envelope", [])
+    sr = int(profile.get("sample_rate", 48000))
+    rms_db = float(profile.get("rms_db", -50.0))
+
+    if output_path_str is None:
+        output_path_str = os.path.join(
+            tempfile.gettempdir(), f"opencut_synth_roomtone_{os.getpid()}.wav"
+        )
+
+    if on_progress:
+        on_progress(10, "Synthesizing room tone from profile...")
+
+    # Try numpy/scipy for spectral synthesis
+    try:
+        import numpy as np
+
+        n_samples = int(sr * duration)
+
+        # Generate white noise
+        noise = np.random.randn(n_samples).astype(np.float32)
+
+        # Apply spectral shaping via FFT
+        fft = np.fft.rfft(noise)
+        freqs = np.fft.rfftfreq(n_samples, 1.0 / sr)
+
+        # Interpolate envelope to match FFT bins
+        if envelope:
+            env_freqs = [e["freq"] for e in envelope]
+            env_mags = [10 ** (e["magnitude_db"] / 20.0) for e in envelope]
+
+            # Linear interpolation
+            shaped_mag = np.interp(freqs, env_freqs, env_mags, left=env_mags[0], right=env_mags[-1])
+            fft *= shaped_mag
+
+        # Inverse FFT
+        audio = np.fft.irfft(fft, n=n_samples)
+
+        # Normalize to target RMS
+        target_rms = 10 ** (rms_db / 20.0)
+        current_rms = np.sqrt(np.mean(audio ** 2))
+        if current_rms > 0:
+            audio = audio * (target_rms / current_rms)
+
+        # Clip to prevent overflow
+        audio = np.clip(audio, -1.0, 1.0)
+
+        # Write WAV
+        audio_int16 = (audio * 32767).astype(np.int16)
+        with wave.open(output_path_str, "wb") as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(2)
+            wf.setframerate(sr)
+            wf.writeframes(audio_int16.tobytes())
+
+        if on_progress:
+            on_progress(100, "Room tone synthesized")
+
+        return {
+            "output_path": output_path_str,
+            "duration": duration,
+            "method": "spectral_synthesis",
+        }
+    except ImportError:
+        pass
+
+    # Fallback: generate pink-ish noise via FFmpeg
+    if on_progress:
+        on_progress(50, "Synthesizing via FFmpeg anoisesrc...")
+
+    ffmpeg = get_ffmpeg_path()
+    # anoisesrc generates white noise; apply lowpass for approximate pink noise
+    target_amp = max(0.001, 10 ** (rms_db / 20.0))
+    cmd = [
+        ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+        "-f", "lavfi",
+        "-i", f"anoisesrc=d={duration}:c=pink:r={sr}:a={target_amp}",
+        "-c:a", "pcm_s16le",
+        output_path_str,
+    ]
+    run_ffmpeg(cmd)
+
+    if on_progress:
+        on_progress(100, "Room tone synthesized (FFmpeg)")
+
+    return {
+        "output_path": output_path_str,
+        "duration": duration,
+        "method": "ffmpeg_pink_noise",
+    }
+
+
+def fill_cuts_with_room_tone(
+    audio_path: str,
+    cut_points: List[dict],
+    output_path_str: Optional[str] = None,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """
+    Fill edit cut points with synthesized room tone for seamless audio.
+
+    Analyzes the room tone of the source audio, synthesizes matching tone,
+    and crossfades it into the specified cut points.
+
+    Args:
+        audio_path: Source audio/video file.
+        cut_points: List of cut point dicts with {time, duration} where
+                    time is the cut position and duration is the fill length.
+        output_path_str: Output path (auto-generated if None).
+        on_progress: Progress callback(pct, msg).
+
+    Returns:
+        dict with output_path, cuts_filled, total_fill_duration, method.
+    """
+    if output_path_str is None:
+        output_path_str = _output_path(audio_path, "cuts_filled")
+
+    if not cut_points:
+        if on_progress:
+            on_progress(100, "No cut points provided")
+        ffmpeg = get_ffmpeg_path()
+        cmd = [ffmpeg, "-i", audio_path, "-c", "copy", "-y", output_path_str]
+        run_ffmpeg(cmd)
+        return {
+            "output_path": output_path_str,
+            "cuts_filled": 0,
+            "total_fill_duration": 0.0,
+            "method": "none",
+        }
+
+    if on_progress:
+        on_progress(10, "Analyzing room tone...")
+
+    # Analyze room tone profile
+    profile = analyze_room_tone(audio_path)
+
+    # Find max fill duration needed
+    max_fill = max(float(cp.get("duration", 0.5)) for cp in cut_points)
+    total_fill_dur = sum(float(cp.get("duration", 0.5)) for cp in cut_points)
+
+    if on_progress:
+        on_progress(30, "Synthesizing room tone fill...")
+
+    # Synthesize tone
+    tone_result = synthesize_room_tone(profile, duration=max_fill + 1.0)
+    tone_path = tone_result["output_path"]
+
+    try:
+        if on_progress:
+            on_progress(50, f"Filling {len(cut_points)} cut points...")
+
+        total_duration = _get_duration(audio_path)
+
+        # Build filter that overlays room tone at each cut point
+        enable_parts = []
+        for cp in cut_points:
+            t = max(0, float(cp.get("time", 0)))
+            dur = max(0.05, float(cp.get("duration", 0.5)))
+            fade = min(0.02, dur * 0.1)
+            s = max(0, t - dur / 2)
+            e = min(total_duration, t + dur / 2)
+            enable_parts.append(f"between(t,{s},{e})")
+
+        enable_expr = "+".join(enable_parts)
+        tone_vol = f"volume=enable='{enable_expr}':volume=1"
+
+        fc = (
+            f"[1:a]aloop=loop=-1:size={int(48000 * total_duration)},"
+            f"atrim=duration={total_duration},{tone_vol}[tone];"
+            f"[0:a][tone]amix=inputs=2:duration=first:dropout_transition=0[out]"
+        )
+
+        ffmpeg = get_ffmpeg_path()
+        cmd = [
+            ffmpeg, "-hide_banner", "-loglevel", "error", "-y",
+            "-i", audio_path,
+            "-i", tone_path,
+            "-filter_complex", fc,
+            "-map", "[out]",
+            "-map", "0:v?",
+            "-c:v", "copy",
+            "-c:a", "pcm_s16le",
+            output_path_str,
+        ]
+        run_ffmpeg(cmd)
+
+        if on_progress:
+            on_progress(100, f"Filled {len(cut_points)} cuts with room tone")
+
+        method = f"synthesized_{profile.get('method', 'unknown')}"
+
+        return {
+            "output_path": output_path_str,
+            "cuts_filled": len(cut_points),
+            "total_fill_duration": round(total_fill_dur, 3),
+            "method": method,
+        }
+    finally:
+        try:
+            os.unlink(tone_path)
+        except OSError:
+            pass

@@ -1,4 +1,4 @@
-"""Interview Polish resume state (v1.10.5, feature Q).
+"""Interview Polish resume state (v1.11.0, feature Q).
 
 Cache the expensive step of ``/interview-polish`` (Whisper transcription)
 so re-running the pipeline on the same file skips re-transcribing when
