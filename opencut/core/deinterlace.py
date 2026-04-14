@@ -7,6 +7,7 @@ using FFmpeg's yadif, bwdif, or nnedi filters.
 Uses FFmpeg only — no additional dependencies required.
 """
 
+import json
 import logging
 import re
 import subprocess
@@ -16,6 +17,8 @@ from typing import Callable, Optional
 from opencut.helpers import (
     FFmpegCmd,
     get_ffmpeg_path,
+    get_ffprobe_path,
+    get_video_info,
     output_path,
     run_ffmpeg,
 )
@@ -242,3 +245,198 @@ def deinterlace(
         on_progress(100, "Deinterlacing complete")
 
     return {"output_path": out}
+
+
+# ---------------------------------------------------------------------------
+# Auto-Detect Interlacing (enhanced via ffprobe + idet)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class DetailedInterlaceInfo:
+    """Extended interlace detection results."""
+    is_interlaced: bool = False
+    field_order: str = "unknown"       # "tff", "bff", "progressive", "unknown"
+    detection_confidence: float = 0.0
+    probe_field_order: str = "unknown"  # Raw ffprobe field_order value
+    idet_tff: int = 0
+    idet_bff: int = 0
+    idet_progressive: int = 0
+    idet_undetermined: int = 0
+    recommended_method: str = "bwdif"
+
+
+def auto_detect_interlacing(video_path: str) -> DetailedInterlaceInfo:
+    """
+    Detect interlacing using both ffprobe ``field_order`` metadata and
+    the ``idet`` analysis filter for robust, two-phase detection.
+
+    Phase 1 reads the container-level ``field_order`` tag (fast, metadata
+    only).  Phase 2 runs the ``idet`` filter on the first 500 frames for
+    statistical frame-level analysis.  The two results are combined for
+    a high-confidence determination.
+
+    Args:
+        video_path: Source video file.
+
+    Returns:
+        DetailedInterlaceInfo with combined results and recommended
+        deinterlacing method.
+    """
+    result = DetailedInterlaceInfo()
+
+    # Phase 1: ffprobe field_order metadata
+    probe_cmd = [
+        get_ffprobe_path(), "-v", "error",
+        "-select_streams", "v:0",
+        "-show_entries", "stream=field_order",
+        "-of", "json",
+        video_path,
+    ]
+    try:
+        probe_out = subprocess.run(probe_cmd, capture_output=True, text=True, timeout=30)
+        if probe_out.returncode == 0:
+            probe_data = json.loads(probe_out.stdout)
+            streams = probe_data.get("streams", [])
+            if streams:
+                fo = streams[0].get("field_order", "unknown")
+                result.probe_field_order = fo
+                if fo in ("tt", "tb"):
+                    result.field_order = "tff"
+                elif fo in ("bb", "bt"):
+                    result.field_order = "bff"
+                elif fo == "progressive":
+                    result.field_order = "progressive"
+    except Exception:
+        pass
+
+    # Phase 2: idet filter analysis
+    idet_info = detect_interlaced(video_path)
+    result.idet_tff = 0
+    result.idet_bff = 0
+    result.idet_progressive = 0
+    result.idet_undetermined = 0
+
+    # Re-run idet to capture raw numbers
+    idet_cmd = [
+        get_ffmpeg_path(), "-hide_banner",
+        "-i", video_path,
+        "-vf", "idet",
+        "-frames:v", "500",
+        "-f", "null", "-",
+    ]
+    try:
+        idet_out = subprocess.run(idet_cmd, capture_output=True, text=True, timeout=120)
+        multi_match = re.search(
+            r"Multi frame detection:\s+"
+            r"TFF:\s*(\d+)\s+BFF:\s*(\d+)\s+"
+            r"Progressive:\s*(\d+)\s+Undetermined:\s*(\d+)",
+            idet_out.stderr,
+        )
+        if multi_match:
+            result.idet_tff = int(multi_match.group(1))
+            result.idet_bff = int(multi_match.group(2))
+            result.idet_progressive = int(multi_match.group(3))
+            result.idet_undetermined = int(multi_match.group(4))
+    except subprocess.TimeoutExpired:
+        pass
+
+    # Combine results
+    result.is_interlaced = idet_info.is_interlaced
+    result.detection_confidence = idet_info.detection_confidence
+
+    # If ffprobe says progressive and idet agrees, boost confidence
+    if result.probe_field_order == "progressive" and not idet_info.is_interlaced:
+        result.detection_confidence = max(result.detection_confidence, 0.95)
+        result.is_interlaced = False
+        result.field_order = "progressive"
+    elif idet_info.is_interlaced:
+        if idet_info.field_order in ("tff", "bff"):
+            result.field_order = idet_info.field_order
+
+    # Recommend method based on content
+    total = result.idet_tff + result.idet_bff + result.idet_progressive + result.idet_undetermined
+    if total > 0:
+        interlaced_ratio = (result.idet_tff + result.idet_bff) / total
+        if interlaced_ratio > 0.7:
+            result.recommended_method = "bwdif"  # Heavy interlacing
+        elif interlaced_ratio > 0.3:
+            result.recommended_method = "yadif"  # Mixed content
+        else:
+            result.recommended_method = "yadif"  # Light interlacing
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Adaptive Deinterlace
+# ---------------------------------------------------------------------------
+
+_ADAPTIVE_METHODS = {"auto", "yadif", "bwdif", "nnedi"}
+
+
+def adaptive_deinterlace(
+    video_path: str,
+    method: str = "auto",
+    output_path_override: Optional[str] = None,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """
+    Adaptively deinterlace a video, auto-detecting interlacing type and
+    choosing the best method.
+
+    When *method* is ``"auto"`` the function runs
+    :func:`auto_detect_interlacing` first and selects yadif (fast) or
+    bwdif (quality) based on interlacing density.  If the video is
+    already progressive it returns early without re-encoding.
+
+    Args:
+        video_path:  Source video file.
+        method:  ``"auto"``, ``"yadif"``, ``"bwdif"``, or ``"nnedi"``.
+        output_path_override:  Optional output file path.
+        on_progress:  Callback ``(pct, msg)``.
+
+    Returns:
+        dict with *output_path*, *method_used*, *field_order*,
+        *was_interlaced*, and *detection_confidence*.
+    """
+    if method not in _ADAPTIVE_METHODS:
+        method = "auto"
+
+    if on_progress:
+        on_progress(5, "Detecting interlacing...")
+
+    detection = auto_detect_interlacing(video_path)
+
+    if method == "auto":
+        if not detection.is_interlaced:
+            if on_progress:
+                on_progress(100, "Video is progressive, no deinterlacing needed")
+            return {
+                "output_path": video_path,
+                "method_used": "none",
+                "field_order": detection.field_order,
+                "was_interlaced": False,
+                "detection_confidence": detection.detection_confidence,
+            }
+        method = detection.recommended_method
+
+    if on_progress:
+        on_progress(15, f"Deinterlacing with {method} (field order: {detection.field_order})...")
+
+    field_order = detection.field_order if detection.field_order in ("tff", "bff") else "tff"
+
+    result = deinterlace(
+        video_path,
+        output_path_override=output_path_override,
+        method=method,
+        field_order=field_order,
+        on_progress=on_progress,
+    )
+
+    return {
+        "output_path": result["output_path"],
+        "method_used": method,
+        "field_order": detection.field_order,
+        "was_interlaced": detection.is_interlaced,
+        "detection_confidence": detection.detection_confidence,
+    }

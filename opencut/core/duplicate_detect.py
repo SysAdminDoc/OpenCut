@@ -333,6 +333,111 @@ def _hamming_distance(hash1: str, hash2: str) -> int:
         return 64
 
 
+# ---------------------------------------------------------------------------
+# 60.4 — Near-Duplicate Detection (perceptual hash on keyframes)
+# ---------------------------------------------------------------------------
+_VIDEO_EXTENSIONS = {
+    ".mp4", ".mov", ".avi", ".mkv", ".mxf", ".m4v",
+    ".wmv", ".flv", ".webm", ".ts", ".m2ts", ".mpg", ".mpeg",
+}
+
+
+def detect_near_duplicates(
+    folder_path: str,
+    threshold: float = 0.80,
+    recursive: bool = True,
+    on_progress: Optional[Callable] = None,
+) -> List[dict]:
+    """
+    Detect near-duplicate videos in a folder using perceptual hashing.
+
+    Scans a directory for video files, computes perceptual hashes on
+    keyframes, and groups files with the same content at different
+    resolutions or quality levels.
+
+    Each group reports:
+    - files: list of file paths in the group
+    - similarity: average pairwise similarity
+    - recommended_keep: the highest-quality version (largest file)
+    - total_size: combined size of all files in the group
+    - potential_savings: size that could be freed by removing duplicates
+
+    Args:
+        folder_path: Directory to scan for video files.
+        threshold: Similarity threshold (0.0-1.0). Lower catches more near-dupes.
+        recursive: Whether to scan subdirectories.
+        on_progress: Callback(pct, msg).
+
+    Returns:
+        List of duplicate group dicts with files, similarity, and size info.
+    """
+    if not os.path.isdir(folder_path):
+        raise FileNotFoundError(f"Folder not found: {folder_path}")
+
+    if on_progress:
+        on_progress(5, "Scanning for video files...")
+
+    # Discover video files
+    video_files = []
+    if recursive:
+        for root, _dirs, files in os.walk(folder_path):
+            for fname in files:
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in _VIDEO_EXTENSIONS:
+                    video_files.append(os.path.join(root, fname))
+    else:
+        for fname in os.listdir(folder_path):
+            ext = os.path.splitext(fname)[1].lower()
+            if ext in _VIDEO_EXTENSIONS:
+                video_files.append(os.path.join(folder_path, fname))
+
+    if len(video_files) < 2:
+        if on_progress:
+            on_progress(100, f"Only {len(video_files)} video file(s) found, need at least 2")
+        return []
+
+    if on_progress:
+        on_progress(10, f"Found {len(video_files)} videos, computing hashes...")
+
+    # Compute hashes
+    groups = find_duplicates(
+        video_files,
+        threshold=threshold,
+        on_progress=lambda pct, msg: (
+            on_progress(10 + int(pct * 0.80), msg) if on_progress else None
+        ),
+    )
+
+    # Enhance results with size information
+    if on_progress:
+        on_progress(92, "Computing size information...")
+
+    for group in groups:
+        total_size = 0
+        for fp in group["files"]:
+            try:
+                total_size += os.path.getsize(fp)
+            except OSError:
+                pass
+
+        keep_size = 0
+        try:
+            keep_size = os.path.getsize(group["recommended_keep"])
+        except OSError:
+            pass
+
+        group["total_size"] = total_size
+        group["potential_savings"] = total_size - keep_size
+        group["file_count"] = len(group["files"])
+
+    if on_progress:
+        total_savings = sum(g.get("potential_savings", 0) for g in groups)
+        savings_mb = total_savings / (1024 * 1024)
+        on_progress(100, f"Found {len(groups)} duplicate group(s), {savings_mb:.1f} MB potential savings")
+
+    return groups
+
+
 def _hash_similarity(h1: VideoHash, h2: VideoHash) -> float:
     """
     Compute similarity between two VideoHash objects.
