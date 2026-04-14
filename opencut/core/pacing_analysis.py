@@ -4,13 +4,19 @@ OpenCut AI Pacing & Rhythm Analysis
 Analyzes video edit pacing by detecting cuts and comparing against
 genre-specific profiles. Provides actionable suggestions for re-editing.
 
+Includes:
+- analyze_pacing: video-file-based pacing analysis with scene detection
+- analyze_pacing_from_cuts: cut-point-based analysis with mean/median/stddev,
+  pacing curve, genre benchmarks, visual bar chart, and anomaly flagging
+
 Uses FFmpeg scene detection -- no additional dependencies required.
 """
 
 import logging
+import math
 import os
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import get_video_info
 
@@ -392,4 +398,332 @@ def _result_to_dict(result: PacingResult) -> dict:
             }
             for s in result.shots
         ],
+    }
+
+
+# ---------------------------------------------------------------------------
+# Cut-point-based pacing analysis (no video file required)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class PacingStats:
+    """Statistical pacing analysis from cut points."""
+    mean_shot_length: float = 0.0
+    median_shot_length: float = 0.0
+    stddev_shot_length: float = 0.0
+    min_shot_length: float = 0.0
+    max_shot_length: float = 0.0
+    total_shots: int = 0
+    total_duration: float = 0.0
+    cuts_per_minute: float = 0.0
+    shot_lengths: List[float] = field(default_factory=list)
+    pacing_curve: List[Dict] = field(default_factory=list)
+    genre_comparisons: Dict[str, Dict] = field(default_factory=dict)
+    anomalies: List[Dict] = field(default_factory=list)
+    bar_chart: List[Dict] = field(default_factory=list)
+    suggestions: List[str] = field(default_factory=list)
+
+
+def _compute_median(values: List[float]) -> float:
+    """Compute median of a list of floats."""
+    if not values:
+        return 0.0
+    sorted_vals = sorted(values)
+    n = len(sorted_vals)
+    if n % 2 == 1:
+        return sorted_vals[n // 2]
+    return (sorted_vals[n // 2 - 1] + sorted_vals[n // 2]) / 2.0
+
+
+def _compute_stddev(values: List[float], mean: float) -> float:
+    """Compute population standard deviation."""
+    if len(values) < 2:
+        return 0.0
+    variance = sum((v - mean) ** 2 for v in values) / len(values)
+    return math.sqrt(variance)
+
+
+def _build_pacing_bar_chart(
+    shot_lengths: List[float],
+    bucket_count: int = 10,
+) -> List[Dict]:
+    """Build a visual pacing bar chart with buckets."""
+    if not shot_lengths:
+        return []
+
+    min_len = min(shot_lengths)
+    max_len = max(shot_lengths)
+    if max_len == min_len:
+        return [{"range_start": min_len, "range_end": max_len,
+                 "count": len(shot_lengths), "bar": "#" * len(shot_lengths)}]
+
+    bucket_width = (max_len - min_len) / bucket_count
+    buckets = []
+    for i in range(bucket_count):
+        start = min_len + i * bucket_width
+        end = start + bucket_width
+        count = sum(1 for s in shot_lengths if start <= s < end or
+                    (i == bucket_count - 1 and s == end))
+        buckets.append({
+            "range_start": round(start, 2),
+            "range_end": round(end, 2),
+            "count": count,
+            "bar": "#" * count,
+        })
+
+    return buckets
+
+
+def _flag_anomalies(
+    shot_lengths: List[float],
+    mean: float,
+    stddev: float,
+    threshold_sigma: float = 2.0,
+) -> List[Dict]:
+    """Flag shots whose length deviates more than threshold_sigma from mean."""
+    if stddev == 0 or not shot_lengths:
+        return []
+
+    anomalies = []
+    for i, length in enumerate(shot_lengths):
+        deviation = abs(length - mean) / stddev
+        if deviation >= threshold_sigma:
+            direction = "too_long" if length > mean else "too_short"
+            anomalies.append({
+                "shot_index": i + 1,
+                "duration": round(length, 3),
+                "deviation_sigma": round(deviation, 2),
+                "direction": direction,
+                "suggestion": (
+                    f"Shot {i + 1} ({length:.1f}s) is {deviation:.1f} sigma "
+                    f"{'above' if direction == 'too_long' else 'below'} mean "
+                    f"({mean:.1f}s). Consider "
+                    f"{'trimming' if direction == 'too_long' else 'extending'}."
+                ),
+            })
+
+    return anomalies
+
+
+def _compare_genre_benchmarks(
+    mean: float,
+    cpm: float,
+) -> Dict[str, Dict]:
+    """Compare pacing against all genre benchmarks."""
+    comparisons = {}
+    for genre_name, profile in GENRE_PROFILES.items():
+        target_avg = profile["target_avg"]
+        target_cpm = profile["target_cpm"]
+
+        avg_diff_pct = ((mean - target_avg) / target_avg * 100) if target_avg > 0 else 0
+        cpm_diff_pct = ((cpm - target_cpm) / target_cpm * 100) if target_cpm > 0 else 0
+
+        if abs(avg_diff_pct) <= 20:
+            match_quality = "good"
+        elif abs(avg_diff_pct) <= 50:
+            match_quality = "fair"
+        else:
+            match_quality = "poor"
+
+        comparisons[genre_name] = {
+            "description": profile["description"],
+            "target_avg_shot": target_avg,
+            "target_cpm": target_cpm,
+            "avg_diff_percent": round(avg_diff_pct, 1),
+            "cpm_diff_percent": round(cpm_diff_pct, 1),
+            "match_quality": match_quality,
+        }
+
+    return comparisons
+
+
+def _build_cut_pacing_curve(
+    cut_points: List[float],
+    total_duration: float,
+    window_seconds: float = 30.0,
+) -> List[Dict]:
+    """Build pacing curve from cut points over sliding time windows."""
+    if not cut_points or total_duration <= 0:
+        return []
+
+    curve = []
+    step = max(5.0, window_seconds / 3.0)
+    t = 0.0
+
+    while t < total_duration:
+        w_start = max(0.0, t - window_seconds / 2.0)
+        w_end = min(total_duration, t + window_seconds / 2.0)
+        w_dur = w_end - w_start
+
+        cuts_in_window = sum(1 for c in cut_points if w_start <= c < w_end)
+        local_cpm = (cuts_in_window / (w_dur / 60.0)) if w_dur > 0 else 0.0
+
+        # Compute avg shot length within window
+        window_cuts = sorted([c for c in cut_points if w_start <= c <= w_end])
+        all_points = [w_start] + window_cuts + [w_end]
+        segments = [all_points[i + 1] - all_points[i]
+                    for i in range(len(all_points) - 1)
+                    if all_points[i + 1] - all_points[i] > 0]
+        avg_shot = (sum(segments) / len(segments)) if segments else 0.0
+
+        curve.append({
+            "time": round(t, 1),
+            "local_cpm": round(local_cpm, 1),
+            "avg_shot_duration": round(avg_shot, 2),
+            "cuts_in_window": cuts_in_window,
+        })
+        t += step
+
+    return curve
+
+
+def analyze_pacing_from_cuts(
+    cut_points: List[float],
+    total_duration: float,
+    genre: str = "general",
+    anomaly_threshold: float = 2.0,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """
+    Analyze pacing from a list of cut points and total duration.
+
+    Computes mean/median/stddev shot lengths, pacing curve,
+    genre benchmark comparisons, visual bar chart, and anomaly flags.
+
+    Args:
+        cut_points: List of cut times in seconds (ascending).
+        total_duration: Total duration of the content in seconds.
+        genre: Genre to compare against (default "general").
+        anomaly_threshold: Sigma threshold for anomaly detection.
+        on_progress: Progress callback(pct, msg).
+
+    Returns:
+        dict with comprehensive pacing statistics.
+    """
+    if total_duration <= 0:
+        raise ValueError("total_duration must be positive")
+
+    genre = genre.lower().strip()
+    if genre not in GENRE_PROFILES:
+        genre = "general"
+
+    if on_progress:
+        on_progress(10, "Computing shot lengths...")
+
+    # Sort and deduplicate cut points
+    cut_points = sorted(set(float(c) for c in cut_points if 0 < c < total_duration))
+
+    # Compute shot lengths from cut points
+    all_points = [0.0] + cut_points + [total_duration]
+    shot_lengths = []
+    for i in range(len(all_points) - 1):
+        length = all_points[i + 1] - all_points[i]
+        if length > 0:
+            shot_lengths.append(round(length, 3))
+
+    total_shots = len(shot_lengths)
+
+    if total_shots == 0:
+        return {
+            "mean_shot_length": total_duration,
+            "median_shot_length": total_duration,
+            "stddev_shot_length": 0.0,
+            "min_shot_length": total_duration,
+            "max_shot_length": total_duration,
+            "total_shots": 1,
+            "total_duration": round(total_duration, 3),
+            "cuts_per_minute": 0.0,
+            "shot_lengths": [total_duration],
+            "pacing_curve": [],
+            "genre_comparisons": {},
+            "anomalies": [],
+            "bar_chart": [],
+            "suggestions": ["No cuts detected in content."],
+        }
+
+    if on_progress:
+        on_progress(30, "Computing statistics...")
+
+    mean = sum(shot_lengths) / total_shots
+    median = _compute_median(shot_lengths)
+    stddev = _compute_stddev(shot_lengths, mean)
+    cpm = (total_shots / (total_duration / 60.0)) if total_duration > 0 else 0.0
+
+    if on_progress:
+        on_progress(50, "Building pacing curve...")
+
+    pacing_curve = _build_cut_pacing_curve(cut_points, total_duration)
+
+    if on_progress:
+        on_progress(65, "Comparing genre benchmarks...")
+
+    genre_comparisons = _compare_genre_benchmarks(mean, cpm)
+
+    if on_progress:
+        on_progress(75, "Building bar chart...")
+
+    bar_chart = _build_pacing_bar_chart(shot_lengths)
+
+    if on_progress:
+        on_progress(85, "Flagging anomalies...")
+
+    anomalies = _flag_anomalies(shot_lengths, mean, stddev, anomaly_threshold)
+
+    # Generate suggestions
+    suggestions = []
+    profile = GENRE_PROFILES[genre]
+    target_avg = profile["target_avg"]
+    target_cpm = profile["target_cpm"]
+
+    if mean > target_avg * 1.5:
+        suggestions.append(
+            f"Average shot length ({mean:.1f}s) is significantly longer than "
+            f"{genre} target ({target_avg:.1f}s). Consider tightening edits."
+        )
+    elif mean < target_avg * 0.5:
+        suggestions.append(
+            f"Average shot length ({mean:.1f}s) is significantly shorter than "
+            f"{genre} target ({target_avg:.1f}s). Consider letting shots breathe."
+        )
+
+    if stddev > mean * 0.8:
+        suggestions.append(
+            f"High pacing variability (stddev {stddev:.1f}s vs mean {mean:.1f}s). "
+            f"Consider more consistent shot lengths for smoother rhythm."
+        )
+
+    if anomalies:
+        suggestions.append(
+            f"{len(anomalies)} anomalous shot(s) detected. "
+            f"Review flagged shots for pacing consistency."
+        )
+
+    # Best genre match
+    best_match = min(genre_comparisons.items(),
+                     key=lambda kv: abs(kv[1]["avg_diff_percent"]))
+    if best_match[0] != genre:
+        suggestions.append(
+            f"Pacing best matches '{best_match[0]}' "
+            f"({best_match[1]['description']})."
+        )
+
+    if on_progress:
+        on_progress(100, "Pacing analysis complete")
+
+    return {
+        "mean_shot_length": round(mean, 3),
+        "median_shot_length": round(median, 3),
+        "stddev_shot_length": round(stddev, 3),
+        "min_shot_length": round(min(shot_lengths), 3),
+        "max_shot_length": round(max(shot_lengths), 3),
+        "total_shots": total_shots,
+        "total_duration": round(total_duration, 3),
+        "cuts_per_minute": round(cpm, 2),
+        "shot_lengths": shot_lengths,
+        "pacing_curve": pacing_curve,
+        "genre": genre,
+        "genre_comparisons": genre_comparisons,
+        "anomalies": anomalies,
+        "bar_chart": bar_chart,
+        "suggestions": suggestions[:10],
     }

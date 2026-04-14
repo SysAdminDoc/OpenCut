@@ -317,6 +317,143 @@ def batch_generate_proxies(
 # ---------------------------------------------------------------------------
 # Relink Proxy to Original
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# 60.1 — Auto Proxy Ingest
+# ---------------------------------------------------------------------------
+_VIDEO_EXTENSIONS = {
+    ".mp4", ".mov", ".avi", ".mkv", ".mxf", ".m4v",
+    ".wmv", ".flv", ".webm", ".ts", ".m2ts", ".mpg", ".mpeg",
+    ".r3d", ".braw", ".ari", ".dng",
+}
+
+
+def auto_proxy_ingest(
+    folder_path: str,
+    threshold_resolution: int = 1920,
+    proxy_preset: str = "720p",
+    output_dir: str = "",
+    recursive: bool = True,
+    on_progress: Optional[Callable] = None,
+) -> BatchProxyResult:
+    """
+    Automatically detect high-resolution clips in a folder and generate proxies.
+
+    Scans for video files exceeding threshold_resolution width, generates
+    proxies for all qualifying clips, and maintains a proxy manifest.
+
+    Args:
+        folder_path: Root folder to scan for media.
+        threshold_resolution: Minimum width to trigger proxy generation.
+        proxy_preset: Proxy preset name (from PROXY_PRESETS).
+        output_dir: Directory for proxy output. Defaults to <folder>/proxies.
+        recursive: Whether to scan subdirectories.
+        on_progress: Callback(pct, msg).
+
+    Returns:
+        BatchProxyResult with per-file results.
+    """
+    if not os.path.isdir(folder_path):
+        raise FileNotFoundError(f"Folder not found: {folder_path}")
+
+    if on_progress:
+        on_progress(5, "Scanning for high-resolution clips...")
+
+    # Discover video files
+    video_files = []
+    if recursive:
+        for root, _dirs, files in os.walk(folder_path):
+            for fname in files:
+                ext = os.path.splitext(fname)[1].lower()
+                if ext in _VIDEO_EXTENSIONS:
+                    video_files.append(os.path.join(root, fname))
+    else:
+        for fname in os.listdir(folder_path):
+            ext = os.path.splitext(fname)[1].lower()
+            if ext in _VIDEO_EXTENSIONS:
+                video_files.append(os.path.join(folder_path, fname))
+
+    if not video_files:
+        if on_progress:
+            on_progress(100, "No video files found")
+        return BatchProxyResult(total=0, proxy_dir=output_dir or folder_path)
+
+    if on_progress:
+        on_progress(10, f"Found {len(video_files)} video files, checking resolution...")
+
+    # Filter by resolution threshold
+    high_res = []
+    for i, fp in enumerate(video_files):
+        try:
+            info = get_video_info(fp)
+            w = info.get("width", 0)
+            if w >= threshold_resolution:
+                high_res.append(fp)
+        except Exception as e:
+            logger.debug("Skipping %s: %s", fp, e)
+
+        if on_progress and (i + 1) % 10 == 0:
+            pct = 10 + int((i / len(video_files)) * 20)
+            on_progress(pct, f"Checking {i + 1}/{len(video_files)} files...")
+
+    if not high_res:
+        if on_progress:
+            on_progress(100, f"No clips exceed {threshold_resolution}px threshold")
+        return BatchProxyResult(
+            total=len(video_files), skipped=len(video_files),
+            proxy_dir=output_dir or folder_path,
+        )
+
+    if on_progress:
+        on_progress(30, f"{len(high_res)} clips need proxies, generating...")
+
+    # Check existing proxy map to skip already-proxied files
+    proxy_dir = output_dir or os.path.join(folder_path, "proxies")
+    map_path = os.path.join(proxy_dir, PROXY_METADATA_FILE)
+    existing_originals = set()
+    if os.path.isfile(map_path):
+        try:
+            with open(map_path, "r") as f:
+                mapping = json.load(f)
+            existing_originals = set(mapping.values())
+        except (json.JSONDecodeError, OSError):
+            pass
+
+    to_generate = [
+        fp for fp in high_res
+        if os.path.abspath(fp) not in existing_originals
+    ]
+    skipped = len(high_res) - len(to_generate)
+
+    if not to_generate:
+        if on_progress:
+            on_progress(100, f"All {len(high_res)} clips already have proxies")
+        return BatchProxyResult(
+            total=len(high_res), skipped=len(high_res),
+            proxy_dir=proxy_dir,
+        )
+
+    # Generate proxies
+    cfg = ProxyConfig(preset=proxy_preset)
+    result = batch_generate_proxies(
+        file_paths=to_generate,
+        output_dir=proxy_dir,
+        config=cfg,
+        on_progress=lambda pct, msg: (
+            on_progress(30 + int(pct * 0.65), msg) if on_progress else None
+        ),
+    )
+
+    result.skipped += skipped
+
+    if on_progress:
+        on_progress(100, f"Auto ingest complete: {result.completed} proxies generated")
+
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Relink Proxy to Original
+# ---------------------------------------------------------------------------
 def relink_proxy_to_original(
     proxy_path: str,
     proxy_dir: str = "",

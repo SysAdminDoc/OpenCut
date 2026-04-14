@@ -68,6 +68,12 @@ def register_blueprints(app):
     from .workflow import workflow_bp
     from .workflow_dev_routes import workflow_dev_bp
     from .workflow_routes import workflow_auto_bp
+    from .vr_lens_routes import vr_lens_bp
+    from .repair_gen_routes import repair_gen_bp
+    from .privacy_spectral_routes import privacy_spectral_bp
+    from .multiview_repurpose_routes import multiview_repurpose_bp
+    from .preproduction_proxy_routes import preproduction_proxy_bp
+    from .composition_dubbing_routes import composition_dubbing_bp
 
     for bp in [system_bp, audio_bp, captions_bp,
                video_core_bp, video_fx_bp, video_ai_bp,
@@ -86,5 +92,7 @@ def register_blueprints(app):
                editing_wf_bp, color_mam_bp, platform_infra_bp,
                transcript_edit_bp, generative_bp, architecture_bp,
                remote_realtime_bp, vfx_advanced_bp, solver_agent_bp,
-               platform_ux_bp]:
+               platform_ux_bp, vr_lens_bp, repair_gen_bp,
+               privacy_spectral_bp, multiview_repurpose_bp,
+               preproduction_proxy_bp, composition_dubbing_bp]:
         app.register_blueprint(bp)

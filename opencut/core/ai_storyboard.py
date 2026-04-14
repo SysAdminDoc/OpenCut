@@ -712,3 +712,210 @@ def generate_storyboard(
         on_progress(100, f"Storyboard complete: {len(panels)} panels")
 
     return storyboard
+
+
+# ---------------------------------------------------------------------------
+# 59.1 — Generate Storyboard from Script Text (Enhanced)
+# ---------------------------------------------------------------------------
+def generate_storyboard_from_script(
+    script_text: str,
+    output_dir: str,
+    on_progress: Optional[Callable] = None,
+    use_stable_diffusion: bool = False,
+    sd_api_url: str = "http://127.0.0.1:7860",
+    columns: int = 3,
+    panel_width: int = 640,
+    panel_height: int = 360,
+    export_pdf: bool = True,
+) -> Storyboard:
+    """
+    Generate a storyboard from script text with optional AI image generation.
+
+    Enhanced pipeline:
+    1. Parse script into detailed shot descriptions
+    2. Generate images via Stable Diffusion API (if available) or Pillow placeholders
+    3. Layout as storyboard grid with annotations
+    4. Export PDF with descriptions and shot numbers
+
+    Args:
+        script_text: Full screenplay or shot list text.
+        output_dir: Directory for output files.
+        on_progress: Callback(pct, msg) for progress.
+        use_stable_diffusion: Attempt to use Stable Diffusion API for images.
+        sd_api_url: Base URL for Stable Diffusion WebUI API.
+        columns: Grid columns for layout.
+        panel_width: Width of each panel.
+        panel_height: Height of each panel.
+        export_pdf: Whether to generate a PDF.
+
+    Returns:
+        Storyboard with all panels, grid path, and optional PDF path.
+    """
+    if not ensure_package("PIL", "Pillow", on_progress):
+        raise RuntimeError("Pillow is required for storyboard generation")
+
+    if not script_text.strip():
+        raise ValueError("script_text cannot be empty")
+
+    os.makedirs(output_dir, exist_ok=True)
+    storyboard = Storyboard()
+
+    if on_progress:
+        on_progress(5, "Parsing script into shots...")
+
+    shots = parse_shot_descriptions(script_text)
+    storyboard.shots = shots
+    storyboard.total_shots = len(shots)
+
+    if not shots:
+        raise ValueError("No shots found in script")
+
+    if on_progress:
+        on_progress(15, f"Parsed {len(shots)} shots, generating images...")
+
+    panels_dir = os.path.join(output_dir, "panels")
+    os.makedirs(panels_dir, exist_ok=True)
+
+    # Try Stable Diffusion API for image generation
+    sd_available = False
+    if use_stable_diffusion:
+        sd_available = _check_sd_api(sd_api_url)
+        if sd_available and on_progress:
+            on_progress(18, "Stable Diffusion API detected, generating AI images...")
+        elif on_progress:
+            on_progress(18, "SD API not available, using placeholder panels...")
+
+    panels = []
+    for i, shot in enumerate(shots):
+        panel_path = os.path.join(panels_dir, f"shot_{shot.shot_number:03d}.png")
+
+        if sd_available:
+            _generate_sd_panel(
+                shot, panel_path, sd_api_url,
+                width=panel_width, height=panel_height,
+            )
+        else:
+            _generate_panel_image(
+                shot,
+                width=panel_width,
+                height=panel_height,
+                output_path=panel_path,
+            )
+
+        panel = StoryboardImage(
+            shot_number=shot.shot_number,
+            image_path=panel_path,
+            description=shot.description[:120],
+            shot_type=shot.shot_type,
+            camera_direction=shot.camera_direction,
+            width=panel_width,
+            height=panel_height,
+        )
+        panels.append(panel)
+
+        if on_progress and (i + 1) % 2 == 0:
+            pct = 15 + int((i / len(shots)) * 50)
+            on_progress(pct, f"Generating panel {i + 1}/{len(shots)}...")
+
+    storyboard.panels = panels
+
+    if on_progress:
+        on_progress(70, "Assembling grid...")
+
+    grid_path = os.path.join(output_dir, "storyboard_grid.png")
+    render_storyboard_grid(
+        panels, shots, grid_path,
+        columns=columns,
+        panel_width=panel_width,
+        panel_height=panel_height,
+    )
+    storyboard.grid_path = grid_path
+
+    if export_pdf:
+        if on_progress:
+            on_progress(85, "Exporting PDF...")
+        pdf_path = os.path.join(output_dir, "storyboard.pdf")
+        export_storyboard_pdf(storyboard, pdf_path)
+        storyboard.pdf_path = pdf_path
+
+    if on_progress:
+        on_progress(100, f"Storyboard from script complete: {len(panels)} panels")
+
+    return storyboard
+
+
+def _check_sd_api(api_url: str) -> bool:
+    """Check if Stable Diffusion WebUI API is reachable."""
+    try:
+        import urllib.request
+        req = urllib.request.Request(f"{api_url}/sdapi/v1/options", method="GET")
+        resp = urllib.request.urlopen(req, timeout=3)
+        return resp.status == 200
+    except Exception:
+        return False
+
+
+def _generate_sd_panel(
+    shot: ShotDescription,
+    output_path: str,
+    api_url: str,
+    width: int = 640,
+    height: int = 360,
+):
+    """
+    Generate a storyboard panel using Stable Diffusion API.
+
+    Falls back to placeholder if the API call fails.
+    """
+    import base64
+    import json
+    import urllib.request
+
+    # Build prompt from shot description
+    prompt_parts = [
+        "storyboard panel",
+        f"{shot.shot_type} shot" if shot.shot_type else "",
+        shot.description[:150] if shot.description else "",
+        f"camera {shot.camera_direction.lower()}" if shot.camera_direction else "",
+        "cinematic, film storyboard, pencil sketch style",
+    ]
+    prompt = ", ".join(p for p in prompt_parts if p)
+
+    payload = {
+        "prompt": prompt,
+        "negative_prompt": "blurry, text, watermark, low quality",
+        "width": min(width, 768),
+        "height": min(height, 512),
+        "steps": 20,
+        "cfg_scale": 7,
+        "sampler_name": "Euler a",
+    }
+
+    try:
+        data = json.dumps(payload).encode("utf-8")
+        req = urllib.request.Request(
+            f"{api_url}/sdapi/v1/txt2img",
+            data=data,
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        resp = urllib.request.urlopen(req, timeout=60)
+        result = json.loads(resp.read().decode("utf-8"))
+
+        if "images" in result and result["images"]:
+            img_data = base64.b64decode(result["images"][0])
+            with open(output_path, "wb") as f:
+                f.write(img_data)
+
+            # Resize to target dimensions
+            from PIL import Image
+            img = Image.open(output_path)
+            img = img.resize((width, height))
+            img.save(output_path, "PNG")
+            return
+
+    except Exception as e:
+        logger.warning("SD API panel generation failed: %s", e)
+
+    # Fallback to placeholder
+    _generate_panel_image(shot, width=width, height=height, output_path=output_path)

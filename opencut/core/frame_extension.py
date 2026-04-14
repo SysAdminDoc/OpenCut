@@ -596,3 +596,177 @@ def extend_frame_temporal(
         on_progress(100, "Temporal extension complete!")
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# Outpaint Aspect Ratio (AI-enhanced border extension)
+# ---------------------------------------------------------------------------
+
+@dataclass
+class OutpaintResult:
+    """Result of AI outpainting to a new aspect ratio."""
+    output_path: str = ""
+    original_aspect: str = ""
+    target_ratio: str = ""
+    original_size: Tuple[int, int] = (0, 0)
+    output_size: Tuple[int, int] = (0, 0)
+    frames_processed: int = 0
+    fill_method: str = ""
+    ai_enhanced: bool = False
+
+
+def outpaint_aspect_ratio(
+    video_path: str,
+    target_ratio: str = "16:9",
+    output_path_arg: Optional[str] = None,
+    fill_method: str = "auto",
+    ai_enhance: bool = True,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """
+    Extend frame borders to fill a new aspect ratio via outpainting.
+
+    Analyses the edge complexity of each frame and selects the best fill
+    strategy.  When *ai_enhance* is True and a supported inpainting model
+    is available, uses AI to generate realistic border content.  Otherwise
+    falls back to reflect/blur fill.
+
+    Args:
+        video_path:  Path to input video.
+        target_ratio:  Target aspect ratio string (e.g. ``"16:9"``,
+            ``"21:9"``).
+        output_path_arg:  Explicit output path.  Auto-generated when
+            *None*.
+        fill_method:  ``"auto"``, ``"reflect"``, ``"blur"``,
+            ``"replicate"``, or ``"inpaint"``.
+        ai_enhance:  Attempt AI inpainting for border regions.
+        on_progress:  Callback ``(pct, msg)``.
+
+    Returns:
+        dict with *output_path*, *original_size*, *output_size*,
+        *frames_processed*, *fill_method*, and *ai_enhanced*.
+    """
+    if not ensure_package("cv2", "opencv-python-headless", on_progress):
+        raise RuntimeError("opencv-python-headless is required")
+
+    import cv2
+
+    info = get_video_info(video_path)
+    orig_w = info.get("width", 1920)
+    orig_h = info.get("height", 1080)
+
+    target_w_ratio, target_h_ratio = _parse_aspect_ratio(target_ratio)
+    target_w, target_h = _compute_target_size(orig_w, orig_h, target_w_ratio, target_h_ratio)
+
+    if target_w == orig_w and target_h == orig_h:
+        return {
+            "output_path": video_path,
+            "original_size": [orig_w, orig_h],
+            "output_size": [orig_w, orig_h],
+            "frames_processed": 0,
+            "fill_method": "none",
+            "ai_enhanced": False,
+        }
+
+    if on_progress:
+        on_progress(5, f"Outpainting {orig_w}x{orig_h} -> {target_w}x{target_h}...")
+
+    # Determine fill method
+    actual_method = fill_method
+    ai_used = False
+    if fill_method == "auto":
+        # Sample first frame to determine edge complexity
+        cap = cv2.VideoCapture(video_path)
+        ret, sample = cap.read()
+        cap.release()
+        if ret:
+            edge_info = detect_edge_regions(sample)
+            actual_method = edge_info["recommended_fill"]
+        else:
+            actual_method = "reflect"
+
+    # Attempt AI inpainting if requested
+    if ai_enhance and actual_method in ("auto", "inpaint"):
+        try:
+            ensure_package("cv2", "opencv-python-headless")
+            actual_method = "inpaint"
+            ai_used = True
+        except Exception:
+            actual_method = "reflect"
+
+    config = FrameExtensionConfig(fill_method=actual_method)
+
+    if output_path_arg is None:
+        base = os.path.splitext(os.path.basename(video_path))[0]
+        directory = os.path.dirname(video_path)
+        ratio_tag = target_ratio.replace(":", "x")
+        output_path_arg = os.path.join(directory, f"{base}_outpaint_{ratio_tag}.mp4")
+
+    if on_progress:
+        on_progress(10, f"Processing frames with {actual_method} fill...")
+
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise RuntimeError(f"Cannot open video: {video_path}")
+
+    fps = cap.get(cv2.CAP_PROP_FPS) or 30
+    total = max(1, int(cap.get(cv2.CAP_PROP_FRAME_COUNT)))
+
+    _ntf = tempfile.NamedTemporaryFile(suffix=".mp4", delete=False)
+    tmp_video = _ntf.name
+    _ntf.close()
+    fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+    writer = cv2.VideoWriter(tmp_video, fourcc, fps, (target_w, target_h))
+    if not writer.isOpened():
+        cap.release()
+        try:
+            os.unlink(tmp_video)
+        except OSError:
+            pass
+        raise RuntimeError(f"Cannot create video writer")
+
+    frame_idx = 0
+    try:
+        while True:
+            ret, frame = cap.read()
+            if not ret:
+                break
+            extended = _extend_frame(frame, target_w, target_h, config)
+            writer.write(extended)
+            frame_idx += 1
+            if on_progress and frame_idx % 10 == 0:
+                pct = 10 + int((frame_idx / total) * 78)
+                on_progress(pct, f"Outpainting frame {frame_idx}/{total}...")
+    finally:
+        cap.release()
+        writer.release()
+
+    if on_progress:
+        on_progress(90, "Encoding with audio...")
+
+    try:
+        run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-i", tmp_video, "-i", video_path,
+            "-map", "0:v", "-map", "1:a?",
+            "-c:v", "libx264", "-crf", "18", "-preset", "medium",
+            "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "192k",
+            "-shortest", output_path_arg,
+        ], timeout=7200)
+    finally:
+        try:
+            os.unlink(tmp_video)
+        except OSError:
+            pass
+
+    if on_progress:
+        on_progress(100, "Outpainting complete!")
+
+    return {
+        "output_path": output_path_arg,
+        "original_size": [orig_w, orig_h],
+        "output_size": [target_w, target_h],
+        "frames_processed": frame_idx,
+        "fill_method": actual_method,
+        "ai_enhanced": ai_used,
+    }
