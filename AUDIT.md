@@ -249,44 +249,51 @@ OpenCut references several AI models that now have superior successors. Upgradin
 
 | Current in OpenCut | Successor (2025-2026) | Improvement | Integration Effort |
 |----|----|----|-----|
-| Real-ESRGAN (upscale) | **SUPIR** / **Upscale-A-Video** | Temporal consistency, fewer artifacts, handles compression better | M — drop-in model swap |
-| RIFE (frame interp) | **RIFE 4.26+** / **AMT** (Adaptive Multi-scale Temporal) | Better handling of large motion, fewer ghosting artifacts | S — version bump |
-| SAM2 (segmentation) | **SAM 2.1** / **Grounded SAM 2** | Better text-prompted segmentation, improved tracking persistence | M — API compatible |
-| Depth Anything V2 | **Depth Pro** (Apple) / **Metric3D v2** | Metric depth (actual distances), better edge accuracy | M — output format change |
-| ProPainter (inpainting) | **Flow-Guided Video Completion** / **E2FGVI v2** | Better temporal coherence, faster, handles complex motion | M |
-| vidstab (stabilization) | **Deep Video Stabilization** / **FuSta** | AI path planning, no crop needed, handles parallax | L — new pipeline |
-| DeepFilterNet (denoise audio) | **Resemble Enhance** / **UNIVERSE++** | Handles music+speech, super-resolution for audio, reverb removal | M |
-| Demucs v4 (stems) | **BS-RoFormer** / **Bandit v2** | Cleaner vocal isolation, 6-stem separation, better on live recordings | S — already optional |
-| faster-whisper (ASR) | **Whisper v3 turbo** / **Canary** (NVIDIA) / **Parakeet** | 3-5x faster, better accuracy on accents, native word timestamps | S — config change |
-| Chatterbox (TTS) | **F5-TTS** / **MaskGCT** / **CosyVoice 2** | Zero-shot voice cloning from 3-second sample, emotional control | M |
-| AudioCraft (music gen) | **Stable Audio 2.0** / **Udio API** | Higher quality, longer generations, better stereo, style control | M |
-| AnimateDiff (video gen) | **Wan 2.1** (already integrated) / **CogVideoX** / **Hunyuan Video** | 1080p output, longer clips, better motion coherence | Already partially done |
-| MediaPipe (face mesh) | **MediaPipe 0.10.20+** / **InsightFace 2D/3D** | More landmarks, better occlusion handling, faster on CPU | S |
-| Florence-2 (vision) | **Florence-2 v2** / **InternVL 2.5** / **Qwen2-VL** | Better scene understanding, grounded descriptions, video input | M |
+| Real-ESRGAN (upscale) | **FlashVSR** (CVPR 2026) | ~17 FPS streaming VSR, 12x faster than diffusion VSR, locality-constrained sparse attention. [github.com/OpenImagingLab/FlashVSR](https://github.com/OpenImagingLab/FlashVSR) | M — Python-native, Flask endpoint wrapper |
+| RIFE (frame interp) | **RIFE 4.26+** / **FLAVR** | RIFE: continued flow improvements. FLAVR: single-shot multi-frame prediction (8x slow-mo in one pass). [github.com/tarun005/FLAVR](https://github.com/tarun005/FLAVR) | S — version bump / M for FLAVR |
+| SAM2 (segmentation) | **SAM2Long** (ICCV 2025) + **SAMWISE** (CVPR 2025) | SAM2Long: 3.7-5.3pt improvement on long videos. SAMWISE: text-driven segmentation ("remove the red car"). [github.com/ClaudiaCuttano/SAMWISE](https://github.com/ClaudiaCuttano/SAMWISE) | M — drop-in SAM2 improvement |
+| Depth Anything V2 | **Video Depth Anything** (CVPR 2025) / **Depth Pro** (Apple) | Video DA: temporally consistent depth for super-long video. Depth Pro: metric depth without camera metadata. [github.com/DepthAnything/Video-Depth-Anything](https://github.com/DepthAnything/Video-Depth-Anything) | M — direct successor |
+| ProPainter (inpainting) | **VOID** (Netflix, April 2026) / **FloED** | VOID: removes objects AND their physical interactions (shadows, reflections). Preferred 64.8% over Runway. Apache 2.0. [github.com/Netflix/void-model](https://github.com/Netflix/void-model). FloED: better temporal coherence on consumer hardware | L (VOID: 40GB+ VRAM) / M (FloED) |
+| vidstab (stabilization) | **SEA-RAFT** (optical flow) + **FlowStab** | SEA-RAFT: 22.9% error reduction, 2.3x faster than prior SOTA. [github.com/princeton-vl/SEA-RAFT](https://github.com/princeton-vl/SEA-RAFT). FlowStab: hybrid traditional + AI refinement | M — improves flow for existing pipeline |
+| DeepFilterNet (denoise) | **Resemble Enhance** + **DeepFilterNet3** | Resemble: two-stage denoiser+enhancer, restores distortions + extends bandwidth. DFN3: PESQ 3.5-4.0+, 10-20ms latency. [github.com/resemble-ai/resemble-enhance](https://github.com/resemble-ai/resemble-enhance) | M — pip install |
+| Demucs v4 (stems) | **HTDemucs v4** (hybrid transformer) | Dual U-Net (time + freq domain) + cross-domain transformer. MIT licensed. 34x realtime on M4 Max. [github.com/facebookresearch/demucs](https://github.com/facebookresearch/demucs) | S — already optional engine |
+| faster-whisper (ASR) | **Qwen3-ASR** / **NVIDIA Canary 2.5B** / **Voxtral Mini 3B** | Qwen3-ASR: beats all commercial+OSS. Canary: 5.63% WER (#1 HF leaderboard). Voxtral Mini: practical for local Flask deploy | S-M — config/model swap |
+| Chatterbox (TTS) | **Fish Speech V1.5** / **CosyVoice2-0.5B** / **Qwen3-TTS** | Fish: 300K+ hrs training, multilingual. CosyVoice2: 150ms latency, real-time streaming. Qwen3-TTS: 3-sec voice cloning, 97ms latency | M — multiple backend options |
+| AudioCraft (music gen) | **ACE-Step v1.5** / **YuE** | ACE-Step: best local music gen, supports Mac+AMD+Intel+CUDA. YuE: full 5-min songs with lyrics, Apache 2.0. [github.com/ace-step/ACE-Step-1.5](https://github.com/ace-step/ACE-Step-1.5) | M |
+| AnimateDiff (video gen) | **LTX-2** (Lightricks) / **HunyuanVideo 1.5** / **Wan 2.2 MoE** | LTX-2: first open-source audio-visual generation (video+sound in one pass), 12GB VRAM. HunyuanVideo: 8.3B params, SOTA quality. [github.com/Lightricks/LTX-Video](https://github.com/Lightricks/LTX-Video) | M-L |
+| MediaPipe (face mesh) | **InstantRestore** (Snap Research) | Near real-time face restoration via single-step diffusion. Outperforms GFPGAN and CodeFormer. [github.com/snap-research/InstantRestore](https://github.com/snap-research/InstantRestore) | M |
+| Florence-2 (vision) | **Qwen3.5-VL** / **InternVL 2.5** / **GLM-4.6V** | Qwen3.5: vision+language+video reasoning, 29 languages. GLM-4.6V: 128K context, native tool use. InternVideo2: joint visual+auditory grounding | M |
+| rembg (matting) | **MatAnyone 2** (CVPR 2026) | Production-quality pixel-level alpha mattes from video. Handles hair, fabric, motion blur with partial transparency. No green screen | M — Python/PyTorch |
 
 ### Audio AI Models
 
 | Category | Best Available (2026) | Why It Matters |
 |----|----|-----|
-| Speech Enhancement | **Resemble Enhance** | Super-resolution for low-bitrate audio + denoising in one pass |
+| Speech Enhancement | **Resemble Enhance** ([github](https://github.com/resemble-ai/resemble-enhance)) | Two-stage denoiser+enhancer: separates speech from noise, then restores distortions and extends bandwidth. Free commercial use |
 | Voice Conversion | **RVC v2** / **Seed-VC** | Real-time voice conversion with better timbre preservation |
-| Speaker Diarization | **pyannote 3.3+** / **NeMo MSDD** | Multi-scale diarization, better overlap handling |
+| Voice Cloning | **Qwen3-TTS** / **Fish Audio S2** | 3-second voice cloning, cross-lingual synthesis across 80+ languages, zero-shot (no retraining) |
+| Speaker Diarization | **pyannote 4.0 Community-1** / **NVIDIA Sortformer** | Pyannote 4.0: significant improvement over 3.1. Sortformer: integrates with Whisper for combined diarize+transcribe |
 | Sound Classification | **BEATs** / **Audio Spectrogram Transformer** | Classify any environmental sound for auto-SFX/SDH tagging |
-| Audio Restoration | **VoiceFixer 2** / **Apollo** | Fix clipping, reverb, noise, and codec artifacts in one model |
-| Music Separation | **Band-Split RNN (BS-RoFormer)** | 6 stems (vocals, drums, bass, guitar, piano, other) |
+| Audio Restoration | **Resemble Enhance** (denoiser + enhancer) | Fixes clipping, reverb, noise, codec artifacts, AND enhances quality in one pass |
+| Music Separation | **HTDemucs v4** (hybrid transformer) | 4-stem: vocals, drums, bass, other. Dual U-Net architecture. MIT licensed |
+| Music Generation | **ACE-Step v1.5** ([github](https://github.com/ace-step/ACE-Step-1.5)) | Best local music gen. Cross-platform GPU (Mac/AMD/Intel/NVIDIA). Diverse genres |
+| Foley / SFX Gen | **HunyuanVideo-Foley** (Tencent) | Video-to-foley: generates synchronized sound effects from video input. SOTA in fidelity + temporal alignment |
 
 ### Emerging Tech Not Yet In Any Video Editor
 
 | Technology | What It Enables | Maturity |
 |----|----|-----|
-| **Video LLMs** (Qwen2-VL, InternVL) | "Find the moment where she laughs" — direct video understanding | Production-ready |
-| **4D Gaussian Splatting** | Capture + replay dynamic 3D scenes from phone video | Research → early production |
-| **Neural Video Compression** | 30-50% better compression than AV1 with AI-decoded frames | Research |
+| **LTX-2** (audio-visual generation) | Generate video WITH synchronized audio, lip movements, ambient sound from a single prompt. 12GB VRAM. [github.com/Lightricks/LTX-Video](https://github.com/Lightricks/LTX-Video) | Production-ready |
+| **VOID** (Netflix object removal) | Remove objects AND their physical interactions (shadows, reflections, physics). VLM-guided reasoning. [github.com/Netflix/void-model](https://github.com/Netflix/void-model) | Production-ready (server-side) |
+| **Video LLMs** (Qwen3.5-VL, InternVL, QMAVIS) | "Find the moment where she laughs" — direct video understanding. QMAVIS runs fully on-premises | Production-ready |
+| **DCVC-RT** (neural video compression) | Real-time neural codec: 1080p@40fps encode on RTX 2080Ti. 30-50% better than AV1 at same quality | Production-ready |
+| **MatAnyone 2** (video matting) | Pixel-level alpha mattes with hair/fabric detail. True compositing-grade matting without green screen | Production-ready |
+| **HunyuanVideo-Foley** (auto-foley) | Generate synchronized sound effects directly from video content. No manual foley work | Production-ready |
+| **FastGS** (3D Gaussian Splatting) | 3DGS training in 100 seconds (15x faster). Enables interactive 3D scene reconstruction from video. [github.com/fastgs/FastGS](https://github.com/fastgs/FastGS) | Production-ready |
+| **SAMWISE** (text-driven segmentation) | "Remove the red car" — natural language object selection + tracking instead of click-based | Production-ready |
 | **ControlNet for Video** | Precise control over generated video (pose, depth, edge guidance) | Production-ready |
 | **IP-Adapter** | Generate consistent characters/objects across multiple scenes | Production-ready |
 | **AnimateAnyone 2** / **MimicMotion** | Full-body motion transfer from reference video | Production-ready |
-| **SonicSim** / **SoundSpaces** | Spatially-aware audio rendering based on room geometry | Research |
-| **MusicLM** / **MusicGen 2** | Generate soundtrack that matches video mood/pacing | Production-ready |
 
 ---
 
@@ -521,25 +528,42 @@ Full keyboard navigation within the panel for accessibility:
 | Essential Graphics Caption Output | Feature | Matches AutoCut |
 | Low-Light Enhancement | Feature | Matches Topaz Nyx |
 
-### Wave 3: Model Upgrades (1-2 weeks)
+### Wave 3: Model Upgrades — Immediate Wins (1-2 weeks)
+These are Python-native, pip-installable, and work today on consumer hardware:
+
 | Item | Type | Impact |
 |------|------|--------|
-| Upgrade to Whisper v3 turbo | Model | 3-5x faster transcription |
-| Upgrade to RIFE 4.26+ | Model | Better frame interpolation |
-| Upgrade to SAM 2.1 / Grounded SAM 2 | Model | Text-prompted segmentation |
-| Add F5-TTS / CosyVoice 2 option | Model | Better voice cloning |
-| Add Resemble Enhance option | Model | Audio super-resolution |
-| Add BS-RoFormer for 6-stem separation | Model | Cleaner stem separation |
+| SEA-RAFT (optical flow) | Model | 22.9% better flow → improves stabilization + tracking |
+| Video Depth Anything (temporal depth) | Model | Temporally consistent depth maps for effects |
+| Resemble Enhance (audio restoration) | Model | Two-stage denoise + enhance in one pass |
+| pyannote 4.0 Community-1 (diarization) | Model | Major accuracy improvement over 3.1 |
+| HTDemucs v4 (stem separation) | Model | Hybrid transformer, cleaner isolation |
+| DeepFilterNet3 (audio denoise) | Model | PESQ 3.5-4.0+, 10-20ms latency |
+
+### Wave 3b: Model Upgrades — Medium Effort (1-2 weeks)
+Require model download + inference wrapper but no architecture changes:
+
+| Item | Type | Impact |
+|------|------|--------|
+| FlashVSR (video upscaling) | Model | CVPR 2026 SOTA, 12x faster than diffusion VSR |
+| SAM2Long + SAMWISE (segmentation) | Model | Long-video fix + text-driven selection |
+| InstantRestore (face restoration) | Model | Near real-time, outperforms GFPGAN/CodeFormer |
+| MatAnyone 2 (video matting) | Model | CVPR 2026, production-quality alpha mattes |
+| HunyuanVideo-Foley (auto-foley) | Model | Generate synced SFX from video content |
+| Fish Speech V1.5 / CosyVoice2 (TTS) | Model | Better voice cloning, 150ms latency |
+| ACE-Step v1.5 (music generation) | Model | Best local music gen, cross-platform GPU |
 
 ### Wave 4: Next-Gen Features (2-4 weeks)
 | Item | Type | Impact |
 |------|------|--------|
-| Video LLM Integration (Qwen2-VL) | Feature | Direct video understanding |
+| Video LLM Integration (Qwen3.5-VL) | Feature | Direct video understanding |
+| LTX-2 Integration (audio-visual gen) | Feature | Generate video+audio in one pass, 12GB VRAM |
 | Generative Extend | Feature | Matches Adobe Firefly |
 | AI Hook Generator | Feature | Matches Opus Clip |
 | A/B Variant Generator | Feature | Matches Opus Clip |
 | AI Music Duration Fit | Feature | Matches DaVinci Resolve |
-| Green-Screen-Free BG Replacement | Feature | Matches Descript/CapCut |
+| Green-Screen-Free BG (MatAnyone 2) | Feature | Matches Descript/CapCut |
+| VOID Object Removal (server-side) | Feature | Netflix's physics-aware removal, Apache 2.0 |
 
 ### Wave 5: UX Polish (1-2 weeks)
 | Item | Type | Impact |
