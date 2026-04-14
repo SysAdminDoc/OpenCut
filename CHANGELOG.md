@@ -1,5 +1,21 @@
 # Changelog
 
+## [1.12.0] - 2026-04-14
+
+### Added
+- **Competitive audit features (N1-N20)** — 25 new core modules implementing all features identified in AUDIT.md competitive analysis.
+- **UX Intelligence**: Command palette with fuzzy search (N1), AI contextual suggestions (UX2), smart defaults engine (UX11), unified preview system (UX5).
+- **Enhanced Media**: AI speech restoration (N2), one-click enhance pipeline (N9), low-light video enhancement (N13), scene edit detection (N14).
+- **Engagement & Content**: Engagement/retention prediction (N4), 50+ animated caption styles (N5), AI hook generator (N6), A/B variant generator (N7), Essential Graphics caption output (N11).
+- **Next-Gen AI**: Video LLM integration (N8), AI music remix/duration fit (N10), audio category tagging (N15), AI color match between shots (N20).
+- **Motion & Generation**: Generative extend (N3), green-screen-free background replacement (N12), consistent character generation (N16), motion brush/cinemagraph+ (N17).
+- **Body & Transfer**: Body/pose-driven effects (N18), full-body motion transfer (N19), AI foley sound generation, AI face restoration.
+- **6 new route blueprints** — `enhanced_media_bp`, `ux_intel_bp`, `engagement_content_bp`, `next_gen_ai_bp`, `motion_gen_bp`, `body_transfer_bp` (48 new routes).
+- **6 new test files** — 615 new tests covering all audit features.
+- **980 total API routes** (up from 932 in v1.11.0).
+- **5,742 total tests** across 77 test files (up from 5,127 across 71).
+- **360 core modules** (up from 335), **73 route blueprints** (up from 67).
+
 ## [1.11.0] - 2026-04-13
 
 ### Added

@@ -17,8 +17,10 @@ def register_blueprints(app):
     from .audio_expansion_routes import audio_expand_bp
     from .audio_production_routes import audio_prod_bp
     from .batch_data_routes import batch_data_bp
+    from .body_transfer_routes import body_transfer_bp
     from .captions import captions_bp
     from .color_mam_routes import color_mam_bp
+    from .composition_dubbing_routes import composition_dubbing_bp
     from .content_routes import content_bp
     from .context import context_bp
     from .creative_routes import creative_bp
@@ -28,6 +30,8 @@ def register_blueprints(app):
     from .editing_workflow_routes import editing_wf_bp
     from .education_routes import education_bp
     from .encoding_routes import encoding_bp
+    from .engagement_content_routes import engagement_content_bp
+    from .enhanced_media_routes import enhanced_media_bp
     from .format_routes import format_bp
     from .gaming_routes import gaming_bp
     from .generative_routes import generative_bp
@@ -36,17 +40,23 @@ def register_blueprints(app):
     from .integration_routes import integration_bp
     from .jobs_routes import jobs_bp
     from .journal import journal_bp
+    from .motion_gen_routes import motion_gen_bp
+    from .multiview_repurpose_routes import multiview_repurpose_bp
     from .music_safety_routes import music_safety_bp
+    from .next_gen_ai_routes import next_gen_ai_bp
     from .nlp import nlp_bp
     from .overlay_routes import overlay_bp
     from .platform_infra_routes import platform_infra_bp
     from .platform_ux_routes import platform_ux_bp
     from .plugins import plugins_bp
+    from .preproduction_proxy_routes import preproduction_proxy_bp
+    from .privacy_spectral_routes import privacy_spectral_bp
     from .processing_routes import processing_bp
     from .production_routes import production_bp
     from .professional_routes import professional_bp
     from .qc_routes import qc_bp
     from .remote_realtime_routes import remote_realtime_bp
+    from .repair_gen_routes import repair_gen_bp
     from .search import search_bp
     from .settings import settings_bp
     from .solver_agent_routes import solver_agent_bp
@@ -56,6 +66,7 @@ def register_blueprints(app):
     from .tools_routes import tools_bp
     from .transcript_edit_routes import transcript_edit_bp
     from .utility_routes import utility_bp
+    from .ux_intelligence_routes import ux_intel_bp
     from .vfx_advanced_routes import vfx_advanced_bp
     from .video_ai import video_ai_bp
     from .video_core import video_core_bp
@@ -65,15 +76,10 @@ def register_blueprints(app):
     from .video_processing_routes import video_proc_bp
     from .video_specialty import video_specialty_bp
     from .video_vfx_routes import video_vfx_bp
+    from .vr_lens_routes import vr_lens_bp
     from .workflow import workflow_bp
     from .workflow_dev_routes import workflow_dev_bp
     from .workflow_routes import workflow_auto_bp
-    from .vr_lens_routes import vr_lens_bp
-    from .repair_gen_routes import repair_gen_bp
-    from .privacy_spectral_routes import privacy_spectral_bp
-    from .multiview_repurpose_routes import multiview_repurpose_bp
-    from .preproduction_proxy_routes import preproduction_proxy_bp
-    from .composition_dubbing_routes import composition_dubbing_bp
 
     for bp in [system_bp, audio_bp, captions_bp,
                video_core_bp, video_fx_bp, video_ai_bp,
@@ -94,5 +100,7 @@ def register_blueprints(app):
                remote_realtime_bp, vfx_advanced_bp, solver_agent_bp,
                platform_ux_bp, vr_lens_bp, repair_gen_bp,
                privacy_spectral_bp, multiview_repurpose_bp,
-               preproduction_proxy_bp, composition_dubbing_bp]:
+               preproduction_proxy_bp, composition_dubbing_bp,
+               enhanced_media_bp, ux_intel_bp, engagement_content_bp,
+               next_gen_ai_bp, motion_gen_bp, body_transfer_bp]:
         app.register_blueprint(bp)
