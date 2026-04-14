@@ -4,11 +4,18 @@ OpenCut Shot Type Auto-Classification
 Classifies shots by type (close-up, wide, medium, etc.) using heuristic
 face-detection-based analysis via FFmpeg.
 
+Includes:
+- classify_single_frame: classify a single extracted frame image
+- classify_shot_type: classify shot type from a frame path using face-to-frame
+  ratio (ECU/CU/MCU/MS/WS), edge density, depth variance; detects two-shot/group
+- classify_shots: classify all shots in a video by type
+
 Uses FFmpeg only - no additional ML dependencies required.
 """
 
 import json
 import logging
+import math
 import os
 import re
 import subprocess
@@ -172,6 +179,239 @@ def _compute_entropy(frame_path: str) -> float:
     except (subprocess.TimeoutExpired, Exception) as exc:
         logger.debug("Entropy computation failed for %s: %s", frame_path, exc)
     return 0.5  # default mid-range
+
+
+@dataclass
+class ShotTypeResult:
+    """Result from classify_shot_type."""
+    shot_type: str = "medium"
+    confidence: float = 0.0
+    face_count: int = 0
+    face_ratio: float = 0.0
+    edge_density: float = 0.0
+    depth_variance: float = 0.0
+    classification_method: str = "face_ratio"  # face_ratio | edge_density | multi_face
+
+
+# Canonical shot type abbreviations for classify_shot_type
+SHOT_TYPE_ABBREVS = {
+    "ECU": "extreme_close_up",
+    "CU": "close_up",
+    "MCU": "medium_close_up",
+    "MS": "medium",
+    "WS": "wide",
+    "EWS": "extreme_wide",
+    "TWO_SHOT": "two_shot",
+    "GROUP": "group_shot",
+}
+
+
+def _compute_edge_density(frame_path: str) -> float:
+    """
+    Compute edge density of a frame (0.0 - 1.0).
+
+    Uses FFmpeg's edgedetect filter and measures the ratio of
+    high-intensity edge pixels.
+    """
+    try:
+        cmd = [
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "info",
+            "-i", frame_path,
+            "-vf", "edgedetect=low=0.1:high=0.3,signalstats=stat=tout+vrep+brng,"
+                   "metadata=print:file=-",
+            "-frames:v", "1",
+            "-f", "null", "-",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+        # Parse YAVG from the edge-detected frame as proxy for edge density
+        yavg_match = re.search(r"SIGNALSTATS\.YAVG=(\d+\.?\d*)", result.stderr)
+        if yavg_match:
+            # YAVG of edge-detected frame: higher = more edges
+            yavg = float(yavg_match.group(1))
+            return min(1.0, yavg / 128.0)
+
+        # Fallback: use TOUT as edge complexity proxy
+        tout_match = re.search(r"SIGNALSTATS\.TOUT=(\d+\.?\d*)", result.stderr)
+        if tout_match:
+            return min(1.0, float(tout_match.group(1)) / 50.0)
+    except (subprocess.TimeoutExpired, Exception) as exc:
+        logger.debug("Edge density computation failed for %s: %s", frame_path, exc)
+    return 0.5
+
+
+def _compute_depth_variance(frame_path: str) -> float:
+    """
+    Estimate depth variance from spatial frequency analysis.
+
+    Uses FFmpeg blur detection: high variance between blurred and original
+    suggests multiple depth planes (background blur vs sharp foreground).
+    Returns 0.0-1.0 normalized value.
+    """
+    try:
+        # Compare original vs heavily blurred version via PSNR
+        cmd = [
+            get_ffmpeg_path(), "-hide_banner", "-loglevel", "info",
+            "-i", frame_path,
+            "-vf", "split[a][b];[b]avgblur=sizeX=20:sizeY=20[blur];"
+                   "[a][blur]psnr=stats_file=-",
+            "-frames:v", "1",
+            "-f", "null", "-",
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=15)
+
+        # Parse PSNR: lower PSNR = more difference = higher depth variance
+        psnr_match = re.search(r"psnr_avg:(\d+\.?\d*)", result.stderr)
+        if psnr_match:
+            psnr = float(psnr_match.group(1))
+            # Typical range 15-40 dB; map to 0-1
+            variance = max(0.0, min(1.0, (40.0 - psnr) / 25.0))
+            return variance
+    except (subprocess.TimeoutExpired, Exception) as exc:
+        logger.debug("Depth variance computation failed for %s: %s", frame_path, exc)
+    return 0.5
+
+
+def classify_shot_type(frame_path: str) -> dict:
+    """
+    Classify shot type from a frame image using face-to-frame ratio.
+
+    Returns shot type using standard abbreviations:
+    - ECU (Extreme Close-Up): face ratio > 30%
+    - CU (Close-Up): face ratio > 15%
+    - MCU (Medium Close-Up): face ratio > 8%
+    - MS (Medium Shot): face ratio > 3%
+    - WS (Wide Shot): face ratio <= 3% or no face
+
+    No face detected: classifies by edge density and depth variance.
+    Multiple faces: returns two_shot (2 faces) or group_shot (3+).
+
+    Args:
+        frame_path: Path to the frame image file.
+
+    Returns:
+        dict with shot_type, abbreviation, confidence, face_count,
+        face_ratio, edge_density, depth_variance, classification_method.
+    """
+    if not os.path.isfile(frame_path):
+        raise FileNotFoundError(f"Frame not found: {frame_path}")
+
+    # Get frame dimensions
+    try:
+        cmd = [
+            get_ffprobe_path(), "-v", "quiet",
+            "-select_streams", "v:0",
+            "-show_entries", "stream=width,height",
+            "-of", "json", frame_path,
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        probe = json.loads(result.stdout)
+        streams = probe.get("streams", [])
+        frame_w = int(streams[0].get("width", 1920)) if streams else 1920
+        frame_h = int(streams[0].get("height", 1080)) if streams else 1080
+    except Exception:
+        frame_w, frame_h = 1920, 1080
+
+    frame_area = frame_w * frame_h
+    faces = _detect_faces_in_frame(frame_path)
+    face_count = len(faces)
+
+    edge_density = _compute_edge_density(frame_path)
+    depth_variance = _compute_depth_variance(frame_path)
+
+    # Multi-face classification
+    if face_count >= 3:
+        total_face_area = sum(f["w"] * f["h"] for f in faces)
+        face_ratio = total_face_area / frame_area
+        return {
+            "shot_type": "group_shot",
+            "abbreviation": "GROUP",
+            "confidence": min(0.90, 0.65 + face_count * 0.05),
+            "face_count": face_count,
+            "face_ratio": round(face_ratio, 4),
+            "edge_density": round(edge_density, 4),
+            "depth_variance": round(depth_variance, 4),
+            "classification_method": "multi_face",
+        }
+
+    if face_count == 2:
+        total_face_area = sum(f["w"] * f["h"] for f in faces)
+        face_ratio = total_face_area / frame_area
+        return {
+            "shot_type": "two_shot",
+            "abbreviation": "TWO_SHOT",
+            "confidence": 0.75,
+            "face_count": 2,
+            "face_ratio": round(face_ratio, 4),
+            "edge_density": round(edge_density, 4),
+            "depth_variance": round(depth_variance, 4),
+            "classification_method": "multi_face",
+        }
+
+    # Single face classification by face-to-frame ratio
+    if face_count == 1:
+        face = faces[0]
+        face_area = face["w"] * face["h"]
+        face_ratio = face_area / frame_area
+
+        if face_ratio > 0.30:
+            abbrev, shot_type = "ECU", "extreme_close_up"
+            confidence = min(0.95, 0.7 + face_ratio)
+        elif face_ratio > 0.15:
+            abbrev, shot_type = "CU", "close_up"
+            confidence = 0.80
+        elif face_ratio > 0.08:
+            abbrev, shot_type = "MCU", "medium_close_up"
+            confidence = 0.75
+        elif face_ratio > 0.03:
+            abbrev, shot_type = "MS", "medium"
+            confidence = 0.70
+        else:
+            abbrev, shot_type = "WS", "wide"
+            confidence = 0.60
+
+        return {
+            "shot_type": shot_type,
+            "abbreviation": abbrev,
+            "confidence": round(confidence, 3),
+            "face_count": 1,
+            "face_ratio": round(face_ratio, 4),
+            "edge_density": round(edge_density, 4),
+            "depth_variance": round(depth_variance, 4),
+            "classification_method": "face_ratio",
+        }
+
+    # No face detected -- classify by edge density and depth variance
+    if edge_density > 0.7 and depth_variance < 0.3:
+        # High detail, flat depth = extreme wide landscape
+        abbrev, shot_type = "EWS", "extreme_wide"
+        confidence = 0.55
+    elif edge_density > 0.5:
+        # Moderate-high detail = wide shot
+        abbrev, shot_type = "WS", "wide"
+        confidence = 0.50
+    elif edge_density < 0.2 and depth_variance > 0.6:
+        # Low detail, high depth variance = insert/macro
+        abbrev, shot_type = "ECU", "extreme_close_up"
+        confidence = 0.45
+    elif depth_variance > 0.5:
+        # High depth variance suggests subject isolation = medium/MCU
+        abbrev, shot_type = "MCU", "medium_close_up"
+        confidence = 0.45
+    else:
+        # Default fallback
+        abbrev, shot_type = "MS", "medium"
+        confidence = 0.35
+
+    return {
+        "shot_type": shot_type,
+        "abbreviation": abbrev,
+        "confidence": round(confidence, 3),
+        "face_count": 0,
+        "face_ratio": 0.0,
+        "edge_density": round(edge_density, 4),
+        "depth_variance": round(depth_variance, 4),
+        "classification_method": "edge_density",
+    }
 
 
 def classify_single_frame(frame_path: str) -> dict:

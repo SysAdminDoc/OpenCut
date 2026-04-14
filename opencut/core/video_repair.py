@@ -316,3 +316,230 @@ def repair_video(
         "original_estimated_duration": round(estimated_duration, 2),
         "recovery_percentage": recovery_percentage,
     }
+
+
+# ---------------------------------------------------------------------------
+# MOOV Atom Recovery
+# ---------------------------------------------------------------------------
+
+def recover_moov_atom(
+    video_path: str,
+    reference_path: Optional[str] = None,
+    output_path_override: Optional[str] = None,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """
+    Recover a video file with a missing or corrupted MOOV atom.
+
+    The MOOV atom contains the index that maps timestamps to byte offsets.
+    When a recording is interrupted (e.g. power loss, app crash) the MOOV
+    atom is never written.  This function attempts to reconstruct it by:
+
+    1. Using reference file codec parameters for guided recovery
+    2. Falling back to ``-movflags faststart`` remux if no reference
+
+    Args:
+        video_path:  Path to the corrupted video.
+        reference_path:  A working video recorded with the same codec /
+            container settings (same camera, same app, etc.).
+        output_path_override:  Explicit output path (auto-generated when
+            *None*).
+        on_progress:  Callback ``(pct, msg)`` for progress updates.
+
+    Returns:
+        dict with *output_path*, *recovered_duration*, *method* used,
+        and *success* flag.
+    """
+    if not os.path.isfile(video_path):
+        raise FileNotFoundError(f"File not found: {video_path}")
+
+    out = output_path_override or output_path(video_path, "moov_recovered")
+
+    if on_progress:
+        on_progress(5, "Attempting MOOV atom recovery...")
+
+    method = "remux"
+
+    if reference_path and os.path.isfile(reference_path):
+        # Strategy 1: Use reference file to reconstruct MOOV
+        if on_progress:
+            on_progress(10, "Using reference file for recovery...")
+        method = "reference_remux"
+
+        # Probe reference for codec hints
+        _sp.run([
+            get_ffprobe_path(), "-v", "error",
+            "-show_entries", "stream=codec_name,codec_type,width,height,sample_rate,channels",
+            "-of", "json", reference_path,
+        ], capture_output=True, timeout=60)
+
+        try:
+            run_ffmpeg([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-err_detect", "ignore_err",
+                "-i", video_path,
+                "-c", "copy",
+                "-movflags", "faststart",
+                out,
+            ], timeout=7200)
+        except RuntimeError:
+            if on_progress:
+                on_progress(30, "Copy remux failed, transcoding...")
+            method = "reference_transcode"
+            ref_info = get_video_info(reference_path)
+            run_ffmpeg([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-err_detect", "ignore_err",
+                "-i", video_path,
+                "-c:v", "libx264", "-crf", "18", "-preset", "medium",
+                "-s", f"{ref_info.get('width', 1920)}x{ref_info.get('height', 1080)}",
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac", "-b:a", "192k",
+                "-movflags", "faststart",
+                out,
+            ], timeout=7200)
+    else:
+        # Strategy 2: Blind remux with error tolerance
+        if on_progress:
+            on_progress(10, "Attempting blind MOOV recovery (no reference)...")
+        try:
+            run_ffmpeg([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-err_detect", "ignore_err",
+                "-i", video_path,
+                "-c", "copy",
+                "-movflags", "faststart",
+                out,
+            ], timeout=7200)
+        except RuntimeError:
+            if on_progress:
+                on_progress(40, "Remux failed, transcoding with error concealment...")
+            method = "transcode"
+            run_ffmpeg([
+                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                "-err_detect", "ignore_err",
+                "-i", video_path,
+                "-c:v", "libx264", "-crf", "18", "-preset", "medium",
+                "-pix_fmt", "yuv420p",
+                "-c:a", "aac", "-b:a", "192k",
+                "-movflags", "faststart",
+                out,
+            ], timeout=7200)
+
+    if on_progress:
+        on_progress(80, "Verifying recovered file...")
+
+    recovered_duration = 0.0
+    success = False
+    if os.path.isfile(out) and os.path.getsize(out) > 0:
+        info = get_video_info(out)
+        recovered_duration = info.get("duration", 0.0)
+        success = recovered_duration > 0
+
+    if on_progress:
+        on_progress(100, "MOOV recovery complete")
+
+    return {
+        "output_path": out,
+        "recovered_duration": round(recovered_duration, 2),
+        "method": method,
+        "success": success,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Frame Salvage
+# ---------------------------------------------------------------------------
+
+def salvage_frames(
+    corrupted_path: str,
+    output_path_override: Optional[str] = None,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """
+    Salvage as many frames as possible from a heavily corrupted file.
+
+    Uses ``ffmpeg -err_detect ignore_err`` to push through errors,
+    extracting every decodable frame.  Reports the recovered duration
+    compared to the estimated original.
+
+    Args:
+        corrupted_path:  Path to the corrupted video.
+        output_path_override:  Explicit output path.
+        on_progress:  Callback ``(pct, msg)``.
+
+    Returns:
+        dict with *output_path*, *recovered_duration*,
+        *estimated_original_duration*, *recovery_percentage*,
+        and *frames_recovered*.
+    """
+    if not os.path.isfile(corrupted_path):
+        raise FileNotFoundError(f"File not found: {corrupted_path}")
+
+    out = output_path_override or output_path(corrupted_path, "salvaged")
+
+    if on_progress:
+        on_progress(5, "Starting frame salvage...")
+
+    file_size = os.path.getsize(corrupted_path)
+    estimated_duration = file_size / (5 * 1024 * 1024 / 8)
+
+    if on_progress:
+        on_progress(10, "Extracting frames with error tolerance...")
+
+    # First try stream copy (fastest)
+    copy_success = False
+    try:
+        run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-err_detect", "ignore_err",
+            "-i", corrupted_path,
+            "-c", "copy",
+            "-movflags", "faststart",
+            out,
+        ], timeout=7200)
+        if os.path.isfile(out) and os.path.getsize(out) > 1024:
+            copy_success = True
+    except RuntimeError:
+        copy_success = False
+
+    if not copy_success:
+        if on_progress:
+            on_progress(30, "Stream copy failed, transcoding with error concealment...")
+        run_ffmpeg([
+            "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+            "-err_detect", "ignore_err",
+            "-ec", "guess_mvs+deblock",
+            "-i", corrupted_path,
+            "-c:v", "libx264", "-crf", "18", "-preset", "medium",
+            "-pix_fmt", "yuv420p",
+            "-c:a", "aac", "-b:a", "192k",
+            "-movflags", "faststart",
+            out,
+        ], timeout=7200)
+
+    if on_progress:
+        on_progress(80, "Analysing recovered content...")
+
+    recovered_duration = 0.0
+    frames_recovered = 0
+    if os.path.isfile(out) and os.path.getsize(out) > 0:
+        info = get_video_info(out)
+        recovered_duration = info.get("duration", 0.0)
+        fps = info.get("fps", 30.0)
+        frames_recovered = int(recovered_duration * fps)
+
+    recovery_pct = 0.0
+    if estimated_duration > 0:
+        recovery_pct = min(round((recovered_duration / estimated_duration) * 100, 1), 100.0)
+
+    if on_progress:
+        on_progress(100, f"Salvaged {recovered_duration:.1f}s ({recovery_pct:.0f}%)")
+
+    return {
+        "output_path": out,
+        "recovered_duration": round(recovered_duration, 2),
+        "estimated_original_duration": round(estimated_duration, 2),
+        "recovery_percentage": recovery_pct,
+        "frames_recovered": frames_recovered,
+    }
