@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.11.0] - 2026-04-13
+
+### Added
+- **All 302 features fully implemented** — Every feature in `features.md` now has a working core module, route blueprint, and test coverage.
+- **12 new feature categories** (Batch 5) — VR/360 video, camera/lens correction, video repair & generation, privacy/redaction, spectral audio editing, split-screen & multicam, content repurposing, storyboard/pre-production, proxy management, composition intelligence, AI dubbing & localization.
+- **52 new core modules** — `vr_stabilize`, `spatial_audio_vr`, `chromatic_aberration`, `lens_profile`, `old_restoration`, `sdr_to_hdr`, `framerate_convert`, `img_to_video`, `scene_extend`, `video_condensed`, `bg_replace_ai`, `plate_blur`, `pii_redact`, `profanity_bleep`, `doc_redact`, `audio_anon`, `spectrogram_edit`, `spectral_repair`, `noise_classify`, `split_screen`, `reaction_template`, `multicam_grid`, `long_to_shorts`, `video_to_blog`, `podcast_bundle`, `content_calendar`, `shot_list_gen`, `mood_board`, `script_to_roughcut`, `proxy_swap`, `media_relink`, `composition_guide`, `saliency_crop`, `ai_dubbing`, `isochronous_translate`, `multilang_audio`, `emotion_voice`, and enhancements to 15 existing modules.
+- **6 new route blueprints** — `vr_lens_bp`, `repair_gen_bp`, `privacy_spectral_bp`, `multiview_repurpose_bp`, `preproduction_proxy_bp`, `composition_dubbing_bp` (52 new routes).
+- **6 new test files** — 562 new tests covering all Batch 5 features.
+- **932 total API routes** (up from 880 in v1.10.5).
+- **5,127 total tests** across 71 test files (up from 867 across 65).
+- **335 core modules** (up from 298), **67 route blueprints** (up from 61).
+
+### Fixed
+- Duplicate blueprint registration in `server.py` that caused `ValueError` on app startup.
+
 ## [1.10.5] - 2026-04-13
 
 ### Added
