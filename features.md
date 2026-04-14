@@ -6,7 +6,7 @@
 
 Items already completed or tracked in ROADMAP.md are excluded. This document focuses exclusively on what's **not yet planned or implemented**.
 
-**Updated**: 2026-04-13 — 302 features across 62 categories
+**Updated**: 2026-04-14 — 327 features across 67 categories
 
 ---
 
@@ -2371,7 +2371,149 @@ Features that every major competitor has but OpenCut lacks:
 | 60 | Proxy & Media Management | 4 |
 | 61 | Composition & Framing Intelligence | 4 |
 | 62 | AI Dubbing & Voice Translation | 4 |
-| **Total** | | **302** |
+| 63 | Competitive Media Enhancement | 5 |
+| 64 | Social & Content Optimization | 5 |
+| 65 | Next-Gen AI Features | 5 |
+| 66 | Advanced VFX & Motion | 6 |
+| 67 | UX Intelligence & Discovery | 4 |
+| **Total** | | **327** |
+
+---
+
+## 63. Competitive Media Enhancement
+
+### 63.1 AI Enhanced Speech Restoration (P0 / M)
+Restore badly recorded dialogue — not just denoise, but reconstruct clarity, extend bandwidth, and normalize. Uses Resemble Enhance or DeepFilterNet with FFmpeg fallback. Three modes: denoise_only, enhance, full.
+- **Why**: Adobe ships this natively. Podcast/interview creators need studio-quality from phone recordings.
+- **Module**: `enhanced_speech.py` | **Routes**: `/audio/enhance-speech`, `/audio/enhance-speech/preview`
+
+### 63.2 One-Click Enhance Pipeline (P1 / M)
+Single button: auto-detect issues and apply upscale + denoise + color correct + stabilize. Three presets: fast, balanced, quality. Skips steps that aren't needed.
+- **Why**: CapCut's most popular feature. Reduces 5-step workflow to one click.
+- **Module**: `one_click_enhance.py` | **Route**: `/video/one-click-enhance`
+
+### 63.3 Low-Light Video Enhancement (P1 / M)
+Beyond denoising — actual light recovery for dark footage using FFmpeg curves for shadow lift + midtone boost + highlight protection, followed by detail recovery via unsharp mask and optional nlmeans denoise.
+- **Why**: Topaz Nyx model does this at AI level. Essential for indoor/night footage.
+- **Module**: `low_light.py` | **Routes**: `/video/enhance-low-light`, `/video/enhance-low-light/preview`
+
+### 63.4 AI Scene Edit Detection (P1 / S)
+Detect cuts in pre-edited footage (from clients, stock). Uses FFmpeg scdet filter + blackdetect + validation. Classifies as hard_cut, dissolve, or fade.
+- **Why**: Adobe added this. Essential for reconforming received edits.
+- **Module**: `scene_edit_detect.py` | **Route**: `/video/detect-edits`
+
+### 63.5 AI Face Restoration (P2 / L)
+Restore and enhance faces in video. Per-frame face detection via MediaPipe/retinaface, selective sharpening + denoising targeted at face regions.
+- **Why**: Old/compressed footage needs face enhancement without affecting backgrounds.
+- **Module**: `face_restore.py` | **Routes**: `/video/face-restore`, `/video/face-restore/detect`, `/video/face-restore/preview`
+
+## 64. Social & Content Optimization
+
+### 64.1 Engagement/Retention Prediction (P0 / M)
+Predict where viewers will drop off. Analyzes hook strength, pacing, audio energy, visual variety. Generates per-5-second retention curve with drop-off point detection.
+- **Why**: Opus Clip and YouTube analytics prove this drives editing decisions.
+- **Module**: `engagement_predict.py` | **Route**: `/content/predict-engagement`
+
+### 64.2 Animated Caption Style Library (P0 / M)
+55+ animated word-by-word caption styles across 10 categories. Includes TikTok Bold, YouTube Clean, Karaoke Highlight, Neon Glow, etc. FFmpeg drawtext filter chains for each animation type.
+- **Why**: CapCut and Captions.ai dominate here. Creators demand styled captions.
+- **Module**: `caption_styles.py` | **Routes**: `/content/caption-styles` (GET/POST), `/content/caption-styles/preview`
+
+### 64.3 AI Hook Generator (P1 / M)
+Generate and insert a compelling opening hook in the first 3 seconds. Five hook types: question, statistic, bold_claim, teaser, quote. LLM integration with heuristic fallback.
+- **Why**: Opus Clip popularized this. First 3 seconds determine viewer retention.
+- **Module**: `hook_generator.py` | **Routes**: `/content/hook/generate`, `/content/hook/text-only`
+
+### 64.4 A/B Variant Generator (P1 / M)
+Generate 3-5 versions of the same clip with different hooks, caption styles, pacing, thumbnails. Test on platforms to optimize engagement.
+- **Why**: Opus Clip popularized this. Data-driven content optimization.
+- **Module**: `ab_variant.py` | **Route**: `/content/ab-variants`
+
+### 64.5 Essential Graphics Caption Output (P1 / M)
+Export captions as Premiere Essential Graphics (XML/JSON) instead of burned-in overlays. Supports Premiere XML, SRT, JSON for CEP panel, After Effects JSON.
+- **Why**: AutoCut does this. Enables editor to reposition/restyle in Premiere.
+- **Module**: `essential_graphics.py` | **Routes**: `/content/essential-graphics/export`, `/content/essential-graphics/premiere-xml`
+
+## 65. Next-Gen AI Features
+
+### 65.1 Video LLM Integration (P1 / L)
+Use multimodal LLMs for direct video understanding: "find the funniest moment", "what's happening at 2:34". Supports OpenAI/Anthropic vision APIs and local LLM backends.
+- **Why**: Goes beyond transcript search to visual understanding.
+- **Module**: `video_llm.py` | **Routes**: `/ai/video-llm/query`, `/ai/video-llm/find-moment`
+
+### 65.2 AI Music Remix / Duration Fit (P1 / M)
+Automatically adjust background music duration to match video length. Three modes: smart (beat-aware looping/cutting), stretch (atempo), fade. Optional librosa for beat detection.
+- **Why**: DaVinci Resolve added this. Music never fits video length perfectly.
+- **Module**: `music_remix.py` | **Routes**: `/ai/music/remix`, `/ai/music/fit-duration`
+
+### 65.3 Audio Category Tagging (P2 / M)
+Auto-classify timeline audio as speech/music/SFX/ambience/silence using FFmpeg astats + optional spectral analysis. Enables smart ducking and stem-aware processing.
+- **Why**: Adobe Sensei does this. Foundation for intelligent audio workflows.
+- **Module**: `audio_category.py` | **Routes**: `/ai/audio/classify`, `/ai/audio/classify-timeline`
+
+### 65.4 AI Color Match Between Shots (P2 / M)
+Auto-match color/exposure between different shots for consistent look. Uses FFmpeg signalstats for analysis, eq + colorbalance filters for matching. Supports batch matching.
+- **Why**: Adobe Auto Tone does this. Essential for multi-camera/multi-day shoots.
+- **Module**: `color_match_shots.py` | **Routes**: `/ai/color-match`, `/ai/color-match/batch`, `/ai/color-match/analyze`
+
+### 65.5 Consistent Character Generation (P2 / L)
+Generate the same character across multiple AI-generated shots. Creates character profiles from reference frames using face/body embeddings. InsightFace + CLIP backends.
+- **Why**: Runway Frames + IP-Adapter enable this. Critical for AI-generated narratives.
+- **Module**: `character_consistency.py` | **Routes**: `/ai/character/create`, `/ai/character/list`, `/ai/character/generate`
+
+## 66. Advanced VFX & Motion
+
+### 66.1 Generative Extend (P0 / L)
+AI extends clips beyond their recorded length. Three-tier fallback: video generation model → optical flow extrapolation → freeze-frame with Ken Burns. Audio extension via room tone loop.
+- **Why**: Adobe Firefly does this in Premiere. Game-changer for short clips.
+- **Module**: `generative_extend.py` | **Route**: `/video/generative-extend`
+
+### 66.2 Green-Screen-Free Background Replacement (P1 / L)
+AI matting without green screen. Three segmentation backends: SAM2, rembg, MediaPipe. Supports image, video, color, blur, and transparent backgrounds. Edge refinement + temporal smoothing.
+- **Why**: Descript and CapCut both do this. Removes need for physical green screen.
+- **Module**: `greenscreen_free.py` | **Routes**: `/video/replace-background`, `/video/replace-background/preview`
+
+### 66.3 Motion Brush / Cinemagraph+ (P2 / M)
+Paint where motion should happen on a still image/video. 8 motion directions with strength control. Still images get Ken Burns animation; videos get per-region overlay transforms.
+- **Why**: Runway popularized this. Extends existing cinemagraph feature.
+- **Module**: `motion_brush.py` | **Routes**: `/video/motion-brush`, `/video/motion-brush/preview`
+
+### 66.4 Body/Pose-Driven Effects (P2 / L)
+Track body keypoints via MediaPipe Pose, apply effects that follow body parts. Six effect types: glow, trail, highlight, blur_except, neon_outline, particle_follow.
+- **Why**: CapCut does this. Popular for dance/fitness content.
+- **Module**: `body_effects.py` | **Routes**: `/video/body-effects`, `/video/body-keypoints`
+
+### 66.5 Full-Body Motion Transfer (P2 / L)
+Transfer motion from a reference video to a target person. Pipeline: extract poses → AI model (AnimateAnyone/MimicMotion) → stick-figure fallback → assemble via FFmpeg.
+- **Why**: AnimateAnyone 2 / MimicMotion enable this. Opens creative possibilities.
+- **Module**: `motion_transfer.py` | **Routes**: `/ai/motion-transfer`, `/ai/motion-transfer/extract-poses`
+
+### 66.6 AI Foley Sound Generation (P2 / L)
+Generate sound effects from video content. Detects motion events via frame differencing, classifies into 10 foley categories, synthesizes audio via PCM synthesis, mixes with original.
+- **Why**: HunyuanVideo-Foley and similar models make this feasible. Saves hours of manual SFX work.
+- **Module**: `foley_gen.py` | **Routes**: `/audio/generate-foley`, `/video/detect-events`
+
+## 67. UX Intelligence & Discovery
+
+### 67.1 Command Palette / Spotlight Search (P0 / M)
+Cmd+K instant search across all 327 features. 215 curated feature entries with fuzzy matching, recent tracking, and categorized results. Type 3 letters, hit Enter.
+- **Why**: With 327 features, users need instant discovery. Every modern tool has this.
+- **Module**: `command_palette.py` | **Routes**: `/ux/search`, `/ux/search/record`, `/ux/recents`, `/ux/feature-index`
+
+### 67.2 AI Contextual Suggestions (P0 / M)
+Analyze the current clip and suggest relevant operations. 17+ rules covering loudness, captions, stabilization, upscaling, denoising, content-type-specific features. Suppresses after dismissal.
+- **Why**: Surfaces the right feature at the right moment. Users discover features they didn't know existed.
+- **Module**: `contextual_suggest.py` | **Route**: `/ux/suggest`
+
+### 67.3 Smart Defaults Engine (P2 / M)
+Auto-detect clip characteristics (interview, music video, screencast, drone, etc.) and pre-fill optimal parameters. 10 content types, 10+ operation types with content-aware defaults.
+- **Why**: Eliminates parameter guessing. Novices get expert settings automatically.
+- **Module**: `smart_defaults.py` | **Route**: `/ux/smart-defaults`
+
+### 67.4 Unified Preview System (P1 / M)
+Before/after preview for ANY processing operation. Extract one frame, apply the operation, show side-by-side comparison. 8 supported operations.
+- **Why**: Users currently process entire clips blind. Preview eliminates guess-and-check.
+- **Module**: `preview_frame.py` | **Route**: `/ux/preview`
 
 ---
 
