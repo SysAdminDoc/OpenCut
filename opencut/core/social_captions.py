@@ -309,3 +309,197 @@ def _parse_llm_response(text: str, platform: str) -> SocialCaptionResult:
         tags=tags,
         platform=platform,
     )
+
+
+# ---------------------------------------------------------------------------
+# Platform Caption Generator (58.3)
+# ---------------------------------------------------------------------------
+@dataclass
+class PlatformCaption:
+    """A caption tailored for a specific platform."""
+    platform: str = ""
+    caption: str = ""
+    hashtags: List[str] = field(default_factory=list)
+    char_count: int = 0
+    tone: str = ""
+
+
+_PLATFORM_CHAR_LIMITS = {
+    "twitter": 280,
+    "instagram": 2200,
+    "linkedin": 3000,
+    "tiktok": 300,
+    "youtube": 5000,
+    "facebook": 63206,
+}
+
+_TONE_TEMPLATES = {
+    "professional": {
+        "twitter": "Key insight: {summary}\n\n{hashtags}",
+        "instagram": "{hook}\n\n{body}\n\n{cta}\n\n{hashtags}",
+        "linkedin": "{hook}\n\n{body}\n\n{cta}\n\n{hashtags}",
+        "tiktok": "{hook} {hashtags}",
+    },
+    "casual": {
+        "twitter": "{hook} {hashtags}",
+        "instagram": "{hook}\n\n{body}\n\nThoughts? Drop a comment!\n\n{hashtags}",
+        "linkedin": "{hook}\n\n{body}\n\n{hashtags}",
+        "tiktok": "{hook} {hashtags}",
+    },
+    "educational": {
+        "twitter": "Did you know? {summary}\n\n{hashtags}",
+        "instagram": "Here's what you need to know:\n\n{body}\n\nSave this for later!\n\n{hashtags}",
+        "linkedin": "A lesson worth sharing:\n\n{body}\n\n{cta}\n\n{hashtags}",
+        "tiktok": "Learn this: {hook} {hashtags}",
+    },
+    "trendy": {
+        "twitter": "{hook} {hashtags}",
+        "instagram": "{hook}\n\n{body}\n\nLink in bio!\n\n{hashtags}",
+        "linkedin": "{hook}\n\n{body}\n\n{hashtags}",
+        "tiktok": "{hook} {hashtags}",
+    },
+}
+
+
+def _generate_caption_via_llm(transcript: str, platform: str, tone: str) -> str:
+    """Generate a platform caption using LLM."""
+    try:
+        from opencut.core.llm import LLMConfig, query_llm
+
+        char_limit = _PLATFORM_CHAR_LIMITS.get(platform, 2000)
+        system_prompt = (
+            f"You are a {tone} social media copywriter for {platform}. "
+            f"Write a caption (max {char_limit} chars) for this content. "
+        )
+
+        if platform == "twitter":
+            system_prompt += "Be concise and punchy. Under 280 chars total including hashtags."
+        elif platform == "instagram":
+            system_prompt += "Use a hook first line, body with line breaks, and call to action."
+        elif platform == "linkedin":
+            system_prompt += "Professional and insightful. Use line breaks for readability."
+        elif platform == "tiktok":
+            system_prompt += "Trendy, use emojis, keep it short and catchy."
+
+        system_prompt += "\nReturn just the caption text, nothing else."
+
+        response = query_llm(
+            prompt=f"Content:\n\n{transcript[:5000]}",
+            system_prompt=system_prompt,
+        )
+
+        if response.text and not response.text.startswith("LLM error:"):
+            return response.text.strip()
+    except Exception as exc:
+        logger.warning("LLM caption generation failed: %s", exc)
+
+    return ""
+
+
+def _build_caption_from_template(transcript: str, platform: str, tone: str) -> str:
+    """Build a caption using templates when LLM is unavailable."""
+    # Extract a hook (first meaningful sentence)
+    sentences = re.split(r"[.!?]+", transcript)
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 15]
+
+    hook = sentences[0][:100] if sentences else "Check this out"
+    summary = sentences[0][:200] if sentences else transcript[:200]
+    body = ". ".join(sentences[:3])[:500] if sentences else transcript[:500]
+    cta = "What do you think?"
+
+    # Extract keywords for hashtags
+    keywords = _extract_keywords_tfidf(transcript, top_n=8)
+    hashtag_str = " ".join(f"#{w}" for w in keywords[:5])
+
+    templates = _TONE_TEMPLATES.get(tone, _TONE_TEMPLATES["professional"])
+    template = templates.get(platform, "{hook}\n\n{body}\n\n{hashtags}")
+
+    caption = template.format(
+        hook=hook,
+        summary=summary,
+        body=body,
+        cta=cta,
+        hashtags=hashtag_str,
+    )
+
+    # Trim to platform limit
+    limit = _PLATFORM_CHAR_LIMITS.get(platform, 2000)
+    if len(caption) > limit:
+        caption = caption[:limit - 3] + "..."
+
+    return caption
+
+
+def generate_platform_caption(
+    transcript: str,
+    platform: str = "twitter",
+    tone: str = "professional",
+    custom_hashtags: Optional[List[str]] = None,
+    on_progress: Optional[Callable] = None,
+) -> PlatformCaption:
+    """
+    Generate a platform-specific caption from transcript text.
+
+    Per-platform templates:
+      - Twitter: <=280 chars, concise
+      - Instagram: hook + body + hashtags
+      - LinkedIn: professional tone
+      - TikTok: trendy with emojis
+
+    Args:
+        transcript: Source transcript text.
+        platform: Target platform.
+        tone: Caption tone (professional, casual, educational, trendy).
+        custom_hashtags: Additional hashtags to include.
+        on_progress: Progress callback(pct, msg).
+
+    Returns:
+        PlatformCaption with caption text and metadata.
+    """
+    platform = platform.lower().strip()
+    if platform not in _PLATFORM_CHAR_LIMITS:
+        platform = "twitter"
+
+    tone = tone.lower().strip()
+    if tone not in _TONE_TEMPLATES:
+        tone = "professional"
+
+    if not transcript or not transcript.strip():
+        return PlatformCaption(platform=platform, tone=tone)
+
+    if on_progress:
+        on_progress(10, f"Generating {platform} caption ({tone} tone)...")
+
+    # Try LLM first
+    caption = _generate_caption_via_llm(transcript, platform, tone)
+
+    if not caption:
+        if on_progress:
+            on_progress(40, "Using template fallback...")
+        caption = _build_caption_from_template(transcript, platform, tone)
+
+    # Extract/add hashtags
+    keywords = _extract_keywords_tfidf(transcript, top_n=8)
+    hashtags = [f"#{w}" for w in keywords[:5]]
+
+    if custom_hashtags:
+        for h in custom_hashtags:
+            tag = h if h.startswith("#") else f"#{h}"
+            if tag not in hashtags:
+                hashtags.append(tag)
+
+    # Enforce char limit
+    limit = _PLATFORM_CHAR_LIMITS.get(platform, 2000)
+    if len(caption) > limit:
+        caption = caption[:limit - 3] + "..."
+
+    if on_progress:
+        on_progress(100, "Caption generated")
+
+    return PlatformCaption(
+        platform=platform,
+        caption=caption,
+        hashtags=hashtags,
+        char_count=len(caption),
+        tone=tone,
+    )
