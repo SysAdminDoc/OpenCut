@@ -2,7 +2,7 @@
 <p align="center"><img src="icon.png" width="128" alt="OpenCut"></p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.11.0-58A6FF?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.12.0-58A6FF?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-4ade80?style=for-the-badge">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Python%20GUI-58A6FF?style=for-the-badge">
 </p>
@@ -10,12 +10,12 @@
 
 # OpenCut
 
-![Version](https://img.shields.io/badge/version-1.11.0-blue)
+![Version](https://img.shields.io/badge/version-1.12.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-932-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-980-orange)
 ![Tests](https://img.shields.io/badge/Tests-5127-brightgreen)
 
 > A free, open-source Premiere Pro extension that brings AI-powered video editing automation, caption generation, audio processing, and visual effects -- all running locally on your machine. No subscriptions, no cloud, no API keys required.
@@ -67,7 +67,7 @@ docker-compose -f docker-compose.gpu.yml up  # With GPU
 
 ## Feature Overview
 
-OpenCut v1.11.0 includes **932 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
+OpenCut v1.12.0 includes **980 API routes**, **8 panel tabs** with **50+ sub-tabs**, and covers every major video editing automation task.
 
 ### Cut & Clean
 
@@ -269,9 +269,9 @@ A modern panel (`com.opencut.uxp`) using Adobe's UXP platform:
 |   Premiere Pro CEP    | <================> |   OpenCut Server      |
 |   Panel (HTML/JS)     |   localhost:5679   |   (Python/Flask)      |
 |                       |                    |                       |
-|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  932 API routes       |
-|  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  335 core modules     |
-|  Keyboard shortcuts   |   SSE streaming    |  67 route blueprints  |
+|  8 tabs, 50+ sub-tabs |   WebSocket:5680   |  980 API routes       |
+|  Studio Graphite, i18n| <~~~~~~~~~~~~~~~>  |  360 core modules     |
+|  Keyboard shortcuts   |   SSE streaming    |  73 route blueprints  |
 +-----------+-----------+                    +-----------+-----------+
             |                                            |
 +-----------+-----------+                    +-----------+-----------+
@@ -459,7 +459,7 @@ pre-commit install
 pre-commit install --hook-type pre-push
 ```
 
-5,127+ tests across 71 test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
+5,742+ tests across 77 test files covering route smoke tests, core module unit tests, feature integration tests, plugin tests, and ExtendScript mock harness.
 
 ---
 
@@ -499,8 +499,8 @@ A: Go to Settings > AI Engine Preferences. Each feature domain (silence, transcr
 ```
 opencut/
   server.py          # Flask app factory + startup
-  core/              # 335 processing modules (silence, captions, audio, video, AI, VR, dubbing)
-  routes/            # 67 route blueprints (audio, video, captions, timeline, etc.)
+  core/              # 360 processing modules (silence, captions, audio, video, AI, VR, dubbing)
+  routes/            # 73 route blueprints (audio, video, captions, timeline, etc.)
   export/            # Premiere XML, SRT, VTT, ASS, OTIO exporters
   utils/             # Media probing, config dataclasses
   checks.py          # Dependency availability checks
@@ -520,7 +520,7 @@ extension/
     main.js          # UXP panel (~1700 lines)
     index.html       # UXP panel UI
     style.css        # UXP dark theme
-tests/               # pytest test suite (5,127+ tests, 71 test files)
+tests/               # pytest test suite (5,742+ tests, 77 test files)
 docs/
   RESEARCH.md        # Open source feature research (80+ projects analyzed)
   ROADMAP.md         # Implementation roadmap with status tracking
