@@ -1,5 +1,5 @@
 <!-- codex-branding:start -->
-<p align="center"><img src="icon.png" width="128" alt="Open Cut"></p>
+<p align="center"><img src="icon.png" width="128" alt="OpenCut"></p>
 
 <p align="center">
   <img alt="Version" src="https://img.shields.io/badge/version-1.11.0-58A6FF?style=for-the-badge">
