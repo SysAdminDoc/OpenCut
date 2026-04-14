@@ -43,7 +43,7 @@
 - `nlp_command.py` - Natural language → API route mapping. COMMAND_MAP with 19 entries. parse_command_keyword(text) → {route, params, confidence, matched_keyword} or None. parse_command_llm(text, config, routes). parse_command(text, llm_config) tries LLM then keyword. extract_params_from_text(text) extracts numbers/language/intensity hints.
 
 ### Route Blueprints (`opencut/routes/`)
-- `__init__.py` - `register_blueprints(app)` registers all 60+ Blueprints (17 original + 43 feature expansion) + dynamic plugin blueprints. 880 total routes.
+- `__init__.py` - `register_blueprints(app)` registers all 67 Blueprints (17 original + 50 feature expansion) + dynamic plugin blueprints. 932 total routes.
 - `system.py` (~1130 lines) - /health, /shutdown, /info, /gpu/*, /dependencies, /file, /whisper/*, /llm/*. Install routes use `make_install_route()` factory.
 - `audio.py` (~2175 lines) - /silence, /fillers, /audio/*, /audio/beat-markers, /audio/loudness-match. All async routes use `@async_job` decorator.
 - `captions.py` (~1590 lines) - /captions/*, /captions/chapters (LLMConfig object, not dict), /captions/repeat-detect. All async routes use `@async_job`.
@@ -135,7 +135,7 @@
 ## Architecture
 - Backend runs as standalone process (exe or `python -m opencut.server`)
 - Panel communicates via XHR to localhost:5679
-- **Blueprint-based route organization**: 60+ Blueprints (17 original: system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins + 43 feature expansion blueprints) + dynamically loaded plugin blueprints. 880 total routes.
+- **Blueprint-based route organization**: 67 Blueprints (17 original: system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins + 50 feature expansion blueprints) + dynamically loaded plugin blueprints. 932 total routes.
 - **Shared modules**: security.py (CSRF + path validation), jobs.py (job state), helpers.py (utilities + `run_ffmpeg` + `ensure_package` + `get_video_info`), user_data.py (thread-safe file I/O)
 - **CSRF protection**: Token generated at startup in security.py, returned via /health, sent as `X-OpenCut-Token` header on mutations. `@require_csrf` decorator applied to ALL POST routes.
 - **Path validation**: `validate_path()` checks realpath, null bytes, `..` components, symlinks. `validate_filepath()` adds isfile check. Applied to ALL routes accepting file paths.
@@ -181,7 +181,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.10.5**
+- Current: **v1.11.0**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -1027,7 +1027,7 @@ Comprehensive multi-phase audit across all 138 files (~82,500 lines). 103 issues
 - **test_clip_notes_plugin.py rewrite** — Old test fixture accessed `mod._thread_local.conn` after flaky `importlib` module load, causing `AttributeError` on Windows. The `temp_db` autouse fixture was a dead no-op (created module without executing it). Rewrote entire test file to use JSON storage backend (matching `test_plugin_clip_notes.py` pattern), eliminating `_thread_local` dependency. All 10 legacy route tests pass cleanly.
 - **LUT_SIZE parsing crash** — `_parse_cube()` in `lut_library.py` called `int(line.split()[-1])` without checking `split()` returned ≥2 parts. Malformed `.cube` files with bare `LUT_SIZE` keyword (no value) crashed with `ValueError`. Added `len(parts) >= 2` guard + `try/except ValueError`.
 - **CEP main.js unsafe `.split()` calls** — 3 call sites could crash on undefined/null values: OTIO export result display (`data.output_path`), caption export filename extraction, and workflow completion output display. Wrapped in `String()` coercion and `|| ""` fallbacks.
-- **Audit results**: 867 tests passing (4 skipped for optional deps), ruff lint clean, exit code 0.
+- **Audit results**: 5,127 tests passing (4 skipped for optional deps), ruff lint clean, exit code 0.
 
 ## v1.9.16 Performance Audit & Memory Leak Fixes
 - **`/video/auto-zoom` broken return** — route returned `{}` instead of `result_dict` (keyframes + output path discarded)
@@ -1203,15 +1203,15 @@ See commit `04d068c` for the full v1.9.22 changelog — `/file` allowlist restor
 - **NDJSON response mime type** — `application/x-ndjson`. Frontend must parse line-by-line, not `JSON.parse()` the whole body. Each line is a valid JSON object.
 - **Context awareness `score_features` capability check** — The scoring checks for "audio" and "video" capabilities by inferring from tags (e.g., `audio_only` implies has audio but no video). Tags like `talking_head` imply both audio and video are present.
 - **`rate_limit("ai_gpu")` scope** — Shared across all AI routes. If upscale is running, music generation returns 429. This is intentional to prevent GPU memory conflicts.
-- **60+ Blueprints** — Route registration in `__init__.py` includes 17 original + 43 feature expansion blueprints (880 total routes). Plus dynamic plugin blueprints.
+- **67 Blueprints** — Route registration in `__init__.py` includes 17 original + 50 feature expansion blueprints (932 total routes). Plus dynamic plugin blueprints.
 
-## v1.10.5 Feature Expansion
+## v1.11.0 Feature Expansion
 
 ### Scale
-- **230 new core modules** (`opencut/core/`) — feature implementations across all 62 categories from `features.md`
-- **43 new route blueprints** (`opencut/routes/`) — 600+ new API endpoints registered via `__init__.py`
-- **43 new test files** (`tests/`) — smoke tests for all new routes
-- **880 total routes** (up from 254 in v1.9.26)
+- **335 core modules** (`opencut/core/`) — feature implementations across all 62 categories from `features.md`
+- **50 feature expansion blueprints** (`opencut/routes/`) — 932 total API endpoints registered via `__init__.py`
+- **71 test files** (`tests/`) — 5,127 tests covering all routes and core modules
+- **932 total routes** (up from 254 in v1.9.26)
 - **Ruff lint clean** — 1,207 auto-fixed + 45 manual fixes across all new files
 
 ### Planning Documents
