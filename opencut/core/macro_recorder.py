@@ -489,6 +489,12 @@ def save_macro(
         _ensure_macros_dir()
         path = _macro_path(macro.name)
     else:
+        # Validate user-supplied path: block traversal, null bytes, UNC
+        if "\x00" in path:
+            raise ValueError("Null byte in path")
+        normed = os.path.normpath(path)
+        if ".." in normed.replace("\\", "/").split("/"):
+            raise ValueError("Path traversal not allowed")
         os.makedirs(os.path.dirname(os.path.abspath(path)), exist_ok=True)
 
     with open(path, "w", encoding="utf-8") as fh:
@@ -517,6 +523,13 @@ def load_macro(
     """
     if on_progress:
         on_progress(50)
+
+    # Validate path: block traversal and null bytes
+    if not path or "\x00" in path:
+        raise ValueError("Invalid macro file path")
+    normed = os.path.normpath(path)
+    if ".." in normed.replace("\\", "/").split("/"):
+        raise ValueError("Path traversal not allowed")
 
     if not os.path.isfile(path):
         raise FileNotFoundError(f"Macro file not found: {path}")

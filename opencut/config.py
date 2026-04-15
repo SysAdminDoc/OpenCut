@@ -22,7 +22,8 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return default
 
 
-def _env_int(name: str, default: int, *, min_val: int | None = None) -> int:
+def _env_int(name: str, default: int, *, min_val: int | None = None,
+             max_val: int | None = None) -> int:
     raw = os.environ.get(name)
     if raw is None:
         return default
@@ -32,6 +33,8 @@ def _env_int(name: str, default: int, *, min_val: int | None = None) -> int:
         return default
     if min_val is not None and value < min_val:
         return min_val
+    if max_val is not None and value > max_val:
+        return max_val
     return value
 
 
@@ -81,10 +84,11 @@ class OpenCutConfig:
                 "OPENCUT_MAX_CONTENT_LENGTH",
                 100 * 1024 * 1024,
                 min_val=1024 * 1024,
+                max_val=2 * 1024 * 1024 * 1024,  # 2 GB hard cap
             ),
             cors_origins=_env_csv("OPENCUT_CORS_ORIGINS", ["null", "file://"]),
-            job_max_age=_env_int("OPENCUT_JOB_MAX_AGE", 3600, min_val=60),
-            max_concurrent_jobs=_env_int("OPENCUT_MAX_CONCURRENT_JOBS", 10, min_val=1),
-            max_batch_files=_env_int("OPENCUT_MAX_BATCH_FILES", 100, min_val=1),
-            job_stuck_timeout=_env_int("OPENCUT_JOB_STUCK_TIMEOUT", 7200, min_val=60),
+            job_max_age=_env_int("OPENCUT_JOB_MAX_AGE", 3600, min_val=60, max_val=86400),
+            max_concurrent_jobs=_env_int("OPENCUT_MAX_CONCURRENT_JOBS", 10, min_val=1, max_val=100),
+            max_batch_files=_env_int("OPENCUT_MAX_BATCH_FILES", 100, min_val=1, max_val=10000),
+            job_stuck_timeout=_env_int("OPENCUT_JOB_STUCK_TIMEOUT", 7200, min_val=60, max_val=86400),
         )
