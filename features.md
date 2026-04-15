@@ -6,7 +6,7 @@
 
 Items already completed or tracked in ROADMAP.md are excluded. This document focuses exclusively on what's **not yet planned or implemented**.
 
-**Updated**: 2026-04-14 — 377 features across 77 categories
+**Updated**: 2026-04-14 — 402 features across 82 categories
 
 ---
 
@@ -2791,6 +2791,141 @@ Split renders into segments, dispatch to multiple nodes, collect and concatenate
 Track publish records, manual metrics entry (views, likes, CTR, watch time). Cross-platform aggregation, top performers, content type analysis, growth trends. CSV/JSON export.
 - **Why**: Understanding what works across platforms guides content strategy. No video editor includes post-publish analytics.
 - **Module**: `distribution_analytics.py` | **Routes**: `/analytics/record`, `/analytics/report`
+
+## 78. AI Voice & Speech
+
+### 78.1 Transcript-Based Video Editing (P0 / XL)
+Edit video by editing text — delete words to cut video, rearrange paragraphs to reorder clips, duplicate text to duplicate sections. Bidirectional text-timeline map from WhisperX timestamps. Undo stack, EDL/OTIO export.
+- **Why**: Descript built a $700M+ company on this single feature. The most-requested AI editing capability.
+- **Module**: `transcript_timeline_edit.py` | **Routes**: `/transcript/edit`, `/transcript/parse`, `/transcript/preview`
+
+### 78.2 AI Eye Contact Correction (P1 / L)
+MediaPipe face mesh gaze estimation + iris affine correction. Temporal smoothing (EMA). Intensity control 0.0-1.0. Frame-by-frame with no-face fallback passthrough.
+- **Why**: Descript, CapCut, NVIDIA Broadcast all offer this. Critical for webcam/interview content.
+- **Module**: `eye_contact_fix.py` | **Routes**: `/video/eye-contact`, `/video/eye-contact/preview`
+
+### 78.3 AI Voice Overdub (P1 / L)
+Fix spoken mistakes by typing corrections. Clone speaker voice from context, generate TTS, time-stretch to match, crossfade boundaries. Edge-tts fallback.
+- **Why**: Descript Overdub equivalent. Connects existing voice cloning + TTS into one workflow.
+- **Module**: `voice_overdub.py` | **Routes**: `/audio/overdub`, `/audio/overdub/clone-voice`
+
+### 78.4 AI Lip Sync (P1 / L)
+Audio-driven mouth region modification. MediaPipe face mesh + amplitude/spectral mouth control. Wav2Lip/SadTalker subprocess fallback for higher quality.
+- **Why**: Essential for dubbing and voice correction workflows. Pairs with overdub and translation.
+- **Module**: `lip_sync.py` | **Routes**: `/video/lip-sync`, `/video/lip-sync/preview`
+
+### 78.5 Voice-to-Voice Conversion (P2 / L)
+Transform voice to sound like target speaker. Pitch contour + spectral envelope analysis. FFmpeg-based conversion with RVC subprocess fallback. Persistent voice profiles.
+- **Why**: RVC popularity explosion. Useful for voice anonymization, dubbing, character consistency.
+- **Module**: `voice_convert.py` | **Routes**: `/audio/voice-convert`, `/audio/voice-convert/profile`, `/audio/voice-convert/profiles`
+
+## 79. Motion Design & Animation
+
+### 79.1 Kinetic Typography Engine (P1 / L)
+Per-character/word/line text animation. 12 presets (bounce, elastic, typewriter, wave, cascade, spiral, explode, assemble, fade_in, slide_up, slide_left, scale_pop). 7 easing functions. Pillow frame rendering + FFmpeg encode.
+- **Why**: Professional motion graphics without After Effects. CapCut text effects competitor.
+- **Module**: `kinetic_typography.py` | **Routes**: `/motion/kinetic-text`, `/motion/kinetic-text/presets`, `/motion/kinetic-text/preview`
+
+### 79.2 Data-Driven Animation (P2 / L)
+Bind motion graphics to CSV/JSON data. 6 chart types (bar, line, counter, label, pie, progress). Template-based with `${data.field}` bindings. Smooth interpolation between data states.
+- **Why**: Corporate reports, sports, financial content need animated data visualization. Remotion competitor.
+- **Module**: `data_animation.py` | **Routes**: `/motion/data-animation`, `/motion/data-animation/validate`
+
+### 79.3 Shape Layer Animation (P2 / L)
+Vector shape morphing, stroke drawing, fill transitions. 8 shape types + SVG path parser. Point resampling for morph matching. Transparent PNG sequence + FFmpeg encode.
+- **Why**: Logo reveals, icon animations, abstract motion design. After Effects shape layers competitor.
+- **Module**: `shape_animation.py` | **Routes**: `/motion/shape-animate`, `/motion/shape-animate/types`
+
+### 79.4 Expression Scripting Engine (P2 / M)
+Sandboxed Python expressions driving animation properties. 30+ math functions (sin, cos, lerp, clamp, smoothstep, noise). AST safety checking blocks imports/attributes. Thread-based timeout.
+- **Why**: Bridges keyframing and programmatic animation. After Effects expressions equivalent.
+- **Module**: `expression_engine.py` | **Routes**: `/motion/expression/evaluate`, `/motion/expression/timeline`
+
+### 79.5 Particle System (P2 / L)
+Configurable particle emitter with physics (gravity, wind, turbulence, bounce). 5 emitter types, 7 sprite types, 8 presets (snow, rain, confetti, fire, dust, bubbles, sparkle, smoke). Pillow rendering.
+- **Why**: Particle overlays are huge on social media. No Premiere extension offers this natively.
+- **Module**: `particle_system.py` | **Routes**: `/motion/particles`, `/motion/particles/presets`, `/motion/particles/preview`
+
+## 80. Professional Subtitling
+
+### 80.1 Shot-Change-Aware Subtitle Timing (P1 / M)
+Post-process subtitles so none span a scene cut. Split at cuts with configurable gap. 4 profiles: netflix (42 CPL), bbc (37 CPL), fcc (32 CPL), custom. Min duration enforcement, fragment merging.
+- **Why**: Netflix, BBC, and every broadcaster requires shot-change-aware timing. Prevents QC rejection.
+- **Module**: `subtitle_shot_aware.py` | **Routes**: `/subtitles/shot-aware`, `/subtitles/profiles`
+
+### 80.2 Multi-Language Simultaneous Editing (P2 / L)
+Shared timing track + per-language text arrays. Add/remove languages, bulk import SRT/VTT, timing shift syncs all tracks. Export per-language files or multi-track MKV.
+- **Why**: Localization workflows need 5-20+ languages with locked timing. Editing each separately drifts.
+- **Module**: `multilang_subtitle.py` | **Routes**: `/subtitles/multilang/create`, `/subtitles/multilang/import`, `/subtitles/multilang/export`, `/subtitles/multilang/languages`
+
+### 80.3 Broadcast Caption Export (P2 / M)
+Export to 6 broadcast formats: CEA-608 (SCC), CEA-708 (MCC), EBU-TT (XML), TTML, IMSC1, WebVTT with positioning. Per-format validation and constraint enforcement.
+- **Why**: SRT alone is insufficient for broadcast. TV delivery requires CEA-608/708 or EBU-TT.
+- **Module**: `broadcast_caption.py` | **Routes**: `/subtitles/broadcast-export`, `/subtitles/broadcast-formats`
+
+### 80.4 SDH / HoH Auto-Formatting (P2 / S)
+Auto-apply Subtitles for Deaf/Hard-of-Hearing conventions: speaker IDs, 40+ sound event descriptions, music notation, emotional tone markers. Configurable bracket/style.
+- **Why**: Legal accessibility requirement. Manual SDH formatting is tedious. AI detects non-speech sounds.
+- **Module**: `sdh_formatter.py` | **Route**: `/subtitles/sdh-format`
+
+### 80.5 Dynamic Subtitle Positioning (P3 / M)
+Per-frame analysis detects faces/text/graphics in lower third. 6 positioning zones with priority fallback. ASS format output with per-line `{\pos(x,y)}` overrides.
+- **Why**: Standard bottom-center positioning covers lower thirds and faces. Dynamic positioning is premium.
+- **Module**: `subtitle_position.py` | **Routes**: `/subtitles/auto-position`, `/subtitles/auto-position/preview`
+
+## 81. Developer & Scripting Platform
+
+### 81.1 Python Scripting Console (P2 / M)
+In-app REPL with sandboxed scope. Blocked: imports, os, sys, subprocess, eval, exec. Allowed: math, json, curated opencut namespace. Timeout enforcement, execution history.
+- **Why**: Opens OpenCut to infinite customization. DaVinci Resolve and Blender both have Python consoles.
+- **Module**: `scripting_console.py` | **Routes**: `/scripting/execute`, `/scripting/history`, `/scripting/namespace`
+
+### 81.2 Macro Recording & Playback (P2 / M)
+Record API call sequences as replayable macros. Variable substitution (`${input_file}`, `${output_dir}`). Save as `.opencut-macro` JSON files. CRUD operations.
+- **Why**: "Do what I just did, but on all these clips." Photoshop Actions equivalent.
+- **Module**: `macro_recorder.py` | **Routes**: `/macro/record/start`, `/macro/record/stop`, `/macro/play`, `/macro/list`
+
+### 81.3 FFmpeg Filter Chain Builder (P3 / L)
+Programmatic filter chain construction. 20 typed filter nodes with connection validation. Cycle detection. Generates `-filter_complex` strings. Save/load as presets.
+- **Why**: Power users need specific filter combinations. Visual builder is more accessible than raw ffmpeg.
+- **Module**: `filter_chain_builder.py` | **Routes**: `/filter-chain/build`, `/filter-chain/preview`
+
+### 81.4 Webhook Event System (P2 / M)
+Register URLs for events (job_complete, job_failed, render_complete, export_ready, error). POST JSON payloads with retry (3 attempts, exponential backoff). Delivery log.
+- **Why**: Integrates OpenCut into automation pipelines. Essential for headless/server deployments.
+- **Module**: `webhook_system.py` | **Routes**: `/webhooks` (CRUD), `/webhooks/test`
+
+### 81.5 Batch Scripting Engine (P2 / M)
+JSON script format: operations + file glob patterns + output naming templates. Execute with error handling modes. Dry-run validation. Execution logging.
+- **Why**: Automated multi-file processing without UI interaction. Critical for production pipelines.
+- **Module**: `batch_script.py` | **Routes**: `/batch/execute`, `/batch/validate`
+
+## 82. Audio Post-Production
+
+### 82.1 ADR Cueing System (P2 / L)
+Mark dialogue lines for replacement. Cue sheets (CSV with industry columns, JSON). Guide audio extraction. Replacement recording with sync. TTS placeholder generation.
+- **Why**: ADR is standard film/TV post-production. Integrates with existing transcription and TTS.
+- **Module**: `adr_cue_system.py` | **Routes**: `/audio/adr/create`, `/audio/adr/cue`, `/audio/adr/cues`, `/audio/adr/cuesheet`, `/audio/adr/record`
+
+### 82.2 M&E Mix Export (P2 / M)
+Generate Music & Effects stem (everything minus dialogue). 3 methods: stem separation (Demucs), track mute, spectral subtraction. Residual dialogue validation.
+- **Why**: International distribution requires M&E mixes. AI stem separation is the shortcut.
+- **Module**: `me_mix.py` | **Route**: `/audio/me-mix`
+
+### 82.3 Automated Dialogue Premix (P2 / M)
+Per-speaker processing from diarization: de-ess, EQ (5 presets: interview/podcast/broadcast/film/voiceover), compress, level-match to target LUFS. All via FFmpeg filters.
+- **Why**: Dialogue premixing is hours of manual work. Per-speaker automation from diarization data is unique.
+- **Module**: `dialogue_premix.py` | **Routes**: `/audio/dialogue-premix`, `/audio/premix-presets`
+
+### 82.4 Surround Sound Upmix & Panning (P3 / L)
+Stereo to 5.1/7.1 upmix (4 modes). Per-clip surround panning via VBAP coefficients. LFE extraction. Downmix validation. Export as WAV/AC-3/E-AC-3.
+- **Why**: Surround delivery required for Netflix, Disney+, Apple TV+, and theatrical. Basic upmix opens the door.
+- **Module**: `surround_upmix.py` | **Routes**: `/audio/surround-upmix`, `/audio/surround-layouts`
+
+### 82.5 Foley Cueing & SFX Placement (P2 / M)
+Detect action events (footsteps, doors, impacts, cloth, glass, water, mechanical, ambient). Cue sheet export. Auto-place SFX from categorized sound library with intensity-scaled mixing.
+- **Why**: Manual SFX placement takes hours. Automated cueing + placement from a library is a massive time saver.
+- **Module**: `foley_cue.py` | **Routes**: `/audio/foley/analyze`, `/audio/foley/place`, `/audio/foley/categories`
 
 ---
 

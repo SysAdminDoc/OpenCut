@@ -89,6 +89,11 @@ def register_blueprints(app):
     from .preview_realtime_routes import preview_realtime_bp
     from .sound_music_routes import sound_music_bp
     from .timeline_auto_routes import timeline_auto_bp
+    from .audio_post_routes import audio_post_bp
+    from .dev_scripting_routes import dev_scripting_bp
+    from .motion_design_routes import motion_design_bp
+    from .subtitle_pro_routes import subtitle_pro_bp
+    from .voice_speech_routes import voice_speech_bp
     from .workflow_routes import workflow_auto_bp
 
     for bp in [system_bp, audio_bp, captions_bp,
@@ -118,5 +123,8 @@ def register_blueprints(app):
                content_gen_bp,
                collab_review_bp, timeline_auto_bp,
                sound_music_bp, preview_realtime_bp,
-               cloud_distrib_bp]:
+               cloud_distrib_bp,
+               voice_speech_bp, motion_design_bp,
+               subtitle_pro_bp, dev_scripting_bp,
+               audio_post_bp]:
         app.register_blueprint(bp)
