@@ -11,7 +11,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import async_job
-from opencut.security import require_csrf, safe_int
+from opencut.security import require_csrf, safe_int, validate_output_path
 
 logger = logging.getLogger("opencut")
 
@@ -30,6 +30,8 @@ def provenance_generate(job_id, filepath, data):
     from opencut.jobs import _update_job
 
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     _update_job(job_id, progress=10, message="Computing file hash...")
 
@@ -120,6 +122,8 @@ def podcast_generate_rss():
         episodes = data.get("episodes", [])
         feed_metadata = data.get("feed_metadata", {})
         output_path = data.get("output_path", None)
+        if output_path:
+            output_path = validate_output_path(output_path)
 
         if not episodes:
             return jsonify({"error": "No episodes provided"}), 400

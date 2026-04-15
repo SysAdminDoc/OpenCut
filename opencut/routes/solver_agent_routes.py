@@ -17,6 +17,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -439,6 +440,8 @@ def agent_auto_edit(job_id, filepath, data):
             validated_paths.append(validate_filepath(fp.strip()))
 
     out_path = data.get("output_path", None)
+    if out_path:
+        out_path = validate_output_path(out_path)
     if out_path:
         out_path = out_path.strip() or None
 
