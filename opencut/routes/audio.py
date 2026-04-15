@@ -495,6 +495,7 @@ def audio_separate(job_id, filepath, data):
                     try:
                         process.wait(timeout=3)
                     except Exception:
+                        logger.warning("Process did not exit after terminate, killing")
                         process.kill()
                     _unregister_job_process(job_id)
                     return

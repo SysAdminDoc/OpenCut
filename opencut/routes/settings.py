@@ -611,7 +611,8 @@ def _load_builtin_templates():
     try:
         with open(templates_path, "r", encoding="utf-8") as f:
             return json.load(f)
-    except Exception:
+    except Exception as exc:
+        logger.warning("Failed to load built-in templates: %s", exc)
         return []
 
 

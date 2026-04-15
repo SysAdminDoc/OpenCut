@@ -20,6 +20,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -51,6 +52,8 @@ def sky_replace(job_id, filepath, data):
                                    min_val=0.0, max_val=1.0)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -129,6 +132,8 @@ def log_apply_idt(job_id, filepath, data):
     lut_size = safe_int(data.get("lut_size", 33), 33, min_val=17, max_val=65)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -180,6 +185,8 @@ def lut_stack(job_id, filepath, data):
 
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -308,6 +315,8 @@ def cinemagraph(job_id, filepath, data):
 
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -353,6 +362,8 @@ def hyperlapse(job_id, filepath, data):
 
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -403,6 +414,8 @@ def lossless_intermediate(job_id, filepath, data):
     direction = data.get("direction", "to").strip().lower()
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

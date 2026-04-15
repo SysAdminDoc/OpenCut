@@ -18,6 +18,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -196,6 +197,8 @@ def stem_remix(job_id, filepath, data):
     mix_config = data.get("mix_config", [])
     data.get("output_dir", "")
     output = data.get("output_path", None)
+    if output:
+        output = validate_output_path(output)
 
     if not stem_paths:
         raise ValueError("No stem paths provided. Pass 'stem_paths' as a list.")

@@ -17,6 +17,7 @@ from opencut.security import (
     safe_int,
     validate_filepath,
     validate_path,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -42,6 +43,8 @@ def cursor_zoom(job_id, filepath, data):
         except ValueError:
             out_dir = ""
     out_path = data.get("output_path")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if out_path:
         try:
             out_path = validate_path(out_path)
@@ -90,6 +93,8 @@ def lower_thirds_generate(job_id, filepath, data):
     height = safe_int(data.get("height", 1080), 1080, min_val=240, max_val=4320)
 
     out_path = data.get("output_path")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if out_path:
         try:
             out_path = validate_path(out_path)
@@ -222,6 +227,8 @@ def beat_cuts_assemble(job_id, filepath, data):
 
     out_path = data.get("output_path")
     if out_path:
+        out_path = validate_output_path(out_path)
+    if out_path:
         try:
             out_path = validate_path(out_path)
         except ValueError:
@@ -259,6 +266,8 @@ def redact_region_route(job_id, filepath, data):
 
     out_path = data.get("output_path")
     if out_path:
+        out_path = validate_output_path(out_path)
+    if out_path:
         try:
             out_path = validate_path(out_path)
         except ValueError:
@@ -290,6 +299,8 @@ def redact_faces_route(job_id, filepath, data):
     sample_interval = safe_float(data.get("sample_interval", 1.0), 1.0, min_val=0.1, max_val=10.0)
 
     out_path = data.get("output_path")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if out_path:
         try:
             out_path = validate_path(out_path)
@@ -324,6 +335,8 @@ def reframe_vertical_route(job_id, filepath, data):
     method = str(data.get("method", "auto"))[:20]
 
     out_path = data.get("output_path")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if out_path:
         try:
             out_path = validate_path(out_path)
@@ -449,6 +462,8 @@ def telemetry_overlay_route(job_id, filepath, data):
     font_color = str(data.get("font_color", "white"))[:20]
 
     out_path = data.get("output_path")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if out_path:
         try:
             out_path = validate_path(out_path)

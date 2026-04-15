@@ -17,6 +17,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -43,6 +44,8 @@ def video_compare(job_id, filepath, data):
     timestamp = safe_float(data.get("timestamp", 0), 0, min_val=0.0)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -119,6 +122,8 @@ def effects_retro(job_id, filepath, data):
     intensity = safe_float(data.get("intensity", 0.7), 0.7, min_val=0.0, max_val=1.0)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -155,6 +160,8 @@ def effects_tilt_shift(job_id, filepath, data):
     saturation = safe_float(data.get("saturation", 1.5), 1.5, min_val=0.5, max_val=3.0)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -191,6 +198,8 @@ def effects_light_leak(job_id, filepath, data):
     intensity = safe_float(data.get("intensity", 0.5), 0.5, min_val=0.0, max_val=1.0)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -224,6 +233,8 @@ def accessibility_colorblind_sim(job_id, filepath, data):
     condition = data.get("condition", "deuteranopia").strip()
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)

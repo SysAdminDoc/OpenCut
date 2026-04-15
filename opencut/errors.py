@@ -107,7 +107,7 @@ def safe_error(exc, context=""):
         status = 403
     elif isinstance(exc, ImportError) or "no module named" in lower or "not installed" in lower:
         code = "MISSING_DEPENDENCY"
-        user_msg = f"A required package is not installed: {msg}"
+        user_msg = "A required package is not installed."
         suggestion = "Install the missing package from the Settings tab."
         status = 503
     elif isinstance(exc, FileNotFoundError) or "no such file" in lower or "file not found" in lower:
@@ -117,7 +117,7 @@ def safe_error(exc, context=""):
         status = 404
     elif ("unsupported" in lower and ("format" in lower or "codec" in lower)):
         code = "UNSUPPORTED_FORMAT"
-        user_msg = f"Unsupported media format: {msg}"
+        user_msg = "Unsupported media format or codec."
         suggestion = "Try converting the file to a standard format (MP4/H.264 for video, WAV/MP3 for audio)."
         status = 400
     elif isinstance(exc, RuntimeError) and ("ffmpeg" in lower or "ffprobe" in lower):
@@ -130,7 +130,7 @@ def safe_error(exc, context=""):
     logger.exception("Error [%s]%s: %s", code, log_ctx, exc)
 
     return error_response(code, user_msg, status=status,
-                          suggestion=suggestion, detail=msg[:200] if msg else None)
+                          suggestion=suggestion)
 
 
 # ---------------------------------------------------------------------------

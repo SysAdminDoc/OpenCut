@@ -18,6 +18,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -57,6 +58,8 @@ def talking_head_generate(job_id, filepath, data):
     preprocess = data.get("preprocess", "crop").strip()
 
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
     output_dir = data.get("output_dir", "")
     if out_path is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -119,6 +122,8 @@ def talking_head_simple(job_id, filepath, data):
                                min_val=0.0, max_val=10.0)
 
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
     output_dir = data.get("output_dir", "")
     if out_path is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -253,6 +258,8 @@ def gaussian_splat_render(job_id, filepath, data):
     interpolation = data.get("interpolation", "linear").strip()
 
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
     output_dir = data.get("output_dir", "")
     if out_path is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)

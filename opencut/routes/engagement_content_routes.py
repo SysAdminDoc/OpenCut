@@ -10,7 +10,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int
+from opencut.security import require_csrf, safe_float, safe_int, validate_output_path
 
 logger = logging.getLogger("opencut")
 
@@ -229,6 +229,8 @@ def captions_export_essential_graphics(job_id, filepath, data):
 
     style = data.get("style")  # Optional dict
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -262,6 +264,8 @@ def captions_export_premiere_xml(job_id, filepath, data):
     export_format = data.get("format", "xml").strip()
     style = data.get("style")
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
     fps = safe_float(data.get("fps"), 30.0, min_val=1.0, max_val=240.0)
 
     def _progress(pct, msg=""):

@@ -22,7 +22,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import async_job
-from opencut.security import require_csrf, safe_bool, safe_float, safe_int
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_output_path
 
 logger = logging.getLogger("opencut")
 
@@ -63,6 +63,8 @@ def split_screen_create(job_id, filepath, data):
     border_color = data.get("border_color", "black")
     gap = safe_int(data.get("gap", 0), 0, min_val=0, max_val=50)
     output_path = data.get("output_path")
+    if output_path:
+        output_path = validate_output_path(output_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -112,6 +114,8 @@ def reaction_create(job_id, filepath, data):
     audio_offset = safe_float(data.get("audio_offset", 0), 0)
     duck_level = safe_float(data.get("duck_level", 0.3), 0.3, min_val=0, max_val=1)
     output_path = data.get("output_path")
+    if output_path:
+        output_path = validate_output_path(output_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -159,6 +163,8 @@ def comparison_export(job_id, filepath, data):
     label_processed = data.get("label_processed", "Processed")
     wipe_speed = safe_float(data.get("wipe_speed", 1.0), 1.0, min_val=0.1, max_val=5.0)
     output_path = data.get("output_path")
+    if output_path:
+        output_path = validate_output_path(output_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -199,6 +205,8 @@ def multicam_grid_export(job_id, filepath, data):
     active_speaker = safe_bool(data.get("active_speaker_highlight", False))
     label_names = data.get("label_names")
     output_path = data.get("output_path")
+    if output_path:
+        output_path = validate_output_path(output_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

@@ -13,7 +13,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -51,6 +51,10 @@ def add_review_comment():
 
     if not project_path:
         return jsonify({"error": "project_path is required"}), 400
+    try:
+        project_path = validate_path(project_path)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     if not text or not text.strip():
         return jsonify({"error": "Comment text is required"}), 400
 
@@ -89,6 +93,10 @@ def list_review_comments():
     project_path = request.args.get("project_path", "")
     if not project_path:
         return jsonify({"error": "project_path query param is required"}), 400
+    try:
+        project_path = validate_path(project_path)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     try:
         comments = list_comments(
@@ -130,6 +138,10 @@ def resolve_review_comment(comment_id):
     project_path = data.get("project_path", "")
     if not project_path:
         return jsonify({"error": "project_path is required"}), 400
+    try:
+        project_path = validate_path(project_path)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     try:
         result = resolve_comment(
@@ -159,6 +171,10 @@ def delete_review_comment(comment_id):
     project_path = data.get("project_path", "")
     if not project_path:
         return jsonify({"error": "project_path is required"}), 400
+    try:
+        project_path = validate_path(project_path)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     try:
         deleted = delete_comment(project_path=project_path,
@@ -188,6 +204,10 @@ def export_review_comments():
     project_path = data.get("project_path", "")
     if not project_path:
         return jsonify({"error": "project_path is required"}), 400
+    try:
+        project_path = validate_path(project_path)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     try:
         fmt = data.get("format", "json")

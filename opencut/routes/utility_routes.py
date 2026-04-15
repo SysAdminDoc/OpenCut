@@ -11,7 +11,7 @@ import os
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int
+from opencut.security import require_csrf, safe_float, safe_int, validate_output_path
 
 logger = logging.getLogger("opencut")
 
@@ -386,6 +386,8 @@ def batch_contact_sheet(job_id, filepath, data):
 
     columns = safe_int(data.get("columns", 4), 4, min_val=1, max_val=20)
     output_path = data.get("output_path", "")
+    if output_path:
+        output_path = validate_output_path(output_path)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
