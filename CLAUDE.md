@@ -43,7 +43,7 @@
 - `nlp_command.py` - Natural language → API route mapping. COMMAND_MAP with 19 entries. parse_command_keyword(text) → {route, params, confidence, matched_keyword} or None. parse_command_llm(text, config, routes). parse_command(text, llm_config) tries LLM then keyword. extract_params_from_text(text) extracts numbers/language/intensity hints.
 
 ### Route Blueprints (`opencut/routes/`)
-- `__init__.py` - `register_blueprints(app)` registers all 73 Blueprints (17 original + 50 feature expansion) + dynamic plugin blueprints. 980 total routes.
+- `__init__.py` - `register_blueprints(app)` registers all 83 Blueprints (17 original + 66 feature expansion) + dynamic plugin blueprints. 1,088 total routes.
 - `system.py` (~1130 lines) - /health, /shutdown, /info, /gpu/*, /dependencies, /file, /whisper/*, /llm/*. Install routes use `make_install_route()` factory.
 - `audio.py` (~2175 lines) - /silence, /fillers, /audio/*, /audio/beat-markers, /audio/loudness-match. All async routes use `@async_job` decorator.
 - `captions.py` (~1590 lines) - /captions/*, /captions/chapters (LLMConfig object, not dict), /captions/repeat-detect. All async routes use `@async_job`.
@@ -135,7 +135,7 @@
 ## Architecture
 - Backend runs as standalone process (exe or `python -m opencut.server`)
 - Panel communicates via XHR to localhost:5679
-- **Blueprint-based route organization**: 73 Blueprints (17 original: system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins + 50 feature expansion blueprints) + dynamically loaded plugin blueprints. 980 total routes.
+- **Blueprint-based route organization**: 83 Blueprints (17 original: system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins + 66 feature expansion blueprints) + dynamically loaded plugin blueprints. 1,088 total routes.
 - **Shared modules**: security.py (CSRF + path validation), jobs.py (job state), helpers.py (utilities + `run_ffmpeg` + `ensure_package` + `get_video_info`), user_data.py (thread-safe file I/O)
 - **CSRF protection**: Token generated at startup in security.py, returned via /health, sent as `X-OpenCut-Token` header on mutations. `@require_csrf` decorator applied to ALL POST routes.
 - **Path validation**: `validate_path()` checks realpath, null bytes, `..` components, symlinks. `validate_filepath()` adds isfile check. Applied to ALL routes accepting file paths.
@@ -181,7 +181,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.13.0**
+- Current: **v1.14.0**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -1241,3 +1241,14 @@ Core modules:
 
 Route blueprint: `object_intel_routes.py` (425 lines) - 10 endpoints: /video/text-segment, /video/text-segment/preview, /video/physics-remove, /video/physics-remove/detect-shadow, /video/track-overlay, /video/overlay-types (GET), /search/semantic, /search/semantic/index, /video/reframe-multi, /video/aspect-ratios (GET).
 Tests: `test_object_intel.py` (1079 lines) - 104 tests covering all dataclasses, to_dict(), helper functions, constants validation, edge cases, route smoke tests.
+
+### Category 76: Real-Time AI Preview
+Core modules:
+- `live_preview.py` — Live AI effect preview at reduced resolution. 10 effects (color_grade, denoise, stabilize_frame, style_transfer, background_remove, upscale_preview, sharpen, blur, vignette, film_grain), in-memory LRU cache (100 entries / 500MB), effect chains, base64 output support.
+- `gpu_preview_pipeline.py` — GPU-accelerated preview rendering pipeline. GPU detection via nvidia-smi/torch.cuda/FFmpeg hwaccels, CPU fallback, batch preview at evenly-spaced timestamps, singleton pipeline with queue management.
+- `ab_compare.py` — A/B comparison data generator. 6 modes (side_by_side, overlay_blend, wipe_horizontal, wipe_vertical, split_diagonal, checkerboard), per-frame metrics (SSIM, PSNR, colour delta, MSE) via numpy with pure-Python fallback, interactive wipe frame generation.
+- `realtime_scopes.py` — Video scopes data generation. 5 scope types (waveform, vectorscope, histogram, parade, false_color), 4 presets (colorist, exposure, broadcast, full), broadcast legal range violation detection, numerical data for frontend canvas rendering.
+- `preview_cache.py` — Intelligent preview render cache. Disk-persistent LRU cache in ~/.opencut/preview_cache/, configurable max_size_mb/TTL, background cleanup thread, invalidation by file/effect/flush, thread-safe, cache warming, hit/miss statistics.
+
+Route blueprint: `preview_realtime_routes.py` — 12 endpoints under /api/preview/*: live, scrub (async), compare, compare/metrics, scopes, scopes/presets, cache/stats, cache/warm (async), cache (DELETE), pipeline (async), effects, pipeline/status.
+Tests: `test_preview_realtime.py` — 122 tests covering all dataclasses, effects, caching, GPU detection, pipeline, A/B comparison, all scope types/presets, cache manager (LRU/TTL/thread safety), route validation smoke tests.
