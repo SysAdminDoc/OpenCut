@@ -1,5 +1,18 @@
 # Changelog
 
+## [1.16.0] - 2026-04-15
+
+### Security & Hardening
+- **Path traversal prevention** — `validate_output_path()` added to all 157+ output_path and 100+ output_dir parameters across 43+ route files.
+- **FFmpeg concat demux injection** — Newline/carriage return stripping in filenames for `video_core.py` concat operations.
+- **SSRF prevention** — LLM base_url validation in captions routes blocks non-HTTP schemes.
+- **Information disclosure** — Error responses no longer leak raw exception messages or detail fields.
+- **Docker hardening** — Non-root user added to container image.
+- **Windows reserved names** — `validate_path()` now blocks CON, PRN, AUX, NUL, etc.
+- **Atomic file writes** — Plugin marketplace manifest and scripting console history use tempfile + os.replace.
+- **Sandbox escape prevention** — Scripting console blocked `__import__`, exec, eval, compile, open, os, sys, subprocess in AST.
+- **.gitignore hardened** — Added `.env.*`, `*.key`, `*.pem`, `credentials*.json`.
+
 ## [1.15.0] - 2026-04-14
 
 ### Added
