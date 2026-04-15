@@ -21,10 +21,12 @@ def register_blueprints(app):
     from .captions import captions_bp
     from .color_mam_routes import color_mam_bp
     from .composition_dubbing_routes import composition_dubbing_bp
+    from .content_gen_routes import content_gen_bp
     from .content_routes import content_bp
     from .context import context_bp
     from .creative_routes import creative_bp
     from .deliverables import deliverables_bp
+    from .delivery_master_routes import delivery_master_bp
     from .delivery_routes import delivery_bp
     from .documentary_routes import documentary_bp
     from .editing_workflow_routes import editing_wf_bp
@@ -45,7 +47,9 @@ def register_blueprints(app):
     from .music_safety_routes import music_safety_bp
     from .next_gen_ai_routes import next_gen_ai_bp
     from .nlp import nlp_bp
+    from .object_intel_routes import object_intel_bp
     from .overlay_routes import overlay_bp
+    from .pipeline_intel_routes import pipeline_intel_bp
     from .platform_infra_routes import platform_infra_bp
     from .platform_ux_routes import platform_ux_bp
     from .plugins import plugins_bp
@@ -62,6 +66,7 @@ def register_blueprints(app):
     from .solver_agent_routes import solver_agent_bp
     from .subtitle_routes import subtitle_bp
     from .system import system_bp
+    from .timeline_intel_routes import timeline_intel_bp
     from .timeline import timeline_bp
     from .tools_routes import tools_bp
     from .transcript_edit_routes import transcript_edit_bp
@@ -102,5 +107,8 @@ def register_blueprints(app):
                privacy_spectral_bp, multiview_repurpose_bp,
                preproduction_proxy_bp, composition_dubbing_bp,
                enhanced_media_bp, ux_intel_bp, engagement_content_bp,
-               next_gen_ai_bp, motion_gen_bp, body_transfer_bp]:
+               next_gen_ai_bp, motion_gen_bp, body_transfer_bp,
+               timeline_intel_bp, pipeline_intel_bp,
+               object_intel_bp, delivery_master_bp,
+               content_gen_bp]:
         app.register_blueprint(bp)
