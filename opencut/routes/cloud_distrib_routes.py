@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, request
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -35,6 +35,8 @@ def cloud_render(job_id, filepath, data):
     timeout = safe_int(data.get("timeout", 3600), 3600, min_val=60, max_val=14400)
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     if output_dir:
         output_dir = _resolve_output_dir(filepath, output_dir)
         render_config["output_dir"] = output_dir
@@ -159,6 +161,8 @@ def publish_prepare(job_id, filepath, data):
     platforms = data.get("platforms", [])
     metadata = data.get("metadata", {})
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     caption_path = data.get("caption_path", "")
 
     if output_dir:
@@ -305,6 +309,8 @@ def farm_render_submit(job_id, filepath, data):
     num_segments = safe_int(data.get("num_segments", 4), 4, min_val=2, max_val=64)
     render_config = data.get("render_config", {})
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output_file = data.get("output_file", "")
     use_remote = data.get("use_remote", False)
 

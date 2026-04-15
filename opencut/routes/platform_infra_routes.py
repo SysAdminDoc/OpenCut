@@ -21,6 +21,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -541,6 +542,8 @@ def stock_download(job_id, filepath, data):
     source = data.get("source", "pexels")
     url = data.get("url", "")
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not media_id:
         raise ValueError("media_id is required")
@@ -656,6 +659,8 @@ def smart_render_route(job_id, filepath, data):
     crf = safe_int(data.get("crf"), default=18, min_val=0, max_val=51)
     preset = data.get("preset", "medium")
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not changes:
         raise ValueError("changes list is required")

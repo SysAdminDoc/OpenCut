@@ -248,6 +248,8 @@ def repurpose_extract_shorts(job_id, filepath, data):
     max_duration = safe_float(data.get("max_duration", 60), 60, min_val=10, max_val=300)
     reframe = safe_bool(data.get("reframe_vertical", True), True)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -295,6 +297,8 @@ def repurpose_video_to_blog(job_id, filepath, data):
     extract_screenshots = safe_bool(data.get("extract_screenshots", True), True)
     output_format = data.get("output_format", "both")
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -338,6 +342,8 @@ def repurpose_podcast_bundle(job_id, filepath, data):
 
     title = data.get("title", "")
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     export_formats = data.get("export_formats")
     max_clips = safe_int(data.get("max_highlight_clips", 3), 3, min_val=0, max_val=10)
     audiogram = safe_bool(data.get("generate_audiogram", True), True)
@@ -387,6 +393,8 @@ def repurpose_content_calendar():
         weeks = safe_int(data.get("weeks", 4), 4, min_val=1, max_val=52)
         output_format = data.get("output_format", "both")
         output_dir = data.get("output_dir", "")
+        if output_dir:
+            output_dir = validate_path(output_dir)
 
         result = generate_content_calendar(
             clips=clips,
