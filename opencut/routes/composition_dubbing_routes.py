@@ -19,6 +19,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -43,6 +44,8 @@ def composition_guide(job_id, filepath, data):
     timestamp = safe_float(data.get("timestamp", 0), 0.0, min_val=0.0)
     opacity = safe_float(data.get("opacity", 0.5), 0.5, min_val=0.0, max_val=1.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if output_dir:
         output_dir = _resolve_output_dir(filepath, output_dir)
@@ -204,6 +207,8 @@ def saliency_crop_route(job_id, filepath, data):
         min_val=0.0, max_val=1.0,
     )
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if output_dir:
         output_dir = _resolve_output_dir(filepath, output_dir)
@@ -247,6 +252,8 @@ def dubbing_full_pipeline(job_id, filepath, data):
         min_val=0.0, max_val=1.0,
     )
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if output_dir:
         output_dir = _resolve_output_dir(filepath, output_dir)
@@ -339,6 +346,8 @@ def manage_tracks_route(job_id, filepath, data):
     track_index = safe_int(data.get("track_index", 0), 0, min_val=0)
     audio_only = safe_bool(data.get("audio_only", False))
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if output_dir:
         output_dir = _resolve_output_dir(input_path, output_dir)
@@ -377,6 +386,8 @@ def emotion_transfer_route(job_id, filepath, data):
 
     source_language = data.get("source_language", "en").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if output_dir:
         output_dir = _resolve_output_dir(filepath, output_dir)

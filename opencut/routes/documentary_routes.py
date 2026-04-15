@@ -17,6 +17,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -283,6 +284,8 @@ def conform_clip_route(job_id, filepath, data):
                   "pix_fmt": "yuv420p", "color_space": "bt709"}
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -325,6 +328,8 @@ def conform_batch_route(job_id, filepath, data):
     if not target:
         target = {"fps": 30.0, "width": 1920, "height": 1080}
     output_dir = data.get("output_dir", None)
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -439,6 +444,8 @@ def brand_auto_correct(job_id, filepath, data):
     add_logo = safe_bool(data.get("add_logo", True), True)
     add_watermark = safe_bool(data.get("add_watermark", True), True)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -547,6 +554,8 @@ def guest_process_single(job_id, filepath, data):
     normalize_audio = safe_bool(data.get("normalize_audio", True), True)
     add_name_card = safe_bool(data.get("add_name_card", True), True)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -698,6 +707,8 @@ def montage_ken_burns(job_id, filepath, data):
     width = safe_int(data.get("width", 1920), 1920, min_val=640, max_val=7680)
     height = safe_int(data.get("height", 1080), 1080, min_val=360, max_val=4320)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -792,6 +803,8 @@ def recap_generate(job_id, filepath, data):
     )
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)

@@ -62,6 +62,8 @@ def hw_encode_route(job_id, filepath, data):
     quality = data.get("quality", "balanced").strip().lower()
     hw_type = data.get("hw_type", "auto").strip().lower()
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if codec not in ("h264", "hevc", "av1"):
         raise ValueError(f"Unsupported codec: {codec}. Use h264, hevc, or av1.")

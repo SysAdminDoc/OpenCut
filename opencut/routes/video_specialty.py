@@ -243,6 +243,8 @@ def video_shorts_pipeline(job_id, filepath, data):
 def video_depth_map(job_id, filepath, data):
     """Generate a depth map video using Depth Anything V2."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     model_size = data.get("model_size", "small")
     if model_size not in ("small", "base", "large"):
         model_size = "small"
@@ -272,6 +274,8 @@ def video_depth_map(job_id, filepath, data):
 def video_depth_bokeh(job_id, filepath, data):
     """Apply depth-of-field (bokeh) simulation using depth estimation."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     focus_point = safe_float(data.get("focus_point", 0.5), 0.5, min_val=0.0, max_val=1.0)
     blur_strength = safe_int(data.get("blur_strength", 25), 25, min_val=3, max_val=99)
     model_size = data.get("model_size", "small")
@@ -307,6 +311,8 @@ def video_depth_bokeh(job_id, filepath, data):
 def video_depth_parallax(job_id, filepath, data):
     """Apply 3D parallax zoom (Ken Burns) effect using depth estimation."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     zoom_amount = safe_float(data.get("zoom_amount", 1.15), 1.15, min_val=1.01, max_val=2.0)
     model_size = data.get("model_size", "small")
     if model_size not in ("small", "base", "large"):

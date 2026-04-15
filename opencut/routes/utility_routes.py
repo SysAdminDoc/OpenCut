@@ -43,6 +43,8 @@ def watermark_apply(job_id, filepath, data):
     font_size = safe_int(data.get("font_size", config.get("font_size", 48)), 48, min_val=8, max_val=200)
     angle = safe_int(data.get("angle", config.get("angle", 0)), 0, min_val=0, max_val=360)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -81,6 +83,8 @@ def watermark_batch(job_id, filepath, data):
 
     watermark_config = data.get("watermark_config", {})
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -355,6 +359,8 @@ def batch_thumbnails(job_id, filepath, data):
     mode = data.get("mode", "auto")
     timestamp_pct = safe_float(data.get("timestamp_pct", 0.1), 0.1, min_val=0.0, max_val=1.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     width = safe_int(data.get("width", 640), 640, min_val=32, max_val=3840)
     fmt = data.get("format", "jpg")
 

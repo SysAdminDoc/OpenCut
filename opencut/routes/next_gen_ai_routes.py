@@ -13,7 +13,7 @@ from flask import Blueprint, jsonify, request
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -113,6 +113,8 @@ def music_remix_route(job_id, filepath, data):
         mode = "smart"
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -158,6 +160,8 @@ def music_fit_duration_route(job_id, filepath, data):
         mode = "smart"
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -305,6 +309,8 @@ def color_match_route(job_id, filepath, data):
 
     strength = safe_float(data.get("strength", 1.0), 1.0, min_val=0.0, max_val=2.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -353,6 +359,8 @@ def color_match_batch_route(job_id, filepath, data):
     all_paths = [filepath] + [validate_filepath(p) for p in additional_paths]
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     effective_dir = _resolve_output_dir(filepath, output_dir)
 
     def _progress(pct, msg=""):

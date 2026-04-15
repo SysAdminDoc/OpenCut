@@ -54,8 +54,10 @@ COPY --from=deps /usr/local/bin /usr/local/bin
 # Copy application code
 COPY . /app
 
-# Create data directories
-RUN mkdir -p /root/.opencut/packages /root/.opencut/models /root/.opencut/plugins
+# Create non-root user and data directories
+RUN groupadd -r opencut && useradd -r -g opencut -d /home/opencut -m opencut \
+    && mkdir -p /home/opencut/.opencut/packages /home/opencut/.opencut/models /home/opencut/.opencut/plugins \
+    && chown -R opencut:opencut /home/opencut /app
 
 # Expose server port + WebSocket bridge port
 EXPOSE 5679 5680
@@ -69,6 +71,10 @@ ENV OPENCUT_BUNDLED=false
 ENV PYTHONUNBUFFERED=1
 ENV OPENCUT_HOST=0.0.0.0
 ENV OPENCUT_PORT=5679
+ENV HOME=/home/opencut
+
+# Run as non-root
+USER opencut
 
 # Entrypoint
 ENTRYPOINT ["python", "-m", "opencut.server"]

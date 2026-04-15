@@ -57,6 +57,8 @@ def timeline_export_from_markers(job_id, filepath, data):
 
     markers = data.get("markers", [])
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
     fmt = data.get("format", "mp4").strip().lower()
 
     if not isinstance(markers, list) or not markers:
@@ -339,6 +341,8 @@ def timeline_export_otio():
     filepath = data.get("filepath", "").strip()
     mode = data.get("mode", "cuts")
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     sequence_name = data.get("sequence_name", "OpenCut Edit")
 
     if not filepath:
