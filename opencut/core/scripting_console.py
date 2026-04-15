@@ -73,6 +73,29 @@ class ScriptResult:
     execution_time_ms: float = 0.0
     success: bool = True
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "output": self.output,
+            "error": self.error,
+            "execution_time_ms": self.execution_time_ms,
+            "success": self.success,
+        }
+
+    def __getitem__(self, key: str) -> Any:
+        return self.to_dict()[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.to_dict().get(key, default)
+
+    def items(self):
+        return self.to_dict().items()
+
+    def keys(self):
+        return self.to_dict().keys()
+
+    def values(self):
+        return self.to_dict().values()
+
 
 # ---------------------------------------------------------------------------
 # Safe import for sandbox
@@ -310,6 +333,8 @@ def execute_script(
     thread.start()
     finished = exec_done.wait(timeout=timeout)
     elapsed_ms = (time.monotonic() - start_time) * 1000.0
+    if elapsed_ms <= 0:
+        elapsed_ms = 0.001
 
     if not finished:
         result.success = False

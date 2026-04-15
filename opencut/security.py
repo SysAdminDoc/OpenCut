@@ -98,6 +98,29 @@ def require_csrf(f):
 
 
 # ---------------------------------------------------------------------------
+# JSON Body Validation
+# ---------------------------------------------------------------------------
+def get_json_dict(*, force: bool = True, silent: bool = False) -> dict:
+    """Return the request JSON body as a dict.
+
+    Many OpenCut routes expect a top-level JSON object and immediately call
+    ``data.get(...)``. When a client sends a JSON array, number, or string, that
+    pattern turns into an ``AttributeError`` and surfaces as a 500. This helper
+    normalizes the happy path and turns non-object JSON into a clear 400-level
+    validation error instead.
+
+    Malformed JSON is still raised by Flask/Werkzeug so the app's centralized
+    error handlers can return a structured ``INVALID_JSON`` response.
+    """
+    data = request.get_json(force=force, silent=silent)
+    if data is None:
+        return {}
+    if not isinstance(data, dict):
+        raise ValueError("JSON body must be an object")
+    return data
+
+
+# ---------------------------------------------------------------------------
 # Path Validation
 # ---------------------------------------------------------------------------
 def validate_path(path: str, allowed_base: str = None) -> str:

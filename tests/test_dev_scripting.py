@@ -1203,6 +1203,23 @@ class TestScriptingRoutes:
         data = resp.get_json()
         assert data["success"] is False
 
+    def test_execute_route_rejects_non_object_json(self, client, csrf_token):
+        resp = client.post("/api/scripting/execute",
+                           headers=csrf_headers(csrf_token),
+                           json=["print(1+2)"])
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert data["code"] == "INVALID_INPUT"
+
+    def test_execute_route_alias_works(self, client, csrf_token):
+        resp = client.post("/api/dev/scripting/execute",
+                           headers=csrf_headers(csrf_token),
+                           json={"code": "print(7)"})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert "7" in data["output"]
+
     def test_history_route(self, client):
         resp = client.get("/api/scripting/history")
         assert resp.status_code == 200
@@ -1249,6 +1266,21 @@ class TestMacroRoutes:
         resp = client.delete("/api/macro/does_not_exist",
                              headers=csrf_headers(csrf_token))
         assert resp.status_code == 404
+
+    def test_macro_play_alias_route_returns_job_id(self, client, csrf_token, tmp_opencut_dir):
+        from opencut.core.macro_recorder import MacroRecording, MacroStep, save_macro
+
+        save_macro(MacroRecording(
+            name="AliasRoute",
+            steps=[MacroStep(endpoint="/api/test", payload={"x": 1})],
+        ))
+
+        resp = client.post("/api/dev/macro/play",
+                           headers=csrf_headers(csrf_token),
+                           json={"name": "AliasRoute", "target_file": "/test.mp4"})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "job_id" in data
 
 
 # ============================================================================
@@ -1329,6 +1361,12 @@ class TestWebhookRoutes:
                            json={"id": ""})
         assert resp.status_code == 400
 
+    def test_register_route_rejects_non_object_json(self, client, csrf_token):
+        resp = client.post("/api/webhooks",
+                           headers=csrf_headers(csrf_token),
+                           json=["https://test.com/hook"])
+        assert resp.status_code == 400
+
 
 # ============================================================================
 # ROUTE TESTS — Batch Scripting
@@ -1350,3 +1388,9 @@ class TestBatchRoutes:
         assert resp.status_code == 200
         data = resp.get_json()
         assert data["dry_run"] is True
+
+    def test_validate_route_rejects_invalid_operations_type(self, client, csrf_token):
+        resp = client.post("/api/batch/validate",
+                           headers=csrf_headers(csrf_token),
+                           json={"name": "test", "operations": "not-a-list"})
+        assert resp.status_code == 400
