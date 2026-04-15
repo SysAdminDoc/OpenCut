@@ -12,7 +12,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut import journal
-from opencut.security import require_csrf, safe_bool, safe_int
+from opencut.security import require_csrf, safe_bool, safe_int, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -54,10 +54,15 @@ def journal_record():
           "inverse": {...}              # action-specific payload
         }
     """
-    data = request.get_json(force=True, silent=True) or {}
+    data = request.get_json(force=True) or {}
     action = str(data.get("action", "")).strip()
     label = str(data.get("label", "")).strip()
     clip_path = str(data.get("clip_path", "")).strip()
+    if clip_path:
+        try:
+            clip_path = validate_path(clip_path)
+        except ValueError:
+            clip_path = ""  # Drop invalid paths silently for journal context
     inverse = data.get("inverse") or {}
     forward = data.get("forward")  # optional; v1.10.3 "Apply to selection"
 

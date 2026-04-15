@@ -20,6 +20,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -51,6 +52,8 @@ def sky_replace(job_id, filepath, data):
     lighting_strength = safe_float(data.get("lighting_strength", 0.6), 0.6,
                                    min_val=0.0, max_val=1.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -131,6 +134,8 @@ def log_apply_idt(job_id, filepath, data):
 
     lut_size = safe_int(data.get("lut_size", 33), 33, min_val=17, max_val=65)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -184,6 +189,8 @@ def lut_stack(job_id, filepath, data):
         raise ValueError("No valid LUT file paths provided")
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -233,6 +240,8 @@ def display_test_pattern(job_id, filepath, data):
     duration = safe_float(data.get("duration", 5.0), 5.0, min_val=1.0, max_val=60.0)
     output_format = data.get("format", "png").strip().lower()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     # Determine output directory
     if output_dir:
@@ -314,6 +323,8 @@ def cinemagraph(job_id, filepath, data):
         ref_timestamp = safe_float(ref_timestamp, 0.0, min_val=0.0)
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -361,6 +372,8 @@ def hyperlapse(job_id, filepath, data):
     passes = safe_int(data.get("passes", 2), 2, min_val=1, max_val=3)
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -413,6 +426,8 @@ def lossless_intermediate(job_id, filepath, data):
 
     direction = data.get("direction", "to").strip().lower()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)

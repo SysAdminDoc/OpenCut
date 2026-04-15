@@ -2158,6 +2158,8 @@ def video_broll_generate(job_id, filepath, data):
             raise ValueError("Prompt too long (max 500 chars)")
 
         output_dir = data.get("output_dir", "")
+        if output_dir:
+            output_dir = validate_path(output_dir)
         backend = data.get("backend", "auto")
         _valid_backends = {"auto", "stable_diffusion", "dall_e", "replicate"}
         if backend not in _valid_backends:

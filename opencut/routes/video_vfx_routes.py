@@ -17,6 +17,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -42,6 +43,8 @@ def track_object_route(job_id, filepath, data):
 
     max_frames = safe_int(data.get("max_frames", 0), 0, min_val=0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -78,6 +81,8 @@ def annotate_tracked_route(job_id, filepath, data):
 
     annotation = data.get("annotation", {"type": "box"})
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -142,6 +147,8 @@ def relight_route(job_id, filepath, data):
 
     light_config = data.get("light_config", {})
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -202,6 +209,8 @@ def convert_360_route(job_id, filepath, data):
 
     projection = data.get("projection", "cubemap").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -237,6 +246,8 @@ def crop_360_route(job_id, filepath, data):
     out_w = safe_int(data.get("output_width", 1920), 1920, min_val=320, max_val=7680)
     out_h = safe_int(data.get("output_height", 1080), 1080, min_val=240, max_val=4320)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -269,6 +280,8 @@ def stabilize_360_route(job_id, filepath, data):
 
     smoothing = safe_int(data.get("smoothing", 10), 10, min_val=1, max_val=30)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -307,6 +320,8 @@ def clean_plate_route(job_id, filepath, data):
         do_inpaint = do_inpaint.lower() in ("true", "1", "yes")
     inpaint_method = data.get("inpaint_method", "telea").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -379,6 +394,8 @@ def extract_highlights_route(job_id, filepath, data):
 
     padding = safe_float(data.get("padding", 2.0), 2.0, min_val=0.0, max_val=30.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     if not output_dir:
         output_dir = ""
 
@@ -430,6 +447,8 @@ def authenticity_report_route(job_id, filepath, data):
     from opencut.core.deepfake_detect import detect_deepfake, generate_authenticity_report
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -584,6 +603,8 @@ def holy_grail_route(job_id, filepath, data):
 
     config = data.get("config", {})
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)

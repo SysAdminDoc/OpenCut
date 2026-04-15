@@ -13,6 +13,7 @@ from opencut.jobs import _update_job, async_job
 from opencut.security import (
     require_csrf,
     validate_filepath,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -82,6 +83,8 @@ def apply_text_edits(job_id, filepath, data):
         raise ValueError("At least one edit is required")
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -413,6 +416,8 @@ def execute_plan_route(job_id, filepath, data):
     )
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     out_path = ""
     if output_dir and clips:
         effective_dir = _resolve_output_dir(clips[0].source_file, output_dir)
@@ -466,6 +471,8 @@ def rough_cut_auto_route(job_id, filepath, data):
         )
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     out_path = ""
     if output_dir and validated:
         effective_dir = _resolve_output_dir(validated[0], output_dir)

@@ -32,6 +32,8 @@ def enhance_speech_route(job_id, filepath, data):
     from opencut.core.enhanced_speech import enhance_speech
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     mode = data.get("mode", "full")
     if mode not in ("denoise_only", "enhance", "full"):
         mode = "full"
@@ -133,6 +135,8 @@ def one_click_enhance_route(job_id, filepath, data):
     from opencut.core.one_click_enhance import one_click_enhance
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     preset = data.get("preset", "balanced")
     if preset not in ("fast", "balanced", "quality"):
         preset = "balanced"
@@ -171,6 +175,8 @@ def enhance_low_light_route(job_id, filepath, data):
     from opencut.core.low_light import enhance_low_light
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     strength = safe_float(data.get("strength", 1.0), 1.0, min_val=0.0, max_val=2.0)
     denoise = data.get("denoise", True)
     if isinstance(denoise, str):

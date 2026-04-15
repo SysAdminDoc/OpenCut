@@ -14,7 +14,7 @@ import logging
 from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, validate_filepath
+from opencut.security import require_csrf, safe_float, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -125,6 +125,8 @@ def video_color_intent(job_id, filepath, data):
 
     intensity = safe_float(data.get("intensity"), 1.0, 0.0, 2.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

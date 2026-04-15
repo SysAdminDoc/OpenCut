@@ -18,6 +18,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -227,6 +228,8 @@ def publish_export(job_id, filepath, data):
 
     output_dir = data.get("output_dir", "")
     if output_dir:
+        output_dir = validate_path(output_dir)
+    if output_dir:
         output_dir = _resolve_output_dir(filepath, output_dir)
 
     def _progress(pct, msg=""):
@@ -337,6 +340,8 @@ def paper_edit_assemble(job_id, filepath, data):
     paper_edit._recalc()
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     out_path = ""
     if output_dir:
         out_dir = _resolve_output_dir(filepath, output_dir)
@@ -565,6 +570,8 @@ def copilot_execute(job_id, filepath, data):
 
     output_dir = data.get("output_dir", "")
     if output_dir:
+        output_dir = validate_path(output_dir)
+    if output_dir:
         output_dir = _resolve_output_dir(filepath, output_dir)
 
     result = execute_copilot_action(
@@ -633,6 +640,8 @@ def data_video_batch(job_id, filepath, data):
         raise ValueError("template must be a dict")
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     if not output_dir:
         output_dir = _resolve_output_dir(filepath, "")
     else:

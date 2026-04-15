@@ -20,6 +20,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -45,6 +46,8 @@ def route_sound_design(job_id, filepath, data):
         categories = None
     seed = safe_int(data.get("seed"), None) if data.get("seed") is not None else None
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg or f"Sound design {pct}%")
@@ -85,6 +88,8 @@ def route_ambient_generate(job_id, filepath, data):
     intensity = safe_float(data.get("intensity", 0.5), 0.5, min_val=0.0, max_val=1.0)
     seed = safe_int(data.get("seed"), None) if data.get("seed") is not None else None
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     crossfade = safe_bool(data.get("crossfade", True), True)
 
     def _on_progress(pct, msg=""):
@@ -130,6 +135,8 @@ def route_mood_morph(job_id, filepath, data):
     )
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output_path_val = data.get("output_path", "")
     if output_path_val:
         output_path_val = validate_output_path(output_path_val)
@@ -208,6 +215,8 @@ def route_beat_sync(job_id, filepath, data):
     sensitivity = safe_float(data.get("sensitivity", 0.5), 0.5, min_val=0.0, max_val=1.0)
     energy_match = safe_bool(data.get("energy_match", False), False)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output_path_val = data.get("output_path", "")
     if output_path_val:
         output_path_val = validate_output_path(output_path_val)
@@ -280,6 +289,8 @@ def route_stem_remix(job_id, filepath, data):
     if custom_settings and not isinstance(custom_settings, dict):
         custom_settings = None
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output_path_val = data.get("output_path", "")
     if output_path_val:
         output_path_val = validate_output_path(output_path_val)
@@ -334,6 +345,8 @@ def route_stem_remix_preview(job_id, filepath, data):
     preview_duration = safe_float(data.get("preview_duration", 15.0), 15.0, min_val=3.0, max_val=30.0)
     preview_start = safe_float(data.get("preview_start", 0.0), 0.0, min_val=0.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg or f"Preview {pct}%")

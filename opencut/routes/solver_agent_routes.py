@@ -17,6 +17,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -253,6 +254,8 @@ def camera_render(job_id, filepath, data):
         ))
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     out = data.get("output_path", None) or None
 
     if out is None and output_dir:

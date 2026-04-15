@@ -70,6 +70,8 @@ audio_bp = Blueprint("audio", __name__)
 def silence_remove(job_id, filepath, data):
     """Remove silences and export Premiere XML."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if detect_speech is None:
         raise ValueError("Core audio modules not available. Reinstall opencut.")
@@ -144,6 +146,8 @@ def silence_remove(job_id, filepath, data):
 def filler_removal(job_id, filepath, data):
     """Detect and remove filler words (um, uh, like, etc.)."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if detect_speech is None:
         raise ValueError("Core audio modules not available. Reinstall opencut.")
@@ -329,6 +333,8 @@ def audio_denoise(job_id, filepath, data):
     from opencut.core.audio_suite import denoise_audio
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     method = data.get("method", "afftdn")
     if method not in ("afftdn", "highpass", "gate"):
         method = "afftdn"
@@ -368,6 +374,8 @@ def audio_isolate(job_id, filepath, data):
     from opencut.core.audio_suite import isolate_voice
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -393,6 +401,8 @@ def audio_separate(job_id, filepath, data):
     import shutil
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     backend = data.get("backend", "demucs")
     if backend not in ("demucs", "audio-separator"):
         backend = "demucs"
@@ -593,6 +603,8 @@ def audio_normalize(job_id, filepath, data):
     from opencut.core.audio_suite import LOUDNESS_PRESETS, normalize_loudness
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     preset = data.get("preset", "youtube")
     target_lufs = data.get("target_lufs", None)
     if target_lufs is not None:
@@ -703,6 +715,8 @@ def audio_effects_apply(job_id, filepath, data):
     from opencut.core.audio_suite import apply_audio_effect
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     effect = data.get("effect", "")
 
     if not effect:
@@ -767,6 +781,8 @@ def audio_pro_apply(job_id, filepath, data):
     from opencut.core.audio_pro import apply_pedalboard_effect
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     effect = data.get("effect", "").strip()
     params = data.get("params", {})
 
@@ -793,6 +809,8 @@ def audio_pro_deepfilter(job_id, filepath, data):
     from opencut.core.audio_pro import deepfilter_denoise
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -1095,6 +1113,8 @@ def audio_duck_route(job_id, filepath, data):
     music_path = filepath  # validated by decorator via filepath_param
     voice_path = data.get("voice_path", "").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not voice_path:
         raise ValueError("Voice file not found")
@@ -1126,6 +1146,8 @@ def audio_mix_duck_route(job_id, filepath, data):
     voice_path = filepath  # validated by decorator via filepath_param
     music_path = data.get("music_path", "").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not music_path:
         raise ValueError("Music file not found")
@@ -1155,6 +1177,8 @@ def audio_duck_video_route(job_id, filepath, data):
     video_path = filepath  # validated by decorator
     music_path = data.get("music_path", "").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not music_path:
         raise ValueError("Music file not found")
@@ -1571,6 +1595,8 @@ def audio_loudness_match(job_id, filepath, data):
     files = data.get("files", [])
     target_lufs = safe_float(data.get("target_lufs", -14.0), -14.0, min_val=-70.0, max_val=0.0)
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not isinstance(files, list) or not files:
         raise ValueError("files must be a non-empty list")

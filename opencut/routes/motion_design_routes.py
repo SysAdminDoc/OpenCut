@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, request
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_output_path
+from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_output_path, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -49,6 +49,8 @@ def kinetic_text_render(job_id, filepath, data):
     shadow_color = data.get("shadow_color")
     bg_color = data.get("background_color", "#00000000")
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     out_path = data.get("output_path", "").strip() or None
     if out_path:
         out_path = validate_output_path(out_path)
@@ -155,6 +157,8 @@ def data_animation_render(job_id, filepath, data):
     bg_color = data.get("bg_color", "#1A1A2E")
     font_size = safe_int(data.get("font_size"), 24, 8, 200)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     out_path = data.get("output_path", "").strip() or None
     if out_path:
         out_path = validate_output_path(out_path)
@@ -242,6 +246,8 @@ def shape_animate_render(job_id, filepath, data):
     rotation_start = safe_float(data.get("rotation_start"), 0.0, -3600, 3600)
     rotation_end = safe_float(data.get("rotation_end"), 0.0, -3600, 3600)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     out_path = data.get("output_path", "").strip() or None
     if out_path:
         out_path = validate_output_path(out_path)
@@ -391,6 +397,8 @@ def particles_render(job_id, filepath, data):
         blend_mode = "alpha"
     bg_color = data.get("background_color")
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     out_path = data.get("output_path", "").strip() or None
     if out_path:
         out_path = validate_output_path(out_path)

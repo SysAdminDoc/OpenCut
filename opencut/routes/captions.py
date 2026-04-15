@@ -26,6 +26,7 @@ from opencut.security import (
     safe_int,
     safe_pip_install,
     validate_filepath,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -127,6 +128,8 @@ def _sanitize_font_name(s: str) -> str:
 def generate_captions(job_id, filepath, data):
     """Generate captions/subtitles."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     model = data.get("model", "base")
     if model not in VALID_WHISPER_MODELS:
@@ -228,6 +231,8 @@ def get_caption_styles():
 def styled_captions_route(job_id, filepath, data):
     """Generate a transparent video overlay with styled, animated captions."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     style_name = data.get("style", "youtube_bold")
     model = data.get("model", "base")
@@ -395,6 +400,8 @@ def export_edited_transcript():
     data = request.get_json(force=True)
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     segments_data = data.get("segments", [])
     sub_format = data.get("format", "srt")
     if sub_format not in ("srt", "vtt", "json", "ass"):
@@ -521,6 +528,8 @@ def get_emoji_map():
 def full_pipeline(job_id, filepath, data):
     """Run silence removal + zoom + optional captions."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     preset = data.get("preset", "youtube")
     skip_captions = safe_bool(data.get("skip_captions", False), False)
@@ -722,6 +731,8 @@ def interview_polish(job_id, filepath, data):
     )
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     preset = data.get("preset", "youtube")
     seq_name = data.get("sequence_name", "")
     # v1.10.5 (Q): resume-from-cache is opt-in via request flag; when true
@@ -1115,6 +1126,8 @@ def captions_karaoke(job_id, filepath, data):
     """Export segments as ASS karaoke subtitles."""
     segments = data.get("segments", [])
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not segments:
         raise ValueError("No segments provided")
@@ -1217,6 +1230,8 @@ def burnin_from_file(job_id, filepath, data):
     video_path = filepath
     subtitle_path = data.get("subtitle_path", "").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not subtitle_path:
         raise ValueError("Subtitle file not found")
@@ -1250,6 +1265,8 @@ def burnin_from_segments(job_id, filepath, data):
     if style not in _VALID_BURNIN_STYLES:
         style = "default"
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not segments:
         raise ValueError("No segments provided")
@@ -1327,9 +1344,14 @@ def transcript_summarize(job_id, filepath, data):
     llm_provider = data.get("llm_provider", "ollama")
     if llm_provider not in ("ollama", "openai", "anthropic", "gemini"):
         llm_provider = "ollama"
-    llm_model = data.get("llm_model", "")
+    llm_model = data.get("llm_model", "")[:100]
     llm_api_key = data.get("llm_api_key", "")
     llm_base_url = data.get("llm_base_url", "")
+    if llm_base_url:
+        from urllib.parse import urlparse
+        parsed = urlparse(llm_base_url)
+        if parsed.scheme not in ("http", "https"):
+            raise ValueError("llm_base_url must use http or https")
 
     from opencut.core.highlights import summarize_video
     from opencut.core.llm import LLMConfig
