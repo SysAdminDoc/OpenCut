@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <a class="oc-skip-link" href="#mainContent">Skip to workspace</a>
   <div id="app">
 
     <!-- ===== HEADER ===== -->
@@ -85,6 +86,11 @@
           <div class="oc-workspace-kicker" translate="no">OpenCut Studio</div>
           <h1 class="oc-workspace-title" id="workspaceOverviewTitle">Cut &amp; Clean</h1>
           <p class="oc-workspace-subtitle" id="workspaceOverviewSubtitle">Trim dead space, fillers, and rough pacing with a tighter review flow.</p>
+          <div class="oc-workspace-actions" role="group" aria-label="Workspace shortcuts">
+            <button type="button" class="oc-btn oc-btn-primary" id="workspaceChooseClipBtn">Choose Clip</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="workspaceSearchBtn">Search Library</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="workspaceTimelineBtn">Timeline Tools</button>
+          </div>
         </div>
         <div class="oc-workspace-meta" role="list" aria-label="Current workspace context">
           <div class="oc-workspace-meta-item" role="listitem">
@@ -99,6 +105,14 @@
             <span class="oc-workspace-meta-label">Media Library</span>
             <span class="oc-workspace-meta-value" id="workspaceLibraryValue" aria-live="polite">0 clips</span>
           </div>
+        </div>
+        <div class="oc-workspace-guide" id="workspaceGuide" aria-live="polite">
+          <div class="oc-workspace-guide-copy">
+            <span class="oc-workspace-guide-kicker" id="workspaceGuideKicker">Needs source</span>
+            <h2 class="oc-workspace-guide-title" id="workspaceGuideTitle">Choose an active shot to start this workspace.</h2>
+            <p class="oc-workspace-guide-text" id="workspaceGuideText">OpenCut keeps the current clip in sync across Cut, Captions, Audio, and Video so you can move through the edit without repeated setup.</p>
+          </div>
+          <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="workspaceGuideAction" data-action="choose-clip">Choose Clip</button>
         </div>
       </section>
 
@@ -185,8 +199,11 @@
           </div>
         </div>
 
-        <div class="oc-result-area hidden" id="cutResultArea">
-          <div class="oc-result-header">Result</div>
+        <div class="oc-result-area hidden" id="cutResultArea" tabindex="-1" aria-live="polite">
+          <div class="oc-result-header-row">
+            <div class="oc-result-header">Latest Cut Pass</div>
+            <div class="oc-result-summary" id="cutResultSummary">Ready for timeline review</div>
+          </div>
           <div class="oc-result-body" id="cutResultBody"></div>
           <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="applyCutResultBtn">Apply Cuts to Timeline</button>
         </div>
@@ -304,8 +321,11 @@
           </div>
         </div>
 
-        <div class="oc-result-area hidden" id="captionsResultArea">
-          <div class="oc-result-header">Transcript</div>
+        <div class="oc-result-area hidden" id="captionsResultArea" tabindex="-1" aria-live="polite">
+          <div class="oc-result-header-row">
+            <div class="oc-result-header">Transcript</div>
+            <div class="oc-result-summary" id="captionsResultSummary">Ready to review</div>
+          </div>
           <textarea class="oc-textarea" id="captionsResultBody" rows="6" readonly placeholder="Transcript will appear here..."></textarea>
           <div class="oc-btn-row">
             <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="copySrtBtn">Copy SRT</button>
@@ -845,7 +865,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="exportDir">Output Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="exportDir" placeholder="Output directory...">
+                <input type="text" class="oc-input" id="exportDir" placeholder="Choose an export destination...">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseExportDir">Browse</button>
               </div>
             </div>
@@ -933,7 +953,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="indexFolder">Media Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="indexFolder" placeholder="Root folder to index...">
+                <input type="text" class="oc-input" id="indexFolder" placeholder="Choose the root folder to index...">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseIndexFolder">Browse</button>
               </div>
             </div>
@@ -946,7 +966,7 @@
               </label>
             </div>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runIndexLibBtn">Index Library</button>
-            <div class="oc-status-line" id="indexStatus"></div>
+            <div class="oc-status-line" id="indexStatus">Ready to build a searchable library.</div>
           </div>
         </div>
 
@@ -961,12 +981,22 @@
               <label class="oc-label" for="searchQuery">Query</label>
               <input type="text" class="oc-input" id="searchQuery" placeholder='e.g. "person laughing outdoors"'>
             </div>
+            <div class="oc-chip-group" role="group" aria-label="Suggested search prompts">
+              <button type="button" class="oc-chip" data-fill-target="searchQuery" data-fill-value="person laughing outdoors">Laughing outdoors</button>
+              <button type="button" class="oc-chip" data-fill-target="searchQuery" data-fill-value="close-up interview in studio lighting">Studio interview</button>
+              <button type="button" class="oc-chip" data-fill-target="searchQuery" data-fill-value="wide city street b-roll at dusk">City b-roll</button>
+            </div>
             <div class="oc-field-row">
               <label class="oc-label" for="searchResultCount">Results</label>
               <input type="number" class="oc-input oc-input-sm" id="searchResultCount" value="10" min="1" max="100">
             </div>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFootageSearchBtn">Search Footage</button>
-            <div class="oc-result-list" id="searchResultList"></div>
+            <div class="oc-result-list" id="searchResultList">
+              <div class="oc-empty-state oc-empty-state-inline">
+                <div class="oc-empty-state-kicker">Search the library</div>
+                <p>Index a folder, then search with descriptive phrases to pull the right shot back into the workspace.</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -981,6 +1011,11 @@
               <label class="oc-label" for="nlpCommand">Command</label>
               <input type="text" class="oc-input" id="nlpCommand" placeholder='e.g. "remove all silences longer than 1 second"'>
             </div>
+            <div class="oc-chip-group" role="group" aria-label="Suggested edit commands">
+              <button type="button" class="oc-chip" data-fill-target="nlpCommand" data-fill-value="remove all silences longer than 0.8 seconds">Tighten pauses</button>
+              <button type="button" class="oc-chip" data-fill-target="nlpCommand" data-fill-value="add markers on every beat drop in this clip">Mark beat drops</button>
+              <button type="button" class="oc-chip" data-fill-target="nlpCommand" data-fill-value="create chapter markers around each topic change">Create chapters</button>
+            </div>
             <div class="oc-field-row">
               <label class="oc-label" for="nlpLlmProvider">LLM</label>
               <select class="oc-select" id="nlpLlmProvider">
@@ -989,8 +1024,11 @@
               </select>
             </div>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runNlpBtn">Execute Command</button>
-            <div class="oc-result-area oc-hidden" id="nlpResultArea">
-              <div class="oc-result-header">Parsed Action</div>
+            <div class="oc-result-area oc-hidden" id="nlpResultArea" tabindex="-1" aria-live="polite">
+              <div class="oc-result-header-row">
+                <div class="oc-result-header">Parsed Action</div>
+                <div class="oc-result-summary" id="nlpResultSummary">Review before applying</div>
+              </div>
               <pre class="oc-code-block" id="nlpResultBody"></pre>
               <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="applyNlpBtn">Apply to Timeline</button>
             </div>
@@ -1009,7 +1047,12 @@
           </div>
           <div class="oc-card-body" id="seqInfoBody">
             <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="loadSeqInfoBtn">Load Sequence Info</button>
-            <div class="oc-info-grid" id="seqInfoGrid"></div>
+            <div class="oc-info-grid" id="seqInfoGrid">
+              <div class="oc-empty-state oc-empty-state-inline">
+                <div class="oc-empty-state-kicker">Sequence details</div>
+                <p>Load the active Premiere sequence to review timing, resolution, and track layout before generating handoff documents.</p>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -1023,26 +1066,38 @@
             <div class="oc-field-row">
               <label class="oc-label" for="delivOutputDir">Output Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="delivOutputDir" placeholder="Save documents to...">
+                <input type="text" class="oc-input" id="delivOutputDir" placeholder="Choose where reports and handoff docs should land...">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseDelivDir">Browse</button>
               </div>
             </div>
             <div class="oc-deliverable-grid">
               <button type="button" class="oc-deliv-btn" id="delivVfxSheetBtn">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M1.5 0A1.5 1.5 0 000 1.5v13A1.5 1.5 0 001.5 16h13a1.5 1.5 0 001.5-1.5V1.5A1.5 1.5 0 0014.5 0h-13zm1 2.5h11a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-11a.5.5 0 01-.5-.5V3a.5.5 0 01.5-.5zm0 3h11a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-11a.5.5 0 01-.5-.5V6a.5.5 0 01.5-.5zm0 3h6a.5.5 0 01.5.5v1a.5.5 0 01-.5.5h-6a.5.5 0 01-.5-.5V9a.5.5 0 01.5-.5z"/></svg>
-                VFX Sheet
+                <span class="oc-deliv-copy">
+                  <span class="oc-deliv-title">VFX Sheet</span>
+                  <span class="oc-deliv-text">Shot notes, vendor handoff context, and status-ready tracking.</span>
+                </span>
               </button>
               <button type="button" class="oc-deliv-btn" id="delivAdrListBtn">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1v14l-4-4H0V5h2l4-4zm5.854 4.146a.5.5 0 010 .708L10.707 7l1.147 1.146a.5.5 0 01-.708.708L10 7.707l-1.146 1.147a.5.5 0 01-.708-.708L9.293 7 8.146 5.854a.5.5 0 01.708-.708L10 6.293l1.146-1.147a.5.5 0 01.708 0z"/></svg>
-                ADR List
+                <span class="oc-deliv-copy">
+                  <span class="oc-deliv-title">ADR List</span>
+                  <span class="oc-deliv-text">Dialogue pickup notes for editorial, mix, and post review.</span>
+                </span>
               </button>
               <button type="button" class="oc-deliv-btn" id="delivMusicCueBtn">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 13c0 1.105-1.12 2-2.5 2S1 14.105 1 13c0-1.104 1.12-2 2.5-2s2.5.896 2.5 2zm9-2c0 1.105-1.12 2-2.5 2s-2.5-.895-2.5-2 1.12-2 2.5-2 2.5.895 2.5 2zM14 11V2h1v9h-1zM6 12V3h1v9H6zM6 2.5a.5.5 0 01.5-.5l8-1a.5.5 0 01.5.5v1.5a.5.5 0 01-.5.5l-8 1A.5.5 0 016 4V2.5z"/></svg>
-                Music Cue Sheet
+                <span class="oc-deliv-copy">
+                  <span class="oc-deliv-title">Music Cue Sheet</span>
+                  <span class="oc-deliv-text">Cue timing, usage context, and licensing handoff details.</span>
+                </span>
               </button>
               <button type="button" class="oc-deliv-btn" id="delivAssetListBtn">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 012-2h8a2 2 0 012 2v8a2 2 0 01-2 2H2a2 2 0 01-2-2V2zm5.5 3a.5.5 0 00-1 0v5.793L3.146 9.354a.5.5 0 10-.708.707l2 2a.5.5 0 00.708 0l2-2a.5.5 0 00-.708-.707L5.5 10.793V5z"/></svg>
-                Asset List
+                <span class="oc-deliv-copy">
+                  <span class="oc-deliv-title">Asset List</span>
+                  <span class="oc-deliv-text">Master a clean inventory of media, references, and outputs.</span>
+                </span>
               </button>
             </div>
           </div>
@@ -1081,7 +1136,10 @@
         <div class="oc-card">
           <p class="oc-hint">Select preferred AI backend per feature domain.</p>
           <div id="uxpEngineGrid" class="oc-engine-grid">
-            <p class="oc-hint">Loading engines...</p>
+            <div class="oc-empty-state oc-empty-state-inline">
+              <div class="oc-empty-state-kicker">Engine routing</div>
+              <p>Loading available engines and saved preferences...</p>
+            </div>
           </div>
           <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshEnginesBtn">Refresh Engines</button>
         </div>
@@ -1101,6 +1159,41 @@
             <button type="button" class="oc-btn oc-btn-secondary" id="uxpWsStartBtn">Start Bridge</button>
             <button type="button" class="oc-btn oc-btn-secondary" id="uxpWsStopBtn">Stop Bridge</button>
             <button type="button" class="oc-btn oc-btn-primary" id="uxpWsConnectBtn">Connect Panel</button>
+          </div>
+        </div>
+
+        <div class="oc-section-title">Keyboard</div>
+        <div class="oc-card">
+          <p class="oc-hint">The fastest editorial actions are available from anywhere in the panel.</p>
+          <div class="oc-shortcut-grid" aria-label="Keyboard shortcuts">
+            <div class="oc-shortcut-item">
+              <div class="oc-shortcut-copy">
+                <span class="oc-shortcut-label">Detect Silence</span>
+                <span class="oc-shortcut-text">Jump straight into the first cleanup pass.</span>
+              </div>
+              <kbd>Ctrl+Shift+S</kbd>
+            </div>
+            <div class="oc-shortcut-item">
+              <div class="oc-shortcut-copy">
+                <span class="oc-shortcut-label">Generate Captions</span>
+                <span class="oc-shortcut-text">Start transcription without leaving the keyboard.</span>
+              </div>
+              <kbd>Ctrl+Shift+C</kbd>
+            </div>
+            <div class="oc-shortcut-item">
+              <div class="oc-shortcut-copy">
+                <span class="oc-shortcut-label">Normalize Audio</span>
+                <span class="oc-shortcut-text">Level the clip quickly before export or review.</span>
+              </div>
+              <kbd>Ctrl+Shift+N</kbd>
+            </div>
+            <div class="oc-shortcut-item">
+              <div class="oc-shortcut-copy">
+                <span class="oc-shortcut-label">Cancel Active Job</span>
+                <span class="oc-shortcut-text">Stop a long-running process without hunting for controls.</span>
+              </div>
+              <kbd>Esc</kbd>
+            </div>
           </div>
         </div>
 

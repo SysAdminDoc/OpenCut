@@ -13,13 +13,15 @@ import uuid
 from flask import Blueprint, Response, jsonify, request
 
 from opencut.jobs import (
+    _cancel_job,
+    _cancel_running_jobs,
     _get_job_copy,
     _kill_job_process,
     _list_jobs_copy,
     job_lock,
     jobs,
 )
-from opencut.security import require_csrf
+from opencut.security import get_json_dict, require_csrf
 
 logger = logging.getLogger("opencut")
 
@@ -42,15 +44,11 @@ def job_status(job_id):
 @require_csrf
 def cancel_job(job_id):
     """Cancel a running job."""
-    with job_lock:
-        job = jobs.get(job_id)
-        if not job:
-            return jsonify({"error": "Job not found"}), 404
-        if job["status"] != "running":
-            return jsonify({"error": "Job is not running"}), 400
-        job["status"] = "cancelled"
-        job["message"] = "Cancelled by user"
-        job["progress"] = 0
+    _job, state = _cancel_job(job_id)
+    if state == "not_found":
+        return jsonify({"error": "Job not found"}), 404
+    if state == "not_running":
+        return jsonify({"error": "Job is not running"}), 400
     _kill_job_process(job_id)
     return jsonify({"status": "cancelled", "job_id": job_id})
 
@@ -59,14 +57,7 @@ def cancel_job(job_id):
 @require_csrf
 def cancel_all_jobs():
     """Cancel all running jobs."""
-    cancelled = []
-    with job_lock:
-        for jid, job in jobs.items():
-            if job.get("status") == "running":
-                job["status"] = "cancelled"
-                job["message"] = "Cancelled by user"
-                job["progress"] = 0
-                cancelled.append(jid)
+    cancelled = _cancel_running_jobs()
     for jid in cancelled:
         _kill_job_process(jid)
     return jsonify({"cancelled": cancelled, "count": len(cancelled)})
@@ -221,7 +212,14 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
 @require_csrf
 def queue_add():
     """Add a job to the queue."""
-    data = request.get_json(force=True)
+    try:
+        data = get_json_dict()
+    except ValueError as e:
+        return jsonify({
+            "error": str(e),
+            "code": "INVALID_INPUT",
+            "suggestion": "Send a top-level JSON object in the request body.",
+        }), 400
     endpoint = data.get("endpoint", "")
     if endpoint not in _ALLOWED_QUEUE_ENDPOINTS:
         return jsonify({"error": f"Endpoint not queueable: {endpoint}"}), 400
@@ -320,7 +318,21 @@ def _dispatch_queue_entry(entry):
         else:
             resp_obj = resp
         result = resp_obj.get_json() if hasattr(resp_obj, "get_json") else {}
-        entry["job_id"] = result.get("job_id", "")
+        if not isinstance(result, dict):
+            result = {}
+        status_code = getattr(resp_obj, "status_code", 200)
+        if status_code >= 400:
+            entry["status"] = "error"
+            entry["error"] = result.get("error") or f"Route failed with HTTP {status_code}"
+            entry["code"] = result.get("code", "")
+            return
+        job_id = result.get("job_id", "")
+        if not job_id:
+            entry["status"] = "error"
+            entry["error"] = result.get("error") or "Route did not return a job ID"
+            entry["code"] = result.get("code", "")
+            return
+        entry["job_id"] = job_id
         entry["status"] = "started"
     except Exception as e:
         entry["status"] = "error"

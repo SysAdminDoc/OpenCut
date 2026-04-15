@@ -240,6 +240,15 @@ def create_app(config=None):
     if config is None:
         config = _default_config
 
+    # Keep jobs.py runtime limits in sync with the app config used for this
+    # process, including tests that supply a custom OpenCutConfig instance.
+    try:
+        from opencut.jobs import apply_config as _apply_job_config
+
+        _apply_job_config(config)
+    except Exception as e:
+        logger.warning("Could not apply job runtime config: %s", e)
+
     _app = Flask(__name__)
     _app.config["OPENCUT"] = config
     _app.config["MAX_CONTENT_LENGTH"] = config.max_content_length
