@@ -939,3 +939,497 @@ body {
   overflow-y: auto;
   margin-bottom: 8px;
 }
+
+/* =========================================================
+   PREMIUM PRODUCT REFRESH
+   Shared control-room visual pass for the UXP panel.
+   ========================================================= */
+
+:root {
+  --bg-primary:    #070d14;
+  --bg-secondary:  #0c131d;
+  --bg-card:       #131d2b;
+  --bg-card-hdr:   #182334;
+  --bg-input:      #0e1723;
+  --bg-hover:      #1b2938;
+  --accent:        #d8b782;
+  --accent-hover:  #e5c594;
+  --accent-dim:    rgba(216, 183, 130, 0.12);
+  --text-primary:  #edf2f7;
+  --text-secondary:#b6c1cf;
+  --text-disabled: #6d7c91;
+  --border:        rgba(198, 208, 223, 0.09);
+  --border-light:  rgba(214, 223, 235, 0.16);
+  --border-focus:  rgba(143, 184, 255, 0.30);
+  --success:       #70d6a4;
+  --success-dim:   rgba(112, 214, 164, 0.12);
+  --error:         #ff7a88;
+  --error-dim:     rgba(255, 122, 136, 0.12);
+  --warning:       #e6b46c;
+  --warning-dim:   rgba(230, 180, 108, 0.12);
+  --info:          #8fb8ff;
+  --radius-sm:     8px;
+  --radius:        12px;
+  --radius-lg:     16px;
+  --font:          "Aptos", "Segoe UI Variable Text", "Segoe UI", "SF Pro Display", sans-serif;
+  --font-mono:     "Cascadia Code", "JetBrains Mono", "Consolas", monospace;
+  --shadow-sm:     0 8px 16px rgba(3, 8, 14, 0.10);
+  --shadow:        0 14px 28px rgba(3, 8, 14, 0.14);
+  --shadow-lg:     0 24px 48px rgba(3, 8, 14, 0.18);
+  --shadow-inner:  inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+body {
+  background: linear-gradient(180deg, #070d14 0%, #0b131d 100%);
+}
+
+#app {
+  background:
+    radial-gradient(circle at top left, rgba(216, 183, 130, 0.08), transparent 28%),
+    radial-gradient(circle at top right, rgba(143, 184, 255, 0.08), transparent 24%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.01), transparent 20%);
+}
+
+.oc-header {
+  height: 48px;
+  padding: 0 16px;
+  background: rgba(10, 16, 25, 0.92);
+  border-bottom: 1px solid rgba(214, 223, 235, 0.08);
+  box-shadow: none;
+}
+
+.oc-header-left {
+  gap: 8px;
+}
+
+.oc-logo {
+  font-size: 16px;
+  font-weight: 720;
+  letter-spacing: -0.03em;
+}
+
+.oc-version {
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+}
+
+.oc-connection {
+  min-height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.oc-conn-dot.connected {
+  box-shadow: 0 0 0 4px rgba(112, 214, 164, 0.08);
+}
+
+.oc-icon-btn {
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-secondary);
+}
+
+.oc-icon-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.oc-processing-banner {
+  margin: 8px 12px 0;
+  padding: 10px 12px 12px;
+  border: 1px solid rgba(214, 223, 235, 0.08);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(19, 31, 45, 0.98), rgba(13, 21, 31, 0.96));
+  box-shadow: var(--shadow);
+}
+
+.oc-tabs {
+  gap: 8px;
+  padding: 10px 12px 12px;
+  background: transparent;
+  border-bottom: none;
+}
+
+.oc-tab {
+  min-width: 72px;
+  gap: 4px;
+  padding: 10px 10px 9px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.025);
+  color: var(--text-secondary);
+}
+
+.oc-tab:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.oc-tab.active {
+  color: #f6f7fa;
+  background: linear-gradient(180deg, rgba(143, 184, 255, 0.10), rgba(255, 255, 255, 0.02));
+  border-color: rgba(143, 184, 255, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.oc-content {
+  padding: 0 12px 18px;
+}
+
+.oc-section-title {
+  margin-top: 12px;
+  padding: 8px 0 6px;
+  border-bottom: 1px solid rgba(214, 223, 235, 0.08);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: var(--text-muted);
+}
+
+.oc-card,
+.oc-result-area,
+.oc-toast {
+  background: linear-gradient(180deg, rgba(19, 31, 45, 0.96), rgba(14, 23, 34, 0.94));
+  border: 1px solid rgba(214, 223, 235, 0.08);
+  box-shadow: var(--shadow);
+}
+
+.oc-card {
+  border-radius: 18px;
+  margin-bottom: 10px;
+}
+
+.oc-card-header {
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+}
+
+.oc-card-body {
+  padding: 12px 14px 14px;
+  gap: 10px;
+}
+
+.oc-input,
+.oc-select,
+.oc-textarea {
+  border-radius: 10px;
+  border: 1px solid rgba(214, 223, 235, 0.08);
+  background: linear-gradient(180deg, rgba(10, 17, 26, 0.94), rgba(9, 15, 23, 0.88));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+  padding: 7px 10px;
+}
+
+.oc-input:focus,
+.oc-select:focus,
+.oc-textarea:focus {
+  outline: none;
+  border-color: var(--border-focus);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 0 0 3px rgba(143, 184, 255, 0.12);
+}
+
+.oc-btn {
+  min-height: 36px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font-weight: 620;
+  letter-spacing: -0.01em;
+}
+
+.oc-btn-primary {
+  background: linear-gradient(135deg, #8fb7eb 0%, #d7b27a 100%);
+  border-color: transparent;
+  color: #08121d;
+  box-shadow: 0 12px 24px rgba(141, 178, 232, 0.16);
+}
+
+.oc-btn-primary:not(:disabled):hover {
+  background: linear-gradient(135deg, #9fc1ee 0%, #e2c08c 100%);
+  border-color: transparent;
+  box-shadow: 0 16px 28px rgba(141, 178, 232, 0.18);
+}
+
+.oc-btn-secondary {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+  color: var(--text-primary);
+}
+
+.oc-btn-secondary:not(:disabled):hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(216, 183, 130, 0.22);
+  color: var(--text-primary);
+}
+
+.oc-status-bar {
+  background: rgba(10, 16, 25, 0.92);
+  border-top: 1px solid rgba(214, 223, 235, 0.08);
+}
+
+.oc-toast {
+  border-radius: 14px;
+}
+
+.oc-btn:focus-visible,
+.oc-tab:focus-visible,
+.oc-icon-btn:focus-visible,
+.oc-input:focus-visible,
+.oc-select:focus-visible,
+.oc-textarea:focus-visible {
+  outline: 2px solid rgba(143, 184, 255, 0.92);
+  outline-offset: 2px;
+}
+
+@media (max-width: 400px) {
+  .oc-tabs {
+    gap: 6px;
+  }
+
+  .oc-tab {
+    min-width: 64px;
+  }
+}
+
+/* =========================================================
+   PREMIUM PRODUCT REFRESH (v2)
+   Compact workspace orientation and tighter panel rhythm.
+   ========================================================= */
+
+:root {
+  color-scheme: dark;
+}
+
+body {
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.oc-content {
+  padding: 0 12px 22px;
+  overscroll-behavior: contain;
+}
+
+.oc-tabs {
+  gap: 10px;
+  padding: 10px 12px 12px;
+  scroll-padding-inline: 12px;
+  scroll-snap-type: x proximity;
+  overscroll-behavior-x: contain;
+}
+
+.oc-tab {
+  flex: 0 0 auto;
+  scroll-snap-align: start;
+}
+
+.oc-tab span {
+  letter-spacing: -0.01em;
+}
+
+.oc-workspace-overview {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 12px 0 16px;
+  padding: 18px 16px;
+  border: 1px solid rgba(214, 223, 235, 0.08);
+  border-radius: 22px;
+  background: linear-gradient(180deg, rgba(17, 28, 41, 0.98), rgba(12, 20, 30, 0.95));
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.oc-workspace-overview::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 0 0, rgba(216, 183, 130, 0.16), transparent 32%),
+    radial-gradient(circle at 100% 18%, rgba(143, 184, 255, 0.12), transparent 24%),
+    linear-gradient(135deg, rgba(255, 255, 255, 0.04), transparent 28%);
+  pointer-events: none;
+}
+
+.oc-workspace-copy,
+.oc-workspace-meta {
+  position: relative;
+  z-index: 1;
+}
+
+.oc-workspace-kicker {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  padding: 0 9px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(233, 239, 247, 0.7);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.oc-workspace-title {
+  margin: 10px 0 0;
+  font-size: 28px;
+  line-height: 0.98;
+  letter-spacing: -0.05em;
+  color: #fbfcfe;
+  text-wrap: balance;
+}
+
+.oc-workspace-subtitle {
+  max-width: 38ch;
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: rgba(216, 224, 233, 0.82);
+}
+
+.oc-workspace-meta {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.oc-workspace-meta-item {
+  min-width: 0;
+  padding: 12px 12px 13px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.oc-workspace-meta-label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(182, 193, 207, 0.66);
+}
+
+.oc-workspace-meta-value {
+  display: block;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: #f5f7fa;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.oc-tab-panel {
+  gap: 14px;
+  padding-bottom: 26px;
+}
+
+.oc-tab-panel > .oc-section-title:first-child {
+  margin-top: 0;
+}
+
+.oc-section-title {
+  margin-top: 4px;
+}
+
+.oc-card-header span {
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.oc-field-row {
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.oc-field-row .oc-label {
+  padding-top: 8px;
+}
+
+.oc-input-group {
+  gap: 8px;
+}
+
+.oc-result-header {
+  letter-spacing: 0.1em;
+}
+
+.oc-toast-msg {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 400px) {
+  .oc-workspace-title {
+    font-size: 24px;
+  }
+
+  .oc-workspace-meta {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 320px) {
+  .oc-workspace-title {
+    font-size: 20px;
+  }
+
+  .oc-workspace-subtitle {
+    font-size: 11.5px;
+  }
+}
+
+/* =========================================================
+   POLISH PASS — missing rules + scroll discoverability
+   ========================================================= */
+
+/* Inline checkbox + label pair (Shorts Pipeline, any future check rows) */
+.oc-check-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0;
+}
+
+.oc-check-row label {
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  user-select: none;
+  line-height: 1.4;
+}
+
+/* Tab bar — expose a thin scrollbar so mouse users can discover overflow tabs */
+.oc-tabs {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.12) transparent;
+}
+
+.oc-tabs::-webkit-scrollbar {
+  display: block;
+  height: 3px;
+}
+
+.oc-tabs::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+}
+
+.oc-tabs::-webkit-scrollbar-track {
+  background: transparent;
+}
