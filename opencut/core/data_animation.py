@@ -1,508 +1,737 @@
 """
-OpenCut Data-Driven Animation (26.2)
+OpenCut Data-Driven Animation Engine (Category 79 - Motion Design)
 
-Bind motion graphics to CSV/JSON data sources:
-- Animated bar charts from data
-- Animated counters (number tickers)
-- Template-based data visualization
-- Support for CSV and JSON data sources
+Bind motion graphics to CSV/JSON data. Template format defines visual elements
+(bar_chart, line_chart, counter, label, pie_chart, progress_bar) with data
+bindings. Animate transitions between data states with smooth interpolation.
 
-Uses FFmpeg drawtext and drawbox filters for rendering.
+Functions:
+    render_data_animation  - Render data-driven animation to video
+    validate_template      - Validate template + data compatibility
+    list_chart_types       - Return supported chart/element types
+    load_data              - Load data from CSV/JSON string
+    load_data_from_file    - Load data from CSV/JSON file
 """
 
 import csv
 import io
 import json
 import logging
+import math
 import os
-from dataclasses import asdict, dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple, Union
-
-from opencut.helpers import FFmpegCmd, run_ffmpeg
+import tempfile
+from dataclasses import dataclass
+from typing import Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("opencut")
 
-
 # ---------------------------------------------------------------------------
-# Constants
+# Result Dataclass
 # ---------------------------------------------------------------------------
-CHART_TYPES = ["bar", "horizontal_bar", "counter", "label_value"]
-
-DEFAULT_COLORS = [
-    "#4285F4", "#EA4335", "#FBBC05", "#34A853",
-    "#FF6D01", "#46BDC6", "#7B1FA2", "#C2185B",
-    "#00897B", "#FFB300",
-]
-
-
-# ---------------------------------------------------------------------------
-# Dataclasses
-# ---------------------------------------------------------------------------
-@dataclass
-class DataTemplate:
-    """Template for data-driven animation."""
-    chart_type: str = "bar"
-    title: str = ""
-    width: int = 1920
-    height: int = 1080
-    fps: int = 30
-    duration: float = 5.0
-    background_color: str = "black"
-    text_color: str = "white"
-    bar_colors: List[str] = field(default_factory=lambda: list(DEFAULT_COLORS))
-    font_size: int = 36
-    title_size: int = 48
-    padding: int = 60
-    animate_in: bool = True
-    show_values: bool = True
-    show_labels: bool = True
-
-    def to_dict(self) -> dict:
-        return asdict(self)
 
 
 @dataclass
-class DataAnimationResult:
-    """Result from a data animation render."""
+class DataAnimResult:
+    """Result of a data animation render."""
+
     output_path: str = ""
-    chart_type: str = ""
-    data_points: int = 0
+    data_rows_rendered: int = 0
+    elements_count: int = 0
     duration: float = 0.0
-    width: int = 0
-    height: int = 0
+    fps: int = 30
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        return {
+            "output_path": self.output_path,
+            "data_rows_rendered": self.data_rows_rendered,
+            "elements_count": self.elements_count,
+            "duration": self.duration,
+            "fps": self.fps,
+        }
 
 
 # ---------------------------------------------------------------------------
-# Internal: Data loading
+# Chart / Element Types
 # ---------------------------------------------------------------------------
-def _load_data_source(data_source: Union[str, List, Dict]) -> List[Dict]:
-    """Load data from CSV path, JSON path, JSON string, or direct list."""
-    if isinstance(data_source, list):
-        return data_source
 
-    if isinstance(data_source, dict):
-        return [data_source]
-
-    if isinstance(data_source, str):
-        # Try as file path first
-        if os.path.isfile(data_source):
-            ext = os.path.splitext(data_source)[1].lower()
-            if ext == ".csv":
-                return _load_csv(data_source)
-            elif ext == ".json":
-                with open(data_source, "r") as f:
-                    loaded = json.load(f)
-                return loaded if isinstance(loaded, list) else [loaded]
-
-        # Try as JSON string
-        try:
-            loaded = json.loads(data_source)
-            return loaded if isinstance(loaded, list) else [loaded]
-        except (json.JSONDecodeError, TypeError):
-            pass
-
-        # Try as CSV string
-        try:
-            return _parse_csv_string(data_source)
-        except Exception:
-            pass
-
-    return []
+CHART_TYPES = {
+    "bar_chart": {
+        "description": "Vertical bar chart with auto-scaling Y axis",
+        "properties": ["height", "color", "label", "value"],
+    },
+    "line_chart": {
+        "description": "Line chart connecting data points over time",
+        "properties": ["value", "color", "line_width", "label"],
+    },
+    "counter": {
+        "description": "Animated numeric counter with prefix/suffix",
+        "properties": ["value", "prefix", "suffix", "color"],
+    },
+    "label": {
+        "description": "Text label with data binding",
+        "properties": ["text", "color", "font_size"],
+    },
+    "pie_chart": {
+        "description": "Pie/donut chart with animated segments",
+        "properties": ["values", "colors", "labels"],
+    },
+    "progress_bar": {
+        "description": "Horizontal progress bar with fill animation",
+        "properties": ["value", "max_value", "color", "bg_color"],
+    },
+}
 
 
-def _load_csv(filepath: str) -> List[Dict]:
-    """Load CSV file into list of dicts."""
+def list_chart_types() -> List[dict]:
+    """Return list of supported chart/element types."""
+    return [
+        {"type": name, **info}
+        for name, info in CHART_TYPES.items()
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Data Loading
+# ---------------------------------------------------------------------------
+
+
+def _load_csv_data(csv_content: str) -> List[dict]:
+    """Parse CSV string into list of row dicts, auto-converting numerics."""
+    reader = csv.DictReader(io.StringIO(csv_content))
     rows = []
-    with open(filepath, "r", newline="", encoding="utf-8-sig") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            rows.append(dict(row))
-    return rows
-
-
-def _parse_csv_string(csv_str: str) -> List[Dict]:
-    """Parse CSV string into list of dicts."""
-    rows = []
-    reader = csv.DictReader(io.StringIO(csv_str))
     for row in reader:
-        rows.append(dict(row))
+        parsed = {}
+        for key, val in row.items():
+            if key is None:
+                continue
+            try:
+                parsed[key] = float(val)
+            except (ValueError, TypeError):
+                parsed[key] = val
+        rows.append(parsed)
     return rows
 
 
-def _extract_labels_values(data: List[Dict]) -> Tuple[List[str], List[float]]:
-    """Extract label-value pairs from data dicts."""
-    labels = []
-    values = []
-    for item in data:
-        # Auto-detect label and value fields
-        label = ""
-        value = 0.0
-        for k, v in item.items():
-            try:
-                value = float(v)
-                # The other field is the label
-                for lk, lv in item.items():
-                    if lk != k:
-                        label = str(lv)
-                        break
-                break
-            except (ValueError, TypeError):
-                label = str(v)
-                continue
+def _load_json_data(json_content: str) -> List[dict]:
+    """Parse JSON string into list of row dicts."""
+    data = json.loads(json_content)
+    if isinstance(data, list):
+        return data
+    if isinstance(data, dict) and "rows" in data:
+        return data["rows"]
+    if isinstance(data, dict) and "data" in data:
+        return data["data"]
+    raise ValueError("JSON data must be a list or contain 'rows'/'data' key")
 
-        if not label:
-            label = f"Item {len(labels) + 1}"
-        labels.append(label)
-        values.append(value)
 
-    return labels, values
+def load_data(content: str, format_hint: str = "auto") -> List[dict]:
+    """Load data from CSV or JSON string.
+
+    Args:
+        content: Raw data string.
+        format_hint: 'csv', 'json', or 'auto' (detect by content).
+
+    Returns:
+        List of row dicts.
+    """
+    if not content or not content.strip():
+        raise ValueError("Data content is empty")
+
+    if format_hint == "csv":
+        return _load_csv_data(content)
+    if format_hint == "json":
+        return _load_json_data(content)
+
+    # Auto-detect
+    stripped = content.strip()
+    if stripped.startswith("[") or stripped.startswith("{"):
+        return _load_json_data(content)
+    return _load_csv_data(content)
+
+
+def load_data_from_file(filepath: str) -> List[dict]:
+    """Load data from a CSV or JSON file."""
+    if not os.path.isfile(filepath):
+        raise FileNotFoundError(f"Data file not found: {filepath}")
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read()
+    ext = os.path.splitext(filepath)[1].lower()
+    fmt = "csv" if ext == ".csv" else "json" if ext == ".json" else "auto"
+    return load_data(content, fmt)
 
 
 # ---------------------------------------------------------------------------
-# Build FFmpeg filter for bar chart
+# Template / Binding Resolution
 # ---------------------------------------------------------------------------
-def _build_bar_chart_filter(
-    labels: List[str],
-    values: List[float],
-    template: DataTemplate,
-    vertical: bool = True,
-) -> str:
-    """Build FFmpeg filter_complex for animated bar chart."""
-    n = len(values)
+
+
+def _resolve_binding(binding: str, data_row: dict):
+    """Resolve a data binding expression like '${data.revenue}'.
+
+    Returns the resolved value (float or str).
+    """
+    if not isinstance(binding, str):
+        return binding
+    if not binding.startswith("${") or not binding.endswith("}"):
+        return binding
+
+    path = binding[2:-1].strip()
+    if path.startswith("data."):
+        path = path[5:]
+
+    value = data_row.get(path)
+    if value is None:
+        return 0.0
+    return value
+
+
+def _resolve_element_bindings(element: dict, data_row: dict) -> dict:
+    """Resolve all data bindings in an element definition."""
+    resolved = {}
+    for key, value in element.items():
+        if key in ("type", "id", "x", "y", "width", "height_max"):
+            resolved[key] = value
+        elif isinstance(value, str) and "${" in value:
+            resolved[key] = _resolve_binding(value, data_row)
+        elif isinstance(value, list):
+            resolved[key] = [
+                _resolve_binding(v, data_row) if isinstance(v, str) else v
+                for v in value
+            ]
+        else:
+            resolved[key] = value
+    return resolved
+
+
+def validate_template(template: dict, data: List[dict]) -> dict:
+    """Validate a template definition against data.
+
+    Returns dict with 'valid' bool, 'errors' list, and 'warnings' list.
+    """
+    errors = []
+    warnings = []
+
+    if not isinstance(template, dict):
+        errors.append("Template must be a dict")
+        return {"valid": False, "errors": errors, "warnings": warnings}
+
+    elements = template.get("elements", [])
+    if not elements:
+        errors.append("Template must contain 'elements' list")
+
+    for i, elem in enumerate(elements):
+        etype = elem.get("type", "")
+        if etype not in CHART_TYPES:
+            errors.append(f"Element {i}: unknown type '{etype}'")
+        if "id" not in elem:
+            warnings.append(f"Element {i}: missing 'id' field")
+
+    if not data:
+        warnings.append("No data rows provided")
+    elif elements:
+        first_row = data[0]
+        for i, elem in enumerate(elements):
+            for key, val in elem.items():
+                if isinstance(val, str) and "${" in val:
+                    path = val[2:-1].strip()
+                    if path.startswith("data."):
+                        path = path[5:]
+                    if path not in first_row:
+                        warnings.append(
+                            f"Element {i}: binding '{val}' not found in data"
+                        )
+
+    return {
+        "valid": len(errors) == 0,
+        "errors": errors,
+        "warnings": warnings,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Interpolation
+# ---------------------------------------------------------------------------
+
+
+def _interpolate_value(v1, v2, t: float):
+    """Interpolate between two values. Numbers interpolate; text crossfades."""
+    if isinstance(v1, (int, float)) and isinstance(v2, (int, float)):
+        return v1 + (v2 - v1) * t
+    return v1 if t < 0.5 else v2
+
+
+def _interpolate_elements(elem1: dict, elem2: dict, t: float) -> dict:
+    """Interpolate all properties between two resolved element states."""
+    result = {}
+    all_keys = set(elem1.keys()) | set(elem2.keys())
+    text_keys = ("type", "id", "label", "text")
+    for key in all_keys:
+        default = "" if key in text_keys else 0.0
+        v1 = elem1.get(key, default)
+        v2 = elem2.get(key, default)
+        if isinstance(v1, list) and isinstance(v2, list):
+            max_len = max(len(v1), len(v2))
+            interp_list = []
+            for idx in range(max_len):
+                a = v1[idx] if idx < len(v1) else 0.0
+                b = v2[idx] if idx < len(v2) else 0.0
+                interp_list.append(_interpolate_value(a, b, t))
+            result[key] = interp_list
+        else:
+            result[key] = _interpolate_value(v1, v2, t)
+    return result
+
+
+# ---------------------------------------------------------------------------
+# Color & Layout Helpers
+# ---------------------------------------------------------------------------
+
+
+def _parse_color(color_str) -> Tuple[int, int, int]:
+    """Parse hex color to RGB tuple."""
+    if not isinstance(color_str, str):
+        return (200, 200, 200)
+    c = color_str.lstrip("#")
+    if len(c) == 3:
+        c = c[0] * 2 + c[1] * 2 + c[2] * 2
+    if len(c) >= 6:
+        return int(c[0:2], 16), int(c[2:4], 16), int(c[4:6], 16)
+    return (200, 200, 200)
+
+
+def _auto_scale(values: List[float]) -> Tuple[float, float]:
+    """Compute auto-scale range for chart values."""
+    if not values:
+        return (0.0, 100.0)
+    min_v = min(values)
+    max_v = max(values)
+    if abs(max_v - min_v) < 0.001:
+        return (min_v - 1, max_v + 1)
+    margin = (max_v - min_v) * 0.1
+    return (min_v - margin, max_v + margin)
+
+
+def _load_font(font_size: int = 24):
+    """Load a default font for rendering."""
+    from PIL import ImageFont  # noqa: F821
+    try:
+        return ImageFont.truetype("arial.ttf", font_size)
+    except (OSError, IOError):
+        return ImageFont.load_default()
+
+
+def _compute_layout(elements: List[dict],
+                    resolution: Tuple[int, int]) -> List[Tuple[int, int, int, int]]:
+    """Compute bounding areas for each element in a grid-like layout."""
+    n = len(elements)
     if n == 0:
-        return "null"
+        return []
 
-    max_val = max(values) if values else 1
-    if max_val == 0:
-        max_val = 1
+    w, h = resolution
+    margin = 40
+    usable_w = w - 2 * margin
+    usable_h = h - 2 * margin
 
-    w = template.width
-    h = template.height
-    pad = template.padding
-    chart_w = w - 2 * pad
-    chart_h = h - 3 * pad  # extra padding for title
+    cols = min(n, 3)
+    rows_count = math.ceil(n / cols)
+    cell_w = usable_w // cols
+    cell_h = usable_h // max(rows_count, 1)
 
-    filters = []
+    areas = []
+    for i in range(n):
+        row = i // cols
+        col = i % cols
+        x1 = margin + col * cell_w + 10
+        y1 = margin + row * cell_h + 10
+        x2 = x1 + cell_w - 20
+        y2 = y1 + cell_h - 20
+        elem = elements[i] if i < len(elements) else {}
+        if "x" in elem and "y" in elem:
+            ex = int(elem["x"])
+            ey = int(elem["y"])
+            ew = int(elem.get("width", cell_w - 20))
+            eh = int(elem.get("height_max", cell_h - 20))
+            areas.append((ex, ey, ex + ew, ey + eh))
+        else:
+            areas.append((x1, y1, x2, y2))
+    return areas
 
-    if vertical:
-        bar_width = max(2, chart_w // (n * 2))
-        gap = max(1, bar_width // 2)
 
-        for i, (label, val) in enumerate(zip(labels, values)):
-            bar_h = int((val / max_val) * chart_h * 0.8)
-            bar_x = pad + i * (bar_width + gap)
-            bar_y = h - pad - bar_h
-            color = template.bar_colors[i % len(template.bar_colors)]
+# ---------------------------------------------------------------------------
+# Element Drawers
+# ---------------------------------------------------------------------------
 
-            # Animated: bar grows from bottom using expression
-            progress = f"min(1,t/{max(0.3, template.duration*0.6)})"
-            animated_h = f"({bar_h}*{progress})" if template.animate_in else str(bar_h)
-            animated_y = f"({h-pad}-{bar_h}*{progress})" if template.animate_in else str(bar_y)
 
-            filters.append(
-                f"drawbox=x={bar_x}:y='{animated_y}':"
-                f"w={bar_width}:h='{animated_h}':"
-                f"color={color}:t=fill"
-            )
+def _draw_bar_chart(draw, elem: dict, area: Tuple[int, int, int, int], font):
+    """Draw a bar chart element."""
+    x1, y1, x2, y2 = area
+    h = y2 - y1
 
-            if template.show_labels:
-                escaped = label.replace("'", "\\'").replace(":", "\\:")
-                filters.append(
-                    f"drawtext=text='{escaped}':"
-                    f"fontsize={template.font_size//2}:"
-                    f"fontcolor={template.text_color}:"
-                    f"x={bar_x}:y={h-pad+5}"
-                )
+    value = float(elem.get("height", elem.get("value", 50)))
+    color = str(elem.get("color", "#4A9EFF"))
+    label = str(elem.get("label", ""))
+    max_val = float(elem.get("max_value", 100))
+
+    bar_h = int((value / max(max_val, 0.001)) * h * 0.8)
+    bar_h = max(1, min(bar_h, h))
+    w = x2 - x1
+
+    r, g, b = _parse_color(color)
+    bar_x1 = x1 + w // 4
+    bar_x2 = x2 - w // 4
+    bar_y1 = y2 - bar_h
+    draw.rectangle([bar_x1, bar_y1, bar_x2, y2], fill=(r, g, b, 255))
+
+    if label:
+        draw.text((x1 + 5, y2 + 5), str(label), font=font,
+                  fill=(200, 200, 200, 255))
+
+
+def _draw_line_chart(draw, elem: dict, area: Tuple[int, int, int, int],
+                     font, history: List[float]):
+    """Draw a line chart element with historical values."""
+    x1, y1, x2, y2 = area
+    w = x2 - x1
+    h = y2 - y1
+
+    color = str(elem.get("color", "#FF6B6B"))
+    line_width = int(elem.get("line_width", 2))
+
+    if len(history) < 2:
+        return
+
+    min_v, max_v = _auto_scale(history)
+    r, g, b = _parse_color(color)
+    points = []
+    for i, val in enumerate(history):
+        px = x1 + int(i / max(len(history) - 1, 1) * w)
+        norm = (val - min_v) / max(max_v - min_v, 0.001)
+        py = y2 - int(norm * h * 0.85) - int(h * 0.05)
+        points.append((px, py))
+
+    for i in range(len(points) - 1):
+        draw.line([points[i], points[i + 1]], fill=(r, g, b, 255),
+                  width=line_width)
+
+    for px, py in points:
+        draw.ellipse([px - 3, py - 3, px + 3, py + 3], fill=(r, g, b, 255))
+
+
+def _draw_counter(draw, elem: dict, area: Tuple[int, int, int, int], font):
+    """Draw an animated counter value."""
+    x1, y1, x2, y2 = area
+    value = elem.get("value", 0)
+    prefix = str(elem.get("prefix", ""))
+    suffix = str(elem.get("suffix", ""))
+    color = str(elem.get("color", "#FFFFFF"))
+
+    if isinstance(value, float):
+        if value == int(value):
+            text = f"{prefix}{int(value)}{suffix}"
+        else:
+            text = f"{prefix}{value:.1f}{suffix}"
     else:
-        bar_height = max(2, chart_h // (n * 2))
-        gap = max(1, bar_height // 2)
+        text = f"{prefix}{value}{suffix}"
 
-        for i, (label, val) in enumerate(zip(labels, values)):
-            bar_w = int((val / max_val) * chart_w * 0.8)
-            bar_x = pad + pad  # offset for labels
-            bar_y = pad * 2 + i * (bar_height + gap)
-            color = template.bar_colors[i % len(template.bar_colors)]
+    r, g, b = _parse_color(color)
+    cx = (x1 + x2) // 2
+    cy = (y1 + y2) // 2
+    bbox = draw.textbbox((0, 0), text, font=font)
+    tw = bbox[2] - bbox[0]
+    th = bbox[3] - bbox[1]
+    draw.text((cx - tw // 2, cy - th // 2), text, font=font,
+              fill=(r, g, b, 255))
 
-            progress = f"min(1,t/{max(0.3, template.duration*0.6)})"
-            animated_w = f"({bar_w}*{progress})" if template.animate_in else str(bar_w)
 
-            filters.append(
-                f"drawbox=x={bar_x}:y={bar_y}:"
-                f"w='{animated_w}':h={bar_height}:"
-                f"color={color}:t=fill"
-            )
+def _draw_label(draw, elem: dict, area: Tuple[int, int, int, int], font):
+    """Draw a text label element."""
+    x1, y1, _x2, _y2 = area
+    text = str(elem.get("text", elem.get("label", "")))
+    color = str(elem.get("color", "#FFFFFF"))
+    r, g, b = _parse_color(color)
+    draw.text((x1 + 5, y1 + 5), text, font=font, fill=(r, g, b, 255))
 
-            if template.show_labels:
-                escaped = label.replace("'", "\\'").replace(":", "\\:")
-                filters.append(
-                    f"drawtext=text='{escaped}':"
-                    f"fontsize={template.font_size//2}:"
-                    f"fontcolor={template.text_color}:"
-                    f"x={pad//2}:y={bar_y+bar_height//4}"
-                )
 
-    # Title
-    if template.title:
-        escaped_title = template.title.replace("'", "\\'").replace(":", "\\:")
-        filters.append(
-            f"drawtext=text='{escaped_title}':"
-            f"fontsize={template.title_size}:"
-            f"fontcolor={template.text_color}:"
-            f"x=(w-text_w)/2:y={pad//2}"
-        )
+def _draw_pie_chart(draw, elem: dict, area: Tuple[int, int, int, int]):
+    """Draw a pie chart element."""
+    x1, y1, x2, y2 = area
+    values = elem.get("values", [])
+    default_colors = ["#4A9EFF", "#FF6B6B", "#6BCB77",
+                      "#FFD93D", "#C77DFF", "#FF8C42"]
+    colors = elem.get("colors", default_colors)
 
-    return ",".join(filters) if filters else "null"
+    if not values or not isinstance(values, list):
+        return
+
+    num_values = []
+    for v in values:
+        try:
+            num_values.append(float(v))
+        except (ValueError, TypeError):
+            num_values.append(0.0)
+
+    total = sum(num_values)
+    if total <= 0:
+        return
+
+    cx = (x1 + x2) // 2
+    cy = (y1 + y2) // 2
+    radius = min(x2 - x1, y2 - y1) // 2 - 5
+
+    start_angle = -90.0
+    for i, val in enumerate(num_values):
+        sweep = (val / total) * 360.0
+        color_hex = colors[i % len(colors)] if isinstance(colors, list) else "#4A9EFF"
+        r, g, b = _parse_color(str(color_hex))
+        end_angle = start_angle + sweep
+
+        bbox_pie = [cx - radius, cy - radius, cx + radius, cy + radius]
+        draw.pieslice(bbox_pie, start_angle, end_angle, fill=(r, g, b, 255))
+        start_angle = end_angle
+
+
+def _draw_progress_bar(draw, elem: dict, area: Tuple[int, int, int, int]):
+    """Draw a progress bar element."""
+    x1, y1, x2, y2 = area
+    value = float(elem.get("value", 50))
+    max_value = float(elem.get("max_value", 100))
+    color = str(elem.get("color", "#4A9EFF"))
+    bg_color = str(elem.get("bg_color", "#333333"))
+
+    pct = max(0.0, min(1.0, value / max(max_value, 0.001)))
+    bar_h = min(30, (y2 - y1))
+    bar_y = y1 + (y2 - y1 - bar_h) // 2
+
+    br, bgr, bb = _parse_color(bg_color)
+    draw.rectangle([x1, bar_y, x2, bar_y + bar_h], fill=(br, bgr, bb, 255))
+
+    fr, fg, fb = _parse_color(color)
+    fill_w = int((x2 - x1) * pct)
+    if fill_w > 0:
+        draw.rectangle([x1, bar_y, x1 + fill_w, bar_y + bar_h],
+                       fill=(fr, fg, fb, 255))
 
 
 # ---------------------------------------------------------------------------
-# Create Data Animation (generic)
+# Frame Rendering
 # ---------------------------------------------------------------------------
-def create_data_animation(
-    template: Optional[DataTemplate] = None,
-    data_source: Union[str, List, Dict, None] = None,
-    output_path: Optional[str] = None,
-    output_dir: str = "",
-    on_progress: Optional[Callable] = None,
-) -> DataAnimationResult:
-    """
-    Create an animated visualization from a data source and template.
 
-    Args:
-        template: DataTemplate with chart type and style settings.
-        data_source: CSV/JSON file path, JSON string, or list of dicts.
-        output_path: Explicit output file path.
-        on_progress: Callback(percent, message).
 
-    Returns:
-        DataAnimationResult with rendered video path.
-    """
-    tmpl = template if isinstance(template, DataTemplate) else DataTemplate()
-    if isinstance(template, dict):
-        tmpl = DataTemplate(
-            chart_type=template.get("chart_type", "bar"),
-            title=template.get("title", ""),
-            width=int(template.get("width", 1920)),
-            height=int(template.get("height", 1080)),
-            fps=int(template.get("fps", 30)),
-            duration=float(template.get("duration", 5)),
-            background_color=template.get("background_color", "black"),
-            text_color=template.get("text_color", "white"),
-            font_size=int(template.get("font_size", 36)),
-            title_size=int(template.get("title_size", 48)),
-            padding=int(template.get("padding", 60)),
-            animate_in=template.get("animate_in", True),
-            show_values=template.get("show_values", True),
-            show_labels=template.get("show_labels", True),
-        )
+def _render_data_frame(template_elements: List[dict],
+                       resolved_states: List[dict],
+                       resolution: Tuple[int, int],
+                       bg_color: str = "#1A1A2E",
+                       font_size: int = 24,
+                       line_histories: Optional[Dict[int, List[float]]] = None):
+    """Render a single data animation frame."""
+    from PIL import Image, ImageDraw  # noqa: F821
 
-    data = _load_data_source(data_source) if data_source else []
-    labels, values = _extract_labels_values(data)
+    r, g, b = _parse_color(bg_color)
+    img = Image.new("RGBA", resolution, (r, g, b, 255))
+    draw = ImageDraw.Draw(img)
+    font = _load_font(font_size)
 
-    if output_path is None:
-        directory = output_dir or os.path.join(os.path.expanduser("~"), ".opencut")
-        os.makedirs(directory, exist_ok=True)
-        output_path = os.path.join(directory, f"data_anim_{tmpl.chart_type}.mp4")
+    areas = _compute_layout(template_elements, resolution)
 
-    if on_progress:
-        on_progress(10, f"Rendering {tmpl.chart_type} chart with {len(data)} points...")
+    for i, (elem_def, resolved) in enumerate(zip(template_elements, resolved_states)):
+        if i >= len(areas):
+            break
+        area = areas[i]
+        etype = elem_def.get("type", "label")
 
-    if tmpl.chart_type == "counter":
-        start = values[0] if values else 0
-        end = values[-1] if len(values) > 1 else (values[0] if values else 100)
-        return render_counter(
-            start=start, end=end, duration=tmpl.duration,
-            output_path=output_path,
-            width=tmpl.width, height=tmpl.height,
-            fps=tmpl.fps, font_size=tmpl.font_size * 2,
-            font_color=tmpl.text_color,
-            background_color=tmpl.background_color,
-            title=tmpl.title,
-            on_progress=on_progress,
-        )
+        if etype == "bar_chart":
+            _draw_bar_chart(draw, resolved, area, font)
+        elif etype == "line_chart":
+            history = (line_histories or {}).get(i, [])
+            cur_val = resolved.get("value", 0)
+            if isinstance(cur_val, (int, float)):
+                history = list(history) + [float(cur_val)]
+            _draw_line_chart(draw, resolved, area, font, history)
+        elif etype == "counter":
+            _draw_counter(draw, resolved, area, font)
+        elif etype == "label":
+            _draw_label(draw, resolved, area, font)
+        elif etype == "pie_chart":
+            _draw_pie_chart(draw, resolved, area)
+        elif etype == "progress_bar":
+            _draw_progress_bar(draw, resolved, area)
 
-    vertical = tmpl.chart_type != "horizontal_bar"
-    vf = _build_bar_chart_filter(labels, values, tmpl, vertical=vertical)
+    return img
 
-    cmd = (
-        FFmpegCmd()
-        .pre_input("-f", "lavfi")
-        .input(
-            f"color=c={tmpl.background_color}:s={tmpl.width}x{tmpl.height}"
-            f":d={tmpl.duration}:r={tmpl.fps}"
-        )
-        .video_filter(vf)
-        .video_codec("libx264", crf=18, preset="medium")
-        .option("-t", str(tmpl.duration))
-        .faststart()
-        .output(output_path)
-        .build()
-    )
+
+# ---------------------------------------------------------------------------
+# FFmpeg Encode
+# ---------------------------------------------------------------------------
+
+
+def _encode_frames(frame_dir: str, output_path: str,
+                   fps: int, resolution: Tuple[int, int]) -> str:
+    """Encode PNG frame sequence to MP4."""
+    from opencut.helpers import get_ffmpeg_path, run_ffmpeg
+
+    pattern = os.path.join(frame_dir, "frame_%06d.png")
+    cmd = [
+        get_ffmpeg_path(), "-y",
+        "-framerate", str(fps),
+        "-i", pattern,
+        "-c:v", "libx264", "-pix_fmt", "yuv420p",
+        "-crf", "18", "-preset", "fast",
+        output_path,
+    ]
     run_ffmpeg(cmd)
-
-    if on_progress:
-        on_progress(100, "Data animation rendered.")
-
-    return DataAnimationResult(
-        output_path=output_path,
-        chart_type=tmpl.chart_type,
-        data_points=len(data),
-        duration=tmpl.duration,
-        width=tmpl.width,
-        height=tmpl.height,
-    )
+    return output_path
 
 
 # ---------------------------------------------------------------------------
-# Render Bar Chart
+# Public API
 # ---------------------------------------------------------------------------
-def render_bar_chart(
-    data: Union[List[Dict], str],
-    config: Optional[Dict] = None,
-    output_path: Optional[str] = None,
-    output_dir: str = "",
-    on_progress: Optional[Callable] = None,
-) -> DataAnimationResult:
-    """
-    Render an animated bar chart from data.
-
-    Args:
-        data: List of {label: X, value: Y} dicts, CSV/JSON path, or string.
-        config: Chart configuration dict.
-        output_path: Explicit output file path.
-        on_progress: Callback(percent, message).
-
-    Returns:
-        DataAnimationResult with rendered video path.
-    """
-    cfg = config or {}
-    tmpl = DataTemplate(
-        chart_type="bar",
-        title=cfg.get("title", ""),
-        width=int(cfg.get("width", 1920)),
-        height=int(cfg.get("height", 1080)),
-        duration=float(cfg.get("duration", 5)),
-        background_color=cfg.get("background_color", "black"),
-        text_color=cfg.get("text_color", "white"),
-    )
-
-    return create_data_animation(
-        template=tmpl,
-        data_source=data,
-        output_path=output_path,
-        output_dir=output_dir,
-        on_progress=on_progress,
-    )
 
 
-# ---------------------------------------------------------------------------
-# Render Counter (number ticker)
-# ---------------------------------------------------------------------------
-def render_counter(
-    start: float = 0,
-    end: float = 100,
-    duration: float = 3.0,
-    output_path: Optional[str] = None,
-    output_dir: str = "",
-    width: int = 1920,
-    height: int = 1080,
+def render_data_animation(
+    template: dict,
+    data: Optional[List[dict]] = None,
+    data_content: str = "",
+    data_file: str = "",
+    data_format: str = "auto",
+    duration_per_row: float = 2.0,
+    transition_duration: float = 0.5,
     fps: int = 30,
-    font_size: int = 96,
-    font_color: str = "white",
-    background_color: str = "black",
-    title: str = "",
-    decimal_places: int = 0,
-    prefix: str = "",
-    suffix: str = "",
+    resolution: Tuple[int, int] = (1920, 1080),
+    bg_color: str = "#1A1A2E",
+    font_size: int = 24,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
     on_progress: Optional[Callable] = None,
-) -> DataAnimationResult:
-    """
-    Render an animated number counter (ticker).
+) -> DataAnimResult:
+    """Render data-driven animation to video.
 
     Args:
-        start: Starting number.
-        end: Ending number.
-        duration: Animation duration in seconds.
-        output_path: Explicit output file path.
-        width: Output width.
-        height: Output height.
-        fps: Frame rate.
-        font_size: Counter font size.
-        font_color: Font color.
-        background_color: Background color.
-        title: Optional title above counter.
-        decimal_places: Number of decimal places.
-        prefix: Text before the number (e.g., "$").
-        suffix: Text after the number (e.g., "%").
-        on_progress: Callback(percent, message).
+        template: Template dict with 'elements' list defining visual elements.
+            Each element has 'type' (bar_chart, line_chart, counter, label,
+            pie_chart, progress_bar) and properties with optional data bindings
+            using '${data.field_name}' syntax.
+        data: Pre-loaded data rows (list of dicts).
+        data_content: Raw CSV/JSON string (used if data is None).
+        data_file: Path to CSV/JSON file (used if data and data_content empty).
+        data_format: 'csv', 'json', or 'auto'.
+        duration_per_row: Seconds to display each data row.
+        transition_duration: Seconds for transition between rows.
+        fps: Frames per second.
+        resolution: Output resolution (width, height).
+        bg_color: Background color hex.
+        font_size: Base font size.
+        output_path: Explicit output path.
+        output_dir: Directory for output.
+        on_progress: Progress callback taking int percentage.
 
     Returns:
-        DataAnimationResult with rendered video path.
+        DataAnimResult with output path and metadata.
     """
-    if output_path is None:
-        directory = output_dir or os.path.join(os.path.expanduser("~"), ".opencut")
-        os.makedirs(directory, exist_ok=True)
-        output_path = os.path.join(directory, "data_counter.mp4")
+    # Load data from whichever source was provided
+    if data is None:
+        if data_content:
+            data = load_data(data_content, data_format)
+        elif data_file:
+            data = load_data_from_file(data_file)
+        else:
+            raise ValueError("No data provided (data, data_content, or data_file)")
 
-    if on_progress:
-        on_progress(10, f"Rendering counter {start} -> {end}...")
+    if not data:
+        raise ValueError("Data is empty")
 
-    # FFmpeg drawtext with expression for counting
-    # t goes from 0 to duration, we interpolate start to end
-    progress = f"min(1,t/{max(0.01, duration)})"
-    value_expr = f"{start}+({end}-{start})*{progress}"
+    elements = template.get("elements", [])
+    if not elements:
+        raise ValueError("Template has no elements")
 
-    if decimal_places > 0:
-        # Use %f format in drawtext expression
-        pass
-    else:
-        pass
-
-    prefix_esc = prefix.replace("'", "\\'").replace(":", "\\:").replace("%", "%%")
-    suffix_esc = suffix.replace("'", "\\'").replace(":", "\\:").replace("%", "%%")
-    text_expr = f"{prefix_esc}%{{eif\\:{value_expr}\\:d}}{suffix_esc}"
-
-    drawtext = (
-        f"drawtext=text='{text_expr}':"
-        f"fontsize={font_size}:fontcolor={font_color}:"
-        f"x=(w-text_w)/2:y=(h-text_h)/2"
-    )
-
-    # Add title if provided
-    if title:
-        escaped_title = title.replace("'", "\\'").replace(":", "\\:")
-        drawtext += (
-            f",drawtext=text='{escaped_title}':"
-            f"fontsize={font_size//2}:fontcolor={font_color}:"
-            f"x=(w-text_w)/2:y=(h-text_h)/2-{font_size}"
+    # Validate template against data
+    validation = validate_template(template, data)
+    if not validation["valid"]:
+        raise ValueError(
+            f"Template validation failed: {'; '.join(validation['errors'])}"
         )
 
-    cmd = (
-        FFmpegCmd()
-        .pre_input("-f", "lavfi")
-        .input(
-            f"color=c={background_color}:s={width}x{height}"
-            f":d={duration}:r={fps}"
+    # Compute total duration and frames
+    total_duration = len(data) * duration_per_row
+    total_frames = max(1, int(total_duration * fps))
+
+    effective_dir = output_dir or tempfile.gettempdir()
+    frame_dir = tempfile.mkdtemp(prefix="opencut_dataanim_", dir=effective_dir)
+
+    # Pre-resolve all data states for each row
+    resolved_per_row = []
+    for row in data:
+        resolved = [_resolve_element_bindings(e, row) for e in elements]
+        resolved_per_row.append(resolved)
+
+    # Track line chart value histories per element
+    line_histories: Dict[int, List[float]] = {}
+    prev_row_idx = -1
+
+    for frame_idx in range(total_frames):
+        time_s = frame_idx / fps
+        row_idx = int(time_s / duration_per_row)
+        row_idx = min(row_idx, len(data) - 1)
+
+        local_t = (time_s - row_idx * duration_per_row) / duration_per_row
+
+        # Determine if we're in a transition zone
+        current_resolved = resolved_per_row[row_idx]
+        trans_threshold = 1.0 - transition_duration / duration_per_row
+        if (row_idx + 1 < len(data) and local_t > trans_threshold):
+            next_resolved = resolved_per_row[row_idx + 1]
+            trans_t = (local_t - trans_threshold) / (
+                transition_duration / duration_per_row
+            )
+            trans_t = max(0.0, min(1.0, trans_t))
+            trans_t = trans_t * trans_t * (3.0 - 2.0 * trans_t)  # smoothstep
+            interp = [
+                _interpolate_elements(c, n, trans_t)
+                for c, n in zip(current_resolved, next_resolved)
+            ]
+        else:
+            interp = current_resolved
+
+        # Update line histories on row transitions
+        if row_idx != prev_row_idx:
+            prev_row_idx = row_idx
+            for ei, elem in enumerate(elements):
+                if elem.get("type") == "line_chart":
+                    cur_val = (
+                        interp[ei].get("value", 0) if ei < len(interp) else 0
+                    )
+                    if isinstance(cur_val, (int, float)):
+                        history = line_histories.get(ei, [])
+                        history.append(float(cur_val))
+                        line_histories[ei] = history
+
+        frame_img = _render_data_frame(
+            elements, interp, resolution,
+            bg_color=bg_color, font_size=font_size,
+            line_histories=line_histories,
         )
-        .video_filter(drawtext)
-        .video_codec("libx264", crf=18, preset="medium")
-        .option("-t", str(duration))
-        .faststart()
-        .output(output_path)
-        .build()
-    )
-    run_ffmpeg(cmd)
+        frame_path = os.path.join(frame_dir, f"frame_{frame_idx:06d}.png")
+        frame_img.save(frame_path, "PNG")
+
+        if on_progress and total_frames > 1:
+            pct = int((frame_idx + 1) / total_frames * 90)
+            on_progress(pct)
+
+    # Encode to video
+    if not output_path:
+        output_path = os.path.join(effective_dir, "data_animation.mp4")
 
     if on_progress:
-        on_progress(100, "Counter rendered.")
+        on_progress(92)
 
-    return DataAnimationResult(
+    _encode_frames(frame_dir, output_path, fps, resolution)
+
+    if on_progress:
+        on_progress(100)
+
+    return DataAnimResult(
         output_path=output_path,
-        chart_type="counter",
-        data_points=2,
-        duration=duration,
-        width=width,
-        height=height,
+        data_rows_rendered=len(data),
+        elements_count=len(elements),
+        duration=total_duration,
+        fps=fps,
     )
