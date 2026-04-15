@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <a class="skip-link" href="#mainContent">Skip to Main Content</a>
     <div class="app">
 
         <!-- ===== SIDEBAR ===== -->
@@ -15,40 +16,40 @@
             <div class="sidebar-brand">
                 <img class="logo-mark" width="18" height="18" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAA9ElEQVR4nK3UwUrDQBDG8f/M+gKBxkspePAkvXj14tmjIHr1IBT0Ij6G3kSkHnqQPoNeamNBT+JjTIekNNmkmsP+2GX5MbM7LPJcqLKVKFAiEPG5vt0T8vM1iWIoE9V/j6UpqNw4O2hIqD7L/wGhTqkIWRhKvEqRB56qiMgePkIhsn+YriVNDSSJUF0r2ppNswk0KZi5e5PvXcfpfYd/rJ42ex8RJXCJcqd+22ren5cAxdtm1N6/6oOoiOLVY0Qixvsg/5dcjvEupF3PbRp5JJHOdSMXJ7IasiWZxctOBUrngCzuJPGij/+TIYhclkfSBuCMOAFmNwJ0F6s0yQAAAABJRU5ErkJggg==" alt="OpenCut">
                 <div class="brand-copy">
-                    <span class="logo-text">OpenCut</span>
-                    <span class="brand-meta">Studio Panel</span>
+                    <span class="logo-text" translate="no">OpenCut</span>
+                    <span class="brand-meta">Editorial Suite</span>
                 </div>
             </div>
             <nav class="nav-tabs" id="navTabs" aria-label="Main navigation" role="tablist">
-                <button type="button" class="nav-tab active" data-nav="cut" title="Cut & Clean" role="tab" aria-selected="true">
+                <button type="button" class="nav-tab active" id="navTabCut" data-nav="cut" title="Cut & Clean" role="tab" aria-label="Cut & Clean" aria-controls="panel-cut" aria-selected="true">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5a2.5 2.5 0 00-1.47 4.53L6.47 8 2.53 9.97A2.5 2.5 0 104 14.5a2.5 2.5 0 001.47-4.53L7.44 8.99 13.5 12V4L7.44 7.01 5.47 5.97A2.5 2.5 0 004 1.5zM2.5 4a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm0 8a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"/></svg>
                 <span data-i18n="tabs.cut">Cut</span>
                 </button>
-                <button type="button" class="nav-tab" data-nav="captions" title="Captions & Subtitles" role="tab" aria-selected="false">
+                <button type="button" class="nav-tab" id="navTabCaptions" data-nav="captions" title="Captions & Subtitles" role="tab" aria-label="Captions & Subtitles" aria-controls="panel-captions" aria-selected="false">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 2a2 2 0 012-2h12a2 2 0 012 2v8a2 2 0 01-2 2H6.5L2 14.5V12H2a2 2 0 01-2-2V2zm4 3a.5.5 0 000 1h4a.5.5 0 000-1H4zm0 2.5a.5.5 0 000 1h8a.5.5 0 000-1H4z"/></svg>
                 <span data-i18n="tabs.captions">Captions</span>
                 </button>
-                <button type="button" class="nav-tab" data-nav="audio" title="Audio Suite" role="tab" aria-selected="false">
+                <button type="button" class="nav-tab" id="navTabAudio" data-nav="audio" title="Audio Suite" role="tab" aria-label="Audio Suite" aria-controls="panel-audio" aria-selected="false">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M6 1v14l-4-4H0V5h2l4-4zm7.07 1.93a.75.75 0 00-1.06 1.06 5.5 5.5 0 010 7.78.75.75 0 001.06 1.06 7 7 0 000-9.9zm-2.12 2.12a.75.75 0 00-1.06 1.06 2.5 2.5 0 010 3.54.75.75 0 001.06 1.06 4 4 0 000-5.66z"/></svg>
                 <span data-i18n="tabs.audio">Audio</span>
                 </button>
-                <button type="button" class="nav-tab" data-nav="video" title="Video Tools" role="tab" aria-selected="false">
+                <button type="button" class="nav-tab" id="navTabVideo" data-nav="video" title="Video Tools" role="tab" aria-label="Video Tools" aria-controls="panel-video" aria-selected="false">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 3a2 2 0 012-2h8a2 2 0 012 2v4l4-2v6l-4-2v4a2 2 0 01-2 2H2a2 2 0 01-2-2V3z"/></svg>
                 <span data-i18n="tabs.video">Video</span>
                 </button>
-                <button type="button" class="nav-tab" data-nav="export" title="Export & Publish" role="tab" aria-selected="false">
+                <button type="button" class="nav-tab" id="navTabExport" data-nav="export" title="Export & Publish" role="tab" aria-label="Export & Publish" aria-controls="panel-export" aria-selected="false">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8.5 1a.5.5 0 00-1 0v5.793L5.854 5.146a.5.5 0 10-.708.708l2.5 2.5a.5.5 0 00.708 0l2.5-2.5a.5.5 0 00-.708-.708L8.5 6.793V1zM2 10a2 2 0 00-2 2v1a2 2 0 002 2h12a2 2 0 002-2v-1a2 2 0 00-2-2h-3.5a.5.5 0 010-1H14a3 3 0 013 3v1a3 3 0 01-3 3H2a3 3 0 01-3-3v-1a3 3 0 013-3h3.5a.5.5 0 010 1H2z"/></svg>
                 <span data-i18n="tabs.export">Export</span>
                 </button>
-                <button type="button" class="nav-tab" data-nav="timeline" title="Timeline Tools" role="tab" aria-selected="false">
+                <button type="button" class="nav-tab" id="navTabTimeline" data-nav="timeline" title="Timeline Tools" role="tab" aria-label="Timeline Tools" aria-controls="panel-timeline" aria-selected="false">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M0 3.5A.5.5 0 01.5 3h15a.5.5 0 010 1H.5A.5.5 0 010 3.5zm0 4A.5.5 0 01.5 7h15a.5.5 0 010 1H.5A.5.5 0 010 7.5zm0 4A.5.5 0 01.5 11h15a.5.5 0 010 1H.5a.5.5 0 01-.5-.5z"/></svg>
                 <span data-i18n="tabs.timeline">Timeline</span>
                 </button>
-                <button type="button" class="nav-tab" data-nav="nlp" title="Search &amp; AI Commands" role="tab" aria-selected="false">
+                <button type="button" class="nav-tab" id="navTabSearch" data-nav="nlp" title="Search &amp; AI Commands" role="tab" aria-label="Search and AI Commands" aria-controls="panel-nlp" aria-selected="false">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M11.742 10.344a6.5 6.5 0 10-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 001.415-1.414l-3.85-3.85a1.007 1.007 0 00-.115-.099zM12 6.5a5.5 5.5 0 11-11 0 5.5 5.5 0 0111 0z"/></svg>
                 <span data-i18n="tabs.search">Search</span>
                 </button>
-                <button type="button" class="nav-tab" data-nav="settings" title="Settings" role="tab" aria-selected="false">
+                <button type="button" class="nav-tab" id="navTabSettings" data-nav="settings" title="Settings" role="tab" aria-label="Settings" aria-controls="panel-settings" aria-selected="false">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 001.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.084.303a.96.96 0 001.187 1.187l.303-.084c.961-.275 1.65.918.931 1.613l-.211.205a.96.96 0 00.434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 00-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.303-.084a.96.96 0 00-1.187 1.187l.084.303c.275.961-.918 1.65-1.613.931l-.205-.211a.96.96 0 00-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 00-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.084-.303a.96.96 0 00-1.187-1.187l-.303.084c-.961.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 00-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071A.96.96 0 001.39 4.22l-.211-.205c-.719-.695-.03-1.888.931-1.613l.303.084a.96.96 0 001.187-1.187l-.084-.303C3.241.035 4.434-.654 5.13.065l.205.211A.96.96 0 006.997.71l.071-.286zM8 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
                 <span data-i18n="tabs.settings">Settings</span>
                 </button>
@@ -63,12 +64,12 @@
             <div class="content-header">
                 <div class="content-header-copy">
                     <div class="content-kicker-row">
-                        <span class="content-kicker">OpenCut Studio</span>
+                        <span class="content-kicker" translate="no">OpenCut Studio</span>
                         <span class="workspace-chip" id="workspaceClipStatus" aria-live="polite" title="Choose a clip or drop media to start">No media selected</span>
                     </div>
                     <div class="content-title-stack">
                         <h1 class="content-title" id="contentTitle">Cut & Clean</h1>
-                        <p class="content-subtitle" id="contentSubtitle">Precision cleanup, editing, and finishing tools for the active workspace.</p>
+                        <p class="content-subtitle" id="contentSubtitle">Focused cleanup, captions, finishing, and delivery tools organized around the active shot.</p>
                     </div>
                 </div>
                 <div class="content-actions">
@@ -133,7 +134,7 @@
             </div>
         </section>
 
-        <main class="main">
+        <main class="main" id="mainContent" tabindex="-1">
             <div class="server-status-banner hidden" id="serverStatusBanner">
                 <span id="serverStatusMsg">Server disconnected. Reconnecting…</span>
             </div>
@@ -141,8 +142,8 @@
             <section class="workspace-stage" id="workspaceStage" aria-labelledby="workspaceStageTitle">
                 <div class="workspace-stage-primary">
                     <div class="workspace-stage-kicker">Studio Flow</div>
-                    <h2 class="workspace-stage-title" id="workspaceStageTitle">Bring in the shot you want to fix, caption, or deliver.</h2>
-                    <p class="workspace-stage-copy">Choose media from the open Premiere project, pull the current timeline selection, or browse a local file. OpenCut keeps the full workflow inside the panel and routes finished results back into the edit.</p>
+                    <h2 class="workspace-stage-title" id="workspaceStageTitle">Bring the shot in once. Finish it without breaking the edit.</h2>
+                    <p class="workspace-stage-copy">Choose project media, pull the active timeline selection, or browse a local file. OpenCut keeps cleanup, captions, audio, and delivery inside the panel, then routes finished work straight back into Premiere.</p>
                     <div class="workspace-stage-session" role="list" aria-label="Current workspace session">
                         <article class="workspace-stage-session-item" role="listitem">
                             <span class="workspace-stage-session-label">Source</span>
@@ -190,24 +191,24 @@
                             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6.25A2.25 2.25 0 0 1 5.25 4h3.32l1.43 1.5h4.75A2.25 2.25 0 0 1 17 7.75v6A2.25 2.25 0 0 1 14.75 16H5.25A2.25 2.25 0 0 1 3 13.75z"/></svg>
                         </span>
                         <span class="workspace-stage-card-label">Intake</span>
-                        <h3>Select the Source</h3>
-                        <p>Start from project media, a timeline selection, or a direct file drop without leaving Premiere.</p>
+                        <h3>Choose the Source</h3>
+                        <p>Start from project media, the active timeline, or a direct file drop without leaving Premiere.</p>
                     </article>
                     <article class="workspace-stage-card" role="listitem">
                         <span class="workspace-stage-card-icon" aria-hidden="true">
                             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6.5h12"/><path d="M4 10h12"/><path d="M4 13.5h8"/><path d="M14 13.5 16 15.5 18 11.5"/></svg>
                         </span>
                         <span class="workspace-stage-card-label">Process</span>
-                        <h3>Move Between Toolsets</h3>
-                        <p>Jump across Cut, Captions, Audio, Video, Export, Timeline, Search, and Settings from one consistent workspace.</p>
+                        <h3>Run the Right Toolset</h3>
+                        <p>Move through cut, captions, audio, video, export, and search from one consistent control surface.</p>
                     </article>
                     <article class="workspace-stage-card" role="listitem">
                         <span class="workspace-stage-card-icon" aria-hidden="true">
                             <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="m6 10 3 3 5-6"/><path d="M4.5 4.5h11v11h-11z"/></svg>
                         </span>
                         <span class="workspace-stage-card-label">Return</span>
-                        <h3>Finish In Context</h3>
-                        <p>Run the task, review the output, and auto-import the result back into the active Premiere project.</p>
+                        <h3>Return to the Edit</h3>
+                        <p>Review the result, confirm it, and send it back into the active Premiere project with less friction.</p>
                     </article>
                 </div>
             </section>
@@ -275,8 +276,8 @@
                     <aside class="media-sidecar" aria-live="polite">
                         <div class="media-sidecar-empty">
                             <div class="media-sidecar-kicker">Current Source</div>
-                            <h3 class="media-sidecar-title">No media in the workspace yet.</h3>
-                            <p class="media-sidecar-copy">Choose a project clip, pull the active timeline selection, or browse a local file to unlock the full toolchain.</p>
+                            <h3 class="media-sidecar-title">No media loaded yet.</h3>
+                            <p class="media-sidecar-copy">Choose a project clip, pull the active timeline selection, or browse a local file to unlock the full OpenCut workflow.</p>
                             <div class="media-sidecar-pills" aria-hidden="true">
                                 <span class="media-sidecar-pill">Project media</span>
                                 <span class="media-sidecar-pill">Timeline</span>
