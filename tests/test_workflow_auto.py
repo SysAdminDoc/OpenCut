@@ -565,6 +565,13 @@ class TestDurationSimilarity:
 class TestWatchRoutes:
     """Tests for /watch/* endpoints."""
 
+    def test_watch_start_rejects_non_object_json(self, client, csrf_token):
+        resp = client.post("/watch/start", headers=csrf_headers(csrf_token),
+                           data=json.dumps(["bad-body"]))
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert data["code"] == "INVALID_INPUT"
+
     def test_watch_start_missing_folder(self, client, csrf_token):
         resp = client.post("/watch/start", headers=csrf_headers(csrf_token),
                            data=json.dumps({"folder_path": ""}))
@@ -610,9 +617,28 @@ class TestWatchRoutes:
         data = resp.get_json()
         assert data["success"] is True
 
+    def test_watch_config_save_ignores_invalid_items(self, client, csrf_token):
+        with patch("opencut.core.watch_folder.save_watch_configs") as save_configs:
+            resp = client.post("/watch/config", headers=csrf_headers(csrf_token),
+                               data=json.dumps({"configs": [
+                                   {"folder_path": "/tmp/test", "workflow_name": "Test"},
+                                   ["bad-item"],
+                                   {"folder_path": "/tmp/skip", "file_extensions": "not-a-list"},
+                               ]}))
+        assert resp.status_code == 200
+        saved_configs = save_configs.call_args[0][0]
+        assert len(saved_configs) == 1
+
 
 class TestRenderQueueRoutes:
     """Tests for /render-queue/* endpoints."""
+
+    def test_render_queue_add_rejects_non_object_json(self, client, csrf_token):
+        resp = client.post("/render-queue/add", headers=csrf_headers(csrf_token),
+                           data=json.dumps(["bad-body"]))
+        assert resp.status_code == 400
+        data = resp.get_json()
+        assert data["code"] == "INVALID_INPUT"
 
     def test_render_queue_add_missing_fields(self, client, csrf_token):
         resp = client.post("/render-queue/add", headers=csrf_headers(csrf_token),
@@ -645,6 +671,18 @@ class TestRenderQueueRoutes:
             resp = client.delete("/render-queue/remove", headers=csrf_headers(csrf_token),
                                  data=json.dumps({"item_id": "nonexistent"}))
         assert resp.status_code == 404
+
+    def test_render_queue_add_invalid_params_type(self, client, csrf_token, tmp_path):
+        test_file = tmp_path / "test.mp4"
+        test_file.write_bytes(b"fake mp4")
+
+        resp = client.post("/render-queue/add", headers=csrf_headers(csrf_token),
+                           data=json.dumps({
+                               "input_path": str(test_file),
+                               "preset_name": "youtube_1080p",
+                               "params": ["bad"],
+                           }))
+        assert resp.status_code == 400
 
     def test_render_queue_list(self, client):
         resp = client.get("/render-queue/list")
@@ -708,6 +746,18 @@ class TestConditionalWorkflowRoutes:
         data = resp.get_json()
         assert "job_id" in data
 
+    def test_conditional_workflow_non_list_steps_still_returns_job(self, client, csrf_token, tmp_path):
+        test_file = tmp_path / "test.mp4"
+        test_file.write_bytes(b"fake mp4")
+
+        resp = client.post("/workflow/conditional", headers=csrf_headers(csrf_token),
+                           data=json.dumps({
+                               "filepath": str(test_file),
+                               "steps": "bad-steps",
+                           }))
+        assert resp.status_code == 200
+        assert "job_id" in resp.get_json()
+
 
 class TestTakeRoutes:
     """Tests for /takes/* endpoints."""
@@ -752,6 +802,18 @@ class TestTakeRoutes:
         assert resp.status_code == 200
         data = resp.get_json()
         assert "job_id" in data
+
+    def test_takes_find_repeats_invalid_threshold_does_not_500(self, client, csrf_token, tmp_path):
+        f1 = tmp_path / "scene_take1.mp4"
+        f1.write_bytes(b"fake")
+
+        resp = client.post("/takes/find-repeats", headers=csrf_headers(csrf_token),
+                           data=json.dumps({
+                               "file_paths": [str(f1)],
+                               "similarity_threshold": "not-a-number",
+                           }))
+        assert resp.status_code == 200
+        assert "job_id" in resp.get_json()
 
 
 # ========================================================================

@@ -16,6 +16,7 @@ def isolate_db(tmp_path):
         import opencut.job_store as store
         store._INITIALIZED = False
         store._LOCAL = type(store._LOCAL)()  # fresh thread-local
+        store._ALL_CONNECTIONS = {}
         yield store
 
 
@@ -118,6 +119,7 @@ class TestJobStore:
             "type": "test",
             "status": "complete",
             "created": old_time,
+            "completed_at": old_time,
         })
         isolate_db.save_job({
             "id": "new1",
@@ -129,6 +131,50 @@ class TestJobStore:
         assert count == 1
         assert isolate_db.get_job("old1") is None
         assert isolate_db.get_job("new1") is not None
+
+    def test_cleanup_old_jobs_uses_completed_at_when_present(self, isolate_db):
+        old_created = time.time() - (8 * 24 * 3600)
+        isolate_db.save_job({
+            "id": "recently-finished",
+            "type": "test",
+            "status": "complete",
+            "created": old_created,
+            "completed_at": time.time(),
+        })
+
+        count = isolate_db.cleanup_old_jobs()
+
+        assert count == 0
+        assert isolate_db.get_job("recently-finished") is not None
+
+    def test_update_existing_job_persists_endpoint_and_payload(self, isolate_db):
+        created = time.time()
+        isolate_db.save_job({
+            "id": "prov1",
+            "type": "test",
+            "status": "running",
+            "created": created,
+            "_endpoint": "/silence",
+            "_payload": {"threshold": -28, "mode": "fast"},
+        })
+        isolate_db.save_job({
+            "id": "prov1",
+            "type": "test",
+            "status": "complete",
+            "progress": 100,
+            "message": "Done",
+            "result": {"ok": True},
+            "created": created,
+            "started_at": created + 1,
+        })
+
+        job = isolate_db.get_job("prov1")
+
+        assert job["status"] == "complete"
+        assert job["endpoint"] == "/silence"
+        assert job["payload"] == {"threshold": -28, "mode": "fast"}
+        assert job["started_at"] == pytest.approx(created + 1)
+        assert job["completed_at"] is not None
 
     def test_get_job_stats(self, isolate_db):
         for status in ["complete", "complete", "error", "cancelled"]:

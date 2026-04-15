@@ -26,7 +26,9 @@ from opencut import __version__
 from opencut.errors import safe_error
 from opencut.helpers import _try_import, _try_import_from, get_ffmpeg_path
 from opencut.jobs import (
+    _cancel_running_jobs,
     _is_cancelled,
+    _kill_job_process,
     _list_jobs_copy,
     _register_job_process,
     _unregister_job_process,
@@ -37,6 +39,7 @@ from opencut.jobs import (
 )
 from opencut.security import (
     VALID_WHISPER_MODELS,
+    get_json_dict,
     get_csrf_token,
     rate_limit,
     rate_limit_release,
@@ -295,11 +298,14 @@ def shutdown_server():
         return jsonify({"error": "Shutdown only allowed from localhost"}), 403
     logger.info("Shutdown requested via /shutdown endpoint")
 
-    # Cancel all running jobs first
-    with job_lock:
-        for jid, job in jobs.items():
-            if job.get("status") == "running":
-                job["status"] = "cancelled"
+    # Cancel all running jobs first and persist synchronously because the
+    # process exits hard a moment later.
+    cancelled = _cancel_running_jobs(
+        message="Cancelled due to server shutdown",
+        persist_sync=True,
+    )
+    for jid in cancelled:
+        _kill_job_process(jid)
 
     # Remove PID file
     try:
@@ -328,7 +334,14 @@ def media_info():
     """Get media file metadata."""
     from opencut.utils.media import probe as _probe_media
 
-    data = request.get_json(force=True)
+    try:
+        data = get_json_dict()
+    except ValueError as e:
+        return jsonify({
+            "error": str(e),
+            "code": "INVALID_INPUT",
+            "suggestion": "Send a top-level JSON object in the request body.",
+        }), 400
     filepath = data.get("filepath", "").strip()
 
     if not filepath:
