@@ -4,17 +4,32 @@ OpenCut Plugin Routes
 Plugin discovery, listing, and management endpoints.
 """
 
+import json
 import logging
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
-from opencut.security import require_csrf, validate_path
+from opencut.security import get_json_dict, require_csrf, validate_path
 
 logger = logging.getLogger("opencut")
 
 plugins_bp = Blueprint("plugins", __name__)
+
+
+def _json_object_or_400():
+    try:
+        return get_json_dict(silent=True), None
+    except ValueError as e:
+        return None, (
+            jsonify({
+                "error": str(e),
+                "code": "INVALID_INPUT",
+                "suggestion": "Send a top-level JSON object in the request body.",
+            }),
+            400,
+        )
 
 try:
     from ..core.plugins import (
@@ -78,8 +93,12 @@ def install_plugin():
     For now, supports copying a plugin directory into the plugins folder.
     Future: support .zip archives and GitHub URLs.
     """
-    data = request.get_json(force=True, silent=True) or {}
+    data, error = _json_object_or_400()
+    if error:
+        return error
     source = data.get("source", "")
+    if source and not isinstance(source, str):
+        return jsonify({"error": "source path must be a string"}), 400
 
     if not source:
         return jsonify({"error": "source path is required"}), 400
@@ -97,7 +116,6 @@ def install_plugin():
     if not os.path.isfile(manifest_path):
         return jsonify({"error": "source directory must contain plugin.json"}), 400
 
-    import json
     import shutil
 
     try:
@@ -109,12 +127,16 @@ def install_plugin():
     name = manifest.get("name", "")
     if not name:
         return jsonify({"error": "Plugin manifest missing 'name' field"}), 400
+    if len(name) > 100:
+        return jsonify({"error": "Plugin name is too long"}), 400
 
     # Sanitize
     if not all(c.isalnum() or c in "-_" for c in name):
         return jsonify({"error": f"Invalid plugin name: {name}"}), 400
 
     dest = os.path.join(PLUGINS_DIR, name)
+    if os.path.realpath(source) == os.path.realpath(dest):
+        return jsonify({"error": "Plugin is already installed at that location"}), 409
     if os.path.exists(dest):
         return jsonify({"error": f"Plugin '{name}' already installed. Remove it first."}), 409
 
@@ -138,8 +160,12 @@ def install_plugin():
 @require_csrf
 def uninstall_plugin():
     """Uninstall (delete) a plugin by name."""
-    data = request.get_json(force=True, silent=True) or {}
+    data, error = _json_object_or_400()
+    if error:
+        return error
     name = data.get("name", "")
+    if name and not isinstance(name, str):
+        return jsonify({"error": "Plugin name must be a string"}), 400
 
     if not name:
         return jsonify({"error": "Plugin name is required"}), 400

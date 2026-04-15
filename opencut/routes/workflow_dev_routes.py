@@ -14,11 +14,36 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf
+from opencut.security import get_json_dict, require_csrf, safe_bool, safe_float
 
 logger = logging.getLogger("opencut")
 
 workflow_dev_bp = Blueprint("workflow_dev", __name__)
+
+
+def _json_object_or_400():
+    try:
+        return get_json_dict(silent=True), None
+    except ValueError as exc:
+        return None, (
+            jsonify({
+                "error": str(exc),
+                "code": "INVALID_INPUT",
+                "suggestion": "Send a top-level JSON object in the request body.",
+            }),
+            400,
+        )
+
+
+def _clean_string(value, field_name, *, allow_empty=True, default=""):
+    if value is None:
+        value = default
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} must be a string")
+    cleaned = value.strip()
+    if not allow_empty and not cleaned:
+        raise ValueError(f"{field_name} is required")
+    return cleaned
 
 
 # ===========================================================================
@@ -42,8 +67,14 @@ def undo_push():
     """
     from opencut.core.undo_stack import push_operation
 
-    data = request.get_json(force=True) or {}
-    session_id = data.get("session_id", "default")
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    try:
+        session_id = _clean_string(data.get("session_id", "default"), "session_id")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     op_data = {
         "operation": data.get("operation", ""),
@@ -52,8 +83,16 @@ def undo_push():
         "parameters": data.get("parameters", {}),
     }
 
-    if not op_data["operation"]:
-        return jsonify({"error": "Operation name is required"}), 400
+    try:
+        op_data["operation"] = _clean_string(op_data["operation"], "operation", allow_empty=False)
+        op_data["input_file"] = _clean_string(op_data["input_file"], "input_file")
+        op_data["output_file"] = _clean_string(op_data["output_file"], "output_file")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    if op_data["parameters"] is None:
+        op_data["parameters"] = {}
+    if not isinstance(op_data["parameters"], dict):
+        return jsonify({"error": "parameters must be an object"}), 400
 
     try:
         record = push_operation(op_data, session_id=session_id)
@@ -88,8 +127,14 @@ def undo_last():
     """
     from opencut.core.undo_stack import undo_last as _undo_last
 
-    data = request.get_json(force=True) or {}
-    session_id = data.get("session_id", "default")
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    try:
+        session_id = _clean_string(data.get("session_id", "default"), "session_id")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     result = _undo_last(session_id=session_id)
     if result is None:
@@ -108,8 +153,14 @@ def undo_clear():
     """
     from opencut.core.undo_stack import clear_history
 
-    data = request.get_json(force=True) or {}
-    session_id = data.get("session_id", "default")
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    try:
+        session_id = _clean_string(data.get("session_id", "default"), "session_id")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     count = clear_history(session_id=session_id)
     return jsonify({"success": True, "cleared": count})
@@ -135,16 +186,22 @@ def edl_export():
     """
     from opencut.core.edl_aaf import export_edl
 
-    data = request.get_json(force=True) or {}
-    cuts = data.get("cuts", [])
-    output_path = data.get("output_path", "")
-    title = data.get("title", "OpenCut Export")
-    fps = float(data.get("fps", 30.0))
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
+    cuts = data.get("cuts", [])
+    try:
+        output_path = _clean_string(data.get("output_path", ""), "output_path", allow_empty=False)
+        title = _clean_string(data.get("title", "OpenCut Export"), "title", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    fps = safe_float(data.get("fps", 30.0), default=30.0, min_val=0.001, max_val=240.0)
+
+    if not isinstance(cuts, list):
+        return jsonify({"error": "cuts must be a list"}), 400
     if not cuts:
         return jsonify({"error": "No cuts provided"}), 400
-    if not output_path:
-        return jsonify({"error": "No output_path provided"}), 400
 
     try:
         result = export_edl(cuts, output_path, title=title, fps=fps)
@@ -171,12 +228,15 @@ def edl_import():
     """
     from opencut.core.edl_aaf import import_edl
 
-    data = request.get_json(force=True) or {}
-    edl_path = data.get("edl_path", "").strip()
-    fps = float(data.get("fps", 30.0))
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
-    if not edl_path:
-        return jsonify({"error": "No edl_path provided"}), 400
+    try:
+        edl_path = _clean_string(data.get("edl_path", ""), "edl_path", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    fps = safe_float(data.get("fps", 30.0), default=30.0, min_val=0.001, max_val=240.0)
 
     try:
         result = import_edl(edl_path, fps=fps)
@@ -208,16 +268,22 @@ def aaf_export():
     """
     from opencut.core.edl_aaf import export_aaf_stub
 
-    data = request.get_json(force=True) or {}
-    cuts = data.get("cuts", [])
-    output_path = data.get("output_path", "")
-    title = data.get("title", "OpenCut Export")
-    fps = float(data.get("fps", 30.0))
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
+    cuts = data.get("cuts", [])
+    try:
+        output_path = _clean_string(data.get("output_path", ""), "output_path", allow_empty=False)
+        title = _clean_string(data.get("title", "OpenCut Export"), "title", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    fps = safe_float(data.get("fps", 30.0), default=30.0, min_val=0.001, max_val=240.0)
+
+    if not isinstance(cuts, list):
+        return jsonify({"error": "cuts must be a list"}), 400
     if not cuts:
         return jsonify({"error": "No cuts provided"}), 400
-    if not output_path:
-        return jsonify({"error": "No output_path provided"}), 400
 
     try:
         result = export_aaf_stub(cuts, output_path, title=title, fps=fps)
@@ -252,10 +318,12 @@ def project_archive(job_id, filepath, data):
     from opencut.core.project_archive import create_archive
 
     project_data = data.get("project_data", {})
-    output_path = data.get("output_path", "")
+    if project_data is None:
+        project_data = {}
+    if not isinstance(project_data, dict):
+        raise ValueError("project_data must be an object")
 
-    if not output_path:
-        raise ValueError("No output_path provided")
+    output_path = _clean_string(data.get("output_path", ""), "output_path", allow_empty=False)
 
     def on_progress(pct, msg):
         _update_job(job_id, progress=pct, message=msg)
@@ -283,13 +351,8 @@ def project_restore(job_id, filepath, data):
     """
     from opencut.core.project_archive import restore_archive
 
-    archive_path = data.get("archive_path", "").strip()
-    dest_path = data.get("dest_path", "").strip()
-
-    if not archive_path:
-        raise ValueError("No archive_path provided")
-    if not dest_path:
-        raise ValueError("No dest_path provided")
+    archive_path = _clean_string(data.get("archive_path", ""), "archive_path", allow_empty=False)
+    dest_path = _clean_string(data.get("dest_path", ""), "dest_path", allow_empty=False)
 
     def on_progress(pct, msg):
         _update_job(job_id, progress=pct, message=msg)
@@ -313,11 +376,14 @@ def project_archive_contents():
     """
     from opencut.core.project_archive import list_archive_contents
 
-    data = request.get_json(force=True) or {}
-    archive_path = data.get("archive_path", "").strip()
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
-    if not archive_path:
-        return jsonify({"error": "No archive_path provided"}), 400
+    try:
+        archive_path = _clean_string(data.get("archive_path", ""), "archive_path", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     try:
         result = list_archive_contents(archive_path)
@@ -346,12 +412,20 @@ def scripting_execute():
     """
     from opencut.core.scripting_console import execute_script
 
-    data = request.get_json(force=True) or {}
-    code = data.get("code", "")
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    try:
+        code = _clean_string(data.get("code", ""), "code", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     context = data.get("context", {})
 
-    if not code:
-        return jsonify({"error": "No code provided"}), 400
+    if context is None:
+        context = {}
+    if not isinstance(context, dict):
+        return jsonify({"error": "context must be an object"}), 400
 
     result = execute_script(code, context=context)
     return jsonify(result)
@@ -381,8 +455,14 @@ def macro_start():
     """
     from opencut.core.macro_recorder import start_recording
 
-    data = request.get_json(force=True) or {}
-    session_id = data.get("session_id", "default")
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    try:
+        session_id = _clean_string(data.get("session_id", "default"), "session_id")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     result = start_recording(session_id=session_id)
     return jsonify(result)
@@ -403,10 +483,16 @@ def macro_stop():
     """
     from opencut.core.macro_recorder import stop_recording
 
-    data = request.get_json(force=True) or {}
-    session_id = data.get("session_id", "default")
-    name = data.get("name", "Untitled Macro")
-    description = data.get("description", "")
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    try:
+        session_id = _clean_string(data.get("session_id", "default"), "session_id")
+        name = _clean_string(data.get("name", "Untitled Macro"), "name", allow_empty=False)
+        description = _clean_string(data.get("description", ""), "description")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     try:
         macro = stop_recording(
@@ -436,14 +522,18 @@ def macro_play():
     """
     from opencut.core.macro_recorder import Macro, play_macro
 
-    data = request.get_json(force=True) or {}
-    macro_data = data.get("macro", {})
-    target_file = data.get("target_file", "")
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
-    if not macro_data:
-        return jsonify({"error": "No macro data provided"}), 400
-    if not target_file:
-        return jsonify({"error": "No target_file provided"}), 400
+    macro_data = data.get("macro", {})
+    try:
+        target_file = _clean_string(data.get("target_file", ""), "target_file", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    if not isinstance(macro_data, dict) or not macro_data:
+        return jsonify({"error": "macro must be an object"}), 400
 
     macro = Macro.from_dict(macro_data)
     results = play_macro(macro, target_file)
@@ -464,14 +554,18 @@ def macro_save():
     """
     from opencut.core.macro_recorder import Macro, save_macro
 
-    data = request.get_json(force=True) or {}
-    macro_data = data.get("macro", {})
-    path = data.get("path", "").strip()
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
-    if not macro_data:
-        return jsonify({"error": "No macro data provided"}), 400
-    if not path:
-        return jsonify({"error": "No path provided"}), 400
+    macro_data = data.get("macro", {})
+    try:
+        path = _clean_string(data.get("path", ""), "path", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    if not isinstance(macro_data, dict) or not macro_data:
+        return jsonify({"error": "macro must be an object"}), 400
 
     macro = Macro.from_dict(macro_data)
 
@@ -493,11 +587,14 @@ def macro_load():
     """
     from opencut.core.macro_recorder import load_macro
 
-    data = request.get_json(force=True) or {}
-    path = data.get("path", "").strip()
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
-    if not path:
-        return jsonify({"error": "No path provided"}), 400
+    try:
+        path = _clean_string(data.get("path", ""), "path", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     try:
         macro = load_macro(path)
@@ -531,13 +628,21 @@ def snapshots_create():
     """
     from opencut.core.edit_snapshots import create_snapshot
 
-    data = request.get_json(force=True) or {}
-    name = data.get("name", "")
-    project_id = data.get("project_id", "default")
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    try:
+        name = _clean_string(data.get("name", ""), "name", allow_empty=False)
+        project_id = _clean_string(data.get("project_id", "default"), "project_id")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
     project_state = data.get("project_state", {})
 
-    if not name:
-        return jsonify({"error": "Snapshot name is required"}), 400
+    if project_state is None:
+        project_state = {}
+    if not isinstance(project_state, dict):
+        return jsonify({"error": "project_state must be an object"}), 400
 
     try:
         result = create_snapshot(name, project_state, project_id=project_id)
@@ -560,12 +665,15 @@ def snapshots_restore():
     """
     from opencut.core.edit_snapshots import restore_snapshot
 
-    data = request.get_json(force=True) or {}
-    name = data.get("name", "")
-    project_id = data.get("project_id", "default")
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
-    if not name:
-        return jsonify({"error": "Snapshot name is required"}), 400
+    try:
+        name = _clean_string(data.get("name", ""), "name", allow_empty=False)
+        project_id = _clean_string(data.get("project_id", "default"), "project_id")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     try:
         result = restore_snapshot(name, project_id=project_id)
@@ -603,13 +711,16 @@ def snapshots_compare():
     """
     from opencut.core.edit_snapshots import compare_snapshots
 
-    data = request.get_json(force=True) or {}
-    name_a = data.get("name_a", "")
-    name_b = data.get("name_b", "")
-    project_id = data.get("project_id", "default")
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
-    if not name_a or not name_b:
-        return jsonify({"error": "Both name_a and name_b are required"}), 400
+    try:
+        name_a = _clean_string(data.get("name_a", ""), "name_a", allow_empty=False)
+        name_b = _clean_string(data.get("name_b", ""), "name_b", allow_empty=False)
+        project_id = _clean_string(data.get("project_id", "default"), "project_id")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     try:
         result = compare_snapshots(name_a, name_b, project_id=project_id)
@@ -640,11 +751,16 @@ def timeline_through_edits():
     """
     from opencut.core.through_edit import detect_through_edits, merge_through_edits
 
-    data = request.get_json(force=True) or {}
-    cut_list = data.get("cut_list", [])
-    tolerance = float(data.get("tolerance", 0.05))
-    auto_merge = data.get("auto_merge", False)
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
+    cut_list = data.get("cut_list", [])
+    tolerance = safe_float(data.get("tolerance", 0.05), default=0.05, min_val=0.0, max_val=10.0)
+    auto_merge = safe_bool(data.get("auto_merge", False), False)
+
+    if not isinstance(cut_list, list):
+        return jsonify({"error": "cut_list must be a list"}), 400
     if not cut_list:
         return jsonify({"error": "No cut_list provided"}), 400
 
@@ -695,10 +811,15 @@ def timeline_detect_gaps():
     """
     from opencut.core.ripple_edit import detect_gaps
 
-    data = request.get_json(force=True) or {}
-    timeline_items = data.get("timeline_items", [])
-    min_gap = float(data.get("min_gap", 0.001))
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
+    timeline_items = data.get("timeline_items", [])
+    min_gap = safe_float(data.get("min_gap", 0.001), default=0.001, min_val=0.0, max_val=3600.0)
+
+    if not isinstance(timeline_items, list):
+        return jsonify({"error": "timeline_items must be a list"}), 400
     if not timeline_items:
         return jsonify({"error": "No timeline_items provided"}), 400
 
@@ -739,11 +860,20 @@ def timeline_ripple_close():
     """
     from opencut.core.ripple_edit import ripple_close_gaps
 
-    data = request.get_json(force=True) or {}
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
     timeline_items = data.get("timeline_items", [])
     locked_tracks = data.get("locked_tracks", [])
-    min_gap = float(data.get("min_gap", 0.001))
+    min_gap = safe_float(data.get("min_gap", 0.001), default=0.001, min_val=0.0, max_val=3600.0)
 
+    if not isinstance(timeline_items, list):
+        return jsonify({"error": "timeline_items must be a list"}), 400
+    if locked_tracks is None:
+        locked_tracks = []
+    if not isinstance(locked_tracks, list):
+        return jsonify({"error": "locked_tracks must be a list"}), 400
     if not timeline_items:
         return jsonify({"error": "No timeline_items provided"}), 400
 

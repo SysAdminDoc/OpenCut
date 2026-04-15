@@ -10,6 +10,7 @@ import logging
 import os
 import tempfile
 import threading
+import time
 
 logger = logging.getLogger("opencut")
 
@@ -38,6 +39,25 @@ def _get_lock(filepath: str) -> threading.RLock:
         return _file_locks[key]
 
 
+def _quarantine_corrupt_file(filepath: str) -> None:
+    """Move unreadable JSON aside so future writes can recover cleanly."""
+    if not os.path.isfile(filepath):
+        return
+    directory = os.path.dirname(filepath) or "."
+    base = os.path.basename(filepath)
+    stamp = time.strftime("%Y%m%d-%H%M%S")
+    target = os.path.join(directory, f"{base}.corrupt-{stamp}")
+    counter = 1
+    while os.path.exists(target):
+        counter += 1
+        target = os.path.join(directory, f"{base}.corrupt-{stamp}-{counter}")
+    try:
+        os.replace(filepath, target)
+        logger.warning("Quarantined corrupt user-data file %s -> %s", filepath, target)
+    except OSError as e:
+        logger.warning("Could not quarantine corrupt file %s: %s", filepath, e)
+
+
 def read_user_file(filename: str, default=None):
     """
     Read a JSON file from the OpenCut user directory.
@@ -50,6 +70,9 @@ def read_user_file(filename: str, default=None):
             if os.path.isfile(filepath):
                 with open(filepath, "r", encoding="utf-8") as f:
                     return json.load(f)
+        except (json.JSONDecodeError, UnicodeDecodeError) as e:
+            logger.warning("Could not parse %s: %s", filename, e)
+            _quarantine_corrupt_file(filepath)
         except Exception as e:
             logger.warning("Could not read %s: %s", filename, e)
     return default
@@ -72,6 +95,8 @@ def write_user_file(filename: str, data):
             try:
                 with os.fdopen(fd, "w", encoding="utf-8") as f:
                     json.dump(data, f, indent=2)
+                    f.flush()
+                    os.fsync(f.fileno())
                 os.replace(tmp_path, filepath)
             except BaseException:
                 try:

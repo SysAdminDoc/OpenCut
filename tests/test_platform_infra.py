@@ -277,6 +277,104 @@ class TestPluginMarketplace(unittest.TestCase):
             self.assertEqual(len(result), 1)
             self.assertEqual(result[0].plugin_id, "p1")
 
+    def test_install_rejects_invalid_plugin_id(self):
+        from opencut.core.plugin_marketplace import install_plugin
+        with self.assertRaises(ValueError):
+            install_plugin("../evil")
+
+    @patch("opencut.core.plugin_marketplace.fetch_plugin_registry")
+    def test_install_flattens_single_root_archive(self, mock_fetch):
+        from opencut.core.plugin_marketplace import PluginInfo, install_plugin
+
+        archive_path = os.path.join(self.tmp, "plugin.zip")
+        with patch("opencut.core.plugin_marketplace.PLUGINS_DIR", self.tmp):
+            with tempfile.TemporaryDirectory(dir=self.tmp) as src_dir:
+                nested_dir = os.path.join(src_dir, "plugin-main")
+                os.makedirs(nested_dir, exist_ok=True)
+                with open(os.path.join(nested_dir, "plugin.json"), "w", encoding="utf-8") as fh:
+                    json.dump({
+                        "name": "my-plugin",
+                        "version": "1.0.0",
+                        "description": "Demo plugin",
+                    }, fh)
+                with open(os.path.join(nested_dir, "routes.py"), "w", encoding="utf-8") as fh:
+                    fh.write("# demo")
+
+                import zipfile
+
+                with zipfile.ZipFile(archive_path, "w") as zf:
+                    zf.write(os.path.join(nested_dir, "plugin.json"), "plugin-main/plugin.json")
+                    zf.write(os.path.join(nested_dir, "routes.py"), "plugin-main/routes.py")
+
+            mock_fetch.return_value = [PluginInfo(
+                plugin_id="my-plugin",
+                name="My Plugin",
+                version="1.0.0",
+                author="Dev",
+                description="Demo plugin",
+                repo_url="https://example.com/repo",
+                download_url="https://example.com/plugin.zip",
+            )]
+
+            def _fake_download(url, dest):
+                shutil.copyfile(archive_path, dest)
+                return dest, None
+
+            with patch("urllib.request.urlretrieve", side_effect=_fake_download):
+                result = install_plugin("my-plugin")
+
+            self.assertEqual(result.plugin_id, "my-plugin")
+            self.assertTrue(os.path.isfile(os.path.join(self.tmp, "my-plugin", "plugin.json")))
+            self.assertTrue(os.path.isfile(os.path.join(self.tmp, "my-plugin", "routes.py")))
+
+    @patch("opencut.core.plugin_marketplace.fetch_plugin_registry")
+    def test_install_rejects_zip_slip_archive(self, mock_fetch):
+        from opencut.core.plugin_marketplace import PluginInfo, install_plugin
+
+        archive_path = os.path.join(self.tmp, "unsafe.zip")
+        outside_path = os.path.join(self.tmp, "outside.txt")
+
+        import zipfile
+
+        with zipfile.ZipFile(archive_path, "w") as zf:
+            zf.writestr("plugin-main/plugin.json", json.dumps({
+                "name": "unsafe-plugin",
+                "version": "1.0.0",
+                "description": "Unsafe plugin",
+            }))
+            zf.writestr("plugin-main/../../outside.txt", "boom")
+
+        mock_fetch.return_value = [PluginInfo(
+            plugin_id="unsafe-plugin",
+            name="Unsafe Plugin",
+            version="1.0.0",
+            author="Dev",
+            description="Unsafe plugin",
+            repo_url="https://example.com/repo",
+            download_url="https://example.com/unsafe.zip",
+        )]
+
+        def _fake_download(url, dest):
+            shutil.copyfile(archive_path, dest)
+            return dest, None
+
+        with patch("opencut.core.plugin_marketplace.PLUGINS_DIR", self.tmp):
+            with patch("urllib.request.urlretrieve", side_effect=_fake_download):
+                with self.assertRaises(ValueError):
+                    install_plugin("unsafe-plugin")
+
+        self.assertFalse(os.path.exists(outside_path))
+
+    @patch("opencut.core.plugin_marketplace._load_installed")
+    def test_update_rejects_manifest_path_outside_plugins_dir(self, mock_load):
+        mock_load.return_value = {
+            "my-plugin": {"path": os.path.dirname(self.tmp)}
+        }
+        with patch("opencut.core.plugin_marketplace.PLUGINS_DIR", self.tmp):
+            from opencut.core.plugin_marketplace import update_plugin
+            with self.assertRaises(ValueError):
+                update_plugin("my-plugin")
+
 
 # ============================================================
 # 4. ONNX Runtime
