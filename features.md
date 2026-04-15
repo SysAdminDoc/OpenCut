@@ -6,7 +6,7 @@
 
 Items already completed or tracked in ROADMAP.md are excluded. This document focuses exclusively on what's **not yet planned or implemented**.
 
-**Updated**: 2026-04-14 — 327 features across 67 categories
+**Updated**: 2026-04-14 — 352 features across 72 categories
 
 ---
 
@@ -2376,7 +2376,12 @@ Features that every major competitor has but OpenCut lacks:
 | 65 | Next-Gen AI Features | 5 |
 | 66 | Advanced VFX & Motion | 6 |
 | 67 | UX Intelligence & Discovery | 4 |
-| **Total** | | **327** |
+| 68 | AI Timeline Intelligence | 5 |
+| 69 | Advanced Object AI | 5 |
+| 70 | Delivery & Mastering | 5 |
+| 71 | AI Content Generation | 5 |
+| 72 | Pipeline Intelligence | 5 |
+| **Total** | | **352** |
 
 ---
 
@@ -2514,6 +2519,143 @@ Auto-detect clip characteristics (interview, music video, screencast, drone, etc
 Before/after preview for ANY processing operation. Extract one frame, apply the operation, show side-by-side comparison. 8 supported operations.
 - **Why**: Users currently process entire clips blind. Preview eliminates guess-and-check.
 - **Module**: `preview_frame.py` | **Route**: `/ux/preview`
+
+---
+
+## 68. AI Timeline Intelligence
+
+### 68.1 Holistic Timeline Quality Analysis (P1 / M)
+Analyze entire timeline for color consistency, audio level consistency, pacing, and continuity issues. Generates overall quality score (0-100) with actionable recommendations.
+- **Why**: No tool analyzes timeline holistically. Catches issues before delivery.
+- **Module**: `timeline_quality.py` | **Route**: `/timeline/quality`
+
+### 68.2 Per-Segment Engagement Scoring (P1 / M)
+Divide video into segments and score each for visual interest, audio engagement, pacing effectiveness, and content diversity. Generates engagement curve.
+- **Why**: Extends engagement prediction to full timeline analysis.
+- **Module**: `timeline_score.py` | **Route**: `/timeline/score`
+
+### 68.3 AI Narrative Clip Chaining (P1 / L)
+Given multiple clips, analyze content and order them for story flow. 8 narrative styles (documentary, vlog, commercial, etc.). Suggests transitions and generates assembly cut list.
+- **Why**: Automates rough cut assembly from unordered clips.
+- **Module**: `clip_narrative.py` | **Route**: `/timeline/narrative`
+
+### 68.4 Natural Language Color Grading (P1 / M)
+Describe desired color grade in words ("warm sunset", "noir", "cyberpunk"). 32 named intents mapped to FFmpeg filter chains. LLM fallback for custom descriptions.
+- **Why**: Makes color grading accessible to non-colorists.
+- **Module**: `ai_color_intent.py` | **Routes**: `/video/color-intent`, `/video/color-intents`, `/video/color-intent/preview`
+
+### 68.5 End-to-End Auto-Dubbing Pipeline (P0 / L)
+Full dubbing pipeline: transcribe → translate → voice clone → generate audio → lip sync → composite. Supports 47 languages with weighted stage progress.
+- **Why**: Closes the biggest gap vs ElevenLabs/HeyGen dubbing workflows.
+- **Module**: `auto_dub_pipeline.py` | **Routes**: `/audio/auto-dub`, `/audio/auto-dub/languages`
+
+## 69. Advanced Object AI
+
+### 69.1 Text-Driven Video Segmentation (P1 / L)
+Describe what to segment in natural language ("the red car", "the person in blue"). CLIP embeddings find matching regions, SAM2 refines masks, tracks across frames.
+- **Why**: SAMWISE-style natural language segmentation is the next frontier.
+- **Module**: `text_segment.py` | **Routes**: `/video/text-segment`, `/video/text-segment/preview`
+
+### 69.2 Physics-Aware Object Removal (P1 / L)
+Remove objects AND their shadows and reflections. Detects shadow direction, reflection surfaces, removes all together, inpaints with temporal consistency.
+- **Why**: Netflix VOID model demonstrates this is now expected quality.
+- **Module**: `physics_remove.py` | **Routes**: `/video/physics-remove`, `/video/physics-remove/detect-shadow`
+
+### 69.3 Object Tracking with Graphic Overlays (P1 / M)
+Track objects and attach overlays that follow them: text labels, arrows, blur, highlight, crosshair, spotlight, and 4 more. JSON track data export.
+- **Why**: Essential for tutorials, sports analysis, and privacy workflows.
+- **Module**: `object_track_overlay.py` | **Routes**: `/video/track-overlay`, `/video/overlay-types`
+
+### 69.4 Semantic Video Search (P2 / M)
+CLIP-based visual search across project clips. Search by text ("person laughing") or image similarity. Cached embeddings for fast re-query.
+- **Why**: Goes beyond transcript search to visual content discovery.
+- **Module**: `semantic_video_search.py` | **Routes**: `/search/semantic`, `/search/semantic/index`
+
+### 69.5 Multi-Subject Intelligent Reframe (P1 / M)
+Detect all subjects (faces, objects, text), score importance, choose optimal crop. Split-screen fallback when subjects are distant. 9 preset aspect ratios.
+- **Why**: CapCut AI Reframe 2.0 tracks multiple subjects. Essential for shorts.
+- **Module**: `ai_reframe_multi.py` | **Routes**: `/video/reframe-multi`, `/video/aspect-ratios`
+
+## 70. Delivery & Mastering
+
+### 70.1 DCP Export (P1 / L)
+Digital Cinema Package for theatrical projection. JPEG2000 MXF video, 24-bit PCM audio MXF, CPL/PKL/ASSETMAP/VOLINDEX XML. 2K/4K DCI Flat/Scope.
+- **Why**: Opens theatrical delivery market. No Premiere extension does this.
+- **Module**: `dcp_export.py` | **Route**: `/export/dcp`
+
+### 70.2 IMF Package (P2 / L)
+Interoperable Master Format per SMPTE ST 2067. MXF OP1a wrapping, CPL/OPL/PKL, multiple audio languages, 4 profile variants.
+- **Why**: Netflix, Disney+, and major streamers require IMF delivery.
+- **Module**: `imf_package.py` | **Route**: `/export/imf`
+
+### 70.3 Delivery Validation Suite (P0 / M)
+Validate exports against platform specs: video, audio, container, subtitles. 7 built-in specs (Netflix, YouTube, Broadcast EBU, DCP, Apple TV+, Amazon, Theatrical). Pass/fail per check.
+- **Why**: Failed delivery QC wastes days. Automated validation prevents rejection.
+- **Module**: `delivery_validate.py` | **Routes**: `/delivery/validate`, `/delivery/specs`
+
+### 70.4 Multi-Format Simultaneous Render (P1 / M)
+Render to multiple formats in one pass with priority ordering. GPU renders sequential, CPU parallel. Per-render progress and cancellation.
+- **Why**: Adobe Media Encoder's core value proposition. Must-have for batch delivery.
+- **Module**: `multi_render.py` | **Routes**: `/render/multi`, `/render/multi/cancel`
+
+### 70.5 Delivery Spec Profile Manager (P2 / S)
+Define, import/export, compare, and auto-suggest delivery specs. 7 built-in profiles with full requirement definitions.
+- **Why**: Teams need consistent delivery standards across projects.
+- **Module**: `delivery_spec.py` | **Routes**: `/delivery/specs`, `/delivery/specs/compare`
+
+## 71. AI Content Generation
+
+### 71.1 Voice-to-Avatar Video Generation (P2 / L)
+Record audio, generate lip-synced talking head video. 5 avatar styles (realistic, cartoon, silhouette, minimal, sketch). SadTalker/LivePortrait backends.
+- **Why**: CapCut voice-to-avatar is a top feature. HeyGen built a company on this.
+- **Module**: `voice_avatar.py` | **Routes**: `/ai/voice-avatar`, `/ai/voice-avatar/styles`
+
+### 71.2 ML Thumbnail CTR Prediction (P1 / M)
+Analyze thumbnails for CTR-relevant features: face presence, text readability, color vibrancy, composition, emotion. Score 0-100 with improvement suggestions. 5 platform weight profiles.
+- **Why**: Thumbnails drive 90% of click-through rate. Data-driven optimization.
+- **Module**: `ctr_predict.py` | **Routes**: `/content/predict-ctr`, `/content/compare-thumbnails`
+
+### 71.3 AI B-Roll Generation from Text (P2 / L)
+Generate B-roll clips from text descriptions. 4-tier fallback: API video gen → local model → AI image + Ken Burns → placeholder. Batch generation support.
+- **Why**: Descript and Adobe are adding AI B-roll generation. Future table-stakes.
+- **Module**: `broll_ai_gen.py` | **Routes**: `/ai/generate-broll`, `/ai/generate-broll/batch`
+
+### 71.4 Auto Chapter Artwork Generation (P2 / M)
+Generate styled chapter title cards. 5 card styles (minimal, bold, gradient, cinematic, split). Auto-title from transcript, brand kit integration.
+- **Why**: Professional chapters need visual markers. Automates repetitive design.
+- **Module**: `auto_chapter_art.py` | **Routes**: `/content/chapter-art`, `/content/chapter-art/styles`
+
+### 71.5 Animated Video Intro Generation (P2 / M)
+Generate animated intros from brand kit. 5 styles (logo_reveal, text_sweep, particles, minimal_fade, kinetic). Music bed integration, configurable duration.
+- **Why**: Every video needs an intro. Templates save hours of motion design.
+- **Module**: `ai_intro_gen.py` | **Routes**: `/video/generate-intro`, `/video/intro-styles`
+
+## 72. Pipeline Intelligence
+
+### 72.1 Pipeline Health Monitoring (P1 / M)
+Track success/failure rates, processing times, error frequency, resource utilization. Per-component health scores (0-100) with trend detection and alerts.
+- **Why**: Production pipelines need observability. Catches degradation early.
+- **Module**: `pipeline_health.py` | **Route**: `/pipeline/health`
+
+### 72.2 Scheduled/Recurring Jobs (P1 / M)
+Cron-like job scheduling with full 5-field cron expression support. Persistent JSON storage, missed job detection, run history tracking.
+- **Why**: Batch processing needs automation. Watch folders + schedules = hands-free.
+- **Module**: `scheduled_jobs.py` | **Routes**: `/pipeline/schedules` (CRUD)
+
+### 72.3 Smart Content Routing (P1 / M)
+Auto-detect content type (10 types: interview, vlog, tutorial, etc.) and suggest optimal workflow with pre-configured parameters. Confidence scoring.
+- **Why**: New users don't know which workflow to use. Smart routing guides them.
+- **Module**: `smart_route.py` | **Routes**: `/video/classify-content`, `/video/suggest-workflow`
+
+### 72.4 Processing Time Estimation (P2 / M)
+Estimate processing time for any operation based on input characteristics, hardware, and historical data. 17 operation baselines with learning from actual runs.
+- **Why**: Users need to know "how long will this take?" before committing.
+- **Module**: `process_estimate.py` | **Routes**: `/pipeline/estimate`, `/pipeline/estimate/batch`
+
+### 72.5 Resource Monitoring (P2 / M)
+Real-time CPU/GPU/RAM/disk monitoring. GPU via nvidia-smi, ring-buffer history, availability checks before job start. Temperature monitoring.
+- **Why**: GPU OOM is the #1 crash cause. Visibility prevents failures.
+- **Module**: `resource_monitor.py` | **Routes**: `/pipeline/resources`, `/pipeline/resources/gpu`
 
 ---
 
