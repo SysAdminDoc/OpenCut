@@ -77,7 +77,12 @@ class WorkerPool:
         with self._lock:
             future = self._futures.get(job_id)
         if future:
-            return future.cancel()
+            cancelled = future.cancel()
+            if cancelled:
+                # Remove from tracking so the entry doesn't leak
+                with self._lock:
+                    self._futures.pop(job_id, None)
+            return cancelled
         return False
 
     def is_running(self, job_id: str) -> bool:

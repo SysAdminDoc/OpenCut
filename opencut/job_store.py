@@ -71,6 +71,15 @@ def _get_conn() -> sqlite3.Connection:
         _LOCAL.conn = conn
         with _CONN_LOCK:
             _ALL_CONNECTIONS[threading.get_ident()] = conn
+            # Prune connections from dead threads to prevent unbounded growth
+            alive_ids = {t.ident for t in threading.enumerate() if t.ident is not None}
+            dead_ids = [tid for tid in _ALL_CONNECTIONS if tid not in alive_ids]
+            for tid in dead_ids:
+                try:
+                    _ALL_CONNECTIONS[tid].close()
+                except Exception:
+                    pass
+                del _ALL_CONNECTIONS[tid]
     return conn
 
 

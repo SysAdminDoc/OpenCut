@@ -334,7 +334,8 @@ def _cleanup_old_jobs():
         for jid, j in jobs.items():
             if j["status"] == "running" and (now - j["created"]) > _JOB_STUCK_TIMEOUT:
                 j["status"] = "error"
-                j["error"] = "Job timed out (stuck for >2 hours)"
+                stuck_hrs = _JOB_STUCK_TIMEOUT / 3600
+                j["error"] = f"Job timed out (stuck for >{stuck_hrs:.0f} hours)"
                 j["message"] = "Timed out"
                 logger.warning("Marking stuck job %s as error (created %.0fs ago)", jid, now - j["created"])
                 jobs_to_persist.append(j.copy())

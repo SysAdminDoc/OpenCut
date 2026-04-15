@@ -22,6 +22,29 @@ _file_locks = {}
 _file_locks_guard = threading.Lock()
 
 
+def _safe_user_filepath(filename: str) -> str:
+    """Resolve a user-data filename and verify it stays within OPENCUT_DIR.
+
+    Blocks path traversal (``../``), absolute paths, null bytes, and any
+    filename that would resolve outside the OpenCut user directory.
+
+    Raises ``ValueError`` on invalid input.
+    """
+    if not filename or not isinstance(filename, str):
+        raise ValueError("Invalid user-data filename")
+    if "\x00" in filename:
+        raise ValueError("Null byte in filename")
+    # Block absolute paths and traversal components
+    if os.path.isabs(filename) or ".." in filename.replace("\\", "/").split("/"):
+        raise ValueError("Invalid user-data filename")
+    filepath = os.path.join(OPENCUT_DIR, filename)
+    resolved = os.path.realpath(filepath)
+    real_base = os.path.realpath(OPENCUT_DIR)
+    if not (resolved == real_base or resolved.startswith(real_base + os.sep)):
+        raise ValueError("Filename escapes user-data directory")
+    return filepath
+
+
 def _get_lock(filepath: str) -> threading.RLock:
     """Get or create a reentrant lock for a specific file path.
 
@@ -63,7 +86,11 @@ def read_user_file(filename: str, default=None):
     Read a JSON file from the OpenCut user directory.
     Returns *default* (default: None) if the file doesn't exist or can't be parsed.
     """
-    filepath = os.path.join(OPENCUT_DIR, filename)
+    try:
+        filepath = _safe_user_filepath(filename)
+    except ValueError:
+        logger.warning("Rejected invalid user-data filename: %s", filename)
+        return default
     lock = _get_lock(filepath)
     with lock:
         try:
@@ -83,7 +110,7 @@ def write_user_file(filename: str, data):
     Write JSON data to a file in the OpenCut user directory.
     Creates the directory if needed. Thread-safe per file.
     """
-    filepath = os.path.join(OPENCUT_DIR, filename)
+    filepath = _safe_user_filepath(filename)
     lock = _get_lock(filepath)
     with lock:
         try:

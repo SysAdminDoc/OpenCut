@@ -25,7 +25,7 @@ dev_scripting_bp = Blueprint("dev_scripting", __name__)
 
 def _json_object_or_400():
     try:
-        return get_json_dict(silent=True), None
+        return get_json_dict(), None
     except ValueError as exc:
         return None, (
             jsonify({

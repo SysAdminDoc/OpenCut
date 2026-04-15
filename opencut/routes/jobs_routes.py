@@ -315,12 +315,13 @@ def _dispatch_queue_entry(entry):
         # Flask view functions return (response, status) or a Response
         if isinstance(resp, tuple):
             resp_obj = resp[0]
+            status_code = resp[1] if len(resp) > 1 else 200
         else:
             resp_obj = resp
+            status_code = getattr(resp_obj, "status_code", 200)
         result = resp_obj.get_json() if hasattr(resp_obj, "get_json") else {}
         if not isinstance(result, dict):
             result = {}
-        status_code = getattr(resp_obj, "status_code", 200)
         if status_code >= 400:
             entry["status"] = "error"
             entry["error"] = result.get("error") or f"Route failed with HTTP {status_code}"
