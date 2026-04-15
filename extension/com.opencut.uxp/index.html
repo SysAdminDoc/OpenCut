@@ -15,7 +15,7 @@
         <svg class="oc-logo-mark" width="16" height="16" viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg">
           <path d="M4 2.5a3 3 0 00-1.76 5.43L7.33 11l-5.09 3.07A3 3 0 104.8 19.5a3 3 0 001.76-5.43L8.93 12.6 16.5 17V5L8.93 9.4 6.56 7.93A3 3 0 004 2.5z" fill="var(--accent)"/>
         </svg>
-        <span class="oc-logo">OpenCut</span>
+        <span class="oc-logo" translate="no">OpenCut</span>
         <span class="oc-version">v1.15.0</span>
       </div>
       <div class="oc-header-right">
@@ -33,7 +33,7 @@
     <div class="oc-processing-banner hidden" id="processingBanner" role="status" aria-live="polite">
       <div class="oc-processing-left">
         <div class="oc-spinner"></div>
-        <span class="oc-processing-msg" id="processingMsg">Processing...</span>
+        <span class="oc-processing-msg" id="processingMsg">Processing…</span>
       </div>
       <div class="oc-processing-right">
         <span class="oc-elapsed" id="processingElapsed">0s</span>
@@ -80,6 +80,27 @@
 
     <!-- ===== MAIN CONTENT ===== -->
     <main class="oc-content" id="mainContent">
+      <section class="oc-workspace-overview" aria-labelledby="workspaceOverviewTitle">
+        <div class="oc-workspace-copy">
+          <div class="oc-workspace-kicker" translate="no">OpenCut Studio</div>
+          <h1 class="oc-workspace-title" id="workspaceOverviewTitle">Cut &amp; Clean</h1>
+          <p class="oc-workspace-subtitle" id="workspaceOverviewSubtitle">Trim dead space, fillers, and rough pacing with a tighter review flow.</p>
+        </div>
+        <div class="oc-workspace-meta" role="list" aria-label="Current workspace context">
+          <div class="oc-workspace-meta-item" role="listitem">
+            <span class="oc-workspace-meta-label">Active Shot</span>
+            <span class="oc-workspace-meta-value" id="workspaceSourceValue" aria-live="polite">Awaiting clip</span>
+          </div>
+          <div class="oc-workspace-meta-item" role="listitem">
+            <span class="oc-workspace-meta-label">Backend</span>
+            <span class="oc-workspace-meta-value" id="workspaceBackendValue" aria-live="polite">Offline</span>
+          </div>
+          <div class="oc-workspace-meta-item" role="listitem">
+            <span class="oc-workspace-meta-label">Media Library</span>
+            <span class="oc-workspace-meta-value" id="workspaceLibraryValue" aria-live="polite">0 clips</span>
+          </div>
+        </div>
+      </section>
 
       <!-- ==================== CUT & CLEAN TAB ==================== -->
       <div class="oc-tab-panel active" id="tab-cut" role="tabpanel" aria-labelledby="tabBtnCut">
@@ -484,7 +505,7 @@
           </div>
           <div class="oc-card-body" id="mmDiarizeBody">
             <div class="oc-field-row">
-              <label for="mmDiarizeNumSpeakersUxp">Speakers</label>
+              <label class="oc-label" for="mmDiarizeNumSpeakersUxp">Speakers</label>
               <select id="mmDiarizeNumSpeakersUxp" class="oc-select" aria-label="Number of speakers">
                 <option value="" selected>Auto</option>
                 <option value="2">2</option>
@@ -505,11 +526,11 @@
           </div>
           <div class="oc-card-body" id="brollGenBody">
             <div class="oc-field-row">
-              <label for="brollGenPromptUxp">Description</label>
+              <label class="oc-label" for="brollGenPromptUxp">Description</label>
               <textarea id="brollGenPromptUxp" class="oc-textarea" rows="2" placeholder="e.g. aerial cityscape at sunset" aria-label="B-roll description"></textarea>
             </div>
             <div class="oc-field-row">
-              <label for="brollGenBackendUxp">Backend</label>
+              <label class="oc-label" for="brollGenBackendUxp">Backend</label>
               <select id="brollGenBackendUxp" class="oc-select" aria-label="Video generation backend">
                 <option value="auto" selected>Auto</option>
                 <option value="cogvideox">CogVideoX</option>
@@ -519,7 +540,7 @@
               </select>
             </div>
             <div class="oc-field-row">
-              <label for="brollGenSeedUxp">Seed</label>
+              <label class="oc-label" for="brollGenSeedUxp">Seed</label>
               <input type="number" id="brollGenSeedUxp" class="oc-input" placeholder="Random" min="0" aria-label="Random seed">
             </div>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBrollGenBtnUxp">Generate B-Roll</button>
@@ -534,7 +555,7 @@
           </div>
           <div class="oc-card-body" id="depthBody">
             <div class="oc-field-row">
-              <label for="depthEffectUxp">Effect</label>
+              <label class="oc-label" for="depthEffectUxp">Effect</label>
               <select id="depthEffectUxp" class="oc-select">
                 <option value="depth_map" selected>Depth Map</option>
                 <option value="bokeh">Bokeh (Depth-of-Field)</option>
@@ -542,7 +563,7 @@
               </select>
             </div>
             <div class="oc-field-row">
-              <label for="depthModelSizeUxp">Model</label>
+              <label class="oc-label" for="depthModelSizeUxp">Model</label>
               <select id="depthModelSizeUxp" class="oc-select">
                 <option value="small" selected>Small (fast)</option>
                 <option value="base">Base</option>
@@ -707,7 +728,7 @@
           </div>
           <div class="oc-card-body" id="socialBody">
             <div class="oc-field-row">
-              <label for="socialPlatformUxp">Platform</label>
+              <label class="oc-label" for="socialPlatformUxp">Platform</label>
               <select id="socialPlatformUxp" class="oc-select" aria-label="Social media platform">
                 <option value="youtube" selected>YouTube</option>
                 <option value="tiktok">TikTok</option>
@@ -715,15 +736,15 @@
               </select>
             </div>
             <div class="oc-field-row">
-              <label for="socialTitleUxp">Title</label>
+              <label class="oc-label" for="socialTitleUxp">Title</label>
               <input type="text" id="socialTitleUxp" class="oc-input" maxlength="100" placeholder="Video title" aria-label="Video title">
             </div>
             <div class="oc-field-row">
-              <label for="socialDescriptionUxp">Description</label>
+              <label class="oc-label" for="socialDescriptionUxp">Description</label>
               <textarea id="socialDescriptionUxp" class="oc-textarea" rows="2" maxlength="2200" placeholder="Caption" aria-label="Description"></textarea>
             </div>
             <div class="oc-field-row">
-              <label for="socialPrivacyUxp">Privacy</label>
+              <label class="oc-label" for="socialPrivacyUxp">Privacy</label>
               <select id="socialPrivacyUxp" class="oc-select" aria-label="Privacy level">
                 <option value="private" selected>Private</option>
                 <option value="unlisted">Unlisted</option>
