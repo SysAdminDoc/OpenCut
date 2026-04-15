@@ -80,6 +80,8 @@ def video_reframe(job_id, filepath, data):
         bg_color = "black"
     quality = data.get("quality", "high")  # low, medium, high
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     if target_w < 16 or target_h < 16:
         raise ValueError("Target dimensions too small (min 16x16)")
 
@@ -399,6 +401,8 @@ def video_color_match(job_id, filepath, data):
     source = data.get("source", "").strip()
     reference = data.get("reference", "").strip()
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
     strength = safe_float(data.get("strength", 1.0), 1.0, min_val=0.0, max_val=1.0)
     if not source:
         raise ValueError("source is required")
@@ -451,6 +455,8 @@ def video_auto_zoom(job_id, filepath, data):
     zoom_amount = safe_float(data.get("zoom_amount", 1.15), 1.15, min_val=1.0, max_val=4.0)
     easing = data.get("easing", "ease_in_out").strip()
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
     apply_to_file = safe_bool(data.get("apply_to_file", False), False)
     _VALID_EASINGS = {"ease_in", "ease_out", "ease_in_out", "linear"}
     if easing not in _VALID_EASINGS:

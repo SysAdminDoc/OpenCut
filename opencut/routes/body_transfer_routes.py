@@ -15,7 +15,7 @@ from flask import Blueprint
 
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -40,6 +40,8 @@ def body_effects_route(job_id, filepath, data):
     effect_type = data.get("effect_type", "glow").strip()
     body_part = data.get("body_part", "nose").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -117,6 +119,8 @@ def motion_transfer_route(job_id, filepath, data):
 
     model = data.get("model", "auto").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -211,6 +215,8 @@ def foley_generate_route(job_id, filepath, data):
     from opencut.core.foley_gen import generate_foley
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     mix_level = safe_float(data.get("mix_level", 0.3), 0.3, min_val=0.0, max_val=1.0)
 
     def _progress(pct, msg=""):
@@ -260,6 +266,8 @@ def face_restore_route(job_id, filepath, data):
     from opencut.core.face_restore import restore_faces
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     strength = safe_float(data.get("strength", 1.0), 1.0, min_val=0.0, max_val=2.0)
     method = data.get("method", "ffmpeg").strip()
 
@@ -336,6 +344,8 @@ def face_restore_preview_route(job_id, filepath, data):
     from opencut.core.face_restore import restore_single_frame
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     strength = safe_float(data.get("strength", 1.0), 1.0, min_val=0.0, max_val=2.0)
 
     def _progress(pct, msg=""):

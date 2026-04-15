@@ -23,6 +23,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -49,6 +50,8 @@ def video_fx_list():
 def video_fx_apply(job_id, filepath, data):
     """Apply a video effect."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     effect = data.get("effect", "").strip()
     params = data.get("params", {})
     if not effect:
@@ -158,6 +161,8 @@ def speed_change_route(job_id, filepath, data):
     """Apply constant speed change."""
     speed = safe_float(data.get("speed", 2.0), 2.0, min_val=0.1, max_val=8.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     from opencut.core.speed_ramp import change_speed
 
@@ -179,6 +184,8 @@ def speed_change_route(job_id, filepath, data):
 def speed_reverse_route(job_id, filepath, data):
     """Reverse video playback."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     from opencut.core.speed_ramp import reverse_video
 
@@ -202,6 +209,8 @@ def speed_ramp_route(job_id, filepath, data):
     preset = data.get("preset", "")
     keyframes = data.get("keyframes", [])
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -253,6 +262,8 @@ def lut_apply(job_id, filepath, data):
         raise ValueError("Invalid LUT name")
     intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=2.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     from opencut.core.lut_library import apply_lut
 
@@ -293,6 +304,8 @@ def chromakey_route(job_id, filepath, data):
     fg = data.get("filepath", "").strip()
     bg = data.get("background", "").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     if not fg:
         raise ValueError("Foreground file not found")
     if not bg:

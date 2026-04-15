@@ -15,6 +15,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -36,6 +37,8 @@ def overlay_safe_zones(job_id, filepath, data):
         raise ValueError("Missing required field: platform")
     opacity = safe_float(data.get("opacity", 0.3), 0.3, min_val=0.0, max_val=1.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     from opencut.core.safe_zones import generate_safe_zone_overlay
     from opencut.helpers import output_path as _output_path

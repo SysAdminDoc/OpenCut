@@ -220,6 +220,8 @@ def macro_play(job_id, filepath, data):
     name = data.get("name", "")
     target_file = data.get("target_file", filepath)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     name = _clean_string(name, "name", allow_empty=False)
     target_file = _clean_string(target_file, "target_file", default=filepath)

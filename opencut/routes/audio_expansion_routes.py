@@ -18,6 +18,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -43,6 +44,8 @@ def generate_sfx(job_id, filepath, data):
     )
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     scene_data = data.get("scenes", None)
     keywords = data.get("keywords", None)
     use_ai = safe_bool(data.get("use_ai", False))
@@ -131,6 +134,8 @@ def spatial_audio(job_id, filepath, data):
 
     mode = data.get("mode", "binaural").strip().lower()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     sofa_path = data.get("sofa_path", None)
     channels = safe_int(data.get("channels", 6), 6, min_val=6, max_val=8)
     gain = safe_float(data.get("gain", 0.0), 0.0, min_val=-20.0, max_val=20.0)
@@ -306,6 +311,8 @@ def sfx_download(job_id, filepath, data):
 
     api_key = data.get("api_key", "")
     output_dir = data.get("output_dir", None)
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -338,6 +345,8 @@ def transition_sfx(job_id, filepath, data):
 
     transitions = data.get("transitions", [])
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     master_volume = safe_float(data.get("master_volume", 0.7), 0.7, min_val=0.0, max_val=1.0)
 
     if not transitions:
@@ -378,6 +387,8 @@ def podcast_extract_audio(job_id, filepath, data):
     from opencut.core.podcast_extract import add_id3_metadata, extract_podcast_audio
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     audio_format = data.get("format", "mp3").strip().lower()
     bitrate = data.get("bitrate", "192k").strip()
     sample_rate = safe_int(data.get("sample_rate", 44100), 44100, min_val=8000, max_val=96000)
