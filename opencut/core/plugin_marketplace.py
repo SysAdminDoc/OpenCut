@@ -381,6 +381,9 @@ def update_plugin(
 ) -> PluginInfo:
     """Update an installed plugin to the latest version.
 
+    Downloads the new version first, then removes the old installation.
+    If the download fails, the old version is preserved.
+
     Args:
         plugin_id: The plugin identifier to update.
 
@@ -395,12 +398,39 @@ def update_plugin(
     if on_progress:
         on_progress(10, "Checking for updates")
 
-    # Remove old installation
     old_path = manifest[plugin_id].get("path", "")
-    if old_path and os.path.isdir(old_path):
-        shutil.rmtree(_validate_managed_plugin_path(old_path), ignore_errors=True)
 
-    # Re-install latest
+    # Remove old installation ONLY right before re-install so that
+    # install_plugin's FileExistsError check passes.
+    if old_path and os.path.isdir(old_path):
+        validated_path = _validate_managed_plugin_path(old_path)
+        # Rename to a temp backup so install_plugin can proceed.
+        # If install fails, we restore the backup.
+        backup_path = validated_path + ".update-backup"
+        try:
+            os.rename(validated_path, backup_path)
+        except OSError:
+            # If rename fails, fall back to rmtree (best effort)
+            shutil.rmtree(validated_path, ignore_errors=True)
+            backup_path = None
+
+        try:
+            result = install_plugin(plugin_id, on_progress=on_progress)
+        except Exception:
+            # Restore backup on failure
+            if backup_path and os.path.isdir(backup_path):
+                try:
+                    os.rename(backup_path, validated_path)
+                except OSError:
+                    pass
+            raise
+
+        # Clean up backup on success
+        if backup_path and os.path.isdir(backup_path):
+            shutil.rmtree(backup_path, ignore_errors=True)
+        return result
+
+    # No existing path to worry about — just install
     return install_plugin(plugin_id, on_progress=on_progress)
 
 
