@@ -181,7 +181,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.12.0**
+- Current: **v1.13.0**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
@@ -1203,20 +1203,41 @@ See commit `04d068c` for the full v1.9.22 changelog — `/file` allowlist restor
 - **NDJSON response mime type** — `application/x-ndjson`. Frontend must parse line-by-line, not `JSON.parse()` the whole body. Each line is a valid JSON object.
 - **Context awareness `score_features` capability check** — The scoring checks for "audio" and "video" capabilities by inferring from tags (e.g., `audio_only` implies has audio but no video). Tags like `talking_head` imply both audio and video are present.
 - **`rate_limit("ai_gpu")` scope** — Shared across all AI routes. If upscale is running, music generation returns 429. This is intentional to prevent GPU memory conflicts.
-- **73 Blueprints** — Route registration in `__init__.py` includes 17 original + 50 feature expansion blueprints (980 total routes). Plus dynamic plugin blueprints.
+- **78 Blueprints** — Route registration in `__init__.py` includes 17 original + 61 feature expansion blueprints (1,031 total routes). Plus dynamic plugin blueprints.
 
-## v1.12.0 Feature Expansion
+## v1.13.0 Feature Expansion
 
 ### Scale
-- **335 core modules** (`opencut/core/`) — feature implementations across all 62 categories from `features.md`
-- **50 feature expansion blueprints** (`opencut/routes/`) — 932 total API endpoints registered via `__init__.py`
-- **71 test files** (`tests/`) — 5,127 tests covering all routes and core modules
-- **980 total routes** (up from 254 in v1.9.26)
-- **Ruff lint clean** — 1,207 auto-fixed + 45 manual fixes across all new files
+- **385 core modules** (`opencut/core/`) — feature implementations across all 72 categories from `features.md`
+- **78 route blueprints** (`opencut/routes/`) — 1,031 total API endpoints registered via `__init__.py`
+- **82 test files** (`tests/`) — 6,278 tests covering all routes and core modules
+- **Ruff lint clean** across all files
 
 ### Planning Documents
-- `features.md` — 302 features across 62 categories (12 new categories added: 360/VR, camera correction, video repair, AI generation, privacy/redaction, spectral audio, split-screen, content repurposing, storyboarding, proxy management, composition intelligence, AI dubbing)
+- `features.md` — 352 features across 72 categories
 - `ROADMAP.md` — v3.0 implementation roadmap with 7 waves organized by dependency chains (Wave 1: quick wins with 0 new deps → Wave 7: emerging tech)
 
 ### New Route Blueprint Files
-`ai_content_routes`, `ai_editing_routes`, `ai_intelligence_routes`, `analysis_routes`, `architecture_routes`, `audio_advanced_routes`, `audio_expansion_routes`, `audio_production_routes`, `batch_data_routes`, `color_mam_routes`, `content_routes`, `creative_routes`, `delivery_routes`, `documentary_routes`, `editing_workflow_routes`, `education_routes`, `encoding_routes`, `format_routes`, `gaming_routes`, `generative_routes`, `hw_routes`, `infrastructure_routes`, `integration_routes`, `music_safety_routes`, `overlay_routes`, `platform_infra_routes`, `platform_ux_routes`, `processing_routes`, `production_routes`, `professional_routes`, `qc_routes`, `remote_realtime_routes`, `solver_agent_routes`, `subtitle_routes`, `tools_routes`, `transcript_edit_routes`, `utility_routes`, `vfx_advanced_routes`, `video_effects_routes`, `video_processing_routes`, `video_vfx_routes`, `workflow_dev_routes`, `workflow_routes`
+`ai_content_routes`, `ai_editing_routes`, `ai_intelligence_routes`, `analysis_routes`, `architecture_routes`, `audio_advanced_routes`, `audio_expansion_routes`, `audio_production_routes`, `batch_data_routes`, `color_mam_routes`, `content_routes`, `creative_routes`, `delivery_routes`, `documentary_routes`, `editing_workflow_routes`, `education_routes`, `encoding_routes`, `format_routes`, `gaming_routes`, `generative_routes`, `hw_routes`, `infrastructure_routes`, `integration_routes`, `music_safety_routes`, `overlay_routes`, `pipeline_intel_routes`, `platform_infra_routes`, `platform_ux_routes`, `processing_routes`, `production_routes`, `professional_routes`, `qc_routes`, `remote_realtime_routes`, `solver_agent_routes`, `subtitle_routes`, `tools_routes`, `transcript_edit_routes`, `utility_routes`, `vfx_advanced_routes`, `video_effects_routes`, `video_processing_routes`, `video_vfx_routes`, `workflow_dev_routes`, `workflow_routes`
+
+### Category 72: Pipeline Intelligence
+Core modules:
+- `pipeline_health.py` (562 lines) - Pipeline health monitoring with SQLite-backed metrics, per-component health scores (0-100), error rate/throughput tracking, alert thresholds, trend detection (improving/stable/degrading).
+- `scheduled_jobs.py` (594 lines) - Cron-like recurring job system with JSON persistence, 5-field cron parsing (ranges, steps, lists), next-run calculation, job history, missed-job detection.
+- `smart_route.py` (589 lines) - Content type classification (10 types: interview, vlog, tutorial, music_video, podcast, gaming, drone, timelapse, corporate, social_short) with ffprobe analysis, motion estimation, confidence scoring, and workflow template suggestions.
+- `process_estimate.py` (620 lines) - Processing time estimation with 17 operation baselines, resolution/GPU/parameter scaling, historical learning via SQLite, batch estimation, human-readable time formatting.
+- `resource_monitor.py` (639 lines) - Real-time CPU/GPU/RAM/disk monitoring via psutil + nvidia-smi (torch.cuda fallback), resource availability checks, auto-snapshot background thread, in-memory ring-buffer history.
+
+Route blueprint: `pipeline_intel_routes.py` (368 lines) - 20 endpoints across /api/pipeline/* and /api/video/* for health, schedules, classification, estimation, and resources.
+Tests: `test_pipeline_intel.py` (1323 lines) - Comprehensive coverage for all dataclasses, CRUD operations, cron parsing, mocked ffprobe/psutil/nvidia-smi, route smoke tests.
+
+### Category 69: Advanced Object AI
+Core modules:
+- `text_segment.py` (684 lines) - Natural language video segmentation via CLIP embeddings. Sliding-window region search with batched scoring, SAM2 refinement fallback, bbox mask fallback, alpha-channel VP9/WebM export.
+- `physics_remove.py` (883 lines) - Physics-aware object removal. Shadow detection via radial scan + intensity thresholding, reflection detection via vertical NCC, unified mask combination with dilation, LaMA/FFmpeg-delogo inpainting, frame reassembly.
+- `object_track_overlay.py` (720 lines) - Object tracking with graphic overlays. Template matching tracker with drift correction, 10 overlay types (text_label, arrow, blur, highlight, custom_image, circle, rectangle, crosshair, spotlight, censor), position smoothing, track data JSON export.
+- `semantic_video_search.py` (589 lines) - CLIP-based visual semantic search. Per-clip embedding cache (pickle, file-hash invalidation), text/image query support, multi-prompt averaging, ranked results with timestamps.
+- `ai_reframe_multi.py` (776 lines) - Multi-subject intelligent reframe. Haar cascade face detection, edge-density text detection, motion hotspot detection, importance-weighted crop centroid, split-screen fallback, smooth crop path with velocity clamping, any aspect ratio.
+
+Route blueprint: `object_intel_routes.py` (425 lines) - 10 endpoints: /video/text-segment, /video/text-segment/preview, /video/physics-remove, /video/physics-remove/detect-shadow, /video/track-overlay, /video/overlay-types (GET), /search/semantic, /search/semantic/index, /video/reframe-multi, /video/aspect-ratios (GET).
+Tests: `test_object_intel.py` (1079 lines) - 104 tests covering all dataclasses, to_dict(), helper functions, constants validation, edge cases, route smoke tests.
