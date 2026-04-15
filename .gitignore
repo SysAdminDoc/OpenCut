@@ -25,3 +25,4 @@ installer/dist/
 installer/publish/
 installer/src/*/obj/
 ffmpeg/
+CLAUDE.md
