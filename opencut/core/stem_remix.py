@@ -1,450 +1,614 @@
 """
-OpenCut Stem Remix Module (Feature 2.7)
+OpenCut Stem Remix Module (Category 75)
 
-After stem separation, apply per-stem effects (reverb, compress, EQ)
-and recombine. Supports per-stem volume and pan controls.
+Creative stem manipulation and remix.  Given separated stems (vocals, drums,
+bass, other from existing Demucs integration), apply per-stem effects and
+remix with preset configurations.
 
 Functions:
-    remix_stems      - Apply effects config to multiple stems and recombine
-    apply_stem_effect - Apply a single effect to a single stem
-    mix_stems        - Mix multiple stems with volume/pan controls
+    apply_stem_effects  - Apply effects to individual stems
+    remix_stems         - Mix stems back together with effects
+    preview_remix       - Preview remix on a short segment
 """
 
+import json
 import logging
 import os
+import struct
+import subprocess
 import tempfile
+import wave
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import (
-    FFmpegCmd,
-    run_ffmpeg,
-)
+from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
 # ---------------------------------------------------------------------------
-# Supported Effects & Their FFmpeg Filter Mappings
+# Constants
 # ---------------------------------------------------------------------------
-SUPPORTED_EFFECTS = {
-    "reverb": {
-        "description": "Add reverb/echo effect",
-        "params": {"delay": 60, "decay": 0.4, "mix": 0.3},
+STEM_NAMES = ["vocals", "drums", "bass", "other"]
+
+SAMPLE_RATE = 44100
+
+# Per-stem effect defaults
+DEFAULT_STEM_SETTINGS = {
+    "volume": 1.0,         # 0.0-2.0
+    "pan": 0.0,            # -1.0 (left) to 1.0 (right)
+    "reverb_amount": 0.0,  # 0.0-1.0
+    "delay_ms": 0.0,       # 0-1000
+    "pitch_shift_semitones": 0.0,  # -12 to 12
+    "reverse": False,
+    "mute": False,
+}
+
+# ---------------------------------------------------------------------------
+# Remix Presets
+# ---------------------------------------------------------------------------
+REMIX_PRESETS = {
+    "acapella": {
+        "description": "Vocals only — isolated vocal track",
+        "stems": {
+            "vocals": {"volume": 1.0, "mute": False},
+            "drums": {"mute": True},
+            "bass": {"mute": True},
+            "other": {"mute": True},
+        },
     },
-    "compress": {
-        "description": "Dynamic range compression",
-        "params": {"threshold": 0.1, "ratio": 4, "attack": 20, "release": 250},
+    "instrumental": {
+        "description": "Mute vocals — instrumental backing track",
+        "stems": {
+            "vocals": {"mute": True},
+            "drums": {"volume": 1.0, "mute": False},
+            "bass": {"volume": 1.0, "mute": False},
+            "other": {"volume": 1.0, "mute": False},
+        },
     },
-    "eq_bass_boost": {
-        "description": "Boost bass frequencies",
-        "params": {"frequency": 100, "gain": 6, "width": 200},
+    "karaoke": {
+        "description": "Vocals reduced with reverb for karaoke backing",
+        "stems": {
+            "vocals": {"volume": 0.15, "reverb_amount": 0.6, "mute": False},
+            "drums": {"volume": 1.0, "mute": False},
+            "bass": {"volume": 1.0, "mute": False},
+            "other": {"volume": 0.9, "mute": False},
+        },
     },
-    "eq_treble_boost": {
-        "description": "Boost treble frequencies",
-        "params": {"frequency": 8000, "gain": 4, "width": 2000},
+    "lo_fi": {
+        "description": "Slowed down with vinyl warmth and low-pass filter",
+        "stems": {
+            "vocals": {"volume": 0.7, "reverb_amount": 0.3, "mute": False},
+            "drums": {"volume": 0.8, "mute": False},
+            "bass": {"volume": 1.1, "mute": False},
+            "other": {"volume": 0.6, "reverb_amount": 0.2, "mute": False},
+        },
+        "global_tempo": 0.92,
+        "global_lowpass": 8000,
     },
-    "eq_mid_cut": {
-        "description": "Cut mid frequencies (scoop)",
-        "params": {"frequency": 1000, "gain": -4, "width": 800},
+    "nightcore": {
+        "description": "Sped up with pitch shift for nightcore style",
+        "stems": {
+            "vocals": {"volume": 1.0, "pitch_shift_semitones": 3, "mute": False},
+            "drums": {"volume": 1.1, "mute": False},
+            "bass": {"volume": 0.9, "mute": False},
+            "other": {"volume": 1.0, "pitch_shift_semitones": 3, "mute": False},
+        },
+        "global_tempo": 1.25,
     },
-    "highpass": {
-        "description": "High-pass filter",
-        "params": {"frequency": 80},
+    "slowed_reverb": {
+        "description": "Slowed down with heavy reverb for dreamy atmosphere",
+        "stems": {
+            "vocals": {"volume": 0.9, "reverb_amount": 0.7, "mute": False},
+            "drums": {"volume": 0.6, "reverb_amount": 0.4, "mute": False},
+            "bass": {"volume": 1.0, "reverb_amount": 0.3, "mute": False},
+            "other": {"volume": 0.8, "reverb_amount": 0.6, "mute": False},
+        },
+        "global_tempo": 0.82,
     },
-    "lowpass": {
-        "description": "Low-pass filter",
-        "params": {"frequency": 12000},
-    },
-    "normalize": {
-        "description": "Loudness normalization",
-        "params": {"target_lufs": -16},
-    },
-    "chorus": {
-        "description": "Chorus effect for widening",
-        "params": {"depth": 0.5, "speed": 0.4},
-    },
-    "flanger": {
-        "description": "Flanger effect",
-        "params": {"delay": 5, "depth": 2, "speed": 0.5},
+    "drum_emphasis": {
+        "description": "Boosted drums with ducked melodic elements",
+        "stems": {
+            "vocals": {"volume": 0.5, "mute": False},
+            "drums": {"volume": 1.5, "mute": False},
+            "bass": {"volume": 1.2, "mute": False},
+            "other": {"volume": 0.4, "mute": False},
+        },
     },
 }
 
 
+# ---------------------------------------------------------------------------
+# Data Classes
+# ---------------------------------------------------------------------------
 @dataclass
-class StemEffect:
-    """Configuration for a single effect on a stem."""
-    name: str
-    params: Dict = field(default_factory=dict)
-
-
-@dataclass
-class StemMixConfig:
-    """Mix configuration for a single stem."""
-    path: str
-    volume: float = 1.0       # 0.0 to 2.0
-    pan: float = 0.0          # -1.0 (left) to 1.0 (right)
+class StemSettings:
+    """Effect settings for a single stem."""
+    volume: float = 1.0
+    pan: float = 0.0
+    reverb_amount: float = 0.0
+    delay_ms: float = 0.0
+    pitch_shift_semitones: float = 0.0
+    reverse: bool = False
     mute: bool = False
-    solo: bool = False
-    effects: List[StemEffect] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "volume": round(self.volume, 2),
+            "pan": round(self.pan, 2),
+            "reverb_amount": round(self.reverb_amount, 2),
+            "delay_ms": round(self.delay_ms, 1),
+            "pitch_shift_semitones": round(self.pitch_shift_semitones, 1),
+            "reverse": self.reverse,
+            "mute": self.mute,
+        }
+
+    @classmethod
+    def from_dict(cls, d: dict) -> "StemSettings":
+        return cls(
+            volume=float(d.get("volume", 1.0)),
+            pan=float(d.get("pan", 0.0)),
+            reverb_amount=float(d.get("reverb_amount", 0.0)),
+            delay_ms=float(d.get("delay_ms", 0.0)),
+            pitch_shift_semitones=float(d.get("pitch_shift_semitones", 0.0)),
+            reverse=bool(d.get("reverse", False)),
+            mute=bool(d.get("mute", False)),
+        )
 
 
 @dataclass
 class RemixResult:
-    """Result of a stem remix operation."""
-    output_path: str
-    stems_processed: int
-    effects_applied: int
-    duration: float
+    """Result of stem remix operation."""
+    output_path: str = ""
+    preset_name: str = ""
+    stem_settings: Dict[str, dict] = field(default_factory=dict)
+    duration: float = 0.0
+
+    def to_dict(self) -> dict:
+        return {
+            "output_path": self.output_path,
+            "preset_name": self.preset_name,
+            "stem_settings": self.stem_settings,
+            "duration": round(self.duration, 3),
+        }
 
 
-def _effect_to_filter(effect: StemEffect) -> str:
-    """Convert a StemEffect to an FFmpeg audio filter string.
-
-    Args:
-        effect: StemEffect with name and optional params.
-
-    Returns:
-        FFmpeg filter string.
-
-    Raises:
-        ValueError: If the effect name is not supported.
-    """
-    name = effect.name.lower()
-    params = effect.params or {}
-    defaults = SUPPORTED_EFFECTS.get(name, {}).get("params", {})
-
-    # Merge defaults with user params
-    p = {**defaults, **params}
-
-    if name == "reverb":
-        delay = int(p.get("delay", 60))
-        decay = float(p.get("decay", 0.4))
-        return f"aecho=0.8:0.88:{delay}:{decay}"
-
-    elif name == "compress":
-        threshold = float(p.get("threshold", 0.1))
-        ratio = int(p.get("ratio", 4))
-        attack = int(p.get("attack", 20))
-        release = int(p.get("release", 250))
-        return f"acompressor=threshold={threshold}:ratio={ratio}:attack={attack}:release={release}"
-
-    elif name == "eq_bass_boost":
-        freq = int(p.get("frequency", 100))
-        gain = float(p.get("gain", 6))
-        width = int(p.get("width", 200))
-        return f"equalizer=f={freq}:t=h:w={width}:g={gain}"
-
-    elif name == "eq_treble_boost":
-        freq = int(p.get("frequency", 8000))
-        gain = float(p.get("gain", 4))
-        width = int(p.get("width", 2000))
-        return f"equalizer=f={freq}:t=h:w={width}:g={gain}"
-
-    elif name == "eq_mid_cut":
-        freq = int(p.get("frequency", 1000))
-        gain = float(p.get("gain", -4))
-        width = int(p.get("width", 800))
-        return f"equalizer=f={freq}:t=h:w={width}:g={gain}"
-
-    elif name == "highpass":
-        freq = int(p.get("frequency", 80))
-        return f"highpass=f={freq}"
-
-    elif name == "lowpass":
-        freq = int(p.get("frequency", 12000))
-        return f"lowpass=f={freq}"
-
-    elif name == "normalize":
-        target = float(p.get("target_lufs", -16))
-        return f"loudnorm=I={target}:TP=-1.5:LRA=11"
-
-    elif name == "chorus":
-        depth = float(p.get("depth", 0.5))
-        speed = float(p.get("speed", 0.4))
-        return f"chorus=0.5:0.9:{int(depth * 40)}:{depth}:{speed}:2"
-
-    elif name == "flanger":
-        delay = float(p.get("delay", 5))
-        depth = float(p.get("depth", 2))
-        speed = float(p.get("speed", 0.5))
-        return f"flanger=delay={delay}:depth={depth}:speed={speed}"
-
-    else:
-        raise ValueError(f"Unsupported effect: {name}. Available: {', '.join(SUPPORTED_EFFECTS.keys())}")
+# ---------------------------------------------------------------------------
+# Stem Duration Helper
+# ---------------------------------------------------------------------------
+def _get_audio_duration(filepath: str) -> float:
+    """Get audio file duration via ffprobe."""
+    cmd = [
+        get_ffprobe_path(), "-v", "quiet",
+        "-show_entries", "format=duration",
+        "-of", "json", filepath,
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+        data = json.loads(result.stdout)
+        return float(data.get("format", {}).get("duration", 0))
+    except Exception:
+        return 0.0
 
 
-def apply_stem_effect(
+# ---------------------------------------------------------------------------
+# Per-Stem Effect Application
+# ---------------------------------------------------------------------------
+def _build_stem_filter(settings: StemSettings) -> List[str]:
+    """Build FFmpeg audio filter chain for a single stem's effects."""
+    filters = []
+
+    if settings.mute:
+        filters.append("volume=0")
+        return filters
+
+    # Volume
+    if abs(settings.volume - 1.0) > 0.01:
+        vol = max(0.0, min(3.0, settings.volume))
+        filters.append(f"volume={vol:.2f}")
+
+    # Reverse
+    if settings.reverse:
+        filters.append("areverse")
+
+    # Pan (stereo balance using pan filter)
+    if abs(settings.pan) > 0.01:
+        # Pan: -1 = left, 0 = center, 1 = right
+        left_gain = max(0.0, 1.0 - settings.pan) if settings.pan >= 0 else 1.0
+        right_gain = max(0.0, 1.0 + settings.pan) if settings.pan <= 0 else 1.0
+        filters.append(f"pan=stereo|c0={left_gain:.2f}*c0|c1={right_gain:.2f}*c0")
+
+    # Delay
+    if settings.delay_ms > 0:
+        delay_ms = min(1000.0, settings.delay_ms)
+        filters.append(f"adelay={delay_ms:.0f}|{delay_ms:.0f}")
+
+    # Reverb (simulated via aecho)
+    if settings.reverb_amount > 0.01:
+        rev = max(0.0, min(1.0, settings.reverb_amount))
+        # aecho: in_gain|out_gain|delays|decays
+        delays = "60|120|180"
+        decays = f"{rev * 0.5:.2f}|{rev * 0.35:.2f}|{rev * 0.2:.2f}"
+        filters.append(f"aecho=0.8:0.88:{delays}:{decays}")
+
+    # Pitch shift (via asetrate + atempo combo)
+    if abs(settings.pitch_shift_semitones) > 0.01:
+        semitones = max(-12.0, min(12.0, settings.pitch_shift_semitones))
+        rate_factor = 2.0 ** (semitones / 12.0)
+        new_rate = int(SAMPLE_RATE * rate_factor)
+        filters.append(f"asetrate={new_rate}")
+        # Compensate speed change
+        tempo_comp = 1.0 / rate_factor
+        tempo_comp = max(0.5, min(2.0, tempo_comp))
+        filters.append(f"atempo={tempo_comp:.4f}")
+        filters.append(f"aresample={SAMPLE_RATE}")
+
+    return filters
+
+
+def apply_stem_effects(
     stem_path: str,
-    effect: StemEffect,
-    output: Optional[str] = None,
-    on_progress: Optional[Callable] = None,
+    settings: StemSettings,
+    output_dir: str = "",
 ) -> str:
-    """Apply a single audio effect to a stem file.
+    """Apply effects to a single stem file.
 
     Args:
-        stem_path: Path to the input stem audio file.
-        effect: StemEffect to apply.
-        output: Output file path. Auto-generated if None.
-        on_progress: Optional progress callback(pct, msg).
+        stem_path: Path to stem audio file.
+        settings: Effect settings.
+        output_dir: Output directory (uses temp if not set).
 
     Returns:
-        Path to the processed stem file.
+        Path to processed stem file.
     """
-    if not os.path.isfile(stem_path):
-        raise FileNotFoundError(f"Stem file not found: {stem_path}")
+    filters = _build_stem_filter(settings)
 
-    if on_progress:
-        on_progress(10, f"Applying {effect.name} to stem...")
-
-    filter_str = _effect_to_filter(effect)
-
-    if output is None:
-        fd, output = tempfile.mkstemp(
-            suffix=".wav", prefix=f"stem_{effect.name}_"
-        )
-        os.close(fd)
-
-    cmd = (
-        FFmpegCmd()
-        .input(stem_path)
-        .audio_filter(filter_str)
-        .audio_codec("pcm_s16le")
-        .output(output)
-        .build()
-    )
-
-    run_ffmpeg(cmd)
-
-    if on_progress:
-        on_progress(90, f"{effect.name} applied")
-
-    return output
-
-
-def _build_pan_filter(pan: float) -> str:
-    """Build a pan filter for stereo output.
-
-    Args:
-        pan: Pan value from -1.0 (left) to 1.0 (right). 0.0 is center.
-
-    Returns:
-        FFmpeg filter string for panning.
-    """
-    pan = max(-1.0, min(1.0, pan))
-    # Convert -1..1 to left/right gains
-    left_gain = min(1.0, 1.0 - pan)
-    right_gain = min(1.0, 1.0 + pan)
-    return f"pan=stereo|FL={left_gain}*c0+{left_gain}*c1|FR={right_gain}*c0+{right_gain}*c1"
-
-
-def mix_stems(
-    stem_paths: List[str],
-    mix_config: Optional[List[Dict]] = None,
-    output_file: str = "",
-    on_progress: Optional[Callable] = None,
-) -> RemixResult:
-    """Mix multiple audio stems together with volume and pan controls.
-
-    Args:
-        stem_paths: List of paths to stem audio files.
-        mix_config: Optional list of dicts with 'volume' (0-2), 'pan' (-1 to 1),
-                    'mute' (bool) per stem. Index-matched to stem_paths.
-        output_file: Output file path. Auto-generated if empty.
-        on_progress: Optional progress callback(pct, msg).
-
-    Returns:
-        RemixResult with output path and stem count.
-    """
-    if not stem_paths:
-        raise ValueError("No stem paths provided")
-
-    valid_stems = [p for p in stem_paths if os.path.isfile(p)]
-    if not valid_stems:
-        raise ValueError("No valid stem files found")
-
-    if output_file == "":
-        fd, output_file = tempfile.mkstemp(suffix=".wav", prefix="mix_")
-        os.close(fd)
-
-    if on_progress:
-        on_progress(5, f"Mixing {len(valid_stems)} stems...")
-
-    configs = mix_config or []
-
-    # Build filter_complex
-    cmd_builder = FFmpegCmd()
-    filter_parts = []
-    mix_labels = []
-    stem_idx = 0
-
-    for i, stem in enumerate(valid_stems):
-        cfg = configs[i] if i < len(configs) else {}
-
-        if cfg.get("mute", False):
-            continue
-
-        cmd_builder.input(stem)
-
-        volume = float(cfg.get("volume", 1.0))
-        volume = max(0.0, min(2.0, volume))
-        pan = float(cfg.get("pan", 0.0))
-
-        # Build per-stem filter chain
-        chain = f"[{stem_idx}:a]volume={volume}"
-        if abs(pan) > 0.01:
-            left_gain = min(1.0, 1.0 - pan)
-            right_gain = min(1.0, 1.0 + pan)
-            chain += f",pan=stereo|FL={left_gain}*c0|FR={right_gain}*c0"
-
-        label = f"s{stem_idx}"
-        chain += f"[{label}]"
-        filter_parts.append(chain)
-        mix_labels.append(f"[{label}]")
-        stem_idx += 1
-
-    if not mix_labels:
-        raise ValueError("All stems are muted")
-
-    # Solo mode: if any stem has solo=True, only include solo stems
-    solo_indices = [i for i, cfg in enumerate(configs) if cfg.get("solo", False)]
-    if solo_indices:
-        # Rebuild with only solo stems
-        solo_labels = [f"[s{i}]" for i in solo_indices if i < stem_idx]
-        if solo_labels:
-            mix_labels = solo_labels
-
-    # Amix
-    n_mix = len(mix_labels)
-    labels_str = "".join(mix_labels)
-    if n_mix > 1:
-        filter_parts.append(
-            f"{labels_str}amix=inputs={n_mix}:duration=longest"
-            f":dropout_transition=2:normalize=0[out]"
-        )
+    if output_dir and os.path.isdir(output_dir):
+        fd, out_path = tempfile.mkstemp(suffix="_stem_fx.wav", dir=output_dir)
     else:
-        # Single stem: just rename the label
-        existing = mix_labels[0]  # e.g. [s0]
-        filter_parts.append(f"{existing}acopy[out]")
+        fd, out_path = tempfile.mkstemp(suffix="_stem_fx.wav")
+    os.close(fd)
 
-    fc = ";".join(filter_parts)
-    cmd_builder.filter_complex(fc, maps=["[out]"])
-    cmd_builder.audio_codec("pcm_s16le")
-    cmd_builder.option("ar", "44100")
-    cmd_builder.output(output_file)
-
-    cmd = cmd_builder.build()
-
-    if on_progress:
-        on_progress(40, "Running mix...")
+    cmd = [get_ffmpeg_path(), "-y", "-i", stem_path]
+    if filters:
+        cmd.extend(["-af", ",".join(filters)])
+    cmd.extend(["-ar", str(SAMPLE_RATE), out_path])
 
     run_ffmpeg(cmd)
+    return out_path
 
-    if on_progress:
-        on_progress(95, "Mix complete")
 
-    return RemixResult(
-        output_path=output_file,
-        stems_processed=n_mix,
-        effects_applied=0,
-        duration=0,
-    )
+# ---------------------------------------------------------------------------
+# Stem Mixing
+# ---------------------------------------------------------------------------
+def _resolve_stem_paths(
+    stem_dir: str,
+    stem_paths: Optional[Dict[str, str]] = None,
+) -> Dict[str, str]:
+    """Resolve actual stem file paths from directory or explicit paths.
+
+    Looks for vocals.wav, drums.wav, bass.wav, other.wav in stem_dir,
+    or uses explicitly provided paths.
+    """
+    resolved = {}
+
+    for stem_name in STEM_NAMES:
+        # Check explicit path first
+        if stem_paths and stem_name in stem_paths:
+            path = stem_paths[stem_name]
+            if os.path.isfile(path):
+                resolved[stem_name] = path
+                continue
+
+        # Search in stem directory
+        if stem_dir and os.path.isdir(stem_dir):
+            for ext in (".wav", ".mp3", ".flac", ".m4a"):
+                candidate = os.path.join(stem_dir, f"{stem_name}{ext}")
+                if os.path.isfile(candidate):
+                    resolved[stem_name] = candidate
+                    break
+
+    return resolved
+
+
+def _build_global_filter(preset_data: dict) -> List[str]:
+    """Build global filters (tempo, lowpass) from preset data."""
+    filters = []
+
+    tempo = preset_data.get("global_tempo", 1.0)
+    if abs(tempo - 1.0) > 0.01:
+        tempo = max(0.5, min(2.0, tempo))
+        filters.append(f"atempo={tempo:.4f}")
+
+    lowpass = preset_data.get("global_lowpass", 0)
+    if lowpass > 0:
+        filters.append(f"lowpass=f={lowpass}")
+
+    return filters
 
 
 def remix_stems(
-    stem_paths: List[str],
-    effects_config: List[Dict],
-    output: Optional[str] = None,
+    stem_dir: str = "",
+    stem_paths: Optional[Dict[str, str]] = None,
+    preset: str = "",
+    custom_settings: Optional[Dict[str, dict]] = None,
+    output_path_val: str = "",
+    output_dir: str = "",
     on_progress: Optional[Callable] = None,
 ) -> RemixResult:
-    """Apply per-stem effects and recombine into a final mix.
+    """Mix stems together with per-stem effects.
 
     Args:
-        stem_paths: List of paths to stem audio files.
-        effects_config: List of dicts per stem with:
-            - 'effects': list of {'name': str, 'params': dict}
-            - 'volume': float (0-2, default 1.0)
-            - 'pan': float (-1 to 1, default 0.0)
-            - 'mute': bool (default False)
-            - 'solo': bool (default False)
-        output: Output file path. Auto-generated if None.
-        on_progress: Optional progress callback(pct, msg).
+        stem_dir: Directory containing stem files (vocals.wav, etc.).
+        stem_paths: Explicit stem paths dict {"vocals": "/path/to/vocals.wav", ...}.
+        preset: Preset name from REMIX_PRESETS (empty for custom settings).
+        custom_settings: Custom per-stem settings dict.
+        output_path_val: Explicit output file path.
+        output_dir: Output directory.
+        on_progress: Progress callback (int percentage).
 
     Returns:
-        RemixResult with output path and processing summary.
+        RemixResult with output path, preset name, settings, duration.
     """
-    if not stem_paths:
-        raise ValueError("No stem paths provided")
+    if on_progress:
+        on_progress(2)
 
-    valid_stems = [p for p in stem_paths if os.path.isfile(p)]
-    if not valid_stems:
-        raise ValueError("No valid stem files found")
+    # Resolve stem file paths
+    resolved = _resolve_stem_paths(stem_dir, stem_paths)
+    if not resolved:
+        raise ValueError(
+            "No stem files found. Provide stem_dir with vocals/drums/bass/other "
+            "files, or explicit stem_paths dict."
+        )
 
     if on_progress:
-        on_progress(5, f"Processing {len(valid_stems)} stems with effects...")
+        on_progress(8)
 
+    # Determine settings from preset or custom
+    preset_data = {}
+    all_settings = {}
+
+    if preset and preset in REMIX_PRESETS:
+        preset_data = REMIX_PRESETS[preset]
+        preset_stems = preset_data.get("stems", {})
+        for stem_name in STEM_NAMES:
+            stem_cfg = preset_stems.get(stem_name, {})
+            merged = dict(DEFAULT_STEM_SETTINGS)
+            merged.update(stem_cfg)
+            all_settings[stem_name] = StemSettings.from_dict(merged)
+    elif custom_settings:
+        for stem_name in STEM_NAMES:
+            stem_cfg = custom_settings.get(stem_name, {})
+            merged = dict(DEFAULT_STEM_SETTINGS)
+            merged.update(stem_cfg)
+            all_settings[stem_name] = StemSettings.from_dict(merged)
+    else:
+        # Default: all stems at unity
+        for stem_name in STEM_NAMES:
+            all_settings[stem_name] = StemSettings()
+
+    if on_progress:
+        on_progress(12)
+
+    # Process each stem
+    processed_stems = []
     temp_files = []
-    total_effects = 0
 
     try:
-        processed_paths = []
+        for idx, stem_name in enumerate(STEM_NAMES):
+            if stem_name not in resolved:
+                continue
 
-        for i, stem in enumerate(valid_stems):
-            cfg = effects_config[i] if i < len(effects_config) else {}
-            effects_list = cfg.get("effects", [])
+            settings = all_settings.get(stem_name, StemSettings())
+            if settings.mute:
+                logger.debug("Skipping muted stem: %s", stem_name)
+                continue
 
-            if effects_list:
-                # Chain effects sequentially
-                current_path = stem
-                for j, eff_dict in enumerate(effects_list):
-                    eff = StemEffect(
-                        name=eff_dict.get("name", ""),
-                        params=eff_dict.get("params", {}),
-                    )
-                    pct = 10 + int((i * len(effects_list) + j) / max(1, len(valid_stems) * max(1, len(effects_list))) * 50)
-                    if on_progress:
-                        on_progress(pct, f"Applying {eff.name} to stem {i + 1}...")
+            if on_progress:
+                pct = 12 + int(((idx + 1) / len(STEM_NAMES)) * 50)
+                on_progress(pct)
 
-                    out = apply_stem_effect(current_path, eff)
-                    if current_path != stem:
-                        temp_files.append(current_path)
-                    current_path = out
-                    total_effects += 1
+            stem_path = resolved[stem_name]
+            processed = apply_stem_effects(stem_path, settings, output_dir=output_dir)
+            processed_stems.append(processed)
+            temp_files.append(processed)
 
-                processed_paths.append(current_path)
-                if current_path != stem:
-                    temp_files.append(current_path)
+        if not processed_stems:
+            logger.warning("All stems are muted — producing silence")
+            # Find any stem to get duration
+            any_stem = next(iter(resolved.values()))
+            dur = _get_audio_duration(any_stem)
+
+            if output_path_val:
+                out = output_path_val
+            elif output_dir:
+                out = os.path.join(output_dir, "remix_silence.wav")
             else:
-                processed_paths.append(stem)
+                fd, out = tempfile.mkstemp(suffix="_remix_silence.wav")
+                os.close(fd)
+
+            # Write silent WAV
+            n_samples = int(SAMPLE_RATE * max(1.0, dur))
+            silence = struct.pack(f"<{n_samples}h", *([0] * n_samples))
+            with wave.open(out, "wb") as wf:
+                wf.setnchannels(1)
+                wf.setsampwidth(2)
+                wf.setframerate(SAMPLE_RATE)
+                wf.writeframes(silence)
+
+            return RemixResult(
+                output_path=out,
+                preset_name=preset,
+                stem_settings={n: all_settings[n].to_dict() for n in STEM_NAMES if n in all_settings},
+                duration=dur,
+            )
 
         if on_progress:
-            on_progress(70, "Mixing processed stems...")
+            on_progress(65)
 
-        # Mix with volume/pan/mute/solo from effects_config
-        mix_config = []
-        for i in range(len(processed_paths)):
-            cfg = effects_config[i] if i < len(effects_config) else {}
-            mix_config.append({
-                "volume": cfg.get("volume", 1.0),
-                "pan": cfg.get("pan", 0.0),
-                "mute": cfg.get("mute", False),
-                "solo": cfg.get("solo", False),
-            })
+        # Mix stems together using FFmpeg amix
+        if output_path_val:
+            out = output_path_val
+        elif output_dir:
+            base = f"remix_{preset}" if preset else "remix_custom"
+            out = os.path.join(output_dir, f"{base}.wav")
+        else:
+            any_stem = next(iter(resolved.values()))
+            out = output_path(any_stem, f"remix_{preset}" if preset else "remix_custom")
+            if not out.lower().endswith((".wav", ".mp3", ".flac")):
+                out = os.path.splitext(out)[0] + ".wav"
 
-        result = mix_stems(
-            processed_paths,
-            mix_config=mix_config,
-            output_file=output or "",
-            on_progress=on_progress,
+        n_inputs = len(processed_stems)
+        cmd = [get_ffmpeg_path(), "-y"]
+        for p in processed_stems:
+            cmd.extend(["-i", p])
+
+        # Build amix filter
+        amix_filter = f"amix=inputs={n_inputs}:duration=longest:dropout_transition=2"
+
+        # Add global filters from preset
+        global_filters = _build_global_filter(preset_data)
+        if global_filters:
+            filter_chain = amix_filter + "," + ",".join(global_filters)
+        else:
+            filter_chain = amix_filter
+
+        cmd.extend(["-filter_complex", filter_chain, "-ar", str(SAMPLE_RATE), out])
+
+        if on_progress:
+            on_progress(75)
+
+        run_ffmpeg(cmd)
+
+        if on_progress:
+            on_progress(92)
+
+        # Get output duration
+        dur = _get_audio_duration(out) or _get_audio_duration(next(iter(resolved.values())))
+
+        result = RemixResult(
+            output_path=out,
+            preset_name=preset,
+            stem_settings={n: all_settings[n].to_dict() for n in STEM_NAMES if n in all_settings},
+            duration=dur,
         )
-        result.effects_applied = total_effects
+        logger.info("Stem remix complete: preset='%s', %d stems -> %s", preset, n_inputs, out)
+        return result
+
+    finally:
+        for p in temp_files:
+            try:
+                os.unlink(p)
+            except OSError:
+                pass
+
+
+# ---------------------------------------------------------------------------
+# Preview
+# ---------------------------------------------------------------------------
+def preview_remix(
+    stem_dir: str = "",
+    stem_paths: Optional[Dict[str, str]] = None,
+    preset: str = "",
+    custom_settings: Optional[Dict[str, dict]] = None,
+    preview_duration: float = 15.0,
+    preview_start: float = 0.0,
+    output_dir: str = "",
+    on_progress: Optional[Callable] = None,
+) -> RemixResult:
+    """Preview remix settings on a short segment.
+
+    Extracts a short segment from each stem before applying effects,
+    making the preview much faster than processing entire tracks.
+
+    Args:
+        stem_dir: Directory containing stem files.
+        stem_paths: Explicit stem paths.
+        preset: Preset name.
+        custom_settings: Custom per-stem settings.
+        preview_duration: Duration of preview in seconds.
+        preview_start: Start time in seconds.
+        output_dir: Output directory.
+        on_progress: Progress callback (int percentage).
+
+    Returns:
+        RemixResult for the preview segment.
+    """
+    if on_progress:
+        on_progress(5)
+
+    resolved = _resolve_stem_paths(stem_dir, stem_paths)
+    if not resolved:
+        raise ValueError("No stem files found for preview")
+
+    preview_duration = max(3.0, min(30.0, preview_duration))
+    preview_start = max(0.0, preview_start)
+
+    # Extract preview segments from each stem
+    preview_stems = {}
+    temp_previews = []
+    try:
+        for stem_name, path in resolved.items():
+            fd, preview_path = tempfile.mkstemp(suffix=f"_preview_{stem_name}.wav")
+            os.close(fd)
+
+            cmd = [
+                get_ffmpeg_path(), "-y",
+                "-ss", f"{preview_start:.3f}",
+                "-i", path,
+                "-t", f"{preview_duration:.3f}",
+                "-vn", "-ar", str(SAMPLE_RATE),
+                preview_path,
+            ]
+            try:
+                run_ffmpeg(cmd)
+                preview_stems[stem_name] = preview_path
+                temp_previews.append(preview_path)
+            except RuntimeError as e:
+                logger.warning("Preview extraction failed for %s: %s", stem_name, e)
+                try:
+                    os.unlink(preview_path)
+                except OSError:
+                    pass
+
+        if on_progress:
+            on_progress(30)
+
+        if not preview_stems:
+            raise RuntimeError("Failed to extract preview segments from any stem")
+
+        # Run remix on previews
+        result = remix_stems(
+            stem_paths=preview_stems,
+            preset=preset,
+            custom_settings=custom_settings,
+            output_dir=output_dir,
+            on_progress=lambda pct: on_progress(30 + int(pct * 0.65)) if on_progress else None,
+        )
+
+        if on_progress:
+            on_progress(95)
 
         return result
 
     finally:
-        # Clean up intermediate temp files
-        for tmp in temp_files:
+        for p in temp_previews:
             try:
-                if os.path.isfile(tmp):
-                    os.unlink(tmp)
+                os.unlink(p)
             except OSError:
                 pass
+
+
+def list_remix_presets() -> List[Dict]:
+    """Return available remix presets with descriptions."""
+    return [
+        {
+            "name": name,
+            "description": info["description"],
+            "stem_settings": {
+                stem: cfg for stem, cfg in info.get("stems", {}).items()
+            },
+            "has_global_tempo": "global_tempo" in info,
+            "has_global_lowpass": "global_lowpass" in info,
+        }
+        for name, info in REMIX_PRESETS.items()
+    ]
