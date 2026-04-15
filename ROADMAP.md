@@ -552,3 +552,96 @@ All Wave 7 features + FastAPI migration + TypeScript + niche items (~40 features
 ---
 
 *This roadmap should be reviewed at the start of each wave and reprioritized based on user feedback, competitive landscape changes, and lessons learned from the previous wave.*
+
+---
+
+## Research & Strategic Gaps (Auto-Generated Analysis)
+
+**Auditor**: Principal Systems Architect analysis
+**Date**: 2026-04-14
+**Baseline**: v1.14.0 (1,088 routes, 408 core modules, 83 blueprints, 87 test files, 6,925 tests)
+**Method**: Full codebase scan, security audit, architecture bottleneck analysis, test/CI pipeline review
+
+> **Context**: This roadmap was authored at v1.9.26 (254 routes, 68 modules). The codebase has since grown **4.3x in routes** and **6x in modules**. The Wave 1-7 structure and growth projections are now obsolete — the "After Wave 7" target of ~393 routes was surpassed at v1.10.5. This analysis identifies the gaps that the rapid feature expansion has opened.
+
+---
+
+### HIGH Priority — Blocking Issues
+
+- **GPU process isolation is still unimplemented (Wave 3A).** This was marked P0 and remains the single most critical infrastructure gap. `MAX_CONCURRENT_JOBS = 10` in `opencut/jobs.py:42` allows 10 simultaneous ML model loads into VRAM. PyTorch models (Demucs, Real-ESRGAN, InsightFace, SAM2, CLIP, etc.) each consume 500MB-4GB VRAM. Concurrent loads **will** OOM on consumer GPUs. No memory reservation, no model-aware scheduling, no graceful degradation path exists. **Every AI feature added since v1.10 has widened this gap.** The 408-module codebase now has 40+ modules that load GPU models — 6x more than when Wave 3A was planned.
+  - *Recommended action*: Implement a GPU memory budget system immediately. At minimum: reduce `MAX_CONCURRENT_JOBS` to 3 for GPU-tagged routes, add a `@gpu_exclusive` decorator that serializes GPU model access behind a semaphore, and report VRAM usage in `/system/status`.
+
+- **Rate limiting covers 4% of async routes.** Security audit found 597 async route handlers but only 23 rate-limit calls. The `require_rate_limit()` decorator exists and works, but was only applied to model-install and a handful of AI routes. All 574 unprotected async routes accept concurrent requests limited only by `MAX_CONCURRENT_JOBS=10`. A single client can trivially exhaust all 10 job slots with expensive operations (batch rendering, video processing, ML inference), starving other requests.
+  - *Recommended action*: Introduce rate-limit categories (`gpu_heavy`, `cpu_heavy`, `io_bound`, `light`) and apply to all async routes. GPU-heavy operations should share a pool of 2-3 concurrent slots. CPU-heavy should cap at 4-6.
+
+- **Test coverage is broad but shallow.** 87 test files exist with 6,925 test functions, but the architecture audit reveals 97% of the 408 core modules lack dedicated behavioral tests — they're only exercised indirectly through route smoke tests. The smoke tests in `test_route_smoke.py` use broad status code assertions like `assert resp.status_code in (200, 400, 429)` which pass regardless of whether the feature works correctly. CI enforces only 50% line coverage (`--cov-fail-under=50` in `build.yml`), which is insufficient for a codebase of this size and complexity.
+  - *Recommended action*: Raise CI coverage threshold to 65% (target 80% over 2 sprints). Add schema validation for route responses (JSON structure, not just "is JSON"). Prioritize integration tests for the 40 GPU-model-loading modules — these are the highest-risk code paths with the least coverage.
+
+- **Roadmap growth projections are 3x out of date.** The "Route Growth Projection" table estimates 393 routes after all 7 waves. Actual count is 1,088 — a 2.8x overshoot. The "Success Metrics" table, "Completed Work" section, and wave feature lists don't reflect v1.10-v1.14 additions (categories 63-77, 155 new core modules, 20 new route blueprints). The roadmap should be rebased to reflect current reality so it can be trusted for planning.
+  - *Recommended action*: Rebase all tables to v1.14.0 actuals. Mark Wave 1-2 features that were implemented in v1.10-v1.14 as DONE. Update dependency legend with new module families. Revise success metrics to reflect 1,088-route baseline.
+
+---
+
+### MEDIUM Priority — Technical Debt & Infrastructure
+
+- **`helpers.py` is a god module (350 imports).** Every core module and most route files import from `opencut/helpers.py`. It contains FFmpeg execution, video probing, output path logic, temp file cleanup, package installation, and progress utilities — responsibilities that span 6+ concerns. This makes it a merge conflict magnet, impossible to test in isolation, and a startup bottleneck (every import chain pulls in the entire module).
+  - *Recommended action*: Decompose into `helpers/ffmpeg.py`, `helpers/video_probe.py`, `helpers/paths.py`, `helpers/cleanup.py`, `helpers/packages.py`. Re-export from `helpers/__init__.py` for backward compat. Do this incrementally during feature work, not as a dedicated refactor sprint.
+
+- **UXP migration has 5 months remaining.** CEP end-of-life is approximately September 2026. The roadmap states UXP is at ~85% feature parity (Wave 3B). The UXP panel (`extension/com.opencut.uxp/`) has 7 tabs vs. CEP's 8, and the UXP main.js is 1,523 lines vs. CEP's 7,730 — indicating significant feature gaps in the frontend. No UXP-specific tests exist in CI. The CEP panel continues to receive features (v1.14.0 version bumps touch CEP files), violating the roadmap's "freeze CEP feature additions" directive.
+  - *Recommended action*: Audit UXP vs. CEP parity at the feature level (not tab level). Add UXP smoke test to CI. Enforce CEP freeze — new frontend features go to UXP only.
+
+- **No type checking in CI.** 523 Python files with no mypy or pyright enforcement. Type errors (None where str expected, dict where dataclass expected, wrong callback signature) are caught at runtime — if at all. The `on_progress` callback pattern is already documented in CLAUDE.md as a gotcha (core modules call with 1 arg, routes define closures with 2 args), which is exactly the class of bug static typing catches.
+  - *Recommended action*: Add `mypy --ignore-missing-imports opencut/` to CI. Start with `--no-strict` and fix errors incrementally. Target: 0 type errors in `opencut/core/` within 2 sprints.
+
+- **Untracked subprocesses can orphan on cancel.** The `@async_job` decorator registers the job's main thread for cancellation, and `_register_job_process()` tracks Popen handles. But 158 subprocess calls across core modules call `subprocess.run()` directly — these finish synchronously within the job thread but can't be interrupted mid-execution. If a user cancels a job while FFmpeg is mid-render (a 30-minute operation), the FFmpeg process runs to completion even though the job is marked cancelled. The process exit code is then silently discarded.
+  - *Recommended action*: Wrap long-running subprocess calls in a pattern that checks `job_cancelled` flag and sends SIGTERM to the child process. Alternatively, refactor `run_ffmpeg()` in helpers.py to accept a `job_id` parameter and auto-register the Popen for cancellation.
+
+- **No security scanning in CI pipeline.** The `build.yml` workflow runs ruff lint and pytest but has no security tooling: no bandit (Python security linter), no CodeQL (GitHub's code scanning), no dependabot/Snyk (dependency vulnerability scanning), no SBOM generation. For a project that executes FFmpeg subprocesses, runs `pip install` at runtime via `safe_pip_install()`, and loads ML models from external sources, this is a meaningful gap.
+  - *Recommended action*: Add `bandit -r opencut/ -ll` to CI (catches high-confidence security issues). Enable GitHub Dependabot for dependency alerts (zero-effort, just add `dependabot.yml`). Add CodeQL for deeper analysis.
+
+- **Temp file accumulation under load.** 93 modules create temp files via `tempfile.mkstemp()` or `NamedTemporaryFile()`. The deferred cleanup mechanism (`_schedule_temp_cleanup()` in helpers.py) uses a 5-second delay with 3 retries. Under concurrent load (10 video processing jobs), this means hundreds of multi-GB temp files (intermediate FFmpeg outputs, extracted frames, model outputs) can accumulate before cleanup fires. No disk quota, no max-temp-size check, no cleanup-on-startup sweep.
+  - *Recommended action*: Add a startup sweep of `tempfile.gettempdir()` for stale `opencut_*` temp files. Add a periodic (60s) background cleanup for files older than 10 minutes. Log temp disk usage in `/system/status`.
+
+- **25+ tests use `time.sleep()` creating flaky CI.** Tests in `test_batch_executor.py`, `test_batch_parallel.py`, `test_boolean_coercion.py`, `test_integration_ffmpeg.py`, and `test_preview_realtime.py` contain sleeps ranging from 10ms to 500ms. These are timing-dependent and will intermittently fail on slow CI runners, Windows VMs, or under load. Additionally, `test_solver_agent.py` uses `random.seed(42)` but other tests don't seed, introducing non-determinism.
+  - *Recommended action*: Replace `time.sleep()` in tests with event-based synchronization (threading.Event, condition variables). For async result tests, poll with timeout rather than fixed sleep. Audit and seed all random usage.
+
+---
+
+### LOW Priority — Future Investment
+
+- **No auto-generated API documentation.** With 1,088 routes across 83 blueprints, there is no OpenAPI/Swagger spec, no auto-generated endpoint catalog, and no machine-readable API schema. Plugin developers and external integrators must read route source code. The roadmap's Wave 3C notes FastAPI migration (which brings auto-generated OpenAPI) but defers it. The original trigger — "if >300 routes" — was passed long ago.
+  - *Recommended action*: Generate an OpenAPI spec from Flask routes using `flask-smorest` or `apispec` without migrating to FastAPI. Serve Swagger UI at `/api/docs` for development mode only. This is a 1-day effort that unlocks plugin ecosystem development.
+
+- **Blueprint registration is sequential and eager.** `register_blueprints()` in `routes/__init__.py` performs 83 sequential `import` statements at app startup. Each import may trigger module-level initialization (cache setup, constant computation, availability checks). Measured impact is 2-5 seconds on startup — not a production issue but noticeable during development when the server auto-restarts on file changes.
+  - *Recommended action*: No immediate action needed. If dev-cycle time becomes a complaint, implement lazy blueprint registration (register on first request to URL prefix).
+
+- **No performance regression detection.** No benchmarks, no load tests, no response-time tracking in CI. With 1,088 routes and 408 modules, a single change to `helpers.py` or `jobs.py` could degrade performance across hundreds of endpoints with no visibility.
+  - *Recommended action*: Add a simple benchmark suite (10 representative endpoints, measure p50/p95 response time) that runs in CI and fails on >20% regression. Use `pytest-benchmark` or custom timing.
+
+- **Missing production governance files.** No `SECURITY.md` (vulnerability disclosure process), no `CODE_OF_CONDUCT.md`, no `CONTRIBUTING.md` with architecture guide, no SBOM (software bill of materials). For an open-source project with 408 modules and ML model downloads, these are expected by enterprise adopters.
+  - *Recommended action*: Add `SECURITY.md` with disclosure process and supported-versions table. Generate SBOM from `pyproject.toml` deps.
+
+- **FastAPI migration trigger has been reached.** The roadmap defers FastAPI migration until ">300 routes" with the rationale that validation boilerplate would become unmanageable. Current state: 1,088 routes, 879 mutation endpoints, manual `safe_float()`/`safe_int()`/`safe_bool()` validation in every handler. Pydantic models would eliminate ~60% of per-route validation boilerplate and provide automatic request/response schema generation.
+  - *Recommended action*: This remains low priority because Flask works and migration risk is high with 83 blueprints. However, the original deferral rationale no longer holds. If a major refactor is planned (e.g., helpers.py decomposition), consider migrating 1-2 blueprints to FastAPI as a proof-of-concept to measure the cost/benefit.
+
+---
+
+### Summary Matrix
+
+| Finding | Priority | Effort | Impact | Status |
+|---------|----------|--------|--------|--------|
+| GPU process isolation (Wave 3A) | HIGH | XL | Eliminates OOM crashes | Not started |
+| Rate limiting expansion | HIGH | M | Prevents DoS / resource exhaustion | 4% coverage |
+| Test depth & coverage threshold | HIGH | L | Catches regressions before release | 50% threshold |
+| Roadmap rebase to v1.14.0 | HIGH | S | Accurate planning | Stale since v1.9.26 |
+| helpers.py decomposition | MEDIUM | M | Reduces coupling, merge conflicts | 350 imports |
+| UXP full parity (Wave 3B) | MEDIUM | L | CEP EOL Sept 2026 | ~85% parity |
+| Type checking in CI | MEDIUM | M | Catches type bugs statically | Not started |
+| Subprocess cancellation | MEDIUM | M | Clean job cancel behavior | 158 untracked calls |
+| Security scanning in CI | MEDIUM | S | Catches vulnerabilities | Not started |
+| Temp file disk management | MEDIUM | S | Prevents disk exhaustion | No quota |
+| Flaky test elimination | MEDIUM | S | Reliable CI | 25+ sleep-based tests |
+| Auto-generated API docs | LOW | S | Enables plugin ecosystem | No spec exists |
+| Performance benchmarks in CI | LOW | M | Detects regressions | Not started |
+| Production governance files | LOW | S | Enterprise readiness | Missing |
+| FastAPI migration evaluation | LOW | XL | Reduces boilerplate at scale | Deferred |
