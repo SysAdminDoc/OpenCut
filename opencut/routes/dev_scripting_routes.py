@@ -16,17 +16,43 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int
+from opencut.security import get_json_dict, require_csrf, safe_float, safe_int
 
 logger = logging.getLogger("opencut")
 
 dev_scripting_bp = Blueprint("dev_scripting", __name__)
 
 
+def _json_object_or_400():
+    try:
+        return get_json_dict(silent=True), None
+    except ValueError as exc:
+        return None, (
+            jsonify({
+                "error": str(exc),
+                "code": "INVALID_INPUT",
+                "suggestion": "Send a top-level JSON object in the request body.",
+            }),
+            400,
+        )
+
+
+def _clean_string(value, field_name, *, allow_empty=True, default=""):
+    if value is None:
+        value = default
+    if not isinstance(value, str):
+        raise ValueError(f"{field_name} must be a string")
+    cleaned = value.strip()
+    if not allow_empty and not cleaned:
+        raise ValueError(f"{field_name} is required")
+    return cleaned
+
+
 # ===========================================================================
 # 1. Scripting Console  (3 routes)
 # ===========================================================================
 
+@dev_scripting_bp.route("/api/dev/scripting/execute", methods=["POST"])
 @dev_scripting_bp.route("/api/scripting/execute", methods=["POST"])
 @require_csrf
 def scripting_execute():
@@ -42,18 +68,27 @@ def scripting_execute():
     """
     from opencut.core.scripting_console import execute_script
 
-    data = request.get_json(force=True) or {}
-    code = data.get("code", "")
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    try:
+        code = _clean_string(data.get("code", ""), "code", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
     timeout = safe_int(data.get("timeout", 30), default=30, min_val=1, max_val=60)
     context = data.get("context", {})
 
-    if not code or not code.strip():
-        return jsonify({"error": "No code provided"}), 400
+    if context is None:
+        context = {}
+    if not isinstance(context, dict):
+        return jsonify({"error": "context must be an object"}), 400
 
     try:
         result = execute_script(
             code=code,
-            context=context if isinstance(context, dict) else {},
+            context=context,
             timeout=timeout,
         )
         return jsonify({
@@ -105,8 +140,14 @@ def macro_record_start():
     """
     from opencut.core.macro_recorder import start_recording
 
-    data = request.get_json(force=True) or {}
-    session_id = data.get("session_id", "default")
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    try:
+        session_id = _clean_string(data.get("session_id", "default"), "session_id")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     result = start_recording(session_id=session_id)
     return jsonify(result)
@@ -127,10 +168,16 @@ def macro_record_stop():
     """
     from opencut.core.macro_recorder import save_macro, stop_recording
 
-    data = request.get_json(force=True) or {}
-    session_id = data.get("session_id", "default")
-    name = data.get("name", "Untitled Macro")
-    description = data.get("description", "")
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    try:
+        session_id = _clean_string(data.get("session_id", "default"), "session_id")
+        name = _clean_string(data.get("name", "Untitled Macro"), "name", allow_empty=False)
+        description = _clean_string(data.get("description", ""), "description")
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     try:
         macro = stop_recording(
@@ -149,6 +196,7 @@ def macro_record_stop():
         return jsonify({"error": str(exc)}), 400
 
 
+@dev_scripting_bp.route("/api/dev/macro/play", methods=["POST"])
 @dev_scripting_bp.route("/api/macro/play", methods=["POST"])
 @require_csrf
 @async_job("macro_play", filepath_required=False)
@@ -173,8 +221,9 @@ def macro_play(job_id, filepath, data):
     target_file = data.get("target_file", filepath)
     output_dir = data.get("output_dir", "")
 
-    if not name:
-        raise ValueError("Macro name is required")
+    name = _clean_string(name, "name", allow_empty=False)
+    target_file = _clean_string(target_file, "target_file", default=filepath)
+    output_dir = _clean_string(output_dir, "output_dir", default="")
 
     macro_path = _macro_path(name)
     if not os.path.isfile(macro_path):
@@ -248,9 +297,14 @@ def filter_chain_build():
         validate_chain,
     )
 
-    data = request.get_json(force=True) or {}
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
     nodes = data.get("nodes", [])
 
+    if not isinstance(nodes, list):
+        return jsonify({"error": "nodes must be a list"}), 400
     if not nodes:
         return jsonify({"error": "At least one filter node is required"}), 400
 
@@ -333,19 +387,27 @@ def webhook_register():
     """
     from opencut.core.webhook_system import register_webhook
 
-    data = request.get_json(force=True) or {}
-    url = data.get("url", "")
-    events = data.get("events", [])
-    description = data.get("description", "")
-    webhook_id = data.get("id", None)
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
-    if not url:
-        return jsonify({"error": "Webhook URL is required"}), 400
+    try:
+        url = _clean_string(data.get("url", ""), "url", allow_empty=False)
+        description = _clean_string(data.get("description", ""), "description")
+        webhook_id = _clean_string(data.get("id", ""), "id", default="") or None
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    events = data.get("events", [])
+    if events is None:
+        events = []
+    if not isinstance(events, list):
+        return jsonify({"error": "events must be a list"}), 400
 
     try:
         webhook = register_webhook(
             url=url,
-            events=events if isinstance(events, list) else [],
+            events=events,
             description=description,
             webhook_id=webhook_id,
         )
@@ -392,11 +454,14 @@ def webhook_test():
     """
     from opencut.core.webhook_system import test_webhook
 
-    data = request.get_json(force=True) or {}
-    webhook_id = data.get("id", "")
+    data, error = _json_object_or_400()
+    if error:
+        return error
 
-    if not webhook_id:
-        return jsonify({"error": "Webhook ID is required"}), 400
+    try:
+        webhook_id = _clean_string(data.get("id", ""), "id", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
 
     try:
         delivery = test_webhook(webhook_id)
@@ -436,6 +501,12 @@ def batch_execute(job_id, filepath, data):
     """
     from opencut.core.batch_script import BatchScript, execute_script
 
+    operations = data.get("operations", [])
+    if operations is None:
+        operations = []
+    if not isinstance(operations, list):
+        raise ValueError("operations must be a list")
+
     script = BatchScript.from_dict(data)
     if not script.name:
         script.name = "batch_" + str(int(time.time()))
@@ -461,10 +532,18 @@ def batch_validate():
     """
     from opencut.core.batch_script import BatchScript, validate_script
 
-    data = request.get_json(force=True) or {}
+    data, error = _json_object_or_400()
+    if error:
+        return error
+
+    operations = data.get("operations", [])
+    if operations is None:
+        operations = []
+    if not isinstance(operations, list):
+        return jsonify({"error": "operations must be a list"}), 400
+
     script = BatchScript.from_dict(data)
 
     result = validate_script(script)
     return jsonify(result.to_dict())
-
 

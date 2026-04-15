@@ -14,7 +14,7 @@ from flask import Blueprint, jsonify, request, send_file
 from opencut import __version__
 from opencut.errors import safe_error
 from opencut.helpers import OPENCUT_DIR, compute_estimate
-from opencut.security import require_csrf, safe_float, safe_int
+from opencut.security import get_json_dict, require_csrf, safe_float, safe_int
 from opencut.user_data import (
     load_favorites,
     load_presets,
@@ -25,6 +25,43 @@ from opencut.user_data import (
 )
 
 settings_bp = Blueprint("settings", __name__)
+
+
+def _invalid_input_response(message: str):
+    return jsonify({
+        "error": message,
+        "code": "INVALID_INPUT",
+        "suggestion": "Send a top-level JSON object in the request body.",
+    }), 400
+
+
+def _require_json_object():
+    try:
+        return get_json_dict(), None
+    except ValueError as e:
+        return None, _invalid_input_response(str(e))
+
+
+def _parse_log_line(line: str) -> dict:
+    """Parse plain-text and JSON log lines into a filterable record."""
+    raw = line.rstrip()
+    level = ""
+    job_id = ""
+    if not raw:
+        return {"raw": raw, "level": level, "job_id": job_id}
+    try:
+        parsed = json.loads(raw)
+        if isinstance(parsed, dict):
+            level = str(parsed.get("level", "")).upper()
+            job_id = str(parsed.get("job_id", ""))
+            return {"raw": raw, "level": level, "job_id": job_id}
+    except (json.JSONDecodeError, TypeError, ValueError):
+        pass
+    for candidate in ("DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"):
+        if f"[{candidate}]" in raw:
+            level = candidate
+            break
+    return {"raw": raw, "level": level, "job_id": job_id}
 
 
 # ---------------------------------------------------------------------------
@@ -40,7 +77,9 @@ def list_presets():
 @require_csrf
 def save_preset():
     """Save a named preset."""
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     name = data.get("name", "").strip()
     if not name:
         return jsonify({"error": "Preset name required"}), 400
@@ -61,7 +100,9 @@ def save_preset():
 @require_csrf
 def delete_preset():
     """Delete a named preset."""
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     name = data.get("name", "").strip()
     presets = load_presets()
     if name in presets:
@@ -83,7 +124,9 @@ def get_favorites():
 @require_csrf
 def save_favorites_route():
     """Save user's favorite operations list."""
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     favorites = data.get("favorites", [])
     if not isinstance(favorites, list):
         return jsonify({"error": "favorites must be a list"}), 400
@@ -106,7 +149,9 @@ def list_workflows():
 @require_csrf
 def save_workflow():
     """Save a custom workflow template."""
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     name = data.get("name", "").strip()
     steps = data.get("steps", [])
     if not name:
@@ -138,7 +183,9 @@ def save_workflow():
 @require_csrf
 def delete_workflow():
     """Delete a custom workflow template."""
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     name = data.get("name", "").strip()
     workflows = load_workflows()
     workflows = [wf for wf in workflows if wf.get("name") != name]
@@ -172,11 +219,23 @@ def export_settings():
 @require_csrf
 def import_settings():
     """Import settings bundle (presets, favorites, workflows)."""
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     imported = []
     if "presets" in data and isinstance(data["presets"], dict):
+        valid_presets = {}
+        for name, preset in data["presets"].items():
+            if not isinstance(name, str):
+                continue
+            clean_name = name.strip()
+            if not clean_name or len(clean_name) > 100:
+                continue
+            if not isinstance(preset, dict):
+                continue
+            valid_presets[clean_name] = preset
         existing = load_presets()
-        existing.update(data["presets"])
+        existing.update(valid_presets)
         if len(existing) > 500:
             return jsonify({"error": "Too many presets (max 500)"}), 400
         save_presets(existing)
@@ -212,7 +271,9 @@ def import_settings():
 @require_csrf
 def estimate_job_time():
     """Estimate processing time based on historical data."""
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     job_type = data.get("type", "")
     file_duration = safe_float(data.get("file_duration", 0))
     return jsonify(compute_estimate(job_type, file_duration))
@@ -254,11 +315,12 @@ def tail_logs():
     # Filter
     result = []
     for line in all_lines:
-        if level_filter and f"[{level_filter}]" not in line:
+        record = _parse_log_line(line)
+        if level_filter and record["level"] != level_filter:
             continue
-        if job_filter and job_filter not in line:
+        if job_filter and job_filter not in record["raw"] and job_filter != record["job_id"]:
             continue
-        result.append(line.rstrip())
+        result.append(record["raw"])
     # Tail
     tail = result[-lines:]
     return jsonify({"lines": tail, "total": len(result)})
@@ -267,12 +329,19 @@ def tail_logs():
 @settings_bp.route("/logs/clear", methods=["POST"])
 @require_csrf
 def clear_logs():
-    """Clear the crash log."""
+    """Clear the crash log and active server log."""
     crash_log = os.path.join(OPENCUT_DIR, "crash.log")
     try:
-        if os.path.isfile(crash_log):
-            os.unlink(crash_log)
-        return jsonify({"success": True})
+        from opencut.server import LOG_FILE
+
+        cleared = []
+        for path in (crash_log, LOG_FILE):
+            if not os.path.isfile(path):
+                continue
+            with open(path, "w", encoding="utf-8"):
+                pass
+            cleared.append(os.path.basename(path))
+        return jsonify({"success": True, "cleared": cleared})
     except OSError as e:
         return safe_error(e, "clear_logs")
 
@@ -332,12 +401,37 @@ def save_llm_settings_route():
         from ..user_data import load_llm_settings, save_llm_settings
     except ImportError:
         from opencut.user_data import load_llm_settings, save_llm_settings
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     current = load_llm_settings()
     # Don't overwrite key if masked value sent back
     if data.get("api_key", "").startswith("***"):
         data["api_key"] = current.get("api_key", "")
-    current.update({k: v for k, v in data.items() if k in current})
+    normalized = {k: v for k, v in data.items() if k in current}
+    if "provider" in normalized:
+        normalized["provider"] = str(normalized["provider"]).strip()[:50] or current.get("provider", "ollama")
+    if "model" in normalized:
+        normalized["model"] = str(normalized["model"]).strip()[:100] or current.get("model", "llama3")
+    if "base_url" in normalized:
+        normalized["base_url"] = str(normalized["base_url"]).strip()[:500]
+    if "api_key" in normalized:
+        normalized["api_key"] = str(normalized["api_key"]).strip()
+    if "max_tokens" in normalized:
+        normalized["max_tokens"] = safe_int(
+            normalized["max_tokens"],
+            default=current.get("max_tokens", 2000),
+            min_val=1,
+            max_val=32768,
+        )
+    if "temperature" in normalized:
+        normalized["temperature"] = safe_float(
+            normalized["temperature"],
+            default=current.get("temperature", 0.3),
+            min_val=0.0,
+            max_val=2.0,
+        )
+    current.update(normalized)
     save_llm_settings(current)
     return jsonify({"success": True})
 
@@ -362,7 +456,9 @@ def save_footage_index_config_route():
         from ..user_data import load_footage_index_config, save_footage_index_config
     except ImportError:
         from opencut.user_data import load_footage_index_config, save_footage_index_config
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     config = load_footage_index_config()
     config.update({k: v for k, v in data.items() if k in config})
     save_footage_index_config(config)
@@ -389,7 +485,9 @@ def save_loudness_target_route():
         from ..user_data import load_loudness_target, save_loudness_target
     except ImportError:
         from opencut.user_data import load_loudness_target, save_loudness_target
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     settings = load_loudness_target()
     settings.update({k: v for k, v in data.items() if k in settings})
     save_loudness_target(settings)
@@ -416,7 +514,9 @@ def save_multicam_config_route():
         from ..user_data import load_multicam_config, save_multicam_config
     except ImportError:
         from opencut.user_data import load_multicam_config, save_multicam_config
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     config = load_multicam_config()
     config.update({k: v for k, v in data.items() if k in config})
     save_multicam_config(config)
@@ -443,7 +543,9 @@ def save_auto_zoom_presets_route():
         from ..user_data import load_auto_zoom_presets, save_auto_zoom_presets
     except ImportError:
         from opencut.user_data import load_auto_zoom_presets, save_auto_zoom_presets
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     presets = load_auto_zoom_presets()
     presets.update({k: v for k, v in data.items() if k in presets})
     save_auto_zoom_presets(presets)
@@ -470,7 +572,9 @@ def save_chapter_defaults_route():
         from ..user_data import load_chapter_defaults, save_chapter_defaults
     except ImportError:
         from opencut.user_data import load_chapter_defaults, save_chapter_defaults
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     defaults = load_chapter_defaults()
     defaults.update({k: v for k, v in data.items() if k in defaults})
     save_chapter_defaults(defaults)
@@ -526,7 +630,9 @@ def list_templates():
 @require_csrf
 def save_template():
     """Save a custom project template."""
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     name = data.get("name", "").strip()
     if not name:
         return jsonify({"error": "Template name required"}), 400
@@ -562,7 +668,9 @@ def save_template():
 @require_csrf
 def apply_template():
     """Apply a template's settings. Returns the settings to apply on the frontend."""
-    data = request.get_json(force=True)
+    data, error = _require_json_object()
+    if error:
+        return error
     template_id = data.get("id", "").strip()
     if not template_id:
         return jsonify({"error": "Template ID required"}), 400

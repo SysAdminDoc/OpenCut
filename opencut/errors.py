@@ -14,7 +14,8 @@ Every error carries:
 import logging
 import os
 
-from flask import jsonify
+from flask import jsonify, request
+from werkzeug.exceptions import BadRequest, MethodNotAllowed, NotFound
 
 logger = logging.getLogger("opencut")
 
@@ -283,3 +284,33 @@ def register_error_handlers(app):
             "code": "TOO_MANY_JOBS",
             "suggestion": "Wait for a job to finish or cancel one from the processing bar.",
         }), 429
+
+    @app.errorhandler(BadRequest)
+    def handle_bad_request(e):
+        if request.is_json or request.mimetype == "application/json":
+            return jsonify({
+                "error": "Invalid JSON request body.",
+                "code": "INVALID_JSON",
+                "suggestion": "Fix malformed JSON or send a top-level JSON object, then retry.",
+            }), 400
+        return jsonify({
+            "error": "Bad request.",
+            "code": "BAD_REQUEST",
+            "suggestion": getattr(e, "description", "") or "Check the request parameters and try again.",
+        }), 400
+
+    @app.errorhandler(NotFound)
+    def handle_not_found(e):
+        return jsonify({
+            "error": "Endpoint not found.",
+            "code": "NOT_FOUND",
+            "suggestion": "Check the URL or update the client to a supported endpoint.",
+        }), 404
+
+    @app.errorhandler(MethodNotAllowed)
+    def handle_method_not_allowed(e):
+        return jsonify({
+            "error": "Method not allowed for this endpoint.",
+            "code": "METHOD_NOT_ALLOWED",
+            "suggestion": "Use the HTTP method documented for this endpoint.",
+        }), 405

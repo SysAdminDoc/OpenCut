@@ -8,9 +8,12 @@ plugins from a central repository index.
 import json
 import logging
 import os
+import re
 import shutil
+import tempfile
 import time
 from dataclasses import dataclass, field
+from urllib.parse import urlparse
 from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import OPENCUT_DIR
@@ -21,6 +24,10 @@ PLUGINS_DIR = os.path.join(OPENCUT_DIR, "plugins")
 REGISTRY_CACHE = os.path.join(OPENCUT_DIR, "plugin_registry.json")
 REGISTRY_URL = "https://raw.githubusercontent.com/opencut/plugin-registry/main/registry.json"
 REGISTRY_TTL = 3600  # cache for 1 hour
+_PLUGIN_ID_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$")
+_WINDOWS_DRIVE_RE = re.compile(r"^[A-Za-z]:[\\/]")
+_MAX_ARCHIVE_MEMBERS = 5000
+_MAX_ARCHIVE_BYTES = 512 * 1024 * 1024
 
 
 @dataclass
@@ -57,6 +64,121 @@ def _save_installed(manifest: Dict[str, dict]) -> None:
     manifest_path = os.path.join(PLUGINS_DIR, "manifest.json")
     with open(manifest_path, "w", encoding="utf-8") as fh:
         json.dump(manifest, fh, indent=2)
+
+
+def _validate_plugin_id(plugin_id: str) -> str:
+    if not isinstance(plugin_id, str):
+        raise ValueError("plugin_id must be a string")
+    cleaned = plugin_id.strip()
+    if not cleaned:
+        raise ValueError("plugin_id is required")
+    if not _PLUGIN_ID_RE.fullmatch(cleaned):
+        raise ValueError("Invalid plugin_id")
+    return cleaned
+
+
+def _resolve_within(base_dir: str, *parts: str) -> str:
+    real_base = os.path.realpath(base_dir)
+    candidate = os.path.realpath(os.path.join(real_base, *parts))
+    if candidate != real_base and not candidate.startswith(real_base + os.sep):
+        raise ValueError("Path escapes plugins directory")
+    return candidate
+
+
+def _validate_managed_plugin_path(path: str) -> str:
+    if not isinstance(path, str) or not path.strip():
+        raise ValueError("Installed plugin path is missing")
+    real_base = os.path.realpath(PLUGINS_DIR)
+    real_path = os.path.realpath(path)
+    if real_path != real_base and not real_path.startswith(real_base + os.sep):
+        raise ValueError("Installed plugin path escapes plugins directory")
+    return real_path
+
+
+def _validate_download_url(url: str) -> str:
+    if not isinstance(url, str) or not url.strip():
+        raise ValueError("Plugin download URL is missing")
+    parsed = urlparse(url.strip())
+    if parsed.scheme not in {"http", "https"}:
+        raise ValueError("Plugin download URL must use http or https")
+    return url.strip()
+
+
+def _normalize_archive_member(name: str) -> str:
+    if not isinstance(name, str) or not name:
+        raise ValueError("Archive contains an invalid entry name")
+    if name.startswith(("/", "\\")) or _WINDOWS_DRIVE_RE.match(name):
+        raise ValueError(f"Archive member uses an absolute path: {name}")
+
+    normalized = os.path.normpath(name.replace("\\", "/")).replace("\\", "/")
+    if normalized in {"", "."}:
+        return ""
+    if normalized == ".." or normalized.startswith("../") or "/../" in f"/{normalized}/":
+        raise ValueError(f"Archive member escapes target directory: {name}")
+    return normalized
+
+
+def _common_archive_root(members: List[str]) -> str:
+    file_members = [m for m in members if m]
+    if not file_members:
+        return ""
+
+    roots = set()
+    for member in file_members:
+        parts = member.split("/", 1)
+        if len(parts) < 2:
+            return ""
+        roots.add(parts[0])
+
+    if len(roots) == 1:
+        return next(iter(roots))
+    return ""
+
+
+def _extract_plugin_archive(zip_path: str, plugin_dir: str) -> None:
+    import zipfile
+
+    with zipfile.ZipFile(zip_path, "r") as zf:
+        infos = zf.infolist()
+        if len(infos) > _MAX_ARCHIVE_MEMBERS:
+            raise ValueError("Plugin archive contains too many files")
+
+        total_bytes = 0
+        normalized_members: List[str] = []
+        for info in infos:
+            if not info.is_dir():
+                total_bytes += max(0, int(info.file_size))
+            if total_bytes > _MAX_ARCHIVE_BYTES:
+                raise ValueError("Plugin archive is too large")
+            normalized_members.append(_normalize_archive_member(info.filename))
+
+        common_root = _common_archive_root(
+            [member for member, info in zip(normalized_members, infos) if not info.is_dir()]
+        )
+
+        for info, normalized in zip(infos, normalized_members):
+            if not normalized:
+                continue
+
+            relative_path = normalized
+            if common_root and relative_path.startswith(common_root + "/"):
+                relative_path = relative_path[len(common_root) + 1:]
+            if not relative_path:
+                continue
+
+            target_path = _resolve_within(plugin_dir, relative_path)
+            if info.is_dir():
+                os.makedirs(target_path, exist_ok=True)
+                continue
+
+            parent = os.path.dirname(target_path)
+            os.makedirs(parent, exist_ok=True)
+            with zf.open(info, "r") as src, open(target_path, "wb") as dst:
+                shutil.copyfileobj(src, dst)
+
+    manifest_path = os.path.join(plugin_dir, "plugin.json")
+    if not os.path.isfile(manifest_path):
+        raise ValueError("Plugin archive did not contain plugin.json at the expected root")
 
 
 def _registry_cache_valid() -> bool:
@@ -100,8 +222,13 @@ def fetch_plugin_registry(
         logger.warning("Failed to fetch plugin registry: %s", exc)
         # Fall back to cached if available
         if os.path.exists(REGISTRY_CACHE):
-            with open(REGISTRY_CACHE, "r", encoding="utf-8") as fh:
-                data = json.load(fh)
+            try:
+                with open(REGISTRY_CACHE, "r", encoding="utf-8") as fh:
+                    data = json.load(fh)
+            except (json.JSONDecodeError, OSError) as cache_exc:
+                raise RuntimeError(
+                    f"Cannot fetch plugin registry and cached registry is unreadable: {cache_exc}"
+                ) from exc
         else:
             raise RuntimeError(f"Cannot fetch plugin registry: {exc}")
 
@@ -119,7 +246,11 @@ def _parse_registry(data: dict) -> List[PluginInfo]:
     installed = _load_installed()
     plugins = []
     for entry in data.get("plugins", []):
+        if not isinstance(entry, dict):
+            continue
         pid = entry.get("id", "")
+        if not isinstance(pid, str) or not pid.strip():
+            continue
         inst = installed.get(pid, {})
         plugins.append(PluginInfo(
             plugin_id=pid,
@@ -129,7 +260,7 @@ def _parse_registry(data: dict) -> List[PluginInfo]:
             description=entry.get("description", ""),
             repo_url=entry.get("repo_url", ""),
             download_url=entry.get("download_url", ""),
-            tags=entry.get("tags", []),
+            tags=entry.get("tags", []) if isinstance(entry.get("tags", []), list) else [],
             min_opencut_version=entry.get("min_opencut_version", ""),
             installed=pid in installed,
             installed_version=inst.get("version", ""),
@@ -157,7 +288,7 @@ def search_plugins(
     q = query.lower().strip()
     results = []
     for p in plugins:
-        searchable = f"{p.name} {p.description} {' '.join(p.tags)}".lower()
+        searchable = f"{p.name} {p.description} {' '.join(str(tag) for tag in p.tags)}".lower()
         if q in searchable:
             results.append(p)
     return results
@@ -175,6 +306,8 @@ def install_plugin(
     Returns:
         PluginInfo for the installed plugin.
     """
+    plugin_id = _validate_plugin_id(plugin_id)
+
     if on_progress:
         on_progress(10, "Fetching registry")
 
@@ -191,24 +324,31 @@ def install_plugin(
     if on_progress:
         on_progress(30, f"Downloading {target.name}")
 
-    plugin_dir = os.path.join(PLUGINS_DIR, plugin_id)
-    os.makedirs(plugin_dir, exist_ok=True)
+    os.makedirs(PLUGINS_DIR, exist_ok=True)
+    plugin_dir = _resolve_within(PLUGINS_DIR, plugin_id)
+    if os.path.exists(plugin_dir):
+        raise FileExistsError(f"Plugin already exists: {plugin_id}")
 
     # Download plugin archive
-    download_url = target.download_url or f"{target.repo_url}/archive/refs/heads/main.zip"
-    import tempfile
+    download_url = _validate_download_url(
+        target.download_url or f"{target.repo_url}/archive/refs/heads/main.zip"
+    )
     import urllib.request
-    import zipfile
 
-    tmp_zip = os.path.join(tempfile.gettempdir(), f"{plugin_id}.zip")
+    fd, tmp_zip = tempfile.mkstemp(prefix=f"opencut_{plugin_id}_", suffix=".zip")
+    os.close(fd)
     try:
         urllib.request.urlretrieve(download_url, tmp_zip)
 
         if on_progress:
             on_progress(60, "Extracting plugin")
 
-        with zipfile.ZipFile(tmp_zip, "r") as zf:
-            zf.extractall(plugin_dir)
+        try:
+            os.makedirs(plugin_dir, exist_ok=True)
+            _extract_plugin_archive(tmp_zip, plugin_dir)
+        except Exception:
+            shutil.rmtree(plugin_dir, ignore_errors=True)
+            raise
     finally:
         if os.path.exists(tmp_zip):
             os.unlink(tmp_zip)
@@ -247,6 +387,7 @@ def update_plugin(
     Returns:
         Updated PluginInfo.
     """
+    plugin_id = _validate_plugin_id(plugin_id)
     manifest = _load_installed()
     if plugin_id not in manifest:
         raise KeyError(f"Plugin not installed: {plugin_id}")
@@ -257,7 +398,7 @@ def update_plugin(
     # Remove old installation
     old_path = manifest[plugin_id].get("path", "")
     if old_path and os.path.isdir(old_path):
-        shutil.rmtree(old_path, ignore_errors=True)
+        shutil.rmtree(_validate_managed_plugin_path(old_path), ignore_errors=True)
 
     # Re-install latest
     return install_plugin(plugin_id, on_progress=on_progress)

@@ -28,6 +28,7 @@ const MEDIA_SCAN_MS    = 30000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
 const VERSION          = "1.15.0";
 const PRIMARY_CLIP_INPUT_IDS = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
+const TABS_REQUIRING_SOURCE = new Set(["cut", "captions", "audio", "video"]);
 const WORKSPACE_META   = {
   cut: {
     title: "Cut & Clean",
@@ -68,6 +69,64 @@ const WORKSPACE_META   = {
     title: "Settings",
     subtitle: "Tune engine routing, realtime connections, and shared defaults across the studio.",
     sourceIds: [],
+  },
+};
+const WORKSPACE_GUIDES = {
+  cut: {
+    kicker: "Cut pass",
+    title: "Build a cleaner first pass of the edit.",
+    text: "Start with silence detection or filler cleanup, then review the suggested cut ranges before writing them back to the timeline.",
+    action: "focus-runSilenceBtn",
+    actionLabel: "Run Silence Detection",
+  },
+  captions: {
+    kicker: "Transcript",
+    title: "Turn the active shot into reviewable text.",
+    text: "Transcribe first, then move into chapters, repeat detection, or timeline import once the wording looks right.",
+    action: "focus-runTranscribeBtn",
+    actionLabel: "Transcribe Clip",
+  },
+  audio: {
+    kicker: "Audio pass",
+    title: "Clean the voice bed before the rest of the finish.",
+    text: "Start with denoise or normalization, then add rhythm markers if the cut needs to lock to music.",
+    action: "focus-runDenoiseBtn",
+    actionLabel: "Run Denoise",
+  },
+  video: {
+    kicker: "Finishing",
+    title: "Shape the frame and build derivative edits from one source.",
+    text: "Use color, reframe, multicam, and short-form tools without repatching the same clip every time.",
+    action: "focus-runColorMatchBtn",
+    actionLabel: "Match Color",
+  },
+  timeline: {
+    kicker: "Write-back",
+    title: "Send approved changes back into Premiere with less friction.",
+    text: "Apply the latest cuts or markers, then export OTIO, markers, or captions from the same review session.",
+    action: "focus-applyTimelineCutsBtn",
+    actionLabel: "Apply Latest Cuts",
+  },
+  search: {
+    kicker: "Discovery",
+    title: "Search the library, then reuse the result instantly.",
+    text: "Index a folder once, search with natural language, and pull the matching shot back into the rest of the workspace.",
+    action: "focus-searchQuery",
+    actionLabel: "Start Search",
+  },
+  deliverables: {
+    kicker: "Handoff",
+    title: "Pull sequence context before generating delivery docs.",
+    text: "Load the active Premiere sequence, choose an output folder, and generate reports with cleaner defaults.",
+    action: "focus-loadSeqInfoBtn",
+    actionLabel: "Load Sequence Info",
+  },
+  settings: {
+    kicker: "Studio setup",
+    title: "Keep routing, engines, and live services healthy.",
+    text: "Refresh engine availability, verify the bridge, and make sure the panel is connected to the right backend.",
+    action: "focus-uxpRefreshEnginesBtn",
+    actionLabel: "Refresh Engines",
   },
 };
 
@@ -658,6 +717,7 @@ const UIController = (() => {
   function showProcessing(msg = "Processing…") {
     const banner = document.getElementById("processingBanner");
     if (banner) banner.classList.remove("hidden");
+    document.getElementById("mainContent")?.setAttribute("aria-busy", "true");
     setProcessingMsg(msg);
     setProgress(0);
     startElapsedTimer();
@@ -666,6 +726,7 @@ const UIController = (() => {
   function hideProcessing() {
     const banner = document.getElementById("processingBanner");
     if (banner) banner.classList.add("hidden");
+    document.getElementById("mainContent")?.setAttribute("aria-busy", "false");
     stopElapsedTimer();
   }
 
@@ -769,13 +830,31 @@ const UIController = (() => {
   // ── Collapsible cards ──
   function initCollapsibles() {
     document.querySelectorAll(".oc-card-header.collapsible").forEach(header => {
-      header.addEventListener("click", () => {
+      if (header.dataset.collapsibleBound === "true") return;
+      const targetId = header.dataset.target;
+      const initialBody = targetId ? document.getElementById(targetId) : null;
+      header.setAttribute("role", "button");
+      header.tabIndex = 0;
+      if (targetId) header.setAttribute("aria-controls", targetId);
+      header.setAttribute("aria-expanded", initialBody?.classList.contains("collapsed") ? "false" : "true");
+
+      const toggle = () => {
         const targetId = header.dataset.target;
         const body = document.getElementById(targetId);
         if (!body) return;
         const collapsed = body.classList.toggle("collapsed");
         header.classList.toggle("collapsed", collapsed);
+        header.setAttribute("aria-expanded", collapsed ? "false" : "true");
+      };
+
+      header.addEventListener("click", toggle);
+      header.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          toggle();
+        }
       });
+      header.dataset.collapsibleBound = "true";
     });
   }
 
@@ -868,6 +947,11 @@ function getWorkspaceTabId(tabId) {
   return document.querySelector(".oc-tab.active")?.dataset.tab ?? "cut";
 }
 
+function getPrimarySourceInputId(tabId) {
+  const activeTab = getWorkspaceTabId(tabId);
+  return WORKSPACE_META[activeTab]?.sourceIds?.[0] ?? PRIMARY_CLIP_INPUT_IDS[0];
+}
+
 function getWorkspaceSource(tabId) {
   if (_workspaceClipPath) return _workspaceClipPath;
   const activeTab = getWorkspaceTabId(tabId);
@@ -888,6 +972,72 @@ function formatWorkspaceSource(pathValue) {
   const normalized = pathValue.replace(/\\/g, "/");
   const parts = normalized.split("/");
   return parts[parts.length - 1] || pathValue;
+}
+
+function focusControl(controlId) {
+  const el = document.getElementById(controlId);
+  if (!el) return;
+  el.focus();
+  if (typeof el.select === "function" && (el.tagName === "INPUT" || el.tagName === "TEXTAREA")) {
+    el.select();
+  }
+}
+
+function fillFieldFromSuggestion(button) {
+  const targetId = button?.dataset.fillTarget;
+  if (!targetId) return;
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.value = button.dataset.fillValue ?? "";
+  target.dispatchEvent(new Event("input", { bubbles: true }));
+  focusControl(targetId);
+}
+
+function handleWorkspaceAction(action) {
+  const activeTab = getWorkspaceTabId();
+  if (!action) return;
+
+  if (action === "choose-clip") {
+    browseFile(getPrimarySourceInputId(activeTab));
+    return;
+  }
+  if (action === "open-search") {
+    UIController.switchTab("search");
+    focusControl("searchQuery");
+    return;
+  }
+  if (action === "open-timeline") {
+    UIController.switchTab("timeline");
+    focusControl("applyTimelineCutsBtn");
+    return;
+  }
+  if (action === "refresh-backend") {
+    document.getElementById("refreshBtn")?.click();
+    return;
+  }
+  if (action === "switch-cut") {
+    UIController.switchTab("cut");
+    focusControl("runSilenceBtn");
+    return;
+  }
+  if (action.startsWith("focus-")) {
+    focusControl(action.slice(6));
+  }
+}
+
+function setWorkspaceGuide(guide) {
+  const kickerEl = document.getElementById("workspaceGuideKicker");
+  const titleEl = document.getElementById("workspaceGuideTitle");
+  const textEl = document.getElementById("workspaceGuideText");
+  const actionEl = document.getElementById("workspaceGuideAction");
+
+  if (kickerEl) kickerEl.textContent = guide.kicker;
+  if (titleEl) titleEl.textContent = guide.title;
+  if (textEl) textEl.textContent = guide.text;
+  if (actionEl) {
+    actionEl.dataset.action = guide.action;
+    actionEl.textContent = guide.actionLabel;
+  }
 }
 
 function setWorkspaceClip(pathValue, options = {}) {
@@ -914,6 +1064,8 @@ function updateWorkspaceOverview(tabId) {
   const activeTab = getWorkspaceTabId(tabId);
   const meta = WORKSPACE_META[activeTab] || WORKSPACE_META.cut;
   const sourcePath = getWorkspaceSource(activeTab);
+  const backendLabel = document.getElementById("connLabel")?.textContent?.trim() || "Offline";
+  const backendOnline = backendLabel === "Online";
   const overviewTitle = document.getElementById("workspaceOverviewTitle");
   const overviewSubtitle = document.getElementById("workspaceOverviewSubtitle");
   const sourceValue = document.getElementById("workspaceSourceValue");
@@ -925,14 +1077,45 @@ function updateWorkspaceOverview(tabId) {
   if (sourceValue) {
     sourceValue.textContent = formatWorkspaceSource(sourcePath);
     sourceValue.title = sourcePath || "Choose a clip or paste a path to start";
+    sourceValue.closest(".oc-workspace-meta-item")?.setAttribute("data-state", sourcePath ? "ready" : "empty");
   }
   if (backendValue) {
-    backendValue.textContent = document.getElementById("connLabel")?.textContent?.trim() || "Offline";
+    backendValue.textContent = backendLabel;
+    backendValue.closest(".oc-workspace-meta-item")?.setAttribute("data-state", backendOnline ? "online" : "offline");
   }
   if (libraryValue) {
     const count = Array.isArray(_projectClips) ? _projectClips.length : 0;
     libraryValue.textContent = `${count} ${count === 1 ? "clip" : "clips"}`;
+    libraryValue.closest(".oc-workspace-meta-item")?.setAttribute("data-state", count > 0 ? "ready" : "empty");
   }
+
+  let guide = WORKSPACE_GUIDES[activeTab] || WORKSPACE_GUIDES.cut;
+  if (!backendOnline) {
+    guide = {
+      kicker: "Backend offline",
+      title: "Reconnect the local OpenCut backend before running jobs.",
+      text: "The workspace is ready, but processing, engine refresh, and timeline handoff all depend on the backend service being online.",
+      action: "refresh-backend",
+      actionLabel: "Refresh Backend",
+    };
+  } else if (TABS_REQUIRING_SOURCE.has(activeTab) && !sourcePath) {
+    guide = {
+      kicker: "Needs source",
+      title: "Choose one active shot to unlock this workspace.",
+      text: "OpenCut keeps the current clip in sync across Cut, Captions, Audio, and Video so you can move through the edit without repeated setup.",
+      action: "choose-clip",
+      actionLabel: "Choose Clip",
+    };
+  } else if (activeTab === "timeline" && !lastCuts.length && !lastMarkers.length) {
+    guide = {
+      kicker: "Ready for write-back",
+      title: "Generate cuts or markers first, then bring them back to the sequence.",
+      text: "Run a cleanup or beat pass in Cut or Audio, then return here to apply the result, export OTIO, or batch markers.",
+      action: "switch-cut",
+      actionLabel: "Open Cut Workspace",
+    };
+  }
+  setWorkspaceGuide(guide);
 }
 
 /**
@@ -1053,12 +1236,36 @@ async function runSilenceRemoval() {
 function showCutResult(result) {
   const area = document.getElementById("cutResultArea");
   const body = document.getElementById("cutResultBody");
+  const summary = document.getElementById("cutResultSummary");
   if (!area || !body) return;
   area.classList.remove("hidden");
-  const lines = (result.cuts ?? []).map((c, i) =>
-    `Cut ${i + 1}: ${Number(c.start).toFixed(3)}s → ${Number(c.end).toFixed(3)}s (${((Number(c.end) - Number(c.start)) * 1000).toFixed(0)} ms)`
-  );
-  body.textContent = lines.join("\n") || "No cuts.";
+  const cuts = result.cuts ?? [];
+  const totalRemoved = cuts.reduce((sum, cut) => sum + Math.max(0, Number(cut.end) - Number(cut.start)), 0);
+  if (summary) {
+    summary.textContent = cuts.length
+      ? `${cuts.length} cut${cuts.length === 1 ? "" : "s"} • ${formatCompactDuration(totalRemoved)} removed`
+      : "No cuts detected";
+  }
+  body.innerHTML = cuts.length
+    ? cuts.map((cut, index) => {
+        const start = Number(cut.start);
+        const end = Number(cut.end);
+        const duration = Math.max(0, end - start);
+        return `
+          <div class="oc-result-row">
+            <span class="oc-result-chip">Cut ${index + 1}</span>
+            <div class="oc-result-copy">
+              <strong>${formatTimecode(start)} to ${formatTimecode(end)}</strong>
+              <span>${formatCompactDuration(duration)} removed</span>
+            </div>
+          </div>`;
+      }).join("")
+    : `
+      <div class="oc-empty-state oc-empty-state-inline">
+        <div class="oc-empty-state-kicker">No changes yet</div>
+        <p>Run silence detection or filler cleanup to generate timeline-ready cuts here.</p>
+      </div>`;
+  area.focus();
 }
 
 /** ── FILLER WORD DETECTION ── */
@@ -1131,10 +1338,17 @@ async function runTranscribe() {
 function showCaptionsResult(result) {
   const area = document.getElementById("captionsResultArea");
   const body = document.getElementById("captionsResultBody");
+  const summary = document.getElementById("captionsResultSummary");
   if (!area || !body) return;
   area.classList.remove("hidden");
   // Prefer SRT content, then plain text, then JSON
-  body.value = result.srt ?? result.text ?? JSON.stringify(result, null, 2);
+  const content = result.srt ?? result.text ?? JSON.stringify(result, null, 2);
+  body.value = content;
+  if (summary) {
+    const nonEmptyLines = content.split(/\r?\n/).filter(Boolean).length;
+    summary.textContent = result.srt ? `${nonEmptyLines} caption lines ready` : `${nonEmptyLines} lines ready`;
+  }
+  area.focus();
 }
 
 /** ── CHAPTER GENERATION ── */
@@ -1162,11 +1376,14 @@ async function runChapterGeneration() {
       if (result.chapters) {
         const area = document.getElementById("captionsResultArea");
         const body = document.getElementById("captionsResultBody");
+        const summary = document.getElementById("captionsResultSummary");
         if (area && body) {
           area.classList.remove("hidden");
           body.value = result.chapters.map((c, i) =>
             `${formatTimecode(c.seconds ?? c.start ?? 0)} — ${c.title ?? `Chapter ${i + 1}`}`
           ).join("\n");
+          if (summary) summary.textContent = `${count} chapter${count === 1 ? "" : "s"} ready`;
+          area.focus();
         }
       }
     },
@@ -1666,17 +1883,31 @@ async function runFootageSearch() {
   if (list) {
     list.innerHTML = "";
     if (results.length === 0) {
-      list.innerHTML = `<div class="oc-hint">No results found.</div>`;
+      list.innerHTML = `
+        <div class="oc-empty-state oc-empty-state-inline">
+          <div class="oc-empty-state-kicker">No matches yet</div>
+          <p>Try a more descriptive query, or index more footage to widen the search space.</p>
+        </div>`;
     } else {
-      results.forEach(item => {
-        const el = document.createElement("div");
+      results.forEach((item, index) => {
+        const nextPath = item.path ?? item.file ?? "";
+        const label = formatWorkspaceSource(nextPath || `Result ${index + 1}`);
+        const meta = typeof item.score === "number"
+          ? `${Math.round(item.score * 100)}% match`
+          : `Result ${index + 1}`;
+        const el = document.createElement("button");
+        el.type = "button";
         el.className = "oc-result-list-item";
-        el.textContent = item.path ?? item.file ?? JSON.stringify(item);
-        el.title = item.score != null ? `Score: ${item.score.toFixed(3)}` : "";
+        el.innerHTML = `
+          <span class="oc-result-list-item-copy">
+            <span class="oc-result-list-item-title">${UIController.escapeHtml(label)}</span>
+            <span class="oc-result-list-item-path">${UIController.escapeHtml(nextPath || JSON.stringify(item))}</span>
+          </span>
+          <span class="oc-result-list-item-meta">${UIController.escapeHtml(meta)}</span>`;
+        el.title = nextPath || JSON.stringify(item);
         el.addEventListener("click", () => {
-          const nextPath = item.path ?? item.file ?? "";
-          setWorkspaceClip(nextPath, { tabId: "video" });
-          UIController.showToast(`Selected: ${item.path ?? item.file}`, "info");
+          if (nextPath) setWorkspaceClip(nextPath, { tabId: "search" });
+          UIController.showToast(`Loaded ${label} into the workspace.`, "success");
         });
         list.appendChild(el);
       });
@@ -1718,9 +1949,21 @@ async function runNlpCommand() {
 function showNlpResult(result) {
   const area = document.getElementById("nlpResultArea");
   const body = document.getElementById("nlpResultBody");
+  const summary = document.getElementById("nlpResultSummary");
   if (!area || !body) return;
+  const action = result.action ?? result;
   area.classList.remove("oc-hidden");
-  body.textContent = JSON.stringify(result.action ?? result, null, 2);
+  body.textContent = JSON.stringify(action, null, 2);
+  if (summary) {
+    if (Array.isArray(action?.cuts) && action.cuts.length) {
+      summary.textContent = `${action.cuts.length} cut${action.cuts.length === 1 ? "" : "s"} ready`;
+    } else if (Array.isArray(action?.markers) && action.markers.length) {
+      summary.textContent = `${action.markers.length} marker${action.markers.length === 1 ? "" : "s"} ready`;
+    } else {
+      summary.textContent = "Review before applying";
+    }
+  }
+  area.focus();
 }
 
 /** ── LOAD SEQUENCE INFO ── */
@@ -1746,7 +1989,11 @@ async function loadSequenceInfo() {
   if (!grid) return;
 
   if (!info) {
-    grid.innerHTML = `<span class="oc-hint" style="grid-column:1/-1;">No active sequence found.</span>`;
+    grid.innerHTML = `
+      <div class="oc-empty-state oc-empty-state-inline">
+        <div class="oc-empty-state-kicker">No active sequence</div>
+        <p>Open a sequence in Premiere, then reload sequence info here before generating deliverables.</p>
+      </div>`;
     UIController.setStatus("No active sequence.");
     return;
   }
@@ -1945,6 +2192,15 @@ function formatTimecode(seconds) {
   const s = Math.floor(seconds % 60);
   const f = Math.floor((seconds % 1) * 100);
   return `${pad(h)}:${pad(m)}:${pad(s)}.${pad(f)}`;
+}
+
+function formatCompactDuration(seconds) {
+  if (typeof seconds !== "number" || isNaN(seconds) || seconds <= 0) return "0 s";
+  if (seconds < 1) return `${Math.round(seconds * 1000)} ms`;
+  if (seconds < 60) return `${seconds.toFixed(seconds >= 10 ? 1 : 2)} s`;
+  const minutes = Math.floor(seconds / 60);
+  const secs = Math.round(seconds % 60);
+  return `${minutes}m ${secs}s`;
 }
 
 function pad(n) { return String(n).padStart(2, "0"); }
@@ -2148,6 +2404,12 @@ function bindEvents() {
 
   // ── Refresh button ──
   document.getElementById("refreshBtn")?.addEventListener("click", () => checkConnection());
+  document.getElementById("workspaceChooseClipBtn")?.addEventListener("click", () => handleWorkspaceAction("choose-clip"));
+  document.getElementById("workspaceSearchBtn")?.addEventListener("click", () => handleWorkspaceAction("open-search"));
+  document.getElementById("workspaceTimelineBtn")?.addEventListener("click", () => handleWorkspaceAction("open-timeline"));
+  document.getElementById("workspaceGuideAction")?.addEventListener("click", (event) => {
+    handleWorkspaceAction(event.currentTarget?.dataset?.action || "");
+  });
 
   // ── Cancel button ──
   document.getElementById("cancelBtn")?.addEventListener("click", async () => {
@@ -2260,6 +2522,12 @@ function bindEvents() {
   });
   document.getElementById("searchQuery")?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") runFootageSearch();
+  });
+  document.getElementById("nlpCommand")?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") runNlpCommand();
+  });
+  document.querySelectorAll("[data-fill-target]").forEach((button) => {
+    button.addEventListener("click", () => fillFieldFromSuggestion(button));
   });
 
   // ── Deliverables ──
@@ -2588,11 +2856,19 @@ async function uxpWsStopBridge() {
 async function uxpLoadEngines() {
   const grid = document.getElementById("uxpEngineGrid");
   if (!grid) return;
-  grid.innerHTML = '<p class="oc-hint">Loading engines...</p>';
+  grid.innerHTML = `
+    <div class="oc-empty-state oc-empty-state-inline">
+      <div class="oc-empty-state-kicker">Engine routing</div>
+      <p>Loading available engines and saved preferences...</p>
+    </div>`;
 
   const r = await BackendClient.get("/engines");
   if (!r.ok || !r.data?.engines) {
-    grid.innerHTML = '<p class="oc-hint">Could not load engine data.</p>';
+    grid.innerHTML = `
+      <div class="oc-empty-state oc-empty-state-inline">
+        <div class="oc-empty-state-kicker">Engine data unavailable</div>
+        <p>OpenCut could not load engine availability right now. Refresh the backend and try again.</p>
+      </div>`;
     return;
   }
 

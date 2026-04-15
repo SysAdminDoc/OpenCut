@@ -150,6 +150,15 @@ def get_pool(max_workers=10) -> WorkerPool:
     return _pool
 
 
+def cancel_job(job_id: str) -> bool:
+    """Cancel a queued job without creating the pool on demand."""
+    with _pool_lock:
+        pool = _pool
+    if pool is None:
+        return False
+    return pool.cancel(job_id)
+
+
 def shutdown_pool(wait=True):
     """Shut down the global pool. Called on server exit."""
     global _pool
