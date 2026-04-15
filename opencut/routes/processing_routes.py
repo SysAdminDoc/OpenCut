@@ -139,6 +139,8 @@ def video_deinterlace(job_id, filepath, data):
         field_order = "auto"
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     # Build output path
     out = None
@@ -181,6 +183,8 @@ def video_lens_correct(job_id, filepath, data):
         k2 = safe_float(k2, default=0.0, min_val=-2.0, max_val=2.0)
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     out = None
     if output_dir:
         import os
@@ -216,6 +220,8 @@ def video_horizon_level(job_id, filepath, data):
     angle = safe_float(data.get("angle", 0.0), 0.0, min_val=-45.0, max_val=45.0)
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     out = None
     if output_dir:
         import os

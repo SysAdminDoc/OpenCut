@@ -11,6 +11,10 @@ build/
 venv/
 env/
 .env
+.env.*
+*.key
+*.pem
+credentials*.json
 *.log
 .pytest_cache/
 .coverage

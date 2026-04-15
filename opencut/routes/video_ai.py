@@ -28,6 +28,7 @@ from opencut.security import (
     safe_int,
     safe_pip_install,
     validate_filepath,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -54,6 +55,8 @@ def video_ai_capabilities():
 def video_ai_upscale(job_id, filepath, data):
     """AI upscale video using Real-ESRGAN."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     scale = safe_int(data.get("scale", 2), 2, min_val=1, max_val=4)
     model = data.get("model", "realesrgan-x4plus")
     if model not in ("realesrgan-x4plus", "realesrgan-x4plus-anime", "realesrgan-x2plus"):
@@ -86,6 +89,8 @@ def video_ai_upscale(job_id, filepath, data):
 def video_ai_rembg(job_id, filepath, data):
     """AI background removal using rembg."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     backend = data.get("backend", "rembg")
     if backend not in ("rembg", "rvm"):
         backend = "rembg"
@@ -130,6 +135,8 @@ def video_ai_rembg(job_id, filepath, data):
 def video_ai_interpolate(job_id, filepath, data):
     """AI frame interpolation."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     multiplier = safe_int(data.get("multiplier", 2), 2, min_val=2, max_val=8)
     method = data.get("method", "auto")
     if method not in ("auto", "rife", "minterpolate"):
@@ -163,6 +170,8 @@ def video_ai_interpolate(job_id, filepath, data):
 def video_ai_denoise(job_id, filepath, data):
     """AI video noise reduction."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     method = data.get("method", "nlmeans")
     if method not in ("nlmeans", "hqdn3d", "basicvsr"):
         method = "nlmeans"
@@ -266,6 +275,8 @@ def face_detect():
 def face_blur(job_id, filepath, data):
     """Auto-detect and blur faces in video."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     method = data.get("method", "gaussian")
     if method not in ("gaussian", "pixelate", "black"):
         method = "gaussian"
@@ -311,6 +322,8 @@ def style_list():
 def style_apply(job_id, filepath, data):
     """Apply neural style transfer to video."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     style_name = data.get("style", "candy")
     if style_name not in ("candy", "mosaic", "rain_princess", "udnie", "starry_night",
                           "la_muse", "the_scream", "pointilism"):

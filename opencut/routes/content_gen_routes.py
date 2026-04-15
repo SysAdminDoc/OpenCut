@@ -14,7 +14,7 @@ import logging
 from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_output_path
+from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_output_path, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -71,6 +71,8 @@ def voice_avatar_generate(job_id, filepath, data):
 
     data.get("output_path", "").strip() or None
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     config = AvatarConfig(
         style=style,
@@ -209,6 +211,8 @@ def generate_broll_route(job_id, filepath, data):
     guidance = safe_float(data.get("guidance_scale", 7.5), 7.5, min_val=1.0, max_val=30.0)
     source_video = data.get("source_video_path", "").strip()
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if source_video:
         source_video = validate_filepath(source_video)
@@ -266,6 +270,8 @@ def batch_generate_broll_route(job_id, filepath, data):
     height = safe_int(data.get("height", 1080), 1080, min_val=64, max_val=4096)
     fps = safe_int(data.get("fps", 30), 30, min_val=1, max_val=120)
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     config = BRollGenConfig(
         backend=backend,
@@ -319,6 +325,8 @@ def chapter_art_route(job_id, filepath, data):
     auto_title = data.get("auto_title_from_transcript", True)
     image_format = data.get("image_format", "png").strip()
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     brand_kit_data = data.get("brand_kit")
     brand_kit = None
@@ -416,6 +424,8 @@ def generate_intro_route(job_id, filepath, data):
     anim_speed = safe_float(data.get("animation_speed", 1.0), 1.0,
                              min_val=0.3, max_val=3.0)
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if bg_image:
         bg_image = validate_filepath(bg_image)

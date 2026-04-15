@@ -23,6 +23,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -440,6 +441,8 @@ def ai_storyboard(job_id, filepath, data):
         raise ValueError("script_text is required")
 
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
     if not output_dir:
         import tempfile
         output_dir = tempfile.mkdtemp(prefix="opencut_storyboard_")
