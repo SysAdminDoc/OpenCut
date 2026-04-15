@@ -6,7 +6,7 @@
 
 Items already completed or tracked in ROADMAP.md are excluded. This document focuses exclusively on what's **not yet planned or implemented**.
 
-**Updated**: 2026-04-14 — 352 features across 72 categories
+**Updated**: 2026-04-14 — 377 features across 77 categories
 
 ---
 
@@ -2656,6 +2656,141 @@ Estimate processing time for any operation based on input characteristics, hardw
 Real-time CPU/GPU/RAM/disk monitoring. GPU via nvidia-smi, ring-buffer history, availability checks before job start. Temperature monitoring.
 - **Why**: GPU OOM is the #1 crash cause. Visibility prevents failures.
 - **Module**: `resource_monitor.py` | **Routes**: `/pipeline/resources`, `/pipeline/resources/gpu`
+
+## 73. AI Collaboration & Review
+
+### 73.1 Frame-Accurate Review Comments (P1 / M)
+Add timestamped, frame-accurate review comments with annotation types (text, rect, circle, arrow). Thread support, status tracking (open/resolved/wontfix). Export to JSON/CSV, import from Frame.io format. Persistent per-project storage.
+- **Why**: Frame.io built a $1.3B company on review workflows. Collaborative review is table-stakes for teams.
+- **Module**: `review_comments.py` | **Routes**: `/review/comments` (CRUD), `/review/comments/export`
+
+### 73.2 Version Comparison (P1 / M)
+Frame-by-frame comparison of two video renders. 4 modes: side_by_side, overlay_diff, flicker, swipe. SSIM/PSNR per frame, diff heatmaps, audio loudness comparison. Overall similarity score 0-100.
+- **Why**: Every revision cycle needs visual diff. No Premiere extension offers automated video comparison.
+- **Module**: `version_compare.py` | **Route**: `/version/compare`
+
+### 73.3 Approval Workflow Pipeline (P1 / M)
+Multi-stage approval: draft → internal_review → client_review → approved → final. Configurable required approvers per stage, auto-advance, deadline tracking with overdue detection.
+- **Why**: Enterprise teams need structured approval. Replaces email chains and spreadsheet tracking.
+- **Module**: `approval_workflow.py` | **Routes**: `/approval/status`, `/approval/advance`, `/approval/create`
+
+### 73.4 Edit History & Audit Log (P2 / M)
+Immutable JSONL audit log of all operations. Undo stack, diff between history points, replay capability, usage statistics. Append-only storage per project.
+- **Why**: Compliance and reproducibility. "What changed and when?" is unanswerable without audit trails.
+- **Module**: `edit_history.py` | **Route**: `/edit-history/export`
+
+### 73.5 Shared Preset Library (P2 / M)
+Team-shared presets across 5 categories (color grades, audio chains, export profiles, workflows, caption styles). Rating, duplicate detection, import/export as .opencut-preset files, merge conflict resolution.
+- **Why**: Teams need consistent look and settings. Shared presets eliminate per-editor variation.
+- **Module**: `shared_presets.py` | **Routes**: `/presets/shared` (GET/POST)
+
+## 74. Advanced Timeline Automation
+
+### 74.1 AI Rough Cut from Script (P0 / XL)
+Given a script/brief + media files, AI matches transcript to script sections, scores candidates, selects best takes, generates EDL. Modes: strict, loose, highlight. LLM with keyword fallback.
+- **Why**: The holy grail of AI editing. Opus Clip, Vizard, and Adobe Sensei are converging here.
+- **Module**: `auto_rough_cut.py` | **Route**: `/timeline/rough-cut`
+
+### 74.2 Multi-Track Audio Auto-Mix (P1 / L)
+Analyze dialogue/music/SFX/ambience tracks, auto-duck, level-match, generate gain keyframes. Ducking profiles: podcast, film, music_video. Optional mixed-down audio output.
+- **Why**: Auto-mixing saves hours per episode. DaVinci Resolve Fairlight has auto-leveling; Premiere doesn't.
+- **Module**: `auto_mix.py` | **Routes**: `/timeline/auto-mix`, `/timeline/auto-mix/preview`
+
+### 74.3 Smart Trim Point Detection (P1 / M)
+Find optimal in/out points: skip pre-roll/slate, detect first speech, find natural ending. Modes: tight, broadcast, social (hook-first). Batch processing.
+- **Why**: Manual trim is the most repetitive editing task. Smart detection eliminates guesswork.
+- **Module**: `smart_trim.py` | **Routes**: `/timeline/smart-trim`, `/timeline/smart-trim/batch`
+
+### 74.4 Batch Timeline Operations (P1 / M)
+6 batch ops: color_grade, speed, normalize, transition, crop, caption. Operation chaining (pipeline), dry-run preview mode, per-clip progress.
+- **Why**: Applying the same operation to 50 clips manually is tedious. Batch ops are essential for scale.
+- **Module**: `batch_timeline_ops.py` | **Routes**: `/timeline/batch-ops`, `/timeline/batch-ops/preview`
+
+### 74.5 Template-Based Assembly (P1 / M)
+Assemble video from slot-based templates. 4 built-in: youtube_video, podcast_video, tutorial, social_clip. Auto-trim to fit durations, transitions between segments. EDL/OTIO export.
+- **Why**: Recurring content uses identical structure. Templates make assembly instant.
+- **Module**: `template_assembly_adv.py` | **Routes**: `/timeline/assemble`, `/timeline/templates`, `/timeline/templates/validate`
+
+## 75. AI Sound Design & Music
+
+### 75.1 AI Sound Design from Video (P1 / L)
+Analyze video frames for motion events, map to 12 SFX categories (impact, whoosh, ambient, etc.), synthesize via PCM engines, mix to timeline. Automatic foley generation.
+- **Why**: HunyuanVideo-Foley demonstrates this is feasible. Eliminates manual SFX placement.
+- **Module**: `sound_design_ai.py` | **Routes**: `/audio/sound-design`, `/audio/sfx-categories`
+
+### 75.2 Procedural Ambient Soundscape Generator (P2 / M)
+Generate ambient audio from 7 presets (forest, ocean, city, rain, office, space, cafe). Multi-layer PCM synthesis, configurable intensity/duration/seed. Crossfade looping.
+- **Why**: Every video needs ambient fill. Procedural generation is cheaper and more flexible than sample libraries.
+- **Module**: `ambient_generator.py` | **Routes**: `/audio/ambient/generate`, `/audio/ambient/presets`
+
+### 75.3 Music Mood Morph (P2 / M)
+Transform music mood over time. 6 transforms: brighten, darken, energize, calm, build, drop. Keyframeable mood curves with FFmpeg EQ/atempo/compand filters.
+- **Why**: Music rarely matches the emotional arc of the edit. Mood morphing adapts music to story beats.
+- **Module**: `music_mood_morph.py` | **Route**: `/audio/mood-morph`
+
+### 75.4 Beat-Synced Auto-Edit (P1 / L)
+Detect beats, align video cuts to music rhythm. 6 modes: every_beat, every_bar, accent_only, custom. Energy matching pairs clip intensity to beat strength. Full assembly output.
+- **Why**: Music video editing is 90% beat-matching. CapCut's auto-beat sync is a top feature.
+- **Module**: `beat_sync_edit.py` | **Routes**: `/audio/beat-sync`, `/audio/beat-detect`
+
+### 75.5 Stem Remix & Mashup (P2 / M)
+Per-stem effects (volume, pan, reverb, delay, pitch shift, reverse, mute) with 7 presets: acapella, instrumental, karaoke, lo_fi, nightcore, slowed_reverb, drum_emphasis.
+- **Why**: Stem separation exists; creative remixing makes it useful beyond simple isolation.
+- **Module**: `stem_remix.py` | **Routes**: `/audio/stem-remix`, `/audio/remix-presets`, `/audio/stem-remix/preview`
+
+## 76. Real-Time AI Preview
+
+### 76.1 Live AI Effect Preview (P1 / M)
+Preview any of 10 effects at 480p on a single frame for instant feedback. LRU cache (100 entries / 500MB). Effect chain support. Returns base64 JPEG or temp file.
+- **Why**: Current workflow is blind: adjust → process whole clip → review. Live preview eliminates the loop.
+- **Module**: `live_preview.py` | **Route**: `/preview/live`
+
+### 76.2 GPU-Accelerated Preview Pipeline (P1 / L)
+Preview render queue with GPU detection (nvidia-smi/torch.cuda) and CPU fallback. Batch preview at N timestamps for scrubbing. Effect chain pipeline.
+- **Why**: GPU acceleration makes preview viable at interactive framerates.
+- **Module**: `gpu_preview_pipeline.py` | **Routes**: `/preview/pipeline`, `/preview/scrub`, `/preview/pipeline/status`
+
+### 76.3 A/B Comparison Generator (P1 / M)
+6 comparison modes: side_by_side, overlay_blend, wipe_horizontal, wipe_vertical, split_diagonal, checkerboard. Quality metrics: SSIM, PSNR, MSE, color delta.
+- **Why**: Every processing operation needs before/after validation. Export-ready comparisons.
+- **Module**: `ab_compare.py` | **Routes**: `/preview/compare`, `/preview/compare/metrics`
+
+### 76.4 Real-Time Video Scopes (P2 / M)
+5 scope types: waveform, vectorscope, histogram, parade, false_color. 4 presets (colorist, exposure, broadcast, full). Broadcast legal range violation detection.
+- **Why**: DaVinci Resolve's scopes are best-in-class. Bringing scopes to Premiere via OpenCut fills a major gap.
+- **Module**: `realtime_scopes.py` | **Routes**: `/preview/scopes`, `/preview/scopes/presets`
+
+### 76.5 Preview Render Cache (P2 / M)
+Disk-persistent LRU cache in `~/.opencut/preview_cache/`. Configurable size/TTL, background cleanup, invalidation by file/effect/flush, cache warming. Thread-safe.
+- **Why**: Re-computing identical previews wastes GPU cycles. Caching makes scrubbing instant.
+- **Module**: `preview_cache.py` | **Routes**: `/preview/cache/stats`, `/preview/cache/warm`, `/preview/cache` (DELETE)
+
+## 77. Cloud & Distribution
+
+### 77.1 Cloud/Remote Render Dispatch (P1 / L)
+Define render nodes, health check via HTTP, dispatch jobs with least-loaded balancing, retry on failure (max 2), fallback to local. Batch dispatch, persistent node config.
+- **Why**: Render time is the biggest bottleneck. Offloading to faster/additional machines scales linearly.
+- **Module**: `cloud_render.py` | **Routes**: `/cloud/render`, `/cloud/nodes` (CRUD)
+
+### 77.2 Multi-Platform Auto-Publish (P1 / L)
+Generate export packages for 10 platforms (YouTube, TikTok, Instagram variants, Twitter/X, LinkedIn, Facebook, Vimeo, Podcast RSS). Per-platform validation, thumbnail, metadata limits. Batch export with manifest.
+- **Why**: Every creator publishes to 3-5 platforms. Manual re-export and metadata entry is hours of work per video.
+- **Module**: `platform_publish.py` | **Routes**: `/publish/prepare`, `/publish/platforms`, `/publish/validate`
+
+### 77.3 Content Fingerprint & Duplicate Detection (P2 / M)
+Perceptual hash (pHash) + audio fingerprint. Hamming distance comparison, similarity 0-100. SQLite index for batch search across project library.
+- **Why**: Duplicate detection saves storage. Fingerprinting enables content identification and rights management.
+- **Module**: `content_fingerprint.py` | **Routes**: `/fingerprint/generate`, `/fingerprint/search`
+
+### 77.4 Render Farm Management (P1 / L)
+Split renders into segments, dispatch to multiple nodes, collect and concatenate. 3 strategies: equal_duration, scene_based, chapter_based. GPU routing, fault tolerance.
+- **Why**: A 1-hour render on 4 machines takes ~15 minutes. Segment-based farm rendering is standard in VFX.
+- **Module**: `render_farm.py` | **Routes**: `/farm/render`, `/farm/status`
+
+### 77.5 Distribution Analytics (P2 / M)
+Track publish records, manual metrics entry (views, likes, CTR, watch time). Cross-platform aggregation, top performers, content type analysis, growth trends. CSV/JSON export.
+- **Why**: Understanding what works across platforms guides content strategy. No video editor includes post-publish analytics.
+- **Module**: `distribution_analytics.py` | **Routes**: `/analytics/record`, `/analytics/report`
 
 ---
 

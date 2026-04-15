@@ -84,6 +84,11 @@ def register_blueprints(app):
     from .vr_lens_routes import vr_lens_bp
     from .workflow import workflow_bp
     from .workflow_dev_routes import workflow_dev_bp
+    from .collab_review_routes import collab_review_bp
+    from .cloud_distrib_routes import cloud_distrib_bp
+    from .preview_realtime_routes import preview_realtime_bp
+    from .sound_music_routes import sound_music_bp
+    from .timeline_auto_routes import timeline_auto_bp
     from .workflow_routes import workflow_auto_bp
 
     for bp in [system_bp, audio_bp, captions_bp,
@@ -110,5 +115,8 @@ def register_blueprints(app):
                next_gen_ai_bp, motion_gen_bp, body_transfer_bp,
                timeline_intel_bp, pipeline_intel_bp,
                object_intel_bp, delivery_master_bp,
-               content_gen_bp]:
+               content_gen_bp,
+               collab_review_bp, timeline_auto_bp,
+               sound_music_bp, preview_realtime_bp,
+               cloud_distrib_bp]:
         app.register_blueprint(bp)
