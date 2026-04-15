@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.14.0] - 2026-04-14
+
+### Added
+- **5 new feature categories (73-77)** — 25 new core modules with routes and comprehensive tests.
+- **AI Collaboration & Review** (Cat. 73): Frame-accurate review comments with annotations, frame-by-frame version comparison (SSIM/PSNR), multi-stage approval workflows, immutable edit history audit log, team-shared preset library with merge resolution.
+- **Advanced Timeline Automation** (Cat. 74): AI rough cut assembly from script/brief (LLM + keyword fallback), multi-track audio auto-mix with ducking profiles, smart trim point detection (3 modes), batch timeline operations (6 op types with chaining), template-based video assembly (4 built-in templates).
+- **AI Sound Design & Music** (Cat. 75): AI sound design from video analysis (12 SFX categories, PCM synthesis), procedural ambient soundscape generator (7 presets), music mood morphing (6 transforms, keyframeable curves), beat-synced auto-edit (6 cut modes, energy matching), creative stem remix (7 presets including lo-fi/nightcore/slowed reverb).
+- **Real-Time AI Preview** (Cat. 76): Live AI effect preview at 480p (10 effects, LRU cache), GPU-accelerated preview pipeline with CPU fallback, A/B comparison generator (6 modes, quality metrics), real-time video scopes (waveform/vectorscope/histogram/parade/false_color), disk-persistent preview render cache with TTL.
+- **Cloud & Distribution** (Cat. 77): Cloud/remote render dispatch with health checks and failover, multi-platform auto-publish (10 platforms), content fingerprinting and duplicate detection (pHash + audio), render farm management with segment dispatch, post-publish distribution analytics.
+- **5 new route blueprints** — `collab_review_bp`, `timeline_auto_bp`, `sound_music_bp`, `preview_realtime_bp`, `cloud_distrib_bp` (57 new routes).
+- **5 new test files** — 647 new tests covering all v1.14.0 features.
+- **1,088 total API routes** (up from 1,031 in v1.13.0).
+- **6,925 total tests** across 87 test files (up from 6,278 across 82).
+- **408 core modules** (up from 385), **83 route blueprints** (up from 78).
+
 ## [1.13.0] - 2026-04-14
 
 ### Added
