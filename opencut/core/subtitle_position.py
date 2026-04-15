@@ -1,473 +1,501 @@
 """
-OpenCut Subtitle Positioning Module v1.0.0
+OpenCut Dynamic Subtitle Positioning
 
-Dynamic per-frame subtitle positioning to avoid faces, text, and logos.
-Analyzes frame obstructions and computes safe subtitle placement.
+Per-frame analysis to detect faces, text/graphics, and bright/busy regions
+in the lower portion of the frame. Repositions subtitles to avoid covering
+important visual content. Generates ASS format with per-line positioning
+overrides.
 """
 
 import logging
 import os
-import time
-from dataclasses import asdict, dataclass
-from typing import Callable, List, Optional, Tuple
-
-from opencut.helpers import (
-    FFmpegCmd,
-    ensure_package,
-    get_video_info,
-    run_ffmpeg,
-)
+from dataclasses import dataclass, field
+from typing import Callable, Dict, List, Optional, Tuple
 
 logger = logging.getLogger("opencut")
 
+# ---------------------------------------------------------------------------
+# Positioning zones
+# ---------------------------------------------------------------------------
+ZONES = {
+    "bottom_center": {"x_pct": 0.5, "y_pct": 0.9, "label": "Bottom Center"},
+    "top_center": {"x_pct": 0.5, "y_pct": 0.1, "label": "Top Center"},
+    "bottom_left": {"x_pct": 0.2, "y_pct": 0.9, "label": "Bottom Left"},
+    "bottom_right": {"x_pct": 0.8, "y_pct": 0.9, "label": "Bottom Right"},
+    "top_left": {"x_pct": 0.2, "y_pct": 0.1, "label": "Top Left"},
+    "top_right": {"x_pct": 0.8, "y_pct": 0.1, "label": "Top Right"},
+}
 
-# ---------------------------------------------------------------------------
-# Result dataclasses
-# ---------------------------------------------------------------------------
+ZONE_PRIORITY = [
+    "bottom_center",
+    "top_center",
+    "bottom_left",
+    "bottom_right",
+    "top_left",
+    "top_right",
+]
+
 
 @dataclass
-class Obstruction:
-    """A detected obstruction region in a frame."""
-    x: int = 0
-    y: int = 0
-    width: int = 0
-    height: int = 0
-    label: str = ""       # "face", "text", "logo", "object"
+class ObstructionInfo:
+    """Information about a detected obstruction in a frame region."""
+
+    zone: str = ""
+    obstruction_type: str = ""  # face, text, graphic, bright, busy
     confidence: float = 0.0
+    bbox: Tuple[int, int, int, int] = (0, 0, 0, 0)  # x, y, w, h
 
 
 @dataclass
-class SubtitlePosition:
-    """Computed subtitle position for a frame."""
+class FrameAnalysis:
+    """Analysis result for a single frame."""
+
+    timestamp: float = 0.0
+    obstructions: List[ObstructionInfo] = field(default_factory=list)
+    obstructed_zones: List[str] = field(default_factory=list)
+    best_zone: str = "bottom_center"
+
+
+@dataclass
+class PositionedSubtitle:
+    """A subtitle with determined position."""
+
+    index: int = 0
+    start: float = 0.0
+    end: float = 0.0
+    text: str = ""
+    zone: str = "bottom_center"
     x: int = 0
     y: int = 0
-    alignment: int = 2       # SSA alignment (1=bottom-left, 2=bottom-center, etc.)
-    margin_bottom: int = 50
-    safe: bool = True
-    reason: str = ""
+    repositioned: bool = False
+    obstruction_reason: str = ""
 
 
 @dataclass
-class PositioningResult:
-    """Result for the full dynamic positioning operation."""
-    output_path: str = ""
+class PositionResult:
+    """Result of dynamic subtitle positioning."""
+
+    positioned_subtitles: List[PositionedSubtitle] = field(default_factory=list)
+    repositioned_count: int = 0
+    obstruction_types: Dict[str, int] = field(default_factory=dict)
+    total_segments: int = 0
     frames_analyzed: int = 0
-    positions_adjusted: int = 0
-    duration_seconds: float = 0.0
-    status: str = "pending"
-    error: str = ""
-
-    def to_dict(self) -> dict:
-        return asdict(self)
 
 
 # ---------------------------------------------------------------------------
-# Default subtitle regions and margins
+# Zone coordinate calculation
 # ---------------------------------------------------------------------------
-
-# Standard safe zones for subtitle placement (relative to frame height)
-_DEFAULT_BOTTOM_ZONE = 0.85    # Bottom 15% of frame
-_DEFAULT_TOP_ZONE = 0.10       # Top 10% of frame
-_SAFE_MARGIN = 20              # Pixel margin from detected obstructions
-
-
-# ---------------------------------------------------------------------------
-# Frame obstruction analysis
-# ---------------------------------------------------------------------------
-
-def _detect_bright_regions(frame_arr, threshold: float = 200.0) -> List[dict]:
-    """Simple bright region detection as proxy for text/logo areas."""
-
-    gray = frame_arr.mean(axis=2) if len(frame_arr.shape) == 3 else frame_arr
-    h, w = gray.shape
-
-    # Focus on bottom third where subtitles go
-    bottom_region = gray[int(h * 0.7):, :]
-    bright_mask = bottom_region > threshold
-
-    regions = []
-    if bright_mask.any():
-        # Find connected bright columns
-        col_brightness = bright_mask.mean(axis=0)
-        bright_cols = col_brightness > 0.3
-
-        if bright_cols.any():
-            # Find contiguous segments
-            in_region = False
-            start_col = 0
-            for c in range(len(bright_cols)):
-                if bright_cols[c] and not in_region:
-                    start_col = c
-                    in_region = True
-                elif not bright_cols[c] and in_region:
-                    region_w = c - start_col
-                    if region_w > 20:  # Skip tiny regions
-                        regions.append({
-                            "x": start_col,
-                            "y": int(h * 0.7),
-                            "width": region_w,
-                            "height": h - int(h * 0.7),
-                            "type": "bright_region",
-                        })
-                    in_region = False
-
-            if in_region:
-                region_w = len(bright_cols) - start_col
-                if region_w > 20:
-                    regions.append({
-                        "x": start_col,
-                        "y": int(h * 0.7),
-                        "width": region_w,
-                        "height": h - int(h * 0.7),
-                        "type": "bright_region",
-                    })
-
-    return regions
-
-
-def analyze_frame_obstructions(
-    frame_path: str,
-    detect_faces: bool = True,
-    detect_text: bool = True,
-    detect_logos: bool = True,
-    on_progress: Optional[Callable] = None,
-) -> List[Obstruction]:
-    """Analyze a video frame for obstructions that could overlap subtitles.
-
-    Uses brightness analysis and optional face detection to find regions
-    that subtitles should avoid.
+def zone_to_pixels(
+    zone: str,
+    video_width: int = 1920,
+    video_height: int = 1080,
+    margin_x: int = 40,
+    margin_y: int = 40,
+) -> Tuple[int, int]:
+    """Convert a zone name to pixel coordinates for subtitle placement.
 
     Args:
-        frame_path: Path to a frame image.
-        detect_faces: Enable face detection.
-        detect_text: Enable text/bright region detection.
-        detect_logos: Enable logo detection (uses bright regions).
-        on_progress: Optional callback ``(percent, message)``.
+        zone: Zone name (bottom_center, top_center, etc.).
+        video_width: Frame width in pixels.
+        video_height: Frame height in pixels.
+        margin_x: Horizontal margin from edges.
+        margin_y: Vertical margin from edges.
 
     Returns:
-        List of :class:`Obstruction` objects.
+        (x, y) pixel coordinates for subtitle anchor point.
     """
-    if not os.path.isfile(frame_path):
-        raise FileNotFoundError(f"Frame not found: {frame_path}")
+    zone_info = ZONES.get(zone, ZONES["bottom_center"])
+    x = int(zone_info["x_pct"] * video_width)
+    y = int(zone_info["y_pct"] * video_height)
+    # Clamp to margins
+    x = max(margin_x, min(x, video_width - margin_x))
+    y = max(margin_y, min(y, video_height - margin_y))
+    return x, y
 
-    if not ensure_package("numpy"):
-        raise RuntimeError("numpy required for frame analysis")
-    if not ensure_package("PIL", "Pillow"):
-        raise RuntimeError("Pillow required for frame analysis")
 
-    import numpy as np
-    from PIL import Image
+# ---------------------------------------------------------------------------
+# Frame analysis (simplified without heavy ML deps)
+# ---------------------------------------------------------------------------
+def _check_bottom_third(
+    frame_data: Optional[Dict],
+    video_width: int,
+    video_height: int,
+) -> List[ObstructionInfo]:
+    """Check the bottom third of the frame for obstructions.
 
-    if on_progress:
-        on_progress(10, "Loading frame...")
+    Uses pre-computed analysis data (face locations, text regions, etc.)
+    rather than performing ML inference directly. When frame_data is None
+    or empty, assumes no obstructions.
 
-    img = Image.open(frame_path).convert("RGB")
-    frame_arr = np.array(img, dtype=np.float32)
-    h, w = frame_arr.shape[:2]
+    Args:
+        frame_data: Dict with optional keys:
+            'faces': list of {x, y, w, h} face bounding boxes
+            'text_regions': list of {x, y, w, h} text/OCR regions
+            'bright_regions': list of {x, y, w, h, intensity} bright spots
+            'edge_density': float (0-1) edge density in bottom third
+        video_width: Frame width.
+        video_height: Frame height.
 
-    obstructions = []
+    Returns:
+        List of ObstructionInfo for obstructed zones.
+    """
+    if not frame_data:
+        return []
 
-    # Face detection via simple skin-color heuristic
-    if detect_faces:
-        if on_progress:
-            on_progress(30, "Detecting faces...")
+    obstructions: List[ObstructionInfo] = []
+    bottom_y = video_height * 2 // 3
 
-        # Simple skin-tone detection in bottom portion
-        bottom = frame_arr[int(h * 0.5):, :, :]
-        # Rough skin tone range in RGB
-        r, g, b = bottom[:, :, 0], bottom[:, :, 1], bottom[:, :, 2]
-        skin_mask = (
-            (r > 95) & (g > 40) & (b > 20) &
-            (r > g) & (r > b) &
-            (np.abs(r - g) > 15)
-        )
-
-        skin_ratio = skin_mask.mean()
-        if skin_ratio > 0.05:  # Significant skin-tone region
-            # Find bounding box of skin region
-            rows = np.any(skin_mask, axis=1)
-            cols = np.any(skin_mask, axis=0)
-            if rows.any() and cols.any():
-                rmin, rmax = np.where(rows)[0][[0, -1]]
-                cmin, cmax = np.where(cols)[0][[0, -1]]
-                obstructions.append(Obstruction(
-                    x=int(cmin),
-                    y=int(h * 0.5 + rmin),
-                    width=int(cmax - cmin),
-                    height=int(rmax - rmin),
-                    label="face",
-                    confidence=round(min(skin_ratio * 5, 0.9), 2),
-                ))
-
-    # Text / bright region detection
-    if detect_text or detect_logos:
-        if on_progress:
-            on_progress(60, "Detecting text/logos...")
-
-        bright_regions = _detect_bright_regions(frame_arr)
-        for region in bright_regions:
-            label = "text" if detect_text else "logo"
-            obstructions.append(Obstruction(
-                x=region["x"],
-                y=region["y"],
-                width=region["width"],
-                height=region["height"],
-                label=label,
-                confidence=0.6,
+    # Check faces
+    for face in frame_data.get("faces", []):
+        fx = int(face.get("x", 0))
+        fy = int(face.get("y", 0))
+        fw = int(face.get("w", 0))
+        fh = int(face.get("h", 0))
+        # Face in bottom third?
+        if fy + fh > bottom_y:
+            zone = _bbox_to_zone(fx, fy, fw, fh, video_width, video_height)
+            obstructions.append(ObstructionInfo(
+                zone=zone,
+                obstruction_type="face",
+                confidence=float(face.get("confidence", 0.9)),
+                bbox=(fx, fy, fw, fh),
             ))
 
-    if on_progress:
-        on_progress(100, f"Found {len(obstructions)} obstructions")
+    # Check text/graphic regions
+    for region in frame_data.get("text_regions", []):
+        rx = int(region.get("x", 0))
+        ry = int(region.get("y", 0))
+        rw = int(region.get("w", 0))
+        rh = int(region.get("h", 0))
+        if ry + rh > bottom_y:
+            zone = _bbox_to_zone(rx, ry, rw, rh, video_width, video_height)
+            obstructions.append(ObstructionInfo(
+                zone=zone,
+                obstruction_type="text",
+                confidence=float(region.get("confidence", 0.8)),
+                bbox=(rx, ry, rw, rh),
+            ))
+
+    # Check bright regions
+    for bright in frame_data.get("bright_regions", []):
+        bx = int(bright.get("x", 0))
+        by = int(bright.get("y", 0))
+        bw = int(bright.get("w", 0))
+        bh = int(bright.get("h", 0))
+        intensity = float(bright.get("intensity", 0))
+        if by + bh > bottom_y and intensity > 0.8:
+            zone = _bbox_to_zone(bx, by, bw, bh, video_width, video_height)
+            obstructions.append(ObstructionInfo(
+                zone=zone,
+                obstruction_type="bright",
+                confidence=intensity,
+                bbox=(bx, by, bw, bh),
+            ))
+
+    # Edge density (general busyness)
+    edge_density = float(frame_data.get("edge_density", 0))
+    if edge_density > 0.6:
+        obstructions.append(ObstructionInfo(
+            zone="bottom_center",
+            obstruction_type="busy",
+            confidence=edge_density,
+            bbox=(0, bottom_y, video_width, video_height - bottom_y),
+        ))
 
     return obstructions
 
 
-# ---------------------------------------------------------------------------
-# Subtitle position computation
-# ---------------------------------------------------------------------------
+def _bbox_to_zone(
+    x: int, y: int, w: int, h: int,
+    video_width: int, video_height: int,
+) -> str:
+    """Map a bounding box center to the nearest positioning zone."""
+    cx = x + w // 2
+    cy = y + h // 2
+    # Determine which zone this overlaps
+    if cy > video_height * 0.66:
+        # Bottom region
+        if cx < video_width * 0.33:
+            return "bottom_left"
+        if cx > video_width * 0.66:
+            return "bottom_right"
+        return "bottom_center"
+    # Top region
+    if cx < video_width * 0.33:
+        return "top_left"
+    if cx > video_width * 0.66:
+        return "top_right"
+    return "top_center"
 
-def compute_subtitle_position(
-    obstructions: List[Obstruction],
-    frame_size: Tuple[int, int],
-    preferred_alignment: int = 2,
-    margin: int = 50,
-) -> SubtitlePosition:
-    """Compute optimal subtitle position avoiding obstructions.
+
+def _find_best_zone(
+    obstructed_zones: List[str],
+    priority: Optional[List[str]] = None,
+) -> str:
+    """Find the best unobstructed zone using priority order.
 
     Args:
-        obstructions: List of Obstruction objects in the frame.
-        frame_size: (width, height) of the frame.
-        preferred_alignment: SSA alignment (2=bottom-center default).
-        margin: Minimum pixel margin from obstructions.
+        obstructed_zones: List of zone names that are obstructed.
+        priority: Zone priority order (default: ZONE_PRIORITY).
 
     Returns:
-        :class:`SubtitlePosition` with computed placement.
+        Best available zone name.
     """
-    w, h = frame_size
-    pos = SubtitlePosition(
-        x=w // 2,
-        y=int(h * _DEFAULT_BOTTOM_ZONE),
-        alignment=preferred_alignment,
-        margin_bottom=margin,
-        safe=True,
+    order = priority or ZONE_PRIORITY
+    obstructed_set = set(obstructed_zones)
+    for zone in order:
+        if zone not in obstructed_set:
+            return zone
+    # All obstructed, fall back to top_center (least likely to overlap
+    # with most content types)
+    return "top_center"
+
+
+def analyze_frame(
+    frame_data: Optional[Dict],
+    video_width: int = 1920,
+    video_height: int = 1080,
+) -> FrameAnalysis:
+    """Analyze a single frame for subtitle positioning obstructions.
+
+    Args:
+        frame_data: Pre-computed analysis data for the frame.
+        video_width: Frame width.
+        video_height: Frame height.
+
+    Returns:
+        FrameAnalysis with detected obstructions and best zone.
+    """
+    obstructions = _check_bottom_third(frame_data, video_width, video_height)
+    obstructed_zones = list({o.zone for o in obstructions})
+    best_zone = _find_best_zone(obstructed_zones)
+
+    return FrameAnalysis(
+        obstructions=obstructions,
+        obstructed_zones=obstructed_zones,
+        best_zone=best_zone,
     )
 
-    if not obstructions:
-        return pos
-
-    # Check if default bottom position overlaps any obstruction
-    subtitle_region_top = int(h * _DEFAULT_BOTTOM_ZONE) - margin
-    subtitle_region_bottom = h
-    subtitle_region_left = w // 4
-    subtitle_region_right = 3 * w // 4
-
-    overlap = False
-    for obs in obstructions:
-        obs_right = obs.x + obs.width
-        obs_bottom = obs.y + obs.height
-
-        # Check overlap with subtitle zone
-        if (obs.x < subtitle_region_right and obs_right > subtitle_region_left and
-                obs.y < subtitle_region_bottom and obs_bottom > subtitle_region_top):
-            overlap = True
-            break
-
-    if not overlap:
-        return pos
-
-    # Try moving subtitle to top of frame
-    top_clear = True
-    top_region_bottom = int(h * _DEFAULT_TOP_ZONE) + margin
-    for obs in obstructions:
-        obs_bottom = obs.y + obs.height
-        if obs.y < top_region_bottom:
-            top_clear = False
-            break
-
-    if top_clear:
-        pos.y = int(h * _DEFAULT_TOP_ZONE)
-        pos.alignment = 8  # SSA top-center
-        pos.margin_bottom = h - int(h * _DEFAULT_TOP_ZONE)
-        pos.reason = "Moved to top to avoid bottom obstruction"
-        return pos
-
-    # Try left-aligned bottom
-    left_clear = True
-    for obs in obstructions:
-        obs_right = obs.x + obs.width
-        if obs.x < w // 3 and obs.y > subtitle_region_top:
-            left_clear = False
-            break
-
-    if left_clear:
-        pos.x = w // 4
-        pos.alignment = 1  # SSA bottom-left
-        pos.reason = "Moved to left to avoid center obstruction"
-        return pos
-
-    # Last resort: raise above all obstructions
-    max_obs_top = max((obs.y for obs in obstructions), default=subtitle_region_top)
-    safe_y = max(max_obs_top - margin - 50, int(h * 0.3))
-    pos.y = safe_y
-    pos.alignment = 2
-    pos.margin_bottom = h - safe_y
-    pos.safe = False
-    pos.reason = "Raised above obstructions (may be suboptimal)"
-
-    return pos
-
 
 # ---------------------------------------------------------------------------
-# Apply dynamic positioning to subtitle file
+# Batch subtitle positioning
 # ---------------------------------------------------------------------------
-
-def apply_dynamic_positioning(
-    subtitle_path: str,
-    video_path: str,
-    output_path: str,
-    sample_interval: float = 2.0,
+def position_subtitles(
+    subtitles: List[Dict],
+    frame_analyses: Optional[Dict[float, Dict]] = None,
+    video_width: int = 1920,
+    video_height: int = 1080,
+    analyze_keyframes_only: bool = True,
     on_progress: Optional[Callable] = None,
-) -> PositioningResult:
-    """Apply dynamic positioning to subtitles based on video content.
+) -> PositionResult:
+    """Apply dynamic positioning to subtitle segments.
 
-    Samples video frames at intervals, analyzes obstructions, and adjusts
-    subtitle positioning to avoid overlap.
+    In batch mode with analyze_keyframes_only=True, only analyzes frames at
+    subtitle in-points rather than every frame.
 
     Args:
-        subtitle_path: Path to SRT/ASS subtitle file.
-        video_path: Path to the video file.
-        output_path: Path for the output video with positioned subtitles.
-        sample_interval: Seconds between frame samples for analysis.
-        on_progress: Optional callback ``(percent, message)``.
+        subtitles: List of subtitle dicts with 'start', 'end', 'text'.
+        frame_analyses: Pre-computed per-frame analysis data. Dict mapping
+            timestamps to frame data dicts with 'faces', 'text_regions', etc.
+        video_width: Frame width for coordinate calculation.
+        video_height: Frame height for coordinate calculation.
+        analyze_keyframes_only: Only analyze at subtitle start times.
+        on_progress: Progress callback.
 
     Returns:
-        :class:`PositioningResult` with processing details.
+        PositionResult with positioned subtitles.
     """
-    if not os.path.isfile(subtitle_path):
-        raise FileNotFoundError(f"Subtitle file not found: {subtitle_path}")
-    if not os.path.isfile(video_path):
-        raise FileNotFoundError(f"Video file not found: {video_path}")
+    if not subtitles:
+        return PositionResult()
 
-    result = PositioningResult()
-    start_time = time.time()
+    analyses = frame_analyses or {}
+    result_subs: List[PositionedSubtitle] = []
+    obstruction_counts: Dict[str, int] = {}
+    repositioned = 0
+    frames_analyzed = 0
 
-    if on_progress:
-        on_progress(5, "Analyzing video for subtitle positioning...")
+    total = len(subtitles)
+    for i, sub in enumerate(subtitles):
+        start = float(sub.get("start", 0))
+        end = float(sub.get("end", 0))
+        text = str(sub.get("text", ""))
 
-    # Get video info
-    info = get_video_info(video_path)
-    duration = info["duration"]
-    width = info["width"]
-    height = info["height"]
+        # Find closest frame analysis
+        frame_data = None
+        if analyses:
+            # Find closest timestamp
+            closest_ts = None
+            min_dist = float("inf")
+            for ts in analyses:
+                dist = abs(float(ts) - start)
+                if dist < min_dist:
+                    min_dist = dist
+                    closest_ts = ts
+            if closest_ts is not None and min_dist < 1.0:
+                frame_data = analyses[closest_ts]
 
-    if duration <= 0:
-        raise ValueError("Could not determine video duration")
+        # Analyze frame
+        analysis = analyze_frame(frame_data, video_width, video_height)
+        analysis.timestamp = start
+        frames_analyzed += 1
 
-    # Sample frames and analyze
-    import tempfile
-    temp_dir = tempfile.mkdtemp(prefix="opencut_subpos_")
+        # Determine position
+        zone = analysis.best_zone
+        x, y = zone_to_pixels(zone, video_width, video_height)
+        is_repositioned = zone != "bottom_center"
 
-    try:
-        # Extract sample frames
-        sample_times = []
-        t = 0.0
-        while t < duration:
-            sample_times.append(t)
-            t += sample_interval
+        reason = ""
+        if is_repositioned and analysis.obstructions:
+            types = [o.obstruction_type for o in analysis.obstructions]
+            reason = ", ".join(set(types))
+            for t in types:
+                obstruction_counts[t] = obstruction_counts.get(t, 0) + 1
+            repositioned += 1
+
+        result_subs.append(PositionedSubtitle(
+            index=i + 1,
+            start=start,
+            end=end,
+            text=text,
+            zone=zone,
+            x=x,
+            y=y,
+            repositioned=is_repositioned,
+            obstruction_reason=reason,
+        ))
 
         if on_progress:
-            on_progress(10, f"Extracting {len(sample_times)} sample frames...")
-
-        frame_positions = {}
-
-        for i, st in enumerate(sample_times):
-            frame_path = os.path.join(temp_dir, f"sample_{i:06d}.jpg")
-
-            try:
-                cmd = (
-                    FFmpegCmd()
-                    .pre_input("ss", str(st))
-                    .input(video_path)
-                    .frames(1)
-                    .option("q:v", "2")
-                    .output(frame_path)
-                    .build()
-                )
-                run_ffmpeg(cmd)
-
-                if os.path.isfile(frame_path):
-                    obstructions = analyze_frame_obstructions(
-                        frame_path,
-                        detect_faces=True,
-                        detect_text=True,
-                        detect_logos=True,
-                    )
-
-                    position = compute_subtitle_position(
-                        obstructions, (width, height),
-                    )
-
-                    frame_positions[st] = position
-                    result.frames_analyzed += 1
-
-                    if position.reason:
-                        result.positions_adjusted += 1
-
-            except Exception as e:
-                logger.debug("Frame analysis failed at %.1fs: %s", st, e)
-
-            if on_progress:
-                pct = min(int(((i + 1) / len(sample_times)) * 60) + 10, 70)
-                on_progress(pct, f"Analyzed {i + 1}/{len(sample_times)} frames")
-
-        # Determine if we need position overrides
-        if on_progress:
-            on_progress(75, "Encoding video with subtitles...")
-
-        # Build FFmpeg command with subtitle overlay
-        # Use the subtitle file as-is with margin adjustments
-        os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-
-        # Calculate dominant margin from analysis
-        margins = [p.margin_bottom for p in frame_positions.values()]
-        avg_margin = int(sum(margins) / max(len(margins), 1)) if margins else 50
-
-        # Escape path for FFmpeg subtitle filter
-        sub_escaped = subtitle_path.replace("\\", "/").replace(":", "\\:")
-
-        vf = f"subtitles='{sub_escaped}':force_style='MarginV={avg_margin}'"
-
-        cmd = (
-            FFmpegCmd()
-            .input(video_path)
-            .video_codec("libx264", crf=18, preset="medium")
-            .audio_codec("aac", bitrate="192k")
-            .video_filter(vf)
-            .faststart()
-            .output(output_path)
-            .build()
-        )
-        run_ffmpeg(cmd)
-
-        result.output_path = output_path
-        result.status = "complete"
-
-    except Exception as e:
-        result.status = "failed"
-        result.error = str(e)
-        raise
-
-    finally:
-        import shutil
-        shutil.rmtree(temp_dir, ignore_errors=True)
-
-    result.duration_seconds = round(time.time() - start_time, 2)
+            on_progress(int(((i + 1) / total) * 95))
 
     if on_progress:
-        on_progress(
-            100,
-            f"Positioning complete: {result.positions_adjusted} adjustments "
-            f"across {result.frames_analyzed} samples",
+        on_progress(100)
+
+    return PositionResult(
+        positioned_subtitles=result_subs,
+        repositioned_count=repositioned,
+        obstruction_types=obstruction_counts,
+        total_segments=len(result_subs),
+        frames_analyzed=frames_analyzed,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Single frame preview
+# ---------------------------------------------------------------------------
+def preview_position(
+    text: str,
+    frame_data: Optional[Dict],
+    video_width: int = 1920,
+    video_height: int = 1080,
+) -> Dict:
+    """Preview subtitle position for a single frame.
+
+    Args:
+        text: Subtitle text to position.
+        frame_data: Pre-computed frame analysis data.
+        video_width: Frame width.
+        video_height: Frame height.
+
+    Returns:
+        Dict with zone, x, y, obstructions, ass_override.
+    """
+    analysis = analyze_frame(frame_data, video_width, video_height)
+    x, y = zone_to_pixels(analysis.best_zone, video_width, video_height)
+
+    ass_override = f"{{\\pos({x},{y})}}"
+
+    return {
+        "zone": analysis.best_zone,
+        "zone_label": ZONES.get(analysis.best_zone, {}).get("label", ""),
+        "x": x,
+        "y": y,
+        "obstructions": [
+            {
+                "type": o.obstruction_type,
+                "zone": o.zone,
+                "confidence": o.confidence,
+            }
+            for o in analysis.obstructions
+        ],
+        "obstructed_zones": analysis.obstructed_zones,
+        "ass_override": ass_override,
+    }
+
+
+# ---------------------------------------------------------------------------
+# ASS export with per-line positioning
+# ---------------------------------------------------------------------------
+def export_positioned_ass(
+    result: PositionResult,
+    title: str = "OpenCut Positioned Subtitles",
+    video_width: int = 1920,
+    video_height: int = 1080,
+) -> str:
+    """Export positioned subtitles as ASS with per-line positioning overrides.
+
+    Each subtitle line gets a {\\pos(x,y)} override based on the computed
+    best position for that segment.
+    """
+    header = (
+        "[Script Info]\n"
+        f"Title: {title}\n"
+        "ScriptType: v4.00+\n"
+        f"PlayResX: {video_width}\n"
+        f"PlayResY: {video_height}\n"
+        "WrapStyle: 0\n"
+        "\n"
+        "[V4+ Styles]\n"
+        "Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, "
+        "OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, "
+        "ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, "
+        "Alignment, MarginL, MarginR, MarginV, Encoding\n"
+        "Style: Default,Arial,48,&H00FFFFFF,&H000000FF,&H00000000,"
+        "&H80000000,0,0,0,0,100,100,0,0,1,2,1,2,20,20,40,1\n"
+        "\n"
+        "[Events]\n"
+        "Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, "
+        "Effect, Text\n"
+    )
+
+    events: List[str] = []
+    for sub in result.positioned_subtitles:
+        start = _seconds_to_ass(sub.start)
+        end = _seconds_to_ass(sub.end)
+        text = sub.text.replace("\n", "\\N")
+        # Add position override
+        pos_tag = f"{{\\pos({sub.x},{sub.y})}}"
+        events.append(
+            f"Dialogue: 0,{start},{end},Default,,0,0,0,,{pos_tag}{text}"
         )
 
-    return result
+    return header + "\n".join(events) + "\n"
+
+
+def _seconds_to_ass(s: float) -> str:
+    """Convert seconds to ASS timestamp H:MM:SS.cc."""
+    if s < 0:
+        s = 0.0
+    h = int(s // 3600)
+    m = int((s % 3600) // 60)
+    sec = s % 60
+    cs = int((sec - int(sec)) * 100)
+    return f"{h}:{m:02d}:{int(sec):02d}.{cs:02d}"
+
+
+def export_to_file(
+    result: PositionResult,
+    output_path: str,
+    video_width: int = 1920,
+    video_height: int = 1080,
+) -> str:
+    """Export positioned subtitles to ASS file. Returns output path."""
+    content = export_positioned_ass(result, video_width=video_width,
+                                    video_height=video_height)
+    os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(content)
+    logger.info(
+        "Exported %d positioned subtitles to %s",
+        len(result.positioned_subtitles), output_path,
+    )
+    return output_path

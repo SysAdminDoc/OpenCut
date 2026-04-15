@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.15.0] - 2026-04-14
+
+### Added
+- **5 new feature categories (78-82)** — 25 new core modules with routes and comprehensive tests.
+- **AI Voice & Speech** (Cat. 78): Descript-style transcript-based video editing with undo stack and EDL export, AI eye contact correction via MediaPipe gaze estimation, voice overdub (replace spoken words with TTS-cloned corrections), audio-driven lip sync with Wav2Lip fallback, voice-to-voice conversion with target profiles.
+- **Motion Design & Animation** (Cat. 79): Kinetic typography engine (12 presets, 7 easing functions), data-driven animation from CSV/JSON (6 chart types), vector shape animation with SVG path morphing, sandboxed expression scripting engine (30+ math functions), configurable particle system (8 presets, 5 emitters, physics simulation).
+- **Professional Subtitling** (Cat. 80): Shot-change-aware subtitle timing (Netflix/BBC/FCC profiles), multi-language simultaneous editing with shared timing, broadcast caption export (CEA-608/708, EBU-TT, TTML, IMSC1, WebVTT), SDH/HoH auto-formatting (speaker IDs, sound events, music notation), dynamic subtitle positioning to avoid visual obstructions.
+- **Developer & Scripting Platform** (Cat. 81): Sandboxed Python scripting console with curated OpenCut namespace, macro recording and playback with variable substitution, FFmpeg filter chain builder (20 filter types, cycle detection), event-driven webhook system (5 event types, retry with backoff), batch scripting engine with glob patterns and dry-run.
+- **Audio Post-Production** (Cat. 82): ADR cueing system with cue sheet export (CSV/JSON) and guide audio, M&E mix export (3 methods: stem separation, track mute, spectral), automated dialogue premix (per-speaker EQ/compression/de-ess, 5 presets), stereo-to-surround upmix (5.1/7.1, 4 modes, VBAP panning), foley cueing with SFX auto-placement (8 categories).
+- **5 new route blueprints** — `voice_speech_bp`, `motion_design_bp`, `subtitle_pro_bp`, `dev_scripting_bp`, `audio_post_bp` (64 new routes).
+- **5 new test files** — 626 new tests covering all v1.15.0 features.
+- **1,152 total API routes** (up from 1,088 in v1.14.0).
+- **7,551 total tests** across 92 test files (up from 6,925 across 87).
+- **424 core modules** (up from 408), **88 route blueprints** (up from 83).
+
 ## [1.14.0] - 2026-04-14
 
 ### Added

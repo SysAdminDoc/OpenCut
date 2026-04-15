@@ -43,7 +43,7 @@
 - `nlp_command.py` - Natural language → API route mapping. COMMAND_MAP with 19 entries. parse_command_keyword(text) → {route, params, confidence, matched_keyword} or None. parse_command_llm(text, config, routes). parse_command(text, llm_config) tries LLM then keyword. extract_params_from_text(text) extracts numbers/language/intensity hints.
 
 ### Route Blueprints (`opencut/routes/`)
-- `__init__.py` - `register_blueprints(app)` registers all 83 Blueprints (17 original + 66 feature expansion) + dynamic plugin blueprints. 1,088 total routes.
+- `__init__.py` - `register_blueprints(app)` registers all 88 Blueprints (17 original + 71 feature expansion) + dynamic plugin blueprints. 1,152 total routes.
 - `system.py` (~1130 lines) - /health, /shutdown, /info, /gpu/*, /dependencies, /file, /whisper/*, /llm/*. Install routes use `make_install_route()` factory.
 - `audio.py` (~2175 lines) - /silence, /fillers, /audio/*, /audio/beat-markers, /audio/loudness-match. All async routes use `@async_job` decorator.
 - `captions.py` (~1590 lines) - /captions/*, /captions/chapters (LLMConfig object, not dict), /captions/repeat-detect. All async routes use `@async_job`.
@@ -135,7 +135,7 @@
 ## Architecture
 - Backend runs as standalone process (exe or `python -m opencut.server`)
 - Panel communicates via XHR to localhost:5679
-- **Blueprint-based route organization**: 83 Blueprints (17 original: system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins + 66 feature expansion blueprints) + dynamically loaded plugin blueprints. 1,088 total routes.
+- **Blueprint-based route organization**: 88 Blueprints (17 original: system, audio, captions, video_core, video_fx, video_ai, video_editing, video_specialty, jobs, settings, timeline, search, deliverables, nlp, workflow, context, plugins + 71 feature expansion blueprints) + dynamically loaded plugin blueprints. 1,152 total routes.
 - **Shared modules**: security.py (CSRF + path validation), jobs.py (job state), helpers.py (utilities + `run_ffmpeg` + `ensure_package` + `get_video_info`), user_data.py (thread-safe file I/O)
 - **CSRF protection**: Token generated at startup in security.py, returned via /health, sent as `X-OpenCut-Token` header on mutations. `@require_csrf` decorator applied to ALL POST routes.
 - **Path validation**: `validate_path()` checks realpath, null bytes, `..` components, symlinks. `validate_filepath()` adds isfile check. Applied to ALL routes accepting file paths.
@@ -181,7 +181,7 @@
 - Lint: `ruff check opencut/` — codebase is fully clean, pre-commit enforces on every commit
 
 ## Version
-- Current: **v1.14.0**
+- Current: **v1.15.0**
 - All version strings: `pyproject.toml`, `__init__.py`, `CSXS/manifest.xml` (ExtensionBundleVersion + Version), `com.opencut.uxp/manifest.json`, `com.opencut.uxp/main.js` (VERSION const), `index.html` version display, README badge, `package.json`
 - Use `python scripts/sync_version.py --set X.Y.Z` to update all 19 targets at once (including UXP files and package.json)
 - Use `python scripts/sync_version.py --check` in CI to verify all targets match
