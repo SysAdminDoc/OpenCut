@@ -14,7 +14,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import get_json_dict, require_csrf, safe_bool, safe_float
+from opencut.security import get_json_dict, require_csrf, safe_bool, safe_float, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -23,7 +23,7 @@ workflow_dev_bp = Blueprint("workflow_dev", __name__)
 
 def _json_object_or_400():
     try:
-        return get_json_dict(silent=True), None
+        return get_json_dict(), None
     except ValueError as exc:
         return None, (
             jsonify({
@@ -196,6 +196,12 @@ def edl_export():
         title = _clean_string(data.get("title", "OpenCut Export"), "title", allow_empty=False)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+    try:
+        output_path = validate_path(output_path)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
     fps = safe_float(data.get("fps", 30.0), default=30.0, min_val=0.001, max_val=240.0)
 
     if not isinstance(cuts, list):
@@ -236,6 +242,12 @@ def edl_import():
         edl_path = _clean_string(data.get("edl_path", ""), "edl_path", allow_empty=False)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+    try:
+        edl_path = validate_path(edl_path)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
     fps = safe_float(data.get("fps", 30.0), default=30.0, min_val=0.001, max_val=240.0)
 
     try:
@@ -278,6 +290,12 @@ def aaf_export():
         title = _clean_string(data.get("title", "OpenCut Export"), "title", allow_empty=False)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
+
+    try:
+        output_path = validate_path(output_path)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
     fps = safe_float(data.get("fps", 30.0), default=30.0, min_val=0.001, max_val=240.0)
 
     if not isinstance(cuts, list):
@@ -325,6 +343,11 @@ def project_archive(job_id, filepath, data):
 
     output_path = _clean_string(data.get("output_path", ""), "output_path", allow_empty=False)
 
+    try:
+        output_path = validate_path(output_path)
+    except ValueError as exc:
+        raise ValueError(str(exc))
+
     def on_progress(pct, msg):
         _update_job(job_id, progress=pct, message=msg)
 
@@ -354,6 +377,12 @@ def project_restore(job_id, filepath, data):
     archive_path = _clean_string(data.get("archive_path", ""), "archive_path", allow_empty=False)
     dest_path = _clean_string(data.get("dest_path", ""), "dest_path", allow_empty=False)
 
+    try:
+        archive_path = validate_path(archive_path)
+        dest_path = validate_path(dest_path)
+    except ValueError as exc:
+        raise ValueError(str(exc))
+
     def on_progress(pct, msg):
         _update_job(job_id, progress=pct, message=msg)
 
@@ -382,6 +411,11 @@ def project_archive_contents():
 
     try:
         archive_path = _clean_string(data.get("archive_path", ""), "archive_path", allow_empty=False)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+
+    try:
+        archive_path = validate_path(archive_path)
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
 

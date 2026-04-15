@@ -20,7 +20,7 @@ plugins_bp = Blueprint("plugins", __name__)
 
 def _json_object_or_400():
     try:
-        return get_json_dict(silent=True), None
+        return get_json_dict(), None
     except ValueError as e:
         return None, (
             jsonify({

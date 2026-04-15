@@ -259,7 +259,18 @@ def import_settings():
                 for s in steps
             ):
                 valid_wfs.append(wf)
-        save_workflows(valid_wfs)
+        # Merge with existing workflows (update by name, append new ones)
+        existing_wfs = load_workflows()
+        existing_names = {wf.get("name"): i for i, wf in enumerate(existing_wfs)}
+        for wf in valid_wfs:
+            name = wf.get("name")
+            if name in existing_names:
+                existing_wfs[existing_names[name]] = wf
+            else:
+                existing_wfs.append(wf)
+        if len(existing_wfs) > 100:
+            existing_wfs = existing_wfs[:100]
+        save_workflows(existing_wfs)
         imported.append("workflows")
     return jsonify({"success": True, "imported": imported})
 
@@ -308,13 +319,20 @@ def tail_logs():
     if not os.path.isfile(LOG_FILE):
         return jsonify({"lines": [], "total": 0})
     try:
+        # Read only the tail of the file to avoid loading multi-MB logs
+        # into memory. When filters are active, read more lines to ensure
+        # enough matches survive filtering.
+        read_limit = lines * 10 if (level_filter or job_filter) else lines * 2
+        read_limit = max(read_limit, 500)
         with open(LOG_FILE, "r", encoding="utf-8", errors="replace") as f:
             all_lines = f.readlines()
+        # Only process the tail portion to bound memory/CPU
+        candidate_lines = all_lines[-read_limit:]
     except OSError:
         return jsonify({"lines": [], "total": 0})
     # Filter
     result = []
-    for line in all_lines:
+    for line in candidate_lines:
         record = _parse_log_line(line)
         if level_filter and record["level"] != level_filter:
             continue
@@ -659,8 +677,19 @@ def save_template():
         "saved": time.time(),
     }
     fpath = os.path.join(templates_dir, safe_id + ".json")
-    with open(fpath, "w", encoding="utf-8") as f:
-        json.dump(tpl, f, indent=2)
+    # Atomic write via temp file + rename to prevent corruption
+    import tempfile
+    fd, tmp_path = tempfile.mkstemp(dir=templates_dir, suffix=".tmp", prefix=safe_id + ".")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(tpl, f, indent=2)
+        os.replace(tmp_path, fpath)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
     return jsonify({"success": True, "template": tpl})
 
 

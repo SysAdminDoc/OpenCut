@@ -46,12 +46,15 @@ _BLOCKED_MODULES = {
 _BLOCKED_BUILTINS = {
     "exec", "eval", "compile", "__import__", "open",
     "breakpoint", "exit", "quit", "input",
+    "getattr", "setattr", "delattr",  # prevent dunder access bypass
+    "globals", "locals", "vars",       # prevent scope inspection
 }
 
 # Dunder attribute patterns blocked in raw source
 _BLOCKED_PATTERNS = (
     "__class__", "__subclasses__", "__bases__", "__mro__",
-    "__globals__", "__code__", "__builtins__",
+    "__globals__", "__code__", "__builtins__", "__dict__",
+    "__import__", "__loader__", "__spec__",
 )
 
 # Maximum output length (characters)
