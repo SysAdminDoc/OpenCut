@@ -27,6 +27,49 @@ const HEALTH_MAX_MS    = 60000;
 const MEDIA_SCAN_MS    = 30000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
 const VERSION          = "1.15.0";
+const PRIMARY_CLIP_INPUT_IDS = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
+const WORKSPACE_META   = {
+  cut: {
+    title: "Cut & Clean",
+    subtitle: "Trim dead space, fillers, and rough pacing with a tighter review flow.",
+    sourceIds: ["clipPathCut"],
+  },
+  captions: {
+    title: "Captions",
+    subtitle: "Transcribe, structure, and style subtitles without leaving the panel.",
+    sourceIds: ["clipPathCaptions"],
+  },
+  audio: {
+    title: "Audio",
+    subtitle: "Denoise, normalize, loudness-match, and cut to rhythm from one focused surface.",
+    sourceIds: ["clipPathAudio"],
+  },
+  video: {
+    title: "Video",
+    subtitle: "Shape the image, plan coverage, and build short-form versions with a cleaner finishing toolkit.",
+    sourceIds: ["clipPathVideo"],
+  },
+  timeline: {
+    title: "Timeline",
+    subtitle: "Write changes back into Premiere, export interchange, and run batch production tasks with confidence.",
+    sourceIds: ["clipPathCut", "clipPathVideo", "clipPathAudio"],
+  },
+  search: {
+    title: "Search",
+    subtitle: "Index the library, search footage, and trigger edit actions from natural-language commands.",
+    sourceIds: ["clipPathVideo", "clipPathCaptions", "clipPathCut", "clipPathAudio"],
+  },
+  deliverables: {
+    title: "Deliverables",
+    subtitle: "Review sequence context and export reports, documents, and final handoff assets.",
+    sourceIds: ["clipPathCut", "clipPathVideo", "clipPathAudio"],
+  },
+  settings: {
+    title: "Settings",
+    subtitle: "Tune engine routing, realtime connections, and shared defaults across the studio.",
+    sourceIds: [],
+  },
+};
 
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
@@ -599,15 +642,20 @@ const UIController = (() => {
       const active = btn.dataset.tab === tabId;
       btn.classList.toggle("active", active);
       btn.setAttribute("aria-selected", active ? "true" : "false");
+      btn.tabIndex = active ? 0 : -1;
     });
     document.querySelectorAll(".oc-tab-panel").forEach(panel => {
-      panel.classList.toggle("active", panel.id === `tab-${tabId}`);
+      const active = panel.id === `tab-${tabId}`;
+      panel.classList.toggle("active", active);
+      panel.hidden = !active;
+      panel.setAttribute("aria-hidden", active ? "false" : "true");
     });
-    setStatus(`${tabId.charAt(0).toUpperCase() + tabId.slice(1)} tab`);
+    updateWorkspaceOverview(tabId);
+    setStatus(`${(WORKSPACE_META[tabId] && WORKSPACE_META[tabId].title) || (tabId.charAt(0).toUpperCase() + tabId.slice(1))} workspace`);
   }
 
   // ── Processing banner ──
-  function showProcessing(msg = "Processing...") {
+  function showProcessing(msg = "Processing…") {
     const banner = document.getElementById("processingBanner");
     if (banner) banner.classList.remove("hidden");
     setProcessingMsg(msg);
@@ -677,8 +725,9 @@ const UIController = (() => {
     const label = document.getElementById("connLabel");
     if (!dot || !label) return;
     dot.className = `oc-conn-dot ${state}`;
-    const labels = { connected: "Online", connecting: "Connecting...", disconnected: "Offline" };
+    const labels = { connected: "Online", connecting: "Connecting…", disconnected: "Offline" };
     label.textContent = labels[state] ?? state;
+    updateWorkspaceOverview();
   }
 
   // ── Toast notifications ──
@@ -768,9 +817,17 @@ async function browseFile(inputId, options = {}) {
     });
 
     if (entry) {
+      const nextPath = entry.nativePath ?? entry.name ?? "";
       const input = document.getElementById(inputId);
-      if (input) input.value = entry.nativePath ?? entry.name ?? "";
-      return entry.nativePath ?? entry.name ?? null;
+      if (input) {
+        input.value = nextPath;
+        input.dispatchEvent(new Event("input", { bubbles: true }));
+        input.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+      if (PRIMARY_CLIP_INPUT_IDS.indexOf(inputId) !== -1) {
+        setWorkspaceClip(nextPath, { originId: inputId });
+      }
+      return nextPath || null;
     }
   } catch (e) {
     // In non-UXP environments or if unsupported, fall back silently
@@ -803,6 +860,80 @@ async function browseFolder(inputId) {
 // ─────────────────────────────────────────────────────────────
 let _projectClips = [];
 let _clipScanTimer = null;
+let _workspaceClipPath = "";
+let _syncingWorkspaceClip = false;
+
+function getWorkspaceTabId(tabId) {
+  if (tabId) return tabId;
+  return document.querySelector(".oc-tab.active")?.dataset.tab ?? "cut";
+}
+
+function getWorkspaceSource(tabId) {
+  if (_workspaceClipPath) return _workspaceClipPath;
+  const activeTab = getWorkspaceTabId(tabId);
+  const meta = WORKSPACE_META[activeTab] || {};
+  const preferredIds = meta.sourceIds || [];
+  const fallbackIds = PRIMARY_CLIP_INPUT_IDS;
+  const orderedIds = preferredIds.concat(fallbackIds.filter(id => preferredIds.indexOf(id) === -1));
+
+  for (const id of orderedIds) {
+    const value = document.getElementById(id)?.value?.trim();
+    if (value) return value;
+  }
+  return "";
+}
+
+function formatWorkspaceSource(pathValue) {
+  if (!pathValue) return "Awaiting clip";
+  const normalized = pathValue.replace(/\\/g, "/");
+  const parts = normalized.split("/");
+  return parts[parts.length - 1] || pathValue;
+}
+
+function setWorkspaceClip(pathValue, options = {}) {
+  const nextValue = (pathValue || "").trim();
+  _workspaceClipPath = nextValue;
+
+  if (_syncingWorkspaceClip) {
+    updateWorkspaceOverview();
+    return;
+  }
+
+  _syncingWorkspaceClip = true;
+  for (const id of PRIMARY_CLIP_INPUT_IDS) {
+    if (options.originId && id === options.originId) continue;
+    const input = document.getElementById(id);
+    if (!input) continue;
+    input.value = nextValue;
+  }
+  _syncingWorkspaceClip = false;
+  updateWorkspaceOverview(options.tabId);
+}
+
+function updateWorkspaceOverview(tabId) {
+  const activeTab = getWorkspaceTabId(tabId);
+  const meta = WORKSPACE_META[activeTab] || WORKSPACE_META.cut;
+  const sourcePath = getWorkspaceSource(activeTab);
+  const overviewTitle = document.getElementById("workspaceOverviewTitle");
+  const overviewSubtitle = document.getElementById("workspaceOverviewSubtitle");
+  const sourceValue = document.getElementById("workspaceSourceValue");
+  const backendValue = document.getElementById("workspaceBackendValue");
+  const libraryValue = document.getElementById("workspaceLibraryValue");
+
+  if (overviewTitle) overviewTitle.textContent = meta.title;
+  if (overviewSubtitle) overviewSubtitle.textContent = meta.subtitle;
+  if (sourceValue) {
+    sourceValue.textContent = formatWorkspaceSource(sourcePath);
+    sourceValue.title = sourcePath || "Choose a clip or paste a path to start";
+  }
+  if (backendValue) {
+    backendValue.textContent = document.getElementById("connLabel")?.textContent?.trim() || "Offline";
+  }
+  if (libraryValue) {
+    const count = Array.isArray(_projectClips) ? _projectClips.length : 0;
+    libraryValue.textContent = `${count} ${count === 1 ? "clip" : "clips"}`;
+  }
+}
 
 /**
  * Scan project media via UXP bridge (or backend fallback) and populate
@@ -841,8 +972,7 @@ async function scanProjectClips() {
   ).join("");
 
   // Attach datalist to all clip path inputs so they get autocomplete
-  const clipInputIds = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
-  for (const id of clipInputIds) {
+  for (const id of PRIMARY_CLIP_INPUT_IDS) {
     const input = document.getElementById(id);
     if (input && !input.getAttribute("list")) {
       input.setAttribute("list", "projectClipList");
@@ -861,6 +991,11 @@ async function scanProjectClips() {
   }
 
   UIController.setStatusRight(`${items.length} clip(s)`);
+  if (_workspaceClipPath) {
+    setWorkspaceClip(_workspaceClipPath);
+    return;
+  }
+  updateWorkspaceOverview();
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -1539,8 +1674,8 @@ async function runFootageSearch() {
         el.textContent = item.path ?? item.file ?? JSON.stringify(item);
         el.title = item.score != null ? `Score: ${item.score.toFixed(3)}` : "";
         el.addEventListener("click", () => {
-          const input = document.getElementById("clipPathVideo");
-          if (input) input.value = item.path ?? item.file ?? "";
+          const nextPath = item.path ?? item.file ?? "";
+          setWorkspaceClip(nextPath, { tabId: "video" });
           UIController.showToast(`Selected: ${item.path ?? item.file}`, "info");
         });
         list.appendChild(el);
@@ -1974,8 +2109,41 @@ function stopMediaScanInterval() {
 // ─────────────────────────────────────────────────────────────
 function bindEvents() {
   // ── Tab navigation ──
-  document.querySelectorAll(".oc-tab").forEach(btn => {
+  const tabs = Array.from(document.querySelectorAll(".oc-tab"));
+  tabs.forEach((btn, index) => {
     btn.addEventListener("click", () => UIController.switchTab(btn.dataset.tab));
+    btn.addEventListener("keydown", (event) => {
+      let target = null;
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") {
+        target = tabs[(index + 1) % tabs.length];
+      } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        target = tabs[(index - 1 + tabs.length) % tabs.length];
+      } else if (event.key === "Home") {
+        target = tabs[0];
+      } else if (event.key === "End") {
+        target = tabs[tabs.length - 1];
+      }
+
+      if (target) {
+        event.preventDefault();
+        target.focus();
+        UIController.switchTab(target.dataset.tab);
+      }
+    });
+  });
+
+  PRIMARY_CLIP_INPUT_IDS.forEach((id) => {
+    const input = document.getElementById(id);
+    if (!input) return;
+    input.addEventListener("input", () => {
+      if (_syncingWorkspaceClip) return;
+      _workspaceClipPath = input.value.trim();
+      updateWorkspaceOverview();
+    });
+    input.addEventListener("change", () => {
+      if (_syncingWorkspaceClip) return;
+      setWorkspaceClip(input.value, { originId: id });
+    });
   });
 
   // ── Refresh button ──
@@ -2613,6 +2781,8 @@ async function initApp() {
   bindSliders();
   bindEvents();
   initKeyboardShortcuts();
+  UIController.switchTab(document.querySelector(".oc-tab.active")?.dataset.tab ?? "cut");
+  updateWorkspaceOverview();
 
   // Initial connection check
   const alive = await checkConnection();

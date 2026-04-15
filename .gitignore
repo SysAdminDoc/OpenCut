@@ -26,3 +26,5 @@ installer/publish/
 installer/src/*/obj/
 ffmpeg/
 CLAUDE.md
+CODEX-CHANGELOG.md
+CLAUDE-HANDOFF-PROMPT.md
