@@ -1,40 +1,179 @@
 """
-OpenCut Expression Scripting Engine v1.0.0
+OpenCut Expression Engine (Category 79 - Motion Design)
 
-Lightweight per-property expression evaluator with sandboxed Python
-execution. Provides time, frame, audio amplitude, and math variables.
+Lightweight scripting layer to drive any animatable property. Expressions
+are Python expressions evaluated per frame with a sandboxed set of globals
+including time, frame, fps, audio_amplitude, beat, and math functions.
+
+Functions:
+    evaluate_expression  - Evaluate a single expression in context
+    evaluate_timeline    - Evaluate expression for every frame in timeline
+    create_context       - Create an ExpressionContext for evaluation
+    list_functions       - List available sandbox functions
 """
 
-import ast
 import logging
 import math
+import random
+import threading
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 
+# ---------------------------------------------------------------------------
+# Result Dataclass
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class ExpressionResult:
+    """Result of expression evaluation over a timeline."""
+
+    values: List[float] = field(default_factory=list)
+    min_value: float = 0.0
+    max_value: float = 0.0
+    errors: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "values": self.values,
+            "min": self.min_value,
+            "max": self.max_value,
+            "errors": self.errors,
+        }
+
 
 # ---------------------------------------------------------------------------
-# Safe evaluation infrastructure
+# Simplex-like Noise (Perlin-inspired via value noise)
 # ---------------------------------------------------------------------------
 
-# Allowed builtin functions in expressions
-_SAFE_BUILTINS = {
-    "abs": abs,
-    "min": min,
-    "max": max,
-    "int": int,
-    "float": float,
-    "round": round,
-    "bool": bool,
-    "len": len,
-    "range": range,
-    "sum": sum,
-    "pow": pow,
-}
 
-# Allowed math module functions
-_SAFE_MATH = {
+def _noise_hash(x: int, seed: int = 0) -> float:
+    """Simple hash function for noise generation."""
+    n = x + seed * 131
+    n = (n << 13) ^ n
+    n = n * (n * n * 15731 + 789221) + 1376312589
+    return (n & 0x7FFFFFFF) / 0x7FFFFFFF
+
+
+def _noise_1d(x: float, seed: int = 0) -> float:
+    """1D value noise, returns -1 to 1."""
+    ix = int(math.floor(x))
+    fx = x - ix
+    # Smoothstep
+    fx = fx * fx * (3.0 - 2.0 * fx)
+    a = _noise_hash(ix, seed) * 2.0 - 1.0
+    b = _noise_hash(ix + 1, seed) * 2.0 - 1.0
+    return a + (b - a) * fx
+
+
+def _noise_2d(x: float, y: float, seed: int = 0) -> float:
+    """2D value noise, returns -1 to 1."""
+    ix = int(math.floor(x))
+    iy = int(math.floor(y))
+    fx = x - ix
+    fy = y - iy
+    fx = fx * fx * (3.0 - 2.0 * fx)
+    fy = fy * fy * (3.0 - 2.0 * fy)
+
+    n00 = _noise_hash(ix + iy * 57, seed) * 2.0 - 1.0
+    n10 = _noise_hash(ix + 1 + iy * 57, seed) * 2.0 - 1.0
+    n01 = _noise_hash(ix + (iy + 1) * 57, seed) * 2.0 - 1.0
+    n11 = _noise_hash(ix + 1 + (iy + 1) * 57, seed) * 2.0 - 1.0
+
+    nx0 = n00 + (n10 - n00) * fx
+    nx1 = n01 + (n11 - n01) * fx
+    return nx0 + (nx1 - nx0) * fy
+
+
+def noise(x: float, y: float = 0.0, octaves: int = 1,
+          seed: int = 0) -> float:
+    """Multi-octave noise function available in expressions.
+
+    Args:
+        x: First coordinate.
+        y: Second coordinate (0 for 1D noise).
+        octaves: Number of octaves for fractal noise.
+        seed: Random seed.
+
+    Returns:
+        Float in range approximately -1 to 1.
+    """
+    value = 0.0
+    amplitude = 1.0
+    frequency = 1.0
+    max_amp = 0.0
+
+    for _ in range(octaves):
+        if y == 0.0:
+            value += _noise_1d(x * frequency, seed) * amplitude
+        else:
+            value += _noise_2d(x * frequency, y * frequency, seed) * amplitude
+        max_amp += amplitude
+        amplitude *= 0.5
+        frequency *= 2.0
+
+    return value / max_amp if max_amp > 0 else 0.0
+
+
+# ---------------------------------------------------------------------------
+# Sandbox Math Functions
+# ---------------------------------------------------------------------------
+
+
+def _lerp(a: float, b: float, t: float) -> float:
+    """Linear interpolation from a to b by t."""
+    return a + (b - a) * t
+
+
+def _clamp(value: float, min_val: float = 0.0, max_val: float = 1.0) -> float:
+    """Clamp value between min and max."""
+    return max(min_val, min(max_val, value))
+
+
+def _smoothstep(edge0: float, edge1: float, x: float) -> float:
+    """Smoothstep interpolation between edge0 and edge1."""
+    t = _clamp((x - edge0) / max(edge1 - edge0, 0.0001), 0.0, 1.0)
+    return t * t * (3.0 - 2.0 * t)
+
+
+def _remap(value: float, in_min: float, in_max: float,
+           out_min: float, out_max: float) -> float:
+    """Remap value from one range to another."""
+    t = (value - in_min) / max(in_max - in_min, 0.0001)
+    return out_min + t * (out_max - out_min)
+
+
+def _ping_pong(t: float, length: float = 1.0) -> float:
+    """Ping-pong oscillation between 0 and length."""
+    if length <= 0:
+        return 0.0
+    t = t % (length * 2)
+    if t > length:
+        return 2 * length - t
+    return t
+
+
+def _step(edge: float, x: float) -> float:
+    """Step function: 0 if x < edge, 1 otherwise."""
+    return 1.0 if x >= edge else 0.0
+
+
+def _pulse(x: float, frequency: float = 1.0,
+           duty_cycle: float = 0.5) -> float:
+    """Square wave / pulse function."""
+    phase = (x * frequency) % 1.0
+    return 1.0 if phase < duty_cycle else 0.0
+
+
+# ---------------------------------------------------------------------------
+# Sandbox Globals
+# ---------------------------------------------------------------------------
+
+
+SANDBOX_FUNCTIONS = {
+    # Math
     "sin": math.sin,
     "cos": math.cos,
     "tan": math.tan,
@@ -43,315 +182,390 @@ _SAFE_MATH = {
     "atan": math.atan,
     "atan2": math.atan2,
     "sqrt": math.sqrt,
+    "pow": pow,
+    "abs": abs,
+    "floor": math.floor,
+    "ceil": math.ceil,
+    "round": round,
     "log": math.log,
     "log2": math.log2,
     "log10": math.log10,
     "exp": math.exp,
-    "floor": math.floor,
-    "ceil": math.ceil,
     "fmod": math.fmod,
+    "degrees": math.degrees,
+    "radians": math.radians,
+    # Constants
     "pi": math.pi,
-    "e": math.e,
     "tau": math.tau,
+    "e": math.e,
     "inf": math.inf,
+    # Interpolation & utility
+    "lerp": _lerp,
+    "clamp": _clamp,
+    "smoothstep": _smoothstep,
+    "remap": _remap,
+    "ping_pong": _ping_pong,
+    "step": _step,
+    "pulse": _pulse,
+    "min": min,
+    "max": max,
+    "int": int,
+    "float": float,
+    # Noise
+    "noise": noise,
 }
 
-# Allowed AST node types for safe evaluation
-_ALLOWED_NODES = {
-    ast.Module,
-    ast.Expr,
-    ast.Expression,
-    # Literals
-    ast.Constant,
-    ast.List,
-    ast.Tuple,
-    ast.Dict,
-    # Operations
-    ast.BinOp,
-    ast.UnaryOp,
-    ast.BoolOp,
-    ast.Compare,
-    # Operators
-    ast.Add,
-    ast.Sub,
-    ast.Mult,
-    ast.Div,
-    ast.FloorDiv,
-    ast.Mod,
-    ast.Pow,
-    ast.USub,
-    ast.UAdd,
-    ast.Not,
-    ast.And,
-    ast.Or,
-    # Comparison operators
-    ast.Eq,
-    ast.NotEq,
-    ast.Lt,
-    ast.LtE,
-    ast.Gt,
-    ast.GtE,
-    # Conditional
-    ast.IfExp,
-    # Variables and calls
-    ast.Name,
-    ast.Load,
-    ast.Call,
-    ast.keyword,
-    ast.Attribute,
-    # Subscript
-    ast.Subscript,
-    ast.Slice,
-}
 
-# Python 3.7/3.8 compat: these were removed in 3.12+
-for _compat_name in ("Num", "Str", "Index"):
-    _node = getattr(ast, _compat_name, None)
-    if _node is not None:
-        _ALLOWED_NODES.add(_node)
-
-
-class ExpressionError(ValueError):
-    """Raised when an expression is invalid or unsafe."""
-    pass
-
-
-# ---------------------------------------------------------------------------
-# Validation
-# ---------------------------------------------------------------------------
-
-def _validate_ast(node: ast.AST, depth: int = 0):
-    """Recursively validate that an AST tree uses only allowed node types."""
-    if depth > 50:
-        raise ExpressionError("Expression too deeply nested (max depth 50)")
-
-    if type(node) not in _ALLOWED_NODES:
-        raise ExpressionError(
-            f"Disallowed syntax: {type(node).__name__}. "
-            f"Only arithmetic, comparisons, conditionals, and function calls are allowed."
-        )
-
-    for child in ast.iter_child_nodes(node):
-        _validate_ast(child, depth + 1)
-
-
-def validate_expression(expr: str) -> dict:
-    """Validate an expression for syntax and safety.
-
-    Args:
-        expr: Expression string to validate.
-
-    Returns:
-        Dict with ``valid`` (bool), ``error`` (str or None),
-        ``variables`` (list of referenced names).
-    """
-    result = {
-        "valid": False,
-        "error": None,
-        "variables": [],
+def list_functions() -> List[dict]:
+    """Return list of functions available in the expression sandbox."""
+    descriptions = {
+        "sin": "Sine function (radians)",
+        "cos": "Cosine function (radians)",
+        "tan": "Tangent function (radians)",
+        "asin": "Arc sine",
+        "acos": "Arc cosine",
+        "atan": "Arc tangent",
+        "atan2": "Two-argument arc tangent",
+        "sqrt": "Square root",
+        "pow": "Power function",
+        "abs": "Absolute value",
+        "floor": "Floor (round down)",
+        "ceil": "Ceiling (round up)",
+        "round": "Round to nearest integer",
+        "log": "Natural logarithm",
+        "log2": "Base-2 logarithm",
+        "log10": "Base-10 logarithm",
+        "exp": "e raised to power",
+        "fmod": "Floating-point modulo",
+        "degrees": "Radians to degrees",
+        "radians": "Degrees to radians",
+        "lerp": "Linear interpolation: lerp(a, b, t)",
+        "clamp": "Clamp value: clamp(val, min, max)",
+        "smoothstep": "Smooth interpolation: smoothstep(edge0, edge1, x)",
+        "remap": "Remap range: remap(val, in_min, in_max, out_min, out_max)",
+        "ping_pong": "Oscillate: ping_pong(t, length)",
+        "step": "Step function: step(edge, x)",
+        "pulse": "Square wave: pulse(x, freq, duty)",
+        "noise": "Perlin-like noise: noise(x, y=0, octaves=1, seed=0)",
+        "min": "Minimum of values",
+        "max": "Maximum of values",
+        "random": "Seeded random: random() returns 0-1",
     }
-
-    if not expr or not isinstance(expr, str):
-        result["error"] = "Empty or non-string expression"
-        return result
-
-    expr = expr.strip()
-    if len(expr) > 2000:
-        result["error"] = "Expression too long (max 2000 characters)"
-        return result
-
-    try:
-        tree = ast.parse(expr, mode="eval")
-    except SyntaxError as e:
-        result["error"] = f"Syntax error: {e.msg} (line {e.lineno}, col {e.offset})"
-        return result
-
-    try:
-        _validate_ast(tree)
-    except ExpressionError as e:
-        result["error"] = str(e)
-        return result
-
-    # Extract referenced variable names
-    names = set()
-    for node in ast.walk(tree):
-        if isinstance(node, ast.Name):
-            names.add(node.id)
-
-    result["valid"] = True
-    result["variables"] = sorted(names)
+    result = []
+    for name in SANDBOX_FUNCTIONS:
+        if callable(SANDBOX_FUNCTIONS[name]):
+            result.append({
+                "name": name,
+                "description": descriptions.get(name, ""),
+            })
+    # Add constants
+    for name in ("pi", "tau", "e", "inf"):
+        if name in SANDBOX_FUNCTIONS:
+            result.append({
+                "name": name,
+                "description": f"Mathematical constant {name}",
+                "type": "constant",
+            })
     return result
 
 
 # ---------------------------------------------------------------------------
-# Compilation
+# AST Safety Checker
 # ---------------------------------------------------------------------------
+
+import ast  # noqa: E402
+
+
+_BANNED_NODE_TYPES = (
+    ast.Import, ast.ImportFrom, ast.Global, ast.Nonlocal,
+    ast.Delete, ast.ClassDef, ast.AsyncFunctionDef, ast.FunctionDef,
+    ast.AsyncFor, ast.AsyncWith, ast.Await,
+    ast.Yield, ast.YieldFrom,
+    ast.Try, ast.Raise,
+)
+
+# Banned attribute names (security-sensitive)
+_BANNED_ATTRS = frozenset({
+    "__import__", "__builtins__", "__globals__", "__code__",
+    "__subclasses__", "__bases__", "__mro__", "__class__",
+    "__dict__", "__getattr__", "__setattr__", "__delattr__",
+    "eval", "exec", "compile", "open", "input",
+    "__loader__", "__spec__", "__name__", "__file__",
+})
+
+
+def _check_ast_safety(expr_str: str) -> Optional[str]:
+    """Check expression AST for safety violations.
+
+    Returns error message if unsafe, None if safe.
+    """
+    try:
+        tree = ast.parse(expr_str, mode="eval")
+    except SyntaxError as e:
+        return f"Syntax error: {e}"
+
+    for node in ast.walk(tree):
+        if isinstance(node, _BANNED_NODE_TYPES):
+            return f"Forbidden construct: {type(node).__name__}"
+
+        if isinstance(node, ast.Attribute):
+            if node.attr in _BANNED_ATTRS:
+                return f"Forbidden attribute access: {node.attr}"
+
+        if isinstance(node, ast.Call):
+            if isinstance(node.func, ast.Name):
+                if node.func.id in ("eval", "exec", "compile", "open",
+                                    "__import__", "input", "getattr",
+                                    "setattr", "delattr", "globals",
+                                    "locals", "vars", "dir", "type",
+                                    "isinstance", "issubclass"):
+                    return f"Forbidden function call: {node.func.id}"
+
+    return None
+
+
+# ---------------------------------------------------------------------------
+# Expression Context
+# ---------------------------------------------------------------------------
+
 
 @dataclass
-class CompiledExpression:
-    """A compiled expression ready for fast evaluation."""
-    source: str
-    code: Any = None    # compiled code object
-    variables: List[str] = field(default_factory=list)
-    valid: bool = False
-    error: str = ""
+class ExpressionContext:
+    """Context providing variables for expression evaluation.
 
-
-def compile_expression(expr: str) -> CompiledExpression:
-    """Compile an expression for repeated evaluation.
-
-    Args:
-        expr: Expression string.
-
-    Returns:
-        :class:`CompiledExpression` with compiled code object.
-    """
-    result = CompiledExpression(source=expr)
-
-    validation = validate_expression(expr)
-    if not validation["valid"]:
-        result.error = validation["error"]
-        return result
-
-    try:
-        code = compile(expr.strip(), "<expression>", "eval")
-        result.code = code
-        result.variables = validation["variables"]
-        result.valid = True
-    except Exception as e:
-        result.error = f"Compilation failed: {e}"
-
-    return result
-
-
-# ---------------------------------------------------------------------------
-# Expression context
-# ---------------------------------------------------------------------------
-
-def create_expression_context(
-    frame: int = 0,
-    time: float = 0.0,
-    audio_amp: float = 0.0,
-    fps: float = 24.0,
-    duration: float = 0.0,
-    width: int = 1920,
-    height: int = 1080,
-    custom_vars: Optional[Dict[str, Any]] = None,
-) -> dict:
-    """Create an evaluation context with standard animation variables.
-
-    Args:
+    Attributes:
+        time: Current time in seconds.
         frame: Current frame number.
-        time: Current time in seconds (alias: t).
-        audio_amp: Audio amplitude at current time (0.0-1.0).
-        fps: Frame rate.
-        duration: Total duration in seconds.
-        width: Composition width.
-        height: Composition height.
-        custom_vars: Additional custom variables.
-
-    Returns:
-        Dict of variables available in expressions.
+        fps: Frames per second.
+        audio_amplitude: Audio amplitude 0.0-1.0.
+        beat: True if current frame is on a beat.
+        seed: Random seed for reproducibility.
+        custom_vars: Additional variables available in expressions.
     """
-    # Normalized progress (0 to 1)
-    progress = time / max(duration, 0.001) if duration > 0 else 0.0
 
-    ctx = {
-        # Time variables
-        "frame": frame,
-        "f": frame,
-        "time": time,
-        "t": time,
-        "fps": fps,
-        "duration": duration,
-        "progress": min(progress, 1.0),
+    time: float = 0.0
+    frame: int = 0
+    fps: float = 30.0
+    audio_amplitude: float = 0.0
+    beat: bool = False
+    seed: int = 42
+    custom_vars: Dict[str, Any] = field(default_factory=dict)
 
-        # Audio
-        "audio_amp": audio_amp,
-        "audio": audio_amp,
-        "amp": audio_amp,
+    def to_globals(self) -> dict:
+        """Build the sandbox globals dict for eval()."""
+        rng = random.Random(self.seed + self.frame)
+        globs = dict(SANDBOX_FUNCTIONS)
+        globs.update({
+            "time": self.time,
+            "t": self.time,
+            "frame": self.frame,
+            "fps": self.fps,
+            "audio_amplitude": self.audio_amplitude,
+            "amplitude": self.audio_amplitude,
+            "beat": self.beat,
+            "random": rng.random,
+            "True": True,
+            "False": False,
+        })
+        globs.update(self.custom_vars)
+        # Remove builtins to prevent access
+        globs["__builtins__"] = {}
+        return globs
 
-        # Composition
-        "width": width,
-        "height": height,
-        "w": width,
-        "h": height,
 
-        # Math functions
-        **_SAFE_MATH,
-
-        # Utility functions
-        "lerp": lambda a, b, t: a + (b - a) * t,
-        "clamp": lambda x, lo, hi: max(lo, min(x, hi)),
-        "smoothstep": lambda edge0, edge1, x: (
-            0.0 if x <= edge0 else
-            1.0 if x >= edge1 else
-            (lambda t: t * t * (3 - 2 * t))((x - edge0) / (edge1 - edge0))
-        ),
-        "wiggle": lambda freq, amp_val, t_val=time: (
-            math.sin(t_val * freq * 2 * math.pi) * amp_val
-        ),
-        "ease_in": lambda t_val: t_val * t_val,
-        "ease_out": lambda t_val: 1 - (1 - t_val) ** 2,
-        "ease_in_out": lambda t_val: (
-            2 * t_val * t_val if t_val < 0.5
-            else 1 - (-2 * t_val + 2) ** 2 / 2
-        ),
-        "step": lambda edge, x: 0.0 if x < edge else 1.0,
-        "pulse": lambda lo, hi, x: 1.0 if lo <= x <= hi else 0.0,
-    }
-
-    # Add builtins
-    ctx.update(_SAFE_BUILTINS)
-
-    # Add custom variables
-    if custom_vars:
-        ctx.update(custom_vars)
-
-    return ctx
+def create_context(
+    time: float = 0.0,
+    frame: int = 0,
+    fps: float = 30.0,
+    audio_amplitude: float = 0.0,
+    beat: bool = False,
+    seed: int = 42,
+    **custom_vars,
+) -> ExpressionContext:
+    """Create an ExpressionContext with the given parameters."""
+    return ExpressionContext(
+        time=time,
+        frame=frame,
+        fps=fps,
+        audio_amplitude=audio_amplitude,
+        beat=beat,
+        seed=seed,
+        custom_vars=custom_vars,
+    )
 
 
 # ---------------------------------------------------------------------------
 # Evaluation
 # ---------------------------------------------------------------------------
 
-def evaluate_expression(
-    expr,
-    context: dict,
-) -> Any:
-    """Evaluate an expression in a sandboxed context.
+# Default timeout per expression evaluation (ms)
+DEFAULT_TIMEOUT_MS = 100
+
+
+def evaluate_expression(expr_string: str,
+                        context: Optional[ExpressionContext] = None,
+                        timeout_ms: int = DEFAULT_TIMEOUT_MS) -> float:
+    """Evaluate a single expression and return the result as a float.
 
     Args:
-        expr: Expression string or :class:`CompiledExpression`.
-        context: Evaluation context from :func:`create_expression_context`.
+        expr_string: Python expression string.
+        context: ExpressionContext providing variables.
+        timeout_ms: Maximum evaluation time in milliseconds.
 
     Returns:
-        The evaluated result.
+        Float result of the expression.
 
     Raises:
-        ExpressionError: If the expression is invalid or evaluation fails.
+        ValueError: If expression is unsafe or has syntax errors.
+        TimeoutError: If evaluation exceeds timeout.
+        RuntimeError: If evaluation fails.
     """
-    if isinstance(expr, CompiledExpression):
-        if not expr.valid:
-            raise ExpressionError(f"Invalid compiled expression: {expr.error}")
-        code = expr.code
-    elif isinstance(expr, str):
-        validation = validate_expression(expr)
-        if not validation["valid"]:
-            raise ExpressionError(validation["error"])
-        code = compile(expr.strip(), "<expression>", "eval")
-    else:
-        raise ExpressionError(f"Expected string or CompiledExpression, got {type(expr).__name__}")
+    if not expr_string or not expr_string.strip():
+        raise ValueError("Expression is empty")
 
-    # Sandbox: restrict globals/builtins
-    safe_globals = {"__builtins__": {}}
-    safe_globals.update(context)
+    expr_string = expr_string.strip()
+
+    # Safety check
+    safety_error = _check_ast_safety(expr_string)
+    if safety_error:
+        raise ValueError(f"Unsafe expression: {safety_error}")
+
+    if context is None:
+        context = ExpressionContext()
+
+    globs = context.to_globals()
+
+    # Evaluate with timeout using threading
+    result_box = [None]
+    error_box = [None]
+
+    def _eval():
+        try:
+            result_box[0] = eval(expr_string, globs)  # noqa: S307
+        except Exception as e:
+            error_box[0] = e
+
+    thread = threading.Thread(target=_eval, daemon=True)
+    thread.start()
+    thread.join(timeout=timeout_ms / 1000.0)
+
+    if thread.is_alive():
+        raise TimeoutError(
+            f"Expression evaluation timed out after {timeout_ms}ms"
+        )
+
+    if error_box[0] is not None:
+        raise RuntimeError(f"Expression error: {error_box[0]}")
+
+    result = result_box[0]
+
+    # Convert to float
+    if isinstance(result, bool):
+        return 1.0 if result else 0.0
+    if isinstance(result, (int, float)):
+        return float(result)
+    if result is None:
+        return 0.0
 
     try:
-        result = eval(code, safe_globals)
-    except ExpressionError:
-        raise
-    except Exception as e:
-        raise ExpressionError(f"Evaluation error: {e}")
+        return float(result)
+    except (ValueError, TypeError):
+        return 0.0
 
-    return result
+
+def evaluate_timeline(expr_string: str,
+                      fps: float = 30.0,
+                      duration: float = 1.0,
+                      audio_amplitudes: Optional[List[float]] = None,
+                      beats: Optional[List[bool]] = None,
+                      seed: int = 42,
+                      timeout_ms: int = DEFAULT_TIMEOUT_MS,
+                      on_progress: Optional[Callable] = None,
+                      **custom_vars) -> ExpressionResult:
+    """Evaluate expression for every frame in a timeline.
+
+    Args:
+        expr_string: Python expression string.
+        fps: Frames per second.
+        duration: Timeline duration in seconds.
+        audio_amplitudes: Per-frame audio amplitude values.
+        beats: Per-frame beat boolean values.
+        seed: Random seed.
+        timeout_ms: Timeout per frame evaluation.
+        on_progress: Progress callback.
+        **custom_vars: Additional variables.
+
+    Returns:
+        ExpressionResult with per-frame values and statistics.
+    """
+    total_frames = max(1, int(fps * duration))
+    values = []
+    errors = []
+
+    for frame_idx in range(total_frames):
+        time_s = frame_idx / fps
+        amp = 0.0
+        if audio_amplitudes and frame_idx < len(audio_amplitudes):
+            amp = audio_amplitudes[frame_idx]
+        beat_val = False
+        if beats and frame_idx < len(beats):
+            beat_val = beats[frame_idx]
+
+        ctx = ExpressionContext(
+            time=time_s,
+            frame=frame_idx,
+            fps=fps,
+            audio_amplitude=amp,
+            beat=beat_val,
+            seed=seed,
+            custom_vars=custom_vars,
+        )
+
+        try:
+            val = evaluate_expression(expr_string, ctx, timeout_ms)
+            values.append(val)
+        except Exception as e:
+            errors.append(f"Frame {frame_idx}: {e}")
+            values.append(0.0)
+
+        if on_progress and total_frames > 1:
+            pct = int((frame_idx + 1) / total_frames * 100)
+            on_progress(pct)
+
+    min_val = min(values) if values else 0.0
+    max_val = max(values) if values else 0.0
+
+    return ExpressionResult(
+        values=values,
+        min_value=min_val,
+        max_value=max_val,
+        errors=errors,
+    )
+
+
+# ---------------------------------------------------------------------------
+# Batch Evaluation
+# ---------------------------------------------------------------------------
+
+
+def evaluate_multi(expressions: Dict[str, str],
+                   context: Optional[ExpressionContext] = None,
+                   timeout_ms: int = DEFAULT_TIMEOUT_MS) -> Dict[str, float]:
+    """Evaluate multiple named expressions in the same context.
+
+    Args:
+        expressions: Dict mapping property names to expression strings.
+        context: Shared evaluation context.
+        timeout_ms: Timeout per expression.
+
+    Returns:
+        Dict mapping property names to float results.
+    """
+    results = {}
+    for name, expr in expressions.items():
+        try:
+            results[name] = evaluate_expression(expr, context, timeout_ms)
+        except Exception as e:
+            logger.debug("Expression '%s' failed: %s", name, e)
+            results[name] = 0.0
+    return results
