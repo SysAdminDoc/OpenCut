@@ -31,6 +31,7 @@ from opencut.security import (
     safe_bool,
     safe_float,
     safe_int,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -283,6 +284,8 @@ def end_screen_route(job_id, filepath, data):
     fade_duration = safe_float(data.get("fade_duration", 1.0), 1.0, min_val=0.0, max_val=5.0)
 
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _progress(pct, msg):
         _update_job(job_id, progress=pct, message=msg)
@@ -334,6 +337,8 @@ def news_ticker_route(job_id, filepath, data):
 
     out_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path:
         base = os.path.splitext(os.path.basename(filepath))[0]
         out_path = os.path.join(out_dir, f"{base}_ticker.mp4")
@@ -464,6 +469,8 @@ def caption_ebu_tt_route(job_id, filepath, data):
         raise ValueError("No caption data provided. Pass 'captions' in the request body.")
 
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path:
         import tempfile
         out_path = os.path.join(tempfile.gettempdir(), "opencut_ebu_tt.xml")
@@ -498,6 +505,8 @@ def caption_ttml_route(job_id, filepath, data):
         raise ValueError("No caption data provided. Pass 'captions' in the request body.")
 
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path:
         import tempfile
         out_path = os.path.join(tempfile.gettempdir(), "opencut_ttml.xml")
@@ -537,6 +546,8 @@ def caption_embed_cc_route(job_id, filepath, data):
 
     out_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path:
         base = os.path.splitext(os.path.basename(filepath))[0]
         ext = os.path.splitext(filepath)[1] or ".mp4"
@@ -567,6 +578,8 @@ def fcpxml_export_route(job_id, filepath, data):
 
     sequence = data.get("sequence", data)
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path:
         import tempfile
         out_path = os.path.join(tempfile.gettempdir(), "opencut_export.fcpxml")

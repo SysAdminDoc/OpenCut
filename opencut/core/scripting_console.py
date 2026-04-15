@@ -459,11 +459,23 @@ def _load_history() -> List[Dict[str, Any]]:
 
 
 def _save_history(history: List[Dict[str, Any]]) -> None:
-    """Persist execution history to disk."""
+    """Persist execution history to disk (atomic write)."""
     _ensure_dir()
     try:
-        with open(_HISTORY_FILE, "w", encoding="utf-8") as fh:
-            json.dump(history[-_MAX_HISTORY:], fh, indent=2)
+        import tempfile
+        fd, tmp_path = tempfile.mkstemp(
+            dir=os.path.dirname(_HISTORY_FILE), suffix=".tmp"
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                json.dump(history[-_MAX_HISTORY:], fh, indent=2)
+            os.replace(tmp_path, _HISTORY_FILE)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
     except OSError as exc:
         logger.warning("Failed to save console history: %s", exc)
 
