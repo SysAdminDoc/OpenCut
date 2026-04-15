@@ -18,6 +18,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -45,6 +46,8 @@ def color_scope_waveform():
         timestamp = safe_float(data.get("timestamp", 0), 0, min_val=0.0)
         output_dir = data.get("output_dir", "")
         output = data.get("output_path") or None
+        if output:
+            output = validate_output_path(output)
 
         result = generate_waveform(
             video_path=filepath,
@@ -187,6 +190,8 @@ def color_wheels_apply(job_id, filepath, data):
     settings = data.get("settings", {})
     output_dir = data.get("output_dir", "")
     output = data.get("output_path") or None
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -245,6 +250,8 @@ def hsl_qualify(job_id, filepath, data):
     hsl_range = data.get("hsl_range", {})
     output_dir = data.get("output_dir", "")
     output = data.get("output_path") or None
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -300,6 +307,8 @@ def hsl_secondary(job_id, filepath, data):
     correction = data.get("correction", {})
     output_dir = data.get("output_dir", "")
     output = data.get("output_path") or None
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -358,6 +367,8 @@ def power_window_track(job_id, filepath, data):
     window = data.get("window", {})
     output_dir = data.get("output_dir", "")
     output = data.get("output_path") or None
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -383,6 +394,8 @@ def power_window_apply(job_id, filepath, data):
     correction = data.get("correction", {})
     output_dir = data.get("output_dir", "")
     output = data.get("output_path") or None
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -435,6 +448,8 @@ def aces_apply(job_id, filepath, data):
     config = data.get("config", {})
     output_dir = data.get("output_dir", "")
     output = data.get("output_path") or None
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -479,6 +494,8 @@ def proxy_generate(job_id, filepath, data):
     config = data.get("config", {})
     output_dir = data.get("output_dir", "")
     output = data.get("output_path") or None
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

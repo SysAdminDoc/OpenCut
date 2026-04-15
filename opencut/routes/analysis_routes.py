@@ -12,7 +12,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int
+from opencut.security import require_csrf, safe_float, safe_int, validate_output_path
 
 logger = logging.getLogger("opencut")
 
@@ -133,6 +133,8 @@ def caption_compliance_fix(job_id, filepath, data):
         standard = "netflix"
 
     output = data.get("output_path", "").strip() or None
+    if output:
+        output = validate_output_path(output)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -166,6 +168,8 @@ def subtitle_snap_to_cuts(job_id, filepath, data):
     min_gap_frames = safe_int(data.get("min_gap_frames", 2), 2, min_val=0, max_val=30)
     fps = safe_float(data.get("fps", 24.0), 24.0, min_val=1.0, max_val=240.0)
     output = data.get("output_path", "").strip() or None
+    if output:
+        output = validate_output_path(output)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -199,6 +203,8 @@ def subtitle_auto_snap(job_id, filepath, data):
 
     video_path = validate_filepath(video_path)
     output = data.get("output_path", "").strip() or None
+    if output:
+        output = validate_output_path(output)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

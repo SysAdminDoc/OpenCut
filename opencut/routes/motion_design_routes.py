@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, request
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_output_path
 
 logger = logging.getLogger("opencut")
 
@@ -50,6 +50,8 @@ def kinetic_text_render(job_id, filepath, data):
     bg_color = data.get("background_color", "#00000000")
     output_dir = data.get("output_dir", "")
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     if output_dir:
         output_dir = _resolve_output_dir("", output_dir)
@@ -154,6 +156,8 @@ def data_animation_render(job_id, filepath, data):
     font_size = safe_int(data.get("font_size"), 24, 8, 200)
     output_dir = data.get("output_dir", "")
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     if output_dir:
         output_dir = _resolve_output_dir("", output_dir)
@@ -239,6 +243,8 @@ def shape_animate_render(job_id, filepath, data):
     rotation_end = safe_float(data.get("rotation_end"), 0.0, -3600, 3600)
     output_dir = data.get("output_dir", "")
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     if output_dir:
         output_dir = _resolve_output_dir("", output_dir)
@@ -386,6 +392,8 @@ def particles_render(job_id, filepath, data):
     bg_color = data.get("background_color")
     output_dir = data.get("output_dir", "")
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     if output_dir:
         output_dir = _resolve_output_dir("", output_dir)

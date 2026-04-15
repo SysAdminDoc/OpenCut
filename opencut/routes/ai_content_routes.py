@@ -15,7 +15,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float
+from opencut.security import require_csrf, safe_float, validate_output_path
 
 logger = logging.getLogger("opencut")
 
@@ -36,6 +36,8 @@ def ai_auto_grade(job_id, filepath, data):
     reference_image = data.get("reference_image", "").strip() or None
     lut_name = data.get("lut_name", "").strip() or None
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     # Validate reference_image if provided
     if reference_image:

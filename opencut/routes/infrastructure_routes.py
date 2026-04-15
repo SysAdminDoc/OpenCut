@@ -10,7 +10,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
-from opencut.security import require_csrf, validate_filepath
+from opencut.security import require_csrf, validate_filepath, validate_output_path
 
 logger = logging.getLogger("opencut")
 
@@ -83,6 +83,8 @@ def quantize_model():
         validate_filepath(model_path)
         precision = data.get("precision", "int8")
         output = data.get("output_path")
+        if output:
+            output = validate_output_path(output)
         result = do_quantize(
             model_path=model_path,
             target_precision=precision,

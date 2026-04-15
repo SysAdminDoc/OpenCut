@@ -146,6 +146,11 @@ def validate_path(path: str, allowed_base: str = None) -> str:
     if path.startswith("\\\\") or path.startswith("//"):
         raise ValueError("UNC/network paths are not allowed")
 
+    # Block Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
+    stem = os.path.splitext(os.path.basename(path))[0].upper()
+    if stem in {"CON", "PRN", "AUX", "NUL"} or re.match(r"^(COM|LPT)\d$", stem):
+        raise ValueError("Windows reserved device name in path")
+
     # Normalise and block .. components
     normed = os.path.normpath(path)
     # Re-check after normpath (could produce UNC from edge cases)
@@ -336,6 +341,20 @@ def validate_filepath(filepath: str) -> str:
     resolved = validate_path(filepath)
     if not os.path.isfile(resolved):
         raise ValueError(f"File not found: {filepath}")
+    return resolved
+
+
+def validate_output_path(path: str) -> str:
+    """Validate a user-supplied output file path.
+
+    Like ``validate_path`` but does NOT require the file to exist (it will
+    be created).  Ensures the *parent directory* exists and is writable.
+    Returns the resolved absolute path.
+    """
+    resolved = validate_path(path)
+    parent = os.path.dirname(resolved)
+    if parent and not os.path.isdir(parent):
+        raise ValueError(f"Output directory does not exist: {parent}")
     return resolved
 
 

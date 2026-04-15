@@ -22,6 +22,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -68,7 +69,7 @@ def route_podcast_polish(job_id, filepath, data):
     result = polish_podcast(
         audio_path=filepath,
         config=config,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         on_progress=lambda pct, msg: None,
     )
 
@@ -143,7 +144,7 @@ def route_per_speaker_process(job_id, filepath, data):
     result = apply_per_speaker_processing(
         audio_path=filepath,
         speaker_segments=segments,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         config=config,
         on_progress=lambda pct, msg: None,
     )
@@ -239,7 +240,7 @@ def route_adr_cue_sheet(job_id, filepath, data):
     result = create_adr_cue_sheet(
         transcript=transcript,
         marked_lines=marked_lines,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         project_name=data.get("project_name", "Untitled"),
         export_format=export_format,
         on_progress=lambda pct, msg: None,
@@ -292,7 +293,7 @@ def route_adr_guide(job_id, filepath, data):
     result = generate_adr_guide(
         video_path=filepath,
         cue=cue,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         preroll=safe_float(data.get("preroll", 3.0), 3.0, min_val=0.0, max_val=10.0),
         postroll=safe_float(data.get("postroll", 2.0), 2.0, min_val=0.0, max_val=10.0),
         on_progress=lambda pct, msg: None,
@@ -335,7 +336,7 @@ def route_adr_sync(job_id, filepath, data):
         original_path=filepath,
         recorded_path=recorded_path,
         cue=cue,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         on_progress=lambda pct, msg: None,
     )
 
@@ -367,7 +368,7 @@ def route_surround_upmix(job_id, filepath, data):
     result = upmix_to_surround(
         audio_path=filepath,
         channels=channels,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         on_progress=lambda pct, msg: None,
     )
 
@@ -401,7 +402,7 @@ def route_surround_pan(job_id, filepath, data):
         audio_path=filepath,
         position=position,
         channels=channels,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         on_progress=lambda pct, msg: None,
     )
 
@@ -427,7 +428,7 @@ def route_surround_downmix(job_id, filepath, data):
 
     result = downmix_preview(
         surround_path=filepath,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         on_progress=lambda pct, msg: None,
     )
 
@@ -448,7 +449,7 @@ def route_surround_export(job_id, filepath, data):
     result = export_multichannel(
         audio_path=filepath,
         format=fmt,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         bitrate=data.get("bitrate", "640k"),
         on_progress=lambda pct, msg: None,
     )
@@ -497,7 +498,7 @@ def route_audio_visualizer(job_id, filepath, data):
     result = generate_visualizer(
         audio_path=filepath,
         style=style,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         config=config,
         video_path=video_path if video_path else None,
         on_progress=lambda pct, msg: None,
@@ -537,7 +538,7 @@ def route_audio_description(job_id, filepath, data):
 
     result = generate_audio_description(
         video_path=filepath,
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         descriptions=data.get("descriptions"),
         transcript=data.get("transcript"),
         voice=data.get("voice", "default"),
@@ -598,7 +599,7 @@ def route_synthesize_description(job_id, filepath, data):
     result = synthesize_description(
         text=text,
         voice=data.get("voice", "default"),
-        output_path_val=data.get("output_path"),
+        output_path_val=validate_output_path(data["output_path"]) if data.get("output_path") else None,
         speed=safe_float(data.get("speed", 1.1), 1.1, min_val=0.5, max_val=2.0),
         on_progress=lambda pct, msg: None,
     )

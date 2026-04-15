@@ -15,6 +15,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -49,6 +50,8 @@ def object_effects_apply(job_id, filepath, data):
     num_frames = safe_int(data.get("num_frames", 60), 60, min_val=1, max_val=9999)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -248,6 +251,8 @@ def planar_track_insert(job_id, filepath, data):
     end_frame = safe_int(end_frame_val, None) if end_frame_val is not None else None
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)

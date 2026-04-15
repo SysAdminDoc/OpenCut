@@ -22,6 +22,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -42,6 +43,8 @@ def export_gif_route(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path and effective_dir:
         import os
         base = os.path.splitext(os.path.basename(filepath))[0]
@@ -77,6 +80,8 @@ def export_webp_route(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path and effective_dir:
         import os
         base = os.path.splitext(os.path.basename(filepath))[0]
@@ -110,6 +115,8 @@ def export_apng_route(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path and effective_dir:
         import os
         base = os.path.splitext(os.path.basename(filepath))[0]
@@ -170,6 +177,8 @@ def metadata_strip_route(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path and effective_dir:
         import os
         base = os.path.splitext(os.path.basename(filepath))[0]
@@ -213,6 +222,8 @@ def metadata_copy_route(job_id, filepath, data):
     output_dir = data.get("output_dir", "")
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out_path = data.get("output_path", "")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path and effective_dir:
         import os
         base = os.path.splitext(os.path.basename(filepath))[0]

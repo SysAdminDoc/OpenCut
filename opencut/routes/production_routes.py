@@ -20,6 +20,7 @@ from opencut.security import (
     safe_int,
     validate_filepath,
     validate_path,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -181,6 +182,8 @@ def image_sequence_assemble(job_id, filepath, data):
 
     out_path = data.get("output_path")
     if out_path:
+        out_path = validate_output_path(out_path)
+    if out_path:
         try:
             out_dir = os.path.dirname(out_path)
             validate_path(out_dir)
@@ -244,6 +247,8 @@ def timelapse_deflicker(job_id, filepath, data):
 
     out_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
     out_path = data.get("output_path")
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path:
         base = os.path.splitext(os.path.basename(filepath))[0]
         out_path = os.path.join(out_dir, f"{base}_deflickered.mp4")

@@ -23,6 +23,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -49,6 +50,8 @@ def ai_eye_contact(job_id, filepath, data):
         only_center_face=safe_bool(data.get("only_center_face"), True),
     )
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -95,6 +98,8 @@ def ai_overdub(job_id, filepath, data):
         speed=safe_float(data.get("speed"), 1.0, 0.5, 2.0),
     )
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -141,6 +146,8 @@ def ai_lip_sync(job_id, filepath, data):
         smooth_frames=safe_int(data.get("smooth_frames"), 3, 1, 15),
     )
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -184,6 +191,8 @@ def ai_voice_convert(job_id, filepath, data):
         f0_method=data.get("f0_method", "harvest").strip() or "harvest",
     )
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -302,6 +311,8 @@ def ai_morph_cut(job_id, filepath, data):
         background_weight=safe_float(data.get("background_weight"), 0.3, 0.0, 1.0),
     )
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -344,6 +355,8 @@ def ai_extend_spatial(job_id, filepath, data):
         inpaint_radius=safe_int(data.get("inpaint_radius"), 5, 1, 20),
     )
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -388,6 +401,8 @@ def ai_extend_temporal(job_id, filepath, data):
 
     config = FrameExtensionConfig(temporal_method=temporal_method)
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

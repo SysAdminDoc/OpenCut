@@ -17,6 +17,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -42,6 +43,8 @@ def track_object_route(job_id, filepath, data):
     max_frames = safe_int(data.get("max_frames", 0), 0, min_val=0)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -76,6 +79,8 @@ def annotate_tracked_route(job_id, filepath, data):
     annotation = data.get("annotation", {"type": "box"})
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -109,6 +114,8 @@ def export_track_route():
             return jsonify({"error": "No track_data provided"}), 400
 
         output_path = data.get("output_path", "").strip()
+        if output_path:
+            output_path = validate_output_path(output_path)
         if not output_path:
             return jsonify({"error": "No output_path provided"}), 400
 
@@ -136,6 +143,8 @@ def relight_route(job_id, filepath, data):
     light_config = data.get("light_config", {})
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
     depth_source = data.get("depth_source", "auto")
 
     if output is None and output_dir:
@@ -194,6 +203,8 @@ def convert_360_route(job_id, filepath, data):
     projection = data.get("projection", "cubemap").strip()
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -227,6 +238,8 @@ def crop_360_route(job_id, filepath, data):
     out_h = safe_int(data.get("output_height", 1080), 1080, min_val=240, max_val=4320)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -257,6 +270,8 @@ def stabilize_360_route(job_id, filepath, data):
     smoothing = safe_int(data.get("smoothing", 10), 10, min_val=1, max_val=30)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -293,6 +308,8 @@ def clean_plate_route(job_id, filepath, data):
     inpaint_method = data.get("inpaint_method", "telea").strip()
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -414,6 +431,8 @@ def authenticity_report_route(job_id, filepath, data):
 
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None:
         effective_dir = _resolve_output_dir(filepath, output_dir) if output_dir else ""
@@ -566,6 +585,8 @@ def holy_grail_route(job_id, filepath, data):
     config = data.get("config", {})
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

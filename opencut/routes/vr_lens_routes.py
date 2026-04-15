@@ -23,6 +23,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -44,6 +45,8 @@ def vr_stabilize(job_id, filepath, data):
     force_visual = safe_bool(data.get("force_visual", False), False)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -92,6 +95,8 @@ def vr_reframe(job_id, filepath, data):
     output_height = safe_int(data.get("output_height", 1080), 1080, min_val=240, max_val=4320)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -205,6 +210,8 @@ def vr_spatial_audio(job_id, filepath, data):
                            min_val=22050, max_val=96000)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -312,6 +319,8 @@ def lens_correct_distortion(job_id, filepath, data):
     preset = data.get("preset", "").strip() or None
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -377,6 +386,8 @@ def lens_chromatic_aberration(job_id, filepath, data):
 
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)

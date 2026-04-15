@@ -21,6 +21,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
     validate_path,
 )
 
@@ -296,6 +297,8 @@ def metadata_export_csv():
         output_path = data.get("output_path", "").strip()
         if not output_path:
             output_path = os.path.join(tempfile.gettempdir(), "opencut_metadata.csv")
+        else:
+            output_path = validate_output_path(output_path)
 
         from opencut.core.batch_metadata import export_metadata_csv
         csv_path = export_metadata_csv(file_paths, output_path)
@@ -377,6 +380,8 @@ def star_trail_composite(job_id, filepath, data):
     output_path = data.get("output_path", "").strip()
     if not output_path:
         output_path = os.path.join(tempfile.gettempdir(), "star_trail_composite.jpg")
+    else:
+        output_path = validate_output_path(output_path)
 
     mode = str(data.get("mode", "lighten"))[:20]
     gap_fill = safe_bool(data.get("gap_fill", True), True)
@@ -424,6 +429,8 @@ def star_trail_animation(job_id, filepath, data):
     output_path = data.get("output_path", "").strip()
     if not output_path:
         output_path = os.path.join(tempfile.gettempdir(), "star_trail_animation.mp4")
+    else:
+        output_path = validate_output_path(output_path)
 
     fps = safe_float(data.get("fps", 24), 24, min_val=1, max_val=120)
     trail_length = safe_int(data.get("trail_length", 0), 0, min_val=0, max_val=1000)
@@ -487,6 +494,8 @@ def construction_timelapse_build(job_id, filepath, data):
     output_path = data.get("output_path", "").strip()
     if not output_path:
         output_path = os.path.join(tempfile.gettempdir(), "construction_timelapse.mp4")
+    else:
+        output_path = validate_output_path(output_path)
 
     fps = safe_float(data.get("fps", 24), 24, min_val=1, max_val=120)
     do_align = safe_bool(data.get("align", True), True)
@@ -769,6 +778,8 @@ def subtitle_position_apply(job_id, filepath, data):
             _resolve_output_dir(video_path, data.get("output_dir", "")),
             f"{base}_positioned.mp4",
         )
+    else:
+        output_path = validate_output_path(output_path)
 
     sample_interval = safe_float(data.get("sample_interval", 2.0), 2.0,
                                  min_val=0.5, max_val=30.0)

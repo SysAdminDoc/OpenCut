@@ -16,7 +16,7 @@ from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_output_path
 
 logger = logging.getLogger("opencut")
 
@@ -37,6 +37,8 @@ def generative_extend(job_id, filepath, data):
     direction = data.get("direction", "forward").strip().lower()
     model = data.get("model", "auto").strip().lower()
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -67,6 +69,8 @@ def replace_background(job_id, filepath, data):
     method = data.get("method", "auto").strip().lower()
     edge_blur = safe_int(data.get("edge_blur"), 2, 0, 20)
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     # Validate background if it's a file path
     if isinstance(background, str) and background not in ("blur", "none"):
@@ -225,6 +229,8 @@ def character_generate(job_id, filepath, data):
 
     duration = safe_float(data.get("duration"), 4.0, 1.0, 30.0)
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     # Load the character profile
     profile = load_character_profile(profile_id)
@@ -263,6 +269,8 @@ def motion_brush(job_id, filepath, data):
 
     motion_params = data.get("motion_params", {})
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

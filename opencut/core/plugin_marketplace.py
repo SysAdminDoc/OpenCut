@@ -62,8 +62,19 @@ def _load_installed() -> Dict[str, dict]:
 def _save_installed(manifest: Dict[str, dict]) -> None:
     os.makedirs(PLUGINS_DIR, exist_ok=True)
     manifest_path = os.path.join(PLUGINS_DIR, "manifest.json")
-    with open(manifest_path, "w", encoding="utf-8") as fh:
-        json.dump(manifest, fh, indent=2)
+    # Atomic write: write to temp file then replace
+    import tempfile
+    fd, tmp_path = tempfile.mkstemp(dir=PLUGINS_DIR, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(manifest, fh, indent=2)
+        os.replace(tmp_path, manifest_path)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 def _validate_plugin_id(plugin_id: str) -> str:

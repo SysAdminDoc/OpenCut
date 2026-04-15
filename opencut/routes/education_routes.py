@@ -19,6 +19,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -285,6 +286,8 @@ def screenshot_video(job_id, filepath, data):
         validated.append(p)
 
     output = data.get("output_path")
+    if output:
+        output = validate_output_path(output)
     if not output:
         raise ValueError("No output_path provided")
 
