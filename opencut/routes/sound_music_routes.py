@@ -20,6 +20,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -130,6 +131,8 @@ def route_mood_morph(job_id, filepath, data):
 
     output_dir = data.get("output_dir", "")
     output_path_val = data.get("output_path", "")
+    if output_path_val:
+        output_path_val = validate_output_path(output_path_val)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg or f"Mood morph {pct}%")
@@ -206,6 +209,8 @@ def route_beat_sync(job_id, filepath, data):
     energy_match = safe_bool(data.get("energy_match", False), False)
     output_dir = data.get("output_dir", "")
     output_path_val = data.get("output_path", "")
+    if output_path_val:
+        output_path_val = validate_output_path(output_path_val)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg or f"Beat sync {pct}%")
@@ -276,6 +281,8 @@ def route_stem_remix(job_id, filepath, data):
         custom_settings = None
     output_dir = data.get("output_dir", "")
     output_path_val = data.get("output_path", "")
+    if output_path_val:
+        output_path_val = validate_output_path(output_path_val)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg or f"Stem remix {pct}%")

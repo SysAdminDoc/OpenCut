@@ -17,6 +17,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -135,6 +136,8 @@ def selects_export(job_id, filepath, data):
 
     filters = data.get("filters", {})
     output = data.get("output_path", None)
+    if output:
+        output = validate_output_path(output)
     fmt = data.get("format", "json").strip()
 
     def _progress(pct, msg=""):
@@ -166,6 +169,8 @@ def stringout_generate(job_id, filepath, data):
     gap_seconds = safe_float(data.get("gap_seconds", 0), 0, min_val=0, max_val=10)
     target_res = data.get("target_resolution", None)
     output = data.get("output_path", None)
+    if output:
+        output = validate_output_path(output)
 
     # Validate clip paths
     if clip_paths:
@@ -279,6 +284,8 @@ def conform_clip_route(job_id, filepath, data):
 
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
         from opencut.helpers import output_path as _op
@@ -433,6 +440,8 @@ def brand_auto_correct(job_id, filepath, data):
     add_watermark = safe_bool(data.get("add_watermark", True), True)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -478,6 +487,8 @@ def guest_compile(job_id, filepath, data):
     target_w = safe_int(data.get("width", 1920), 1920, min_val=640, max_val=7680)
     target_h = safe_int(data.get("height", 1080), 1080, min_val=360, max_val=4320)
     output = data.get("output_path", None)
+    if output:
+        output = validate_output_path(output)
 
     style = None
     style_data = data.get("name_style", None)
@@ -537,6 +548,8 @@ def guest_process_single(job_id, filepath, data):
     add_name_card = safe_bool(data.get("add_name_card", True), True)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -581,6 +594,8 @@ def guest_name_card(job_id, filepath, data):
     height = safe_int(data.get("height", 1080), 1080, min_val=360, max_val=4320)
     duration = safe_float(data.get("duration", 4.0), 4.0, min_val=1, max_val=30)
     output = data.get("output_path", None)
+    if output:
+        output = validate_output_path(output)
 
     style_data = data.get("style", {})
     style = NameCardStyle(
@@ -635,6 +650,8 @@ def montage_create(job_id, filepath, data):
     height = safe_int(data.get("height", 1080), 1080, min_val=360, max_val=4320)
     sync_music = safe_bool(data.get("sync_to_music", True), True)
     output = data.get("output_path", None)
+    if output:
+        output = validate_output_path(output)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -682,6 +699,8 @@ def montage_ken_burns(job_id, filepath, data):
     height = safe_int(data.get("height", 1080), 1080, min_val=360, max_val=4320)
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
 
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -774,6 +793,8 @@ def recap_generate(job_id, filepath, data):
 
     output_dir = data.get("output_dir", "")
     output = data.get("output_path", None) or None
+    if output:
+        output = validate_output_path(output)
     if output is None and output_dir:
         effective_dir = _resolve_output_dir(filepath, output_dir)
         from opencut.helpers import output_path as _op

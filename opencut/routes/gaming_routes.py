@@ -20,6 +20,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -53,6 +54,8 @@ def chat_replay(job_id, filepath, data):
     max_visible = safe_int(data.get("max_visible", 15), 15, min_val=1, max_val=50)
     style = data.get("style", "scrolling").strip()
     output_path = data.get("output_path")
+    if output_path:
+        output_path = validate_output_path(output_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -152,6 +155,8 @@ def auto_montage_assemble(job_id, filepath, data):
     count = safe_int(data.get("count", 10), 10, min_val=1, max_val=100)
     transition = data.get("transition", "cut").strip()
     output_path = data.get("output_path")
+    if output_path:
+        output_path = validate_output_path(output_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -242,6 +247,8 @@ def multi_pov_export_xml(job_id, filepath, data):
         ))
 
     output_path = data.get("output_path")
+    if output_path:
+        output_path = validate_output_path(output_path)
     sequence_name = data.get("sequence_name", "OpenCut Multi-POV")
 
     def _progress(pct, msg=""):
@@ -391,6 +398,8 @@ def iso_ingest_timeline(job_id, filepath, data):
         ))
 
     output_path = data.get("output_path")
+    if output_path:
+        output_path = validate_output_path(output_path)
     sequence_name = data.get("sequence_name", "OpenCut ISO Multicam")
 
     def _progress(pct, msg=""):
@@ -436,6 +445,8 @@ def instant_replay(job_id, filepath, data):
     )
 
     output_path = data.get("output_path")
+    if output_path:
+        output_path = validate_output_path(output_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -633,6 +644,8 @@ def stream_highlights_assemble(job_id, filepath, data):
     transition_duration = safe_float(data.get("transition_duration", 0.5), 0.5, min_val=0.1, max_val=3.0)
     intro_text = data.get("intro_text")
     output_path = data.get("output_path")
+    if output_path:
+        output_path = validate_output_path(output_path)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
