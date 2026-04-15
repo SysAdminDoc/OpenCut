@@ -65,11 +65,22 @@ def watch_start():
     folder_path = _string_field(data, "folder_path")
     if not folder_path:
         return jsonify({"error": "folder_path is required"}), 400
+    # Validate paths against traversal/null byte attacks
+    try:
+        from opencut.security import validate_path
+        folder_path = validate_path(folder_path)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     if not os.path.isdir(folder_path):
         return jsonify({"error": f"Folder does not exist: {folder_path}"}), 400
     output_dir = _string_field(data, "output_dir")
-    if output_dir and not os.path.isdir(output_dir):
-        return jsonify({"error": f"Output folder does not exist: {output_dir}"}), 400
+    if output_dir:
+        try:
+            output_dir = validate_path(output_dir)
+        except ValueError as e:
+            return jsonify({"error": str(e)}), 400
+        if not os.path.isdir(output_dir):
+            return jsonify({"error": f"Output folder does not exist: {output_dir}"}), 400
     file_extensions = data.get("file_extensions")
     if file_extensions is not None and (
         not isinstance(file_extensions, list)

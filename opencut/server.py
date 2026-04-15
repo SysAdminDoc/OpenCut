@@ -260,7 +260,8 @@ def create_app(config=None):
     @_app.errorhandler(413)
     def handle_large_request(e):
         """Return 413 when request payload exceeds MAX_CONTENT_LENGTH."""
-        return jsonify({"error": "Request too large (max 100 MB)"}), 413
+        max_mb = config.max_content_length / (1024 * 1024)
+        return jsonify({"error": f"Request too large (max {max_mb:.0f} MB)"}), 413
 
     @_app.errorhandler(RuntimeError)
     def handle_runtime_error(e):
@@ -361,10 +362,12 @@ def _is_pid_alive(pid: int) -> bool:
     try:
         if sys.platform == "win32":
             result = _sp.run(
-                ["tasklist", "/FI", f"PID eq {pid}", "/NH"],
+                ["tasklist", "/FI", f"PID eq {pid}", "/NH", "/FO", "CSV"],
                 capture_output=True, text=True, timeout=5, check=False
             )
-            return str(pid) in result.stdout
+            # CSV format: "name","pid","session","session#","mem"
+            # Check that the PID appears as an exact CSV field
+            return f'"{pid}"' in result.stdout
         else:
             os.kill(pid, 0)  # Signal 0 = check if alive
             return True
@@ -527,9 +530,8 @@ def _nuke_old_servers(host: str, port: int) -> bool:
     print(f"  Port {port} is in use. Cleaning up...")
     logger.info(f"Port {port} busy - starting kill sequence")
 
-    # --- Step 1: Send /shutdown to all ports in our range ---
-    for p in range(port, port + 11):
-        _kill_via_shutdown_endpoint(host, p)
+    # --- Step 1: Send /shutdown to the target port ---
+    _kill_via_shutdown_endpoint(host, port)
 
     if _wait_for_port(host, port, timeout=3.0):
         print("  Graceful shutdown succeeded.")
