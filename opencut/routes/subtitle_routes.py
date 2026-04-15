@@ -15,7 +15,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_bool, safe_float
+from opencut.security import require_csrf, safe_bool, safe_float, validate_output_path
 
 logger = logging.getLogger("opencut")
 
@@ -40,6 +40,8 @@ def subtitle_embed(job_id, filepath, data):
     languages = data.get("languages", None)
     container = data.get("container", "mp4")
     output = data.get("output_path", None)
+    if output:
+        output = validate_output_path(output)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -92,6 +94,8 @@ def sdh_format(job_id, filepath, data):
 
     diarization_data = data.get("diarization_data", None)
     output = data.get("output_path", None)
+    if output:
+        output = validate_output_path(output)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -164,6 +168,8 @@ def dead_time_speed_ramp(job_id, filepath, data):
     speed_factor = safe_float(data.get("speed_factor"), default=8.0,
                               min_val=1.5, max_val=100.0)
     output = data.get("output_path", None)
+    if output:
+        output = validate_output_path(output)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -234,6 +240,8 @@ def nd_filter_sim(job_id, filepath, data):
     shutter_angle = safe_float(data.get("shutter_angle"), default=180.0,
                                min_val=1.0, max_val=360.0)
     output = data.get("output_path", None)
+    if output:
+        output = validate_output_path(output)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

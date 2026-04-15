@@ -18,6 +18,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -110,6 +111,8 @@ def route_rhythm_effects(job_id, filepath, data):
 
     window_ms = safe_float(data.get("window_ms", 50.0), 50.0, min_val=10.0, max_val=200.0)
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     # Parse effect map
     raw_map = data.get("effect_map", None)
@@ -221,6 +224,8 @@ def route_c2pa_embed(job_id, filepath, data):
         )
 
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -269,6 +274,8 @@ def route_watermark_embed(job_id, filepath, data):
     strength = safe_float(data.get("strength", 25.0), 25.0, min_val=1.0, max_val=100.0)
     key_frames_only = safe_bool(data.get("key_frames_only", False))
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -413,6 +420,8 @@ def route_custody_export(job_id, filepath, data):
         raise ValueError("Chain data is required")
 
     out_path = data.get("output_path", "").strip()
+    if out_path:
+        out_path = validate_output_path(out_path)
     if not out_path:
         raise ValueError("Output path is required for report export")
 
@@ -503,6 +512,8 @@ def route_tc_sync(job_id, filepath, data):
 
     fps = safe_float(data.get("fps", 0.0), 0.0, min_val=0.0, max_val=120.0)
     out_path = data.get("output_path", "").strip() or None
+    if out_path:
+        out_path = validate_output_path(out_path)
     timeline_fmt = data.get("timeline_format", "json").strip().lower()
 
     def _on_progress(pct, msg=""):

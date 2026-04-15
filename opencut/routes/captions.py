@@ -930,8 +930,8 @@ def interview_polish(job_id, filepath, data):
             llm = None
             try:
                 llm = LLMConfig(provider=data.get("llm_provider", "ollama"))
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("LLM config failed, chapters will use fallback: %s", exc)
             chapters_data = generate_chapters(seg_dicts, llm_config=llm, max_chapters=8)
             desc = (chapters_data or {}).get("description_block", "")
             if desc:
