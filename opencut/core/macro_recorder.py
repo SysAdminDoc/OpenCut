@@ -7,6 +7,7 @@ as JSON files.  Supports variable substitution in payloads.
 """
 
 import copy
+import inspect
 import json
 import logging
 import os
@@ -42,6 +43,14 @@ class MacroStep:
     timestamp: float = field(default_factory=time.time)
     order: int = 0
 
+    @property
+    def params(self) -> Dict[str, Any]:
+        return self.payload
+
+    @params.setter
+    def params(self, value: Dict[str, Any]) -> None:
+        self.payload = value if isinstance(value, dict) else {}
+
 
 @dataclass
 class MacroRecording:
@@ -51,6 +60,14 @@ class MacroRecording:
     steps: List[MacroStep] = field(default_factory=list)
     created: float = field(default_factory=time.time)
     version: int = 1
+
+    @property
+    def actions(self) -> List[MacroStep]:
+        return self.steps
+
+    @actions.setter
+    def actions(self, value: List[MacroStep]) -> None:
+        self.steps = list(value or [])
 
     def to_dict(self) -> Dict[str, Any]:
         """Convert macro to a JSON-serializable dict."""
@@ -85,8 +102,48 @@ class MacroRecording:
 
 
 # Legacy aliases for backward compatibility
-MacroAction = MacroStep
-Macro = MacroRecording
+class MacroAction(MacroStep):
+    """Backward-compatible alias that still accepts ``params=...``."""
+
+    def __init__(
+        self,
+        endpoint: str,
+        method: str = "POST",
+        payload: Optional[Dict[str, Any]] = None,
+        params: Optional[Dict[str, Any]] = None,
+        timestamp: Optional[float] = None,
+        order: int = 0,
+    ):
+        if payload is None:
+            payload = params or {}
+        super().__init__(
+            endpoint=endpoint,
+            method=method,
+            payload=payload,
+            timestamp=time.time() if timestamp is None else timestamp,
+            order=order,
+        )
+
+
+class Macro(MacroRecording):
+    """Backward-compatible alias that still accepts ``actions=...``."""
+
+    def __init__(
+        self,
+        name: str = "Untitled Macro",
+        description: str = "",
+        steps: Optional[List[MacroStep]] = None,
+        actions: Optional[List[MacroStep]] = None,
+        created: Optional[float] = None,
+        version: int = 1,
+    ):
+        super().__init__(
+            name=name,
+            description=description,
+            steps=list(actions if actions is not None else (steps or [])),
+            created=time.time() if created is None else created,
+            version=version,
+        )
 
 
 @dataclass
@@ -313,6 +370,21 @@ def play_macro(
     if not macro.steps:
         return []
 
+    use_legacy_executor = False
+    if executor is not None:
+        try:
+            sig = inspect.signature(executor)
+            params = list(sig.parameters.values())
+            positional = [
+                p for p in params
+                if p.kind in (inspect.Parameter.POSITIONAL_ONLY,
+                              inspect.Parameter.POSITIONAL_OR_KEYWORD)
+            ]
+            has_varargs = any(p.kind == inspect.Parameter.VAR_POSITIONAL for p in params)
+            use_legacy_executor = not has_varargs and len(positional) <= 2
+        except (TypeError, ValueError):
+            use_legacy_executor = False
+
     # Build variable map
     variables = {
         "input_file": target_file,
@@ -340,7 +412,10 @@ def play_macro(
 
         if executor:
             try:
-                result = executor(step.endpoint, step.method, payload)
+                if use_legacy_executor:
+                    result = executor(step.endpoint, payload)
+                else:
+                    result = executor(step.endpoint, step.method, payload)
                 results.append({
                     "step": i + 1,
                     "endpoint": step.endpoint,
@@ -363,6 +438,7 @@ def play_macro(
                 "endpoint": step.endpoint,
                 "method": step.method,
                 "payload": payload,
+                "params": payload,
                 "dry_run": True,
             })
 

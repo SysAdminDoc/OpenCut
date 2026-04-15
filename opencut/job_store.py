@@ -45,6 +45,20 @@ _CONN_LOCK = threading.Lock()
 COMPLETED_JOB_TTL = 7 * 24 * 3600  # 7 days
 
 
+def _coerce_limit(value, default):
+    try:
+        return max(1, int(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _coerce_offset(value, default=0):
+    try:
+        return max(0, int(value))
+    except (TypeError, ValueError):
+        return default
+
+
 def _get_conn() -> sqlite3.Connection:
     """Get or create a thread-local SQLite connection."""
     conn = getattr(_LOCAL, "conn", None)
@@ -136,9 +150,10 @@ def save_job(job_dict):
             pass
 
     now = time.time()
-    completed_at = None
-    if job_dict.get("status") in ("complete", "error", "cancelled"):
+    completed_at = job_dict.get("completed_at")
+    if completed_at is None and job_dict.get("status") in ("complete", "error", "cancelled", "interrupted"):
         completed_at = now
+    started_at = job_dict.get("started_at") or job_dict.get("created", now)
 
     conn.execute("""
         INSERT INTO jobs (id, type, filepath, status, progress, message,
@@ -146,12 +161,18 @@ def save_job(job_dict):
                           created_at, started_at, completed_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(id) DO UPDATE SET
+            type = COALESCE(NULLIF(excluded.type, ''), jobs.type),
+            filepath = COALESCE(NULLIF(excluded.filepath, ''), jobs.filepath),
             status = excluded.status,
             progress = excluded.progress,
             message = excluded.message,
             result_json = excluded.result_json,
             error = excluded.error,
-            completed_at = excluded.completed_at
+            endpoint = COALESCE(NULLIF(excluded.endpoint, ''), jobs.endpoint),
+            payload_json = COALESCE(excluded.payload_json, jobs.payload_json),
+            created_at = MIN(jobs.created_at, excluded.created_at),
+            started_at = COALESCE(jobs.started_at, excluded.started_at),
+            completed_at = COALESCE(excluded.completed_at, jobs.completed_at)
     """, (
         job_dict.get("id", ""),
         job_dict.get("type", ""),
@@ -164,7 +185,7 @@ def save_job(job_dict):
         job_dict.get("_endpoint", ""),
         payload_json,
         job_dict.get("created", now),
-        job_dict.get("created", now),
+        started_at,
         completed_at,
     ))
     conn.commit()
@@ -184,6 +205,8 @@ def list_jobs(status=None, limit=100, offset=0):
     """List jobs, optionally filtered by status. Newest first."""
     init_db()
     conn = _get_conn()
+    limit = _coerce_limit(limit, 100)
+    offset = _coerce_offset(offset, 0)
     if status:
         rows = conn.execute(
             "SELECT * FROM jobs WHERE status = ? ORDER BY created_at DESC LIMIT ? OFFSET ?",
@@ -233,7 +256,7 @@ def cleanup_old_jobs():
     cutoff = time.time() - COMPLETED_JOB_TTL
     count = conn.execute(
         "DELETE FROM jobs WHERE status IN ('complete', 'error', 'cancelled', 'interrupted') "
-        "AND created_at < ?",
+        "AND COALESCE(completed_at, created_at) < ?",
         (cutoff,)
     ).rowcount
     conn.commit()
@@ -274,6 +297,8 @@ def _row_to_dict(row):
         "message": row["message"],
         "error": row["error"],
         "created": row["created_at"],
+        "started_at": row["started_at"],
+        "completed_at": row["completed_at"],
     }
     if row["result_json"]:
         try:

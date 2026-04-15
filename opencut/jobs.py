@@ -5,11 +5,14 @@ Shared job tracking state and helper functions used across all route modules.
 """
 
 import atexit
+import json
 import logging
 import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+
+from opencut.config import OpenCutConfig
 
 logger = logging.getLogger("opencut")
 
@@ -38,9 +41,11 @@ _job_processes = {}  # job_id -> Popen, for subprocess kill support
 # These mirror OpenCutConfig defaults (the single source of truth for
 # documentation and test overrides).  They are kept as module-level constants
 # because jobs.py operates outside Flask app context.
-JOB_MAX_AGE = 3600              # see OpenCutConfig.job_max_age
-MAX_CONCURRENT_JOBS = 10        # see OpenCutConfig.max_concurrent_jobs
-MAX_BATCH_FILES = 100           # see OpenCutConfig.max_batch_files
+_JOB_CONFIG = OpenCutConfig.from_env()
+JOB_MAX_AGE = _JOB_CONFIG.job_max_age
+MAX_CONCURRENT_JOBS = _JOB_CONFIG.max_concurrent_jobs
+MAX_BATCH_FILES = _JOB_CONFIG.max_batch_files
+MAX_PERSISTED_JOB_PAYLOAD_BYTES = 64 * 1024
 
 
 def _safe_error(e, context=""):
@@ -56,6 +61,15 @@ def _safe_error(e, context=""):
 class TooManyJobsError(RuntimeError):
     """Raised when MAX_CONCURRENT_JOBS is reached."""
     pass
+
+
+def apply_config(config: OpenCutConfig) -> None:
+    """Apply runtime job limits from an OpenCutConfig instance."""
+    global JOB_MAX_AGE, MAX_CONCURRENT_JOBS, MAX_BATCH_FILES, _JOB_STUCK_TIMEOUT
+    JOB_MAX_AGE = int(config.job_max_age)
+    MAX_CONCURRENT_JOBS = int(config.max_concurrent_jobs)
+    MAX_BATCH_FILES = int(config.max_batch_files)
+    _JOB_STUCK_TIMEOUT = int(config.job_stuck_timeout)
 
 
 def _new_job(job_type: str, filepath: str) -> str:
@@ -126,7 +140,7 @@ def _update_job(job_id: str, **kwargs):
         _persist_job(job_copy_to_persist)
 
 
-def _persist_job(job_dict):
+def _persist_job(job_dict, *, sync: bool = False):
     """Persist a job to SQLite via bounded I/O pool to avoid I/O under lock."""
     def _save():
         try:
@@ -134,7 +148,16 @@ def _persist_job(job_dict):
             save_job(job_dict)
         except Exception as e:
             logger.debug("Failed to persist job %s: %s", job_dict.get("id"), e)
-    _io_pool.submit(_save)
+    if sync:
+        _save()
+        return
+    try:
+        _io_pool.submit(_save)
+    except RuntimeError:
+        # Interpreter shutdown can close the pool before the last persistence
+        # task is submitted. Falling back to sync avoids silently dropping the
+        # final job state in that window.
+        _save()
 
 
 def _schedule_record_time(job_type, elapsed, filepath):
@@ -150,6 +173,29 @@ def _schedule_record_time(job_type, elapsed, filepath):
         except Exception as e:
             logger.debug("Failed to record job time for %s: %s", job_type, e)
     _io_pool.submit(_record)
+
+
+def _sanitize_payload_for_storage(payload):
+    """Cap persisted request payloads so job history stays useful but bounded."""
+    if not isinstance(payload, dict):
+        return {}
+    try:
+        encoded = json.dumps(payload, ensure_ascii=False)
+    except (TypeError, ValueError):
+        return {
+            "_truncated": True,
+            "_reason": "unserializable",
+            "_keys": sorted(str(k) for k in payload.keys())[:50],
+        }
+    encoded_bytes = len(encoded.encode("utf-8"))
+    if encoded_bytes <= MAX_PERSISTED_JOB_PAYLOAD_BYTES:
+        return payload
+    return {
+        "_truncated": True,
+        "_reason": "payload_too_large",
+        "_size_bytes": encoded_bytes,
+        "_keys": sorted(str(k) for k in payload.keys())[:50],
+    }
 
 
 def _is_cancelled(job_id: str) -> bool:
@@ -199,7 +245,49 @@ def _kill_job_process(job_id: str):
             logger.debug("Failed to reap process for job %s: %s", job_id, e)
 
 
-_JOB_STUCK_TIMEOUT = 7200  # see OpenCutConfig.job_stuck_timeout
+def _cancel_job(job_id: str, *, message: str = "Cancelled by user",
+                persist_sync: bool = False) -> tuple[dict | None, str]:
+    """Cancel a single running job and persist the terminal state."""
+    cancelled_job = None
+    with job_lock:
+        job = jobs.get(job_id)
+        if job is None:
+            return None, "not_found"
+        if job.get("status") != "running":
+            return None, "not_running"
+        job["status"] = "cancelled"
+        job["message"] = message
+        job["progress"] = 0
+        cancelled_job = job.copy()
+
+    try:
+        from opencut.workers import cancel_job as _cancel_queued_job
+
+        if _cancel_queued_job(job_id):
+            with job_lock:
+                if job_id in jobs:
+                    jobs[job_id]["message"] = "Cancelled before starting"
+                    cancelled_job = jobs[job_id].copy()
+    except Exception as e:
+        logger.debug("Failed to cancel queued job %s: %s", job_id, e)
+
+    if cancelled_job is not None:
+        _persist_job(cancelled_job, sync=persist_sync)
+    return cancelled_job, "cancelled"
+
+
+def _cancel_running_jobs(*, message: str = "Cancelled by user",
+                         persist_sync: bool = False) -> list[str]:
+    """Cancel every running job and return the cancelled job IDs."""
+    with job_lock:
+        running_ids = [jid for jid, job in jobs.items() if job.get("status") == "running"]
+
+    for job_id in running_ids:
+        _cancel_job(job_id, message=message, persist_sync=persist_sync)
+    return running_ids
+
+
+_JOB_STUCK_TIMEOUT = _JOB_CONFIG.job_stuck_timeout
 _CLEANUP_INTERVAL = 300  # 5 minutes — periodic cleanup interval
 _cleanup_timer_started = False
 _cleanup_timer_lock = threading.Lock()
@@ -240,6 +328,7 @@ def _cleanup_old_jobs():
     """Remove completed/errored jobs older than JOB_MAX_AGE.
     Also mark stuck 'running' jobs as error after _JOB_STUCK_TIMEOUT."""
     now = time.time()
+    jobs_to_persist = []
     with job_lock:
         # Mark stuck running jobs as error
         for jid, j in jobs.items():
@@ -248,7 +337,7 @@ def _cleanup_old_jobs():
                 j["error"] = "Job timed out (stuck for >2 hours)"
                 j["message"] = "Timed out"
                 logger.warning("Marking stuck job %s as error (created %.0fs ago)", jid, now - j["created"])
-                _persist_job(j.copy())
+                jobs_to_persist.append(j.copy())
         # Clean up old finished jobs
         expired = [
             jid for jid, j in jobs.items()
@@ -268,6 +357,8 @@ def _cleanup_old_jobs():
                 stale_procs.append(jid)
         for jid in stale_procs:
             _job_processes.pop(jid, None)
+    for job_dict in jobs_to_persist:
+        _persist_job(job_dict)
 
 
 def async_job(job_type: str, *, filepath_required: bool = True,
@@ -322,8 +413,15 @@ def async_job(job_type: str, *, filepath_required: bool = True,
     def decorator(f):
         @functools.wraps(f)
         def wrapper(*args, **kwargs):
-            from opencut.security import validate_filepath
-            data = request.get_json(force=True) or {}
+            from opencut.security import get_json_dict, validate_filepath
+            try:
+                data = get_json_dict()
+            except ValueError as e:
+                return jsonify({
+                    "error": str(e),
+                    "code": "INVALID_INPUT",
+                    "suggestion": "Send a top-level JSON object in the request body.",
+                }), 400
             filepath = data.get(filepath_param, "")
             if isinstance(filepath, str):
                 filepath = filepath.strip()
@@ -370,6 +468,11 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     "suggestion": "Wait for a job to finish or cancel one from the processing bar.",
                 }), 429
 
+            with job_lock:
+                if job_id in jobs:
+                    jobs[job_id]["_endpoint"] = request.path
+                    jobs[job_id]["_payload"] = _sanitize_payload_for_storage(data)
+
             def _process():
                 _thread_local.job_id = job_id
                 try:
@@ -378,6 +481,10 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                 except ImportError:
                     pass
                 try:
+                    if _is_cancelled(job_id):
+                        _update_job(job_id, message="Cancelled before starting", progress=0)
+                        return
+                    _update_job(job_id, started_at=time.time())
                     result = f(job_id, filepath, data)
                     if not _is_cancelled(job_id):
                         _update_job(job_id, status="complete", progress=100,

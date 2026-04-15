@@ -779,6 +779,11 @@ class TestUndoRoutes:
         }), headers=csrf_headers(csrf_token))
         assert resp.status_code == 400
 
+    def test_push_rejects_non_object_json(self, client, csrf_token):
+        resp = client.post("/api/undo/push", data=json.dumps(["trim"]),
+                           headers=csrf_headers(csrf_token))
+        assert resp.status_code == 400
+
     def test_history_route(self, client, csrf_token):
         client.post("/api/undo/push", data=json.dumps({
             "operation": "test_op",
@@ -873,6 +878,17 @@ class TestEDLAAFRoutes:
         }), headers=csrf_headers(csrf_token))
         assert resp.status_code == 404
 
+    def test_edl_export_invalid_fps_falls_back_instead_of_500(self, client, csrf_token, tmp_dir):
+        out = os.path.join(tmp_dir, "bad_fps.edl")
+        resp = client.post("/api/edl/export", data=json.dumps({
+            "cuts": [{"reel": "AX", "channel": "V", "transition": "C",
+                       "source_in": 0, "source_out": 5,
+                       "record_in": 0, "record_out": 5}],
+            "output_path": out,
+            "fps": "bad-value",
+        }), headers=csrf_headers(csrf_token))
+        assert resp.status_code == 200
+
     def test_aaf_export_route(self, client, csrf_token, tmp_dir):
         out = os.path.join(tmp_dir, "aaf_route.json")
         resp = client.post("/api/aaf/export", data=json.dumps({
@@ -913,6 +929,11 @@ class TestScriptingRoutes:
         resp = client.post("/api/scripting/execute", data=json.dumps({
             "code": "",
         }), headers=csrf_headers(csrf_token))
+        assert resp.status_code == 400
+
+    def test_execute_rejects_non_object_json(self, client, csrf_token):
+        resp = client.post("/api/scripting/execute", data=json.dumps(["print(1)"]),
+                           headers=csrf_headers(csrf_token))
         assert resp.status_code == 400
 
     def test_modules_route(self, client):
@@ -995,6 +1016,12 @@ class TestMacroRoutes:
             "path": "/nonexistent/macro.json",
         }), headers=csrf_headers(csrf_token))
         assert resp.status_code == 404
+
+    def test_load_rejects_non_string_path(self, client, csrf_token):
+        resp = client.post("/api/macro/load", data=json.dumps({
+            "path": 123,
+        }), headers=csrf_headers(csrf_token))
+        assert resp.status_code == 400
 
 
 # ============================================================================

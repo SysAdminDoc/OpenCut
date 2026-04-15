@@ -7,15 +7,29 @@ Run, list, save, and delete multi-step processing workflows.
 import logging
 import time
 
-from flask import Blueprint, current_app, jsonify, request
+from flask import Blueprint, current_app, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf
+from opencut.security import get_json_dict, require_csrf
 from opencut.user_data import load_workflows, save_workflows
 
 logger = logging.getLogger("opencut")
 
 workflow_bp = Blueprint("workflow", __name__)
+
+
+def _json_object_or_400():
+    try:
+        return get_json_dict(), None
+    except ValueError as e:
+        return None, (
+            jsonify({
+                "error": str(e),
+                "code": "INVALID_INPUT",
+                "suggestion": "Send a top-level JSON object in the request body.",
+            }),
+            400,
+        )
 
 # ---------------------------------------------------------------------------
 # Built-in Workflow Presets
@@ -163,15 +177,27 @@ def save_custom_workflow():
     """
     from opencut.core.workflow import validate_workflow_steps
 
-    data = request.get_json(force=True)
-    name = data.get("name", "").strip()
+    data, error = _json_object_or_400()
+    if error:
+        return error
     steps = data.get("steps", [])
-    description = data.get("description", "").strip()
+    name = data.get("name", "")
+    description = data.get("description", "")
+
+    if not isinstance(name, str):
+        return jsonify({"error": "Workflow name must be a string"}), 400
+    if description and not isinstance(description, str):
+        return jsonify({"error": "Workflow description must be a string"}), 400
+
+    name = name.strip()
+    description = description.strip()
 
     if not name:
         return jsonify({"error": "Workflow name required"}), 400
     if len(name) > 100:
         return jsonify({"error": "Workflow name too long"}), 400
+    if not isinstance(steps, list):
+        return jsonify({"error": "Workflow steps must be a list"}), 400
 
     # Check for collision with built-in names
     builtin_names = {wf["name"] for wf in BUILTIN_WORKFLOWS}
@@ -223,8 +249,13 @@ def delete_custom_workflow():
 
         {"name": "My Workflow"}
     """
-    data = request.get_json(force=True)
-    name = data.get("name", "").strip()
+    data, error = _json_object_or_400()
+    if error:
+        return error
+    name = data.get("name", "")
+    if not isinstance(name, str):
+        return jsonify({"error": "Workflow name must be a string"}), 400
+    name = name.strip()
 
     if not name:
         return jsonify({"error": "Workflow name required"}), 400
