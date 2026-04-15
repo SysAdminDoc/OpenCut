@@ -23,6 +23,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -44,6 +45,8 @@ def vr_stabilize(job_id, filepath, data):
     smoothing = safe_int(data.get("smoothing", 10), 10, min_val=1, max_val=30)
     force_visual = safe_bool(data.get("force_visual", False), False)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -94,6 +97,8 @@ def vr_reframe(job_id, filepath, data):
     output_width = safe_int(data.get("output_width", 1920), 1920, min_val=320, max_val=7680)
     output_height = safe_int(data.get("output_height", 1080), 1080, min_val=240, max_val=4320)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -157,6 +162,8 @@ def vr_extract_fov(job_id, filepath, data):
     output_height = safe_int(data.get("output_height", 1080), 1080, min_val=240, max_val=4320)
     generate_xml = safe_bool(data.get("generate_xml", True), True)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if output_dir:
         output_dir = _resolve_output_dir(filepath, output_dir)
@@ -209,6 +216,8 @@ def vr_spatial_audio(job_id, filepath, data):
     sample_rate = safe_int(data.get("sample_rate", 48000), 48000,
                            min_val=22050, max_val=96000)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -318,6 +327,8 @@ def lens_correct_distortion(job_id, filepath, data):
     k2 = data.get("k2", None)
     preset = data.get("preset", "").strip() or None
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -385,6 +396,8 @@ def lens_chromatic_aberration(job_id, filepath, data):
         blue_shift_y = safe_int(blue_shift_y, 0, min_val=-10, max_val=10)
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)

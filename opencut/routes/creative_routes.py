@@ -17,6 +17,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -43,6 +44,8 @@ def video_compare(job_id, filepath, data):
     mode = data.get("mode", "sidebyside").strip()
     timestamp = safe_float(data.get("timestamp", 0), 0, min_val=0.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -121,6 +124,8 @@ def effects_retro(job_id, filepath, data):
     effect = data.get("effect", "vhs").strip()
     intensity = safe_float(data.get("intensity", 0.7), 0.7, min_val=0.0, max_val=1.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -159,6 +164,8 @@ def effects_tilt_shift(job_id, filepath, data):
     blur_amount = safe_int(data.get("blur_amount", 10), 10, min_val=1, max_val=30)
     saturation = safe_float(data.get("saturation", 1.5), 1.5, min_val=0.5, max_val=3.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -197,6 +204,8 @@ def effects_light_leak(job_id, filepath, data):
     style = data.get("style", "warm_amber").strip()
     intensity = safe_float(data.get("intensity", 0.5), 0.5, min_val=0.0, max_val=1.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)
@@ -232,6 +241,8 @@ def accessibility_colorblind_sim(job_id, filepath, data):
 
     condition = data.get("condition", "deuteranopia").strip()
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     output = data.get("output_path", None) or None
     if output:
         output = validate_output_path(output)

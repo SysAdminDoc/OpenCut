@@ -15,7 +15,7 @@ import logging
 from flask import Blueprint
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -143,6 +143,8 @@ def ai_summarize(job_id, filepath, data):
         top_n = safe_int(data.get("top_n"), 5, 1, 20)
         clip_duration = safe_float(data.get("clip_duration"), 3.0, 0.5, 30.0)
         output_dir = data.get("output_dir", "").strip()
+        if output_dir:
+            output_dir = validate_path(output_dir)
 
         result = visual_summary(
             video_path=filepath,

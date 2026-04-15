@@ -22,6 +22,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -41,6 +42,8 @@ def export_gif_route(job_id, filepath, data):
     from opencut.core.gif_export import export_gif
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out_path = data.get("output_path", "")
     if out_path:
@@ -78,6 +81,8 @@ def export_webp_route(job_id, filepath, data):
     from opencut.core.gif_export import export_webp
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out_path = data.get("output_path", "")
     if out_path:
@@ -113,6 +118,8 @@ def export_apng_route(job_id, filepath, data):
     from opencut.core.gif_export import export_apng
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out_path = data.get("output_path", "")
     if out_path:
@@ -175,6 +182,8 @@ def metadata_strip_route(job_id, filepath, data):
     from opencut.core.metadata_tools import strip_metadata
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out_path = data.get("output_path", "")
     if out_path:
@@ -220,6 +229,8 @@ def metadata_copy_route(job_id, filepath, data):
     from opencut.core.metadata_tools import copy_with_metadata
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     effective_dir = _resolve_output_dir(filepath, output_dir)
     out_path = data.get("output_path", "")
     if out_path:

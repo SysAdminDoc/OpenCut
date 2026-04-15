@@ -44,6 +44,8 @@ def export_dcp(job_id, filepath, data):
     from opencut.core.dcp_export import DCPConfig, export_dcp as _export_dcp
 
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
     if not output_dir:
         output_dir = os.path.dirname(filepath)
     if not os.path.isdir(output_dir):
@@ -102,6 +104,8 @@ def export_imf(job_id, filepath, data):
     from opencut.core.imf_package import IMFAudioTrack, IMFConfig, export_imf as _export_imf
 
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
     if not output_dir:
         output_dir = os.path.dirname(filepath)
     if not os.path.isdir(output_dir):

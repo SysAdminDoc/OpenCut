@@ -20,6 +20,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
     validate_output_path,
 )
 
@@ -493,6 +494,8 @@ def instant_replay_batch(job_id, filepath, data):
     )
 
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -591,6 +594,8 @@ def stream_highlights_extract(job_id, filepath, data):
     max_clips = safe_int(data.get("max_clips", 10), 10, min_val=1, max_val=50)
     min_score = safe_float(data.get("min_score", 0.3), 0.3, min_val=0.0, max_val=1.0)
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

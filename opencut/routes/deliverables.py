@@ -46,6 +46,8 @@ def deliverables_vfx_sheet():
     data = request.get_json(force=True)
     sequence_data = data.get("sequence_data", {})
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not sequence_data:
         return jsonify({"error": "sequence_data is required"}), 400
@@ -79,6 +81,8 @@ def deliverables_adr_list():
     data = request.get_json(force=True)
     sequence_data = data.get("sequence_data", {})
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not sequence_data:
         return jsonify({"error": "sequence_data is required"}), 400
@@ -112,6 +116,8 @@ def deliverables_music_cue_sheet():
     data = request.get_json(force=True)
     sequence_data = data.get("sequence_data", {})
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not sequence_data:
         return jsonify({"error": "sequence_data is required"}), 400
@@ -145,6 +151,8 @@ def deliverables_asset_list():
     data = request.get_json(force=True)
     sequence_data = data.get("sequence_data", {})
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not sequence_data:
         return jsonify({"error": "sequence_data is required"}), 400

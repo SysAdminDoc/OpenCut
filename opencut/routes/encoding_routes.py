@@ -17,6 +17,7 @@ from opencut.security import (
     require_csrf,
     safe_bool,
     validate_filepath,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -36,6 +37,8 @@ def prores_export_route(job_id, filepath, data):
     profile = data.get("profile", "422hq").strip().lower()
     include_alpha = safe_bool(data.get("include_alpha"), default=False)
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     resolved_dir = _resolve_output_dir(filepath, output_dir)
     base = os.path.splitext(os.path.basename(filepath))[0]
@@ -82,6 +85,8 @@ def av1_export_route(job_id, filepath, data):
     quality = data.get("quality", "balanced").strip().lower()
     crf = int(data.get("crf", 28))
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     resolved_dir = _resolve_output_dir(filepath, output_dir)
     base = os.path.splitext(os.path.basename(filepath))[0]
@@ -128,6 +133,8 @@ def dnxhr_export_route(job_id, filepath, data):
     profile = data.get("profile", "dnxhr_hq").strip().lower()
     container = data.get("container", "mov").strip().lower()
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     ext = f".{container}" if container in ("mov", "mxf") else ".mov"
     resolved_dir = _resolve_output_dir(filepath, output_dir)
@@ -174,6 +181,8 @@ def batch_transcode_route(job_id, filepath, data):
     file_paths = data.get("file_paths", [])
     preset_names = data.get("preset_names", [])
     output_dir = data.get("output_dir", "").strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
     parallel = int(data.get("parallel", 1))
 
     if not isinstance(file_paths, list) or not file_paths:

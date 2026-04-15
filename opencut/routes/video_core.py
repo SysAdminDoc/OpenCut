@@ -40,6 +40,7 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -89,6 +90,8 @@ def video_auto_detect_watermark():
 def video_watermark(job_id, filepath, data):
     """Remove watermarks from video or image using AI."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     max_bbox_percent = safe_int(data.get("max_bbox_percent", 10), 10, min_val=1, max_val=100)
     detection_prompt = data.get("detection_prompt", "watermark")[:200]
     detection_skip = safe_int(data.get("detection_skip", 3), 3, min_val=1, max_val=30)
@@ -459,6 +462,8 @@ def video_scenes(job_id, filepath, data):
 def export_video(job_id, filepath, data):
     """Render a new video file with silences removed (no visible cuts)."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     segments_data = data.get("segments", [])
     if len(segments_data) > 10000:
         raise ValueError("Too many segments (max 10000)")
@@ -723,6 +728,8 @@ def export_presets_list():
 def export_with_preset_route(job_id, filepath, data):
     """Export video using a preset profile."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     preset_name = data.get("preset", "youtube_1080p")
 
     from opencut.core.export_presets import export_with_preset
@@ -749,6 +756,8 @@ def export_with_preset_route(job_id, filepath, data):
 def generate_thumbnails_route(job_id, filepath, data):
     """Generate thumbnail candidates from video."""
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     count = safe_int(data.get("count", 5), 5, min_val=1, max_val=20)
     width = safe_int(data.get("width", 1920), 1920, min_val=160, max_val=3840)
     use_faces = safe_bool(data.get("use_faces", True), True)
@@ -1200,6 +1209,8 @@ def video_merge(job_id, filepath, data):
         merge_mode = "concat_demux"
     quality = data.get("quality", "high")
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     _update_job(job_id, progress=5, message="Preparing merge...")
 
@@ -1245,7 +1256,8 @@ def video_merge(job_id, filepath, data):
         try:
             with open(concat_file, "w", encoding="utf-8") as cf:
                 for f in files:
-                    safe = f.replace("'", "'\\''")
+                    # Escape single quotes AND newlines to prevent concat demux injection
+                    safe = f.replace("'", "'\\''").replace("\n", "").replace("\r", "")
                     cf.write(f"file '{safe}'\n")
 
             cmd = [
@@ -1294,6 +1306,8 @@ def video_trim(job_id, filepath, data):
     end_time = data.get("end", "")
     quality = data.get("quality", "high")  # low, medium, high, copy
     output_dir = data.get("output_dir", "")
+    if output_dir:
+        output_dir = validate_path(output_dir)
     if not end_time:
         raise ValueError("End time is required")
     _time_re = re.compile(r"^\d{1,3}:\d{2}:\d{2}(?:\.\d+)?$")
