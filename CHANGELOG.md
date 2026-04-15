@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.13.0] - 2026-04-14
+
+### Added
+- **5 new feature categories (68-72)** — 25 new core modules with routes and comprehensive tests.
+- **AI Timeline Intelligence** (Cat. 68): Holistic timeline quality analysis, per-segment engagement scoring, AI narrative clip chaining, natural language color grading (32 named looks), end-to-end auto-dubbing pipeline (47 languages).
+- **Advanced Object AI** (Cat. 69): Text-driven video segmentation ("remove the red car"), physics-aware object removal (shadows + reflections), object tracking with graphic overlays (10 overlay types), CLIP-based semantic video search, multi-subject intelligent reframe.
+- **Delivery & Mastering** (Cat. 70): DCP (Digital Cinema Package) export, IMF (Interoperable Master Format) packaging, automated delivery validation (Netflix/YouTube/Broadcast/DCP/Apple TV+/Amazon specs), multi-format simultaneous render with priority, delivery spec profile manager.
+- **AI Content Generation** (Cat. 71): Voice-to-avatar video generation (5 styles), ML thumbnail CTR prediction, AI B-roll generation from text prompts, auto chapter artwork/title cards (5 card styles), animated video intro generation (5 intro styles).
+- **Pipeline Intelligence** (Cat. 72): Pipeline health monitoring dashboard, cron-like scheduled/recurring jobs, smart content routing (10 content types), accurate processing time estimation, real-time CPU/GPU/memory resource monitoring.
+- **5 new route blueprints** — `timeline_intel_bp`, `object_intel_bp`, `delivery_master_bp`, `content_gen_bp`, `pipeline_intel_bp` (51 new routes).
+- **5 new test files** — 596 new tests covering all v1.13.0 features.
+- **1,031 total API routes** (up from 980 in v1.12.0).
+- **6,278 total tests** across 82 test files (up from 5,742 across 77).
+- **385 core modules** (up from 360), **78 route blueprints** (up from 73).
+
 ## [1.12.0] - 2026-04-14
 
 ### Added

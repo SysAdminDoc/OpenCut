@@ -2,7 +2,7 @@
 <p align="center"><img src="icon.png" width="128" alt="OpenCut"></p>
 
 <p align="center">
-  <img alt="Version" src="https://img.shields.io/badge/version-1.12.0-58A6FF?style=for-the-badge">
+  <img alt="Version" src="https://img.shields.io/badge/version-1.13.0-58A6FF?style=for-the-badge">
   <img alt="License" src="https://img.shields.io/badge/license-MIT-4ade80?style=for-the-badge">
   <img alt="Platform" src="https://img.shields.io/badge/platform-Python%20GUI-58A6FF?style=for-the-badge">
 </p>
@@ -10,13 +10,13 @@
 
 # OpenCut
 
-![Version](https://img.shields.io/badge/version-1.12.0-blue)
+![Version](https://img.shields.io/badge/version-1.13.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-980-orange)
-![Tests](https://img.shields.io/badge/Tests-5127-brightgreen)
+![Routes](https://img.shields.io/badge/API%20Routes-1031-orange)
+![Tests](https://img.shields.io/badge/Tests-6278-brightgreen)
 
 > A free, open-source Premiere Pro extension that brings AI-powered video editing automation, caption generation, audio processing, and visual effects -- all running locally on your machine. No subscriptions, no cloud, no API keys required.
 
