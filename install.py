@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 """
-OpenCut Installer v1.3.0
+OpenCut Installer
 Cross-platform setup script. Run: python install.py
+
+Version is read from VERS below — kept in sync with opencut/__init__.py
+by ``scripts/sync_version.py``.
 """
 
 import os
-import sys
+import platform
 import shutil
 import subprocess
-import platform
+import sys
 
 VERS = "1.16.0"
 CEP_EXT = "com.opencut.panel"
@@ -58,11 +61,15 @@ def install_deps():
     # 30-min timeout: enough for slow networks downloading torch/faster-whisper,
     # but bounded so a hung pip mirror doesn't freeze the installer forever.
     pip_timeout = 1800
+    # ``--quiet`` was removed — torch + faster-whisper take 5–15 minutes on
+    # cold installs and a silent pip looks like a hang to the user.
+    # ``--progress-bar on`` keeps the visual feedback even when stdout is
+    # piped through subprocess.
     try:
         if os.path.exists(req_file):
             subprocess.run(
                 [sys.executable, "-m", "pip", "install", "-r", req_file,
-                 "--prefer-binary", "--quiet"],
+                 "--prefer-binary", "--progress-bar", "on"],
                 check=True, timeout=pip_timeout,
             )
         else:
@@ -71,7 +78,8 @@ def install_deps():
                  "click>=8.0", "rich>=13.0", "flask>=3.0", "flask-cors>=4.0",
                  "python-json-logger>=2.0", "psutil>=5.9",
                  "faster-whisper>=1.0", "opencv-python-headless>=4.8",
-                 "Pillow>=10.0", "numpy>=1.24", "--prefer-binary", "--quiet"],
+                 "Pillow>=10.0", "numpy>=1.24",
+                 "--prefer-binary", "--progress-bar", "on"],
                 check=True, timeout=pip_timeout,
             )
     except subprocess.TimeoutExpired:
@@ -145,7 +153,9 @@ def create_launcher():
 
     if system == "Windows":
         launcher = os.path.join(base_dir, "Start-OpenCut.bat")
-        with open(launcher, "w") as f:
+        # ``encoding="utf-8"`` so non-ASCII install paths don't corrupt the
+        # generated launcher under Windows' system locale (cp1252).
+        with open(launcher, "w", encoding="utf-8") as f:
             f.write("@echo off\n")
             f.write("echo.\n")
             f.write(f"echo   OpenCut Server v{VERS}\n")
@@ -158,7 +168,7 @@ def create_launcher():
         print(f"  [OK] Launcher created: {launcher}")
     else:
         launcher = os.path.join(base_dir, "start-opencut.sh")
-        with open(launcher, "w") as f:
+        with open(launcher, "w", encoding="utf-8") as f:
             f.write("#!/bin/bash\n")
             f.write(f'echo "OpenCut Server v{VERS}"\n')
             f.write('echo "Starting on http://localhost:5679"\n')
