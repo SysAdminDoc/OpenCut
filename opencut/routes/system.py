@@ -2414,14 +2414,23 @@ def engine_set_preference():
     """Set the preferred engine for a feature domain."""
     data = request.get_json(force=True)
     domain = data.get("domain", "").strip()
-    engine = data.get("engine", "").strip()
+    engine = str(data.get("engine", "") or "").strip()
 
-    if not domain or not engine:
-        return jsonify({"error": "domain and engine required"}), 400
+    if not domain:
+        return jsonify({"error": "domain required"}), 400
 
     try:
         from opencut.core.engine_registry import get_registry
         reg = get_registry()
+
+        if not engine or engine.lower() == "auto":
+            reg.clear_preference(domain)
+            return jsonify({
+                "success": True,
+                "domain": domain,
+                "engine": "",
+                "mode": "auto",
+            })
 
         # Validate domain and engine exist
         info = reg.get_engine(domain, engine)

@@ -126,6 +126,12 @@ class EngineRegistry:
             self._preferences[domain] = engine_name
         logger.info("Engine preference set: %s -> %s", domain, engine_name)
 
+    def clear_preference(self, domain: str):
+        """Clear any preferred engine for a domain and return to automatic selection."""
+        with self._lock:
+            self._preferences.pop(domain, None)
+        logger.info("Engine preference cleared: %s", domain)
+
     def get_preference(self, domain: str) -> Optional[str]:
         """Get the user's preferred engine for a domain."""
         with self._lock:
