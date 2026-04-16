@@ -1703,8 +1703,10 @@
     // ================================================================
     var _projectSaveWarned = false;
     var _scanInProgress = false;
-    var _scanDebounceTimer = null;
-    var _projectMediaRetryTimer = null;
+    // NOTE: _scanDebounceTimer and _projectMediaRetryTimer are hoisted at the
+    // top of the IIFE so cleanupTimers() can clear them on disconnect. Do NOT
+    // re-declare them here — that would create shadowed locals which the
+    // outer cleanup function can't see, leaking timers on every disconnect.
     var _projectMediaRetryCount = 0;
     var _projectMediaRetryNoticeShown = false;
     var PROJECT_MEDIA_RETRY_DELAYS = [800, 1600, 3200, 5000];
@@ -6725,7 +6727,9 @@
     // ================================================================
     // Utility
     // ================================================================
-    var _alertTimer = null;
+    // NOTE: _alertTimer is hoisted at the top of the IIFE so cleanupTimers()
+    // can clear it on disconnect. Do NOT re-declare it here — a shadowed
+    // local would mean dismiss timers survive panel reload/disconnect.
 
     var NOTIFICATION_TONE_CLASSES = ["is-info", "is-success", "is-warning", "is-error"];
 

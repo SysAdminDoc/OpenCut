@@ -92,7 +92,14 @@ class WorkerPool:
         return future is not None and future.running()
 
     def _worker_loop(self):
-        """Worker thread main loop — pull from priority queue and execute."""
+        """Worker thread main loop — pull from priority queue and execute.
+
+        Catches ``BaseException`` rather than ``Exception`` around the user
+        callable so that a KeyboardInterrupt / SystemExit from a job body
+        cannot kill the worker thread without first marking the future
+        complete. A killed worker that never returns means anyone awaiting
+        ``future.result()`` blocks forever.
+        """
         while True:
             try:
                 item = self._work_queue.get(timeout=1.0)
@@ -107,17 +114,28 @@ class WorkerPool:
 
             _priority, _seq, (fn, args, kwargs, future, job_id) = item
 
-            if future.set_running_or_notify_cancel():
-                try:
-                    result = fn(*args, **kwargs)
-                    future.set_result(result)
-                except Exception as exc:
-                    future.set_exception(exc)
-            else:
-                _update_job(job_id, status="cancelled", message="Cancelled before starting")
-
-            with self._lock:
-                self._futures.pop(job_id, None)
+            try:
+                if future.set_running_or_notify_cancel():
+                    try:
+                        result = fn(*args, **kwargs)
+                    except BaseException as exc:  # noqa: BLE001
+                        # Always propagate to the future; never let a worker
+                        # thread die with the future still unresolved.
+                        future.set_exception(exc)
+                        # Re-raise SystemExit / KeyboardInterrupt so the
+                        # process actually exits as the signaller intended.
+                        if isinstance(exc, (SystemExit, KeyboardInterrupt)):
+                            raise
+                    else:
+                        future.set_result(result)
+                else:
+                    try:
+                        _update_job(job_id, status="cancelled", message="Cancelled before starting")
+                    except Exception as exc:  # noqa: BLE001
+                        logger.debug("Cancel-bookkeeping failed for %s: %s", job_id, exc)
+            finally:
+                with self._lock:
+                    self._futures.pop(job_id, None)
 
     def active_count(self) -> int:
         """Number of currently tracked jobs (running + queued)."""

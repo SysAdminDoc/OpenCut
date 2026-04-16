@@ -191,14 +191,22 @@ def search(query, limit=50):
         return results
 
     except sqlite3.OperationalError as e:
-        # FTS5 query syntax error -- fall back to LIKE search
+        # FTS5 query syntax error -- fall back to LIKE search.
+        # Escape SQL LIKE wildcards (`%`, `_`) and our escape char (`\`) so a
+        # search for "test_file" doesn't match "testXfile" via the underscore
+        # wildcard. ESCAPE clause tells SQLite which char prefixes a literal.
         logger.warning("FTS5 query failed (%s), falling back to LIKE: %s", e, query)
+        like_query = (
+            safe_query.replace("\\", "\\\\")
+                      .replace("%", "\\%")
+                      .replace("_", "\\_")
+        )
         rows = conn.execute("""
             SELECT file_path, transcript, indexed_at, duration, file_size
             FROM footage
-            WHERE transcript LIKE ? COLLATE NOCASE
+            WHERE transcript LIKE ? ESCAPE '\\' COLLATE NOCASE
             LIMIT ?
-        """, (f"%{safe_query}%", limit)).fetchall()
+        """, (f"%{like_query}%", limit)).fetchall()
 
         return [
             {
