@@ -456,11 +456,11 @@ def _resolve_output_dir(input_file, output_dir):
 
 @cli.command()
 @click.argument("file", type=click.Path(exists=True))
-@click.option("--provider", default="ollama", help="LLM provider: ollama, openai, anthropic")
+@click.option("--provider", type=click.Choice(["ollama", "openai", "anthropic", "gemini"]), default="ollama", help="LLM provider")
 @click.option("--model", default="llama3", help="LLM model name")
-@click.option("--api-key", default="", help="API key (for OpenAI/Anthropic)")
-@click.option("--max-chapters", default=15, help="Maximum chapters to generate")
-@click.option("--whisper-model", default="base", help="Whisper model for transcription")
+@click.option("--api-key", default="", help="API key (for OpenAI/Anthropic/Gemini)")
+@click.option("--max-chapters", type=click.IntRange(1, 100), default=15, help="Maximum chapters to generate (1-100)")
+@click.option("--whisper-model", default="turbo", help="Whisper model for transcription (turbo, base, small, medium, large-v3, distil-large-v3)")
 @click.option("--output", "-o", default=None, help="Output text file path")
 def chapters(file, provider, model, api_key, max_chapters, whisper_model, output):
     """Generate YouTube chapter timestamps from video transcript."""
@@ -474,6 +474,13 @@ def chapters(file, provider, model, api_key, max_chapters, whisper_model, output
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
         console.print("Ensure opencut[chapters] extras are installed.")
         sys.exit(1)
+
+    # Validate whisper model — same allowlist used by the route layer.
+    from .security import VALID_WHISPER_MODELS
+    if whisper_model not in VALID_WHISPER_MODELS:
+        console.print(f"[red bold]Error:[/red bold] Invalid --whisper-model '{whisper_model}'.")
+        console.print(f"Valid models: {', '.join(sorted(VALID_WHISPER_MODELS))}")
+        sys.exit(2)
 
     llm_cfg = LLMConfig(provider=provider, model=model, api_key=api_key)
 

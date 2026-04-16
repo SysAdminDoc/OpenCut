@@ -53,12 +53,23 @@ def removal_capabilities():
 @async_job("remove_watermark")
 def remove_watermark_route(job_id, filepath, data):
     """Remove watermark using delogo or LaMA."""
-    region = data.get("region", {})
+    raw_region = data.get("region", {})
     method = data.get("method", "delogo")
     if method not in ("delogo", "lama"):
         method = "delogo"
-    if not region:
+    if not raw_region or not isinstance(raw_region, dict):
         raise ValueError("No region specified")
+
+    # Validate + clamp region coords up front so a crafted dict can't crash
+    # the delogo/lama core with a non-numeric value or interpolate ``inf``
+    # into the FFmpeg ``delogo=x=...`` filter expression. Coords are pixel
+    # offsets, so capping at 32K covers any realistic source frame.
+    region = {
+        "x": safe_int(raw_region.get("x", 0), 0, min_val=0, max_val=32768),
+        "y": safe_int(raw_region.get("y", 0), 0, min_val=0, max_val=32768),
+        "width": safe_int(raw_region.get("width", 0), 0, min_val=1, max_val=32768),
+        "height": safe_int(raw_region.get("height", 0), 0, min_val=1, max_val=32768),
+    }
 
     def _p(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -259,7 +270,7 @@ def video_depth_map(job_id, filepath, data):
     if model_size not in ("small", "base", "large"):
         model_size = "small"
 
-    acquired = rate_limit("gpu_job")
+    acquired = rate_limit("ai_gpu")
     if not acquired:
         raise ValueError("A gpu_job operation is already running. Please wait.")
     try:
@@ -275,7 +286,7 @@ def video_depth_map(job_id, filepath, data):
         return {"output_path": out}
     finally:
         if acquired:
-            rate_limit_release("gpu_job")
+            rate_limit_release("ai_gpu")
 
 
 @video_specialty_bp.route("/video/depth/bokeh", methods=["POST"])
@@ -292,7 +303,7 @@ def video_depth_bokeh(job_id, filepath, data):
     if model_size not in ("small", "base", "large"):
         model_size = "small"
 
-    acquired = rate_limit("gpu_job")
+    acquired = rate_limit("ai_gpu")
     if not acquired:
         raise ValueError("A gpu_job operation is already running. Please wait.")
     try:
@@ -312,7 +323,7 @@ def video_depth_bokeh(job_id, filepath, data):
         return {"output_path": out}
     finally:
         if acquired:
-            rate_limit_release("gpu_job")
+            rate_limit_release("ai_gpu")
 
 
 @video_specialty_bp.route("/video/depth/parallax", methods=["POST"])
@@ -328,7 +339,7 @@ def video_depth_parallax(job_id, filepath, data):
     if model_size not in ("small", "base", "large"):
         model_size = "small"
 
-    acquired = rate_limit("gpu_job")
+    acquired = rate_limit("ai_gpu")
     if not acquired:
         raise ValueError("A gpu_job operation is already running. Please wait.")
     try:
@@ -348,7 +359,7 @@ def video_depth_parallax(job_id, filepath, data):
         return {"output_path": out}
     finally:
         if acquired:
-            rate_limit_release("gpu_job")
+            rate_limit_release("ai_gpu")
 
 
 # ---------------------------------------------------------------------------

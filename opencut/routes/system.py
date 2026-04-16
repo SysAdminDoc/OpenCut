@@ -2151,7 +2151,7 @@ def video_multimodal_diarize(job_id, filepath, data):
 
     Returns speaker segments enriched with face IDs for accurate multicam switching.
     """
-    acquired = rate_limit("gpu_job")
+    acquired = rate_limit("ai_gpu")
     if not acquired:
         raise ValueError("A GPU-intensive job is already running. Please wait.")
 
@@ -2198,7 +2198,7 @@ def video_multimodal_diarize(job_id, filepath, data):
         }
     finally:
         if acquired:
-            rate_limit_release("gpu_job")
+            rate_limit_release("ai_gpu")
 
 
 # ---------------------------------------------------------------------------
@@ -2218,7 +2218,7 @@ def _validate_broll_prompt(data):
 @async_job("broll-generate", filepath_required=False, pre_validate=_validate_broll_prompt)
 def video_broll_generate(job_id, filepath, data):
     """Generate a B-roll video clip from a text description using AI."""
-    acquired = rate_limit("gpu_job")
+    acquired = rate_limit("ai_gpu")
     if not acquired:
         raise ValueError("A GPU-intensive job is already running. Please wait.")
 
@@ -2278,7 +2278,7 @@ def video_broll_generate(job_id, filepath, data):
         }
     finally:
         if acquired:
-            rate_limit_release("gpu_job")
+            rate_limit_release("ai_gpu")
 
 
 @system_bp.route("/video/broll-backends", methods=["GET"])
