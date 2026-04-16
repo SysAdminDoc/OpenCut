@@ -330,19 +330,28 @@ def style_apply(job_id, filepath, data):
         style_name = "candy"
     intensity = safe_float(data.get("intensity", 1.0), 1.0, min_val=0.0, max_val=1.0)
 
-    from opencut.core.style_transfer import style_transfer_video
+    # Style transfer loads a torch model; without the shared ai_gpu lock,
+    # concurrent jobs (upscale + style + face_enhance) easily OOM the GPU.
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
+        raise ValueError("Another AI GPU operation is already running. Please wait.")
+    try:
+        from opencut.core.style_transfer import style_transfer_video
 
-    def _on_progress(pct, msg=""):
-        _update_job(job_id, progress=pct, message=msg)
+        def _on_progress(pct, msg=""):
+            _update_job(job_id, progress=pct, message=msg)
 
-    effective_dir = _resolve_output_dir(filepath, output_dir)
-    out = style_transfer_video(
-        filepath, style_name=style_name,
-        output_dir=effective_dir,
-        intensity=intensity,
-        on_progress=_on_progress,
-    )
-    return {"output_path": out, "style": style_name}
+        effective_dir = _resolve_output_dir(filepath, output_dir)
+        out = style_transfer_video(
+            filepath, style_name=style_name,
+            output_dir=effective_dir,
+            intensity=intensity,
+            on_progress=_on_progress,
+        )
+        return {"output_path": out, "style": style_name}
+    finally:
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 @video_ai_bp.route("/video/style/arbitrary", methods=["POST"])
@@ -356,19 +365,26 @@ def style_arbitrary(job_id, filepath, data):
         raise ValueError("No style image provided")
     style_image = validate_filepath(style_image)
 
-    from opencut.core.style_transfer import arbitrary_style_transfer
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
+        raise ValueError("Another AI GPU operation is already running. Please wait.")
+    try:
+        from opencut.core.style_transfer import arbitrary_style_transfer
 
-    def _on_progress(pct, msg=""):
-        _update_job(job_id, progress=pct, message=msg)
+        def _on_progress(pct, msg=""):
+            _update_job(job_id, progress=pct, message=msg)
 
-    effective_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
-    out = arbitrary_style_transfer(
-        filepath, style_image,
-        output_dir=effective_dir,
-        intensity=intensity,
-        on_progress=_on_progress,
-    )
-    return {"output_path": out}
+        effective_dir = _resolve_output_dir(filepath, data.get("output_dir", ""))
+        out = arbitrary_style_transfer(
+            filepath, style_image,
+            output_dir=effective_dir,
+            intensity=intensity,
+            on_progress=_on_progress,
+        )
+        return {"output_path": out}
+    finally:
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 # ---------------------------------------------------------------------------
@@ -393,13 +409,20 @@ def face_enhance_route(job_id, filepath, data):
         _enhance_model = "gfpgan"
     _fidelity = safe_float(data.get("fidelity", 0.5), 0.5, min_val=0.0, max_val=1.0)
 
-    from opencut.core.face_swap import enhance_faces
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
+        raise ValueError("Another AI GPU operation is already running. Please wait.")
+    try:
+        from opencut.core.face_swap import enhance_faces
 
-    def _p(pct, msg=""):
-        _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
-    out = enhance_faces(filepath, output_dir=d, model=_enhance_model, upscale=safe_int(data.get("upscale", 2), 2, min_val=1, max_val=4), fidelity=_fidelity, on_progress=_p)
-    return {"output_path": out}
+        def _p(pct, msg=""):
+            _update_job(job_id, progress=pct, message=msg)
+        d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+        out = enhance_faces(filepath, output_dir=d, model=_enhance_model, upscale=safe_int(data.get("upscale", 2), 2, min_val=1, max_val=4), fidelity=_fidelity, on_progress=_p)
+        return {"output_path": out}
+    finally:
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 @video_ai_bp.route("/video/face/swap", methods=["POST"])
@@ -412,13 +435,20 @@ def face_swap_route(job_id, filepath, data):
         raise ValueError("Reference face not found")
     ref = validate_filepath(ref)
 
-    from opencut.core.face_swap import swap_face
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
+        raise ValueError("Another AI GPU operation is already running. Please wait.")
+    try:
+        from opencut.core.face_swap import swap_face
 
-    def _p(pct, msg=""):
-        _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
-    out = swap_face(filepath, ref, output_dir=d, on_progress=_p)
-    return {"output_path": out}
+        def _p(pct, msg=""):
+            _update_job(job_id, progress=pct, message=msg)
+        d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+        out = swap_face(filepath, ref, output_dir=d, on_progress=_p)
+        return {"output_path": out}
+    finally:
+        if acquired:
+            rate_limit_release("ai_gpu")
 
 
 # ---------------------------------------------------------------------------
@@ -438,16 +468,23 @@ def upscale_capabilities():
 @async_job("upscale")
 def upscale_run(job_id, filepath, data):
     """Upscale video with quality preset."""
-    from opencut.core.upscale_pro import upscale_with_preset
+    acquired = rate_limit("ai_gpu")
+    if not acquired:
+        raise ValueError("Another AI GPU operation is already running. Please wait.")
+    try:
+        from opencut.core.upscale_pro import upscale_with_preset
 
-    def _p(pct, msg=""):
-        _update_job(job_id, progress=pct, message=msg)
-    d = _resolve_output_dir(filepath, data.get("output_dir", ""))
-    _valid_presets = {"fast", "balanced", "quality"}
-    _preset = data.get("preset", "fast")
-    if _preset not in _valid_presets:
-        _preset = "fast"
-    out = upscale_with_preset(filepath, preset=_preset,
-                               scale=safe_int(data.get("scale", 2), 2, min_val=1, max_val=4),
-                               output_dir=d, on_progress=_p)
-    return {"output_path": out}
+        def _p(pct, msg=""):
+            _update_job(job_id, progress=pct, message=msg)
+        d = _resolve_output_dir(filepath, data.get("output_dir", ""))
+        _valid_presets = {"fast", "balanced", "quality"}
+        _preset = data.get("preset", "fast")
+        if _preset not in _valid_presets:
+            _preset = "fast"
+        out = upscale_with_preset(filepath, preset=_preset,
+                                   scale=safe_int(data.get("scale", 2), 2, min_val=1, max_val=4),
+                                   output_dir=d, on_progress=_p)
+        return {"output_path": out}
+    finally:
+        if acquired:
+            rate_limit_release("ai_gpu")
