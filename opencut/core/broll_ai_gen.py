@@ -618,7 +618,8 @@ def generate_broll(
     if on_progress:
         on_progress(40, "Attempting image generation + Ken Burns...")
 
-    img_path = tempfile.mktemp(suffix=".png", prefix="broll_img_")
+    _fd, img_path = tempfile.mkstemp(suffix=".png", prefix="broll_img_")
+    os.close(_fd)
     ai_image = _try_ai_image_generation(prompt, config.width, config.height, img_path, config)
 
     if not ai_image:

@@ -289,8 +289,10 @@ def embed_watermark(
         on_progress(10, f"Embedding {len(bits)} bits into video frames")
 
     # Extract raw frames
-    tmp_raw = tempfile.mktemp(suffix="_wm_frames.gray")
-    tmp_wm = tempfile.mktemp(suffix="_wm_modified.gray")
+    _fd, tmp_raw = tempfile.mkstemp(suffix="_wm_frames.gray")
+    os.close(_fd)
+    _fd, tmp_wm = tempfile.mkstemp(suffix="_wm_modified.gray")
+    os.close(_fd)
 
     try:
         ffmpeg = get_ffmpeg_path()
@@ -407,7 +409,8 @@ def extract_watermark(
         on_progress(10, "Extracting frames for watermark analysis")
 
     # Extract first frame as grayscale
-    tmp_raw = tempfile.mktemp(suffix="_wm_extract.gray")
+    _fd, tmp_raw = tempfile.mkstemp(suffix="_wm_extract.gray")
+    os.close(_fd)
     try:
         ffmpeg = get_ffmpeg_path()
         cmd = [

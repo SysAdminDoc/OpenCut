@@ -64,12 +64,17 @@ class TooManyJobsError(RuntimeError):
 
 
 def apply_config(config: OpenCutConfig) -> None:
-    """Apply runtime job limits from an OpenCutConfig instance."""
+    """Apply runtime job limits from an OpenCutConfig instance.
+
+    Acquires ``job_lock`` so concurrent readers of the globals see
+    consistent values.
+    """
     global JOB_MAX_AGE, MAX_CONCURRENT_JOBS, MAX_BATCH_FILES, _JOB_STUCK_TIMEOUT
-    JOB_MAX_AGE = int(config.job_max_age)
-    MAX_CONCURRENT_JOBS = int(config.max_concurrent_jobs)
-    MAX_BATCH_FILES = int(config.max_batch_files)
-    _JOB_STUCK_TIMEOUT = int(config.job_stuck_timeout)
+    with job_lock:
+        JOB_MAX_AGE = int(config.job_max_age)
+        MAX_CONCURRENT_JOBS = int(config.max_concurrent_jobs)
+        MAX_BATCH_FILES = int(config.max_batch_files)
+        _JOB_STUCK_TIMEOUT = int(config.job_stuck_timeout)
 
 
 def _new_job(job_type: str, filepath: str) -> str:
@@ -147,7 +152,7 @@ def _persist_job(job_dict, *, sync: bool = False):
             from opencut.job_store import save_job
             save_job(job_dict)
         except Exception as e:
-            logger.debug("Failed to persist job %s: %s", job_dict.get("id"), e)
+            logger.warning("Failed to persist job %s: %s", job_dict.get("id"), e)
     if sync:
         _save()
         return
@@ -180,12 +185,19 @@ def _sanitize_payload_for_storage(payload):
     if not isinstance(payload, dict):
         return {}
     try:
-        encoded = json.dumps(payload, ensure_ascii=False)
-    except (TypeError, ValueError):
+        # check_circular=True (default) catches circular references;
+        # cap key count to prevent CPU waste on massive dicts.
+        if len(payload) > 200:
+            trimmed = {k: payload[k] for k in list(payload)[:200]}
+            trimmed["_keys_trimmed"] = True
+            encoded = json.dumps(trimmed, ensure_ascii=False, default=str)
+        else:
+            encoded = json.dumps(payload, ensure_ascii=False, default=str)
+    except (TypeError, ValueError, OverflowError, RecursionError):
         return {
             "_truncated": True,
             "_reason": "unserializable",
-            "_keys": sorted(str(k) for k in payload.keys())[:50],
+            "_keys": sorted(str(k) for k in list(payload.keys())[:50]),
         }
     encoded_bytes = len(encoded.encode("utf-8"))
     if encoded_bytes <= MAX_PERSISTED_JOB_PAYLOAD_BYTES:
@@ -194,7 +206,7 @@ def _sanitize_payload_for_storage(payload):
         "_truncated": True,
         "_reason": "payload_too_large",
         "_size_bytes": encoded_bytes,
-        "_keys": sorted(str(k) for k in payload.keys())[:50],
+        "_keys": sorted(str(k) for k in list(payload.keys())[:50]),
     }
 
 
