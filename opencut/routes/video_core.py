@@ -1307,8 +1307,20 @@ def video_merge(job_id, filepath, data):
         try:
             with open(concat_file, "w", encoding="utf-8") as cf:
                 for f in files:
-                    # Escape single quotes AND newlines to prevent concat demux injection
-                    safe = f.replace("'", "'\\''").replace("\n", "").replace("\r", "")
+                    # FFmpeg concat demux escape rules (NOT POSIX shell):
+                    # inside ``file '...'``, a backslash escapes the next
+                    # char and a literal ``'`` must be ``\'``. The previous
+                    # ``'\''`` POSIX close/reopen trick produced
+                    # ``file 'O'\\''Brian.mp4'`` which FFmpeg parses as the
+                    # filename ``O`` followed by garbage and aborts the
+                    # concat. Strip CR/LF first so embedded newlines can't
+                    # inject a second ``file`` directive either.
+                    safe = (
+                        f.replace("\\", "\\\\")
+                         .replace("'", "\\'")
+                         .replace("\n", "")
+                         .replace("\r", "")
+                    )
                     cf.write(f"file '{safe}'\n")
 
             cmd = [

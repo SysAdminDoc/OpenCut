@@ -101,9 +101,18 @@ def denoise_audio(
         af_filter = f"highpass=f={hp_freq},lowpass=f={lp_freq}"
 
     elif method == "gate":
-        # Noise gate - silence audio below threshold
-        gate_thresh = noise_floor + (strength * 10)  # Adjust gate threshold
-        af_filter = f"agate=threshold={gate_thresh}dB:ratio=10:attack=5:release=50"
+        # Noise gate - silence audio below threshold. FFmpeg's agate
+        # threshold is a LINEAR amplitude in [0, 1], not dB — passing
+        # "-30dB" silently failed to parse on most FFmpeg builds and the
+        # gate effectively never engaged. Convert dB → linear amplitude
+        # via 10**(dB/20) and clamp to the documented range.
+        gate_thresh_db = noise_floor + (strength * 10)  # dB scale (e.g. -30 dB)
+        gate_thresh_lin = 10.0 ** (gate_thresh_db / 20.0)
+        if gate_thresh_lin < 0.0 or gate_thresh_lin != gate_thresh_lin:
+            gate_thresh_lin = 0.0
+        if gate_thresh_lin > 1.0:
+            gate_thresh_lin = 1.0
+        af_filter = f"agate=threshold={gate_thresh_lin:.6f}:ratio=10:attack=5:release=50"
 
     else:
         raise ValueError(f"Unknown denoise method: {method}")
