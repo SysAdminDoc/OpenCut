@@ -8,10 +8,10 @@ repair, noise classification, room tone fill).
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, safe_bool
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int
 
 logger = logging.getLogger("opencut")
 

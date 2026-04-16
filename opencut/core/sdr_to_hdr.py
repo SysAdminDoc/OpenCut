@@ -12,7 +12,6 @@ from dataclasses import dataclass
 from typing import Callable, Optional
 
 from opencut.helpers import (
-    FFmpegCmd,
     get_video_info,
     output_path,
     run_ffmpeg,
@@ -101,7 +100,7 @@ def sdr_to_hdr(
     if on_progress:
         on_progress(5, f"Starting SDR-to-HDR conversion ({tf['name']})...")
 
-    info = get_video_info(video_path)
+    get_video_info(video_path)
 
     if on_progress:
         on_progress(10, "Building HDR conversion filter chain...")

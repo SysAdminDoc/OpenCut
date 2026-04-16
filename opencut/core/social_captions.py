@@ -364,7 +364,7 @@ _TONE_TEMPLATES = {
 def _generate_caption_via_llm(transcript: str, platform: str, tone: str) -> str:
     """Generate a platform caption using LLM."""
     try:
-        from opencut.core.llm import LLMConfig, query_llm
+        from opencut.core.llm import query_llm
 
         char_limit = _PLATFORM_CHAR_LIMITS.get(platform, 2000)
         system_prompt = (

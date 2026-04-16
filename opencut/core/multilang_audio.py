@@ -19,10 +19,8 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import (
-    FFmpegCmd,
     get_ffmpeg_path,
     get_ffprobe_path,
-    get_video_info,
     output_path,
     run_ffmpeg,
 )

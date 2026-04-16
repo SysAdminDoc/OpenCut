@@ -6,7 +6,6 @@ Preset layouts: side-by-side, 2x2 grid, 3x3, PiP variants, diagonal, L-shaped.
 Composite via FFmpeg overlay chain with optional border/gap between cells.
 """
 
-import json
 import logging
 import os
 from dataclasses import dataclass, field
@@ -15,8 +14,10 @@ from typing import Callable, Dict, List, Optional
 from opencut.helpers import (
     FFmpegCmd,
     get_video_info,
-    output_path as _output_path,
     run_ffmpeg,
+)
+from opencut.helpers import (
+    output_path as _output_path,
 )
 
 logger = logging.getLogger("opencut")

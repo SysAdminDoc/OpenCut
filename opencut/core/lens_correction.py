@@ -18,7 +18,7 @@ import math
 import os
 import subprocess
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,

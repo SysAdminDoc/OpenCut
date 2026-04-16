@@ -9,15 +9,14 @@ Uses FFmpeg for audio manipulation and optional pydub/librosa for
 advanced processing.
 """
 
-import json
 import logging
 import os
 import subprocess
 import tempfile
-from dataclasses import asdict, dataclass, field
-from typing import Callable, Dict, List, Optional
+from dataclasses import asdict, dataclass
+from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -63,7 +62,6 @@ def _diarize_simple(input_path: str, num_speakers: int = 2) -> List[SpeakerSegme
     result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=False)
 
     segments = []
-    speech_start = 0.0
     speaker_idx = 0
     current_start = 0.0
 
@@ -142,7 +140,6 @@ def _pitch_shift_segment(
 
     # Use asetrate + atempo for simple pitch shift
     # Raising pitch by semitones: rate_factor = 2^(semitones/12)
-    import math
     rate_factor = 2 ** (semitones / 12.0)
     tempo_factor = 1.0 / rate_factor  # compensate to keep duration
 
@@ -270,7 +267,6 @@ def anonymize_speaker(
     try:
         # Create pitch-shifted version of full audio
         shifted_path = os.path.join(tmpdir, "shifted.wav")
-        import math
         rate_factor = 2 ** (pitch_semitones / 12.0)
         tempo_factor = 1.0 / rate_factor
 

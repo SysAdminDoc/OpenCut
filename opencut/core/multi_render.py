@@ -12,7 +12,7 @@ import subprocess as _sp
 import threading
 import time
 import uuid
-from concurrent.futures import ThreadPoolExecutor, as_completed, Future
+from concurrent.futures import Future, ThreadPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
 

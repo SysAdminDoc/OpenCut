@@ -405,8 +405,8 @@ def _try_video_gen_api(prompt: str, config: BRollGenConfig,
         return None
 
     try:
-        import urllib.request
         import urllib.error
+        import urllib.request
 
         payload = {
             "prompt": _enhance_prompt(prompt, config.style_prompt_suffix),
