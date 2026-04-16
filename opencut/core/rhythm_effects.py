@@ -144,7 +144,8 @@ def analyze_audio_features(
         on_progress(5, "Extracting audio for feature analysis")
 
     # Extract PCM
-    tmp_wav = tempfile.mktemp(suffix="_rhythm_audio.wav")
+    _fd, tmp_wav = tempfile.mkstemp(suffix="_rhythm_audio.wav")
+    os.close(_fd)
     try:
         ffmpeg = get_ffmpeg_path()
         cmd = [

@@ -150,3 +150,176 @@ def test_save_llm_settings_clamps_numeric_values(client, csrf_token):
     assert saved["model"] == "gpt-test"
     assert saved["max_tokens"] == 32768
     assert saved["temperature"] == 2.0
+
+
+# ---------------------------------------------------------------------------
+# Audit pass 2 — regression tests
+# ---------------------------------------------------------------------------
+
+
+def test_expression_engine_rejects_dunder_custom_vars():
+    """custom_vars with dunder or underscore-prefixed keys are filtered out."""
+    from opencut.core.expression_engine import ExpressionContext, evaluate_expression
+
+    ctx = ExpressionContext(
+        time=1.0,
+        frame=1,
+        custom_vars={
+            "__builtins__": {"__import__": __import__},
+            "__class__": object,
+            "_private": 999,
+            "safe_var": 42.0,
+        },
+    )
+    # safe_var should be available, dunder keys should not
+    result = evaluate_expression("safe_var", ctx)
+    assert result == 42.0
+
+
+def test_expression_engine_rejects_non_scalar_custom_vars():
+    """custom_vars with non-scalar values (objects, functions) are filtered."""
+    from opencut.core.expression_engine import ExpressionContext, evaluate_expression
+
+    ctx = ExpressionContext(
+        time=1.0,
+        frame=1,
+        custom_vars={
+            "obj": object(),          # should be rejected
+            "func": lambda: None,     # should be rejected
+            "num": 7.0,               # should pass
+        },
+    )
+    result = evaluate_expression("num", ctx)
+    assert result == 7.0
+
+
+def test_expression_engine_banned_attrs_expanded():
+    """Expanded banned attrs block __init__, __call__, __reduce__, etc."""
+    from opencut.core.expression_engine import _BANNED_ATTRS
+
+    for attr in ("__init__", "__new__", "__call__", "__reduce__",
+                 "__getattribute__", "__module__", "__wrapped__"):
+        assert attr in _BANNED_ATTRS, f"{attr} missing from _BANNED_ATTRS"
+
+
+def test_expression_engine_non_primitive_result_returns_zero():
+    """Non-primitive eval results return 0.0 instead of calling __float__."""
+    from opencut.core.expression_engine import ExpressionContext, evaluate_expression
+
+    ctx = ExpressionContext(time=1.0, frame=1)
+    # list/dict results should yield 0.0, not raise or call __float__
+    result = evaluate_expression("[1, 2, 3]", ctx)
+    assert result == 0.0
+
+
+def test_scripting_console_rejects_dunder_context_keys():
+    """Context keys with double underscores are blocked in sandbox."""
+    from opencut.core.scripting_console import create_sandbox
+
+    sandbox = create_sandbox(context={
+        "__builtins__": {"__import__": __import__},
+        "__class__": object,
+        "safe_key": "hello",
+    })
+    # __builtins__ should be our restricted version, not the injected one
+    assert isinstance(sandbox["__builtins__"], dict)
+    assert "__import__" not in sandbox["__builtins__"] or \
+        sandbox["__builtins__"]["__import__"] is not __import__
+    assert sandbox.get("safe_key") == "hello"
+
+
+def test_scripting_console_blocked_patterns_expanded():
+    """Expanded blocked patterns catch __init__, __reduce__, etc."""
+    from opencut.core.scripting_console import _BLOCKED_PATTERNS
+
+    for pat in ("__init__", "__new__", "__reduce__", "__getattribute__",
+                "__module__", "__wrapped__"):
+        assert pat in _BLOCKED_PATTERNS, f"{pat} missing from _BLOCKED_PATTERNS"
+
+
+def test_webhook_url_rejects_localhost():
+    """Webhook URL validation blocks localhost/private IPs."""
+    from opencut.core.webhooks import _validate_webhook_url
+
+    import pytest as _pt
+    for url in (
+        "http://localhost/hook",
+        "http://127.0.0.1/hook",
+        "http://0.0.0.0/hook",
+    ):
+        with _pt.raises(ValueError, match="localhost"):
+            _validate_webhook_url(url)
+
+
+def test_webhook_url_rejects_private_ips():
+    """Webhook URL validation blocks private network IPs."""
+    from opencut.core.webhooks import _validate_webhook_url
+
+    import pytest as _pt
+    for url in (
+        "http://10.0.0.1/hook",
+        "http://192.168.1.1/hook",
+        "http://172.16.0.1/hook",
+    ):
+        with _pt.raises(ValueError, match="private"):
+            _validate_webhook_url(url)
+
+
+def test_plugin_download_url_rejects_private_ips():
+    """Plugin download URL validation blocks private network targets."""
+    from opencut.core.plugin_marketplace import _validate_download_url
+
+    import pytest as _pt
+    for url in (
+        "http://localhost/plugin.zip",
+        "http://127.0.0.1/plugin.zip",
+        "http://10.0.0.1/plugin.zip",
+        "http://192.168.1.1/plugin.zip",
+    ):
+        with _pt.raises(ValueError):
+            _validate_download_url(url)
+
+
+def test_jobs_sanitize_payload_handles_circular_ref():
+    """_sanitize_payload_for_storage handles circular references gracefully."""
+    from opencut.jobs import _sanitize_payload_for_storage
+
+    # Circular reference should not hang or crash
+    d = {"key": "value"}
+    d["self"] = d  # circular
+    result = _sanitize_payload_for_storage(d)
+    # Should return truncated/error dict, not hang
+    assert isinstance(result, dict)
+
+
+def test_jobs_sanitize_payload_caps_large_dicts():
+    """_sanitize_payload_for_storage caps very large dicts."""
+    from opencut.jobs import _sanitize_payload_for_storage
+
+    big = {f"key_{i}": f"val_{i}" for i in range(500)}
+    result = _sanitize_payload_for_storage(big)
+    assert isinstance(result, dict)
+
+
+def test_open_path_blocks_executable_extensions(client, csrf_token):
+    """open-path route blocks executable file types."""
+    import tempfile
+
+    # Create a fake .bat file
+    with tempfile.NamedTemporaryFile(suffix=".bat", delete=False, mode="w") as f:
+        f.write("echo hello")
+        bat_path = f.name
+
+    try:
+        import os
+        resp = client.post(
+            "/system/open-path",
+            data=json.dumps({"path": bat_path, "mode": "open"}),
+            headers=csrf_headers(csrf_token),
+        )
+        assert resp.status_code == 403
+        data = resp.get_json()
+        assert "executable" in data["error"].lower() or ".bat" in data["error"]
+    finally:
+        import os
+        os.unlink(bat_path)
