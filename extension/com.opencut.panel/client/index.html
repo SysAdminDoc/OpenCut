@@ -141,9 +141,9 @@
 
             <section class="workspace-stage" id="workspaceStage" aria-labelledby="workspaceStageTitle">
                 <div class="workspace-stage-primary">
-                    <div class="workspace-stage-kicker">Studio Flow</div>
-                    <h2 class="workspace-stage-title" id="workspaceStageTitle">Bring the shot in once. Finish it without breaking the edit.</h2>
-                    <p class="workspace-stage-copy">Choose project media, pull the active timeline selection, or browse a local file. OpenCut keeps cleanup, captions, audio, and delivery inside the panel, then routes finished work straight back into Premiere.</p>
+                    <div class="workspace-stage-kicker" id="workspaceStageKicker">Studio Workspace</div>
+                    <h2 class="workspace-stage-title" id="workspaceStageTitle">Choose one source. Move through the entire edit with less friction.</h2>
+                    <p class="workspace-stage-copy" id="workspaceStageCopy">OpenCut keeps the active shot anchored across cleanup, captions, audio, video, and delivery so you can stay inside Premiere and keep momentum.</p>
                     <div class="workspace-stage-session" role="list" aria-label="Current workspace session">
                         <article class="workspace-stage-session-item" role="listitem">
                             <span class="workspace-stage-session-label">Source</span>
@@ -380,7 +380,7 @@
                         <button type="button" class="btn btn-secondary btn-lg hidden" id="polishBatchBtn" title="Polish every file in the batch picker, one after another">
                             Polish batch (<span id="polishBatchCount">0</span>)
                         </button>
-                        <span class="interview-polish-hint" id="interviewPolishHint">Select a clip to run.</span>
+                        <span class="interview-polish-hint" id="interviewPolishHint">Choose a source clip to unlock the full polish pass.</span>
                     </div>
                     <!-- v1.10.5 (Q): clear the cached transcript if the user wants Whisper to re-run -->
                     <div class="interview-polish-footer">
@@ -396,15 +396,15 @@
                 <section class="card assistant-card" id="assistantCard" aria-labelledby="assistantCardTitle">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="card-title" id="assistantCardTitle">Assistant</div>
-                            <div class="card-subtitle">OpenCut scans the active sequence and suggests the next edit.</div>
+                            <div class="card-title" id="assistantCardTitle">Sequence Assistant</div>
+                            <div class="card-subtitle">Scan the active sequence and surface the highest-leverage next move before you commit changes.</div>
                         </div>
                         <button type="button" class="icon-btn" id="assistantRefreshBtn" title="Re-scan the current sequence" aria-label="Refresh assistant suggestions">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
                         </button>
                     </div>
                     <div class="assistant-body" id="assistantBody" aria-live="polite">
-                        <div class="assistant-empty">Open a sequence in Premiere, then click refresh.</div>
+                        <div class="assistant-empty">Open a Premiere sequence, then refresh to surface cleanup, caption, and write-back suggestions.</div>
                     </div>
                 </section>
 
@@ -2937,10 +2937,21 @@
                         </div>
 
                         <p class="card-desc">Select files from the clip picker above, then click "Run Batch" to process all selected clips with the chosen operation.</p>
+                        <div class="oc-inline-summary-grid" aria-label="Batch queue overview">
+                            <div class="oc-inline-stat">
+                                <span class="oc-inline-label">Queue</span>
+                                <span class="oc-inline-value" id="batchQueueSummary">No clips queued</span>
+                            </div>
+                            <div class="oc-inline-stat">
+                                <span class="oc-inline-label">Operation</span>
+                                <span class="oc-inline-value" id="batchOperationSummary">Choose an operation to run across the queue</span>
+                            </div>
+                        </div>
+                        <div class="oc-status-line" id="batchStatusLine" data-state="idle" role="status" aria-live="polite">Add two or more clips to build a repeatable batch run.</div>
 
                         <div class="batch-file-picker" id="batchFilePicker">
                             <div class="batch-file-list" id="batchFileList">
-                                <div class="hint">Add steps to build your workflow.</div>
+                                <div class="hint">Add clips to build a batch queue.</div>
                             </div>
                             <div class="btn-row gap-xs mt-xs">
                                 <button type="button" class="btn-outline btn-sm" id="batchAddSelectedBtn">Add Selected Clip</button>
@@ -2959,6 +2970,17 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title" data-i18n="workflow.title">Workflow Presets</div></div>
                         <p class="card-desc">Run a multi-step pipeline on the selected clip. Each step runs automatically after the previous one finishes.</p>
+                        <div class="oc-inline-summary-grid" aria-label="Workflow preset overview">
+                            <div class="oc-inline-stat">
+                                <span class="oc-inline-label">Preset</span>
+                                <span class="oc-status-pill" id="workflowPresetPill" data-state="working">Loading...</span>
+                            </div>
+                            <div class="oc-inline-stat">
+                                <span class="oc-inline-label">Library</span>
+                                <span class="oc-inline-value" id="workflowPresetSummary">Checking built-in and custom workflow presets...</span>
+                            </div>
+                        </div>
+                        <div class="oc-status-line" id="workflowPresetStatus" data-state="working" role="status" aria-live="polite">Loading workflow presets for repeatable editorial runs.</div>
 
                         <div class="form-group">
                             <label for="workflowPreset">Preset</label>
@@ -2971,6 +2993,17 @@
                         <button type="button" class="btn-primary" id="runWorkflowBtn" disabled data-i18n="workflow.run">Run Workflow</button>
                         <div class="border-t">
                             <div class="card-header card-header--flush"><div class="card-title card-title--sm">Custom Workflows</div></div>
+                            <div class="oc-inline-summary-grid" aria-label="Custom workflow overview">
+                                <div class="oc-inline-stat">
+                                    <span class="oc-inline-label">Draft</span>
+                                    <span class="oc-inline-value" id="customWorkflowSummary">No custom workflow steps yet</span>
+                                </div>
+                                <div class="oc-inline-stat">
+                                    <span class="oc-inline-label">Saved</span>
+                                    <span class="oc-inline-value" id="savedWorkflowSummary">Checking saved workflows...</span>
+                                </div>
+                            </div>
+                            <div class="oc-status-line" id="customWorkflowStatus" data-state="idle" role="status" aria-live="polite">Add steps to build a repeatable workflow for the current editorial style.</div>
                             <div class="form-group">
                                 <label for="customWorkflowName">Name</label>
                                 <input type="text" id="customWorkflowName" class="text-input" placeholder="My Workflow">
@@ -3052,7 +3085,25 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.deliverables">Deliverables</div></div>
                         <p class="card-desc" data-i18n="export.deliverables_desc">Generate post-production documents (VFX sheet, ADR list, music cue sheet, asset list) from the active sequence.</p>
-                        <button type="button" class="btn-outline btn-sm" id="loadSeqInfoBtn">Load Sequence Info</button>
+                        <div class="oc-inline-summary-grid" aria-label="Deliverables readiness">
+                            <div class="oc-inline-stat">
+                                <span class="oc-inline-label">Sequence</span>
+                                <span class="oc-status-pill" id="deliverablesSeqPill" data-state="empty">Not loaded</span>
+                            </div>
+                            <div class="oc-inline-stat">
+                                <span class="oc-inline-label">Summary</span>
+                                <span class="oc-inline-value" id="deliverablesSeqSummary">Load the active sequence before generating handoff docs.</span>
+                            </div>
+                            <div class="oc-inline-stat">
+                                <span class="oc-inline-label">Destination</span>
+                                <span class="oc-inline-value" id="deliverablesOutputSummary">Project folder</span>
+                            </div>
+                            <div class="oc-inline-stat">
+                                <span class="oc-inline-label">Last export</span>
+                                <span class="oc-inline-value" id="deliverablesLastExport">No exports yet</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn-outline btn-sm mt-xs" id="loadSeqInfoBtn">Load Sequence Info</button>
                         <div class="hint hidden mt-xs" id="seqInfoStatus"></div>
                         <div class="form-group mt-sm">
                             <label for="deliverablesOutputDir">Output Directory</label>
@@ -3061,6 +3112,7 @@
                                 <button type="button" class="btn-sm btn-browse" data-target="deliverablesOutputDir">Browse</button>
                             </div>
                         </div>
+                        <div class="oc-status-line mt-xs" id="deliverablesStatus" data-state="idle" role="status" aria-live="polite">Load sequence info, choose a destination if needed, then generate the docs you need.</div>
                         <div class="btn-row gap-xs flex-wrap mt-xs">
                             <button type="button" class="btn-sm btn-secondary" id="genVfxSheetBtn" disabled>VFX Sheet (CSV)</button>
                             <button type="button" class="btn-sm btn-secondary" id="genAdrListBtn" disabled>ADR List (CSV)</button>
@@ -3231,8 +3283,22 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title">Search Footage Library</div></div>
                         <p class="card-desc">Index and semantically search all project clips by transcript content.</p>
+                        <div class="oc-inline-summary-grid" aria-label="Search index status">
+                            <div class="oc-inline-stat">
+                                <span class="oc-inline-label">Index</span>
+                                <span class="oc-status-pill" id="searchIndexPill" data-state="empty">Not ready</span>
+                            </div>
+                            <div class="oc-inline-stat">
+                                <span class="oc-inline-label">Indexed</span>
+                                <span class="oc-inline-value" id="searchIndexCount">0 files indexed</span>
+                            </div>
+                        </div>
                         <div class="hint mb-sm" id="searchIndexStats">Index not loaded.</div>
-                        <button type="button" class="btn-outline btn-sm" id="indexAllClipsBtn">Index All Project Clips</button>
+                        <div class="btn-row gap-xs flex-wrap mb-sm">
+                            <button type="button" class="btn-outline btn-sm" id="indexAllClipsBtn">Index All Project Clips</button>
+                            <button type="button" class="btn-secondary btn-sm" id="clearSearchIndexBtn" disabled>Clear Index</button>
+                        </div>
+                        <div class="oc-status-line" id="searchStatus" data-state="idle" role="status" aria-live="polite">Index project clips, then search with descriptive phrases to surface the right moment faster.</div>
                         <div class="border-t"></div>
                         <div class="form-group">
                             <label for="footageSearchQuery">Search For…</label>
@@ -3243,7 +3309,13 @@
                             <input type="number" id="footageSearchMax" value="10" min="1" max="50" class="dim-input">
                         </div>
                         <button type="button" class="btn-primary" id="runFootageSearchBtn">Search</button>
-                        <div id="footageSearchResults" class="scrollable-md mt-sm" aria-live="polite" aria-label="Footage search results"></div>
+                        <div id="footageSearchResults" class="scrollable-md mt-sm" aria-live="polite" aria-label="Footage search results">
+                            <div class="hint hint-empty is-info">
+                                <span class="hint-kicker">Ready when you are</span>
+                                <span class="hint-title">Search the footage library</span>
+                                <span class="hint-copy">Index project clips, then use descriptive queries to find the right sound bite or shot.</span>
+                            </div>
+                        </div>
                     </section>
                 </div>
 
@@ -3276,6 +3348,30 @@
 
             <!-- ======== TAB: SETTINGS ======== -->
             <div class="nav-panel" id="panel-settings" role="tabpanel" aria-label="Settings">
+                <section class="card settings-overview-card">
+                    <div class="card-header"><div class="card-title">Studio Readiness</div></div>
+                    <p class="card-desc">Check the local backend, transcription, live updates, and engine routing before you start longer runs.</p>
+                    <div class="oc-inline-summary-grid" aria-label="Studio readiness">
+                        <div class="oc-inline-stat">
+                            <span class="oc-inline-label">Backend</span>
+                            <span class="oc-status-pill" id="settingsBackendPill" data-state="working">Checking...</span>
+                        </div>
+                        <div class="oc-inline-stat">
+                            <span class="oc-inline-label">Speech</span>
+                            <span class="oc-inline-value" id="settingsSpeechSummary">Checking transcription...</span>
+                        </div>
+                        <div class="oc-inline-stat">
+                            <span class="oc-inline-label">Bridge</span>
+                            <span class="oc-inline-value" id="settingsBridgeSummary">Checking live updates...</span>
+                        </div>
+                        <div class="oc-inline-stat">
+                            <span class="oc-inline-label">AI Routing</span>
+                            <span class="oc-inline-value" id="settingsEngineSummary">Refresh availability</span>
+                        </div>
+                    </div>
+                    <div class="oc-status-line" id="settingsOverviewStatus" data-state="working" role="status" aria-live="polite">OpenCut is checking the local studio environment.</div>
+                </section>
+
                 <!-- Operation Journal (v1.9.28) -->
                 <section class="card" id="journalCard" aria-labelledby="journalCardTitle">
                     <div class="card-header">
@@ -3287,7 +3383,18 @@
                             <button type="button" class="btn btn-ghost btn-sm" id="journalClearBtn" title="Clear all entries">Clear</button>
                         </div>
                     </div>
-                    <p class="card-description">Every OpenCut action that writes to your Premiere project is recorded here. Revert any action that supports it, as long as you haven't made manual changes that conflict.</p>
+                    <p class="card-description">Track every timeline-affecting action in one place, then roll back supported changes before manual edits drift out of sync.</p>
+                    <div class="oc-inline-summary-grid" aria-label="Journal overview">
+                        <div class="oc-inline-stat">
+                            <span class="oc-inline-label">Recent</span>
+                            <span class="oc-inline-value" id="journalCountSummary">Checking recent operations...</span>
+                        </div>
+                        <div class="oc-inline-stat">
+                            <span class="oc-inline-label">Undo-ready</span>
+                            <span class="oc-inline-value" id="journalRevertSummary">Checking rollback support...</span>
+                        </div>
+                    </div>
+                    <div class="oc-status-line" id="journalStatusLine" data-state="working" role="status" aria-live="polite">Loading recent timeline operations and rollback availability.</div>
                     <div id="journalList" class="journal-list" aria-live="polite">
                         <div class="journal-empty">Loading recent operations…</div>
                     </div>
@@ -3295,13 +3402,14 @@
 
                 <section class="card">
                     <div class="card-header"><div class="card-title" data-i18n="settings.whisper_ai">Whisper AI</div></div>
-                    <div class="settings-row" id="whisperStatus">
+                    <p class="card-desc">Keep transcription reliable for captions, search, chapters, and transcript-driven cleanup.</p>
+                    <div class="settings-row settings-row-inline" id="whisperStatus">
                         <span class="settings-label">Status</span>
-                        <span class="settings-value" id="whisperStatusText">Checking…</span>
+                        <span class="settings-value settings-status-pill" id="whisperStatusText" data-state="unknown">Checking...</span>
                     </div>
-                    <div class="settings-row">
+                    <div class="settings-row settings-row-inline">
                         <span class="settings-label">Device</span>
-                        <span class="settings-value" id="whisperDeviceText">--</span>
+                        <span class="settings-value settings-inline-value" id="whisperDeviceText" data-state="idle">Checking device...</span>
                     </div>
                     <div class="form-group mt-md">
                         <label for="settingsDefaultModel">Default Model</label>
@@ -3320,16 +3428,18 @@
                         <input type="checkbox" id="whisperCpuMode">
                         <label for="whisperCpuMode">Force CPU Mode (bypass GPU)</label>
                     </div>
-                    <p class="hint-inline mt-xs mb-sm">Enable CPU mode if transcription hangs or produces errors.</p>
+                    <p class="hint-inline mt-xs mb-sm">Use CPU mode if GPU transcription is unstable or keeps running out of memory.</p>
                     <div class="btn-row gap-xs">
                         <button type="button" class="btn-outline btn-sm" id="settingsInstallWhisperBtn" data-i18n="common.install">Install</button>
                         <button type="button" class="btn-outline btn-sm" id="settingsReinstallWhisperBtn" data-i18n="common.reinstall">Reinstall</button>
                         <button type="button" class="btn-outline btn-sm" id="settingsClearCacheBtn" data-i18n="settings.clear_cache">Clear Cache</button>
                     </div>
+                    <div class="oc-status-line mt-xs" id="whisperStatusLine" data-state="working" role="status" aria-live="polite">Checking transcription readiness for captions, search, and chapter generation.</div>
                 </section>
 
                 <section class="card">
                     <div class="card-header"><div class="card-title" data-i18n="settings.system">System</div></div>
+                    <p class="card-desc">Review local acceleration, backend connectivity, and service health for the current machine.</p>
                     <div class="settings-row">
                         <span class="settings-label">GPU</span>
                         <span class="settings-value" id="gpuName">Checking…</span>
@@ -3356,6 +3466,7 @@
                             <span class="btn-label">View Logs</span>
                         </button>
                     </div>
+                    <div class="oc-status-line mt-xs" id="systemStatusLine" data-state="working" role="status" aria-live="polite">Checking local acceleration and backend details.</div>
                 </section>
 
                 <section class="card">
@@ -3368,13 +3479,16 @@
                             <span class="btn-label">Check Status</span>
                         </button>
                     </div>
+                    <p class="card-desc">Verify which local packages are ready before you start a feature-specific run.</p>
                     <div class="dep-grid" id="depGrid">
                         <div class="hint">Press Check above to see which AI features are available.</div>
                     </div>
+                    <div class="oc-status-line mt-xs" id="depsStatusLine" data-state="idle" role="status" aria-live="polite">Run a dependency check to confirm which local toolchains are available.</div>
                 </section>
 
                 <section class="card">
                     <div class="card-header"><div class="card-title" data-i18n="settings.preferences">Preferences</div></div>
+                    <p class="card-desc">These defaults shape how OpenCut imports, opens, and stores results unless a tool overrides them.</p>
                     <div class="checkbox-row">
                         <input type="checkbox" id="settingsAutoImport" checked>
                         <label for="settingsAutoImport">Auto-import sequence after processing</label>
@@ -3415,8 +3529,9 @@
                 <section class="card">
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.llm_config">LLM Configuration</div>
-                        <button type="button" class="btn-sm" id="testLLMBtn">Test</button>
+                        <button type="button" class="btn-outline btn-sm" id="testLLMBtn">Test Connection</button>
                     </div>
+                    <p class="card-desc">Connect a local or hosted LLM for chapters, summaries, search prompts, and higher-level editorial assistance.</p>
                     <div class="form-group">
                         <label for="llmProvider">Provider</label>
                         <select id="llmProvider" class="form-select">
@@ -3437,13 +3552,14 @@
                         <label for="llmBaseUrl">Base URL</label>
                         <input type="url" id="llmBaseUrl" name="llm_base_url" class="text-input" placeholder="http://localhost:11434" inputmode="url" autocomplete="url" spellcheck="false">
                     </div>
-                    <div class="hint" id="llmStatus">Not tested yet.</div>
+                    <div class="oc-status-line mt-xs" id="llmStatus" data-state="idle" role="status" aria-live="polite">Test the provider before using chapters, summaries, or highlight suggestions.</div>
                 </section>
 
                 <section class="card">
                     <div class="card-header">
                         <div class="card-title" data-i18n="settings.presets">Presets</div>
                     </div>
+                    <p class="card-desc">Capture a known-good setup so repeat jobs start from the same editorial baseline every time.</p>
                     <div class="form-group">
                         <label for="presetNameInput" data-i18n="settings.save_preset">Save Current Settings</label>
                         <div class="preset-save-row">
@@ -3517,6 +3633,7 @@
                             <span class="btn-label">Refresh</span>
                         </button>
                     </div>
+                    <p class="card-desc">Review the local checkpoints and model assets OpenCut can access on this machine.</p>
                     <div class="model-list" id="modelList" aria-live="polite" aria-label="Installed AI models">
                         <div class="hint">Press Refresh above to detect installed AI models.</div>
                     </div>
@@ -3524,43 +3641,45 @@
                         <span class="settings-label">Total Size</span>
                         <span class="settings-value" id="modelsTotalSize">--</span>
                     </div>
+                    <div class="oc-status-line mt-xs" id="modelsStatusLine" data-state="idle" role="status" aria-live="polite">Refresh the model inventory to review local storage usage and available checkpoints.</div>
                 </section>
 
                 <section class="card">
                     <div class="card-header">
-                        <div class="card-title" data-i18n="settings.ai_engine_prefs">AI Engine Preferences</div>
-                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshEnginesBtn" title="Refresh engine status">
+                        <div class="card-title" data-i18n="settings.ai_engine_prefs">Engine Routing</div>
+                        <button type="button" class="link-btn utility-btn is-refresh" id="refreshEnginesBtn" title="Refresh engine availability">
                             <span class="btn-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.75 8.25A6.75 6.75 0 0 0 5.27 4.11"/><path d="M4 1.75v3.5h3.5"/><path d="M3.25 11.75a6.75 6.75 0 0 0 11.48 4.14"/><path d="M16 18.25v-3.5h-3.5"/></svg>
                             </span>
-                            <span class="btn-label">Refresh</span>
+                            <span class="btn-label">Refresh Availability</span>
                         </button>
                     </div>
-                    <p class="card-desc">Select preferred AI backend per feature. Higher quality engines use more VRAM.</p>
+                    <p class="card-desc">Choose which engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available engine selected for this machine.</p>
                     <div id="engineRegistryGrid" class="dep-grid">
-                        <div class="hint">Press Refresh to load available engines.</div>
+                        <div class="hint">Refresh availability to load engine options for this machine.</div>
                     </div>
+                    <div class="oc-status-line mt-xs" id="engineRegistryStatus" data-state="idle" role="status" aria-live="polite">Refresh engine availability to review Auto routing and any pinned domains.</div>
                 </section>
 
                 <section class="card">
                     <div class="card-header">
-                        <div class="card-title" data-i18n="settings.ws_bridge">WebSocket Bridge</div>
+                        <div class="card-title" data-i18n="settings.ws_bridge">Live Updates Bridge</div>
                     </div>
-                    <p class="card-desc">Real-time progress streaming between backend and panel.</p>
-                    <div class="settings-row">
-                        <span class="settings-label">Status</span>
-                        <span class="settings-value" id="wsStatusText">Unknown</span>
+                    <p class="card-desc">Keep progress, completion, and cancel feedback flowing between the backend and the panel while longer jobs run.</p>
+                    <div class="settings-row settings-row-inline">
+                        <span class="settings-label">Bridge</span>
+                        <span class="settings-value settings-status-pill" id="wsStatusText" data-state="unknown">Checking…</span>
                     </div>
-                    <div class="settings-row">
-                        <span class="settings-label">Clients</span>
-                        <span class="settings-value" id="wsClientCount">0</span>
+                    <div class="settings-row settings-row-inline">
+                        <span class="settings-label">Listeners</span>
+                        <span class="settings-value settings-inline-value" id="wsClientCount">0 listeners</span>
                     </div>
                     <div class="btn-row gap-xs mt-sm">
                         <button type="button" class="btn-outline btn-sm" id="wsStartBtn">Start Bridge</button>
                         <button type="button" class="btn-outline btn-sm" id="wsStopBtn">Stop Bridge</button>
-                        <button type="button" class="btn-outline btn-sm" id="wsConnectBtn">Connect Panel</button>
+                        <button type="button" class="btn-outline btn-sm" id="wsConnectBtn">Connect Live Updates</button>
                     </div>
-                    <div class="hint mt-xs" id="wsHint">WebSocket enables real-time job progress without polling.</div>
+                    <div class="oc-status-line mt-xs" id="wsHint" data-state="idle" role="status" aria-live="polite">Start the bridge to stream progress from the backend into the panel during longer runs.</div>
                 </section>
 
                 <section class="card">
@@ -3638,7 +3757,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.15.0</span>
+                        <span class="settings-value">1.16.0</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>
