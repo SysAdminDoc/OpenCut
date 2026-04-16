@@ -92,12 +92,15 @@ class ChatSession:
             timestamp=time.time(),
             actions=actions or [],
         ))
-        # Trim history to keep context window manageable
+        # Trim history to keep context window manageable. Only keep the
+        # most-recent system message — older system prompts may be stale
+        # (different filepath/context) and accumulating them pollutes the
+        # LLM context window on long sessions.
         if len(self.history) > self.max_history:
-            # Keep system message + last N messages
             system_msgs = [m for m in self.history if m.role == "system"]
             recent = self.history[-self.max_history:]
-            self.history = system_msgs + [m for m in recent if m.role != "system"]
+            latest_system = [system_msgs[-1]] if system_msgs else []
+            self.history = latest_system + [m for m in recent if m.role != "system"]
 
     def get_llm_messages(self) -> List[Dict]:
         """Format history for LLM API call."""
@@ -277,22 +280,59 @@ def _parse_actions(text: str) -> List[Dict]:
         except json.JSONDecodeError:
             continue
 
-    # Also try inline JSON patterns: {"action": "/route", ...}
+    # Also try inline JSON patterns. The previous regex ``[^}]*\}`` truncated
+    # at the first inner ``}`` which broke on ``"params": {"effect": "blur"}``
+    # nested objects. Walk balanced braces instead so nested JSON parses.
     if not actions:
-        inline_pattern = r'\{["\']action["\']\s*:\s*["\']\/[^"\']+["\'][^}]*\}'
-        for match in re.finditer(inline_pattern, text):
+        starts = [m.start() for m in re.finditer(r'\{\s*["\']action["\']\s*:', text)]
+        for start in starts:
+            depth = 0
+            end = -1
+            in_str = False
+            esc = False
+            quote = ""
+            for i in range(start, len(text)):
+                ch = text[i]
+                if in_str:
+                    if esc:
+                        esc = False
+                    elif ch == "\\":
+                        esc = True
+                    elif ch == quote:
+                        in_str = False
+                    continue
+                if ch in ("'", '"'):
+                    in_str = True
+                    quote = ch
+                elif ch == "{":
+                    depth += 1
+                elif ch == "}":
+                    depth -= 1
+                    if depth == 0:
+                        end = i + 1
+                        break
+            if end <= start:
+                continue
             try:
-                parsed = json.loads(match.group())
-                if "action" in parsed:
-                    actions.append(parsed)
+                parsed = json.loads(text[start:end])
             except json.JSONDecodeError:
                 continue
+            if isinstance(parsed, dict) and "action" in parsed:
+                actions.append(parsed)
 
     return actions
 
 
 def list_sessions() -> List[Dict]:
-    """List all active chat sessions."""
+    """List all active chat sessions.
+
+    Acquires ``_sessions_lock`` and snapshots the dict before building the
+    result list. Without the lock, concurrent ``chat()`` calls could mutate
+    ``_sessions`` mid-iteration and raise
+    ``RuntimeError: dictionary changed size during iteration``.
+    """
+    with _sessions_lock:
+        snapshot = list(_sessions.items())
     return [
         {
             "session_id": sid,
@@ -300,5 +340,5 @@ def list_sessions() -> List[Dict]:
             "message_count": len(s.history),
             "last_activity": s.history[-1].timestamp if s.history else 0,
         }
-        for sid, s in _sessions.items()
+        for sid, s in snapshot
     ]

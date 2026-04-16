@@ -111,6 +111,11 @@ def index_file(file_path, transcript, duration=0, file_size=0):
         duration: media duration in seconds
         file_size: file size in bytes
     """
+    # Without init_db the very first call from a fresh thread (no prior
+    # search/get_stats) hits "no such table: footage" because the
+    # CREATE TABLE IF NOT EXISTS only runs from init_db. Mirror the
+    # pattern used by every read function below.
+    init_db()
     conn = _get_conn()
     now = time.time()
 

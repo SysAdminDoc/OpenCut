@@ -472,7 +472,13 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     "code": "INVALID_INPUT",
                     "suggestion": "Send a top-level JSON object in the request body.",
                 }), 400
+            # Per CLAUDE.md convention, the CEP panel always sends `filepath`.
+            # Routes that use a non-default ``filepath_param`` (e.g.
+            # ``melody_path``, ``music_path``, ``file``) still need to accept
+            # ``filepath`` as a fallback so frontend + backend stay in sync.
             filepath = data.get(filepath_param, "")
+            if filepath_param != "filepath" and not filepath:
+                filepath = data.get("filepath", "")
             if isinstance(filepath, str):
                 filepath = filepath.strip()
 

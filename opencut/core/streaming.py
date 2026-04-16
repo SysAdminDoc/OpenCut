@@ -11,6 +11,23 @@ import logging
 logger = logging.getLogger("opencut")
 
 
+def _safe_dumps(obj):
+    """``json.dumps`` that won't crash mid-stream on non-serializable values.
+
+    A single bad item with ``bytes``/``datetime``/``set`` would otherwise
+    raise ``TypeError`` and abort the entire NDJSON response. Falling back
+    to ``default=str`` keeps the stream alive and gives the frontend a
+    string approximation of the value.
+    """
+    try:
+        return json.dumps(obj)
+    except (TypeError, ValueError):
+        try:
+            return json.dumps(obj, default=str)
+        except Exception as exc:  # noqa: BLE001
+            return json.dumps({"_error": "serialization_failed", "_reason": str(exc)})
+
+
 def ndjson_generator(items, chunk_size=50):
     """Yield items as NDJSON lines, with optional batching metadata.
 
@@ -26,7 +43,7 @@ def ndjson_generator(items, chunk_size=50):
 
     # Send header with total count if known
     header = {"type": "header", "total": total, "chunk_size": chunk_size}
-    yield json.dumps(header) + "\n"
+    yield _safe_dumps(header) + "\n"
 
     batch = []
     for item in items:
@@ -34,15 +51,15 @@ def ndjson_generator(items, chunk_size=50):
         sent += 1
 
         if len(batch) >= chunk_size:
-            yield json.dumps({"type": "batch", "items": batch, "sent": sent}) + "\n"
+            yield _safe_dumps({"type": "batch", "items": batch, "sent": sent}) + "\n"
             batch = []
 
     # Flush remaining items
     if batch:
-        yield json.dumps({"type": "batch", "items": batch, "sent": sent}) + "\n"
+        yield _safe_dumps({"type": "batch", "items": batch, "sent": sent}) + "\n"
 
     # Send footer
-    yield json.dumps({"type": "done", "total_sent": sent}) + "\n"
+    yield _safe_dumps({"type": "done", "total_sent": sent}) + "\n"
 
 
 def ndjson_item_generator(items):
@@ -58,14 +75,14 @@ def ndjson_item_generator(items):
         str: JSON-encoded lines terminated by newline
     """
     total = len(items) if hasattr(items, "__len__") else None
-    yield json.dumps({"type": "header", "total": total}) + "\n"
+    yield _safe_dumps({"type": "header", "total": total}) + "\n"
 
     sent = 0
     for item in items:
         sent += 1
-        yield json.dumps(item) + "\n"
+        yield _safe_dumps(item) + "\n"
 
-    yield json.dumps({"type": "done", "total_sent": sent}) + "\n"
+    yield _safe_dumps({"type": "done", "total_sent": sent}) + "\n"
 
 
 def ndjson_progress_generator(generator_fn, total_hint=None):
@@ -81,15 +98,22 @@ def ndjson_progress_generator(generator_fn, total_hint=None):
     Yields:
         str: NDJSON lines with progress info
     """
-    yield json.dumps({"type": "header", "total": total_hint}) + "\n"
+    yield _safe_dumps({"type": "header", "total": total_hint}) + "\n"
 
     sent = 0
     for item, progress in generator_fn():
         sent += 1
-        item["_progress"] = progress
-        yield json.dumps(item) + "\n"
+        # Build a copy so we don't mutate the caller's dict — the previous
+        # implementation set ``item["_progress"]`` in place, which leaked
+        # the streaming-only key back into the caller's data structure.
+        if isinstance(item, dict):
+            payload = dict(item)
+            payload["_progress"] = progress
+        else:
+            payload = {"value": item, "_progress": progress}
+        yield _safe_dumps(payload) + "\n"
 
-    yield json.dumps({"type": "done", "total_sent": sent}) + "\n"
+    yield _safe_dumps({"type": "done", "total_sent": sent}) + "\n"
 
 
 def make_ndjson_response(generator, flask_response_class):
@@ -102,9 +126,12 @@ def make_ndjson_response(generator, flask_response_class):
     Returns:
         Flask Response with correct headers for NDJSON streaming
     """
+    # Don't manually set ``Transfer-Encoding: chunked`` — WSGI servers add
+    # it automatically when the response body is a generator. Setting it
+    # ourselves caused the body to be double-chunked (chunk size + content)
+    # on some servers, breaking strict NDJSON line parsers on the client.
     resp = flask_response_class(generator, mimetype="application/x-ndjson")
     resp.headers["Cache-Control"] = "no-cache"
     resp.headers["Connection"] = "keep-alive"
     resp.headers["X-Accel-Buffering"] = "no"
-    resp.headers["Transfer-Encoding"] = "chunked"
     return resp
