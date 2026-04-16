@@ -230,31 +230,59 @@ def _unregister_job_process(job_id: str):
 
 def _kill_job_process(job_id: str):
     """Terminate (then kill) a stored subprocess for the given job.
-    Uses graceful terminate with 3s wait before force-kill."""
+
+    Uses graceful terminate with 3s wait before force-kill. Closes stdin
+    after terminating so the child doesn't block on a parent that has
+    stopped reading. If the child has filled its stdout/stderr pipe
+    buffers and the parent stopped draining (e.g., the worker thread
+    abandoned the read loop on cancel), close those pipes from the parent
+    side so wait() doesn't deadlock waiting for a kernel-buffered child.
+    """
     proc = None
     with job_lock:
         proc = _job_processes.pop(job_id, None)
-    if proc is not None:
-        try:
-            proc.terminate()
-        except OSError as e:
-            logger.debug("Failed to terminate process for job %s: %s", job_id, e)
-        # Wait up to 3 seconds for graceful exit
-        try:
-            proc.wait(timeout=3)
+    if proc is None:
+        return
+
+    def _close_pipe(pipe):
+        if pipe is None:
             return
-        except Exception as e:
-            logger.debug("Process for job %s did not exit gracefully: %s", job_id, e)
-        # Force kill if still alive
         try:
-            proc.kill()
-        except OSError as e:
-            logger.debug("Failed to kill process for job %s: %s", job_id, e)
-        # Reap zombie process
-        try:
-            proc.wait(timeout=5)
-        except Exception as e:
-            logger.debug("Failed to reap process for job %s: %s", job_id, e)
+            pipe.close()
+        except (OSError, ValueError):
+            pass
+
+    try:
+        proc.terminate()
+    except OSError as e:
+        logger.debug("Failed to terminate process for job %s: %s", job_id, e)
+    # Drop our end of stdin so the child isn't blocked waiting for input.
+    _close_pipe(getattr(proc, "stdin", None))
+
+    # Wait up to 3 seconds for graceful exit
+    try:
+        proc.wait(timeout=3)
+        # On clean exit, we still drain output pipes so the OS can
+        # release the file descriptors.
+        _close_pipe(getattr(proc, "stdout", None))
+        _close_pipe(getattr(proc, "stderr", None))
+        return
+    except Exception as e:
+        logger.debug("Process for job %s did not exit gracefully: %s", job_id, e)
+
+    # Force kill if still alive
+    try:
+        proc.kill()
+    except OSError as e:
+        logger.debug("Failed to kill process for job %s: %s", job_id, e)
+    # Close output pipes so the kernel can release their buffers.
+    _close_pipe(getattr(proc, "stdout", None))
+    _close_pipe(getattr(proc, "stderr", None))
+    # Reap zombie process
+    try:
+        proc.wait(timeout=5)
+    except Exception as e:
+        logger.debug("Failed to reap process for job %s: %s", job_id, e)
 
 
 def _cancel_job(job_id: str, *, message: str = "Cancelled by user",
@@ -375,7 +403,8 @@ def _cleanup_old_jobs():
 
 
 def async_job(job_type: str, *, filepath_required: bool = True,
-              filepath_param: str = "filepath"):
+              filepath_param: str = "filepath",
+              pre_validate=None):
     """
     Decorator that wraps a route handler in the standard async job pattern.
 
@@ -384,6 +413,8 @@ def async_job(job_type: str, *, filepath_required: bool = True,
     job errors automatically.  The decorator handles:
 
     - JSON parsing and filepath validation
+    - Optional synchronous pre-validation (fail-fast 400 instead of an
+      async job that errors out 200ms later)
     - ``TooManyJobsError`` → HTTP 429
     - Background thread via ``WorkerPool``
     - Cancellation check before marking complete
@@ -397,6 +428,12 @@ def async_job(job_type: str, *, filepath_required: bool = True,
         filepath_param: JSON field name for the primary filepath.  Defaults
             to ``"filepath"``.  Use ``"video_path"``, ``"input_file"``, etc.
             for routes that use a different field.
+        pre_validate: Optional callable ``(data: dict) -> str | None`` that
+            runs synchronously before the worker thread is spawned. Return a
+            non-empty string to short-circuit with a 400 ``INVALID_INPUT``
+            response — useful for routes like ``/captions/translate`` that
+            need a list of segments instead of a filepath, so the client
+            sees the error immediately instead of via job polling.
 
     Usage::
 
@@ -470,6 +507,20 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     else:
                         code, hint = "INVALID_INPUT", "Use a plain absolute path with no traversal, null bytes, or UNC prefix."
                     return jsonify({"error": msg, "code": code, "suggestion": hint}), 400
+
+            # Optional synchronous pre-validation — fail fast instead of
+            # spawning a worker thread that immediately raises ValueError.
+            if pre_validate is not None:
+                try:
+                    err = pre_validate(data)
+                except Exception as exc:  # noqa: BLE001
+                    err = f"Validation error: {exc}"
+                if err:
+                    return jsonify({
+                        "error": str(err),
+                        "code": "INVALID_INPUT",
+                        "suggestion": "Check the request body against the route's documented schema.",
+                    }), 400
 
             job_label = filepath or job_type
             try:
@@ -587,14 +638,32 @@ def make_install_route(blueprint, url_path, component_name, packages,
                 "code": "RATE_LIMITED",
                 "suggestion": "Wait for the current install to finish, then retry.",
             }), 429
+        # `_install_body` is the @async_job wrapper. On the happy path it
+        # returns ``jsonify({"job_id": ...})`` (200) and the worker thread's
+        # ``finally`` releases the slot. On the unhappy path it returns a
+        # tuple like ``(jsonify({...}), 429)`` (TooManyJobsError, JSON body
+        # validation, etc.) WITHOUT raising — the worker thread never starts
+        # so its ``finally`` never runs. Detect non-2xx returns here and
+        # release the slot so the next caller isn't permanently locked out.
         try:
-            return _install_body()
+            response = _install_body()
         except Exception:
-            # _install_body only raises before spawning the worker thread
-            # (e.g., TooManyJobsError). Release the slot so the next caller
-            # isn't permanently locked out.
             _rlr("model_install")
             raise
+        status = 200
+        if isinstance(response, tuple) and len(response) >= 2:
+            try:
+                status = int(response[1])
+            except (TypeError, ValueError):
+                status = 200
+        else:
+            try:
+                status = int(getattr(response, "status_code", 200))
+            except (TypeError, ValueError):
+                status = 200
+        if status >= 400:
+            _rlr("model_install")
+        return response
 
     _install_handler.__name__ = f"install_{component_name}"
     _install_handler.__qualname__ = f"install_{component_name}"

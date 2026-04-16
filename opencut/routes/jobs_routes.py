@@ -96,7 +96,11 @@ def stream_job(job_id):
                     break
                 status = safe.get("status")
                 yield f"data: {json.dumps(safe)}\n\n"
-                if status in ("complete", "error", "cancelled"):
+                # 'interrupted' is set on startup for jobs that were running
+                # when the server died. It's a terminal state — don't keep
+                # an SSE connection alive trying to watch progress that
+                # will never come.
+                if status in ("complete", "error", "cancelled", "interrupted"):
                     break
                 time.sleep(0.5)
         finally:

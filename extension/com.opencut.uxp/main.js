@@ -630,7 +630,12 @@ const JobPoller = (() => {
     };
   }
 
-  async function pollJob(jobId, onProgress, onComplete, onError) {
+  // Hard cap: 1200ms × 3000 = 60 minutes of polling. If a job is still
+  // "running" after an hour the panel gives up rather than spinning closures
+  // forever. The CEP panel has the same cap; UXP previously had none.
+  const MAX_POLL_ATTEMPTS = 3000;
+
+  async function pollJob(jobId, onProgress, onComplete, onError, attempt = 0) {
     const r = await BackendClient.get(`/status/${jobId}`);
     if (!r.ok) {
       onError(r.error ?? "Polling error");
@@ -652,9 +657,19 @@ const JobPoller = (() => {
       return;
     }
 
-    if (status === "error" || status === "failed" || status === "cancelled") {
+    // 'interrupted' is the terminal state set on server startup for jobs
+    // that were running when the server died; treat it like an error so
+    // the panel doesn't poll forever for progress that will never arrive.
+    if (status === "error" || status === "failed" || status === "cancelled" || status === "interrupted") {
       activeJobId = null;
       onError(job.error ?? job.message ?? "Job failed");
+      _fireCompletionHooks();
+      return;
+    }
+
+    if (attempt >= MAX_POLL_ATTEMPTS) {
+      activeJobId = null;
+      onError("Polling timed out — the job is still running on the server.");
       _fireCompletionHooks();
       return;
     }
@@ -662,7 +677,7 @@ const JobPoller = (() => {
     // Still running — schedule next poll
     setTimeout(() => {
       if (activeJobId === jobId) {
-        pollJob(jobId, onProgress, onComplete, onError);
+        pollJob(jobId, onProgress, onComplete, onError, attempt + 1);
       }
     }, POLL_INTERVAL_MS);
   }

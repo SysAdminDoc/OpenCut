@@ -106,10 +106,27 @@ _CAPS_CACHE_TTL = 30.0
 
 
 def invalidate_caps_cache():
-    """Called after install routes modify available dependencies."""
+    """Called after install routes modify available dependencies.
+
+    Both the per-route capability cache (used by /health-style probes) and
+    the heavy /system/dependencies cache need invalidation — otherwise the
+    Settings tab's dependency grid keeps showing the just-installed package
+    as missing for up to 60 seconds, and the user re-clicks Install.
+    """
     with _caps_cache_lock:
         _caps_cache["data"] = None
         _caps_cache["ts"] = 0.0
+    # Also clear the /system/dependencies TTL cache so the next render
+    # reflects the new install. Defined later in this module.
+    try:
+        with _deps_cache_lock:
+            _deps_cache["data"] = None
+            _deps_cache["ts"] = 0.0
+    except NameError:
+        # _deps_cache is defined later in module load order; if this
+        # function is somehow called before that, the deps cache is
+        # already empty.
+        pass
 
 
 def _build_capabilities():
@@ -2151,9 +2168,18 @@ def video_multimodal_diarize(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 # AI B-Roll Generation (Text-to-Video)
 # ---------------------------------------------------------------------------
+def _validate_broll_prompt(data):
+    prompt = (data.get("prompt") or "").strip()
+    if not prompt:
+        return "No prompt provided"
+    if len(prompt) > 500:
+        return "Prompt too long (max 500 chars)"
+    return None
+
+
 @system_bp.route("/video/broll-generate", methods=["POST"])
 @require_csrf
-@async_job("broll-generate", filepath_required=False)
+@async_job("broll-generate", filepath_required=False, pre_validate=_validate_broll_prompt)
 def video_broll_generate(job_id, filepath, data):
     """Generate a B-roll video clip from a text description using AI."""
     acquired = rate_limit("gpu_job")

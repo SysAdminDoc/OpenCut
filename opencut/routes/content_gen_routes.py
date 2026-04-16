@@ -69,7 +69,6 @@ def voice_avatar_generate(job_id, filepath, data):
     if bg_image:
         bg_image = validate_filepath(bg_image)
 
-    data.get("output_path", "").strip() or None
     output_dir = data.get("output_dir", "").strip()
     if output_dir:
         output_dir = validate_path(output_dir)
