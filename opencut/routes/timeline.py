@@ -78,9 +78,8 @@ def timeline_export_from_markers(job_id, filepath, data):
     if fmt not in {"mp4", "mov", "mkv", "mxf"}:
         fmt = "mp4"
 
-    # Resolve output directory
+    # Resolve output directory — already validated above when present.
     if output_dir:
-        output_dir = validate_path(output_dir)
         os.makedirs(output_dir, exist_ok=True)
     else:
         output_dir = os.path.dirname(input_file)
@@ -394,8 +393,10 @@ def timeline_export_otio():
 
         if mode == "markers":
             markers = data.get("markers", [])
-            if not markers:
-                return jsonify({"error": "No markers provided"}), 400
+            if not isinstance(markers, list) or not markers:
+                return jsonify({"error": "No markers provided (must be a non-empty list)"}), 400
+            if len(markers) > 5000:
+                return jsonify({"error": "Too many markers (max 5000)"}), 400
             result_path = export_otio_markers(
                 filepath, markers, otio_path,
                 sequence_name=sequence_name,
@@ -404,13 +405,21 @@ def timeline_export_otio():
             )
         elif mode == "segments":
             segments_data = data.get("segments", [])
-            if not segments_data:
-                return jsonify({"error": "No segments provided"}), 400
+            if not isinstance(segments_data, list) or not segments_data:
+                return jsonify({"error": "No segments provided (must be a non-empty list)"}), 400
+            if len(segments_data) > 10000:
+                return jsonify({"error": "Too many segments (max 10000)"}), 400
             from opencut.core.silence import TimeSegment
             segments = [
-                TimeSegment(start=safe_float(s.get("start", 0), 0.0, min_val=0.0), end=safe_float(s.get("end", 0), 0.0, min_val=0.0), label="speech")
-                for s in segments_data
+                TimeSegment(
+                    start=safe_float(s.get("start", 0), 0.0, min_val=0.0),
+                    end=safe_float(s.get("end", 0), 0.0, min_val=0.0),
+                    label="speech",
+                )
+                for s in segments_data if isinstance(s, dict)
             ]
+            if not segments:
+                return jsonify({"error": "No valid segments provided"}), 400
             result_path = export_otio(
                 filepath, segments, otio_path,
                 sequence_name=sequence_name,
@@ -419,8 +428,10 @@ def timeline_export_otio():
         else:
             # mode == "cuts" (default)
             cuts = data.get("cuts", [])
-            if not cuts:
-                return jsonify({"error": "No cuts provided"}), 400
+            if not isinstance(cuts, list) or not cuts:
+                return jsonify({"error": "No cuts provided (must be a non-empty list)"}), 400
+            if len(cuts) > 10000:
+                return jsonify({"error": "Too many cuts (max 10000)"}), 400
             result_path = export_otio_from_cuts(
                 filepath, cuts, otio_path,
                 sequence_name=sequence_name,

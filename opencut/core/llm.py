@@ -130,12 +130,25 @@ def _query_openai(prompt, system_prompt, config):
         messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
 
+    # ``max_completion_tokens`` is only honored by newer reasoning-capable
+    # models (o1/o3/gpt-4o 2024-11+). Classic ``gpt-3.5-turbo``/``gpt-4`` /
+    # ``gpt-4-turbo`` still expect ``max_tokens`` and return HTTP 400 on
+    # ``max_completion_tokens``. Branch on model family so both paths work.
+    _model_lower = (config.model or "").lower()
+    _is_new_model = (
+        _model_lower.startswith(("o1", "o3", "gpt-5"))
+        or "-2024-11" in _model_lower
+        or "gpt-4o-2024-1" in _model_lower
+    )
     body = {
         "model": config.model,
         "messages": messages,
         "temperature": config.temperature,
-        "max_completion_tokens": config.max_tokens,
     }
+    if _is_new_model:
+        body["max_completion_tokens"] = config.max_tokens
+    else:
+        body["max_tokens"] = config.max_tokens
 
     data = _http_json(url, data=body, headers=headers, timeout=60)
 

@@ -1279,6 +1279,8 @@ def music_ai_generate(job_id, filepath, data):
     prompt = data.get("prompt", "").strip()
     if not prompt:
         raise ValueError("No prompt")
+    if len(prompt) > 2000:
+        raise ValueError("Prompt too long (max 2000 chars)")
 
     acquired = rate_limit("ai_gpu")
     if not acquired:
@@ -1319,6 +1321,8 @@ def music_ai_ace_step(job_id, filepath, data):
     lyrics = data.get("lyrics", "").strip()
     if not prompt:
         raise ValueError("No prompt")
+    if len(prompt) > 2000:
+        raise ValueError("Prompt too long (max 2000 chars)")
     if len(lyrics) > 10000:
         raise ValueError("Lyrics too long (max 10000 chars)")
 
@@ -1357,6 +1361,8 @@ def music_ai_stable_audio(job_id, filepath, data):
     prompt = data.get("prompt", "").strip()
     if not prompt:
         raise ValueError("No prompt")
+    if len(prompt) > 2000:
+        raise ValueError("Prompt too long (max 2000 chars)")
 
     acquired = rate_limit("ai_gpu")
     if not acquired:
@@ -1394,6 +1400,8 @@ def music_ai_melody(job_id, filepath, data):
     melody = filepath  # validated by decorator via filepath_param
     if not prompt:
         raise ValueError("No prompt")
+    if len(prompt) > 2000:
+        raise ValueError("Prompt too long (max 2000 chars)")
 
     acquired = rate_limit("ai_gpu")
     if not acquired:

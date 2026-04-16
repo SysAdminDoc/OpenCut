@@ -890,7 +890,10 @@ class TestWorkerEntry(unittest.TestCase):
         self.assertIsInstance(result, IsolatedJobResult)
         self.assertTrue(result.success)
         self.assertEqual(result.output, {"result": 42})
-        self.assertGreater(result.duration, 0)
+        # duration should be non-negative; on Windows time.time() resolution
+        # can report 0.0 for instantaneous mock calls so >= 0 is the correct
+        # invariant here (not strictly >).
+        self.assertGreaterEqual(result.duration, 0)
 
     def test_execution_error(self):
         import queue

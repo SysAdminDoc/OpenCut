@@ -362,12 +362,22 @@ def media_info():
     filepath = data.get("filepath", "").strip()
 
     if not filepath:
-        return jsonify({"error": "No file path provided"}), 400
+        return jsonify({
+            "error": "No file path provided",
+            "code": "INVALID_INPUT",
+            "suggestion": "Pass `filepath` in the request body.",
+        }), 400
 
     try:
         filepath = validate_filepath(filepath)
     except ValueError as e:
-        return jsonify({"error": str(e)}), 400
+        msg = str(e)
+        lower = msg.lower()
+        if "not found" in lower or "not a file" in lower or "does not exist" in lower:
+            code, hint = "FILE_NOT_FOUND", "Check that the file exists and is accessible."
+        else:
+            code, hint = "INVALID_INPUT", "Use a plain absolute path with no traversal or UNC prefix."
+        return jsonify({"error": msg, "code": code, "suggestion": hint}), 400
 
     try:
         info = _probe_media(filepath)
@@ -1118,7 +1128,7 @@ def serve_file():
 @system_bp.route("/outputs/recent", methods=["GET"])
 def recent_outputs():
     """List recent output files from completed jobs."""
-    limit = min(safe_int(request.args.get("limit", 20), default=20, min_val=1, max_val=100), 100)
+    limit = safe_int(request.args.get("limit", 20), default=20, min_val=1, max_val=100)
     outputs = []
     all_jobs = _list_jobs_copy()
     sorted_jobs = sorted(all_jobs, key=lambda j: j.get("created", 0), reverse=True)
@@ -1914,9 +1924,35 @@ def check_for_update():
         if tag:
             result["latest_version"] = tag
             result["release_url"] = html_url
-            current_parts = tuple(int(x) for x in current.split("."))
-            latest_parts = tuple(int(x) for x in tag.split("."))
-            result["update_available"] = latest_parts > current_parts
+
+            def _parse_version(v: str) -> tuple:
+                """Parse version like '1.16.0' or '1.16.0-rc1' into comparable tuple.
+
+                Keeps only leading integer components, ignoring any -rc/.dev/+build
+                suffix. Falls back to (0,) if no digits are present so comparison
+                never raises on unexpected inputs.
+                """
+                parts = []
+                for seg in str(v).split("."):
+                    # Strip any trailing non-digit suffix (e.g. "0-rc1" -> "0")
+                    digits = ""
+                    for ch in seg:
+                        if ch.isdigit():
+                            digits += ch
+                        else:
+                            break
+                    if digits:
+                        parts.append(int(digits))
+                    else:
+                        break
+                return tuple(parts) if parts else (0,)
+
+            try:
+                current_parts = _parse_version(current)
+                latest_parts = _parse_version(tag)
+                result["update_available"] = latest_parts > current_parts
+            except Exception as ve:
+                logger.debug("Version compare failed (%s vs %s): %s", current, tag, ve)
     except Exception as exc:
         logger.debug("Update check failed: %s", exc)
         result["error"] = "offline"
