@@ -62,7 +62,13 @@ def burnin_subtitles(
     # Escape path for FFmpeg filter (Windows backslashes, single quotes).
     # Path is wrapped in single quotes below, so do NOT escape colons (would
     # corrupt Windows drive-letter paths like C:/... → C\:/...).
-    escaped_sub = subtitle_path.replace("\\", "/").replace("'", "'\\''")
+    # Apostrophes inside a single-quoted FFmpeg filter value must be escaped
+    # with a single backslash (``\'``). The previous POSIX shell-style
+    # ``'\''`` close/reopen trick is NOT valid FFmpeg filter syntax —
+    # FFmpeg rejected paths like ``O'Brian.srt`` with "Unable to parse
+    # option value" on platforms where the shell didn't pre-collapse the
+    # escape.
+    escaped_sub = subtitle_path.replace("\\", "/").replace("'", "\\'")
 
     if ext_lower == ".ass" or ext_lower == ".ssa":
         # ASS subtitles: use ass filter (respects all ASS styling)
