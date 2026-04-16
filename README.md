@@ -33,7 +33,7 @@
 
 **Option A -- Installer (recommended):**
 
-Download `OpenCut-Setup-1.10.5.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Handles everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
+Download the latest `OpenCut-Setup-1.16.0.exe` from [Releases](https://github.com/SysAdminDoc/OpenCut/releases) and run it. Handles everything: server, FFmpeg, CEP extension, registry, and optional model downloads. No Python needed.
 
 **Option B -- From source:**
 
@@ -59,7 +59,7 @@ docker-compose -f docker-compose.gpu.yml up  # With GPU
 
 ### Launch
 
-1. Start the backend: run `Start-OpenCut.bat`, the exe, or `python -m opencut.server`
+1. Start the backend: run `OpenCut-Server.bat`, the installed launcher, or `python -m opencut.server`
 2. In Premiere Pro: **Window > Extensions > OpenCut**
 3. Select a clip and start editing
 

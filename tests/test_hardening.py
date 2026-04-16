@@ -31,6 +31,19 @@ def test_settings_import_rejects_non_object_body(client, csrf_token):
     assert "top-level JSON object" in data["suggestion"]
 
 
+def test_direct_request_get_json_routes_reject_non_object_body(client, csrf_token):
+    resp = client.post(
+        "/chat/clear",
+        data=json.dumps(["not", "an", "object"]),
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["code"] == "INVALID_INPUT"
+    assert "top-level JSON object" in data["suggestion"]
+
+
 def test_queue_sync_failure_does_not_leave_started_entry(client, csrf_token):
     import opencut.routes.jobs_routes as jobs_routes
 
