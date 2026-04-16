@@ -249,7 +249,10 @@ def create_app(config=None):
     except Exception as e:
         logger.warning("Could not apply job runtime config: %s", e)
 
+    from opencut.security import OpenCutRequest  # noqa: E402
+
     _app = Flask(__name__)
+    _app.request_class = OpenCutRequest
     _app.config["OPENCUT"] = config
     _app.config["MAX_CONTENT_LENGTH"] = config.max_content_length
     CORS(_app, origins=config.cors_origins)
@@ -790,6 +793,16 @@ def download_models(model_size="base"):
     return 0
 
 
+def _pause_on_fatal_exit() -> None:
+    """Wait for user acknowledgement only in interactive terminals."""
+    stdin = getattr(sys, "stdin", None)
+    try:
+        if stdin is not None and stdin.isatty():
+            input("  Press Enter to close...")
+    except (EOFError, KeyboardInterrupt):
+        pass
+
+
 def main():
     """Entry point for `opencut-server` console script (pyproject.toml).
 
@@ -828,6 +841,7 @@ def main():
             sys.exit(download_models(args.download_models))
         else:
             run_server(host=args.host, port=args.port, debug=args.debug)
+            return 0
     except Exception as _fatal:
         print("")
         print("  " + "=" * 50)
@@ -846,8 +860,9 @@ def main():
         except Exception:
             pass
         print("")
-        input("  Press Enter to close...")
+        _pause_on_fatal_exit()
+        return 1
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

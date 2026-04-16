@@ -11,18 +11,22 @@ Uses ``urllib.request`` only -- no external dependencies.
 import json
 import logging
 import os
+import threading
 import time
 import urllib.error
 import urllib.request
 import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional
+from urllib.parse import urlparse
 
 logger = logging.getLogger("opencut")
 
 _OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
 _WEBHOOKS_FILE = os.path.join(_OPENCUT_DIR, "webhooks.json")
 _DELIVERY_LOG_FILE = os.path.join(_OPENCUT_DIR, "webhook_deliveries.json")
+_config_lock = threading.RLock()
+_delivery_lock = threading.RLock()
 
 _MAX_DELIVERIES = 100
 
@@ -92,27 +96,58 @@ def _ensure_dir():
     os.makedirs(_OPENCUT_DIR, exist_ok=True)
 
 
+def _validate_webhook_url(url: str) -> str:
+    """Validate and normalize outbound webhook URLs."""
+    cleaned = (url or "").strip()
+    if not cleaned:
+        raise ValueError("Webhook URL is required")
+    parsed = urlparse(cleaned)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("Webhook URL must use http:// or https:// and include a host")
+    if any(ch in cleaned for ch in ("\r", "\n", "\x00")):
+        raise ValueError("Webhook URL contains invalid characters")
+    return cleaned
+
+
+def _atomic_write_json(path: str, payload: Any) -> None:
+    """Atomically replace *path* with UTF-8 JSON content."""
+    import tempfile
+
+    _ensure_dir()
+    fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
+        os.replace(tmp_path, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 def _load_configs() -> List[WebhookConfig]:
     """Load webhook configs from disk."""
-    if not os.path.isfile(_WEBHOOKS_FILE):
-        return []
-    try:
-        with open(_WEBHOOKS_FILE, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
-        if isinstance(data, list):
-            return [WebhookConfig.from_dict(d) for d in data]
-        return []
-    except (json.JSONDecodeError, OSError) as exc:
-        logger.warning("Failed to load webhook configs: %s", exc)
-        return []
+    with _config_lock:
+        if not os.path.isfile(_WEBHOOKS_FILE):
+            return []
+        try:
+            with open(_WEBHOOKS_FILE, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            if isinstance(data, list):
+                return [WebhookConfig.from_dict(d) for d in data]
+            return []
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("Failed to load webhook configs: %s", exc)
+            return []
 
 
 def _save_configs(configs: List[WebhookConfig]) -> None:
     """Persist webhook configs to disk."""
-    _ensure_dir()
-    with open(_WEBHOOKS_FILE, "w", encoding="utf-8") as fh:
-        json.dump([c.to_dict() for c in configs], fh, indent=2)
-    logger.debug("Saved %d webhook config(s)", len(configs))
+    with _config_lock:
+        _atomic_write_json(_WEBHOOKS_FILE, [c.to_dict() for c in configs])
+        logger.debug("Saved %d webhook config(s)", len(configs))
 
 
 # ---------------------------------------------------------------------------
@@ -121,33 +156,34 @@ def _save_configs(configs: List[WebhookConfig]) -> None:
 
 def _load_deliveries() -> List[Dict[str, Any]]:
     """Load delivery log from disk."""
-    if not os.path.isfile(_DELIVERY_LOG_FILE):
-        return []
-    try:
-        with open(_DELIVERY_LOG_FILE, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
-        if isinstance(data, list):
-            return data
-        return []
-    except (json.JSONDecodeError, OSError):
-        return []
+    with _delivery_lock:
+        if not os.path.isfile(_DELIVERY_LOG_FILE):
+            return []
+        try:
+            with open(_DELIVERY_LOG_FILE, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            if isinstance(data, list):
+                return data
+            return []
+        except (json.JSONDecodeError, OSError):
+            return []
 
 
 def _save_deliveries(deliveries: List[Dict[str, Any]]) -> None:
     """Persist delivery log to disk (keeps last N)."""
-    _ensure_dir()
-    try:
-        with open(_DELIVERY_LOG_FILE, "w", encoding="utf-8") as fh:
-            json.dump(deliveries[-_MAX_DELIVERIES:], fh, indent=2)
-    except OSError as exc:
-        logger.warning("Failed to save delivery log: %s", exc)
+    with _delivery_lock:
+        try:
+            _atomic_write_json(_DELIVERY_LOG_FILE, deliveries[-_MAX_DELIVERIES:])
+        except OSError as exc:
+            logger.warning("Failed to save delivery log: %s", exc)
 
 
 def _append_delivery(delivery: WebhookDelivery) -> None:
     """Append a delivery record to the log."""
-    deliveries = _load_deliveries()
-    deliveries.append(delivery.to_dict())
-    _save_deliveries(deliveries[-_MAX_DELIVERIES:])
+    with _delivery_lock:
+        deliveries = _load_deliveries()
+        deliveries.append(delivery.to_dict())
+        _save_deliveries(deliveries[-_MAX_DELIVERIES:])
 
 
 # ---------------------------------------------------------------------------
@@ -177,8 +213,7 @@ def register_webhook(
     if on_progress:
         on_progress(30)
 
-    if not url or not url.strip():
-        raise ValueError("Webhook URL is required")
+    url = _validate_webhook_url(url)
 
     # Validate event types
     if events:
@@ -188,31 +223,32 @@ def register_webhook(
                 f"Invalid event types: {invalid}. "
                 f"Valid: {sorted(VALID_EVENTS)}")
 
-    configs = _load_configs()
+    with _config_lock:
+        configs = _load_configs()
 
-    if webhook_id:
-        # Update existing
-        for cfg in configs:
-            if cfg.id == webhook_id:
-                cfg.url = url.strip()
-                cfg.events = events or []
-                cfg.description = description
-                _save_configs(configs)
-                if on_progress:
-                    on_progress(100)
-                logger.info("Updated webhook '%s' -> %s", webhook_id, url)
-                return cfg
-        # Not found — fall through to create new with that ID
+        if webhook_id:
+            # Update existing
+            for cfg in configs:
+                if cfg.id == webhook_id:
+                    cfg.url = url
+                    cfg.events = events or []
+                    cfg.description = description
+                    _save_configs(configs)
+                    if on_progress:
+                        on_progress(100)
+                    logger.info("Updated webhook '%s' -> %s", webhook_id, url)
+                    return cfg
+            # Not found — fall through to create new with that ID
 
-    # Create new
-    webhook = WebhookConfig(
-        id=webhook_id or uuid.uuid4().hex[:12],
-        url=url.strip(),
-        events=events or [],
-        description=description,
-    )
-    configs.append(webhook)
-    _save_configs(configs)
+        # Create new
+        webhook = WebhookConfig(
+            id=webhook_id or uuid.uuid4().hex[:12],
+            url=url,
+            events=events or [],
+            description=description,
+        )
+        configs.append(webhook)
+        _save_configs(configs)
 
     if on_progress:
         on_progress(100)
@@ -238,16 +274,17 @@ def unregister_webhook(
     if on_progress:
         on_progress(50)
 
-    configs = _load_configs()
-    original_count = len(configs)
-    configs = [c for c in configs if c.id != webhook_id]
+    with _config_lock:
+        configs = _load_configs()
+        original_count = len(configs)
+        configs = [c for c in configs if c.id != webhook_id]
 
-    if len(configs) == original_count:
-        if on_progress:
-            on_progress(100)
-        return False
+        if len(configs) == original_count:
+            if on_progress:
+                on_progress(100)
+            return False
 
-    _save_configs(configs)
+        _save_configs(configs)
 
     if on_progress:
         on_progress(100)
@@ -267,8 +304,9 @@ def list_webhooks(
     if on_progress:
         on_progress(50)
 
-    configs = _load_configs()
-    result = [c.to_dict() for c in configs]
+    with _config_lock:
+        configs = _load_configs()
+        result = [c.to_dict() for c in configs]
 
     if on_progress:
         on_progress(100)
@@ -282,10 +320,11 @@ def get_webhook(webhook_id: str) -> Optional[WebhookConfig]:
     Returns:
         WebhookConfig or None if not found.
     """
-    configs = _load_configs()
-    for cfg in configs:
-        if cfg.id == webhook_id:
-            return cfg
+    with _config_lock:
+        configs = _load_configs()
+        for cfg in configs:
+            if cfg.id == webhook_id:
+                return cfg
     return None
 
 
@@ -304,6 +343,11 @@ def _send_payload(
     Returns:
         (status_code, success, error_message)
     """
+    try:
+        url = _validate_webhook_url(url)
+    except ValueError as exc:
+        return 0, False, str(exc)
+
     headers = {
         "Content-Type": "application/json",
         "X-OpenCut-Event": event_type,
@@ -351,12 +395,13 @@ def fire_event(
     if on_progress:
         on_progress(10)
 
-    configs = _load_configs()
-    # Filter to enabled webhooks subscribing to this event
-    targets = [
-        c for c in configs
-        if c.enabled and (not c.events or event_type in c.events)
-    ]
+    with _config_lock:
+        configs = _load_configs()
+        # Filter to enabled webhooks subscribing to this event
+        targets = [
+            c for c in configs
+            if c.enabled and (not c.events or event_type in c.events)
+        ]
 
     if not targets:
         if on_progress:
@@ -512,13 +557,14 @@ def get_delivery_log(
     if on_progress:
         on_progress(50)
 
-    deliveries = _load_deliveries()
+    with _delivery_lock:
+        deliveries = _load_deliveries()
 
-    if webhook_id:
-        deliveries = [d for d in deliveries
-                      if d.get("webhook_id") == webhook_id]
+        if webhook_id:
+            deliveries = [d for d in deliveries
+                          if d.get("webhook_id") == webhook_id]
 
-    result = deliveries[-limit:]
+        result = deliveries[-limit:]
 
     if on_progress:
         on_progress(100)
@@ -590,5 +636,15 @@ def load_webhook_config() -> List[Dict]:
 
 def save_webhook_config(configs: List[Dict]) -> None:
     """Persist webhook configurations (legacy API)."""
-    parsed = [WebhookConfig.from_dict(c) for c in configs]
+    parsed = []
+    for config in configs:
+        cfg = WebhookConfig.from_dict(config)
+        cfg.url = _validate_webhook_url(cfg.url)
+        if cfg.events:
+            invalid = [e for e in cfg.events if e not in VALID_EVENTS]
+            if invalid:
+                raise ValueError(
+                    f"Invalid event types: {invalid}. Valid: {sorted(VALID_EVENTS)}"
+                )
+        parsed.append(cfg)
     _save_configs(parsed)

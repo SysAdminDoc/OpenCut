@@ -106,18 +106,27 @@ def watermark_batch(job_id, filepath, data):
 @require_csrf
 def webhook_test():
     """Send a test webhook to a given URL (sync)."""
-    from opencut.core.webhooks import send_webhook
+    from opencut.core.webhooks import _validate_webhook_url, send_webhook
 
     data = request.get_json(force=True)
     url = data.get("url", "").strip()
     if not url:
         return jsonify({"error": "No URL provided"}), 400
+    try:
+        url = _validate_webhook_url(url)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
 
     payload = {
         "event": "test",
         "message": "OpenCut webhook test",
     }
-    success = send_webhook(url, "test", payload, timeout=data.get("timeout", 10))
+    success = send_webhook(
+        url,
+        "test",
+        payload,
+        timeout=safe_int(data.get("timeout", 10), 10, min_val=1, max_val=60),
+    )
     return jsonify({"success": success, "url": url})
 
 
@@ -142,7 +151,10 @@ def webhook_config_save():
     if not isinstance(configs, list):
         return jsonify({"error": "webhooks must be a list"}), 400
 
-    save_webhook_config(configs)
+    try:
+        save_webhook_config(configs)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     return jsonify({"saved": len(configs)})
 
 

@@ -11,9 +11,11 @@ import json
 import logging
 import math
 import os
+import sys
 import threading
 import time
 import traceback
+import types
 from contextlib import redirect_stderr, redirect_stdout
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
@@ -23,6 +25,8 @@ logger = logging.getLogger("opencut")
 _OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
 _HISTORY_FILE = os.path.join(_OPENCUT_DIR, "console_history.json")
 _MAX_HISTORY = 50
+_history_lock = threading.RLock()
+_execution_state = threading.local()
 
 # Modules allowed in the sandbox
 _ALLOWED_MODULES = {
@@ -62,6 +66,41 @@ MAX_OUTPUT_LENGTH = 50_000
 
 # Maximum execution time (seconds)
 DEFAULT_TIMEOUT = 30
+
+
+def _safe_sleep(seconds: float) -> None:
+    """Sleep in short increments so script timeouts can interrupt it cleanly."""
+    try:
+        remaining = float(seconds)
+    except (TypeError, ValueError):
+        raise ValueError("sleep duration must be numeric")
+    if remaining < 0:
+        raise ValueError("sleep duration must be non-negative")
+
+    deadline = getattr(_execution_state, "deadline", None)
+    timeout = getattr(_execution_state, "timeout", DEFAULT_TIMEOUT)
+
+    while remaining > 0:
+        if deadline is not None and time.monotonic() >= deadline:
+            raise TimeoutError(f"Script execution timed out after {timeout}s")
+        chunk = min(remaining, 0.05)
+        time.sleep(chunk)
+        remaining -= chunk
+
+
+def _build_safe_time_module() -> types.ModuleType:
+    """Expose a constrained time module to sandboxed scripts."""
+    safe_time = types.ModuleType("time")
+    for attr in (
+        "time", "monotonic", "perf_counter", "process_time",
+        "strftime", "gmtime", "localtime", "ctime",
+    ):
+        setattr(safe_time, attr, getattr(time, attr))
+    safe_time.sleep = _safe_sleep
+    return safe_time
+
+
+_SAFE_TIME_MODULE = _build_safe_time_module()
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +153,8 @@ def _safe_import(name, *args, **kwargs):
             f"Import of '{name}' is not allowed. "
             f"Allowed modules: {', '.join(sorted(_ALLOWED_MODULES))}"
         )
+    if top_level == "time":
+        return _SAFE_TIME_MODULE
     if isinstance(__builtins__, dict):
         return __builtins__["__import__"](name, *args, **kwargs)
     return getattr(__builtins__, "__import__")(name, *args, **kwargs)
@@ -243,6 +284,7 @@ def create_sandbox(
         "re": _re,
         "datetime": _datetime,
         "collections": _collections,
+        "time": _SAFE_TIME_MODULE,
         # Convenience math functions at top level
         "sqrt": math.sqrt,
         "ceil": math.ceil,
@@ -256,7 +298,7 @@ def create_sandbox(
         "dumps": _json.dumps,
         "loads": _json.loads,
         # OpenCut namespace
-        "opencut": type("opencut", (), _build_opencut_namespace())(),
+        "opencut": types.SimpleNamespace(**_build_opencut_namespace()),
     }
 
     # Inject caller context
@@ -321,15 +363,28 @@ def execute_script(
     # Execute in a thread with timeout enforcement
     exec_error: List[Optional[BaseException]] = [None]
     exec_done = threading.Event()
+    deadline = time.monotonic() + timeout
+
+    def _deadline_trace(frame, event, arg):
+        if time.monotonic() >= getattr(_execution_state, "deadline", deadline):
+            raise TimeoutError(f"Script execution timed out after {timeout}s")
+        return _deadline_trace
 
     def _run():
         try:
+            _execution_state.deadline = deadline
+            _execution_state.timeout = timeout
+            sys.settrace(_deadline_trace)
             compiled = compile(code, "<opencut_script>", "exec")
             with redirect_stdout(stdout_capture), redirect_stderr(stderr_capture):
                 exec(compiled, sandbox)  # noqa: S102
         except Exception as exc:
             exec_error[0] = exc
         finally:
+            sys.settrace(None)
+            for attr in ("deadline", "timeout"):
+                if hasattr(_execution_state, attr):
+                    delattr(_execution_state, attr)
             exec_done.set()
 
     thread = threading.Thread(target=_run, daemon=True)
@@ -446,53 +501,56 @@ def _ensure_dir():
 
 def _load_history() -> List[Dict[str, Any]]:
     """Load execution history from disk."""
-    if not os.path.isfile(_HISTORY_FILE):
-        return []
-    try:
-        with open(_HISTORY_FILE, "r", encoding="utf-8") as fh:
-            data = json.load(fh)
-        if isinstance(data, list):
-            return data
-        return []
-    except (json.JSONDecodeError, OSError):
-        return []
+    with _history_lock:
+        if not os.path.isfile(_HISTORY_FILE):
+            return []
+        try:
+            with open(_HISTORY_FILE, "r", encoding="utf-8") as fh:
+                data = json.load(fh)
+            if isinstance(data, list):
+                return data
+            return []
+        except (json.JSONDecodeError, OSError):
+            return []
 
 
 def _save_history(history: List[Dict[str, Any]]) -> None:
     """Persist execution history to disk (atomic write)."""
-    _ensure_dir()
-    try:
-        import tempfile
-        fd, tmp_path = tempfile.mkstemp(
-            dir=os.path.dirname(_HISTORY_FILE), suffix=".tmp"
-        )
+    with _history_lock:
+        _ensure_dir()
         try:
-            with os.fdopen(fd, "w", encoding="utf-8") as fh:
-                json.dump(history[-_MAX_HISTORY:], fh, indent=2)
-            os.replace(tmp_path, _HISTORY_FILE)
-        except BaseException:
+            import tempfile
+            fd, tmp_path = tempfile.mkstemp(
+                dir=os.path.dirname(_HISTORY_FILE), suffix=".tmp"
+            )
             try:
-                os.unlink(tmp_path)
-            except OSError:
-                pass
-            raise
-    except OSError as exc:
-        logger.warning("Failed to save console history: %s", exc)
+                with os.fdopen(fd, "w", encoding="utf-8") as fh:
+                    json.dump(history[-_MAX_HISTORY:], fh, indent=2)
+                os.replace(tmp_path, _HISTORY_FILE)
+            except BaseException:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
+        except OSError as exc:
+            logger.warning("Failed to save console history: %s", exc)
 
 
 def _append_history(code: str, result: ScriptResult) -> None:
     """Append an execution record to history."""
-    history = _load_history()
-    history.append({
-        "code": code[:2000],
-        "output": result.output[:1000],
-        "error": result.error[:1000] if result.error else "",
-        "success": result.success,
-        "execution_time_ms": round(result.execution_time_ms, 2),
-        "timestamp": time.time(),
-    })
-    # Keep only the last N entries
-    _save_history(history[-_MAX_HISTORY:])
+    with _history_lock:
+        history = _load_history()
+        history.append({
+            "code": code[:2000],
+            "output": result.output[:1000],
+            "error": result.error[:1000] if result.error else "",
+            "success": result.success,
+            "execution_time_ms": round(result.execution_time_ms, 2),
+            "timestamp": time.time(),
+        })
+        # Keep only the last N entries
+        _save_history(history[-_MAX_HISTORY:])
 
 
 def get_history(limit: int = _MAX_HISTORY) -> List[Dict[str, Any]]:
@@ -504,8 +562,9 @@ def get_history(limit: int = _MAX_HISTORY) -> List[Dict[str, Any]]:
     Returns:
         List of history dicts, newest last.
     """
-    history = _load_history()
-    return history[-limit:]
+    with _history_lock:
+        history = _load_history()
+        return history[-limit:]
 
 
 def clear_history() -> None:
