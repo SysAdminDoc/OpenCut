@@ -284,6 +284,29 @@ class TestEngineRoutes:
         assert resp.status_code in (200, 400, 429)
         assert resp.get_json() is not None
 
+    def test_engines_preference_post_can_clear_to_auto(self, client, csrf_token, monkeypatch):
+        class DummyRegistry:
+            def __init__(self):
+                self.cleared = None
+
+            def clear_preference(self, domain):
+                self.cleared = domain
+
+        registry = DummyRegistry()
+        monkeypatch.setattr("opencut.core.engine_registry.get_registry", lambda: registry)
+
+        resp = client.post(
+            "/engines/preference",
+            data=json.dumps({"domain": "captions", "engine": ""}),
+            headers=csrf_headers(csrf_token),
+        )
+
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert data["mode"] == "auto"
+        assert registry.cleared == "captions"
+
     def test_engines_resolve(self, client, csrf_token):
         resp = client.post("/engines/resolve",
                            data=json.dumps({"operation": "silence"}),
@@ -1281,7 +1304,24 @@ class TestTemplateRoutes:
         assert resp.status_code == 200
         data = resp.get_json()
         assert "builtins" in data
+        assert "builtin" in data
         assert len(data["builtins"]) >= 6
+        assert data["builtins"] == data["builtin"]
+
+    def test_templates_list_missing_builtin_file_falls_back(self, client, monkeypatch):
+        import opencut.routes.settings as settings_routes
+
+        def raise_missing(*args, **kwargs):
+            raise FileNotFoundError("missing project templates")
+
+        monkeypatch.setattr(settings_routes.resources, "files", raise_missing)
+
+        resp = client.get("/templates/list")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["builtin"] == []
+        assert data["builtins"] == []
+        assert "user" in data
 
     def test_templates_apply_nonexistent(self, client, csrf_token):
         resp = client.post("/templates/apply",
