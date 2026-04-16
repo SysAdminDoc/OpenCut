@@ -240,10 +240,20 @@ def blur_faces(
         if on_progress:
             on_progress(92, "Encoding output video...")
 
+        # Probe may return 0 fps for VFR / corrupt sources. ``-framerate 0``
+        # makes FFmpeg refuse the input concat with a confusing error, so
+        # floor at 1.0 (and prefer the real value when usable).
+        _src_fps = info.get("fps", 0) or 0
+        try:
+            _src_fps = float(_src_fps)
+        except (TypeError, ValueError):
+            _src_fps = 0.0
+        if _src_fps <= 0 or _src_fps != _src_fps:  # also rejects NaN
+            _src_fps = 30.0
         run_ffmpeg([
             "ffmpeg", "-hide_banner", "-loglevel", "error",
             "-y",
-            "-framerate", str(info["fps"]),
+            "-framerate", str(_src_fps),
             "-i", os.path.join(frames_out, "frame_%06d.png"),
             "-i", input_path,
             "-map", "0:v", "-map", "1:a?",
