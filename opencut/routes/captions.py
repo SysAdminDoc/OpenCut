@@ -60,6 +60,26 @@ captions_bp = Blueprint("captions", __name__)
 
 import re as _re  # noqa: E402
 
+
+def _safe_probe(filepath):
+    """Probe media or return None — never raise.
+
+    ``_probe_media`` may itself be ``None`` if the optional ``utils.media``
+    import failed at startup (e.g. missing ffprobe), and even when present it
+    raises on truncated/missing files.  Routes that only use the result for
+    optional metadata (resolution, duration) treat ``None`` as a fallback
+    sentinel and substitute defaults instead of crashing the worker.
+    """
+    if _probe_media is None:
+        return None
+    try:
+        if not filepath or not os.path.isfile(filepath):
+            return None
+        return _probe_media(filepath)
+    except Exception as exc:  # noqa: BLE001 — probing must never break a job
+        logger.debug("Media probe failed for %s: %s", filepath, exc)
+        return None
+
 # ---------------------------------------------------------------------------
 # Transcript Cache (transcribe once, reuse across highlights/shorts/translate)
 # ---------------------------------------------------------------------------
@@ -175,7 +195,11 @@ def generate_captions(job_id, filepath, data):
         result = transcribe(filepath, config=config)
         # Cache for reuse by highlights/shorts/translate
         if hasattr(result, "segments"):
-            segs = [{"start": s.start, "end": s.end, "text": s.text} for s in result.segments] if hasattr(result.segments[0], "start") else result.segments
+            raw_segs = result.segments or []
+            if raw_segs and hasattr(raw_segs[0], "start"):
+                segs = [{"start": s.start, "end": s.end, "text": s.text} for s in raw_segs]
+            else:
+                segs = list(raw_segs)
             cache_transcript(filepath, segs, language=getattr(result, "language", ""), model=model)
 
     if _is_cancelled(job_id):
@@ -192,9 +216,9 @@ def generate_captions(job_id, filepath, data):
     elif sub_format == "json":
         export_json(result, out_path)
     elif sub_format == "ass":
-        info = _probe_media(filepath)
-        vid_w = info.video.width if info.video else 1920
-        vid_h = info.video.height if info.video else 1080
+        info = _safe_probe(filepath)
+        vid_w = info.video.width if info and info.video else 1920
+        vid_h = info.video.height if info and info.video else 1080
         export_ass(
             result, out_path,
             video_width=vid_w, video_height=vid_h,
@@ -256,10 +280,10 @@ def styled_captions_route(job_id, filepath, data):
         raise ValueError("Whisper is required for styled captions. Install from the Captions tab.")
 
     # Get video resolution
-    info = _probe_media(filepath)
-    vid_w = info.video.width if info.video else 1920
-    vid_h = info.video.height if info.video else 1080
-    vid_fps = info.video.fps if info.video else 30.0
+    info = _safe_probe(filepath)
+    vid_w = info.video.width if info and info.video else 1920
+    vid_h = info.video.height if info and info.video else 1080
+    vid_fps = info.video.fps if info and info.video else 30.0
 
     # Step 1: Transcribe
     _update_job(job_id, progress=10, message=f"Transcribing with {backend} ({model})...")
@@ -547,7 +571,7 @@ def full_pipeline(job_id, filepath, data):
     srt_path = os.path.join(effective_dir, f"{base_name}_opencut.srt")
 
     # Probe once for all pipeline steps
-    _finfo = _probe_media(filepath)
+    _finfo = _safe_probe(filepath)
     _fdur = _finfo.duration if _finfo else 0.0
 
     # Calculate total steps
@@ -752,7 +776,7 @@ def interview_polish(job_id, filepath, data):
     srt_path = os.path.join(effective_dir, f"{base_name}_interview.srt")
     chapters_path = os.path.join(effective_dir, f"{base_name}_chapters.md")
 
-    _finfo = _probe_media(filepath)
+    _finfo = _safe_probe(filepath)
     _fdur = _finfo.duration if _finfo else 0.0
 
     # Per-step result carrier — the frontend renders this as a
@@ -1049,9 +1073,21 @@ def captions_whisperx(job_id, filepath, data):
     return result
 
 
+def _validate_segments(data, *, max_segments=10000):
+    """Shared sync validator for routes that operate on a list of segments."""
+    segs = data.get("segments")
+    if not segs:
+        return "No segments provided"
+    if not isinstance(segs, list):
+        return "segments must be a list"
+    if len(segs) > max_segments:
+        return f"Too many segments (max {max_segments})"
+    return None
+
+
 @captions_bp.route("/captions/translate", methods=["POST"])
 @require_csrf
-@async_job("translate", filepath_required=False)
+@async_job("translate", filepath_required=False, pre_validate=_validate_segments)
 def captions_translate(job_id, filepath, data):
     """Translate caption segments. Backend: auto (SeamlessM4T > NLLB), seamless, or nllb."""
     segments = data.get("segments", [])
@@ -1121,7 +1157,7 @@ def captions_translate(job_id, filepath, data):
 
 @captions_bp.route("/captions/karaoke", methods=["POST"])
 @require_csrf
-@async_job("karaoke", filepath_required=False)
+@async_job("karaoke", filepath_required=False, pre_validate=_validate_segments)
 def captions_karaoke(job_id, filepath, data):
     """Export segments as ASS karaoke subtitles."""
     segments = data.get("segments", [])
@@ -1395,9 +1431,19 @@ def transcript_summarize(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 # Captions: Chapter Generation
 # ---------------------------------------------------------------------------
+def _validate_chapters_input(data):
+    """At least one of file/filepath/segments must be present."""
+    segs = data.get("segments")
+    has_segs = isinstance(segs, list) and len(segs) > 0
+    has_file = bool((data.get("filepath") or data.get("file") or "").strip())
+    if not has_segs and not has_file:
+        return "file or segments required"
+    return None
+
+
 @captions_bp.route("/captions/chapters", methods=["POST"])
 @require_csrf
-@async_job("chapters", filepath_required=False)
+@async_job("chapters", filepath_required=False, pre_validate=_validate_chapters_input)
 def captions_chapters(job_id, filepath, data):
     """Generate YouTube-style chapters from a transcript using an LLM."""
     # filepath may come as "filepath" or "file" -- decorator gets "filepath",

@@ -148,16 +148,32 @@ def save_preset():
 @settings_bp.route("/presets/delete", methods=["POST"])
 @require_csrf
 def delete_preset():
-    """Delete a named preset."""
+    """Delete a named preset.
+
+    Returns 400 when ``name`` is missing/empty (was previously a silent
+    no-op that gave the client false confirmation), and 404 when the
+    named preset does not exist (so dashboards can refresh their list).
+    """
     data, error = _require_json_object()
     if error:
         return error
-    name = data.get("name", "").strip()
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({
+            "error": "name is required",
+            "code": "INVALID_INPUT",
+            "suggestion": "Pass the preset name to delete in the JSON body.",
+        }), 400
     presets = load_presets()
-    if name in presets:
-        del presets[name]
-        save_presets(presets)
-    return jsonify({"success": True})
+    if name not in presets:
+        return jsonify({
+            "error": f"Preset '{name}' not found",
+            "code": "NOT_FOUND",
+            "suggestion": "Refresh the preset list — it may have been deleted by another client.",
+        }), 404
+    del presets[name]
+    save_presets(presets)
+    return jsonify({"success": True, "deleted": name})
 
 
 # ---------------------------------------------------------------------------
@@ -231,15 +247,32 @@ def save_workflow():
 @settings_bp.route("/workflows/delete", methods=["POST"])
 @require_csrf
 def delete_workflow():
-    """Delete a custom workflow template."""
+    """Delete a custom workflow template.
+
+    Returns 400 when ``name`` is missing/empty and 404 when no workflow
+    with that name is registered. Previously this silently succeeded for
+    both cases, which let stale UI state look saved while it wasn't.
+    """
     data, error = _require_json_object()
     if error:
         return error
-    name = data.get("name", "").strip()
+    name = (data.get("name") or "").strip()
+    if not name:
+        return jsonify({
+            "error": "name is required",
+            "code": "INVALID_INPUT",
+            "suggestion": "Pass the workflow name to delete in the JSON body.",
+        }), 400
     workflows = load_workflows()
-    workflows = [wf for wf in workflows if wf.get("name") != name]
-    save_workflows(workflows)
-    return jsonify({"success": True})
+    remaining = [wf for wf in workflows if wf.get("name") != name]
+    if len(remaining) == len(workflows):
+        return jsonify({
+            "error": f"Workflow '{name}' not found",
+            "code": "NOT_FOUND",
+            "suggestion": "Refresh the workflow list — it may have been deleted by another client.",
+        }), 404
+    save_workflows(remaining)
+    return jsonify({"success": True, "deleted": name})
 
 
 # ---------------------------------------------------------------------------

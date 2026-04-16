@@ -423,29 +423,28 @@ def generate_audio_description(
                 if not text:
                     continue
 
-                # Find matching gap
-                best_gap = None
-                for gap in gaps:
-                    if gap.start <= ts <= gap.end:
-                        best_gap = gap
-                        break
+                # Descriptions are scheduled by their explicit ``timestamp``
+                # regardless of whether they line up with a detected silent
+                # gap — the previous implementation searched ``gaps`` for a
+                # match but then guarded the synthesis with
+                # ``if best_gap or True:``, which always entered the branch.
+                # Skipping the lookup keeps the same effective behavior with
+                # less noise.
+                synth_path = os.path.join(
+                    tempfile.gettempdir(), f"ad_desc_{i:04d}.wav",
+                )
+                temp_files.append(synth_path)
 
-                if best_gap or True:  # Allow descriptions even outside detected gaps
-                    synth_path = os.path.join(
-                        tempfile.gettempdir(), f"ad_desc_{i:04d}.wav",
-                    )
-                    temp_files.append(synth_path)
+                synthesize_description(
+                    text, voice=voice,
+                    output_path_val=synth_path,
+                    on_progress=None,
+                )
+                desc_audio_pairs.append((ts, synth_path))
 
-                    synthesize_description(
-                        text, voice=voice,
-                        output_path_val=synth_path,
-                        on_progress=None,
-                    )
-                    desc_audio_pairs.append((ts, synth_path))
-
-                    if on_progress:
-                        pct = 20 + int(40 * (i + 1) / len(descriptions))
-                        on_progress(pct, f"Synthesized {i + 1}/{len(descriptions)}")
+                if on_progress:
+                    pct = 20 + int(40 * (i + 1) / len(descriptions))
+                    on_progress(pct, f"Synthesized {i + 1}/{len(descriptions)}")
         else:
             # Auto-describe at gap positions
             for i, gap in enumerate(gaps[:20]):  # Limit to 20 descriptions

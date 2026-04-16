@@ -225,7 +225,9 @@ def route_room_tone_fill(job_id, filepath, data):
     tone_path = data.get("tone_path", "")
     if not tone_path:
         raise ValueError("A 'tone_path' is required for gap filling.")
-    validate_filepath(tone_path)
+    # Capture the validated (symlink-resolved) path; using the raw user input
+    # could let a symlink point to a different file than was validated.
+    tone_path = validate_filepath(tone_path)
 
     gap_threshold_db = safe_float(
         data.get("gap_threshold_db", -50.0), -50.0, min_val=-80.0, max_val=-10.0

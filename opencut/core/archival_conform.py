@@ -63,7 +63,6 @@ def _probe_detailed(filepath: str) -> dict:
         "-show_entries", "format=duration",
         "-of", "json", filepath,
     ]
-    result = _sp.run(cmd, capture_output=True, timeout=30)
     defaults = {
         "width": 0, "height": 0, "fps": 0.0, "duration": 0.0,
         "pix_fmt": "unknown", "color_space": "unknown",
@@ -71,6 +70,14 @@ def _probe_detailed(filepath: str) -> dict:
         "field_order": "progressive", "sar": "1:1", "dar": "unknown",
         "codec": "unknown",
     }
+    try:
+        result = _sp.run(cmd, capture_output=True, timeout=30)
+    except _sp.TimeoutExpired:
+        # ffprobe rarely needs >30s on real media; treat a stuck probe as
+        # a soft failure so the conformance pass returns defaults instead
+        # of bubbling an unhandled TimeoutExpired up to the worker thread.
+        logger.warning("ffprobe timed out for %s; using defaults", filepath)
+        return defaults
     if result.returncode != 0:
         return defaults
 
