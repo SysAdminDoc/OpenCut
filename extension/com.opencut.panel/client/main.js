@@ -6515,20 +6515,45 @@
     function openLogs() {
         var isWin = navigator.platform.indexOf("Win") !== -1;
         try {
-            var exec = require("child_process").exec;
+            var childProcess = require("child_process");
+            var os = require("os");
+            var home = os.homedir ? os.homedir() : (process.env.USERPROFILE || process.env.HOME || "");
+            var logPath = home ? home + (isWin ? "\\.opencut\\server.log" : "/.opencut/server.log") : "";
+            var logDir = home ? home + (isWin ? "\\.opencut" : "/.opencut") : "";
+
+            function spawnDetached(command, args, onError) {
+                try {
+                    var child = childProcess.spawn(command, args, {
+                        detached: true,
+                        stdio: "ignore"
+                    });
+                    child.on("error", function (err) {
+                        if (onError) onError(err);
+                    });
+                    child.unref();
+                    return true;
+                } catch (err) {
+                    if (onError) onError(err);
+                    return false;
+                }
+            }
+
             if (isWin) {
-                var logPath = process.env.USERPROFILE + "\\.opencut\\server.log";
-                exec('start notepad "' + logPath + '"', function (err) {
-                    if (err) {
-                        // Fallback: open the folder
-                        exec('explorer "' + process.env.USERPROFILE + '\\.opencut"');
-                    }
+                spawnDetached("notepad", [logPath], function () {
+                    spawnDetached("explorer", [logDir]);
                 });
             } else {
-                var home = process.env.HOME || "~";
-                exec('open "' + home + '/.opencut/server.log" 2>/dev/null || xdg-open "' + home + '/.opencut/server.log"', function (err) {
-                    if (err) {
-                        exec('open "' + home + '/.opencut/"');
+                var openCommand = navigator.platform.indexOf("Mac") !== -1 ? "open" : "xdg-open";
+                var fallbackCommand = openCommand === "open" ? "xdg-open" : "open";
+                spawnDetached(openCommand, [logPath], function () {
+                    if (!spawnDetached(fallbackCommand, [logPath], function () {
+                        spawnDetached(openCommand, [logDir], function () {
+                            spawnDetached(fallbackCommand, [logDir]);
+                        });
+                    })) {
+                        spawnDetached(openCommand, [logDir], function () {
+                            spawnDetached(fallbackCommand, [logDir]);
+                        });
                     }
                 });
             }

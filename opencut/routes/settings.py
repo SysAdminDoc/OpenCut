@@ -67,6 +67,52 @@ def _parse_log_line(line: str) -> dict:
     return {"raw": raw, "level": level, "job_id": job_id}
 
 
+def _read_tail_lines(filepath: str, max_lines: int) -> list[str]:
+    """Read roughly the last *max_lines* lines without loading the whole file."""
+    if max_lines <= 0:
+        return []
+    with open(filepath, "rb") as f:
+        f.seek(0, os.SEEK_END)
+        position = f.tell()
+        buffer = bytearray()
+        newline_target = max_lines + 1
+        while position > 0 and buffer.count(b"\n") < newline_target:
+            chunk_size = min(8192, position)
+            position -= chunk_size
+            f.seek(position)
+            buffer[:0] = f.read(chunk_size)
+    return buffer.decode("utf-8", errors="replace").splitlines()
+
+
+def _slugify_template_name(name: str) -> str:
+    slug = "".join(c if c.isalnum() or c in "-_" else "_" for c in name.lower())
+    return slug.strip("_")
+
+
+def _resolve_template_slot(templates_dir: str, name: str) -> tuple[str, str, bool]:
+    """Pick a template filename, preserving updates and avoiding slug collisions."""
+    base_slug = _slugify_template_name(name)
+    if not base_slug:
+        raise ValueError("Invalid template name")
+    desired_name = name.strip().casefold()
+    candidate = base_slug
+    for suffix in range(0, 100):
+        if suffix:
+            candidate = f"{base_slug}_{suffix + 1}"
+        fpath = os.path.join(templates_dir, candidate + ".json")
+        if not os.path.exists(fpath):
+            return candidate, fpath, False
+        try:
+            with open(fpath, "r", encoding="utf-8") as f:
+                existing = json.load(f)
+        except Exception:
+            existing = {}
+        existing_name = str(existing.get("name", "")).strip().casefold()
+        if existing_name and existing_name == desired_name:
+            return candidate, fpath, True
+    raise ValueError("Could not create a unique template filename")
+
+
 # ---------------------------------------------------------------------------
 # User Presets
 # ---------------------------------------------------------------------------
@@ -327,10 +373,7 @@ def tail_logs():
         # enough matches survive filtering.
         read_limit = lines * 10 if (level_filter or job_filter) else lines * 2
         read_limit = max(read_limit, 500)
-        with open(LOG_FILE, "r", encoding="utf-8", errors="replace") as f:
-            all_lines = f.readlines()
-        # Only process the tail portion to bound memory/CPU
-        candidate_lines = all_lines[-read_limit:]
+        candidate_lines = _read_tail_lines(LOG_FILE, read_limit)
     except OSError:
         return jsonify({"lines": [], "total": 0})
     # Filter
@@ -659,15 +702,14 @@ def save_template():
         return jsonify({"error": "Template name required"}), 400
     if len(name) > 100:
         return jsonify({"error": "Template name too long"}), 400
-    # Build a safe filename
-    safe_id = "".join(c if c.isalnum() or c in "-_" else "_" for c in name.lower())
-    if not safe_id:
-        return jsonify({"error": "Invalid template name"}), 400
     templates_dir = os.path.join(OPENCUT_DIR, "templates")
     os.makedirs(templates_dir, exist_ok=True)
-    # Limit user templates
+    try:
+        safe_id, fpath, is_update = _resolve_template_slot(templates_dir, name)
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
     existing = [f for f in os.listdir(templates_dir) if f.endswith(".json")]
-    if len(existing) >= 50:
+    if len(existing) >= 50 and not is_update:
         return jsonify({"error": "Too many user templates (max 50)"}), 400
     tpl = {
         "id": "user_" + safe_id,
@@ -679,7 +721,6 @@ def save_template():
         "aspect": data.get("aspect", "16:9"),
         "saved": time.time(),
     }
-    fpath = os.path.join(templates_dir, safe_id + ".json")
     # Atomic write via temp file + rename to prevent corruption
     import tempfile
     fd, tmp_path = tempfile.mkstemp(dir=templates_dir, suffix=".tmp", prefix=safe_id + ".")
