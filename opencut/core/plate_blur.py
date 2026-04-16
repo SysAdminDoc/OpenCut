@@ -12,14 +12,12 @@ detection when available.
 import json
 import logging
 import os
-import re
-import subprocess
 import tempfile
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 from datetime import datetime
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, get_video_info, output_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -111,7 +109,7 @@ def _detect_plates_yolo(frames_dir: str, info: dict, sample_fps: float) -> Optio
 
     detections: List[PlateDetection] = []
     frame_files = sorted(f for f in os.listdir(frames_dir) if f.endswith(".png"))
-    fps = info.get("fps", 25.0)
+    info.get("fps", 25.0)
 
     for idx, fname in enumerate(frame_files):
         fpath = os.path.join(frames_dir, fname)
@@ -123,7 +121,7 @@ def _detect_plates_yolo(frames_dir: str, info: dict, sample_fps: float) -> Optio
         t = idx / sample_fps
         for r in results:
             for box in r.boxes:
-                cls_id = int(box.cls[0]) if box.cls is not None else -1
+                int(box.cls[0]) if box.cls is not None else -1
                 conf = float(box.conf[0]) if box.conf is not None else 0.0
                 # Accept any high-confidence rectangular detection as possible plate
                 if conf < 0.25:
@@ -141,7 +139,7 @@ def _detect_plates_contour(frames_dir: str, info: dict, sample_fps: float) -> Li
     """Fallback: color-threshold + contour detection for rectangular plate-like regions."""
     try:
         import cv2
-        import numpy as np
+        import numpy as np  # noqa: F401
     except ImportError:
         logger.info("OpenCV not available; install opencv-python for contour plate detection")
         return []
@@ -296,7 +294,7 @@ def blur_plates(
     info = get_video_info(input_path)
     duration = info["duration"]
     width, height = info["width"], info["height"]
-    fps = info.get("fps", 25.0)
+    info.get("fps", 25.0)
 
     if detections is None:
         if on_progress:

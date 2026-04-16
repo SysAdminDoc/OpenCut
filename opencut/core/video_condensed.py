@@ -8,11 +8,10 @@ Trim to essential content and assemble a 30-60 second recap.
 import logging
 import os
 import tempfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import (
-    FFmpegCmd,
     get_video_info,
     output_path,
     run_ffmpeg,

@@ -11,7 +11,7 @@ import os
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int
+from opencut.security import require_csrf, safe_float, safe_int, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -41,7 +41,8 @@ def export_dcp(job_id, filepath, data):
             "rating": "PG-13"
         }
     """
-    from opencut.core.dcp_export import DCPConfig, export_dcp as _export_dcp
+    from opencut.core.dcp_export import DCPConfig
+    from opencut.core.dcp_export import export_dcp as _export_dcp
 
     output_dir = data.get("output_dir", "").strip()
     if output_dir:
@@ -101,7 +102,8 @@ def export_imf(job_id, filepath, data):
             ]
         }
     """
-    from opencut.core.imf_package import IMFAudioTrack, IMFConfig, export_imf as _export_imf
+    from opencut.core.imf_package import IMFAudioTrack, IMFConfig
+    from opencut.core.imf_package import export_imf as _export_imf
 
     output_dir = data.get("output_dir", "").strip()
     if output_dir:
@@ -326,7 +328,8 @@ def render_multi(job_id, filepath, data):
             ]
         }
     """
-    from opencut.core.multi_render import RenderConfig, multi_render as _multi_render
+    from opencut.core.multi_render import RenderConfig
+    from opencut.core.multi_render import multi_render as _multi_render
 
     configs_raw = data.get("configs", [])
     if not configs_raw:

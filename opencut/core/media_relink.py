@@ -174,8 +174,8 @@ def find_candidates(
     """
     candidates = []
     offline_name = os.path.basename(offline_path).lower()
-    offline_stem = os.path.splitext(offline_name)[0]
-    offline_ext = os.path.splitext(offline_name)[1]
+    os.path.splitext(offline_name)[0]
+    os.path.splitext(offline_name)[1]
 
     seen_paths = set()
 

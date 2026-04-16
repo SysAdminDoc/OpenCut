@@ -494,7 +494,7 @@ def _apply_lip_sync(
     _stage_progress(on_progress, STAGE_LIP_SYNC, 0, "Applying lip sync...")
 
     try:
-        from opencut.core.lip_sync_gen import apply_lip_sync, LipSyncConfig
+        from opencut.core.lip_sync_gen import LipSyncConfig, apply_lip_sync
 
         os.path.join(work_dir, "lip_synced.mp4")
         config = LipSyncConfig()

@@ -15,7 +15,6 @@ Uses FFmpeg only - no additional ML dependencies required.
 
 import json
 import logging
-import math
 import os
 import re
 import subprocess

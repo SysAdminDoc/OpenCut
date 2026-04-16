@@ -16,7 +16,7 @@ import logging
 import math
 import os
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import get_video_info
 
@@ -673,7 +673,7 @@ def analyze_pacing_from_cuts(
     suggestions = []
     profile = GENRE_PROFILES[genre]
     target_avg = profile["target_avg"]
-    target_cpm = profile["target_cpm"]
+    profile["target_cpm"]
 
     if mean > target_avg * 1.5:
         suggestions.append(

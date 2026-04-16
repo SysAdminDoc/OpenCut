@@ -12,11 +12,10 @@ import json
 import logging
 import os
 import re
-import subprocess
 import tempfile
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
 from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
 
@@ -173,7 +172,7 @@ def detect_pii(
         dict with detections, pii_found count, types found.
     """
     sample_fps = max(0.25, min(5.0, float(sample_fps)))
-    info = get_video_info(input_path)
+    get_video_info(input_path)
 
     if on_progress:
         on_progress(10, "Extracting frames for OCR...")

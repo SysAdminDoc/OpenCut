@@ -8,14 +8,11 @@ to entire surface or selectively to OCR-identified text regions.
 Uses FFmpeg for frame I/O and OpenCV for detection when available.
 """
 
-import json
 import logging
 import os
-import subprocess
 import tempfile
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
 from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
 

@@ -16,9 +16,10 @@ import re
 import struct
 import tempfile
 import wave
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_video_info, output_path as _output_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_video_info, run_ffmpeg
+from opencut.helpers import output_path as _output_path
 
 logger = logging.getLogger("opencut")
 

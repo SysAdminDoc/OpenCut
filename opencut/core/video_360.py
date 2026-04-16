@@ -13,7 +13,6 @@ Import, process, and export equirectangular 360 video:
 All via FFmpeg v360 filter + OpenCV -- no ML dependencies.
 """
 
-import json
 import logging
 import math
 import os
@@ -24,11 +23,11 @@ from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
-    FFmpegCmd,
-    get_ffprobe_path,
     get_video_info,
-    output_path as _output_path,
     run_ffmpeg,
+)
+from opencut.helpers import (
+    output_path as _output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -561,7 +560,7 @@ def keyframed_reframe(
 
     info = get_video_info(video_path)
     duration = info.get("duration", 0.0)
-    fps = info.get("fps", 30.0)
+    info.get("fps", 30.0)
 
     if on_progress:
         on_progress(5, f"Reframing with {len(parsed_kfs)} keyframes...")
@@ -737,7 +736,7 @@ def _detect_motion_regions(
                 pitch = 90.0 - (row / grid_rows) * 180.0
 
                 # Use crop + signalstats to measure mean brightness
-                cell_file = os.path.join(tmp_dir, f"cell_{row}_{col}.txt")
+                os.path.join(tmp_dir, f"cell_{row}_{col}.txt")
                 try:
                     result = subprocess.run([
                         "ffmpeg", "-hide_banner", "-loglevel", "error",
@@ -811,7 +810,7 @@ def _generate_multicam_xml(
             f'          <asset-clip ref="clip_{i}" '
             f'duration="{total_frames}/{int(fps)}s" />'
         )
-        xml_lines.append(f'        </mc-angle>')
+        xml_lines.append('        </mc-angle>')
 
     xml_lines.append('      </multicam-clip>')
     xml_lines.append('    </event>')

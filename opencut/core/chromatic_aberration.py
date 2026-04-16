@@ -10,18 +10,15 @@ Detect and correct chromatic aberration (CA) in video:
 Uses FFmpeg's chromashift and scale filters.
 """
 
-import json
 import logging
-import math
 import os
 import subprocess
 import tempfile
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Callable, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
-    get_ffprobe_path,
     get_video_info,
     output_path,
     run_ffmpeg,

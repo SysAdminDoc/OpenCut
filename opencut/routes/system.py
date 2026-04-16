@@ -39,8 +39,8 @@ from opencut.jobs import (
 )
 from opencut.security import (
     VALID_WHISPER_MODELS,
-    get_json_dict,
     get_csrf_token,
+    get_json_dict,
     rate_limit,
     rate_limit_release,
     require_csrf,
