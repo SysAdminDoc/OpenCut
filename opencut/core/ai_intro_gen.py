@@ -712,7 +712,8 @@ def _add_music_bed(video_path: str, music_path: str, volume: float,
 # ---------------------------------------------------------------------------
 def _prepend_intro(intro_path: str, main_video: str, out_path: str) -> str:
     """Concatenate intro clip before the main video."""
-    concat_file = tempfile.mktemp(suffix=".txt", prefix="intro_concat_")
+    _fd, concat_file = tempfile.mkstemp(suffix=".txt", prefix="intro_concat_")
+    os.close(_fd)
     try:
         with open(concat_file, "w") as f:
             f.write(f"file '{intro_path}'\n")
