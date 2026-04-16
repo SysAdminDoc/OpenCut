@@ -383,7 +383,11 @@ def video_watermark(job_id, filepath, data):
             }
 
     except Exception as e:
-        raise Exception(f"Processing error: {str(e)}")
+        # Re-raise with cause preserved — wrapping as ``Exception`` erased
+        # the original class (ValueError/RuntimeError/MemoryError) which
+        # ``safe_error`` relies on for structured classification. ``from e``
+        # keeps the original traceback for logs.
+        raise RuntimeError(f"Processing error: {e}") from e
 
 
 # ---------------------------------------------------------------------------
@@ -644,11 +648,15 @@ def export_video(job_id, filepath, data):
     _stderr_thread.start()
     _register_job_process(job_id, proc)
 
-    # Calculate expected output duration for progress estimation
-    total_kept = sum(
-        seg.get("end", 0) - seg.get("start", 0) for seg in segments_data
-        if seg.get("end", 0) > seg.get("start", 0)
-    )
+    # Calculate expected output duration for progress estimation. Use
+    # safe_float to reject NaN/inf and coerce string inputs, else a crafted
+    # payload with ``"end": "inf"`` or ``"end": null`` poisons the timeout
+    # and progress math.
+    def _seg_len(seg):
+        s = safe_float(seg.get("start", 0), 0.0, min_val=0.0)
+        e = safe_float(seg.get("end", 0), 0.0, min_val=0.0)
+        return max(0.0, e - s)
+    total_kept = sum(_seg_len(seg) for seg in segments_data)
 
     import re as _re
     for line in proc.stdout:
@@ -693,8 +701,20 @@ def export_video(job_id, filepath, data):
                 pass
         raise ValueError(f"FFmpeg exited with code {proc.returncode}: {stderr_tail[:500]}")
 
-    # Get output file size
+    # Get output file size. A 0-byte output means FFmpeg exited 0 but wrote
+    # nothing (commonly caused by unreachable filter arg combinations or
+    # a malformed segments list that filter_complex silently discarded).
+    # Failing loudly here beats silently handing the user an empty file.
     output_size = os.path.getsize(output_path) if os.path.exists(output_path) else 0
+    if output_size == 0:
+        try:
+            if os.path.exists(output_path):
+                os.unlink(output_path)
+        except OSError:
+            pass
+        raise ValueError(
+            "FFmpeg produced a 0-byte output — check segments bounds and codec compatibility."
+        )
     size_mb = output_size / (1024 * 1024)
 
     return {
@@ -804,6 +824,17 @@ def batch_create():
         except ValueError as e:
             return jsonify({"error": str(e)}), 400
     filepaths = validated_paths
+
+    # Validate params["output_dir"] so ``_execute_batch_item`` receives an
+    # already-resolved path and cannot write outside the allowed root via a
+    # crafted ``../`` / UNC / null-byte value.
+    if isinstance(params, dict):
+        _out = params.get("output_dir", "")
+        if _out:
+            try:
+                params["output_dir"] = validate_path(_out)
+            except ValueError as e:
+                return jsonify({"error": f"output_dir — {e}"}), 400
 
     parallel = safe_bool(data.get("parallel", True), True)
 
@@ -943,11 +974,18 @@ def batch_parallel():
     if len(operations) > MAX_BATCH_FILES:
         return jsonify({"error": f"Too many operations. Maximum is {MAX_BATCH_FILES}."}), 400
 
-    # Build operation specs and validate filepaths
+    # Build operation specs and validate filepaths + output_dirs. Parallel
+    # batch dispatch writes to ``payload["output_dir"]`` without re-checking
+    # it downstream, so validation must happen here to prevent a crafted
+    # payload escaping the allowed root.
     specs = []
     for i, op in enumerate(operations):
+        if not isinstance(op, dict):
+            return jsonify({"error": f"Operation {i}: must be a JSON object"}), 400
         endpoint = op.get("endpoint", "")
         payload = op.get("payload", {})
+        if not isinstance(payload, dict):
+            return jsonify({"error": f"Operation {i}: payload must be an object"}), 400
         if not endpoint:
             return jsonify({"error": f"Operation {i}: missing endpoint"}), 400
         fp = payload.get("filepath", "")
@@ -956,6 +994,12 @@ def batch_parallel():
                 payload["filepath"] = validate_filepath(fp)
             except ValueError as e:
                 return jsonify({"error": f"Operation {i}: {e}"}), 400
+        od = payload.get("output_dir", "")
+        if od:
+            try:
+                payload["output_dir"] = validate_path(od)
+            except ValueError as e:
+                return jsonify({"error": f"Operation {i}: output_dir — {e}"}), 400
         specs.append(OperationSpec(endpoint=endpoint, payload=payload))
 
     # Create a parent job to track overall progress
@@ -1317,9 +1361,20 @@ def video_trim(job_id, filepath, data):
         output_dir = validate_path(output_dir)
     if not end_time:
         raise ValueError("End time is required")
-    _time_re = re.compile(r"^\d{1,3}:\d{2}:\d{2}(?:\.\d+)?$")
+    # Restrict MM/SS to 0–59 so ``999:99:99`` (silently accepted by FFmpeg
+    # but produces a 0-byte output) is rejected up front. Also convert to
+    # seconds so we can assert ``start < end`` — a same-or-inverted range
+    # would otherwise run FFmpeg and return 0 bytes.
+    _time_re = re.compile(r"^\d{1,3}:[0-5]\d:[0-5]\d(?:\.\d+)?$")
     if not _time_re.match(str(start_time)) or not _time_re.match(str(end_time)):
-        raise ValueError("Invalid time format. Use HH:MM:SS or HH:MM:SS.xxx")
+        raise ValueError("Invalid time format. Use HH:MM:SS or HH:MM:SS.xxx (minutes/seconds 00–59)")
+
+    def _tc_to_sec(tc: str) -> float:
+        h, m, s = tc.split(":")
+        return int(h) * 3600 + int(m) * 60 + float(s)
+
+    if _tc_to_sec(str(end_time)) <= _tc_to_sec(str(start_time)):
+        raise ValueError("End time must be greater than start time")
 
     _update_job(job_id, progress=5, message="Preparing trim...")
 
