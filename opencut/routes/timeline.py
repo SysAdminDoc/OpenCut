@@ -45,9 +45,17 @@ make_install_route(
 # ---------------------------------------------------------------------------
 # Timeline: Export Clips from Markers
 # ---------------------------------------------------------------------------
+def _validate_timeline_export(data):
+    """Sync validation: at least an input file (under either key) is required."""
+    input_file = (data.get("input_file") or data.get("filepath") or "").strip()
+    if not input_file:
+        return "No input_file provided"
+    return None
+
+
 @timeline_bp.route("/timeline/export-from-markers", methods=["POST"])
 @require_csrf
-@async_job("timeline-export", filepath_required=False)
+@async_job("timeline-export", filepath_required=False, pre_validate=_validate_timeline_export)
 def timeline_export_from_markers(job_id, filepath, data):
     """Use FFmpeg to extract clip segments defined by timeline markers."""
     input_file = data.get("input_file", data.get("filepath", "")).strip()

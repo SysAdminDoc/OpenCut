@@ -28,6 +28,32 @@ def _storage_mode():
     return "sqlite" if _DB_PATH else "json"
 
 
+def _validate_clip_filepath(path):
+    """Reject clearly malformed filepaths before persisting them.
+
+    The clip-notes store keys notes by ``filepath``. A request that smuggles
+    ``..`` traversal, null bytes, or UNC prefixes into that key would
+    pollute the JSON store with weird keys and could later be reflected
+    into UI without escaping. The actual file is never opened from this
+    plugin, so we only need to reject obviously hostile shapes — full
+    path-resolution belongs in the host backend, not the plugin.
+    """
+    if not isinstance(path, str):
+        return False
+    if not path or not path.strip():
+        return False
+    if "\x00" in path:
+        return False
+    # Block traversal segments (``..``) and absolute UNC prefixes that have
+    # no business in a clip-name key.
+    if path.startswith("\\\\") or path.startswith("//"):
+        return False
+    parts = path.replace("\\", "/").split("/")
+    if ".." in parts:
+        return False
+    return True
+
+
 def _ensure_parent(path):
     parent = os.path.dirname(path)
     if parent:
@@ -226,6 +252,8 @@ def save_note():
 
     if not filepath:
         return jsonify({"error": "filepath is required"}), 400
+    if not _validate_clip_filepath(filepath):
+        return jsonify({"error": "filepath contains invalid characters"}), 400
     if not timestamp:
         return jsonify({"error": "timestamp is required"}), 400
     if not text:
@@ -252,6 +280,8 @@ def get_notes():
     filepath = request.args.get("filepath", "").strip()
     if not filepath:
         return jsonify({"error": "filepath query parameter is required"}), 400
+    if not _validate_clip_filepath(filepath):
+        return jsonify({"error": "filepath contains invalid characters"}), 400
 
     clip_notes = _filter_by_path(_load_notes(), filepath)
     return jsonify({"notes": clip_notes, "count": len(clip_notes)})

@@ -55,13 +55,32 @@ def install_deps():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     req_file = os.path.join(base_dir, "requirements.txt")
 
-    if os.path.exists(req_file):
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "-r", req_file, "--quiet"])
-    else:
-        subprocess.check_call([sys.executable, "-m", "pip", "install",
-                               "click>=8.0", "rich>=13.0", "flask>=3.0", "flask-cors>=4.0",
-                               "faster-whisper>=1.0", "opencv-python-headless>=4.8",
-                               "Pillow>=10.0", "numpy>=1.24", "--quiet"])
+    # 30-min timeout: enough for slow networks downloading torch/faster-whisper,
+    # but bounded so a hung pip mirror doesn't freeze the installer forever.
+    pip_timeout = 1800
+    try:
+        if os.path.exists(req_file):
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install", "-r", req_file,
+                 "--prefer-binary", "--quiet"],
+                check=True, timeout=pip_timeout,
+            )
+        else:
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install",
+                 "click>=8.0", "rich>=13.0", "flask>=3.0", "flask-cors>=4.0",
+                 "python-json-logger>=2.0", "psutil>=5.9",
+                 "faster-whisper>=1.0", "opencv-python-headless>=4.8",
+                 "Pillow>=10.0", "numpy>=1.24", "--prefer-binary", "--quiet"],
+                check=True, timeout=pip_timeout,
+            )
+    except subprocess.TimeoutExpired:
+        print(f"  [!!] pip install timed out after {pip_timeout // 60} minutes.")
+        print("       Check your network connection and try again.")
+        sys.exit(1)
+    except subprocess.CalledProcessError as exc:
+        print(f"  [!!] pip install failed (exit code {exc.returncode}).")
+        sys.exit(1)
     print("  [OK] Dependencies installed")
 
 
@@ -153,13 +172,18 @@ def check_gpu():
         import torch
         if torch.cuda.is_available():
             name = torch.cuda.get_device_name(0)
-            vram = torch.cuda.get_device_properties(0).total_mem / (1024**3)
+            # The PyTorch attribute is `total_memory`, not `total_mem` —
+            # the latter raises AttributeError and the GPU was reported as
+            # "unavailable" instead of detected.
+            vram = torch.cuda.get_device_properties(0).total_memory / (1024**3)
             print(f"  [OK] CUDA GPU: {name} ({vram:.1f}GB VRAM)")
         else:
             print("  [--] No CUDA GPU detected. AI features will use CPU (slower).")
             print("       For GPU: pip install torch --index-url https://download.pytorch.org/whl/cu121")
     except ImportError:
         print("  [--] PyTorch not installed. AI features unavailable until installed.")
+    except Exception as exc:
+        print(f"  [--] Could not query GPU: {exc}")
 
 
 def verify():
@@ -173,7 +197,7 @@ def verify():
         errors.append("flask")
 
     try:
-        from faster_whisper import WhisperModel
+        from faster_whisper import WhisperModel  # noqa: F401 — import probes availability
         print("  [OK] faster-whisper")
     except ImportError:
         print("  [--] faster-whisper not available (captions won't work)")

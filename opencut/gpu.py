@@ -27,9 +27,23 @@ except ImportError:
 # Standalone helpers
 # ---------------------------------------------------------------------------
 
+def _cuda_available() -> bool:
+    """Wrap ``torch.cuda.is_available()`` so a partially-broken CUDA driver
+    (mismatched runtime, kernel mode driver crash, blacklisted device) can't
+    raise a hard exception and take down the request handler. We only need
+    a boolean answer; treat every error as "no GPU"."""
+    if not _HAS_TORCH:
+        return False
+    try:
+        return bool(torch.cuda.is_available())
+    except Exception as exc:
+        logger.warning("torch.cuda.is_available() raised %s — falling back to CPU", exc)
+        return False
+
+
 def get_device() -> str:
     """Return 'cuda' if a CUDA GPU is available, else 'cpu'."""
-    if _HAS_TORCH and torch.cuda.is_available():
+    if _cuda_available():
         return "cuda"
     return "cpu"
 
@@ -46,7 +60,7 @@ def check_vram(min_gb: float = 0) -> tuple:
         (available_gb, total_gb) tuple.  Returns (0, 0) when no
         CUDA GPU is detected or torch is unavailable.
     """
-    if not _HAS_TORCH or not torch.cuda.is_available():
+    if not _cuda_available():
         return (0.0, 0.0)
 
     try:
@@ -149,7 +163,7 @@ class GPUContext:
         self._models.clear()
 
         # Flush CUDA cache
-        if _HAS_TORCH and torch.cuda.is_available():
+        if _cuda_available():
             try:
                 torch.cuda.empty_cache()
                 logger.debug("GPUContext: CUDA cache cleared")

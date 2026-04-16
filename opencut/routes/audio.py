@@ -883,9 +883,18 @@ def tts_voices():
         return safe_error(e, "tts_voices")
 
 
+def _validate_tts_text(data):
+    text = (data.get("text") or "").strip()
+    if not text:
+        return "No text provided"
+    if len(text) > 50000:
+        return "Text too long (max 50000 chars)"
+    return None
+
+
 @audio_bp.route("/audio/tts/generate", methods=["POST"])
 @require_csrf
-@async_job("tts", filepath_required=False)
+@async_job("tts", filepath_required=False, pre_validate=_validate_tts_text)
 def tts_generate(job_id, filepath, data):
     """Generate speech from text."""
     import re as _re_tts
@@ -949,7 +958,7 @@ def tts_generate(job_id, filepath, data):
 
 @audio_bp.route("/audio/tts/subtitled", methods=["POST"])
 @require_csrf
-@async_job("tts-sub", filepath_required=False)
+@async_job("tts-sub", filepath_required=False, pre_validate=_validate_tts_text)
 def tts_subtitled(job_id, filepath, data):
     """Generate speech + word-level subtitles."""
     from opencut.core.voice_gen import edge_tts_with_subtitles
@@ -1198,9 +1207,20 @@ def audio_duck_video_route(job_id, filepath, data):
     return {"output_path": out}
 
 
+def _validate_mix_tracks(data):
+    tracks = data.get("tracks")
+    if not tracks:
+        return "No tracks to mix"
+    if not isinstance(tracks, list):
+        return "tracks must be a list"
+    if len(tracks) > 32:
+        return "Too many tracks (max 32)"
+    return None
+
+
 @audio_bp.route("/audio/mix", methods=["POST"])
 @require_csrf
-@async_job("mix", filepath_required=False)
+@async_job("mix", filepath_required=False, pre_validate=_validate_mix_tracks)
 def audio_mix_route(job_id, filepath, data):
     """Mix multiple audio tracks."""
     from opencut.core.audio_duck import mix_audio_tracks
@@ -1585,9 +1605,18 @@ def audio_beat_markers(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 # Audio: Loudness Match (batch)
 # ---------------------------------------------------------------------------
+def _validate_loudness_files(data):
+    files = data.get("files")
+    if not isinstance(files, list) or not files:
+        return "files must be a non-empty list"
+    if len(files) > 100:
+        return "Too many files (max 100)"
+    return None
+
+
 @audio_bp.route("/audio/loudness-match", methods=["POST"])
 @require_csrf
-@async_job("loudness-match", filepath_required=False)
+@async_job("loudness-match", filepath_required=False, pre_validate=_validate_loudness_files)
 def audio_loudness_match(job_id, filepath, data):
     """Batch-normalize a list of audio/video files to a target LUFS level."""
     from opencut.core import loudness_match

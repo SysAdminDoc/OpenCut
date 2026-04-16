@@ -120,7 +120,6 @@ def detect_sfx_cues(
         # Parse scene descriptions to find action keywords
         for scene in scene_data:
             start = float(scene.get("start", 0))
-            float(scene.get("end", start + 1.0))
             desc = scene.get("description", "").lower()
 
             # Check for action keywords in description
@@ -231,7 +230,6 @@ def _build_synth_filter(category: str, duration: float) -> str:
         )
     elif synth_type == "sweep_loop":
         # Alarm sweep (up-down)
-        duration / 2
         return (
             f"sine=frequency={freq}:duration={duration},"
             f"tremolo=f=4:d=0.7,"
