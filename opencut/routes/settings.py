@@ -395,7 +395,7 @@ def tail_logs():
         job_id (str): Filter by job ID
     """
     from opencut.server import LOG_FILE
-    lines = min(safe_int(request.args.get("lines", 100), default=100, min_val=1, max_val=500), 500)
+    lines = safe_int(request.args.get("lines", 100), default=100, min_val=1, max_val=500)
     level_filter = request.args.get("level", "").upper()
     job_filter = request.args.get("job_id", "")
     if not os.path.isfile(LOG_FILE):

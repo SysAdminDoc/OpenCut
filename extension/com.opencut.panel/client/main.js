@@ -34,6 +34,7 @@
     var elapsedTimer = null;
     var activeStream = null;
     var batchPollTimer = null;
+    var _currentBatchId = null;
     var mediaScanTimer = null;
     var transcriptData = null; // stored transcript for editing/export
     var lastJobEndpoint = "";  // for retry
@@ -59,6 +60,7 @@
         if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
         if (elapsedTimer) { clearInterval(elapsedTimer); elapsedTimer = null; }
         if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
+        _currentBatchId = null;
         if (mediaScanTimer) { clearInterval(mediaScanTimer); mediaScanTimer = null; }
         if (_statusTimer) { clearInterval(_statusTimer); _statusTimer = null; }
         if (_scanDebounceTimer) { clearTimeout(_scanDebounceTimer); _scanDebounceTimer = null; }
@@ -1670,6 +1672,13 @@
                             healthTimer = setInterval(checkHealth, HEALTH_MS);
                             updateButtons();
                             loadCapabilities();
+                            // cleanupTimers() on the preceding disconnect nuked
+                            // mediaScanTimer + _statusTimer; checkHealth()
+                            // restarts them on normal reconnects, but the
+                            // port-scan reconnect path here must do the same
+                            // or the status bar and media-scan silently stop
+                            // until the panel is fully reloaded.
+                            try { if (typeof startBackgroundPollers === "function") startBackgroundPollers(); } catch (e) {}
                             portScanPending = false;
                         }
                     } catch (e) {}
@@ -4852,17 +4861,30 @@
                 return;
             }
             var batchId = data.batch_id;
+            _currentBatchId = batchId;
             el.batchStatusText.textContent = "Batch running: 0/" + data.total + " complete…";
             updateBatchSummary("Batch is running across " + data.total + " clips.", "working");
-            // Poll for status (with error limit to prevent infinite polling)
+            // Poll for status (with error limit to prevent infinite polling).
+            // Starting a new batch replaces the active timer, so capture the
+            // local timer ref + batchId in the callback so an in-flight poll
+            // from the old batch can't overwrite UI for the new one.
             var pollErrors = 0;
             if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
-            batchPollTimer = setInterval(function () {
+            var _thisBatch = batchId;
+            var _thisTimer = null;
+            _thisTimer = setInterval(function () {
+                // If a newer batch superseded us, self-destruct quietly.
+                if (_thisBatch !== _currentBatchId) {
+                    clearInterval(_thisTimer);
+                    return;
+                }
                 api("GET", "/batch/" + batchId, null, function (e2, d2) {
+                    if (_thisBatch !== _currentBatchId) return;
                     if (e2 || !d2) {
                         pollErrors++;
                         if (pollErrors >= 10) {
-                            clearInterval(batchPollTimer); batchPollTimer = null;
+                            clearInterval(_thisTimer);
+                            if (batchPollTimer === _thisTimer) batchPollTimer = null;
                             el.batchStatusText.textContent = "Batch poll failed after 10 errors";
                             updateBatchSummary(
                                 "Batch status polling failed repeatedly. Results may still finish in the background.",
@@ -4883,11 +4905,13 @@
                         d2.status === "running" ? "working" : ((res.failed || 0) ? "warning" : "success")
                     );
                     if (d2.status !== "running") {
-                        clearInterval(batchPollTimer); batchPollTimer = null;
+                        clearInterval(_thisTimer);
+                        if (batchPollTimer === _thisTimer) batchPollTimer = null;
                         showAlert("Batch complete: " + (res.success || 0) + " succeeded");
                     }
                 });
             }, 2000);
+            batchPollTimer = _thisTimer;
         });
     }
 
@@ -7278,7 +7302,7 @@
             var payload = JSON.stringify(markers);
             cs.evalScript(
                 "ocAddSequenceMarkers('" +
-                payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')",
+                escSingleQuote(payload) + "')",
                 function (result) {
                     try {
                         var r = JSON.parse(result || "{}");
@@ -8107,6 +8131,24 @@
         // backslashes, quotes, and control characters that could break the string
         return s.replace(/\\/g, "\\\\").replace(/"/g, '\\"')
                 .replace(/\n/g, "\\n").replace(/\r/g, "\\r").replace(/\t/g, "\\t");
+    }
+
+    // Escape for embedding inside an ExtendScript *single-quoted* string.
+    // Used by evalScript("ocX('" + escSingleQuote(payload) + "')") call sites
+    // that previously did a narrow replace(/\\/g,"\\\\").replace(/'/g,"\\'")
+    // which failed on literal newlines/CR/Unicode line separators — breaking
+    // the JSX string and raising a cs.evalScript error on markers/chapters
+    // whose names contained those chars.
+    function escSingleQuote(s) {
+        if (s === undefined || s === null) return "";
+        return String(s)
+            .replace(/\\/g, "\\\\")
+            .replace(/'/g, "\\'")
+            .replace(/\n/g, "\\n")
+            .replace(/\r/g, "\\r")
+            .replace(/\t/g, "\\t")
+            .replace(/\u2028/g, "\\u2028")
+            .replace(/\u2029/g, "\\u2029");
     }
 
     function extractWordSegments(segments) {
@@ -9707,12 +9749,16 @@
                 setTimeout(function () { steps[idx].classList.add("active"); }, idx * 400);
             })(i);
         }
-        if (el.wizardCloseBtn) {
+        if (el.wizardCloseBtn && !el.wizardCloseBtn._wizardBound) {
             el.wizardCloseBtn.addEventListener("click", closeWizard);
+            el.wizardCloseBtn._wizardBound = true;
         }
-        el.wizardOverlay.addEventListener("click", function (e) {
-            if (e.target === el.wizardOverlay) closeWizard();
-        });
+        if (!el.wizardOverlay._wizardOverlayBound) {
+            el.wizardOverlay.addEventListener("click", function (e) {
+                if (e.target === el.wizardOverlay) closeWizard();
+            });
+            el.wizardOverlay._wizardOverlayBound = true;
+        }
     }
 
     // ================================================================
@@ -9942,13 +9988,20 @@
             for (var i = 0; i < keys.length; i++) {
                 var name = keys[i];
                 var info = data[name];
-                if (info && info.installed) installedCount++;
+                // Defend against the backend returning ``null`` for a dep
+                // entry (has happened with racy cache refreshes); rendering
+                // would otherwise throw and wipe the whole grid.
+                var isInstalled = !!(info && info.installed);
+                if (isInstalled) installedCount++;
                 else missingCount++;
+                var versionText = isInstalled
+                    ? ((info && info.version ? info.version : "OK").toString().substring(0, 12))
+                    : "missing";
                 var div = document.createElement("div");
                 div.className = "dep-item";
-                div.innerHTML = '<span class="dep-dot ' + (info.installed ? "installed" : "missing") + '"></span>' +
+                div.innerHTML = '<span class="dep-dot ' + (isInstalled ? "installed" : "missing") + '"></span>' +
                     '<span class="dep-name">' + esc(name) + '</span>' +
-                    '<span class="dep-version">' + esc(info.installed ? (info.version || "OK").toString().substring(0, 12) : "missing") + '</span>';
+                    '<span class="dep-version">' + esc(versionText) + '</span>';
                 frag.appendChild(div);
             }
             el.depGrid.innerHTML = "";
@@ -11771,7 +11824,7 @@
     function applySequenceCuts(cuts) {
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
         var payload = JSON.stringify(cuts);
-        cs.evalScript("ocApplySequenceCuts('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
+        cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
                 showToast("Applied " + (r.applied || 0) + " cuts to sequence", "success");
@@ -11803,7 +11856,7 @@
         if (!beatMarkerTimes || !beatMarkerTimes.length) { showAlert("No beat markers detected."); return; }
         var markers = beatMarkerTimes.map(function(t) { return { time: t, name: "Beat", type: "Chapter" }; });
         var payload = JSON.stringify(markers);
-        cs.evalScript("ocAddSequenceMarkers('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
+        cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
                 showToast("Added " + (r.added || beatMarkerTimes.length) + " markers", "success");
@@ -11863,7 +11916,7 @@
         if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
         if (!multicamCutsData) { showAlert("No multicam cuts available."); return; }
         var payload = JSON.stringify(multicamCutsData);
-        cs.evalScript("ocApplySequenceCuts('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
+        cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
                 showToast("Multicam cuts applied: " + (r.applied || 0), "success");
@@ -12020,7 +12073,7 @@
             if (err || (data && data.error)) { showAlert("Validation failed: " + (data ? data.error : "Network error")); return; }
             if (!inPremiere) { showToast("Rename validated (no Premiere connection)", "info"); return; }
             var payload = JSON.stringify(renames);
-            cs.evalScript("ocBatchRenameProjectItems('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
+            cs.evalScript("ocBatchRenameProjectItems('" + escSingleQuote(payload) + "')", function (result) {
                 try {
                     var r = JSON.parse(result);
                     showToast("Renamed " + (r.renamed || renames.length) + " items", "success");
@@ -12131,7 +12184,7 @@
             if (!inPremiere) { showToast("Rules validated (no Premiere connection)", "info"); return; }
             var jsxRules = smartBinRules.map(function(r) { return { binName: r.bin_name, rule: r.rule_type, field: r.field, value: r.value }; });
             var payload = JSON.stringify(jsxRules);
-            cs.evalScript("ocCreateSmartBins('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
+            cs.evalScript("ocCreateSmartBins('" + escSingleQuote(payload) + "')", function (result) {
                 try {
                     var r = JSON.parse(result);
                     showToast("Created " + (r.created || smartBinRules.length) + " bins", "success");
@@ -12243,7 +12296,7 @@
         if (!chaptersData || !chaptersData.length) { showAlert("No chapters available."); return; }
         var markers = chaptersData.map(function(c) { return { time: c.seconds || c.start || c.time || 0, name: c.title || c.label || "Chapter", type: "Chapter" }; });
         var payload = JSON.stringify(markers);
-        cs.evalScript("ocAddSequenceMarkers('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
+        cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
                 showToast("Added " + (r.added || chaptersData.length) + " chapter markers", "success");
@@ -12259,7 +12312,7 @@
             var segments = data.segments || [];
             if (!inPremiere) { showToast("SRT parsed (" + segments.length + " segments), no Premiere connection", "info"); return; }
             var payload = JSON.stringify(segments);
-            cs.evalScript("ocAddNativeCaptionTrack('" + payload.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "')", function (result) {
+            cs.evalScript("ocAddNativeCaptionTrack('" + escSingleQuote(payload) + "')", function (result) {
                 try {
                     var r = JSON.parse(result);
                     showToast("Imported " + (r.imported || segments.length) + " captions", "success");

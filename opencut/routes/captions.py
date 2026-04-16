@@ -189,7 +189,14 @@ def generate_captions(job_id, filepath, data):
             seg_obj.text = cs.get("text", "")
             seg_obj.words = []
             cached_segs.append(seg_obj)
-        result = type("TranscriptResult", (), {"segments": cached_segs, "language": language or "en"})()
+        # word_count is required by the result payload below; synthesize from
+        # text so the cached-hit fast path doesn't crash with AttributeError.
+        _cached_words = sum(len(seg.text.split()) for seg in cached_segs if seg.text)
+        result = type("TranscriptResult", (), {
+            "segments": cached_segs,
+            "language": language or "en",
+            "word_count": _cached_words,
+        })()
     else:
         _update_job(job_id, progress=20, message="Transcribing audio (this takes a while for long files)...")
         result = transcribe(filepath, config=config)
@@ -229,10 +236,10 @@ def generate_captions(job_id, filepath, data):
 
     return {
         "output_path": out_path,
-        "language": result.language,
+        "language": getattr(result, "language", language or "en"),
         "segments": len(result.segments),
         "caption_segments": len(result.segments),
-        "words": result.word_count,
+        "words": getattr(result, "word_count", 0),
     }
 
 
@@ -264,6 +271,15 @@ def styled_captions_route(job_id, filepath, data):
         raise ValueError(f"Invalid model: {model}")
     language = data.get("language", None)
     custom_action_words = data.get("action_words", [])
+    # Bound the list + per-item size so malicious/misconfigured clients can't
+    # drive the styled-captions renderer into unbounded regex work or OOM.
+    if not isinstance(custom_action_words, list):
+        custom_action_words = []
+    else:
+        custom_action_words = [
+            str(w)[:64] for w in custom_action_words[:500]
+            if isinstance(w, (str, int, float))
+        ]
     auto_detect_energy = safe_bool(data.get("auto_detect_energy", True), True)
     # Optional: pre-existing speech segments for remapping
     remap_segments_raw = data.get("remap_segments", None)
@@ -339,6 +355,26 @@ def styled_captions_route(job_id, filepath, data):
     def _on_render_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
 
+    # Resolve total duration defensively — info may be None if probing failed,
+    # and transcription.duration may be 0/None. Prefer the last segment end as
+    # a guaranteed-available fallback so the renderer always gets a sane value.
+    _last_end = 0.0
+    try:
+        _last_end = max(
+            (float(getattr(s, "end", 0) or 0) for s in transcription.segments),
+            default=0.0,
+        )
+    except (TypeError, ValueError):
+        _last_end = 0.0
+    _info_dur = 0.0
+    try:
+        _info_dur = float(info.duration) if info and getattr(info, "duration", None) else 0.0
+    except (TypeError, ValueError):
+        _info_dur = 0.0
+    total_duration = (
+        getattr(transcription, "duration", 0) or _info_dur or _last_end or 0.0
+    )
+
     result = render_styled_caption_video(
         transcription,
         overlay_path,
@@ -347,7 +383,7 @@ def styled_captions_route(job_id, filepath, data):
         video_height=vid_h,
         fps=vid_fps,
         action_indices=action_indices,
-        total_duration=transcription.duration or info.duration,
+        total_duration=total_duration,
         on_progress=_on_render_progress,
     )
 
@@ -358,8 +394,8 @@ def styled_captions_route(job_id, filepath, data):
         "frames_rendered": result["frames_rendered"],
         "action_words_found": len(action_indices),
         "caption_segments": len(transcription.segments),
-        "words": sum(len(s.words) for s in transcription.segments),
-        "language": transcription.language,
+        "words": sum(len(getattr(s, "words", []) or []) for s in transcription.segments),
+        "language": getattr(transcription, "language", language or "en"),
     }
 
 
@@ -464,10 +500,12 @@ def export_edited_transcript():
                 speaker=seg.get("speaker"),
             ))
 
+        # Use max() instead of last-element access so out-of-order segments
+        # (possible after user edits) still produce a correct total duration.
         result = TranscriptionResult(
             segments=caption_segments,
             language=language,
-            duration=caption_segments[-1].end if caption_segments else 0.0,
+            duration=max((s.end for s in caption_segments), default=0.0) if caption_segments else 0.0,
         )
 
         effective_dir = _resolve_output_dir(filepath, output_dir)
@@ -479,7 +517,7 @@ def export_edited_transcript():
         elif sub_format == "json":
             export_json(result, out_path)
         elif sub_format == "ass":
-            info = _probe_media(filepath) if os.path.isfile(filepath) else None
+            info = _safe_probe(filepath)
             vid_w = info.video.width if info and info.video else 1920
             vid_h = info.video.height if info and info.video else 1080
             export_ass(result, out_path, video_width=vid_w, video_height=vid_h, karaoke=True)
