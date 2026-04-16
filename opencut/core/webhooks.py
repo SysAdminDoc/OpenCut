@@ -33,6 +33,18 @@ def _validate_webhook_url(url: str) -> str:
         raise ValueError("Webhook URL must use http:// or https:// and include a host")
     if any(ch in cleaned for ch in ("\r", "\n", "\x00")):
         raise ValueError("Webhook URL contains invalid characters")
+    # Block internal/private network targets to prevent SSRF
+    hostname = (parsed.hostname or "").lower()
+    if hostname in {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"}:
+        raise ValueError("Webhook URL must not target localhost")
+    import ipaddress
+    try:
+        addr = ipaddress.ip_address(hostname)
+    except ValueError:
+        pass  # hostname is not an IP literal — that's fine
+    else:
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            raise ValueError("Webhook URL must not target private/reserved networks")
     return cleaned
 
 

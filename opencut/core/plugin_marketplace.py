@@ -112,6 +112,22 @@ def _validate_download_url(url: str) -> str:
     parsed = urlparse(url.strip())
     if parsed.scheme not in {"http", "https"}:
         raise ValueError("Plugin download URL must use http or https")
+    # Block internal/private network targets to prevent SSRF
+    hostname = (parsed.hostname or "").lower()
+    if not hostname:
+        raise ValueError("Plugin download URL has no hostname")
+    _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"}
+    if hostname in _BLOCKED_HOSTS:
+        raise ValueError("Plugin download URL must not target localhost")
+    # Block private IP ranges (10.x, 172.16-31.x, 192.168.x, 169.254.x)
+    import ipaddress
+    try:
+        addr = ipaddress.ip_address(hostname)
+    except ValueError:
+        pass  # hostname is not an IP literal — that's fine
+    else:
+        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
+            raise ValueError("Plugin download URL must not target private/reserved networks")
     return url.strip()
 
 

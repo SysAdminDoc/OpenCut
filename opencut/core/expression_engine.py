@@ -352,6 +352,11 @@ _BANNED_ATTRS = frozenset({
     "__import__", "__builtins__", "__globals__", "__code__",
     "__subclasses__", "__bases__", "__mro__", "__class__",
     "__dict__", "__getattr__", "__setattr__", "__delattr__",
+    "__getattribute__", "__init__", "__new__", "__call__",
+    "__reduce__", "__reduce_ex__", "__getnewargs__",
+    "__getnewargs_ex__", "__module__", "__wrapped__",
+    "__qualname__", "__self__", "__func__", "__closure__",
+    "__init_subclass__", "__set_name__", "__del__",
     "eval", "exec", "compile", "open", "input",
     "__loader__", "__spec__", "__name__", "__file__",
 })
@@ -546,7 +551,14 @@ class ExpressionContext:
             "True": True,
             "False": False,
         })
-        globs.update(self.custom_vars)
+        # Sanitize custom_vars: reject dunder keys and non-scalar values
+        # that could carry dangerous methods (__float__, __class__, etc.)
+        for k, v in self.custom_vars.items():
+            if k.startswith("_") or k in _BANNED_ATTRS:
+                continue
+            if not isinstance(v, (int, float, bool, str, type(None))):
+                continue
+            globs[k] = v
         # Remove builtins to prevent access
         globs["__builtins__"] = {}
         return globs
@@ -703,18 +715,23 @@ def evaluate_expression(expr_string: str,
 
     result = result_box[0]
 
-    # Convert to float
+    # Convert to float — only allow primitive types to prevent
+    # __float__/__int__ dunder calls on arbitrary objects
     if isinstance(result, bool):
         return 1.0 if result else 0.0
     if isinstance(result, (int, float)):
         return float(result)
     if result is None:
         return 0.0
+    if isinstance(result, str):
+        try:
+            return float(result)
+        except (ValueError, TypeError):
+            return 0.0
 
-    try:
-        return float(result)
-    except (ValueError, TypeError):
-        return 0.0
+    # Reject non-primitive results — calling float() on arbitrary objects
+    # would invoke __float__() which could be a sandbox escape
+    return 0.0
 
 
 def evaluate_timeline(expr_string: str,

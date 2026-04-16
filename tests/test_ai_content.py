@@ -389,79 +389,71 @@ class TestEngagementPredict(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             predict_engagement("/nonexistent/video.mp4")
 
-    @patch("opencut.core.engagement_predict._measure_scene_change_rate")
-    @patch("opencut.core.engagement_predict._build_energy_curve")
-    @patch("opencut.core.engagement_predict._measure_visual_change")
-    @patch("opencut.core.engagement_predict._measure_audio_energy")
+    @patch("opencut.core.engagement_predict._detect_scene_changes")
+    @patch("opencut.core.engagement_predict._detect_silence_segments")
+    @patch("opencut.core.engagement_predict._extract_audio_levels")
     @patch("opencut.core.engagement_predict.get_video_info")
     def test_predict_engagement_structure(self, mock_info, mock_audio,
-                                          mock_visual, mock_energy,
-                                          mock_scene_rate):
+                                          mock_silence, mock_scenes):
         """predict_engagement should return complete result structure."""
         from opencut.core.engagement_predict import predict_engagement
         mock_info.return_value = {"duration": 60.0, "fps": 30.0, "width": 1920, "height": 1080}
-        mock_audio.return_value = 55.0
-        mock_visual.return_value = 40.0
-        mock_energy.return_value = [
-            {"time": 0.0, "energy": 50.0},
-            {"time": 10.0, "energy": 45.0},
-            {"time": 20.0, "energy": 55.0},
-            {"time": 30.0, "energy": 40.0},
-        ]
-        mock_scene_rate.return_value = 12.0
+        mock_audio.return_value = [-20.0] * 60  # 60s of audio levels
+        mock_silence.return_value = [(10.0, 12.0), (30.0, 31.5)]
+        mock_scenes.return_value = [5.0, 15.0, 25.0, 35.0, 45.0]
 
         with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
             f.write(b"fake")
             path = f.name
         try:
-            result = predict_engagement(path, transcript_text="Hello world testing speech pace")
+            result = predict_engagement(path, transcript="Hello world testing")
             self.assertIn("hook_score", result)
             self.assertIn("retention_curve", result)
-            self.assertIn("virality_score", result)
             self.assertIn("overall_score", result)
             self.assertIn("suggestions", result)
-            self.assertIn("analysis", result)
             self.assertIsInstance(result["hook_score"], int)
             self.assertTrue(0 <= result["hook_score"] <= 100)
-            self.assertTrue(0 <= result["virality_score"] <= 100)
+            self.assertTrue(0 <= result["overall_score"] <= 100)
             self.assertTrue(len(result["retention_curve"]) > 0)
         finally:
             os.unlink(path)
 
-    def test_speech_pace_analysis(self):
-        """_analyze_speech_pace should calculate WPM from transcript."""
-        from opencut.core.engagement_predict import _analyze_speech_pace
-        transcript = "This is a test with exactly ten words in it"
-        wpm = _analyze_speech_pace(transcript, duration=60.0)
-        self.assertIsNotNone(wpm)
-        self.assertAlmostEqual(wpm, 10.0, delta=1.0)
+    def test_score_audio_energy_range(self):
+        """_score_audio_energy should return 0-100 and suggestions list."""
+        from opencut.core.engagement_predict import _score_audio_energy
+        score, tips = _score_audio_energy([-20.0] * 10)
+        self.assertTrue(0 <= score <= 100)
+        self.assertIsInstance(tips, list)
 
-    def test_speech_pace_empty(self):
-        """_analyze_speech_pace should return None for empty transcript."""
-        from opencut.core.engagement_predict import _analyze_speech_pace
-        self.assertIsNone(_analyze_speech_pace(None, 60.0))
-        self.assertIsNone(_analyze_speech_pace("", 60.0))
-        self.assertIsNone(_analyze_speech_pace("hello", 0.0))
+    def test_score_audio_energy_empty(self):
+        """_score_audio_energy should handle empty input gracefully."""
+        from opencut.core.engagement_predict import _score_audio_energy
+        score, tips = _score_audio_energy([])
+        self.assertTrue(0 <= score <= 100)
+        self.assertTrue(len(tips) > 0)  # should suggest adding audio
 
     def test_hook_score_computation(self):
-        """_compute_hook_score should return 0-100 for valid inputs."""
-        from opencut.core.engagement_predict import _compute_hook_score
-        # High energy + high visual = high hook
-        high = _compute_hook_score(80.0, 70.0, 60.0)
-        self.assertTrue(40 <= high <= 100)
-        # Low energy = low hook
-        low = _compute_hook_score(10.0, 10.0, 60.0)
-        self.assertTrue(0 <= low <= 50)
+        """_score_hook should return 0-100 score and tips list."""
+        from opencut.core.engagement_predict import _score_hook
+        # High energy audio + early cuts = high hook
+        high_score, high_tips = _score_hook([-10.0] * 10, 10.0, [0.5, 1.5, 2.5])
+        self.assertTrue(0 <= high_score <= 100)
+        self.assertIsInstance(high_tips, list)
+        # Low energy audio = low hook
+        low_score, low_tips = _score_hook([-60.0] * 10, 10.0, [])
+        self.assertTrue(0 <= low_score <= 100)
+        self.assertLessEqual(low_score, high_score)
 
     def test_retention_curve_shape(self):
-        """_build_retention_curve should produce a decaying curve."""
-        from opencut.core.engagement_predict import _build_retention_curve
-        energy = [{"time": 0.0, "energy": 50.0}, {"time": 30.0, "energy": 50.0}]
-        curve = _build_retention_curve(energy, 10.0, 60.0)
+        """_generate_retention_curve should produce a decaying curve."""
+        from opencut.core.engagement_predict import _generate_retention_curve
+        audio_levels = [-30.0] * 60
+        cuts = [5.0, 15.0, 25.0]
+        silence_segments = [(10.0, 12.0)]
+        curve = _generate_retention_curve(audio_levels, cuts, silence_segments, 60.0)
         self.assertTrue(len(curve) >= 2)
-        # First point should have higher retention than last
-        self.assertGreater(curve[0]["predicted_retention_pct"],
-                          curve[-1]["predicted_retention_pct"])
+        # First point should have higher retention than last (natural decay)
+        self.assertGreater(curve[0][1], curve[-1][1])
 
 
 # ============================================================

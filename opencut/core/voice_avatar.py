@@ -159,7 +159,8 @@ def _read_audio_amplitudes(audio_path: str, target_fps: int = 30) -> List[float]
 
     # Convert to WAV if not already
     if not audio_path.lower().endswith(".wav"):
-        tmp_wav = tempfile.mktemp(suffix=".wav", prefix="avatar_audio_")
+        _fd, tmp_wav = tempfile.mkstemp(suffix=".wav", prefix="avatar_audio_")
+        os.close(_fd)
         cmd = (FFmpegCmd()
                .input(audio_path)
                .no_video()

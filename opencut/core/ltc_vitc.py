@@ -265,7 +265,8 @@ def extract_ltc(
     sample_rate = 48000  # LTC needs high sample rate for reliable decoding
 
     # Extract audio as mono PCM (LTC is often on the last channel)
-    tmp_wav = tempfile.mktemp(suffix="_ltc_audio.wav")
+    _fd, tmp_wav = tempfile.mkstemp(suffix="_ltc_audio.wav")
+    os.close(_fd)
     try:
         ffmpeg = get_ffmpeg_path()
         af_filter = "pan=mono|c0=c0" if channel <= 0 else f"pan=mono|c0=c{channel}"
@@ -380,7 +381,8 @@ def extract_vitc(
     crop_h = max(scan_lines) + 5 if scan_lines else 25
     crop_h = min(crop_h, height)
 
-    tmp_raw = tempfile.mktemp(suffix="_vitc_frames.gray")
+    _fd, tmp_raw = tempfile.mkstemp(suffix="_vitc_frames.gray")
+    os.close(_fd)
     try:
         ffmpeg = get_ffmpeg_path()
         vf = f"crop={width}:{crop_h}:0:0,format=gray"
