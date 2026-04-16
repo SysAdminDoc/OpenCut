@@ -421,17 +421,28 @@ _TOOL_ROUTES = {
 }
 
 
-def _validate_mcp_filepath(args, key="filepath"):
-    """Validate filepath arguments at MCP layer (defense-in-depth)."""
+def _validate_mcp_filepath(args, key="filepath", *, allow_empty=False):
+    """Validate filepath arguments at MCP layer (defense-in-depth).
+
+    ``allow_empty=True`` lets optional keys (e.g. ``voice_ref``) omit the
+    value by passing an empty string — the server route treats empty as
+    "not provided" and skips processing. Without this, legitimate empty
+    values were rejected as invalid.
+    """
     path = args.get(key, "")
     if not isinstance(path, str):
         return False
     if not path:
-        return False
-    if ".." in path or "\x00" in path:
+        return allow_empty
+    if "\x00" in path:
         return False
     if path.startswith("\\\\") or path.startswith("//"):
         return False  # Reject UNC paths
+    # Check for `..` as a *path component* (not just a substring); names like
+    # ``my..file.mp4`` are legal filenames and must not be rejected.
+    parts = path.replace("\\", "/").split("/")
+    if ".." in parts:
+        return False
     return True
 
 
@@ -440,17 +451,27 @@ def handle_tool_call(tool_name, arguments):
     if tool_name not in _TOOL_ROUTES:
         return {"error": f"Unknown tool: {tool_name}"}
 
-    # Validate filepath arguments at MCP layer (scalar keys)
-    for key in ("filepath", "style_image", "voice_ref", "file", "source", "reference"):
-        if key in arguments and not _validate_mcp_filepath(arguments, key):
-            return {"error": f"Invalid {key}: path traversal or null bytes detected"}
+    # Required scalar path keys — empty rejected
+    _required_path_keys = ("filepath", "file", "source", "reference")
+    # Optional scalar path keys — empty allowed (means "not provided")
+    _optional_path_keys = ("style_image", "voice_ref", "output_dir")
+    for key in _required_path_keys:
+        if key in arguments and not _validate_mcp_filepath(arguments, key, allow_empty=False):
+            return {"error": f"Invalid {key}: path traversal, null byte, or UNC path detected"}
+    for key in _optional_path_keys:
+        if key in arguments and not _validate_mcp_filepath(arguments, key, allow_empty=True):
+            return {"error": f"Invalid {key}: path traversal, null byte, or UNC path detected"}
 
     # Validate filepath arrays (e.g. "files" in index_footage / loudness_match)
     for key in ("files",):
         if key in arguments and isinstance(arguments[key], list):
             for i, item in enumerate(arguments[key]):
-                if not isinstance(item, str) or ".." in item or "\x00" in item or item.startswith("\\\\") or item.startswith("//"):
-                    return {"error": f"Invalid path in {key}[{i}]: path traversal or UNC path detected"}
+                if not isinstance(item, str) or not item or "\x00" in item \
+                        or item.startswith("\\\\") or item.startswith("//"):
+                    return {"error": f"Invalid path in {key}[{i}]: empty, null byte, or UNC path detected"}
+                parts = item.replace("\\", "/").split("/")
+                if ".." in parts:
+                    return {"error": f"Invalid path in {key}[{i}]: path traversal component detected"}
 
     method, path = _TOOL_ROUTES[tool_name]
 
@@ -499,6 +520,11 @@ def run_mcp_stdio():
         msg_id = msg.get("id")
         method = msg.get("method", "")
         params = msg.get("params", {})
+
+        # JSON-RPC 2.0: messages without an ``id`` field are notifications
+        # and must not produce a response, regardless of method name.
+        if "id" not in msg:
+            continue
 
         if method == "initialize":
             response = {
