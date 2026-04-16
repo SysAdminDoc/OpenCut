@@ -59,7 +59,14 @@ def _diarize_simple(input_path: str, num_speakers: int = 2) -> List[SpeakerSegme
         "-af", "silencedetect=noise=-35dB:d=0.5",
         "-f", "null", "-",
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=False)
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300, check=False)
+    except subprocess.TimeoutExpired:
+        # 5-minute silence-detect cap is plenty for an audio-only pass.
+        # Treat timeout as "no segments detected" so the caller still gets
+        # a usable list rather than an unhandled exception in the worker.
+        logger.warning("silencedetect timed out for %s; returning empty segment list", input_path)
+        return []
 
     segments = []
     speaker_idx = 0

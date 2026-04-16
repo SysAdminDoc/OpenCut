@@ -450,9 +450,16 @@ def transitions_apply(job_id, filepath, data):
     return {"output_path": out}
 
 
+def _validate_transition_clips(data):
+    clips = data.get("clips")
+    if not isinstance(clips, list) or len(clips) < 2:
+        return "Need 2+ clips"
+    return None
+
+
 @video_fx_bp.route("/video/transitions/join", methods=["POST"])
 @require_csrf
-@async_job("join", filepath_required=False)
+@async_job("join", filepath_required=False, pre_validate=_validate_transition_clips)
 def transitions_join(job_id, filepath, data):
     """Join multiple clips with transitions."""
     clips = data.get("clips", [])

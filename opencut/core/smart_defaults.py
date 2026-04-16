@@ -133,8 +133,9 @@ def _estimate_motion(video_path: str) -> float:
         result = _sp.run(cmd, capture_output=True, timeout=60)
         stderr = result.stderr.decode(errors="replace")
 
-        # Count freeze events -- more freezes = more static
-        len(re.findall(r"freeze_start", stderr))
+        # Sum freeze durations from FFmpeg's freezedetect filter output —
+        # the previous line counted ``freeze_start`` events but discarded
+        # the result. Total freeze duration is what feeds the ratio below.
         freeze_duration_matches = re.findall(r"freeze_duration:\s*([\d.]+)", stderr)
         total_freeze = sum(float(d) for d in freeze_duration_matches)
 

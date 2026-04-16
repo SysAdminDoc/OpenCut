@@ -47,7 +47,15 @@ def _extract_audio_pcm(input_path: str, wav_path: str) -> None:
         "-ac", "1",
         wav_path,
     ]
-    result = _sp.run(cmd, capture_output=True, timeout=300)
+    try:
+        result = _sp.run(cmd, capture_output=True, timeout=300)
+    except _sp.TimeoutExpired as exc:
+        # 5-minute extraction cap is generous for audio-only PCM convert.
+        # Surface the timeout as a normal failure instead of letting the
+        # raw TimeoutExpired bubble up through the worker thread.
+        raise RuntimeError(
+            f"Audio extraction timed out after {exc.timeout}s for '{input_path}'"
+        ) from exc
     if result.returncode != 0:
         stderr = result.stderr.decode(errors="replace")[-500:]
         raise RuntimeError(f"Audio extraction failed: {stderr}")

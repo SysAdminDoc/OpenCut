@@ -84,9 +84,19 @@ def title_presets():
         return safe_error(e, "title_presets")
 
 
+def _validate_title_render(data):
+    """Sync validation for /video/title/render — text must be non-empty."""
+    text = (data.get("text") or "").strip()
+    if not text:
+        return "No text"
+    if len(text) > 500:
+        return "Title text too long (max 500 chars)"
+    return None
+
+
 @video_specialty_bp.route("/video/title/render", methods=["POST"])
 @require_csrf
-@async_job("title_render", filepath_required=False)
+@async_job("title_render", filepath_required=False, pre_validate=_validate_title_render)
 def title_render(job_id, filepath, data):
     """Render a standalone title card video."""
     text = data.get("text", "").strip()

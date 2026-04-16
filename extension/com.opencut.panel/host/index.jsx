@@ -2396,11 +2396,15 @@ function ocUnrenameItems(mapJSON) {
             if (!entry || !entry.oldName) { missed++; continue; }
             var item = null;
             if (entry.nodeId) {
-                try { item = _findByNodeId(entry.nodeId); } catch (e1) { item = null; }
+                // _findByNodeId(parent, nodeId, depth) — must pass rootItem
+                // and starting depth or the function silently returns null.
+                try { item = _findByNodeId(app.project.rootItem, entry.nodeId, 0); } catch (e1) { item = null; }
             }
             if (!item && entry.currentName) {
-                // Fall back to name lookup
-                var all = _collectMediaItems(app.project.rootItem);
+                // Fall back to name lookup. _collectMediaItems(parent, items, depth)
+                // mutates `items` and returns nothing — we own the array.
+                var all = [];
+                try { _collectMediaItems(app.project.rootItem, all, 0); } catch (eC) { all = []; }
                 for (var j = 0; j < all.length; j++) {
                     if (all[j].name === entry.currentName) { item = all[j]; break; }
                 }
@@ -2445,7 +2449,10 @@ function ocRemoveImportedSequence(payloadJSON) {
 
         // ProjectItem.deleteItem() for sequences isn't universal across
         // Premiere versions, so try the rootItem walk first.
-        var items = _collectMediaItems(app.project.rootItem);
+        // _collectMediaItems(parent, items, depth) mutates `items` and
+        // returns nothing — we must allocate the array ourselves.
+        var items = [];
+        try { _collectMediaItems(app.project.rootItem, items, 0); } catch (eC) { items = []; }
         for (var j = 0; j < items.length; j++) {
             if (items[j].name === name && items[j].type === ProjectItemType.CLIP) {
                 try {
@@ -2516,7 +2523,10 @@ function ocRemoveImportedItem(payloadJSON) {
         var nodeId = payload && payload.nodeId ? payload.nodeId : "";
         if (!nodeId) return JSON.stringify({ error: "Missing nodeId" });
 
-        var item = _findByNodeId(nodeId);
+        // _findByNodeId(parent, nodeId, depth) — earlier code passed only
+        // nodeId here, which made the helper treat the string as a parent
+        // and silently return null, so deletes by nodeId never worked.
+        var item = _findByNodeId(app.project.rootItem, nodeId, 0);
         if (!item) return JSON.stringify({ error: "Item not found" });
 
         try {

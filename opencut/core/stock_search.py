@@ -8,6 +8,7 @@ preview results, download, and import into projects.
 import json
 import logging
 import os
+import urllib.error
 import urllib.parse
 import urllib.request
 from dataclasses import dataclass, field
@@ -52,22 +53,44 @@ def _get_api_key(source: str) -> str:
     return key
 
 
+def _http_get_json(req_or_url, timeout: int = 15) -> dict:
+    """Shared GET-and-parse helper that turns network/parse failures into a
+    clear ``RuntimeError`` instead of letting raw ``urllib`` /
+    ``json.JSONDecodeError`` exceptions propagate up to the worker. Returns
+    an empty dict so downstream ``data.get("videos", [])`` calls keep
+    returning an empty list rather than crashing on a missing API key /
+    rate limit / malformed response.
+    """
+    try:
+        with urllib.request.urlopen(req_or_url, timeout=timeout) as resp:
+            body = resp.read().decode("utf-8", errors="replace")
+    except urllib.error.HTTPError as exc:
+        raise RuntimeError(f"Stock API HTTP {exc.code}: {exc.reason}") from exc
+    except urllib.error.URLError as exc:
+        raise RuntimeError(f"Stock API network error: {exc.reason}") from exc
+    except (TimeoutError, OSError) as exc:
+        raise RuntimeError(f"Stock API request failed: {exc}") from exc
+    try:
+        parsed = json.loads(body)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError(f"Stock API returned invalid JSON: {exc}") from exc
+    return parsed if isinstance(parsed, dict) else {}
+
+
 def _pexels_request(endpoint: str, api_key: str) -> dict:
     """Make an authenticated request to the Pexels API."""
     req = urllib.request.Request(
         f"https://api.pexels.com{endpoint}",
         headers={"Authorization": api_key},
     )
-    with urllib.request.urlopen(req, timeout=15) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    return _http_get_json(req)
 
 
 def _pixabay_request(endpoint: str, api_key: str) -> dict:
     """Make a request to the Pixabay API."""
     sep = "&" if "?" in endpoint else "?"
     url = f"https://pixabay.com/api{endpoint}{sep}key={api_key}"
-    with urllib.request.urlopen(url, timeout=15) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    return _http_get_json(url)
 
 
 # ------------------------------------------------------------------
