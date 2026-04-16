@@ -14,7 +14,10 @@ FROM python:3.12-slim AS base
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ffmpeg \
     libsndfile1 \
-    libgl1-mesa-glx \
+    # libgl1 replaces libgl1-mesa-glx in Debian 12+ (bookworm). The old
+    # virtual package was dropped and pulling it fails the apt step on
+    # newer base images. libgl1 satisfies OpenCV's GL dependency.
+    libgl1 \
     libglib2.0-0 \
     curl \
     && rm -rf /var/lib/apt/lists/*
