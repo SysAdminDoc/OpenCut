@@ -144,6 +144,19 @@ def load_plugin_routes(app, plugin_info):
     if not os.path.isfile(routes_file):
         return False
 
+    # Reject duplicate plugin names up front. Flask's ``register_blueprint``
+    # raises a confusing ``ValueError: The name 'X' is already registered``
+    # when two plugins share a name; catching it here gives the operator a
+    # clear "duplicate" signal and prevents a second plugin from silently
+    # shadowing the first if Flask's behavior changes.
+    with _plugins_lock:
+        if plugin_name in _loaded_plugins:
+            logger.warning(
+                "Plugin name collision: '%s' already loaded — refusing to register",
+                plugin_name,
+            )
+            return False
+
     try:
         # Add plugin dir to sys.path temporarily for imports
         if plugin_dir not in sys.path:

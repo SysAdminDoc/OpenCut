@@ -102,10 +102,19 @@ def _get_image_size(image_path: str) -> Tuple[int, int]:
         "-show_entries", "stream=width,height",
         "-of", "json", image_path,
     ]
-    result = subprocess.run(cmd, capture_output=True, timeout=15)
+    try:
+        result = subprocess.run(cmd, capture_output=True, timeout=15)
+    except subprocess.TimeoutExpired as exc:
+        # 15s is plenty for a still-image probe; surface the timeout as
+        # a clean RuntimeError so the worker reports a useful message
+        # instead of an unhandled TimeoutExpired.
+        raise RuntimeError(f"ffprobe timed out after {exc.timeout}s for {image_path}") from exc
     if result.returncode != 0:
         raise RuntimeError(f"ffprobe failed for {image_path}")
-    data = json.loads(result.stdout.decode())
+    try:
+        data = json.loads(result.stdout.decode())
+    except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+        raise RuntimeError(f"ffprobe returned invalid JSON for {image_path}: {exc}") from exc
     streams = data.get("streams", [])
     if not streams:
         raise RuntimeError(f"No image streams found in {image_path}")

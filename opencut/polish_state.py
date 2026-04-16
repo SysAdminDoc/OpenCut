@@ -17,11 +17,28 @@ import hashlib
 import json
 import logging
 import os
+import tempfile
+import threading
 from typing import Any, Optional
 
 logger = logging.getLogger("opencut")
 
 STATE_DIR = os.path.join(os.path.expanduser("~"), ".opencut", "polish_state")
+
+# Per-key write lock so concurrent saves on the same source file don't race
+# each other writing the same JSON file. Bounded — in practice the number of
+# distinct active polish jobs is tiny (<10).
+_WRITE_LOCKS: dict[str, threading.Lock] = {}
+_WRITE_LOCKS_GUARD = threading.Lock()
+
+
+def _get_write_lock(key: str) -> threading.Lock:
+    with _WRITE_LOCKS_GUARD:
+        lock = _WRITE_LOCKS.get(key)
+        if lock is None:
+            lock = threading.Lock()
+            _WRITE_LOCKS[key] = lock
+        return lock
 
 
 def _state_key(filepath: str) -> str:
@@ -85,11 +102,34 @@ def save_state(filepath: str, transcription_dict: dict) -> None:
         "size": size,
         "transcription": transcription_dict,
     }
-    try:
-        with open(_state_path(filepath), "w", encoding="utf-8") as f:
-            json.dump(cache, f)
-    except (OSError, TypeError) as e:
-        logger.warning("Could not write polish state: %s", e)
+    target_path = _state_path(filepath)
+    # Atomic write: serialize to a temp file in the same dir, then rename.
+    # Direct ``open(target, "w")`` truncates immediately, so a crash mid-
+    # write or two threads racing on the same key would leave a corrupt
+    # JSON that ``load_state`` then silently treats as "no cache".
+    with _get_write_lock(_state_key(filepath)):
+        tmp_path = None
+        try:
+            fd, tmp_path = tempfile.mkstemp(
+                dir=STATE_DIR, suffix=".tmp", prefix="polish."
+            )
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(cache, f)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError:
+                    pass
+            os.replace(tmp_path, target_path)
+            tmp_path = None
+        except (OSError, TypeError) as e:
+            logger.warning("Could not write polish state: %s", e)
+        finally:
+            if tmp_path is not None:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
 
 
 def clear_state(filepath: str) -> bool:

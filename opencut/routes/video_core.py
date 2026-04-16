@@ -1190,9 +1190,16 @@ def _execute_batch_item(operation, filepath, params, on_progress):
 # ---------------------------------------------------------------------------
 # Video Merge / Concatenate
 # ---------------------------------------------------------------------------
+def _validate_merge_files(data):
+    files = data.get("files")
+    if not isinstance(files, list) or len(files) < 2:
+        return "At least 2 files required"
+    return None
+
+
 @video_core_bp.route("/video/merge", methods=["POST"])
 @require_csrf
-@async_job("merge", filepath_required=False)
+@async_job("merge", filepath_required=False, pre_validate=_validate_merge_files)
 def video_merge(job_id, filepath, data):
     """Merge / concatenate multiple video files into one."""
     files = data.get("files", [])

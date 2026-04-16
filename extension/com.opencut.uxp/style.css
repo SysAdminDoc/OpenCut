@@ -1976,7 +1976,9 @@ body[data-active-tab="settings"] {
   box-shadow:
     0 1px 0 rgba(255, 255, 255, 0.03),
     0 10px 24px rgba(0, 0, 0, 0.22);
-  backdrop-filter: blur(16px);
+  /* No backdrop-filter: the gradient above is 94-98% opaque so blur has no
+     visible effect, and the UXP WebView in older Premiere versions can
+     stutter or fail to composite blurred regions during scroll. */
 }
 
 .oc-header-left,

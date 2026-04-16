@@ -304,7 +304,6 @@ def _detect_faces_heuristic(img: "Image.Image") -> Tuple[int, float, List[Tuple[
     small = img.resize((100, 100), resample=1)
     pixels = small.load()
     w, h = 100, 100
-    total_pixels = w * h
 
     # Skin tone detection in RGB
     skin_map = [[False] * w for _ in range(h)]
@@ -323,8 +322,6 @@ def _detect_faces_heuristic(img: "Image.Image") -> Tuple[int, float, List[Tuple[
             if is_skin:
                 skin_map[y][x] = True
                 skin_pixel_count += 1
-
-    skin_pixel_count / total_pixels
 
     # Simple connected component to find face-sized clusters
     visited = [[False] * w for _ in range(h)]

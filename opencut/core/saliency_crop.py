@@ -295,7 +295,6 @@ def saliency_crop(
     frame_w = info.get("width", 1920)
     frame_h = info.get("height", 1080)
     duration = info.get("duration", 0)
-    info.get("fps", 30.0)
 
     # Calculate crop dimensions maintaining target aspect ratio
     # Fit the largest crop window with the target AR inside the frame
