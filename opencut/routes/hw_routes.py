@@ -14,6 +14,7 @@ from opencut.helpers import _resolve_output_dir, _unique_output_path
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
     require_csrf,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")

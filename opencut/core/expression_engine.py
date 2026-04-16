@@ -275,7 +275,6 @@ def list_functions() -> List[dict]:
 
 import ast  # noqa: E402
 
-
 _BANNED_NODE_TYPES = (
     ast.Import, ast.ImportFrom, ast.Global, ast.Nonlocal,
     ast.Delete, ast.ClassDef, ast.AsyncFunctionDef, ast.FunctionDef,

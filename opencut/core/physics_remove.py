@@ -537,8 +537,8 @@ def _combine_masks(
 def _inpaint_frame_lama(frame_path: str, mask_path: str, out_path: str) -> bool:
     """Inpaint a single frame using SimpleLaMA."""
     try:
-        from simple_lama_inpainting import SimpleLama
         from PIL import Image
+        from simple_lama_inpainting import SimpleLama
 
         lama = SimpleLama()
         img = Image.open(frame_path).convert("RGB")
@@ -554,8 +554,8 @@ def _inpaint_frame_lama(frame_path: str, mask_path: str, out_path: str) -> bool:
 def _inpaint_frame_ffmpeg(frame_path: str, mask_path: str, out_path: str) -> bool:
     """Inpaint using FFmpeg's delogo or blend filter as basic fallback."""
     try:
-        from PIL import Image
         import numpy as np
+        from PIL import Image
 
         mask_img = Image.open(mask_path).convert("L")
         mask_arr = np.array(mask_img)

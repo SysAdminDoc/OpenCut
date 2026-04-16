@@ -13,8 +13,8 @@ import shutil
 import tempfile
 import time
 from dataclasses import dataclass, field
-from urllib.parse import urlparse
 from typing import Callable, Dict, List, Optional
+from urllib.parse import urlparse
 
 from opencut.helpers import OPENCUT_DIR
 

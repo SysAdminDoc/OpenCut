@@ -15,11 +15,10 @@ import math
 import os
 import struct
 import tempfile
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
+from dataclasses import dataclass
+from typing import Callable, List, Optional, Tuple
 
 from opencut.helpers import (
-    FFmpegCmd,
     get_ffprobe_path,
     get_video_info,
     output_path,
@@ -156,7 +155,7 @@ def _decode_gpmf_gyro_data(raw_path: str) -> List[GyroSample]:
         # Align to 4 bytes
         aligned_size = (payload_size + 3) & ~3
         payload_start = offset + 8
-        payload_end = payload_start + payload_size
+        payload_start + payload_size
 
         if key == GPMF_GYRO_FOURCC and struct_size >= 6 and type_byte == ord("s"):
             # Each sample: 3 x int16 (yaw_rate, pitch_rate, roll_rate) in deg/s

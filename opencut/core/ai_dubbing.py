@@ -7,18 +7,14 @@ Full pipeline: transcribe -> translate -> voice-clone TTS -> mix
 Supports 50+ languages via pluggable translation and TTS backends.
 """
 
-import json
 import logging
 import os
-import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
-    ensure_package,
-    get_ffmpeg_path,
     get_video_info,
     output_path,
     run_ffmpeg,
@@ -216,7 +212,7 @@ def _generate_tts(
     # Try voice generation module
     try:
         from opencut.core.voice_gen import generate_voice
-        result = generate_voice(
+        generate_voice(
             text=text,
             output_path=output_audio,
             language=target_lang,
@@ -232,7 +228,7 @@ def _generate_tts(
         dur = max(1.0, target_duration)
         cmd = (FFmpegCmd()
                .option("f", "lavfi")
-               .input(f"anullsrc=r=16000:cl=mono", t=str(dur))
+               .input("anullsrc=r=16000:cl=mono", t=str(dur))
                .audio_codec("pcm_s16le")
                .output(output_audio)
                .build())

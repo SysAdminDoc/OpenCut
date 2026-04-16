@@ -90,7 +90,8 @@ def rough_cut(job_id, filepath, data):
 @async_job("auto_mix", filepath_required=False)
 def auto_mix(job_id, filepath, data):
     """Auto-mix multiple audio tracks with ducking and level matching."""
-    from opencut.core.auto_mix import DUCKING_PROFILES, auto_mix as run_auto_mix
+    from opencut.core.auto_mix import DUCKING_PROFILES
+    from opencut.core.auto_mix import auto_mix as run_auto_mix
 
     tracks = data.get("tracks", [])
     profile = data.get("profile", "podcast")

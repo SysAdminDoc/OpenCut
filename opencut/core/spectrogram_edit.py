@@ -8,16 +8,13 @@ Uses librosa/numpy when available, falls back to FFmpeg showspectrumpic
 for visualization.
 """
 
-import json
 import logging
-import math
 import os
-import struct
 import tempfile
-import wave
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, output_path as _output_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, run_ffmpeg
+from opencut.helpers import output_path as _output_path
 
 logger = logging.getLogger("opencut")
 
@@ -90,7 +87,6 @@ def _apply_mask_librosa(
         Path to reconstructed WAV file.
     """
     import librosa
-    import numpy as np
 
     stft = stft_data["stft"].copy()
     sr = stft_data["sr"]
@@ -153,7 +149,7 @@ def _apply_mask_ffmpeg(
             # Remove this frequency range
             center = (f_low + f_high) / 2
             width = max(1, f_high - f_low)
-            q = center / max(width, 1)
+            center / max(width, 1)
             enable = f"between(t,{t_start},{t_end})"
             filters.append(f"bandreject=f={center}:width_type=h:w={width}:enable='{enable}'")
 
@@ -231,8 +227,8 @@ def generate_spectrogram(
     try:
         import matplotlib
         matplotlib.use("Agg")
-        import matplotlib.pyplot as plt
         import librosa.display
+        import matplotlib.pyplot as plt
 
         fig, ax = plt.subplots(1, 1, figsize=(16, 4))
         librosa.display.specshow(spec_data["power_db"], sr=spec_data["sr"],

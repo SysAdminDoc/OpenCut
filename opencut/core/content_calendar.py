@@ -8,7 +8,6 @@ distribute across a calendar, and export as CSV or iCal (.ics).
 import csv
 import logging
 import os
-import re
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Callable, Dict, List, Optional
@@ -123,7 +122,7 @@ def _distribute_posts(
     # If items have no platform, distribute evenly
     unassigned = [it for it in items if not it.platform]
     if unassigned and platforms:
-        per_platform = max(1, len(unassigned) // len(platforms))
+        max(1, len(unassigned) // len(platforms))
         for i, item in enumerate(unassigned):
             p = platforms[i % len(platforms)]
             if p not in platform_queues:
@@ -219,7 +218,7 @@ def _export_ics(posts: List[ScheduledPost], output_path: str) -> str:
             f"SUMMARY:{summary}",
             f"DESCRIPTION:{description}",
             f"CATEGORIES:{post.platform.upper()}",
-            f"STATUS:CONFIRMED",
+            "STATUS:CONFIRMED",
             "END:VEVENT",
         ])
 

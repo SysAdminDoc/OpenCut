@@ -53,9 +53,9 @@ class BGReplaceResult:
 
 def _remove_bg_rembg(frame):
     """Remove background from a single frame using rembg."""
-    from rembg import remove
     import numpy as np
     from PIL import Image
+    from rembg import remove
 
     pil_img = Image.fromarray(frame[:, :, ::-1])  # BGR -> RGB
     result = remove(pil_img)
@@ -194,14 +194,13 @@ def replace_background(
         raise RuntimeError("opencv-python-headless is required")
 
     import cv2
-    import numpy as np
 
     out = output_path_override or output_path(video_path, f"bg_{bg_type}")
 
     if on_progress:
         on_progress(5, "Preparing background replacement...")
 
-    info = get_video_info(video_path)
+    get_video_info(video_path)
 
     # Determine removal method
     actual_removal = removal_method

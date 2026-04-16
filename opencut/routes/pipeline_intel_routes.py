@@ -208,7 +208,8 @@ def classify_content(job_id, filepath, data):
 @require_csrf
 def suggest_workflow():
     """Suggest optimal workflow from a classification result."""
-    from opencut.core.smart_route import ContentClassification, suggest_workflow as _suggest
+    from opencut.core.smart_route import ContentClassification
+    from opencut.core.smart_route import suggest_workflow as _suggest
 
     data = request.get_json(silent=True) or {}
     classification_data = data.get("classification", {})

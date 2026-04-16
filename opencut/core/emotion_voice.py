@@ -190,7 +190,7 @@ def _measure_speaking_rate(audio_path: str) -> float:
         silence_starts = re.findall(
             r"silence_start: (\d+\.?\d*)", result.stderr
         )
-        silence_ends = re.findall(
+        re.findall(
             r"silence_end: (\d+\.?\d*)", result.stderr
         )
 
@@ -425,7 +425,7 @@ def emotion_preserving_dub(
             on_progress(75, "Separating stems...")
 
         # Step 6: Separate stems and mix
-        from opencut.core.ai_dubbing import _separate_stems, _mix_dubbed_audio
+        from opencut.core.ai_dubbing import _mix_dubbed_audio, _separate_stems
         stems = _separate_stems(source_audio, tmp_dir)
         bg_audio = stems.get("background", source_audio)
 

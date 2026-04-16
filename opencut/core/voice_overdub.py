@@ -272,8 +272,8 @@ def _call_external_tts(
     voice_profile: Optional[VoiceProfile] = None,
 ) -> str:
     """Call external TTS API endpoint."""
-    import urllib.request
     import urllib.error
+    import urllib.request
 
     payload = json.dumps({
         "text": text,

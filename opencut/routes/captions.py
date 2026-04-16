@@ -720,9 +720,9 @@ def interview_polish(job_id, filepath, data):
         remap_captions_to_segments,
         transcribe,
     )
-    from opencut.export.srt import export_srt
     from opencut.core.fillers import detect_fillers, remove_fillers_from_segments
     from opencut.core.repeat_detect import detect_repeated_takes, merge_repeat_ranges
+    from opencut.export.srt import export_srt
     from opencut.polish_state import (
         _transcription_from_dict,
         _transcription_to_dict,

@@ -11,12 +11,10 @@ Uses FFmpeg astats, aloop, acrossfade, and volume-based gap detection.
 
 import json
 import logging
-import math
 import os
-import struct
 import tempfile
 import wave
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
 from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, run_ffmpeg
 from opencut.helpers import output_path as _output_path
@@ -675,7 +673,7 @@ def fill_cuts_with_room_tone(
         for cp in cut_points:
             t = max(0, float(cp.get("time", 0)))
             dur = max(0.05, float(cp.get("duration", 0.5)))
-            fade = min(0.02, dur * 0.1)
+            min(0.02, dur * 0.1)
             s = max(0, t - dur / 2)
             e = min(total_duration, t + dur / 2)
             enable_parts.append(f"between(t,{s},{e})")

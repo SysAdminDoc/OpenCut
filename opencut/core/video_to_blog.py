@@ -11,12 +11,10 @@ import os
 import re
 import subprocess
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
 from opencut.helpers import (
     get_ffmpeg_path,
-    get_ffprobe_path,
-    get_video_info,
 )
 
 logger = logging.getLogger("opencut")
@@ -79,7 +77,7 @@ def _extract_frame(video_path: str, timestamp: float, output_path: str) -> str:
 def _generate_blog_via_llm(transcript_text: str, tone: str = "professional") -> dict:
     """Use LLM to generate a structured blog post from transcript."""
     try:
-        from opencut.core.llm import LLMConfig, query_llm
+        from opencut.core.llm import query_llm
 
         system_prompt = (
             f"You are a {tone} content writer. Convert this video transcript into "
@@ -191,7 +189,7 @@ def _render_html(title: str, sections: List[BlogSection], seo: SEOMetadata) -> s
         parts.append(f'<meta name="keywords" content="{_esc(", ".join(seo.keywords))}">')
     parts.append("</head>")
     parts.append("<body>")
-    parts.append(f"<article>")
+    parts.append("<article>")
     parts.append(f"<h1>{_esc(title)}</h1>")
 
     for section in sections:

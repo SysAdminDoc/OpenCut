@@ -18,8 +18,6 @@ from opencut.jobs import (
     _get_job_copy,
     _kill_job_process,
     _list_jobs_copy,
-    job_lock,
-    jobs,
 )
 from opencut.security import get_json_dict, require_csrf
 

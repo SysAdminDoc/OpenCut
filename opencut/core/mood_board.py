@@ -17,7 +17,7 @@ import os
 import subprocess
 import tempfile
 from dataclasses import asdict, dataclass, field
-from typing import Callable, List, Optional, Tuple
+from typing import Callable, List, Optional
 
 from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info
 

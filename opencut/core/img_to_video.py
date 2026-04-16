@@ -16,7 +16,6 @@ from typing import Callable, Optional
 
 from opencut.helpers import (
     ensure_package,
-    get_video_info,
     output_path,
     run_ffmpeg,
 )

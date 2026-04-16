@@ -6,9 +6,7 @@ bias), places a crop window to maximize saliency, and smooths the crop path
 over time for stable output.
 """
 
-import json
 import logging
-import math
 import os
 import subprocess
 import tempfile
@@ -18,7 +16,6 @@ from typing import Callable, Dict, List, Optional, Tuple
 from opencut.helpers import (
     FFmpegCmd,
     get_ffmpeg_path,
-    get_ffprobe_path,
     get_video_info,
     output_path,
     run_ffmpeg,
@@ -298,7 +295,7 @@ def saliency_crop(
     frame_w = info.get("width", 1920)
     frame_h = info.get("height", 1080)
     duration = info.get("duration", 0)
-    fps = info.get("fps", 30.0)
+    info.get("fps", 30.0)
 
     # Calculate crop dimensions maintaining target aspect ratio
     # Fit the largest crop window with the target AR inside the frame
