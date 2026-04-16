@@ -9,6 +9,7 @@ Smoke tests for:
 """
 
 import json
+import time
 
 from tests.conftest import csrf_headers
 
@@ -108,6 +109,51 @@ class TestWorkflowValidation:
             assert job["status"] == "error"
         else:
             assert resp.status_code >= 400
+
+    def test_nested_workflow_steps_payload_runs(self, client, csrf_token, monkeypatch):
+        """Nested workflow payloads from the panel should still run."""
+        import opencut.core.workflow as workflow_core
+        from opencut.jobs import _get_job_copy
+
+        captured = {}
+
+        def fake_run_workflow(app, filepath, steps, csrf_token, on_progress=None, parent_job_id=""):
+            captured["steps"] = steps
+            return {
+                "success": True,
+                "steps_completed": len(steps),
+                "output": filepath,
+                "step_results": [],
+            }
+
+        monkeypatch.setattr(workflow_core, "run_workflow", fake_run_workflow)
+
+        resp = client.post(
+            "/workflow/run",
+            data=json.dumps({
+                "filepath": __file__,
+                "workflow": {
+                    "steps": [
+                        {"endpoint": "/silence", "params": {}},
+                    ],
+                },
+            }),
+            headers=csrf_headers(csrf_token),
+        )
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "job_id" in data
+
+        job = None
+        for _ in range(40):
+            job = _get_job_copy(data["job_id"])
+            if job and job.get("status") != "running":
+                break
+            time.sleep(0.1)
+
+        assert job is not None
+        assert job["status"] == "complete"
+        assert captured["steps"] == [{"endpoint": "/silence", "params": {}}]
 
 
 # =====================================================================
