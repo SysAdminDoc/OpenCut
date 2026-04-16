@@ -366,6 +366,15 @@ class TestScriptingConsoleCore:
         names = [f["name"] for f in funcs]
         assert "opencut.get_video_info" in names
 
+    def test_opencut_namespace_helpers_are_callable(self):
+        from opencut.core.scripting_console import execute_script
+        result = execute_script(
+            "info = opencut.get_video_info('missing.mp4')\n"
+            "print(isinstance(info, dict))"
+        )
+        assert result.success is True
+        assert "True" in result.output
+
 
 # ============================================================================
 # 2. MACRO RECORDER — Core Logic
@@ -820,6 +829,11 @@ class TestWebhookSystemCore:
         with pytest.raises(ValueError, match="Invalid event"):
             register_webhook("https://example.com", events=["bogus_event"])
 
+    def test_register_webhook_invalid_scheme_raises(self, tmp_opencut_dir):
+        from opencut.core.webhook_system import register_webhook
+        with pytest.raises(ValueError, match="http:// or https://"):
+            register_webhook("file:///tmp/out")
+
     def test_register_all_events_empty_list(self, tmp_opencut_dir):
         from opencut.core.webhook_system import register_webhook
         wh = register_webhook("https://example.com/hook", events=[])
@@ -955,6 +969,11 @@ class TestWebhookSystemCore:
         configs = load_webhook_config()
         assert len(configs) >= 1
         assert configs[0]["url"] == "https://x.com"
+
+    def test_legacy_save_config_invalid_scheme_raises(self, tmp_opencut_dir):
+        from opencut.core.webhook_system import save_webhook_config
+        with pytest.raises(ValueError, match="http:// or https://"):
+            save_webhook_config([{"url": "file:///tmp/out"}])
 
 
 # ============================================================================
