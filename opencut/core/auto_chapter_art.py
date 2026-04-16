@@ -215,7 +215,8 @@ def _extract_key_frame(video_path: str, timestamp: float,
 
     Returns path to the extracted PNG frame, or None on failure.
     """
-    out_path = tempfile.mktemp(suffix=".png", prefix="chapter_frame_")
+    _fd, out_path = tempfile.mkstemp(suffix=".png", prefix="chapter_frame_")
+    os.close(_fd)
     cmd = (FFmpegCmd()
            .option("ss", str(timestamp))
            .input(video_path)
@@ -641,7 +642,8 @@ def _assemble_cards_to_video(card_paths: List[str], chapters: List[ChapterInfo],
     with configurable fade in/out.
     """
     # Build concat input with timed images
-    concat_file = tempfile.mktemp(suffix=".txt", prefix="chapter_concat_")
+    _fd, concat_file = tempfile.mkstemp(suffix=".txt", prefix="chapter_concat_")
+    os.close(_fd)
     try:
         with open(concat_file, "w") as f:
             for i, card_path in enumerate(card_paths):

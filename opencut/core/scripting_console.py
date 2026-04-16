@@ -59,6 +59,9 @@ _BLOCKED_PATTERNS = (
     "__class__", "__subclasses__", "__bases__", "__mro__",
     "__globals__", "__code__", "__builtins__", "__dict__",
     "__import__", "__loader__", "__spec__",
+    "__init__", "__new__", "__reduce__", "__getattribute__",
+    "__module__", "__wrapped__", "__qualname__", "__self__",
+    "__func__", "__closure__",
 )
 
 # Maximum output length (characters)
@@ -257,11 +260,12 @@ def create_sandbox(
     import json as _json
     import re as _re
 
-    # Build safe builtins
+    # Build safe builtins — filter both blocked names and all dunders
+    # (except the few we explicitly re-add below)
     if isinstance(__builtins__, dict):
         safe_builtins = {
             k: v for k, v in __builtins__.items()
-            if k not in _BLOCKED_BUILTINS
+            if k not in _BLOCKED_BUILTINS and not k.startswith("_")
         }
     else:
         safe_builtins = {
@@ -269,10 +273,6 @@ def create_sandbox(
             for k in dir(__builtins__)
             if k not in _BLOCKED_BUILTINS and not k.startswith("_")
         }
-        # Add essential dunder items
-        for k in ("__name__", "__doc__"):
-            if hasattr(__builtins__, k):
-                safe_builtins[k] = getattr(__builtins__, k)
 
     safe_builtins["__import__"] = _safe_import
 
@@ -301,11 +301,13 @@ def create_sandbox(
         "opencut": types.SimpleNamespace(**_build_opencut_namespace()),
     }
 
-    # Inject caller context
+    # Inject caller context — reject dunder keys and non-data values
+    # to prevent sandbox escapes like context={"__builtins__": ...}
     if context:
         for key, value in context.items():
-            if not key.startswith("_"):
-                sandbox[key] = value
+            if "__" in key or key.startswith("_"):
+                continue
+            sandbox[key] = value
 
     return sandbox
 
