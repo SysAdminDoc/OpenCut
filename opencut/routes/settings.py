@@ -6,8 +6,10 @@ log export, job retry.
 """
 
 import json
+import logging
 import os
 import time
+from importlib import resources
 
 from flask import Blueprint, jsonify, request, send_file
 
@@ -25,6 +27,7 @@ from opencut.user_data import (
 )
 
 settings_bp = Blueprint("settings", __name__)
+logger = logging.getLogger("opencut")
 
 
 def _invalid_input_response(message: str):
@@ -605,11 +608,10 @@ def save_chapter_defaults_route():
 
 def _load_builtin_templates():
     """Load built-in project templates from the data directory."""
-    templates_path = os.path.join(
-        os.path.dirname(os.path.dirname(__file__)), "data", "project_templates.json"
-    )
     try:
-        with open(templates_path, "r", encoding="utf-8") as f:
+        with resources.files("opencut.data").joinpath("project_templates.json").open(
+            "r", encoding="utf-8"
+        ) as f:
             return json.load(f)
     except Exception as exc:
         logger.warning("Failed to load built-in templates: %s", exc)
@@ -642,7 +644,7 @@ def list_templates():
     """Return all project templates (built-in + user-saved)."""
     builtin = _load_builtin_templates()
     user = _load_user_templates()
-    return jsonify({"builtin": builtin, "user": user})
+    return jsonify({"builtin": builtin, "builtins": builtin, "user": user})
 
 
 @settings_bp.route("/templates/save", methods=["POST"])

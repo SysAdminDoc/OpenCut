@@ -7,7 +7,7 @@ Run, list, save, and delete multi-step processing workflows.
 import logging
 import time
 
-from flask import Blueprint, current_app, jsonify
+from flask import Blueprint, current_app, has_app_context, jsonify
 
 from opencut.jobs import _update_job, async_job
 from opencut.security import get_json_dict, require_csrf
@@ -30,6 +30,17 @@ def _json_object_or_400():
             }),
             400,
         )
+
+
+def _extract_workflow_steps(data):
+    """Accept both ``workflow: [...]`` and ``workflow: {steps: [...]}`` payloads."""
+    workflow = data.get("workflow")
+    if isinstance(workflow, dict):
+        return workflow.get("steps", [])
+    if workflow is not None:
+        return workflow
+    return data.get("steps", [])
+
 
 # ---------------------------------------------------------------------------
 # Built-in Workflow Presets
@@ -110,16 +121,19 @@ def run_workflow_route(job_id, filepath, data):
 
         {
             "filepath": "/path/to/input.mp4",
-            "workflow": [
-                {"endpoint": "/silence", "params": {}},
-                {"endpoint": "/audio/normalize", "params": {}}
-            ]
+            "workflow": {
+                "steps": [
+                    {"endpoint": "/silence", "params": {}},
+                    {"endpoint": "/audio/normalize", "params": {}}
+                ]
+            }
         }
     """
     from opencut.core.workflow import run_workflow, validate_workflow_steps
     from opencut.security import get_csrf_token
+    from opencut.server import app as server_app
 
-    steps = data.get("workflow", [])
+    steps = _extract_workflow_steps(data)
 
     # Validate
     valid, error = validate_workflow_steps(steps)
@@ -132,8 +146,10 @@ def run_workflow_route(job_id, filepath, data):
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
 
+    app_obj = current_app._get_current_object() if has_app_context() else server_app
+
     result = run_workflow(
-        app=current_app._get_current_object(),
+        app=app_obj,
         filepath=filepath,
         steps=steps,
         csrf_token=csrf_token,

@@ -98,6 +98,9 @@
     var lastTimelineCuts = null;    // stores last cuts result for timeline apply
     var sequenceInfo = null;        // stores loaded sequence info for deliverables
     var footageIndex = {};          // stores local copy of index stats
+    var _lastDeliverablesActivity = null;
+    var _lastSearchIndexStats = { total_files: 0, total_segments: 0 };
+    var _selectedFootageSearchPath = "";
     var beatMarkerTimes = null;     // beat times for marker insertion
     var seqMarkersData = null;      // markers from sequence for export
     var renameItemsData = [];       // project items for rename
@@ -654,6 +657,9 @@
         el.stageUseTimelineBtn = $("stageUseTimelineBtn");
         el.stageBrowseMediaBtn = $("stageBrowseMediaBtn");
         el.stageCommandPaletteBtn = $("stageCommandPaletteBtn");
+        el.workspaceStageKicker = $("workspaceStageKicker");
+        el.workspaceStageTitle = $("workspaceStageTitle");
+        el.workspaceStageCopy = $("workspaceStageCopy");
         el.workspaceStageSource = $("workspaceStageSource");
         el.workspaceStageSuite = $("workspaceStageSuite");
         el.workspaceStageStatus = $("workspaceStageStatus");
@@ -1324,6 +1330,7 @@
             el.connDot.className = state === "online" ? "conn-dot on" : "conn-dot off";
             el.connDot.setAttribute("aria-label", state === "online" ? "Server connected" : "Server disconnected");
         }
+        updateShellState();
         updateWorkspaceStageSession();
     }
 
@@ -1592,6 +1599,7 @@
                 if (data.csrf_token) csrfToken = data.csrf_token;
                 if (data.capabilities) capabilities = data.capabilities;
                 el.backendPort.textContent = BACKEND.replace("http://127.0.0.1:", "Port ");
+                syncSettingsBackendSummary(true);
                 updateButtons();
                 loadCapabilities();
                 // Restart media scan + status bar pollers after a reconnect.
@@ -1621,6 +1629,7 @@
         if (el.serverStatusMsg) el.serverStatusMsg.textContent = "Server disconnected. Reconnecting…";
             }
             connected = false;
+            syncSettingsBackendSummary(false);
             // Clean up all active timers on disconnect
             cleanupTimers();
             // Exponential backoff: double interval on failure, cap at 60s
@@ -1654,6 +1663,7 @@
                             if (data.csrf_token) csrfToken = data.csrf_token;
                             setConnectionBadge("online", "Connected" + (port !== BACKEND_BASE_PORT ? " (:" + port + ")" : ""));
                             el.backendPort.textContent = "Port " + port;
+                            syncSettingsBackendSummary(true);
                             if (data.capabilities) capabilities = data.capabilities;
                             healthBackoff = HEALTH_MS;
                             clearInterval(healthTimer);
@@ -1849,8 +1859,11 @@
     }
 
     function buildEmptyHintMarkup(title, copy, tone) {
-        var classes = "hint hint-empty is-" + (tone || "info");
+        var resolvedTone = tone || "info";
+        var toneLabel = resolvedTone === "error" ? "Attention" : resolvedTone === "warning" ? "Needs review" : "Ready when you are";
+        var classes = "hint hint-empty is-" + resolvedTone;
         var html = '<div class="' + classes + '">' +
+            '<span class="hint-kicker">' + esc(toneLabel) + '</span>' +
             '<span class="hint-title">' + esc(title || "") + '</span>';
         if (copy) {
             html += '<span class="hint-copy">' + esc(copy) + '</span>';
@@ -2200,7 +2213,80 @@
         settings: "Tune models, defaults, and workspace behavior for the whole studio."
     };
 
+    var WORKSPACE_STAGE_META = {
+        cut: {
+            kicker: "Cut Pass",
+            idleTitle: "Tighten the edit before the timeline gets noisy.",
+            idleCopy: "Choose one source clip, then remove dead air, clean fillers, and review pacing from the same workspace.",
+            readyTitle: "Shape the cut while the active shot stays locked in context.",
+            readyCopy: "Run cleanup, review the proposed changes, and send the result back to Premiere without repatching the source."
+        },
+        captions: {
+            kicker: "Transcript Flow",
+            idleTitle: "Turn the next clip into usable language, structure, and delivery assets.",
+            idleCopy: "Open a source clip to move through styled captions, subtitle export, transcript cleanup, chapters, and translation in one pass.",
+            readyTitle: "Refine captions, chapters, and subtitle exports around the active shot.",
+            readyCopy: "Transcribe once, keep the wording editable, and carry the same source through review, styling, and export."
+        },
+        audio: {
+            kicker: "Audio Pass",
+            idleTitle: "Clean the voice bed before the finish starts to sprawl.",
+            idleCopy: "Choose a source clip to denoise, normalize, loudness-match, and build rhythm-aware markers from one calmer control surface.",
+            readyTitle: "Polish the mix while the clip stays synced across the workspace.",
+            readyCopy: "Move from repair to loudness to music-aware timing without reloading the source or losing the current edit context."
+        },
+        video: {
+            kicker: "Finishing",
+            idleTitle: "Shape the frame, build derivatives, and protect delivery quality from one source.",
+            idleCopy: "Open a shot to move through reframing, enhancement, scene analysis, social versions, and AI-assisted finishing inside the same panel.",
+            readyTitle: "Finish the frame and generate follow-on versions from the active shot.",
+            readyCopy: "Keep the source anchored while you explore vertical crops, color, scene detection, and short-form outputs without duplicate setup."
+        },
+        export: {
+            kicker: "Delivery",
+            idleTitle: "Prepare exports, workflows, and handoff presets before the final pass.",
+            idleCopy: "Choose a source when needed, then move through transcript export, platform presets, batch workflows, and short-form delivery with clearer defaults.",
+            readyTitle: "Package outputs and repeatable workflows around the current source.",
+            readyCopy: "Use the active clip to drive exports, workflow presets, thumbnails, and delivery handoff without losing the thread of the edit."
+        },
+        timeline: {
+            kicker: "Write-Back",
+            idleTitle: "Bring approved changes back into Premiere with more confidence.",
+            idleCopy: "Review cuts, markers, OTIO, renaming, and export tasks from a quieter workspace that stays focused on sequence handoff.",
+            readyTitle: "Write timeline changes back while the current source stays visible.",
+            readyCopy: "Carry the active source through marker export, multicam prep, clip management, and write-back so approvals feel traceable."
+        },
+        nlp: {
+            kicker: "Library Search",
+            idleTitle: "Search the footage library and trigger edit actions without mode switching.",
+            idleCopy: "Index media once, then use natural-language search and command routing to bring the right clip back into the rest of the workspace.",
+            readyTitle: "Search, recall, and action the active source from one command surface.",
+            readyCopy: "Keep the current clip in context while you search similar footage, parse commands, and route the next step faster."
+        },
+        settings: {
+            kicker: "Studio Control",
+            idleTitle: "Keep routing, models, defaults, and diagnostics reliable between sessions.",
+            idleCopy: "Review the health of the local studio, tune defaults, and manage templates from a calmer control center designed for maintenance work.",
+            readyTitle: "Tune the studio around the clip and workflow you are actively shaping.",
+            readyCopy: "Use Settings to keep the current session reliable, from backend health and model installs to templates, engine routing, and diagnostics."
+        }
+    };
+
+    function getActiveNavTabName() {
+        var activeNav = document.querySelector(".nav-tab.active");
+        return activeNav ? (activeNav.getAttribute("data-nav") || "cut") : "cut";
+    }
+
+    function updateShellState(activeTabName) {
+        var activeTab = activeTabName || getActiveNavTabName();
+        document.body.setAttribute("data-active-nav", activeTab || "cut");
+        document.body.classList.toggle("is-connected", !!connected);
+        document.body.classList.toggle("is-disconnected", !connected);
+        document.body.classList.toggle("has-source", !!selectedPath);
+    }
+
     function updateContentHeader(tabName, titleText) {
+        updateShellState(tabName);
         if (el.contentTitle) {
             el.contentTitle.textContent = titleText || tabName;
         }
@@ -2211,6 +2297,30 @@
     }
 
     function updateWorkspaceStageSession(activeTitle) {
+        var activeTab = getActiveNavTabName();
+        var stageMeta = WORKSPACE_STAGE_META[activeTab] || WORKSPACE_STAGE_META.cut;
+        var stageKicker = stageMeta.kicker;
+        var stageTitle = stageMeta.idleTitle;
+        var stageCopy = stageMeta.idleCopy;
+
+        if (!connected) {
+            stageKicker = "Backend Offline";
+            stageTitle = "Reconnect the local OpenCut backend before running jobs.";
+            stageCopy = "The workspace is intact, but processing, model checks, write-back, and timeline handoff all depend on the local backend service being online.";
+        } else if (selectedPath) {
+            stageTitle = stageMeta.readyTitle;
+            stageCopy = stageMeta.readyCopy;
+        }
+
+        if (el.workspaceStageKicker) {
+            el.workspaceStageKicker.textContent = stageKicker;
+        }
+        if (el.workspaceStageTitle) {
+            el.workspaceStageTitle.textContent = stageTitle;
+        }
+        if (el.workspaceStageCopy) {
+            el.workspaceStageCopy.textContent = stageCopy;
+        }
         if (el.workspaceStageSource) {
             el.workspaceStageSource.textContent = selectedName || "Awaiting media";
             el.workspaceStageSource.title = selectedPath || "Choose a clip or drop media to start";
@@ -2220,16 +2330,23 @@
         }
         if (el.workspaceStageStatus) {
             if (!connected) {
-                el.workspaceStageStatus.textContent = "Backend offline";
+                el.workspaceStageStatus.textContent = "Reconnect backend";
+                el.workspaceStageStatus.title = "Start or reconnect the local OpenCut backend service";
             } else if (selectedPath) {
-                el.workspaceStageStatus.textContent = "Ready to process";
+                el.workspaceStageStatus.textContent = "Clip synced & ready";
+                el.workspaceStageStatus.title = "The active clip is selected and the workspace is ready to process";
+            } else if (activeTab === "settings") {
+                el.workspaceStageStatus.textContent = "Studio ready to review";
+                el.workspaceStageStatus.title = "Settings does not require a source clip";
             } else {
-                el.workspaceStageStatus.textContent = "Awaiting media";
+                el.workspaceStageStatus.textContent = "Choose a clip to unlock";
+                el.workspaceStageStatus.title = "Select a clip from Premiere or browse a local file to unlock processing";
             }
         }
     }
 
     function updateWorkspaceClipStatus() {
+        updateShellState();
         if (!el.workspaceClipStatus) return;
         if (selectedName) {
             el.workspaceClipStatus.textContent = selectedName;
@@ -2325,6 +2442,7 @@
 
         var activeTabName = targetButton.getAttribute("data-nav") || "cut";
         if (remember) rememberWorkspaceTab(activeTabName);
+        updateShellState(activeTabName);
         updateContentHeader(activeTabName, targetButton.getAttribute("title") || activeTabName);
         _pproCache.seq = null;
         _pproCache.seqTs = 0;
@@ -2572,6 +2690,7 @@
         if (el.createSmartBinsBtn) el.createSmartBinsBtn.disabled = !connected || !hasSmartBinRules;
         if (el.runSrtImportBtn) el.runSrtImportBtn.disabled = !connected || !inPremiere;
         if (el.indexAllClipsBtn) el.indexAllClipsBtn.disabled = !connected || !hasProjectMedia;
+        if (el.clearSearchIndexBtn) el.clearSearchIndexBtn.disabled = !connected || !Number((_lastSearchIndexStats && _lastSearchIndexStats.total_files) || 0);
 
         // Helper to safely toggle hint visibility and optionally disable a button
         function _setHint(hintEl, btnEl, showHint) {
@@ -2686,6 +2805,10 @@
 
         // Social media posting hint
         _setHint(el.socialHint, null, capabilities.social_post === false);
+
+        updateBatchSummary();
+        updateWorkflowPresetSummary();
+        updateCustomWorkflowSummary();
     }
 
     // ================================================================
@@ -3924,7 +4047,7 @@
 
     function wsConnect() {
         if (_ws && (_ws.readyState === WebSocket.OPEN || _ws.readyState === WebSocket.CONNECTING)) {
-            showToast("WebSocket already connected", "info");
+            showToast("Live updates are already connected", "info");
             return;
         }
         var port = 5680;
@@ -3932,7 +4055,7 @@
         try {
             _ws = new WebSocket(url);
         } catch (e) {
-            showToast("WebSocket connection failed", "warning");
+            showToast("Could not open the live-updates bridge", "warning");
             return;
         }
 
@@ -3941,7 +4064,7 @@
             _ws.send(JSON.stringify({ type: "identify", client_type: "cep", id: "cep-1" }));
             _ws.send(JSON.stringify({ type: "command", action: "subscribe", params: { events: ["progress", "job_complete", "job_error", "timeline"] }, id: "sub-1" }));
             _updateWsStatus();
-            showToast("WebSocket connected", "success");
+            showToast("Live updates connected", "success");
         };
 
         _ws.onmessage = function (evt) {
@@ -3994,20 +4117,119 @@
     function _updateWsStatus() {
         var statusEl = document.getElementById("wsStatusText");
         var countEl = document.getElementById("wsClientCount");
-        if (_wsConnected) {
-            if (statusEl) statusEl.textContent = "Connected";
-            if (statusEl) statusEl.style.color = "var(--accent)";
-        } else {
-            if (statusEl) statusEl.textContent = "Disconnected";
-            if (statusEl) statusEl.style.color = "";
+        var startBtn = document.getElementById("wsStartBtn");
+        var stopBtn = document.getElementById("wsStopBtn");
+        var connectBtn = document.getElementById("wsConnectBtn");
+        var statusText = _wsConnected ? "Live updates connected" : "Bridge unavailable";
+        var statusState = _wsConnected ? "connected" : "unknown";
+        var hintMessage = _wsConnected
+            ? "Checking listener status for the active panel connection."
+            : "Checking whether the live updates bridge is available.";
+        var hintState = _wsConnected ? "working" : "idle";
+        var bridgeRunning = false;
+        var clients = 0;
+        if (statusEl) {
+            statusEl.textContent = statusText;
+            statusEl.setAttribute("data-state", statusState);
         }
+        if (countEl) {
+            countEl.textContent = clients + " listeners";
+            countEl.setAttribute("data-state", "idle");
+        }
+        if (startBtn) startBtn.disabled = false;
+        if (stopBtn) stopBtn.disabled = true;
+        if (connectBtn) {
+            connectBtn.textContent = _wsConnected ? "Live Updates Connected" : "Connect Live Updates";
+            connectBtn.disabled = !_wsConnected;
+        }
+        setStatusLine("wsHint", hintMessage, hintState, hintMessage);
+        setSettingsStudioState(
+            "bridge",
+            _wsConnected ? "Panel connected" : "Checking live updates...",
+            _wsConnected ? "ready" : "working",
+            _wsConnected
+                ? "The panel is connected to the live updates bridge."
+                : "Checking the live updates bridge."
+        );
         // Also fetch server-side status
         api("GET", "/ws/status", null, function (err, r) {
-            if (err) return;
-            if (r) {
-                if (countEl) countEl.textContent = r.clients || 0;
-                if (!r.running && statusEl && !_wsConnected) statusEl.textContent = "Server stopped";
+            if (err) {
+                setStatusLine(
+                    "wsHint",
+                    "Couldn't read the live updates bridge status. Reconnect the backend or try again.",
+                    "warning"
+                );
+                setSettingsStudioState(
+                    "bridge",
+                    "Status unavailable",
+                    "warning",
+                    "Couldn't read the live updates bridge status."
+                );
+                return;
             }
+            if (r) {
+                bridgeRunning = !!r.running;
+                clients = Number(r.clients || 0);
+                if (_wsConnected) {
+                    statusText = clients > 0 ? "Live updates connected" : "Panel connected";
+                    statusState = "connected";
+                } else if (bridgeRunning) {
+                    statusText = clients > 0 ? "Bridge ready" : "Bridge idle";
+                    statusState = "ready";
+                } else {
+                    statusText = "Bridge stopped";
+                    statusState = "stopped";
+                }
+            }
+            if (statusEl) {
+                statusEl.textContent = statusText;
+                statusEl.setAttribute("data-state", statusState);
+            }
+            if (countEl) {
+                countEl.textContent = clients + " " + (clients === 1 ? "listener" : "listeners");
+                countEl.setAttribute("data-state", clients > 0 ? "active" : "idle");
+            }
+            if (startBtn) startBtn.disabled = bridgeRunning;
+            if (stopBtn) stopBtn.disabled = !bridgeRunning;
+            if (connectBtn) {
+                connectBtn.textContent = _wsConnected ? "Live Updates Connected" : "Connect Live Updates";
+                connectBtn.disabled = !bridgeRunning || _wsConnected;
+            }
+
+            if (_wsConnected) {
+                hintMessage = clients > 0
+                    ? "Live updates are flowing into the panel right now. Progress, completion, and cancel events will stay visible here."
+                    : "The panel is connected. Progress will appear here as soon as a job starts streaming updates.";
+                hintState = "success";
+                setSettingsStudioState(
+                    "bridge",
+                    clients > 0 ? clients + " live listener" + (clients === 1 ? "" : "s") : "Panel connected",
+                    "ready",
+                    hintMessage
+                );
+            } else if (bridgeRunning) {
+                hintMessage = clients > 0
+                    ? "The bridge is running and waiting for a panel connection. Connect live updates to stream progress without polling."
+                    : "The bridge is running. Connect live updates so longer jobs can stream progress into the panel.";
+                hintState = "ready";
+                setSettingsStudioState(
+                    "bridge",
+                    clients > 0 ? clients + " listener" + (clients === 1 ? "" : "s") + " ready" : "Bridge ready",
+                    "ready",
+                    hintMessage
+                );
+            } else {
+                hintMessage = "Start the bridge to stream progress, completion, and cancel feedback into the panel during longer runs.";
+                hintState = "warning";
+                setSettingsStudioState(
+                    "bridge",
+                    "Bridge stopped",
+                    "warning",
+                    hintMessage
+                );
+            }
+
+            setStatusLine("wsHint", hintMessage, hintState, hintMessage);
         });
     }
 
@@ -4015,7 +4237,7 @@
         api("POST", "/ws/start", {}, function (err, r) {
             if (err) { showAlert("WS start error: " + err.message); return; }
             if (r && r.success) {
-                showToast("WebSocket bridge started", "success");
+                showToast("Live-updates bridge started", "success");
                 setTimeout(function () { wsConnect(); }, 500);
             } else {
                 showAlert(r && r.error ? r.error : "Failed to start WebSocket bridge");
@@ -4028,42 +4250,120 @@
         api("POST", "/ws/stop", {}, function (err, r) {
             if (err) return;
             if (r && r.success) {
-                showToast("WebSocket bridge stopped", "success");
+                showToast("Live-updates bridge stopped", "success");
                 _updateWsStatus();
             }
         });
     }
 
     // ---- Engine Registry UI ----
+    function humanizeEngineDomain(domain) {
+        return String(domain || "")
+            .split("_")
+            .filter(Boolean)
+            .map(function (part) { return part.charAt(0).toUpperCase() + part.slice(1); })
+            .join(" ");
+    }
+
     function loadEngineRegistry() {
         var grid = document.getElementById("engineRegistryGrid");
         if (!grid) return;
-            grid.innerHTML = '<div class="hint">Loading engines…</div>';
+        setSettingsStudioState(
+            "engines",
+            "Checking availability...",
+            "working",
+            "Checking installed engines for each editing domain."
+        );
+        setStatusLine(
+            "engineRegistryStatus",
+            "Checking which local engines are installed for each editing domain.",
+            "working"
+        );
+        grid.innerHTML = buildEmptyHintMarkup(
+            "Loading engine routing…",
+            "Checking which engines are installed and available for this machine.",
+            "info"
+        );
 
         api("GET", "/engines", null, function (err, r) {
             if (err || !r || !r.engines) {
-                grid.innerHTML = '<div class="hint">Could not load engine data.</div>';
+                setSettingsStudioState(
+                    "engines",
+                    "Routing unavailable",
+                    "error",
+                    "Reconnect the backend or refresh availability to review engine routing."
+                );
+                setStatusLine(
+                    "engineRegistryStatus",
+                    "Reconnect the backend or refresh availability to pull the latest engine inventory.",
+                    "error"
+                );
+                grid.innerHTML = buildEmptyHintMarkup(
+                    "Engine routing is unavailable right now.",
+                    "Reconnect the backend or refresh availability to pull the latest engine inventory.",
+                    "error"
+                );
                 return;
             }
             var html = "";
             var domains = Object.keys(r.engines).sort();
+            var pinnedCount = 0;
+            var autoCount = 0;
+            var warningCount = 0;
             for (var i = 0; i < domains.length; i++) {
                 var domain = domains[i];
                 var info = r.engines[domain];
                 var engines = info.engines || [];
                 var active = info.active || "";
                 var preferred = info.preferred || "";
+                var domainLabel = humanizeEngineDomain(domain);
+                var activeInfo = null;
+                var preferredInfo = null;
+                var availableCount = 0;
+                for (var ai = 0; ai < engines.length; ai++) {
+                    if (engines[ai] && engines[ai].available) availableCount++;
+                    if (engines[ai] && engines[ai].name === active) activeInfo = engines[ai];
+                    if (engines[ai] && engines[ai].name === preferred) preferredInfo = engines[ai];
+                }
+                var stateLabel = preferredInfo ? "Pinned" : (availableCount ? "Auto" : "Needs attention");
+                var stateClass = preferredInfo ? "manual" : (availableCount ? "auto" : "warning");
+                var summary = "";
 
-                html += '<div class="engine-domain">';
-                html += '<label class="param-label">' + esc(domain.replace(/_/g, " ")) + '</label>';
-                html += '<select class="engine-select" data-domain="' + esc(domain) + '">';
-                html += '<option value="">Auto (highest priority)</option>';
+                if (preferredInfo) pinnedCount++;
+                else if (availableCount) autoCount++;
+                else warningCount++;
+
+                if (preferredInfo) {
+                    summary = preferredInfo.display_name + " is preferred for " + domainLabel.toLowerCase() + ".";
+                    if (activeInfo && activeInfo.name === preferredInfo.name) {
+                        summary += " It is also active right now.";
+                    } else if (activeInfo) {
+                        summary += " Current active engine: " + activeInfo.display_name + ".";
+                    }
+                } else if (activeInfo) {
+                    summary = activeInfo.display_name + " is active right now. Auto mode keeps the best available engine selected for this system.";
+                } else if (availableCount) {
+                    summary = availableCount + " " + (availableCount === 1 ? "engine is" : "engines are") + " available. Auto mode will pick the best fit at run time.";
+                } else {
+                    summary = "No available engines detected yet. Refresh availability after installs finish.";
+                }
+
+                html += '<div class="engine-domain engine-domain-card">';
+                html += '<div class="engine-copy">';
+                html += '<div class="engine-title-row">';
+                html += '<label class="param-label engine-domain-label">' + esc(domainLabel) + '</label>';
+                html += '<span class="engine-state-badge is-' + esc(stateClass) + '">' + esc(stateLabel) + '</span>';
+                html += '</div>';
+                html += '<div class="engine-meta">' + esc(summary) + '</div>';
+                html += '</div>';
+                html += '<select class="engine-select" data-domain="' + esc(domain) + '" aria-label="' + esc(domainLabel) + ' engine preference">';
+                html += '<option value="">Auto (best available)</option>';
                 for (var j = 0; j < engines.length; j++) {
                     var eng = engines[j];
                     var selected = (preferred === eng.name) ? " selected" : "";
-                    var avail = eng.available ? "" : " (unavailable)";
-                    var label = esc(eng.display_name) + " — " + esc(eng.quality) + "/" + esc(eng.speed) + avail;
-                    if (eng.name === active) label += " *";
+                    var avail = eng.available ? "" : " - unavailable";
+                    var label = esc(eng.display_name) + " - " + esc(eng.quality) + "/" + esc(eng.speed) + avail;
+                    if (eng.name === active) label += " - active";
                     html += '<option value="' + esc(eng.name) + '"' + selected + '>' + label + '</option>';
                 }
                 html += '</select>';
@@ -4071,19 +4371,54 @@
             }
             grid.innerHTML = html;
 
+            var registrySummary = "";
+            var registryState = "success";
+            var summaryLabel = "";
+            if (!domains.length) {
+                registrySummary = "No engine domains were reported yet. Refresh availability after installs finish.";
+                registryState = "warning";
+                summaryLabel = "No domains yet";
+            } else if (warningCount > 0) {
+                registrySummary = warningCount + " editing domain" + (warningCount === 1 ? " is" : "s are") + " still missing an available engine. Auto routing remains active for the rest.";
+                registryState = "warning";
+                summaryLabel = warningCount + " needs review";
+            } else if (pinnedCount > 0 && autoCount > 0) {
+                registrySummary = pinnedCount + " domain" + (pinnedCount === 1 ? " is" : "s are") + " pinned while " + autoCount + " stay on Auto routing.";
+                summaryLabel = pinnedCount + " pinned / " + domains.length;
+            } else if (pinnedCount > 0) {
+                registrySummary = "Pinned routing is active across all " + domains.length + " editing domain" + (domains.length === 1 ? "" : "s") + ".";
+                summaryLabel = pinnedCount + " pinned";
+            } else {
+                registrySummary = "Auto routing is ready across " + domains.length + " editing domain" + (domains.length === 1 ? "" : "s") + ".";
+                summaryLabel = "Auto across " + domains.length;
+            }
+
+            setSettingsStudioState("engines", summaryLabel, registryState === "success" ? "ready" : registryState, registrySummary);
+            setStatusLine("engineRegistryStatus", registrySummary, registryState, registrySummary);
+
             // Bind change events for preference setting
             var selects = grid.querySelectorAll(".engine-select");
             for (var k = 0; k < selects.length; k++) {
                 selects[k].addEventListener("change", function () {
                     var dom = this.getAttribute("data-domain");
                     var eng = this.value;
-                    if (eng) {
-                        api("POST", "/engines/preference", { domain: dom, engine: eng }, function (perr, r) {
-                            if (perr) { showAlert("Error: " + perr.message); return; }
-                            if (r && r.success) showToast("Engine preference saved", "success");
-                            else showAlert(r && r.error ? r.error : "Failed to save preference");
-                        });
-                    }
+                    var domainLabel = humanizeEngineDomain(dom);
+                    var selectedLabel = this.options[this.selectedIndex] ? this.options[this.selectedIndex].textContent : "Auto";
+                    api("POST", "/engines/preference", { domain: dom, engine: eng }, function (perr, r) {
+                        if (perr) { showAlert("Error: " + perr.message); loadEngineRegistry(); return; }
+                        if (r && r.success) {
+                            showToast(
+                                eng
+                                    ? domainLabel + " now prefers " + selectedLabel + "."
+                                    : domainLabel + " is back on Auto routing.",
+                                "success"
+                            );
+                            loadEngineRegistry();
+                        } else {
+                            showAlert(r && r.error ? r.error : "Failed to save preference");
+                            loadEngineRegistry();
+                        }
+                    });
                 });
             }
         });
@@ -4409,6 +4744,75 @@
     }
 
     // --- BATCH PROCESSING ---
+    function getSelectOptionLabel(selectEl, fallback) {
+        if (!selectEl) return fallback || "";
+        var opt = selectEl.selectedIndex >= 0 ? selectEl.options[selectEl.selectedIndex] : null;
+        return opt ? opt.textContent : (fallback || "");
+    }
+
+    function updateBatchSummary(statusMessage, statusState, statusTitle) {
+        var queuedCount = (_batchFiles && _batchFiles.length) || 0;
+        var availableCount = Array.isArray(projectMedia) ? projectMedia.length : 0;
+        var opLabel = getSelectOptionLabel(el.batchOperation, "Choose an operation");
+        var queueLabel = "";
+        var queueTitle = "";
+
+        if (queuedCount > 0) {
+            queueLabel = queuedCount + " clip" + (queuedCount === 1 ? "" : "s") + " queued";
+            queueTitle = queueLabel + " for the next batch run.";
+        } else if (availableCount > 0) {
+            queueLabel = "0 queued • " + availableCount + " available";
+            queueTitle = availableCount + " project clip" + (availableCount === 1 ? " is" : "s are") + " available to add to the batch queue.";
+        } else {
+            queueLabel = "No clips queued";
+            queueTitle = "Load clips into the project, then add the ones you want to process together.";
+        }
+
+        setTextAndTitle("batchQueueSummary", queueLabel, queueTitle);
+        setTextAndTitle(
+            "batchOperationSummary",
+            opLabel || "Choose an operation",
+            opLabel ? opLabel + " will run across the queued clips." : "Choose the process you want to apply across the queue."
+        );
+
+        if (statusMessage) {
+            setStatusLine("batchStatusLine", statusMessage, statusState || "idle", statusTitle || statusMessage);
+            return;
+        }
+
+        if (!connected) {
+            setStatusLine(
+                "batchStatusLine",
+                "Reconnect the backend before running batch processing across multiple clips.",
+                "warning"
+            );
+        } else if (!availableCount && !queuedCount) {
+            setStatusLine(
+                "batchStatusLine",
+                "Load clips into the project, then add two or more to the queue for batch processing.",
+                "idle"
+            );
+        } else if (queuedCount === 0) {
+            setStatusLine(
+                "batchStatusLine",
+                "Add clips to the queue, then run " + (opLabel || "the selected operation") + " across the whole batch.",
+                "idle"
+            );
+        } else if (queuedCount === 1) {
+            setStatusLine(
+                "batchStatusLine",
+                "Add one more clip to enable batch processing for " + (opLabel || "the selected operation") + ".",
+                "warning"
+            );
+        } else {
+            setStatusLine(
+                "batchStatusLine",
+                "Batch is ready to run " + (opLabel || "the selected operation") + " across " + queuedCount + " queued clips.",
+                "ready"
+            );
+        }
+    }
+
     function runBatch() {
         // Use batch file picker selection if available, otherwise fall back to clip selector
         var paths = _batchFiles && _batchFiles.length > 0 ? _batchFiles.slice() : [];
@@ -4430,6 +4834,7 @@
         var op = el.batchOperation.value;
         el.batchResults.classList.remove("hidden");
         el.batchStatusText.textContent = "Starting batch: " + paths.length + " files…";
+        updateBatchSummary("Starting batch processing for " + paths.length + " clips.", "working");
 
         api("POST", "/batch/create", {
             operation: op,
@@ -4438,10 +4843,15 @@
         }, function (err, data) {
             if (err || !data || data.error) {
                 el.batchStatusText.textContent = "Batch error: " + ((data && data.error) || "Unknown");
+                updateBatchSummary(
+                    "Batch couldn't start: " + ((data && data.error) || (err && err.message) || "Unknown error") + ".",
+                    "error"
+                );
                 return;
             }
             var batchId = data.batch_id;
-        el.batchStatusText.textContent = "Batch running: 0/" + data.total + " complete…";
+            el.batchStatusText.textContent = "Batch running: 0/" + data.total + " complete…";
+            updateBatchSummary("Batch is running across " + data.total + " clips.", "working");
             // Poll for status (with error limit to prevent infinite polling)
             var pollErrors = 0;
             if (batchPollTimer) { clearInterval(batchPollTimer); batchPollTimer = null; }
@@ -4452,6 +4862,10 @@
                         if (pollErrors >= 10) {
                             clearInterval(batchPollTimer); batchPollTimer = null;
                             el.batchStatusText.textContent = "Batch poll failed after 10 errors";
+                            updateBatchSummary(
+                                "Batch status polling failed repeatedly. Results may still finish in the background.",
+                                "error"
+                            );
                         }
                         return;
                     }
@@ -4460,6 +4874,12 @@
                     el.batchStatusText.textContent =
                         "Batch " + d2.status + ": " + (d2.completed || 0) + "/" + (d2.total || 0) +
                         " (" + (res.success || 0) + " ok, " + (res.failed || 0) + " failed)";
+                    updateBatchSummary(
+                        d2.status === "running"
+                            ? "Batch is processing " + (d2.completed || 0) + " of " + (d2.total || 0) + " clips. " + (res.success || 0) + " finished cleanly so far."
+                            : "Batch finished: " + (res.success || 0) + " succeeded and " + (res.failed || 0) + " failed.",
+                        d2.status === "running" ? "working" : ((res.failed || 0) ? "warning" : "success")
+                    );
                     if (d2.status !== "running") {
                         clearInterval(batchPollTimer); batchPollTimer = null;
                         showAlert("Batch complete: " + (res.success || 0) + " succeeded");
@@ -4471,13 +4891,208 @@
 
     // --- WORKFLOW PRESETS ---
     var _workflowPresets = []; // Loaded from backend
+    var _workflowPresetsLoaded = false;
+    var _savedWorkflowCount = 0;
+    var _savedWorkflowLibraryLoaded = false;
+    var _lastWorkflowRunContext = null;
+
+    function workflowStepCountLabel(count) {
+        return count + " step" + (count === 1 ? "" : "s");
+    }
+
+    function describeWorkflowStepGroup(endpoint) {
+        if (!endpoint) return "Workflow step";
+        var clean = String(endpoint).replace(/^\/+/, "");
+        var root = clean.split("/")[0] || clean;
+        return ({
+            cut: "Cut cleanup",
+            audio: "Audio polish",
+            captions: "Captioning",
+            video: "Video finishing",
+            export: "Delivery"
+        })[root] || humanizeEngineDomain(root);
+    }
+
+    function getSelectedWorkflowPreset() {
+        var sel = el.workflowPreset;
+        if (!sel || !sel.value) return null;
+        var idx = _getWorkflowPresetIndex(sel.value);
+        return idx >= 0 ? _workflowPresets[idx] : null;
+    }
+
+    function syncWorkflowPresetDescription(preset) {
+        if (!el.workflowPresetDesc) return;
+        if (!preset) {
+            setHintState(
+                el.workflowPresetDesc,
+                "Choose a preset to preview its editorial intent and step order.",
+                "info"
+            );
+            return;
+        }
+        var description = preset.description || (workflowStepCountLabel((preset.steps || []).length) + " in sequence.");
+        setHintState(el.workflowPresetDesc, description, "info");
+    }
+
+    function updateWorkflowPresetSummary(statusMessage, statusState, statusTitle) {
+        var preset = getSelectedWorkflowPreset();
+        var availableCount = _workflowPresets.length;
+        var summaryLabel = "";
+        var summaryTitle = "";
+
+        if (!_workflowPresetsLoaded) {
+            setStatusPill("workflowPresetPill", "Loading...", "working", "Loading workflow presets.");
+            summaryLabel = "Checking built-in and custom workflow presets...";
+            summaryTitle = "Loading workflow presets.";
+        } else if (!availableCount) {
+            setStatusPill("workflowPresetPill", "Empty", "warning", "No built-in or custom presets are currently available.");
+            summaryLabel = "No workflow presets available";
+            summaryTitle = "Save a custom workflow or refresh the preset library.";
+        } else if (!preset) {
+            setStatusPill("workflowPresetPill", "Choose one", "idle", "Choose a workflow preset to preview and run.");
+            summaryLabel = availableCount + " presets ready";
+            summaryTitle = availableCount + " built-in or custom workflow presets are available.";
+        } else {
+            setStatusPill("workflowPresetPill", "Ready", "ready", preset.name + " is ready to run.");
+            summaryLabel = preset.name + " • " + workflowStepCountLabel((preset.steps || []).length);
+            summaryTitle = preset.name + " runs " + workflowStepCountLabel((preset.steps || []).length) + " in sequence.";
+        }
+
+        setTextAndTitle("workflowPresetSummary", summaryLabel, summaryTitle);
+        syncWorkflowPresetDescription(preset);
+
+        if (statusMessage) {
+            setStatusLine("workflowPresetStatus", statusMessage, statusState || "idle", statusTitle || statusMessage);
+            return;
+        }
+
+        if (!_workflowPresetsLoaded) {
+            setStatusLine(
+                "workflowPresetStatus",
+                "Loading workflow presets for repeatable editorial runs.",
+                "working"
+            );
+        } else if (!connected) {
+            setStatusLine(
+                "workflowPresetStatus",
+                "Reconnect the backend before running preset workflows or loading the preset library.",
+                "warning"
+            );
+        } else if (!availableCount) {
+            setStatusLine(
+                "workflowPresetStatus",
+                "No workflow presets are available yet. Save a custom workflow to build your own repeatable pipeline.",
+                "warning"
+            );
+        } else if (!preset) {
+            setStatusLine(
+                "workflowPresetStatus",
+                "Choose a workflow preset to preview its step order and run it against the current clip.",
+                "idle"
+            );
+        } else if (!selectedPath) {
+            setStatusLine(
+                "workflowPresetStatus",
+                preset.name + " is ready. Choose a clip before starting the workflow.",
+                "ready"
+            );
+        } else {
+            setStatusLine(
+                "workflowPresetStatus",
+                preset.name + " is ready to run on " + (selectedName || selectedPath.split(/[/\\]/).pop()) + ".",
+                "ready"
+            );
+        }
+    }
+
+    function updateCustomWorkflowSummary(statusMessage, statusState, statusTitle) {
+        var draftName = el.customWorkflowName ? el.customWorkflowName.value.trim() : "";
+        var stepCount = _workflowSteps.length;
+        var savedLabel = !_savedWorkflowLibraryLoaded
+            ? "Checking saved workflows..."
+            : (_savedWorkflowCount
+            ? _savedWorkflowCount + " saved workflow" + (_savedWorkflowCount === 1 ? "" : "s")
+            : "No saved workflows yet");
+        var savedTitle = !_savedWorkflowLibraryLoaded
+            ? "Loading the saved custom workflow library."
+            : (_savedWorkflowCount
+            ? _savedWorkflowCount + " saved custom workflow" + (_savedWorkflowCount === 1 ? " is" : "s are") + " available."
+            : "Save a draft to build a reusable workflow library.");
+
+        setTextAndTitle(
+            "customWorkflowSummary",
+            stepCount
+                ? (draftName ? draftName + " • " + workflowStepCountLabel(stepCount) : workflowStepCountLabel(stepCount) + " in draft")
+                : "No custom workflow steps yet",
+            stepCount
+                ? "Draft contains " + workflowStepCountLabel(stepCount) + "."
+                : "Add steps to start building a repeatable workflow."
+        );
+        setTextAndTitle("savedWorkflowSummary", savedLabel, savedTitle);
+
+        if (statusMessage) {
+            setStatusLine("customWorkflowStatus", statusMessage, statusState || "idle", statusTitle || statusMessage);
+            return;
+        }
+
+        if (!_savedWorkflowLibraryLoaded) {
+            setStatusLine(
+                "customWorkflowStatus",
+                "Loading saved workflows and draft availability.",
+                "working"
+            );
+        } else if (!connected) {
+            setStatusLine(
+                "customWorkflowStatus",
+                "Reconnect the backend before saving, deleting, or running custom workflows.",
+                "warning"
+            );
+        } else if (!stepCount) {
+            setStatusLine(
+                "customWorkflowStatus",
+                "Add steps to build a repeatable workflow for this editorial style.",
+                "idle"
+            );
+        } else if (!draftName) {
+            setStatusLine(
+                "customWorkflowStatus",
+                "Name the draft when you want to save it to the workflow library.",
+                "warning"
+            );
+        } else if (!selectedPath) {
+            setStatusLine(
+                "customWorkflowStatus",
+                draftName + " is ready to save. Choose a clip before running the draft.",
+                "ready"
+            );
+        } else {
+            setStatusLine(
+                "customWorkflowStatus",
+                draftName + " is ready to run on " + (selectedName || selectedPath.split(/[/\\]/).pop()) + ".",
+                "ready"
+            );
+        }
+    }
 
     function loadWorkflowPresets() {
+        _workflowPresetsLoaded = false;
+        updateWorkflowPresetSummary();
         api("GET", "/workflow/presets", null, function (err, data) {
-            if (err || !data) return;
+            if (err || !data) {
+                _workflowPresets = [];
+                _workflowPresetsLoaded = true;
+                if (el.workflowPreset) el.workflowPreset.innerHTML = '<option value="" disabled selected>Preset library unavailable</option>';
+                syncWorkflowPresetDescription(null);
+                updateWorkflowPresetSummary(
+                    "Couldn't load workflow presets. Reconnect the backend or refresh the panel to try again.",
+                    "error"
+                );
+                return;
+            }
             _workflowPresets = [];
             var sel = el.workflowPreset;
             if (!sel) return;
+            var previousValue = sel.value;
             sel.innerHTML = "";
             // Built-in presets
             var builtins = data.builtins || [];
@@ -4511,15 +5126,14 @@
             }
             if (!builtins.length && !customs.length) {
                 sel.innerHTML = '<option value="" disabled selected>No presets available</option>';
+            } else if (previousValue) {
+                sel.value = previousValue;
             }
-            // Show description on change
-            sel.addEventListener("change", function () {
-                var idx = _getWorkflowPresetIndex(sel.value);
-                var desc = el.workflowPresetDesc;
-                if (desc && idx >= 0 && _workflowPresets[idx]) {
-                    desc.textContent = _workflowPresets[idx].description || "";
-                }
-            });
+            sel.onchange = function () {
+                updateWorkflowPresetSummary();
+            };
+            _workflowPresetsLoaded = true;
+            updateWorkflowPresetSummary();
         });
     }
 
@@ -4544,10 +5158,19 @@
             showAlert("Invalid workflow preset.");
             return;
         }
+        _lastWorkflowRunContext = {
+            kind: "preset",
+            name: preset.name,
+            steps: (preset.steps || []).length
+        };
+        updateWorkflowPresetSummary(
+            "Running " + preset.name + " across " + workflowStepCountLabel((preset.steps || []).length) + " on " + (selectedName || selectedPath.split(/[/\\]/).pop()) + ".",
+            "working"
+        );
         // Use server-side workflow runner for reliable chained execution
         startJob("/workflow/run", {
             filepath: selectedPath,
-            workflow: { steps: preset.steps },
+            workflow: preset.steps,
             output_dir: projectFolder,
         });
     }
@@ -5550,31 +6173,233 @@
     // Settings Info
     // ================================================================
     var settingsLoaded = false;
+    var _settingsStudioState = {
+        backend: {
+            label: "Checking...",
+            state: "working",
+            title: "Checking the local OpenCut backend."
+        },
+        speech: {
+            label: "Checking transcription...",
+            state: "working",
+            title: "Checking transcription readiness."
+        },
+        bridge: {
+            label: "Checking live updates...",
+            state: "working",
+            title: "Checking the live updates bridge."
+        },
+        engines: {
+            label: "Refresh availability",
+            state: "idle",
+            title: "Refresh engine availability to review Auto routing and pinned domains."
+        }
+    };
+
+    function setSettingsStudioState(key, label, state, title) {
+        _settingsStudioState[key] = {
+            label: label || "",
+            state: state || "idle",
+            title: title || label || ""
+        };
+        renderSettingsStudioOverview();
+    }
+
+    function renderSettingsStudioOverview() {
+        setStatusPill(
+            "settingsBackendPill",
+            (_settingsStudioState.backend && _settingsStudioState.backend.label) || "Checking...",
+            (_settingsStudioState.backend && _settingsStudioState.backend.state) || "working",
+            (_settingsStudioState.backend && _settingsStudioState.backend.title) || "Checking the local OpenCut backend."
+        );
+        setTextAndTitle(
+            "settingsSpeechSummary",
+            (_settingsStudioState.speech && _settingsStudioState.speech.label) || "Checking transcription...",
+            (_settingsStudioState.speech && _settingsStudioState.speech.title) || "Checking transcription readiness."
+        );
+        setTextAndTitle(
+            "settingsBridgeSummary",
+            (_settingsStudioState.bridge && _settingsStudioState.bridge.label) || "Checking live updates...",
+            (_settingsStudioState.bridge && _settingsStudioState.bridge.title) || "Checking the live updates bridge."
+        );
+        setTextAndTitle(
+            "settingsEngineSummary",
+            (_settingsStudioState.engines && _settingsStudioState.engines.label) || "Refresh availability",
+            (_settingsStudioState.engines && _settingsStudioState.engines.title) || "Refresh engine availability to review routing."
+        );
+
+        var lineState = "success";
+        var lineMessage = "The local studio is ready for captions, search, routing, and longer editorial runs.";
+
+        if (_settingsStudioState.backend && _settingsStudioState.backend.state === "error") {
+            lineState = "error";
+            lineMessage = "Reconnect the local backend to restore captions, search, settings sync, and delivery tools.";
+        } else if (_settingsStudioState.speech && _settingsStudioState.speech.state === "error") {
+            lineState = "warning";
+            lineMessage = "Transcription still needs attention before captions, search indexing, and chapter generation will feel reliable.";
+        } else if (_settingsStudioState.bridge && (_settingsStudioState.bridge.state === "warning" || _settingsStudioState.bridge.state === "error")) {
+            lineState = "warning";
+            lineMessage = "Most features still run, but live progress and completion feedback are limited until the bridge is running.";
+        } else if (_settingsStudioState.engines && (_settingsStudioState.engines.state === "warning" || _settingsStudioState.engines.state === "error")) {
+            lineState = _settingsStudioState.engines.state === "error" ? "error" : "warning";
+            lineMessage = "Refresh engine routing after installs finish so Auto can make the best local decisions for this machine.";
+        }
+
+        setStatusLine("settingsOverviewStatus", lineMessage, lineState, lineMessage);
+    }
+
+    function syncSettingsBackendSummary(ok) {
+        if (ok) {
+            var portLabel = (el.backendPort && el.backendPort.textContent) || BACKEND.replace("http://127.0.0.1:", "Port ");
+            setSettingsStudioState("backend", "Connected", "ready", portLabel + " is responding for local processing.");
+            return;
+        }
+        setSettingsStudioState("backend", "Offline", "error", "Reconnect the local OpenCut backend to restore settings sync and processing.");
+        setStatusLine(
+            "systemStatusLine",
+            "Reconnect the backend to review GPU acceleration, logs, and local service details.",
+            "warning"
+        );
+    }
+
+    function updateWhisperSettingsState(healthData) {
+        if (!healthData || healthData.status !== "ok") {
+            if (el.whisperStatusText) {
+                el.whisperStatusText.textContent = "Unavailable";
+                el.whisperStatusText.setAttribute("data-state", "error");
+                el.whisperStatusText.title = "Reconnect the backend to review transcription readiness.";
+            }
+            if (el.whisperDeviceText) {
+                el.whisperDeviceText.textContent = "Reconnect backend";
+                el.whisperDeviceText.setAttribute("data-state", "warning");
+                el.whisperDeviceText.title = "Reconnect the backend to inspect transcription device settings.";
+            }
+            setStatusLine(
+                "whisperStatusLine",
+                "Reconnect the backend before reviewing or installing transcription services.",
+                "warning"
+            );
+            setSettingsStudioState(
+                "speech",
+                "Status unavailable",
+                "error",
+                "Reconnect the backend to review Whisper readiness."
+            );
+            return;
+        }
+
+        var caps = healthData.capabilities || {};
+        var backendName = caps.whisper_backend || "Whisper";
+        var installed = !!caps.captions;
+        var cpuMode = !!caps.whisper_cpu_mode;
+        var deviceLabel = cpuMode ? "CPU forced" : "Auto (GPU if available)";
+
+        if (installed) {
+            if (el.whisperStatusText) {
+                el.whisperStatusText.textContent = "Installed";
+                el.whisperStatusText.setAttribute("data-state", "ready");
+                el.whisperStatusText.title = backendName + " is available for transcription workflows.";
+            }
+            if (el.whisperDeviceText) {
+                el.whisperDeviceText.textContent = deviceLabel;
+                el.whisperDeviceText.setAttribute("data-state", cpuMode ? "warning" : "idle");
+                el.whisperDeviceText.title = cpuMode
+                    ? "CPU mode is enabled for stability."
+                    : "OpenCut will prefer GPU acceleration when available.";
+            }
+            setStatusLine(
+                "whisperStatusLine",
+                cpuMode
+                    ? "Transcription is ready in CPU mode. Use this when GPU runs are unstable."
+                    : backendName + " is ready for captions, search indexing, and chapter generation.",
+                cpuMode ? "warning" : "success"
+            );
+            setSettingsStudioState(
+                "speech",
+                cpuMode ? "Whisper ready on CPU" : backendName + " ready",
+                "ready",
+                cpuMode
+                    ? "Transcription is available in CPU mode for stability."
+                    : backendName + " is ready for transcript-driven workflows."
+            );
+            return;
+        }
+
+        if (el.whisperStatusText) {
+            el.whisperStatusText.textContent = "Not installed";
+            el.whisperStatusText.setAttribute("data-state", "error");
+            el.whisperStatusText.title = "Install Whisper to unlock transcription workflows.";
+        }
+        if (el.whisperDeviceText) {
+            el.whisperDeviceText.textContent = "Install required";
+            el.whisperDeviceText.setAttribute("data-state", "warning");
+            el.whisperDeviceText.title = "Install Whisper before captions, search indexing, and chapter generation will run.";
+        }
+        setStatusLine(
+            "whisperStatusLine",
+            "Install Whisper to enable transcription, subtitle export, search indexing, and transcript-driven tools.",
+            "warning"
+        );
+        setSettingsStudioState(
+            "speech",
+            "Install Whisper",
+            "error",
+            "Install Whisper to enable captions, search indexing, and transcript-driven tools."
+        );
+    }
+
+    function updateSystemSettingsState(gpuData) {
+        var portLabel = (el.backendPort && el.backendPort.textContent) || BACKEND.replace("http://127.0.0.1:", "Port ");
+        var message = "";
+        var state = connected ? "success" : "warning";
+
+        if (!connected) {
+            message = "Reconnect the backend to review GPU acceleration, logs, and local service details.";
+            setStatusLine("systemStatusLine", message, state, message);
+            return;
+        }
+
+        if (gpuData && gpuData.available) {
+            var vramText = gpuData.vram_mb != null ? safeFixed(gpuData.vram_mb / 1024, 1) + " GB VRAM" : "GPU memory available";
+            message = gpuData.name + " is ready with " + vramText + ". " + portLabel + " is active for local processing.";
+            setStatusLine("systemStatusLine", message, "success", message);
+            return;
+        }
+
+        if (gpuData && gpuData.available === false) {
+            message = "No GPU detected. OpenCut will fall back to CPU for heavier processing on " + portLabel + ".";
+            setStatusLine("systemStatusLine", message, "warning", message);
+            return;
+        }
+
+        message = portLabel + " is active. GPU details are still loading.";
+        setStatusLine("systemStatusLine", message, "working", message);
+    }
 
     function loadSettingsInfo() {
-        if (settingsLoaded) return;
+        var firstLoad = !settingsLoaded;
         settingsLoaded = true;
+
+        renderSettingsStudioOverview();
+        if (!connected) syncSettingsBackendSummary(false);
 
         // Whisper status from health check
         api("GET", "/health", null, function (err, data) {
-            if (!err && data) {
-                if (data.capabilities && data.capabilities.captions) {
-                    el.whisperStatusText.textContent = "Installed (" + (data.capabilities.whisper_backend || "unknown") + ")";
-                    el.whisperStatusText.style.color = "var(--success)";
-                } else {
-                    el.whisperStatusText.textContent = "Not installed";
-                    el.whisperStatusText.style.color = "var(--error)";
-                }
-                // CPU mode status
-                if (data.capabilities && data.capabilities.whisper_cpu_mode) {
-                    el.whisperCpuMode.checked = true;
-                    el.whisperDeviceText.textContent = "CPU (forced)";
-                    el.whisperDeviceText.style.color = "var(--warning)";
-                } else {
-                    el.whisperCpuMode.checked = false;
-                    el.whisperDeviceText.textContent = "Auto (GPU if available)";
-                    el.whisperDeviceText.style.color = "var(--text-secondary)";
-                }
+            if (err || !data || data.status !== "ok") {
+                syncSettingsBackendSummary(false);
+                updateWhisperSettingsState(null);
+                setStatusLine(
+                    "systemStatusLine",
+                    "Reconnect the backend to review GPU acceleration, logs, and local service details.",
+                    "warning"
+                );
+                return;
+            }
+            syncSettingsBackendSummary(true);
+            if (el.whisperCpuMode) el.whisperCpuMode.checked = !!(data.capabilities && data.capabilities.whisper_cpu_mode);
+            updateWhisperSettingsState(data);
+            if (firstLoad) {
+                _updateWsStatus();
             }
         });
 
@@ -5583,8 +6408,18 @@
             if (!err && data) {
                 el.gpuName.textContent = data.available ? data.name : "None detected";
                 el.gpuVram.textContent = data.available ? safeFixed(data.vram_mb / 1024, 1) + " GB" : "--";
+                updateSystemSettingsState(data);
+                return;
             }
+            updateSystemSettingsState(null);
         });
+
+        loadLLMSettings();
+        _updateWsStatus();
+
+        refreshDeps();
+        refreshModelList();
+        loadEngineRegistry();
     }
 
     function installWhisper() {
@@ -5618,12 +6453,34 @@
         api("POST", "/whisper/settings", { cpu_mode: cpuMode }, function (err, data) {
             if (!err && data && data.success) {
                 if (cpuMode) {
-                    el.whisperDeviceText.textContent = "CPU (forced)";
-                    el.whisperDeviceText.style.color = "var(--warning)";
+                    el.whisperDeviceText.textContent = "CPU forced";
+                    el.whisperDeviceText.setAttribute("data-state", "warning");
+                    setStatusLine(
+                        "whisperStatusLine",
+                        "CPU mode is enabled. Transcription will be slower, but it can be more stable on unsupported or memory-constrained GPUs.",
+                        "warning"
+                    );
+                    setSettingsStudioState(
+                        "speech",
+                        "Whisper ready on CPU",
+                        "ready",
+                        "Transcription is available in CPU mode for stability."
+                    );
                     showAlert("CPU mode enabled. Transcription may be slower but more stable.");
                 } else {
                     el.whisperDeviceText.textContent = "Auto (GPU if available)";
-                    el.whisperDeviceText.style.color = "var(--text-secondary)";
+                    el.whisperDeviceText.setAttribute("data-state", "idle");
+                    setStatusLine(
+                        "whisperStatusLine",
+                        "Transcription will prefer GPU acceleration when available and fall back gracefully when it is not.",
+                        "success"
+                    );
+                    setSettingsStudioState(
+                        "speech",
+                        "Whisper ready",
+                        "ready",
+                        "Transcription will prefer GPU acceleration when available."
+                    );
                     showAlert("CPU mode disabled. Whisper will try to use GPU.");
                 }
             } else {
@@ -5636,6 +6493,17 @@
 
     function restartBackend() {
         showAlert("Restarting backend…");
+        setStatusLine(
+            "systemStatusLine",
+            "Restarting the local backend. Processing controls will come back as soon as the service responds again.",
+            "working"
+        );
+        setSettingsStudioState(
+            "backend",
+            "Restarting",
+            "working",
+            "Restarting the local OpenCut backend."
+        );
         api("POST", "/shutdown", {}, function () {
             // Backend will shut down, then auto-restart via launcher
             setTimeout(function () {
@@ -6191,19 +7059,97 @@
         })[action] || action;
     }
 
+    function _journalClipName(path) {
+        return path ? String(path).split(/[/\\]/).pop() : "";
+    }
+
+    function updateJournalSummary(entries, statusMessage, statusState, statusTitle) {
+        var recentCount = Array.isArray(entries) ? entries.length : 0;
+        var revertibleCount = 0;
+        var latestTime = "";
+        if (recentCount) {
+            for (var i = 0; i < entries.length; i++) {
+                if (entries[i] && entries[i].revertible && !entries[i].reverted) revertibleCount++;
+            }
+            latestTime = _sessionCtxRelativeTime(entries[0].created_at);
+        }
+
+        setTextAndTitle(
+            "journalCountSummary",
+            recentCount
+                ? recentCount + " recent action" + (recentCount === 1 ? "" : "s")
+                : "No recent timeline writes",
+            recentCount
+                ? "Latest journal entry was " + latestTime + "."
+                : "Run a Premiere-writing action and it will appear here."
+        );
+        setTextAndTitle(
+            "journalRevertSummary",
+            revertibleCount
+                ? revertibleCount + " undo-ready"
+                : (recentCount ? "Context only" : "Waiting for first reversible action"),
+            revertibleCount
+                ? revertibleCount + " recent journal entr" + (revertibleCount === 1 ? "y is" : "ies are") + " ready to revert automatically."
+                : (recentCount
+                    ? "The recent journal entries are recorded for context, but none can be reverted automatically."
+                    : "Automatic rollback will appear here when supported actions are recorded.")
+        );
+
+        if (statusMessage) {
+            setStatusLine("journalStatusLine", statusMessage, statusState || "idle", statusTitle || statusMessage);
+            return;
+        }
+
+        if (!recentCount) {
+            setStatusLine(
+                "journalStatusLine",
+                "Run an action that writes to Premiere and it will appear here with any available rollback support.",
+                "idle"
+            );
+        } else if (revertibleCount) {
+            setStatusLine(
+                "journalStatusLine",
+                revertibleCount + " recent action" + (revertibleCount === 1 ? " is" : "s are") + " still undo-ready. Review them before manual timeline edits drift too far.",
+                "success"
+            );
+        } else {
+            setStatusLine(
+                "journalStatusLine",
+                "Recent actions are recorded for context, but the current set does not include any automatic rollback steps.",
+                "warning"
+            );
+        }
+    }
+
     function renderJournalList() {
         if (!el.journalList) return;
-        el.journalList.innerHTML = '<div class="journal-empty">Loading recent operations…</div>';
+        el.journalList.innerHTML = buildEmptyHintMarkup(
+            "Loading timeline history…",
+            "Reviewing recent timeline-affecting actions and any available rollback support.",
+            "info"
+        );
+        updateJournalSummary([], "Loading recent timeline operations and rollback availability.", "working");
         api("GET", "/journal/list?limit=30", null, function (err, data) {
             if (err) {
-                el.journalList.innerHTML =
-                    '<div class="journal-empty journal-error">Couldn\'t load journal: ' +
-                    esc(err.error || err.message || "Unknown error") + '</div>';
+                el.journalList.innerHTML = buildEmptyHintMarkup(
+                    "Journal unavailable",
+                    "Couldn't load timeline history right now. Reconnect the backend or refresh the journal to try again.",
+                    "error"
+                );
+                updateJournalSummary(
+                    [],
+                    "Couldn't load timeline history: " + (err.error || err.message || "Unknown error") + ".",
+                    "error"
+                );
                 return;
             }
             if (!Array.isArray(data) || !data.length) {
-                el.journalList.innerHTML =
-                    '<div class="journal-empty">No operations recorded yet. Run an action that writes to your Premiere project and it will appear here.</div>';
+                el.journalList.innerHTML = buildEmptyHintMarkup(
+                    "No timeline actions yet",
+                    "Run an action that writes to Premiere and it will appear here with any available rollback support.",
+                    "info"
+                );
+                updateJournalSummary([]);
                 return;
             }
             el.journalList.innerHTML = "";
@@ -6212,6 +7158,7 @@
                 frag.appendChild(_buildJournalRow(data[i]));
             }
             el.journalList.appendChild(frag);
+            updateJournalSummary(data);
         });
     }
 
@@ -6231,6 +7178,8 @@
         meta.className = "journal-row-meta";
         var parts = [_sessionCtxRelativeTime(entry.created_at)];
         if (entry.label) parts.push(entry.label);
+        var clipName = _journalClipName(entry.clip_path);
+        if (clipName) parts.push(clipName);
         meta.textContent = parts.join(" · ");
 
         copy.appendChild(title);
@@ -6248,8 +7197,8 @@
         } else if (!entry.revertible) {
             var pill2 = document.createElement("span");
             pill2.className = "journal-pill journal-pill-info";
-            pill2.textContent = "No auto-revert";
-            pill2.title = "This action type has no ExtendScript inverse. It's recorded for context only.";
+            pill2.textContent = "Context only";
+            pill2.title = "This action is recorded for context, but it does not have an automatic rollback step.";
             actions.appendChild(pill2);
         } else {
             var revertBtn = document.createElement("button");
@@ -7098,6 +8047,7 @@
         if (el.journalClearBtn) {
             el.journalClearBtn.addEventListener("click", function () {
                 if (!confirm("Clear all journal entries? This does not undo anything in Premiere.")) return;
+                updateJournalSummary([], "Clearing the journal history. This does not undo anything in Premiere.", "working");
                 api("POST", "/journal/clear", {}, function (err) {
                     if (err) { showAlert("Could not clear: " + (err.error || err)); return; }
                     showToast("Journal cleared", "success");
@@ -7902,15 +8852,43 @@
     function refreshModelList() {
         if (!el.modelList) return;
         ensureModelListDelegation();
-        setHintContent(el.modelList, "Scanning…");
+        el.modelList.innerHTML = buildEmptyHintMarkup(
+            "Scanning local models…",
+            "Reviewing local checkpoints and downloaded assets on this machine.",
+            "info"
+        );
+        setStatusLine(
+            "modelsStatusLine",
+            "Scanning local models and checkpoints for the current machine.",
+            "working"
+        );
         api("GET", "/models/list", null, function (err, data) {
             if (err || !data) {
-                setHintContent(el.modelList, "Failed to load models.");
+                el.modelList.innerHTML = buildEmptyHintMarkup(
+                    "Model inventory unavailable",
+                    "Reconnect the backend or refresh again to inspect local model storage.",
+                    "error"
+                );
+                if (el.modelsTotalSize) el.modelsTotalSize.textContent = "--";
+                setStatusLine(
+                    "modelsStatusLine",
+                    "Couldn't read the local model inventory. Reconnect the backend or try again.",
+                    "error"
+                );
                 return;
             }
             if (!data.models || data.models.length === 0) {
-                setHintContent(el.modelList, "No models found.");
+                el.modelList.innerHTML = buildEmptyHintMarkup(
+                    "No local models found",
+                    "Add local checkpoints here, or rely on hosted providers for LLM-driven features.",
+                    "warning"
+                );
                 if (el.modelsTotalSize) el.modelsTotalSize.textContent = "0 MB";
+                setStatusLine(
+                    "modelsStatusLine",
+                    "No local models are installed yet. Hosted providers can still power supported workflows.",
+                    "warning"
+                );
                 return;
             }
             var frag = document.createDocumentFragment();
@@ -7946,6 +8924,11 @@
             if (el.modelsTotalSize) {
                 var totalStr = data.total_mb >= 1024 ? safeFixed(data.total_mb / 1024, 1) + " GB" : safeFixed(data.total_mb, 0) + " MB";
                 el.modelsTotalSize.textContent = totalStr;
+                setStatusLine(
+                    "modelsStatusLine",
+                    data.models.length + " local model" + (data.models.length === 1 ? "" : "s") + " detected across " + totalStr + " of storage.",
+                    "success"
+                );
             }
         }, 30000);
     }
@@ -8803,6 +9786,11 @@
 
     var _batchDelegationAdded = false;
     function initBatchPicker() {
+        if (el.batchOperation) {
+            el.batchOperation.addEventListener("change", function () {
+                updateBatchSummary();
+            });
+        }
         if (el.batchAddSelectedBtn) {
             el.batchAddSelectedBtn.addEventListener("click", function () {
                 if (!selectedPath) { showToast("Select a clip first", "warning"); return; }
@@ -8838,6 +9826,8 @@
                 }
             });
         }
+        renderBatchFiles();
+        updateBatchSummary();
     }
 
     function renderBatchFiles() {
@@ -8846,6 +9836,8 @@
         if (!el.batchFileList) return;
         if (_batchFiles.length === 0) {
             el.batchFileList.innerHTML = buildEmptyHintMarkup("No files added", 'Use "Add Selected" or drag files.');
+            if (typeof updateButtons === "function") updateButtons();
+            updateBatchSummary();
             return;
         }
         var frag = document.createDocumentFragment();
@@ -8862,6 +9854,8 @@
         }
         el.batchFileList.innerHTML = "";
         el.batchFileList.appendChild(frag);
+        if (typeof updateButtons === "function") updateButtons();
+        updateBatchSummary();
     }
 
     // ================================================================
@@ -8875,17 +9869,52 @@
 
     function refreshDeps() {
         if (!el.depGrid) return;
-        el.depGrid.innerHTML = '<div class="hint">Checking dependencies…</div>';
+        el.depGrid.innerHTML = buildEmptyHintMarkup(
+            "Checking dependencies…",
+            "Reviewing local packages for captions, audio, search, and timeline tooling.",
+            "info"
+        );
+        setStatusLine(
+            "depsStatusLine",
+            "Checking local dependencies for AI, captions, and timeline tooling.",
+            "working"
+        );
         api("GET", "/system/dependencies", null, function (err, data) {
             if (err || !data) {
-                el.depGrid.innerHTML = '<div class="hint">Failed to check dependencies.</div>';
+                el.depGrid.innerHTML = buildEmptyHintMarkup(
+                    "Dependency health unavailable",
+                    "Reconnect the backend or try again to inspect local packages.",
+                    "error"
+                );
+                setStatusLine(
+                    "depsStatusLine",
+                    "Couldn't read dependency health. Reconnect the backend or run the check again.",
+                    "error"
+                );
                 return;
             }
             var keys = Object.keys(data);
+            if (!keys.length) {
+                el.depGrid.innerHTML = buildEmptyHintMarkup(
+                    "No dependency results yet",
+                    "The backend returned an empty dependency report for this machine.",
+                    "warning"
+                );
+                setStatusLine(
+                    "depsStatusLine",
+                    "No dependency results were returned. Try the check again after the backend settles.",
+                    "warning"
+                );
+                return;
+            }
             var frag = document.createDocumentFragment();
+            var installedCount = 0;
+            var missingCount = 0;
             for (var i = 0; i < keys.length; i++) {
                 var name = keys[i];
                 var info = data[name];
+                if (info && info.installed) installedCount++;
+                else missingCount++;
                 var div = document.createElement("div");
                 div.className = "dep-item";
                 div.innerHTML = '<span class="dep-dot ' + (info.installed ? "installed" : "missing") + '"></span>' +
@@ -8895,6 +9924,13 @@
             }
             el.depGrid.innerHTML = "";
             el.depGrid.appendChild(frag);
+            setStatusLine(
+                "depsStatusLine",
+                missingCount
+                    ? missingCount + " dependency check" + (missingCount === 1 ? " needs" : "s need") + " attention. Related features may stay disabled until those packages are installed."
+                    : installedCount + " dependency check" + (installedCount === 1 ? " looks" : "s look") + " healthy for this machine.",
+                missingCount ? "warning" : "success"
+            );
         });
     }
 
@@ -8977,6 +10013,16 @@
     var _workflowDelegationAdded = false;
 
     function initWorkflowBuilder() {
+        if (el.customWorkflowName) {
+            el.customWorkflowName.addEventListener("input", function () {
+                updateCustomWorkflowSummary();
+            });
+        }
+        if (el.savedWorkflowSelect) {
+            el.savedWorkflowSelect.addEventListener("change", function () {
+                updateCustomWorkflowSummary();
+            });
+        }
         if (el.workflowAddStepBtn) {
             el.workflowAddStepBtn.addEventListener("click", function () {
                 var sel = el.workflowStepSelect;
@@ -8987,6 +10033,7 @@
                     label: selOpt ? selOpt.textContent : sel.value
                 });
                 renderWorkflowSteps();
+                updateCustomWorkflowSummary();
             });
         }
         // Event delegation for workflow step remove buttons (F2)
@@ -8998,6 +10045,7 @@
                     var idx = parseInt(removeBtn.getAttribute("data-idx"), 10);
                     _workflowSteps.splice(idx, 1);
                     renderWorkflowSteps();
+                    updateCustomWorkflowSummary();
                 }
             });
         }
@@ -9009,6 +10057,7 @@
                 api("POST", "/workflow/save", { name: name, steps: _workflowSteps }, function (err, data) {
                     if (err || (data && data.error)) { showToast(data ? data.error : "Save failed", "error"); return; }
                     showToast("Workflow saved: " + name, "success");
+                    updateCustomWorkflowSummary("Saved " + name + " to the custom workflow library.", "success");
                     refreshSavedWorkflows();
                     loadWorkflowPresets();
                 });
@@ -9025,6 +10074,10 @@
                             _workflowSteps = data[i].steps || [];
                             if (el.customWorkflowName) el.customWorkflowName.value = data[i].name;
                             renderWorkflowSteps();
+                            updateCustomWorkflowSummary(
+                                "Loaded " + data[i].name + " into the draft editor. Review the steps or run it on the current clip.",
+                                "success"
+                            );
                             break;
                         }
                     }
@@ -9038,6 +10091,7 @@
                 api("DELETE", "/workflow/delete", { name: sel.value }, function (err, data) {
                     if (!err && !(data && data.error)) {
                         showToast("Workflow deleted", "success");
+                        updateCustomWorkflowSummary("Deleted " + sel.value + " from the saved workflow library.", "warning");
                         refreshSavedWorkflows();
                         loadWorkflowPresets();
                     }
@@ -9047,15 +10101,27 @@
         if (el.runCustomWorkflowBtn) {
             el.runCustomWorkflowBtn.addEventListener("click", function () {
                 if (_workflowSteps.length === 0 || !selectedPath) return;
+                var draftName = (el.customWorkflowName && el.customWorkflowName.value.trim()) || "Custom workflow";
+                _lastWorkflowRunContext = {
+                    kind: "custom",
+                    name: draftName,
+                    steps: _workflowSteps.length
+                };
+                updateCustomWorkflowSummary(
+                    "Running " + draftName + " across " + workflowStepCountLabel(_workflowSteps.length) + " on " + (selectedName || selectedPath.split(/[/\\]/).pop()) + ".",
+                    "working"
+                );
                 // Use server-side workflow runner for reliable chained execution
                 startJob("/workflow/run", {
                     filepath: selectedPath,
-                    workflow: { steps: _workflowSteps },
+                    workflow: _workflowSteps,
                     output_dir: projectFolder,
                 });
             });
         }
         refreshSavedWorkflows();
+        renderWorkflowSteps();
+        updateCustomWorkflowSummary();
     }
 
     function renderWorkflowSteps() {
@@ -9063,6 +10129,7 @@
         if (_workflowSteps.length === 0) {
             el.workflowStepList.innerHTML = buildEmptyHintMarkup("Workflow is empty", "Add steps to build a custom workflow.");
             if (el.runCustomWorkflowBtn) el.runCustomWorkflowBtn.disabled = true;
+            updateCustomWorkflowSummary();
             return;
         }
         if (el.runCustomWorkflowBtn) el.runCustomWorkflowBtn.disabled = false;
@@ -9070,23 +10137,49 @@
         for (var i = 0; i < _workflowSteps.length; i++) {
             var item = document.createElement("div");
             item.className = "workflow-step-item";
+            var endpoint = _workflowSteps[i].endpoint || "";
             item.innerHTML = '<div class="workflow-step-main">' +
                 '<span class="workflow-step-num">' + (i + 1) + '</span>' +
+                '<div class="workflow-step-copy">' +
                 '<span class="workflow-step-label">' + esc(_workflowSteps[i].label) + '</span>' +
+                '<span class="workflow-step-meta">' + esc(describeWorkflowStepGroup(endpoint)) + ' • ' + esc(endpoint.replace(/^\/+/, "")) + '</span>' +
+                '</div>' +
                 '</div>' +
                 '<button type="button" class="workflow-step-remove" data-idx="' + i + '">Remove</button>';
             frag.appendChild(item);
         }
         el.workflowStepList.innerHTML = "";
         el.workflowStepList.appendChild(frag);
+        updateCustomWorkflowSummary();
     }
 
     function refreshSavedWorkflows() {
+        _savedWorkflowLibraryLoaded = false;
+        updateCustomWorkflowSummary();
         api("GET", "/workflows/list", null, function (err, data) {
-            if (err || !data || !el.savedWorkflowSelect) return;
+            if (err || !data || !el.savedWorkflowSelect) {
+                _savedWorkflowCount = 0;
+                _savedWorkflowLibraryLoaded = true;
+                if (el.savedWorkflowSelect) {
+                    el.savedWorkflowSelect.innerHTML = '<option value="" disabled selected>Saved workflows unavailable</option>';
+                }
+                if (el.loadCustomWorkflowBtn) el.loadCustomWorkflowBtn.disabled = true;
+                if (el.deleteCustomWorkflowBtn) el.deleteCustomWorkflowBtn.disabled = true;
+                updateCustomWorkflowSummary(
+                    "Couldn't load saved workflows. Reconnect the backend or try again.",
+                    "error"
+                );
+                return;
+            }
+            var previousValue = el.savedWorkflowSelect.value;
             el.savedWorkflowSelect.innerHTML = "";
+            _savedWorkflowCount = Array.isArray(data) ? data.length : 0;
+            _savedWorkflowLibraryLoaded = true;
             if (data.length === 0) {
                 el.savedWorkflowSelect.innerHTML = '<option value="" disabled selected>No custom workflows</option>';
+                if (el.loadCustomWorkflowBtn) el.loadCustomWorkflowBtn.disabled = true;
+                if (el.deleteCustomWorkflowBtn) el.deleteCustomWorkflowBtn.disabled = true;
+                updateCustomWorkflowSummary();
                 return;
             }
             for (var i = 0; i < data.length; i++) {
@@ -9095,6 +10188,13 @@
                 opt.textContent = data[i].name + " (" + (data[i].steps || []).length + " steps)";
                 el.savedWorkflowSelect.appendChild(opt);
             }
+            if (previousValue) el.savedWorkflowSelect.value = previousValue;
+            if (!el.savedWorkflowSelect.value && el.savedWorkflowSelect.options.length) {
+                el.savedWorkflowSelect.selectedIndex = 0;
+            }
+            if (el.loadCustomWorkflowBtn) el.loadCustomWorkflowBtn.disabled = false;
+            if (el.deleteCustomWorkflowBtn) el.deleteCustomWorkflowBtn.disabled = false;
+            updateCustomWorkflowSummary();
         });
     }
 
@@ -10342,6 +11442,49 @@
         return config;
     }
 
+    function humanizeLlmProvider(provider) {
+        if (provider === "ollama") return "Ollama";
+        if (provider === "openai") return "OpenAI";
+        if (provider === "anthropic") return "Anthropic";
+        return provider || "LLM";
+    }
+
+    function refreshLlmStatusLine(message, state, title) {
+        if (message) {
+            setStatusLine("llmStatus", message, state || "idle", title || message);
+            return;
+        }
+
+        var provider = el.llmProvider ? el.llmProvider.value : "ollama";
+        var providerLabel = humanizeLlmProvider(provider);
+        var needsKey = provider === "openai" || provider === "anthropic";
+        var hasKey = !!(el.llmApiKey && el.llmApiKey.value);
+
+        if (needsKey && !hasKey) {
+            setStatusLine(
+                "llmStatus",
+                "Add an API key, then test the " + providerLabel + " connection before using hosted LLM features.",
+                "warning"
+            );
+            return;
+        }
+
+        if (provider === "ollama") {
+            setStatusLine(
+                "llmStatus",
+                "Ollama is selected for local suggestions. Test the connection before using chapters, summaries, or highlight ranking.",
+                "idle"
+            );
+            return;
+        }
+
+        setStatusLine(
+            "llmStatus",
+            providerLabel + " is configured. Test the connection before using chapters, summaries, or highlight ranking.",
+            "idle"
+        );
+    }
+
     function applyLLMConfig(cfg, fillBlankOnly) {
         if (!cfg) return;
         var assign = function (input, value) {
@@ -10354,6 +11497,7 @@
         assign(el.llmApiKey, cfg.api_key);
         assign(el.llmBaseUrl, cfg.base_url);
         updateLLMProviderUI();
+        refreshLlmStatusLine();
     }
 
     function saveLLMSettings(options) {
@@ -10381,7 +11525,15 @@
             }
         } catch (e) {}
         api("GET", "/settings/llm", null, function (err, s) {
-            if (err || !s) return;
+            if (err || !s) {
+                if (!hasLocalSettings) {
+                    refreshLlmStatusLine(
+                        "Could not load saved LLM settings from the backend. You can still enter them manually.",
+                        "warning"
+                    );
+                }
+                return;
+            }
             applyLLMConfig({
                 provider: s.provider || "",
                 model: s.model || "",
@@ -10406,18 +11558,19 @@
             var modelDefaults = { ollama: "llama3.1", openai: "gpt-4o-mini", anthropic: "claude-sonnet-4-20250514" };
             if (!el.llmModel.value) el.llmModel.placeholder = modelDefaults[provider] || "";
         }
+        refreshLlmStatusLine();
     }
 
     function testLLM() {
         var cfg = getLLMConfig();
-        if (el.llmStatus) el.llmStatus.textContent = "Testing…";
+        refreshLlmStatusLine("Testing " + humanizeLlmProvider(cfg.provider) + " connection...", "working");
         api("POST", "/llm/test", { prompt: "Say hello in one sentence.", provider: cfg.provider, model: cfg.model || "", api_key: cfg.api_key || "", base_url: cfg.base_url || "" }, function (err, resp) {
             if (err || !resp || !resp.success) {
                 var msg = (resp && resp.error) ? resp.error : (err && typeof err === "object" && err.message) ? err.message : "Couldn't reach the LLM provider";
-                if (el.llmStatus) el.llmStatus.textContent = "Failed: " + msg;
+                refreshLlmStatusLine("Connection failed: " + msg, "error");
                 return;
             }
-            if (el.llmStatus) el.llmStatus.textContent = "Connected: " + resp.provider + "/" + resp.model;
+            refreshLlmStatusLine("Connected to " + resp.provider + " / " + resp.model + ".", "success");
             saveLLMSettings({ silent: true });
             showToast("LLM connected", "success");
         });
@@ -11135,22 +12288,142 @@
     // v1.5.0 — Export Tab: Deliverables
     // ================================================================
 
+    var DELIVERABLE_DOC_LABELS = {
+        "vfx-sheet": "VFX Sheet",
+        "adr-list": "ADR List",
+        "music-cue-sheet": "Music Cue Sheet",
+        "asset-list": "Asset List"
+    };
+
+    function setTextAndTitle(id, text, title) {
+        var node = document.getElementById(id);
+        if (!node) return;
+        node.textContent = text || "";
+        node.title = title || text || "";
+    }
+
+    function setStatusPill(id, label, state, title) {
+        var node = document.getElementById(id);
+        if (!node) return;
+        node.textContent = label || "";
+        node.setAttribute("data-state", state || "idle");
+        node.title = title || label || "";
+    }
+
+    function setStatusLine(id, message, state, title) {
+        var node = document.getElementById(id);
+        if (!node) return;
+        node.textContent = message || "";
+        node.setAttribute("data-state", state || "idle");
+        node.title = title || message || "";
+    }
+
+    function formatLocalTime(ts) {
+        if (!ts) return "";
+        try {
+            return new Date(ts).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+        } catch (e) {
+            return "";
+        }
+    }
+
+    function getDeliverablesOutputSummary() {
+        var raw = ((document.getElementById("deliverablesOutputDir") || {}).value || "").trim();
+        if (raw) {
+            return {
+                label: raw.split(/[/\\]/).pop() || raw,
+                title: raw
+            };
+        }
+        if (projectFolder) {
+            return {
+                label: (projectFolder.split(/[/\\]/).pop() || projectFolder) + " (project)",
+                title: projectFolder
+            };
+        }
+        return {
+            label: "Project folder",
+            title: "Uses the current Premiere project folder when available."
+        };
+    }
+
+    function updateDeliverablesSummary() {
+        var info = sequenceInfo && typeof sequenceInfo === "object" && !sequenceInfo.error ? sequenceInfo : null;
+        var output = getDeliverablesOutputSummary();
+        setTextAndTitle("deliverablesOutputSummary", output.label, output.title);
+
+        if (info) {
+            var summaryBits = [info.name || "Active Sequence"];
+            if (info.clip_count != null) {
+                var clipCount = Number(info.clip_count) || 0;
+                summaryBits.push(clipCount + " clip" + (clipCount === 1 ? "" : "s"));
+            }
+            if (info.duration != null) {
+                summaryBits.push(formatTimecode(info.duration));
+            }
+            var summary = summaryBits.join(" • ");
+            setStatusPill("deliverablesSeqPill", "Loaded", "success", "Sequence info is ready for deliverables.");
+            setTextAndTitle("deliverablesSeqSummary", summary, summary);
+            if (!_lastDeliverablesActivity) {
+                setStatusLine(
+                    "deliverablesStatus",
+                    connected
+                        ? "Sequence info is ready. Choose a destination if needed, then generate the docs you need."
+                        : "Sequence info is loaded, but the backend is disconnected.",
+                    connected ? "ready" : "warning"
+                );
+            }
+        } else {
+            setStatusPill("deliverablesSeqPill", "Not loaded", "empty", "Load the active sequence before generating deliverables.");
+            setTextAndTitle(
+                "deliverablesSeqSummary",
+                "Load the active sequence before generating handoff docs.",
+                "Load the active sequence before generating handoff docs."
+            );
+            if (!_lastDeliverablesActivity) {
+                setStatusLine(
+                    "deliverablesStatus",
+                    connected
+                        ? "Load sequence info, choose a destination if needed, then generate the docs you need."
+                        : "Reconnect the backend, then load sequence info to generate handoff docs.",
+                    connected ? "idle" : "warning"
+                );
+            }
+        }
+
+        if (_lastDeliverablesActivity) {
+            var activity = _lastDeliverablesActivity;
+            var exportLabel = activity.label + " at " + formatLocalTime(activity.time);
+            setTextAndTitle("deliverablesLastExport", exportLabel, activity.output || exportLabel);
+        } else {
+            setTextAndTitle("deliverablesLastExport", "No exports yet", "No deliverables have been generated yet.");
+        }
+    }
+
+    function renderSearchResultsEmpty(title, copy, tone) {
+        var res = document.getElementById("footageSearchResults");
+        if (!res) return;
+        _selectedFootageSearchPath = "";
+        res.innerHTML = buildEmptyHintMarkup(title, copy, tone || "info");
+    }
+
     function loadSeqInfo() {
-        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        var statusEl = document.getElementById("seqInfoStatus");
+        if (!inPremiere) {
+            setStatusLine("deliverablesStatus", "Premiere Pro connection required to load sequence info.", "warning");
+            showAlert("Premiere Pro connection required.");
+            return;
+        }
         // Return cached sequence info if still fresh
         if (_pproCache.seq && typeof _pproCache.seq === "object" && !_pproCache.seq.error && (Date.now() - _pproCache.seqTs < _pproCache.ttl)) {
             var cached = _pproCache.seq;
             sequenceInfo = cached;
-            var statusEl = document.getElementById("seqInfoStatus");
-            if (statusEl) {
-                statusEl.textContent = "Loaded: " + (cached.name || "Unknown") + " — " + (cached.clip_count || 0) + " clips (cached)";
-                statusEl.classList.remove("hidden");
-            }
+            if (statusEl) setHintState(statusEl, "Using cached sequence info for '" + (cached.name || "Active Sequence") + "'.", "success");
             updateButtons();
+            updateDeliverablesSummary();
             return;
         }
         cs.evalScript('ocGetSequenceInfo()', function (result) {
-            var statusEl = document.getElementById("seqInfoStatus");
             try {
                 sequenceInfo = JSON.parse(result);
                 if (!sequenceInfo || typeof sequenceInfo !== "object" || sequenceInfo.error) {
@@ -11159,35 +12432,75 @@
                 _pproCache.seq = sequenceInfo;
                 _pproCache.seqTs = Date.now();
                 if (statusEl) {
-                    statusEl.textContent = "Loaded: " + (sequenceInfo.name || "Unknown") + " — " + (sequenceInfo.clip_count || 0) + " clips";
-                    statusEl.classList.remove("hidden");
+                    setHintState(
+                        statusEl,
+                        "Loaded '" + (sequenceInfo.name || "Active Sequence") + "' with " + (Number(sequenceInfo.clip_count) || 0) + " clips ready for handoff docs.",
+                        "success"
+                    );
                 }
                 updateButtons();
+                updateDeliverablesSummary();
                 showToast("Sequence info loaded", "success");
             } catch (e) {
                 sequenceInfo = null;
                 _pproCache.seq = null;
                 _pproCache.seqTs = 0;
-                if (statusEl) {
-                    statusEl.textContent = "Couldn't load the active sequence.";
-                    statusEl.classList.remove("hidden");
-                }
+                if (statusEl) setHintState(statusEl, "Couldn't load the active Premiere sequence.", "error");
                 updateButtons();
+                updateDeliverablesSummary();
+                setStatusLine("deliverablesStatus", "Couldn't load the active sequence. Make sure a Premiere sequence is active and try again.", "error");
                 showAlert("Error loading sequence info: " + (result || e.message));
             }
         });
     }
 
     function genDeliverableDoc(type) {
-        if (!sequenceInfo) { showAlert("Load sequence info first."); return; }
-        var outDir = (document.getElementById("deliverablesOutputDir") || {}).value || projectFolder;
+        var label = DELIVERABLE_DOC_LABELS[type] || type;
+        if (!sequenceInfo || typeof sequenceInfo !== "object" || sequenceInfo.error) {
+            setStatusLine("deliverablesStatus", "Load sequence info before generating handoff docs.", "warning");
+            showAlert("Load sequence info first.");
+            return;
+        }
+        var buttonId = {
+            "vfx-sheet": "genVfxSheetBtn",
+            "adr-list": "genAdrListBtn",
+            "music-cue-sheet": "genMusicCueBtn",
+            "asset-list": "genAssetListBtn"
+        }[type];
+        var btn = buttonId ? document.getElementById(buttonId) : null;
+        var originalBtnText = rememberButtonText(btn);
+        var outDir = ((document.getElementById("deliverablesOutputDir") || {}).value || "").trim() || projectFolder || null;
+        if (btn) {
+            btn.disabled = true;
+            setButtonText(btn, "Generating…");
+        }
+        setStatusLine("deliverablesStatus", "Generating " + label + "…", "working");
         api("POST", "/deliverables/" + type, { sequence_data: sequenceInfo, output_dir: outDir }, function (err, data) {
-            if (err || (data && data.error)) { showAlert("Generation failed: " + (data ? data.error : "Network error")); return; }
+            if (btn) {
+                btn.disabled = false;
+                setButtonText(btn, originalBtnText);
+            }
+            if (err || (data && data.error)) {
+                setStatusLine("deliverablesStatus", "Couldn't generate " + label + " just now.", "error");
+                showAlert("Generation failed: " + (data ? data.error : "Network error"));
+                return;
+            }
             var res = document.getElementById("deliverablesResult");
             var fp = document.getElementById("deliverablesFilePath");
+            var output = data.output || data.output_path || "File generated.";
             if (res) res.classList.remove("hidden");
-            if (fp) fp.textContent = data.output || data.output_path || "File generated.";
-            showToast(type + " generated", "success");
+            if (fp) {
+                fp.textContent = output;
+                fp.title = output;
+            }
+            _lastDeliverablesActivity = {
+                label: label,
+                output: output,
+                time: Date.now()
+            };
+            updateDeliverablesSummary();
+            setStatusLine("deliverablesStatus", label + " ready. Review the generated file or open its folder.", "success", output);
+            showToast(label + " generated", "success");
         });
     }
 
@@ -11198,39 +12511,146 @@
     function renderSearchIndexStats(stats) {
         var statsEl = document.getElementById("searchIndexStats");
         footageIndex = stats || {};
-        if (!statsEl) return;
+        _lastSearchIndexStats = footageIndex;
         var totalFiles = Number((stats && stats.total_files) || 0);
         var totalSegments = Number((stats && stats.total_segments) || 0);
+        var countLabel = totalFiles + " file" + (totalFiles === 1 ? "" : "s") + " indexed";
+        if (totalSegments) {
+            countLabel += " • " + totalSegments + " segment" + (totalSegments === 1 ? "" : "s");
+        }
+        setStatusPill(
+            "searchIndexPill",
+            totalFiles ? "Ready" : "Empty",
+            totalFiles ? "success" : "empty",
+            totalFiles ? "Footage search library ready." : "Index project clips to build the footage library."
+        );
+        setTextAndTitle("searchIndexCount", totalFiles ? countLabel : "0 files indexed", totalFiles ? countLabel : "0 files indexed");
+        if (el.clearSearchIndexBtn) {
+            el.clearSearchIndexBtn.disabled = !connected || !totalFiles;
+        }
+        if (!statsEl) return;
         if (!totalFiles) {
-            statsEl.textContent = "Search index is empty. Index project clips to enable footage search.";
+            setHintState(statsEl, "Search index is empty. Index project clips to enable footage search.", "info");
+            setStatusLine(
+                "searchStatus",
+                connected
+                    ? "Index project clips, then search with descriptive phrases to surface the right moment faster."
+                    : "Reconnect the backend to search the footage library.",
+                connected ? "idle" : "warning"
+            );
             return;
         }
-        statsEl.textContent = "Index: " + totalFiles + " file" + (totalFiles === 1 ? "" : "s") + ", " + totalSegments + " segment" + (totalSegments === 1 ? "" : "s") + ".";
+        setHintState(
+            statsEl,
+            totalFiles + " file" + (totalFiles === 1 ? "" : "s") + " indexed across " + totalSegments + " segment" + (totalSegments === 1 ? "" : "s") + ".",
+            "success"
+        );
+        setStatusLine("searchStatus", "Library ready. Search with descriptive phrases and click a result to load it into the workspace.", "ready");
     }
 
-    function refreshSearchIndexStatus() {
+    function refreshSearchIndexStatus(options) {
+        options = options || {};
         api("GET", "/timeline/index-status", null, function (err, data) {
-            if (err || !data) return;
+            if (err || !data) {
+                if (!options.silent) {
+                    if (document.getElementById("searchIndexStats")) {
+                        setHintState(document.getElementById("searchIndexStats"), "Couldn't refresh footage index status right now.", "warning");
+                    }
+                    setStatusPill("searchIndexPill", "Unavailable", "warning", "Couldn't refresh footage index status.");
+                    setTextAndTitle("searchIndexCount", "Check backend connection", "Check backend connection");
+                    setStatusLine("searchStatus", "Couldn't refresh the footage library right now. Check the backend connection and try again.", "warning");
+                }
+                return;
+            }
             renderSearchIndexStats(data);
+        });
+    }
+
+    function clearSearchIndex() {
+        var statsEl = document.getElementById("searchIndexStats");
+        var totalFiles = Number((_lastSearchIndexStats && _lastSearchIndexStats.total_files) || 0);
+        var btn = document.getElementById("clearSearchIndexBtn");
+        if (!totalFiles) {
+            setStatusLine("searchStatus", "The footage library is already empty.", "idle");
+            return;
+        }
+        if (typeof window !== "undefined" && typeof window.confirm === "function") {
+            var confirmed = window.confirm("Clear the indexed footage library? You can rebuild it anytime from project clips.");
+            if (!confirmed) return;
+        }
+        var originalBtnText = rememberButtonText(btn);
+        if (btn) {
+            btn.disabled = true;
+            setButtonText(btn, "Clearing…");
+        }
+        setStatusPill("searchIndexPill", "Clearing", "working", "Clearing indexed footage library.");
+        setStatusLine("searchStatus", "Clearing indexed footage and resetting search state…", "working");
+        api("DELETE", "/search/index", null, function (err, data) {
+            if (btn) {
+                btn.disabled = false;
+                setButtonText(btn, originalBtnText);
+            }
+            if (err || (data && data.error)) {
+                if (statsEl) setHintState(statsEl, "Couldn't clear the footage library just now.", "error");
+                setStatusLine("searchStatus", "Couldn't clear the footage library just now. Try again in a moment.", "error");
+                showAlert("Failed to clear footage index: " + (data ? data.error : "Network error"));
+                return;
+            }
+            renderSearchIndexStats({ total_files: 0, total_segments: 0 });
+            if (statsEl) {
+                setHintState(statsEl, "Search index cleared. Re-index project clips when you're ready to search again.", "success");
+            }
+            renderSearchResultsEmpty(
+                "Search the footage library",
+                "Index project clips, then use descriptive queries to find the right sound bite or shot.",
+                "info"
+            );
+            setStatusLine("searchStatus", "Library index cleared. Re-index project clips to search again.", "success");
+            showToast("Footage index cleared", "success");
         });
     }
 
     function indexAllClips() {
         var paths = projectMedia.map(function(m) { return m.path || m; }).filter(Boolean);
-        if (!paths.length) { showAlert("No project media found."); return; }
+        if (!paths.length) {
+            if (document.getElementById("searchIndexStats")) {
+                setHintState(document.getElementById("searchIndexStats"), "No project media was found to index yet.", "warning");
+            }
+            setStatusLine("searchStatus", "No project media is available to index yet.", "warning");
+            showAlert("No project media found.");
+            return;
+        }
         var btn = document.getElementById("indexAllClipsBtn");
         if (currentJob || jobStarting) {
+            setStatusLine("searchStatus", "Another task is already in progress. Cancel it from the processing bar before re-indexing.", "warning");
             showAlert("Another task is in progress. You can cancel it from the processing bar above.");
             return;
         }
         var originalBtnText = rememberButtonText(btn);
         if (btn) { btn.disabled = true; setButtonText(btn, "Indexing…"); }
+        if (document.getElementById("searchIndexStats")) {
+            setHintState(document.getElementById("searchIndexStats"), "Indexing " + paths.length + " project clip" + (paths.length === 1 ? "" : "s") + ". This can take a moment.", "info");
+        }
+        setStatusPill("searchIndexPill", "Indexing", "working", "Building the searchable footage library.");
+        setStatusLine("searchStatus", "Indexing project media and building the footage library…", "working");
         startJob("/search/index", { files: paths, no_input: true }, {
             onComplete: function (result) {
-                refreshSearchIndexStatus();
                 var indexed = Number((result && result.indexed) || 0);
                 var total = Number((result && result.total) || paths.length);
                 var errors = (result && result.errors) || [];
+                refreshSearchIndexStatus({ silent: true });
+                if (errors.length) {
+                    if (document.getElementById("searchIndexStats")) {
+                        setHintState(
+                            document.getElementById("searchIndexStats"),
+                            "Indexed " + indexed + " of " + total + " project clips. Some items still need attention.",
+                            "warning"
+                        );
+                    }
+                    setStatusLine("searchStatus", "Indexing finished with a few issues. Search is available, but some clips need attention.", "warning");
+                } else {
+                    setStatusLine("searchStatus", "Library index updated. Search is ready to use.", "success");
+                }
                 showToast("Indexed " + indexed + " of " + total + " project clips" + (errors.length ? " with " + errors.length + " issue" + (errors.length === 1 ? "" : "s") : "") + ".", errors.length ? "warning" : "success");
             },
             onFinally: function () {
@@ -11240,6 +12660,10 @@
                 }
             },
             onStartError: function () {
+                if (document.getElementById("searchIndexStats")) {
+                    setHintState(document.getElementById("searchIndexStats"), "Couldn't start footage indexing. Check the backend connection and try again.", "error");
+                }
+                setStatusLine("searchStatus", "Couldn't start indexing right now. Check the backend connection and try again.", "error");
                 if (btn) {
                     btn.disabled = false;
                     setButtonText(btn, originalBtnText);
@@ -11249,15 +12673,39 @@
     }
 
     function runFootageSearch() {
-        var query = (document.getElementById("footageSearchQuery") || {}).value || "";
-        if (!query) { showAlert("Enter a search query."); return; }
+        var query = ((document.getElementById("footageSearchQuery") || {}).value || "").trim();
+        if (!query) {
+            setStatusLine("searchStatus", "Enter a descriptive query to search the footage library.", "warning");
+            showAlert("Enter a search query.");
+            return;
+        }
+        var searchBtn = document.getElementById("runFootageSearchBtn");
+        var originalBtnText = rememberButtonText(searchBtn);
         var maxResults = parseInt((document.getElementById("footageSearchMax") || {}).value || "10");
+        if (searchBtn) {
+            searchBtn.disabled = true;
+            setButtonText(searchBtn, "Searching…");
+        }
+        setStatusLine("searchStatus", "Searching the indexed footage library…", "working");
+        renderSearchResultsEmpty("Searching footage", "Looking for the best matches across indexed project clips.", "info");
         api("POST", "/search/footage", { query: query, top_k: maxResults }, function (err, data) {
             var res = document.getElementById("footageSearchResults");
+            if (searchBtn) {
+                searchBtn.disabled = !connected;
+                setButtonText(searchBtn, originalBtnText);
+            }
             if (!res) return;
-            if (err || !data) { setHintContent(res, "Search failed."); return; }
+            if (err || !data) {
+                renderSearchResultsEmpty("Search unavailable", "The footage search request failed. Check the backend connection and try again.", "error");
+                setStatusLine("searchStatus", "Search failed. Check the backend connection and try again.", "error");
+                return;
+            }
             var results = data.results || [];
-            if (!results.length) { setHintContent(res, "No results found."); return; }
+            if (!results.length) {
+                renderSearchResultsEmpty("No matches yet", "Try a broader query or refresh the library index, then search again.", "warning");
+                setStatusLine("searchStatus", "No matching footage found for that query.", "warning");
+                return;
+            }
             var frag = document.createDocumentFragment();
             for (var i = 0; i < results.length; i++) {
                 var r = results[i];
@@ -11268,8 +12716,12 @@
                 item.type = "button";
                 item.className = "footage-result-item";
                 item.dataset.path = path;
+                item.dataset.name = name;
                 item.disabled = !path;
                 if (!path) item.classList.add("is-disabled");
+                if (path && (path === _selectedFootageSearchPath || path === selectedPath)) {
+                    item.classList.add("is-selected");
+                }
                 item.title = path ? "Select clip" : "Clip path unavailable";
                 item.setAttribute("aria-label", path ? "Select clip " + name : "Unavailable clip result");
                 var title = document.createElement("div");
@@ -11286,7 +12738,8 @@
                 if (r.text) {
                     var snippet = document.createElement("div");
                     snippet.className = "footage-result-snippet";
-        snippet.textContent = r.text.substring(0, 80) + (r.text.length > 80 ? "…" : "");
+                    var snippetText = String(r.text);
+                    snippet.textContent = snippetText.substring(0, 120) + (snippetText.length > 120 ? "…" : "");
                     item.appendChild(snippet);
                 }
                 if (timeRange || typeof r.score === "number") {
@@ -11310,6 +12763,7 @@
             }
             res.innerHTML = "";
             res.appendChild(frag);
+            setStatusLine("searchStatus", results.length + " match" + (results.length === 1 ? "" : "es") + " ready. Click a result to load it into the workspace.", "ready");
         });
     }
 
@@ -11324,7 +12778,16 @@
             var item = e.target.closest(".footage-result-item");
             if (!item) return;
             var p = item.dataset.path || "";
-            if (p) selectFile(p, p.split(/[/\\]/).pop());
+            if (!p) return;
+            var items = res.querySelectorAll(".footage-result-item.is-selected");
+            for (var i = 0; i < items.length; i++) {
+                items[i].classList.remove("is-selected");
+            }
+            item.classList.add("is-selected");
+            _selectedFootageSearchPath = p;
+            var label = item.dataset.name || p.split(/[/\\]/).pop();
+            selectFile(p, label);
+            setStatusLine("searchStatus", "Loaded '" + label + "' into the workspace.", "success", p);
         });
     }
 
@@ -11521,6 +12984,11 @@
     function initDeliverablesFeatures() {
         var loadSeqBtn = document.getElementById("loadSeqInfoBtn");
         if (loadSeqBtn) loadSeqBtn.addEventListener("click", loadSeqInfo);
+        var outputDir = document.getElementById("deliverablesOutputDir");
+        if (outputDir) {
+            outputDir.addEventListener("input", updateDeliverablesSummary);
+            outputDir.addEventListener("change", updateDeliverablesSummary);
+        }
         var vfxBtn = document.getElementById("genVfxSheetBtn");
         if (vfxBtn) vfxBtn.addEventListener("click", function() { genDeliverableDoc("vfx-sheet"); });
         var adrBtn = document.getElementById("genAdrListBtn");
@@ -11536,11 +13004,14 @@
                 cs.evalScript('openFolderInFinder("' + escPath(fp.textContent) + '")', function() {});
             }
         });
+        updateDeliverablesSummary();
     }
 
     function initNlpFeatures() {
         var indexBtn = document.getElementById("indexAllClipsBtn");
         if (indexBtn) indexBtn.addEventListener("click", indexAllClips);
+        var clearBtn = document.getElementById("clearSearchIndexBtn");
+        if (clearBtn) clearBtn.addEventListener("click", clearSearchIndex);
         var searchBtn = document.getElementById("runFootageSearchBtn");
         if (searchBtn) searchBtn.addEventListener("click", runFootageSearch);
         var footageQuery = document.getElementById("footageSearchQuery");
@@ -11552,6 +13023,11 @@
         var nlpBtn = document.getElementById("runNlpCommandBtn");
         if (nlpBtn) nlpBtn.addEventListener("click", runNlpCommand);
         ensureFootageDelegation();
+        renderSearchResultsEmpty(
+            "Search the footage library",
+            "Index project clips, then use descriptive queries to find the right sound bite or shot.",
+            "info"
+        );
         refreshSearchIndexStatus();
     }
 
@@ -11608,11 +13084,34 @@
     // Workflow completion handler — show step-by-step summary
     addJobDoneListener(function (job) {
         if (job.type !== "workflow") return;
+        var ctx = _lastWorkflowRunContext;
         if (job.status === "complete" && job.result) {
             var r = job.result;
             var msg = "Workflow complete: " + (r.steps_completed || 0) + " steps processed.";
             if (r.output) msg += " Output: " + String(r.output).split("/").pop().split("\\").pop();
             showToast(msg, "success");
+            if (ctx && ctx.kind === "preset") {
+                updateWorkflowPresetSummary(msg, "success");
+            } else if (ctx && ctx.kind === "custom") {
+                updateCustomWorkflowSummary(msg, "success");
+            }
+            _lastWorkflowRunContext = null;
+        } else if (job.status === "error") {
+            var errorMsg = "Workflow failed: " + (job.error || job.message || "Unknown error") + ".";
+            if (ctx && ctx.kind === "preset") {
+                updateWorkflowPresetSummary(errorMsg, "error");
+            } else if (ctx && ctx.kind === "custom") {
+                updateCustomWorkflowSummary(errorMsg, "error");
+            }
+            _lastWorkflowRunContext = null;
+        } else if (job.status === "cancelled") {
+            var cancelMsg = "Workflow cancelled before all steps finished.";
+            if (ctx && ctx.kind === "preset") {
+                updateWorkflowPresetSummary(cancelMsg, "warning");
+            } else if (ctx && ctx.kind === "custom") {
+                updateCustomWorkflowSummary(cancelMsg, "warning");
+            }
+            _lastWorkflowRunContext = null;
         }
     });
 
@@ -12284,7 +13783,7 @@
                 if (_workflowPresets[qi].name === workflowName) {
                     startJob("/workflow/run", {
                         filepath: selectedPath,
-                        workflow: { steps: _workflowPresets[qi].steps },
+                        workflow: _workflowPresets[qi].steps,
                         output_dir: projectFolder,
                     });
                     return;

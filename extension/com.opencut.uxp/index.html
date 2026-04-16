@@ -17,7 +17,7 @@
           <path d="M4 2.5a3 3 0 00-1.76 5.43L7.33 11l-5.09 3.07A3 3 0 104.8 19.5a3 3 0 001.76-5.43L8.93 12.6 16.5 17V5L8.93 9.4 6.56 7.93A3 3 0 004 2.5z" fill="var(--accent)"/>
         </svg>
         <span class="oc-logo" translate="no">OpenCut</span>
-        <span class="oc-version">v1.15.0</span>
+        <span class="oc-version" id="uxpHeaderVersion">v1.16.0</span>
       </div>
       <div class="oc-header-right">
         <div class="oc-connection" id="connectionStatus" title="Backend connection status">
@@ -213,12 +213,28 @@
       <div class="oc-tab-panel" id="tab-captions" role="tabpanel" aria-labelledby="tabBtnCaptions">
 
         <div class="oc-section-title">Transcription</div>
+        <div class="oc-inline-summary-grid oc-inline-summary-grid--captions" aria-label="Captions workflow readiness">
+          <div class="oc-inline-stat">
+            <span class="oc-label">Session</span>
+            <span class="oc-status-pill" id="captionsSessionPill" data-state="empty">Needs source</span>
+          </div>
+          <div class="oc-inline-stat">
+            <span class="oc-label">Source</span>
+            <span class="oc-inline-value" id="captionsSourceValue">Choose a clip to start</span>
+          </div>
+          <div class="oc-inline-stat">
+            <span class="oc-label">Latest Output</span>
+            <span class="oc-inline-value" id="captionsOutputValue">No transcript yet</span>
+          </div>
+        </div>
+        <div class="oc-status-line" id="captionsStatusLine" role="status" aria-live="polite">Choose a clip, then transcribe to unlock chapters, repeat review, and subtitle export.</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="transcribeBody">
             <span>Transcribe</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="transcribeBody">
+            <p class="oc-caption-intro">Create a clean transcript first, then reuse the same review surface for chapters, repeat cleanup, and subtitle delivery.</p>
             <div class="oc-field-row">
               <label class="oc-label" for="clipPathCaptions">Clip Path</label>
               <div class="oc-input-group">
@@ -273,6 +289,21 @@
                 <input type="checkbox" id="enableWordLevel" checked> Word-Level Timestamps
               </label>
             </div>
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--caption-plan" aria-label="Current transcription plan">
+              <div class="oc-inline-stat">
+                <span class="oc-label">Model</span>
+                <span class="oc-inline-value" id="captionsPlanModel">turbo (recommended)</span>
+              </div>
+              <div class="oc-inline-stat">
+                <span class="oc-label">Language</span>
+                <span class="oc-inline-value" id="captionsPlanLanguage">Auto-detect</span>
+              </div>
+              <div class="oc-inline-stat">
+                <span class="oc-label">Style</span>
+                <span class="oc-inline-value" id="captionsPlanStyle">YouTube Bold</span>
+              </div>
+            </div>
+            <p class="oc-hint oc-caption-plan-note" id="captionsPlanNote">Word timing is on. Speaker splits are off.</p>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runTranscribeBtn">Transcribe</button>
           </div>
         </div>
@@ -284,6 +315,7 @@
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="chaptersBody">
+            <p class="oc-caption-intro">Draft platform-ready chapter markers from the current transcript flow, then copy the list into publishing or review notes.</p>
             <div class="oc-field-row">
               <label class="oc-label" for="llmProvider">LLM Provider</label>
               <select class="oc-select" id="llmProvider">
@@ -307,6 +339,7 @@
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="repeatBody">
+            <p class="oc-caption-intro">Flag duplicated lines and alternate takes before you commit to the next cleanup pass.</p>
             <div class="oc-slider-row">
               <label class="oc-label" for="repeatSimilarity">Similarity Threshold</label>
               <input type="range" class="oc-slider" id="repeatSimilarity" min="0.5" max="1.0" value="0.85" step="0.01">
@@ -326,10 +359,14 @@
             <div class="oc-result-header">Transcript</div>
             <div class="oc-result-summary" id="captionsResultSummary">Ready to review</div>
           </div>
-          <textarea class="oc-textarea" id="captionsResultBody" rows="6" readonly placeholder="Transcript will appear here..."></textarea>
+          <div class="oc-result-meta-row">
+            <span class="oc-status-pill" id="captionsResultPill" data-state="empty">Awaiting output</span>
+            <span class="oc-result-meta" id="captionsResultMeta">Transcripts, chapter lists, and repeat notes will land here for one calm review pass.</span>
+          </div>
+          <textarea class="oc-textarea" id="captionsResultBody" rows="8" readonly placeholder="Transcript, chapter list, or repeat review will appear here..."></textarea>
           <div class="oc-btn-row">
-            <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="copySrtBtn">Copy SRT</button>
-            <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="importSrtBtn">Import to Timeline</button>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="copySrtBtn" disabled>Copy Output</button>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="importSrtBtn" disabled>Open SRT Prep</button>
           </div>
         </div>
       </div>
@@ -782,25 +819,47 @@
 
         <div class="oc-uxp-notice" id="uxpTimelineNotice">
           <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M8 1a7 7 0 100 14A7 7 0 008 1zm0 3a.75.75 0 01.75.75v3.5a.75.75 0 01-1.5 0v-3.5A.75.75 0 018 4zm0 8a1 1 0 110-2 1 1 0 010 2z"/></svg>
-          <span>UXP timeline write-back is in preview. Some operations fall back to the CEP panel for Premiere &lt; 25.6.</span>
+          <span>Direct UXP sequence write-back is still in preview. Some timeline tasks hand off to the CEP panel for dependable execution.</span>
         </div>
+        <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline" aria-label="Timeline workspace readiness">
+          <div class="oc-inline-stat">
+            <span class="oc-label">Bridge</span>
+            <span class="oc-status-pill" id="timelineBridgePill" data-state="working">Checking bridge</span>
+          </div>
+          <div class="oc-inline-stat">
+            <span class="oc-label">Cuts Ready</span>
+            <span class="oc-inline-value" id="timelineCutsValue">No cuts ready</span>
+          </div>
+          <div class="oc-inline-stat">
+            <span class="oc-label">Markers Ready</span>
+            <span class="oc-inline-value" id="timelineMarkersValue">No markers ready</span>
+          </div>
+          <div class="oc-inline-stat">
+            <span class="oc-label">Last Action</span>
+            <span class="oc-inline-value" id="timelineLastActionValue">No write-back activity</span>
+          </div>
+        </div>
+        <div class="oc-status-line" id="timelineStatusLine" role="status" aria-live="polite">Generate cuts or beat markers first, then return here to write back, export OTIO, or validate captions for sequence import.</div>
 
-        <div class="oc-section-title">Apply Cuts</div>
+        <div class="oc-section-title">Sequence Write-Back</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="applyCutsBody">
             <span>Apply Cuts to Sequence</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="applyCutsBody">
-            <p class="oc-hint">Run Silence Removal or Filler Detection first, then apply the resulting cuts directly to the active Premiere sequence.</p>
-            <div class="oc-field-row">
-              <label class="oc-label" for="cutsJsonPath">Cuts JSON</label>
-              <div class="oc-input-group">
-                <input type="text" class="oc-input" id="cutsJsonPath" placeholder="Path to cuts JSON or auto from last job...">
-                <button type="button" class="oc-btn oc-btn-secondary" id="browseCutsJson">Browse</button>
+            <p class="oc-hint">Use the latest cut pass from Cut or Video and send it into the active Premiere sequence when the edit is ready.</p>
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Apply cuts readiness">
+              <div class="oc-inline-stat">
+                <span class="oc-label">Latest Cuts</span>
+                <span class="oc-inline-value" id="timelineCutsSourceValue">Run a cut pass first</span>
+              </div>
+              <div class="oc-inline-stat">
+                <span class="oc-label">Sequence Bridge</span>
+                <span class="oc-inline-value" id="timelineSequenceValue">Checking UXP bridge</span>
               </div>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="applyTimelineCutsBtn">Apply to Active Sequence</button>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="applyTimelineCutsBtn">Apply Latest Cuts</button>
           </div>
         </div>
 
@@ -852,6 +911,17 @@
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="batchExportBody">
+            <p class="oc-hint">Export beat-marked or cut-defined segments from the current clip once the output folder is set.</p>
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Batch export readiness">
+              <div class="oc-inline-stat">
+                <span class="oc-label">Source Windows</span>
+                <span class="oc-inline-value" id="timelineExportSourceValue">Awaiting cuts or markers</span>
+              </div>
+              <div class="oc-inline-stat">
+                <span class="oc-label">Destination</span>
+                <span class="oc-inline-value" id="timelineExportOutputValue">Choose output folder</span>
+              </div>
+            </div>
             <div class="oc-field-row">
               <label class="oc-label" for="exportPreset">Export Preset</label>
               <select class="oc-select" id="exportPreset">
@@ -880,6 +950,7 @@
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="batchRenameBody">
+            <p class="oc-hint">Project-wide rename still runs through the CEP panel today. Keep the pattern here as a reference, then switch panels to execute safely.</p>
             <div class="oc-field-row">
               <label class="oc-label" for="renamePattern">Pattern</label>
               <input type="text" class="oc-input" id="renamePattern" placeholder="{name}_{index:03d}" value="{name}_{index:03d}">
@@ -892,7 +963,17 @@
                 <option value="project">Whole Project</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runBatchRenameBtn">Rename Items</button>
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Batch rename availability">
+              <div class="oc-inline-stat">
+                <span class="oc-label">Availability</span>
+                <span class="oc-status-pill" id="timelineRenamePill" data-state="warning">CEP panel required</span>
+              </div>
+              <div class="oc-inline-stat">
+                <span class="oc-label">Pattern</span>
+                <span class="oc-inline-value" id="timelineRenamePatternValue">{name}_{index:03d}</span>
+              </div>
+            </div>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="runBatchRenameBtn" disabled>Available in CEP Panel</button>
           </div>
         </div>
 
@@ -913,17 +994,29 @@
                 <option value="speaker">Speaker</option>
               </select>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runSmartBinsBtn">Organize into Smart Bins</button>
+            <p class="oc-hint">Smart bin execution also still lives in the CEP panel. Use this strategy picker as a planning reference before switching panels.</p>
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="Smart bins availability">
+              <div class="oc-inline-stat">
+                <span class="oc-label">Availability</span>
+                <span class="oc-status-pill" id="timelineSmartBinsPill" data-state="warning">CEP panel required</span>
+              </div>
+              <div class="oc-inline-stat">
+                <span class="oc-label">Strategy</span>
+                <span class="oc-inline-value" id="timelineSmartBinsValue">File Type</span>
+              </div>
+            </div>
+            <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="runSmartBinsBtn" disabled>Available in CEP Panel</button>
           </div>
         </div>
 
-        <div class="oc-section-title">SRT Import</div>
+        <div class="oc-section-title">SRT Prep</div>
         <div class="oc-card">
           <div class="oc-card-header collapsible" data-target="srtImportBody">
-            <span>Import SRT to Sequence</span>
+            <span>Validate SRT for Timeline Import</span>
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="srtImportBody">
+            <p class="oc-hint">Check the file and count caption segments here, then use the CEP or native captions flow for final placement on the sequence.</p>
             <div class="oc-field-row">
               <label class="oc-label" for="srtFilePath">SRT File</label>
               <div class="oc-input-group">
@@ -935,7 +1028,17 @@
               <label class="oc-label" for="srtTrackIndex">Target Track</label>
               <input type="number" class="oc-input oc-input-sm" id="srtTrackIndex" value="1" min="1" max="99">
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runSrtImportBtn">Import SRT to Timeline</button>
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--timeline-card" aria-label="SRT validation summary">
+              <div class="oc-inline-stat">
+                <span class="oc-label">File</span>
+                <span class="oc-inline-value" id="timelineSrtValue">Choose .srt file</span>
+              </div>
+              <div class="oc-inline-stat">
+                <span class="oc-label">Target</span>
+                <span class="oc-inline-value" id="timelineSrtTrackValue">Track 1</span>
+              </div>
+            </div>
+            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runSrtImportBtn">Validate SRT File</button>
           </div>
         </div>
       </div>
@@ -965,8 +1068,21 @@
                 <input type="checkbox" id="indexFrames"> Index key frames
               </label>
             </div>
-            <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runIndexLibBtn">Index Library</button>
-            <div class="oc-status-line" id="indexStatus">Ready to build a searchable library.</div>
+            <div class="oc-inline-summary-grid" aria-label="Library index status">
+              <div class="oc-field-row oc-inline-stat">
+                <span class="oc-label">Index</span>
+                <span id="indexStatePill" class="oc-inline-value oc-status-pill" data-state="idle">Ready</span>
+              </div>
+              <div class="oc-field-row oc-inline-stat">
+                <span class="oc-label">Indexed</span>
+                <span id="indexStatsValue" class="oc-inline-value">0 files indexed</span>
+              </div>
+            </div>
+            <div class="oc-btn-row">
+              <button type="button" class="oc-btn oc-btn-primary" id="runIndexLibBtn">Index Library</button>
+              <button type="button" class="oc-btn oc-btn-secondary" id="clearIndexBtn">Clear Index</button>
+            </div>
+            <div class="oc-status-line" id="indexStatus" role="status" aria-live="polite">Ready to build a searchable library.</div>
           </div>
         </div>
 
@@ -991,6 +1107,7 @@
               <input type="number" class="oc-input oc-input-sm" id="searchResultCount" value="10" min="1" max="100">
             </div>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFootageSearchBtn">Search Footage</button>
+            <div class="oc-status-line" id="searchStatus" role="status" aria-live="polite">Choose a descriptive query, then load the best match back into the workspace.</div>
             <div class="oc-result-list" id="searchResultList">
               <div class="oc-empty-state oc-empty-state-inline">
                 <div class="oc-empty-state-kicker">Search the library</div>
@@ -1046,6 +1163,16 @@
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="seqInfoBody">
+            <div class="oc-inline-summary-grid" aria-label="Sequence readiness">
+              <div class="oc-field-row oc-inline-stat">
+                <span class="oc-label">Sequence</span>
+                <span id="seqInfoStatePill" class="oc-inline-value oc-status-pill" data-state="empty">Not Loaded</span>
+              </div>
+              <div class="oc-field-row oc-inline-stat">
+                <span class="oc-label">Summary</span>
+                <span id="seqInfoSummary" class="oc-inline-value">Load the active Premiere sequence before generating handoff docs.</span>
+              </div>
+            </div>
             <button type="button" class="oc-btn oc-btn-secondary oc-btn-full" id="loadSeqInfoBtn">Load Sequence Info</button>
             <div class="oc-info-grid" id="seqInfoGrid">
               <div class="oc-empty-state oc-empty-state-inline">
@@ -1066,8 +1193,22 @@
             <div class="oc-field-row">
               <label class="oc-label" for="delivOutputDir">Output Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="delivOutputDir" placeholder="Choose where reports and handoff docs should land...">
+                <input type="text" class="oc-input" id="delivOutputDir" placeholder="Choose where reports and handoff docs should land…">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseDelivDir">Browse</button>
+              </div>
+            </div>
+            <div class="oc-inline-summary-grid" aria-label="Deliverables readiness">
+              <div class="oc-field-row oc-inline-stat">
+                <span class="oc-label">Sequence</span>
+                <span id="deliverablesSequenceValue" class="oc-inline-value">Load sequence info</span>
+              </div>
+              <div class="oc-field-row oc-inline-stat">
+                <span class="oc-label">Destination</span>
+                <span id="deliverablesOutputValue" class="oc-inline-value">System temp folder</span>
+              </div>
+              <div class="oc-field-row oc-inline-stat">
+                <span class="oc-label">Last Export</span>
+                <span id="deliverablesLastExportValue" class="oc-inline-value">No exports yet</span>
               </div>
             </div>
             <div class="oc-deliverable-grid">
@@ -1124,6 +1265,7 @@
                 <option value="pdf">PDF</option>
               </select>
             </div>
+            <div class="oc-status-line" id="deliverablesStatus" role="status" aria-live="polite">Load sequence info, choose a destination if needed, then generate the handoff docs you need.</div>
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFullReportBtn">Generate Full Report</button>
           </div>
         </div>
@@ -1132,39 +1274,39 @@
       <!-- ==================== SETTINGS TAB ==================== -->
       <div class="oc-tab-panel" id="tab-settings" role="tabpanel" aria-labelledby="tabBtnSettings">
 
-        <div class="oc-section-title">AI Engine Preferences</div>
+        <div class="oc-section-title">Engine Routing</div>
         <div class="oc-card">
-          <p class="oc-hint">Select preferred AI backend per feature domain.</p>
+          <p class="oc-hint">Pick the engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available option active for the current machine.</p>
           <div id="uxpEngineGrid" class="oc-engine-grid">
             <div class="oc-empty-state oc-empty-state-inline">
               <div class="oc-empty-state-kicker">Engine routing</div>
               <p>Loading available engines and saved preferences...</p>
             </div>
           </div>
-          <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshEnginesBtn">Refresh Engines</button>
+          <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshEnginesBtn">Refresh Availability</button>
         </div>
 
-        <div class="oc-section-title">WebSocket Bridge</div>
+        <div class="oc-section-title">Live Updates Bridge</div>
         <div class="oc-card">
-          <p class="oc-hint">Real-time progress streaming. No polling needed.</p>
-          <div class="oc-field-row">
-            <span class="oc-label">Status</span>
-            <span id="uxpWsStatus">Unknown</span>
+          <p class="oc-hint">Keep progress, completion, and cancel feedback flowing into the panel while longer jobs run.</p>
+          <div class="oc-field-row oc-inline-stat">
+            <span class="oc-label">Bridge</span>
+            <span id="uxpWsStatus" class="oc-inline-value oc-status-pill" data-state="unknown">Checking...</span>
           </div>
-          <div class="oc-field-row">
-            <span class="oc-label">Clients</span>
-            <span id="uxpWsClients">0</span>
+          <div class="oc-field-row oc-inline-stat">
+            <span class="oc-label">Listeners</span>
+            <span id="uxpWsClients" class="oc-inline-value">0 listeners</span>
           </div>
           <div class="oc-btn-row">
             <button type="button" class="oc-btn oc-btn-secondary" id="uxpWsStartBtn">Start Bridge</button>
             <button type="button" class="oc-btn oc-btn-secondary" id="uxpWsStopBtn">Stop Bridge</button>
-            <button type="button" class="oc-btn oc-btn-primary" id="uxpWsConnectBtn">Connect Panel</button>
+            <button type="button" class="oc-btn oc-btn-primary" id="uxpWsConnectBtn">Connect Live Updates</button>
           </div>
         </div>
 
         <div class="oc-section-title">Keyboard</div>
         <div class="oc-card">
-          <p class="oc-hint">The fastest editorial actions are available from anywhere in the panel.</p>
+          <p class="oc-hint">The fastest editorial actions stay available even while you move between workspaces.</p>
           <div class="oc-shortcut-grid" aria-label="Keyboard shortcuts">
             <div class="oc-shortcut-item">
               <div class="oc-shortcut-copy">
@@ -1201,11 +1343,11 @@
         <div class="oc-card">
           <div class="oc-field-row">
             <span class="oc-label">Version</span>
-            <span id="uxpVersionDisplay">1.9.8 (UXP)</span>
+                <span id="uxpVersionDisplay">1.16.0 (UXP)</span>
           </div>
           <div class="oc-field-row">
             <span class="oc-label">Panel</span>
-            <span>UXP (Premiere Pro 25.6+)</span>
+            <span>UXP panel for Premiere Pro 25.6+</span>
           </div>
         </div>
       </div>
