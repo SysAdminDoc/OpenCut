@@ -287,6 +287,13 @@ def register_error_handlers(app):
 
     @app.errorhandler(BadRequest)
     def handle_bad_request(e):
+        description = getattr(e, "description", "") or ""
+        if "JSON body must be an object" in description:
+            return jsonify({
+                "error": "JSON body must be an object.",
+                "code": "INVALID_INPUT",
+                "suggestion": "Send a top-level JSON object in the request body.",
+            }), 400
         if request.is_json or request.mimetype == "application/json":
             return jsonify({
                 "error": "Invalid JSON request body.",

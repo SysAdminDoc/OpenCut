@@ -732,6 +732,11 @@ class TestExpressionEngine:
         with pytest.raises(ValueError, match="Unsafe|Syntax"):
             evaluate_expression("def foo(): pass")
 
+    def test_noise_rejects_excessive_octaves(self):
+        from opencut.core.expression_engine import evaluate_expression
+        with pytest.raises(ValueError, match="octaves"):
+            evaluate_expression("noise(1.0, octaves=10**8)", timeout_ms=50)
+
     def test_evaluate_timeline(self):
         from opencut.core.expression_engine import evaluate_timeline
         result = evaluate_timeline("time * 10", fps=10, duration=1.0)
@@ -1085,10 +1090,6 @@ class TestMotionDesignRoutes:
         cfg = OpenCutConfig()
         flask_app = create_app(config=cfg)
         flask_app.config["TESTING"] = True
-        # Register motion_design_bp manually (not in __init__.py yet)
-        from opencut.routes.motion_design_routes import motion_design_bp
-        if "motion_design" not in flask_app.blueprints:
-            flask_app.register_blueprint(motion_design_bp, url_prefix="/api")
         return flask_app
 
     @pytest.fixture
@@ -1113,6 +1114,12 @@ class TestMotionDesignRoutes:
         data = resp.get_json()
         assert "presets" in data
         assert len(data["presets"]) == 12
+
+    def test_kinetic_text_presets_primary_path_get(self, client):
+        resp = client.get("/motion/kinetic-text/presets")
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert "presets" in data
 
     def test_shape_animate_types_get(self, client):
         resp = client.get("/api/motion/shape-animate/types")

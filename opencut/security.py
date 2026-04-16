@@ -16,7 +16,8 @@ import sys
 import threading
 import time
 
-from flask import jsonify, request
+from flask import Request, jsonify, request
+from werkzeug.exceptions import BadRequest
 
 logger = logging.getLogger("opencut")
 
@@ -28,6 +29,28 @@ VALID_WHISPER_MODELS = frozenset({
     "distil-large-v2", "distil-large-v3", "distil-large-v3.5",
     "distil-medium.en", "distil-small.en",
 })
+
+
+class OpenCutRequest(Request):
+    """Flask request class that rejects top-level non-object JSON bodies.
+
+    The backend routes overwhelmingly expect JSON objects and immediately call
+    ``data.get(...)``. A top-level array/string/number would otherwise make it
+    through ``request.get_json()`` and crash later as an ``AttributeError``,
+    surfacing as a 500 instead of a clear client error. Centralizing the guard
+    here hardens every route that still uses Flask's request parsing directly.
+    """
+
+    _OBJECT_ONLY_METHODS = frozenset({"POST", "PUT", "PATCH", "DELETE"})
+
+    def get_json(self, force=False, silent=False, cache=True):
+        data = super().get_json(force=force, silent=silent, cache=cache)
+        if silent or data is None:
+            return data
+        expects_object = self.method in self._OBJECT_ONLY_METHODS and (force or self.is_json)
+        if expects_object and not isinstance(data, dict):
+            raise BadRequest("JSON body must be an object.")
+        return data
 
 # ---------------------------------------------------------------------------
 # CSRF Token (rotating with TTL)

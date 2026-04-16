@@ -9,15 +9,49 @@ and persistent config in ``~/.opencut/webhooks.json``.
 import json
 import logging
 import os
+import threading
 import time
 import urllib.error
 import urllib.request
 from typing import Dict, List
+from urllib.parse import urlparse
 
 logger = logging.getLogger("opencut")
 
 _OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
 _WEBHOOKS_FILE = os.path.join(_OPENCUT_DIR, "webhooks.json")
+_config_lock = threading.RLock()
+
+
+def _validate_webhook_url(url: str) -> str:
+    """Validate and normalize a legacy webhook URL."""
+    cleaned = (url or "").strip()
+    if not cleaned:
+        raise ValueError("Webhook URL is required")
+    parsed = urlparse(cleaned)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("Webhook URL must use http:// or https:// and include a host")
+    if any(ch in cleaned for ch in ("\r", "\n", "\x00")):
+        raise ValueError("Webhook URL contains invalid characters")
+    return cleaned
+
+
+def _atomic_write_json(path: str, payload: object) -> None:
+    """Atomically replace *path* with UTF-8 JSON content."""
+    import tempfile
+
+    os.makedirs(_OPENCUT_DIR, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(dir=os.path.dirname(path), suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+        os.replace(tmp_path, path)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
 
 
 def send_webhook(
@@ -39,6 +73,12 @@ def send_webhook(
     Returns:
         True if the webhook was delivered (2xx), False otherwise.
     """
+    try:
+        url = _validate_webhook_url(url)
+    except ValueError as exc:
+        logger.warning("Rejected webhook URL: %s", exc)
+        return False
+
     headers = {
         "Content-Type": "application/json",
         "X-OpenCut-Event": event_type,
@@ -105,18 +145,19 @@ def load_webhook_config() -> List[Dict]:
     optional ``events`` filter list.  Returns empty list if the file does
     not exist.
     """
-    if not os.path.isfile(_WEBHOOKS_FILE):
-        return []
+    with _config_lock:
+        if not os.path.isfile(_WEBHOOKS_FILE):
+            return []
 
-    try:
-        with open(_WEBHOOKS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        if isinstance(data, list):
-            return data
-        return []
-    except (json.JSONDecodeError, OSError) as exc:
-        logger.warning("Failed to load webhook config: %s", exc)
-        return []
+        try:
+            with open(_WEBHOOKS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            if isinstance(data, list):
+                return data
+            return []
+        except (json.JSONDecodeError, OSError) as exc:
+            logger.warning("Failed to load webhook config: %s", exc)
+            return []
 
 
 def save_webhook_config(configs: List[Dict]) -> None:
@@ -125,7 +166,13 @@ def save_webhook_config(configs: List[Dict]) -> None:
 
     Each config dict should have at minimum a ``url`` key.
     """
-    os.makedirs(_OPENCUT_DIR, exist_ok=True)
-    with open(_WEBHOOKS_FILE, "w", encoding="utf-8") as f:
-        json.dump(configs, f, indent=2)
-    logger.info("Saved %d webhook config(s)", len(configs))
+    sanitized = []
+    for cfg in configs:
+        if not isinstance(cfg, dict):
+            raise ValueError("Each webhook config must be an object")
+        clean_cfg = dict(cfg)
+        clean_cfg["url"] = _validate_webhook_url(clean_cfg.get("url", ""))
+        sanitized.append(clean_cfg)
+    with _config_lock:
+        _atomic_write_json(_WEBHOOKS_FILE, sanitized)
+    logger.info("Saved %d webhook config(s)", len(sanitized))

@@ -1090,7 +1090,7 @@ def serve_file():
 @system_bp.route("/outputs/recent", methods=["GET"])
 def recent_outputs():
     """List recent output files from completed jobs."""
-    limit = safe_int(request.args.get("limit", 20), default=20)
+    limit = min(safe_int(request.args.get("limit", 20), default=20, min_val=1, max_val=100), 100)
     outputs = []
     all_jobs = _list_jobs_copy()
     sorted_jobs = sorted(all_jobs, key=lambda j: j.get("created", 0), reverse=True)
