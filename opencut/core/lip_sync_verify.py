@@ -63,7 +63,8 @@ def compute_audio_energy(
         on_progress(5, "Extracting audio for energy analysis")
 
     # Extract raw PCM
-    tmp_wav = tempfile.mktemp(suffix="_lipsync_audio.wav")
+    _fd, tmp_wav = tempfile.mkstemp(suffix="_lipsync_audio.wav")
+    os.close(_fd)
     try:
         ffmpeg = get_ffmpeg_path()
         cmd = [
@@ -149,7 +150,8 @@ def compute_mouth_energy(
     scale_h = max(1, int(crop_h * scale_w / max(width, 1)))
 
     # Extract lower-third grayscale frames as raw bytes
-    tmp_raw = tempfile.mktemp(suffix="_mouth_raw.gray")
+    _fd, tmp_raw = tempfile.mkstemp(suffix="_mouth_raw.gray")
+    os.close(_fd)
     try:
         ffmpeg = get_ffmpeg_path()
         vf = f"crop={width}:{crop_h}:0:{crop_y},scale={scale_w}:{scale_h},format=gray"
