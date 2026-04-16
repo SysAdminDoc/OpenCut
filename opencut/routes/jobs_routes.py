@@ -147,7 +147,11 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/speed/ramp", "/video/shorts-pipeline",
     "/video/title/render", "/video/title/overlay", "/video/preview-frame",
     "/video/pip", "/video/blend", "/video/merge", "/video/trim",
-    "/video/object/remove", "/video/watermark",
+    # ``/video/object/remove`` is stale — actual route is /video/remove/watermark
+    # (already listed in the v1.9.0 batch below). Removing prevents the
+    # queue from emitting a misleading 400 ``Endpoint not queueable`` for
+    # callers that try to use the obsolete name.
+    "/video/watermark",
     "/export-video",
     "/video/ai/upscale", "/video/ai/denoise",
     "/video/style/apply", "/video/style/arbitrary", "/video/ai/rembg",

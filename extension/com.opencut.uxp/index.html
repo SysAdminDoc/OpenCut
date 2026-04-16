@@ -391,10 +391,13 @@
           <div class="oc-card-body" id="denoiseBody">
             <div class="oc-field-row">
               <label class="oc-label" for="denoiseMethod">Method</label>
+              <!-- Backend /audio/denoise allowlist is afftdn|highpass|gate.
+                   Older options (noisereduce/rnnoise/spectral) were silently
+                   coerced to afftdn, so all three did identical work. -->
               <select class="oc-select" id="denoiseMethod">
-                <option value="noisereduce">noisereduce (fast)</option>
-                <option value="rnnoise">RNNoise (AI)</option>
-                <option value="spectral">Spectral Gating</option>
+                <option value="afftdn">FFT denoise (recommended)</option>
+                <option value="highpass">Highpass + lowpass band-limit</option>
+                <option value="gate">Noise gate</option>
               </select>
             </div>
             <div class="oc-slider-row">

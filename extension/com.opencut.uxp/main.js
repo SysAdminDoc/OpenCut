@@ -1894,13 +1894,22 @@ async function runSilenceRemoval() {
       UIController.hideProcessing();
       UIController.setButtonLoading("runSilenceBtn", false);
 
-      if (result.cuts && result.cuts.length > 0) {
-        rememberTimelineCuts(result.cuts, { source: "Silence Removal", clipPath });
-        showCutResult(result);
-        UIController.showToast(`Removed ${result.cuts.length} silence region(s).`, "success");
-        UIController.setStatus(`Done — ${result.cuts.length} cuts`);
-      } else if (result.output_path) {
-        UIController.showToast(`Output: ${result.output_path}`, "success");
+      // Backend /silence returns ``segments_data`` (array of {start, end})
+      // and ``segments`` (count). Older code read ``result.cuts`` which was
+      // never populated, so the panel always showed "No silences found"
+      // even on successful detection. ``cuts`` retained as fallback in case
+      // some future engine variant emits it.
+      const cuts = (result.cuts && result.cuts.length)
+        ? result.cuts
+        : (result.segments_data || []);
+      if (cuts.length > 0) {
+        rememberTimelineCuts(cuts, { source: "Silence Removal", clipPath });
+        showCutResult({ ...result, cuts });
+        UIController.showToast(`Removed ${cuts.length} silence region(s).`, "success");
+        UIController.setStatus(`Done — ${cuts.length} cuts`);
+      } else if (result.xml_path || result.output_path) {
+        const out = result.xml_path || result.output_path;
+        UIController.showToast(`Output: ${out}`, "success");
         UIController.setStatus("Silence removal complete.");
       } else {
         UIController.showToast("No silences found with current settings.", "info");
@@ -1970,11 +1979,18 @@ async function runFillerDetection() {
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runFillerBtn", false);
-      if (result.cuts) rememberTimelineCuts(result.cuts, { source: "Filler Detection", clipPath });
-      const count = result.count ?? result.cuts?.length ?? 0;
+      // /fillers default (whisper backend) returns ``segments_data`` /
+      // ``segments`` — only the crisper backend returns ``cuts``. Without
+      // this fallback, default-backend filler detection silently reported
+      // 0 and never staged cuts.
+      const cuts = (result.cuts && result.cuts.length)
+        ? result.cuts
+        : (result.segments_data || []);
+      if (cuts.length) rememberTimelineCuts(cuts, { source: "Filler Detection", clipPath });
+      const count = result.count ?? cuts.length ?? 0;
       UIController.showToast(`Detected ${count} filler word(s).`, "success");
       UIController.setStatus(`Filler detection done — ${count} removed.`);
-      if (result.cuts?.length) showCutResult(result);
+      if (cuts.length) showCutResult({ ...result, cuts });
     },
     (err) => {
       UIController.hideProcessing();
@@ -2007,10 +2023,16 @@ async function runTranscribe() {
   setTextAndTitle("captionsOutputValue", "Processing transcript...", clipPath);
   syncCaptionsActionButtons();
 
+  // The "captionStyle" select offers visual styles (youtube_bold, neon_pop,
+  // ...) that have nothing to do with the /captions transcription format.
+  // The backend's ``format`` param accepts only srt/vtt/json/ass and silently
+  // coerces unknowns to srt — so the user's style choice was being lost.
+  // Send a real format here; the visual style will be applied later via
+  // /styled-captions if/when the user runs that flow.
   await JobPoller.start(
     "/captions",
     { filepath: clipPath, model, language: lang === "auto" ? null : lang,
-      format: style, diarize, word_timestamps: wordLevel },
+      format: "srt", diarize, word_timestamps: wordLevel },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Transcribing..."); },
     (result) => {
       UIController.hideProcessing();
@@ -2383,9 +2405,17 @@ async function runMulticamCuts() {
   UIController.setButtonLoading("runMulticamBtn", true);
   UIController.showProcessing("Generating multicam cuts...");
 
+  // Backend /video/multicam-cuts wants either ``segments`` (inline list),
+  // ``diarization_file`` (a JSON file with diarization data), or a single
+  // ``filepath`` it can transcribe to derive speakers from. Sending the
+  // second camera path as ``diarization_file`` always 400s with
+  // "Could not read diarization_file" because it's a video, not JSON.
+  // The right flow: transcribe cam1 to derive speaker turns, then map
+  // speaker → camera afterwards. cam2 is needed only for the eventual
+  // timeline-side multicam application, not for the cut generation pass.
   await JobPoller.start(
     "/video/multicam-cuts",
-    { filepath: cam1Path, diarization_file: cam2Path, min_cut_duration: 1.0 },
+    { filepath: cam1Path, min_cut_duration: 1.0 },
     (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing cameras..."); },
     async (result) => {
       UIController.hideProcessing();
