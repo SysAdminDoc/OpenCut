@@ -95,12 +95,16 @@ if ($Uninstall) {
         try { $_.CommandLine -like "*opencut*" } catch { $false }
     } | Stop-Process -Force -ErrorAction SilentlyContinue
     
-    # Kill by port
+    # Kill by port. NB: ``$pid`` is a read-only automatic PowerShell
+    # variable (the current process PID). Assigning to it in ``foreach``
+    # raises a ``Cannot overwrite variable PID`` runtime error and, with
+    # ``$ErrorActionPreference = "Stop"`` set above, halts the entire
+    # uninstall. Use ``$procId`` instead.
     $portPids = netstat -ano 2>$null | Select-String ":5679 " | ForEach-Object {
         ($_ -split '\s+')[-1]
     } | Where-Object { $_ -match '^\d+$' } | Sort-Object -Unique
-    foreach ($pid in $portPids) {
-        Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+    foreach ($procId in $portPids) {
+        Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
     }
     Write-Ok "Processes stopped"
 
@@ -180,9 +184,10 @@ if (-not $SkipCleanup) {
             ($_ -split '\s+')[-1]
         } | Where-Object { $_ -match '^\d+$' -and $_ -ne '0' } | Sort-Object -Unique
         
-        foreach ($pid in $portPids) {
+        # ``$pid`` is reserved (current process PID, read-only); use ``$procId``.
+        foreach ($procId in $portPids) {
             try {
-                Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
                 $killed++
             } catch {}
         }
@@ -341,7 +346,10 @@ foreach ($cmd in @("python", "python3", "py")) {
             if ($ver -match "(\d+)\.(\d+)") {
                 $major = [int]$Matches[1]
                 $minor = [int]$Matches[2]
-                if ($major -ge 3 -and $minor -ge 9) {
+                # Accept any Python whose version is >= 3.9 (so a hypothetical
+                # 4.x or 3.20 still passes). Old check ``$minor -ge 9`` would
+                # reject Python 4.0 because 0 < 9.
+                if (($major -gt 3) -or ($major -eq 3 -and $minor -ge 9)) {
                     $pythonCmd = $cmd
                     Write-Ok "Python found: $ver (using '$cmd')"
                     break
@@ -512,7 +520,17 @@ if (-not $SkipExtension) {
     # Set PlayerDebugMode registry key (allows unsigned extensions)
     Write-Step "Configuring Adobe CEP debug mode..."
 
+    # Cover CSXS 7 (CC 2014) through 18 (current PPro 2025+). Old script
+    # stopped at 12 which left modern Premiere installs (CC 2023+ on
+    # CSXS 13+) without PlayerDebugMode set, so the panel never loaded.
+    # Mirrors the install.py + install_cep_extension matrix.
     $regPaths = @(
+        "HKCU:\Software\Adobe\CSXS.18",
+        "HKCU:\Software\Adobe\CSXS.17",
+        "HKCU:\Software\Adobe\CSXS.16",
+        "HKCU:\Software\Adobe\CSXS.15",
+        "HKCU:\Software\Adobe\CSXS.14",
+        "HKCU:\Software\Adobe\CSXS.13",
         "HKCU:\Software\Adobe\CSXS.12",
         "HKCU:\Software\Adobe\CSXS.11",
         "HKCU:\Software\Adobe\CSXS.10",
@@ -531,7 +549,7 @@ if (-not $SkipExtension) {
             # Silently continue - some may not exist
         }
     }
-    Write-Ok "PlayerDebugMode enabled for CSXS 7-12"
+    Write-Ok "PlayerDebugMode enabled for CSXS 7-18"
     Write-Info "This allows unsigned extensions to load in Premiere Pro."
 
 } else {
