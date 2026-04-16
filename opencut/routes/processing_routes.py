@@ -10,7 +10,7 @@ import logging
 from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float
+from opencut.security import require_csrf, safe_float, validate_path
 
 logger = logging.getLogger("opencut")
 

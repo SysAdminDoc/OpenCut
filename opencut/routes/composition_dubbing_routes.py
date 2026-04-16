@@ -8,9 +8,8 @@ multi-language track management, emotion-preserving dubbing).
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint
 
-from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
@@ -107,6 +106,7 @@ def classify_shot(job_id, filepath, data):
             import os
             import subprocess
             import tempfile
+
             from opencut.helpers import get_ffmpeg_path
 
             timestamp = safe_float(data.get("timestamp", 0), 0.0, min_val=0.0)

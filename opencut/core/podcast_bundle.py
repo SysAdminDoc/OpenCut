@@ -8,7 +8,6 @@ chapters -> highlight clips -> audiogram -> show notes -> bundle all outputs.
 import json
 import logging
 import os
-import shutil
 import subprocess
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
@@ -17,7 +16,6 @@ from opencut.helpers import (
     FFmpegCmd,
     get_ffmpeg_path,
     get_ffprobe_path,
-    output_path as _output_path,
     run_ffmpeg,
 )
 
@@ -142,8 +140,9 @@ def _transcribe_audio(audio_path: str, on_progress=None) -> tuple:
 def _extract_chapters(transcript_text: str, segments: List[dict]) -> List[dict]:
     """Extract chapter markers from transcript via LLM or heuristics."""
     try:
-        from opencut.core.llm import query_llm
         import re
+
+        from opencut.core.llm import query_llm
 
         response = query_llm(
             prompt=f"Transcript:\n\n{transcript_text[:10000]}",
@@ -184,8 +183,9 @@ def _extract_highlight_clips(audio_path: str, transcript_text: str,
     """Extract highlight clips from the podcast."""
     clips = []
     try:
-        from opencut.core.llm import query_llm
         import re
+
+        from opencut.core.llm import query_llm
 
         response = query_llm(
             prompt=f"Transcript:\n\n{transcript_text[:10000]}",
@@ -245,7 +245,7 @@ def _generate_audiogram(audio_path: str, output_dir: str,
 def _generate_show_notes(transcript_text: str) -> tuple:
     """Generate show notes in markdown and HTML."""
     try:
-        from opencut.core.show_notes import generate_show_notes, export_show_notes
+        from opencut.core.show_notes import export_show_notes, generate_show_notes
 
         notes = generate_show_notes(transcript_text)
         md = export_show_notes(notes, format="markdown")

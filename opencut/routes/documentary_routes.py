@@ -17,8 +17,8 @@ from opencut.security import (
     safe_float,
     safe_int,
     validate_filepath,
-    validate_path,
     validate_output_path,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")

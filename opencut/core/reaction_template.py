@@ -6,21 +6,21 @@ Auto-sync reaction audio with content via cross-correlation.
 Audio ducking for main content when reaction audio is active.
 """
 
-import json
 import logging
 import os
 import subprocess
 import tempfile
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Callable, Dict, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
     get_ffmpeg_path,
-    get_ffprobe_path,
     get_video_info,
-    output_path as _output_path,
     run_ffmpeg,
+)
+from opencut.helpers import (
+    output_path as _output_path,
 )
 
 logger = logging.getLogger("opencut")
