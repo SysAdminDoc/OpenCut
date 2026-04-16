@@ -411,7 +411,7 @@ def job_history():
 
     from opencut.security import safe_int
     status_filter = request.args.get("status", None)
-    limit = min(safe_int(request.args.get("limit", 50), default=50, min_val=1, max_val=200), 200)
+    limit = safe_int(request.args.get("limit", 50), default=50, min_val=1, max_val=200)
     offset = safe_int(request.args.get("offset", 0), default=0, min_val=0)
     results = db_list_jobs(status=status_filter, limit=limit, offset=offset)
     return jsonify(results)

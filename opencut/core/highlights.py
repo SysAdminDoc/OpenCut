@@ -514,15 +514,28 @@ def extract_frames_for_vision(
     import tempfile
 
     from opencut.helpers import get_ffmpeg_path, get_ffprobe_path
-    duration_cmd = subprocess.run(
-        [get_ffprobe_path(), "-v", "quiet", "-show_entries", "format=duration",
-         "-of", "default=nw=1:nk=1", video_path],
-        capture_output=True, text=True, timeout=30,
-    )
     try:
-        duration = float(duration_cmd.stdout.strip())
-    except (ValueError, AttributeError):
-        duration = 300.0
+        duration_cmd = subprocess.run(
+            [get_ffprobe_path(), "-v", "quiet", "-show_entries", "format=duration",
+             "-of", "default=nw=1:nk=1", video_path],
+            capture_output=True, text=True, timeout=30, check=False,
+        )
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
+        logger.warning("ffprobe duration failed for %s: %s — using 300s fallback", video_path, exc)
+        duration_cmd = None
+
+    duration = 300.0
+    if duration_cmd is not None:
+        if duration_cmd.returncode != 0:
+            logger.warning(
+                "ffprobe returned rc=%d for %s — using 300s fallback",
+                duration_cmd.returncode, video_path,
+            )
+        else:
+            try:
+                duration = float(duration_cmd.stdout.strip())
+            except (ValueError, AttributeError) as exc:
+                logger.warning("Could not parse ffprobe duration for %s: %s", video_path, exc)
 
     # Calculate frame timestamps
     n_frames = min(max_frames, max(1, int(duration / interval_seconds)))
@@ -533,12 +546,18 @@ def extract_frames_for_vision(
     try:
         for i, ts in enumerate(timestamps):
             out_path = os.path.join(tmp_dir, f"frame_{i:04d}.jpg")
-            subprocess.run(
-                [get_ffmpeg_path(), "-ss", str(ts), "-i", video_path,
-                 "-vframes", "1", "-q:v", "5", "-vf", "scale=480:-1",
-                 "-y", out_path],
-                capture_output=True, timeout=10,
-            )
+            try:
+                subprocess.run(
+                    [get_ffmpeg_path(), "-ss", str(ts), "-i", video_path,
+                     "-vframes", "1", "-q:v", "5", "-vf", "scale=480:-1",
+                     "-y", out_path],
+                    capture_output=True, timeout=10, check=False,
+                )
+            except (subprocess.TimeoutExpired, FileNotFoundError, OSError) as exc:
+                # Skip this frame but keep extracting the rest — a single
+                # hung/failing seek must not abort the whole batch.
+                logger.debug("Frame extract failed at ts=%s: %s", ts, exc)
+                continue
             if os.path.isfile(out_path) and os.path.getsize(out_path) > 100:
                 with open(out_path, "rb") as f:
                     b64 = base64.b64encode(f.read()).decode("ascii")

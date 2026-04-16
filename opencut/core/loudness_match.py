@@ -64,7 +64,10 @@ def measure_loudness(filepath: str) -> dict:
 
     Returns:
         Dict with "lufs" (integrated loudness, LUFS), "lra" (loudness range,
-        LU), "peak" (sample peak, dBFS), "true_peak" (true peak, dBTP).
+        LU), "true_peak" (true peak, dBTP). Also returns "peak" as an alias
+        of true_peak for backward compatibility with existing callers that
+        read either name — FFmpeg loudnorm does not expose a separate
+        sample-peak measurement, so both refer to the input_tp value.
 
     Raises:
         RuntimeError: If FFmpeg is not installed or analysis fails.
@@ -99,11 +102,16 @@ def measure_loudness(filepath: str) -> dict:
         except (TypeError, ValueError):
             return default
 
+    # FFmpeg ``loudnorm=print_format=json`` only exposes ``input_tp`` (true
+    # peak), not a distinct sample peak. Expose it under both names so
+    # callers that read ``peak`` and callers that read ``true_peak`` both
+    # work, and document the alias in the return docstring above.
+    _tp = _f("input_tp")
     return {
         "lufs": _f("input_i"),
         "lra": _f("input_lra"),
-        "peak": _f("input_tp"),          # true peak reported as input_tp
-        "true_peak": _f("input_tp"),
+        "peak": _tp,
+        "true_peak": _tp,
     }
 
 

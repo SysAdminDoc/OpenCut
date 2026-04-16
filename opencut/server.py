@@ -264,14 +264,32 @@ def create_app(config=None):
     def handle_large_request(e):
         """Return 413 when request payload exceeds MAX_CONTENT_LENGTH."""
         max_mb = config.max_content_length / (1024 * 1024)
-        return jsonify({"error": f"Request too large (max {max_mb:.0f} MB)"}), 413
+        return jsonify({
+            "error": f"Request too large (max {max_mb:.0f} MB)",
+            "code": "REQUEST_TOO_LARGE",
+            "suggestion": "Reduce the payload size or process the file in smaller batches.",
+        }), 413
 
     @_app.errorhandler(RuntimeError)
     def handle_runtime_error(e):
-        """Return 500 for unhandled RuntimeErrors."""
+        """Return a structured error for unhandled RuntimeErrors.
+
+        Delegates to ``safe_error`` so FFmpeg/ImportError/MemoryError
+        RuntimeErrors get classified into specific codes with recovery
+        suggestions. Falls back to a generic INTERNAL_ERROR response if
+        classification fails.
+        """
         logger.exception("Unhandled RuntimeError: %s", e)
-        err_msg = str(e)[:200] if str(e) else "Internal server error"
-        return jsonify({"error": err_msg, "code": "INTERNAL_ERROR"}), 500
+        try:
+            from opencut.errors import safe_error as _safe_error
+            return _safe_error(e, context="runtime_error_handler")
+        except Exception:
+            err_msg = str(e)[:200] if str(e) else "Internal server error"
+            return jsonify({
+                "error": err_msg,
+                "code": "INTERNAL_ERROR",
+                "suggestion": "Check the server logs for details.",
+            }), 500
 
     @_app.errorhandler(500)
     def handle_internal_error(e):
@@ -286,7 +304,11 @@ def create_app(config=None):
                 _tb.print_exc(file=_f)
         except Exception:
             pass
-        return jsonify({"error": "An internal error occurred. Check server logs for details."}), 500
+        return jsonify({
+            "error": "An internal error occurred. Check server logs for details.",
+            "code": "INTERNAL_ERROR",
+            "suggestion": "Retry the request; if it persists check ~/.opencut/crash.log.",
+        }), 500
 
     # Register Blueprints (all routes are in opencut/routes/)
     from opencut.routes import register_blueprints  # noqa: E402

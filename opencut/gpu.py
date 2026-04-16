@@ -59,23 +59,45 @@ def check_vram(min_gb: float = 0) -> tuple:
     Returns:
         (available_gb, total_gb) tuple.  Returns (0, 0) when no
         CUDA GPU is detected or torch is unavailable.
+
+    A broken NVIDIA driver can make ``torch.cuda.mem_get_info`` hang
+    indefinitely. We run it on a *daemon* thread and abandon it on
+    timeout, so the request handler returns in bounded time even if the
+    driver is wedged. A ThreadPoolExecutor context manager would block
+    on exit waiting for the hung task to finish, which is why we manage
+    the thread manually.
     """
     if not _cuda_available():
         return (0.0, 0.0)
 
-    try:
-        import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
-            future = pool.submit(torch.cuda.mem_get_info)
-            free, total = future.result(timeout=5)
-        available_gb = free / (1024 ** 3)
-        total_gb = total / (1024 ** 3)
-    except concurrent.futures.TimeoutError:
+    result = {}
+
+    def _query():
+        try:
+            free, total = torch.cuda.mem_get_info()
+            result["free"] = free
+            result["total"] = total
+        except Exception as exc:  # noqa: BLE001
+            result["error"] = exc
+
+    import threading
+
+    t = threading.Thread(target=_query, daemon=True, name="vram-query")
+    t.start()
+    t.join(timeout=5)
+
+    if t.is_alive():
+        # Abandon the thread; it's a daemon so it dies with the process.
         logger.warning("VRAM query timed out (>5s) — NVIDIA driver may be hung")
         return (0.0, 0.0)
-    except Exception as exc:
-        logger.warning("Failed to query VRAM: %s", exc)
+    if "error" in result:
+        logger.warning("Failed to query VRAM: %s", result["error"])
         return (0.0, 0.0)
+    if "free" not in result:
+        return (0.0, 0.0)
+
+    available_gb = result["free"] / (1024 ** 3)
+    total_gb = result["total"] / (1024 ** 3)
 
     if min_gb > 0 and available_gb < min_gb:
         logger.warning(

@@ -164,16 +164,36 @@ def parse_command_llm(
 
     raw = response.text.strip()
 
-    # Extract JSON object from response
-    json_match = re.search(r"\{.*\}", raw, re.DOTALL)
-    if not json_match:
-        logger.warning("No JSON found in LLM command response: %s", raw[:200])
-        return None
-
+    # Extract JSON object from response. Try ``json.loads(raw)`` first so a
+    # clean response is parsed verbatim. Fall back to a balanced-brace scan
+    # because a greedy ``\{.*\}`` regex eats stray prose ``{`` earlier in the
+    # response and produces invalid JSON (see chat_editor for the same class
+    # of bug).
+    parsed = None
     try:
-        parsed = json.loads(json_match.group(0))
-    except json.JSONDecodeError as exc:
-        logger.warning("JSON parse error in LLM command response: %s", exc)
+        parsed = json.loads(raw)
+    except json.JSONDecodeError:
+        pass
+    if parsed is None:
+        depth = 0
+        start = -1
+        for i, ch in enumerate(raw):
+            if ch == "{":
+                if depth == 0:
+                    start = i
+                depth += 1
+            elif ch == "}":
+                depth -= 1
+                if depth == 0 and start >= 0:
+                    candidate = raw[start:i + 1]
+                    try:
+                        parsed = json.loads(candidate)
+                        break
+                    except json.JSONDecodeError:
+                        start = -1
+                        continue
+    if not isinstance(parsed, dict):
+        logger.warning("No JSON object found in LLM command response: %s", raw[:200])
         return None
 
     route = parsed.get("route")
@@ -251,9 +271,24 @@ def extract_params_from_text(text: str) -> dict:
     params = {}
     text_lower = text.lower()
 
-    # Extract numbers (integers and decimals)
-    numbers = re.findall(r"\b\d+(?:\.\d+)?\b", text)
-    numeric_values = [float(n) for n in numbers]
+    # Extract numbers (integers and decimals, including negatives so dB
+    # thresholds like "-30 dB" keep their sign). The leading lookbehind
+    # allows start-of-string or whitespace/``,`` / ``(`` before the number
+    # so we don't pick up digits inside words like ``abc1``. A trailing
+    # ``\b`` on the integer form would reject ``1.5`` because ``1`` is
+    # followed by ``.`` and the decimal portion wouldn't re-anchor. Allow
+    # an optional decimal body without ``\b`` at the end so ``1.5s``,
+    # ``1.5 seconds``, and ``30%`` all extract the full number.
+    numbers = re.findall(
+        r"(?:(?<=^)|(?<=[\s,(]))-?\d+(?:\.\d+)?(?![\d.])",
+        text,
+    )
+    numeric_values = []
+    for n in numbers:
+        try:
+            numeric_values.append(float(n))
+        except ValueError:
+            continue
     if len(numeric_values) >= 1:
         params["threshold"] = numeric_values[0]
     if len(numeric_values) >= 2:
@@ -275,6 +310,23 @@ def extract_params_from_text(text: str) -> dict:
     lufs_match = re.search(r"(-?\d+(?:\.\d+)?)\s*lufs", text_lower)
     if lufs_match:
         params["target_lufs"] = float(lufs_match.group(1))
+
+    # dB threshold (e.g. "-30 dB threshold", "at -40dB") — override the
+    # positional heuristic so the semantic extraction wins over order.
+    db_match = re.search(r"(-?\d+(?:\.\d+)?)\s*d[bB]\b", text_lower)
+    if db_match:
+        try:
+            params["threshold"] = float(db_match.group(1))
+        except (TypeError, ValueError):
+            pass
+
+    # "X seconds" / "X sec" → duration (again, semantic > positional)
+    sec_match = re.search(r"(\d+(?:\.\d+)?)\s*(?:second|sec|s\b)", text_lower)
+    if sec_match:
+        try:
+            params["duration"] = float(sec_match.group(1))
+        except (TypeError, ValueError):
+            pass
 
     # Percentage (e.g. "15% zoom" → zoom_amount=1.15)
     pct_match = re.search(r"(\d+(?:\.\d+)?)\s*%\s*zoom", text_lower)

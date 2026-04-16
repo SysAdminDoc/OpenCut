@@ -2285,9 +2285,20 @@ function ocExportSequenceRange(outputPath, startSeconds, endSeconds) {
             encodeError = e.toString();
         }
 
-        // Restore original in/out points regardless of success/failure
+        // Restore original in/out points regardless of success/failure.
+        // setInPoint/setOutPoint expect seconds (Number); seq.end is a Time
+        // object whose .seconds property must be unwrapped or older Premiere
+        // builds raise ``Invalid argument`` and skip the restore.
         try { if (origIn >= 0) seq.setInPoint(origIn); else seq.setInPoint(0); } catch (e) {}
-        try { if (origOut >= 0) seq.setOutPoint(origOut); else seq.setOutPoint(seq.end); } catch (e) {}
+        try {
+            if (origOut >= 0) {
+                seq.setOutPoint(origOut);
+            } else {
+                var _endSec = 0;
+                try { _endSec = seq.end && seq.end.seconds != null ? seq.end.seconds : 0; } catch (_ee) {}
+                seq.setOutPoint(_endSec);
+            }
+        } catch (e) {}
 
         if (encodeError) {
             return JSON.stringify({ error: "AME encode failed: " + encodeError });
@@ -2360,7 +2371,12 @@ function ocRemoveSequenceMarkers(fingerprintsJSON) {
             var nextM;
             try { nextM = markers.getNextMarker(m); } catch (e0) { nextM = null; }
             var mtime = null;
-            try { mtime = m.start && m.start.seconds != null ? m.start.seconds : m.start; } catch (e1) {}
+            // Premiere Marker exposes time via m.time (Time object with
+            // .seconds). Older code here used m.start which does not exist
+            // on Marker, so the fingerprint match always failed and zero
+            // markers were ever removed. Mirror the pattern used at lines
+            // 1479 / 1618.
+            try { mtime = m.time && m.time.seconds != null ? m.time.seconds : null; } catch (e1) {}
             var mcomment = "";
             try { mcomment = m.comments || m.name || ""; } catch (e2) {}
             if (mtime != null && targetSet[keyFor(mtime, mcomment)]) {
@@ -2453,8 +2469,13 @@ function ocRemoveImportedSequence(payloadJSON) {
         // returns nothing — we must allocate the array ourselves.
         var items = [];
         try { _collectMediaItems(app.project.rootItem, items, 0); } catch (eC) { items = []; }
+        // ProjectItemType is not always defined on stripped ExtendScript
+        // engines (e.g., when QE DOM wasn't initialized). Fall back to
+        // numeric enum value 1 (= CLIP) when the identifier is missing.
+        var _CLIP_TYPE = 1;
+        try { if (typeof ProjectItemType !== "undefined" && ProjectItemType && ProjectItemType.CLIP != null) _CLIP_TYPE = ProjectItemType.CLIP; } catch (_eT) {}
         for (var j = 0; j < items.length; j++) {
-            if (items[j].name === name && items[j].type === ProjectItemType.CLIP) {
+            if (items[j].name === name && items[j].type === _CLIP_TYPE) {
                 try {
                     items[j].deleteAsset ? items[j].deleteAsset() : app.project.deleteSequence(target);
                     return JSON.stringify({ success: true, removed: name });
