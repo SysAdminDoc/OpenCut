@@ -15,11 +15,54 @@ Functions:
 import logging
 import math
 import random
+import sys
 import threading
+import time
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
+
+_evaluation_state = threading.local()
+_MAX_NOISE_OCTAVES = 32
+
+
+def _check_deadline() -> None:
+    """Raise TimeoutError when the current expression exceeded its deadline."""
+    deadline = getattr(_evaluation_state, "deadline", None)
+    if deadline is None or time.monotonic() < deadline:
+        return
+    timeout_ms = getattr(_evaluation_state, "timeout_ms", None)
+    if timeout_ms is None:
+        raise TimeoutError("Expression evaluation timed out")
+    raise TimeoutError(f"Expression evaluation timed out after {timeout_ms}ms")
+
+
+def _normalize_noise_octaves(octaves: int) -> int:
+    """Validate and normalize octave counts to a sane motion-graphics range."""
+    if isinstance(octaves, bool):
+        raise ValueError(
+            f"noise octaves must be an integer between 1 and {_MAX_NOISE_OCTAVES}"
+        )
+    if isinstance(octaves, float):
+        if not math.isfinite(octaves) or not octaves.is_integer():
+            raise ValueError(
+                f"noise octaves must be an integer between 1 and {_MAX_NOISE_OCTAVES}"
+            )
+        octaves = int(octaves)
+    else:
+        try:
+            octaves = int(octaves)
+        except (TypeError, ValueError, OverflowError) as exc:
+            raise ValueError(
+                f"noise octaves must be an integer between 1 and {_MAX_NOISE_OCTAVES}"
+            ) from exc
+
+    if octaves < 1 or octaves > _MAX_NOISE_OCTAVES:
+        raise ValueError(
+            f"noise octaves must be between 1 and {_MAX_NOISE_OCTAVES}"
+        )
+    return octaves
 
 # ---------------------------------------------------------------------------
 # Result Dataclass
@@ -42,6 +85,21 @@ class ExpressionResult:
             "max": self.max_value,
             "errors": self.errors,
         }
+
+
+@dataclass
+class CompiledExpression:
+    """Pre-validated expression container for batch reuse."""
+
+    source: str = ""
+    code: Any = None
+    valid: bool = False
+    error: str = ""
+    variables: List[str] = field(default_factory=list)
+
+
+class ExpressionError(ValueError):
+    """Raised when an expression cannot be evaluated safely."""
 
 
 # ---------------------------------------------------------------------------
@@ -100,12 +158,18 @@ def noise(x: float, y: float = 0.0, octaves: int = 1,
     Returns:
         Float in range approximately -1 to 1.
     """
+    if not math.isfinite(x) or not math.isfinite(y):
+        raise ValueError("noise coordinates must be finite numbers")
+
+    octaves = _normalize_noise_octaves(octaves)
     value = 0.0
     amplitude = 1.0
     frequency = 1.0
     max_amp = 0.0
 
-    for _ in range(octaves):
+    for octave_idx in range(octaves):
+        if octave_idx % 4 == 0:
+            _check_deadline()
         if y == 0.0:
             value += _noise_1d(x * frequency, seed) * amplitude
         else:
@@ -292,6 +356,14 @@ _BANNED_ATTRS = frozenset({
     "__loader__", "__spec__", "__name__", "__file__",
 })
 
+_MAX_EXPRESSION_LENGTH = 2000
+_RESERVED_NAMES = frozenset(SANDBOX_FUNCTIONS) | frozenset({
+    "time", "t", "frame", "f", "fps", "duration", "progress",
+    "audio_amplitude", "audio_amp", "amplitude", "amp",
+    "beat", "seed", "width", "height", "w", "h",
+    "True", "False",
+})
+
 
 def _check_ast_safety(expr_str: str) -> Optional[str]:
     """Check expression AST for safety violations.
@@ -323,6 +395,98 @@ def _check_ast_safety(expr_str: str) -> Optional[str]:
     return None
 
 
+def _collect_variable_names(expr_str: str) -> List[str]:
+    """Return user-defined variable references used by an expression."""
+    tree = ast.parse(expr_str, mode="eval")
+    names = []
+    seen = set()
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.Name):
+            continue
+        name = node.id
+        if name in _RESERVED_NAMES or name in seen:
+            continue
+        seen.add(name)
+        names.append(name)
+    return names
+
+
+def validate_expression(expr_string: str) -> dict:
+    """Validate an expression and report referenced custom variables."""
+    expr_string = "" if expr_string is None else str(expr_string)
+    expr_string = expr_string.strip()
+
+    if not expr_string:
+        return {
+            "valid": False,
+            "error": "Expression is empty",
+            "variables": [],
+        }
+    if len(expr_string) > _MAX_EXPRESSION_LENGTH:
+        return {
+            "valid": False,
+            "error": (
+                f"Expression exceeds maximum length of "
+                f"{_MAX_EXPRESSION_LENGTH} characters"
+            ),
+            "variables": [],
+        }
+
+    safety_error = _check_ast_safety(expr_string)
+    if safety_error:
+        return {
+            "valid": False,
+            "error": safety_error,
+            "variables": [],
+        }
+
+    try:
+        variables = _collect_variable_names(expr_string)
+    except SyntaxError as exc:
+        return {
+            "valid": False,
+            "error": f"Syntax error: {exc}",
+            "variables": [],
+        }
+
+    return {
+        "valid": True,
+        "error": "",
+        "variables": variables,
+    }
+
+
+def compile_expression(expr_string: str) -> CompiledExpression:
+    """Compile an expression once for repeated evaluation."""
+    validation = validate_expression(expr_string)
+    if not validation["valid"]:
+        return CompiledExpression(
+            source="" if expr_string is None else str(expr_string).strip(),
+            valid=False,
+            error=validation["error"],
+            variables=validation["variables"],
+        )
+
+    source = str(expr_string).strip()
+    try:
+        code = compile(source, "<opencut-expression>", "eval")
+    except SyntaxError as exc:
+        return CompiledExpression(
+            source=source,
+            valid=False,
+            error=f"Syntax error: {exc}",
+            variables=[],
+        )
+
+    return CompiledExpression(
+        source=source,
+        code=code,
+        valid=True,
+        error="",
+        variables=validation["variables"],
+    )
+
+
 # ---------------------------------------------------------------------------
 # Expression Context
 # ---------------------------------------------------------------------------
@@ -346,6 +510,9 @@ class ExpressionContext:
     frame: int = 0
     fps: float = 30.0
     audio_amplitude: float = 0.0
+    duration: float = 0.0
+    width: int = 1920
+    height: int = 1080
     beat: bool = False
     seed: int = 42
     custom_vars: Dict[str, Any] = field(default_factory=dict)
@@ -353,14 +520,27 @@ class ExpressionContext:
     def to_globals(self) -> dict:
         """Build the sandbox globals dict for eval()."""
         rng = random.Random(self.seed + self.frame)
+        progress = 0.0
+        if self.duration > 0:
+            progress = _clamp(self.time / self.duration, 0.0, 1.0)
         globs = dict(SANDBOX_FUNCTIONS)
         globs.update({
             "time": self.time,
             "t": self.time,
             "frame": self.frame,
+            "f": self.frame,
             "fps": self.fps,
             "audio_amplitude": self.audio_amplitude,
+            "audio_amp": self.audio_amplitude,
             "amplitude": self.audio_amplitude,
+            "amp": self.audio_amplitude,
+            "duration": self.duration,
+            "progress": progress,
+            "width": self.width,
+            "height": self.height,
+            "w": self.width,
+            "h": self.height,
+            "seed": self.seed,
             "beat": self.beat,
             "random": rng.random,
             "True": True,
@@ -371,12 +551,21 @@ class ExpressionContext:
         globs["__builtins__"] = {}
         return globs
 
+    def __getitem__(self, key: str) -> Any:
+        return self.to_globals()[key]
+
+    def get(self, key: str, default: Any = None) -> Any:
+        return self.to_globals().get(key, default)
+
 
 def create_context(
     time: float = 0.0,
     frame: int = 0,
     fps: float = 30.0,
     audio_amplitude: float = 0.0,
+    duration: float = 0.0,
+    width: int = 1920,
+    height: int = 1080,
     beat: bool = False,
     seed: int = 42,
     **custom_vars,
@@ -387,9 +576,39 @@ def create_context(
         frame=frame,
         fps=fps,
         audio_amplitude=audio_amplitude,
+        duration=duration,
+        width=width,
+        height=height,
         beat=beat,
         seed=seed,
         custom_vars=custom_vars,
+    )
+
+
+def create_expression_context(
+    time: float = 0.0,
+    frame: int = 0,
+    fps: float = 30.0,
+    duration: float = 0.0,
+    width: int = 1920,
+    height: int = 1080,
+    audio_amp: float = 0.0,
+    beat: bool = False,
+    seed: int = 42,
+    custom_vars: Optional[Dict[str, Any]] = None,
+) -> ExpressionContext:
+    """Backward-compatible context factory used by batch-data routes."""
+    return ExpressionContext(
+        time=float(time),
+        frame=int(frame),
+        fps=float(fps),
+        audio_amplitude=float(audio_amp),
+        duration=float(duration),
+        width=int(width),
+        height=int(height),
+        beat=bool(beat),
+        seed=int(seed),
+        custom_vars=dict(custom_vars or {}),
     )
 
 
@@ -419,15 +638,24 @@ def evaluate_expression(expr_string: str,
         TimeoutError: If evaluation exceeds timeout.
         RuntimeError: If evaluation fails.
     """
-    if not expr_string or not expr_string.strip():
-        raise ValueError("Expression is empty")
+    code = None
+    source = expr_string
+    if isinstance(expr_string, CompiledExpression):
+        if not expr_string.valid or expr_string.code is None:
+            raise ExpressionError(
+                f"Evaluation error: {expr_string.error or 'Expression is invalid'}"
+            )
+        source = expr_string.source
+        code = expr_string.code
+    else:
+        if not expr_string or not str(expr_string).strip():
+            raise ValueError("Expression is empty")
+        source = str(expr_string).strip()
 
-    expr_string = expr_string.strip()
-
-    # Safety check
-    safety_error = _check_ast_safety(expr_string)
-    if safety_error:
-        raise ValueError(f"Unsafe expression: {safety_error}")
+        validation = validate_expression(source)
+        if not validation["valid"]:
+            raise ExpressionError(f"Evaluation error: {validation['error']}")
+        code = compile(source, "<opencut-expression>", "eval")
 
     if context is None:
         context = ExpressionContext()
@@ -437,12 +665,27 @@ def evaluate_expression(expr_string: str,
     # Evaluate with timeout using threading
     result_box = [None]
     error_box = [None]
+    deadline = time.monotonic() + (timeout_ms / 1000.0)
+
+    def _deadline_trace(frame, event, arg):
+        if time.monotonic() >= deadline:
+            raise TimeoutError(
+                f"Expression evaluation timed out after {timeout_ms}ms"
+            )
+        return _deadline_trace
 
     def _eval():
         try:
-            result_box[0] = eval(expr_string, globs)  # noqa: S307
+            _evaluation_state.deadline = deadline
+            _evaluation_state.timeout_ms = timeout_ms
+            sys.settrace(_deadline_trace)
+            result_box[0] = eval(code, globs)  # noqa: S307
         except Exception as e:
             error_box[0] = e
+        finally:
+            sys.settrace(None)
+            _evaluation_state.deadline = None
+            _evaluation_state.timeout_ms = None
 
     thread = threading.Thread(target=_eval, daemon=True)
     thread.start()
@@ -454,7 +697,9 @@ def evaluate_expression(expr_string: str,
         )
 
     if error_box[0] is not None:
-        raise RuntimeError(f"Expression error: {error_box[0]}")
+        if isinstance(error_box[0], TimeoutError):
+            raise error_box[0]
+        raise ExpressionError(f"Evaluation error: {error_box[0]}")
 
     result = result_box[0]
 

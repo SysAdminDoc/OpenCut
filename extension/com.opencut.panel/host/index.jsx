@@ -2312,7 +2312,15 @@ function _ocParse(jsonStr) {
     if (typeof JSON !== "undefined" && JSON.parse) {
         return JSON.parse(jsonStr);
     }
-    // Legacy ExtendScript fallback
+    // Legacy ExtendScript fallback: validate that the payload only contains
+    // JSON tokens before using eval() on older hosts with no JSON.parse().
+    var sanitized = String(jsonStr || "")
+        .replace(/\\(?:["\\\/bfnrt]|u[0-9a-fA-F]{4})/g, "@")
+        .replace(/"[^"\\\n\r]*"|true|false|null|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?/g, "]")
+        .replace(/(?:^|:|,)(?:\s*\[)+/g, "");
+    if (!/^[\],:{}\s]*$/.test(sanitized)) {
+        throw new Error("Unsafe JSON payload");
+    }
     return eval("(" + jsonStr + ")");  // eslint-disable-line no-eval
 }
 

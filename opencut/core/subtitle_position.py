@@ -82,6 +82,60 @@ class PositionResult:
     frames_analyzed: int = 0
 
 
+@dataclass
+class Obstruction:
+    """Backward-compatible obstruction record used by batch-data routes."""
+
+    x: int = 0
+    y: int = 0
+    width: int = 0
+    height: int = 0
+    label: str = ""
+    confidence: float = 0.0
+
+
+@dataclass
+class SubtitlePosition:
+    """Single subtitle placement decision for compatibility endpoints."""
+
+    x: int = 0
+    y: int = 0
+    alignment: int = 2
+    margin_bottom: int = 40
+    safe: bool = True
+    reason: str = ""
+
+
+@dataclass
+class PositioningResult:
+    """Minimal route-friendly result container."""
+
+    output_path: str = ""
+    status: str = "pending"
+    details: Dict[str, object] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        payload = {
+            "output_path": self.output_path,
+            "status": self.status,
+        }
+        payload.update(self.details)
+        return payload
+
+
+_ALIGNMENT_TO_ZONE = {
+    1: "bottom_left",
+    2: "bottom_center",
+    3: "bottom_right",
+    7: "top_left",
+    8: "top_center",
+    9: "top_right",
+}
+_ZONE_TO_ALIGNMENT = {
+    zone: alignment for alignment, zone in _ALIGNMENT_TO_ZONE.items()
+}
+
+
 # ---------------------------------------------------------------------------
 # Zone coordinate calculation
 # ---------------------------------------------------------------------------
@@ -499,3 +553,105 @@ def export_to_file(
         len(result.positioned_subtitles), output_path,
     )
     return output_path
+
+
+def analyze_frame_obstructions(
+    frame_path: str,
+    detect_faces: bool = True,
+    detect_text: bool = True,
+    detect_logos: bool = True,
+) -> List[Obstruction]:
+    """Lightweight obstruction analysis for a rendered frame image.
+
+    The compatibility routes only need a safe, dependency-light heuristic.
+    We currently detect bright/busy lower-third regions and return an empty
+    list when optional imaging dependencies are unavailable.
+    """
+    if not os.path.exists(frame_path):
+        raise FileNotFoundError(frame_path)
+
+    try:
+        from PIL import Image, ImageStat
+    except ImportError:
+        logger.debug("Pillow unavailable; skipping frame obstruction analysis")
+        return []
+
+    try:
+        with Image.open(frame_path) as img:
+            gray = img.convert("L")
+            width, height = gray.size
+            lower_third_top = height * 2 // 3
+            lower_third = gray.crop((0, lower_third_top, width, height))
+            stat = ImageStat.Stat(lower_third)
+            mean_brightness = float(stat.mean[0]) if stat.mean else 0.0
+            extrema = stat.extrema[0] if stat.extrema else (0, 0)
+    except OSError as exc:
+        raise ValueError(f"Could not read frame image: {exc}") from exc
+
+    obstructions: List[Obstruction] = []
+    if detect_text or detect_logos or detect_faces:
+        if mean_brightness >= 180.0 or extrema[1] >= 240:
+            confidence = max(mean_brightness / 255.0, 0.7)
+            obstructions.append(Obstruction(
+                x=0,
+                y=lower_third_top,
+                width=width,
+                height=height - lower_third_top,
+                label="bright",
+                confidence=min(confidence, 1.0),
+            ))
+    return obstructions
+
+
+def compute_subtitle_position(
+    obstructions: List[Obstruction],
+    frame_size: Tuple[int, int],
+    preferred_alignment: int = 2,
+    margin: int = 50,
+) -> SubtitlePosition:
+    """Choose a safe subtitle placement from simple obstruction boxes."""
+    frame_width, frame_height = frame_size
+    preferred_zone = _ALIGNMENT_TO_ZONE.get(preferred_alignment, "bottom_center")
+
+    obstructed_zones = []
+    obstruction_labels: Dict[str, set] = {}
+    for obstruction in obstructions:
+        zone = _bbox_to_zone(
+            obstruction.x,
+            obstruction.y,
+            obstruction.width,
+            obstruction.height,
+            frame_width,
+            frame_height,
+        )
+        obstructed_zones.append(zone)
+        obstruction_labels.setdefault(zone, set()).add(obstruction.label or "content")
+
+    priority = [preferred_zone]
+    priority.extend(zone for zone in ZONE_PRIORITY if zone != preferred_zone)
+    best_zone = _find_best_zone(obstructed_zones, priority)
+    x, y = zone_to_pixels(
+        best_zone,
+        frame_width,
+        frame_height,
+        margin_x=margin,
+        margin_y=margin,
+    )
+
+    reason = ""
+    if preferred_zone in obstructed_zones:
+        labels = sorted(label for label in obstruction_labels.get(preferred_zone, set()) if label)
+        reason = f"Avoided {preferred_zone.replace('_', ' ')} obstruction"
+        if labels:
+            reason += f": {', '.join(labels)}"
+    elif best_zone != preferred_zone:
+        reason = f"Moved subtitles to {best_zone.replace('_', ' ')}"
+
+    return SubtitlePosition(
+        x=x,
+        y=y,
+        alignment=_ZONE_TO_ALIGNMENT.get(best_zone, 2),
+        margin_bottom=margin,
+        safe=best_zone not in set(obstructed_zones),
+        reason=reason,
+    )

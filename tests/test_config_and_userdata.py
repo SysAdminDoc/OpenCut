@@ -117,3 +117,79 @@ def test_plugins_install_rejects_non_object_json_body(client, csrf_token):
     data = resp.get_json()
     assert data["code"] == "INVALID_INPUT"
     assert "top-level JSON object" in data["suggestion"]
+
+
+def test_template_save_allows_overwrite_at_limit(client, csrf_token, tmp_path, monkeypatch):
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+
+    same_template = templates_dir / "my_template.json"
+    same_template.write_text(json.dumps({"id": "user_my_template", "name": "My Template"}), encoding="utf-8")
+    for idx in range(49):
+        (templates_dir / f"tpl_{idx}.json").write_text(
+            json.dumps({"id": f"user_tpl_{idx}", "name": f"Template {idx}"}),
+            encoding="utf-8",
+        )
+
+    monkeypatch.setattr("opencut.routes.settings.OPENCUT_DIR", str(tmp_path))
+
+    resp = client.post(
+        "/templates/save",
+        data=json.dumps({"name": "My Template", "description": "Updated"}),
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["template"]["id"] == "user_my_template"
+    saved = json.loads(same_template.read_text(encoding="utf-8"))
+    assert saved["description"] == "Updated"
+
+
+def test_template_save_disambiguates_slug_collisions(client, csrf_token, tmp_path, monkeypatch):
+    templates_dir = tmp_path / "templates"
+    templates_dir.mkdir()
+
+    existing = templates_dir / "my_template.json"
+    existing.write_text(json.dumps({"id": "user_my_template", "name": "My/Template"}), encoding="utf-8")
+
+    monkeypatch.setattr("opencut.routes.settings.OPENCUT_DIR", str(tmp_path))
+
+    resp = client.post(
+        "/templates/save",
+        data=json.dumps({"name": "My Template"}),
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 200
+    data = resp.get_json()
+    assert data["template"]["id"] == "user_my_template_2"
+    assert existing.exists()
+    assert (templates_dir / "my_template_2.json").exists()
+
+
+def test_server_main_fatal_noninteractive_returns_nonzero(monkeypatch, tmp_path):
+    import opencut.server as server
+
+    def _boom(*args, **kwargs):
+        raise RuntimeError("boom")
+
+    class _DummyStdin:
+        def isatty(self):
+            return False
+
+    prompts = []
+    original_expanduser = server.os.path.expanduser
+
+    monkeypatch.setattr(server, "run_server", _boom)
+    monkeypatch.setattr(server.sys, "argv", ["opencut-server"])
+    monkeypatch.setattr(server.sys, "stdin", _DummyStdin())
+    monkeypatch.setattr(
+        server.os.path,
+        "expanduser",
+        lambda value: str(tmp_path) if value == "~" else original_expanduser(value),
+    )
+    monkeypatch.setattr("builtins.input", lambda prompt="": prompts.append(prompt))
+
+    assert server.main() == 1
+    assert prompts == []

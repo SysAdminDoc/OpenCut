@@ -226,6 +226,23 @@ class TestWebhooks(unittest.TestCase):
         with patch("opencut.core.webhooks._WEBHOOKS_FILE", "/nonexistent/webhooks.json"):
             self.assertEqual(load_webhook_config(), [])
 
+    def test_send_webhook_rejects_invalid_scheme(self):
+        """send_webhook should reject non-http(s) schemes."""
+        from opencut.core.webhooks import send_webhook
+
+        ok = send_webhook("file:///tmp/out", "test", {})
+        self.assertFalse(ok)
+
+    def test_save_webhook_config_rejects_invalid_scheme(self):
+        """save_webhook_config should validate configured webhook URLs."""
+        from opencut.core.webhooks import save_webhook_config
+
+        with patch("opencut.core.webhooks._WEBHOOKS_FILE",
+                   os.path.join(self.tmpdir, "webhooks.json")), \
+             patch("opencut.core.webhooks._OPENCUT_DIR", self.tmpdir):
+            with self.assertRaises(ValueError):
+                save_webhook_config([{"url": "file:///tmp/out"}])
+
 
 # ============================================================
 # Team Presets
@@ -736,6 +753,11 @@ class TestUtilityRoutes(unittest.TestCase):
                                 data=json.dumps({}))
         self.assertEqual(resp.status_code, 400)
 
+    def test_webhook_test_invalid_scheme(self):
+        resp = self.client.post("/webhook/test", headers=self.headers,
+                                data=json.dumps({"url": "file:///tmp/out"}))
+        self.assertEqual(resp.status_code, 400)
+
     @patch("opencut.core.webhooks.load_webhook_config", return_value=[])
     def test_webhook_config_get(self, mock_load):
         resp = self.client.get("/webhook/config", headers=self.headers)
@@ -747,6 +769,13 @@ class TestUtilityRoutes(unittest.TestCase):
         resp = self.client.post("/webhook/config", headers=self.headers,
                                 data=json.dumps({"webhooks": [{"url": "https://test.com"}]}))
         self.assertEqual(resp.status_code, 200)
+        mock_save.assert_called_once()
+
+    @patch("opencut.core.webhooks.save_webhook_config", side_effect=ValueError("Webhook URL must use http:// or https:// and include a host"))
+    def test_webhook_config_save_invalid_url(self, mock_save):
+        resp = self.client.post("/webhook/config", headers=self.headers,
+                                data=json.dumps({"webhooks": [{"url": "file:///tmp/out"}]}))
+        self.assertEqual(resp.status_code, 400)
         mock_save.assert_called_once()
 
     # --- Notes routes ---
