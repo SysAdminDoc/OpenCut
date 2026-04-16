@@ -16,10 +16,8 @@ Blueprint ``repair_gen_bp`` provides endpoints for:
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint
 
-from opencut.errors import safe_error
-from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
     require_csrf,

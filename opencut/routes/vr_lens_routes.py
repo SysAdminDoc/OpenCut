@@ -22,9 +22,8 @@ from opencut.security import (
     safe_bool,
     safe_float,
     safe_int,
-    validate_filepath,
-    validate_path,
     validate_output_path,
+    validate_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -440,6 +439,7 @@ def lens_chromatic_aberration(job_id, filepath, data):
 def lens_profiles():
     """List all available camera lens profiles."""
     from flask import request
+
     from opencut.core.lens_correction import list_camera_profiles, list_lens_presets
 
     category = request.args.get("category", None)

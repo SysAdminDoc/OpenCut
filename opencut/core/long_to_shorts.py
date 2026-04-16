@@ -14,12 +14,11 @@ import shutil
 import subprocess
 import tempfile
 from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
 from opencut.helpers import (
     get_ffmpeg_path,
     get_ffprobe_path,
-    get_video_info,
 )
 
 logger = logging.getLogger("opencut")
@@ -115,7 +114,7 @@ def _extract_highlights_llm(transcript_text: str, num_shorts: int,
                              min_duration: float, max_duration: float) -> List[dict]:
     """Use LLM to extract highlight segments from transcript."""
     try:
-        from opencut.core.llm import LLMConfig, query_llm
+        from opencut.core.llm import query_llm
 
         system_prompt = (
             "You are a video editor analyzing a transcript for viral short-form clips. "

@@ -9,12 +9,12 @@ Uses librosa/numpy when available, FFmpeg bandreject as fallback.
 """
 
 import logging
-import math
 import os
 import tempfile
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_video_info, output_path as _output_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, run_ffmpeg
+from opencut.helpers import output_path as _output_path
 
 logger = logging.getLogger("opencut")
 
@@ -61,7 +61,6 @@ def _analyze_frequencies_librosa(
         peaks.sort(key=lambda p: p["power_db"], reverse=True)
 
         # Identify common hum/buzz patterns
-        classifications = []
         for p in peaks[:20]:
             f = p["frequency"]
             if 49 < f < 62:
@@ -93,13 +92,7 @@ def _analyze_frequencies_librosa(
 
 def _analyze_frequencies_ffmpeg(input_path: str) -> dict:
     """Basic frequency analysis using FFmpeg astats."""
-    import subprocess
-    ffmpeg = get_ffmpeg_path()
-    cmd = [
-        ffmpeg, "-hide_banner", "-i", input_path,
-        "-af", "asplit[a][b];[a]showfreqs=s=1024x512:mode=bar:fscale=log[v];[b]anull",
-        "-f", "null", "-",
-    ]
+    get_ffmpeg_path()
     # This is a simplified fallback - just report common hum frequencies
     return {
         "peaks": [
@@ -121,7 +114,6 @@ def _repair_librosa(
 ) -> str:
     """Remove target frequencies via STFT bin attenuation."""
     import librosa
-    import numpy as np
 
     stft = analysis["stft"].copy()
     sr = analysis["sr"]
@@ -158,7 +150,7 @@ def _repair_ffmpeg(
     filters = []
 
     for freq in target_frequencies:
-        q = freq / max(bandwidth, 1.0)
+        freq / max(bandwidth, 1.0)
         filters.append(f"bandreject=f={freq}:width_type=h:w={bandwidth}")
 
     if not filters:

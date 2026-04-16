@@ -87,6 +87,7 @@ def text_segment_preview(job_id, filepath, data):
     else:
         import os
         import tempfile
+
         from opencut.helpers import get_ffmpeg_path, run_ffmpeg
 
         tmp_dir = tempfile.mkdtemp(prefix="textseg_preview_")
@@ -188,6 +189,7 @@ def detect_shadow_route(job_id, filepath, data):
     else:
         import os
         import tempfile
+
         from opencut.helpers import get_ffmpeg_path, run_ffmpeg
 
         tmp_dir = tempfile.mkdtemp(prefix="shadow_detect_")

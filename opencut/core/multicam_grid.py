@@ -7,16 +7,17 @@ timecode burn-in.
 """
 
 import logging
-import math
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
     get_video_info,
-    output_path as _output_path,
     run_ffmpeg,
+)
+from opencut.helpers import (
+    output_path as _output_path,
 )
 
 logger = logging.getLogger("opencut")
@@ -192,9 +193,8 @@ def export_multicam_grid(
         fc_parts.append(
             f"{audio_inputs}amix=inputs={n}:duration=shortest[outa]"
         )
-        audio_map = "[outa]"
     else:
-        audio_map = "0:a?"
+        pass
 
     filter_complex = ";".join(fc_parts)
 

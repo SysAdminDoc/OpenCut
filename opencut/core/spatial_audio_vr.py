@@ -17,11 +17,10 @@ import math
 import os
 import subprocess
 import tempfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
-    FFmpegCmd,
     get_ffprobe_path,
     get_video_info,
     output_path,
@@ -173,7 +172,7 @@ def _build_ambisonics_filter(
 
     # Mix all ambisonic streams together
     if len(speakers) == 1:
-        filter_parts.append(f"[amb0]acopy[ambiout]")
+        filter_parts.append("[amb0]acopy[ambiout]")
     else:
         mix_inputs = "".join(f"[amb{i}]" for i in range(len(speakers)))
         filter_parts.append(
@@ -210,8 +209,8 @@ def detect_speaker_positions(
         raise FileNotFoundError(f"Video not found: {video_path}")
 
     info = get_video_info(video_path)
-    w = info.get("width", 3840)
-    h = info.get("height", 1920)
+    info.get("width", 3840)
+    info.get("height", 1920)
     duration = info.get("duration", 0.0)
 
     if duration <= 0:
@@ -365,7 +364,7 @@ def spatialize_audio(
     if on_progress:
         on_progress(5, "Analyzing audio and video...")
 
-    info = get_video_info(video_path)
+    get_video_info(video_path)
 
     # Get audio channel count
     ffprobe = get_ffprobe_path()

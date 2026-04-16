@@ -9,11 +9,10 @@ of CMOS sensor readout artifacts.
 """
 
 import logging
-import math
 import os
 import tempfile
-from dataclasses import dataclass, field
-from typing import Callable, Dict, List, Optional
+from dataclasses import dataclass
+from typing import Callable, Optional
 
 from opencut.helpers import get_video_info, output_path, run_ffmpeg
 
@@ -275,7 +274,7 @@ def correct_rolling_shutter_enhanced(
         # Pass 2: Apply row-aware stabilization
         # Use crop-based row analysis for more targeted correction
         # The readout time determines how much temporal offset each row gets
-        readout_fraction = readout_time_ms / max(1, 1000.0 / fps)
+        readout_time_ms / max(1, 1000.0 / fps)
 
         # Map readout to vidstab transform parameters
         # zoom adjustment compensates for correction-induced edge crop

@@ -18,9 +18,8 @@ import logging
 import os
 import tempfile
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint
 
-from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (

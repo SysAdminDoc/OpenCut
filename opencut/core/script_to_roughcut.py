@@ -23,9 +23,7 @@ import os
 import re
 import xml.etree.ElementTree as ET
 from dataclasses import asdict, dataclass, field
-from typing import Callable, Dict, List, Optional, Tuple
-
-from opencut.helpers import get_ffmpeg_path, get_video_info
+from typing import Callable, Dict, List, Optional
 
 logger = logging.getLogger("opencut")
 
