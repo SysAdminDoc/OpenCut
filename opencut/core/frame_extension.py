@@ -723,7 +723,7 @@ def outpaint_aspect_ratio(
             os.unlink(tmp_video)
         except OSError:
             pass
-        raise RuntimeError(f"Cannot create video writer")
+        raise RuntimeError("Cannot create video writer")
 
     frame_idx = 0
     try:

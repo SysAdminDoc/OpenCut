@@ -13,7 +13,7 @@ import os
 import re
 import subprocess as _sp
 from dataclasses import asdict, dataclass, field
-from typing import Callable, Dict, List, Optional, Any
+from typing import Any, Callable, Dict, List, Optional
 
 from opencut.helpers import (
     get_ffmpeg_path,

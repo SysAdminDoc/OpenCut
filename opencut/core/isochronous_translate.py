@@ -14,8 +14,6 @@ Ensures lip-sync-friendly dubbing by constraining translated text length.
 """
 
 import logging
-import math
-import os
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
@@ -109,8 +107,8 @@ def _translate_text(
 ) -> str:
     """Translate text using LLM backend."""
     try:
-        from opencut.core.llm import llm_chat
         from opencut.core.ai_dubbing import SUPPORTED_LANGUAGES
+        from opencut.core.llm import llm_chat
 
         src_name = SUPPORTED_LANGUAGES.get(source_lang, source_lang)
         tgt_name = SUPPORTED_LANGUAGES.get(target_lang, target_lang)

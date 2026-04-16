@@ -8,15 +8,14 @@ Supports selective removal of classified noise types.
 Uses FFmpeg for audio extraction, numpy for frequency analysis.
 """
 
-import json
 import logging
 import os
-import subprocess
 import tempfile
 from dataclasses import asdict, dataclass, field
-from typing import Callable, Dict, List, Optional
+from typing import Callable, List, Optional
 
-from opencut.helpers import get_ffmpeg_path, get_video_info, output_path as _output_path, run_ffmpeg
+from opencut.helpers import get_ffmpeg_path, get_video_info, run_ffmpeg
+from opencut.helpers import output_path as _output_path
 
 logger = logging.getLogger("opencut")
 
@@ -64,10 +63,10 @@ class NoiseClassifyResult:
 def _classify_yamnet(input_path: str, segment_duration: float = 1.0) -> Optional[List[NoiseSegment]]:
     """Classify using TensorFlow YAMNet model."""
     try:
-        import tensorflow as tf
-        import tensorflow_hub as hub
         import numpy as np
         import soundfile as sf
+        import tensorflow as tf
+        import tensorflow_hub as hub
     except ImportError:
         return None
 
@@ -242,7 +241,7 @@ def _remove_noise_ffmpeg(
     """Remove classified noise segments using FFmpeg filters."""
     ffmpeg = get_ffmpeg_path()
     info = get_video_info(input_path)
-    duration = info.get("duration", 0)
+    info.get("duration", 0)
 
     filters = []
     for seg in segments:
