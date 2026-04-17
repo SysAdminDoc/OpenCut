@@ -303,7 +303,8 @@ def quantize_model(
         output_path = os.path.join(os.path.dirname(model_path), f"{basename}{suffix}{ext}")
 
     original_size = os.path.getsize(model_path)
-    start_time = time.time()
+    # perf_counter has higher resolution than time.time on Windows
+    start_time = time.perf_counter()
 
     if on_progress:
         on_progress({"step": "loading", "model": basename, "precision": target_precision})
@@ -335,7 +336,8 @@ def quantize_model(
             error=str(exc),
         )
 
-    elapsed = time.time() - start_time
+    # 0.001s floor so rounded reporting still reflects "ran" for fast paths.
+    elapsed = max(time.perf_counter() - start_time, 0.001)
     quantized_size = os.path.getsize(output_path) if os.path.isfile(output_path) else 0
     ratio = quantized_size / original_size if original_size > 0 else 0.0
 
@@ -352,7 +354,7 @@ def quantize_model(
         original_size_mb=original_size / (1024 * 1024),
         quantized_size_mb=quantized_size / (1024 * 1024),
         compression_ratio=round(ratio, 3),
-        elapsed_seconds=round(elapsed, 2),
+        elapsed_seconds=round(elapsed, 3),
     )
 
 

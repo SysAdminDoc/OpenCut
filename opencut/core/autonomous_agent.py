@@ -406,7 +406,9 @@ def execute_step(step: AgentStep) -> AgentStep:
         Updated AgentStep with result or error.
     """
     step.status = "running"
-    start_time = time.time()
+    # Use perf_counter for elapsed timing — time.time() resolution on
+    # Windows is ~15.6 ms, so fast/mocked tools record duration 0.0.
+    start_time = time.perf_counter()
 
     try:
         result = _execute_tool(step.action, step.params)
@@ -417,7 +419,7 @@ def execute_step(step: AgentStep) -> AgentStep:
         step.error = str(e)
         logger.warning("Step '%s' failed: %s", step.action, e)
 
-    step.duration_seconds = time.time() - start_time
+    step.duration_seconds = max(time.perf_counter() - start_time, 1e-6)
     return step
 
 
@@ -551,7 +553,7 @@ def execute_plan(
         AgentResult with execution summary.
     """
     plan.status = "running"
-    start_time = time.time()
+    start_time = time.perf_counter()
     output_paths = []
     previous_output = None
     steps_completed = 0
@@ -615,7 +617,7 @@ def execute_plan(
         elif executed.status == "skipped":
             plan.execution_log.append(f"Step {idx + 1} skipped: {executed.action}")
 
-    total_duration = time.time() - start_time
+    total_duration = max(time.perf_counter() - start_time, 1e-6)
     plan.status = "complete" if steps_failed == 0 else "error"
 
     if on_progress:
