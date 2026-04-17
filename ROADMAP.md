@@ -5,6 +5,12 @@
 **Baseline**: v1.9.26 (254 routes, 68 core modules, 17 blueprints, 867 tests)
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
+> **⚡ Active work (2026-Q2 → 2026-Q4)** lives in
+> [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — Wave A/B/C/D/E covering
+> v1.18.0 → v1.23.0+ from the cross-project OSS research pass. This
+> file is preserved as the long-range 302-feature plan and the v1.14.0
+> strategic-gap analysis below.
+
 ---
 
 ## Guiding Principles

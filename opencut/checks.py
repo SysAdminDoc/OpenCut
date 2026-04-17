@@ -206,3 +206,125 @@ def check_social_post_available() -> bool:
     import os
     creds_path = os.path.join(os.path.expanduser("~"), ".opencut", "social_credentials.json")
     return os.path.isfile(creds_path)
+
+
+def check_neural_interp_available() -> bool:
+    """Check if neural frame interpolation is usable.
+
+    Always True — the FFmpeg ``minterpolate`` fallback is always present.
+    RIFE-NCNN-Vulkan CLI and torch RIFE are optional accelerators.
+    """
+    try:
+        from opencut.core.neural_interp import check_neural_interp_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_rife_cli_available() -> bool:
+    """Check if the rife-ncnn-vulkan CLI is on PATH."""
+    import shutil
+    return shutil.which("rife-ncnn-vulkan") is not None
+
+
+def check_declarative_compose_available() -> bool:
+    """Check if declarative JSON composition can run. Needs FFmpeg only."""
+    import shutil
+    return shutil.which("ffmpeg") is not None
+
+
+# --- v1.18.0 Wave A + Wave D availability checks ---
+
+def check_f5_tts_available() -> bool:
+    """Check if F5-TTS (flow-matching voice clone) is installed."""
+    return _try_import("f5_tts") is not None
+
+
+def check_beatnet_available() -> bool:
+    """Check if BeatNet (beat + downbeat neural detector) is installed."""
+    return _try_import("BeatNet") is not None
+
+
+def check_clip_iqa_available() -> bool:
+    """Check if CLIP-IQA+ clip quality scoring is usable."""
+    try:
+        from opencut.core.clip_quality import check_clip_iqa_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_hsemotion_available() -> bool:
+    """Check if HSEmotion (face emotion arc) is installed."""
+    try:
+        from opencut.core.emotion_arc import check_hsemotion_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_ab_av1_available() -> bool:
+    """Check if ab-av1 (VMAF-target encoder) is on PATH."""
+    import shutil
+    return shutil.which("ab-av1") is not None
+
+
+def check_aaf_adapter_available() -> bool:
+    """Check if OTIO AAF adapter is installed."""
+    try:
+        from opencut.export.otio_export import check_aaf_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_event_moments_available() -> bool:
+    """Event-moment finder uses stdlib + FFmpeg; always available."""
+    import shutil
+    return shutil.which("ffmpeg") is not None
+
+
+# --- v1.19.0 Wave A2.3 / A3.1 / A4.2 / D2 availability checks ---
+
+def check_birefnet_available() -> bool:
+    try:
+        from opencut.core.matte_birefnet import check_birefnet_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_pyonfx_available() -> bool:
+    return _try_import("pyonfx") is not None
+
+
+def check_svtav1_psy_available() -> bool:
+    try:
+        from opencut.core.svtav1_psy import check_svtav1_psy_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_ddcolor_available() -> bool:
+    try:
+        from opencut.core.colorize_ddcolor import check_ddcolor_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_vrt_available() -> bool:
+    try:
+        from opencut.core.restore_vrt import check_vrt_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_neural_deflicker_available() -> bool:
+    try:
+        from opencut.core.deflicker_neural import check_neural_deflicker_available as _c
+        return _c()
+    except Exception:
+        return False

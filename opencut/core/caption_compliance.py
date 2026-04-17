@@ -59,6 +59,43 @@ STANDARDS = {
         "max_wpm": None,
         "label": "YouTube Subtitle Best Practices",
     },
+    # EBU-TT-D (European Broadcasting Union) — the common
+    # pan-European standard used by BBC iPlayer, France TV, RAI, etc.
+    # Source: Tech 3380 R149. Stricter than BBC legacy.
+    "ebu-tt-d": {
+        "max_cpl": 37,
+        "min_duration_ms": 700,
+        "max_duration_ms": 6000,
+        "max_cps": 17,
+        "max_lines": 2,
+        "min_gap_ms": 80,    # One-frame gap at 12.5 fps
+        "max_wpm": 180,
+        "label": "EBU-TT-D (Tech 3380)",
+    },
+    # YouTube broadcast-grade — what major publishers (e.g., NYT,
+    # WSJ, national broadcasters) use on their YouTube uploads to
+    # stay consistent with broadcast masters.
+    "youtube-broadcast": {
+        "max_cpl": 37,
+        "min_duration_ms": 833,   # 20 frames at 24 fps
+        "max_duration_ms": 7000,
+        "max_cps": 17,
+        "max_lines": 2,
+        "min_gap_ms": 100,
+        "max_wpm": 160,
+        "label": "YouTube broadcast-grade (BBC-adjacent)",
+    },
+    # Accessibility-first profile (CVAA / WCAG 2.2 guidance)
+    "accessibility": {
+        "max_cpl": 32,
+        "min_duration_ms": 1000,
+        "max_duration_ms": 8000,
+        "max_cps": 15,
+        "max_lines": 2,
+        "min_gap_ms": 200,
+        "max_wpm": 150,
+        "label": "Accessibility-first (CVAA + WCAG 2.2)",
+    },
 }
 
 
