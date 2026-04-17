@@ -26,7 +26,7 @@ const HEALTH_CHECK_MS  = 8000;
 const HEALTH_MAX_MS    = 60000;
 const MEDIA_SCAN_MS    = 30000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
-const VERSION          = "1.16.0";
+const VERSION          = "1.16.3";
 const PRIMARY_CLIP_INPUT_IDS = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
 const TABS_REQUIRING_SOURCE = new Set(["cut", "captions", "audio", "video"]);
 const DELIVERABLE_LABELS = {
@@ -463,10 +463,23 @@ const BackendClient = (() => {
     const headers = { "Content-Type": "application/json" };
     if (csrfToken) headers["X-OpenCut-Token"] = csrfToken;
 
-    const opts = { method, headers };
+    // 120s default — long enough for synchronous routes (CSRF, health,
+    // /info), short enough that a hung backend doesn't pin a button
+    // forever. Async job submission returns within seconds; the actual
+    // long-running work is observed via SSE/polling, not held in this
+    // request.
+    const ac = new AbortController();
+    const timer = setTimeout(() => ac.abort(), 120000);
+
+    const opts = { method, headers, signal: ac.signal };
     if (body && method !== "GET") opts.body = JSON.stringify(body);
 
-    const resp = await fetch(url, opts);
+    let resp;
+    try {
+      resp = await fetch(url, opts);
+    } finally {
+      clearTimeout(timer);
+    }
 
     // Refresh CSRF token if provided in response headers
     const newToken = resp.headers.get("X-OpenCut-Token");
@@ -475,7 +488,14 @@ const BackendClient = (() => {
     let data;
     const ct = resp.headers.get("Content-Type") || "";
     if (ct.includes("application/json")) {
-      data = await resp.json();
+      try {
+        data = await resp.json();
+      } catch (_) {
+        // Server claimed JSON but produced garbage — surface as a string
+        // rather than throwing inside the wrapper, which would skip the
+        // status-code branch and hide whether this was a 4xx/5xx response.
+        data = null;
+      }
     } else {
       data = await resp.text();
     }

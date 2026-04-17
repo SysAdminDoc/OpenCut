@@ -523,7 +523,18 @@ def record_feature_use(
     if on_progress:
         on_progress(50, "Updating usage record...")
 
+    # Use a monotonically increasing timestamp so two consecutive calls
+    # get distinct values even when the wall clock has low resolution
+    # (Windows `time.time()` advances in ~15.6ms steps and would tie
+    # records logged within the same tick, breaking sort-by-recency).
     now = time.time()
+    if recents:
+        try:
+            max_existing = max(float(r.get("timestamp", 0) or 0) for r in recents)
+        except (TypeError, ValueError):
+            max_existing = 0.0
+        if now <= max_existing:
+            now = max_existing + 1e-6
 
     # Look up the feature name from the index
     index = build_feature_index()
