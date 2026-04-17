@@ -151,7 +151,7 @@ def _save_download_meta(model_name: str, progress: DownloadProgress):
     _ensure_dirs()
     meta_path = os.path.join(DOWNLOADS_META_DIR, f"{model_name}.json")
     try:
-        with open(meta_path, "w") as f:
+        with open(meta_path, "w", encoding="utf-8") as f:
             json.dump(progress.to_dict(), f)
     except OSError:
         pass
@@ -162,7 +162,7 @@ def _load_download_meta(model_name: str) -> Optional[Dict]:
     meta_path = os.path.join(DOWNLOADS_META_DIR, f"{model_name}.json")
     if os.path.isfile(meta_path):
         try:
-            with open(meta_path) as f:
+            with open(meta_path, encoding="utf-8") as f:
                 return json.load(f)
         except (OSError, json.JSONDecodeError):
             pass

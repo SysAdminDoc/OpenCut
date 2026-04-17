@@ -2148,10 +2148,23 @@ function ocAddNativeCaptionTrack(srtJSON) {
                 var segE = Number(seg.end);
                 // Skip invalid segments
                 if (isNaN(segS) || isNaN(segE) || segS < 0 || segE <= segS) continue;
+                // Sanitise the caption body so it doesn't break the SRT
+                // cue boundaries. SRT uses a blank line as the cue separator,
+                // so embedded blank lines in the text would split a single
+                // caption into two malformed cues. Also collapse \r\n to \n
+                // so Premiere's importer doesn't see stray carriage returns
+                // inside the text body on macOS-authored payloads.
+                var rawText = (seg.text != null) ? String(seg.text) : "";
+                rawText = rawText.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
+                rawText = rawText.replace(/\n{2,}/g, "\n");
+                // Trim trailing whitespace so the writeln below doesn't add
+                // a blank-looking line that ends the cue early.
+                rawText = rawText.replace(/\s+$/g, "");
+                if (!rawText) rawText = " ";  // empty cue body is invalid SRT
                 srtIndex++;
                 tempFile.writeln(String(srtIndex));
                 tempFile.writeln(_secondsToSrtTime(segS) + " --> " + _secondsToSrtTime(segE));
-                tempFile.writeln(seg.text || "");
+                tempFile.writeln(rawText);
                 tempFile.writeln("");
             }
         } finally {

@@ -9,7 +9,7 @@ import logging
 import os
 import tempfile
 from dataclasses import dataclass, field
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 from ..utils.config import CaptionConfig
 from .audio import extract_audio_wav
@@ -258,6 +258,49 @@ def transcribe(
                 os.unlink(wav_path)
             except Exception:
                 pass
+
+
+def transcribe_audio(
+    filepath: str,
+    model: str = "base",
+    language: Optional[str] = None,
+    timeout: Optional[float] = None,
+) -> List[Dict]:
+    """Convenience wrapper around :func:`transcribe` returning plain segment dicts.
+
+    The CLI commands ``chapters`` / ``repeat-detect`` / ``search index``
+    and other consumers want a flat list of ``{start, end, text}`` dicts
+    rather than a :class:`TranscriptionResult` object. This wrapper
+    builds a minimal :class:`CaptionConfig` from the keyword arguments
+    most callers actually care about (model, language) and projects the
+    result down to the segment list.
+
+    Raises the same errors as :func:`transcribe` (RuntimeError when no
+    Whisper backend is installed, TimeoutError on overrun).
+    """
+    config = CaptionConfig(model=model, language=language)
+    result = transcribe(filepath, config=config, timeout=timeout)
+    segments = getattr(result, "segments", None)
+    if segments is None and isinstance(result, dict):
+        segments = result.get("segments", [])
+    if segments is None:
+        return []
+    out: List[Dict] = []
+    for seg in segments:
+        if isinstance(seg, dict):
+            out.append(seg)
+            continue
+        # Dataclass / namespace-style object
+        try:
+            out.append({
+                "start": float(getattr(seg, "start", 0.0)),
+                "end": float(getattr(seg, "end", 0.0)),
+                "text": str(getattr(seg, "text", "")),
+                "words": getattr(seg, "words", None),
+            })
+        except (TypeError, ValueError):
+            continue
+    return out
 
 
 def _transcribe_openai_whisper(wav_path: str, config: CaptionConfig) -> TranscriptionResult:

@@ -759,3 +759,286 @@ def export_mkv(
                 os.unlink(tf)
             except OSError:
                 pass
+
+
+# ===========================================================================
+# In-memory project API
+# ---------------------------------------------------------------------------
+# The persistence-based ``create_project`` / ``add_language`` / ``update_text``
+# / ``export_srt`` API above is for the saved JSON workflow. The functions
+# below provide a lighter, in-memory project model used by the v1.15.0
+# editing_workflows tests and by callers (UXP/MCP) that don't need disk
+# persistence.
+# ===========================================================================
+
+import json as _json_module
+import tempfile as _tempfile_module
+
+
+@dataclass
+class MultilangProject:
+    """In-memory multi-language subtitle project.
+
+    Distinct from :class:`MultiLangData` (persisted) and
+    :class:`MultiLangProject` (metadata view): no disk I/O, no project_id.
+    Holds the shared timing track and per-language translation strings.
+    """
+
+    timing: List["TimingSegment"] = field(default_factory=list)
+    translations: Dict[str, List[str]] = field(default_factory=dict)
+    source_language: Optional[str] = None
+
+    def entry_count(self) -> int:
+        return len(self.timing)
+
+    def language_count(self) -> int:
+        return len(self.translations)
+
+    def to_dict(self) -> dict:
+        return {
+            "timing": [{"start": t.start, "end": t.end} for t in self.timing],
+            "translations": {k: list(v) for k, v in self.translations.items()},
+            "source_language": self.source_language,
+        }
+
+
+def create_multilang_project(
+    timing: List[Dict],
+    languages: List[str],
+    source_language: Optional[str] = None,
+) -> MultilangProject:
+    """Create a fresh in-memory multi-language subtitle project.
+
+    *timing* is a list of ``{"start": float, "end": float, "text": str}``
+    entries. *languages* is the list of ISO codes to create translation
+    arrays for. If *source_language* is given and the timing entries have
+    a ``"text"`` field, the source language is pre-populated; the other
+    languages start as empty strings (untranslated).
+
+    Validation is strict so client bugs surface as 400s, not garbage data.
+    """
+    if not timing:
+        raise ValueError("create_multilang_project: timing must be non-empty")
+    if not languages:
+        raise ValueError("create_multilang_project: languages must be non-empty")
+
+    parsed_timing: List[TimingSegment] = []
+    source_texts: List[str] = []
+    for i, raw in enumerate(timing):
+        if not isinstance(raw, dict):
+            raise ValueError(f"timing[{i}] must be a dict")
+        try:
+            start = float(raw.get("start", 0))
+            end = float(raw.get("end", 0))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"timing[{i}] has non-numeric start/end: {exc}") from exc
+        if end < start:
+            raise ValueError(
+                f"timing[{i}] has end={end} before start={start} — bad timing"
+            )
+        parsed_timing.append(TimingSegment(start=start, end=end))
+        text = raw.get("text", "")
+        source_texts.append("" if text is None else str(text))
+
+    # Deduplicate language codes while preserving order.
+    seen = set()
+    cleaned_languages: List[str] = []
+    for lang in languages:
+        if not isinstance(lang, str) or not lang.strip():
+            continue
+        code = lang.strip().lower()
+        if code in seen:
+            continue
+        seen.add(code)
+        cleaned_languages.append(code)
+
+    if not cleaned_languages:
+        raise ValueError("languages must contain at least one non-empty string")
+
+    src = source_language.strip().lower() if isinstance(source_language, str) and source_language.strip() else None
+    translations: Dict[str, List[str]] = {}
+    for code in cleaned_languages:
+        if src is not None and code == src:
+            translations[code] = list(source_texts)
+        else:
+            translations[code] = [""] * len(parsed_timing)
+
+    return MultilangProject(
+        timing=parsed_timing,
+        translations=translations,
+        source_language=src,
+    )
+
+
+def update_language_text(
+    project: MultilangProject,
+    language: str,
+    texts: List[str],
+) -> Dict:
+    """Replace the translation array for *language* on *project*.
+
+    Raises ``ValueError`` if the language isn't in the project or if the
+    text count doesn't match the timing entry count — silently truncating
+    or padding would corrupt downstream alignment.
+    """
+    if not isinstance(project, MultilangProject):
+        raise ValueError("project must be a MultilangProject")
+    code = (language or "").strip().lower()
+    if code not in project.translations:
+        raise ValueError(f"Language {language!r} not in project")
+    if not isinstance(texts, list):
+        raise ValueError("texts must be a list of strings")
+    if len(texts) != project.entry_count():
+        raise ValueError(
+            f"Text count ({len(texts)}) does not match timing entry count ({project.entry_count()})"
+        )
+    project.translations[code] = ["" if t is None else str(t) for t in texts]
+    return {"language": code, "entries_updated": len(texts)}
+
+
+def export_language(
+    project: MultilangProject,
+    language: str,
+    format: str = "srt",
+    output_path: Optional[str] = None,
+) -> Dict:
+    """Export a single language track to *format* and return the file path.
+
+    Supported *format* values: ``srt``, ``vtt``, ``json``. Anything else
+    raises ``ValueError`` so a client UI bug never silently produces an
+    empty file.
+    """
+    fmt = (format or "").strip().lower()
+    if fmt not in {"srt", "vtt", "json"}:
+        raise ValueError(f"Unsupported export format: {format!r}")
+    if not isinstance(project, MultilangProject):
+        raise ValueError("project must be a MultilangProject")
+    code = (language or "").strip().lower()
+    if code not in project.translations:
+        raise ValueError(f"Language {language!r} not in project")
+
+    texts = project.translations[code]
+    if output_path is None:
+        fd, output_path = _tempfile_module.mkstemp(suffix=f"_{code}.{fmt}")
+        os.close(fd)
+
+    if fmt == "srt":
+        lines: List[str] = []
+        for i, seg in enumerate(project.timing):
+            lines.append(str(i + 1))
+            lines.append(f"{_seconds_to_srt(seg.start)} --> {_seconds_to_srt(seg.end)}")
+            lines.append(texts[i] if i < len(texts) else "")
+            lines.append("")
+        with open(output_path, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(lines))
+    elif fmt == "vtt":
+        lines = ["WEBVTT", ""]
+        for i, seg in enumerate(project.timing):
+            lines.append(f"{_seconds_to_vtt(seg.start)} --> {_seconds_to_vtt(seg.end)}")
+            lines.append(texts[i] if i < len(texts) else "")
+            lines.append("")
+        with open(output_path, "w", encoding="utf-8") as fh:
+            fh.write("\n".join(lines))
+    else:  # json
+        payload = {
+            "language": code,
+            "entries": [
+                {
+                    "start": project.timing[i].start,
+                    "end": project.timing[i].end,
+                    "text": texts[i] if i < len(texts) else "",
+                }
+                for i in range(len(project.timing))
+            ],
+        }
+        with open(output_path, "w", encoding="utf-8") as fh:
+            _json_module.dump(payload, fh, indent=2)
+
+    return {"output_path": output_path, "language": code, "format": fmt, "entries": project.entry_count()}
+
+
+def sync_timing_change(
+    project: MultilangProject,
+    change: Dict,
+) -> Dict:
+    """Apply a timing-track edit, mirroring it across every language.
+
+    Operations:
+
+    * ``shift`` — add ``offset_seconds`` to every entry's start/end.
+    * ``update`` — replace ``timing[index].start/end``.
+    * ``insert`` — append a new ``{start, end}`` entry, padding all
+      languages with an empty string for the new index.
+    * ``delete`` — remove ``timing[index]`` and the matching string in
+      every language.
+
+    Anything else raises ``ValueError`` rather than silently no-oping.
+    """
+    if not isinstance(project, MultilangProject):
+        raise ValueError("project must be a MultilangProject")
+    if not isinstance(change, dict):
+        raise ValueError("change must be a dict")
+    op = (change.get("operation") or "").strip().lower()
+
+    if op == "shift":
+        try:
+            offset = float(change.get("offset_seconds", 0))
+        except (TypeError, ValueError):
+            raise ValueError("shift requires numeric offset_seconds")
+        for seg in project.timing:
+            seg.start = max(0.0, seg.start + offset)
+            seg.end = max(seg.start, seg.end + offset)
+        return {"operation": "shift", "applied": offset, "entries": project.entry_count()}
+
+    if op == "update":
+        try:
+            idx = int(change.get("index", -1))
+            start = float(change.get("start", 0))
+            end = float(change.get("end", 0))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"update requires numeric index/start/end: {exc}") from exc
+        if not 0 <= idx < project.entry_count():
+            raise ValueError(f"update index {idx} out of range (0..{project.entry_count() - 1})")
+        if end < start:
+            raise ValueError(f"update has end={end} before start={start}")
+        project.timing[idx].start = start
+        project.timing[idx].end = end
+        return {"operation": "update", "index": idx}
+
+    if op == "insert":
+        try:
+            start = float(change.get("start", 0))
+            end = float(change.get("end", 0))
+        except (TypeError, ValueError) as exc:
+            raise ValueError(f"insert requires numeric start/end: {exc}") from exc
+        if end < start:
+            raise ValueError(f"insert has end={end} before start={start}")
+        # Insert position: by default append; honour optional 'index'.
+        idx_raw = change.get("index")
+        if idx_raw is None:
+            idx = project.entry_count()
+        else:
+            try:
+                idx = int(idx_raw)
+            except (TypeError, ValueError):
+                raise ValueError("insert index must be int when provided")
+            if not 0 <= idx <= project.entry_count():
+                raise ValueError(f"insert index {idx} out of range")
+        project.timing.insert(idx, TimingSegment(start=start, end=end))
+        for code in project.translations:
+            project.translations[code].insert(idx, "")
+        return {"operation": "insert", "index": idx}
+
+    if op == "delete":
+        try:
+            idx = int(change.get("index", -1))
+        except (TypeError, ValueError):
+            raise ValueError("delete requires integer index")
+        if not 0 <= idx < project.entry_count():
+            raise ValueError(f"delete index {idx} out of range")
+        del project.timing[idx]
+        for code in project.translations:
+            del project.translations[code][idx]
+        return {"operation": "delete", "index": idx}
+
+    raise ValueError(f"Unsupported sync operation: {op!r}")

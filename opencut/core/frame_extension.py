@@ -279,6 +279,9 @@ def extend_frame_spatial(
     Returns:
         SpatialExtensionResult with output path and dimensions.
     """
+    if not os.path.isfile(video_path):
+        raise FileNotFoundError(f"Input video not found: {video_path}")
+
     if not ensure_package("cv2", "opencv-python-headless", on_progress):
         raise RuntimeError("opencv-python-headless is required")
 
@@ -417,6 +420,9 @@ def extend_frame_temporal(
     Returns:
         TemporalExtensionResult with output path and metadata.
     """
+    if not os.path.isfile(video_path):
+        raise FileNotFoundError(f"Input video not found: {video_path}")
+
     if not ensure_package("cv2", "opencv-python-headless", on_progress):
         raise RuntimeError("opencv-python-headless is required")
 
@@ -646,6 +652,9 @@ def outpaint_aspect_ratio(
         dict with *output_path*, *original_size*, *output_size*,
         *frames_processed*, *fill_method*, and *ai_enhanced*.
     """
+    if not os.path.isfile(video_path):
+        raise FileNotFoundError(f"Input video not found: {video_path}")
+
     if not ensure_package("cv2", "opencv-python-headless", on_progress):
         raise RuntimeError("opencv-python-headless is required")
 

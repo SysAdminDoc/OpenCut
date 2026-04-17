@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.16.0
+   OpenCut CEP Panel - Main Controller v1.16.3
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -2112,35 +2112,49 @@
     var MAX_RECENT_FILES = 10;
 
     function addRecentFile(path, name) {
+        if (!path) return;
         try {
-            var recent = JSON.parse(localStorage.getItem(RECENT_FILES_KEY) || "[]");
-            // Remove if already exists
+            // Reuse the defensive parser so a corrupted store doesn't blow up
+            // .filter() / .unshift() below.
+            var recent = getRecentFiles();
             recent = recent.filter(function (r) { return r.path !== path; });
-            recent.unshift({ path: path, name: name });
+            recent.unshift({ path: path, name: name || path });
             if (recent.length > MAX_RECENT_FILES) recent = recent.slice(0, MAX_RECENT_FILES);
             localStorage.setItem(RECENT_FILES_KEY, JSON.stringify(recent));
         } catch (e) {}
     }
 
     function getRecentFiles() {
+        // Defensively coerce to an array — corrupted localStorage (e.g. a
+        // bare string or null left behind by an older build) would otherwise
+        // make `populateRecentFiles`'s `.length` / loop access throw.
         try {
-            return JSON.parse(localStorage.getItem(RECENT_FILES_KEY) || "[]");
+            var raw = localStorage.getItem(RECENT_FILES_KEY);
+            if (!raw) return [];
+            var parsed = JSON.parse(raw);
+            if (!Array.isArray(parsed)) return [];
+            return parsed.filter(function (r) {
+                return r && typeof r.path === "string" && r.path;
+            });
         } catch (e) { return []; }
     }
 
     function populateRecentFiles() {
         var recent = getRecentFiles();
+        if (!el.clipSelect) return;
         // Check if optgroup already exists
         var existing = el.clipSelect.querySelector('optgroup[label="Recent Files"]');
-        if (existing) existing.parentNode.removeChild(existing);
+        if (existing && existing.parentNode) existing.parentNode.removeChild(existing);
         if (recent.length) {
             var group = document.createElement("optgroup");
             group.label = "Recent Files";
             for (var i = 0; i < recent.length; i++) {
+                var entry = recent[i];
+                if (!entry || !entry.path) continue;
                 var opt = document.createElement("option");
-                opt.value = recent[i].path;
-                opt.textContent = recent[i].name;
-                opt.setAttribute("data-name", recent[i].name);
+                opt.value = String(entry.path);
+                opt.textContent = String(entry.name || entry.path);
+                opt.setAttribute("data-name", String(entry.name || entry.path));
                 group.appendChild(opt);
             }
             el.clipSelect.appendChild(group);

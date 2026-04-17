@@ -220,8 +220,14 @@ def get_video_info(filepath: str) -> dict:
         "-show_entries", "format=duration",
         "-of", "json", filepath,
     ]
-    result = _sp.run(cmd, capture_output=True, timeout=30)
     _defaults = {"width": 1920, "height": 1080, "fps": 30.0, "duration": 0}
+    try:
+        result = _sp.run(cmd, capture_output=True, timeout=30)
+    except (_sp.TimeoutExpired, FileNotFoundError, OSError) as exc:
+        # ffprobe missing, hung, or unavailable — degrade gracefully so
+        # callers get safe defaults instead of an unhandled 500.
+        logger.warning("ffprobe call failed for %s: %s — using defaults", filepath, exc)
+        return _defaults
     if result.returncode != 0:
         logger.warning("ffprobe failed (rc=%d) for %s — using defaults", result.returncode, filepath)
         return _defaults
