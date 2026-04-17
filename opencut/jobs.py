@@ -143,6 +143,53 @@ def _update_job(job_id: str, **kwargs):
                 _job_processes.pop(job_id, None)
     if job_copy_to_persist is not None:
         _persist_job(job_copy_to_persist)
+        # Fire webhook event for terminal job states (best-effort).
+        # Wrapped in try/except so a webhook failure never blocks job
+        # finalisation. Dispatched asynchronously via _io_pool.
+        try:
+            _emit_job_webhook(job_copy_to_persist)
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("Webhook emit failed for job %s: %s",
+                           job_copy_to_persist.get("id"), exc)
+
+
+def _emit_job_webhook(job_dict):
+    """Fire a ``job.{status}`` webhook event for a terminal job.
+
+    Uses the bounded ``_io_pool`` so the caller of ``_update_job`` isn't
+    blocked waiting for outbound HTTP. Also lazily imports
+    ``webhook_system`` — it's optional, and the import must not cost
+    startup time for installs that never register a webhook.
+    """
+    status = job_dict.get("status")
+    if status not in ("complete", "error", "cancelled"):
+        return
+
+    def _fire():
+        try:
+            from opencut.core.webhook_system import fire_event
+        except Exception:  # noqa: BLE001
+            return
+        event_type = f"job.{status}"
+        details = {
+            "job_id": job_dict.get("id"),
+            "job_type": job_dict.get("type"),
+            "filepath": job_dict.get("filepath"),
+            "endpoint": job_dict.get("_endpoint"),
+            "result": job_dict.get("result"),
+            "error": job_dict.get("error"),
+            "progress": job_dict.get("progress"),
+        }
+        try:
+            fire_event(event_type, details, job_id=str(job_dict.get("id") or ""))
+        except Exception as exc:  # noqa: BLE001
+            logger.warning("fire_event(%s) raised: %s", event_type, exc)
+
+    try:
+        _io_pool.submit(_fire)
+    except RuntimeError:
+        # Interpreter shutdown — best-effort sync fire
+        _fire()
 
 
 def _persist_job(job_dict, *, sync: bool = False):

@@ -561,7 +561,17 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
 
 
 def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionResult:
-    """Transcribe using WhisperX (best word-level alignment)."""
+    """Transcribe using WhisperX (best word-level alignment).
+
+    If ``config.diarize`` is True and a Hugging Face token is available
+    (via ``config.hf_token`` or the ``HF_TOKEN`` env var), WhisperX's
+    ``DiarizationPipeline`` tags each caption segment with a
+    ``speaker`` label (SPEAKER_00, SPEAKER_01, …) using pyannote 3.x.
+    Falls back silently to untagged segments if the token is missing or
+    pyannote models can't be loaded.
+    """
+    import os
+
     import torch
     import whisperx
 
@@ -571,6 +581,7 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
     # Load model and transcribe
     model = whisperx.load_model(config.model, device, compute_type=compute_type)
     align_model = None
+    diarize_pipeline = None
     try:
         audio = whisperx.load_audio(wav_path)
         result = model.transcribe(audio, batch_size=16, language=config.language)
@@ -588,6 +599,59 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
                 audio,
                 device,
             )
+
+        # Optional diarisation — gated on token + flag
+        if getattr(config, "diarize", False):
+            hf_token = getattr(config, "hf_token", None) or os.environ.get("HF_TOKEN")
+            if hf_token:
+                try:
+                    # DiarizationPipeline lives under different names in
+                    # different WhisperX versions — try both.
+                    Pipeline = (
+                        getattr(whisperx, "DiarizationPipeline", None)
+                        or getattr(whisperx, "diarize", None)
+                    )
+                    if Pipeline is None:
+                        # Fall back to pyannote directly
+                        from pyannote.audio import Pipeline as PyaPipeline  # noqa: N811
+                        diarize_pipeline = PyaPipeline.from_pretrained(
+                            "pyannote/speaker-diarization-3.1",
+                            use_auth_token=hf_token,
+                        )
+                        # pyannote returns a pyannote.core.Annotation
+                        diar_result = diarize_pipeline(
+                            {"uri": "audio", "audio": wav_path},
+                            min_speakers=config.min_speakers,
+                            max_speakers=config.max_speakers,
+                        )
+                        # Transform Annotation → WhisperX-compatible segments
+                        import pandas as _pd  # WhisperX uses a DataFrame
+                        rows = []
+                        for turn, _, speaker in diar_result.itertracks(yield_label=True):
+                            rows.append({
+                                "start": float(turn.start),
+                                "end": float(turn.end),
+                                "speaker": speaker,
+                            })
+                        if rows:
+                            diar_segments = _pd.DataFrame(rows)
+                            result = whisperx.assign_word_speakers(diar_segments, result)
+                    else:
+                        # Newer WhisperX: keep DiarizationPipeline path
+                        diarize_pipeline = Pipeline(
+                            use_auth_token=hf_token,
+                            device=device,
+                        )
+                        diar_segments = diarize_pipeline(
+                            audio,
+                            min_speakers=config.min_speakers,
+                            max_speakers=config.max_speakers,
+                        )
+                        result = whisperx.assign_word_speakers(diar_segments, result)
+                except Exception as exc:  # noqa: BLE001
+                    # Never kill transcription over a diarisation failure —
+                    # log and fall through with plain segments.
+                    logger.warning("WhisperX diarisation failed: %s", exc)
     finally:
         try:
             del model
@@ -596,6 +660,11 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
         if align_model is not None:
             try:
                 del align_model
+            except Exception:
+                pass
+        if diarize_pipeline is not None:
+            try:
+                del diarize_pipeline
             except Exception:
                 pass
         if torch.cuda.is_available():
@@ -618,6 +687,7 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
             start=seg.get("start", 0.0),
             end=seg.get("end", 0.0),
             words=words,
+            speaker=seg.get("speaker") if isinstance(seg.get("speaker"), str) else None,
         ))
 
     return TranscriptionResult(

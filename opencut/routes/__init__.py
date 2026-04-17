@@ -38,6 +38,7 @@ def register_blueprints(app):
     from .encoding_routes import encoding_bp
     from .engagement_content_routes import engagement_content_bp
     from .enhanced_media_routes import enhanced_media_bp
+    from .enhancement_routes import enhancement_bp
     from .format_routes import format_bp
     from .gaming_routes import gaming_bp
     from .generative_routes import generative_bp
@@ -92,6 +93,8 @@ def register_blueprints(app):
     from .video_vfx_routes import video_vfx_bp
     from .voice_speech_routes import voice_speech_bp
     from .vr_lens_routes import vr_lens_bp
+    from .wave_a_routes import wave_a_bp
+    from .wave_b_routes import wave_b_bp
     from .workflow import workflow_bp
     from .workflow_dev_routes import workflow_dev_bp
     from .workflow_routes import workflow_auto_bp
@@ -126,7 +129,10 @@ def register_blueprints(app):
                   cloud_distrib_bp,
                   voice_speech_bp, motion_design_bp,
                   subtitle_pro_bp, dev_scripting_bp,
-                  audio_post_bp]
+                  audio_post_bp,
+                  enhancement_bp,
+                  wave_a_bp,
+                  wave_b_bp]
 
     for bp in blueprints:
         app.register_blueprint(bp)
