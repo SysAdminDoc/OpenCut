@@ -277,7 +277,7 @@ def _export_pose_json(pose_seq: PoseSequence, output_dir: str) -> str:
             for frame_kp in pose_seq.poses
         ],
     }
-    with open(json_path, "w") as f:
+    with open(json_path, "w", encoding="utf-8") as f:
         json.dump(data, f)
     return json_path
 

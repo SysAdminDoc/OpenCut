@@ -77,7 +77,7 @@ def load_proxy_map(proxy_dirs: List[str]) -> Dict[str, str]:
         map_path = os.path.join(d, PROXY_METADATA_FILE)
         if os.path.isfile(map_path):
             try:
-                with open(map_path, "r") as f:
+                with open(map_path, "r", encoding="utf-8") as f:
                     mapping = json.load(f)
                 combined.update(mapping)
             except (json.JSONDecodeError, OSError) as e:
