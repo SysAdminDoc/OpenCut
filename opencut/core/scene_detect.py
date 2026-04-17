@@ -643,6 +643,60 @@ def detect_scenes_hybrid(
     )
 
 
+def detect_scenes_auto(
+    filepath: str,
+    threshold: float = 0.4,
+    min_scene_length: float = 1.0,
+    on_progress: Optional[Callable] = None,
+) -> "SceneInfo":
+    """Backend-priority scene detection: TransNetV2 → PySceneDetect → FFmpeg.
+
+    Picks the most accurate installed backend at call time.  The
+    ordering reflects 2024–2025 benchmarks where TransNetV2 (ML)
+    dominates legacy threshold detection by a wide margin, and
+    PySceneDetect's ContentDetector is the best non-ML fallback.
+
+    This is a thin dispatcher that preserves the existing
+    ``detect_scenes`` / ``detect_scenes_ml`` /
+    ``detect_scenes_pyscenedetect`` entry points — add it as the new
+    **default** for new routes; keep the individual backends callable
+    by name for users who want a specific one.
+    """
+    # Tier 1 — TransNetV2 (ML SOTA)
+    try:
+        from transnetv2 import TransNetV2  # noqa: F401
+        logger.debug("detect_scenes_auto: using TransNetV2")
+        return detect_scenes_ml(
+            filepath,
+            threshold=threshold,
+            min_scene_length=min_scene_length,
+            on_progress=on_progress,
+        )
+    except (ImportError, RuntimeError) as exc:
+        logger.debug("TransNetV2 unavailable (%s); trying PySceneDetect", exc)
+
+    # Tier 2 — PySceneDetect ContentDetector
+    try:
+        import scenedetect  # noqa: F401
+        logger.debug("detect_scenes_auto: using PySceneDetect")
+        return detect_scenes_pyscenedetect(
+            filepath,
+            threshold=27.0,  # ContentDetector default
+            min_scene_length=min_scene_length,
+            on_progress=on_progress,
+        )
+    except (ImportError, RuntimeError) as exc:
+        logger.debug("PySceneDetect unavailable (%s); using FFmpeg threshold", exc)
+
+    # Tier 3 — FFmpeg threshold (always available)
+    return detect_scenes(
+        filepath,
+        threshold=threshold,
+        min_scene_length=min_scene_length,
+        on_progress=on_progress,
+    )
+
+
 SPEED_RAMP_PRESETS = [
     {"name": "dramatic_pause", "label": "Dramatic Pause", "description": "Slow down in the middle for impact"},
     {"name": "smooth_ramp_up", "label": "Smooth Ramp Up", "description": "Gradually accelerate"},
