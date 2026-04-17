@@ -42,6 +42,14 @@ class CaptionConfig:
     output_format: str = "srt"
     # Translate to English
     translate: bool = False
+    # Run speaker diarisation (WhisperX backend only). Requires a
+    # HuggingFace token for pyannote/speaker-diarization-3.x.
+    diarize: bool = False
+    # HF token for diarisation model (None = read from env HF_TOKEN)
+    hf_token: Optional[str] = None
+    # Optional bounds for diarisation (None = auto)
+    min_speakers: Optional[int] = None
+    max_speakers: Optional[int] = None
 
 
 @dataclass
