@@ -341,7 +341,7 @@ def create_character_profile(
 
     # Save metadata
     meta_path = _profile_meta_path(profile_id)
-    with open(meta_path, "w") as f:
+    with open(meta_path, "w", encoding="utf-8") as f:
         json.dump(profile.to_dict(), f, indent=2)
 
     if on_progress:
@@ -366,7 +366,7 @@ def load_character_profile(profile_id: str) -> CharacterProfile:
     if not os.path.isfile(meta_path):
         raise FileNotFoundError(f"Character profile not found: {profile_id}")
 
-    with open(meta_path) as f:
+    with open(meta_path, encoding="utf-8") as f:
         data = json.load(f)
 
     return CharacterProfile(**data)
@@ -385,7 +385,7 @@ def list_character_profiles() -> List[Dict]:
         meta_path = os.path.join(CHARACTERS_DIR, entry, "profile.json")
         if os.path.isfile(meta_path):
             try:
-                with open(meta_path) as f:
+                with open(meta_path, encoding="utf-8") as f:
                     data = json.load(f)
                 profiles.append({
                     "profile_id": data.get("profile_id", entry),

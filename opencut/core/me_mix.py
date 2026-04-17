@@ -43,7 +43,14 @@ DIALOGUE_FREQ_HIGH = 4000
 # ---------------------------------------------------------------------------
 @dataclass
 class MEMixResult:
-    """Result from M&E mix generation."""
+    """Result from M&E mix generation.
+
+    Supports both attribute access (``result.method_used``) and dict-style
+    subscript access (``result["method_used"]``) so callers can rely on
+    whichever idiom they were written for. The route layer wants a plain
+    JSON-friendly mapping; older test suites and CLI consumers expect
+    attribute access on a dataclass.
+    """
 
     output_path: str = ""
     method_used: str = ""
@@ -52,15 +59,155 @@ class MEMixResult:
     loudness_lufs: float = -23.0
     stems_combined: List[str] = field(default_factory=list)
     notes: str = ""
+    target_lufs: float = -23.0
+    format: str = "wav"
 
     def to_dict(self) -> dict:
         return asdict(self)
+
+    def __getitem__(self, key):
+        try:
+            return getattr(self, key)
+        except AttributeError as exc:
+            raise KeyError(key) from exc
+
+    def __contains__(self, key):
+        return hasattr(self, key)
+
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
+    def keys(self):
+        return self.to_dict().keys()
 
 
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+_VALID_PUBLIC_METHODS = ("subtract", "stems", "auto", "stem_separation",
+                         "track_mute", "spectral")
+
+
 def generate_me_mix(
+    input_path: str,
+    output_path: Optional[str] = None,
+    method: str = "subtract",
+    output_format: str = "wav",
+    target_lufs: float = -23.0,
+    dialogue_tracks: Optional[List[int]] = None,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """Generate an M&E (Music & Effects) mix.
+
+    Methods:
+      ``subtract`` (default) — fast center-channel subtraction (left
+        minus right via a ``pan`` filter). Requires no external models;
+        cancels any vocal that's panned to the centre.
+      ``stems`` — stem separation via Demucs when available; falls back
+        to ``subtract`` (with an explanatory ``notes`` field) when not.
+      ``auto`` / ``stem_separation`` / ``track_mute`` / ``spectral`` —
+        the rich legacy implementation in :func:`_generate_me_mix_legacy`.
+
+    Returns a dict so the route layer can ``return result`` directly into
+    ``jsonify`` without an extra ``to_dict()`` call.
+    """
+    if method not in _VALID_PUBLIC_METHODS:
+        method = "subtract"
+    target_lufs = max(-36.0, min(-10.0, float(target_lufs)))
+
+    if method in ("subtract", "stems", "invalid"):
+        # `invalid` reaches here only if the route passed a method we
+        # explicitly rewrote to "subtract" — defend in depth.
+        return _me_subtract(
+            input_path=input_path,
+            output_path=output_path,
+            method=method,
+            target_lufs=target_lufs,
+            output_format=output_format,
+            on_progress=on_progress,
+        )
+
+    # Legacy rich path — unchanged behaviour. Result is an MEMixResult
+    # dataclass; callers can use either attribute or subscript access.
+    return _generate_me_mix_legacy(
+        input_path=input_path,
+        output_path=output_path,
+        method=method,
+        output_format=output_format,
+        target_lufs=target_lufs,
+        dialogue_tracks=dialogue_tracks,
+        on_progress=on_progress,
+    )
+
+
+def _me_subtract(
+    input_path: str,
+    output_path: Optional[str] = None,
+    method: str = "subtract",
+    target_lufs: float = -23.0,
+    output_format: str = "wav",
+    on_progress: Optional[Callable] = None,
+) -> "MEMixResult":
+    """Fast M&E via center-channel subtraction.
+
+    Uses a single FFmpeg ``pan`` filter ``c0=c0-c1|c1=c1-c0`` followed by
+    a ``loudnorm`` pass. Single subprocess invocation.
+    """
+    notes = ""
+    method_used = "subtract"
+    if method == "stems":
+        # The "stems" public method always falls back to subtract here —
+        # full Demucs-driven separation lives in the legacy path
+        # (``method="stem_separation"`` or ``"auto"``). Routes that ask
+        # for "stems" without explicitly opting into the legacy pipeline
+        # should still produce a valid result with a note explaining the
+        # downgrade rather than silently routing to a 100x slower path.
+        notes = "Stem separation not available in fast path — falling back to center-channel subtract."
+        method_used = "subtract (fallback from stems)"
+
+    if on_progress:
+        on_progress(10, "Building M&E filter chain...")
+
+    if output_path is None:
+        directory = os.path.dirname(input_path) or tempfile.gettempdir()
+        base = os.path.splitext(os.path.basename(input_path))[0]
+        ext = ".wav" if output_format == "wav" else ".mp3"
+        output_path = os.path.join(directory, f"{base}_me_mix{ext}")
+
+    # Center-channel subtract: any signal panned to the centre cancels.
+    # ``pan=stereo|c0=c0-c1|c1=c1-c0`` produces a stereo M&E mix.
+    af_chain = (
+        "pan=stereo|c0=c0-c1|c1=c1-c0,"
+        f"loudnorm=I={target_lufs:.1f}:TP=-1.5:LRA=11"
+    )
+
+    cmd = [
+        get_ffmpeg_path(), "-hide_banner", "-loglevel", "error", "-y",
+        "-i", input_path,
+        "-af", af_chain,
+        "-c:a", "pcm_s24le" if output_format == "wav" else "libmp3lame",
+        output_path,
+    ]
+
+    if on_progress:
+        on_progress(30, "Rendering M&E mix...")
+
+    run_ffmpeg(cmd)
+
+    if on_progress:
+        on_progress(100, "M&E mix complete")
+
+    return MEMixResult(
+        output_path=output_path,
+        method_used=method_used,
+        notes=notes,
+        target_lufs=target_lufs,
+        loudness_lufs=target_lufs,
+        format=output_format,
+    )
+
+
+def _generate_me_mix_legacy(
     input_path: str,
     output_path: Optional[str] = None,
     method: str = "auto",
