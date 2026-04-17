@@ -406,7 +406,12 @@ def analyze_room_tone(
     if on_progress:
         on_progress(10, "Analyzing room tone spectral envelope...")
 
-    # Try librosa path for detailed spectral analysis
+    # Try librosa path for detailed spectral analysis. Any failure
+    # (missing file, codec error, librosa internals) falls back to the
+    # FFmpeg-based envelope estimator below — librosa.load can raise a
+    # variety of exceptions (FileNotFoundError, RuntimeError from
+    # audioread, NoBackendError, etc.) and surfacing any of them here
+    # would defeat the whole point of having a fallback.
     try:
         import librosa
         import numpy as np
@@ -458,6 +463,10 @@ def analyze_room_tone(
         }
     except ImportError:
         pass
+    except Exception as exc:
+        # Log at info — the FFmpeg fallback below produces a usable
+        # result; a load failure is interesting but not fatal.
+        logger.info("librosa room-tone path failed (%s) — falling back to FFmpeg", exc)
 
     # Fallback: use FFmpeg astats for basic analysis
     if on_progress:

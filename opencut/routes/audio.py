@@ -518,7 +518,21 @@ def audio_separate(job_id, filepath, data):
                     except (ValueError, IndexError):
                         pass
 
-            process.wait()
+            # Bound the final wait so a wedged Demucs (stdout closed but
+            # process never exits) can't hang the worker thread forever.
+            # 30 minutes is generous for the largest realistic input that
+            # gets this far past stdout draining.
+            try:
+                process.wait(timeout=1800)
+            except _sp.TimeoutExpired:
+                logger.warning("Demucs did not exit after stdout drained — killing")
+                process.kill()
+                try:
+                    process.wait(timeout=10)
+                except Exception:
+                    pass
+                _unregister_job_process(job_id)
+                raise RuntimeError("Demucs separation timed out (no exit after 30 min).")
             _unregister_job_process(job_id)
 
             if process.returncode != 0:

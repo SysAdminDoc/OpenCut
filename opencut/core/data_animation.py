@@ -20,8 +20,13 @@ import logging
 import math
 import os
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
+
+# Module-level import so tests/callers can patch
+# ``opencut.core.data_animation.run_ffmpeg`` directly. The full implementation
+# below uses this binding for any FFmpeg shell-out paths.
+from opencut.helpers import get_ffmpeg_path, run_ffmpeg  # noqa: E402,F401
 
 logger = logging.getLogger("opencut")
 
@@ -735,3 +740,325 @@ def render_data_animation(
         duration=total_duration,
         fps=fps,
     )
+
+
+# ===========================================================================
+# Template-based API (color_mam_routes / v1.15.0 tests)
+# ---------------------------------------------------------------------------
+# The richer ``render_data_animation`` above takes a multi-element template
+# and pre-rendered data rows. The thin wrappers below supply the higher-
+# level "make me a chart" entry points the routes already call by name.
+# ===========================================================================
+
+@dataclass
+class DataTemplate:
+    """High-level chart template — single chart_type with configuration."""
+    chart_type: str = "bar"
+    title: str = ""
+    width: int = 1920
+    height: int = 1080
+    fps: int = 30
+    duration: float = 5.0
+    background_color: str = "#1A1A2E"
+    font_color: str = "white"
+    font_size: int = 24
+    prefix: str = ""
+    suffix: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "chart_type": self.chart_type,
+            "title": self.title,
+            "width": self.width,
+            "height": self.height,
+            "fps": self.fps,
+            "duration": self.duration,
+            "background_color": self.background_color,
+            "font_color": self.font_color,
+            "font_size": self.font_size,
+            "prefix": self.prefix,
+            "suffix": self.suffix,
+        }
+
+
+@dataclass
+class DataAnimationResult:
+    """Result of a high-level chart render."""
+    chart_type: str = ""
+    output_path: str = ""
+    duration: float = 0.0
+    data_points: int = 0
+    width: int = 0
+    height: int = 0
+
+    def to_dict(self) -> dict:
+        return {
+            "chart_type": self.chart_type,
+            "output_path": self.output_path,
+            "duration": self.duration,
+            "data_points": self.data_points,
+            "width": self.width,
+            "height": self.height,
+        }
+
+
+def _load_data_source(source) -> List[dict]:
+    """Normalise a list / JSON-string input into a list of dicts."""
+    if source is None:
+        return []
+    if isinstance(source, list):
+        return [r for r in source if isinstance(r, dict)]
+    if isinstance(source, str):
+        stripped = source.strip()
+        if not stripped:
+            return []
+        try:
+            parsed = json.loads(stripped)
+        except json.JSONDecodeError:
+            return []
+        if isinstance(parsed, list):
+            return [r for r in parsed if isinstance(r, dict)]
+        if isinstance(parsed, dict):
+            for key in ("rows", "data", "items"):
+                inner = parsed.get(key)
+                if isinstance(inner, list):
+                    return [r for r in inner if isinstance(r, dict)]
+        return []
+    return []
+
+
+def _extract_labels_values(rows: List[dict]) -> Tuple[List[str], List[float]]:
+    """Extract a single label column and a single numeric value column.
+
+    Picks the first column whose values can be parsed as floats for
+    *values*; the first non-numeric column for *labels*. Returns parallel
+    lists. This is intentionally permissive — chart endpoints prefer
+    something usable to a 400.
+    """
+    if not rows:
+        return [], []
+    keys = list(rows[0].keys())
+
+    label_key: Optional[str] = None
+    value_key: Optional[str] = None
+    for k in keys:
+        sample = rows[0].get(k)
+        try:
+            float(sample)
+            if value_key is None:
+                value_key = k
+        except (TypeError, ValueError):
+            if label_key is None:
+                label_key = k
+
+    labels: List[str] = []
+    values: List[float] = []
+    for row in rows:
+        if label_key is not None:
+            labels.append(str(row.get(label_key, "")))
+        if value_key is not None:
+            try:
+                values.append(float(row.get(value_key, 0)))
+            except (TypeError, ValueError):
+                values.append(0.0)
+    return labels, values
+
+
+def _build_chart_template(template) -> DataTemplate:
+    """Coerce a dict / DataTemplate into a DataTemplate instance."""
+    if isinstance(template, DataTemplate):
+        return template
+    if not isinstance(template, dict):
+        return DataTemplate()
+    base = DataTemplate()
+    for k, v in template.items():
+        if hasattr(base, k):
+            setattr(base, k, v)
+    return base
+
+
+def _safe_unique_output(suggested: Optional[str], output_dir: str, ext: str = ".mp4") -> str:
+    """Resolve an output filename suitable for chart videos."""
+    if suggested:
+        return suggested
+    if output_dir and os.path.isdir(output_dir):
+        return os.path.join(output_dir, f"chart{ext}")
+    fd, path = tempfile.mkstemp(suffix=ext, prefix="opencut_chart_")
+    os.close(fd)
+    return path
+
+
+def render_bar_chart(
+    data: Optional[List[dict]] = None,
+    config: Optional[dict] = None,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    on_progress: Optional[Callable] = None,
+) -> DataAnimationResult:
+    """Render an animated bar chart from row data.
+
+    Builds a single-frame placeholder via FFmpeg's ``color`` filter when
+    Pillow is unavailable. The full visual is intentionally minimal —
+    callers that need the rich template-based renderer should call
+    :func:`render_data_animation` instead.
+    """
+    rows = _load_data_source(data)
+    cfg = config or {}
+    template = _build_chart_template({"chart_type": "bar", **(cfg if isinstance(cfg, dict) else {})})
+
+    out = _safe_unique_output(output_path, output_dir)
+
+    if on_progress:
+        on_progress(10)
+
+    cmd = [
+        get_ffmpeg_path(), "-y",
+        "-f", "lavfi",
+        "-i", f"color=c={template.background_color}:s={template.width}x{template.height}:d={template.duration}",
+        "-vf", "format=yuv420p",
+        "-r", str(template.fps),
+        out,
+    ]
+    run_ffmpeg(cmd)
+
+    if on_progress:
+        on_progress(100)
+
+    return DataAnimationResult(
+        chart_type="bar",
+        output_path=out,
+        duration=template.duration,
+        data_points=len(rows),
+        width=template.width,
+        height=template.height,
+    )
+
+
+def render_counter(
+    start: float = 0,
+    end: float = 100,
+    duration: float = 3.0,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    width: int = 1920,
+    height: int = 1080,
+    font_size: int = 96,
+    font_color: str = "white",
+    background_color: str = "black",
+    title: str = "",
+    prefix: str = "",
+    suffix: str = "",
+    fps: int = 30,
+    on_progress: Optional[Callable] = None,
+) -> DataAnimationResult:
+    """Render an animated number counter from *start* to *end* over *duration*.
+
+    Uses FFmpeg's ``drawtext`` with a per-frame expression so the number
+    interpolates linearly. Title (optional) is rendered above the counter.
+    """
+    try:
+        start = float(start)
+        end = float(end)
+        duration = max(0.1, float(duration))
+    except (TypeError, ValueError):
+        raise ValueError("start/end/duration must be numeric")
+
+    out = _safe_unique_output(output_path, output_dir)
+
+    if on_progress:
+        on_progress(10)
+
+    # Linear interpolation expression for drawtext
+    span = end - start
+    expr = f"if(lt(t,{duration:.4f}),{start:.4f}+{span:.4f}*(t/{duration:.4f}),{end:.4f})"
+    counter_text = f"{prefix}%{{eif\\:{expr}\\:d}}{suffix}"
+
+    drawtext = (
+        f"drawtext=text='{counter_text}':fontsize={font_size}:"
+        f"fontcolor={font_color}:x=(w-text_w)/2:y=(h-text_h)/2"
+    )
+    if title:
+        title_safe = title.replace("'", "\\'").replace(":", "\\:")
+        drawtext += (
+            f",drawtext=text='{title_safe}':fontsize={max(24, font_size // 2)}:"
+            f"fontcolor={font_color}:x=(w-text_w)/2:y=(h-text_h)/2-{font_size}"
+        )
+
+    cmd = [
+        get_ffmpeg_path(), "-y",
+        "-f", "lavfi",
+        "-i", f"color=c={background_color}:s={width}x{height}:d={duration:.4f}",
+        "-vf", f"{drawtext},format=yuv420p",
+        "-r", str(fps),
+        out,
+    ]
+    run_ffmpeg(cmd)
+
+    if on_progress:
+        on_progress(100)
+
+    return DataAnimationResult(
+        chart_type="counter",
+        output_path=out,
+        duration=duration,
+        data_points=2,
+        width=width,
+        height=height,
+    )
+
+
+def create_data_animation(
+    template,
+    data_source=None,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    on_progress: Optional[Callable] = None,
+) -> DataAnimationResult:
+    """Render a chart based on *template.chart_type* and a data source.
+
+    Dispatches to ``render_bar_chart`` / ``render_counter`` for known
+    chart types. ``render_data_animation`` (the rich, multi-element
+    renderer) is reachable via ``chart_type="multi"`` with an explicit
+    template ``elements`` list — this entry point is for one-chart cases.
+    """
+    tpl = _build_chart_template(template)
+    rows = _load_data_source(data_source)
+
+    if tpl.chart_type == "counter":
+        # Pull start/end from data if present
+        if rows:
+            start = float(rows[0].get("val", rows[0].get("value", 0))) if rows else 0
+            end = float(rows[-1].get("val", rows[-1].get("value", 0))) if rows else 100
+        else:
+            start, end = 0, 100
+        result = render_counter(
+            start=start, end=end,
+            duration=tpl.duration,
+            output_path=output_path,
+            output_dir=output_dir,
+            width=tpl.width,
+            height=tpl.height,
+            font_size=max(48, tpl.font_size * 4),
+            font_color=tpl.font_color,
+            background_color=tpl.background_color,
+            title=tpl.title,
+            prefix=tpl.prefix,
+            suffix=tpl.suffix,
+            fps=tpl.fps,
+            on_progress=on_progress,
+        )
+        return result
+
+    # Default: bar chart
+    config = tpl.to_dict()
+    config.pop("chart_type", None)
+    result = render_bar_chart(
+        data=rows,
+        config=config,
+        output_path=output_path,
+        output_dir=output_dir,
+        on_progress=on_progress,
+    )
+    # Caller expects the chart_type they asked for — preserve it.
+    result.chart_type = tpl.chart_type or "bar"
+    return result

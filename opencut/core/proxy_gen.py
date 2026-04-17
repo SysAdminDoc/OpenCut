@@ -148,13 +148,13 @@ def _save_proxy_map(proxy_dir: str, original: str, proxy: str):
     mapping = {}
     if os.path.isfile(map_path):
         try:
-            with open(map_path, "r") as f:
+            with open(map_path, "r", encoding="utf-8") as f:
                 mapping = json.load(f)
         except (json.JSONDecodeError, OSError):
             pass
     mapping[os.path.abspath(proxy)] = os.path.abspath(original)
     os.makedirs(proxy_dir, exist_ok=True)
-    with open(map_path, "w") as f:
+    with open(map_path, "w", encoding="utf-8") as f:
         json.dump(mapping, f, indent=2)
 
 
@@ -412,7 +412,7 @@ def auto_proxy_ingest(
     existing_originals = set()
     if os.path.isfile(map_path):
         try:
-            with open(map_path, "r") as f:
+            with open(map_path, "r", encoding="utf-8") as f:
                 mapping = json.load(f)
             existing_originals = set(mapping.values())
         except (json.JSONDecodeError, OSError):

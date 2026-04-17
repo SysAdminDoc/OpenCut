@@ -913,12 +913,18 @@ def deliverables(sequence_json, output_dir, doc_type):
 @click.option("--model", default="llama3")
 @click.option("--api-key", default="")
 def nlp(command_text, file, provider, model, api_key):
-    """Execute a natural language editing command."""
+    """Parse a natural language editing command and show the matched route.
+
+    Uses the LLM (when configured) or the keyword matcher to map the
+    English instruction to an OpenCut backend route plus parameters.
+    Currently displays the result; pass ``--file`` together with a
+    running backend to execute it by POSTing to the matched route.
+    """
     print_banner()
 
     try:
         from .core.llm import LLMConfig
-        from .core.nlp import parse_nlp_command
+        from .core.nlp_command import parse_command
     except ImportError as e:
         console.print(f"[red bold]Error:[/red bold] Missing dependency: {e}")
         console.print("Ensure opencut[nlp] extras are installed.")
@@ -938,36 +944,61 @@ def nlp(command_text, file, provider, model, api_key):
         console=console,
     ) as progress:
         task = progress.add_task("Parsing command...", total=None)
-        start_time = time.time()
-        parsed = parse_nlp_command(command_text, llm_cfg)
-        elapsed = time.time() - start_time
-        progress.update(task, description=f"[green]Parsed ({elapsed:.1f}s)")
+        start_time = time.perf_counter()
+        parsed = parse_command(command_text, llm_cfg)
+        elapsed = time.perf_counter() - start_time
+        progress.update(task, description=f"[green]Parsed ({elapsed:.2f}s)")
         progress.stop()
 
     if parsed is None:
         console.print("[red]Could not parse command.[/red]")
+        sys.exit(1)
+
+    route = parsed.get("route", "")
+    params = parsed.get("params", {})
+    confidence = parsed.get("confidence", 0.0)
+    source = parsed.get("param_source", "?")
+    console.print(f"[bold]Matched route:[/bold] [cyan]{route}[/cyan]  "
+                  f"[dim](confidence={confidence:.2f}, via={source})[/dim]")
+    console.print(f"[bold]Parameters:[/bold] {params}\n")
+
+    if not file:
+        console.print("[dim]Pass --file to execute the command against a "
+                      "running backend.[/dim]\n")
         return
 
-    console.print(f"[bold]Matched route:[/bold] [cyan]{parsed.route}[/cyan]")
-    console.print(f"[bold]Parameters:[/bold] {parsed.params}\n")
+    # Execute against the local backend by POSTing to the matched route.
+    try:
+        import json as _json
+        import urllib.error
+        import urllib.request
 
-    if file and parsed.route:
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            TimeElapsedColumn(),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Executing command...", total=None)
-            start_time = time.time()
-            result = parsed.execute(file)
-            elapsed = time.time() - start_time
-            progress.update(task, description=f"[green]Execution complete ({elapsed:.1f}s)")
-            progress.stop()
+        body = dict(params)
+        body["filepath"] = file
+        url = f"http://127.0.0.1:5679{route}"
+        # Refresh CSRF first
+        try:
+            with urllib.request.urlopen("http://127.0.0.1:5679/health", timeout=5) as resp:
+                csrf = _json.loads(resp.read()).get("csrf_token", "")
+        except Exception:
+            csrf = ""
 
+        req = urllib.request.Request(
+            url,
+            data=_json.dumps(body).encode("utf-8"),
+            headers={"Content-Type": "application/json", "X-OpenCut-Token": csrf},
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=120) as resp:
+            result = _json.loads(resp.read())
         console.print(f"\n[green bold]Done:[/green bold] {result}\n")
-    else:
-        console.print("[dim]Pass --file to execute the command.[/dim]\n")
+    except urllib.error.URLError as exc:
+        console.print(f"\n[red bold]Backend unreachable[/red bold] ({exc}).")
+        console.print("Start the OpenCut server first: [cyan]python -m opencut.server[/cyan]\n")
+        sys.exit(1)
+    except Exception as exc:
+        console.print(f"\n[red bold]Execution failed:[/red bold] {exc}\n")
+        sys.exit(1)
 
 
 @cli.command()

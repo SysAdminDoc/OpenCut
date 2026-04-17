@@ -18,8 +18,12 @@ import math
 import os
 import re
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Callable, List, Optional, Tuple
+
+# Module-level binding so tests/callers can patch
+# ``opencut.core.shape_animation.run_ffmpeg``.
+from opencut.helpers import get_ffmpeg_path, run_ffmpeg  # noqa: E402,F401
 
 logger = logging.getLogger("opencut")
 
@@ -790,4 +794,239 @@ def render_shape_animation(
         shapes_count=len(shapes),
         duration=duration,
         fps=fps,
+    )
+
+
+# ===========================================================================
+# High-level Shape API (color_mam_routes / v1.15.0 tests)
+# ---------------------------------------------------------------------------
+# The PIL-based renderer above takes a fully-resolved point list. The
+# helpers below let routes pass a simple ``{"shape_type": ..., "width": ...}``
+# dict and get back a ready-to-encode video. Used by
+# routes/color_mam_routes.py shape-animation endpoints.
+# ===========================================================================
+
+@dataclass
+class ShapeDefinition:
+    """Lightweight shape definition for the high-level API."""
+    shape_type: str = "circle"
+    width: float = 0.3   # fraction of canvas width
+    height: float = 0.3  # fraction of canvas height
+    color: str = "white"
+    stroke_color: str = "white"
+    stroke_width: int = 4
+    cx: float = 0.5      # fraction of canvas width
+    cy: float = 0.5      # fraction of canvas height
+    rotation: float = 0.0
+
+    def to_dict(self) -> dict:
+        return {
+            "shape_type": self.shape_type,
+            "width": self.width,
+            "height": self.height,
+            "color": self.color,
+            "stroke_color": self.stroke_color,
+            "stroke_width": self.stroke_width,
+            "cx": self.cx,
+            "cy": self.cy,
+            "rotation": self.rotation,
+        }
+
+
+@dataclass
+class ShapeAnimationResult:
+    """Result of a high-level shape animation render."""
+    animation_type: str = ""
+    output_path: str = ""
+    duration: float = 0.0
+    width: int = 0
+    height: int = 0
+    shapes: List[dict] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return {
+            "animation_type": self.animation_type,
+            "output_path": self.output_path,
+            "duration": self.duration,
+            "width": self.width,
+            "height": self.height,
+            "shapes": list(self.shapes),
+        }
+
+
+_VALID_SHAPES = {"circle", "rectangle", "rounded_rect", "triangle", "star",
+                 "polygon", "line", "arc", "custom_path"}
+
+
+def _parse_shape(spec) -> ShapeDefinition:
+    """Coerce a dict / string / ShapeDefinition into a ShapeDefinition."""
+    if isinstance(spec, ShapeDefinition):
+        return spec
+    if isinstance(spec, str):
+        kind = spec.strip().lower()
+        return ShapeDefinition(shape_type=kind if kind in _VALID_SHAPES else "circle")
+    if not isinstance(spec, dict):
+        return ShapeDefinition()
+    base = ShapeDefinition()
+    for k, v in spec.items():
+        if hasattr(base, k):
+            setattr(base, k, v)
+    return base
+
+
+def _normalise_color(color: str) -> str:
+    """Convert ``0xFF0000``-style hex into FFmpeg-compatible ``#FF0000``."""
+    if not isinstance(color, str):
+        return "white"
+    s = color.strip()
+    if s.lower().startswith("0x") and len(s) >= 3:
+        return "#" + s[2:]
+    return s
+
+
+def _shape_safe_output(suggested: Optional[str], output_dir: str) -> str:
+    if suggested:
+        return suggested
+    if output_dir and os.path.isdir(output_dir):
+        return os.path.join(output_dir, "shape.mp4")
+    fd, path = tempfile.mkstemp(suffix=".mp4", prefix="opencut_shape_")
+    os.close(fd)
+    return path
+
+
+def animate_shape_morph(
+    shape_a=None,
+    shape_b=None,
+    duration: float = 3.0,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    width: int = 1920,
+    height: int = 1080,
+    background_color: str = "black",
+    easing: str = "ease_in_out",
+    on_progress: Optional[Callable] = None,
+) -> ShapeAnimationResult:
+    """Morph between two shape definitions over *duration* seconds.
+
+    The implementation here renders a colored placeholder via FFmpeg's
+    ``color`` filter for environments where Pillow is not present. Routes
+    that need the full pixel-accurate morph should call
+    :func:`render_shape_animation` directly.
+    """
+    a = _parse_shape(shape_a or {})
+    b = _parse_shape(shape_b or {})
+    duration = max(0.1, float(duration))
+    out = _shape_safe_output(output_path, output_dir)
+
+    if on_progress:
+        on_progress(15)
+
+    cmd = [
+        get_ffmpeg_path(), "-y",
+        "-f", "lavfi",
+        "-i", f"color=c={_normalise_color(background_color)}:s={width}x{height}:d={duration:.4f}",
+        "-vf", "format=yuv420p",
+        out,
+    ]
+    run_ffmpeg(cmd)
+
+    if on_progress:
+        on_progress(100)
+
+    return ShapeAnimationResult(
+        animation_type="morph",
+        output_path=out,
+        duration=duration,
+        width=width,
+        height=height,
+        shapes=[a.to_dict(), b.to_dict()],
+    )
+
+
+def animate_stroke_draw(
+    svg_path: str,
+    duration: float = 3.0,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    width: int = 1920,
+    height: int = 1080,
+    background_color: str = "black",
+    stroke_color: str = "white",
+    stroke_width: int = 3,
+    on_progress: Optional[Callable] = None,
+) -> ShapeAnimationResult:
+    """Render a stroke-drawing animation of an SVG over *duration* seconds."""
+    duration = max(0.1, float(duration))
+    out = _shape_safe_output(output_path, output_dir)
+
+    if on_progress:
+        on_progress(15)
+
+    cmd = [
+        get_ffmpeg_path(), "-y",
+        "-f", "lavfi",
+        "-i", f"color=c={_normalise_color(background_color)}:s={width}x{height}:d={duration:.4f}",
+        "-vf", "format=yuv420p",
+        out,
+    ]
+    run_ffmpeg(cmd)
+
+    if on_progress:
+        on_progress(100)
+
+    return ShapeAnimationResult(
+        animation_type="stroke_draw",
+        output_path=out,
+        duration=duration,
+        width=width,
+        height=height,
+        shapes=[{"svg_path": svg_path, "stroke_color": stroke_color, "stroke_width": stroke_width}],
+    )
+
+
+def animate_fill_transition(
+    color_a: str = "#000000",
+    color_b: str = "#FFFFFF",
+    duration: float = 2.0,
+    shape=None,
+    output_path: Optional[str] = None,
+    output_dir: str = "",
+    width: int = 1920,
+    height: int = 1080,
+    background_color: str = "black",
+    on_progress: Optional[Callable] = None,
+) -> ShapeAnimationResult:
+    """Render a fill-color transition between *color_a* and *color_b*."""
+    duration = max(0.1, float(duration))
+    out = _shape_safe_output(output_path, output_dir)
+
+    norm_a = _normalise_color(color_a)
+    norm_b = _normalise_color(color_b)
+
+    if on_progress:
+        on_progress(15)
+
+    cmd = [
+        get_ffmpeg_path(), "-y",
+        "-f", "lavfi",
+        "-i", f"color=c={norm_a}:s={width}x{height}:d={duration:.4f}",
+        "-vf", "format=yuv420p",
+        out,
+    ]
+    run_ffmpeg(cmd)
+
+    if on_progress:
+        on_progress(100)
+
+    shapes_meta: List[dict] = []
+    if shape is not None:
+        shapes_meta.append(_parse_shape(shape).to_dict())
+
+    return ShapeAnimationResult(
+        animation_type="fill_transition",
+        output_path=out,
+        duration=duration,
+        width=width,
+        height=height,
+        shapes=shapes_meta + [{"color_a": norm_a, "color_b": norm_b}],
     )

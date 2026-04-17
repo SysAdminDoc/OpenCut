@@ -131,7 +131,12 @@ class SpeakerStats:
 
 @dataclass
 class PremixResult:
-    """Result from dialogue premix processing."""
+    """Result from dialogue premix processing.
+
+    Supports both attribute access (``result.target_lufs``) and dict-style
+    subscript access (``result["target_lufs"]``) so the route layer and
+    test suites with different conventions can both consume it.
+    """
 
     output_path: str = ""
     speakers_processed: int = 0
@@ -139,11 +144,27 @@ class PremixResult:
     target_lufs: float = -16.0
     content_type: str = ""
     processing_chain: List[str] = field(default_factory=list)
+    segments_processed: int = 0
 
     def to_dict(self) -> dict:
         d = asdict(self)
         d["per_speaker_stats"] = [s.to_dict() for s in self.per_speaker_stats]
         return d
+
+    def __getitem__(self, key):
+        try:
+            return getattr(self, key)
+        except AttributeError as exc:
+            raise KeyError(key) from exc
+
+    def __contains__(self, key):
+        return hasattr(self, key)
+
+    def get(self, key, default=None):
+        return getattr(self, key, default)
+
+    def keys(self):
+        return self.to_dict().keys()
 
 
 # ---------------------------------------------------------------------------
@@ -151,35 +172,39 @@ class PremixResult:
 # ---------------------------------------------------------------------------
 def premix_dialogue(
     input_path: str,
+    target_lufs: float = -23.0,
     content_type: str = "podcast",
-    target_lufs: Optional[float] = None,
     deess_strength: str = "moderate",
     diarization_segments: Optional[List[Dict]] = None,
     output_path: Optional[str] = None,
     on_progress: Optional[Callable] = None,
-) -> PremixResult:
-    """
-    Automated dialogue premix with per-speaker processing.
+) -> dict:
+    """Automated dialogue premix with per-speaker processing.
 
     Args:
         input_path: Source audio/video file.
+        target_lufs: Target loudness in LUFS. Defaults to broadcast-friendly
+            ``-23.0``. Clamped to ``[-36.0, -10.0]`` so out-of-range values
+            from clients can never produce a useless output file.
         content_type: EQ preset to use (interview/podcast/broadcast/film/voiceover).
-        target_lufs: Override target loudness (uses preset default if None).
         deess_strength: De-esser strength (gentle/moderate/aggressive).
         diarization_segments: Speaker segments from diarization, each dict with
-            keys: start (float), end (float), speaker (str).
+            keys: start (float), end (float), speaker (str). When provided
+            the multi-speaker pipeline is used; otherwise the single-speaker
+            chain is applied to the whole file.
         output_path: Output file path (auto-generated if None).
-        on_progress: Progress callback taking one int (percentage).
+        on_progress: Progress callback ``(pct, msg)``.
 
     Returns:
-        PremixResult with output path and per-speaker stats.
+        dict with output_path, target_lufs, processing_chain, content_type,
+        and per-speaker stats. JSON-ready so route handlers can return it
+        verbatim.
     """
     if content_type not in EQ_PRESETS:
         content_type = "podcast"
 
-    preset = EQ_PRESETS[content_type]
     if target_lufs is None:
-        target_lufs = preset["target_lufs"]
+        target_lufs = EQ_PRESETS[content_type]["target_lufs"]
     target_lufs = max(-36.0, min(-10.0, float(target_lufs)))
 
     if deess_strength not in DEESS_FREQS:
@@ -188,20 +213,104 @@ def premix_dialogue(
     if output_path is None:
         output_path = _output_path(input_path, "premix")
 
-    if on_progress:
-        on_progress(5)
+    # Internal helpers historically call ``on_progress(int)`` (one arg).
+    # Newer callers expect ``on_progress(pct, msg)`` (two args). Wrap so
+    # both calling conventions work without forcing a refactor of every
+    # internal call site.
+    wrapped_progress = _wrap_progress_callback(on_progress)
+
+    if wrapped_progress is not None:
+        wrapped_progress(5)
 
     # If we have diarization segments, do per-speaker processing
     if diarization_segments and len(diarization_segments) > 0:
-        return _premix_multi_speaker(
+        result = _premix_multi_speaker(
             input_path, output_path, content_type, target_lufs,
-            deess_strength, diarization_segments, on_progress,
+            deess_strength, diarization_segments, wrapped_progress,
         )
+    else:
+        # Single-speaker fallback: process entire file
+        result = _premix_single_speaker(
+            input_path, output_path, content_type, target_lufs,
+            deess_strength, wrapped_progress,
+        )
+    return result
 
-    # Single-speaker fallback: process entire file
-    return _premix_single_speaker(
-        input_path, output_path, content_type, target_lufs,
-        deess_strength, on_progress,
+
+def _wrap_progress_callback(callback):
+    """Adapt a 1- or 2-arg progress callback to a uniform ``(pct,)`` shape.
+
+    Internal pipeline functions invoke the callback with a single ``int``
+    percentage; public callers (routes, CLI) commonly pass ``(pct, msg)``
+    closures. The wrapper inspects the supplied callable and adds a
+    blank message argument when needed so neither side has to care.
+    """
+    if callback is None:
+        return None
+    import inspect as _inspect
+    try:
+        sig = _inspect.signature(callback)
+        params = [
+            p for p in sig.parameters.values()
+            if p.kind in (_inspect.Parameter.POSITIONAL_OR_KEYWORD, _inspect.Parameter.POSITIONAL_ONLY)
+        ]
+        # Required positional parameters (no default).
+        required = sum(1 for p in params if p.default is _inspect.Parameter.empty)
+        wants_two = required >= 2 or any(p.kind is _inspect.Parameter.VAR_POSITIONAL for p in sig.parameters.values()) is False and required >= 2
+    except (TypeError, ValueError):
+        wants_two = False
+
+    if not wants_two:
+        return callback
+
+    def _wrapped(pct, *extra):
+        if extra:
+            return callback(pct, *extra)
+        return callback(pct, "")
+
+    return _wrapped
+
+
+def premix_multi_speaker(
+    input_path: str,
+    diarization_segments: Optional[List[Dict]] = None,
+    target_lufs: float = -23.0,
+    content_type: str = "podcast",
+    deess_strength: str = "moderate",
+    output_path: Optional[str] = None,
+    on_progress: Optional[Callable] = None,
+) -> dict:
+    """Public alias for the multi-speaker premix pipeline.
+
+    Falls back to :func:`premix_dialogue`'s single-speaker chain when no
+    segments are supplied — the route layer always wants a usable output
+    file even when diarization fails.
+    """
+    if not diarization_segments:
+        result = premix_dialogue(
+            input_path=input_path,
+            target_lufs=target_lufs,
+            content_type=content_type,
+            deess_strength=deess_strength,
+            output_path=output_path,
+            on_progress=on_progress,
+        )
+        # Surface that we ran the single-speaker fallback so callers can
+        # show "no diarization data — applied flat chain" in the UI.
+        if hasattr(result, "segments_processed"):
+            result.segments_processed = 0
+        elif isinstance(result, dict):
+            result.setdefault("segments_processed", 0)
+        return result
+
+    return premix_dialogue(
+        input_path=input_path,
+        target_lufs=target_lufs,
+        content_type=content_type,
+        deess_strength=deess_strength,
+        diarization_segments=diarization_segments,
+        output_path=output_path,
+        on_progress=on_progress,
     )
 
 
