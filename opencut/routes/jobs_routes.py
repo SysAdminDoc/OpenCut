@@ -211,6 +211,24 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/multimodal-diarize",
     "/video/transitions/apply",
     "/video/transitions/join",
+    # v1.17.0 additions
+    "/video/interpolate/neural",
+    "/compose/render",
+    # v1.18.0 additions
+    "/audio/tts/f5",
+    "/audio/beats/beatnet",
+    "/video/scenes/auto",
+    "/video/quality/score",
+    "/video/quality/rank",
+    "/video/emotion/arc",
+    "/video/encode/vmaf-target",
+    "/events/moments",
+    # v1.19.0 additions
+    "/video/matte/birefnet",
+    "/video/encode/svtav1-psy",
+    "/video/restore/colorize",
+    "/video/restore/vrt",
+    "/video/restore/deflicker",
 })
 
 

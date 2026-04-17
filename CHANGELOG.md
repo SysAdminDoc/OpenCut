@@ -1,5 +1,110 @@
 # Changelog
 
+## [1.19.0] - 2026-04-17
+
+### Added — Wave A (remaining items) + Wave D2 + Wave D3.2
+
+Seven new core modules + one jobs-layer hook; 10 new routes; 1,192 → 1,202 total routes. All backends optional and gated behind `check_X_available()`; FFmpeg fallbacks where applicable keep routes functional on minimal installs.
+
+**Wave A2.3 — Matting**
+- **BiRefNet still/keyframe matte** — `core/matte_birefnet.py`, `POST /video/matte/birefnet`. ONNX Runtime (preferred, no torch) or transformers/HF fallback. Three output modes: `alpha` (α only), `rgba` (RGB + α), `cutout` (premultiplied RGBA). Targets the `ZhengPeng7/BiRefNet` HF repo by default. ONNX checkpoint via `OPENCUT_BIREFNET_ONNX` env var.
+
+**Wave A3.1 — Advanced Captions**
+- **Karaoke / kinetic captions** — `core/captions_karaoke_adv.py`, `POST /captions/karaoke-adv/render`, `GET /captions/karaoke-adv/presets`. Six presets — `fill`, `bounce`, `color_wave`, `typewriter`, `karaoke_glow`, `highlight_word` — using libass override tags. PyonFX hook available but defers to built-in renderer until PyonFX-specific FX logic is wired in a follow-up. `segments_from_whisperx_dicts()` adapter accepts WhisperX segment dicts directly.
+
+**Wave A4.2 — Encoding**
+- **SVT-AV1-PSY** — `core/svtav1_psy.py`, `POST /video/encode/svtav1-psy`, `GET /video/encode/svtav1-psy/info`. Three perceptually-tuned presets (`social`, `web`, `archive`). Uses the FFmpeg-integrated `libsvtav1` path when available; falls back to a 2-stage rawvideo pipe through the standalone `SvtAv1EncApp` binary. Outputs `.mp4` with libopus audio.
+
+**Wave D2 — Restoration**
+- **DDColor B&W colorisation** — `core/colorize_ddcolor.py`, `POST /video/restore/colorize`. Frame-by-frame colorisation via ONNX Runtime (checkpoint path via `OPENCUT_DDCOLOR_ONNX`) or ModelScope (`damo/cv_ddcolor_image-colorization`). Extract → colourise → reassemble with original audio.
+- **VRT / RVRT unified restoration** — `core/restore_vrt.py`, `POST /video/restore/vrt`. Unifies denoise / deblur / super-res / real-world-SR / `unified` into one pass via sliding-window temporal inference (default window=8). ONNX or `basicsr` backend. The `basicsr` path is a forward-compatible stub — the ONNX path is the complete inference loop.
+- **Neural deflicker** — `core/deflicker_neural.py`, `POST /video/restore/deflicker`. 7-frame temporal sliding window via All-In-One-Deflicker ONNX checkpoint, with `auto` mode that falls back to FFmpeg's `deflicker` + `tmix` chain when the neural backend is absent. Audio stream-copied verbatim.
+- **Restoration backends report** — `GET /video/restore/backends` enumerates which backends are installed and provides install hints.
+
+**Wave D3.2 — Webhook auto-emit**
+- **Job-complete webhook events** — `jobs.py::_emit_job_webhook()` automatically fires `job.complete` / `job.error` / `job.cancelled` events via `core/webhook_system.fire_event()` on terminal job status. Dispatched asynchronously through `_io_pool` so job finalisation is never blocked on outbound HTTP. Best-effort — any webhook failure is logged at warning and swallowed.
+- **Webhook event catalogue route** — `GET /webhooks/events` lists auto-emitted event types + payload schema + retry policy (3 attempts, 1 s / 5 s / 15 s backoff).
+
+### Infrastructure
+- 6 new `check_*_available()` entries in `opencut/checks.py` — `birefnet`, `pyonfx`, `svtav1_psy`, `ddcolor`, `vrt`, `neural_deflicker`.
+- 5 new routes added to `_ALLOWED_QUEUE_ENDPOINTS`.
+- `_emit_job_webhook()` hook in `jobs._update_job` — lazy-imports `webhook_system`, never blocks.
+
+### Gotchas
+- **Webhook auto-emit is best-effort** — a failing webhook must **never** block `_update_job`. The `try/except` around `_emit_job_webhook()` is load-bearing. Dispatch runs on the `_io_pool` worker; raise only inside the worker where it'll be logged.
+- **BiRefNet outputs vary by checkpoint** — different exported ONNX files emit different head shapes (single tensor, tuple, list). `_postprocess_alpha()` handles squeeze + sigmoid + clamp defensively; don't trust `mask.shape` assumptions when swapping checkpoints.
+- **PyonFX is advisory** — `backend="pyonfx"` is reported when the library is installed but the renderer still uses the built-in preset path until we wire per-syllable FX. Users with Aegisub-specific expectations should be warned the implementation is pending.
+- **SVT-AV1-PSY integrated vs standalone** — the integrated `libsvtav1` path is ~2× faster than the rawvideo pipe + standalone binary because it skips an intermediate yuv420p10le encode. Prefer an FFmpeg build with libsvtav1 linked against the PSY fork; the standalone path is there as a fallback, not a goal.
+- **VRT `basicsr` backend is a stub** — the ONNX path is production-ready; the torch/basicsr path logs a warning and no-ops on frames. Users hitting the stub should either install the ONNX checkpoint or wait for the full torch wiring (Wave E tracking).
+- **Deflicker auto-fallback path** — when `backend="auto"` is chosen and the neural path is *registered* but fails at runtime (e.g. ONNX checkpoint missing but env var set), the code intentionally re-calls `deflicker_video(..., backend="ffmpeg")` to guarantee a usable output. Do not remove this recursion — early-stage users frequently mis-set `OPENCUT_DEFLICKER_ONNX`.
+- **DDColor ModelScope import cost** — `modelscope.pipelines.pipeline("image-colorization")` is slow (~10 s cold) and downloads weights on first use. Consider pre-warming via a background job on server start for production installs.
+- **Job-complete event payload includes `result`** — the full job result dict is included in the webhook payload. If a webhook endpoint sits over an untrusted network, users should register it via a domain filter (the existing `_validate_webhook_url` layer blocks private / loopback addresses by default).
+
+## [1.18.0] - 2026-04-17
+
+### Added — Wave A + Wave D (first batch from ROADMAP-NEXT.md)
+
+Ten features built against the established `@async_job` + subscriptable-
+dataclass + graceful-degradation pattern. All new routes registered under
+the new `wave_a_bp` blueprint. 1,177 → 1,192 total routes (+15).
+
+**Wave A1 — Audio**
+- **F5-TTS zero-shot voice clone** — `core/tts_f5.py`, `POST /audio/tts/f5`, `GET /audio/tts/f5/models`. Supports F5-TTS and E2-TTS models. Module-level model cache to avoid re-loading per request. Subscriptable `F5Result`.
+- **WhisperX `--diarize` exposure** — extended `CaptionConfig` with `diarize`, `hf_token`, `min_speakers`, `max_speakers` fields; `_transcribe_whisperx` now runs pyannote 3.x diarisation when `diarize=True` and an HF token is available (env `HF_TOKEN` or explicit). Falls back to plain transcription on pipeline failure — never kills a caption job over a diarisation error.
+- **BeatNet downbeat detection** — `core/beats_beatnet.py`, `POST /audio/beats/beatnet`. Supports `offline` (best) and `realtime` modes; configurable meter (3/4/6). Approximates a confidence score as the ratio of downbeat labels to expected-per-meter counts.
+
+**Wave A2 — Video Intelligence**
+- **Scene detection auto-dispatcher** — `core/scene_detect.py::detect_scenes_auto()`, `POST /video/scenes/auto`. TransNetV2 (ML) → PySceneDetect → FFmpeg threshold priority. Keeps the original `detect_scenes` / `detect_scenes_ml` / `detect_scenes_pyscenedetect` entry points callable by name for users who want a specific backend.
+- **CLIP-IQA+ clip quality scoring** — `core/clip_quality.py`, `POST /video/quality/score`, `POST /video/quality/rank`. Samples frames via FFmpeg, scores each via `pyiqa.create_metric("clipiqa+")` (or `piq.CLIPIQA` fallback). `INVERTED_AXES` frozenset inverts noisy/blurry/dark so the aggregate is monotone-positive. Batch-rank up to 40 clips per call.
+- **HSEmotion emotion arc** — `core/emotion_arc.py`, `POST /video/emotion/arc`. 8-class emotion timeline (Neutral/Happy/Sad/Surprise/Fear/Disgust/Anger/Contempt). Prefers `hsemotion_onnx` backend (no torch needed), falls back to torch-based `hsemotion`. Emits mean probabilities, transition count, and an emotional-range score for highlight ranking.
+
+**Wave A4 — Encoding**
+- **ab-av1 VMAF-target encode** — `core/ab_av1.py`, `POST /video/encode/vmaf-target`, `GET /video/encode/vmaf-target/info`. Wraps the ab-av1 CLI for "give me VMAF 95" one-shot encoding (SVT-AV1 / libaom-av1 / libx264 / libx265). Parses both the trailing-JSON format and the legacy `crf N VMAF M` regex output. Hard 3 h subprocess timeout.
+
+**Wave A5 — Interchange**
+- **OTIO AAF export** — `export/otio_export.py::export_aaf()`, `POST /timeline/export/aaf`. Uses `otio-aaf-adapter` (Apache-2) to emit Avid-compatible AAF files. Graceful 503 `MISSING_DEPENDENCY` when the adapter isn't installed.
+- **OTIOZ bundle export** — `export/otio_export.py::export_otioz()`, `POST /timeline/export/otioz`. Zip container with optional embedded media (`bundle_media=True`). One-file portable project handoff.
+
+**Wave D1 — Compliance**
+- **Broadcast compliance profiles** — extended `core/caption_compliance.py` with **EBU-TT-D** (EBU Tech 3380), **YouTube broadcast-grade**, and **accessibility-first** (CVAA + WCAG 2.2) profiles in addition to the existing netflix / bbc / fcc / youtube sets. New `GET /captions/compliance/standards` to let panels enumerate them.
+
+**Wave D6 — Verticals**
+- **Event moment finder** — `core/event_moments.py`, `POST /events/moments`. Wedding / ceremony / live-event highlight detection via audio-energy RMS spike detection (mean + k·σ threshold) with a `min_spacing` guard to prevent redundant picks. Optional YAMNet stub for AudioSet tagging when `tflite_runtime` + a local model path are configured via `OPENCUT_YAMNET_MODEL`.
+
+### Changed
+- Nothing user-visible — all Wave A/D additions live behind `check_X_available()` guards and degrade gracefully when optional dependencies are absent.
+
+### Infrastructure
+- 8 new `check_*_available()` entries in `opencut/checks.py`: `f5_tts`, `beatnet`, `clip_iqa`, `hsemotion`, `ab_av1`, `aaf_adapter`, `event_moments`, plus the pre-existing `neural_interp` / `declarative_compose`.
+- 8 new routes added to `_ALLOWED_QUEUE_ENDPOINTS` so they can be queued via `/queue/add`.
+- `captions.CaptionSegment` now carries an optional `speaker: str` field populated by the WhisperX diarisation pipeline when enabled.
+
+### Gotchas
+- **F5-TTS model cache stays alive across requests** — `_MODEL_CACHE["model"]` pins the loaded model to free subsequent requests from the ~5 s load penalty. Call `tts_f5.clear_model_cache()` from a GPU-pressure code path if VRAM becomes tight.
+- **WhisperX diarisation auto-fallback** — the `try/except Exception` wrapper around the pyannote branch is intentional. If pyannote 3.x / the HF token / the model download fails for any reason, the caption job completes *without* speaker labels rather than erroring out. Any diarisation-specific failure mode must be surfaced via `logger.warning`, never re-raised.
+- **BeatNet wav decode** — we intentionally decode to a temp 22 050 Hz mono WAV because BeatNet's pretrained models expect that rate. The temp file is cleaned in `finally`.
+- **ab-av1 output parsing** — we check for a JSON summary line first (current versions), then fall back to the `crf N VMAF M` regex for older builds. Some versions emit neither — in that case the result has `achieved_vmaf=0, final_crf=0` and only the `output` path is reliable.
+- **OTIOZ `bundle_media` pulls media into the zip** — relies on OTIO's `file_bundle_utils.MediaReferencePolicy`. The policy enum name differs across OTIO versions (`AllMissingReferences` on 0.17, `ALL_MISSING_REFERENCES` on 0.15). Write the adapter import inside the function so import-time failures don't gate module import.
+- **Scene-detect auto-dispatcher is stateless** — `detect_scenes_auto` imports TransNetV2/PySceneDetect fresh per call. Cheap in practice (imports are cached by Python) but avoid calling it in a tight inner loop; use `detect_scenes_ml` directly if you already know TransNetV2 is installed.
+- **Event-moments heuristic fallback** — when `mode="yamnet"` is requested but `tflite_runtime` / TF / a valid model file are unavailable, the function silently downgrades to `mode="heuristic"` and records that in `result.mode`. Never raise in that case — YAMNet is a nice-to-have enrichment, not a requirement.
+
+## [1.17.0] - 2026-04-17
+
+### Added — cross-project research pass
+
+Two feature surfaces borrowed from OSS editors that were missing from the codebase after a survey of LosslessCut, auto-editor, editly, Shotcut/MLT, Olive, OpenShot, Kdenlive, OpenTimelineIO, WhisperX, and PyAV. (Most research recommendations were already implemented: faster-whisper + whisperx, OTIO export, DeepFilterNet, EBU R128 two-pass loudnorm, and GOP-aware `smart_render` are all present. These two were the remaining concrete gaps.)
+
+- **Neural frame interpolation** (`core/neural_interp.py`, `routes/enhancement_routes.py`) — RIFE-NCNN-Vulkan CLI backend with torch-RIFE hook and FFmpeg `minterpolate` fallback. Single `interpolate(video_path, target_fps, backend="auto", ...)` entry point with auto backend selection, graceful degradation, and a `notes` field describing fallbacks. Routes: `GET /video/interpolate/backends` (list installed/available), `POST /video/interpolate/neural` (async, `@async_job("neural_interp")`). Doubles via RIFE up to 3 passes (8×), then decimates to the exact `target_fps`. Audio stream-copied from the source to avoid resampling drift. Source for the external binary: https://github.com/nihui/rife-ncnn-vulkan.
+- **Declarative JSON video composition** (`core/declarative_compose.py`, `routes/enhancement_routes.py`) — editly-inspired (https://github.com/mifi/editly). Single JSON spec → finished video, no timeline reasoning required by callers. Supports `video` / `image` / `title` / `color` clip types, ~18 xfade transitions (fade, dissolve, wipe*, slide*, circle*, smooth*, pixelize, radial), optional ducked background audio, burnt captions (top/bottom/center) via drawtext, and per-clip in-points. Every intermediate clip is normalised to the target `width×height×fps` + yuv420p + AAC 48 k stereo so `filter_complex` concat/xfade works without "resolution mismatch" errors. Routes: `GET /compose/schema` (enums + example spec), `POST /compose/validate` (sync validation without rendering), `POST /compose/render` (async, `@async_job("compose", filepath_required=False)`). Max 200 clips per spec. `ComposeResult` dataclass is subscriptable so Flask `jsonify` accepts it directly.
+- **New checks** — `check_neural_interp_available()` (always True — FFmpeg fallback), `check_rife_cli_available()` (rife-ncnn-vulkan on PATH), `check_declarative_compose_available()` (FFmpeg on PATH). Added to `opencut/checks.py`.
+- **Queue allowlist** — `/video/interpolate/neural` and `/compose/render` added to `_ALLOWED_QUEUE_ENDPOINTS` in `jobs_routes.py` so they can be queued via `/queue/add`.
+- **Blueprint** — `enhancement_bp` registered in `routes/__init__.py`. 5 new routes bring the total from 1,152 → 1,177.
+
+### Design notes
+- Both modules follow the established dataclass-with-`__getitem__` pattern (`InterpResult`, `ComposeResult`) so routes can return them directly to Flask's `jsonify` without a `to_dict()` conversion — matches the `MEMixResult` / `PremixResult` convention from v1.16.2.
+- Neural interpolation refuses to run when `target_fps <= source fps` and redirects the caller to the existing `/video/framerate-convert` route for downsampling.
+- `declarative_compose._escape_text` scrubs drawtext meta-characters (`:`, `;`, `\`, `'`) and control bytes, and caps text at 500 chars — same pattern as the title/overlay route hardening in v1.3.1 batch 10.
+
 ## [1.16.3] - 2026-04-16
 
 ### Fixed
