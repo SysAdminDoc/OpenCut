@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import os
 import tempfile
+import threading
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
@@ -43,7 +44,13 @@ F5_MODELS = {
 }
 
 DEFAULT_MODEL = "F5-TTS"
+
+# Module-level model cache. Guarded by ``_MODEL_LOCK`` so two concurrent
+# Flask requests don't both call ``F5TTS(...)`` (doubles VRAM and wastes
+# ~5 s of cold-load time each).  Readers/writers both acquire the lock;
+# this path is not hot enough for double-checked locking.
 _MODEL_CACHE: dict = {"model": None, "name": ""}
+_MODEL_LOCK = threading.Lock()
 
 
 # ---------------------------------------------------------------------------
@@ -84,10 +91,48 @@ def check_f5_available() -> bool:
 
 def list_models() -> List[dict]:
     """Return the supported F5/E2 models with their HF repo IDs."""
-    return [
-        {"name": name, **info}
-        for name, info in F5_MODELS.items()
-    ]
+    return [{"name": name, **info} for name, info in F5_MODELS.items()]
+
+
+# ---------------------------------------------------------------------------
+# Cached model accessor
+# ---------------------------------------------------------------------------
+
+def _get_or_load_model(model_name: str, device: str):
+    """Return the cached F5 model for ``model_name``, loading if needed.
+
+    Serialised via ``_MODEL_LOCK`` — two concurrent requests share one
+    load.  If a different model is requested than the cached one, the
+    cached model is released before the new one is loaded.
+    """
+    from f5_tts.api import F5TTS  # public API since v0.2.0
+
+    with _MODEL_LOCK:
+        cached = _MODEL_CACHE.get("model")
+        if cached is not None and _MODEL_CACHE.get("name") == model_name:
+            return cached
+
+        # Different model requested — release previous one first so we
+        # don't leave two big torch models pinned in VRAM.
+        if cached is not None:
+            try:
+                del _MODEL_CACHE["model"]
+            except Exception:  # noqa: BLE001
+                pass
+            _MODEL_CACHE["model"] = None
+            _MODEL_CACHE["name"] = ""
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except Exception:  # noqa: BLE001
+                pass
+
+        logger.info("Loading F5-TTS model %s on %s", model_name, device)
+        model = F5TTS(model_type=model_name, device=device)
+        _MODEL_CACHE["model"] = model
+        _MODEL_CACHE["name"] = model_name
+        return model
 
 
 # ---------------------------------------------------------------------------
@@ -155,25 +200,20 @@ def f5_generate(
     if on_progress:
         on_progress(10, f"Loading {model}…")
 
-    # Lazy import — keeps module-import cost low when F5 isn't used.
     import torch
-    from f5_tts.api import F5TTS  # public API since v0.2.0
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    cached_model = None
     try:
-        if _MODEL_CACHE["name"] == model and _MODEL_CACHE["model"] is not None:
-            cached_model = _MODEL_CACHE["model"]
-        else:
-            cached_model = F5TTS(model_type=model, device=device)
-            _MODEL_CACHE["model"] = cached_model
-            _MODEL_CACHE["name"] = model
+        tts_model = _get_or_load_model(model, device)
 
         if on_progress:
             on_progress(40, "Synthesising speech…")
 
-        # f5_tts.api returns (wav, sr, spectrogram) tuple on most versions.
-        res = cached_model.infer(
+        # f5_tts.api.F5TTS.infer emits (wav, sr, spectrogram) on most
+        # versions.  We don't rely on the tuple shape — ``file_wave``
+        # writes the WAV directly, and we probe it afterwards for
+        # accurate duration.
+        res = tts_model.infer(
             ref_file=voice_ref,
             ref_text=ref_text or "",
             gen_text=text,
@@ -184,23 +224,19 @@ def f5_generate(
         if on_progress:
             on_progress(90, "Saving audio…")
 
-        # Duration hint: `res` may be an audio tensor or a tuple; we
-        # don't rely on it — probe the output after save for accuracy.
-        if isinstance(res, tuple) and len(res) >= 2:
-            wav, sr = res[0], res[1]
-        else:
-            wav, sr = None, 24000
-
+        sr = 24000
         duration = 0.0
-        if wav is not None:
+        if isinstance(res, tuple) and len(res) >= 2:
+            wav, sr = res[0], int(res[1] or 24000)
             try:
                 if hasattr(wav, "shape"):
                     duration = float(wav.shape[-1]) / float(sr or 24000)
             except Exception:  # noqa: BLE001
                 duration = 0.0
     finally:
-        # Defensive GPU cleanup — the cached model stays alive, but
-        # intermediate tensors are freed by the api call itself.
+        # Free short-lived intermediates. The cached model stays resident
+        # so subsequent calls skip the cold-load penalty — clear via
+        # :func:`clear_model_cache` if VRAM pressure builds.
         try:
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
@@ -221,13 +257,14 @@ def f5_generate(
 
 def clear_model_cache() -> None:
     """Release the cached F5 model (frees GPU VRAM)."""
-    if _MODEL_CACHE["model"] is not None:
-        try:
-            del _MODEL_CACHE["model"]
-        except Exception:  # noqa: BLE001
-            pass
-        _MODEL_CACHE["model"] = None
-        _MODEL_CACHE["name"] = ""
+    with _MODEL_LOCK:
+        if _MODEL_CACHE.get("model") is not None:
+            try:
+                del _MODEL_CACHE["model"]
+            except Exception:  # noqa: BLE001
+                pass
+            _MODEL_CACHE["model"] = None
+            _MODEL_CACHE["name"] = ""
     try:
         import torch
         if torch.cuda.is_available():
