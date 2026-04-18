@@ -328,3 +328,34 @@ def check_neural_deflicker_available() -> bool:
         return _c()
     except Exception:
         return False
+
+
+# --- v1.20.0 Wave C availability checks ---
+
+def check_otio_diff_available() -> bool:
+    try:
+        from opencut.export.otio_diff import check_otio_diff_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_quality_metrics_available() -> bool:
+    try:
+        from opencut.core.quality_metrics import check_quality_metrics_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_vmaf_available() -> bool:
+    try:
+        from opencut.core.quality_metrics import check_vmaf_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_sentry_available() -> bool:
+    """True when sentry_sdk is importable (DSN need not be set)."""
+    return _try_import("sentry_sdk") is not None
