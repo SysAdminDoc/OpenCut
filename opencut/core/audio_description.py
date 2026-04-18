@@ -274,6 +274,86 @@ def _generate_scene_description(stats_output: str, timestamp: float) -> str:
     )
 
 
+def describe_scene_llm(
+    timestamp: float,
+    transcript_context: str,
+    duration: float = 3.0,
+    llm_config=None,
+    brightness_hint: str = "normal",
+) -> str:
+    """Generate an AD line via LLM using transcript context.
+
+    Real-world audio description scripts are written by humans who read
+    the screenplay / transcript and fill in *what's happening visually*
+    between lines of dialogue. This function asks the configured LLM
+    to do the same — taking the surrounding dialogue as context plus
+    an optional brightness hint — and outputs a single short
+    present-tense description that fits in ``duration`` seconds at a
+    typical AD reading speed (~3 words per second).
+
+    Unlike :func:`describe_visual_content`, this path does not do
+    frame analysis — there's no vision model requirement. The LLM
+    fills in plausible scene text from transcript cues alone. Best
+    paired with :func:`describe_visual_content` to anchor the AD line
+    with a brightness hint from the actual frame.
+
+    Args:
+        timestamp: Timestamp in seconds the description targets.
+        transcript_context: Surrounding dialogue (e.g. the last 60 s
+            of captions preceding ``timestamp`` + the first 30 s
+            following). Empty string is tolerated but yields weaker
+            results.
+        duration: Available gap length in seconds. Used to cap the
+            word-count target (~3 words/sec).
+        llm_config: :class:`opencut.core.llm.LLMConfig` instance. When
+            ``None``, falls back to the heuristic description — no
+            error is raised so callers can pass ``None`` unconditionally
+            and let the configured provider (or its absence) decide.
+        brightness_hint: ``"dark"`` / ``"normal"`` / ``"bright"`` — a
+            short cue the LLM can weave into the output.
+
+    Returns:
+        A single-line AD string. Falls back to the heuristic template
+        when the LLM provider isn't available or the call fails — this
+        path must never raise since AD rendering proceeds line-by-line
+        and one missing line shouldn't kill the whole job.
+    """
+    if llm_config is None:
+        return f"[{brightness_hint.title()} scene at {int(timestamp)}s.]"
+
+    max_words = max(4, min(30, int(duration * 3.0)))
+    prompt = (
+        "You are writing audio-description copy for a video. "
+        f"At timestamp {int(timestamp)} s there is a {duration:.1f}-second "
+        "pause in dialogue. Write ONE short present-tense sentence "
+        f"(maximum {max_words} words) describing what's likely happening "
+        "visually, based on the surrounding dialogue below. No speaker "
+        "names, no line breaks, no quotation marks.\n\n"
+        f"Brightness cue from the frame: {brightness_hint}\n"
+        f"Surrounding dialogue:\n{transcript_context or '(no transcript available)'}"
+    )
+
+    try:
+        from opencut.core.llm import query_llm
+        resp = query_llm(prompt, config=llm_config)
+        text = (getattr(resp, "text", "") or "").strip()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("describe_scene_llm failed: %s", exc)
+        return f"[{brightness_hint.title()} scene at {int(timestamp)}s.]"
+
+    # Strip surrounding quotes the model sometimes wraps its output in
+    text = text.strip(" \t\r\n\"'")
+    # Collapse whitespace and cap length defensively
+    text = " ".join(text.split())
+    if not text:
+        return f"[{brightness_hint.title()} scene at {int(timestamp)}s.]"
+    # Hard cap — AD lines shouldn't overflow the gap
+    words = text.split()
+    if len(words) > max_words + 4:
+        text = " ".join(words[:max_words + 4])
+    return text
+
+
 # ---------------------------------------------------------------------------
 # Speech Synthesis
 # ---------------------------------------------------------------------------

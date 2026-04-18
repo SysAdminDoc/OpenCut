@@ -1,8 +1,8 @@
 # OpenCut — Next-Wave Roadmap (2026-Q2 → 2026-Q4)
 
-**Version**: 1.2
-**Created**: 2026-04-17 (updated 2026-04-17 after v1.19.0 ship)
-**Baseline**: v1.19.0 (1,202 routes, 441 core modules, 7,689+ tests)
+**Version**: 1.3
+**Created**: 2026-04-17 (updated 2026-04-17 after v1.20.0 ship)
+**Baseline**: v1.20.0 (1,207 routes, 443 core modules, 7,689+ tests)
 **Source**: Synthesised from an OSS survey of LosslessCut, auto-editor, editly,
 Descript, Shotcut/MLT, Olive, OpenShot, Kdenlive, OpenTimelineIO, WhisperX,
 PyAV, and a 2024–2026 scan of new SOTA AI video models (see research notes
@@ -75,6 +75,20 @@ Second batch closes the remaining Wave A items plus Wave D2 restoration pack and
 | 19.5 / D2.2 | **VRT / RVRT unified restoration** | `core/restore_vrt.py` | `POST /video/restore/vrt` | [VRT](https://github.com/JingyunLiang/VRT) |
 | 19.6 / D2.3 | **Neural deflicker (+ FFmpeg fallback)** | `core/deflicker_neural.py` | `POST /video/restore/deflicker`, `GET /video/restore/backends` | [All-In-One-Deflicker](https://github.com/ChenyangLEI/All-In-One-Deflicker) |
 | 19.7 / D3.2 | **Webhook auto-emit on job completion** | `jobs.py::_emit_job_webhook`, existing `core/webhook_system.py::fire_event` | `GET /webhooks/events` | built-in |
+
+## v1.20.0 — Shipped (2026-04-17)
+
+Clears the remaining Wave D items identified in the initial research pass. Two items (D1.1 audio description, D6.2 auto-quiz) became *LLM enrichments* of existing modules rather than new-from-scratch duplicates — `core/audio_description.py` already had a complete template-based pipeline and `core/quiz_overlay.py` already had a TF-IDF generator.
+
+| # | Feature | Module | Routes | Source |
+|---|---------|--------|--------|--------|
+| 20.1 / D3.1 | **Semantic OTIO timeline diff** | `export/otio_diff.py` | `POST /timeline/diff` | [OpenTimelineIO](https://github.com/AcademySoftwareFoundation/OpenTimelineIO) |
+| 20.2 / D4.1 | **Objective quality metrics (VMAF/SSIM/PSNR)** | `core/quality_metrics.py` | `POST /video/quality/compare`, `POST /video/quality/batch-compare`, `GET /video/quality/backends` | [libvmaf](https://github.com/Netflix/vmaf) + FFmpeg filters |
+| 20.3 / D5.2 | **Sentry / GlitchTip optional observability** | `server.py::_init_sentry_if_configured` | `GET /observability/status` | [GlitchTip](https://glitchtip.com/) / [Sentry](https://sentry.io) |
+| 20.4 / D1.1 | **LLM-enriched audio description** (extends v1.15-era `audio_description.py`) | `core/audio_description.py::describe_scene_llm` | — (inside existing `/audio/audio-description` routes) | `core/llm.py` + template fallback |
+| 20.5 / D6.2 | **LLM-enriched auto-quiz** (extends v1.15-era `quiz_overlay.py`) | `core/quiz_overlay.py::generate_quiz_questions_llm` | — (inside existing `/api/education/quiz-*` routes) | `core/llm.py` + TF-IDF fallback |
+
+**Status**: Merged. 1,207 total routes (+5 vs v1.19.1). Lint clean. 4 new `check_*_available()` entries. Queue allowlist extended for the three async Wave C routes.
 
 ### Already-shipped Wave A items detected during the v1.18.0 pass (skipped, noted for reference)
 
@@ -335,6 +349,8 @@ should ship in parallel with Wave A/B work:
 | v1.17.0 | Neural interp + declarative compose | — | **Shipped 2026-04-17** |
 | v1.18.0 | F5-TTS, WhisperX diarise, BeatNet, scenes-auto, CLIP-IQA+, HSEmotion, ab-av1, AAF/OTIOZ, compliance profiles, event moments | A + D | **Shipped 2026-04-17** |
 | v1.19.0 | BiRefNet matte, karaoke captions, SVT-AV1-PSY, DDColor, VRT/RVRT, neural deflicker, webhook auto-emit | A + D | **Shipped 2026-04-17** |
+| v1.19.1 | Hardening audit on v1.17-v1.19 — matte_birefnet, event_moments, tts_f5, neural_interp, AAF/OTIOZ async | — | **Shipped 2026-04-17** |
+| v1.20.0 | OTIO diff, VMAF/SSIM/PSNR harness, Sentry, LLM audio description, LLM auto-quiz | D | **Shipped 2026-04-17** |
 | v1.19.1 | Wave D3–D6 (collab, dev SDK, obs, verticals) | D | 2026-05 |
 | v1.20.0 | Wave B1 (lip-sync) + B2 (OCIO/ACES) + GPU isolation MVP | B | 2026-06 |
 | v1.21.0 | Wave B3 (LTX-Video) + B4 (diarisation) + Wave E4 (voice-command grammar) | B + E | 2026-07 |
