@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencut"
-version = "1.21.0"
+version = "1.22.0"
 description = "Open-source AI video editing automation for Adobe Premiere Pro - captions, audio processing, visual effects, and more"
 readme = "README.md"
 license = {text = "MIT"}

@@ -240,6 +240,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/encode/vvc",
     "/video/stream/srt/start",
     "/video/scopes/pro",
+    # v1.22.0 additions — Wave E (Shaka packaging async)
+    "/delivery/shaka/package",
 })
 
 

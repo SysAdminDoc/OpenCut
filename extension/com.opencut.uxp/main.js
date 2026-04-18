@@ -26,7 +26,7 @@ const HEALTH_CHECK_MS  = 8000;
 const HEALTH_MAX_MS    = 60000;
 const MEDIA_SCAN_MS    = 30000;
 const SSE_AVAILABLE    = typeof EventSource !== "undefined";
-const VERSION          = "1.21.0";
+const VERSION          = "1.22.0";
 const PRIMARY_CLIP_INPUT_IDS = ["clipPathCut", "clipPathCaptions", "clipPathAudio", "clipPathVideo"];
 const TABS_REQUIRING_SOURCE = new Set(["cut", "captions", "audio", "video"]);
 const DELIVERABLE_LABELS = {

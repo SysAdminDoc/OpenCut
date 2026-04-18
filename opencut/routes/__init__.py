@@ -97,6 +97,7 @@ def register_blueprints(app):
     from .wave_b_routes import wave_b_bp
     from .wave_c_routes import wave_c_bp
     from .wave_d_routes import wave_d_bp
+    from .wave_e_routes import wave_e_bp
     from .workflow import workflow_bp
     from .workflow_dev_routes import workflow_dev_bp
     from .workflow_routes import workflow_auto_bp
@@ -136,7 +137,8 @@ def register_blueprints(app):
                   wave_a_bp,
                   wave_b_bp,
                   wave_c_bp,
-                  wave_d_bp]
+                  wave_d_bp,
+                  wave_e_bp]
 
     for bp in blueprints:
         app.register_blueprint(bp)
