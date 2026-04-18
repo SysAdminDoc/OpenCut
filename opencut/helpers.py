@@ -169,17 +169,74 @@ def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
 # ---------------------------------------------------------------------------
 # Shared FFmpeg Runner
 # ---------------------------------------------------------------------------
-def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0) -> str:
-    """Run FFmpeg command, raise RuntimeError on failure. Returns stderr."""
+def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
+               job_id: str = "") -> str:
+    """Run FFmpeg command, raise RuntimeError on failure. Returns stderr.
+
+    When ``job_id`` is supplied, the spawned process is registered with
+    the job subsystem via :func:`opencut.jobs._register_job_process` so
+    the standard cancel path (``POST /cancel/<job_id>``) kills the
+    child cleanly.  Previously, ``run_ffmpeg`` used a blocking
+    ``subprocess.run`` that couldn't be interrupted — a user cancel on
+    a 30-minute encode would mark the job cancelled while FFmpeg ran
+    to completion, pinning a worker slot indefinitely.
+
+    Unregistration happens in the ``finally`` block regardless of
+    whether the child exited normally, by timeout, or via cancel.
+    """
     if cmd and cmd[0] == "ffmpeg":
         cmd = [get_ffmpeg_path()] + cmd[1:]
-    result = _sp.run(cmd, capture_output=True, timeout=timeout)
-    stderr = result.stderr.decode(errors="replace")
-    if stderr_cap > 0 and len(stderr) > stderr_cap:
-        stderr = "...[truncated] " + stderr[-stderr_cap:]
-    if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg error: {stderr[-500:]}")
-    return stderr
+
+    # Fast path: no job tracking requested — preserve the original
+    # subprocess.run semantics so existing callers see no behaviour
+    # change.
+    if not job_id:
+        result = _sp.run(cmd, capture_output=True, timeout=timeout)
+        stderr = result.stderr.decode(errors="replace")
+        if stderr_cap > 0 and len(stderr) > stderr_cap:
+            stderr = "...[truncated] " + stderr[-stderr_cap:]
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg error: {stderr[-500:]}")
+        return stderr
+
+    # Tracked path: use Popen + register so cancel can terminate us.
+    try:
+        from opencut.jobs import _register_job_process, _unregister_job_process
+    except Exception:  # noqa: BLE001
+        # Jobs module unavailable — fall back to plain run.
+        result = _sp.run(cmd, capture_output=True, timeout=timeout)
+        stderr = result.stderr.decode(errors="replace")
+        if stderr_cap > 0 and len(stderr) > stderr_cap:
+            stderr = "...[truncated] " + stderr[-stderr_cap:]
+        if result.returncode != 0:
+            raise RuntimeError(f"FFmpeg error: {stderr[-500:]}")
+        return stderr
+
+    proc = _sp.Popen(cmd, stdout=_sp.PIPE, stderr=_sp.PIPE)
+    _register_job_process(job_id, proc)
+    try:
+        try:
+            _stdout, stderr_bytes = proc.communicate(timeout=timeout)
+        except _sp.TimeoutExpired:
+            proc.kill()
+            try:
+                _stdout, stderr_bytes = proc.communicate(timeout=5)
+            except _sp.TimeoutExpired:
+                stderr_bytes = b""
+            raise RuntimeError(
+                f"FFmpeg timed out after {timeout}s and was killed"
+            )
+        stderr = (stderr_bytes or b"").decode(errors="replace")
+        if stderr_cap > 0 and len(stderr) > stderr_cap:
+            stderr = "...[truncated] " + stderr[-stderr_cap:]
+        if proc.returncode != 0:
+            raise RuntimeError(f"FFmpeg error: {stderr[-500:]}")
+        return stderr
+    finally:
+        try:
+            _unregister_job_process(job_id)
+        except Exception:  # noqa: BLE001
+            pass
 
 
 # ---------------------------------------------------------------------------

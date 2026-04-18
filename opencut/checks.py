@@ -456,3 +456,29 @@ def check_temp_cleanup_available() -> bool:
         return _c()
     except Exception:
         return False
+
+
+# --- v1.24.0 Wave G (second wide-net pass) ---
+
+def check_disk_monitor_available() -> bool:
+    try:
+        from opencut.core.disk_monitor import check_disk_monitor_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_request_correlation_available() -> bool:
+    try:
+        from opencut.core.request_correlation import check_request_correlation_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_deprecation_registry_available() -> bool:
+    try:
+        from opencut.core.deprecation import check_deprecation_available as _c
+        return _c()
+    except Exception:
+        return False

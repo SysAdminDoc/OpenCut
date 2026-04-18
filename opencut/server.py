@@ -338,6 +338,14 @@ def create_app(config=None):
     except Exception as _cleanup_exc:  # noqa: BLE001
         logger.warning("temp_cleanup bootstrap failed: %s", _cleanup_exc)
 
+    # Optional disk-space background monitor (off by default, opt-in
+    # via OPENCUT_DISK_MONITOR_INTERVAL).
+    try:
+        from opencut.core import disk_monitor as _disk_monitor
+        _disk_monitor.start_background()
+    except Exception as _disk_exc:  # noqa: BLE001
+        logger.warning("disk_monitor bootstrap failed: %s", _disk_exc)
+
     from opencut.security import OpenCutRequest  # noqa: E402
 
     _app = Flask(__name__)
@@ -348,6 +356,14 @@ def create_app(config=None):
 
     from opencut.errors import register_error_handlers  # noqa: E402
     register_error_handlers(_app)
+
+    # Per-request correlation ID middleware — must run before route
+    # blueprints register so every view sees the populated ``g.request_id``.
+    try:
+        from opencut.core.request_correlation import install_middleware
+        install_middleware(_app)
+    except Exception as _rc_exc:  # noqa: BLE001
+        logger.warning("request_correlation install failed: %s", _rc_exc)
 
     @_app.errorhandler(413)
     def handle_large_request(e):
