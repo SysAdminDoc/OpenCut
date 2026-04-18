@@ -95,6 +95,7 @@ def register_blueprints(app):
     from .vr_lens_routes import vr_lens_bp
     from .wave_a_routes import wave_a_bp
     from .wave_b_routes import wave_b_bp
+    from .wave_c_routes import wave_c_bp
     from .workflow import workflow_bp
     from .workflow_dev_routes import workflow_dev_bp
     from .workflow_routes import workflow_auto_bp
@@ -132,7 +133,8 @@ def register_blueprints(app):
                   audio_post_bp,
                   enhancement_bp,
                   wave_a_bp,
-                  wave_b_bp]
+                  wave_b_bp,
+                  wave_c_bp]
 
     for bp in blueprints:
         app.register_blueprint(bp)
