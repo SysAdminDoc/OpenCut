@@ -395,3 +395,39 @@ def check_voice_grammar_available() -> bool:
 def check_atheris_available() -> bool:
     """True when Atheris (fuzzing harness dep) is installed."""
     return _try_import("atheris") is not None
+
+
+# --- v1.22.0 Wave E availability checks ---
+
+def check_shaka_available() -> bool:
+    try:
+        from opencut.core.shaka_pkg import check_shaka_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_obs_bridge_available() -> bool:
+    try:
+        from opencut.core.obs_bridge import check_obs_bridge_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_runpod_available() -> bool:
+    """Transport is stdlib; always True. Use check_runpod_api_key for env."""
+    return True
+
+
+def check_runpod_api_key_set() -> bool:
+    import os
+    return bool((os.environ.get("RUNPOD_API_KEY") or "").strip())
+
+
+def check_plausible_configured() -> bool:
+    try:
+        from opencut.core.telemetry_plausible import check_plausible_available as _c
+        return _c()
+    except Exception:
+        return False
