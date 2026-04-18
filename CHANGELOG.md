@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.19.1] - 2026-04-17
+
+### Fixed — production hardening audit on v1.17.0–v1.19.0 additions
+
+- **Broken `__import__("PIL.Image")` hack in `core/matte_birefnet.py` `cutout` branch** — the previous code relied on Python's `__import__` returning the top-level `PIL` package, which happened to expose `.Image` only because `from PIL import Image` had run earlier in the same function.  Fragile, linter-hostile, and confusing to read.  Replaced the cutout compositing with a clean `from PIL import Image` + `import numpy as np` path, extracted into a `_compose_output()` helper that also owns the `alpha` / `rgba` / `cutout` branching.  Removed the `_ = np` load-bearing noise line that existed solely to suppress an unused-import lint on the broken code path.
+- **Apples-to-oranges score comparison in `core/event_moments.py::_find_spikes`** — the "keep the louder of two close picks" branch compared a raw RMS value (`e`, typically 0..0.5) against a normalised score (`moments[-1].score`, 0..1) scaled by `mean` — different units entirely.  Result: the replacement branch almost never fired, so `min_spacing` was ignored for clustered spikes and duplicate moments survived ranking.  Fix: track the raw RMS magnitude of the last pick (`last_picked_e`) separately from the normalised score used in the final `EventMoment`, and compare in consistent units.  Also extracted an `_build_spike()` helper to eliminate the copy-pasted EventMoment construction.
+- **Model-cache race in `core/tts_f5.py`** — `_MODEL_CACHE` was a plain module-level dict.  Two concurrent `POST /audio/tts/f5` requests could both observe `cached_model is None`, both call `F5TTS(model_type=...)`, both write — doubling VRAM for the race window and wasting ~5 s of load time each.  Added `_MODEL_LOCK` (`threading.Lock`) around reads and writes; extracted `_get_or_load_model()` so the locking discipline lives in one place.  When a *different* model is requested than the cached one, the previous is released via `torch.cuda.empty_cache()` before the new one is loaded — prevents two big torch models pinned in VRAM simultaneously.
+- **Backend-cache race in `core/neural_interp.py`** — same shape but less severe: `_BACKEND_CACHE["checked"]` was written before `rife_cli` / `rife_torch`, so a concurrent reader could see `checked=True` + empty values.  Added `_BACKEND_LOCK` and write `checked=True` last inside the critical section.
+
+### Changed
+- **AAF + OTIOZ exports are now async** (`POST /timeline/export/aaf`, `POST /timeline/export/otioz`) — previously blocked the Flask request thread for tens of seconds on 500-segment timelines.  Both promoted to `@async_job` with a shared `_export_pre_validate` hook so malformed `segments` lists short-circuit to HTTP 400 synchronously before a worker slot is consumed.  Added to `_ALLOWED_QUEUE_ENDPOINTS` so they're queueable via `/queue/add`.  Response shape now includes `framerate` + `sequence_name` echoes for downstream tooling.
+- **`core/clip_quality.py`** — removed the stale `# noqa: F401` annotation on `from PIL import Image` in the `piq` fallback branch.  The import is actually used two lines later (`Image.open(fpath).convert("RGB")`) — the `noqa` was a leftover from an earlier refactor and misled readers about the import's purpose.
+
+### Gotchas
+- **F5-TTS model swap frees VRAM** — when a caller requests a different model name than the cached one, `_get_or_load_model()` deletes the previous model + calls `torch.cuda.empty_cache()` before loading.  This means rapidly switching between `F5-TTS` and `E2-TTS` causes repeated cold-loads.  Stick to one model per deployment where possible.
+- **Spike dedup uses raw RMS** — `_find_spikes` compares raw `e` against `last_picked_e`, not the normalised `.score` field.  If future callers add additional scoring criteria to `EventMoment`, remember the replacement check is **by loudness**, not by the scored axis.
+- **Async AAF/OTIOZ error surface** — exports now return 202 + job_id instead of an inline 503 when the adapter is missing.  Clients must poll `/status/{job_id}` and inspect `error` + `code` fields.  The `pre_validate` hook still short-circuits malformed requests with 400 synchronously.
+
 ## [1.19.0] - 2026-04-17
 
 ### Added — Wave A (remaining items) + Wave D2 + Wave D3.2
