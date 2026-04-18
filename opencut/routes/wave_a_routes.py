@@ -20,9 +20,8 @@ research pass:
 import logging
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
-from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, validate_filepath, validate_path
 
@@ -316,87 +315,123 @@ def _parse_segments(raw_segments):
     return parsed
 
 
+def _export_pre_validate(data):
+    """Shared pre-validator for AAF + OTIOZ exports.
+
+    Returns an error string for a 400 short-circuit, or ``None`` when
+    the request is well-formed.  Runs synchronously before the worker
+    thread is spawned so clients learn about malformed segments
+    immediately instead of via job polling.
+    """
+    if not isinstance(data.get("segments"), list) or not data.get("segments"):
+        return "segments: non-empty list of {start,end[,label]} required"
+    return None
+
+
 @wave_a_bp.route("/timeline/export/aaf", methods=["POST"])
 @require_csrf
-def route_export_aaf():
+@async_job("export_aaf", pre_validate=_export_pre_validate)
+def route_export_aaf(job_id, filepath, data):
+    """Export to Avid AAF via the OTIO adapter.
+
+    Promoted to ``@async_job`` in v1.19.1 — large timelines (500+
+    segments) previously blocked the Flask request thread for tens of
+    seconds.  Now returns a job_id immediately and emits the standard
+    ``job.complete`` webhook on finish.
+    """
     try:
         from opencut.export import otio_export
+    except ImportError as exc:
+        raise RuntimeError(str(exc))
 
-        data = request.get_json(force=True) or {}
-        filepath = validate_filepath(str(data.get("filepath") or ""))
-        segments = _parse_segments(data.get("segments"))
-        if not segments:
-            return jsonify({
-                "error": "segments: non-empty list of {start,end[,label]} required",
-                "code": "INVALID_INPUT",
-            }), 400
-        output = str(data.get("output") or os.path.splitext(filepath)[0] + ".aaf").strip()
-        output = validate_path(output)
-        framerate = float(data.get("framerate") or 24.0)
-        seq = str(data.get("sequence_name") or "OpenCut Edit")[:120]
+    segments = _parse_segments(data.get("segments"))
+    if not segments:
+        raise ValueError("segments: no valid {start,end} entries after normalisation")
 
+    _update_job(job_id, progress=10, message=f"Validated {len(segments)} segment(s)")
+
+    output = (data.get("output") or "").strip()
+    if not output:
+        output = os.path.splitext(filepath)[0] + ".aaf"
+    output = validate_path(output)
+    framerate = float(data.get("framerate") or 24.0)
+    seq = str(data.get("sequence_name") or "OpenCut Edit")[:120]
+
+    try:
+        _update_job(job_id, progress=40, message="Writing AAF…")
         path = otio_export.export_aaf(
             filepath, segments, output,
             sequence_name=seq, framerate=framerate,
         )
-        return jsonify({
-            "output": path,
-            "clip_count": len(segments),
-            "adapter": "aaf",
-        })
     except ImportError as exc:
-        return jsonify({
-            "error": str(exc),
-            "code": "MISSING_DEPENDENCY",
-            "suggestion": "pip install otio-aaf-adapter",
-        }), 503
-    except ValueError as exc:
-        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
-    except Exception as exc:  # noqa: BLE001
-        return safe_error(exc, "export_aaf")
+        # otio-aaf-adapter specifically absent — surface as a clean
+        # MISSING_DEPENDENCY via the job error channel.
+        raise RuntimeError(
+            f"AAF adapter not installed: {exc}. "
+            "Install: pip install otio-aaf-adapter"
+        )
+
+    _update_job(job_id, progress=100, message="AAF written")
+    return {
+        "output": path,
+        "clip_count": len(segments),
+        "adapter": "aaf",
+        "framerate": framerate,
+        "sequence_name": seq,
+    }
 
 
 @wave_a_bp.route("/timeline/export/otioz", methods=["POST"])
 @require_csrf
-def route_export_otioz():
+@async_job("export_otioz", pre_validate=_export_pre_validate)
+def route_export_otioz(job_id, filepath, data):
+    """Export to a portable .otioz bundle. Async since ``bundle_media``
+    can copy multi-GB media into the zip."""
     try:
         from opencut.export import otio_export
+    except ImportError as exc:
+        raise RuntimeError(str(exc))
 
-        data = request.get_json(force=True) or {}
-        filepath = validate_filepath(str(data.get("filepath") or ""))
-        segments = _parse_segments(data.get("segments"))
-        if not segments:
-            return jsonify({
-                "error": "segments: non-empty list of {start,end[,label]} required",
-                "code": "INVALID_INPUT",
-            }), 400
-        output = str(data.get("output") or os.path.splitext(filepath)[0] + ".otioz").strip()
-        output = validate_path(output)
-        framerate = float(data.get("framerate") or 24.0)
-        seq = str(data.get("sequence_name") or "OpenCut Edit")[:120]
-        bundle_media = bool(data.get("bundle_media"))
+    segments = _parse_segments(data.get("segments"))
+    if not segments:
+        raise ValueError("segments: no valid {start,end} entries after normalisation")
 
+    _update_job(job_id, progress=10, message=f"Validated {len(segments)} segment(s)")
+
+    output = (data.get("output") or "").strip()
+    if not output:
+        output = os.path.splitext(filepath)[0] + ".otioz"
+    output = validate_path(output)
+    framerate = float(data.get("framerate") or 24.0)
+    seq = str(data.get("sequence_name") or "OpenCut Edit")[:120]
+    bundle_media = bool(data.get("bundle_media"))
+
+    _update_job(
+        job_id, progress=40,
+        message=("Writing OTIOZ bundle (with media)…" if bundle_media
+                 else "Writing OTIOZ bundle…"),
+    )
+    try:
         path = otio_export.export_otioz(
             filepath, segments, output,
             sequence_name=seq, framerate=framerate,
             bundle_media=bundle_media,
         )
-        return jsonify({
-            "output": path,
-            "clip_count": len(segments),
-            "adapter": "otioz",
-            "media_bundled": bundle_media,
-        })
     except ImportError as exc:
-        return jsonify({
-            "error": str(exc),
-            "code": "MISSING_DEPENDENCY",
-            "suggestion": "pip install opentimelineio",
-        }), 503
-    except ValueError as exc:
-        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
-    except Exception as exc:  # noqa: BLE001
-        return safe_error(exc, "export_otioz")
+        raise RuntimeError(
+            f"OpenTimelineIO not installed: {exc}. "
+            "Install: pip install opentimelineio"
+        )
+
+    _update_job(job_id, progress=100, message="OTIOZ written")
+    return {
+        "output": path,
+        "clip_count": len(segments),
+        "adapter": "otioz",
+        "media_bundled": bundle_media,
+        "framerate": framerate,
+        "sequence_name": seq,
+    }
 
 
 # ---------------------------------------------------------------------------

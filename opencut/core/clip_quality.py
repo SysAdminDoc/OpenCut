@@ -209,7 +209,7 @@ def score_clip(
         except ImportError:
             # Fallback: piq library (no per-axis, just clip-iqa aggregate)
             import piq  # type: ignore
-            from PIL import Image  # noqa: F401
+            from PIL import Image
             per_frame = []
             device = "cuda" if torch.cuda.is_available() else "cpu"
             metric = piq.CLIPIQA().to(device)

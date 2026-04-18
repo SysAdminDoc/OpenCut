@@ -41,6 +41,7 @@ import os
 import shutil
 import subprocess as _sp
 import tempfile
+import threading
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
@@ -62,25 +63,40 @@ logger = logging.getLogger("opencut")
 
 RIFE_CLI_BIN = "rife-ncnn-vulkan"
 
+# Backend-availability cache.  Guarded by ``_BACKEND_LOCK`` so concurrent
+# requests can't observe the "checked=True but values not yet written"
+# window — cheap, but a correctness nit worth closing on a server that
+# can serve many parallel requests.
 _BACKEND_CACHE: Dict[str, Optional[str]] = {
-    "rife_cli": None,    # Path to rife-ncnn-vulkan or None
-    "rife_torch": None,  # "yes" if `rife` pip pkg importable, None otherwise
+    "rife_cli": None,    # Path to rife-ncnn-vulkan or ""
+    "rife_torch": None,  # "yes" if `rife` pip pkg importable, "" otherwise
     "checked": False,
 }
+_BACKEND_LOCK = threading.Lock()
 
 
 def _detect_backends() -> Dict[str, bool]:
     """Return {rife_cli: bool, rife_torch: bool, ffmpeg: bool}.
 
     Cached at module level so bulk calls don't spawn subprocesses per item.
+    Concurrent callers serialise through ``_BACKEND_LOCK``; once the cache
+    is populated, subsequent reads still acquire the lock but the
+    contention window is trivial.
     """
-    if not _BACKEND_CACHE["checked"]:
-        _BACKEND_CACHE["rife_cli"] = shutil.which(RIFE_CLI_BIN) or ""
-        _BACKEND_CACHE["rife_torch"] = "yes" if _try_import("rife") is not None else ""
-        _BACKEND_CACHE["checked"] = True
+    with _BACKEND_LOCK:
+        if not _BACKEND_CACHE["checked"]:
+            _BACKEND_CACHE["rife_cli"] = shutil.which(RIFE_CLI_BIN) or ""
+            _BACKEND_CACHE["rife_torch"] = (
+                "yes" if _try_import("rife") is not None else ""
+            )
+            # Set ``checked`` last so a reader that sees the flag sees
+            # the populated values too.
+            _BACKEND_CACHE["checked"] = True
+        rife_cli = _BACKEND_CACHE["rife_cli"]
+        rife_torch = _BACKEND_CACHE["rife_torch"]
     return {
-        "rife_cli": bool(_BACKEND_CACHE["rife_cli"]),
-        "rife_torch": bool(_BACKEND_CACHE["rife_torch"]),
+        "rife_cli": bool(rife_cli),
+        "rife_torch": bool(rife_torch),
         "ffmpeg": bool(get_ffmpeg_path()),
     }
 

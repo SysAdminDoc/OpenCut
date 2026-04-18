@@ -33,8 +33,7 @@ logger = logging.getLogger("opencut")
 
 
 # ---------------------------------------------------------------------------
-# Default event tags. Each entry pairs a user-facing label with a
-# semantic hint that downstream NLE markers can style by colour.
+# Canonical tags + YAMNet class mapping
 # ---------------------------------------------------------------------------
 
 CANONICAL_EVENTS = (
@@ -46,9 +45,6 @@ CANONICAL_EVENTS = (
     "silence_break",
 )
 
-# Default YAMNet class-name → canonical event mapping. YAMNet emits
-# hundreds of class names; we only care about the handful that
-# correlate with event moments. Callers can override via `tag_map`.
 DEFAULT_TAG_MAP = {
     "Applause": "applause",
     "Clapping": "applause",
@@ -99,21 +95,26 @@ class EventMomentsResult:
 # ---------------------------------------------------------------------------
 
 def check_yamnet_available() -> bool:
-    """True when TFLite runtime + a YAMNet model file are usable."""
+    """True when TFLite runtime (or TensorFlow) is importable.
+
+    The YAMNet model file itself is a second dependency — callers point
+    ``OPENCUT_YAMNET_MODEL`` at a ``.tflite`` checkpoint; this function
+    only probes the runtime.
+    """
     try:
         import tflite_runtime  # noqa: F401
         return True
     except ImportError:
         pass
     try:
-        import tensorflow as tf  # noqa: F401
+        import tensorflow  # noqa: F401
         return True
     except ImportError:
         return False
 
 
 # ---------------------------------------------------------------------------
-# Helpers
+# PCM extraction + RMS envelope
 # ---------------------------------------------------------------------------
 
 def _extract_pcm(input_path: str, sample_rate: int = 16000) -> tuple:
@@ -151,9 +152,27 @@ def _energy_envelope(
         acc = 0.0
         for s in chunk:
             acc += (s / 32768.0) ** 2
-        rms = math.sqrt(acc / len(chunk)) if chunk else 0.0
+        rms = math.sqrt(acc / len(chunk))
         out.append(rms)
     return out
+
+
+# ---------------------------------------------------------------------------
+# Spike detection
+# ---------------------------------------------------------------------------
+
+def _build_spike(
+    i: int, e: float, hop_seconds: float, threshold: float,
+    mean: float, sigma: float,
+) -> EventMoment:
+    """Construct an ``EventMoment`` from a single RMS envelope hit."""
+    return EventMoment(
+        t=round(i * hop_seconds, 3),
+        label="loud_peak",
+        score=round(min(1.0, e / (threshold + 1e-9)), 3),
+        surrounding_energy=round(mean, 5),
+        notes=f"sigma={sigma:.4f}",
+    )
 
 
 def _find_spikes(
@@ -162,9 +181,18 @@ def _find_spikes(
     min_spacing: float,
     k_sigma: float,
 ) -> List[EventMoment]:
-    """Find RMS peaks that exceed mean + k_sigma * stddev."""
+    """Find RMS peaks that exceed ``mean + k_sigma·σ`` with a minimum
+    spacing between picks.
+
+    When two peaks fall inside ``min_spacing``, the one with the
+    **higher raw RMS** wins — replacing the earlier pick in-place so
+    ``len(moments)`` never grows without spacing.  (The v1.19.0 version
+    of this function compared a raw RMS value against a normalised
+    score × mean, which is apples-to-oranges — a bug fixed here.)
+    """
     if len(env) < 10:
         return []
+
     n = len(env)
     mean = sum(env) / n
     var = sum((e - mean) ** 2 for e in env) / n
@@ -174,30 +202,30 @@ def _find_spikes(
     min_spacing_hops = max(1, int(min_spacing / hop_seconds))
 
     moments: List[EventMoment] = []
-    last_picked = -min_spacing_hops
+    # Track the raw RMS magnitude of the most recent pick separately so
+    # we can compare against future candidates in the same units.
+    last_picked_idx = -min_spacing_hops
+    last_picked_e = 0.0
+
     for i, e in enumerate(env):
         if e < threshold:
             continue
-        if i - last_picked < min_spacing_hops:
-            # keep the louder of the two
-            if moments and e > moments[-1].score * (mean or 1.0):
-                moments[-1] = EventMoment(
-                    t=round(i * hop_seconds, 3),
-                    label="loud_peak",
-                    score=round(min(1.0, e / (threshold + 1e-9)), 3),
-                    surrounding_energy=round(mean, 5),
-                    notes=f"sigma={sigma:.4f}",
+
+        if i - last_picked_idx < min_spacing_hops:
+            # Too close to the previous pick. Replace only if this peak
+            # is louder in raw RMS — same units, no scale confusion.
+            if moments and e > last_picked_e:
+                moments[-1] = _build_spike(
+                    i, e, hop_seconds, threshold, mean, sigma,
                 )
-                last_picked = i
+                last_picked_idx = i
+                last_picked_e = e
             continue
-        moments.append(EventMoment(
-            t=round(i * hop_seconds, 3),
-            label="loud_peak",
-            score=round(min(1.0, e / (threshold + 1e-9)), 3),
-            surrounding_energy=round(mean, 5),
-            notes=f"sigma={sigma:.4f}",
-        ))
-        last_picked = i
+
+        moments.append(_build_spike(i, e, hop_seconds, threshold, mean, sigma))
+        last_picked_idx = i
+        last_picked_e = e
+
     return moments
 
 
@@ -219,7 +247,8 @@ def find_event_moments(
         filepath: Any ffmpeg-decodable input file.
         mode: ``"heuristic"`` (always available, audio-energy spikes)
             or ``"yamnet"`` (adds AudioSet tagging; requires
-            ``tflite_runtime`` or ``tensorflow``).
+            ``tflite_runtime`` or ``tensorflow`` *and* a YAMNet model
+            via ``OPENCUT_YAMNET_MODEL``).
         k_sigma: Spike threshold as *mean + k·σ* over the RMS envelope.
             2.0 = moderately loud; 3.0 = very loud peaks only.
         min_spacing: Seconds between accepted spikes. Prevents one loud
@@ -228,7 +257,9 @@ def find_event_moments(
         on_progress: ``(pct, msg)`` callback.
 
     Returns:
-        :class:`EventMomentsResult`.
+        :class:`EventMomentsResult`.  Its ``mode`` field records the
+        **effective** mode — a ``yamnet`` request silently falls back to
+        ``heuristic`` when runtime / model are missing.
     """
     if not os.path.isfile(filepath):
         raise FileNotFoundError(f"File not found: {filepath}")
@@ -261,7 +292,7 @@ def find_event_moments(
         except Exception as exc:  # noqa: BLE001
             logger.warning("YAMNet tagging failed: %s — using heuristic labels", exc)
 
-    # Rank by score
+    # Keep the top N by score, then re-sort chronologically for the UI.
     moments.sort(key=lambda m: m.score, reverse=True)
     moments = moments[:max_moments]
     moments.sort(key=lambda m: m.t)
@@ -279,7 +310,7 @@ def find_event_moments(
 
 
 # ---------------------------------------------------------------------------
-# Optional YAMNet retagger
+# Optional YAMNet retagger (stub)
 # ---------------------------------------------------------------------------
 
 def _retag_with_yamnet(
@@ -287,14 +318,22 @@ def _retag_with_yamnet(
     moments: List[EventMoment],
     on_progress: Optional[Callable],
 ) -> List[EventMoment]:
-    """Best-effort YAMNet tagging. Called from within a try/except."""
-    # Placeholder: full YAMNet integration ships with the tflite_runtime
-    # path in a follow-up PR (Wave A stub). For now, keep the interface
-    # stable — the heuristic mode is fully usable and this branch simply
-    # returns the input when the model file isn't wired yet.
+    """Best-effort YAMNet class tagging.
+
+    Returns the input unchanged when:
+    - ``OPENCUT_YAMNET_MODEL`` is unset or missing, or
+    - the full classify loop is not yet wired (current state — shipping
+      the interface stable while the model-specific windowing logic is
+      being finalised).
+
+    The call is wrapped in a ``try/except`` by the caller so any failure
+    here logs at warning and the untagged ``heuristic`` moments are
+    returned verbatim.
+    """
     model_path = os.environ.get("OPENCUT_YAMNET_MODEL", "")
     if not model_path or not os.path.isfile(model_path):
         return moments
+
     try:
         import tflite_runtime.interpreter as tflite  # type: ignore
     except ImportError:
@@ -302,7 +341,7 @@ def _retag_with_yamnet(
 
     interpreter = tflite.Interpreter(model_path=model_path)
     interpreter.allocate_tensors()
-    # The full sample-window classification loop is deferred — ship stub
-    # so the route exists and falls back to heuristic labels.
-    # (YAMNet's expected input is 15600 samples @ 16kHz.)
+    # Full per-window classification loop deferred to a subsequent pass —
+    # ship the stable interface so the route exists and downstream code
+    # can depend on it. Until then, heuristic labels are returned.
     return moments

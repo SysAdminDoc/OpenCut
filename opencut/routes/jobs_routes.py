@@ -229,6 +229,9 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/restore/colorize",
     "/video/restore/vrt",
     "/video/restore/deflicker",
+    # v1.19.1 additions — AAF/OTIOZ promoted to async_job
+    "/timeline/export/aaf",
+    "/timeline/export/otioz",
 })
 
 
