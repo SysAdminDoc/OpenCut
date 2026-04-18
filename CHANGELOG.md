@@ -1,5 +1,31 @@
 # Changelog
 
+## [1.23.0] - 2026-04-17
+
+### Added — wide-net infrastructure pass
+
+Four cross-cutting modules + one blueprint.  No new features — closes long-standing gaps flagged in the v1.14.0 strategic audit and the original ROADMAP.md Wave 3A.  7 new routes, 1,228 → 1,235.
+
+**OpenAPI 3.1 spec generator** — new [`core/openapi_spec.py`](opencut/core/openapi_spec.py) + `GET /api/openapi.json`, `GET /api/docs`, `GET /api/routes`. Walks Flask's `url_map`, introspects view-function docstrings, detects `@require_csrf` by walking the wrapper chain, converts Flask `<int:foo>` path converters to OpenAPI `{foo}` parameters, and emits a valid 3.1 spec (1,208 paths / 97 tags on a stock install). Swagger UI hosted inline via CDN-loaded script — no extra dep. Per-endpoint `schema_hints` escape hatch lets callers attach real request/response schemas without rewriting the generator. Closes Wave 3C "FastAPI migration is deferred" with a zero-migration alternative.
+
+**GPU-exclusive semaphore** — new [`core/gpu_semaphore.py`](opencut/core/gpu_semaphore.py) + `GET /system/gpu-semaphore`. Ships the minimal version of the Wave 3A P0: a process-wide `threading.Semaphore` (default `MAX_CONCURRENT_GPU_JOBS=3`, env-tunable) that routes wrap via `@gpu_exclusive` on their inner worker body. `acquire()` honours a configurable `OPENCUT_GPU_ACQUIRE_TIMEOUT` (default 0 = non-blocking 429). Status endpoint reports `active` / `available` / `rejected_total` / `acquired_total` for ops dashboards. Upgrade path stays open — the decorator boundary is the same whether the implementation becomes an in-process semaphore or a multi-process worker pool later.
+
+**Rate-limit categories** — new [`core/rate_limit_categories.py`](opencut/core/rate_limit_categories.py) + `GET /system/rate-limits`. Four categories (`gpu_heavy`, `cpu_heavy`, `io_bound`, `light`) with env-tunable ceilings. Each category gets a `threading.Semaphore`, an acquire / release API, a `@rate_limit_category("gpu_heavy")` decorator, and a `category_of(func)` helper so introspection / OpenAPI hints can surface the category on the UI. Closes the v1.14.0 audit finding "4 % of async routes are rate-limited" by reducing the per-route cost of opt-in to a single decorator.
+
+**Temp-file startup + periodic sweep** — new [`core/temp_cleanup.py`](opencut/core/temp_cleanup.py) + `POST /system/temp-cleanup/sweep`, `GET /system/temp-cleanup/status`. Runs on `create_app()`: walks `tempfile.gettempdir()` for `opencut_*` + `opencut-*` entries older than a configurable TTL (default 1 h) and removes them. Daemon thread re-sweeps every `OPENCUT_TEMP_CLEANUP_INTERVAL` seconds (default 3600, `0` disables). Symlink-out-of-tempdir defence via `realpath() + commonpath()` check. Logs `removed N files / N dirs / N.N MB` summary per sweep. On the dev machine, the startup sweep of a long-running box reclaimed 4.6 MB across 45 files + 397 dirs.
+
+### Infrastructure wiring
+- **`server.py::create_app`** now calls `temp_cleanup.run_startup_sweep()` + `start_background_sweep()`. Any failure logs at warning and the app continues.
+- **4 new `check_*_available()`** entries in `opencut/checks.py` (all stdlib-only, so all return True unless the module import itself fails).
+
+### Gotchas
+- **OpenAPI spec is cached module-level** — the first request walks 1,200+ routes; subsequent requests serve from `_OPENAPI_CACHE`. `?refresh=1` bypasses the cache. Spec drift between deploys is a concern for deploy-time validation, not runtime.
+- **`@gpu_exclusive` goes on the *inner* worker body, not the Flask route** — the `@async_job` decorator already handles queue back-pressure for the HTTP layer. Putting `@gpu_exclusive` on the route would mean the HTTP caller waits; putting it on the inner body means the worker thread waits, which is where the actual GPU contention happens.
+- **Rate-limit categories coexist with the existing `security.rate_limit()` / `require_rate_limit()`** — the new category API is for *category-scoped* work (gpu_heavy, cpu_heavy, io_bound, light). The legacy `rate_limit("model_install")` API is still the right choice for *single-op* gates like pip-install serialisation.
+- **`temp_cleanup` prefix match is strict basename-only** — we never walk into arbitrary user files. Operators can extend the prefix list via `OPENCUT_TEMP_CLEANUP_PREFIXES` (comma-separated) but should only add prefixes they *own*.
+- **`_route_uses_csrf` walks `__wrapped__`** — add your own decorators above `@require_csrf` in the stack order `@wave_X_bp.route → @require_csrf → @async_job` to keep introspection accurate. The OpenAPI spec's `CSRFToken` security block is derived from this walk.
+- **Startup temp sweep is best-effort** — logs a warning on failure; never blocks app startup. A corrupt tempfile permission won't prevent the server from coming up.
+
 ## [1.22.0] - 2026-04-17
 
 ### Added — Shaka Packager / OBS bridge / RunPod / Plausible telemetry
