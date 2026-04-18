@@ -8,6 +8,7 @@ Uses FFmpeg drawtext for rendering. Keyword extraction uses TF-IDF
 heuristics (no external NLP libraries required).
 """
 
+import json
 import logging
 import math
 import os
@@ -329,6 +330,140 @@ def generate_quiz_questions(
         on_progress(100, "Done")
 
     return [q.to_dict() for q in questions]
+
+
+def generate_quiz_questions_llm(
+    transcript: str,
+    count: int = 5,
+    difficulty: str = "medium",
+    llm_config=None,
+    on_progress: Optional[Callable] = None,
+) -> List[dict]:
+    """LLM-backed variant of :func:`generate_quiz_questions`.
+
+    When ``llm_config`` is provided and the call succeeds, returns
+    genuine comprehension questions — not the fill-in-the-blank
+    keyword swaps the TF-IDF path produces. Falls back to the
+    TF-IDF implementation on any failure so callers can pass
+    ``llm_config`` unconditionally.
+
+    The LLM is prompted to return strict JSON matching the existing
+    ``QuizQuestion.to_dict()`` schema:
+        [{"question": str, "options": [str]*4, "correct_index": int,
+          "source_sentence": str, "keyword": str, "difficulty": str}, …]
+
+    Response shape: same as :func:`generate_quiz_questions`.
+    """
+    # Fast-path: no LLM configured → reuse heuristic path.
+    if llm_config is None:
+        return generate_quiz_questions(
+            transcript, count=count, difficulty=difficulty,
+            on_progress=on_progress,
+        )
+
+    if not transcript or len(transcript.strip()) < 50:
+        raise ValueError("Transcript is too short to generate questions (minimum 50 characters)")
+    if count < 1:
+        raise ValueError(f"Question count must be >= 1, got {count}")
+    if difficulty not in ("easy", "medium", "hard"):
+        raise ValueError(f"Invalid difficulty: {difficulty!r}. Valid: easy, medium, hard")
+
+    if on_progress:
+        on_progress(10, "Querying LLM for quiz questions…")
+
+    # Cap transcript at ~4000 chars — anything longer wastes context
+    transcript_snippet = transcript.strip()
+    if len(transcript_snippet) > 4000:
+        transcript_snippet = transcript_snippet[:4000] + "…"
+
+    prompt = (
+        f"Generate {count} multiple-choice quiz questions from the "
+        f"transcript below at {difficulty} difficulty. "
+        "Return STRICT JSON only — no prose, no markdown code fences, "
+        "no comments. The JSON must be a list of objects with exactly "
+        "these keys: question (string), options (list of 4 strings, "
+        "the first being the correct answer), correct_index (int 0..3), "
+        "source_sentence (the transcript sentence the question is "
+        "derived from), keyword (the focal term), difficulty (\""
+        f"{difficulty}\"). Shuffle the correct_index so the right answer "
+        "isn't always at position 0. Each question must be answerable "
+        "from the transcript alone.\n\n"
+        f"TRANSCRIPT:\n{transcript_snippet}"
+    )
+
+    try:
+        from opencut.core.llm import query_llm
+        resp = query_llm(prompt, config=llm_config)
+        text = (getattr(resp, "text", "") or "").strip()
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("LLM quiz generation failed: %s — falling back to TF-IDF", exc)
+        return generate_quiz_questions(
+            transcript, count=count, difficulty=difficulty,
+            on_progress=on_progress,
+        )
+
+    # Strip markdown code fences the model sometimes adds despite the
+    # instruction. Accept ```json / ``` bare / `~~~` fences.
+    stripped = text.strip()
+    for fence in ("```json", "```", "~~~"):
+        if stripped.startswith(fence):
+            stripped = stripped[len(fence):].lstrip("\n")
+            if stripped.endswith("```") or stripped.endswith("~~~"):
+                stripped = stripped.rsplit("```", 1)[0].rsplit("~~~", 1)[0]
+            break
+
+    try:
+        parsed = json.loads(stripped)
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("LLM returned non-JSON quiz output: %s — falling back", exc)
+        return generate_quiz_questions(
+            transcript, count=count, difficulty=difficulty,
+            on_progress=on_progress,
+        )
+
+    if not isinstance(parsed, list) or not parsed:
+        return generate_quiz_questions(
+            transcript, count=count, difficulty=difficulty,
+            on_progress=on_progress,
+        )
+
+    # Normalise + validate each question — drop malformed entries,
+    # keep up to ``count``.
+    out: List[dict] = []
+    for i, q in enumerate(parsed):
+        if not isinstance(q, dict):
+            continue
+        question = str(q.get("question") or "").strip()
+        options = q.get("options") or []
+        if (not question or not isinstance(options, list)
+                or len(options) != 4
+                or not all(isinstance(o, str) and o.strip() for o in options)):
+            continue
+        try:
+            correct_idx = int(q.get("correct_index", 0))
+        except (TypeError, ValueError):
+            correct_idx = 0
+        correct_idx = max(0, min(3, correct_idx))
+        out.append({
+            "question": question[:300],
+            "options": [str(o).strip()[:120] for o in options],
+            "correct_index": correct_idx,
+            "source_sentence": str(q.get("source_sentence") or "")[:400],
+            "keyword": str(q.get("keyword") or "")[:80],
+            "difficulty": difficulty,
+        })
+        if len(out) >= count:
+            break
+
+    if not out:
+        return generate_quiz_questions(
+            transcript, count=count, difficulty=difficulty,
+            on_progress=on_progress,
+        )
+
+    if on_progress:
+        on_progress(100, f"LLM produced {len(out)} question(s)")
+    return out
 
 
 # ---------------------------------------------------------------------------
