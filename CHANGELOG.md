@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.22.0] - 2026-04-17
+
+### Added — Shaka Packager / OBS bridge / RunPod / Plausible telemetry
+
+Four new core modules, 11 new routes (1,216 → 1,228). All opt-in via env + optional deps, with graceful degradation.
+
+**B5.2 Shaka Packager HLS/DASH/CENC** — new [`core/shaka_pkg.py`](opencut/core/shaka_pkg.py) + `POST /delivery/shaka/package`, `GET /delivery/shaka/info`. Wraps the standalone ``packager`` binary (BSD-3, Google). Stream-descriptor builder emits one entry per rendition (video/audio/text), with safe basename sanitisation so user stream labels can't smuggle filter characters. Optional CENC DRM with AES-128 raw-key schema for Widevine / PlayReady / FairPlay / Common System. LL-HLS gate validates `protocol=hls`. Resolution cache (`_AVAILABILITY_CACHE`) probes PATH candidates once per process. 2 h default subprocess timeout.
+
+**E6 OBS WebSocket v5 bridge** — new [`core/obs_bridge.py`](opencut/core/obs_bridge.py) + `POST /integration/obs/status`, `POST /integration/obs/switch-scene`, `POST /integration/obs/recording`, `POST /integration/obs/screenshot`. Implements the v5 JSON-over-WebSocket protocol with SHA-256 challenge auth inline — no dedicated ``obs-websocket-py`` dependency. Uses the existing ``websockets`` pip package (already checked via `check_websocket_available`). Blocking sync API with a single background event-loop thread per client. `ObsClient` is a context-manager (`with` block). High-level helpers: `ping()`, `status()`, `switch_scene()`, `recording()`, `take_screenshot()`. Unlocks the Gaming vertical (Twitch VOD clipping), live-production cue sheets, tutorial-capture auto-split.
+
+**E9 RunPod serverless render** — new [`core/runpod_render.py`](opencut/core/runpod_render.py) + `POST /cloud/runpod/submit`, `GET /cloud/runpod/status/<endpoint>/<job>`, `POST /cloud/runpod/cancel`, `GET /cloud/runpod/info`. Pure-`urllib` transport (no hard pip dep); `runpod` SDK is an optional ergonomic enhancement. Submit / status / wait / cancel entry points with exponential-ish backoff in `wait()`. `_ENDPOINT_ID_RE` prevents URL-injection via malformed endpoint IDs. API key from `RUNPOD_API_KEY` env or explicit argument — **never logged**. Sync mode via `/runsync` for small jobs; default `/run` returns a job_id to poll.
+
+**D5.3 Plausible telemetry** — new [`core/telemetry_plausible.py`](opencut/core/telemetry_plausible.py) + `POST /telemetry/plausible/track`, `GET /telemetry/plausible/info`. Fire-and-forget event emitter to a self-hosted Plausible instance (AGPL-3). Single background worker thread reads from a bounded queue (`_MAX_QUEUED=500`, drops oldest on overflow). `_scrub_props()` hardens user-supplied props: drops `_`-prefixed keys, caps string lengths to 120 chars, caps dict size to 30 entries, rejects non-alphanumeric key chars. Opt-in via `PLAUSIBLE_HOST` + `PLAUSIBLE_DOMAIN` env vars — absent env vars = complete no-op, zero overhead.
+
+### Infrastructure
+- 5 new `check_*_available()` entries in `opencut/checks.py`: `shaka`, `obs_bridge`, `runpod` (always True, stdlib), `runpod_api_key_set`, `plausible_configured`.
+- 1 new route in `_ALLOWED_QUEUE_ENDPOINTS`: `/delivery/shaka/package`.
+- New blueprint `wave_e_bp` registered (v1.22 continues the wave_a/b/c/d/e sequence).
+
+### Gotchas
+- **Shaka `extra_args` is power-user escape hatch** — args are passed verbatim to the ``packager`` binary without validation. Don't expose this via untrusted surfaces. The stream-descriptor builder *does* sanitise basenames to reject filter-chain metacharacters.
+- **OBS `ObsClient` is not thread-safe** — one client per thread; sharing across threads will drop responses because `_pending` dispatch is lookup-by-request-id, not broadcast. The high-level helpers (``status``, ``switch_scene`` etc.) create a fresh client per call, which is the right pattern for low-volume use.
+- **OBS background thread uses daemon=True** — clean process exit won't block on a hung OBS connection. If you need guaranteed flush, call `client.close()` explicitly.
+- **RunPod API key env fallback** — the `submit` / `status_of` / `cancel` / `wait` functions all honour `RUNPOD_API_KEY` when `api_key=None`. Be careful not to log request bodies that might be echoed back by a misbehaving handler — the SDK fallback path returns raw `output` verbatim.
+- **RunPod `wait` backoff caps at 30s** — poll interval grows ×1.25 every 3 polls. For long-running jobs this is fine; for very short jobs the client may observe `COMPLETED` on the first poll regardless.
+- **Plausible worker is daemon=True, survives the event loop** — `shutdown()` is provided for clean test teardown but normal daemon-thread behaviour is correct for production. `queue_depth()` lets ops spot backlog.
+- **Plausible drops oldest on overflow** — `_MAX_QUEUED=500`. Telemetry is best-effort, so a long Plausible outage doesn't pin memory. If operators care about *durability* of events, Plausible isn't the right sink — use a proper queue + OpenTelemetry stack.
+
 ## [1.21.0] - 2026-04-17
 
 ### Added — Wave B delivery + Wave E voice grammar + D4.2 fuzz harness
