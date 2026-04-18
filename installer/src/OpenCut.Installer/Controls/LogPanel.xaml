@@ -1,7 +1,8 @@
 <UserControl x:Class="OpenCut.Installer.Controls.LogPanel"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Border Background="{DynamicResource Mantle}" CornerRadius="8" Padding="2">
+    <Border Background="{DynamicResource Mantle}" BorderBrush="{DynamicResource Surface1}"
+            BorderThickness="1" CornerRadius="12" Padding="2">
         <RichTextBox x:Name="LogBox" IsReadOnly="True"
                      Background="{DynamicResource Mantle}"
                      Foreground="{DynamicResource Subtext0}"
@@ -9,7 +10,7 @@
                      FontSize="11.5"
                      BorderThickness="0"
                      VerticalScrollBarVisibility="Auto"
-                     Padding="8,4">
+                     Padding="10,8">
             <RichTextBox.Document>
                 <FlowDocument PageWidth="2000" />
             </RichTextBox.Document>

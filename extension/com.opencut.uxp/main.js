@@ -621,7 +621,7 @@ const JobPoller = (() => {
         const job = JSON.parse(event.data);
         const status = job.status ?? "running";
         const pct    = typeof job.progress === "number" ? job.progress : 0;
-        const msg    = job.message ?? job.msg ?? "Processing...";
+        const msg    = job.message ?? job.msg ?? "Processing…";
 
         onProgress(pct, msg);
 
@@ -666,7 +666,7 @@ const JobPoller = (() => {
     const job = r.data;
     const status  = job.status ?? "running";
     const pct     = typeof job.progress === "number" ? job.progress : 0;
-    const msg     = job.message ?? job.msg ?? "Processing...";
+    const msg     = job.message ?? job.msg ?? "Processing…";
 
     onProgress(pct, msg);
 
@@ -867,9 +867,34 @@ const UIController = (() => {
   }
 
   // ── Toast notifications ──
-  function showToast(message, type = "info", duration = 4000) {
+  function getToastHeading(type) {
+    switch (type) {
+      case "success": return "Ready";
+      case "warning": return "Needs attention";
+      case "error": return "Action failed";
+      default: return "OpenCut";
+    }
+  }
+
+  function getToastDuration(type, explicitDuration) {
+    if (typeof explicitDuration === "number") return explicitDuration;
+    if (type === "error") return 0;
+    if (type === "warning") return 5600;
+    return 4000;
+  }
+
+  function showToast(message, type = "info", duration) {
     const area = document.getElementById("toastArea");
     if (!area) return;
+
+    const payload = (message && typeof message === "object")
+      ? message
+      : { message };
+    const tone = payload.type || type || "info";
+    const text = String(payload.message ?? payload.text ?? "").trim()
+      || String(message ?? "").trim();
+    const title = String(payload.title ?? getToastHeading(tone)).trim() || getToastHeading(tone);
+    const detail = String(payload.detail ?? "").trim();
 
     const icons = {
       success: `<svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M13.854 3.646a.5.5 0 010 .708l-7 7a.5.5 0 01-.708 0l-3.5-3.5a.5.5 0 11.708-.708L6.5 10.293l6.646-6.647a.5.5 0 01.708 0z"/></svg>`,
@@ -879,18 +904,34 @@ const UIController = (() => {
     };
 
     const toast = document.createElement("div");
-    toast.className = `oc-toast ${type}`;
-    toast.setAttribute("role", type === "error" ? "alert" : "status");
+    toast.className = `oc-toast ${tone}`;
+    toast.dataset.state = tone;
+    toast.setAttribute("role", tone === "error" ? "alert" : "status");
+    toast.setAttribute("aria-live", tone === "error" ? "assertive" : "polite");
     toast.innerHTML = `
-      <span class="oc-toast-icon">${icons[type] ?? icons.info}</span>
-      <span class="oc-toast-msg">${escapeHtml(message)}</span>`;
+      <span class="oc-toast-icon" aria-hidden="true">${icons[tone] ?? icons.info}</span>
+      <span class="oc-toast-content">
+        <span class="oc-toast-title">${escapeHtml(title)}</span>
+        <span class="oc-toast-msg">${escapeHtml(text || title)}</span>
+        ${detail ? `<span class="oc-toast-detail">${escapeHtml(detail)}</span>` : ""}
+      </span>
+      <button type="button" class="oc-toast-dismiss" aria-label="Dismiss notification">&times;</button>`;
 
     area.appendChild(toast);
 
-    setTimeout(() => {
+    const dismiss = () => {
+      if (toast.dataset.closing === "true") return;
+      toast.dataset.closing = "true";
       toast.classList.add("fade-out");
       setTimeout(() => toast.remove(), 320);
-    }, duration);
+    };
+    toast.querySelector(".oc-toast-dismiss")?.addEventListener("click", dismiss);
+
+    const resolvedDuration = getToastDuration(
+      tone,
+      payload.duration ?? (arguments.length >= 3 ? duration : undefined)
+    );
+    if (resolvedDuration > 0) setTimeout(dismiss, resolvedDuration);
   }
 
   // ── Slider live value display ──
@@ -1058,6 +1099,89 @@ function getSelectLabel(selectId, fallback = "") {
   return (option?.textContent || option?.label || option?.value || fallback).trim();
 }
 
+function getSearchResultPath(item) {
+  const candidate = [
+    item?.path,
+    item?.file,
+    item?.filepath,
+    item?.source_path,
+    item?.clip_path,
+    item?.asset_path,
+  ].find((value) => typeof value === "string" && value.trim());
+  return candidate ? candidate.trim() : "";
+}
+
+function getSearchResultKindLabel(item) {
+  const raw = String(item?.kind ?? item?.type ?? item?.modality ?? item?.match_type ?? "").toLowerCase();
+  if (/frame|image|visual/.test(raw)) return "Visual";
+  if (/audio|speech|voice/.test(raw)) return "Audio";
+  if (/text|transcript|caption|subtitle|segment/.test(raw)) return "Transcript";
+  if (typeof item?.text === "string" || typeof item?.transcript === "string" || typeof item?.snippet === "string") {
+    return "Transcript";
+  }
+  return "Library";
+}
+
+function getSearchResultTimeLabel(item) {
+  const start = Number(
+    item?.start
+    ?? item?.start_time
+    ?? item?.segment_start
+    ?? item?.t0
+    ?? item?.timestamp_start
+  );
+  const end = Number(
+    item?.end
+    ?? item?.end_time
+    ?? item?.segment_end
+    ?? item?.t1
+    ?? item?.timestamp_end
+  );
+  if (Number.isFinite(start) && Number.isFinite(end) && end >= start) {
+    return `${formatTimecode(start)} to ${formatTimecode(end)}`;
+  }
+  if (Number.isFinite(start)) return `From ${formatTimecode(start)}`;
+  return "";
+}
+
+function getSearchResultPreview(item) {
+  const preview = [
+    item?.preview,
+    item?.snippet,
+    item?.segment_text,
+    item?.text,
+    item?.transcript,
+    item?.description,
+    item?.reason,
+    item?.caption,
+  ].find((value) => typeof value === "string" && value.trim());
+  if (!preview) return "";
+  const compact = preview.replace(/\s+/g, " ").trim();
+  return compact.length > 156 ? `${compact.slice(0, 153)}…` : compact;
+}
+
+function getSearchResultScoreLabel(item, index) {
+  const raw = Number(item?.score ?? item?.confidence ?? item?.similarity);
+  if (Number.isFinite(raw)) {
+    const pct = raw > 1 ? Math.round(raw) : Math.round(raw * 100);
+    return `${pct}% match`;
+  }
+  return index === 0 ? "Top match" : `Match ${index + 1}`;
+}
+
+function buildSearchResultCard(item, index) {
+  const path = getSearchResultPath(item);
+  return {
+    index,
+    path,
+    label: formatWorkspaceSource(path || `Result ${index + 1}`),
+    kindLabel: getSearchResultKindLabel(item),
+    timeLabel: getSearchResultTimeLabel(item),
+    preview: getSearchResultPreview(item),
+    scoreLabel: getSearchResultScoreLabel(item, index),
+  };
+}
+
 function setCaptionsStatus(message, state = "idle", title) {
   const line = document.getElementById("captionsStatusLine");
   if (!line) return;
@@ -1085,11 +1209,18 @@ function syncCaptionsActionButtons() {
   const copyBtn = document.getElementById("copySrtBtn");
   if (copyBtn) {
     copyBtn.disabled = !_lastCaptionsResult?.content;
+    copyBtn.title = copyBtn.disabled
+      ? "Copy becomes available after a transcript, chapter list, or repeat review has been generated."
+      : (_lastCaptionsResult?.copyLabel || "Copy output");
   }
 
   const importBtn = document.getElementById("importSrtBtn");
   if (importBtn) {
-    importBtn.disabled = !(_lastCaptionsResult && _lastCaptionsResult.kind === "transcript" && _lastCaptionsResult.hasSrt);
+    const canImport = !!(_lastCaptionsResult && _lastCaptionsResult.kind === "transcript" && _lastCaptionsResult.hasSrt);
+    importBtn.disabled = !canImport;
+    importBtn.title = canImport
+      ? "Open the timeline import flow for the current SRT output."
+      : "SRT Prep becomes available after a transcript pass produces subtitle output.";
   }
 }
 
@@ -1171,11 +1302,20 @@ function renderCaptionsResultView(resultState) {
   const header = area?.querySelector(".oc-result-header");
   const copyBtn = document.getElementById("copySrtBtn");
   const importBtn = document.getElementById("importSrtBtn");
+  const typeLabelMap = {
+    transcript: "Transcript",
+    chapters: "Chapter draft",
+    repeat: "Repeat review",
+  };
 
   if (!area || !body) return;
 
   area.classList.remove("hidden");
+  area.dataset.kind = resultState.kind || "review";
+  area.dataset.state = resultState.resultPillState || "success";
   body.value = resultState.content || "";
+  body.title = resultState.contentTitle || resultState.outputTitle || resultState.resultMetaTitle || "Review output";
+  body.setAttribute("aria-label", resultState.header || "Review output");
   if (summary) summary.textContent = resultState.summary || "Ready to review";
   if (meta) {
     meta.textContent = resultState.resultMeta || "Review output is ready.";
@@ -1190,6 +1330,21 @@ function renderCaptionsResultView(resultState) {
   );
   if (copyBtn) copyBtn.textContent = resultState.copyLabel || "Copy Output";
   if (importBtn) importBtn.textContent = resultState.importLabel || "Open SRT Prep";
+  setTextAndTitle(
+    "captionsResultTypeValue",
+    resultState.insightType || typeLabelMap[resultState.kind] || "Review output",
+    resultState.insightTypeTitle || resultState.resultMetaTitle || resultState.summary || "Review output"
+  );
+  setTextAndTitle(
+    "captionsResultLengthValue",
+    resultState.insightLength || resultState.outputLabel || resultState.summary || "Ready",
+    resultState.insightLengthTitle || resultState.outputTitle || resultState.summary || "Ready"
+  );
+  setTextAndTitle(
+    "captionsResultNextValue",
+    resultState.insightNext || (resultState.hasSrt ? "Copy SRT or open SRT Prep" : "Copy notes or continue review"),
+    resultState.insightNextTitle || resultState.statusMessage || resultState.summary || "Next action"
+  );
 
   _lastCaptionsResult = resultState;
   updateCaptionsWorkspaceSummary();
@@ -1252,6 +1407,11 @@ function showRepeatResult(result) {
       ? `${repeats.length} repeat ${repeats.length === 1 ? "range" : "ranges"} flagged`
       : "No repeats flagged",
     outputTitle: clipPath || "Repeat review",
+    insightType: "Repeat review",
+    insightLength: repeats.length
+      ? `${repeats.length} repeat ${repeats.length === 1 ? "range" : "ranges"}`
+      : "Clean pass",
+    insightNext: repeats.length ? "Tighten threshold or continue cleanup" : "Keep current threshold and continue",
   });
 }
 
@@ -1517,17 +1677,25 @@ function handleWorkspaceAction(action) {
 }
 
 function setWorkspaceGuide(guide) {
+  const guideEl = document.getElementById("workspaceGuide");
   const kickerEl = document.getElementById("workspaceGuideKicker");
   const titleEl = document.getElementById("workspaceGuideTitle");
   const textEl = document.getElementById("workspaceGuideText");
   const actionEl = document.getElementById("workspaceGuideAction");
+  const guideState = guide.state || "ready";
 
+  if (guideEl) {
+    guideEl.dataset.state = guideState;
+    guideEl.title = guide.text || guide.title || "";
+  }
   if (kickerEl) kickerEl.textContent = guide.kicker;
   if (titleEl) titleEl.textContent = guide.title;
   if (textEl) textEl.textContent = guide.text;
   if (actionEl) {
-    actionEl.dataset.action = guide.action;
-    actionEl.textContent = guide.actionLabel;
+    actionEl.dataset.action = guide.action || "";
+    actionEl.textContent = guide.actionLabel || "Open";
+    actionEl.disabled = !guide.action;
+    actionEl.hidden = !guide.actionLabel;
   }
 }
 
@@ -1595,6 +1763,7 @@ function updateWorkspaceOverview(tabId) {
       kicker: "Backend offline",
       title: "Reconnect the local OpenCut backend before running jobs.",
       text: "The workspace is ready, but processing, engine refresh, and timeline handoff all depend on the backend service being online.",
+      state: "error",
       action: "refresh-backend",
       actionLabel: "Refresh Backend",
     };
@@ -1603,6 +1772,7 @@ function updateWorkspaceOverview(tabId) {
       kicker: "Needs source",
       title: "Choose one active shot to unlock this workspace.",
       text: "OpenCut keeps the current clip in sync across Cut, Captions, Audio, and Video so you can move through the edit without repeated setup.",
+      state: "warning",
       action: "choose-clip",
       actionLabel: "Choose Clip",
     };
@@ -1611,6 +1781,7 @@ function updateWorkspaceOverview(tabId) {
       kicker: "Ready for write-back",
       title: "Generate cuts or markers first, then bring them back to the sequence.",
       text: "Run a cleanup or beat pass in Cut or Audio, then return here to apply the result, export OTIO, or batch markers.",
+      state: "warning",
       action: "switch-cut",
       actionLabel: "Open Cut Workspace",
     };
@@ -1618,14 +1789,16 @@ function updateWorkspaceOverview(tabId) {
   setWorkspaceGuide(guide);
   updateCaptionsWorkspaceSummary();
   updateTimelineReadiness();
+  updateDeliverablesSummary();
+  syncSearchPanelState();
 }
 
 function getDeliverablesOutputSummary() {
   const outputDir = document.getElementById("delivOutputDir")?.value?.trim() || "";
   if (!outputDir) {
     return {
-      label: "System temp folder",
-      title: "Deliverables will be saved to the system temp folder until you choose an output folder.",
+      label: "Session temp folder",
+      title: "Deliverables will be saved to the session temp folder until you choose an output folder.",
     };
   }
   return {
@@ -1634,13 +1807,109 @@ function getDeliverablesOutputSummary() {
   };
 }
 
+function getSelectedReportTypes() {
+  return [
+    ["rptIncludeVfx", "vfx_sheet"],
+    ["rptIncludeAdr", "adr_list"],
+    ["rptIncludeMusic", "music_cue_sheet"],
+    ["rptIncludeAssets", "asset_list"],
+  ]
+    .filter(([controlId]) => document.getElementById(controlId)?.checked)
+    .map(([, type]) => type);
+}
+
+function getDeliverablesSelectionSummary(selectedTypes) {
+  if (!selectedTypes.length) {
+    return {
+      label: "No documents selected",
+      title: "Select at least one handoff document before generating a package.",
+    };
+  }
+  if (selectedTypes.length === 4) {
+    return {
+      label: "All four handoff sheets",
+      title: "VFX Sheet, ADR List, Music Cue Sheet, and Asset List will be generated in this package.",
+    };
+  }
+  if (selectedTypes.length === 1) {
+    const label = DELIVERABLE_LABELS[selectedTypes[0]] || humanizeDomain(selectedTypes[0]);
+    return {
+      label,
+      title: `${label} is the only document selected for this package.`,
+    };
+  }
+  const labels = selectedTypes.map((type) => DELIVERABLE_LABELS[type] || humanizeDomain(type));
+  return {
+    label: `${selectedTypes.length} documents selected`,
+    title: labels.join(" • "),
+  };
+}
+
+function getDeliverablesFormatSummary() {
+  return {
+    value: "csv",
+    label: "CSV handoff sheets",
+    title: "The UXP deliverables workflow currently exports CSV handoff sheets.",
+  };
+}
+
+function updateDeliverablesPlanSummary(outputSummary = getDeliverablesOutputSummary()) {
+  const selectedTypes = getSelectedReportTypes();
+  const selectionSummary = getDeliverablesSelectionSummary(selectedTypes);
+  const formatSummary = getDeliverablesFormatSummary();
+  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const hasSequence = !!_lastSequenceInfo;
+  const canGenerate = hasSequence && backendOnline;
+
+  setTextAndTitle("deliverablesPackageValue", selectionSummary.label, selectionSummary.title);
+  setTextAndTitle("deliverablesReportFormatValue", formatSummary.label, formatSummary.title);
+  setTextAndTitle("deliverablesReportDestinationValue", outputSummary.label, outputSummary.title);
+
+  const formatSelect = document.getElementById("reportFormat");
+  if (formatSelect) {
+    formatSelect.value = formatSummary.value;
+    formatSelect.title = formatSummary.title;
+  }
+
+  Object.entries(DELIVERABLE_BUTTON_IDS).forEach(([type, id]) => {
+    const btn = document.getElementById(id);
+    if (!btn || btn.classList.contains("loading")) return;
+    const label = DELIVERABLE_LABELS[type] || humanizeDomain(type);
+    btn.disabled = !canGenerate;
+    btn.title = !backendOnline
+      ? `Reconnect the backend before generating ${label}.`
+      : (hasSequence
+          ? `Generate ${label} as a CSV handoff sheet.`
+          : `Load sequence info before generating ${label}.`);
+  });
+
+  const reportBtn = document.getElementById("runFullReportBtn");
+  if (reportBtn && !reportBtn.classList.contains("loading")) {
+    if (!selectedTypes.length) {
+      reportBtn.textContent = "Select Documents First";
+    } else if (selectedTypes.length === 1) {
+      reportBtn.textContent = `Generate ${DELIVERABLE_LABELS[selectedTypes[0]] || "Selected Report"}`;
+    } else if (selectedTypes.length === 4) {
+      reportBtn.textContent = "Generate Full Report";
+    } else {
+      reportBtn.textContent = `Generate ${selectedTypes.length}-Doc Package`;
+    }
+    reportBtn.disabled = !canGenerate || selectedTypes.length === 0;
+    reportBtn.title = !selectedTypes.length
+      ? "Select at least one handoff document before generating a package."
+      : (!backendOnline
+          ? "Reconnect the backend before generating the selected handoff package."
+          : (!hasSequence
+          ? "Load sequence info before generating the selected handoff package."
+          : `${selectionSummary.title} ${formatSummary.title}`));
+  }
+}
+
 function setDeliverablesButtonsDisabled(disabled) {
   Object.values(DELIVERABLE_BUTTON_IDS).forEach((id) => {
     const btn = document.getElementById(id);
     if (btn && !btn.classList.contains("loading")) btn.disabled = disabled;
   });
-  const reportBtn = document.getElementById("runFullReportBtn");
-  if (reportBtn && !reportBtn.classList.contains("loading")) reportBtn.disabled = disabled;
 }
 
 function setDeliverablesStatus(message, state = "idle", title) {
@@ -1651,9 +1920,20 @@ function setDeliverablesStatus(message, state = "idle", title) {
   line.title = title || message;
 }
 
+function setSettingsStatus(id, message, state = "idle", title) {
+  const line = document.getElementById(id);
+  if (!line) return;
+  line.textContent = message;
+  line.dataset.state = state;
+  line.title = title || message;
+}
+
 function updateDeliverablesSummary() {
   const info = _lastSequenceInfo;
   const output = getDeliverablesOutputSummary();
+  const hasOutputDestination = !!document.getElementById("delivOutputDir")?.value?.trim();
+  const selectedTypes = getSelectedReportTypes();
+  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
 
   if (info) {
     const resolution = (info.width && info.height) ? `${info.width} × ${info.height}` : "Unknown size";
@@ -1686,23 +1966,31 @@ function updateDeliverablesSummary() {
   }
 
   setTextAndTitle("deliverablesOutputValue", output.label, output.title);
+  updateDeliverablesPlanSummary(output);
 
   if (_lastDeliverableActivity) {
     const activity = _lastDeliverableActivity;
     const label = activity.count
       ? `${activity.label} • ${activity.count} ${activity.count === 1 ? "doc" : "docs"}`
       : activity.label;
+    const relative = formatRelativeTime(activity.time);
     setTextAndTitle(
       "deliverablesLastExportValue",
-      `${label} at ${formatLocaleTime(activity.time)}`,
+      `${label} (${relative})`,
       activity.output || `${label} at ${formatLocaleTime(activity.time)}`
     );
   } else {
     setTextAndTitle("deliverablesLastExportValue", "No exports yet", "No deliverables have been generated in this session.");
   }
 
-  if (!_lastSequenceInfo) {
+  if (!backendOnline) {
+    setDeliverablesStatus("Reconnect the local backend before generating handoff documents or report packages.", "error");
+  } else if (!_lastSequenceInfo) {
     setDeliverablesStatus("Load sequence info, choose a destination if needed, then generate the handoff docs you need.", "idle");
+  } else if (!selectedTypes.length) {
+    setDeliverablesStatus("Sequence info is ready. Select at least one handoff document below, or generate a single sheet above for this pass.", "warning");
+  } else if (!_lastDeliverableActivity && !hasOutputDestination) {
+    setDeliverablesStatus("Sequence ready. Choose an output folder if you want handoff docs saved somewhere more durable than the session temp folder.", "warning", output.title);
   } else if (_lastDeliverableActivity) {
     const lastLabel = _lastDeliverableActivity.count
       ? `${_lastDeliverableActivity.label} finished`
@@ -1719,6 +2007,57 @@ function setIndexStatus(message, state = "idle", title) {
   line.textContent = message;
   line.dataset.state = state;
   line.title = title || message;
+}
+
+function syncSearchPanelState() {
+  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const folder = document.getElementById("indexFolder")?.value?.trim() || "";
+  const query = document.getElementById("searchQuery")?.value?.trim() || "";
+  const nlpCommand = document.getElementById("nlpCommand")?.value?.trim() || "";
+  const indexedFiles = Number(_lastIndexStats?.total_files || 0);
+  const hasIndex = indexedFiles > 0;
+
+  const runIndexBtn = document.getElementById("runIndexLibBtn");
+  if (runIndexBtn && !runIndexBtn.classList.contains("loading")) {
+    runIndexBtn.disabled = !backendOnline || !folder;
+    runIndexBtn.title = !backendOnline
+      ? "Reconnect the backend before indexing the library."
+      : (folder
+          ? "Build a searchable library from the selected media folder."
+          : "Choose a media folder before indexing the library.");
+  }
+
+  const clearBtn = document.getElementById("clearIndexBtn");
+  if (clearBtn && !clearBtn.classList.contains("loading")) {
+    clearBtn.disabled = !backendOnline || !hasIndex;
+    clearBtn.title = !backendOnline
+      ? "Reconnect the backend before clearing the search index."
+      : (hasIndex
+          ? "Clear the current search index. You can rebuild it any time."
+          : "Build an index before clearing it.");
+  }
+
+  const searchBtn = document.getElementById("runFootageSearchBtn");
+  if (searchBtn && !searchBtn.classList.contains("loading")) {
+    searchBtn.disabled = !backendOnline || !hasIndex || !query;
+    searchBtn.title = !backendOnline
+      ? "Reconnect the backend before searching the library."
+      : (!hasIndex
+          ? "Index a folder before searching the library."
+          : (query
+              ? "Search the indexed library and load the best shot back into the workspace."
+              : "Enter a descriptive query before searching the library."));
+  }
+
+  const nlpBtn = document.getElementById("runNlpBtn");
+  if (nlpBtn && !nlpBtn.classList.contains("loading")) {
+    nlpBtn.disabled = !backendOnline || !nlpCommand;
+    nlpBtn.title = !backendOnline
+      ? "Reconnect the backend before running natural-language commands."
+      : (nlpCommand
+          ? "Parse the current edit instruction and review the result before applying it."
+          : "Enter a natural-language edit instruction before running it.");
+  }
 }
 
 function resetSearchResults(kicker, message) {
@@ -1740,6 +2079,7 @@ async function refreshFootageIndexStats(options = {}) {
       setTextAndTitle("indexStatsValue", "Index status unavailable", "The panel could not read the search index status.");
       setIndexStatus("Could not read the current library index. Reconnect the backend, then refresh or re-index the folder.", "warning");
     }
+    syncSearchPanelState();
     return null;
   }
 
@@ -1769,10 +2109,18 @@ async function refreshFootageIndexStats(options = {}) {
     }
   }
 
+  syncSearchPanelState();
   return stats;
 }
 
 async function clearFootageIndex() {
+  if (!(Number(_lastIndexStats?.total_files || 0) > 0)) {
+    setIndexStatus("Build an index before clearing it.", "warning");
+    UIController.showToast("Build an index before clearing it.", "warning");
+    syncSearchPanelState();
+    return;
+  }
+
   const confirmMessage = "Clear the current search index? You can rebuild it any time by indexing the folder again.";
   if (typeof window !== "undefined" && typeof window.confirm === "function" && !window.confirm(confirmMessage)) {
     return;
@@ -1800,6 +2148,7 @@ async function clearFootageIndex() {
   setTextAndTitle("indexStatsValue", "0 files indexed", "The search index is empty until you index a folder again.");
   setIndexStatus("Search index cleared. Re-index a folder to make library results available again.", "success");
   UIController.showToast("Search index cleared.", "success");
+  syncSearchPanelState();
 }
 
 async function ensureSequenceInfo(options = {}) {
@@ -1900,15 +2249,15 @@ async function runSilenceRemoval() {
   const detectMethod = document.getElementById("silenceDetectMethod")?.value ?? "auto";
 
   UIController.setButtonLoading("runSilenceBtn", true);
-  UIController.showProcessing("Detecting silences...");
-  UIController.setStatus("Running silence removal...");
+  UIController.showProcessing("Detecting silences…");
+  UIController.setStatus("Running silence removal…");
 
   await JobPoller.start(
     "/silence",
     { filepath: clipPath, threshold: threshold, min_duration: minSilence, padding_before: padding / 1000, padding_after: padding / 1000, mode, method: detectMethod },
     (pct, msg) => {
       UIController.setProgress(pct);
-      UIController.setProcessingMsg(msg || "Processing...");
+      UIController.setProcessingMsg(msg || "Processing…");
     },
     (result) => {
       UIController.hideProcessing();
@@ -1952,12 +2301,33 @@ function showCutResult(result) {
   if (!area || !body) return;
   area.classList.remove("hidden");
   const cuts = result.cuts ?? [];
+  const clipPath = document.getElementById("clipPathCut")?.value?.trim() || getWorkspaceSource("cut");
   const totalRemoved = cuts.reduce((sum, cut) => sum + Math.max(0, Number(cut.end) - Number(cut.start)), 0);
+  const longestCut = cuts.reduce((max, cut) => Math.max(max, Math.max(0, Number(cut.end) - Number(cut.start))), 0);
   if (summary) {
     summary.textContent = cuts.length
-      ? `${cuts.length} cut${cuts.length === 1 ? "" : "s"} • ${formatCompactDuration(totalRemoved)} removed`
+      ? `${cuts.length} cut window${cuts.length === 1 ? "" : "s"} • ${formatCompactDuration(totalRemoved)} removed${longestCut ? ` • longest ${formatCompactDuration(longestCut)}` : ""}`
       : "No cuts detected";
   }
+  setTextAndTitle(
+    "cutResultSourceValue",
+    clipPath ? formatWorkspaceSource(clipPath) : "Awaiting reviewed pass",
+    clipPath || "Choose a clip and run a cleanup pass to stage cut windows."
+  );
+  setTextAndTitle(
+    "cutResultRemovedValue",
+    cuts.length ? `${formatCompactDuration(totalRemoved)} total` : "0 s",
+    cuts.length
+      ? `${formatCompactDuration(totalRemoved)} total removed across ${cuts.length} cut window${cuts.length === 1 ? "" : "s"}.`
+      : "No cut windows are staged yet."
+  );
+  setTextAndTitle(
+    "cutResultNextValue",
+    cuts.length ? "Apply latest cuts to timeline" : "Adjust settings and rerun",
+    cuts.length
+      ? "Review the suggested windows, then apply the pass to the active sequence."
+      : "Refine the thresholds or switch cleanup mode, then run another pass."
+  );
   body.innerHTML = cuts.length
     ? cuts.map((cut, index) => {
         const start = Number(cut.start);
@@ -1990,12 +2360,12 @@ async function runFillerDetection() {
   const fillerBackend = document.getElementById("fillerBackend")?.value ?? "whisper";
 
   UIController.setButtonLoading("runFillerBtn", true);
-  UIController.showProcessing(fillerBackend === "crisper" ? "Detecting fillers with CrisperWhisper..." : "Detecting filler words...");
+  UIController.showProcessing(fillerBackend === "crisper" ? "Detecting fillers with CrisperWhisper…" : "Detecting filler words…");
 
   await JobPoller.start(
     "/fillers",
     { filepath: clipPath, custom_words: words.split(",").map(w => w.trim()), filler_backend: fillerBackend },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Transcribing..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Transcribing…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runFillerBtn", false);
@@ -2032,7 +2402,7 @@ async function runTranscribe() {
   const wordLevel = document.getElementById("enableWordLevel")?.checked ?? true;
 
   UIController.setButtonLoading("runTranscribeBtn", true);
-  UIController.showProcessing("Transcribing — this may take a while...");
+  UIController.showProcessing("Transcribing — this may take a while…");
   setCaptionsSessionState(
     "Working",
     "working",
@@ -2040,7 +2410,7 @@ async function runTranscribe() {
     "working",
     clipPath
   );
-  setTextAndTitle("captionsOutputValue", "Processing transcript...", clipPath);
+  setTextAndTitle("captionsOutputValue", "Processing transcript…", clipPath);
   syncCaptionsActionButtons();
 
   // The "captionStyle" select offers visual styles (youtube_bold, neon_pop,
@@ -2053,7 +2423,7 @@ async function runTranscribe() {
     "/captions",
     { filepath: clipPath, model, language: lang === "auto" ? null : lang,
       format: "srt", diarize, word_timestamps: wordLevel },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Transcribing..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Transcribing…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runTranscribeBtn", false);
@@ -2105,6 +2475,11 @@ function showCaptionsResult(result) {
       ? `${nonEmptyLines} caption ${nonEmptyLines === 1 ? "line" : "lines"}`
       : `${nonEmptyLines} transcript ${nonEmptyLines === 1 ? "line" : "lines"}`,
     outputTitle: clipPath || "Transcript ready",
+    insightType: result.srt ? "Transcript + SRT" : "Transcript",
+    insightLength: result.srt
+      ? `${nonEmptyLines} caption ${nonEmptyLines === 1 ? "line" : "lines"}`
+      : `${nonEmptyLines} transcript ${nonEmptyLines === 1 ? "line" : "lines"}`,
+    insightNext: result.srt ? "Copy SRT or open SRT Prep" : "Copy transcript or draft chapters",
   });
 }
 
@@ -2118,7 +2493,7 @@ async function runChapterGeneration() {
   if (!clipPath) { UIController.showToast("Please transcribe a clip first, or select one.", "warning"); return; }
 
   UIController.setButtonLoading("runChaptersBtn", true);
-  UIController.showProcessing("Generating chapters with AI...");
+  UIController.showProcessing("Generating chapters with AI…");
   setCaptionsSessionState(
     "Working",
     "working",
@@ -2126,13 +2501,13 @@ async function runChapterGeneration() {
     "working",
     clipPath
   );
-  setTextAndTitle("captionsOutputValue", "Drafting chapters...", clipPath);
+  setTextAndTitle("captionsOutputValue", "Drafting chapters…", clipPath);
   syncCaptionsActionButtons();
 
   await JobPoller.start(
     "/captions/chapters",
     { filepath: clipPath, llm_provider: provider, llm_model: model },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Generating..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Generating…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runChaptersBtn", false);
@@ -2168,6 +2543,9 @@ async function runChapterGeneration() {
         statusTitle: clipTitle,
         outputLabel: count ? `${count} chapter${count === 1 ? "" : "s"}` : "No chapters drafted",
         outputTitle: clipTitle,
+        insightType: "Chapter draft",
+        insightLength: count ? `${count} chapter${count === 1 ? "" : "s"}` : "No chapters drafted",
+        insightNext: count ? "Copy into publishing notes" : "Try another model or refine the transcript",
       });
     },
     (err) => {
@@ -2192,7 +2570,7 @@ async function runRepeatDetection() {
   const keepBest  = document.getElementById("keepBestRepeat")?.checked ?? true;
 
   UIController.setButtonLoading("runRepeatBtn", true);
-  UIController.showProcessing("Detecting repeated segments...");
+  UIController.showProcessing("Detecting repeated segments…");
   setCaptionsSessionState(
     "Working",
     "working",
@@ -2200,13 +2578,13 @@ async function runRepeatDetection() {
     "working",
     clipPath
   );
-  setTextAndTitle("captionsOutputValue", "Scanning for repeats...", clipPath);
+  setTextAndTitle("captionsOutputValue", "Scanning for repeats…", clipPath);
   syncCaptionsActionButtons();
 
   await JobPoller.start(
     "/captions/repeat-detect",
     { filepath: clipPath, threshold, keep_best: keepBest },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runRepeatBtn", false);
@@ -2237,12 +2615,12 @@ async function runDenoise() {
   const strength = parseInt(document.getElementById("denoiseStrength")?.value ?? 75) / 100;
 
   UIController.setButtonLoading("runDenoiseBtn", true);
-  UIController.showProcessing("Applying noise reduction...");
+  UIController.showProcessing("Applying noise reduction…");
 
   await JobPoller.start(
     "/audio/denoise",
     { filepath: clipPath, method, strength },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Processing..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Processing…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runDenoiseBtn", false);
@@ -2266,12 +2644,12 @@ async function runNormalize() {
   const truePeak   = document.getElementById("normalizeTruePeak")?.checked ?? true;
 
   UIController.setButtonLoading("runNormalizeBtn", true);
-  UIController.showProcessing("Normalizing audio...");
+  UIController.showProcessing("Normalizing audio…");
 
   await JobPoller.start(
     "/audio/normalize",
     { filepath: clipPath, target_lufs: targetLufs, true_peak: truePeak ? -1.0 : null },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Normalizing..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Normalizing…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runNormalizeBtn", false);
@@ -2296,12 +2674,12 @@ async function runLoudnessMatch() {
   }
 
   UIController.setButtonLoading("runLoudnessBtn", true);
-  UIController.showProcessing("Matching loudness to reference...");
+  UIController.showProcessing("Matching loudness to reference…");
 
   await JobPoller.start(
     "/audio/loudness-match",
     { files: [clipPath, refPath], target_lufs: -14.0 },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Matching..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Matching…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runLoudnessBtn", false);
@@ -2324,19 +2702,19 @@ async function runBeatMarkers() {
   const sensitivity = parseInt(document.getElementById("beatSensitivity")?.value ?? 60) / 100;
 
   UIController.setButtonLoading("runBeatMarkersBtn", true);
-  UIController.showProcessing("Detecting beats...");
+  UIController.showProcessing("Detecting beats…");
 
   await JobPoller.start(
     "/audio/beat-markers",
     { filepath: trackPath, subdivisions: Math.max(1, Math.round(sensitivity * 4)) },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing tempo..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing tempo…"); },
     async (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runBeatMarkersBtn", false);
 
       const beats = result.beats ?? result.markers ?? [];
       rememberTimelineMarkers(beats, { source: "Beat Detection", clipPath: trackPath });
-      UIController.showToast(`Detected ${beats.length} beats. Adding markers to timeline...`, "success");
+      UIController.showToast(`Detected ${beats.length} beats. Adding markers to timeline…`, "success");
       UIController.setStatus(`Beat detection done — ${beats.length} beats.`);
 
       // Attempt direct UXP marker insertion
@@ -2362,12 +2740,12 @@ async function runColorMatch() {
   const strength = parseInt(document.getElementById("colorMatchStrength")?.value ?? 80) / 100;
 
   UIController.setButtonLoading("runColorMatchBtn", true);
-  UIController.showProcessing("Matching color grading...");
+  UIController.showProcessing("Matching color grading…");
 
   await JobPoller.start(
     "/video/color-match",
     { source: clipPath, reference: refPath, strength },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Grading..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Grading…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runColorMatchBtn", false);
@@ -2391,12 +2769,12 @@ async function runAutoZoom() {
   const maxZoom   = parseFloat(document.getElementById("zoomFactor")?.value ?? 1.4);
 
   UIController.setButtonLoading("runAutoZoomBtn", true);
-  UIController.showProcessing("Applying auto zoom / reframe...");
+  UIController.showProcessing("Applying auto zoom / reframe…");
 
   await JobPoller.start(
     "/video/auto-zoom",
     { filepath: clipPath, zoom_amount: maxZoom, easing: "ease_in_out" },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Reframing..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Reframing…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runAutoZoomBtn", false);
@@ -2423,7 +2801,7 @@ async function runMulticamCuts() {
   const strategy = document.getElementById("multicamStrategy")?.value ?? "activity";
 
   UIController.setButtonLoading("runMulticamBtn", true);
-  UIController.showProcessing("Generating multicam cuts...");
+  UIController.showProcessing("Generating multicam cuts…");
 
   // Backend /video/multicam-cuts wants either ``segments`` (inline list),
   // ``diarization_file`` (a JSON file with diarization data), or a single
@@ -2436,7 +2814,7 @@ async function runMulticamCuts() {
   await JobPoller.start(
     "/video/multicam-cuts",
     { filepath: cam1Path, min_cut_duration: 1.0 },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing cameras..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Analysing cameras…"); },
     async (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runMulticamBtn", false);
@@ -2470,7 +2848,7 @@ async function applyTimelineCuts(cuts) {
   }
 
   if (PProBridge.available()) {
-    UIController.setStatus("Applying cuts to timeline via UXP...");
+  UIController.setStatus("Applying cuts to timeline via UXP…");
     const result = await PProBridge.applyCuts(cutsToApply);
     if (result.ok) {
       UIController.showToast(`Applied ${result.applied} cut(s) to active sequence.`, "success");
@@ -2532,7 +2910,7 @@ async function addSequenceMarkers(markers, color) {
   }));
 
   if (PProBridge.available()) {
-    UIController.setStatus("Adding markers to sequence via UXP...");
+  UIController.setStatus("Adding markers to sequence via UXP…");
     const result = await PProBridge.addMarkers(formatted);
     if (result.ok) {
       UIController.showToast(`Added ${result.count} marker(s) to active sequence.`, "success");
@@ -2582,12 +2960,12 @@ async function runBatchExport() {
   if (markersToExport.length === 0) { UIController.showToast("No markers or cuts to export. Run beat detection or silence removal first.", "warning"); return; }
 
   UIController.setButtonLoading("runBatchExportBtn", true);
-  UIController.showProcessing("Starting batch export from markers...");
+  UIController.showProcessing("Starting batch export from markers…");
 
   await JobPoller.start(
     "/timeline/export-from-markers",
     { input_file: clipPath, markers: markersToExport, output_dir: outputDir, format: preset },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Exporting..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Exporting…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runBatchExportBtn", false);
@@ -2644,12 +3022,12 @@ async function runSrtImport() {
   if (!srtPath) { UIController.showToast("Please select an SRT file.", "warning"); return; }
 
   UIController.setButtonLoading("runSrtImportBtn", true);
-  UIController.showProcessing("Validating SRT for timeline import...");
+  UIController.showProcessing("Validating SRT for timeline import…");
 
   await JobPoller.start(
     "/timeline/srt-to-captions",
     { srt_path: srtPath, track_index: trackIndex },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Validating..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Validating…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runSrtImportBtn", false);
@@ -2680,12 +3058,13 @@ async function runIndexLibrary() {
     setStatusPill("indexStatePill", "Needs Folder", "warning", "Choose a media folder before building the search index.");
     setIndexStatus("Choose a media folder before building the search index.", "warning");
     UIController.showToast("Please select a media folder to index.", "warning");
+    syncSearchPanelState();
     return;
   }
 
   const statusLine = document.getElementById("indexStatus");
   UIController.setButtonLoading("runIndexLibBtn", true);
-  UIController.showProcessing("Indexing media library...");
+  UIController.showProcessing("Indexing media library…");
   setStatusPill("indexStatePill", "Indexing", "working", folder);
   setIndexStatus("Indexing the media library…", "working", folder);
   if (statusLine) statusLine.textContent = "Indexing the media library…";
@@ -2735,6 +3114,7 @@ async function runIndexLibrary() {
       setIndexStatus(`Could not index the library. ${err}`, "error");
       if (statusLine) statusLine.textContent = `Could not index the library. ${err}`;
       UIController.showToast(`Index error: ${err}`, "error");
+      syncSearchPanelState();
     }
   );
 }
@@ -2743,14 +3123,29 @@ async function runIndexLibrary() {
 async function runFootageSearch() {
   const query = document.getElementById("searchQuery")?.value?.trim();
   const limit = parseInt(document.getElementById("searchResultCount")?.value ?? 10);
+  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  const indexedFiles = Number(_lastIndexStats?.total_files || 0);
+  if (!backendOnline) {
+    setTextAndTitle("searchStatus", "Reconnect the backend before searching the library.", "Reconnect the backend before searching the library.");
+    UIController.showToast("Reconnect the backend before searching the library.", "warning");
+    syncSearchPanelState();
+    return;
+  }
+  if (indexedFiles <= 0) {
+    setTextAndTitle("searchStatus", "Index a folder before searching the library.", "Index a folder before searching the library.");
+    UIController.showToast("Index a folder before searching the library.", "warning");
+    syncSearchPanelState();
+    return;
+  }
   if (!query) {
     setTextAndTitle("searchStatus", "Enter a descriptive query to search the indexed library.", "Enter a descriptive query to search the indexed library.");
     UIController.showToast("Please enter a search query.", "warning");
+    syncSearchPanelState();
     return;
   }
 
   UIController.setButtonLoading("runFootageSearchBtn", true);
-  UIController.setStatus("Searching footage...", "working");
+  UIController.setStatus("Searching footage…", "working");
   setTextAndTitle("searchStatus", `Searching for "${query}"…`, `Searching for "${query}"…`);
 
   const r = await BackendClient.post("/search/footage", { query, top_k: limit });
@@ -2760,46 +3155,63 @@ async function runFootageSearch() {
   if (!r.ok) {
     setTextAndTitle("searchStatus", `Could not search the library. ${r.error}`, r.error);
     UIController.showToast(`Search error: ${r.error}`, "error");
+    UIController.setStatus("Search failed. Review the query or reconnect the backend.", "error");
+    syncSearchPanelState();
     return;
   }
 
   const results = r.data?.results ?? r.data ?? [];
   const list    = document.getElementById("searchResultList");
+  const cards = Array.isArray(results) ? results.map((item, index) => buildSearchResultCard(item, index)) : [];
   if (list) {
     list.innerHTML = "";
-    if (results.length === 0) {
+    if (cards.length === 0) {
       list.innerHTML = `
         <div class="oc-empty-state oc-empty-state-inline">
           <div class="oc-empty-state-kicker">No matches yet</div>
-          <p>Try a more descriptive query, or index more footage to widen the search space.</p>
+          <p>Try more descriptive language, quote a spoken phrase, or index a broader folder to widen the search space.</p>
         </div>`;
     } else {
-      results.forEach((item, index) => {
-        const nextPath = item.path ?? item.file ?? "";
-        const label = formatWorkspaceSource(nextPath || `Result ${index + 1}`);
-        const meta = typeof item.score === "number"
-          ? `${Math.round(item.score * 100)}% match`
-          : `Result ${index + 1}`;
+      cards.forEach((card, index) => {
         const el = document.createElement("button");
         el.type = "button";
-        el.className = "oc-result-list-item";
+        el.className = `oc-result-list-item${index === 0 ? " is-featured" : ""}`;
         el.innerHTML = `
           <span class="oc-result-list-item-copy">
-            <span class="oc-result-list-item-title">${UIController.escapeHtml(label)}</span>
-            <span class="oc-result-list-item-path">${UIController.escapeHtml(nextPath || JSON.stringify(item))}</span>
+            <span class="oc-result-list-item-topline">
+              <span class="oc-result-list-item-title">${UIController.escapeHtml(card.label)}</span>
+              <span class="oc-result-list-item-badge">${UIController.escapeHtml(card.kindLabel)}</span>
+              ${card.timeLabel ? `<span class="oc-result-list-item-badge">${UIController.escapeHtml(card.timeLabel)}</span>` : ""}
+            </span>
+            <span class="oc-result-list-item-path">${UIController.escapeHtml(card.path || "Path unavailable for this result")}</span>
+            ${card.preview ? `<span class="oc-result-list-item-excerpt">${UIController.escapeHtml(card.preview)}</span>` : ""}
           </span>
-          <span class="oc-result-list-item-meta">${UIController.escapeHtml(meta)}</span>`;
-        el.title = nextPath || JSON.stringify(item);
+          <span class="oc-result-list-item-meta">${UIController.escapeHtml(card.scoreLabel)}</span>`;
+        el.title = card.path || card.preview || card.label;
         el.addEventListener("click", () => {
+          if (!card.path) {
+            setTextAndTitle(
+              "searchStatus",
+              "This match does not include a loadable file path yet. Refine the query or index a folder with source media.",
+              card.label
+            );
+            UIController.showToast("This result does not include a loadable file path yet.", "warning");
+            return;
+          }
           list.querySelectorAll(".oc-result-list-item").forEach((node) => {
             node.classList.remove("is-selected");
             node.setAttribute("aria-pressed", "false");
           });
           el.classList.add("is-selected");
           el.setAttribute("aria-pressed", "true");
-          if (nextPath) setWorkspaceClip(nextPath, { tabId: "search" });
-          setTextAndTitle("searchStatus", `Loaded ${label} into the workspace.`, nextPath || label);
-          UIController.showToast(`Loaded ${label} into the workspace.`, "success");
+          setWorkspaceClip(card.path, { tabId: "search" });
+          setTextAndTitle(
+            "searchStatus",
+            `Loaded ${card.label} into the workspace. Search results stay visible while you compare alternate shots.`,
+            card.path
+          );
+          UIController.showToast(`Loaded ${card.label} into the workspace.`, "success");
+          UIController.setStatus(`Search match loaded — ${card.label}.`, "success");
         });
         el.setAttribute("aria-pressed", "false");
         list.appendChild(el);
@@ -2809,12 +3221,17 @@ async function runFootageSearch() {
 
   setTextAndTitle(
     "searchStatus",
-    results.length
-      ? `${results.length} ${results.length === 1 ? "match is" : "matches are"} ready. Choose one to load it back into the workspace.`
+    cards.length
+      ? `${cards.length} ${cards.length === 1 ? "match is" : "matches are"} ready. Start with ${cards[0].label}, or compare results before loading a shot back into the workspace.`
       : "No matches yet. Try more descriptive language, or index a broader folder.",
     query
   );
-  UIController.setStatus(`Search done — ${results.length} result(s).`);
+  UIController.setStatus(
+    cards.length
+      ? `Search ready — ${cards.length} result${cards.length === 1 ? "" : "s"}.`
+      : "Search returned no matches."
+  );
+  syncSearchPanelState();
 }
 
 /** ── NLP COMMAND ── */
@@ -2822,15 +3239,21 @@ async function runNlpCommand() {
   const llmProvider = window._llmSettings?.provider || "ollama";
   const command  = document.getElementById("nlpCommand")?.value?.trim();
   const provider = document.getElementById("nlpLlmProvider")?.value ?? llmProvider;
+  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  if (!backendOnline) {
+    UIController.showToast("Reconnect the backend before running natural-language commands.", "warning");
+    syncSearchPanelState();
+    return;
+  }
   if (!command) { UIController.showToast("Please enter a natural language command.", "warning"); return; }
 
   UIController.setButtonLoading("runNlpBtn", true);
-  UIController.showProcessing("Parsing command with AI...");
+  UIController.showProcessing("Parsing command with AI…");
 
   await JobPoller.start(
     "/nlp/command",
     { command, llm_provider: provider },
-    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Thinking..."); },
+    (pct, msg) => { UIController.setProgress(pct); UIController.setProcessingMsg(msg || "Thinking…"); },
     (result) => {
       UIController.hideProcessing();
       UIController.setButtonLoading("runNlpBtn", false);
@@ -2869,7 +3292,7 @@ function showNlpResult(result) {
 /** ── LOAD SEQUENCE INFO ── */
 async function loadSequenceInfo() {
   UIController.setButtonLoading("loadSeqInfoBtn", true);
-  UIController.setStatus("Loading sequence info...", "working");
+  UIController.setStatus("Loading sequence info…", "working");
 
   const info = await ensureSequenceInfo({ force: true, silent: true });
 
@@ -2899,17 +3322,26 @@ async function loadSequenceInfo() {
   ];
 
   grid.innerHTML = rows.map(([k, v]) =>
-    `<span class="oc-info-key">${UIController.escapeHtml(k)}</span>` +
-    `<span class="oc-info-val">${UIController.escapeHtml(String(v ?? "—"))}</span>`
+    `<div class="oc-info-pair">` +
+      `<span class="oc-info-key">${UIController.escapeHtml(k)}</span>` +
+      `<span class="oc-info-val">${UIController.escapeHtml(String(v ?? "—"))}</span>` +
+    `</div>`
   ).join("");
 
-  setDeliverablesStatus(`${info.name ?? "Active sequence"} is ready. Generate the handoff docs when the edit is ready.`, "ready", info.name ?? "Active sequence");
-  UIController.setStatus(`Sequence: ${info.name ?? "—"}`);
+  updateDeliverablesSummary();
+  UIController.setStatus(`Sequence ready — ${info.name ?? "Active sequence"}`, "success");
 }
 
 /** ── DELIVERABLES ── */
 async function runDeliverables(type) {
   const deliverableLabel = DELIVERABLE_LABELS[type] || humanizeDomain(type);
+  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  if (!backendOnline) {
+    setDeliverablesStatus(`Reconnect the backend before generating ${deliverableLabel}.`, "error");
+    UIController.showToast("Reconnect the backend before generating deliverables.", "warning");
+    UIController.setStatus("Reconnect the backend before generating deliverables.", "error");
+    return;
+  }
   const seqData = await ensureSequenceInfo({ silent: true });
   const outputDir = document.getElementById("delivOutputDir")?.value?.trim();
   if (!seqData) {
@@ -2933,10 +3365,22 @@ async function runDeliverables(type) {
       if (btnId) UIController.setButtonLoading(btnId, false);
       const outputPath = result.output ?? result.output_path ?? "";
       const outputLabel = outputPath ? formatWorkspaceSource(outputPath) : "saved";
+      const documentCount = Math.max(
+        1,
+        Number(
+          result.count
+          ?? result.generated
+          ?? result.documents?.length
+          ?? result.outputs?.length
+          ?? result.files?.length
+          ?? 1
+        ) || 1
+      );
       _lastDeliverableActivity = {
         label: deliverableLabel,
         output: outputPath,
         time: Date.now(),
+        count: documentCount,
       };
       updateDeliverablesSummary();
       setDeliverablesStatus(`${deliverableLabel} is ready. Review the file and continue building the handoff package.`, "success", outputPath || deliverableLabel);
@@ -2957,20 +3401,40 @@ async function runDeliverables(type) {
 
 /** ── FULL PROJECT REPORT (generates all 4 deliverables) ── */
 async function runFullReport() {
+  const backendOnline = document.getElementById("connLabel")?.textContent?.trim() === "Online";
+  if (!backendOnline) {
+    setDeliverablesStatus("Reconnect the backend before generating the report package.", "error");
+    UIController.showToast("Reconnect the backend before generating the report package.", "warning");
+    UIController.setStatus("Reconnect the backend before generating the report package.", "error");
+    return;
+  }
   const seqData = await ensureSequenceInfo({ silent: true });
   const outputDir = document.getElementById("delivOutputDir")?.value?.trim();
+  const selectedTypes = getSelectedReportTypes();
+  const packageSummary = getDeliverablesSelectionSummary(selectedTypes);
+  const formatSummary = getDeliverablesFormatSummary();
   if (!seqData) {
     setDeliverablesStatus("Load the active Premiere sequence before generating the full report.", "warning");
     UIController.showToast("Load sequence info before generating the full report.", "warning");
     UIController.setStatus("Load sequence info before generating the full report.", "error");
     return;
   }
+  if (!selectedTypes.length) {
+    setDeliverablesStatus("Select at least one handoff document before generating the report package.", "warning");
+    UIController.showToast("Select at least one handoff document before generating the report package.", "warning");
+    UIController.setStatus("Select documents before generating the report package.", "warning");
+    updateDeliverablesSummary();
+    return;
+  }
 
-  const types = ["vfx-sheet", "adr-list", "music-cue-sheet", "asset-list"];
+  const types = selectedTypes.map((type) => type.replace(/_/g, "-"));
+  const packageLabel = selectedTypes.length === 1
+    ? (DELIVERABLE_LABELS[selectedTypes[0]] || "Selected Report")
+    : (selectedTypes.length === 4 ? "Full Report" : `${selectedTypes.length}-Doc Package`);
 
   UIController.setButtonLoading("runFullReportBtn", true);
-  setDeliverablesStatus("Generating the full handoff package…", "working");
-  UIController.showProcessing("Generating full project report…");
+  setDeliverablesStatus(`Generating ${packageLabel}…`, "working", packageSummary.title);
+  UIController.showProcessing(`Generating ${packageLabel}…`);
   UIController.setProgress(0);
 
   let generated = 0;
@@ -2984,6 +3448,7 @@ async function runFullReport() {
     const r = await BackendClient.post(`/deliverables/${type}`, {
       sequence_data: seqData,
       output_dir: outputDir || null,
+      format: formatSummary.value,
     });
     if (r.ok) {
       generated++;
@@ -2996,20 +3461,20 @@ async function runFullReport() {
   UIController.hideProcessing();
   UIController.setButtonLoading("runFullReportBtn", false);
   _lastDeliverableActivity = {
-    label: "Full Report",
+    label: packageLabel,
     output: outputPaths[0] || outputDir || "",
     time: Date.now(),
     count: generated,
   };
   updateDeliverablesSummary();
   if (errors === 0) {
-    setDeliverablesStatus(`Full handoff package ready. ${generated} ${generated === 1 ? "document is" : "documents are"} available for review.`, "success", outputPaths[0] || outputDir || "Full handoff package ready.");
-    UIController.showToast(`Generated ${generated} deliverable document(s).`, "success");
+    setDeliverablesStatus(`${packageLabel} ready. ${generated} ${generated === 1 ? "document is" : "documents are"} available for review.`, "success", outputPaths[0] || outputDir || packageSummary.title);
+    UIController.showToast(`Generated ${generated} CSV handoff ${generated === 1 ? "document" : "documents"}.`, "success");
   } else {
-    setDeliverablesStatus(`Full handoff package generated with a few gaps. ${generated} documents completed and ${errors} ${errors === 1 ? "step needs" : "steps need"} attention.`, "warning", outputPaths[0] || outputDir || "Full handoff package generated with warnings.");
-    UIController.showToast(`Generated ${generated}, failed ${errors}.`, "warning");
+    setDeliverablesStatus(`${packageLabel} generated with a few gaps. ${generated} documents completed and ${errors} ${errors === 1 ? "step needs" : "steps need"} attention.`, "warning", outputPaths[0] || outputDir || packageSummary.title);
+    UIController.showToast(`Generated ${generated} CSV documents; ${errors} ${errors === 1 ? "step needs" : "steps need"} attention.`, "warning");
   }
-  UIController.setStatus(`Report: ${generated} docs generated.`);
+  UIController.setStatus(`${packageLabel} ready — ${generated} CSV ${generated === 1 ? "document" : "documents"}.`);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -3023,7 +3488,7 @@ async function runBrollGenerate() {
   const payload = { prompt, backend };
   if (seedEl?.value) payload.seed = parseInt(seedEl.value);
   UIController.setButtonLoading("runBrollGenBtnUxp", true);
-  UIController.showProcessing("Generating AI B-roll...");
+  UIController.showProcessing("Generating AI B-roll…");
   const r = await BackendClient.post("/video/broll-generate", payload);
   if (r.ok && r.data?.job_id) {
     const result = await JobPoller.poll(r.data.job_id);
@@ -3047,7 +3512,7 @@ async function runMultimodalDiarize() {
   const payload = { filepath: clipPath, sample_fps: 2.0, min_face_confidence: 0.5 };
   if (numSpeakers) payload.num_speakers = parseInt(numSpeakers);
   UIController.setButtonLoading("runMmDiarizeBtnUxp", true);
-  UIController.showProcessing("Running multimodal diarization...");
+  UIController.showProcessing("Running multimodal diarization…");
   const r = await BackendClient.post("/video/multimodal-diarize", payload);
   if (r.ok && r.data?.job_id) {
     const result = await JobPoller.poll(r.data.job_id);
@@ -3074,7 +3539,7 @@ async function runSocialUpload() {
   const description = document.getElementById("socialDescriptionUxp")?.value ?? "";
   const privacy = document.getElementById("socialPrivacyUxp")?.value ?? "private";
   UIController.setButtonLoading("socialUploadBtnUxp", true);
-  UIController.showProcessing(`Uploading to ${platform}...`);
+  UIController.showProcessing(`Uploading to ${platform}…`);
   const r = await BackendClient.post("/social/upload", {
     filepath: clipPath, platform, title, description, privacy,
   });
@@ -3144,6 +3609,19 @@ function formatLocaleTime(value) {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
+}
+
+function formatRelativeTime(value) {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "just now";
+  const diffMs = date.getTime() - Date.now();
+  const absMinutes = Math.abs(diffMs) / 60000;
+  const formatter = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" });
+  if (absMinutes < 1) return "just now";
+  if (absMinutes < 60) return formatter.format(Math.round(diffMs / 60000), "minute");
+  const absHours = Math.abs(diffMs) / 3600000;
+  if (absHours < 24) return formatter.format(Math.round(diffMs / 3600000), "hour");
+  return formatter.format(Math.round(diffMs / 86400000), "day");
 }
 
 function formatBytes(bytes) {
@@ -3386,6 +3864,19 @@ function bindEvents() {
     control.addEventListener("change", () => updateTimelineReadiness());
   });
 
+  ["indexFolder", "searchQuery", "nlpCommand"].forEach((id) => {
+    const control = document.getElementById(id);
+    if (!control) return;
+    control.addEventListener("input", () => syncSearchPanelState());
+    control.addEventListener("change", () => syncSearchPanelState());
+  });
+
+  ["rptIncludeVfx", "rptIncludeAdr", "rptIncludeMusic", "rptIncludeAssets", "reportFormat"].forEach((id) => {
+    const control = document.getElementById(id);
+    if (!control) return;
+    control.addEventListener("change", () => updateDeliverablesSummary());
+  });
+
   // ── Refresh button ──
   document.getElementById("refreshBtn")?.addEventListener("click", () => checkConnection());
   document.getElementById("workspaceChooseClipBtn")?.addEventListener("click", () => handleWorkspaceAction("choose-clip"));
@@ -3542,7 +4033,7 @@ function bindEvents() {
   document.getElementById("runDepthBtnUxp")?.addEventListener("click", runDepthEffect);
   document.getElementById("installDepthBtnUxp")?.addEventListener("click", async () => {
     const r = await BackendClient.post("/video/depth/install", {});
-    if (r.ok) UIController.showToast("Installing Depth Anything V2...", "info");
+  if (r.ok) UIController.showToast("Installing Depth Anything V2…", "info");
     else UIController.showToast("Install failed: " + (r.error || "unknown"), "error");
   });
 
@@ -3627,7 +4118,7 @@ async function runDepthEffect() {
   UIController.setButtonLoading("runDepthBtnUxp", true);
   const r = await BackendClient.post(endpoint, payload);
   if (r.ok && r.data?.job_id) {
-    UIController.showProcessing("Running depth effect...");
+  UIController.showProcessing("Running depth effect…");
     try {
       const result = await JobPoller.poll(r.data.job_id);
       UIController.showToast(`Depth effect complete: ${result?.output_path?.split(/[/\\]/).pop() ?? "done"}`, "success");
@@ -3652,7 +4143,7 @@ async function runEmotionHighlights() {
   UIController.setButtonLoading("runEmotionBtnUxp", true);
   const r = await BackendClient.post("/video/emotion-highlights", { filepath: clipPath });
   if (r.ok && r.data?.job_id) {
-    UIController.showProcessing("Analyzing emotions...");
+  UIController.showProcessing("Analyzing emotions…");
     try {
       const result = await JobPoller.poll(r.data.job_id);
       const peaks = result?.peaks?.length ?? 0;
@@ -3678,7 +4169,7 @@ async function runBrollAnalysis() {
   UIController.setButtonLoading("runBrollPlanBtnUxp", true);
   const r = await BackendClient.post("/video/broll-plan", { filepath: clipPath });
   if (r.ok && r.data?.job_id) {
-    UIController.showProcessing("Analyzing B-roll points...");
+  UIController.showProcessing("Analyzing B-roll points…");
     try {
       const result = await JobPoller.poll(r.data.job_id);
       const windows = result?.windows?.length ?? 0;
@@ -3737,7 +4228,7 @@ async function sendChatMessage() {
     // Auto-execute actions if present
     const actions = r.data.actions || [];
     if (actions.length > 0) {
-      UIController.showToast(`Executing ${actions.length} action(s)...`, "info");
+UIController.showToast(`Executing ${actions.length} action(s)…`, "info");
     }
   } else {
     if (history) {
@@ -3819,13 +4310,16 @@ function uxpWsDisconnect() {
 async function uxpUpdateWsStatus() {
   const statusEl = document.getElementById("uxpWsStatus");
   const countEl = document.getElementById("uxpWsClients");
+  const panelStateEl = document.getElementById("uxpWsPanelState");
   const connectBtn = document.getElementById("uxpWsConnectBtn");
   const startBtn = document.getElementById("uxpWsStartBtn");
   const stopBtn = document.getElementById("uxpWsStopBtn");
   let statusText = _uxpWsConnected ? "Live updates connected" : "Bridge unavailable";
   let statusState = _uxpWsConnected ? "connected" : "unknown";
+  let panelStateText = _uxpWsConnected ? "Connected" : "Waiting to connect";
   let bridgeRunning = false;
   let clients = 0;
+  let statusDetail = "Start the bridge, then connect this panel to receive live job updates.";
 
   const r = await BackendClient.get("/ws/status");
   if (r.ok && r.data) {
@@ -3834,31 +4328,63 @@ async function uxpUpdateWsStatus() {
     if (_uxpWsConnected) {
       statusText = clients > 0 ? "Live updates connected" : "Panel connected";
       statusState = "connected";
+      panelStateText = "Connected";
+      statusDetail = "Live updates are flowing into this panel. Long-running jobs can report progress, completion, and cancel feedback here.";
     } else if (bridgeRunning) {
       statusText = clients > 0 ? "Bridge ready" : "Bridge idle";
       statusState = "ready";
+      panelStateText = "Ready to connect";
+      statusDetail = "The bridge is running, but this panel is not attached yet. Connect live updates to bring job progress back into the workspace.";
     } else {
       statusText = "Bridge stopped";
       statusState = "stopped";
+      panelStateText = "Not linked";
+      statusDetail = "Start the live-updates bridge to bring long-running job feedback back into the panel.";
     }
   } else if (!_uxpWsConnected) {
     statusText = "Bridge unavailable";
     statusState = "error";
+    panelStateText = "Unavailable";
+    statusDetail = "The panel could not read bridge status right now. Refresh the backend, then try again.";
   }
 
   if (statusEl) {
     statusEl.textContent = statusText;
     statusEl.dataset.state = statusState;
+    statusEl.title = statusDetail;
   }
   if (countEl) {
     countEl.textContent = `${clients} ${clients === 1 ? "listener" : "listeners"}`;
     countEl.dataset.state = clients > 0 ? "active" : "idle";
+    countEl.title = clients
+      ? `${clients} ${clients === 1 ? "listener is" : "listeners are"} currently attached to the live-updates bridge.`
+      : "No listeners are attached to the live-updates bridge right now.";
   }
-  if (startBtn) startBtn.disabled = bridgeRunning;
-  if (stopBtn) stopBtn.disabled = !bridgeRunning;
+  if (panelStateEl) {
+    panelStateEl.textContent = panelStateText;
+    panelStateEl.title = statusDetail;
+  }
+  setSettingsStatus("settingsBridgeStatus", statusDetail, statusState === "connected" ? "success" : (statusState === "error" ? "error" : (statusState === "stopped" ? "warning" : "ready")), statusDetail);
+  if (startBtn) {
+    startBtn.disabled = bridgeRunning;
+    startBtn.title = bridgeRunning
+      ? "The live-updates bridge is already running."
+      : "Start the live-updates bridge for panel progress and completion updates.";
+  }
+  if (stopBtn) {
+    stopBtn.disabled = !bridgeRunning;
+    stopBtn.title = bridgeRunning
+      ? "Stop the live-updates bridge."
+      : "The live-updates bridge is not running.";
+  }
   if (connectBtn) {
     connectBtn.textContent = _uxpWsConnected ? "Live Updates Connected" : "Connect Live Updates";
     connectBtn.disabled = !bridgeRunning || _uxpWsConnected;
+    connectBtn.title = _uxpWsConnected
+      ? "This panel is already receiving live updates."
+      : (!bridgeRunning
+          ? "Start the bridge before connecting this panel."
+          : "Connect this panel to receive live job updates.");
   }
 }
 
@@ -3889,14 +4415,22 @@ async function uxpWsStopBridge() {
 async function uxpLoadEngines() {
   const grid = document.getElementById("uxpEngineGrid");
   if (!grid) return;
+  setTextAndTitle("settingsEngineDefaultsValue", "Loading…", "Loading automatic engine routing coverage.");
+  setTextAndTitle("settingsEnginePinnedValue", "Loading…", "Loading pinned engine preferences.");
+  setTextAndTitle("settingsEngineCoverageValue", "Loading…", "Loading engine availability.");
+  setSettingsStatus("settingsEngineStatus", "Loading engine availability…", "working");
   grid.innerHTML = `
     <div class="oc-empty-state oc-empty-state-inline">
       <div class="oc-empty-state-kicker">Engine routing</div>
-      <p>Loading available engines and saved preferences...</p>
+      <p>Loading available engines and saved preferences…</p>
     </div>`;
 
   const r = await BackendClient.get("/engines");
   if (!r.ok || !r.data?.engines) {
+    setTextAndTitle("settingsEngineDefaultsValue", "Unavailable", "OpenCut could not load automatic engine routing coverage.");
+    setTextAndTitle("settingsEnginePinnedValue", "Unavailable", "OpenCut could not load pinned engine preferences.");
+    setTextAndTitle("settingsEngineCoverageValue", "Refresh needed", "Refresh availability after the backend reconnects.");
+    setSettingsStatus("settingsEngineStatus", "Engine availability could not be loaded. Refresh the backend, then try again.", "error");
     grid.innerHTML = `
       <div class="oc-empty-state oc-empty-state-inline">
         <div class="oc-empty-state-kicker">Engine data unavailable</div>
@@ -3907,6 +4441,10 @@ async function uxpLoadEngines() {
 
   const engines = r.data.engines;
   const domains = Object.keys(engines).sort();
+  let pinnedCount = 0;
+  let autoCount = 0;
+  let issueCount = 0;
+  let availableEngineCount = 0;
   let html = "";
 
   for (const domain of domains) {
@@ -3918,8 +4456,12 @@ async function uxpLoadEngines() {
     const activeInfo = entries.find(eng => eng.name === active) || null;
     const preferredInfo = entries.find(eng => eng.name === preferred) || null;
     const availableCount = entries.filter(eng => eng.available).length;
+    availableEngineCount += availableCount;
     const modeLabel = preferredInfo ? "Pinned" : availableCount ? "Auto" : "Needs attention";
     const modeClass = preferredInfo ? "manual" : availableCount ? "auto" : "warning";
+    if (preferredInfo) pinnedCount += 1;
+    else if (availableCount) autoCount += 1;
+    else issueCount += 1;
     let summary = "";
 
     if (preferredInfo) {
@@ -3957,6 +4499,42 @@ async function uxpLoadEngines() {
   }
 
   grid.innerHTML = html;
+  setTextAndTitle(
+    "settingsEngineDefaultsValue",
+    `${autoCount} auto`,
+    `${autoCount} ${autoCount === 1 ? "domain is" : "domains are"} currently using automatic engine routing.`
+  );
+  setTextAndTitle(
+    "settingsEnginePinnedValue",
+    `${pinnedCount} pinned`,
+    `${pinnedCount} ${pinnedCount === 1 ? "domain has" : "domains have"} a pinned engine preference.`
+  );
+  setTextAndTitle(
+    "settingsEngineCoverageValue",
+    issueCount
+      ? `${issueCount} ${issueCount === 1 ? "issue" : "issues"}`
+      : `${availableEngineCount} ${availableEngineCount === 1 ? "engine" : "engines"} ready`,
+    `${availableEngineCount} available ${availableEngineCount === 1 ? "engine" : "engines"} detected across ${domains.length} ${domains.length === 1 ? "domain" : "domains"}.`
+  );
+  if (issueCount) {
+    setSettingsStatus(
+      "settingsEngineStatus",
+      `${issueCount} ${issueCount === 1 ? "domain still needs attention" : "domains still need attention"}. Refresh availability after installs finish or return those domains to Auto when engines are ready.`,
+      "warning"
+    );
+  } else if (pinnedCount) {
+    setSettingsStatus(
+      "settingsEngineStatus",
+      "Engine routing is healthy. Auto covers the remaining domains, and pinned preferences will stay in place until you change them.",
+      "success"
+    );
+  } else {
+    setSettingsStatus(
+      "settingsEngineStatus",
+      "Engine routing is healthy. Auto mode will keep the best available engine selected for each domain.",
+      "ready"
+    );
+  }
 
   grid.querySelectorAll(".oc-engine-sel").forEach(sel => {
     sel.addEventListener("change", async () => {

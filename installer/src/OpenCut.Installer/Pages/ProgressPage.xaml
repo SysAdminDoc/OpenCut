@@ -4,31 +4,51 @@
       xmlns:controls="clr-namespace:OpenCut.Installer.Controls"
       Background="Transparent">
 
-    <Grid Margin="40,16,40,30">
+    <Grid Margin="44,22,44,34">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Grid.Row="0" Text="Installing OpenCut..." FontSize="20" FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextBrush}"
-                   FontFamily="{DynamicResource UIFont}" Margin="0,0,0,6" />
+        <StackPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock Text="Installing OpenCut…" Style="{StaticResource SectionTitleText}" />
+            <TextBlock x:Name="ProgressSummaryText"
+                       Text="Setting up the local server, Premiere integration, and any extras you selected. First install can take a few minutes."
+                       Style="{StaticResource BodyText}" Margin="0,8,0,0" />
+        </StackPanel>
 
-        <!-- Current Step -->
-        <TextBlock x:Name="StepLabel" Grid.Row="1" Text="Preparing..."
-                   FontSize="13" Foreground="{DynamicResource Subtext0}"
-                   FontFamily="{DynamicResource UIFont}" Margin="0,0,0,12" />
+        <Border Grid.Row="1" Style="{StaticResource SetupHeroBorder}" Margin="0,0,0,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
 
-        <!-- Progress Bar -->
+                <StackPanel Grid.Column="0">
+                    <TextBlock x:Name="ProgressStateText" Text="Preparing setup…"
+                               Foreground="{DynamicResource TextBrush}" FontSize="14.5"
+                               FontWeight="SemiBold" />
+                    <TextBlock x:Name="StepLabel" Text="Gathering the install plan and preparing files."
+                               Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
+                </StackPanel>
+
+                <Border Grid.Column="1" Background="#20362b" BorderBrush="{DynamicResource Surface1}"
+                        BorderThickness="1" CornerRadius="999" Padding="10,4" HorizontalAlignment="Right">
+                    <TextBlock x:Name="ProgressPercentText" Text="0%"
+                               Foreground="{DynamicResource Green}" FontSize="12"
+                               FontWeight="SemiBold" />
+                </Border>
+            </Grid>
+        </Border>
+
         <Grid Grid.Row="2" Margin="0,0,0,16">
-            <ProgressBar x:Name="ProgressBar" Height="6" Minimum="0" Maximum="100" Value="0" />
-            <!-- Shimmer overlay -->
-            <Border x:Name="Shimmer" Height="6" CornerRadius="3"
-                    HorizontalAlignment="Left" Width="80"
-                    IsHitTestVisible="False" Opacity="0.3">
+            <ProgressBar x:Name="ProgressBar" Height="10" Minimum="0" Maximum="100" Value="0" />
+            <Border x:Name="Shimmer" Height="10" CornerRadius="5"
+                    HorizontalAlignment="Left" Width="96"
+                    IsHitTestVisible="False" Opacity="0.32">
                 <Border.Background>
                     <LinearGradientBrush StartPoint="0,0" EndPoint="1,0">
                         <GradientStop Color="Transparent" Offset="0" />
@@ -42,13 +62,33 @@
             </Border>
         </Grid>
 
-        <!-- Log Panel -->
-        <controls:LogPanel x:Name="LogPanel" Grid.Row="3" />
+        <Border Grid.Row="3" Style="{StaticResource SetupCardBorder}" Padding="0">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-        <!-- Close button (shown only on failure) -->
-        <Button x:Name="CloseBtn" Grid.Row="3" Content="Close" Width="100" Height="32"
-                HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="0,0,0,8"
-                Visibility="Collapsed" Click="CloseBtn_Click"
-                Style="{DynamicResource AccentButtonStyle}" />
+                <StackPanel Grid.Row="0" Margin="18,16,18,12">
+                    <TextBlock Text="Install Log" Foreground="{DynamicResource TextBrush}"
+                               FontSize="14.5" FontWeight="SemiBold" />
+                    <TextBlock Text="Live activity from setup appears here so you can see what changed and where the installer is spending time."
+                               Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
+                </StackPanel>
+
+                <controls:LogPanel x:Name="LogPanel" Grid.Row="1" Margin="18,0,18,18" />
+            </Grid>
+        </Border>
+
+        <Grid Grid.Row="4" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+
+            <Button x:Name="CloseBtn" Grid.Column="1" Content="Close Setup" Width="120"
+                    Visibility="Collapsed" Click="CloseBtn_Click"
+                    Style="{StaticResource SecondaryButton}" />
+        </Grid>
     </Grid>
 </Page>

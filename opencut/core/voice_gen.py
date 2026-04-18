@@ -20,6 +20,25 @@ from opencut.helpers import ensure_package
 
 logger = logging.getLogger("opencut")
 
+
+def _run_async_sync(coro, *, timeout: int = 120):
+    """Run a coroutine from sync code, even if a loop is already active.
+
+    The fallback only needs a single worker because it executes exactly one
+    coroutine on a dedicated event loop thread.
+    """
+    try:
+        return asyncio.run(coro)
+    except RuntimeError:
+        import concurrent.futures
+
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=1,
+            thread_name_prefix="oc-tts",
+        ) as pool:
+            future = pool.submit(asyncio.run, coro)
+            return future.result(timeout=timeout)
+
 # ---------------------------------------------------------------------------
 # Availability
 # ---------------------------------------------------------------------------
@@ -157,14 +176,7 @@ def edge_tts_generate(
     # Run async in sync context — use asyncio.run() which works in all
     # Python 3.9+ versions.  If called from an existing event loop thread,
     # fall back to a new thread with its own loop.
-    try:
-        asyncio.run(_generate())
-    except RuntimeError:
-        # Already inside an event loop — run in a dedicated thread
-        import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor() as pool:
-            future = pool.submit(asyncio.run, _generate())
-            future.result(timeout=120)
+    _run_async_sync(_generate(), timeout=120)
 
     if on_progress:
         on_progress(100, "Speech generated!")
@@ -215,14 +227,7 @@ def edge_tts_with_subtitles(
         with open(sub_path, "w", encoding="utf-8") as f:
             f.write(subs.generate_subs())
 
-    try:
-        asyncio.run(_generate())
-    except RuntimeError:
-        # Already inside an event loop — run in a dedicated thread
-        import concurrent.futures
-        with concurrent.futures.ThreadPoolExecutor() as pool:
-            future = pool.submit(asyncio.run, _generate())
-            future.result(timeout=120)
+    _run_async_sync(_generate(), timeout=120)
 
     if not os.path.isfile(audio_path) or os.path.getsize(audio_path) == 0:
         raise RuntimeError("Edge TTS produced empty audio output")

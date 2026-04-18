@@ -18,12 +18,13 @@ public partial class OptionsPage : Page
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        UpdateFormState();
         UpdateDiskSpace();
+        UpdateSelectionSummary();
     }
 
     private void Browse_Click(object sender, RoutedEventArgs e)
     {
-        // Use OpenFolderDialog (WPF/.NET 8+)
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
             Title = "Select install location",
@@ -34,7 +35,58 @@ public partial class OptionsPage : Page
         {
             PathBox.Text = dialog.FolderName;
             UpdateDiskSpace();
+            UpdateSelectionSummary();
         }
+    }
+
+    private void PathBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        UpdateDiskSpace();
+        UpdateSelectionSummary();
+    }
+
+    private void WhisperCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateFormState();
+        UpdateSelectionSummary();
+    }
+
+    private void OptionalDepsCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateFormState();
+        UpdateSelectionSummary();
+    }
+
+    private void CepCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateFormState();
+        UpdateSelectionSummary();
+    }
+
+    private void AnyOptionChanged(object sender, RoutedEventArgs e)
+    {
+        UpdateSelectionSummary();
+    }
+
+    private void UpdateFormState()
+    {
+        OptionalDepsPanel.Visibility = OptionalDepsCheck.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        ModelPanel.Visibility = WhisperCheck.IsChecked == true
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+        var cepEnabled = CepCheck.IsChecked == true;
+        DebugModeCheck.IsEnabled = cepEnabled;
+        if (!cepEnabled) DebugModeCheck.IsChecked = false;
+
+        CepStatusText.Text = cepEnabled
+            ? (DebugModeCheck.IsChecked == true
+                ? "The CEP panel will be installed and Adobe debug mode will be enabled so the extension can load reliably."
+                : "The CEP panel will be installed, but Adobe debug mode will stay off until you enable it manually.")
+            : "Premiere CEP integration will be skipped. You can still run the OpenCut server and add the panel later.";
     }
 
     private void UpdateDiskSpace()
@@ -46,25 +98,101 @@ public partial class OptionsPage : Page
             {
                 var drive = new DriveInfo(root);
                 var freeGB = drive.AvailableFreeSpace / (1024.0 * 1024 * 1024);
-                DiskSpace.Text = $"{freeGB:F1} GB available on {drive.Name}";
+                DiskSpace.Text = $"{freeGB:F1} GB available on {drive.Name} • Estimated setup footprint {GetEstimatedInstallSizeLabel()}";
+                return;
             }
         }
         catch
         {
-            DiskSpace.Text = "";
+            // Ignore and fall through.
         }
+
+        DiskSpace.Text = $"Estimated setup footprint {GetEstimatedInstallSizeLabel()}";
     }
 
-    private void WhisperCheck_Changed(object sender, RoutedEventArgs e)
+    private void UpdateSelectionSummary()
     {
-        ModelPanel.Visibility = WhisperCheck.IsChecked == true
-            ? Visibility.Visible : Visibility.Collapsed;
+        DestinationSummaryText.Text = PathBox.Text.Trim();
+
+        if (CepCheck.IsChecked == true)
+        {
+            IntegrationSummaryText.Text = DebugModeCheck.IsChecked == true
+                ? "CEP panel + debug mode"
+                : "CEP panel only";
+        }
+        else
+        {
+            IntegrationSummaryText.Text = "Server only";
+        }
+
+        var extras = new List<string>();
+
+        if (WhisperCheck.IsChecked == true)
+        {
+            extras.Add($"Whisper {GetSelectedWhisperModel()}");
+        }
+
+        if (OptionalDepsCheck.IsChecked == true)
+        {
+            var depCount = 0;
+            if (DepAutoEditor.IsChecked == true) depCount++;
+            if (DepEdgeTts.IsChecked == true) depCount++;
+            if (DepMediapipe.IsChecked == true) depCount++;
+            extras.Add(depCount > 0
+                ? $"{depCount} optional tool{(depCount == 1 ? "" : "s")}"
+                : "Optional tools enabled");
+        }
+
+        var shortcutParts = new List<string>();
+        if (DesktopCheck.IsChecked == true) shortcutParts.Add("Desktop");
+        if (StartMenuCheck.IsChecked == true) shortcutParts.Add("Start Menu");
+        if (AutostartCheck.IsChecked == true) shortcutParts.Add("Startup");
+
+        if (shortcutParts.Count > 0)
+        {
+            extras.Add(string.Join(" + ", shortcutParts));
+        }
+
+        ExtrasSummaryText.Text = extras.Count > 0
+            ? string.Join(" • ", extras)
+            : "Core install only";
     }
 
-    private void OptionalDepsCheck_Changed(object sender, RoutedEventArgs e)
+    private string GetSelectedWhisperModel()
     {
-        OptionalDepsPanel.Visibility = OptionalDepsCheck.IsChecked == true
-            ? Visibility.Visible : Visibility.Collapsed;
+        if (ModelTiny.IsChecked == true) return "tiny";
+        if (ModelBase.IsChecked == true) return "base";
+        if (ModelSmall.IsChecked == true) return "small";
+        if (ModelMedium.IsChecked == true) return "medium";
+        return "turbo";
+    }
+
+    private string GetEstimatedInstallSizeLabel()
+    {
+        var estimateMb = 350;
+
+        if (WhisperCheck.IsChecked == true)
+        {
+            estimateMb += GetSelectedWhisperModel() switch
+            {
+                "tiny" => 75,
+                "base" => 150,
+                "small" => 500,
+                "medium" => 1500,
+                _ => 1600,
+            };
+        }
+
+        if (OptionalDepsCheck.IsChecked == true)
+        {
+            if (DepAutoEditor.IsChecked == true) estimateMb += 45;
+            if (DepEdgeTts.IsChecked == true) estimateMb += 20;
+            if (DepMediapipe.IsChecked == true) estimateMb += 140;
+        }
+
+        return estimateMb >= 1024
+            ? $"{estimateMb / 1024.0:F1} GB"
+            : $"{estimateMb} MB";
     }
 
     private void Back_Click(object sender, RoutedEventArgs e)
@@ -75,7 +203,6 @@ public partial class OptionsPage : Page
 
     private void Install_Click(object sender, RoutedEventArgs e)
     {
-        // Collect config
         var config = _mainWindow.Config;
         config.InstallPath = PathBox.Text.Trim();
         config.InstallCepExtension = CepCheck.IsChecked == true;
@@ -96,14 +223,9 @@ public partial class OptionsPage : Page
 
         if (config.DownloadWhisperModel)
         {
-            if (ModelTiny.IsChecked == true) config.WhisperModel = "tiny";
-            else if (ModelBase.IsChecked == true) config.WhisperModel = "base";
-            else if (ModelSmall.IsChecked == true) config.WhisperModel = "small";
-            else if (ModelMedium.IsChecked == true) config.WhisperModel = "medium";
-            else config.WhisperModel = "turbo";
+            config.WhisperModel = GetSelectedWhisperModel();
         }
 
-        // Validate path
         if (string.IsNullOrWhiteSpace(config.InstallPath))
         {
             MessageBox.Show("Please select an install location.", "OpenCut Setup",
@@ -111,7 +233,6 @@ public partial class OptionsPage : Page
             return;
         }
 
-        // Check for invalid path characters
         try
         {
             var fullPath = Path.GetFullPath(config.InstallPath);
@@ -129,7 +250,6 @@ public partial class OptionsPage : Page
             return;
         }
 
-        // Check disk space (need at least 500 MB)
         try
         {
             var root = Path.GetPathRoot(config.InstallPath);
@@ -144,7 +264,10 @@ public partial class OptionsPage : Page
                 }
             }
         }
-        catch (Exception) { /* DriveInfo may fail on network paths — allow anyway */ }
+        catch (Exception)
+        {
+            // DriveInfo may fail on network paths — allow anyway.
+        }
 
         _mainWindow.SetStep(3);
         _mainWindow.NavigateToPage(new ProgressPage(_mainWindow));

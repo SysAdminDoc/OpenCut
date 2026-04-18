@@ -20,7 +20,7 @@ public partial class UninstallPage : Page
         UninstallBtn.IsEnabled = false;
         CancelBtn.IsEnabled = false;
         ProgressBar.Visibility = Visibility.Visible;
-        StatusText.Text = "Removing OpenCut...";
+        StatusText.Text = "Removing OpenCut…";
 
         var progress = new Progress<InstallProgress>(report =>
         {
@@ -39,7 +39,7 @@ public partial class UninstallPage : Page
             await Task.Run(() => engine.RunUninstall(progress));
 
             HeaderText.Text = "Uninstall Complete";
-            StatusText.Text = "OpenCut has been removed from your system.";
+            StatusText.Text = "OpenCut has been removed from this system.";
             UninstallBtn.Visibility = Visibility.Collapsed;
             CancelBtn.Content = "Close";
             CancelBtn.IsEnabled = true;
@@ -52,7 +52,7 @@ public partial class UninstallPage : Page
         catch (Exception ex)
         {
             LogPanel.AppendLog($"Uninstall failed: {ex.Message}", LogLevel.Error);
-            StatusText.Text = "Uninstall encountered errors.";
+            StatusText.Text = "Uninstall encountered errors. Review the log, then close the installer when you are ready.";
             CancelBtn.IsEnabled = true;
         }
     }

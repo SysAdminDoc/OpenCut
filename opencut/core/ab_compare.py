@@ -206,18 +206,18 @@ def _metrics_numpy(arr_a, arr_b) -> FrameMetrics:
 
 def _metrics_pure(img_a, img_b) -> FrameMetrics:
     """Pure-Python metrics fallback (no numpy)."""
-    pixels_a = list(img_a.getdata())
-    pixels_b = list(img_b.getdata())
-    n = len(pixels_a)
+    bytes_a = img_a.tobytes()
+    bytes_b = img_b.tobytes()
+    n = min(len(bytes_a), len(bytes_b)) // 3
     if n == 0:
         return FrameMetrics()
 
     sum_sq = 0.0
     sum_color_dist = 0.0
-    for pa, pb in zip(pixels_a, pixels_b):
-        dr = pa[0] - pb[0]
-        dg = pa[1] - pb[1]
-        db = pa[2] - pb[2]
+    for idx in range(0, n * 3, 3):
+        dr = bytes_a[idx] - bytes_b[idx]
+        dg = bytes_a[idx + 1] - bytes_b[idx + 1]
+        db = bytes_a[idx + 2] - bytes_b[idx + 2]
         sum_sq += (dr * dr + dg * dg + db * db) / 3.0
         sum_color_dist += math.sqrt(dr * dr + dg * dg + db * db)
 

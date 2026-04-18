@@ -54,6 +54,25 @@ REVERTIBLE_ACTIONS = frozenset({
 })
 
 
+def _coerce_limit(value, default=50):
+    try:
+        return max(1, int(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _prune_dead_connections() -> None:
+    with _CONN_LOCK:
+        alive_ids = {t.ident for t in threading.enumerate() if t.ident is not None}
+        dead_ids = [tid for tid in _ALL_CONNECTIONS if tid not in alive_ids]
+        for tid in dead_ids:
+            try:
+                _ALL_CONNECTIONS[tid].close()
+            except Exception:
+                pass
+            del _ALL_CONNECTIONS[tid]
+
+
 def _get_conn() -> sqlite3.Connection:
     conn = getattr(_thread_local, "conn", None)
     if conn is None:
@@ -65,6 +84,7 @@ def _get_conn() -> sqlite3.Connection:
         _thread_local.conn = conn
         with _CONN_LOCK:
             _ALL_CONNECTIONS[threading.get_ident()] = conn
+    _prune_dead_connections()
     return conn
 
 
@@ -151,6 +171,7 @@ def record(action: str, label: str, inverse_payload: dict,
 def list_entries(limit: int = 50, include_reverted: bool = True) -> list:
     init_db()
     conn = _get_conn()
+    limit = _coerce_limit(limit, 50)
     if include_reverted:
         rows = conn.execute(
             "SELECT * FROM journal ORDER BY created_at DESC LIMIT ?",

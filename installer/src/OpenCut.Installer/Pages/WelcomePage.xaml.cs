@@ -19,6 +19,11 @@ public partial class WelcomePage : Page
 
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
+        VersionText.Text = $"v{AppConstants.AppVersion}";
+        InstallModeBadgeText.Text = "Fresh install";
+        InstallStatusText.Text = "No earlier install was detected. OpenCut will install to the default location and keep the first-run flow simple.";
+        InstallPathText.Text = _mainWindow.Config.InstallPath;
+
         // Animate logo fade-in
         var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(600))
         {
@@ -33,7 +38,12 @@ public partial class WelcomePage : Page
             if (key?.GetValue("InstallPath") is string path && Directory.Exists(path))
             {
                 UninstallLink.Visibility = Visibility.Visible;
+                UninstallLink.Content = "Open Uninstaller";
                 _mainWindow.Config.InstallPath = path;
+                InstallModeBadgeText.Text = "Update ready";
+                InstallStatusText.Text = "An existing OpenCut install was found. Setup will refresh the current location and keep your uninstall path intact.";
+                InstallPathText.Text = path;
+                InstallActionButton.Content = "Update OpenCut";
             }
         }
         catch { /* Not installed */ }

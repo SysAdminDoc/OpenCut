@@ -239,9 +239,9 @@ def test_scripting_console_blocked_patterns_expanded():
 
 def test_webhook_url_rejects_localhost():
     """Webhook URL validation blocks localhost/private IPs."""
-    from opencut.core.webhooks import _validate_webhook_url
-
     import pytest as _pt
+
+    from opencut.core.webhooks import _validate_webhook_url
     for url in (
         "http://localhost/hook",
         "http://127.0.0.1/hook",
@@ -253,9 +253,9 @@ def test_webhook_url_rejects_localhost():
 
 def test_webhook_url_rejects_private_ips():
     """Webhook URL validation blocks private network IPs."""
-    from opencut.core.webhooks import _validate_webhook_url
-
     import pytest as _pt
+
+    from opencut.core.webhooks import _validate_webhook_url
     for url in (
         "http://10.0.0.1/hook",
         "http://192.168.1.1/hook",
@@ -267,9 +267,9 @@ def test_webhook_url_rejects_private_ips():
 
 def test_plugin_download_url_rejects_private_ips():
     """Plugin download URL validation blocks private network targets."""
-    from opencut.core.plugin_marketplace import _validate_download_url
-
     import pytest as _pt
+
+    from opencut.core.plugin_marketplace import _validate_download_url
     for url in (
         "http://localhost/plugin.zip",
         "http://127.0.0.1/plugin.zip",
@@ -323,3 +323,29 @@ def test_open_path_blocks_executable_extensions(client, csrf_token):
     finally:
         import os
         os.unlink(bat_path)
+
+
+def test_validate_output_path_rejects_non_writable_directory(tmp_path):
+    from opencut.security import validate_output_path
+
+    output = tmp_path / "out.wav"
+
+    with patch("opencut.security.os.access") as mock_access:
+        def _fake_access(path, mode):
+            if str(path) == str(tmp_path):
+                return False
+            return True
+
+        mock_access.side_effect = _fake_access
+
+        import pytest as _pt
+        with _pt.raises(ValueError, match="not writable"):
+            validate_output_path(str(output))
+
+
+def test_validate_output_path_rejects_directory_target(tmp_path):
+    import pytest as _pt
+
+    from opencut.security import validate_output_path
+    with _pt.raises(ValueError, match="is a directory"):
+        validate_output_path(str(tmp_path))

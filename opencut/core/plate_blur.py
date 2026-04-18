@@ -14,7 +14,7 @@ import logging
 import os
 import tempfile
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, List, Optional
 
 from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
@@ -378,7 +378,7 @@ def blur_plates(
     metadata = {
         "plate_redaction": {
             "version": "1.0",
-            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "source_file": os.path.basename(input_path),
             "method": method,
             "blur_strength": blur_strength,

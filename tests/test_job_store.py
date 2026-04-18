@@ -203,3 +203,24 @@ class TestJobStore:
         assert len(page1) == 3
         assert len(page2) == 3
         assert page1[0]["id"] != page2[0]["id"]
+
+    def test_close_all_connections_reopens_cleanly(self, isolate_db):
+        created = time.time()
+        isolate_db.save_job({
+            "id": "first",
+            "type": "test",
+            "status": "complete",
+            "created": created,
+        })
+
+        isolate_db.close_all_connections()
+
+        isolate_db.save_job({
+            "id": "second",
+            "type": "test",
+            "status": "complete",
+            "created": created + 1,
+        })
+
+        assert isolate_db.get_job("first") is not None
+        assert isolate_db.get_job("second") is not None

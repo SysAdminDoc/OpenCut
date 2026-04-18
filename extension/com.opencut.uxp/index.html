@@ -124,7 +124,7 @@
           <div class="oc-field-row">
             <label class="oc-label" for="clipPathCut">Clip Path</label>
             <div class="oc-input-group">
-              <input type="text" class="oc-input" id="clipPathCut" placeholder="Select or paste clip path...">
+              <input type="text" class="oc-input" id="clipPathCut" placeholder="Select or paste clip path…">
               <button type="button" class="oc-btn oc-btn-secondary" id="browseClipCut">Browse</button>
             </div>
           </div>
@@ -204,6 +204,20 @@
             <div class="oc-result-header">Latest Cut Pass</div>
             <div class="oc-result-summary" id="cutResultSummary">Ready for timeline review</div>
           </div>
+          <div class="oc-result-insight-grid oc-result-insight-grid--compact" aria-label="Cut pass details">
+            <div class="oc-result-insight">
+              <span class="oc-result-insight-label">Source</span>
+              <span class="oc-result-insight-value" id="cutResultSourceValue">Awaiting output</span>
+            </div>
+            <div class="oc-result-insight">
+              <span class="oc-result-insight-label">Removed</span>
+              <span class="oc-result-insight-value" id="cutResultRemovedValue">0 s</span>
+            </div>
+            <div class="oc-result-insight">
+              <span class="oc-result-insight-label">Next</span>
+              <span class="oc-result-insight-value" id="cutResultNextValue">Apply latest cuts</span>
+            </div>
+          </div>
           <div class="oc-result-body" id="cutResultBody"></div>
           <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="applyCutResultBtn">Apply Cuts to Timeline</button>
         </div>
@@ -238,7 +252,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="clipPathCaptions">Clip Path</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="clipPathCaptions" placeholder="Select clip...">
+                <input type="text" class="oc-input" id="clipPathCaptions" placeholder="Select clip…">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseClipCaptions">Browse</button>
               </div>
             </div>
@@ -363,7 +377,21 @@
             <span class="oc-status-pill" id="captionsResultPill" data-state="empty">Awaiting output</span>
             <span class="oc-result-meta" id="captionsResultMeta">Transcripts, chapter lists, and repeat notes will land here for one calm review pass.</span>
           </div>
-          <textarea class="oc-textarea" id="captionsResultBody" rows="8" readonly placeholder="Transcript, chapter list, or repeat review will appear here..."></textarea>
+          <div class="oc-result-insight-grid" aria-label="Captions result details">
+            <div class="oc-result-insight">
+              <span class="oc-result-insight-label">Type</span>
+              <span class="oc-result-insight-value" id="captionsResultTypeValue">Awaiting output</span>
+            </div>
+            <div class="oc-result-insight">
+              <span class="oc-result-insight-label">Length</span>
+              <span class="oc-result-insight-value" id="captionsResultLengthValue">0 lines</span>
+            </div>
+            <div class="oc-result-insight">
+              <span class="oc-result-insight-label">Next</span>
+              <span class="oc-result-insight-value" id="captionsResultNextValue">Transcribe a clip</span>
+            </div>
+          </div>
+          <textarea class="oc-textarea" id="captionsResultBody" rows="8" readonly placeholder="Transcript, chapter list, or repeat review will appear here…"></textarea>
           <div class="oc-btn-row">
             <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="copySrtBtn" disabled>Copy Output</button>
             <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="importSrtBtn" disabled>Open SRT Prep</button>
@@ -377,7 +405,7 @@
         <div class="oc-field-row oc-mb-sm">
           <label class="oc-label" for="clipPathAudio">Clip Path</label>
           <div class="oc-input-group">
-            <input type="text" class="oc-input" id="clipPathAudio" placeholder="Select clip...">
+            <input type="text" class="oc-input" id="clipPathAudio" placeholder="Select clip…">
             <button type="button" class="oc-btn oc-btn-secondary" id="browseClipAudio">Browse</button>
           </div>
         </div>
@@ -440,7 +468,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="refClipLoudness">Reference Clip</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="refClipLoudness" placeholder="Reference audio file...">
+                <input type="text" class="oc-input" id="refClipLoudness" placeholder="Reference audio file…">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseRefLoudness">Browse</button>
               </div>
             </div>
@@ -458,7 +486,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="beatTrackPath">Audio Track</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="beatTrackPath" placeholder="Music file...">
+                <input type="text" class="oc-input" id="beatTrackPath" placeholder="Music file…">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseBeatTrack">Browse</button>
               </div>
             </div>
@@ -478,7 +506,7 @@
         <div class="oc-field-row oc-mb-sm">
           <label class="oc-label" for="clipPathVideo">Clip Path</label>
           <div class="oc-input-group">
-            <input type="text" class="oc-input" id="clipPathVideo" placeholder="Select clip...">
+            <input type="text" class="oc-input" id="clipPathVideo" placeholder="Select clip…">
             <button type="button" class="oc-btn oc-btn-secondary" id="browseClipVideo">Browse</button>
           </div>
         </div>
@@ -493,7 +521,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="colorRefPath">Reference Clip</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="colorRefPath" placeholder="Reference video file...">
+                <input type="text" class="oc-input" id="colorRefPath" placeholder="Reference video file…">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseColorRef">Browse</button>
               </div>
             </div>
@@ -541,7 +569,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="cam2Path">Camera 2</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="cam2Path" placeholder="Second camera file...">
+                <input type="text" class="oc-input" id="cam2Path" placeholder="Second camera file…">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseCam2">Browse</button>
               </div>
             </div>
@@ -938,7 +966,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="exportDir">Output Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="exportDir" placeholder="Choose an export destination...">
+                <input type="text" class="oc-input" id="exportDir" placeholder="Choose an export destination…">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseExportDir">Browse</button>
               </div>
             </div>
@@ -1023,7 +1051,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="srtFilePath">SRT File</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="srtFilePath" placeholder="Path to .srt file...">
+                <input type="text" class="oc-input" id="srtFilePath" placeholder="Path to .srt file…">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseSrtFile">Browse</button>
               </div>
             </div>
@@ -1059,7 +1087,7 @@
             <div class="oc-field-row">
               <label class="oc-label" for="indexFolder">Media Folder</label>
               <div class="oc-input-group">
-                <input type="text" class="oc-input" id="indexFolder" placeholder="Choose the root folder to index...">
+                <input type="text" class="oc-input" id="indexFolder" placeholder="Choose the root folder to index…">
                 <button type="button" class="oc-btn oc-btn-secondary" id="browseIndexFolder">Browse</button>
               </div>
             </div>
@@ -1207,7 +1235,7 @@
               </div>
               <div class="oc-field-row oc-inline-stat">
                 <span class="oc-label">Destination</span>
-                <span id="deliverablesOutputValue" class="oc-inline-value">System temp folder</span>
+                <span id="deliverablesOutputValue" class="oc-inline-value">Session temp folder</span>
               </div>
               <div class="oc-field-row oc-inline-stat">
                 <span class="oc-label">Last Export</span>
@@ -1254,18 +1282,33 @@
             <svg class="oc-chevron" width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M1.646 4.646a.5.5 0 01.708 0L8 10.293l5.646-5.647a.5.5 0 01.708.708l-6 6a.5.5 0 01-.708 0l-6-6a.5.5 0 010-.708z"/></svg>
           </div>
           <div class="oc-card-body" id="projectReportBody">
+            <p class="oc-hint">Choose the handoff sheets you need for this pass. The UXP deliverables workflow currently exports CSV documents for editorial review.</p>
             <div class="oc-checkbox-row">
               <label class="oc-checkbox-label"><input type="checkbox" id="rptIncludeVfx" checked> VFX Sheet</label>
               <label class="oc-checkbox-label"><input type="checkbox" id="rptIncludeAdr" checked> ADR List</label>
               <label class="oc-checkbox-label"><input type="checkbox" id="rptIncludeMusic" checked> Music Cue Sheet</label>
               <label class="oc-checkbox-label"><input type="checkbox" id="rptIncludeAssets" checked> Asset List</label>
             </div>
+            <div class="oc-inline-summary-grid oc-inline-summary-grid--deliverables" aria-label="Project report summary">
+              <div class="oc-field-row oc-inline-stat">
+                <span class="oc-label">Package</span>
+                <span id="deliverablesPackageValue" class="oc-inline-value">All four handoff sheets</span>
+              </div>
+              <div class="oc-field-row oc-inline-stat">
+                <span class="oc-label">Format</span>
+                <span id="deliverablesReportFormatValue" class="oc-inline-value">CSV handoff sheets</span>
+              </div>
+              <div class="oc-field-row oc-inline-stat">
+                <span class="oc-label">Destination</span>
+                <span id="deliverablesReportDestinationValue" class="oc-inline-value">Session temp folder</span>
+              </div>
+            </div>
             <div class="oc-field-row">
               <label class="oc-label" for="reportFormat">Format</label>
               <select class="oc-select" id="reportFormat">
-                <option value="csv">CSV</option>
-                <option value="xlsx">Excel (.xlsx)</option>
-                <option value="pdf">PDF</option>
+                <option value="csv">CSV (.csv) handoff sheets</option>
+                <option value="xlsx" disabled>Excel (.xlsx) — Not Available in UXP</option>
+                <option value="pdf" disabled>PDF — Not Available in UXP</option>
               </select>
             </div>
             <div class="oc-status-line" id="deliverablesStatus" role="status" aria-live="polite">Load sequence info, choose a destination if needed, then generate the handoff docs you need.</div>
@@ -1280,10 +1323,25 @@
         <div class="oc-section-title">Engine Routing</div>
         <div class="oc-card">
           <p class="oc-hint">Pick the engine OpenCut should favor for each editing domain. Leave a domain on Auto to keep the best available option active for the current machine.</p>
+          <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="Engine routing summary">
+            <div class="oc-inline-stat">
+              <span class="oc-label">Defaults</span>
+              <span class="oc-inline-value" id="settingsEngineDefaultsValue">Loading…</span>
+            </div>
+            <div class="oc-inline-stat">
+              <span class="oc-label">Pinned</span>
+              <span class="oc-inline-value" id="settingsEnginePinnedValue">Loading…</span>
+            </div>
+            <div class="oc-inline-stat">
+              <span class="oc-label">Coverage</span>
+              <span class="oc-inline-value" id="settingsEngineCoverageValue">Loading…</span>
+            </div>
+          </div>
+          <div class="oc-status-line" id="settingsEngineStatus" role="status" aria-live="polite">Loading engine availability…</div>
           <div id="uxpEngineGrid" class="oc-engine-grid">
             <div class="oc-empty-state oc-empty-state-inline">
               <div class="oc-empty-state-kicker">Engine routing</div>
-              <p>Loading available engines and saved preferences...</p>
+              <p>Loading available engines and saved preferences…</p>
             </div>
           </div>
           <button type="button" class="oc-btn oc-btn-secondary" id="uxpRefreshEnginesBtn">Refresh Availability</button>
@@ -1292,14 +1350,21 @@
         <div class="oc-section-title">Live Updates Bridge</div>
         <div class="oc-card">
           <p class="oc-hint">Keep progress, completion, and cancel feedback flowing into the panel while longer jobs run.</p>
-          <div class="oc-field-row oc-inline-stat">
-            <span class="oc-label">Bridge</span>
-            <span id="uxpWsStatus" class="oc-inline-value oc-status-pill" data-state="unknown">Checking...</span>
+          <div class="oc-inline-summary-grid oc-inline-summary-grid--settings" aria-label="Live updates bridge summary">
+            <div class="oc-inline-stat">
+              <span class="oc-label">Bridge</span>
+              <span id="uxpWsStatus" class="oc-inline-value oc-status-pill" data-state="unknown">Checking…</span>
+            </div>
+            <div class="oc-inline-stat">
+              <span class="oc-label">Listeners</span>
+              <span id="uxpWsClients" class="oc-inline-value">0 listeners</span>
+            </div>
+            <div class="oc-inline-stat">
+              <span class="oc-label">Panel Link</span>
+              <span id="uxpWsPanelState" class="oc-inline-value">Waiting to connect</span>
+            </div>
           </div>
-          <div class="oc-field-row oc-inline-stat">
-            <span class="oc-label">Listeners</span>
-            <span id="uxpWsClients" class="oc-inline-value">0 listeners</span>
-          </div>
+          <div class="oc-status-line" id="settingsBridgeStatus" role="status" aria-live="polite">Start the bridge, then connect this panel to receive live job updates.</div>
           <div class="oc-btn-row">
             <button type="button" class="oc-btn oc-btn-secondary" id="uxpWsStartBtn">Start Bridge</button>
             <button type="button" class="oc-btn oc-btn-secondary" id="uxpWsStopBtn">Stop Bridge</button>

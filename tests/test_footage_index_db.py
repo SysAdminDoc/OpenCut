@@ -44,6 +44,21 @@ class TestIndexFile:
         assert search("") == []
         assert search("   ") == []
 
+    def test_search_coerces_invalid_limit(self, tmp_path):
+        from opencut.core.footage_index_db import index_file, search
+
+        f1 = tmp_path / "one.mp4"
+        f2 = tmp_path / "two.mp4"
+        f1.write_bytes(b"x")
+        f2.write_bytes(b"y")
+
+        index_file(str(f1), "shared transcript")
+        index_file(str(f2), "shared transcript")
+
+        results = search("shared transcript", limit=0)
+
+        assert len(results) == 1
+
     def test_upsert(self, tmp_path):
         from opencut.core.footage_index_db import index_file, search
 
@@ -121,3 +136,25 @@ class TestClearAndCleanup:
         removed = remove_missing_files()
         assert removed == 1
         assert get_stats()["total_files"] == 1
+
+    def test_get_conn_prunes_dead_thread_connections(self):
+        import opencut.core.footage_index_db as mod
+
+        class DummyConn:
+            def __init__(self):
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+        dummy = DummyConn()
+        mod._ALL_CONNECTIONS[999999] = dummy
+
+        import threading
+        from unittest.mock import patch
+
+        with patch.object(mod.threading, "enumerate", return_value=[threading.current_thread()]):
+            mod._get_conn()
+
+        assert dummy.closed is True
+        assert 999999 not in mod._ALL_CONNECTIONS

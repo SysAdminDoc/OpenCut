@@ -378,6 +378,13 @@ def validate_output_path(path: str) -> str:
     parent = os.path.dirname(resolved)
     if parent and not os.path.isdir(parent):
         raise ValueError(f"Output directory does not exist: {parent}")
+    if parent and not os.access(parent, os.W_OK):
+        raise ValueError(f"Output directory is not writable: {parent}")
+    if os.path.exists(resolved):
+        if os.path.isdir(resolved):
+            raise ValueError(f"Output path is a directory: {resolved}")
+        if not os.access(resolved, os.W_OK):
+            raise ValueError(f"Output file is not writable: {resolved}")
     return resolved
 
 

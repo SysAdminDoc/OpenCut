@@ -4,7 +4,7 @@
       xmlns:controls="clr-namespace:OpenCut.Installer.Controls"
       Background="Transparent">
 
-    <Grid Margin="40,16,40,30">
+    <Grid Margin="44,24,44,34">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -13,27 +13,41 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock x:Name="HeaderText" Grid.Row="0" Text="Uninstall OpenCut" FontSize="20" FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextBrush}"
-                   FontFamily="{DynamicResource UIFont}" Margin="0,0,0,6" />
+        <StackPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock x:Name="HeaderText" Text="Uninstall OpenCut" Style="{StaticResource SectionTitleText}" />
+            <TextBlock x:Name="StatusText"
+                       Text="This removes OpenCut, its components, and supporting shortcuts from this machine."
+                       Style="{StaticResource BodyText}" Margin="0,8,0,0" />
+        </StackPanel>
 
-        <!-- Status -->
-        <TextBlock x:Name="StatusText" Grid.Row="1"
-                   Text="This will remove OpenCut and all its components from your system."
-                   FontSize="13" Foreground="{DynamicResource Subtext0}"
-                   FontFamily="{DynamicResource UIFont}" Margin="0,0,0,12"
-                   TextWrapping="Wrap" />
+        <Border Grid.Row="1" Background="{DynamicResource DangerTintBrush}" BorderBrush="{DynamicResource Surface1}"
+                BorderThickness="1" CornerRadius="12" Padding="14,12" Margin="0,0,0,14">
+            <TextBlock Text="Use uninstall when you want to remove the local app, integration files, and shortcuts in one pass."
+                       Style="{StaticResource CaptionText}" Foreground="{DynamicResource TextBrush}" />
+        </Border>
 
-        <!-- Progress Bar (hidden until uninstall starts) -->
-        <ProgressBar x:Name="ProgressBar" Grid.Row="2" Height="6"
+        <ProgressBar x:Name="ProgressBar" Grid.Row="2" Height="10"
                      Minimum="0" Maximum="100" Value="0"
-                     Visibility="Collapsed" Margin="0,0,0,12" />
+                     Visibility="Collapsed" Margin="0,0,0,14" />
 
-        <!-- Log Panel -->
-        <controls:LogPanel x:Name="LogPanel" Grid.Row="3" Margin="0,0,0,12" />
+        <Border Grid.Row="3" Style="{StaticResource SetupCardBorder}" Padding="0" Margin="0,0,0,14">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
 
-        <!-- Buttons -->
+                <StackPanel Grid.Row="0" Margin="18,16,18,12">
+                    <TextBlock Text="Uninstall Log" Foreground="{DynamicResource TextBrush}"
+                               FontSize="14.5" FontWeight="SemiBold" />
+                    <TextBlock Text="Removal activity and any cleanup issues will appear here."
+                               Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
+                </StackPanel>
+
+                <controls:LogPanel x:Name="LogPanel" Grid.Row="1" Margin="18,0,18,18" />
+            </Grid>
+        </Border>
+
         <Grid Grid.Row="4">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -44,11 +58,12 @@
             <Button x:Name="CancelBtn" Grid.Column="1" Content="Cancel"
                     Style="{StaticResource SecondaryButton}"
                     Click="Cancel_Click" Margin="0,0,10,0" />
-            <Button x:Name="UninstallBtn" Grid.Column="2" Content="Uninstall"
+            <Button x:Name="UninstallBtn" Grid.Column="2" Content="Remove OpenCut"
                     Click="Uninstall_Click">
                 <Button.Style>
                     <Style TargetType="Button" BasedOn="{StaticResource PrimaryButton}">
                         <Setter Property="Background" Value="{StaticResource Red}" />
+                        <Setter Property="Foreground" Value="White" />
                         <Style.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
                                 <Setter Property="Background" Value="{StaticResource Maroon}" />

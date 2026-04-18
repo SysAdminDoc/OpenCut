@@ -25,6 +25,25 @@ _ALL_CONNECTIONS: "dict[int, sqlite3.Connection]" = {}
 _CONN_LOCK = threading.Lock()
 
 
+def _coerce_limit(value, default=50):
+    try:
+        return max(1, int(value))
+    except (TypeError, ValueError):
+        return default
+
+
+def _prune_dead_connections() -> None:
+    with _CONN_LOCK:
+        alive_ids = {t.ident for t in threading.enumerate() if t.ident is not None}
+        dead_ids = [tid for tid in _ALL_CONNECTIONS if tid not in alive_ids]
+        for tid in dead_ids:
+            try:
+                _ALL_CONNECTIONS[tid].close()
+            except Exception:
+                pass
+            del _ALL_CONNECTIONS[tid]
+
+
 def _get_conn():
     """Get a thread-local SQLite connection."""
     conn = getattr(_thread_local, "conn", None)
@@ -37,6 +56,7 @@ def _get_conn():
         _thread_local.conn = conn
         with _CONN_LOCK:
             _ALL_CONNECTIONS[threading.get_ident()] = conn
+    _prune_dead_connections()
     return conn
 
 
@@ -157,6 +177,7 @@ def search(query, limit=50):
     """
     if not query or not query.strip():
         return []
+    limit = _coerce_limit(limit, 50)
 
     conn = _get_conn()
     init_db()  # Ensure tables exist
