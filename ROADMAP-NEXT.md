@@ -1,8 +1,8 @@
 # OpenCut — Next-Wave Roadmap (2026-Q2 → 2026-Q4)
 
-**Version**: 1.6
-**Created**: 2026-04-17 (updated 2026-04-17 after v1.23.0 ship)
-**Baseline**: v1.23.0 (1,235 routes, 455 core modules, 7,689+ tests)
+**Version**: 1.7
+**Created**: 2026-04-17 (updated 2026-04-17 after v1.24.0 ship)
+**Baseline**: v1.24.0 (1,241 routes, 460 core modules, 7,689+ tests)
 **Source**: Synthesised from an OSS survey of LosslessCut, auto-editor, editly,
 Descript, Shotcut/MLT, Olive, OpenShot, Kdenlive, OpenTimelineIO, WhisperX,
 PyAV, and a 2024–2026 scan of new SOTA AI video models (see research notes
@@ -354,6 +354,7 @@ should ship in parallel with Wave A/B work:
 | v1.21.0 | VVC/H.266, SRT streaming, colour-science scopes, voice-command grammar, Atheris fuzz harness | B + D + E | **Shipped 2026-04-17** |
 | v1.22.0 | Shaka Packager HLS/DASH/CENC, OBS WebSocket v5 bridge, RunPod serverless, Plausible telemetry | B + D + E | **Shipped 2026-04-17** |
 | v1.23.0 | Wide-net infrastructure: OpenAPI 3.1 + Swagger UI, GPU semaphore (Wave 3A MVP), rate-limit categories, temp-file startup sweep | infra | **Shipped 2026-04-17** |
+| v1.24.0 | Wide-net infra round 2: run_ffmpeg(job_id), disk monitor, request-ID middleware, deprecation registry, SECURITY.md + CONTRIBUTING.md + SBOM generator | infra | **Shipped 2026-04-17** |
 | v1.19.1 | Wave D3–D6 (collab, dev SDK, obs, verticals) | D | 2026-05 |
 | v1.20.0 | Wave B1 (lip-sync) + B2 (OCIO/ACES) + GPU isolation MVP | B | 2026-06 |
 | v1.21.0 | Wave B3 (LTX-Video) + B4 (diarisation) + Wave E4 (voice-command grammar) | B + E | 2026-07 |
