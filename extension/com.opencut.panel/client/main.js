@@ -6850,7 +6850,7 @@
             var link = document.createElement("button");
             link.type = "button";
             link.className = "alert-action-link";
-            link.textContent = "Open " + action.tab.charAt(0).toUpperCase() + action.tab.slice(1);
+            link.textContent = "Open " + (action.sub ? getPaletteSubLabel(action.sub) : getPaletteTabLabel(action.tab));
             link.addEventListener("click", function () {
                 navigateToTab(action.tab, action.sub || null);
                 el.alertBanner.classList.add("hidden");
@@ -6859,7 +6859,8 @@
         }
         el.alertBanner.classList.remove("hidden");
         if (_alertTimer) clearTimeout(_alertTimer);
-        _alertTimer = setTimeout(function () { el.alertBanner.classList.add("hidden"); }, 15000);
+        if (tone === "error") return;
+        _alertTimer = setTimeout(function () { el.alertBanner.classList.add("hidden"); }, tone === "warning" ? 18000 : 12000);
     }
 
     function showErrorWithAction(errorData) {
@@ -8388,14 +8389,74 @@
             status: job.status || "complete",
             message: job.message || "",
             time: new Date().toLocaleTimeString(),
+            createdAt: Math.floor(Date.now() / 1000),
             endpoint: lastJobEndpoint || "",
-            payload: lastJobPayload ? JSON.parse(JSON.stringify(lastJobPayload)) : null
+            payload: lastJobPayload ? JSON.parse(JSON.stringify(lastJobPayload)) : null,
+            sourcePath: (lastJobPayload && lastJobPayload.filepath) || job.filepath || "",
+            outputPath: _sessionCtxResultPath(job)
         });
         if (jobHistoryList.length > MAX_JOB_HISTORY) jobHistoryList.pop();
         renderJobHistory();
         // Note: toast is intentionally NOT shown here — onJobDone/showResults
         // already displays results and showAlert. Adding a toast here would
         // duplicate notifications on every job completion.
+    }
+
+    function formatJobHistoryType(type) {
+        return _sessionCtxOpText({ type: type || "unknown" });
+    }
+
+    function getJobHistoryStatusLabel(status) {
+        if (status === "error") return "Needs attention";
+        if (status === "cancelled") return "Cancelled";
+        if (status === "running") return "Running";
+        return "Complete";
+    }
+
+    function getJobHistorySourcePath(entry) {
+        if (!entry) return "";
+        return entry.sourcePath || (entry.payload && entry.payload.filepath) || entry.filepath || "";
+    }
+
+    function getJobHistorySourceName(entry) {
+        var path = getJobHistorySourcePath(entry);
+        if (!path) return "";
+        var parts = path.split(/[\\/]/);
+        return parts[parts.length - 1] || path;
+    }
+
+    function getJobHistoryOutputPath(entry) {
+        return (entry && (entry.outputPath || _sessionCtxResultPath(entry))) || "";
+    }
+
+    function getJobHistoryClockLabel(entry) {
+        if (!entry) return "";
+        if (entry.createdAt) {
+            try {
+                return new Date(entry.createdAt * 1000).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+            } catch (e) {}
+        }
+        return entry.time || "";
+    }
+
+    function getJobHistorySecondaryText(entry) {
+        var sourceName = getJobHistorySourceName(entry);
+        var outputPath = getJobHistoryOutputPath(entry);
+        var bits = [];
+
+        bits.push(sourceName ? ("Source: " + sourceName) : "Source not recorded");
+
+        if (outputPath) {
+            bits.push("Output: " + outputPath.split(/[\\/]/).pop());
+        } else if ((entry && entry.status) === "error" && entry.message) {
+            bits.push(entry.message);
+        } else if ((entry && entry.status) === "cancelled") {
+            bits.push("Stopped before the output finished.");
+        } else {
+            bits.push("Saved with replayable parameters.");
+        }
+
+        return bits.join(" • ");
     }
 
     function setToggleButtonCount(button, label, count) {
@@ -8414,26 +8475,120 @@
     function renderJobHistory() {
         if (!el.jobHistory || !el.jobHistoryToggle) return;
         setToggleButtonCount(el.jobHistoryToggle, "History", jobHistoryList.length);
-        var html = "";
+        el.jobHistory.innerHTML = "";
+        if (!jobHistoryList.length) {
+            el.jobHistory.innerHTML = buildEmptyHintMarkup(
+                "No history yet",
+                "Completed passes, exports, and timeline write-backs will appear here so you can reopen outputs or replay the same run.",
+                "info"
+            );
+            return;
+        }
+        var frag = document.createDocumentFragment();
         for (var i = 0; i < jobHistoryList.length; i++) {
             var h = jobHistoryList[i];
-            var statusClass = h.status === "complete" ? "complete" : (h.status === "cancelled" ? "cancelled" : "error");
-            // Show "Apply to selection" only when there's a different clip selected
-            // from the one this job originally targeted (v1.9.30: feature J).
+            var statusClass = h.status === "complete" ? "complete" : (h.status === "cancelled" ? "cancelled" : (h.status === "running" ? "running" : "error"));
             var payloadPath = h.payload && h.payload.filepath ? h.payload.filepath : "";
             var showApply = h.endpoint && payloadPath && selectedPath && selectedPath !== payloadPath;
-            html += '<div class="job-history-item" data-idx="' + i + '">' +
-                '<div class="job-history-main">' +
-                '<span class="job-history-status ' + statusClass + '"></span>' +
-                '<span class="job-history-type">' + esc(h.type) + '</span>' +
-                '</div>' +
-                '<div class="job-history-meta">' +
-                '<span class="job-history-time">' + esc(h.time) + '</span>' +
-                (h.endpoint ? '<button type="button" class="btn-sm job-history-rerun" data-idx="' + i + '" title="Re-run on the original clip with the same params">Re-run</button>' : '') +
-                (showApply ? '<button type="button" class="btn-sm job-history-apply" data-idx="' + i + '" title="Run this job on the currently selected clip with the same params">Apply to selection</button>' : '') +
-                '</div></div>';
+            var outputPath = getJobHistoryOutputPath(h);
+            var item = document.createElement("article");
+            item.className = "job-history-item";
+            item.setAttribute("data-idx", String(i));
+            item.setAttribute("data-status", h.status || "complete");
+
+            var main = document.createElement("div");
+            main.className = "job-history-main";
+
+            var mainline = document.createElement("div");
+            mainline.className = "job-history-mainline";
+
+            var dot = document.createElement("span");
+            dot.className = "job-history-status " + statusClass;
+            dot.setAttribute("aria-hidden", "true");
+            mainline.appendChild(dot);
+
+            var type = document.createElement("span");
+            type.className = "job-history-type";
+            type.textContent = formatJobHistoryType(h.type);
+            mainline.appendChild(type);
+
+            var pill = document.createElement("span");
+            pill.className = "job-history-status-pill";
+            pill.setAttribute("data-state", h.status || "complete");
+            pill.textContent = getJobHistoryStatusLabel(h.status);
+            mainline.appendChild(pill);
+
+            var subline = document.createElement("div");
+            subline.className = "job-history-subline";
+            subline.textContent = getJobHistorySecondaryText(h);
+            subline.title = [getJobHistorySourcePath(h), outputPath].filter(Boolean).join("\n");
+
+            main.appendChild(mainline);
+            main.appendChild(subline);
+
+            var meta = document.createElement("div");
+            meta.className = "job-history-meta";
+
+            var time = document.createElement("span");
+            time.className = "job-history-time";
+            time.textContent = getJobHistoryClockLabel(h);
+            time.title = h.createdAt ? new Date(h.createdAt * 1000).toLocaleString() : (h.time || "");
+            meta.appendChild(time);
+
+            if (h.createdAt) {
+                var relative = document.createElement("span");
+                relative.className = "job-history-relative";
+                relative.textContent = _sessionCtxRelativeTime(h.createdAt);
+                meta.appendChild(relative);
+            }
+
+            var actions = document.createElement("div");
+            actions.className = "job-history-action-row";
+
+            if (outputPath) {
+                var openBtn = document.createElement("button");
+                openBtn.type = "button";
+                openBtn.className = "btn-sm job-history-open";
+                openBtn.setAttribute("data-idx", String(i));
+                openBtn.title = "Open output file";
+                openBtn.textContent = "Open";
+                actions.appendChild(openBtn);
+
+                var revealBtn = document.createElement("button");
+                revealBtn.type = "button";
+                revealBtn.className = "btn-sm job-history-reveal";
+                revealBtn.setAttribute("data-idx", String(i));
+                revealBtn.title = "Reveal output in file manager";
+                revealBtn.textContent = "Reveal";
+                actions.appendChild(revealBtn);
+            }
+
+            if (h.endpoint) {
+                var rerunBtn = document.createElement("button");
+                rerunBtn.type = "button";
+                rerunBtn.className = "btn-sm job-history-rerun";
+                rerunBtn.setAttribute("data-idx", String(i));
+                rerunBtn.title = "Re-run on the original clip with the same parameters";
+                rerunBtn.textContent = "Re-run";
+                actions.appendChild(rerunBtn);
+            }
+
+            if (showApply) {
+                var applyBtn = document.createElement("button");
+                applyBtn.type = "button";
+                applyBtn.className = "btn-sm job-history-apply";
+                applyBtn.setAttribute("data-idx", String(i));
+                applyBtn.title = "Run this job on the currently selected clip with the same parameters";
+                applyBtn.textContent = "Apply to selection";
+                actions.appendChild(applyBtn);
+            }
+
+            item.appendChild(main);
+            item.appendChild(meta);
+            item.appendChild(actions);
+            frag.appendChild(item);
         }
-        el.jobHistory.innerHTML = html;
+        el.jobHistory.appendChild(frag);
     }
 
     // Event delegation for job history re-run buttons (avoids listener accumulation)
@@ -8442,14 +8597,26 @@
         if (_jobHistoryDelegationAdded || !el.jobHistory) return;
         _jobHistoryDelegationAdded = true;
         el.jobHistory.addEventListener("click", function (e) {
+            var openBtn = e.target.closest(".job-history-open");
+            var revealBtn = e.target.closest(".job-history-reveal");
             var rerunBtn = e.target.closest(".job-history-rerun");
             var applyBtn = e.target.closest(".job-history-apply");
-            var btn = rerunBtn || applyBtn;
+            var btn = openBtn || revealBtn || rerunBtn || applyBtn;
             if (!btn) return;
             e.stopPropagation();
             var idx = parseInt(btn.getAttribute("data-idx"));
             var entry = jobHistoryList[idx];
-            if (!entry || !entry.endpoint || !entry.payload) return;
+            if (!entry) return;
+            if (openBtn || revealBtn) {
+                var outputPath = getJobHistoryOutputPath(entry);
+                if (!outputPath) {
+                    showToast("This history item is missing an output path.", "warning");
+                    return;
+                }
+                _sessionCtxOpenPath(outputPath, openBtn ? "open" : "reveal");
+                return;
+            }
+            if (!entry.endpoint || !entry.payload) return;
             if (applyBtn) {
                 if (!selectedPath) { showAlert("Select a clip first."); return; }
                 // Clone so we don't mutate the stored payload
@@ -8495,8 +8662,11 @@
                         status: j.status || "complete",
                         message: j.message || "",
                         time: created,
+                        createdAt: j.created || 0,
                         endpoint: j.endpoint || "",
-                        payload: j.payload || null
+                        payload: j.payload || null,
+                        sourcePath: (j.payload && j.payload.filepath) || j.filepath || "",
+                        outputPath: j.output_path || _sessionCtxResultPath(j) || ""
                     });
                 }
             }
@@ -9780,6 +9950,45 @@
     // ================================================================
     var _outputBrowserOpen = false;
 
+    function getOutputItemPath(item) {
+        return (item && item.path) || "";
+    }
+
+    function getOutputItemName(item) {
+        var path = getOutputItemPath(item);
+        if (item && item.name) return item.name;
+        if (!path) return "Untitled output";
+        return path.split(/[\\/]/).pop() || path;
+    }
+
+    function getOutputItemTypeLabel(item) {
+        if (item && item.type) return item.type;
+        var path = getOutputItemPath(item) || (item && item.name) || "";
+        var match = path.match(/\.([A-Za-z0-9]+)$/);
+        return match ? match[1].toUpperCase() : "Output";
+    }
+
+    function getOutputItemMetaBits(item) {
+        var bits = [];
+        var sizeMb = item && item.size_mb;
+        var ts = parseToUnixSeconds(item && (item.modified || item.created || item.timestamp || item.updated_at));
+
+        if (typeof sizeMb === "number" && !isNaN(sizeMb)) bits.push(safeFixed(sizeMb, 1) + " MB");
+        if (ts) bits.push(_sessionCtxRelativeTime(ts));
+
+        return bits;
+    }
+
+    function createOutputActionButton(label, className, title, onClick) {
+        var btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = className;
+        btn.title = title;
+        btn.textContent = label;
+        btn.addEventListener("click", onClick);
+        return btn;
+    }
+
     function initOutputBrowser() {
         if (el.outputBrowserToggle) {
             el.outputBrowserToggle.addEventListener("click", function () {
@@ -9805,66 +10014,105 @@
 
     function refreshOutputs() {
         api("GET", "/outputs/recent", null, function (err, data) {
-            if (err || !data || !Array.isArray(data)) return;
             if (el.outputBrowserToggle) {
-                setToggleButtonCount(el.outputBrowserToggle, "Outputs", data.length);
+                setToggleButtonCount(el.outputBrowserToggle, "Outputs", Array.isArray(data) ? data.length : 0);
             }
             if (!el.outputBrowserList) return;
             el.outputBrowserList.textContent = "";
-            if (data.length === 0) {
-                var emptyHint = document.createElement("div");
-                emptyHint.className = "hint";
-                emptyHint.style.padding = "8px 12px";
-                emptyHint.textContent = "No recent outputs.";
-                el.outputBrowserList.appendChild(emptyHint);
+            if (err || !data || !Array.isArray(data)) {
+                el.outputBrowserList.innerHTML = buildEmptyHintMarkup(
+                    "Couldn't load recent outputs",
+                    "Reconnect the backend or refresh again to pull the latest rendered files.",
+                    "error"
+                );
                 return;
             }
+            if (el.outputBrowserToggle) {
+                setToggleButtonCount(el.outputBrowserToggle, "Outputs", data.length);
+            }
+            if (data.length === 0) {
+                el.outputBrowserList.innerHTML = buildEmptyHintMarkup(
+                    "No recent outputs yet",
+                    "Finished files will collect here so you can reopen, reveal, or import them without hunting through folders.",
+                    "info"
+                );
+                return;
+            }
+            var frag = document.createDocumentFragment();
             for (var i = 0; i < data.length; i++) {
                 var item = data[i] || {};
-                var row = document.createElement("div");
+                var path = getOutputItemPath(item);
+                var row = document.createElement("article");
                 row.className = "output-item";
+                row.title = path || "";
 
-                var info = document.createElement("div");
-                info.className = "output-item-info";
+                var header = document.createElement("div");
+                header.className = "output-item-header";
+
+                var titleRow = document.createElement("div");
+                titleRow.className = "output-item-title-row";
 
                 var nameEl = document.createElement("div");
                 nameEl.className = "output-item-name";
-                nameEl.textContent = item.name || (item.path ? item.path.split(/[/\\]/).pop() : "Untitled output");
+                nameEl.textContent = getOutputItemName(item);
+                titleRow.appendChild(nameEl);
+
+                var badgeEl = document.createElement("span");
+                badgeEl.className = "output-item-badge";
+                badgeEl.textContent = getOutputItemTypeLabel(item);
+                titleRow.appendChild(badgeEl);
+
+                header.appendChild(titleRow);
 
                 var metaEl = document.createElement("div");
                 metaEl.className = "output-item-meta";
-                metaEl.textContent = safeFixed(item.size_mb, 1) + " MB" + (item.type ? " - " + item.type : "");
+                metaEl.textContent = getOutputItemMetaBits(item).join(" • ") || "Ready in recent outputs";
+                header.appendChild(metaEl);
 
-                info.appendChild(nameEl);
-                info.appendChild(metaEl);
+                var pathEl = document.createElement("div");
+                pathEl.className = "output-item-path";
+                pathEl.textContent = path || "Path unavailable";
+                header.appendChild(pathEl);
 
                 var actions = document.createElement("div");
                 actions.className = "output-item-actions";
 
-                var importBtn = document.createElement("button");
-                importBtn.type = "button";
-                importBtn.className = "btn-sm";
-                importBtn.textContent = "Import";
-                importBtn.dataset.path = item.path || "";
-                importBtn.disabled = !item.path;
-                importBtn.setAttribute("aria-label", "Import " + nameEl.textContent);
-                importBtn.addEventListener("click", function () {
-                    var p = this.dataset.path || "";
-                    if (!p) {
-                        showToast("This output is missing a file path.", "error");
-                        return;
-                    }
-                    if (inPremiere && cs) {
-                        PremiereBridge.autoImport(p, "output");
-                        showToast("Imported: " + p.split(/[/\\]/).pop(), "success");
-                    }
-                });
+                if (path) {
+                    actions.appendChild(createOutputActionButton("Open", "output-item-btn", "Open output file", (function (outputPath) {
+                        return function () {
+                            _sessionCtxOpenPath(outputPath, "open");
+                        };
+                    })(path)));
 
+                    actions.appendChild(createOutputActionButton("Reveal", "output-item-btn", "Reveal in file manager", (function (outputPath) {
+                        return function () {
+                            _sessionCtxOpenPath(outputPath, "reveal");
+                        };
+                    })(path)));
+                }
+
+                var importBtn = createOutputActionButton("Import to Premiere", "output-item-btn output-item-btn-primary", "Import into the current Premiere project", (function (outputPath) {
+                    return function () {
+                        if (!outputPath) {
+                            showToast("This output is missing a file path.", "error");
+                            return;
+                        }
+                        if (!inPremiere || !cs) {
+                            showToast("Premiere isn't connected right now, so import is unavailable.", "warning");
+                            return;
+                        }
+                        PremiereBridge.autoImport(outputPath, "output");
+                        showToast("Imported " + outputPath.split(/[\\/]/).pop(), "success");
+                    };
+                })(path));
+                importBtn.disabled = !path || !inPremiere || !cs;
                 actions.appendChild(importBtn);
-                row.appendChild(info);
+
+                row.appendChild(header);
                 row.appendChild(actions);
-                el.outputBrowserList.appendChild(row);
+                frag.appendChild(row);
             }
+            el.outputBrowserList.appendChild(frag);
         });
     }
 
@@ -12421,6 +12669,17 @@
         } catch (e) {
             return "";
         }
+    }
+
+    function parseToUnixSeconds(value) {
+        if (value == null || value === "") return 0;
+        if (typeof value === "number") {
+            if (value > 1000000000000) return Math.floor(value / 1000);
+            if (value > 10000000000) return Math.floor(value / 1000);
+            return Math.floor(value);
+        }
+        var parsed = Date.parse(value);
+        return isNaN(parsed) ? 0 : Math.floor(parsed / 1000);
     }
 
     function getDeliverablesOutputSummary() {

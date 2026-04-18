@@ -1,5 +1,5 @@
 ﻿OpenCut-Setup
-1.3.0.0
+1.19.0.0
 
 winexe
 C#
@@ -12,8 +12,8 @@ TRACE;DEBUG;NET;NET9_0;NETCOREAPP;WINDOWS;WINDOWS7_0;NET5_0_OR_GREATER;NET6_0_OR
 C:\Users\--\repos\OpenCut\installer\src\OpenCut.Installer\App.xaml
 11167999527
 
-26-963424559
-200-1779018206
+27-587697382
+200903117426
 Controls\LogPanel.xaml;Controls\StepIndicator.xaml;MainWindow.xaml;Pages\CompletePage.xaml;Pages\LicensePage.xaml;Pages\OptionsPage.xaml;Pages\ProgressPage.xaml;Pages\UninstallPage.xaml;Pages\WelcomePage.xaml;Themes\Animations.xaml;Themes\CatppuccinMocha.xaml;
 
 False

@@ -20,6 +20,8 @@ public partial class CompletePage : Page
     private void OnLoaded(object sender, RoutedEventArgs e)
     {
         var config = _mainWindow.Config;
+        VersionText.Text = $"v{AppConstants.AppVersion}";
+        SummaryText.Text = $"{AppConstants.AppName} has been installed successfully. Your local editing workflow is ready for the first launch.";
 
         PathSummary.Text = $"Installed to: {config.InstallPath}";
 
@@ -30,7 +32,12 @@ public partial class CompletePage : Page
         if (config.CreateStartupShortcut) components.Add("Autostart");
         if (config.DownloadWhisperModel) components.Add($"Whisper ({config.WhisperModel})");
         ComponentsSummary.Text = components.Count > 0
-            ? string.Join(" | ", components) : "Server + FFmpeg";
+            ? string.Join(" • ", components) : "Server + FFmpeg";
+
+        NextStepsText.Text = config.InstallCepExtension
+            ? "1. Launch the OpenCut Server.\n2. Open Premiere Pro and load the OpenCut panel.\n3. Start with a clip, transcript, or cleanup pass."
+            : "1. Launch the OpenCut Server.\n2. Open the workflow surface you plan to use first.\n3. Add Premiere integration later if you want the CEP panel available.";
+        UpdateFinishButtonLabel();
 
         // Animate checkmark
         var fadeIn = new DoubleAnimation(0, 1, TimeSpan.FromMilliseconds(400))
@@ -39,6 +46,16 @@ public partial class CompletePage : Page
             EasingFunction = new CubicEase { EasingMode = EasingMode.EaseOut }
         };
         CheckPath.BeginAnimation(OpacityProperty, fadeIn);
+    }
+
+    private void LaunchCheck_Changed(object sender, RoutedEventArgs e)
+    {
+        UpdateFinishButtonLabel();
+    }
+
+    private void UpdateFinishButtonLabel()
+    {
+        FinishButton.Content = LaunchCheck.IsChecked == true ? "Launch & Close" : "Finish";
     }
 
     private void Close_Click(object sender, RoutedEventArgs e)
