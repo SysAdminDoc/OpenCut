@@ -81,7 +81,7 @@
     "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
-    "version": "1.9.3",
+    "version": "1.19.0",
     "restore": {
       "projectUniqueName": "C:\\Users\\--\\repos\\OpenCut\\installer\\src\\OpenCut.Installer\\OpenCut.Installer.csproj",
       "projectName": "OpenCut-Setup",
@@ -147,11 +147,27 @@
         "warn": true,
         "downloadDependencies": [
           {
+            "name": "Microsoft.AspNetCore.App.Ref",
+            "version": "[9.0.14, 9.0.14]"
+          },
+          {
             "name": "Microsoft.AspNetCore.App.Runtime.win-x64",
             "version": "[9.0.14, 9.0.14]"
           },
           {
+            "name": "Microsoft.NETCore.App.Host.win-x64",
+            "version": "[9.0.14, 9.0.14]"
+          },
+          {
+            "name": "Microsoft.NETCore.App.Ref",
+            "version": "[9.0.14, 9.0.14]"
+          },
+          {
             "name": "Microsoft.NETCore.App.Runtime.win-x64",
+            "version": "[9.0.14, 9.0.14]"
+          },
+          {
+            "name": "Microsoft.WindowsDesktop.App.Ref",
             "version": "[9.0.14, 9.0.14]"
           },
           {

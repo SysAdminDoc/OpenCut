@@ -148,12 +148,42 @@ class WorkerPool:
 
     def shutdown(self, wait=True):
         """Shut down the pool. Called on server exit."""
-        self._shutdown = True
-        # Send poison pills to all workers
-        for _ in self._workers:
-            self._work_queue.put((-1, -1, None))
+        with self._lock:
+            already_shutdown = self._shutdown
+            self._shutdown = True
+            workers = list(self._workers)
+
+        if not already_shutdown:
+            cancelled_job_ids = []
+            while True:
+                try:
+                    _priority, _seq, work_item = self._work_queue.get_nowait()
+                except queue.Empty:
+                    break
+                if work_item is None:
+                    continue
+                _fn, _args, _kwargs, future, job_id = work_item
+                if future.cancel():
+                    cancelled_job_ids.append(job_id)
+                    with self._lock:
+                        self._futures.pop(job_id, None)
+
+            for job_id in cancelled_job_ids:
+                try:
+                    _update_job(
+                        job_id,
+                        status="cancelled",
+                        message="Cancelled during server shutdown",
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    logger.debug("Shutdown cancel bookkeeping failed for %s: %s", job_id, exc)
+
+            # Wake any idle workers and let running jobs exit cleanly after
+            # their current task completes.
+            for _ in workers:
+                self._work_queue.put((-1, -1, None))
         if wait:
-            for t in self._workers:
+            for t in workers:
                 t.join(timeout=10)
         logger.info("WorkerPool shut down")
 

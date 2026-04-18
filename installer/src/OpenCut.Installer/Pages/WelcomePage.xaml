@@ -3,45 +3,123 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       Background="Transparent">
 
-    <Grid Margin="40,20,40,30">
+    <Grid Margin="44,28,44,34">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Center Content -->
-        <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
-            <StackPanel.RenderTransform>
-                <TranslateTransform />
-            </StackPanel.RenderTransform>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.25*" />
+                <ColumnDefinition Width="0.95*" />
+            </Grid.ColumnDefinitions>
 
-            <!-- Logo -->
-            <Image x:Name="Logo" Source="/Assets/logo.png" Width="96" Height="96"
-                   RenderOptions.BitmapScalingMode="HighQuality"
-                   HorizontalAlignment="Center" Margin="0,0,0,20"
-                   Opacity="0">
-                <Image.RenderTransform>
-                    <TranslateTransform />
-                </Image.RenderTransform>
-            </Image>
+            <Border Grid.Column="0" Style="{StaticResource SetupHeroBorder}" Margin="0,0,18,0">
+                <StackPanel>
+                    <Border Background="#22304a" BorderBrush="#334865" BorderThickness="1"
+                            CornerRadius="999" Padding="10,4" HorizontalAlignment="Left">
+                        <TextBlock x:Name="InstallModeBadgeText" Text="Fresh install"
+                                   Foreground="{DynamicResource Blue}" FontSize="11"
+                                   FontFamily="{DynamicResource UIFont}" FontWeight="SemiBold" />
+                    </Border>
 
-            <!-- Title -->
-            <TextBlock Text="OpenCut" FontSize="32" FontWeight="Bold"
-                       Foreground="{DynamicResource TextBrush}"
-                       FontFamily="{DynamicResource UIFont}"
-                       HorizontalAlignment="Center" Margin="0,0,0,4" />
-            <TextBlock Text="v1.3.0" FontSize="14"
-                       Foreground="{DynamicResource Overlay1}"
-                       FontFamily="{DynamicResource UIFont}"
-                       HorizontalAlignment="Center" Margin="0,0,0,12" />
-            <TextBlock Text="Video Editing Automation for Premiere Pro"
-                       FontSize="13" Foreground="{DynamicResource Subtext0}"
-                       FontFamily="{DynamicResource UIFont}"
-                       HorizontalAlignment="Center" />
-        </StackPanel>
+                    <Image x:Name="Logo" Source="/Assets/logo.png" Width="76" Height="76"
+                           RenderOptions.BitmapScalingMode="HighQuality"
+                           HorizontalAlignment="Left" Margin="0,24,0,16"
+                           Opacity="0">
+                        <Image.RenderTransform>
+                            <TranslateTransform />
+                        </Image.RenderTransform>
+                    </Image>
 
-        <!-- Bottom Buttons -->
-        <Grid Grid.Row="1">
+                    <TextBlock Text="Install OpenCut" Style="{StaticResource PageTitleText}" />
+                    <TextBlock x:Name="VersionText" Text="v1.19.0"
+                               Foreground="{DynamicResource Blue}" FontSize="14"
+                               FontFamily="{DynamicResource UIFont}" FontWeight="SemiBold"
+                               Margin="0,8,0,0" />
+                    <TextBlock Margin="0,14,0,0"
+                               Text="Set up the OpenCut server, Premiere integration, and editing tools in one guided flow. The installer keeps the experience local, predictable, and ready for the first session."
+                               Style="{StaticResource BodyText}" />
+
+                    <Grid Margin="0,24,0,0">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <Border Grid.Row="0" Style="{StaticResource SetupCardBorder}" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="Premiere Ready" Foreground="{DynamicResource TextBrush}"
+                                           FontSize="14" FontWeight="SemiBold" />
+                                <TextBlock Text="Install the CEP panel and the recommended debug mode so OpenCut can talk to Premiere without extra manual setup."
+                                           Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Row="1" Style="{StaticResource SetupCardBorder}" Margin="0,0,0,10">
+                            <StackPanel>
+                                <TextBlock Text="Local Workflow" Foreground="{DynamicResource TextBrush}"
+                                           FontSize="14" FontWeight="SemiBold" />
+                                <TextBlock Text="The setup keeps the server, FFmpeg, shortcuts, and optional AI extras in one predictable install location."
+                                           Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Row="2" Style="{StaticResource SetupCardBorder}">
+                            <StackPanel>
+                                <TextBlock Text="Guided Finish" Foreground="{DynamicResource TextBrush}"
+                                           FontSize="14" FontWeight="SemiBold" />
+                                <TextBlock Text="You can review options, watch progress clearly, and launch the server immediately when setup is done."
+                                           Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <StackPanel Grid.Column="1">
+                <Border Style="{StaticResource SetupCardBorder}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="Setup Status" Style="{StaticResource SectionTitleText}" FontSize="18" />
+                        <TextBlock x:Name="InstallStatusText"
+                                   Text="No earlier install detected. OpenCut will use the default location and keep the first-run flow simple."
+                                   Style="{StaticResource BodyText}" Margin="0,10,0,0" />
+                        <TextBlock x:Name="InstallPathText"
+                                   Text="C:\Program Files\OpenCut"
+                                   Foreground="{DynamicResource Subtext1}" FontSize="12.5"
+                                   FontFamily="{DynamicResource MonoFont}" Margin="0,14,0,0"
+                                   TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SetupCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="What This Setup Includes" Style="{StaticResource SectionTitleText}" FontSize="18" />
+                        <TextBlock Text="OpenCut server + FFmpeg"
+                                   Foreground="{DynamicResource TextBrush}" FontSize="13.5"
+                                   FontWeight="SemiBold" Margin="0,10,0,0" />
+                        <TextBlock Text="Core processing services, local tooling, and launch scripts."
+                                   Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
+
+                        <TextBlock Text="Premiere integration"
+                                   Foreground="{DynamicResource TextBrush}" FontSize="13.5"
+                                   FontWeight="SemiBold" Margin="0,14,0,0" />
+                        <TextBlock Text="CEP panel setup with install-time options for Adobe-friendly configuration."
+                                   Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
+
+                        <TextBlock Text="Optional AI extras"
+                                   Foreground="{DynamicResource TextBrush}" FontSize="13.5"
+                                   FontWeight="SemiBold" Margin="0,14,0,0" />
+                        <TextBlock Text="Whisper models and optional Python helpers can be added on the next step."
+                                   Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="0,22,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="Auto" />
                 <ColumnDefinition Width="*" />
@@ -49,15 +127,14 @@
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
 
-            <!-- Uninstall link (only shown if already installed) -->
             <Button x:Name="UninstallLink" Grid.Column="0"
-                    Content="Uninstall" Visibility="Collapsed"
+                    Content="Open Uninstaller" Visibility="Collapsed"
                     Style="{StaticResource LinkButton}" Click="UninstallLink_Click" />
 
             <Button Grid.Column="2" Content="Cancel"
                     Style="{StaticResource SecondaryButton}"
                     Click="Cancel_Click" Margin="0,0,10,0" />
-            <Button Grid.Column="3" Content="Install OpenCut"
+            <Button x:Name="InstallActionButton" Grid.Column="3" Content="Install OpenCut"
                     Style="{StaticResource PrimaryButton}"
                     Click="Next_Click" />
         </Grid>
