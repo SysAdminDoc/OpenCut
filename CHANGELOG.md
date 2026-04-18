@@ -1,5 +1,33 @@
 # Changelog
 
+## [1.20.0] - 2026-04-17
+
+### Added — Wave D remaining items (D1.1, D3.1, D4.1, D5.2, D6.2)
+
+Three new modules, two LLM-enrichment extensions of existing modules, one server-level observability hook. 1,202 → 1,207 total routes (+5).
+
+**D3.1 Semantic OTIO timeline diff** — new [`opencut/export/otio_diff.py`](opencut/export/otio_diff.py) + `POST /timeline/diff`. Loads two timelines through OpenTimelineIO's adapter framework (supports `.otio`, `.otioz`, FCP XML, EDL, AAF when the optional adapter is installed) and emits a structured `OtioDiffResult` with track-level, clip-level, and marker-level diffs. Clip matching by `(name, source_url)` tuple with order-preserving pair-up; different `(start, duration)` → `retimed`, different track index → `moved`. Includes `format_diff_text()` for CLI / log output.
+
+**D4.1 Objective quality metrics** — new [`opencut/core/quality_metrics.py`](opencut/core/quality_metrics.py). VMAF / SSIM / PSNR comparison of a distorted file against a reference via FFmpeg's built-in filters + libvmaf JSON log. Three entry points: `measure_vmaf()` / `measure_ssim()` / `measure_psnr()` for single metrics, `compare_videos()` for a full `QualityReport`, and `batch_compare()` for CI golden-regression suites. Routes: `POST /video/quality/compare`, `POST /video/quality/batch-compare`, `GET /video/quality/backends`. Handles libvmaf absence gracefully — SSIM/PSNR still run; VMAF emits a clear `notes` entry. Threshold-based `passes` gate for CI regression budgets.
+
+**D5.2 Optional Sentry / GlitchTip observability** — new `_init_sentry_if_configured()` hook in [`opencut/server.py`](opencut/server.py), called from `create_app()`. Activated when `SENTRY_DSN` env var is set AND `sentry_sdk` is installed — no behaviour change for installs without either. Reads `OPENCUT_SENTRY_ENV`, `OPENCUT_SENTRY_RELEASE`, `OPENCUT_SENTRY_SAMPLE_RATE`. `send_default_pii=False` so request bodies (which often carry user media paths) don't leak to the error tracker. Reports via `GET /observability/status`.
+
+**D1.1 LLM-enriched audio description** — new `describe_scene_llm()` in [`opencut/core/audio_description.py`](opencut/core/audio_description.py). Takes a timestamp + surrounding transcript + optional brightness hint, asks the configured LLM (`core/llm.py`) to produce a single present-tense AD line of ≤ `~3·duration` words. No vision model needed — pure text-to-text. Falls back to the heuristic template on any LLM error so AD rendering never aborts mid-job. Complements the existing template-based `describe_visual_content()`; callers can pick per invocation.
+
+**D6.2 LLM-enriched quiz generation** — new `generate_quiz_questions_llm()` in [`opencut/core/quiz_overlay.py`](opencut/core/quiz_overlay.py). When `llm_config` is provided, produces genuine comprehension questions with shuffled `correct_index`. Strict JSON output parsed defensively — markdown code fences stripped, malformed entries dropped. Falls back to the existing TF-IDF fill-in-the-blank generator on any failure, so callers pass `llm_config` unconditionally.
+
+### Infrastructure
+- **4 new `check_*_available()`** entries in `opencut/checks.py`: `otio_diff`, `quality_metrics`, `vmaf`, `sentry`.
+- **3 new routes added to `_ALLOWED_QUEUE_ENDPOINTS`** so they're queueable via `/queue/add`.
+- **New blueprint** `wave_c_bp` registered in `routes/__init__.py` (alongside `wave_a_bp`, `wave_b_bp`).
+
+### Gotchas
+- **VMAF absence is non-fatal** — a FFmpeg build without `--enable-libvmaf` returns a `QualityReport` with `vmaf=None` and a diagnostic in `notes`. Callers must check `report.vmaf is not None` before using the value. Windows Gyan.dev / BtbN builds include libvmaf; many Linux distro packages don't.
+- **Sentry init is idempotent** — `_SENTRY_INITIALISED` guards re-entry. `create_app()` can be called multiple times in tests without creating multiple hubs. Environment variables are read *every* call, so changing them between `create_app()` invocations in test fixtures won't take effect until a fresh interpreter.
+- **OTIO AAF reads require the adapter even for diff** — `/timeline/diff` on `.aaf` inputs fails with `MISSING_DEPENDENCY` unless `otio-aaf-adapter` is installed. The error surfaces through the `job.error` event (the route is `@async_job`), not inline.
+- **LLM quiz JSON fence stripping is defensive** — the model may wrap output in ```` ```json ... ``` ````, ` ```...``` `, or `~~~...~~~`. We strip all three before `json.loads`. A genuinely non-JSON response falls back to TF-IDF — no error surfaces to the caller.
+- **`describe_scene_llm` word cap is approximate** — the `max_words + 4` tolerance (vs strict `max_words`) handles short models that over-shoot by one or two words without truncating natural sentence endings. AD burn-in downstream clamps display duration to the gap length, so a slightly long line is still safely bounded.
+
 ## [1.19.1] - 2026-04-17
 
 ### Fixed — production hardening audit on v1.17.0–v1.19.0 additions

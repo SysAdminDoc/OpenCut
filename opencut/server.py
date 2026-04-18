@@ -225,6 +225,80 @@ except ImportError:
 
 
 # ---------------------------------------------------------------------------
+# Optional observability — Sentry / GlitchTip
+# ---------------------------------------------------------------------------
+
+_SENTRY_INITIALISED = False
+
+
+def _init_sentry_if_configured() -> bool:
+    """Initialise Sentry / GlitchTip when configured via env.
+
+    Reads:
+    - ``SENTRY_DSN`` — GlitchTip or Sentry DSN. Empty / unset → skipped.
+    - ``OPENCUT_SENTRY_ENV`` — environment tag (default: "production").
+    - ``OPENCUT_SENTRY_RELEASE`` — release tag (default: current version).
+    - ``OPENCUT_SENTRY_SAMPLE_RATE`` — float 0..1 (default: 1.0).
+
+    Safe when ``sentry_sdk`` isn't installed — logs at INFO and returns
+    ``False``. Idempotent — returns ``True`` on re-entry once initialised.
+    """
+    global _SENTRY_INITIALISED
+    if _SENTRY_INITIALISED:
+        return True
+
+    dsn = os.environ.get("SENTRY_DSN", "").strip()
+    if not dsn:
+        return False
+
+    try:
+        import sentry_sdk  # type: ignore
+        from sentry_sdk.integrations.flask import FlaskIntegration  # type: ignore
+    except ImportError:
+        logger.info(
+            "SENTRY_DSN set but `sentry_sdk` not installed — "
+            "observability disabled. pip install sentry-sdk[flask]"
+        )
+        return False
+
+    try:
+        sample_rate = float(os.environ.get("OPENCUT_SENTRY_SAMPLE_RATE") or "1.0")
+    except (TypeError, ValueError):
+        sample_rate = 1.0
+    sample_rate = max(0.0, min(1.0, sample_rate))
+
+    env = os.environ.get("OPENCUT_SENTRY_ENV", "production")
+    try:
+        from opencut import __version__ as _ver
+    except Exception:  # noqa: BLE001
+        _ver = "unknown"
+    release = os.environ.get("OPENCUT_SENTRY_RELEASE", f"opencut@{_ver}")
+
+    try:
+        sentry_sdk.init(
+            dsn=dsn,
+            environment=env,
+            release=release,
+            sample_rate=sample_rate,
+            traces_sample_rate=sample_rate,
+            integrations=[FlaskIntegration()],
+            # Don't capture request bodies — they often contain media
+            # paths that are irrelevant to crash triage.
+            send_default_pii=False,
+        )
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("sentry_sdk.init failed: %s — observability disabled", exc)
+        return False
+
+    _SENTRY_INITIALISED = True
+    logger.info(
+        "Sentry initialised (env=%s, release=%s, sample_rate=%.2f)",
+        env, release, sample_rate,
+    )
+    return True
+
+
+# ---------------------------------------------------------------------------
 # Flask App Factory
 # ---------------------------------------------------------------------------
 def create_app(config=None):
@@ -248,6 +322,12 @@ def create_app(config=None):
         _apply_job_config(config)
     except Exception as e:
         logger.warning("Could not apply job runtime config: %s", e)
+
+    # Optional observability — Sentry / GlitchTip. Driven by env vars so
+    # deployments opt in without the module dependency becoming a hard
+    # requirement. Safe to call multiple times (sentry_sdk.init is
+    # idempotent-ish — subsequent calls just reconfigure the hub).
+    _init_sentry_if_configured()
 
     from opencut.security import OpenCutRequest  # noqa: E402
 

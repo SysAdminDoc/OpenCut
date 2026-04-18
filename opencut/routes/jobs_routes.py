@@ -232,6 +232,10 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     # v1.19.1 additions — AAF/OTIOZ promoted to async_job
     "/timeline/export/aaf",
     "/timeline/export/otioz",
+    # v1.20.0 additions — Wave C (observability + quality harness + diff)
+    "/timeline/diff",
+    "/video/quality/compare",
+    "/video/quality/batch-compare",
 })
 
 
