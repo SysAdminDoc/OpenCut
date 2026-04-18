@@ -13,14 +13,19 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
         _uninstallMode = uninstallMode;
+        WindowVersionText.Text = $"v{AppConstants.AppVersion}";
 
         if (_uninstallMode)
         {
+            Title = "OpenCut Uninstall";
+            WindowTitleText.Text = "OpenCut Uninstall";
             NavigateToPage(new UninstallPage(this));
             StepIndicator.Visibility = Visibility.Collapsed;
         }
         else
         {
+            Title = "OpenCut Setup";
+            WindowTitleText.Text = "OpenCut Setup";
             NavigateToPage(new WelcomePage(this));
             StepIndicator.CurrentStep = 0;
         }
