@@ -1,5 +1,34 @@
 # Changelog
 
+## [1.21.0] - 2026-04-17
+
+### Added — Wave B delivery + Wave E voice grammar + D4.2 fuzz harness
+
+Four new core modules, one fuzz-test harness, 9 new routes. 1,207 → 1,216 total.
+
+**B5.1 VVC / H.266 export** — new [`core/vvc_export.py`](opencut/core/vvc_export.py) + `POST /video/encode/vvc`, `GET /video/encode/vvc/info`. Wraps FFmpeg's `libvvenc` (Fraunhofer HHI, BSD-3). Three presets (`faster`/`balanced`/`archive`), QP override, optional raw `.266` / `.vvc` elementary-stream output for HLS packagers. Availability cached — module only probes FFmpeg's encoder list once per process.
+
+**B5.4 SRT streaming** — new [`core/srt_streaming.py`](opencut/core/srt_streaming.py) + `POST /video/stream/srt/start`, `POST /video/stream/srt/stop`, `GET /video/stream/srt/info`. Spawns FFmpeg → `srt://` push (caller) or listen (listener). URL builder validates host/port/passphrase/stream-id, and reserved param names (mode, latency, pkt_size, passphrase, streamid) are immune to `extra_params` overrides. The 1.5 s probe window on start catches early subprocess exits so clients learn about URL/auth failures before polling. `stop_stream()` does SIGTERM → wait → SIGKILL / Windows `taskkill /F` fallback.
+
+**B2.2 colour-science scopes** — new [`core/color_scopes_pro.py`](opencut/core/color_scopes_pro.py) + `POST /video/scopes/pro`, `GET /video/scopes/pro/info`. Mathematically-proper scopes via the ``colour-science`` pip package (BSD-3): mean CIE 1931 xy chromaticity, mean CIELUV (u*, v*), and **gamut coverage** fractions for Rec.709 / DCI-P3 / Rec.2020 computed with a vectorised barycentric test. Optional matplotlib PNG plots (chromaticity horseshoe + LUV vectorscope) — stats return even when matplotlib is absent.
+
+**E4 voice-command grammar** — new [`core/voice_command_grammar.py`](opencut/core/voice_command_grammar.py) + `POST /voice/grammar/parse`, `GET /voice/grammar/catalogue`. Deterministic grammar (no LLM) for hands-free timeline editing. Verbs: `cut` / `trim` / `mark` / `slip` / `nudge` / `speed` / `slow` / `undo` / `redo` / `seek` / `mute` / `unmute` / `ripple` / `zoom_in` / `zoom_out`. Frames + seconds + minutes + beats all normalise to seconds given sequence `fps` + `bpm`. Number-words 0..99 parsed inline. ``parse()`` is advertised as never-raising — fuzzed to verify. Low-confidence parses emit `fallback_route="/nlp/command"` for broader LLM-backed dispatch.
+
+**D4.2 Atheris fuzz harness** — new [`tests/fuzz/test_parser_fuzz.py`](tests/fuzz/test_parser_fuzz.py). Five fuzz targets: SRT time parser, SRT file parser, `.cube` LUT parser, voice-grammar parser, `event_moments._find_spikes`. Opt-in via `RUN_FUZZ=1`; default pytest runs skip the infinite-loop libFuzzer entry points. Pytest-smoke variant runs a fixed deterministic payload suite per target so CI catches "import-broke-the-fuzz-target" regressions without needing Atheris at ordinary CI time.
+
+### Infrastructure
+- 6 new `check_*_available()` entries in `opencut/checks.py`: `vvc`, `srt`, `colour_science`, `voice_grammar` (always True), `atheris`, plus the deprecation of `_AVAILABILITY_CACHE` dicts to per-module.
+- 3 new routes in `_ALLOWED_QUEUE_ENDPOINTS`: `/video/encode/vvc`, `/video/stream/srt/start`, `/video/scopes/pro`.
+- New blueprint `wave_d_bp` registered (naming: v1.18/19/20 = wave_a/b/c; v1.21 = wave_d).
+
+### Gotchas
+- **`_AVAILABILITY_CACHE` is per-module** — both `vvc_export` and `srt_streaming` memoise their FFmpeg-capability probe. Cache lives for the lifetime of the Python process. A rebuild that flips libvvenc on/off requires a server restart before the cached `False` becomes `True`.
+- **SRT stop is platform-split** — POSIX uses `signal.SIGKILL` after the grace window; Windows falls back to `taskkill /F /PID`. Don't remove the Windows branch — Windows Python lacks SIGKILL entirely.
+- **Voice-grammar is intentionally narrow** — the grammar is a whitelist, not a classifier. Utterances it doesn't match emit `fallback_route="/nlp/command"` so the broader LLM-backed parser in `core/nlp_command.py` picks up stragglers. Don't grow the grammar to catch everything — that's what the fallback is for.
+- **`colour-science` sample-count cap is 120** — probing 120 frames at 256² is fast (seconds). Larger values are silently clamped. The xy / LUV means are computed on **concatenated** pixel arrays across all samples, not per-frame averages, so uniform distributions don't wash out interesting chromaticity.
+- **VVC encode timeout is 4 hours** — reflects real-world archival encode times at `preset=archive` on ≥30-minute sources. Lower it for `faster` preset users only if monitored.
+- **Fuzz tests skip by default** — `RUN_FUZZ=1 pytest tests/fuzz/` enables the deterministic smoke suite. libFuzzer-style real fuzzing uses `python -m tests.fuzz.test_parser_fuzz <target> -max_total_time=N`.
+
 ## [1.20.0] - 2026-04-17
 
 ### Added — Wave D remaining items (D1.1, D3.1, D4.1, D5.2, D6.2)
