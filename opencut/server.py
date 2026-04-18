@@ -329,6 +329,15 @@ def create_app(config=None):
     # idempotent-ish — subsequent calls just reconfigure the hub).
     _init_sentry_if_configured()
 
+    # Startup + periodic sweep of stale opencut_* temp files. Best-effort;
+    # failure never blocks app startup.
+    try:
+        from opencut.core import temp_cleanup as _temp_cleanup
+        _temp_cleanup.run_startup_sweep()
+        _temp_cleanup.start_background_sweep()
+    except Exception as _cleanup_exc:  # noqa: BLE001
+        logger.warning("temp_cleanup bootstrap failed: %s", _cleanup_exc)
+
     from opencut.security import OpenCutRequest  # noqa: E402
 
     _app = Flask(__name__)
