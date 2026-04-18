@@ -7,8 +7,8 @@
     <RootNamespace>OpenCut.Installer</RootNamespace>
     <AssemblyName>OpenCut-Setup</AssemblyName>
     <ApplicationIcon>..\..\..\icon.ico</ApplicationIcon>
-    <Version>1.19.1</Version>
-    <FileVersion>1.19.1.0</FileVersion>
+    <Version>1.20.0</Version>
+    <FileVersion>1.20.0.0</FileVersion>
     <AssemblyVersion>1.19.0.0</AssemblyVersion>
     <Company>SysAdminDoc</Company>
     <Product>OpenCut Installer</Product>

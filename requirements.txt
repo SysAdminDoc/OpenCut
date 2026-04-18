@@ -1,4 +1,4 @@
-# OpenCut v1.19.1 Requirements
+# OpenCut v1.20.0 Requirements
 # Install: pip install -r requirements.txt
 # For GPU: pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
 
