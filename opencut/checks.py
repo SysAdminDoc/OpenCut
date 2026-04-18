@@ -359,3 +359,39 @@ def check_vmaf_available() -> bool:
 def check_sentry_available() -> bool:
     """True when sentry_sdk is importable (DSN need not be set)."""
     return _try_import("sentry_sdk") is not None
+
+
+# --- v1.21.0 Wave D availability checks ---
+
+def check_vvc_available() -> bool:
+    try:
+        from opencut.core.vvc_export import check_vvc_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_srt_available() -> bool:
+    try:
+        from opencut.core.srt_streaming import check_srt_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_colour_science_available() -> bool:
+    return _try_import("colour") is not None
+
+
+def check_voice_grammar_available() -> bool:
+    """Voice-command grammar is pure-Python stdlib — always available."""
+    try:
+        from opencut.core.voice_command_grammar import parse  # noqa: F401
+        return True
+    except Exception:
+        return False
+
+
+def check_atheris_available() -> bool:
+    """True when Atheris (fuzzing harness dep) is installed."""
+    return _try_import("atheris") is not None
