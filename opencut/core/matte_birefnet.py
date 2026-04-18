@@ -13,8 +13,7 @@ handoff).
 Backend preferences in priority order:
 1. ``onnxruntime`` with an external ONNX checkpoint — fastest, zero
    torch requirement. Path via ``OPENCUT_BIREFNET_ONNX`` env var.
-2. Torch via the ``BiRefNet`` pip package (if anyone publishes it) or
-   via HuggingFace ``ZhengPeng7/BiRefNet`` snapshot + transformers.
+2. Torch via HuggingFace ``ZhengPeng7/BiRefNet`` snapshot + transformers.
 3. Graceful error with install guidance.
 
 Output modes:
@@ -35,6 +34,11 @@ logger = logging.getLogger("opencut")
 
 
 OUTPUT_MODES = ("alpha", "rgba", "cutout")
+
+# Target inference resolution — BiRefNet is trained at 1024² and upstream
+# inference code agrees.  Lower resolutions still work but hurt edge
+# quality, which is the whole reason callers reach for BiRefNet.
+TARGET_SIZE = 1024
 
 
 @dataclass
@@ -62,7 +66,6 @@ class MatteResult:
 
 def check_birefnet_available() -> bool:
     """True when any supported BiRefNet backend can run."""
-    # Backend 1: ONNX via env-var-specified checkpoint
     onnx_path = os.environ.get("OPENCUT_BIREFNET_ONNX", "")
     if onnx_path and os.path.isfile(onnx_path):
         try:
@@ -70,7 +73,6 @@ def check_birefnet_available() -> bool:
             return True
         except ImportError:
             pass
-    # Backend 2: torch + transformers (HF snapshot)
     try:
         import torch  # noqa: F401
         import transformers  # noqa: F401
@@ -80,6 +82,7 @@ def check_birefnet_available() -> bool:
 
 
 def available_backends() -> List[str]:
+    """Return the names of usable backends in priority order."""
     out: List[str] = []
     onnx_path = os.environ.get("OPENCUT_BIREFNET_ONNX", "")
     if onnx_path and os.path.isfile(onnx_path):
@@ -101,23 +104,23 @@ def available_backends() -> List[str]:
 # Preprocessing / postprocessing
 # ---------------------------------------------------------------------------
 
-TARGET_SIZE = 1024  # BiRefNet's training resolution; upstream inference code agrees
-
-
 def _load_image(path: str):
     from PIL import Image
-    img = Image.open(path).convert("RGB")
-    return img
+    return Image.open(path).convert("RGB")
 
 
 def _preprocess_for_inference(img, target: int = TARGET_SIZE):
-    """Letterbox-resize RGB image to ``target×target`` with value range [0, 1]."""
+    """Letterbox-resize RGB image to ``target×target`` with ImageNet norm.
+
+    Returns a (1, 3, H, W) ``float32`` ndarray ready for ONNX / torch
+    inference plus the original ``(w, h)`` size for postprocess resize.
+    """
     import numpy as np
     from PIL import Image
+
     w0, h0 = img.size
     resized = img.resize((target, target), Image.BILINEAR)
     arr = np.asarray(resized).astype("float32") / 255.0
-    # CHW + normalise as per BiRefNet training (ImageNet stats)
     mean = np.array([0.485, 0.456, 0.406], dtype="float32").reshape(1, 1, 3)
     std = np.array([0.229, 0.224, 0.225], dtype="float32").reshape(1, 1, 3)
     arr = (arr - mean) / std
@@ -126,23 +129,26 @@ def _preprocess_for_inference(img, target: int = TARGET_SIZE):
 
 
 def _postprocess_alpha(mask, src_size):
-    """Resize a (H, W) or (1, 1, H, W) alpha tensor back to source size."""
+    """Resize an α-mask tensor back to the source size.
+
+    Accepts torch tensors, numpy arrays, or Python-typed nested lists.
+    Handles arbitrary leading dims (some BiRefNet checkpoints emit a
+    single tensor, others a tuple / list where the main mask is the
+    final head).  Applies a sigmoid when the values look unbounded.
+    """
     import numpy as np
     from PIL import Image
 
     if hasattr(mask, "detach"):
         mask = mask.detach().cpu().numpy()
     arr = np.asarray(mask)
-    # Squeeze leading dims → (H, W)
     while arr.ndim > 2:
         arr = arr[0]
-    # Sigmoid the logits if they look unbounded
     if arr.min() < 0 or arr.max() > 1:
         arr = 1.0 / (1.0 + np.exp(-arr))
     arr = (arr * 255.0).clip(0, 255).astype("uint8")
     img = Image.fromarray(arr, mode="L")
-    img = img.resize(src_size, Image.BILINEAR)
-    return img
+    return img.resize(src_size, Image.BILINEAR)
 
 
 # ---------------------------------------------------------------------------
@@ -155,7 +161,7 @@ def _infer_onnx(onnx_path: str, preprocessed):
     sess = ort.InferenceSession(onnx_path, providers=providers)
     ort_inputs = {sess.get_inputs()[0].name: preprocessed}
     outs = sess.run(None, ort_inputs)
-    # BiRefNet emits multiple heads; the final one is the main mask.
+    # BiRefNet typically emits multiple heads; main mask is the final.
     return outs[-1]
 
 
@@ -172,7 +178,6 @@ def _infer_torch_hf(preprocessed, model_name: str):
         x = torch.from_numpy(preprocessed).to(device)
         with torch.no_grad():
             out = model(x)
-            # Model output may be a tensor or a tuple/list of tensors
             if isinstance(out, (list, tuple)):
                 out = out[-1]
             return out
@@ -180,6 +185,44 @@ def _infer_torch_hf(preprocessed, model_name: str):
         del model
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
+
+
+# ---------------------------------------------------------------------------
+# Output composition
+# ---------------------------------------------------------------------------
+
+def _compose_output(
+    src_img,
+    alpha_img,
+    output_path: str,
+    mode: str,
+) -> None:
+    """Write the final PNG for the requested ``mode``.
+
+    - ``alpha`` — single-channel α only.
+    - ``rgba``  — source RGB with α channel, RGB preserved.
+    - ``cutout`` — source RGB premultiplied by α so viewers that
+      composite RGB without respecting α (thumbnail generators, older
+      chat clients) still show the cut-out shape.
+    """
+    from PIL import Image
+
+    if mode == "alpha":
+        alpha_img.save(output_path, "PNG", optimize=True)
+        return
+
+    rgba = Image.new("RGBA", src_img.size)
+    rgba.paste(src_img.convert("RGBA"), (0, 0))
+    rgba.putalpha(alpha_img)
+
+    if mode == "cutout":
+        import numpy as np
+        arr = np.asarray(rgba).copy()
+        a = arr[..., 3:4] / 255.0
+        arr[..., :3] = (arr[..., :3].astype("float32") * a).astype("uint8")
+        rgba = Image.fromarray(arr, "RGBA")
+
+    rgba.save(output_path, "PNG", optimize=True)
 
 
 # ---------------------------------------------------------------------------
@@ -198,16 +241,11 @@ def matte_image(
 
     Args:
         input_path: Source image (PNG/JPG/WEBP).
-        output_path: Output path. If None, writes next to source with
-            ``_matte_{mode}.png`` suffix.
-        mode: ``"alpha"`` (α only), ``"rgba"`` (RGB + α), ``"cutout"``
-            (premultiplied RGBA, background cleared).
+        output_path: Output path. Defaults to ``<input>_matte_{mode}.png``.
+        mode: ``"alpha"`` / ``"rgba"`` / ``"cutout"``.
         backend: ``"auto"`` / ``"onnx"`` / ``"torch_hf"``.
         hf_model: HuggingFace repo ID when backend is ``torch_hf``.
         on_progress: ``(pct, msg)`` callback.
-
-    Returns:
-        :class:`MatteResult`.
 
     Raises:
         RuntimeError: no backend is usable.
@@ -217,14 +255,12 @@ def matte_image(
     if not os.path.isfile(input_path):
         raise FileNotFoundError(f"File not found: {input_path}")
     if mode not in OUTPUT_MODES:
-        raise ValueError(
-            f"mode must be one of {OUTPUT_MODES}, got {mode!r}"
-        )
+        raise ValueError(f"mode must be one of {OUTPUT_MODES}, got {mode!r}")
     if not check_birefnet_available():
         raise RuntimeError(
             "BiRefNet not installed. Install one of: "
-            "(1) set OPENCUT_BIREFNET_ONNX to an ONNX checkpoint path "
-            "and `pip install onnxruntime`; or "
+            "(1) set OPENCUT_BIREFNET_ONNX to an ONNX checkpoint path and "
+            "`pip install onnxruntime`; or "
             "(2) `pip install transformers torch`."
         )
 
@@ -235,8 +271,8 @@ def matte_image(
     if on_progress:
         on_progress(5, f"Loading image (backend={backend})…")
 
-    img = _load_image(input_path)
-    pre, src_size = _preprocess_for_inference(img)
+    src_img = _load_image(input_path)
+    pre, src_size = _preprocess_for_inference(src_img)
 
     if on_progress:
         on_progress(25, "Running BiRefNet…")
@@ -259,27 +295,10 @@ def matte_image(
     alpha_img = _postprocess_alpha(mask, src_size)
 
     if output_path is None:
-        base, ext = os.path.splitext(input_path)
+        base, _ext = os.path.splitext(input_path)
         output_path = f"{base}_matte_{mode}.png"
 
-    if mode == "alpha":
-        alpha_img.save(output_path, "PNG", optimize=True)
-    else:
-        # Compose RGBA
-        from PIL import Image
-        rgba = Image.new("RGBA", img.size)
-        rgba.paste(img.convert("RGBA"), (0, 0))
-        rgba.putalpha(alpha_img)
-        if mode == "cutout":
-            # Zero out RGB where alpha is 0 (strictly speaking optional
-            # since PNG viewers ignore RGB when A=0, but keeps file smaller)
-            import numpy as np
-            arr = __import__("numpy").asarray(rgba).copy()
-            a = arr[..., 3:4] / 255.0
-            arr[..., :3] = (arr[..., :3].astype("float32") * a).astype("uint8")
-            rgba = __import__("PIL.Image").Image.fromarray(arr, "RGBA")
-            _ = np  # silence unused-import noise on some linters
-        rgba.save(output_path, "PNG", optimize=True)
+    _compose_output(src_img, alpha_img, output_path, mode)
 
     if on_progress:
         on_progress(100, "Matte complete")
