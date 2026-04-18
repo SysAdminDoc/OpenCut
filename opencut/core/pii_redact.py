@@ -14,7 +14,7 @@ import os
 import re
 import tempfile
 from dataclasses import asdict, dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Callable, List, Optional
 
 from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
@@ -318,7 +318,7 @@ def redact_pii(
     report = {
         "pii_redaction_report": {
             "version": "1.0",
-            "generated_at": datetime.utcnow().isoformat() + "Z",
+            "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
             "source_file": os.path.basename(input_path),
             "pii_types_found": pii_types_found,
             "total_detections": len(detections),

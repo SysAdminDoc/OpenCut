@@ -3,65 +3,82 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       Background="Transparent">
 
-    <Grid Margin="40,20,40,30">
+    <Grid Margin="44,24,44,34">
         <Grid.RowDefinitions>
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Center Content -->
-        <StackPanel Grid.Row="0" VerticalAlignment="Center" HorizontalAlignment="Center">
-            <!-- Animated Checkmark -->
-            <Grid Width="72" Height="72" HorizontalAlignment="Center" Margin="0,0,0,20">
-                <Ellipse Fill="{DynamicResource Green}" Opacity="0.15" />
-                <Path x:Name="CheckPath" Data="M18,36 L30,48 L54,24"
-                      Stroke="{DynamicResource Green}" StrokeThickness="4"
-                      StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
-                      HorizontalAlignment="Center" VerticalAlignment="Center"
-                      Width="72" Height="72" Stretch="None"
-                      Opacity="0">
-                    <Path.RenderTransform>
-                        <ScaleTransform ScaleX="1" ScaleY="1" CenterX="36" CenterY="36" />
-                    </Path.RenderTransform>
-                </Path>
-            </Grid>
+        <Grid Grid.Row="0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="1.05*" />
+                <ColumnDefinition Width="0.95*" />
+            </Grid.ColumnDefinitions>
 
-            <TextBlock Text="Installation Complete" FontSize="24" FontWeight="SemiBold"
-                       Foreground="{DynamicResource TextBrush}"
-                       FontFamily="{DynamicResource UIFont}"
-                       HorizontalAlignment="Center" Margin="0,0,0,8" />
-
-            <TextBlock x:Name="SummaryText" Text="OpenCut v1.3.0 has been installed successfully."
-                       FontSize="13" Foreground="{DynamicResource Subtext0}"
-                       FontFamily="{DynamicResource UIFont}"
-                       HorizontalAlignment="Center" Margin="0,0,0,24"
-                       TextAlignment="Center" />
-
-            <!-- Install Summary -->
-            <Border Background="{DynamicResource Surface0}" CornerRadius="8"
-                    Padding="16,12" MaxWidth="400" HorizontalAlignment="Center">
+            <Border Grid.Column="0" Style="{StaticResource SetupHeroBorder}" Margin="0,0,18,0">
                 <StackPanel>
-                    <TextBlock x:Name="PathSummary" FontSize="12"
-                               Foreground="{DynamicResource Subtext1}"
-                               FontFamily="{DynamicResource MonoFont}" />
-                    <TextBlock x:Name="ComponentsSummary" FontSize="12"
-                               Foreground="{DynamicResource Overlay1}" Margin="0,4,0,0"
-                               FontFamily="{DynamicResource UIFont}" />
+                    <Grid Width="84" Height="84" HorizontalAlignment="Left" Margin="0,0,0,18">
+                        <Ellipse Fill="{DynamicResource Green}" Opacity="0.15" />
+                        <Path x:Name="CheckPath" Data="M18,36 L30,48 L54,24"
+                              Stroke="{DynamicResource Green}" StrokeThickness="4"
+                              StrokeStartLineCap="Round" StrokeEndLineCap="Round" StrokeLineJoin="Round"
+                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                              Width="72" Height="72" Stretch="None"
+                              Opacity="0">
+                            <Path.RenderTransform>
+                                <ScaleTransform ScaleX="1" ScaleY="1" CenterX="36" CenterY="36" />
+                            </Path.RenderTransform>
+                        </Path>
+                    </Grid>
+
+                    <TextBlock Text="OpenCut Is Ready" Style="{StaticResource PageTitleText}" />
+                    <TextBlock x:Name="VersionText" Text="v1.19.0"
+                               Foreground="{DynamicResource Green}" FontSize="14"
+                               FontFamily="{DynamicResource UIFont}" FontWeight="SemiBold"
+                               Margin="0,8,0,0" />
+                    <TextBlock x:Name="SummaryText"
+                               Text="OpenCut has been installed successfully and the local workflow is ready for first launch."
+                               Style="{StaticResource BodyText}" Margin="0,14,0,0" />
+
+                    <Border Background="{DynamicResource SuccessTintBrush}" BorderBrush="{DynamicResource Surface1}"
+                            BorderThickness="1" CornerRadius="12" Padding="14,12" Margin="0,22,0,0">
+                        <CheckBox x:Name="LaunchCheck" Content="Launch OpenCut Server now"
+                                  IsChecked="True" Checked="LaunchCheck_Changed" Unchecked="LaunchCheck_Changed" />
+                    </Border>
                 </StackPanel>
             </Border>
 
-            <!-- Launch checkbox -->
-            <CheckBox x:Name="LaunchCheck" Content="Launch OpenCut Server now"
-                      IsChecked="True" HorizontalAlignment="Center" Margin="0,20,0,0" />
-        </StackPanel>
+            <StackPanel Grid.Column="1">
+                <Border Style="{StaticResource SetupCardBorder}" Margin="0,0,0,14">
+                    <StackPanel>
+                        <TextBlock Text="Install Summary" Style="{StaticResource SectionTitleText}" FontSize="18" />
+                        <TextBlock x:Name="PathSummary" FontSize="12.5"
+                                   Foreground="{DynamicResource Subtext1}"
+                                   FontFamily="{DynamicResource MonoFont}" Margin="0,12,0,0"
+                                   TextWrapping="Wrap" />
+                        <TextBlock x:Name="ComponentsSummary" FontSize="12.5"
+                                   Foreground="{DynamicResource Overlay1}" Margin="0,10,0,0"
+                                   FontFamily="{DynamicResource UIFont}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
 
-        <!-- Close Button -->
-        <Grid Grid.Row="1">
+                <Border Style="{StaticResource SetupCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="Next Steps" Style="{StaticResource SectionTitleText}" FontSize="18" />
+                        <TextBlock x:Name="NextStepsText"
+                                   Text="1. Launch the OpenCut Server.&#x0a;2. Open Premiere Pro and load the OpenCut panel.&#x0a;3. Start with a clip, transcript, or cleanup pass."
+                                   Style="{StaticResource BodyText}" Margin="0,12,0,0" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <Grid Grid.Row="1" Margin="0,22,0,0">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
             </Grid.ColumnDefinitions>
-            <Button Grid.Column="1" Content="Close"
+            <Button x:Name="FinishButton" Grid.Column="1" Content="Launch &amp; Close"
                     Style="{StaticResource PrimaryButton}"
                     Click="Close_Click" />
         </Grid>

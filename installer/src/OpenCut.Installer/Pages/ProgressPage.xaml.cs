@@ -19,15 +19,17 @@ public partial class ProgressPage : Page
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        // Start shimmer animation
         StartShimmer();
+        LogPanel.AppendLog("Setup initialized. Preparing installation workflow.", LogLevel.Info);
 
         var progress = new Progress<InstallProgress>(report =>
         {
             Dispatcher.Invoke(() =>
             {
-                StepLabel.Text = report.StepName;
+                ProgressStateText.Text = report.StepName;
+                StepLabel.Text = report.Message;
                 ProgressBar.Value = report.OverallPercent;
+                ProgressPercentText.Text = $"{report.OverallPercent:0}%";
                 LogPanel.AppendLog(report.Message, report.Level);
             });
         });
@@ -38,14 +40,20 @@ public partial class ProgressPage : Page
         {
             await Task.Run(() => engine.RunInstall(progress));
 
-            // Success - navigate to complete page
+            ProgressStateText.Text = "Install complete";
+            StepLabel.Text = "OpenCut finished installing successfully. Preparing the final summary…";
+            ProgressPercentText.Text = "100%";
             _mainWindow.SetStep(4);
             _mainWindow.NavigateToPage(new CompletePage(_mainWindow));
         }
         catch (Exception ex)
         {
             LogPanel.AppendLog($"Installation failed: {ex.Message}", LogLevel.Error);
-            StepLabel.Text = "Installation failed";
+            ProgressStateText.Text = "Install failed";
+            StepLabel.Text = "Setup ran into an error. Review the log, then close the installer and try again.";
+            ProgressSummaryText.Text = "OpenCut could not finish setup. The log below shows the last successful action and the error that stopped installation.";
+            ProgressPercentText.Text = $"{ProgressBar.Value:0}%";
+            Shimmer.Visibility = Visibility.Collapsed;
             CloseBtn.Visibility = Visibility.Visible;
         }
     }

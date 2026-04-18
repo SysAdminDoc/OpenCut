@@ -3,94 +3,161 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       Background="Transparent">
 
-    <Grid Margin="40,16,40,30">
+    <Grid Margin="44,22,44,34">
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Grid.Row="0" Text="Installation Options" FontSize="20" FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextBrush}"
-                   FontFamily="{DynamicResource UIFont}" Margin="0,0,0,12" />
+        <StackPanel Grid.Row="0" Margin="0,0,0,14">
+            <TextBlock Text="Installation Options" Style="{StaticResource SectionTitleText}" />
+            <TextBlock Text="Choose where OpenCut should live, how Premiere integration should be configured, and whether to include optional AI tooling on day one."
+                       Style="{StaticResource BodyText}" Margin="0,8,0,0" />
+        </StackPanel>
 
-        <!-- Options ScrollViewer -->
-        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Margin="0,0,0,12">
+        <Border Grid.Row="1" Style="{StaticResource SetupHeroBorder}" Margin="0,0,0,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,14,0">
+                    <TextBlock Text="Destination" Foreground="{DynamicResource Overlay1}" FontSize="11.5" FontWeight="SemiBold" />
+                    <TextBlock x:Name="DestinationSummaryText" Foreground="{DynamicResource TextBrush}" FontSize="13.5"
+                               FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="0,0,14,0">
+                    <TextBlock Text="Premiere" Foreground="{DynamicResource Overlay1}" FontSize="11.5" FontWeight="SemiBold" />
+                    <TextBlock x:Name="IntegrationSummaryText" Foreground="{DynamicResource TextBrush}" FontSize="13.5"
+                               FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <StackPanel Grid.Column="2">
+                    <TextBlock Text="Extras" Foreground="{DynamicResource Overlay1}" FontSize="11.5" FontWeight="SemiBold" />
+                    <TextBlock x:Name="ExtrasSummaryText" Foreground="{DynamicResource TextBrush}" FontSize="13.5"
+                               FontWeight="SemiBold" Margin="0,8,0,0" TextWrapping="Wrap" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,0,0,14">
             <StackPanel>
-                <!-- Install Location -->
-                <TextBlock Text="Install Location" FontSize="13" FontWeight="SemiBold"
-                           Foreground="{DynamicResource Subtext1}" Margin="0,0,0,6" />
-                <Grid Margin="0,0,0,4">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" />
-                    </Grid.ColumnDefinitions>
-                    <TextBox x:Name="PathBox" Grid.Column="0"
-                             Text="C:\Program Files\OpenCut" Margin="0,0,8,0" />
-                    <Button Grid.Column="1" Content="Browse..."
-                            Style="{StaticResource SecondaryButton}"
-                            Click="Browse_Click" Padding="12,8" />
-                </Grid>
-                <TextBlock x:Name="DiskSpace" Text="" FontSize="11"
-                           Foreground="{DynamicResource Overlay0}" Margin="0,2,0,12" />
+                <Border Style="{StaticResource SetupCardBorder}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Install Location" Foreground="{DynamicResource TextBrush}"
+                                   FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="Choose where OpenCut should place the server, FFmpeg, logs, and supporting files."
+                                   Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
 
-                <!-- Separator -->
-                <Rectangle Height="1" Fill="{DynamicResource Surface1}" Margin="0,4,0,12" />
+                        <Grid Margin="0,14,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBox x:Name="PathBox" Grid.Column="0"
+                                     Text="C:\Program Files\OpenCut"
+                                     Margin="0,0,10,0"
+                                     TextChanged="PathBox_TextChanged" />
+                            <Button Grid.Column="1" Content="Browse…"
+                                    Style="{StaticResource SecondaryButton}"
+                                    Click="Browse_Click" Padding="14,9" />
+                        </Grid>
 
-                <!-- Adobe Integration -->
-                <TextBlock Text="Adobe Integration" FontSize="13" FontWeight="SemiBold"
-                           Foreground="{DynamicResource Subtext1}" Margin="0,0,0,6" />
-                <CheckBox x:Name="CepCheck" Content="Install Premiere Pro CEP extension"
-                          IsChecked="True" Margin="0,0,0,2" />
-                <CheckBox x:Name="DebugModeCheck" Content="Enable PlayerDebugMode (required for CEP)"
-                          IsChecked="True" Margin="16,0,0,0" />
+                        <TextBlock x:Name="DiskSpace" Text="" Style="{StaticResource CaptionText}" Margin="0,10,0,0" />
+                    </StackPanel>
+                </Border>
 
-                <!-- Separator -->
-                <Rectangle Height="1" Fill="{DynamicResource Surface1}" Margin="0,12,0,12" />
+                <Border Style="{StaticResource SetupCardBorder}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Premiere Integration" Foreground="{DynamicResource TextBrush}"
+                                   FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="Keep the install ready for Adobe workflows without forcing extra manual steps later."
+                                   Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
 
-                <!-- Shortcuts -->
-                <TextBlock Text="Shortcuts" FontSize="13" FontWeight="SemiBold"
-                           Foreground="{DynamicResource Subtext1}" Margin="0,0,0,6" />
-                <CheckBox x:Name="DesktopCheck" Content="Create desktop shortcut" IsChecked="True" />
-                <CheckBox x:Name="StartMenuCheck" Content="Create Start Menu shortcut" IsChecked="True" />
-                <CheckBox x:Name="AutostartCheck" Content="Start with Windows" />
+                        <CheckBox x:Name="CepCheck" Content="Install Premiere Pro CEP extension"
+                                  IsChecked="True" Margin="0,14,0,0"
+                                  Checked="CepCheck_Changed" Unchecked="CepCheck_Changed" />
+                        <CheckBox x:Name="DebugModeCheck" Content="Enable PlayerDebugMode (recommended for CEP)"
+                                  IsChecked="True" Margin="18,6,0,0"
+                                  Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
+                        <TextBlock x:Name="CepStatusText"
+                                   Text="The CEP panel will be installed and Adobe debug mode will be enabled so the extension can load reliably."
+                                   Style="{StaticResource CaptionText}" Margin="0,10,0,0" />
+                    </StackPanel>
+                </Border>
 
-                <!-- Separator -->
-                <Rectangle Height="1" Fill="{DynamicResource Surface1}" Margin="0,12,0,12" />
+                <Border Style="{StaticResource SetupCardBorder}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Shortcuts &amp; Startup" Foreground="{DynamicResource TextBrush}"
+                                   FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="Choose how visible OpenCut should be after installation."
+                                   Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
 
-                <!-- Optional Tools -->
-                <TextBlock Text="Optional Tools" FontSize="13" FontWeight="SemiBold"
-                           Foreground="{DynamicResource Subtext1}" Margin="0,0,0,6" />
-                <CheckBox x:Name="OptionalDepsCheck" Content="Install optional Python tools (requires Python in PATH)"
-                          Checked="OptionalDepsCheck_Changed" Unchecked="OptionalDepsCheck_Changed" />
-                <StackPanel x:Name="OptionalDepsPanel" Margin="20,6,0,0" Visibility="Collapsed">
-                    <CheckBox x:Name="DepAutoEditor" Content="auto-editor (motion-based auto-editing)" IsChecked="True" />
-                    <CheckBox x:Name="DepEdgeTts" Content="edge-tts (text-to-speech)" IsChecked="True" />
-                    <CheckBox x:Name="DepMediapipe" Content="mediapipe (face tracking for reframe)" IsChecked="True" />
-                </StackPanel>
+                        <CheckBox x:Name="DesktopCheck" Content="Create desktop shortcut" IsChecked="True"
+                                  Margin="0,14,0,0" Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
+                        <CheckBox x:Name="StartMenuCheck" Content="Create Start Menu shortcut" IsChecked="True"
+                                  Margin="0,6,0,0" Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
+                        <CheckBox x:Name="AutostartCheck" Content="Start with Windows"
+                                  Margin="0,6,0,0" Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
+                    </StackPanel>
+                </Border>
 
-                <!-- Separator -->
-                <Rectangle Height="1" Fill="{DynamicResource Surface1}" Margin="0,12,0,12" />
+                <Border Style="{StaticResource SetupCardBorder}" Margin="0,0,0,12">
+                    <StackPanel>
+                        <TextBlock Text="Optional Tools" Foreground="{DynamicResource TextBrush}"
+                                   FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="Optional Python helpers can be installed if Python is already available on this machine."
+                                   Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
 
-                <!-- AI Models -->
-                <TextBlock Text="AI Models" FontSize="13" FontWeight="SemiBold"
-                           Foreground="{DynamicResource Subtext1}" Margin="0,0,0,6" />
-                <CheckBox x:Name="WhisperCheck" Content="Download Whisper model for captions"
-                          Checked="WhisperCheck_Changed" Unchecked="WhisperCheck_Changed" />
-                <StackPanel x:Name="ModelPanel" Margin="20,6,0,0" Visibility="Collapsed">
-                    <RadioButton x:Name="ModelTiny" Content="tiny (75 MB) — Fastest, lower accuracy" GroupName="Model" />
-                    <RadioButton x:Name="ModelBase" Content="base (150 MB) — Good balance" GroupName="Model" />
-                    <RadioButton x:Name="ModelSmall" Content="small (500 MB) — Better accuracy, slower" GroupName="Model" />
-                    <RadioButton x:Name="ModelMedium" Content="medium (1.5 GB) — High accuracy, more RAM" GroupName="Model" />
-                    <RadioButton x:Name="ModelTurbo" Content="turbo (1.6 GB) — Best speed/accuracy (recommended)"
-                                 GroupName="Model" IsChecked="True" />
-                </StackPanel>
+                        <CheckBox x:Name="OptionalDepsCheck" Content="Install optional Python tools"
+                                  Margin="0,14,0,0"
+                                  Checked="OptionalDepsCheck_Changed" Unchecked="OptionalDepsCheck_Changed" />
+                        <StackPanel x:Name="OptionalDepsPanel" Margin="20,8,0,0" Visibility="Collapsed">
+                            <CheckBox x:Name="DepAutoEditor" Content="auto-editor for motion-based auto-editing"
+                                      IsChecked="True" Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
+                            <CheckBox x:Name="DepEdgeTts" Content="edge-tts for text-to-speech"
+                                      IsChecked="True" Margin="0,6,0,0"
+                                      Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
+                            <CheckBox x:Name="DepMediapipe" Content="mediapipe for face-aware reframing"
+                                      IsChecked="True" Margin="0,6,0,0"
+                                      Checked="AnyOptionChanged" Unchecked="AnyOptionChanged" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <Border Style="{StaticResource SetupCardBorder}">
+                    <StackPanel>
+                        <TextBlock Text="AI Model Download" Foreground="{DynamicResource TextBrush}"
+                                   FontSize="15" FontWeight="SemiBold" />
+                        <TextBlock Text="Download a Whisper speech model now if you want captions and transcript workflows ready immediately."
+                                   Style="{StaticResource CaptionText}" Margin="0,6,0,0" />
+
+                        <CheckBox x:Name="WhisperCheck" Content="Download Whisper model for captions"
+                                  Margin="0,14,0,0"
+                                  Checked="WhisperCheck_Changed" Unchecked="WhisperCheck_Changed" />
+                        <StackPanel x:Name="ModelPanel" Margin="20,8,0,0" Visibility="Collapsed">
+                            <RadioButton x:Name="ModelTiny" Content="tiny (75 MB) — Fastest, lower accuracy"
+                                         GroupName="Model" Checked="AnyOptionChanged" />
+                            <RadioButton x:Name="ModelBase" Content="base (150 MB) — Good balance"
+                                         GroupName="Model" Margin="0,6,0,0" Checked="AnyOptionChanged" />
+                            <RadioButton x:Name="ModelSmall" Content="small (500 MB) — Better accuracy, slower"
+                                         GroupName="Model" Margin="0,6,0,0" Checked="AnyOptionChanged" />
+                            <RadioButton x:Name="ModelMedium" Content="medium (1.5 GB) — High accuracy, more RAM"
+                                         GroupName="Model" Margin="0,6,0,0" Checked="AnyOptionChanged" />
+                            <RadioButton x:Name="ModelTurbo" Content="turbo (1.6 GB) — Best speed/accuracy (recommended)"
+                                         GroupName="Model" Margin="0,6,0,0" IsChecked="True" Checked="AnyOptionChanged" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Buttons -->
-        <Grid Grid.Row="2">
+        <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
                 <ColumnDefinition Width="Auto" />
@@ -100,7 +167,7 @@
             <Button Grid.Column="1" Content="Back"
                     Style="{StaticResource SecondaryButton}"
                     Click="Back_Click" Margin="0,0,10,0" />
-            <Button Grid.Column="2" Content="Install"
+            <Button Grid.Column="2" Content="Start Install"
                     Style="{StaticResource PrimaryButton}"
                     Click="Install_Click" />
         </Grid>
