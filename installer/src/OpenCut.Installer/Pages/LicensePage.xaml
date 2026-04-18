@@ -3,7 +3,7 @@
       xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
       Background="Transparent">
 
-    <Grid Margin="40,16,40,30">
+    <Grid Margin="44,24,44,34">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="*" />
@@ -11,29 +11,45 @@
             <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Grid.Row="0" Text="License Agreement" FontSize="20" FontWeight="SemiBold"
-                   Foreground="{DynamicResource TextBrush}"
-                   FontFamily="{DynamicResource UIFont}" Margin="0,0,0,12" />
+        <StackPanel Grid.Row="0" Margin="0,0,0,16">
+            <TextBlock Text="License Agreement" Style="{StaticResource SectionTitleText}" />
+            <TextBlock Text="Review the MIT license, then continue when you’re ready to configure the setup."
+                       Style="{StaticResource BodyText}" Margin="0,8,0,0" />
+        </StackPanel>
 
-        <!-- License Text -->
-        <Border Grid.Row="1" Background="{DynamicResource Surface0}"
-                CornerRadius="8" Padding="16,12" Margin="0,0,0,12">
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <TextBlock x:Name="LicenseText" TextWrapping="Wrap"
-                           Foreground="{DynamicResource Subtext1}"
-                           FontFamily="{DynamicResource MonoFont}"
-                           FontSize="11.5" LineHeight="18" />
-            </ScrollViewer>
+        <Border Grid.Row="1" Style="{StaticResource SetupCardBorder}" Margin="0,0,0,14">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Grid.Row="0" Margin="0,0,0,12">
+                    <TextBlock Text="MIT License" Foreground="{DynamicResource TextBrush}"
+                               FontSize="14" FontWeight="SemiBold" />
+                    <TextBlock Text="OpenCut is distributed under the MIT license. The full text is shown below for review."
+                               Style="{StaticResource CaptionText}" Margin="0,4,0,0" />
+                </StackPanel>
+
+                <Border Grid.Row="1" Background="{DynamicResource Mantle}" BorderBrush="{DynamicResource Surface1}"
+                        BorderThickness="1" CornerRadius="12" Padding="14,12">
+                    <ScrollViewer VerticalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="LicenseText" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource Subtext1}"
+                                   FontFamily="{DynamicResource MonoFont}"
+                                   FontSize="11.5" LineHeight="18" />
+                    </ScrollViewer>
+                </Border>
+            </Grid>
         </Border>
 
-        <!-- Accept Checkbox -->
-        <CheckBox x:Name="AcceptCheck" Grid.Row="2"
-                  Content="I accept the terms of the MIT License"
-                  Margin="0,0,0,16"
-                  Checked="AcceptCheck_Changed" Unchecked="AcceptCheck_Changed" />
+        <Border Grid.Row="2" Background="{DynamicResource SuccessTintBrush}" BorderBrush="{DynamicResource Surface1}"
+                BorderThickness="1" CornerRadius="12" Padding="14,12" Margin="0,0,0,16">
+            <CheckBox x:Name="AcceptCheck"
+                      Content="I accept the terms of the MIT License"
+                      Checked="AcceptCheck_Changed" Unchecked="AcceptCheck_Changed" />
+        </Border>
 
-        <!-- Buttons -->
         <Grid Grid.Row="3">
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="*" />
@@ -44,7 +60,7 @@
             <Button Grid.Column="1" Content="Back"
                     Style="{StaticResource SecondaryButton}"
                     Click="Back_Click" Margin="0,0,10,0" />
-            <Button x:Name="NextBtn" Grid.Column="2" Content="Next"
+            <Button x:Name="NextBtn" Grid.Column="2" Content="Continue"
                     Style="{StaticResource PrimaryButton}"
                     IsEnabled="False" Click="Next_Click" />
         </Grid>

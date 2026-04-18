@@ -95,6 +95,11 @@ def close_all_connections():
             except Exception:
                 pass
         _ALL_CONNECTIONS.clear()
+    try:
+        if getattr(_LOCAL, "conn", None) is not None:
+            _LOCAL.conn = None
+    except Exception:
+        pass
     logger.debug("All job store connections closed")
 
 

@@ -3,7 +3,9 @@
 import json
 import os
 import tempfile
+import threading
 import unittest
+from unittest.mock import patch
 
 
 def _isolate_journal():
@@ -90,6 +92,34 @@ class TestJournalStore(unittest.TestCase):
         # import_captions is recorded but has no auto-revert
         info_only = jm.record("import_captions", "y", {})
         self.assertFalse(info_only["revertible"])
+
+    def test_list_entries_coerces_invalid_limit(self):
+        from opencut import journal as jm
+        jm.record("add_markers", "a", {})
+        jm.record("add_markers", "b", {})
+
+        rows = jm.list_entries(limit=0)
+
+        self.assertEqual(len(rows), 1)
+
+    def test_get_conn_prunes_dead_thread_connections(self):
+        from opencut import journal as jm
+
+        class DummyConn:
+            def __init__(self):
+                self.closed = False
+
+            def close(self):
+                self.closed = True
+
+        dummy = DummyConn()
+        jm._ALL_CONNECTIONS[999999] = dummy
+
+        with patch.object(jm.threading, "enumerate", return_value=[threading.current_thread()]):
+            jm._get_conn()
+
+        self.assertTrue(dummy.closed)
+        self.assertNotIn(999999, jm._ALL_CONNECTIONS)
 
 
 class TestJournalRoutes(unittest.TestCase):
