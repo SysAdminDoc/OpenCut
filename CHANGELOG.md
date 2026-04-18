@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.24.0] - 2026-04-17
+
+### Added — second wide-net pass
+
+Five infrastructure modules + three governance files + one `run_ffmpeg` ergonomics extension. Closes the remaining wide-net findings from the v1.14.0 strategic-gap audit. 6 new routes (1,235 → 1,241).
+
+**Subprocess tracking for cancel** — [`helpers.run_ffmpeg`](opencut/helpers.py) now accepts an optional `job_id=...` keyword. When supplied, the spawned Popen is registered with the job subsystem via `_register_job_process(job_id, proc)` so `POST /cancel/<job_id>` actually terminates the child. Previous behaviour used blocking `subprocess.run()` — cancel marked the job "cancelled" but FFmpeg ran to completion, pinning a worker slot indefinitely. The non-`job_id` call path is unchanged, so all ~158 existing callers keep working; new / refactored callers opt in by passing `job_id=job_id`. Closes the v1.14.0 audit finding "untracked subprocesses can orphan on cancel".
+
+**Disk-space monitor** — new [`core/disk_monitor.py`](opencut/core/disk_monitor.py) + `GET /system/disk`, `POST /system/disk/preflight`, `POST /system/disk/track`. Tracks `tempfile.gettempdir()` + `~/.opencut` by default; ops add more via `register_tracked_path()` or the `/system/disk/track` route. Warn / critical thresholds via `OPENCUT_DISK_WARN_MB` (2048) / `OPENCUT_DISK_CRITICAL_MB` (500). Optional background probe thread via `OPENCUT_DISK_MONITOR_INTERVAL` (default 0 = disabled). `preflight(path, required_mb)` gates a long render — fails open when the probe itself fails so disk-probe bugs don't cascade into job failures. Started from `server.create_app()` alongside the temp-cleanup boot.
+
+**Request-ID correlation** — new [`core/request_correlation.py`](opencut/core/request_correlation.py) + `GET /system/request-correlation`. Installs Flask `before_request` / `after_request` / `teardown_request` hooks: generates `r-{uuid[:16]}`, stamps `g.request_id`, echoes on the response `X-Request-ID` header (RFC-standard), and attaches a `logging.Filter` so every log record under `logger("opencut")` carries the ID. Never trusts client-supplied `X-Request-ID` — the incoming value is sanitised into `g.client_request_id` for forensic value but the canonical ID is always server-generated. Prevents log-injection + server-log poisoning.
+
+**Deprecation registry** — new [`core/deprecation.py`](opencut/core/deprecation.py) + `GET /system/deprecations`. `@deprecated_route(remove_in="2.0.0", replacement="/new/path", sunset_date="2026-10-01", reason="…")` decorator stamps metadata on the view, emits RFC 8594 `Deprecation: true` + `Sunset: ...` + `Link: <...>; rel="successor-version"` response headers, and logs a one-time INFO record the first time each deprecated route is hit per process (including the caller's User-Agent). `enrich_openapi_spec(spec, app)` helper upgrades the existing OpenAPI generator output with `deprecated: true` + an `x-opencut-deprecation` extension block so clients see the warning at schema-generation time.
+
+**Governance docs**:
+- [`SECURITY.md`](SECURITY.md) — vulnerability reporting process, supported-versions table (1.24.x active / 1.23.x previous / 1.22.x critical-only / ≤1.21 EOL), disclosure SLA (Critical 72h, High 7d, Medium 30d, Low 90d), known-safe-by-design surface, hardening recommendations.
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — 100-line repo tour + common-pattern reference card. Covers async route recipe, optional-dep guard, dataclass result shape, new `run_ffmpeg(job_id=...)` pattern, rate-limit categories, deprecation decorator.
+- [`scripts/sbom.py`](scripts/sbom.py) — pure-stdlib CycloneDX 1.5 SBOM generator. Walks `pyproject.toml` + `requirements.txt`, emits `dist/opencut-sbom.cyclonedx.{json,xml}`. First run catalogued 15 required + 71 optional deps. No `cyclonedx-bom` pip dep required.
+
+### Infrastructure
+- 3 new `check_*_available()` entries in `opencut/checks.py`: `disk_monitor`, `request_correlation`, `deprecation_registry`.
+- New blueprint `wave_g_bp` registered (continues wave_a/b/c/d/e/f/g naming).
+- `server.create_app()` now calls `install_middleware()` for request-ID wiring + `disk_monitor.start_background()` for optional background monitoring.
+
+### Gotchas
+- **`run_ffmpeg` default path is unchanged** — no `job_id` means the fast `subprocess.run` path runs exactly as it did pre-v1.24. Only callers that opt in (`job_id=job_id`) get cancel support. New code should always pass `job_id` when in an `@async_job` context.
+- **Request-ID middleware regenerates even when the client sends one** — this is intentional (prevents log-injection). The client-supplied value is preserved in `g.client_request_id` for investigation but never echoed back as-is. If downstream systems need client-controlled correlation, use a separate header (e.g. `X-Client-Correlation-ID`) that we log but don't adopt as the server ID.
+- **Disk-monitor `preflight` fails open** — when the probe itself errors (permissions, odd filesystem), it returns `ok=True` + a diagnostic note. Callers needing guaranteed refusal should check `note` and bail explicitly. Fail-open matches the existing `check_disk_space()` semantics.
+- **Deprecation registry is keyed by `func.__qualname__`** at decoration time. When the OpenAPI generator is enriched later via `enrich_openapi_spec(spec, app)`, it walks `__wrapped__` to recover the metadata. Keep decorator order `@bp.route → @deprecated_route → @require_csrf → @async_job` so the walk finds the info.
+- **SBOM scope** — the generator reads *declared* deps from `pyproject.toml` + `requirements.txt`, not installed ones. Use `cyclonedx-py` / `syft` against a populated venv when you need the installed-packages SBOM (e.g. for CVE scanning the actually-running set).
+- **`X-Request-ID` charset** is strictly alphanumeric + `- _ : .`, cap 64 chars. Clients that want richer IDs should derive them from UUID4 hex + hyphens.
+
 ## [1.23.0] - 2026-04-17
 
 ### Added — wide-net infrastructure pass
