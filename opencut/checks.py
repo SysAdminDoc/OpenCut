@@ -431,3 +431,28 @@ def check_plausible_configured() -> bool:
         return _c()
     except Exception:
         return False
+
+
+# --- v1.23.0 Wave F (cross-cutting infrastructure) ---
+
+def check_openapi_available() -> bool:
+    """Always True — stdlib-only generator."""
+    return True
+
+
+def check_gpu_semaphore_available() -> bool:
+    """Always True — stdlib threading semaphore."""
+    return True
+
+
+def check_rate_limit_categories_available() -> bool:
+    """Always True — stdlib threading semaphores."""
+    return True
+
+
+def check_temp_cleanup_available() -> bool:
+    try:
+        from opencut.core.temp_cleanup import check_temp_cleanup_available as _c
+        return _c()
+    except Exception:
+        return False
