@@ -32,6 +32,34 @@ def get_current_job_id():
     return getattr(_thread_local, "job_id", "")
 
 
+def should_skip_install_in_testing(job_type: str = "install") -> bool:
+    """Return True when Flask tests should not perform real package installs."""
+    if "install" not in str(job_type).lower():
+        return False
+    try:
+        from flask import current_app
+
+        return bool(
+            current_app.config.get("TESTING")
+            and not current_app.config.get("OPENCUT_RUN_INSTALLS_IN_TESTS", False)
+        )
+    except RuntimeError:
+        return False
+
+
+def testing_install_response(component_name: str):
+    """Return a side-effect-free install response for Flask TESTING mode."""
+    from flask import jsonify
+
+    component = str(component_name or "install")
+    return jsonify({
+        "job_id": f"test-install-{component}",
+        "component": component,
+        "testing": True,
+        "message": "Install skipped in TESTING mode.",
+    })
+
+
 # ---------------------------------------------------------------------------
 # Job State (shared across all Blueprints)
 # ---------------------------------------------------------------------------
@@ -575,6 +603,10 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                         "suggestion": "Check the request body against the route's documented schema.",
                     }), 400
 
+            if should_skip_install_in_testing(job_type):
+                component_name = data.get("component") or job_type
+                return testing_install_response(component_name)
+
             job_label = filepath or job_type
             try:
                 job_id = _new_job(job_type, job_label)
@@ -685,6 +717,9 @@ def make_install_route(blueprint, url_path, component_name, packages,
     @blueprint.route(url_path, methods=["POST"])
     @_csrf
     def _install_handler():
+        if should_skip_install_in_testing("install"):
+            return testing_install_response(component_name)
+
         if not _rl("model_install"):
             return jsonify({
                 "error": "A model_install operation is already running. Please wait.",
