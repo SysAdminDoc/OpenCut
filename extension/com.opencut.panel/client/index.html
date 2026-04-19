@@ -21,7 +21,7 @@
                 </div>
             </div>
             <nav class="nav-tabs" id="navTabs" aria-label="Main navigation" role="tablist">
-                <button type="button" class="nav-tab active" id="navTabCut" data-nav="cut" title="Cut & Clean" role="tab" aria-label="Cut & Clean" aria-controls="panel-cut" aria-selected="true">
+                <button type="button" class="nav-tab active" id="navTabCut" data-nav="cut" title="Cut & Clean" role="tab" aria-label="Cut & Clean" aria-controls="panel-cut" aria-selected="true" aria-current="page">
                 <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor"><path d="M4 1.5a2.5 2.5 0 00-1.47 4.53L6.47 8 2.53 9.97A2.5 2.5 0 104 14.5a2.5 2.5 0 001.47-4.53L7.44 8.99 13.5 12V4L7.44 7.01 5.47 5.97A2.5 2.5 0 004 1.5zM2.5 4a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0zm0 8a1.5 1.5 0 113 0 1.5 1.5 0 01-3 0z"/></svg>
                 <span data-i18n="tabs.cut">Cut</span>
                 </button>
@@ -142,8 +142,8 @@
             <section class="workspace-stage" id="workspaceStage" aria-labelledby="workspaceStageTitle">
                 <div class="workspace-stage-primary">
                     <div class="workspace-stage-kicker" id="workspaceStageKicker">Studio Workspace</div>
-                    <h2 class="workspace-stage-title" id="workspaceStageTitle">Choose one source. Move through the entire edit with less friction.</h2>
-                    <p class="workspace-stage-copy" id="workspaceStageCopy">OpenCut keeps the active shot anchored across cleanup, captions, audio, video, and delivery so you can stay inside Premiere and keep momentum.</p>
+                    <h2 class="workspace-stage-title" id="workspaceStageTitle">Select media to start the cut pass.</h2>
+                    <p class="workspace-stage-copy" id="workspaceStageCopy">Choose a source, then remove dead air, clean fillers, and review pacing from the same workspace.</p>
                     <div class="workspace-stage-session" role="list" aria-label="Current workspace session">
                         <article class="workspace-stage-session-item" role="listitem">
                             <span class="workspace-stage-session-label">Source</span>
@@ -449,9 +449,9 @@
                             <div class="form-group">
                                 <label for="padBefore" data-i18n="silence.padding">Keep Padding (before / after)</label>
                                 <div class="input-pair">
-                                    <input type="number" id="padBefore" value="0.1" min="0" max="2" step="0.05">
+                                    <input type="number" id="padBefore" value="0.1" min="0" max="2" step="0.05" aria-label="Padding before silence">
                                     <span>/</span>
-                                    <input type="number" id="padAfter" value="0.1" min="0" max="2" step="0.05">
+                                    <input type="number" id="padAfter" value="0.1" min="0" max="2" step="0.05" aria-label="Padding after silence">
                                     <span class="unit">sec</span>
                                 </div>
                             </div>
@@ -660,9 +660,9 @@
                         <div class="form-group">
                             <label for="highlightMinDur">Duration Range (sec)</label>
                             <div class="input-pair">
-                                <input type="number" id="highlightMinDur" value="15" min="5" max="300" step="5">
+                                <input type="number" id="highlightMinDur" value="15" min="5" max="300" step="5" aria-label="Minimum highlight duration">
                                 <span>to</span>
-                                <input type="number" id="highlightMaxDur" value="60" min="10" max="600" step="5">
+                                <input type="number" id="highlightMaxDur" value="60" min="10" max="600" step="5" aria-label="Maximum highlight duration">
                             </div>
                         </div>
                         <button type="button" class="btn-primary" id="runHighlightsBtn" disabled data-i18n="cut.highlights_extract">Extract Highlights (LLM)</button>
@@ -888,7 +888,7 @@
                                 </div>
                             </div>
                             <div class="transcript-search" id="transcriptSearch">
-                                <input type="text" id="transcriptSearchInput" class="text-input" placeholder="Search transcript…">
+                                <input type="text" id="transcriptSearchInput" class="text-input" placeholder="Search transcript…" aria-label="Search transcript" autocomplete="off" spellcheck="false">
                                 <span class="transcript-search-count" id="transcriptSearchCount"></span>
                                 <button type="button" class="btn-sm" id="transcriptSearchPrev" title="Previous" aria-label="Previous transcript search result">&uarr;</button>
                                 <button type="button" class="btn-sm" id="transcriptSearchNext" title="Next" aria-label="Next transcript search result">&darr;</button>
@@ -2609,9 +2609,9 @@
                         <div class="form-group hidden" id="reframeCustomDims">
                             <label for="reframeCustomW">Width × Height</label>
                             <div class="input-pair">
-                                <input type="number" id="reframeCustomW" min="16" max="7680" value="1080" class="dim-input">
+                                <input type="number" id="reframeCustomW" min="16" max="7680" value="1080" class="dim-input" aria-label="Custom reframe width">
                                 <span>×</span>
-                                <input type="number" id="reframeCustomH" min="16" max="7680" value="1920" class="dim-input">
+                                <input type="number" id="reframeCustomH" min="16" max="7680" value="1920" class="dim-input" aria-label="Custom reframe height">
                             </div>
                         </div>
 
@@ -2758,19 +2758,19 @@
                             <div class="region-inputs">
                                 <div class="region-field">
                                     <span class="region-label">X</span>
-                                    <input type="number" id="removeX" value="0" min="0">
+                                    <input type="number" id="removeX" value="0" min="0" aria-label="Region X coordinate">
                                 </div>
                                 <div class="region-field">
                                     <span class="region-label">Y</span>
-                                    <input type="number" id="removeY" value="0" min="0">
+                                    <input type="number" id="removeY" value="0" min="0" aria-label="Region Y coordinate">
                                 </div>
                                 <div class="region-field">
                                     <span class="region-label">W</span>
-                                    <input type="number" id="removeW" value="200" min="10">
+                                    <input type="number" id="removeW" value="200" min="10" aria-label="Region width">
                                 </div>
                                 <div class="region-field">
                                     <span class="region-label">H</span>
-                                    <input type="number" id="removeH" value="50" min="10">
+                                    <input type="number" id="removeH" value="50" min="10" aria-label="Region height">
                                 </div>
                             </div>
                             <span class="hint-inline">Pixel coordinates of the area to remove</span>
@@ -3066,9 +3066,9 @@
                         <div class="form-group">
                             <label for="shortsMinDur">Clip Duration (sec)</label>
                             <div class="input-pair">
-                                <input type="number" id="shortsMinDur" value="15" min="5" max="300" step="5">
+                                <input type="number" id="shortsMinDur" value="15" min="5" max="300" step="5" aria-label="Minimum short duration">
                                 <span>to</span>
-                                <input type="number" id="shortsMaxDur" value="60" min="10" max="600" step="5">
+                                <input type="number" id="shortsMaxDur" value="60" min="10" max="600" step="5" aria-label="Maximum short duration">
                             </div>
                         </div>
                         <label class="checkbox-row"><input type="checkbox" id="shortsFaceTrack" checked>Face Tracking</label>
@@ -3588,7 +3588,7 @@
                             <button type="button" class="btn-outline btn-sm" id="exportSettingsBtn" data-i18n="settings.export_all">Export All Settings</button>
                             <button type="button" class="btn-outline btn-sm" id="importSettingsBtn" data-i18n="settings.import_settings">Import Settings</button>
                         </div>
-                        <input type="file" id="importSettingsFile" accept=".json" class="hidden">
+                        <input type="file" id="importSettingsFile" accept=".json" class="hidden" aria-label="Import settings file">
                     </div>
                     <div class="border-t">
                         <label class="param-label mb-xs" data-i18n="settings.diagnostics">Diagnostics</label>
@@ -3617,7 +3617,7 @@
                     <div class="border-t">
                         <label class="param-label mb-xs">Save Custom Template</label>
                         <div class="preset-save-row">
-                            <input type="text" id="templateCustomName" class="text-input" placeholder="My Template Name">
+                            <input type="text" id="templateCustomName" class="text-input" placeholder="My Template Name" aria-label="Custom template name" autocomplete="off" spellcheck="false">
                             <button type="button" class="btn-sm" id="saveCustomTemplateBtn" data-i18n="common.save">Save</button>
                         </div>
                     </div>
@@ -3960,8 +3960,8 @@
         </div>
 
         <!-- First-Run Wizard Overlay -->
-        <div class="wizard-overlay hidden" id="wizardOverlay" role="dialog" aria-modal="true" aria-labelledby="wizardTitle">
-            <div class="wizard-card">
+        <div class="wizard-overlay hidden" id="wizardOverlay" role="dialog" aria-modal="true" aria-labelledby="wizardTitle" aria-describedby="wizardSubtitle">
+            <div class="wizard-card" tabindex="-1">
                 <div class="wizard-hero">
                     <div class="wizard-kicker-row">
                         <span class="wizard-kicker">Guided Setup</span>
@@ -3971,7 +3971,7 @@
                         <img class="wizard-logo" width="32" height="32" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAB6ElEQVR4nMWXUU4CMRCG/5nsBSQrmCgiGM/gITiGb8aoT8YoMb6qxMTEB/UcchsJECNqqGcYH7aF0i24xWXpy26myXzt/PO3u7R3MIKQAAQI6ycBYEmeU3EBWM+TQBhO3OTR8wQnns4feSZlyXCy83PBcIBF7PxcMNzkFxPnFcBNXIQALrLhfHFeJXxSgRXBQeK64H/wr8sahcCFYbsgh50jDG65IDv843pLufDPi+3O13mtIyKv32e1Tla4kIBDdw4Aw6uqGraqykA2bgZN2CMjXBjg4LJbw0C+z3eo0u433fhfcExckF3z1E4JKN/1RAgo3yeLGJ3WO/Pg0O/aBYENZ1fA03DrD72kEnPgjgvCut2Myu0g9nX76KSuAOyro4bylX16UYJoEatN79DR3Bo/h7sKANZe3mKxym7nj0JPOACotPuxD66O68peQOm5G7uau/mj4OPVaO+x2hj81I1d/X1wIQFttt6TqzGns91ntVlwEIjzvFgC4bYL8oXP09yVmxeBq9MGuXCZY7VZcOuLKHDncCHZGi4tt5i7IKzspceuLKq5DdcVKFZzN39UVLe78LEEq4DDHFw0+S+gIsuu85PlAkkWEQAPsdosOFgQOZME/ceyLM1tuL4NU2VPHTJ5aj4VZ+AX8o+DeqiKjVUAAAAASUVORK5CYII=" alt="OpenCut">
                         <div class="wizard-header-copy">
                             <h2 id="wizardTitle">Welcome to OpenCut Studio</h2>
-                            <p class="wizard-subtitle">A calmer way to clean dialogue, generate captions, repair shots, and publish edits without leaving Premiere Pro.</p>
+                            <p class="wizard-subtitle" id="wizardSubtitle">A calmer way to clean dialogue, generate captions, repair shots, and publish edits without leaving Premiere Pro.</p>
                         </div>
                     </div>
                     <div class="wizard-highlights" role="list" aria-label="OpenCut highlights">
