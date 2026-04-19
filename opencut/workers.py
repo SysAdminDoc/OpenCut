@@ -59,17 +59,18 @@ class WorkerPool:
         Jobs with lower priority values are executed first when workers
         are busy.  Equal-priority jobs run in submission order (FIFO).
         """
-        if self._shutdown:
-            raise RuntimeError("WorkerPool is shut down")
-
-        future = Future()
         with self._lock:
+            if self._shutdown:
+                raise RuntimeError("WorkerPool is shut down")
+            future = Future()
             self._seq += 1
             seq = self._seq
             self._futures[job_id] = future
-
-        # PriorityQueue sorts by tuple: (priority, sequence, work_item)
-        self._work_queue.put((int(priority), seq, (fn, args, kwargs, future, job_id)))
+            # PriorityQueue sorts by tuple: (priority, sequence, work_item).
+            # Queue while holding the shutdown lock so shutdown cannot drain an
+            # empty queue and then have this work item appear behind poison
+            # pills with no worker left to execute or cancel it.
+            self._work_queue.put((int(priority), seq, (fn, args, kwargs, future, job_id)))
         return future
 
     def cancel(self, job_id: str) -> bool:

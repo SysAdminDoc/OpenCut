@@ -36,6 +36,8 @@ from opencut.jobs import (
     async_job,
     job_lock,
     jobs,
+    should_skip_install_in_testing,
+    testing_install_response,
 )
 from opencut.security import (
     VALID_WHISPER_MODELS,
@@ -1675,6 +1677,9 @@ def whisper_reinstall(job_id, filepath, data):
 @require_rate_limit("model_install")
 def install_demucs():
     """Install Demucs for AI audio separation."""
+    if should_skip_install_in_testing("install"):
+        return testing_install_response("demucs")
+
     try:
         safe_pip_install("demucs", timeout=600)
         return jsonify({"success": True, "message": "Demucs installed successfully"})
@@ -1692,6 +1697,9 @@ def install_demucs():
 @require_rate_limit("model_install")
 def install_watermark():
     """Install watermark removal dependencies."""
+    if should_skip_install_in_testing("install"):
+        return testing_install_response("watermark")
+
     try:
         packages = [
             'transformers',
