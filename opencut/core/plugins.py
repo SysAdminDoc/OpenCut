@@ -25,6 +25,20 @@ _loaded_plugins = {}
 _plugins_lock = threading.Lock()
 
 
+def _install_plugin_csrf_guard(blueprint):
+    """Ensure hosted plugin mutations use the same CSRF guard as core routes."""
+    if getattr(blueprint, "_opencut_csrf_guarded", False):
+        return
+
+    from opencut.security import validate_csrf_request
+
+    @blueprint.before_request
+    def _opencut_plugin_csrf_guard():
+        return validate_csrf_request()
+
+    blueprint._opencut_csrf_guarded = True
+
+
 def _validate_manifest(manifest, plugin_dir):
     """Validate a plugin manifest dict.
 
@@ -150,7 +164,8 @@ def load_plugin_routes(app, plugin_info):
     # clear "duplicate" signal and prevents a second plugin from silently
     # shadowing the first if Flask's behavior changes.
     with _plugins_lock:
-        if plugin_name in _loaded_plugins:
+        existing = _loaded_plugins.get(plugin_name)
+        if existing and existing.get("app_id") == id(app):
             logger.warning(
                 "Plugin name collision: '%s' already loaded — refusing to register",
                 plugin_name,
@@ -178,6 +193,8 @@ def load_plugin_routes(app, plugin_info):
             logger.warning("Plugin %s routes.py has no 'plugin_bp' Blueprint", plugin_name)
             return False
 
+        _install_plugin_csrf_guard(bp)
+
         # Register under /plugins/<name>/ prefix
         app.register_blueprint(bp, url_prefix=f"/plugins/{plugin_name}")
 
@@ -186,6 +203,7 @@ def load_plugin_routes(app, plugin_info):
                 "info": plugin_info,
                 "module": module,
                 "blueprint": bp,
+                "app_id": id(app),
             }
 
         logger.info("Loaded plugin: %s v%s", plugin_name, plugin_info["version"])

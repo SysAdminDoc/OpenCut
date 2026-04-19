@@ -14,8 +14,8 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
-from urllib.parse import urlparse
 
+from opencut.core.url_safety import validate_public_http_url
 from opencut.helpers import OPENCUT_DIR
 
 logger = logging.getLogger("opencut")
@@ -107,28 +107,12 @@ def _validate_managed_plugin_path(path: str) -> str:
 
 
 def _validate_download_url(url: str) -> str:
-    if not isinstance(url, str) or not url.strip():
-        raise ValueError("Plugin download URL is missing")
-    parsed = urlparse(url.strip())
-    if parsed.scheme not in {"http", "https"}:
-        raise ValueError("Plugin download URL must use http or https")
-    # Block internal/private network targets to prevent SSRF
-    hostname = (parsed.hostname or "").lower()
-    if not hostname:
-        raise ValueError("Plugin download URL has no hostname")
-    _BLOCKED_HOSTS = {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"}
-    if hostname in _BLOCKED_HOSTS:
-        raise ValueError("Plugin download URL must not target localhost")
-    # Block private IP ranges (10.x, 172.16-31.x, 192.168.x, 169.254.x)
-    import ipaddress
     try:
-        addr = ipaddress.ip_address(hostname)
-    except ValueError:
-        pass  # hostname is not an IP literal — that's fine
-    else:
-        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
-            raise ValueError("Plugin download URL must not target private/reserved networks")
-    return url.strip()
+        return validate_public_http_url(url, label="Plugin download URL")
+    except ValueError as exc:
+        if "is required" in str(exc):
+            raise ValueError("Plugin download URL is missing") from exc
+        raise
 
 
 def _normalize_archive_member(name: str) -> str:
