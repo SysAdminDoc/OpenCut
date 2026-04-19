@@ -79,6 +79,11 @@ def _parse_tags(value):
     return [str(value).strip()]
 
 
+def _get_json_object():
+    data = request.get_json(force=True, silent=True)
+    return data if isinstance(data, dict) else {}
+
+
 def _normalize_note(data):
     now = time.time()
     filepath = str(data.get("filepath") or data.get("clip_path") or "").strip()
@@ -244,7 +249,7 @@ def _delete_by_id(note_id):
 @plugin_bp.route("/note", methods=["POST"])
 def save_note():
     """Save a timestamped note for a clip."""
-    data = request.get_json(force=True, silent=True) or {}
+    data = _get_json_object()
 
     filepath = str(data.get("filepath", "")).strip()
     timestamp = str(data.get("timestamp", "")).strip()
@@ -340,7 +345,7 @@ def list_notes():
 @plugin_bp.route("/add", methods=["POST"])
 def add_note():
     """Legacy route: add a clip note."""
-    data = request.get_json(force=True, silent=True) or {}
+    data = _get_json_object()
     clip_path = str(data.get("clip_path", "")).strip()
     note_text = str(data.get("note", "")).strip()
     if not clip_path:
@@ -366,7 +371,7 @@ def add_note():
 @plugin_bp.route("/update", methods=["POST"])
 def update_note():
     """Legacy route: update an existing note."""
-    data = request.get_json(force=True, silent=True) or {}
+    data = _get_json_object()
     note_id = str(data.get("id", "")).strip()
     if not note_id:
         return jsonify({"error": "id is required"}), 400
@@ -411,7 +416,7 @@ def update_note():
 @plugin_bp.route("/delete", methods=["POST"])
 def delete_note_legacy():
     """Legacy route: delete a note by ID via POST body."""
-    data = request.get_json(force=True, silent=True) or {}
+    data = _get_json_object()
     note_id = str(data.get("id", "")).strip()
     if not note_id:
         return jsonify({"error": "id is required"}), 400
@@ -423,7 +428,7 @@ def delete_note_legacy():
 @plugin_bp.route("/search", methods=["POST"])
 def search_notes():
     """Legacy route: search notes by free-text query."""
-    data = request.get_json(force=True, silent=True) or {}
+    data = _get_json_object()
     query = str(data.get("query", "")).strip().lower()
     if not query:
         return jsonify({"notes": [], "count": 0})

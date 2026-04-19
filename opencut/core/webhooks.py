@@ -14,7 +14,8 @@ import time
 import urllib.error
 import urllib.request
 from typing import Dict, List
-from urllib.parse import urlparse
+
+from opencut.core.url_safety import validate_public_http_url
 
 logger = logging.getLogger("opencut")
 
@@ -25,27 +26,7 @@ _config_lock = threading.RLock()
 
 def _validate_webhook_url(url: str) -> str:
     """Validate and normalize a legacy webhook URL."""
-    cleaned = (url or "").strip()
-    if not cleaned:
-        raise ValueError("Webhook URL is required")
-    parsed = urlparse(cleaned)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise ValueError("Webhook URL must use http:// or https:// and include a host")
-    if any(ch in cleaned for ch in ("\r", "\n", "\x00")):
-        raise ValueError("Webhook URL contains invalid characters")
-    # Block internal/private network targets to prevent SSRF
-    hostname = (parsed.hostname or "").lower()
-    if hostname in {"localhost", "127.0.0.1", "0.0.0.0", "::1", "[::1]"}:
-        raise ValueError("Webhook URL must not target localhost")
-    import ipaddress
-    try:
-        addr = ipaddress.ip_address(hostname)
-    except ValueError:
-        pass  # hostname is not an IP literal — that's fine
-    else:
-        if addr.is_private or addr.is_loopback or addr.is_link_local or addr.is_reserved:
-            raise ValueError("Webhook URL must not target private/reserved networks")
-    return cleaned
+    return validate_public_http_url(url, label="Webhook URL")
 
 
 def _atomic_write_json(path: str, payload: object) -> None:

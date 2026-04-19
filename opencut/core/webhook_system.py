@@ -18,7 +18,8 @@ import urllib.request
 import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional
-from urllib.parse import urlparse
+
+from opencut.core.url_safety import validate_public_http_url
 
 logger = logging.getLogger("opencut")
 
@@ -98,15 +99,7 @@ def _ensure_dir():
 
 def _validate_webhook_url(url: str) -> str:
     """Validate and normalize outbound webhook URLs."""
-    cleaned = (url or "").strip()
-    if not cleaned:
-        raise ValueError("Webhook URL is required")
-    parsed = urlparse(cleaned)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
-        raise ValueError("Webhook URL must use http:// or https:// and include a host")
-    if any(ch in cleaned for ch in ("\r", "\n", "\x00")):
-        raise ValueError("Webhook URL contains invalid characters")
-    return cleaned
+    return validate_public_http_url(url, label="Webhook URL")
 
 
 def _atomic_write_json(path: str, payload: Any) -> None:

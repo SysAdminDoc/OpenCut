@@ -16,6 +16,8 @@ import urllib.request
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
+from opencut.core.url_safety import validate_public_http_url
+
 logger = logging.getLogger("opencut")
 
 _OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
@@ -101,6 +103,11 @@ def send_webhook(
     if on_progress:
         on_progress(30, f"Sending webhook for {event_type}...")
 
+    try:
+        url = validate_public_http_url(url, label="Webhook URL")
+    except ValueError as exc:
+        return WebhookResult(success=False, error=str(exc))
+
     headers = {
         "Content-Type": "application/json",
         "X-OpenCut-Event": event_type,
@@ -162,6 +169,7 @@ def register_webhook_trigger(
     if on_progress:
         on_progress(30, "Registering webhook trigger...")
 
+    url = validate_public_http_url(url, label="Webhook URL")
     trigger = WebhookTrigger(event=event, url=url)
 
     triggers = _load_triggers()

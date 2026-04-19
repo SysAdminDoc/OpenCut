@@ -44,6 +44,19 @@ def test_direct_request_get_json_routes_reject_non_object_body(client, csrf_toke
     assert "top-level JSON object" in data["suggestion"]
 
 
+def test_silent_json_routes_reject_non_object_body(client, csrf_token):
+    resp = client.post(
+        "/context/analyze",
+        data=json.dumps(["not", "an", "object"]),
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["code"] == "INVALID_INPUT"
+    assert "top-level JSON object" in data["suggestion"]
+
+
 def test_queue_sync_failure_does_not_leave_started_entry(client, csrf_token):
     import opencut.routes.jobs_routes as jobs_routes
 
@@ -265,6 +278,48 @@ def test_webhook_url_rejects_private_ips():
             _validate_webhook_url(url)
 
 
+def test_public_url_validation_rejects_malformed_inputs():
+    import pytest as _pt
+
+    from opencut.core.url_safety import validate_public_http_url
+
+    for value in (None, 123, ["https://example.com/hook"]):
+        with _pt.raises(ValueError, match="URL is required"):
+            validate_public_http_url(value)
+
+    with _pt.raises(ValueError, match="not a valid URL"):
+        validate_public_http_url("https://[::1")
+
+
+def test_webhook_system_url_rejects_local_and_private_targets():
+    import pytest as _pt
+
+    from opencut.core.webhook_system import _validate_webhook_url
+
+    for url, match in (
+        ("http://localhost/hook", "localhost"),
+        ("http://127.0.0.1/hook", "localhost"),
+        ("http://10.0.0.1/hook", "private"),
+        ("http://192.168.1.1/hook", "private"),
+        ("http://[::1]/hook", "localhost"),
+    ):
+        with _pt.raises(ValueError, match=match):
+            _validate_webhook_url(url)
+
+
+def test_webhook_integrations_reject_local_and_private_targets():
+    import pytest as _pt
+
+    from opencut.core.webhook_integrations import register_webhook_trigger, send_webhook
+
+    result = send_webhook("http://127.0.0.1/hook", "test", {})
+    assert result.success is False
+    assert "localhost" in result.error
+
+    with _pt.raises(ValueError, match="private"):
+        register_webhook_trigger("test", "http://10.0.0.1/hook")
+
+
 def test_plugin_download_url_rejects_private_ips():
     """Plugin download URL validation blocks private network targets."""
     import pytest as _pt
@@ -299,6 +354,23 @@ def test_jobs_sanitize_payload_caps_large_dicts():
     big = {f"key_{i}": f"val_{i}" for i in range(500)}
     result = _sanitize_payload_for_storage(big)
     assert isinstance(result, dict)
+
+
+def test_standard_install_routes_skip_real_installs_in_testing(client, csrf_token):
+    headers = csrf_headers(csrf_token)
+
+    for path, body, component in (
+        ("/video/depth/install", {}, "depth_effects"),
+        ("/video/ai/install", {"component": "rembg"}, "rembg"),
+        ("/install-whisper", {"backend": "faster-whisper"}, "install-whisper"),
+        ("/demucs/install", {}, "demucs"),
+    ):
+        resp = client.post(path, data=json.dumps(body), headers=headers)
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["component"] == component
+        assert data["testing"] is True
+        assert data["job_id"].startswith("test-install-")
 
 
 def test_open_path_blocks_executable_extensions(client, csrf_token):
