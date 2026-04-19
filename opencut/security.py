@@ -45,7 +45,7 @@ class OpenCutRequest(Request):
 
     def get_json(self, force=False, silent=False, cache=True):
         data = super().get_json(force=force, silent=silent, cache=cache)
-        if silent or data is None:
+        if data is None:
             return data
         expects_object = self.method in self._OBJECT_ONLY_METHODS and (force or self.is_json)
         if expects_object and not isinstance(data, dict):
@@ -95,9 +95,28 @@ def get_csrf_token() -> str:
         return tok
 
 
+def is_csrf_token_valid(header_token: str) -> bool:
+    """Return True when *header_token* matches a non-expired CSRF token."""
+    if not header_token:
+        return False
+    with _csrf_lock:
+        _purge_expired_tokens()
+        return any(hmac.compare_digest(header_token, token) for token in _csrf_tokens)
+
+
+def validate_csrf_request():
+    """Return a Flask error response for invalid mutating requests, else None."""
+    if request.method not in ("POST", "PUT", "PATCH", "DELETE"):
+        return None
+    header_token = request.headers.get("X-OpenCut-Token", "")
+    if is_csrf_token_valid(header_token):
+        return None
+    return jsonify({"error": "Invalid or missing CSRF token"}), 403
+
+
 def require_csrf(f):
     """
-    Decorator that rejects POST/PUT/DELETE requests missing a valid
+    Decorator that rejects POST/PUT/PATCH/DELETE requests missing a valid
     ``X-OpenCut-Token`` header.  The token is handed to the panel via
     the ``/health`` response so no extra round-trip is needed.
 
@@ -106,16 +125,9 @@ def require_csrf(f):
     """
     @functools.wraps(f)
     def wrapper(*args, **kwargs):
-        if request.method in ("POST", "PUT", "DELETE"):
-            header_token = request.headers.get("X-OpenCut-Token", "")
-            with _csrf_lock:
-                _purge_expired_tokens()
-                valid = any(
-                    hmac.compare_digest(header_token, t)
-                    for t in _csrf_tokens
-                )
-            if not valid:
-                return jsonify({"error": "Invalid or missing CSRF token"}), 403
+        csrf_error = validate_csrf_request()
+        if csrf_error is not None:
+            return csrf_error
         return f(*args, **kwargs)
     return wrapper
 
