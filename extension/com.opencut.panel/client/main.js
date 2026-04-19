@@ -335,7 +335,14 @@
         trigger.setAttribute("role", "combobox");
         trigger.setAttribute("aria-expanded", "false");
         trigger.setAttribute("aria-haspopup", "listbox");
-        
+        if (select.getAttribute("aria-label")) {
+            trigger.setAttribute("aria-label", select.getAttribute("aria-label"));
+        } else {
+            var associatedLabel = getAssociatedLabel(select);
+            var labelId = ensureLabelId(associatedLabel, select);
+            if (labelId) trigger.setAttribute("aria-labelledby", labelId);
+        }
+
         var selectedText = document.createElement('span');
         selectedText.className = 'custom-dropdown-text';
         
@@ -598,6 +605,73 @@
         }
     });
     function $(id) { return document.getElementById(id); }
+
+    var _generatedLabelId = 0;
+
+    function humanizeControlId(id) {
+        return String(id || "")
+            .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
+            .replace(/[_-]+/g, " ")
+            .replace(/\b\w/g, function (letter) { return letter.toUpperCase(); })
+            .trim();
+    }
+
+    function getAssociatedLabel(control) {
+        if (!control) return null;
+        if (control.closest) {
+            var wrapped = control.closest("label");
+            if (wrapped) return wrapped;
+        }
+        if (!control.id) return null;
+        var labels = document.getElementsByTagName("label");
+        for (var i = 0; i < labels.length; i++) {
+            if (labels[i].htmlFor === control.id) return labels[i];
+        }
+        return null;
+    }
+
+    function ensureLabelId(label, control) {
+        if (!label) return "";
+        if (!label.id) {
+            _generatedLabelId++;
+            label.id = "oc-control-label-" + (control && control.id ? control.id : _generatedLabelId);
+        }
+        return label.id;
+    }
+
+    function initFormControlSemantics() {
+        var controls = document.querySelectorAll("input, select, textarea");
+        var textLikeTypes = {
+            text: true, search: true, url: true, email: true, tel: true,
+            password: true, number: true
+        };
+        for (var i = 0; i < controls.length; i++) {
+            var control = controls[i];
+            var tag = control.tagName;
+            var type = (control.getAttribute("type") || (tag === "SELECT" ? "select" : tag === "TEXTAREA" ? "textarea" : "text")).toLowerCase();
+
+            if (!control.name) {
+                if (control.id) {
+                    control.name = control.id;
+                } else if (control.getAttribute("data-filler")) {
+                    control.name = "filler_" + control.getAttribute("data-filler").replace(/[^a-z0-9]+/gi, "_").replace(/^_+|_+$/g, "").toLowerCase();
+                }
+            }
+            if (tag === "INPUT" && textLikeTypes[type] && !control.hasAttribute("autocomplete")) {
+                control.setAttribute("autocomplete", "off");
+            }
+
+            var hasProgrammaticName = !!(control.getAttribute("aria-label") || control.getAttribute("aria-labelledby"));
+            if (hasProgrammaticName || getAssociatedLabel(control)) continue;
+
+            var fallback = control.getAttribute("title") ||
+                control.getAttribute("placeholder") ||
+                humanizeControlId(control.id || control.name);
+            if (fallback) {
+                control.setAttribute("aria-label", fallback.replace(/\s+/g, " ").replace(/\.\.\.$/, "...").trim());
+            }
+        }
+    }
     function setExpanded(node, expanded) {
         if (node) node.setAttribute("aria-expanded", expanded ? "true" : "false");
     }
@@ -1240,6 +1314,7 @@
         el.contextMenu = $("contextMenu");
         // Wizard
         el.wizardOverlay = $("wizardOverlay");
+        el.wizardCard = el.wizardOverlay ? el.wizardOverlay.querySelector(".wizard-card") : null;
         el.wizardCloseBtn = $("wizardCloseBtn");
         el.wizardDontShow = $("wizardDontShow");
         // Output browser
@@ -1340,12 +1415,24 @@
     // CEP / Premiere Interface
     // ================================================================
     function initCSInterface() {
-        try { cs = new CSInterface(); inPremiere = true; }
+        try {
+            var hasCepBridge = typeof window !== "undefined" &&
+                window.__adobe_cep__ &&
+                typeof window.__adobe_cep__.evalScript === "function";
+            if (typeof CSInterface === "undefined" || !hasCepBridge) {
+                cs = null;
+                inPremiere = false;
+                return;
+            }
+            cs = new CSInterface();
+            inPremiere = !!(cs && typeof cs.evalScript === "function");
+            if (!inPremiere) cs = null;
+        }
         catch (e) { cs = null; inPremiere = false; }
     }
 
     function jsx(script, callback) {
-        if (!cs) { if (callback) callback(null); return; }
+        if (!cs || typeof cs.evalScript !== "function") { if (callback) callback(null); return; }
         cs.evalScript(script, function (result) { if (callback) callback(result); });
     }
 
@@ -1384,7 +1471,7 @@
             jsx('importFileToProject("' + escPath(path) + '", "' + (bin || "OpenCut Output") + '")', cb);
         },
         autoImport: function (path, type) {
-            if (!cs) return;
+            if (!cs || typeof cs.evalScript !== "function") return;
             cs.evalScript('autoImportResult("' + escPath(path) + '", "' + escPath(type || "output") + '")');
         },
         isProjectSaved: function (cb) {
@@ -1871,9 +1958,12 @@
 
     function buildEmptyHintMarkup(title, copy, tone) {
         var resolvedTone = tone || "info";
-        var toneLabel = resolvedTone === "error" ? "Attention" : resolvedTone === "warning" ? "Needs review" : "Ready when you are";
+        var toneLabel = resolvedTone === "error" ? "Attention" : resolvedTone === "warning" ? "Needs review" : resolvedTone === "loading" ? "Checking" : "Ready when you are";
         var classes = "hint hint-empty is-" + resolvedTone;
-        var html = '<div class="' + classes + '">' +
+        var role = resolvedTone === "error" ? "alert" : "status";
+        var live = resolvedTone === "error" ? "assertive" : "polite";
+        var accessibleText = [toneLabel, title, copy].filter(function (part) { return !!part; }).join(". ");
+        var html = '<div class="' + classes + '" role="' + role + '" aria-live="' + live + '" aria-label="' + esc(accessibleText) + '">' +
             '<span class="hint-kicker">' + esc(toneLabel) + '</span>' +
             '<span class="hint-title">' + esc(title || "") + '</span>';
         if (copy) {
@@ -2228,72 +2318,72 @@
     // Tab Navigation
     // ================================================================
     var TAB_DESCRIPTIONS = {
-        cut: "Trim dead space, fillers, and rough pacing with a tighter review flow.",
-        captions: "Transcribe, refine, and style captions without leaving the panel.",
-        audio: "Balance dialogue, stems, loudness, and polish from one focused surface.",
-        video: "Repair, enhance, and shape the image with cleaner finishing controls.",
-        export: "Package platform-ready deliverables with fewer passes and clearer status.",
-        timeline: "Write back markers, bins, and sequence edits with confidence.",
-        nlp: "Search footage and trigger edit actions with natural-language commands.",
-        settings: "Tune models, defaults, and workspace behavior for the whole studio."
+        cut: "Remove dead space, clean fillers, and review pacing from the active source.",
+        captions: "Transcribe, edit, style, translate, and export caption assets.",
+        audio: "Repair dialogue, balance stems, check loudness, and prep timing cues.",
+        video: "Analyze, repair, reframe, and finish image treatments for delivery.",
+        export: "Package deliverables, presets, thumbnails, and repeatable workflows.",
+        timeline: "Send markers, cuts, bins, and sequence changes back to Premiere.",
+        nlp: "Search footage and route editing commands from one command surface.",
+        settings: "Manage backend health, models, defaults, templates, and diagnostics."
     };
 
     var WORKSPACE_STAGE_META = {
         cut: {
             kicker: "Cut Pass",
-            idleTitle: "Tighten the edit before the timeline gets noisy.",
-            idleCopy: "Choose one source clip, then remove dead air, clean fillers, and review pacing from the same workspace.",
-            readyTitle: "Shape the cut while the active shot stays locked in context.",
-            readyCopy: "Run cleanup, review the proposed changes, and send the result back to Premiere without repatching the source."
+            idleTitle: "Select media to start the cut pass.",
+            idleCopy: "Choose a source, then remove dead air, clean fillers, and review pacing from the same workspace.",
+            readyTitle: "Cut tools are ready for the active source.",
+            readyCopy: "Run cleanup, review proposed edits, and send approved changes back to Premiere."
         },
         captions: {
             kicker: "Transcript Flow",
-            idleTitle: "Turn the next clip into usable language, structure, and delivery assets.",
-            idleCopy: "Open a source clip to move through styled captions, subtitle export, transcript cleanup, chapters, and translation in one pass.",
-            readyTitle: "Refine captions, chapters, and subtitle exports around the active shot.",
-            readyCopy: "Transcribe once, keep the wording editable, and carry the same source through review, styling, and export."
+            idleTitle: "Select media to build transcript assets.",
+            idleCopy: "Create captions, subtitles, transcript cleanup, chapters, and translations from one source.",
+            readyTitle: "Caption tools are ready for the active source.",
+            readyCopy: "Transcribe once, keep the text editable, then style, review, and export."
         },
         audio: {
             kicker: "Audio Pass",
-            idleTitle: "Clean the voice bed before the finish starts to sprawl.",
-            idleCopy: "Choose a source clip to denoise, normalize, loudness-match, and build rhythm-aware markers from one calmer control surface.",
-            readyTitle: "Polish the mix while the clip stays synced across the workspace.",
-            readyCopy: "Move from repair to loudness to music-aware timing without reloading the source or losing the current edit context."
+            idleTitle: "Select media to start the audio pass.",
+            idleCopy: "Denoise, normalize, loudness-match, split stems, and build timing markers from one source.",
+            readyTitle: "Audio tools are ready for the active source.",
+            readyCopy: "Move from repair to loudness to music-aware timing without reloading media."
         },
         video: {
             kicker: "Finishing",
-            idleTitle: "Shape the frame, build derivatives, and protect delivery quality from one source.",
-            idleCopy: "Open a shot to move through reframing, enhancement, scene analysis, social versions, and AI-assisted finishing inside the same panel.",
-            readyTitle: "Finish the frame and generate follow-on versions from the active shot.",
-            readyCopy: "Keep the source anchored while you explore vertical crops, color, scene detection, and short-form outputs without duplicate setup."
+            idleTitle: "Select media to start finishing.",
+            idleCopy: "Analyze scenes, reframe shots, enhance image quality, and create social versions from one source.",
+            readyTitle: "Video tools are ready for the active source.",
+            readyCopy: "Explore crops, color, scene detection, and short-form outputs without duplicate setup."
         },
         export: {
             kicker: "Delivery",
-            idleTitle: "Prepare exports, workflows, and handoff presets before the final pass.",
-            idleCopy: "Choose a source when needed, then move through transcript export, platform presets, batch workflows, and short-form delivery with clearer defaults.",
-            readyTitle: "Package outputs and repeatable workflows around the current source.",
-            readyCopy: "Use the active clip to drive exports, workflow presets, thumbnails, and delivery handoff without losing the thread of the edit."
+            idleTitle: "Prepare delivery settings and workflows.",
+            idleCopy: "Set platform presets, batch workflows, transcript exports, and thumbnails before the final pass.",
+            readyTitle: "Delivery tools are ready for the active source.",
+            readyCopy: "Package exports, workflow presets, thumbnails, and handoff assets from the same context."
         },
         timeline: {
             kicker: "Write-Back",
-            idleTitle: "Bring approved changes back into Premiere with more confidence.",
-            idleCopy: "Review cuts, markers, OTIO, renaming, and export tasks from a quieter workspace that stays focused on sequence handoff.",
-            readyTitle: "Write timeline changes back while the current source stays visible.",
-            readyCopy: "Carry the active source through marker export, multicam prep, clip management, and write-back so approvals feel traceable."
+            idleTitle: "Prepare timeline changes for Premiere.",
+            idleCopy: "Review cuts, markers, OTIO, renaming, and export tasks before writing back.",
+            readyTitle: "Timeline tools are ready for the active source.",
+            readyCopy: "Send markers, multicam prep, clip management, and approved write-back actions to Premiere."
         },
         nlp: {
             kicker: "Library Search",
-            idleTitle: "Search the footage library and trigger edit actions without mode switching.",
-            idleCopy: "Index media once, then use natural-language search and command routing to bring the right clip back into the rest of the workspace.",
-            readyTitle: "Search, recall, and action the active source from one command surface.",
-            readyCopy: "Keep the current clip in context while you search similar footage, parse commands, and route the next step faster."
+            idleTitle: "Search footage and route commands.",
+            idleCopy: "Index media, find clips by meaning, and send the next action to the right toolset.",
+            readyTitle: "Search tools are ready for the active source.",
+            readyCopy: "Keep the current clip in context while you search, compare, and route follow-up actions."
         },
         settings: {
             kicker: "Studio Control",
-            idleTitle: "Keep routing, models, defaults, and diagnostics reliable between sessions.",
-            idleCopy: "Review the health of the local studio, tune defaults, and manage templates from a calmer control center designed for maintenance work.",
-            readyTitle: "Tune the studio around the clip and workflow you are actively shaping.",
-            readyCopy: "Use Settings to keep the current session reliable, from backend health and model installs to templates, engine routing, and diagnostics."
+            idleTitle: "Review studio health and defaults.",
+            idleCopy: "Check backend status, models, engine routing, templates, and diagnostics from one control center.",
+            readyTitle: "Settings are ready for this session.",
+            readyCopy: "Keep backend health, models, templates, engine routing, and diagnostics aligned with the current workflow."
         }
     };
 
@@ -2330,8 +2420,8 @@
 
         if (!connected) {
             stageKicker = "Backend Offline";
-            stageTitle = "Reconnect the local OpenCut backend before running jobs.";
-            stageCopy = "The workspace is intact, but processing, model checks, write-back, and timeline handoff all depend on the local backend service being online.";
+            stageTitle = "Reconnect OpenCut to run processing jobs.";
+            stageCopy = "The workspace is still available, but processing, model checks, write-back, and timeline handoff need the local backend.";
         } else if (selectedPath) {
             stageTitle = stageMeta.readyTitle;
             stageCopy = stageMeta.readyCopy;
@@ -2358,13 +2448,13 @@
                 el.workspaceStageStatus.textContent = "Reconnect backend";
                 el.workspaceStageStatus.title = "Start or reconnect the local OpenCut backend service";
             } else if (selectedPath) {
-                el.workspaceStageStatus.textContent = "Clip synced & ready";
-                el.workspaceStageStatus.title = "The active clip is selected and the workspace is ready to process";
+                el.workspaceStageStatus.textContent = "Source ready";
+                el.workspaceStageStatus.title = "The active source is selected and ready for processing";
             } else if (activeTab === "settings") {
-                el.workspaceStageStatus.textContent = "Studio ready to review";
+                el.workspaceStageStatus.textContent = "Settings ready";
                 el.workspaceStageStatus.title = "Settings does not require a source clip";
             } else {
-                el.workspaceStageStatus.textContent = "Choose a clip to unlock";
+                el.workspaceStageStatus.textContent = "Select media";
                 el.workspaceStageStatus.title = "Select a clip from Premiere or browse a local file to unlock processing";
             }
         }
@@ -2383,6 +2473,17 @@
             el.workspaceClipStatus.classList.remove("is-active");
         }
         updateWorkspaceStageSession();
+    }
+
+    function resetMainScroll() {
+        var main = el.mainContent || document.querySelector(".main");
+        if (main && typeof main.scrollTop === "number") {
+            main.scrollTop = 0;
+        }
+        var root = document.scrollingElement || document.documentElement;
+        if (root && typeof root.scrollTop === "number") {
+            root.scrollTop = 0;
+        }
     }
 
     function setPanelVisibility(panel, active) {
@@ -2461,6 +2562,8 @@
             var isActiveNav = navBtns[i] === targetButton;
             navBtns[i].classList.toggle("active", isActiveNav);
             navBtns[i].setAttribute("aria-selected", isActiveNav ? "true" : "false");
+            if (isActiveNav) navBtns[i].setAttribute("aria-current", "page");
+            else navBtns[i].removeAttribute("aria-current");
             navBtns[i].tabIndex = isActiveNav ? 0 : -1;
             setPanelVisibility($("panel-" + navBtns[i].getAttribute("data-nav")), isActiveNav);
         }
@@ -2482,6 +2585,7 @@
             remember: remember,
             scroll: scroll
         });
+        if (scroll) resetMainScroll();
         if (options && options.focus) targetButton.focus();
         return targetButton;
     }
@@ -9925,7 +10029,14 @@
         // Show wizard
         if (el.wizardDontShow) el.wizardDontShow.checked = false;
         el.wizardOverlay.classList.remove("hidden");
-        if (el.wizardCloseBtn) el.wizardCloseBtn.focus();
+        var wizardFocusTarget = el.wizardCard || el.wizardCloseBtn;
+        if (wizardFocusTarget && typeof wizardFocusTarget.focus === "function") {
+            try {
+                wizardFocusTarget.focus({ preventScroll: true });
+            } catch (e) {
+                wizardFocusTarget.focus();
+            }
+        }
         // Animate steps
         var steps = el.wizardOverlay.querySelectorAll(".wizard-step");
         for (var i = 1; i < steps.length; i++) {
@@ -10013,6 +10124,13 @@
     }
 
     function refreshOutputs() {
+        if (el.outputBrowserList) {
+            el.outputBrowserList.innerHTML = buildEmptyHintMarkup(
+                "Checking recent outputs",
+                "OpenCut is asking the local backend for rendered files.",
+                "loading"
+            );
+        }
         api("GET", "/outputs/recent", null, function (err, data) {
             if (el.outputBrowserToggle) {
                 setToggleButtonCount(el.outputBrowserToggle, "Outputs", Array.isArray(data) ? data.length : 0);
@@ -10706,8 +10824,12 @@
         for (var i = 0; i < els.length; i++) {
             var k = els[i].getAttribute("data-i18n");
             if (!k) continue;
-            var translated = t(k);
             var labelTarget = els[i].querySelector(".btn-label, .i18n-text");
+            if (!els[i].hasAttribute("data-i18n-fallback")) {
+                els[i].setAttribute("data-i18n-fallback", labelTarget ? labelTarget.textContent : els[i].textContent);
+            }
+            var fallback = els[i].getAttribute("data-i18n-fallback") || "";
+            var translated = t(k, fallback);
             if (labelTarget) labelTarget.textContent = translated;
             else els[i].textContent = translated;
         }
@@ -10719,7 +10841,7 @@
             var xhr = new XMLHttpRequest();
             xhr.open("GET", "locales/" + locale + ".json", true);
             xhr.onload = function () {
-                if (xhr.status === 200) {
+                if (xhr.status === 200 || (xhr.status === 0 && xhr.responseText)) {
                     try { cb(JSON.parse(xhr.responseText)); } catch (e) { cb(null); }
                 } else { cb(null); }
             };
@@ -11553,6 +11675,15 @@
 
     function initCommandPalette() {
         if (!el.commandPaletteOverlay || !el.commandPaletteInput || !el.commandPaletteResults) return;
+
+        if (el.stageCommandPaletteBtn && !el.stageCommandPaletteBtn._commandPaletteBound) {
+            el.stageCommandPaletteBtn.addEventListener("click", function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+                openCommandPalette();
+            });
+            el.stageCommandPaletteBtn._commandPaletteBound = true;
+        }
 
         el.commandPaletteInput.addEventListener("input", function () {
             renderPaletteResults(this.value);
@@ -13656,6 +13787,7 @@
         checkSubTabOverflow();
         window.addEventListener("resize", checkSubTabOverflow);
         setupSliders();
+        initFormControlSemantics();
         initCustomDropdowns(); // Initialize custom in-panel dropdowns
         initCutReviewPanel(); // Phase 3.3: Cut review panel
 
@@ -13685,7 +13817,6 @@
         _on("stageBrowseMediaBtn", "click", function () {
             if (el.browseFileBtn) el.browseFileBtn.click();
         });
-        _on("stageCommandPaletteBtn", "click", openCommandPalette);
 
         // Cut tab buttons
         _on("runSilenceBtn", "click", runSilence);
