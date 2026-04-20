@@ -771,8 +771,8 @@ def export_mkv(
 # persistence.
 # ===========================================================================
 
-import json as _json_module
-import tempfile as _tempfile_module
+import json as _json_module  # noqa: E402
+import tempfile as _tempfile_module  # noqa: E402
 
 
 @dataclass
