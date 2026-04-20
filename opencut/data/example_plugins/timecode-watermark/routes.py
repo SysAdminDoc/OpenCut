@@ -50,8 +50,8 @@ def apply_timecode():
     filepath = data.get("filepath", "")
 
     try:
-        from opencut.security import safe_int, validate_filepath, validate_output_path
         from opencut.helpers import output_path
+        from opencut.security import safe_int, validate_filepath, validate_output_path
 
         filepath = validate_filepath(filepath)
     except ValueError as exc:
