@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.25.0
+   OpenCut CEP Panel - Main Controller v1.25.1
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -29,6 +29,11 @@
     var lastOverlayPath = "";
     var projectMedia = [];
     var projectFolder = "";
+    // Raw project folder detected by JSX (app.project.path → parent dir,
+    // with fallback to first-media dir / scratch disk). Kept separate so
+    // _recomputeEffectiveOutputDir() can layer the user's Settings →
+    // Output directory preference on top of it.
+    var _detectedProjectFolder = "";
     var backendStartAttempted = false;
     var jobStartTime = 0;
     var elapsedTimer = null;
@@ -2041,12 +2046,34 @@
         }
     }
 
+    // Resolve the effective output directory. Priority:
+    //   1. User's Settings → Output directory (localStorage opencut_settings.outputDir)
+    //   2. JSX-detected project folder (saved .prproj → first-media dir → scratch disk)
+    //   3. "" — lets the backend fall back to the source clip's directory
+    function _recomputeEffectiveOutputDir() {
+        var userPref = "";
+        try {
+            if (el.settingsOutputDir && el.settingsOutputDir.value) {
+                userPref = String(el.settingsOutputDir.value || "").trim();
+            }
+            if (!userPref) {
+                var saved = localStorage.getItem(LOCAL_SETTINGS_KEY);
+                if (saved) {
+                    var parsed = JSON.parse(saved);
+                    if (parsed && parsed.outputDir) userPref = String(parsed.outputDir).trim();
+                }
+            }
+        } catch (e) { /* localStorage unavailable — fall through */ }
+        projectFolder = userPref || _detectedProjectFolder || "";
+    }
+
     function updateProjectMediaList(media, folder) {
         var files = Array.isArray(media) ? media : [];
         var desiredPath = selectedPath || _workspaceState.selectedPath || "";
         var desiredName = selectedName || _workspaceState.selectedName || "";
         projectMedia = files;
-        projectFolder = folder || "";
+        _detectedProjectFolder = folder || "";
+        _recomputeEffectiveOutputDir();
         if (!el.clipSelect) return;
         // Batch DOM updates via DocumentFragment (one reflow instead of N)
         var frag = document.createDocumentFragment();
@@ -6728,8 +6755,11 @@
         } catch (e) {
             // localStorage may not be available in CEP
         }
+        // Re-apply the user's Output directory preference immediately so
+        // in-flight-then-saved setting changes land on the next job.
+        try { _recomputeEffectiveOutputDir(); } catch (e) {}
     }
-    
+
     function loadLocalSettings() {
         try {
             var saved = localStorage.getItem(LOCAL_SETTINGS_KEY);
@@ -6744,6 +6774,9 @@
         } catch (e) {
             // localStorage may not be available
         }
+        // Apply the Output directory override ASAP so the very first job
+        // after a reconnect honours the persisted preference.
+        try { _recomputeEffectiveOutputDir(); } catch (e) {}
     }
     
     function getLocalSetting(key, defaultVal) {
