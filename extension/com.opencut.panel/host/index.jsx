@@ -55,6 +55,7 @@ function getAllProjectMedia() {
 function getProjectMedia() {
     var scan = null;
     var projectFolder = "";
+    var projectFolderSource = "";
     try {
         if (!app || !app.project) {
             return JSON.stringify({ error: "No project open", media: [], projectFolder: "", rootChildren: 0, scanAttempts: 0 });
@@ -63,19 +64,55 @@ function getProjectMedia() {
         if (!root) {
             return JSON.stringify({ error: "Cannot access project root", media: [], projectFolder: "", rootChildren: 0, scanAttempts: 0 });
         }
-        
-        // Get project folder path
+
+        // Priority 1: derive project folder from the saved .prproj path.
         try {
             var projPath = app.project.path;
             if (projPath) {
                 var projFile = new File(projPath);
-                projectFolder = projFile.parent ? projFile.parent.fsName : "";
+                if (projFile.parent) {
+                    projectFolder = projFile.parent.fsName;
+                    projectFolderSource = "project_path";
+                }
             }
         } catch (e2) {
             _ocLog("getProjectMedia projectFolder error: " + e2.toString());
         }
-        
+
         scan = _collectProjectMedia(root, 6, 100);
+
+        // Priority 2: if the project hasn't been saved, fall back to
+        // the directory of the first imported media. Keeps outputs
+        // near the user's content instead of at the source clip's
+        // arbitrary origin folder (Downloads, network share, etc).
+        if (!projectFolder && scan && scan.items && scan.items.length > 0) {
+            var i;
+            for (i = 0; i < scan.items.length; i++) {
+                try {
+                    var firstPath = scan.items[i].path || "";
+                    if (firstPath) {
+                        var f = new File(firstPath);
+                        if (f.parent) {
+                            projectFolder = f.parent.fsName;
+                            projectFolderSource = "first_media";
+                            break;
+                        }
+                    }
+                } catch (eF) {}
+            }
+        }
+
+        // Priority 3: scratch disk. Some projects have a configured
+        // scratch / captures path even when .prproj hasn't been saved.
+        if (!projectFolder) {
+            try {
+                var scratch = app.project.scratchDiskPath;
+                if (scratch) {
+                    projectFolder = String(scratch);
+                    projectFolderSource = "scratch_disk";
+                }
+            } catch (eS) {}
+        }
     } catch (e) {
         _ocLog("getProjectMedia error: " + e.toString());
         return JSON.stringify({ error: "ExtendScript: " + e.toString(), media: [], projectFolder: "", rootChildren: 0, scanAttempts: 0 });
@@ -83,6 +120,7 @@ function getProjectMedia() {
     return JSON.stringify({
         media: scan ? scan.items : [],
         projectFolder: projectFolder,
+        projectFolderSource: projectFolderSource,
         rootChildren: scan ? scan.rootChildren : 0,
         scanAttempts: scan ? scan.attempts : 0
     });
@@ -145,49 +183,54 @@ function _walkProjectItems(parent, items, seenPaths, depth) {
         if (!item) continue;
 
         try {
-            // Check if this is a bin/folder - type 2 or has children
-            var isBin = false;
-            try { isBin = (item.type === 2); } catch (e2) {}
-            if (!isBin) {
-                try { isBin = (item.children && item.children.numItems > 0 && !item.getMediaPath); } catch (e3) {}
-            }
+            // Discriminate on getMediaPath() FIRST — it's the only
+            // reliable check across Premiere 14-25+. The old `item.type`
+            // heuristic breaks on 2025+ where the enum values shifted,
+            // and the `!item.getMediaPath` fallback always failed for
+            // bins that expose the method (which most versions do).
+            var mediaPath = "";
+            try { mediaPath = _normalizeMediaPath(item.getMediaPath()); } catch (e4) { mediaPath = ""; }
 
-            if (isBin) {
+            var childCount = 0;
+            try { childCount = (item.children && item.children.numItems) || 0; } catch (eC) { childCount = 0; }
+
+            if (mediaPath && mediaPath.length > 0) {
+                // Real on-disk media — record it.
+                var dedupeKey = mediaPath.toLowerCase();
+                if (seenPaths && seenPaths[dedupeKey]) continue;
+                if (seenPaths) seenPaths[dedupeKey] = true;
+
+                var dur = 0;
+                try {
+                    var outPt = item.getOutPoint();
+                    dur = outPt ? outPt.seconds : 0;
+                } catch (e5) { dur = 0; }
+
+                var hasVideo = false;
+                var hasAudio = false;
+                try { hasVideo = item.hasVideo(); } catch (e6) {}
+                try { hasAudio = item.hasAudio(); } catch (e7) {}
+
+                var mediaType = "unknown";
+                if (hasVideo && hasAudio) mediaType = "av";
+                else if (hasVideo) mediaType = "video";
+                else if (hasAudio) mediaType = "audio";
+
+                items.push({
+                    name: item.name || "",
+                    path: mediaPath,
+                    duration: dur,
+                    type: mediaType,
+                    nodeId: item.nodeId || ""
+                });
+            } else if (childCount > 0) {
+                // No media path but has children → treat as bin / folder
+                // / sub-project. Walk regardless of reported type — this
+                // reaches media nested inside bins on every Premiere
+                // version, including unsaved Premiere 2025 projects.
                 _walkProjectItems(item, items, seenPaths, depth + 1);
-            } else {
-                var mediaPath = "";
-                try { mediaPath = _normalizeMediaPath(item.getMediaPath()); } catch (e4) { mediaPath = ""; }
-
-                if (mediaPath && mediaPath.length > 0) {
-                    var dedupeKey = mediaPath.toLowerCase();
-                    if (seenPaths && seenPaths[dedupeKey]) continue;
-                    if (seenPaths) seenPaths[dedupeKey] = true;
-
-                    var dur = 0;
-                    try {
-                        var outPt = item.getOutPoint();
-                        dur = outPt ? outPt.seconds : 0;
-                    } catch (e5) { dur = 0; }
-
-                    var hasVideo = false;
-                    var hasAudio = false;
-                    try { hasVideo = item.hasVideo(); } catch (e6) {}
-                    try { hasAudio = item.hasAudio(); } catch (e7) {}
-
-                    var mediaType = "unknown";
-                    if (hasVideo && hasAudio) mediaType = "av";
-                    else if (hasVideo) mediaType = "video";
-                    else if (hasAudio) mediaType = "audio";
-
-                    items.push({
-                        name: item.name || "",
-                        path: mediaPath,
-                        duration: dur,
-                        type: mediaType,
-                        nodeId: item.nodeId || ""
-                    });
-                }
             }
+            // else: sequence / offline media / exotic placeholder — skip
         } catch (e) { _ocLog("walkItem[" + i + "] error: " + e.toString()); }
     }
 }
