@@ -2,11 +2,11 @@
 <ExtensionManifest xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
                    Version="7.0"
                    ExtensionBundleId="com.opencut.panel"
-                   ExtensionBundleVersion="1.24.0"
+                   ExtensionBundleVersion="1.25.0"
                    ExtensionBundleName="OpenCut">
 
     <ExtensionList>
-        <Extension Id="com.opencut.panel.main" Version="1.24.0" />
+        <Extension Id="com.opencut.panel.main" Version="1.25.0" />
     </ExtensionList>
 
     <ExecutionEnvironment>

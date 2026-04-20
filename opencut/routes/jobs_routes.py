@@ -242,6 +242,10 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/scopes/pro",
     # v1.22.0 additions — Wave E (Shaka packaging async)
     "/delivery/shaka/package",
+    # v1.25.0 additions — Wave H (commercial parity)
+    "/analyze/virality",
+    "/analyze/virality/rank",
+    "/video/cursor-zoom/resolve",
 })
 
 

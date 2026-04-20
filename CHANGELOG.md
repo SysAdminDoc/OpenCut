@@ -1,5 +1,69 @@
 # Changelog
 
+## [1.25.0] - 2026-04-19
+
+### Added — Wave H: Commercial Parity & Content-Creator Polish
+
+16 new core modules + 1 new blueprint (`wave_h_bp`) + 34 new routes (1,241 → 1,275). Extends the OSS survey with commercial-product patterns (Opus Clip, Descript, CapCut, ScreenStudio) and post-April-2026 AI projects (FlashVSR, ROSE, Sammie-Roto-2, OmniVoice, ReEzSynth, VidMuse, VideoAgent, ViMax, Hailuo 2.3, Seedance 2.0, GaussianHeadTalk, FantasyTalking2).
+
+**Tier 1 — Content-creator polish (fully working)**:
+
+- **Virality scoring** — new [`core/virality_score.py`](opencut/core/virality_score.py) + `POST /analyze/virality`, `POST /analyze/virality/rank`. Multimodal 0–100 heuristic score blending audio-energy peaks (existing `silence.py`), transcript hook density (LLM when available, keyword lexicon fallback), and visual salience (FFmpeg `signalstats`). `ViralityResult` + `ViralitySignals` subscriptable for jsonify. Stable-sorted ranking. Opus Clip inspiration.
+- **Cursor-zoom sidecar parsing** — extended [`core/cursor_zoom.py`](opencut/core/cursor_zoom.py) + `POST /video/cursor-zoom/resolve`. Parses ScreenStudio / Screen.Studio / OBS click-log sidecars, falls back to inline events, falls back to the existing frame-diff detector. All coordinates clamped to `[0, width] × [0, height]`.
+- **Changelog feed** — new [`core/changelog_feed.py`](opencut/core/changelog_feed.py) + `GET /system/changelog/latest`, `GET /system/changelog/unseen`, `POST /system/changelog/mark-seen`. Fetches GitHub releases, 15 min cache, graceful offline fallback, persists last-seen tag in `~/.opencut/changelog_seen.json`.
+- **Issue report bundle** — new [`core/issue_report.py`](opencut/core/issue_report.py) + `GET|POST /system/issue-report/bundle`. Scrubs all HOME paths to `~` before including crash.log + log tail. Returns a pre-filled GitHub issue URL. 60 KB body cap.
+- **Demo bundle** — new [`core/demo_bundle.py`](opencut/core/demo_bundle.py) + `GET /system/demo/list`, `GET /system/demo/sample`, `POST /system/demo/download`. Serves `opencut/data/demo/sample.mp4` when the installer ships one; dev installs can pull it from a GitHub release asset.
+- **Gist preset sync** — new [`core/gist_sync.py`](opencut/core/gist_sync.py) + `POST /settings/gist/push`, `POST /settings/gist/pull`, `GET /settings/gist/info`. Pure-stdlib urllib; refuses anonymous secret gists; rejects files > 2 MB; whitelists `.json`/`.jsonl`/`.txt`/`.md` extensions.
+- **Onboarding state** — new [`core/onboarding.py`](opencut/core/onboarding.py) + `GET|POST /settings/onboarding`. Per-profile `{seen, step, updated_at}` persisted in `~/.opencut/onboarding.json`. Delete the file to re-trigger the tour.
+
+**Tier 2 — AI model stubs (503 MISSING_DEPENDENCY)**:
+
+All six ship as `check_X_available()`-gated stubs returning 503 with install hints, matching the v1.18–1.20 pattern. Full wiring deferred to v1.26.0+ once each upstream pins a stable Python entry point.
+
+- **FlashVSR** — streaming diffusion VSR (CVPR'26). [`core/upscale_flashvsr.py`](opencut/core/upscale_flashvsr.py) + `POST /video/upscale/flashvsr`, `GET /video/upscale/flashvsr/info`.
+- **ROSE** — video inpainting that preserves shadows/reflections. [`core/inpaint_rose.py`](opencut/core/inpaint_rose.py) + `POST /video/inpaint/rose`.
+- **Sammie-Roto-2** — AI rotoscoping with VideoMaMa segmentation + in/out markers. [`core/matte_sammie.py`](opencut/core/matte_sammie.py) + `POST /video/matte/sammie`.
+- **OmniVoice** — zero-shot TTS with 600+ languages. [`core/tts_omnivoice.py`](opencut/core/tts_omnivoice.py) + `POST /audio/tts/omnivoice`, `GET /audio/tts/omnivoice/models`.
+- **ReEzSynth** — flicker-free Ebsynth successor. [`core/style_reezsynth.py`](opencut/core/style_reezsynth.py) + `POST /video/style/reezsynth`.
+- **VidMuse** — video-to-music generation (CVPR'25). [`core/music_vidmuse.py`](opencut/core/music_vidmuse.py) + `POST /audio/music/vidmuse`.
+
+**Tier 2 — Infra stubs**:
+
+- **QE reflection probe** — [`wave_h_routes.py`](opencut/routes/wave_h_routes.py) + `GET|POST /system/qe-reflect`. Panel POSTs the output of `ocQeReflect()` (host JSX); server caches it in `~/.opencut/qe_reflect.json` for future API discovery. Host-side JSX wiring lands in v1.26.0 (see ROADMAP-NEXT Wave H2.8).
+
+**Tier 3 — Strategic stubs (501 ROUTE_STUBBED)**:
+
+All routes return 501 with install hints — promoted to Tier 2 once usage signal confirms demand or upstream licences clarify.
+
+- **VideoAgent + ViMax** — [`core/video_agent.py`](opencut/core/video_agent.py) + `POST /agent/search-footage`, `POST /agent/storyboard`. HKUDS agentic pipelines.
+- **Hailuo 2.3 / Seedance 2.0** — [`core/gen_video_cloud.py`](opencut/core/gen_video_cloud.py) + `POST /generate/cloud/submit`, `GET /generate/cloud/status/<id>`, `GET /generate/cloud/backends`. Cloud gen-video backends.
+- **GaussianHeadTalk + FantasyTalking2** — [`core/lipsync_advanced.py`](opencut/core/lipsync_advanced.py) + `POST /lipsync/gaussian`, `POST /lipsync/fantasy2`, `GET /lipsync/advanced/backends`. Wobble-free lip-sync alternatives to LatentSync/MuseTalk.
+
+### Infrastructure
+
+- 16 new `check_*_available()` entries in [`opencut/checks.py`](opencut/checks.py) (Wave H block).
+- 3 new async routes added to `_ALLOWED_QUEUE_ENDPOINTS`: `/analyze/virality`, `/analyze/virality/rank`, `/video/cursor-zoom/resolve`.
+- New blueprint `wave_h_bp` registered (continues wave_a/b/c/d/e/f/g/h naming).
+- New error code `ROUTE_STUBBED` returned at HTTP 501 for Tier 3 routes. Frontend treats 501 as "coming soon" (greyed-out with tooltip), never as a failed call.
+- ROADMAP-NEXT.md extended with a new **Wave H** section documenting every item and its upstream source.
+
+### Frontend wiring
+
+- **[`client/main.js`](extension/com.opencut.panel/client/main.js)** — ~330-line `WaveH` module appended at the end of the main IIFE. Staggered startup probes at 1.2/1.8/2.4/3.0 s to avoid racing the first health check. Exposes `window.OpenCutWaveH` for the command palette.
+- **[`client/index.html`](extension/com.opencut.panel/client/index.html)** — "Panel Polish" card injected into the Settings tab with 7 `data-i18n` labelled buttons: Try demo, Restart tour, Gist push, Gist pull, Virality, Cursor zoom, Send log.
+- **[`client/style.css`](extension/com.opencut.panel/client/style.css)** — `.oc-wave-h-*` + `.oc-onboarding-*` rules, dark-mode-first, with a 520 px narrow-panel media query.
+- **[`client/locales/en.json`](extension/com.opencut.panel/client/locales/en.json)** — 10 new keys under `wave_h.*`.
+- **[`host/index.jsx`](extension/com.opencut.panel/host/index.jsx)** — three new ES3-safe functions: `ocQeReflect()` (QE API reflection probe), `_ocDispatchEvent()` (CSXS event dispatcher), `ocEmitPingEvent()` (panel-callable ack). All CSXS events use the `com.opencut.<event>` namespace.
+
+### Gotchas
+
+- Virality score is heuristic — no ML model. The absolute number is not comparable across video types; use for relative ranking only.
+- Cursor-zoom: never trust client-supplied sidecar coordinates — the clamp to `[0, width] × [0, height]` is non-negotiable.
+- Changelog feed never raises. Network / JSON errors return `{releases: [], source: "fallback", note: "..."}` so the panel keeps working offline.
+- Issue report bundle scrubs HOME paths but does NOT redact API keys / credentials that may leak into logs. Callers must still prompt the user to review the body before opening the GitHub URL.
+- Gist sync refuses anonymous secret gists — anonymous gists are always public. Secret gists require `GITHUB_TOKEN` env.
+- Tier 3 routes always return 501 `ROUTE_STUBBED`, even with optional deps installed. These are scaffolding for future releases, not "features waiting for a pip install".
+
 ## [1.24.0] - 2026-04-17
 
 ### Added — second wide-net pass
