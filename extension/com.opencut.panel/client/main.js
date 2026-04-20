@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel - Main Controller v1.24.0
+   OpenCut CEP Panel - Main Controller v1.25.0
    6-Tab Professional Toolkit
    ============================================================ */
 (function () {
@@ -14347,6 +14347,395 @@
             }
             cleanupTimers();
         });
+
+        // ================================================================
+        // v1.25.0 Wave H — Commercial Parity & Content-Creator Polish
+        // ================================================================
+        // All Wave H panel wiring lives in one block so it can be lifted
+        // into its own file later. Depends on api(), showToast(),
+        // showAlert(), selectedPath, projectFolder, startJob().
+        var WaveH = (function () {
+            var WH_LAST_SEEN_KEY = "opencut_wh_last_seen_release";
+
+            function h(tag, attrs, children) {
+                var n = document.createElement(tag);
+                if (attrs) {
+                    for (var k in attrs) {
+                        if (!Object.prototype.hasOwnProperty.call(attrs, k)) continue;
+                        if (k === "className") n.className = attrs[k];
+                        else if (k === "style") n.setAttribute("style", attrs[k]);
+                        else if (k.indexOf("on") === 0 && typeof attrs[k] === "function") {
+                            n.addEventListener(k.substring(2), attrs[k]);
+                        } else {
+                            n.setAttribute(k, attrs[k]);
+                        }
+                    }
+                }
+                if (children) {
+                    for (var i = 0; i < children.length; i++) {
+                        var c = children[i];
+                        if (c == null) continue;
+                        if (typeof c === "string") n.appendChild(document.createTextNode(c));
+                        else n.appendChild(c);
+                    }
+                }
+                return n;
+            }
+
+            // --------------------------------------------------------------
+            // H1.4 — Changelog toast on startup
+            // --------------------------------------------------------------
+            function checkChangelog() {
+                var lastSeen = "";
+                try { lastSeen = localStorage.getItem(WH_LAST_SEEN_KEY) || ""; } catch (e) {}
+                var path = "/system/changelog/unseen?limit=3" +
+                    (lastSeen ? "&last_seen=" + encodeURIComponent(lastSeen) : "");
+                api("GET", path, null, function (err, data) {
+                    if (err || !data || !data.unseen || !data.unseen.length) return;
+                    var top = data.unseen[0];
+                    if (!top || !top.tag) return;
+                    showToast("OpenCut " + top.tag + " released — see GitHub", "info");
+                    // Auto-mark as seen locally after showing once per session.
+                    try { localStorage.setItem(WH_LAST_SEEN_KEY, top.tag); } catch (e) {}
+                    // Persist server-side too so any other panel instance
+                    // on the same machine stays in sync.
+                    api("POST", "/system/changelog/mark-seen", { tag: top.tag }, function () {});
+                });
+            }
+
+            // --------------------------------------------------------------
+            // H1.5 — "Send log" → GitHub issue URL
+            // --------------------------------------------------------------
+            function sendLog() {
+                var desc = (typeof prompt === "function")
+                    ? (prompt("What went wrong?  (optional)") || "")
+                    : "";
+                api("POST", "/system/issue-report/bundle", {
+                    title: "OpenCut issue report from panel",
+                    description: desc,
+                    log_tail_lines: 200,
+                    include_crash: true,
+                    include_logs: true
+                }, function (err, data) {
+                    if (err || !data || !data.url) {
+                        showToast("Could not assemble issue bundle", "error");
+                        return;
+                    }
+                    // CEP allows opening external URLs via CSInterface.
+                    try {
+                        if (typeof cs !== "undefined" && cs && cs.openURLInDefaultBrowser) {
+                            cs.openURLInDefaultBrowser(data.url);
+                        } else if (typeof window !== "undefined" && window.open) {
+                            window.open(data.url, "_blank");
+                        }
+                        showToast("Issue report opened — review before submitting", "success");
+                    } catch (e) {
+                        showAlert("Issue bundle URL (copy manually):\n\n" + data.url);
+                    }
+                });
+            }
+
+            // --------------------------------------------------------------
+            // H1.6 — Demo footage button
+            // --------------------------------------------------------------
+            function tryDemo() {
+                api("GET", "/system/demo/sample", null, function (err, data) {
+                    if (err || !data) {
+                        showToast("Demo fetch failed", "error");
+                        return;
+                    }
+                    if (!data.exists || !data.path) {
+                        showAlert("No demo footage found on this server.\n\n" +
+                            "Run `opencut-server --download-demo` or use the installer build.");
+                        return;
+                    }
+                    // Fall through to the existing selection flow.
+                    try {
+                        selectedPath = data.path;
+                        showToast("Loaded demo footage — try any tab", "success");
+                        // Poke any selection label the panel exposes.
+                        var label = document.getElementById("selectedClipLabel");
+                        if (label) label.textContent = data.path.split(/[\\/]/).pop();
+                    } catch (e) {}
+                });
+            }
+
+            // --------------------------------------------------------------
+            // H1.7 — Gist push / pull modal (lightweight prompt flow)
+            // --------------------------------------------------------------
+            function gistPush() {
+                // Build a minimal settings snapshot — presets + favorites +
+                // workflows are the typical things users share.
+                api("GET", "/presets", null, function (err1, presets) {
+                    api("GET", "/favorites", null, function (err2, favs) {
+                        api("GET", "/workflows", null, function (err3, flows) {
+                            var files = {};
+                            files["opencut-presets.json"] = presets || {};
+                            files["opencut-favorites.json"] = favs || [];
+                            files["opencut-workflows.json"] = flows || [];
+                            var publicChoice = false;
+                            try {
+                                publicChoice = !!confirm(
+                                    "Push as a PUBLIC gist?\n\n" +
+                                    "Cancel = secret gist (requires GITHUB_TOKEN env)."
+                                );
+                            } catch (e) {}
+                            api("POST", "/settings/gist/push", {
+                                files: files,
+                                description: "OpenCut presets export",
+                                public: publicChoice
+                            }, function (err, data) {
+                                if (err || !data || !data.html_url) {
+                                    showAlert("Gist push failed: " +
+                                        (err && err.message ? err.message : "unknown"));
+                                    return;
+                                }
+                                showAlert("Gist created:\n\n" + data.html_url +
+                                    "\n\nCopy this URL to share your presets.");
+                            });
+                        });
+                    });
+                });
+            }
+
+            function gistPull() {
+                var url = (typeof prompt === "function")
+                    ? (prompt("Paste gist URL or ID:") || "")
+                    : "";
+                url = String(url).trim();
+                if (!url) return;
+                api("POST", "/settings/gist/pull", { gist: url }, function (err, data) {
+                    if (err || !data || !data.files) {
+                        showAlert("Gist pull failed: " +
+                            (err && err.message ? err.message : "unknown"));
+                        return;
+                    }
+                    var summary = [];
+                    for (var k in data.files) {
+                        if (Object.prototype.hasOwnProperty.call(data.files, k)) {
+                            summary.push(" - " + k);
+                        }
+                    }
+                    showAlert("Pulled " + summary.length + " file(s) from gist " +
+                        (data.id || "") + ":\n\n" + summary.join("\n") +
+                        "\n\nReview the files in ~/.opencut/ before applying.");
+                });
+            }
+
+            // --------------------------------------------------------------
+            // H1.8 — Onboarding wizard
+            // --------------------------------------------------------------
+            var ONBOARDING_STEPS = [
+                { title: "Welcome to OpenCut", body: "AI-powered video editing automation, local-first, no cloud." },
+                { title: "Pick a clip", body: "Choose any clip from your Premiere project or the media list above." },
+                { title: "Cut silences + fillers", body: "The Cut tab removes pauses and filler words in one click." },
+                { title: "Caption + enhance", body: "Captions and stems both run locally via faster-whisper and Demucs." },
+                { title: "Export", body: "Export to 13 social presets or hand off to Premiere via OTIO/AAF." }
+            ];
+
+            function maybeRunOnboarding() {
+                api("GET", "/settings/onboarding", null, function (err, data) {
+                    if (err) return;
+                    if (data && data.seen) return;
+                    runOnboarding(data && data.step ? parseInt(data.step, 10) : 0);
+                });
+            }
+
+            function runOnboarding(startStep) {
+                var idx = Math.max(0, Math.min(startStep || 0, ONBOARDING_STEPS.length - 1));
+                var overlay = document.getElementById("ocOnboardingOverlay");
+                if (!overlay) {
+                    overlay = buildOnboardingOverlay();
+                    document.body.appendChild(overlay);
+                }
+                renderOnboardingStep(overlay, idx);
+                overlay.style.display = "flex";
+            }
+
+            function buildOnboardingOverlay() {
+                var overlay = h("div", {
+                    id: "ocOnboardingOverlay",
+                    className: "oc-onboarding-overlay",
+                    role: "dialog",
+                    "aria-modal": "true"
+                }, []);
+                var card = h("div", { className: "oc-onboarding-card" }, []);
+                card.id = "ocOnboardingCard";
+                overlay.appendChild(card);
+                return overlay;
+            }
+
+            function renderOnboardingStep(overlay, idx) {
+                var card = document.getElementById("ocOnboardingCard");
+                if (!card) return;
+                var step = ONBOARDING_STEPS[idx];
+                card.innerHTML = "";
+                card.appendChild(h("div", { className: "oc-onboarding-step" },
+                    ["Step " + (idx + 1) + " of " + ONBOARDING_STEPS.length]));
+                card.appendChild(h("h2", { className: "oc-onboarding-title" }, [step.title]));
+                card.appendChild(h("p", { className: "oc-onboarding-body" }, [step.body]));
+
+                var row = h("div", { className: "oc-onboarding-actions" }, []);
+                if (idx > 0) {
+                    row.appendChild(h("button", {
+                        className: "btn btn-secondary oc-onboarding-btn",
+                        onclick: function () { renderOnboardingStep(overlay, idx - 1); }
+                    }, ["Back"]));
+                }
+                row.appendChild(h("button", {
+                    className: "btn btn-ghost oc-onboarding-btn",
+                    onclick: function () { finishOnboarding(overlay, false); }
+                }, ["Skip"]));
+                var nextLabel = (idx + 1 >= ONBOARDING_STEPS.length) ? "Finish" : "Next";
+                row.appendChild(h("button", {
+                    className: "btn btn-primary oc-onboarding-btn",
+                    onclick: function () {
+                        api("POST", "/settings/onboarding", { step: idx + 1 }, function () {});
+                        if (idx + 1 >= ONBOARDING_STEPS.length) {
+                            finishOnboarding(overlay, true);
+                        } else {
+                            renderOnboardingStep(overlay, idx + 1);
+                        }
+                    }
+                }, [nextLabel]));
+                card.appendChild(row);
+            }
+
+            function finishOnboarding(overlay, completed) {
+                api("POST", "/settings/onboarding", { seen: true }, function () {});
+                if (overlay && overlay.parentNode) {
+                    overlay.style.display = "none";
+                }
+                if (completed) {
+                    showToast("Ready to go — explore any tab", "success");
+                }
+            }
+
+            function restartOnboarding() {
+                api("POST", "/settings/onboarding", { seen: false, step: 0 }, function (err) {
+                    if (!err) runOnboarding(0);
+                });
+            }
+
+            // --------------------------------------------------------------
+            // H1.1 — Virality score quick action
+            // --------------------------------------------------------------
+            function runViralityScore() {
+                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                startJob("/analyze/virality", {
+                    filepath: selectedPath,
+                    skip_visual: false
+                });
+            }
+
+            // --------------------------------------------------------------
+            // H1.2 — Cursor-zoom resolve (screen-recording auto-zoom)
+            // --------------------------------------------------------------
+            function runCursorZoomResolve(sidecarPath) {
+                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                startJob("/video/cursor-zoom/resolve", {
+                    filepath: selectedPath,
+                    sidecar_path: sidecarPath || "",
+                    allow_framediff: true
+                });
+            }
+
+            // --------------------------------------------------------------
+            // H2.7 — BridgeTalk async ready probe
+            // --------------------------------------------------------------
+            function wireCsxsEvents() {
+                if (typeof cs === "undefined" || !cs || !cs.addEventListener) return;
+                try {
+                    cs.addEventListener("com.opencut.ping.ack", function (evt) {
+                        showToast("BridgeTalk async ready", "success");
+                    });
+                    cs.addEventListener("com.opencut.job.progress", function (evt) {
+                        // Reserved for future host-driven progress updates.
+                    });
+                } catch (e) {}
+            }
+
+            function runPingProbe() {
+                if (typeof cs === "undefined" || !cs || !cs.evalScript) return;
+                try {
+                    cs.evalScript('ocEmitPingEvent("' + Date.now() + '")',
+                        function (res) { /* ack arrives via CSXS event */ });
+                } catch (e) {}
+            }
+
+            // --------------------------------------------------------------
+            // H2.8 — QE reflection probe (one-shot on startup)
+            // --------------------------------------------------------------
+            function runQeReflect() {
+                if (typeof cs === "undefined" || !cs || !cs.evalScript) return;
+                try {
+                    cs.evalScript("ocQeReflect()", function (res) {
+                        if (!res || res === "EvalScript error.") return;
+                        var parsed = null;
+                        try { parsed = JSON.parse(res); } catch (e) { return; }
+                        if (!parsed || !parsed.methods) return;
+                        api("POST", "/system/qe-reflect", {
+                            methods: parsed.methods,
+                            premiere_version: parsed.premiere_version || "",
+                            probed_at: parsed.probed_at || 0
+                        }, function () {});
+                    });
+                } catch (e) {}
+            }
+
+            // --------------------------------------------------------------
+            // Bind buttons injected into index.html (H1.x surface)
+            // --------------------------------------------------------------
+            function bindButtons() {
+                var b;
+                b = document.getElementById("ocWaveHTryDemo");
+                if (b) b.addEventListener("click", tryDemo);
+                b = document.getElementById("ocWaveHSendLog");
+                if (b) b.addEventListener("click", sendLog);
+                b = document.getElementById("ocWaveHGistPush");
+                if (b) b.addEventListener("click", gistPush);
+                b = document.getElementById("ocWaveHGistPull");
+                if (b) b.addEventListener("click", gistPull);
+                b = document.getElementById("ocWaveHRestartTour");
+                if (b) b.addEventListener("click", restartOnboarding);
+                b = document.getElementById("ocWaveHVirality");
+                if (b) b.addEventListener("click", runViralityScore);
+                b = document.getElementById("ocWaveHCursorZoom");
+                if (b) b.addEventListener("click", function () { runCursorZoomResolve(""); });
+            }
+
+            function init() {
+                bindButtons();
+                wireCsxsEvents();
+                // Sequence the startup probes so we don't block the first
+                // health check / media scan.
+                setTimeout(checkChangelog, 1200);
+                setTimeout(maybeRunOnboarding, 1800);
+                setTimeout(runQeReflect, 2400);
+                setTimeout(runPingProbe, 3000);
+            }
+
+            return {
+                init: init,
+                // Exposed for command palette / manual triggers.
+                tryDemo: tryDemo,
+                sendLog: sendLog,
+                gistPush: gistPush,
+                gistPull: gistPull,
+                restartOnboarding: restartOnboarding,
+                runViralityScore: runViralityScore,
+                runCursorZoomResolve: runCursorZoomResolve
+            };
+        })();
+
+        // Expose for the command palette / devtools.
+        try { window.OpenCutWaveH = WaveH; } catch (e) {}
+
+        // Fire once — guarded so re-inits during reconnect don't double-register.
+        if (!window._ocWaveHInitDone) {
+            window._ocWaveHInitDone = true;
+            setTimeout(function () { WaveH.init(); }, 400);
+        }
     });
 
 })();

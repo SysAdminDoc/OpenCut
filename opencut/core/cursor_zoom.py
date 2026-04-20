@@ -9,11 +9,14 @@ Auto zoom-to-cursor in screen recordings:
 All via FFmpeg + basic frame analysis - no heavy dependencies.
 """
 
+import json
 import logging
+import math
 import os
+import shutil
 import tempfile
 from dataclasses import dataclass, field
-from typing import Callable, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Sequence
 
 from opencut.helpers import get_ffmpeg_path, get_video_info, output_path, run_ffmpeg
 
@@ -556,3 +559,199 @@ def _build_zoom_segments(
         })
 
     return segments
+
+
+# ---------------------------------------------------------------------------
+# Wave H1.2 additions — sidecar-driven click events
+# ---------------------------------------------------------------------------
+
+def check_cursor_zoom_available() -> bool:
+    """Cursor zoom works with sidecar JSON + FFmpeg; cv2 is an accelerator."""
+    return shutil.which("ffmpeg") is not None
+
+
+def _clamp_coord(value: float, lo: float, hi: float) -> float:
+    if not math.isfinite(value):
+        return lo
+    return max(lo, min(hi, value))
+
+
+def parse_click_sidecar(
+    sidecar_path: str,
+    width: int,
+    height: int,
+) -> List[ClickRegion]:
+    """Parse a ScreenStudio / Screen.Studio / OBS sidecar JSON into ClickRegion.
+
+    Accepted shapes (first match wins)::
+
+        {"clicks": [{"t": 1.23, "x": 640, "y": 360}, ...]}
+        {"events": [{"ts": 1.23, "kind": "mouse_click", "x": 640, "y": 360}]}
+
+    All coordinates are clamped to ``[0, width] × [0, height]``. Never
+    trust client-supplied pixels — the clamp is non-negotiable even if
+    the recorder thinks its own coordinates are trustworthy.
+    """
+    if not sidecar_path or not os.path.isfile(sidecar_path):
+        raise FileNotFoundError(sidecar_path)
+
+    with open(sidecar_path, "r", encoding="utf-8") as fh:
+        data = json.load(fh)
+
+    raw = data.get("clicks") or data.get("events") or []
+    out: List[ClickRegion] = []
+    for c in raw:
+        if not isinstance(c, dict):
+            continue
+        kind = str(c.get("kind") or c.get("type") or "mouse_click").lower()
+        if "click" not in kind and kind not in ("mouse_click", "click"):
+            continue
+        try:
+            t = float(c.get("t", c.get("ts", c.get("time", -1))))
+            x = float(c.get("x", -1))
+            y = float(c.get("y", -1))
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(t) or t < 0:
+            continue
+        conf = c.get("confidence", 1.0)
+        try:
+            conf = float(conf)
+            if not math.isfinite(conf):
+                conf = 1.0
+        except (TypeError, ValueError):
+            conf = 1.0
+        out.append(ClickRegion(
+            timestamp=t,
+            x=int(_clamp_coord(x, 0.0, float(width))),
+            y=int(_clamp_coord(y, 0.0, float(height))),
+            confidence=round(max(0.0, min(1.0, conf)), 3),
+        ))
+    out.sort(key=lambda cr: cr.timestamp)
+    return out
+
+
+def normalise_click_events(
+    events: Sequence[Dict[str, Any]],
+    width: int,
+    height: int,
+) -> List[ClickRegion]:
+    """Normalise in-memory event dicts into ClickRegion instances.
+
+    Mirrors ``parse_click_sidecar`` but works from caller-supplied
+    data — useful when the panel already has click timestamps from a
+    browser-side recorder.
+    """
+    out: List[ClickRegion] = []
+    for c in events or []:
+        if not isinstance(c, dict):
+            continue
+        try:
+            t = float(c.get("t", c.get("ts", c.get("time", -1))))
+            x = float(c.get("x", -1))
+            y = float(c.get("y", -1))
+        except (TypeError, ValueError):
+            continue
+        if not math.isfinite(t) or t < 0:
+            continue
+        out.append(ClickRegion(
+            timestamp=t,
+            x=int(_clamp_coord(x, 0.0, float(width))),
+            y=int(_clamp_coord(y, 0.0, float(height))),
+            confidence=1.0,
+        ))
+    out.sort(key=lambda cr: cr.timestamp)
+    return out
+
+
+def resolve_click_regions(
+    input_path: str,
+    sidecar_path: Optional[str] = None,
+    events: Optional[Sequence[Dict[str, Any]]] = None,
+    allow_framediff: bool = True,
+    on_progress: Optional[Callable] = None,
+) -> Dict[str, Any]:
+    """Resolve click events via sidecar → in-memory → frame-diff fallback.
+
+    Returns::
+
+        {
+          "click_regions": List[ClickRegion],
+          "source": "sidecar" | "events" | "framediff" | "none",
+          "width": int, "height": int,
+          "duration": float, "fps": float,
+          "notes": List[str],
+        }
+
+    This is the preferred entry point for the Wave H1.2 route — older
+    callers that only want frame-diff detection can still use
+    ``detect_click_regions()`` directly.
+    """
+    if not input_path or not isinstance(input_path, str):
+        raise ValueError("input_path must be a non-empty string")
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(input_path)
+
+    info = get_video_info(input_path) or {}
+    width = int(info.get("width") or 1920)
+    height = int(info.get("height") or 1080)
+    duration = float(info.get("duration") or 0.0)
+    fps = float(info.get("fps") or 30.0)
+
+    notes: List[str] = []
+    source = "none"
+    regions: List[ClickRegion] = []
+
+    if sidecar_path:
+        try:
+            regions = parse_click_sidecar(sidecar_path, width, height)
+            if regions:
+                source = "sidecar"
+                notes.append(f"sidecar events: {len(regions)}")
+        except FileNotFoundError:
+            notes.append(f"sidecar not found: {sidecar_path}")
+        except Exception as exc:  # noqa: BLE001
+            notes.append(f"sidecar parse failed: {exc}")
+
+    if not regions and events:
+        try:
+            regions = normalise_click_events(events, width, height)
+            if regions:
+                source = "events"
+                notes.append(f"inline events: {len(regions)}")
+        except Exception as exc:  # noqa: BLE001
+            notes.append(f"event parse failed: {exc}")
+
+    if not regions and allow_framediff:
+        try:
+            regions = detect_click_regions(input_path, on_progress=on_progress)
+            if regions:
+                source = "framediff"
+                notes.append(f"framediff events: {len(regions)}")
+        except Exception as exc:  # noqa: BLE001
+            notes.append(f"framediff failed: {exc}")
+
+    if not regions:
+        notes.append("no cursor events resolved")
+
+    return {
+        "click_regions": regions,
+        "source": source,
+        "width": width,
+        "height": height,
+        "duration": duration,
+        "fps": fps,
+        "notes": notes,
+    }
+
+
+__all__ = [
+    "ClickRegion",
+    "CursorZoomResult",
+    "detect_click_regions",
+    "apply_cursor_zoom",
+    "check_cursor_zoom_available",
+    "parse_click_sidecar",
+    "normalise_click_events",
+    "resolve_click_regions",
+]
