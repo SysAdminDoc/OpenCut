@@ -429,6 +429,52 @@ matching the v1.18–1.20 pattern. Frontend wiring trails by one release.
 
 ---
 
+## Wave I — Panel Polish & Agentic Assembly (v1.26.0, target 2026-05)
+
+Cross-project research pass against
+[ayushozha/AdobePremiereProMCP](https://github.com/ayushozha/AdobePremiereProMCP)
+— an MCP server for Premiere Pro (Go + Rust + TypeScript + Python
+polyglot, WebSocket-in-panel transport, ~907 generated tools). Their
+architecture isn't worth adopting wholesale (polyglot overhead for
+negligible gain), but four small polish items and one strategic
+capability are worth porting. All items are additive; no breaking
+changes.
+
+### Tier 1 — small polish (high ROI, 1-2 days each)
+
+| # | Feature | Module (new) | Routes | Source |
+|---|---------|--------------|--------|--------|
+| I1.1 | **Live panel stats widget** — uptime, command count, avg response time (p50/p95), error count, active SSE / WS clients, last-error text. Renders as a new card on the Settings tab. | `core/panel_stats.py` + `client/main.js` stats card | `GET /system/stats` | AdobePremiereProMCP CEP panel |
+| I1.2 | **Lazy-loaded JSX chunks** — split `host/index.jsx` into `host/core.jsx` (media scan + ping + marker ops, eager) and `host/domain.jsx` (color / audio / transitions / captions, loaded on first call via `$.evalFile`). Target: trim cold-panel-open time. | `host/core.jsx`, `host/domain.jsx` (new) + `client/main.js` lazy-load helper | — (JSX loader change) | AdobePremiereProMCP lazy-load pattern |
+| I1.3 | **WebSocket heartbeat pings (15 s)** — active ping/pong from panel to `/ws` so dead sockets are detected before the next user action. Extends the existing `wsDisconnect()` reconnect loop. | `core/websocket_server.py` + `client/main.js` heartbeat timer | — (ws plumbing only) | AdobePremiereProMCP panel.js |
+| I1.4 | **Cross-platform launchers** — add `OpenCut-Server.command` (macOS) and `OpenCut-Server.sh` (Linux) to match the existing `OpenCut-Server.bat` / `OpenCut-Launcher.vbs`. Keeps tarball installs turnkey on all three OSes. | `OpenCut-Server.command`, `OpenCut-Server.sh` (new, repo root) | — (scripts only) | AdobePremiereProMCP launchers |
+
+### Tier 2 — strategic capability (M effort)
+
+| # | Feature | Module (new) | Routes | Source |
+|---|---------|--------------|--------|--------|
+| I2.1 | **Script → EDL → native Premiere sequence** in one call. Chains: whisper transcribe (or raw script text) → LLM scene split → `footage_search.py` to match shots against an indexed media library → `multicam_xml.py` to emit FCP XML → host JSX import. Returns the new sequence's nodeId. Single POST replaces what currently takes 4-5 sequential jobs. | `core/script_to_sequence.py` | `POST /timeline/assemble-from-script`, `POST /timeline/assemble-from-script/preview` | AdobePremiereProMCP `ExecuteEDL` RPC |
+
+### Not adopted (deliberate)
+
+- **Polyglot stack (Go + Rust + TS + Python)** — huge dependency burden for no user-visible benefit. OpenCut's single-process Flask ships as one exe via PyInstaller; we keep that.
+- **WebSocket-in-panel server** — they invert the normal CEP pattern (panel = server, external MCP client connects in on port 9801). Fine for their "MCP client drives Premiere" use case but breaks OpenCut's install-and-forget UX.
+- **Auto-generated tool stubs** — their own README disagrees with itself (907 vs 1,060 tools) suggesting heavy use of boilerplate generators. OpenCut's 1,275 routes are hand-written and tested.
+- **gRPC between internal services** — Flask + SSE + NDJSON streaming is enough. No cross-language boundary to bridge.
+
+### Wave I gotchas (anticipated)
+
+- **Stats widget cardinality** — don't track per-route p99 for every one of 1,275 routes (that's a memory leak waiting to happen). Aggregate at category level (`audio/*`, `video/*`, `captions/*`, `system/*`, `settings/*`) and keep a rolling window of the last 5 000 completed jobs.
+- **Lazy JSX chunk loader must be idempotent** — `$.evalFile(path)` called twice loads the script twice, which on ES3 redefines every top-level `function`. Track a `window._ocLoadedJSXChunks` Set on the panel side and short-circuit.
+- **Heartbeat pings must be cheap** — the server-side handler must be O(1) per ping. Don't touch the job store, don't run DB queries, don't acquire `job_lock`.
+- **macOS `.command` file perms** — must be committed executable (`chmod +x`) AND have a Gatekeeper-friendly `#!/bin/sh` shebang. Without +x macOS refuses to double-click-execute.
+- **`assemble-from-script` LLM cost** — the scene-split step is a single LLM call per ~4000-word chunk; cap at 8 chunks per request (≈32k-word script) or the backend will hit any rate limit on free Anthropic / OpenAI tiers.
+- **Media-library index must exist first** — `/timeline/assemble-from-script` requires a pre-built `core/footage_index_db.py` index; return 400 `MISSING_INDEX` with a hint to call `POST /search/index` first if the index is empty.
+
+**Wave I total**: 4 new routes (Tier 1: `/system/stats`; Tier 2: `/timeline/assemble-from-script` + preview), 2 new core modules, 2 new launcher scripts, 1 JSX file split, zero new *required* pip deps.
+
+---
+
 ## Sources (OSS survey, April 2026)
 
 - **Editors surveyed**: LosslessCut, auto-editor, editly, Descript,
@@ -487,3 +533,11 @@ releases.
 - **CEP/UXP ecosystem**: bolt-cep (Hyper Brew), Bolt UXP WebView UI,
   Adobe UXP Premiere Pro Samples, Adobe CEP Samples (PProPanel),
   SoundBuddy Studio, jumpcut, vakago-tools QE API documentation.
+- **MCP servers for NLEs (Wave I source)**:
+  [ayushozha/AdobePremiereProMCP](https://github.com/ayushozha/AdobePremiereProMCP)
+  — polyglot Go + Rust + TS + Python MCP server exposing ~907
+  Premiere tools over a WebSocket-in-panel transport on port 9801.
+  Architecture not adopted; four polish patterns (live stats widget,
+  lazy JSX chunking, WS heartbeat, cross-platform launchers) +
+  one strategic route (script-to-sequence `ExecuteEDL` equivalent)
+  promoted into Wave I.
