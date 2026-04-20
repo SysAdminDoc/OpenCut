@@ -3372,6 +3372,24 @@
                     <div class="oc-status-line" id="settingsOverviewStatus" data-state="working" role="status" aria-live="polite">OpenCut is checking the local studio environment.</div>
                 </section>
 
+                <!-- Wave H — Commercial Parity & Content-Creator Polish (v1.25.0) -->
+                <section class="card oc-wave-h-card" id="waveHCard" aria-labelledby="waveHCardTitle">
+                    <div class="card-header">
+                        <div class="card-title" id="waveHCardTitle" data-i18n="wave_h.card_title">Panel Polish</div>
+                    </div>
+                    <p class="card-desc" data-i18n="wave_h.card_desc">Share presets as gists, try demo footage, re-run the tour, score short-form clips, and send a pre-filled issue report. Commercial-parity helpers added in v1.25.0.</p>
+                    <div class="oc-wave-h-grid">
+                        <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHTryDemo" data-i18n="wave_h.try_demo">Try on demo footage</button>
+                        <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHRestartTour" data-i18n="wave_h.restart_tour">Restart onboarding tour</button>
+                        <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHGistPush" data-i18n="wave_h.gist_push">Export presets to Gist</button>
+                        <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHGistPull" data-i18n="wave_h.gist_pull">Import presets from Gist</button>
+                        <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHVirality" data-i18n="wave_h.virality">Score virality (selected clip)</button>
+                        <button type="button" class="btn btn-secondary oc-wave-h-btn" id="ocWaveHCursorZoom" data-i18n="wave_h.cursor_zoom">Detect cursor zoom (screen rec)</button>
+                        <button type="button" class="btn btn-ghost oc-wave-h-btn" id="ocWaveHSendLog" data-i18n="wave_h.send_log">Send log — open issue report</button>
+                    </div>
+                    <p class="oc-wave-h-note" data-i18n="wave_h.note">Gist push defaults to a secret gist and requires GITHUB_TOKEN. Issue reports scrub HOME paths before opening the URL.</p>
+                </section>
+
                 <!-- Operation Journal (v1.9.28) -->
                 <section class="card" id="journalCard" aria-labelledby="journalCardTitle">
                     <div class="card-header">
@@ -3757,7 +3775,7 @@
                     <div class="card-header"><div class="card-title" data-i18n="settings.about">About OpenCut</div></div>
                     <div class="settings-row">
                         <span class="settings-label">Version</span>
-                        <span class="settings-value">1.24.0</span>
+                        <span class="settings-value">1.25.0</span>
                     </div>
                     <div class="about-links">
                         <a href="https://github.com/SysAdminDoc/opencut" class="about-link" target="_blank">GitHub</a>

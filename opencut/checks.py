@@ -482,3 +482,124 @@ def check_deprecation_registry_available() -> bool:
         return _c()
     except Exception:
         return False
+
+
+# --- v1.25.0 Wave H (Commercial Parity & Content-Creator Polish) ---
+
+def check_virality_score_available() -> bool:
+    try:
+        from opencut.core.virality_score import check_virality_score_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_cursor_zoom_available() -> bool:
+    try:
+        from opencut.core.cursor_zoom import check_cursor_zoom_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_changelog_feed_available() -> bool:
+    """Always True — stdlib urllib, fails gracefully on network errors."""
+    return True
+
+
+def check_issue_report_available() -> bool:
+    """Always True — stdlib only."""
+    return True
+
+
+def check_demo_bundle_available() -> bool:
+    try:
+        from opencut.core.demo_bundle import check_demo_bundle_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_gist_sync_available() -> bool:
+    """Always True — stdlib urllib, fails gracefully on network errors."""
+    return True
+
+
+def check_onboarding_available() -> bool:
+    """Always True — user_data wrappers."""
+    return True
+
+
+def check_flashvsr_available() -> bool:
+    try:
+        from opencut.core.upscale_flashvsr import check_flashvsr_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_rose_available() -> bool:
+    try:
+        from opencut.core.inpaint_rose import check_rose_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_sammie_available() -> bool:
+    try:
+        from opencut.core.matte_sammie import check_sammie_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_omnivoice_available() -> bool:
+    try:
+        from opencut.core.tts_omnivoice import check_omnivoice_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_reezsynth_available() -> bool:
+    try:
+        from opencut.core.style_reezsynth import check_reezsynth_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_vidmuse_available() -> bool:
+    try:
+        from opencut.core.music_vidmuse import check_vidmuse_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_video_agent_available() -> bool:
+    """Always False in v1.25.0 — Tier 3 stub."""
+    try:
+        from opencut.core.video_agent import check_video_agent_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_gen_video_cloud_available() -> bool:
+    """Always False in v1.25.0 — Tier 3 stub."""
+    try:
+        from opencut.core.gen_video_cloud import check_gen_video_cloud_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_lipsync_advanced_available() -> bool:
+    """Always False in v1.25.0 — Tier 3 stub."""
+    try:
+        from opencut.core.lipsync_advanced import check_lipsync_advanced_available as _c
+        return _c()
+    except Exception:
+        return False

@@ -1,5 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.24.0 - ULTRA PREMIUM EDITION
+   OpenCut CEP Panel v1.25.0 - ULTRA PREMIUM EDITION
    Next-Generation AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
@@ -16257,5 +16257,118 @@ input[type="range"]::-webkit-slider-thumb:hover {
 @media (max-height: 720px) {
     .wizard-overlay {
         align-items: flex-start;
+    }
+}
+
+
+/* =========================================================================
+   Wave H (v1.25.0) — Commercial Parity & Content-Creator Polish
+   ========================================================================= */
+
+.oc-wave-h-card {
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.08));
+}
+
+.oc-wave-h-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.oc-wave-h-btn {
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 12px;
+    padding: 8px 12px;
+    min-height: 36px;
+    white-space: normal;
+    line-height: 1.35;
+}
+
+.oc-wave-h-note {
+    margin-top: 12px;
+    font-size: 11px;
+    line-height: 1.5;
+    color: var(--text-muted, #8891a2);
+    padding: 8px 12px;
+    border-left: 2px solid var(--border-subtle, rgba(255, 255, 255, 0.12));
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 0 4px 4px 0;
+}
+
+/* Onboarding overlay (H1.8) */
+.oc-onboarding-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 14, 18, 0.82);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 24px;
+    backdrop-filter: blur(6px);
+    animation: ocOnboardingFade 220ms ease-out;
+}
+
+@keyframes ocOnboardingFade {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.oc-onboarding-card {
+    background: var(--panel-bg, #1c1f26);
+    border: 1px solid var(--border-subtle, rgba(255, 255, 255, 0.1));
+    border-radius: 10px;
+    padding: 24px 28px;
+    max-width: 440px;
+    width: 100%;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.55);
+    color: var(--text-primary, #e5e9f0);
+}
+
+.oc-onboarding-step {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent, #6aa0ff);
+    margin-bottom: 8px;
+}
+
+.oc-onboarding-title {
+    margin: 0 0 10px 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary, #e5e9f0);
+}
+
+.oc-onboarding-body {
+    margin: 0 0 20px 0;
+    line-height: 1.55;
+    font-size: 13px;
+    color: var(--text-secondary, #b8c0d0);
+}
+
+.oc-onboarding-actions {
+    display: flex;
+    gap: 8px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+}
+
+.oc-onboarding-btn {
+    min-width: 84px;
+}
+
+@media (max-width: 520px) {
+    .oc-onboarding-card {
+        padding: 18px 20px;
+    }
+    .oc-onboarding-actions {
+        justify-content: stretch;
+    }
+    .oc-onboarding-btn {
+        flex: 1 1 auto;
     }
 }
