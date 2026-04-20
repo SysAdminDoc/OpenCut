@@ -475,6 +475,94 @@ changes.
 
 ---
 
+## Wave J — Depth & Differentiation (v1.27.0, target 2026-Q3)
+
+Three-angle research pass (April 2026): OSS Premiere / NLE extensions on
+GitHub + Adobe Exchange, niche new AI releases Q1-Q2 2026 outside the
+mainstream, and creator-adjacent tool UX patterns (podcast, streaming,
+screen recording, DIT, MAM, client review). Twenty items survive the
+licence + "actually novel" filter; grouped into three tiers matching
+the Wave H pattern (Tier 1 fully working, Tier 2 stubs, Tier 3 research
+scaffolding).
+
+### Tier 1 — Small-effort depth (fully working, ≤1 week each)
+
+| # | Feature | Module (new) | Routes | OSS Source | Licence |
+|---|---------|--------------|--------|------------|---------|
+| J1.1 | **Burned-in subtitle extraction** — PaddleOCR walk over frames, locate + OCR + mask the subtitle region, emit SRT. Opens an entire archival / repurposing workflow lane (foreign-language redubs, broadcast-to-web reformats). | `core/caption_ocr.py` | `POST /captions/extract-burned-in`, `GET /captions/extract-burned-in/info` | [timminator/VideOCR](https://github.com/timminator/VideOCR), [SWHL/RapidVideOCR](https://github.com/SWHL/RapidVideOCR) | MIT / Apache-2 |
+| J1.2 | **EDL → CDL colour metadata passthrough** — parse an EDL, extract Color Decision List values, emit as a `.cdl` file + an OTIO sidecar for DaVinci round-trip. Tiny code, high value for colourists. | `core/cdl_bridge.py` | `POST /timeline/export/cdl`, `POST /timeline/import/cdl` | [walter-arrighetti/edl2cdl](https://github.com/walter-arrighetti/edl2cdl) | MIT |
+| J1.3 | **Semantic keyframe extraction** — CLIP embeddings + clustering pick N representative frames per clip for thumbnails / previews / summaries. Pairs with the existing virality score so the top-ranked clips get the smartest thumbnails. | `core/keyframes_semantic.py` | `POST /video/keyframes/semantic`, `POST /video/keyframes/ranked` | [keplerlab/katna](https://github.com/keplerlab/katna) | Apache-2 |
+| J1.4 | **PSE hue-flash detector extension** — extend the existing ITU-R BT.1702 flash detector to catch rapid hue changes (red→blue) that don't register on luminance delta. Accessibility win for seizure-prone viewers. | `core/pse_flash.py` (extend) | — (enhances existing `/video/pse/check`) | ITU-R BT.1702 + custom | — |
+| J1.5 | **Video fingerprinting / duplicate detection** — perceptual hash over clip segments; finds duplicate shots across an ingested library. Pure-stdlib pHash-style implementation (NOT the GPLv3 `pHash` lib — we roll our own to stay MIT). | `core/video_fingerprint.py` | `POST /video/fingerprint`, `POST /search/duplicates` | [Light1Knight/video-fingerprinting-system](https://github.com/Light1Knight/video-fingerprinting-system) pattern | MIT (reimplementation) |
+
+### Tier 2 — New AI surfaces (503 MISSING_DEPENDENCY stubs)
+
+Same pattern as Wave H Tier 2: ship `check_X_available()` guards, 503 with install hints, full wiring lands in later releases once each upstream pins a stable Python entry point.
+
+| # | Feature | Module (stub) | Routes | OSS Source |
+|---|---------|---------------|--------|------------|
+| J2.1 | **DCVC-RT real-time neural codec** (Microsoft, CVPR'25) — 21% bitrate saving vs H.266 at 100+ fps 1080p, real-time 4K on modern GPUs. Replaces H.264 for proxy / preview generation. | `core/codec_dcvc.py` | `POST /video/encode/dcvc`, `POST /video/decode/dcvc`, `GET /video/encode/dcvc/info` | [microsoft/DCVC](https://github.com/microsoft/DCVC) |
+| J2.2 | **GIMM-VFI** (NeurIPS'24) — generalisable implicit motion modelling for arbitrary-timestep frame interpolation. Beats RIFE on fast-action / ghosting. Slots alongside existing `/video/interpolate/neural`. | `core/interp_gimm.py` | `POST /video/interpolate/gimm`, `GET /video/interpolate/gimm/info` | [GSeanCDAT/GIMM-VFI](https://github.com/GSeanCDAT/GIMM-VFI) |
+| J2.3 | **PerVFI / EMA-VFI** — asymmetric synergistic blending + hybrid CNN+Transformer frame interpolation. Tier of backends for `/video/interpolate/*` alongside RIFE and GIMM. | `core/interp_pervfi.py` | `POST /video/interpolate/pervfi` | [mulns/PerVFI](https://github.com/mulns/PerVFI), [MCG-NJU/EMA-VFI](https://github.com/MCG-NJU/EMA-VFI) |
+| J2.4 | **ITMLUT inverse tonemapping** (CVMP'23) — SDR→HDR via 3D-LUT; very fast inference. Archival upgrade path for old web video. | `core/hdr_itmlut.py` | `POST /video/tone-map/inverse`, `GET /video/tone-map/backends` | [AndreGuo/ITMLUT](https://github.com/AndreGuo/ITMLUT) |
+| J2.5 | **FoleyCrafter** — realistic Foley + SFX generation from silent video. Complements existing MusicGen (which handles music, not ambience). | `core/foley_crafter.py` | `POST /audio/foley/generate`, `GET /audio/foley/info` | FoleyCrafter (permissive fork) |
+| J2.6 | **SafeVision / NudeNet** content moderation — NSFW + violence frame-level detection, auto-blur pipeline. Fills the enterprise / platform-compliance gap OpenCut doesn't currently address. | `core/content_moderation.py` | `POST /video/content/scan`, `POST /video/content/blur`, `GET /video/content/info` | [im-syn/SafeVision](https://github.com/im-syn/SafeVision), NudeNet pattern |
+| J2.7 | **Advanced frame interpolation aggregator** — unified `/video/interpolate` route that dispatches across RIFE (shipped) + GIMM (J2.2) + PerVFI (J2.3) + FFmpeg minterpolate fallback based on availability + user preference. | `core/neural_interp.py` (extend) | `GET /video/interpolate/backends` (extend existing) | — (dispatcher over J2.2/J2.3) |
+
+### Tier 3 — Strategic UX patterns (scaffolding + research notes)
+
+These are patterns from the research pass that deserve a documented landing spot but don't warrant a code stub — they're UX investments or architecture decisions that pay off across multiple releases.
+
+| # | Feature | OSS / Product Source | Notes |
+|---|---------|----------------------|-------|
+| J3.1 | **Scene-aware auto-ducking** — LLM-decided dialogue-vs-music submix routing. Existing `/audio/duck` does amplitude-based ducking only; extend to a scene-tag-aware router that knows "this is dialogue over music bed, dip the bed 12 dB". | Hindenburg, Auphonic (closed products) | New route `/audio/auto-duck-scene`; relies on existing LLM + transcript infra. **L effort; no stub in Wave J.** |
+| J3.2 | **Multi-pass caption review gate** — per-segment approve / flag / lock before export, with broadcast-compliance auto-check layered on top of `caption_compliance.py`. Differentiates from Premiere's native caption flow. | Rev, Glocap, Aegisub (pattern) | New route `/captions/review-gate`; panel card extension. **M effort; no stub in Wave J.** |
+| J3.3 | **Node-based colour graph UI** — SVG canvas on the panel, nodes = colour ops (lift/gamma/gain, LUT apply, curves), edges = pipeline. Lets users wire grades visually instead of through a linear filter chain. Attracts colourists. | DaVinci Resolve colour page | New panel card + `POST /video/color-node-graph/apply`; graph schema in core. **L effort; no stub in Wave J.** |
+| J3.4 | **Client-review feedback loop** — export a watermarked password-gated preview, collect frame-locked comments via a lightweight web view, reimport as timeline markers. Closes the post-production → client → revision loop without Frame.io subscription. | Frame.io, Wipster, Vimeo Review (pattern only) | New blueprint + static HTML review site; persist comments in `~/.opencut/reviews/<session_id>.json`. **L effort; design spike only.** |
+| J3.5 | **De-subtitling (burned-in subtitle removal)** — detect burned-in subtitle regions via OCR confidence (reuse J1.1) then inpaint via existing ProPainter / ROSE. Inverse of J1.1 — produces a clean base video for re-localisation. | Glocap (pattern) | New route `/video/de-subtitle`; chains J1.1 + existing inpainting infra. **M effort; schedule after J1.1 lands.** |
+| J3.6 | **Multi-language audio package delivery** — extend `/delivery/export` to mux N audio streams (dialogue per language) + 1 master subtitle stream into a single MKV or H.264/H.265 container. Single output file instead of N separate files for N languages. | Broadcast delivery conventions | Extension to existing delivery routes; **S effort; schedule when J1.1 archival lane lands.** |
+
+### Not adopted (with rationale)
+
+Documented explicitly so future research passes don't re-surface these:
+
+- **pHash (perceptual hash library)** — GPLv3 licence contaminates OpenCut's MIT promise. We implement our own MIT-licensed pHash-style fingerprint in J1.5 instead.
+- **C-MET (CVPR 2026 emotion edit)** — research-only licence. Revisit if authors relicense.
+- **EmoMUNIT (voice emotion transfer)** — niche, low user demand, lab-quality voice artefacts. Skip unless a user files a feature request.
+- **MyFrame / FreeFrame** (self-hosted Frame.io clones) — shipping these well is a business, not a feature. J3.4 captures the narrow client-review slice that matters to OpenCut users.
+- **Timeline-as-code / Cursorful-style markdown editing** — overlaps with existing workflow presets; niche audience; Git-friendly diff benefit doesn't outweigh implementation cost.
+- **StreamDeck webhook integration** — fine as a user-supplied plugin calling existing routes; not core.
+- **Recordly / Kap / ShareX / general screen recorders** — out of scope. OpenCut edits screen recordings; it doesn't capture them.
+- **Hypothesis.is / Milanote-style note-taking panels** — overlaps with Operation Journal already shipped.
+- **ai-typography / atokern** — font-level work is a different product. Skip.
+- **pHash (again, GPLv3)** — still no.
+
+### Wave J gotchas (anticipated)
+
+- **PaddleOCR GPU footprint** — J1.1 needs ~2 GB of PaddleOCR models per language pack. Download lazily per-language via a new `/captions/extract-burned-in/install?lang=<iso>` endpoint rather than front-loading every language on startup.
+- **J1.3 CLIP embeddings already cached** — `footage_index_db.py` (Wave 1.9.0) already caches CLIP embeddings for footage search. Re-use those — don't recompute on every keyframe request.
+- **DCVC-RT decoder must match encoder** — bitstreams are NOT interchangeable with H.264/HEVC. Any clip encoded with J2.1 requires J2.1 for decode. Flag this in the delivery preset so users don't hand off a DCVC proxy to a client who can't play it back.
+- **GIMM-VFI + PerVFI share a CUDA-heavy runtime** — ship them under a single `opencut[interp-neural]` pip extra so users don't double-install torch.
+- **J1.4 PSE hue detector must not flag brand colour flips** — branded motion graphics (logo reveal red→blue) triggers the naive detector. Gate the hue-delta check on a per-region basis (detect foreground vs background first) or expose a `pse_hue_sensitivity` knob.
+- **J2.6 content-moderation scores are not decisions** — return `score` + `category` and let the user / platform apply the policy. Never hard-block export on a content-moderation flag — that's someone else's compliance team's call.
+- **Node-based colour graph JSON schema needs versioning** — users will save graphs and expect them to keep loading in v1.28.0+. Pin the schema from day 1 with a `"version": 1` field and a migration path.
+- **J3.4 client-review feedback URL must be opt-in shareable** — default it to localhost-only with a "generate public link" button that exposes a reverse-proxy endpoint. Don't make the panel silently open a public port.
+- **J1.1 OCR + J3.5 de-subtitling must chain safely** — if J1.1 extraction fails (OCR confidence too low), J3.5 should not blindly inpaint whatever rectangles J1.1 guessed. Propagate a confidence threshold + abort flag.
+
+**Wave J total**: 15 new routes (J1.1-J1.5 + J2.1-J2.7), 9 new core modules, 9 new `check_*_available()` entries, zero new *required* pip deps, 1 new blueprint (`wave_j_bp`).
+
+### Wave J shipping cadence
+
+| Phase | Items | Target |
+|-------|-------|--------|
+| v1.26.0 (Wave I) | Panel polish + script-to-sequence | 2026-05 |
+| v1.26.x (Wave H Tier 2 fills) | Wire FlashVSR / ROSE / Sammie / OmniVoice / ReEzSynth / VidMuse | rolling through 2026-Q2 |
+| **v1.27.0 (Wave J Tier 1)** | **J1.1 VideOCR, J1.2 edl2cdl, J1.3 katna, J1.4 PSE hue, J1.5 fingerprint** | **2026-Q3** |
+| v1.27.x (Wave J Tier 2 stubs) | DCVC-RT, GIMM-VFI, PerVFI, ITMLUT, FoleyCrafter, SafeVision, interp aggregator | 2026-Q3 |
+| v1.28.0 (Wave J Tier 3 rollout) | J3.1-J3.6 UX patterns rolled in progressively | 2026-Q4 |
+
+---
+
 ## Sources (OSS survey, April 2026)
 
 - **Editors surveyed**: LosslessCut, auto-editor, editly, Descript,
@@ -541,3 +629,43 @@ releases.
   lazy JSX chunking, WS heartbeat, cross-platform launchers) +
   one strategic route (script-to-sequence `ExecuteEDL` equivalent)
   promoted into Wave I.
+
+## Sources (Wave J addendum — April 2026 three-angle research pass)
+
+- **Premiere / NLE OSS extensions**: [timminator/VideOCR](https://github.com/timminator/VideOCR),
+  [SWHL/RapidVideOCR](https://github.com/SWHL/RapidVideOCR),
+  [roybaer/burnt-in-subtitle-extractor](https://github.com/roybaer/burnt-in-subtitle-extractor),
+  [URUWorks/TeroSubtitler](https://github.com/URUWorks/TeroSubtitler),
+  [walter-arrighetti/edl2cdl](https://github.com/walter-arrighetti/edl2cdl),
+  [KyleTryon/MyFrame](https://github.com/KyleTryon/MyFrame),
+  [Techiebutler/freeframe](https://github.com/Techiebutler/freeframe),
+  [ros-dorian/TwitchHack](https://github.com/ros-dorian/TwitchHack),
+  [furmonenko/easy-markers-twitch](https://github.com/furmonenko/easy-markers-twitch),
+  [JaINTP/OBS-Highlight-Display](https://github.com/JaINTP/OBS-Highlight-Display),
+  [wulkano/Kap](https://github.com/wulkano/Kap),
+  [ShareX/ShareX](https://github.com/ShareX/ShareX),
+  [phiresky/ripgrep-all](https://github.com/phiresky/ripgrep-all).
+- **Q1-Q2 2026 niche AI (adopted into Tier 1/2)**:
+  [microsoft/DCVC](https://github.com/microsoft/DCVC) (DCVC-RT real-time neural codec),
+  [GSeanCDAT/GIMM-VFI](https://github.com/GSeanCDAT/GIMM-VFI) (NeurIPS'24 frame interpolation),
+  [mulns/PerVFI](https://github.com/mulns/PerVFI) (perception-oriented VFI),
+  [MCG-NJU/EMA-VFI](https://github.com/MCG-NJU/EMA-VFI) (CNN+Transformer VFI),
+  [AndreGuo/ITMLUT](https://github.com/AndreGuo/ITMLUT) (SDR→HDR 3D-LUT),
+  FoleyCrafter (Stable Audio-class SFX generation),
+  [keplerlab/katna](https://github.com/keplerlab/katna) (CLIP semantic keyframes),
+  [im-syn/SafeVision](https://github.com/im-syn/SafeVision) (content moderation),
+  [fcakyon/content-moderation-deep-learning](https://github.com/fcakyon/content-moderation-deep-learning),
+  [Light1Knight/video-fingerprinting-system](https://github.com/Light1Knight/video-fingerprinting-system) (pattern reimplemented MIT).
+- **Q1-Q2 2026 niche AI (evaluated, not adopted)**:
+  DiffuEraser, COCOCO, ViDeNN, UDVD, EmoMUNIT, C-MET (research-only),
+  GMR (motion retargeting — out of scope for an NLE extension),
+  ai-typography, atokern (out of scope), pHash (GPLv3).
+- **Creator-adjacent UX patterns surveyed**:
+  Happy Scribe, Rev, Aegisub, SubtitleEdit, Oto, Riverside,
+  Hindenburg Journalist Pro, Auphonic, Descript Overdub, Twitch Studio,
+  StreamElements, BOOMR, OBS + StreamDeck integrations, ScreenStudio,
+  Cap.so, Tella, Loom, Glocap, DaVinci Resolve (colour page + DIT),
+  Blackmagic LUT packs, Natural Light, Telestream Vantage,
+  Frame.io, Wipster, Vimeo Review, Shotgun, CantemoPortal,
+  Edpuzzle, Hypothesis.is, Milanote, VLC bookmarks,
+  Cursorful, Marp.
