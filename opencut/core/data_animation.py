@@ -20,7 +20,7 @@ import logging
 import math
 import os
 import tempfile
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional, Tuple
 
 # Module-level import so tests/callers can patch
