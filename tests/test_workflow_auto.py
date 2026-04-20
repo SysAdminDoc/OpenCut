@@ -131,8 +131,13 @@ class TestWatchFolderPolling:
             # Create a new file
             test_file = tmp_path / "new_video.mp4"
             test_file.write_bytes(b"x" * 2048)
-            # Wait for detection -- poll loop has a 0.5s stability delay
-            time.sleep(1.5)
+            # Poll for detection -- loop has a 0.5s stability delay.
+            # macOS/Windows CI runners are slow enough that a fixed
+            # 1.5s wait flakes; poll up to 6s instead and bail as soon
+            # as the callback fires.
+            deadline = time.time() + 6.0
+            while time.time() < deadline and callback.call_count < 1:
+                time.sleep(0.1)
             stop_watch(handle)
 
         assert callback.call_count >= 1

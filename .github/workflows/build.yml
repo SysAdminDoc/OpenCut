@@ -88,6 +88,32 @@ jobs:
           name: ${{ matrix.artifact }}
           path: dist/OpenCut-Server/
 
+      - name: Build Windows installer (Inno Setup)
+        if: runner.os == 'Windows' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        shell: pwsh
+        run: |
+          $iscc = "C:\Program Files (x86)\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) {
+            choco install innosetup -y --no-progress
+          }
+          # The .iss script expects ffmpeg binaries in a local ffmpeg/
+          # folder. CI installed ffmpeg via choco into PATH — copy the
+          # exes into place so ISCC can bundle them.
+          New-Item -ItemType Directory -Force -Path ffmpeg | Out-Null
+          $ff = (Get-Command ffmpeg.exe -ErrorAction Stop).Source
+          $fp = (Get-Command ffprobe.exe -ErrorAction Stop).Source
+          Copy-Item $ff ffmpeg/ffmpeg.exe -Force
+          Copy-Item $fp ffmpeg/ffprobe.exe -Force
+          & $iscc OpenCut.iss
+          Get-ChildItem installer/dist
+
+      - name: Archive Windows installer
+        if: runner.os == 'Windows' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenCut-Setup-Windows
+          path: installer/dist/OpenCut-Setup-*.exe
+
       - name: Upload to release
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -97,3 +123,11 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         shell: bash
+
+      - name: Upload installer to release
+        if: runner.os == 'Windows' && startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          gh release upload ${{ github.ref_name }} installer/dist/OpenCut-Setup-*.exe --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
