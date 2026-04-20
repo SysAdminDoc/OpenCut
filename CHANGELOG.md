@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.25.1] - 2026-04-20
+
+### Fixed
+
+Two user-reported bugs in the CEP panel: imported media not detected, and processed output landing next to the source clip instead of in the project folder.
+
+- **CEP project-item walker** — [`host/index.jsx`](extension/com.opencut.panel/host/index.jsx) `_walkProjectItems()` now uses `getMediaPath()` as the primary discriminator instead of an `item.type === 2` + `!item.getMediaPath` heuristic that broke silently on Premiere 25.x. The old heuristic misclassified bins that expose `getMediaPath` as a function (most versions do), so nested media was never traversed. New logic: if `getMediaPath()` returns a non-empty string, record it; else if the item has children, walk it regardless of reported type.
+- **Project-folder detection fallback** — [`host/index.jsx`](extension/com.opencut.panel/host/index.jsx) `getProjectMedia()` returns a best-guess project folder even when `app.project.path` is empty (i.e. the .prproj hasn't been saved yet). Priority chain: saved project path → directory of the first imported media → scratch disk path → empty. A new `projectFolderSource` field in the response tells the panel which fallback fired. Stops processed files from landing in `Downloads/` / network shares for unsaved projects.
+- **Panel `outputDir` preference honoured** — [`client/main.js`](extension/com.opencut.panel/client/main.js) introduces `_recomputeEffectiveOutputDir()` that layers the user's Settings → Output directory preference on top of the JSX-detected project folder. Previously the preference was saved to localStorage but ignored at job time; every `output_dir: projectFolder` call site now receives the resolved priority chain (user pref → detected project folder → empty). Recompute fires on settings save and on every media-list refresh.
+
+### Gotchas
+- **JSX walker is getMediaPath-first** — sequences and offline media both return empty `getMediaPath()`; the difference is sequences have 0 children. Both are now skipped cleanly. Bins with `type` reported as `undefined` / `0` / `3` on newer Premiere builds are now walked via the "has children" fallback.
+- **`projectFolder` is now the effective output dir**, not the raw detected value. The JSX-detected folder lives on the panel side in `_detectedProjectFolder`. If something needs the raw value, read that — don't read `projectFolder`.
+
 ## [1.25.0] - 2026-04-19
 
 ### Added — Wave H: Commercial Parity & Content-Creator Polish
