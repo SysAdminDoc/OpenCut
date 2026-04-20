@@ -2576,3 +2576,118 @@ function ocRemoveImportedItem(payloadJSON) {
         return JSON.stringify({ error: e.toString() });
     }
 }
+
+
+// ===========================================================================
+// v1.25.0 Wave H — QE reflection + BridgeTalk async progress
+// ===========================================================================
+
+/**
+ * H2.8 — Reflect the QE DOM's available methods so the panel can
+ * discover undocumented Premiere 2025+ APIs at runtime. Returns a JSON
+ * { methods: [...], premiere_version: "...", probed_at: <unix ts> }.
+ *
+ * Called once at panel startup; the panel POSTs the result to
+ * /system/qe-reflect so the server can surface the catalogue via
+ * GET /system/qe-reflect without re-probing.
+ */
+function ocQeReflect() {
+    var out = { methods: [], premiere_version: "", probed_at: 0, enabled: false };
+    try {
+        if (app && app.getAppSystemInfo) {
+            try {
+                var info = app.getAppSystemInfo();
+                if (info && info.appVersion) out.premiere_version = String(info.appVersion);
+            } catch (eInfo) {}
+        }
+        if (!out.premiere_version && app && app.version) {
+            out.premiere_version = String(app.version);
+        }
+
+        // QE is gated behind enableQE(); not all builds expose it.
+        try {
+            if (typeof app.enableQE === "function") {
+                app.enableQE();
+                out.enabled = true;
+            }
+        } catch (eQe) {
+            out.enabled = false;
+        }
+
+        // Reflect on the qe namespace if present.
+        var names = [];
+        try {
+            if (typeof qe !== "undefined" && qe && qe.reflect && qe.reflect.methods) {
+                var mm = qe.reflect.methods;
+                for (var i = 0; i < mm.length; i++) {
+                    try {
+                        if (mm[i] && mm[i].name) names.push(String(mm[i].name));
+                    } catch (eN) {}
+                }
+            } else if (typeof qe !== "undefined" && qe) {
+                // Older builds: walk the object's own keys.
+                for (var k in qe) {
+                    if (typeof qe[k] === "function") names.push(String(k));
+                }
+            }
+        } catch (eRefl) {
+            _ocLog("ocQeReflect: reflect call failed: " + eRefl.toString());
+        }
+
+        // Cap to 500 entries so the payload stays small.
+        if (names.length > 500) names.length = 500;
+        out.methods = names;
+
+        try { out.probed_at = (new Date()).getTime() / 1000.0; } catch (eT) { out.probed_at = 0; }
+    } catch (e) {
+        _ocLog("ocQeReflect error: " + e.toString());
+        out.error = e.toString();
+    }
+    return JSON.stringify(out);
+}
+
+
+/**
+ * H2.7 — Dispatch a namespaced CSXS event the panel can listen for.
+ *
+ * Usage from another JSX function:
+ *   _ocDispatchEvent("com.opencut.job.progress", { jobId: "...", pct: 42 });
+ *
+ * The panel side registers via
+ *   cs.addEventListener("com.opencut.<name>", handler)
+ *
+ * Fails silently on older hosts without CSXSEvent. Do NOT use template
+ * literals — ExtendScript is ES3 only.
+ */
+function _ocDispatchEvent(eventType, payloadObj) {
+    try {
+        if (typeof CSXSEvent === "undefined") return false;
+        var evt = new CSXSEvent();
+        evt.type = String(eventType || "com.opencut.event");
+        try {
+            evt.data = payloadObj ? JSON.stringify(payloadObj) : "";
+        } catch (e1) {
+            evt.data = "";
+        }
+        evt.dispatch();
+        return true;
+    } catch (e) {
+        _ocLog("_ocDispatchEvent failed: " + e.toString());
+        return false;
+    }
+}
+
+
+/**
+ * H2.7 — Thin wrapper the panel can invoke to confirm CSXS event
+ * dispatch is wired up correctly. Panel listens for
+ *   com.opencut.ping.ack
+ * and toasts "BridgeTalk async ready" on receipt.
+ */
+function ocEmitPingEvent(tag) {
+    var ok = _ocDispatchEvent("com.opencut.ping.ack", {
+        tag: String(tag || ""),
+        t: (new Date()).getTime()
+    });
+    return JSON.stringify({ dispatched: !!ok });
+}

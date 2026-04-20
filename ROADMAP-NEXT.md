@@ -363,6 +363,72 @@ should ship in parallel with Wave A/B work:
 
 ---
 
+## Wave H — Commercial Parity & Content-Creator Polish (v1.25.0, 2026-04-19)
+
+Cross-project research pass against commercial editors (Opus Clip,
+Descript, CapCut, ScreenStudio, Runway Gen-3, DaVinci 19+ Magic Mask,
+Adobe Firefly Video) and GitHub projects that landed *after* the
+April-2026 survey (FlashVSR, ROSE, Sammie-Roto-2, OmniVoice, ReEzSynth,
+VidMuse, VideoAgent, ViMax, Hailuo 2.3, Seedance 2.0, GaussianHeadTalk,
+FantasyTalking2). All three tiers in this wave ship together as v1.25.0
+"shipped scaffolding" — Tier 1 lands as fully-working backend + panel
+additions; Tier 2/3 AI-model features land as `check_X_available()`-
+gated stubs returning 503 `MISSING_DEPENDENCY` with install hints,
+matching the v1.18–1.20 pattern. Frontend wiring trails by one release.
+
+### Tier 1 — High ROI, Small Effort (content-creator polish)
+
+| # | Feature | Module (new) | Routes | OSS / Product Source |
+|---|---------|--------------|--------|----------------------|
+| H1.1 | **Virality / hook score 0–100** — multimodal: transcript sentiment × audio energy peaks × visual salience. Ranks short-form clip candidates before shorts_pipeline picks one. | `core/virality_score.py` | `POST /analyze/virality`, `POST /analyze/virality/rank` | Opus Clip pattern |
+| H1.2 | **Cursor-event auto-zoom** — detect mouse-click timestamps from a screen-recording metadata side-car (or OpenCV diff-based cursor detection) and emit timeline-aligned zoom keyframes. Extends `auto_zoom.py`. | `core/cursor_zoom.py` | `POST /video/cursor-zoom` | ScreenStudio / Screen.Studio |
+| H1.3 | **Eye-gaze correction** — MediaPipe face-mesh keypoint rotation to fake camera gaze for teleprompter reads. | `core/eye_contact.py` | `POST /video/eye-contact` | Descript Eye Contact |
+| H1.4 | **In-panel changelog toast** — panel fetches GitHub releases on startup, shows unseen release notes. | `client/main.js` (+ `POST /system/changelog/mark-seen`) | `GET /system/changelog/latest`, `POST /system/changelog/mark-seen` | Every polished CEP extension |
+| H1.5 | **"Send log" / crash-to-issue** — panel button posts filtered `/logs/tail` + `crash.log` excerpt into a pre-filled GitHub issue URL. | `client/main.js` (+ `GET /system/issue-report/bundle`) | `GET /system/issue-report/bundle` | Bolt CEP convention |
+| H1.6 | **Demo-footage bundle** — 10–30 s public-domain sample ships under `opencut/data/demo/sample.mp4`; "Try on demo" button in every tab pre-fills `filepath`. | `opencut/data/demo/` + `GET /system/demo/sample` | `GET /system/demo/sample`, `GET /system/demo/list` | Kapwing / AEJuice |
+| H1.7 | **Preset sharing via GitHub Gist** — export/import workflow presets, LUT configs, and favorites through Gist URLs. Pure stdlib `urllib`. | `core/gist_sync.py` | `POST /settings/gist/push`, `POST /settings/gist/pull`, `GET /settings/gist/info` | Community pattern |
+| H1.8 | **First-run onboarding wizard** — 5-step panel tour (Connect → Pick clip → Cut → Caption → Export). Skippable, remembered per profile. | `client/onboarding.js` + `client/onboarding.css` | `GET /settings/onboarding`, `POST /settings/onboarding` | FCP, Premiere built-in tours |
+
+### Tier 2 — High Impact, Medium Effort (new AI surfaces)
+
+| # | Feature | Module (stub) | Routes | Source |
+|---|---------|--------------|--------|--------|
+| H2.1 | **FlashVSR** — streaming diffusion VSR (CVPR'26). Preview-grade 4K via locality-constrained sparse attention. | `core/upscale_flashvsr.py` | `POST /video/upscale/flashvsr`, `GET /video/upscale/flashvsr/info` | [OpenImagingLab/FlashVSR](https://github.com/OpenImagingLab/FlashVSR) |
+| H2.2 | **ROSE** — video inpainting that preserves shadows/reflections (the "remove object but keep shadow" problem). | `core/inpaint_rose.py` | `POST /video/inpaint/rose`, `GET /video/inpaint/rose/info` | [rose2025-inpaint.github.io](https://rose2025-inpaint.github.io/) |
+| H2.3 | **Sammie-Roto-2** — AI rotoscoping with VideoMaMa segmentation + in/out markers (v2.3 Mar 2026). Temporal complement to BiRefNet. | `core/matte_sammie.py` | `POST /video/matte/sammie`, `GET /video/matte/sammie/info` | [Zarxrax/Sammie-Roto-2](https://github.com/Zarxrax/Sammie-Roto-2) |
+| H2.4 | **OmniVoice** — zero-shot TTS with 600+ languages. New backend alongside F5-TTS / Chatterbox for long-tail languages. | `core/tts_omnivoice.py` | `POST /audio/tts/omnivoice`, `GET /audio/tts/omnivoice/models` | [k2-fsa/OmniVoice](https://github.com/k2-fsa/OmniVoice) |
+| H2.5 | **ReEzSynth** — flicker-free Ebsynth successor (bidirectional NNF + temporal propagation). | `core/style_reezsynth.py` | `POST /video/style/reezsynth`, `GET /video/style/reezsynth/info` | [FuouM/ReEzSynth](https://github.com/FuouM/ReEzSynth) |
+| H2.6 | **VidMuse** — video-to-music generation (CVPR'25) with long-short-term modeling. Pairs with existing MusicGen. | `core/music_vidmuse.py` | `POST /audio/music/vidmuse`, `GET /audio/music/vidmuse/info` | [vidmuse.github.io](https://vidmuse.github.io/) |
+| H2.7 | **BridgeTalk async JSX bridge** — replace panel polling with CSXS events emitted from JSX for cut-review / batch-rename / sequence-introspection ops. | `host/index.jsx` (extend) + `client/main.js` event listener | — (event plumbing only) | Adobe CEP docs |
+| H2.8 | **QE API reflection probe** — call `qe.reflect.methods` at startup, surface the result through `GET /system/qe-reflect`. Unlocks undocumented Premiere 2025+ APIs. | `host/index.jsx::ocQeReflect` + `routes/system.py` | `GET /system/qe-reflect` | vakago-tools.com |
+
+### Tier 3 — Strategic Bets (stub + research note)
+
+| # | Feature | Module (stub) | Routes | Source |
+|---|---------|--------------|--------|--------|
+| H3.1 | **VideoAgent / ViMax** — agentic LLM-routed search across indexed footage + auto-storyboard from a script. | `core/video_agent.py` | `POST /agent/search-footage`, `POST /agent/storyboard` | [HKUDS/VideoAgent](https://github.com/HKUDS/VideoAgent), [HKUDS/ViMax](https://github.com/HKUDS/ViMax) |
+| H3.2 | **Hailuo 2.3 / Seedance 2.0** — commercial gen-video backends (closed-weights, HTTP API). Alternative to LTX-Video / Wan 2.1 for higher quality at the cost of cloud dependency. | `core/gen_video_cloud.py` | `POST /generate/cloud/submit`, `GET /generate/cloud/status/<id>`, `GET /generate/cloud/backends` | hailuo-02.com, seed.bytedance.com |
+| H3.3 | **GaussianHeadTalk / FantasyTalking2** — wobble-free talking-head alternatives to LatentSync/MuseTalk for higher-end dubbing. | `core/lipsync_advanced.py` | `POST /lipsync/gaussian`, `POST /lipsync/fantasy2`, `GET /lipsync/advanced/backends` | WACV/AAAI 2026 |
+| H3.4 | **Magnetic-timeline snap UI** — FCP-inspired gap-closing snap for the cut review panel (drag cuts across sequence boundaries without gaps). | `client/main.js` (cut review panel) | — (frontend only) | FCP |
+| H3.5 | **WebView UI UXP migration path** — adopt Bolt UXP's WebView pattern to share the CEP codebase post-CEP-EOL (Sept 2026). Research spike only; no code lands in v1.25.0. | — | — | [Bolt UXP WebView](https://blog.developer.adobe.com/en/publish/2026/03/introducing-webview-ui-in-bolt-uxp-build-richer-adobe-plugins-faster/) |
+
+### Tier 1 ships **fully working** in v1.25.0. Tier 2 ships as stubs + `check_X_available()` guards returning 503 `MISSING_DEPENDENCY` with install hints. Tier 3 lands as route scaffolding with a single "not yet implemented" response body + a TODO comment naming the upstream reference; promoted to Tier 2 once a user files a feature request or the upstream licence clarifies.
+
+**Wave H total**: 21 new routes (Tier 1 + Tier 2), ~8 new stub routes (Tier 3), ~14 new `check_*_available()` entries, zero new *required* pip deps, 1 new blueprint (`wave_h_bp`).
+
+### Wave H gotchas
+- **Gist sharing writes to public gists by default** — `/settings/gist/push` requires an explicit `private=True` flag to target a secret gist, and requires `GITHUB_TOKEN` env for authenticated push. Unauthenticated push uses anonymous gists (IP-rate-limited by GitHub).
+- **Virality score is heuristic** — no ML model; a simple weighted blend of audio-energy peaks (from existing `silence.py`), transcript sentiment (via `core/llm.py` if available, falls back to keyword lexicon), and visual salience (optical-flow magnitude). Results are ranked 0–100 but the absolute number is not comparable across video types.
+- **Cursor-zoom metadata parsing** — accepts either a ScreenStudio / Screen.Studio sidecar JSON (`{clicks: [{t, x, y}]}`), an OBS-WebSocket recording log, or a frame-diff fallback (slower, OpenCV-based). Never trust client-supplied coordinates; clamp to `[0, width] × [0, height]`.
+- **Eye-contact shader** — the MediaPipe face-mesh keypoint rotation fakes gaze at the cost of introducing a small warp around the eye region. The module returns a `warp_factor` between 0 and 1 so frontend previews can show the user a "before/after" slider rather than commit irreversibly.
+- **Demo footage is bundled only in installer builds** — PyInstaller spec adds `opencut/data/demo/sample.mp4`; pip-installed dev installs rely on a post-install `opencut-server --download-demo` flag that pulls from a GitHub release asset.
+- **Onboarding wizard persists per-profile** — stored as `onboarding_seen: true` in `~/.opencut/onboarding.json`; deleting the file re-triggers the tour. Don't use localStorage — it doesn't survive panel reinstalls.
+- **Issue-report bundle scrubs filepaths** — `/system/issue-report/bundle` redacts any path under `$HOME` to `~/.../<basename>`. Never let a user email raw crash.log to a bug tracker that could include private directory structures.
+- **BridgeTalk event names are namespaced** — all events use the `com.opencut.<event>` prefix. Panel listens via `CSInterface.addEventListener` in `main.js`. JSX emits via `new CSXSEvent(...)` (ES3-safe; no template literals).
+- **Tier 3 routes always return 501** — `ROUTE_STUBBED` error code. Frontend treats 501 as "coming soon" (greyed-out with tooltip), never as a failed call.
+
+---
+
 ## Sources (OSS survey, April 2026)
 
 - **Editors surveyed**: LosslessCut, auto-editor, editly, Descript,
@@ -396,3 +462,28 @@ should ship in parallel with Wave A/B work:
 Revisit this list every 6 months. AI video space moves quickly — a new
 model on par with Chatterbox or LTX-Video can appear between major
 releases.
+
+---
+
+## Sources (Wave H addendum, April 2026)
+
+- **Commercial products**: Opus Clip, Reap, Vidyo.ai, SubMagic,
+  Riverside Magic Clips, Descript (Storyboard / Eye Contact / Studio
+  Sound / Rooms / Underlord), Runway ML Gen-3 (Act-One, Motion Brush,
+  Multi-Motion), CapCut + CapCut Pro desktop, Adobe Firefly Video
+  (Generative Extend, Enhance Speech), DaVinci Resolve 19+
+  (Magic Mask, UltraNR, Voice Isolation, AI Smart Reframe), FCP / Motion,
+  Kapwing, Veed.io, Clipchamp, Motion Array / AEJuice / Envato,
+  ScreenStudio / Screen.Studio / Loom / Tella.
+- **Post-April-2026 GitHub projects**: FlashVSR (CVPR'26 VSR), STAR
+  (ICCV'25 spatial-temporal augmentation), ROSE (video inpainting with
+  shadows), FloED (flow-guided inpainting), VideoVanish, Hailuo 2.3,
+  Seedance 2.0, GaussianHeadTalk (WACV'26), FantasyTalking2 (AAAI'26),
+  VASA-3D (NeurIPS'25), OmniVoice (k2-fsa), Voice-Pro (WebUI),
+  ViDubb (video dubbing), SpectroStream (neural codec, Aug'25),
+  Sammie-Roto-2 (v2.3 Mar'26), Cutie Roto, RotoForge-AI,
+  ReEzSynth (bidirectional Ebsynth), VidMuse (CVPR'25 video-to-music),
+  VideoAgent, ViMax (script-to-video agentic).
+- **CEP/UXP ecosystem**: bolt-cep (Hyper Brew), Bolt UXP WebView UI,
+  Adobe UXP Premiere Pro Samples, Adobe CEP Samples (PProPanel),
+  SoundBuddy Studio, jumpcut, vakago-tools QE API documentation.
