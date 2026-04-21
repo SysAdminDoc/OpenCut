@@ -311,6 +311,19 @@ def queue_download(
             )
             return prog
         url = info["url"]
+    else:
+        # User-supplied URL — validate it blocks file://, private IPs, and
+        # other non-public targets before handing it to urllib.
+        from opencut.core.url_safety import validate_public_http_url  # local import avoids circular
+        try:
+            url = validate_public_http_url(url, label="Model download URL")
+        except ValueError as exc:
+            prog = DownloadProgress(
+                model_name=model_name,
+                status="failed",
+                error=str(exc),
+            )
+            return prog
 
     if output_path is None:
         output_path = _model_output_path(model_name, url)

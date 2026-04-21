@@ -230,6 +230,12 @@ def _post_webhook(
     timeout: int = 10,
 ) -> NotificationResult:
     """POST a JSON payload to a webhook URL with retry."""
+    from opencut.core.url_safety import validate_public_http_url
+    try:
+        url = validate_public_http_url(url, label=f"{platform.capitalize()} webhook URL")
+    except ValueError as exc:
+        return NotificationResult(success=False, platform=platform, error=str(exc))
+
     headers = {"Content-Type": "application/json"}
     body = json.dumps(payload).encode("utf-8")
 

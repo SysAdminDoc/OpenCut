@@ -369,6 +369,9 @@ def download_sfx(
         if not download_url:
             raise ValueError(f"No preview URL found for Freesound sound {sfx_id}")
 
+        from opencut.core.url_safety import validate_public_http_url
+        download_url = validate_public_http_url(download_url, label="Freesound preview URL")
+
         if on_progress:
             on_progress(50, f"Downloading {name}...")
 

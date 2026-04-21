@@ -79,16 +79,22 @@ def get_config() -> PlausibleConfig:
     except Exception:  # noqa: BLE001
         _ver = "unknown"
     ua = os.environ.get("PLAUSIBLE_USER_AGENT") or f"opencut-telemetry/{_ver}"
+
+    if host:
+        from opencut.core.url_safety import validate_public_http_url
+        try:
+            host = validate_public_http_url(host, label="PLAUSIBLE_HOST")
+        except ValueError as exc:
+            logger.warning("Telemetry disabled — invalid PLAUSIBLE_HOST: %s", exc)
+            host = ""
+
     enabled = bool(host and domain)
     return PlausibleConfig(host=host, domain=domain, user_agent=ua, enabled=enabled)
 
 
 def check_plausible_available() -> bool:
-    """True when env is configured AND the host looks well-formed."""
-    cfg = get_config()
-    if not cfg.enabled:
-        return False
-    return cfg.host.startswith(("http://", "https://"))
+    """True when env is configured with a valid public host."""
+    return get_config().enabled
 
 
 # ---------------------------------------------------------------------------

@@ -1,6 +1,7 @@
 """Shared URL validation helpers for outbound network calls."""
 
 import ipaddress
+import socket
 from urllib.parse import urlparse
 
 
@@ -37,6 +38,31 @@ def validate_public_http_url(url: str, *, label: str = "URL") -> str:
     try:
         addr = ipaddress.ip_address(hostname)
     except ValueError:
+        # Hostname (not a bare IP) — resolve it and validate every returned address.
+        # This is a best-effort check: it catches static private-IP domains but
+        # does NOT fully prevent DNS rebinding (the IP may change between validation
+        # and the actual request).
+        try:
+            resolved = {
+                res[4][0]
+                for res in socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+            }
+        except socket.gaierror as exc:
+            raise ValueError(f"{label} hostname does not resolve: {exc}") from exc
+        for raw in resolved:
+            try:
+                raddr = ipaddress.ip_address(raw)
+            except ValueError:
+                continue
+            if (
+                raddr.is_loopback
+                or raddr.is_unspecified
+                or raddr.is_private
+                or raddr.is_link_local
+                or raddr.is_reserved
+                or raddr.is_multicast
+            ):
+                raise ValueError(f"{label} must not target private/reserved networks")
         return cleaned
 
     if addr.is_loopback or addr.is_unspecified:
