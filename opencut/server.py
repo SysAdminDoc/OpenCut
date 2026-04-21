@@ -5,11 +5,9 @@ Local HTTP server that the Premiere Pro CEP panel communicates with.
 Runs on localhost:5679 and handles all processing requests.
 """
 
-import json
 import logging
 import logging.handlers
 import os
-import socket
 import subprocess as _sp
 import sys
 import threading as _log_threading
@@ -431,265 +429,57 @@ def create_app(config=None):
     return _app
 
 
-# Backward-compat: module-level singleton used by entry points and tests
-app = create_app()
+# Backward-compat: module-level singleton used by entry points and tests.
+# Access via `from opencut.server import app` triggers __getattr__ below,
+# which creates the singleton on first use rather than at import time.
+_app_singleton = None
+_app_lock = _log_threading.Lock()
 
 
-# ---------------------------------------------------------------------------
-# PID File Management
-# ---------------------------------------------------------------------------
-PID_FILE = os.path.join(os.path.expanduser("~"), ".opencut", "server.pid")
+def _get_app():
+    """Return the shared Flask app singleton, creating it on first call."""
+    global _app_singleton
+    with _app_lock:
+        if _app_singleton is None:
+            _app_singleton = create_app()
+    return _app_singleton
 
 
-def _write_pid(port: int):
-    """Write current PID and port to file so future instances can find us."""
-    try:
-        import tempfile
-        pid_dir = os.path.dirname(PID_FILE)
-        os.makedirs(pid_dir, exist_ok=True)
-        # Atomic write: temp file + rename to prevent partial reads
-        fd, tmp_path = tempfile.mkstemp(dir=pid_dir, suffix=".tmp", prefix="server.pid.")
-        try:
-            with os.fdopen(fd, "w", encoding="utf-8") as f:
-                f.write(f"{os.getpid()}\n{port}\n")
-            os.replace(tmp_path, PID_FILE)
-        except BaseException:
-            with suppress(OSError):
-                os.unlink(tmp_path)
-            raise
-        logger.debug(f"Wrote PID file: pid={os.getpid()} port={port}")
-    except Exception as e:
-        logger.warning(f"Could not write PID file: {e}")
+def __getattr__(name: str):
+    """Lazy attribute access for module-level names.
 
-
-def _read_pid():
-    """Read PID and port from file. Returns (pid, port) or (None, None)."""
-    try:
-        if os.path.exists(PID_FILE):
-            with open(PID_FILE, "r", encoding="utf-8") as f:
-                lines = f.read().strip().split("\n")
-            pid = int(lines[0]) if lines else None
-            port = int(lines[1]) if len(lines) > 1 else None
-            return pid, port
-    except Exception:
-        pass
-    return None, None
-
-
-def _remove_pid():
-    """Remove PID file."""
-    try:
-        if os.path.exists(PID_FILE):
-            os.unlink(PID_FILE)
-    except Exception:
-        pass
-
-
-def _is_pid_alive(pid: int) -> bool:
-    """Check if a process with the given PID is still running."""
-    if pid is None:
-        return False
-    try:
-        if sys.platform == "win32":
-            result = _sp.run(
-                ["tasklist", "/FI", f"PID eq {pid}", "/NH", "/FO", "CSV"],
-                capture_output=True, text=True, timeout=5, check=False
-            )
-            # CSV format: "name","pid","session","session#","mem"
-            # Check that the PID appears as an exact CSV field
-            return f'"{pid}"' in result.stdout
-        else:
-            os.kill(pid, 0)  # Signal 0 = check if alive
-            return True
-    except (OSError, _sp.TimeoutExpired):
-        return False
-
-
-# ---------------------------------------------------------------------------
-# Port Checking (with SO_REUSEADDR to handle TIME_WAIT)
-# ---------------------------------------------------------------------------
-def _check_port(host: str, port: int) -> bool:
+    Supports ``from opencut.server import app`` without triggering
+    ``create_app()`` at import time.
     """
-    Check if a port is available for binding.
-    Uses SO_REUSEADDR so TIME_WAIT sockets from recently-killed servers
-    don't falsely report the port as busy.
-    """
-    try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            s.settimeout(1)
-            s.bind((host, port))
-            return True
-    except OSError:
-        return False
-
-
-def _is_opencut_on_port(host: str, port: int) -> bool:
-    """Check if an OpenCut server is responding on the given port."""
-    import urllib.request
-    try:
-        req = urllib.request.Request(f"http://{host}:{port}/health", method="GET")
-        with urllib.request.urlopen(req, timeout=2) as resp:
-            data = json.loads(resp.read())
-            return data.get("status") == "ok"
-    except Exception:
-        return False
+    if name == "app":
+        inst = _get_app()
+        # Populate __dict__ so subsequent accesses bypass this hook.
+        globals()["app"] = inst
+        return inst
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
 # ---------------------------------------------------------------------------
-# Kill Strategies (tried in order, each one more aggressive)
+# PID File Management, Port Checking, and Kill Strategies
 # ---------------------------------------------------------------------------
-def _kill_via_shutdown_endpoint(host: str, port: int) -> bool:
-    """Strategy 1: Ask the server to shut itself down via HTTP."""
-    import urllib.request
-    try:
-        # First fetch CSRF token from /health
-        csrf_token = ""
-        try:
-            health_req = urllib.request.Request(f"http://{host}:{port}/health", method="GET")
-            with urllib.request.urlopen(health_req, timeout=2) as health_resp:
-                health_data = json.loads(health_resp.read())
-                csrf_token = health_data.get("csrf_token", "")
-        except Exception:
-            pass
-
-        req = urllib.request.Request(
-            f"http://{host}:{port}/shutdown",
-            method="POST",
-            headers={
-                "Content-Type": "application/json",
-                "X-OpenCut-Token": csrf_token,
-            },
-            data=b"{}",
-        )
-        with urllib.request.urlopen(req, timeout=3) as resp:
-            data = json.loads(resp.read())
-        old_pid = data.get("pid")
-        logger.info(f"Shutdown request accepted by server on :{port} (pid={old_pid})")
-        return True
-    except Exception:
-        return False
-
-
-def _kill_via_pid(pid: int) -> bool:
-    """Strategy 2: Kill a specific PID directly."""
-    if pid is None or not _is_pid_alive(pid):
-        return False
-    try:
-        print(f"  Killing old server process (PID {pid})...")
-        logger.info(f"Killing PID {pid}")
-        if sys.platform == "win32":
-            # /F = force, /T = kill entire process tree (bat launcher + python)
-            _sp.run(["taskkill", "/F", "/T", "/PID", str(pid)],
-                    capture_output=True, timeout=10, check=False)
-        else:
-            os.kill(pid, 9)  # SIGKILL
-            # Reap zombie if it happens to be our child
-            with suppress(ChildProcessError):
-                os.waitpid(pid, os.WNOHANG)
-
-        # Verify kill worked (retry a few times)
-        for _ in range(6):
-            time.sleep(0.3)
-            if not _is_pid_alive(pid):
-                return True
-        logger.warning(f"PID {pid} still alive after kill attempt")
-        return False
-    except Exception as e:
-        logger.warning(f"PID kill failed for {pid}: {e}")
-        return False
-
-
-def _kill_via_netstat(host: str, port: int) -> bool:
-    """Strategy 3: Find PID holding the port via netstat and force-kill it."""
-    killed_any = False
-    try:
-        if sys.platform == "win32":
-            result = _sp.run(
-                ["netstat", "-ano", "-p", "TCP"],
-                capture_output=True, text=True, timeout=10, check=False
-            )
-            for line in result.stdout.splitlines():
-                # Only match LISTENING state with exact port
-                # Format: "  TCP    127.0.0.1:5679    0.0.0.0:0    LISTENING    12345"
-                parts = line.split()
-                if len(parts) >= 5 and parts[3] == "LISTENING":
-                    local_addr = parts[1]
-                    if local_addr.endswith(f":{port}"):
-                        pid = parts[4]
-                        if pid.isdigit() and int(pid) != os.getpid():
-                            print(f"  Found process {pid} on port {port}, killing...")
-                            logger.info(f"Killing PID {pid} found on port {port}")
-                            _sp.run(["taskkill", "/F", "/T", "/PID", pid],
-                                    capture_output=True, timeout=10, check=False)
-                            killed_any = True
-        else:
-            result = _sp.run(
-                ["lsof", "-ti", f":{port}"],
-                capture_output=True, text=True, timeout=5, check=False
-            )
-            for pid in result.stdout.strip().split():
-                if pid.isdigit() and int(pid) != os.getpid():
-                    print(f"  Found process {pid} on port {port}, killing...")
-                    logger.info(f"Killing PID {pid} found on port {port}")
-                    os.kill(int(pid), 9)
-                    killed_any = True
-    except Exception as e:
-        logger.warning(f"Netstat kill failed for port {port}: {e}")
-    return killed_any
-
-
-def _wait_for_port(host: str, port: int, timeout: float = 8.0) -> bool:
-    """Wait up to `timeout` seconds for a port to become available."""
-    deadline = time.time() + timeout
-    while time.time() < deadline:
-        if _check_port(host, port):
-            return True
-        time.sleep(0.4)
-    return False
-
-
-# ---------------------------------------------------------------------------
-# Master Kill Sequence: nuke everything, reclaim the port
-# ---------------------------------------------------------------------------
-def _nuke_old_servers(host: str, port: int) -> bool:
-    """
-    Aggressively kill any existing OpenCut server(s) to reclaim the port.
-    Tries multiple strategies in sequence. Returns True if port is free.
-    """
-    print(f"  Port {port} is in use. Cleaning up...")
-    logger.info(f"Port {port} busy - starting kill sequence")
-
-    # --- Step 1: Send /shutdown to the target port ---
-    _kill_via_shutdown_endpoint(host, port)
-
-    if _wait_for_port(host, port, timeout=3.0):
-        print("  Graceful shutdown succeeded.")
-        return True
-
-    # --- Step 2: Kill via PID file ---
-    old_pid, old_port = _read_pid()
-    if old_pid:
-        _kill_via_pid(old_pid)
-        _remove_pid()
-        if _wait_for_port(host, port, timeout=3.0):
-            print(f"  Killed old server via PID file (PID {old_pid}).")
-            return True
-
-    # --- Step 3: Kill via netstat (find whoever is holding the port) ---
-    _kill_via_netstat(host, port)
-    if _wait_for_port(host, port, timeout=4.0):
-        print(f"  Killed process holding port {port}.")
-        return True
-
-    # --- Step 4: Last check with SO_REUSEADDR (TIME_WAIT is OK) ---
-    if _check_port(host, port):
-        print(f"  Port {port} available (socket in TIME_WAIT, safe to reuse).")
-        return True
-
-    print(f"  Could not free port {port}.")
-    logger.warning(f"All kill strategies failed for port {port}")
-    return False
+# Extracted to opencut/pid.py.  Re-exported here so any code that previously
+# did `from opencut.server import _read_pid` (or similar) continues to work.
+# Extracted to opencut/pid.py.  Re-exported here so any code that previously
+# did `from opencut.server import _read_pid` (or similar) continues to work.
+from opencut.pid import (  # noqa: E402, F401
+    PID_FILE,
+    _check_port,
+    _is_opencut_on_port,
+    _is_pid_alive,
+    _kill_via_netstat,
+    _kill_via_pid,
+    _kill_via_shutdown_endpoint,
+    _nuke_old_servers,
+    _read_pid,
+    _remove_pid,
+    _wait_for_port,
+    _write_pid,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -809,7 +599,7 @@ def run_server(host="127.0.0.1", port=5679, debug=False):
     # when launched via VBS hidden launcher where console is invisible)
     _show_startup_notification(effective_port)
 
-    app.run(host=host, port=effective_port, debug=debug, threaded=True)
+    _get_app().run(host=host, port=effective_port, debug=debug, threaded=True)
 
 
 def download_models(model_size="base"):

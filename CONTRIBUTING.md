@@ -35,6 +35,15 @@ tests/                    pytest suite; tests/fuzz/ for Atheris harness
 scripts/                  sync_version, sbom, misc dev helpers
 ```
 
+### Wave-file blueprints
+
+`routes/wave_a_routes.py` through `wave_h_routes.py` are delivery batch labels, not
+permanent taxonomy. Each wave file holds features that were added in a release cycle
+before a proper semantic home was decided. When touching a wave file, prefer migrating
+the endpoint to a purpose-named blueprint (e.g. `audio_processing_routes.py`) rather
+than adding more routes to the wave file. New features should never land in a wave
+file — create a semantic blueprint instead.
+
 ## Setting up
 
 ```bash
@@ -59,6 +68,7 @@ Open Chrome at `http://localhost:7474` after launching Premiere with the panel v
 
 - **New async route** → `@require_csrf` → `@async_job("job_type")` on the route; worker body receives `(job_id, filepath, data)`. Add the rule to `_ALLOWED_QUEUE_ENDPOINTS` in `jobs_routes.py`.
 - **New optional dep** → add a `check_X_available()` entry in `opencut/checks.py`. Gate imports inside the function. Never hard-fail if the dep is missing — return a 503 `MISSING_DEPENDENCY` with an install hint.
+- **Heavy optional imports** (cv2, torch, numpy, librosa, PIL) → always import them inside the function that needs them, never at module top-level in a route file. Top-level heavy imports add latency to every test collection and cold-start even when the feature isn't used.
 - **Dataclass results** → make them subscriptable via `__getitem__` + `keys()` so routes can `return dict(result)` to Flask's `jsonify` without a `.to_dict()` detour. See `core/neural_interp.InterpResult` for the canonical shape.
 - **FFmpeg subprocess** → use `run_ffmpeg(cmd, job_id=job_id)` (v1.24+). The `job_id` parameter is how cancel actually kills the child process. Without it, you get the legacy non-cancellable path.
 - **Rate limiting** → apply `@rate_limit_category("gpu_heavy" | "cpu_heavy" | "io_bound" | "light")` on the route. Use `@gpu_exclusive` on the inner worker body for GPU model loads.

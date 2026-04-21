@@ -299,7 +299,7 @@ def _update_via_git() -> UpdateResult:
         )
     try:
         result = subprocess.run(
-            ["git", "pull", "--ff-only"],
+            ["git", "-c", "core.hooksPath=/dev/null", "pull", "--ff-only"],
             capture_output=True,
             text=True,
             timeout=120,

@@ -76,6 +76,42 @@ MAX_BATCH_FILES = _JOB_CONFIG.max_batch_files
 MAX_PERSISTED_JOB_PAYLOAD_BYTES = 64 * 1024
 
 
+class JobRegistry:
+    """Encapsulates the three module-level job-state globals.
+
+    Exists so tests (and future multi-app setups) can create isolated
+    instances rather than patching module globals.  The module-level
+    ``jobs``, ``job_lock``, and ``_job_processes`` names remain as
+    backward-compatible aliases pointing to the default registry.
+
+    Usage (isolated test fixture)::
+
+        registry = JobRegistry()
+        monkeypatch.setattr("opencut.jobs.jobs", registry.jobs)
+        monkeypatch.setattr("opencut.jobs.job_lock", registry.lock)
+        monkeypatch.setattr("opencut.jobs._job_processes", registry.processes)
+    """
+
+    def __init__(self):
+        self.jobs: dict = {}
+        self.lock: threading.Lock = threading.Lock()
+        self.processes: dict = {}  # job_id -> Popen
+
+    def reset(self):
+        """Clear all state; useful for test teardown."""
+        with self.lock:
+            self.jobs.clear()
+            self.processes.clear()
+
+
+# Default instance; module-level aliases point here for backward compat.
+_default_registry = JobRegistry()
+# NOTE: jobs / job_lock / _job_processes are intentionally NOT delegated to
+# _default_registry because 80+ route files already hold direct references to
+# these names.  Changing them would require a mass-import update.  Use
+# JobRegistry for new code that needs isolation.
+
+
 def _safe_error(e, context=""):
     """Log the real exception and return a structured error response.
 

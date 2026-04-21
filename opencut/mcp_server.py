@@ -19,6 +19,7 @@ import json
 import logging
 import re
 import sys
+import time
 import urllib.error
 import urllib.request
 
@@ -28,16 +29,28 @@ logger = logging.getLogger("opencut.mcp")
 
 BACKEND_URL = "http://127.0.0.1:5679"
 _csrf_token = ""
+_csrf_fetched_at: float = 0.0
+# CSRF tokens have a 1-hour TTL on the backend; refresh proactively 5 minutes
+# before expiry so long-running MCP sessions never hit a 403 mid-operation.
+_CSRF_TTL_SECONDS = 3300  # 55 minutes
+
+
+def _csrf_is_fresh() -> bool:
+    """Return True when the cached token is non-empty and not near expiry."""
+    return bool(_csrf_token) and (time.time() - _csrf_fetched_at < _CSRF_TTL_SECONDS)
 
 
 def _refresh_csrf():
-    """Fetch fresh CSRF token from backend."""
-    global _csrf_token
+    """Fetch a fresh CSRF token from the backend and record the fetch time."""
+    global _csrf_token, _csrf_fetched_at
     try:
         req = urllib.request.Request(f"{BACKEND_URL}/health")
         with urllib.request.urlopen(req, timeout=5) as resp:
             body = json.loads(resp.read())
-            _csrf_token = body.get("csrf_token", "")
+            token = body.get("csrf_token", "")
+            if token:
+                _csrf_token = token
+                _csrf_fetched_at = time.time()
     except Exception as exc:
         logger.warning("CSRF refresh failed: %s", exc)
 
@@ -46,7 +59,7 @@ def _api(method, path, data=None):
     """Call the OpenCut Flask backend."""
     global _csrf_token
 
-    if not _csrf_token:
+    if not _csrf_is_fresh():
         _refresh_csrf()
 
     url = f"{BACKEND_URL}{path}"
