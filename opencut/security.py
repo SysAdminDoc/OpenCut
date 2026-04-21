@@ -101,7 +101,10 @@ def is_csrf_token_valid(header_token: str) -> bool:
         return False
     with _csrf_lock:
         _purge_expired_tokens()
-        return any(hmac.compare_digest(header_token, token) for token in _csrf_tokens)
+        # Evaluate ALL comparisons before testing any result so timing does
+        # not leak which position in the token list matched.
+        matches = [hmac.compare_digest(header_token, token) for token in _csrf_tokens]
+        return any(matches)
 
 
 def validate_csrf_request():

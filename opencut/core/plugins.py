@@ -172,10 +172,14 @@ def load_plugin_routes(app, plugin_info):
             )
             return False
 
+    _path_inserted = False
     try:
-        # Add plugin dir to sys.path temporarily for imports
+        # Add plugin dir to sys.path for the duration of exec_module only.
+        # Remove it immediately after so two plugins with identically-named
+        # helper modules cannot shadow each other.
         if plugin_dir not in sys.path:
             sys.path.insert(0, plugin_dir)
+            _path_inserted = True
 
         spec = importlib.util.spec_from_file_location(
             f"opencut_plugin_{plugin_name}", routes_file
@@ -187,6 +191,14 @@ def load_plugin_routes(app, plugin_info):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
+    except Exception as e:
+        logger.error("Failed to load plugin %s: %s", plugin_name, e)
+        return False
+    finally:
+        if _path_inserted and plugin_dir in sys.path:
+            sys.path.remove(plugin_dir)
+
+    try:
         # Look for plugin_bp Blueprint
         bp = getattr(module, "plugin_bp", None)
         if bp is None:
@@ -210,7 +222,7 @@ def load_plugin_routes(app, plugin_info):
         return True
 
     except Exception as e:
-        logger.error("Failed to load plugin %s: %s", plugin_name, e)
+        logger.error("Failed to register plugin %s: %s", plugin_name, e)
         return False
 
 

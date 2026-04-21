@@ -146,6 +146,7 @@ all = [
 dev = [
     "pytest>=7.0,<9",
     "pytest-cov>=4.0,<6",
+    "pytest-xdist>=3.0,<5",
     "ruff>=0.1,<1",
     "pre-commit>=3.0,<4",
 ]

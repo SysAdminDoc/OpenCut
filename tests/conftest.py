@@ -2,7 +2,11 @@
 Shared pytest fixtures for OpenCut integration tests.
 """
 
+import logging
+
 import pytest
+
+_fixture_log = logging.getLogger("opencut.tests.conftest")
 
 
 @pytest.fixture
@@ -64,17 +68,17 @@ def _isolate_global_state():
         with _jobs_mod.job_lock:
             _jobs_mod.jobs.clear()
             _jobs_mod._job_processes.clear()
-    except Exception:
-        pass
+    except Exception as _e:
+        _fixture_log.warning("jobs teardown failed: %s", _e)
     try:
         from opencut.routes import jobs_routes as _jr
         with _jr.job_queue_lock:
             _jr.job_queue.clear()
             _jr._queue_state["running"] = False
-    except Exception:
-        pass
+    except Exception as _e:
+        _fixture_log.warning("job_queue teardown failed: %s", _e)
     try:
         from opencut.routes.system import invalidate_caps_cache
         invalidate_caps_cache()
-    except Exception:
-        pass
+    except Exception as _e:
+        _fixture_log.warning("caps_cache teardown failed: %s", _e)
