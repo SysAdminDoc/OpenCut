@@ -801,14 +801,14 @@ def open_path():
                 os.startfile(filepath)  # noqa: S606 — validated path, exec exts blocked above
         elif sys.platform == "darwin":
             if mode == "reveal":
-                _sp.Popen(["open", "-R", filepath])
+                _sp.Popen(["open", "-R", filepath], start_new_session=True)
             else:
-                _sp.Popen(["open", filepath])
+                _sp.Popen(["open", filepath], start_new_session=True)
         else:
             # Linux / BSD — xdg-open has no "reveal" equivalent; open the
             # containing directory when reveal is requested.
             target = os.path.dirname(filepath) if mode == "reveal" else filepath
-            _sp.Popen(["xdg-open", target])
+            _sp.Popen(["xdg-open", target], start_new_session=True)
     except Exception as e:
         logger.exception("open_path failed for %s", filepath)
         return jsonify({"error": f"Could not open path: {e}"}), 500

@@ -281,6 +281,9 @@ def _call_external_tts(
         "sample_rate": 24000,
     }).encode()
 
+    from opencut.core.url_safety import validate_public_http_url
+    endpoint = validate_public_http_url(endpoint, label="TTS endpoint")
+
     req = urllib.request.Request(
         endpoint,
         data=payload,

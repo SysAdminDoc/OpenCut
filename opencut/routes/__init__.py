@@ -3,10 +3,21 @@ OpenCut Route Blueprints
 
 All Flask route handlers organized by domain.
 """
+# The blueprint imports below are collected via `locals()` in
+# register_blueprints(); ruff cannot trace through that dynamic access.
+# ruff: noqa: F401
 
 
 def register_blueprints(app):
-    """Register all route Blueprints with the Flask app."""
+    """Register all route Blueprints with the Flask app.
+
+    Any name ending in ``_bp`` that is imported inside this function is
+    automatically collected and registered.  ``motion_design_bp`` is registered
+    twice: once by the auto-collection loop (bare ``/motion/*`` routes) and
+    once manually with ``url_prefix="/api"`` to preserve the legacy
+    ``/api/motion/*`` surface for older panel builds.  When adding a new
+    blueprint, add its import here; no other change is needed.
+    """
     from .ai_content_routes import ai_content_bp
     from .ai_editing_routes import ai_editing_bp
     from .ai_intelligence_routes import ai_intel_bp
@@ -105,46 +116,10 @@ def register_blueprints(app):
     from .workflow_dev_routes import workflow_dev_bp
     from .workflow_routes import workflow_auto_bp
 
-    blueprints = [system_bp, audio_bp, captions_bp,
-                  video_core_bp, video_fx_bp, video_ai_bp,
-                  video_editing_bp, video_specialty_bp,
-                  jobs_bp, settings_bp,
-                  timeline_bp, search_bp, deliverables_bp, nlp_bp, workflow_bp,
-                  context_bp, plugins_bp, journal_bp, overlay_bp, qc_bp,
-                  format_bp, processing_bp, content_bp, hw_bp, creative_bp,
-                  subtitle_bp, encoding_bp, utility_bp, production_bp,
-                  analysis_bp, workflow_auto_bp, video_proc_bp, audio_prod_bp,
-                  ai_content_bp, professional_bp, tools_bp, workflow_dev_bp,
-                  infra_bp, video_effects_bp, audio_expand_bp, ai_intel_bp,
-                  delivery_bp, gaming_bp, education_bp, documentary_bp,
-                  batch_data_bp, music_safety_bp, integration_bp,
-                  video_vfx_bp, audio_adv_bp, ai_editing_bp,
-                  editing_wf_bp, color_mam_bp, platform_infra_bp,
-                  transcript_edit_bp, generative_bp, architecture_bp,
-                  remote_realtime_bp, vfx_advanced_bp, solver_agent_bp,
-                  platform_ux_bp, vr_lens_bp, repair_gen_bp,
-                  privacy_spectral_bp, multiview_repurpose_bp,
-                  preproduction_proxy_bp, composition_dubbing_bp,
-                  enhanced_media_bp, ux_intel_bp, engagement_content_bp,
-                  next_gen_ai_bp, motion_gen_bp, body_transfer_bp,
-                  timeline_intel_bp, pipeline_intel_bp,
-                  object_intel_bp, delivery_master_bp,
-                  content_gen_bp,
-                  collab_review_bp, timeline_auto_bp,
-                  sound_music_bp, preview_realtime_bp,
-                  cloud_distrib_bp,
-                  voice_speech_bp, motion_design_bp,
-                  subtitle_pro_bp, dev_scripting_bp,
-                  audio_post_bp,
-                  enhancement_bp,
-                  wave_a_bp,
-                  wave_b_bp,
-                  wave_c_bp,
-                  wave_d_bp,
-                  wave_e_bp,
-                  wave_f_bp,
-                  wave_g_bp,
-                  wave_h_bp]
+    blueprints = [
+        v for k, v in locals().items()
+        if k.endswith("_bp")
+    ]
 
     for bp in blueprints:
         app.register_blueprint(bp)

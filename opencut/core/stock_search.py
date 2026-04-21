@@ -328,6 +328,9 @@ def download_stock_media(
     if not url:
         raise ValueError("Download URL is required")
 
+    from opencut.core.url_safety import validate_public_http_url
+    url = validate_public_http_url(url, label="Stock media download URL")
+
     ext = ".mp4" if "video" in url.lower() else ".jpg"
     if ".png" in url.lower():
         ext = ".png"
