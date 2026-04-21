@@ -57,6 +57,9 @@ class OpenCutConfig:
     florence_model_dir: Optional[str] = None
     lama_model_dir: Optional[str] = None
     max_content_length: int = 100 * 1024 * 1024  # 100 MB
+    # "null" satisfies sandboxed iframes and CEP panels that report a null
+    # origin.  "file://" covers panels loaded from the filesystem.  Do not
+    # remove "null" here without verifying CEP connectivity still works.
     cors_origins: list[str] = field(default_factory=lambda: ["null", "file://"])
 
     # Job system defaults (single source of truth; mirrored as module-level
@@ -86,7 +89,7 @@ class OpenCutConfig:
                 min_val=1024 * 1024,
                 max_val=2 * 1024 * 1024 * 1024,  # 2 GB hard cap
             ),
-            cors_origins=_env_csv("OPENCUT_CORS_ORIGINS", ["null", "file://"]),
+            cors_origins=_env_csv("OPENCUT_CORS_ORIGINS", ["null", "file://"]),  # see field comment above
             job_max_age=_env_int("OPENCUT_JOB_MAX_AGE", 3600, min_val=60, max_val=86400),
             max_concurrent_jobs=_env_int("OPENCUT_MAX_CONCURRENT_JOBS", 10, min_val=1, max_val=100),
             max_batch_files=_env_int("OPENCUT_MAX_BATCH_FILES", 100, min_val=1, max_val=10000),
