@@ -254,6 +254,11 @@ def start_watch(config: WatchFolderConfig,
     Returns:
         WatcherHandle with a ``.stop()`` method.
     """
+    from opencut.security import validate_path
+    try:
+        config.folder_path = validate_path(config.folder_path)
+    except ValueError as e:
+        raise ValueError(f"Invalid watch folder path: {e}") from e
     if not os.path.isdir(config.folder_path):
         raise ValueError(f"Folder does not exist: {config.folder_path}")
 

@@ -294,6 +294,16 @@ def _execute_tool(tool_name, params):
     except (ImportError, AttributeError) as e:
         raise RuntimeError(f"Cannot load tool {tool_name}: {e}")
 
+    # Validate any file path params that came from LLM output.  The HTTP
+    # route layer validated the initial input_files list, but the LLM can
+    # generate arbitrary filepath values in step params that must be
+    # independently checked before reaching the core function.
+    from opencut.security import validate_filepath as _vf
+    _PATH_KEYS = {"filepath", "input_path", "output_path", "file_path"}
+    for key in _PATH_KEYS:
+        if key in params and params[key]:
+            params[key] = _vf(params[key])
+
     # Filter params to only those the function accepts
     import inspect
     sig = inspect.signature(func)

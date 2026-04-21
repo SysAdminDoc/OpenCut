@@ -16,14 +16,46 @@ from typing import Optional
 
 logger = logging.getLogger("opencut")
 
-# Configurable HMAC key — set OPENCUT_PROVENANCE_KEY in environment
-_DEFAULT_KEY = "opencut-provenance-default-key-change-me"
+_KEY_FILE = os.path.join(os.path.expanduser("~"), ".opencut", "provenance_key.bin")
+_key_lock = __import__("threading").Lock()
 
 
 def _get_provenance_key() -> bytes:
-    """Return the HMAC signing key (bytes)."""
-    key = os.environ.get("OPENCUT_PROVENANCE_KEY", _DEFAULT_KEY)
-    return key.encode("utf-8")
+    """Return the HMAC signing key as bytes.
+
+    Priority:
+    1. ``OPENCUT_PROVENANCE_KEY`` environment variable (hex or raw string).
+    2. Persisted 32-byte random key at ``~/.opencut/provenance_key.bin``.
+       Generated on first call and reused on all subsequent calls so
+       signatures remain verifiable across server restarts.
+    """
+    env_key = os.environ.get("OPENCUT_PROVENANCE_KEY", "")
+    if env_key:
+        return env_key.encode("utf-8")
+
+    with _key_lock:
+        # Read existing key
+        if os.path.isfile(_KEY_FILE):
+            try:
+                with open(_KEY_FILE, "rb") as fh:
+                    data = fh.read()
+                if len(data) >= 32:
+                    return data
+            except OSError:
+                pass
+
+        # Generate and persist a new 32-byte key
+        new_key = os.urandom(32)
+        try:
+            os.makedirs(os.path.dirname(_KEY_FILE), exist_ok=True)
+            # Write with owner-read-only permissions
+            fd = os.open(_KEY_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+            with os.fdopen(fd, "wb") as fh:
+                fh.write(new_key)
+            logger.info("Generated new provenance HMAC key at %s", _KEY_FILE)
+        except OSError as exc:
+            logger.warning("Could not persist provenance key: %s — signatures will not survive restart", exc)
+        return new_key
 
 
 def _sha256_file(filepath: str) -> str:
