@@ -137,6 +137,7 @@ def get_core_blueprints():
     from .wave_g_routes import wave_g_bp
     from .wave_h_routes import wave_h_bp
     from .wave_k_routes import wave_k_bp
+    from .wave_l_routes import wave_l_bp
     from .workflow import workflow_bp
     from .workflow_dev_routes import workflow_dev_bp
     from .workflow_routes import workflow_auto_bp
@@ -237,6 +238,7 @@ def get_core_blueprints():
         wave_g_bp,
         wave_h_bp,
         wave_k_bp,
+        wave_l_bp,
         workflow_bp,
         workflow_dev_bp,
         workflow_auto_bp,
