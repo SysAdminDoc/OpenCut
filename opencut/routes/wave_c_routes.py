@@ -7,7 +7,7 @@ and ``quiz_overlay`` live inside those modules' existing blueprints;
 this blueprint only owns the *new* surfaces.
 
 Routes:
-- ``POST /timeline/diff``                  — semantic OTIO/FCP-XML diff
+- ``POST /timeline/otio-diff``             — semantic OTIO/FCP-XML diff
 - ``POST /video/quality/compare``          — VMAF/SSIM/PSNR vs reference
 - ``POST /video/quality/batch-compare``    — same, for CI golden suites
 - ``GET  /video/quality/backends``         — report quality-metric capability
@@ -41,7 +41,7 @@ def _diff_pre_validate(data):
     return None
 
 
-@wave_c_bp.route("/timeline/diff", methods=["POST"])
+@wave_c_bp.route("/timeline/otio-diff", methods=["POST"])
 @require_csrf
 @async_job("otio_diff", filepath_required=False, pre_validate=_diff_pre_validate)
 def route_timeline_diff(job_id, filepath, data):

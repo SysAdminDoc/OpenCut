@@ -414,7 +414,7 @@ def create_app(config=None):
         }), 500
 
     # Register Blueprints (all routes are in opencut/routes/)
-    from opencut.routes import register_blueprints  # noqa: E402
+    from opencut.routes import assert_no_route_collisions, register_blueprints  # noqa: E402
     register_blueprints(_app)
 
     # Load Plugins
@@ -425,6 +425,10 @@ def create_app(config=None):
             logger.info("Plugins: %d loaded", len(plugin_result["loaded"]))
     except Exception as e:
         logger.warning("Plugin loading failed: %s", e)
+
+    # Route ownership must stay unambiguous. Fail fast if any later blueprint or
+    # plugin registration reintroduces a method/path collision.
+    assert_no_route_collisions(_app)
 
     return _app
 
