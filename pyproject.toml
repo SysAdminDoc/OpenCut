@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "opencut"
-version = "1.29.0"
+version = "1.30.0"
 description = "Open-source AI video editing automation for Adobe Premiere Pro - captions, audio processing, visual effects, and more"
 readme = "README.md"
 license = {text = "MIT"}
@@ -105,6 +105,9 @@ scene-ml = [
 enhance = [
     "resemble-enhance>=0.0.1,<1",
 ]
+mcp = [
+    "mcp>=1.0",
+]
 otio = [
     "opentimelineio>=0.15,<1",
 ]
@@ -154,6 +157,7 @@ dev = [
 [project.scripts]
 opencut = "opencut.cli:main"
 opencut-server = "opencut.server:main"
+opencut-mcp-server = "opencut.mcp_server:main"
 
 [project.urls]
 Homepage = "https://github.com/SysAdminDoc/OpenCut"
