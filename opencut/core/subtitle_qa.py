@@ -6,6 +6,7 @@ CPS check, min/max gap, overlap detection, max line length per broadcast standar
 from __future__ import annotations
 
 import logging
+import os
 import re
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
@@ -116,8 +117,11 @@ def _parse_vtt(path: str) -> List[Dict]:
             start_line = 1
         if start_line >= len(lines):
             continue
+        # Handle both HH:MM:SS.mmm and MM:SS.mmm WebVTT timestamp forms
         tc_match = re.match(
-            r"(\d+:\d+[:.]\d+[:.]\d+|\d+:\d+[:.]\d+)\s*-->\s*(\d+[:\d.]+[:.]\d+)",
+            r"(\d+:\d{2}:\d{2}[.,]\d+|\d{2}:\d{2}[.,]\d+)"
+            r"\s*-->\s*"
+            r"(\d+:\d{2}:\d{2}[.,]\d+|\d{2}:\d{2}[.,]\d+)",
             lines[start_line],
         )
         if not tc_match:
@@ -163,6 +167,8 @@ def _parse_ass(path: str) -> List[Dict]:
 
 def validate(subtitle_path: str, profile: str = "netflix") -> QAReport:
     """Run QA checks on a subtitle file against a broadcast profile."""
+    if not subtitle_path or not os.path.isfile(subtitle_path):
+        raise ValueError(f"Subtitle file not found: {subtitle_path}")
     if profile not in PROFILES:
         raise ValueError(f"Unknown profile '{profile}'. Available: {list(PROFILES.keys())}")
 
@@ -201,7 +207,7 @@ def validate(subtitle_path: str, profile: str = "netflix") -> QAReport:
                     start=cue["start"], end=cue["end"], text=text,
                     detail=f"Line length {len(line)} > {max_line_chars}"))
 
-        line_count = len([l for l in clean_text.splitlines() if l.strip()])
+        line_count = len([ln for ln in clean_text.splitlines() if ln.strip()])
         if line_count > max_lines:
             issues.append(QAIssue(rule="max_lines", severity="warning", index=cue["index"],
                 start=cue["start"], end=cue["end"], text=text,

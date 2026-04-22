@@ -7,12 +7,12 @@ from __future__ import annotations
 
 import logging
 import os
-import subprocess
 import struct
+import subprocess
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
-from opencut.helpers import _try_import
+from opencut.helpers import _try_import, get_ffmpeg_path
 
 logger = logging.getLogger("opencut")
 
@@ -57,8 +57,13 @@ def embed(
 
     generator = audioseal.AudioSeal.load_model("facebook/audioseal-generator-16bits")
 
-    cmd = ["ffmpeg", "-y", "-i", audio_path, "-f", "f32le", "-ar", "16000", "-ac", "1", "pipe:1"]
-    raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+    ffmpeg = get_ffmpeg_path()
+    cmd = [ffmpeg, "-y", "-i", audio_path, "-f", "f32le", "-ar", "16000", "-ac", "1", "pipe:1"]
+    try:
+        raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+    except subprocess.CalledProcessError as e:
+        stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
+        raise RuntimeError(f"FFmpeg decode failed: {stderr_msg[:500]}") from e
     n = len(raw) // 4
     samples = struct.unpack(f"{n}f", raw)
     wav = torch.tensor(samples).unsqueeze(0).unsqueeze(0)
@@ -77,13 +82,20 @@ def embed(
         output = f"{base}_watermarked{ext or '.wav'}"
 
     raw_out = (watermarked.squeeze().numpy() * 32767).astype("int16").tobytes()
-    enc_cmd = ["ffmpeg", "-y", "-f", "s16le", "-ar", "16000", "-ac", "1", "-i", "pipe:0", output]
-    subprocess.run(enc_cmd, input=raw_out, capture_output=True, check=True)
+    enc_cmd = [ffmpeg, "-y", "-f", "s16le", "-ar", "16000", "-ac", "1", "-i", "pipe:0", output]
+    try:
+        subprocess.run(enc_cmd, input=raw_out, capture_output=True, check=True)
+    except subprocess.CalledProcessError as e:
+        stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
+        raise RuntimeError(f"FFmpeg encode failed: {stderr_msg[:500]}") from e
 
     if on_progress:
         on_progress(100, "Done")
 
-    return WatermarkResult(output=output, method="audioseal", notes=[])
+    notes = []
+    if audio_path.lower().rsplit(".", 1)[-1] not in ("wav", "pcm"):
+        notes.append("Output resampled to 16 kHz mono (AudioSeal requirement)")
+    return WatermarkResult(output=output, method="audioseal", notes=notes)
 
 
 def detect(audio_path: str) -> dict:
@@ -94,8 +106,13 @@ def detect(audio_path: str) -> dict:
     import torch
 
     detector = audioseal.AudioSeal.load_model("facebook/audioseal-detector-16bits")
-    cmd = ["ffmpeg", "-y", "-i", audio_path, "-f", "f32le", "-ar", "16000", "-ac", "1", "pipe:1"]
-    raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+    ffmpeg = get_ffmpeg_path()
+    cmd = [ffmpeg, "-y", "-i", audio_path, "-f", "f32le", "-ar", "16000", "-ac", "1", "pipe:1"]
+    try:
+        raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+    except subprocess.CalledProcessError as e:
+        stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
+        raise RuntimeError(f"FFmpeg decode failed: {stderr_msg[:500]}") from e
     n = len(raw) // 4
     samples = struct.unpack(f"{n}f", raw)
     wav = torch.tensor(samples).unsqueeze(0).unsqueeze(0)

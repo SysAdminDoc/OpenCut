@@ -5,19 +5,26 @@ Unified CLIP visual + CLAP audio + Whisper transcript search index.
 """
 from __future__ import annotations
 
+import io
 import json
 import logging
 import os
+import subprocess
+import threading
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Callable, List, Optional
 
-from opencut.helpers import _try_import
+import numpy as np
+
+from opencut.helpers import _try_import, get_ffmpeg_path
 
 logger = logging.getLogger("opencut")
 INSTALL_HINT = "pip install torch transformers laion-clap openai-clip"
 _INDEX_PATH = os.path.join(os.path.expanduser("~"), ".opencut", "search_index.json")
 _model_cache: dict = {}
+_model_lock = threading.Lock()
+_index_lock = threading.Lock()
 
 
 def check_semantic_search_available() -> bool:
@@ -69,8 +76,10 @@ def _load_index() -> dict:
 
 def _save_index(idx: dict) -> None:
     os.makedirs(os.path.dirname(_INDEX_PATH), exist_ok=True)
-    with open(_INDEX_PATH, "w", encoding="utf-8") as f:
+    tmp = _INDEX_PATH + ".tmp"
+    with open(tmp, "w", encoding="utf-8") as f:
         json.dump(idx, f, indent=2)
+    os.replace(tmp, _INDEX_PATH)
 
 
 def _text_fallback_search(query: str, media_paths: List[str], top_k: int) -> List[SearchResult]:
@@ -81,6 +90,39 @@ def _text_fallback_search(query: str, media_paths: List[str], top_k: int) -> Lis
         results.append(SearchResult(path=path, score=score, type="text_fallback"))
     results.sort(key=lambda r: r.score, reverse=True)
     return results[:top_k]
+
+
+def _load_clip():
+    """Load CLIP model once; thread-safe. Returns (model, preprocess, clip_mod)."""
+    with _model_lock:
+        if "clip_model" not in _model_cache:
+            import clip as clip_mod  # type: ignore
+            model, preprocess = clip_mod.load("ViT-B/32")
+            _model_cache["clip_model"] = model
+            _model_cache["clip_preprocess"] = preprocess
+            _model_cache["clip_mod"] = clip_mod
+    return (
+        _model_cache["clip_model"],
+        _model_cache["clip_preprocess"],
+        _model_cache["clip_mod"],
+    )
+
+
+def _extract_frame_png(path: str) -> Optional[bytes]:
+    """Extract the first frame of a video as PNG bytes; returns None on failure."""
+    ffmpeg = get_ffmpeg_path()
+    cmd = [
+        ffmpeg, "-i", path,
+        "-vf", "select=eq(n\\,0)",
+        "-vframes", "1",
+        "-f", "image2pipe", "-vcodec", "png",
+        "pipe:1",
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, timeout=15)
+        return result.stdout if result.stdout else None
+    except Exception:
+        return None
 
 
 def search(
@@ -98,39 +140,47 @@ def search(
     results = []
 
     if mode in ("visual", "all"):
-        clip_mod = _try_import("clip")
-        if clip_mod is not None:
+        clip_mod_avail = _try_import("clip")
+        if clip_mod_avail is not None:
             try:
                 if on_progress:
                     on_progress(10, "Loading CLIP model")
-                if "clip" not in _model_cache:
-                    import clip  # type: ignore
-                    _model_cache["clip_model"], _model_cache["clip_preprocess"] = clip.load("ViT-B/32")
-                model = _model_cache["clip_model"]
-                preprocess = _model_cache["clip_preprocess"]
-                import clip as clip_mod2  # type: ignore
-                text_tokens = clip_mod2.tokenize([query])
+                model, preprocess, clip_mod = _load_clip()
+
+                # Encode the text query once
+                text_tokens = clip_mod.tokenize([query])
                 with torch.no_grad():
                     text_features = model.encode_text(text_tokens)
                     text_features /= text_features.norm(dim=-1, keepdim=True)
+
+                # Prefer pre-built embeddings from the index when available
+                with _index_lock:
+                    idx = _load_index()
+                embeddings = idx.get("embeddings", {})
+
                 for i, path in enumerate(media_paths):
                     if on_progress and i % 5 == 0:
-                        on_progress(20 + int(i / len(media_paths) * 40), f"Scoring {os.path.basename(path)}")
+                        on_progress(
+                            20 + int(i / len(media_paths) * 40),
+                            f"Scoring {os.path.basename(path)}",
+                        )
                     try:
-                        import subprocess
-                        frame_cmd = ["ffmpeg", "-i", path, "-vf", "select=eq(n\\,0)", "-vframes", "1",
-                                     "-f", "image2pipe", "-vcodec", "png", "pipe:1"]
-                        png = subprocess.run(frame_cmd, capture_output=True, timeout=10).stdout
-                        if png:
+                        stored = embeddings.get(path, {}).get("embedding")
+                        if stored is not None:
+                            img_feat = torch.tensor(stored, dtype=torch.float32).unsqueeze(0)
+                            img_feat /= img_feat.norm(dim=-1, keepdim=True)
+                        else:
+                            png = _extract_frame_png(path)
+                            if not png:
+                                raise ValueError("No frame extracted")
                             from PIL import Image  # type: ignore
-                            import io
                             img = Image.open(io.BytesIO(png)).convert("RGB")
                             img_tensor = preprocess(img).unsqueeze(0)
                             with torch.no_grad():
-                                img_features = model.encode_image(img_tensor)
-                                img_features /= img_features.norm(dim=-1, keepdim=True)
-                            score = float((img_features @ text_features.T).squeeze())
-                            results.append(SearchResult(path=path, score=score, type="visual"))
+                                img_feat = model.encode_image(img_tensor)
+                                img_feat /= img_feat.norm(dim=-1, keepdim=True)
+                        score = float((img_feat @ text_features.T).squeeze())
+                        results.append(SearchResult(path=path, score=score, type="visual"))
                     except Exception as e:
                         logger.debug("CLIP frame scoring failed for %s: %s", path, e)
                         results.append(SearchResult(path=path, score=0.0, type="visual"))
@@ -158,27 +208,63 @@ def build_index(
     media_paths: List[str],
     on_progress: Optional[Callable[[int, str], None]] = None,
 ) -> IndexStatus:
-    idx = _load_index()
-    embeddings = idx.get("embeddings", {})
-    total = len(media_paths)
-    indexed = 0
-    for i, path in enumerate(media_paths):
-        if path not in embeddings:
-            embeddings[path] = {"indexed_at": datetime.now(timezone.utc).isoformat()}
-            indexed += 1
-        if on_progress:
-            on_progress(int(i / total * 95), f"Indexing {os.path.basename(path)}")
-    idx["embeddings"] = embeddings
-    idx["last_updated"] = datetime.now(timezone.utc).isoformat()
-    _save_index(idx)
+    """Build or update the CLIP visual embedding index for a list of media files."""
+    clip_mod_avail = _try_import("clip")
+    import torch
+
+    if clip_mod_avail is not None:
+        try:
+            model, preprocess, clip_mod = _load_clip()
+        except Exception as e:
+            logger.warning("CLIP model load failed during indexing: %s — timestamps only", e)
+            model = preprocess = clip_mod = None
+    else:
+        model = preprocess = clip_mod = None
+
+    with _index_lock:
+        idx = _load_index()
+        embeddings = idx.get("embeddings", {})
+        total = len(media_paths)
+        newly_indexed = 0
+
+        for i, path in enumerate(media_paths):
+            if on_progress:
+                on_progress(int(i / max(total, 1) * 95), f"Indexing {os.path.basename(path)}")
+            entry = embeddings.get(path, {})
+            if "embedding" not in entry and model is not None:
+                try:
+                    png = _extract_frame_png(path)
+                    if png:
+                        from PIL import Image  # type: ignore
+                        img = Image.open(io.BytesIO(png)).convert("RGB")
+                        img_tensor = preprocess(img).unsqueeze(0)
+                        with torch.no_grad():
+                            feat = model.encode_image(img_tensor)
+                            feat /= feat.norm(dim=-1, keepdim=True)
+                        entry["embedding"] = feat.squeeze().tolist()
+                except Exception as e:
+                    logger.debug("Could not embed %s: %s", path, e)
+            if path not in embeddings or "embedding" in entry:
+                entry.setdefault("indexed_at", datetime.now(timezone.utc).isoformat())
+                embeddings[path] = entry
+                newly_indexed += 1
+
+        idx["embeddings"] = embeddings
+        idx["last_updated"] = datetime.now(timezone.utc).isoformat()
+        _save_index(idx)
+
     if on_progress:
         on_progress(100, "Index built")
-    return IndexStatus(indexed=len(embeddings), pending=max(0, total - indexed),
-                       last_updated=idx["last_updated"])
+    return IndexStatus(
+        indexed=len(embeddings),
+        pending=max(0, total - newly_indexed),
+        last_updated=idx["last_updated"],
+    )
 
 
 def get_index_status() -> IndexStatus:
-    idx = _load_index()
+    with _index_lock:
+        idx = _load_index()
     embeddings = idx.get("embeddings", {})
     return IndexStatus(indexed=len(embeddings), pending=0,
                        last_updated=str(idx.get("last_updated", "")))

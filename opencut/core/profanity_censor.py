@@ -11,6 +11,8 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.helpers import get_ffmpeg_path, get_ffprobe_path
+
 logger = logging.getLogger("opencut")
 
 _DEFAULT_WORDS = [
@@ -48,8 +50,22 @@ def list_wordlists() -> Dict:
     custom_words = []
     if os.path.isfile(_CUSTOM_WORDS_PATH):
         with open(_CUSTOM_WORDS_PATH, encoding="utf-8") as f:
-            custom_words = [l.strip() for l in f if l.strip()]
+            custom_words = [line.strip() for line in f if line.strip()]
     return {"default": _DEFAULT_WORDS, "custom": custom_words, "custom_path": _CUSTOM_WORDS_PATH}
+
+
+def _get_audio_duration(audio_path: str) -> float:
+    """Probe the duration of an audio file using ffprobe."""
+    ffprobe = get_ffprobe_path()
+    cmd = [
+        ffprobe, "-v", "error", "-show_entries", "format=duration",
+        "-of", "default=noprint_wrappers=1:nokey=1", audio_path,
+    ]
+    try:
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        return float(result.stdout.strip())
+    except Exception:
+        return 0.0
 
 
 def censor(
@@ -85,28 +101,42 @@ def censor(
     if on_progress:
         on_progress(10, f"Censoring {len(targets)} words via {mode}")
 
+    ffmpeg = get_ffmpeg_path()
+
     if mode == "bleep":
-        bleep_inputs = []
-        for i, seg in enumerate(targets):
-            start_ms = int(float(seg["start"]) * 1000)
-            dur = max(0.05, float(seg["end"]) - float(seg["start"]))
-            bleep_inputs.append(
-                f"aevalsrc=0.3*sin(2*PI*1000*t):d={dur:.4f}:s=44100[b{i}]; "
-                f"[b{i}]adelay={start_ms}|{start_ms}[bd{i}]; "
-            )
-        fc = "".join(bleep_inputs)
-        labels = "".join(f"[bd{i}]" for i in range(len(targets)))
-        fc += f"[0:a]{labels}amix=inputs={len(targets)+1}:normalize=0[outa]"
-        cmd = ["ffmpeg", "-y", "-i", audio_path, "-filter_complex", fc, "-map", "[outa]", output]
+        # Build an enable expression covering every target window
+        enable_expr = "+".join(
+            f"between(t,{float(s['start']):.4f},{float(s['end']):.4f})" for s in targets
+        )
+        # Probe total duration so the bleep track covers the whole file
+        total_dur = _get_audio_duration(audio_path)
+        if total_dur <= 0.0:
+            total_dur = max(float(s["end"]) for s in targets) + 2.0
+
+        # 1. Silence the original wherever a target word occurs
+        # 2. Generate a constant 1 kHz tone across the full duration
+        # 3. Gate that tone to only pass during target windows
+        # 4. Mix silenced original with gated bleep
+        fc = (
+            f"[0:a]volume='if(gt({enable_expr},0),0,1)'[silenced];"
+            f"aevalsrc=0.3*sin(2*PI*1000*t):d={total_dur:.4f}:s=44100:c=stereo[raw_bleep];"
+            f"[raw_bleep]volume='if(gt({enable_expr},0),1,0)'[bleep];"
+            f"[silenced][bleep]amix=inputs=2:normalize=0[outa]"
+        )
+        cmd = [ffmpeg, "-y", "-i", audio_path, "-filter_complex", fc, "-map", "[outa]", output]
     else:
         vol_expr = "+".join(
             f"between(t,{float(s['start']):.4f},{float(s['end']):.4f})" for s in targets
         )
         fc = (f"[0:a]volume=0:enable='{vol_expr}'[outa]" if len(targets) == 1
               else f"[0:a]volume='if(gt({vol_expr},0),0,1)'[outa]")
-        cmd = ["ffmpeg", "-y", "-i", audio_path, "-filter_complex", fc, "-map", "[outa]", output]
+        cmd = [ffmpeg, "-y", "-i", audio_path, "-filter_complex", fc, "-map", "[outa]", output]
 
-    subprocess.run(cmd, capture_output=True, check=True)
+    try:
+        subprocess.run(cmd, capture_output=True, check=True)
+    except subprocess.CalledProcessError as e:
+        stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
+        raise RuntimeError(f"FFmpeg censor failed (exit {e.returncode}): {stderr_msg[:500]}") from e
 
     if on_progress:
         on_progress(100, "Done")
