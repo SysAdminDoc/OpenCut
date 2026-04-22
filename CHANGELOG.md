@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.29.0] - 2026-04-23
+
+### Added — Wave L (Premium TTS, Smart Upscaling, AI Face Tools)
+
+- **`core/tts_elevenlabs.py`** (`POST /audio/tts/elevenlabs`, `GET /audio/tts/elevenlabs/voices`, `GET /audio/tts/elevenlabs/info`): ElevenLabs cloud TTS backend — 3,000+ voices across 32 languages. Gated by `OPENCUT_ELEVENLABS_API_KEY` environment variable; returns 503 with install/setup hint if absent. Supports all four synthesis models (multilingual v2, turbo v2.5, turbo v2, monolingual v1), voice stability, similarity boost, style exaggeration, and speaker boost. Voice can be specified by name or voice_id. Route is `@async_job` and registered in `_ALLOWED_QUEUE_ENDPOINTS`.
+- **`core/upscale_hub.py`** (`POST /video/upscale/smart`, `GET /video/upscale/smart/info`): Smart upscaling dispatcher that auto-selects the best available backend — FlashVSR (streaming SR) → Real-ESRGAN → Video2x → Lanczos (always available). Content hints (`auto`, `fast`, `quality`, `anime`, `face`, `film`) route to appropriate backends and models. Falls back to Lanczos on any backend failure. Route is `@async_job`. `/info` endpoint returns live backend availability and auto-selection table.
+- **`core/face_reshape.py`** (`POST /video/face/reshape`, `GET /video/face/reshape/info`): Liquify-style face warping using MediaPipe FaceMesh (468 landmarks). Supports five operations: `slim_face`, `enlarge_eyes`, `shrink_nose`, `raise_cheekbones`, `smooth_jaw`. Builds a smooth per-pixel displacement field from landmark deltas with Gaussian blending, applied via `cv2.remap`. Strength parameter 0–1. Route is `@async_job`.
+- **`core/skin_retouch.py`** (`POST /video/face/retouch`, `GET /video/face/retouch/info`): Automated skin retouching and blemish removal. Bilateral `mode` applies frequency-separation smoothing (edge-preserving bilateral filter + skin HSV mask + blend). `gfpgan` mode runs GFPGAN deep face restoration when available; falls back to bilateral if GFPGAN absent. Optional `radiance` parameter applies a subtle brightness boost to skin areas. Route is `@async_job`.
+- **`routes/wave_l_routes.py`**: New Flask blueprint `wave_l_bp` with 11 new routes.
+- **`checks.py`**: Added `check_elevenlabs_available()`, `check_upscale_hub_available()`, `check_face_reshape_available()`, `check_skin_retouch_available()`, and `check_wave_l()` summary function.
+
+### Changed
+
+- **`routes/__init__.py`**: Registered `wave_l_bp` — brings total blueprint count to 99.
+- **`routes/jobs_routes.py`**: Added 4 Wave L `@async_job` routes to `_ALLOWED_QUEUE_ENDPOINTS`.
+
+---
+
 ## [1.28.2] - 2026-04-22
 
 ### Fixed
