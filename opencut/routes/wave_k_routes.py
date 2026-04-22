@@ -1,5 +1,5 @@
 """
-OpenCut Wave K Routes v1.28.0
+OpenCut Wave K Routes v1.28.2
 
 Routes for Wave K modules: AudioSeal, Brand Kit, Batch Reframe,
 Clip Rating, Subtitle QA, Profanity Censor, Spectral Match, Lottie,
@@ -522,8 +522,8 @@ def route_singing_vevo2():
         if not singing_vevo2.check_vevo2_available():
             return _stub_503("Vevo2", singing_vevo2.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
-        audio_path = validate_path(str(data.get("audio_path") or ""))
-        reference_path = validate_path(str(data.get("reference_path") or ""))
+        audio_path = validate_filepath(str(data.get("audio_path") or ""))
+        reference_path = validate_filepath(str(data.get("reference_path") or ""))
         result = singing_vevo2.convert(audio_path, reference_path,
                                        pitch_shift=safe_int(data.get("pitch_shift"), 0),
                                        output=str(data.get("output") or "") or None)
@@ -541,8 +541,8 @@ def route_lipsync_echomimic():
             return _stub_503("EchoMimic", lipsync_echomimic.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = lipsync_echomimic.animate(
-            validate_path(str(data.get("image_path") or "")),
-            validate_path(str(data.get("audio_path") or "")),
+            validate_filepath(str(data.get("image_path") or "")),
+            validate_filepath(str(data.get("audio_path") or "")),
             mode=str(data.get("mode") or "portrait"),
             output=str(data.get("output") or "") or None,
         )
@@ -560,7 +560,7 @@ def route_style_tokenflow():
             return _stub_503("TokenFlow", style_tokenflow.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = style_tokenflow.restyle(
-            validate_path(str(data.get("video_path") or "")),
+            validate_filepath(str(data.get("video_path") or "")),
             style_prompt=str(data.get("style_prompt") or ""),
             strength=safe_float(data.get("strength"), default=0.7),
             output=str(data.get("output") or "") or None,
@@ -579,8 +579,8 @@ def route_track_cutie():
             return _stub_503("Cutie", track_cutie.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = track_cutie.track(
-            validate_path(str(data.get("video_path") or "")),
-            validate_path(str(data.get("mask_frame0_path") or "")),
+            validate_filepath(str(data.get("video_path") or "")),
+            validate_filepath(str(data.get("mask_frame0_path") or "")),
             object_id=safe_int(data.get("object_id"), default=1),
             output_dir=str(data.get("output_dir") or "") or None,
         )
@@ -599,7 +599,7 @@ def route_track_deva():
             return _stub_503("DEVA", track_deva.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = track_deva.track(
-            validate_path(str(data.get("video_path") or "")),
+            validate_filepath(str(data.get("video_path") or "")),
             text_prompt=str(data.get("text_prompt") or ""),
             output_dir=str(data.get("output_dir") or "") or None,
         )
@@ -618,7 +618,7 @@ def route_flow_searaft():
             return _stub_503("SEA-RAFT", flow_searaft.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = flow_searaft.compute_flow(
-            validate_path(str(data.get("video_path") or "")),
+            validate_filepath(str(data.get("video_path") or "")),
             output=str(data.get("output") or "") or None,
             max_resolution=safe_int(data.get("max_resolution"), default=1080),
         )
@@ -636,7 +636,7 @@ def route_restore_diffbir():
             return _stub_503("DiffBIR", restore_diffbir.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = restore_diffbir.restore(
-            validate_path(str(data.get("video_path") or "")),
+            validate_filepath(str(data.get("video_path") or "")),
             tile_size=safe_int(data.get("tile_size"), default=512),
             fast_mode=safe_bool(data.get("fast_mode"), default=False),
             output=str(data.get("output") or "") or None,
@@ -655,7 +655,7 @@ def route_stabilize_gyroflow():
             return _stub_503("Gyroflow", stabilize_gyroflow.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = stabilize_gyroflow.stabilize(
-            validate_path(str(data.get("video_path") or "")),
+            validate_filepath(str(data.get("video_path") or "")),
             gyro_data_path=str(data.get("gyro_data_path") or "") or None,
             lens_profile=str(data.get("lens_profile") or "") or None,
             horizon_lock=safe_bool(data.get("horizon_lock"), default=False),
@@ -675,7 +675,7 @@ def route_deblur_motion():
             return _stub_503("Motion Deblur", deblur_motion.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = deblur_motion.deblur(
-            validate_path(str(data.get("video_path") or "")),
+            validate_filepath(str(data.get("video_path") or "")),
             backend=str(data.get("backend") or "auto"),
             output=str(data.get("output") or "") or None,
         )
@@ -702,7 +702,7 @@ def route_depth_depthpro():
             return _stub_503("Depth Pro", depth_depthpro.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = depth_depthpro.estimate(
-            validate_path(str(data.get("video_path") or "")),
+            validate_filepath(str(data.get("video_path") or "")),
             output=str(data.get("output") or "") or None,
         )
         return jsonify({"output_depth_path": result.output_depth_path, "notes": result.notes})
@@ -728,7 +728,7 @@ def route_depth_flow():
             return _stub_503("DepthFlow", depth_flow.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = depth_flow.generate(
-            validate_path(str(data.get("image_path") or "")),
+            validate_filepath(str(data.get("image_path") or "")),
             depth_path=str(data.get("depth_path") or "") or None,
             duration=safe_float(data.get("duration"), default=5.0),
             parallax_intensity=safe_float(data.get("parallax_intensity"), default=0.5),
@@ -816,7 +816,7 @@ def route_audio_reactive_fx():
             return _stub_503("Audio Reactive FX", audio_reactive_fx.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = audio_reactive_fx.render(
-            validate_path(str(data.get("video_path") or "")),
+            validate_filepath(str(data.get("video_path") or "")),
             audio_path=str(data.get("audio_path") or ""),
             preset=str(data.get("preset") or "boom"),
             custom_params=data.get("custom_params") or None,
@@ -846,7 +846,7 @@ def route_cinefocus():
             return _stub_503("CineFocus", cinefocus.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
         result = cinefocus.render(
-            validate_path(str(data.get("video_path") or "")),
+            validate_filepath(str(data.get("video_path") or "")),
             focal_z_start=safe_float(data.get("focal_z_start"), default=0.5),
             focal_z_end=safe_float(data.get("focal_z_end"), default=0.5),
             focal_frame_start=safe_int(data.get("focal_frame_start"), default=0),
@@ -881,7 +881,7 @@ def route_screenplay_parse():
     try:
         from opencut.core import screenplay_parser
         data = request.get_json(force=True, silent=True) or {}
-        screenplay_path = validate_path(str(data.get("screenplay_path") or ""))
+        screenplay_path = validate_filepath(str(data.get("screenplay_path") or ""))
         ext = screenplay_path.lower().rsplit(".", 1)[-1]
         if ext == "fdx":
             scenes = screenplay_parser.parse_fdx(screenplay_path)
@@ -907,7 +907,7 @@ def route_slate_id():
     try:
         from opencut.core import slate_id
         data = request.get_json(force=True, silent=True) or {}
-        video_path = validate_path(str(data.get("video_path") or data.get("filepath") or ""))
+        video_path = validate_filepath(str(data.get("video_path") or data.get("filepath") or ""))
         max_head = safe_int(data.get("max_head_frames"), default=60)
         info = slate_id.identify(video_path, max_head_frames=max_head)
         return jsonify({"scene": info.scene, "take": info.take, "camera": info.camera,
