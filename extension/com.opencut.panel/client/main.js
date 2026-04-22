@@ -24,9 +24,6 @@
     var healthTimer = null;
     var csrfToken = "";
     var _updateCheckDone = false;
-    var lastXmlPath = "";
-    var lastCaptionPath = "";
-    var lastOverlayPath = "";
     var projectMedia = [];
     var projectFolder = "";
     // Raw project folder detected by JSX (app.project.path → parent dir,
@@ -58,6 +55,11 @@
     var editDebounceTimer = null;
     var _alertTimer = null;
     var _wsReconnectTimer = null;
+    var _navScrollPersistTimer = null;
+    var _overlayStack = [];
+    var _overlayFocusManagementBound = false;
+    var _previewModalReturnFocusEl = null;
+    var _audioPreviewReturnFocusEl = null;
 
     // ---- Centralized Timer Cleanup ----
     function cleanupTimers() {
@@ -139,7 +141,9 @@
     };
     var _shortcutRegistry = {};
     var WORKSPACE_STATE_KEY = "opencut_workspace_state";
+    var NAV_SCROLL_STATE_KEY = "opencut_nav_scroll_state";
     var _workspaceState = loadWorkspaceState();
+    var _navScrollState = loadNavScrollState();
 
     function loadShortcuts() {
         var saved = {};
@@ -160,25 +164,6 @@
         return _shortcutRegistry;
     }
 
-    function saveShortcuts() {
-        var toSave = {};
-        var id;
-        for (id in _shortcutRegistry) {
-            if (_shortcutRegistry.hasOwnProperty(id) && DEFAULT_SHORTCUTS[id] &&
-                _shortcutRegistry[id].keys !== DEFAULT_SHORTCUTS[id].keys) {
-                toSave[id] = { keys: _shortcutRegistry[id].keys };
-            }
-        }
-        try { localStorage.setItem("opencut_shortcuts", JSON.stringify(toSave)); } catch (e) {}
-    }
-
-    function updateShortcut(actionId, newKeys) {
-        if (_shortcutRegistry[actionId]) {
-            _shortcutRegistry[actionId].keys = newKeys;
-            saveShortcuts();
-        }
-    }
-
     function normalizeWorkspaceState(saved) {
         return {
             activeNav: saved && typeof saved.activeNav === "string" ? saved.activeNav : "cut",
@@ -186,6 +171,21 @@
             selectedPath: saved && typeof saved.selectedPath === "string" ? saved.selectedPath : "",
             selectedName: saved && typeof saved.selectedName === "string" ? saved.selectedName : ""
         };
+    }
+
+    function normalizeNavScrollState(saved) {
+        var normalized = {};
+        var key;
+        if (!saved || typeof saved !== "object") return normalized;
+        for (key in saved) {
+            if (Object.prototype.hasOwnProperty.call(saved, key) &&
+                typeof saved[key] === "number" &&
+                isFinite(saved[key]) &&
+                saved[key] >= 0) {
+                normalized[key] = Math.round(saved[key]);
+            }
+        }
+        return normalized;
     }
 
     function loadWorkspaceState() {
@@ -200,6 +200,43 @@
         try {
             localStorage.setItem(WORKSPACE_STATE_KEY, JSON.stringify(_workspaceState));
         } catch (e) {}
+    }
+
+    function loadNavScrollState() {
+        try {
+            var saved = localStorage.getItem(NAV_SCROLL_STATE_KEY);
+            if (saved) return normalizeNavScrollState(JSON.parse(saved));
+        } catch (e) {}
+        return normalizeNavScrollState({});
+    }
+
+    function persistNavScrollState() {
+        try {
+            localStorage.setItem(NAV_SCROLL_STATE_KEY, JSON.stringify(_navScrollState));
+        } catch (e) {}
+    }
+
+    function getMainScrollContainer() {
+        return (el && el.mainContent) ? el.mainContent : document.querySelector(".main");
+    }
+
+    function rememberNavScroll(tabName) {
+        var main = getMainScrollContainer();
+        if (!main || !tabName) return;
+        _navScrollState[tabName] = Math.max(0, Math.round(main.scrollTop || 0));
+        persistNavScrollState();
+    }
+
+    function restoreNavScroll(tabName) {
+        var main = getMainScrollContainer();
+        if (!main) return;
+        main.scrollTop = tabName && Object.prototype.hasOwnProperty.call(_navScrollState, tabName)
+            ? _navScrollState[tabName]
+            : 0;
+        var root = document.scrollingElement || document.documentElement;
+        if (root && typeof root.scrollTop === "number") {
+            root.scrollTop = 0;
+        }
     }
 
     function rememberWorkspaceTab(tabName) {
@@ -315,12 +352,12 @@
             dropdownGlobalListenersAdded = true;
             document.addEventListener('click', function(e) {
                 if (!e.target.closest('.custom-dropdown')) {
-                    closeAllDropdowns();
+                    closeAllDropdowns({ restoreFocus: false });
                 }
             });
             document.addEventListener('keydown', function(e) {
                 if (e.key === 'Escape') {
-                    closeAllDropdowns();
+                    closeAllDropdowns({ restoreFocus: true });
                 }
             });
         }
@@ -365,7 +402,7 @@
         function buildOptions() {
             dropdown.innerHTML = '';
             var hasOptgroups = select.querySelector('optgroup');
-            var i, j, child, opt;
+            var i, j, child;
             
             if (hasOptgroups) {
                 for (i = 0; i < select.children.length; i++) {
@@ -424,9 +461,9 @@
                 }
                 item.classList.add('selected');
                 updateSelectedText();
-                closeDropdown();
+                closeDropdown({ restoreFocus: true });
             });
-            
+             
             return item;
         }
         
@@ -455,11 +492,15 @@
             }
         }
         
-        function closeDropdown() {
+        function closeDropdown(options) {
+            var restoreFocus = !!(options && options.restoreFocus);
             wrapper.classList.remove('open');
             trigger.setAttribute("aria-expanded", "false");
             var focused = dropdown.querySelector('.custom-dropdown-item.focused');
             if (focused) focused.classList.remove('focused');
+            if (restoreFocus) {
+                try { trigger.focus(); } catch (e) {}
+            }
         }
         
         function positionDropdown() {
@@ -498,7 +539,7 @@
                     // Select the focused item
                     var focused = dropdown.querySelector('.custom-dropdown-item.focused');
                     if (focused) focused.click();
-                    else closeDropdown();
+                    else closeDropdown({ restoreFocus: true });
                 } else {
                     toggleDropdown(e);
                 }
@@ -507,7 +548,7 @@
 
             if (e.key === 'Escape') {
                 e.preventDefault();
-                closeDropdown();
+                closeDropdown({ restoreFocus: true });
                 return;
             }
 
@@ -558,7 +599,21 @@
                 }
             }
         });
-        
+
+        dropdown.addEventListener('wheel', function (e) {
+            var maxScrollTop;
+            if (!wrapper.classList.contains('open')) return;
+            maxScrollTop = Math.max(0, dropdown.scrollHeight - dropdown.clientHeight);
+            if (maxScrollTop <= 0) {
+                e.preventDefault();
+                e.stopPropagation();
+                return;
+            }
+            dropdown.scrollTop = Math.max(0, Math.min(maxScrollTop, dropdown.scrollTop + e.deltaY));
+            e.preventDefault();
+            e.stopPropagation();
+        }, { passive: false });
+         
         wrapper.appendChild(trigger);
         wrapper.appendChild(dropdown);
         if (!select.parentNode) return;
@@ -577,28 +632,30 @@
             wrapper: wrapper,
             update: buildOptions,
             updateText: updateSelectedText,
-            observer: observer
+            observer: observer,
+            close: closeDropdown,
+            trigger: trigger
         };
     }
-    
-    function closeAllDropdowns() {
+     
+    function closeAllDropdowns(options) {
+        options = options || {};
         var openDropdowns = document.querySelectorAll('.custom-dropdown.open');
         for (var i = 0; i < openDropdowns.length; i++) {
-            openDropdowns[i].classList.remove('open');
-            var trig = openDropdowns[i].querySelector('.custom-dropdown-trigger');
-            if (trig) trig.setAttribute("aria-expanded", "false");
+            var selectId = openDropdowns[i].dataset.for;
+            var nativeSelect = selectId ? document.getElementById(selectId) : null;
+            if (nativeSelect && nativeSelect._customDropdown && typeof nativeSelect._customDropdown.close === "function") {
+                nativeSelect._customDropdown.close({ restoreFocus: !!options.restoreFocus && i === openDropdowns.length - 1 });
+            } else {
+                openDropdowns[i].classList.remove('open');
+                var trig = openDropdowns[i].querySelector('.custom-dropdown-trigger');
+                if (trig) trig.setAttribute("aria-expanded", "false");
+            }
         }
-        hideRecentClipsDropdown(false);
-        closeCommandPalette({ restoreFocus: false });
+        hideRecentClipsDropdown(!!options.restoreFocus);
+        if (options.closePalette) closeCommandPalette({ restoreFocus: options.restorePaletteFocus !== false });
     }
     
-    function updateCustomDropdown(selectId) {
-        var select = document.getElementById(selectId);
-        if (select && select._customDropdown) {
-            select._customDropdown.update();
-        }
-    }
-
     // ---- DOM (Lazy Proxy — elements are cached on first access) ----
     var _elCache = {};
     var el = new Proxy(_elCache, {
@@ -610,6 +667,181 @@
         }
     });
     function $(id) { return document.getElementById(id); }
+
+    function initSkipLinkFocus() {
+        var skipLink = document.querySelector(".skip-link");
+        var main = $("mainContent");
+        if (!skipLink || !main || skipLink._focusBindingAdded) return;
+        skipLink._focusBindingAdded = true;
+        skipLink.addEventListener("click", function () {
+            window.setTimeout(function () {
+                try { main.focus(); } catch (e) {}
+            }, 0);
+        });
+    }
+
+    function isFocusableNode(node) {
+        if (!node || node.disabled) return false;
+        if (node.getAttribute && node.getAttribute("aria-hidden") === "true") return false;
+        if (node.tabIndex < 0 && !/^(AUDIO)$/i.test(node.tagName || "")) return false;
+        try {
+            var style = window.getComputedStyle(node);
+            if (style.display === "none" || style.visibility === "hidden") return false;
+        } catch (e) {}
+        return !!(node.offsetWidth || node.offsetHeight || (node.getClientRects && node.getClientRects().length));
+    }
+
+    function getFocusableNodes(container) {
+        if (!container || !container.querySelectorAll) return [];
+        var selector = [
+            'a[href]',
+            'button:not([disabled])',
+            'input:not([disabled])',
+            'select:not([disabled])',
+            'textarea:not([disabled])',
+            '[tabindex]:not([tabindex="-1"])',
+            'audio[controls]'
+        ].join(',');
+        var nodes = container.querySelectorAll(selector);
+        var focusable = [];
+        for (var i = 0; i < nodes.length; i++) {
+            if (isFocusableNode(nodes[i])) focusable.push(nodes[i]);
+        }
+        return focusable;
+    }
+
+    function getTopOverlayEntry() {
+        return _overlayStack.length ? _overlayStack[_overlayStack.length - 1] : null;
+    }
+
+    function focusOverlayEntry(entry) {
+        if (!entry || !entry.element) return;
+        var target = entry.initialFocus && isFocusableNode(entry.initialFocus)
+            ? entry.initialFocus
+            : null;
+        var focusable = target ? null : getFocusableNodes(entry.element);
+        if (!target && focusable.length) target = focusable[0];
+        if (!target) {
+            if (!entry.element.hasAttribute("tabindex")) entry.element.setAttribute("tabindex", "-1");
+            target = entry.element;
+        }
+        try { target.focus(); } catch (e) {}
+    }
+
+    function syncOverlayBackgroundState() {
+        var app = document.querySelector(".app");
+        var hasOverlay = !!getTopOverlayEntry();
+        if (!app) return;
+        var children = app.children;
+        for (var i = 0; i < children.length; i++) {
+            var child = children[i];
+            var isOverlayLayer = child === el.commandPaletteOverlay || child === el.previewModal;
+            if (isOverlayLayer) continue;
+            if (hasOverlay) {
+                child.setAttribute("aria-hidden", "true");
+                if ("inert" in child) child.inert = true;
+            } else {
+                if (child.getAttribute("aria-hidden") === "true") child.removeAttribute("aria-hidden");
+                if ("inert" in child) child.inert = false;
+            }
+        }
+        document.body.classList.toggle("overlay-active", hasOverlay);
+    }
+
+    function activateOverlay(element, options) {
+        var entry = null;
+        var i;
+        if (!element) return;
+        for (i = _overlayStack.length - 1; i >= 0; i--) {
+            if (_overlayStack[i].element === element) {
+                entry = _overlayStack.splice(i, 1)[0];
+                break;
+            }
+        }
+        if (!entry) {
+            entry = {
+                element: element,
+                returnFocus: options && options.returnFocus ? options.returnFocus : (document.activeElement && document.activeElement !== document.body ? document.activeElement : null),
+                initialFocus: null
+            };
+        }
+        if (options && options.initialFocus) entry.initialFocus = options.initialFocus;
+        if (options && options.returnFocus) entry.returnFocus = options.returnFocus;
+        element.setAttribute("data-overlay-active", "true");
+        if (!element.hasAttribute("tabindex")) element.setAttribute("tabindex", "-1");
+        _overlayStack.push(entry);
+        syncOverlayBackgroundState();
+        focusOverlayEntry(entry);
+    }
+
+    function deactivateOverlay(element, options) {
+        var removed = null;
+        var restoreFocus = !options || options.restoreFocus !== false;
+        var i;
+        if (!element) return;
+        for (i = _overlayStack.length - 1; i >= 0; i--) {
+            if (_overlayStack[i].element === element) {
+                removed = _overlayStack.splice(i, 1)[0];
+                break;
+            }
+        }
+        element.removeAttribute("data-overlay-active");
+        syncOverlayBackgroundState();
+        if (_overlayStack.length) {
+            focusOverlayEntry(getTopOverlayEntry());
+            return;
+        }
+        if (restoreFocus && removed && removed.returnFocus && typeof removed.returnFocus.focus === "function") {
+            try { removed.returnFocus.focus(); } catch (e) {}
+        }
+    }
+
+    function getOverlayCloseHandler(element) {
+        if (element === el.commandPaletteOverlay) return closeCommandPalette;
+        if (element === el.previewModal) return closePreviewModal;
+        return null;
+    }
+
+    function initOverlayFocusManagement() {
+        if (_overlayFocusManagementBound) return;
+        _overlayFocusManagementBound = true;
+        document.addEventListener("keydown", function (e) {
+            var top = getTopOverlayEntry();
+            var focusable;
+            var first;
+            var last;
+            if (!top || !top.element || top.element.classList.contains("hidden")) return;
+            if (e.key === "Escape") {
+                var closeHandler = getOverlayCloseHandler(top.element);
+                if (typeof closeHandler === "function") {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeHandler();
+                }
+                return;
+            }
+            if (e.key !== "Tab") return;
+            focusable = getFocusableNodes(top.element);
+            if (!focusable.length) {
+                e.preventDefault();
+                focusOverlayEntry(top);
+                return;
+            }
+            first = focusable[0];
+            last = focusable[focusable.length - 1];
+            if (e.shiftKey) {
+                if (document.activeElement === first || !top.element.contains(document.activeElement)) {
+                    e.preventDefault();
+                    last.focus();
+                }
+                return;
+            }
+            if (document.activeElement === last || !top.element.contains(document.activeElement)) {
+                e.preventDefault();
+                first.focus();
+            }
+        }, true);
+    }
 
     var _generatedLabelId = 0;
 
@@ -677,6 +909,140 @@
             }
         }
     }
+
+    var _numericValidationBound = false;
+
+    function getControlAccessibleName(control) {
+        var label = getAssociatedLabel(control);
+        var labelText = label ? (label.textContent || "") : "";
+        return (
+            (control && (control.getAttribute("aria-label") || control.getAttribute("title") || control.getAttribute("placeholder"))) ||
+            labelText ||
+            humanizeControlId(control && (control.id || control.name))
+        ).replace(/\s+/g, " ").trim();
+    }
+
+    function getStepPrecision(step) {
+        var stepText = String(step || "");
+        var decimalPoint = stepText.indexOf(".");
+        return decimalPoint === -1 ? 0 : (stepText.length - decimalPoint - 1);
+    }
+
+    function formatNumberForInput(value, precision) {
+        var text;
+        if (!isFinite(value)) return "";
+        if (precision > 0) {
+            text = value.toFixed(precision).replace(/\.?0+$/, "");
+            return text === "-0" ? "0" : text;
+        }
+        text = String(Math.round(value));
+        return text === "-0" ? "0" : text;
+    }
+
+    function normalizeNumberInputValue(input) {
+        var raw;
+        var value;
+        var originalValue;
+        var minAttr;
+        var maxAttr;
+        var stepAttr;
+        var minValue;
+        var maxValue;
+        var stepValue;
+        var baseValue;
+        var precision;
+        var nextValue;
+        if (!input || input.tagName !== "INPUT" || input.type !== "number") return null;
+        raw = String(input.value || "").trim();
+        if (!raw) {
+            input.removeAttribute("aria-invalid");
+            return null;
+        }
+        minAttr = input.getAttribute("min");
+        maxAttr = input.getAttribute("max");
+        stepAttr = input.getAttribute("step");
+        minValue = minAttr !== null && minAttr !== "" ? parseFloat(minAttr) : null;
+        maxValue = maxAttr !== null && maxAttr !== "" ? parseFloat(maxAttr) : null;
+        stepValue = stepAttr && stepAttr !== "any" ? parseFloat(stepAttr) : null;
+        value = parseFloat(raw);
+        originalValue = value;
+        if (!isFinite(value)) {
+            if (minValue != null && isFinite(minValue)) value = minValue;
+            else if (input.defaultValue && isFinite(parseFloat(input.defaultValue))) value = parseFloat(input.defaultValue);
+            else value = 0;
+            input.setAttribute("aria-invalid", "true");
+        }
+        if (minValue != null && isFinite(minValue)) value = Math.max(minValue, value);
+        if (maxValue != null && isFinite(maxValue)) value = Math.min(maxValue, value);
+        if (stepValue && isFinite(stepValue) && stepValue > 0) {
+            baseValue = minValue != null && isFinite(minValue) ? minValue : 0;
+            value = baseValue + (Math.round((value - baseValue) / stepValue) * stepValue);
+        }
+        if (minValue != null && isFinite(minValue)) value = Math.max(minValue, value);
+        if (maxValue != null && isFinite(maxValue)) value = Math.min(maxValue, value);
+        precision = stepValue && isFinite(stepValue) ? getStepPrecision(stepValue) : 6;
+        nextValue = formatNumberForInput(value, precision);
+        if (raw !== nextValue) {
+            input.value = nextValue;
+            return {
+                changed: true,
+                label: getControlAccessibleName(input),
+                value: nextValue,
+                notify: !isFinite(originalValue) || Math.abs(originalValue - value) > 0.000001
+            };
+        }
+        input.removeAttribute("aria-invalid");
+        return null;
+    }
+
+    var NUMERIC_INPUT_PAIRS = [
+        { minId: "highlightMinDur", maxId: "highlightMaxDur", label: "Highlight duration" },
+        { minId: "shortsMinDur", maxId: "shortsMaxDur", label: "Short duration" }
+    ];
+
+    function enforceNumericInputPair(input) {
+        var i;
+        for (i = 0; i < NUMERIC_INPUT_PAIRS.length; i++) {
+            var pair = NUMERIC_INPUT_PAIRS[i];
+            var minInput = document.getElementById(pair.minId);
+            var maxInput = document.getElementById(pair.maxId);
+            var minValue;
+            var maxValue;
+            if (!minInput || !maxInput || (input !== minInput && input !== maxInput)) continue;
+            if (!String(minInput.value || "").trim() || !String(maxInput.value || "").trim()) return null;
+            minValue = parseFloat(minInput.value);
+            maxValue = parseFloat(maxInput.value);
+            if (!isFinite(minValue) || !isFinite(maxValue) || minValue <= maxValue) return null;
+            if (input === minInput) {
+                maxInput.value = minInput.value;
+                return { label: pair.label, value: maxInput.value };
+            }
+            minInput.value = maxInput.value;
+            return { label: pair.label, value: minInput.value };
+        }
+        return null;
+    }
+
+    function initNumericInputValidation() {
+        if (_numericValidationBound) return;
+        _numericValidationBound = true;
+        document.addEventListener("blur", function (e) {
+            var input = e.target;
+            var normalized;
+            var paired;
+            if (!input || input.tagName !== "INPUT" || input.type !== "number") return;
+            normalized = normalizeNumberInputValue(input);
+            paired = enforceNumericInputPair(input);
+            if (normalized && normalized.changed && normalized.notify) {
+                showToast((normalized.label || "Value") + " adjusted to " + normalized.value + ".", "info");
+            }
+            if (paired) {
+                showToast(paired.label + " kept in range at " + paired.value + ".", "info");
+            }
+            input.removeAttribute("aria-invalid");
+        }, true);
+    }
+
     function setExpanded(node, expanded) {
         if (node) node.setAttribute("aria-expanded", expanded ? "true" : "false");
     }
@@ -1521,7 +1887,7 @@
         // v1.10.3 (N): include forward {endpoint, payload} so journal
         // rows can later expose "Apply to selection".
         if (forwardPayload) body.forward = forwardPayload;
-        api("POST", "/journal/record", body, function (err, entry) {
+        api("POST", "/journal/record", body, function (err) {
             if (err) {
                 // Never surface journal-record failures to the user — the
                 // forward operation already succeeded.
@@ -2502,15 +2868,20 @@
         updateWorkspaceStageSession();
     }
 
-    function resetMainScroll() {
-        var main = el.mainContent || document.querySelector(".main");
-        if (main && typeof main.scrollTop === "number") {
-            main.scrollTop = 0;
-        }
-        var root = document.scrollingElement || document.documentElement;
-        if (root && typeof root.scrollTop === "number") {
-            root.scrollTop = 0;
-        }
+    function initMainScrollTracking() {
+        var main = getMainScrollContainer();
+        if (!main || main._navScrollTrackingBound) return;
+        main._navScrollTrackingBound = true;
+        main.addEventListener("scroll", function () {
+            var activeTab = getActiveNavTabName();
+            if (!activeTab) return;
+            _navScrollState[activeTab] = Math.max(0, Math.round(main.scrollTop || 0));
+            if (_navScrollPersistTimer) clearTimeout(_navScrollPersistTimer);
+            _navScrollPersistTimer = setTimeout(function () {
+                _navScrollPersistTimer = null;
+                persistNavScrollState();
+            }, 120);
+        });
     }
 
     function setPanelVisibility(panel, active) {
@@ -2567,6 +2938,7 @@
         if (scroll && targetButton.scrollIntoView) {
             targetButton.scrollIntoView({ block: "nearest", inline: "nearest" });
         }
+        updateSubTabOverflowState(container);
         return targetButton;
     }
 
@@ -2575,8 +2947,10 @@
         if (!navBtns.length) return null;
         var remember = !options || options.remember !== false;
         var scroll = !options || options.scroll !== false;
+        var currentActiveName = getActiveNavTabName();
         var targetButton = null;
         var i;
+        if (scroll && currentActiveName) rememberNavScroll(currentActiveName);
         for (i = 0; i < navBtns.length; i++) {
             if (navBtns[i].getAttribute("data-nav") === tabName) {
                 targetButton = navBtns[i];
@@ -2612,9 +2986,27 @@
             remember: remember,
             scroll: scroll
         });
-        if (scroll) resetMainScroll();
+        if (scroll) restoreNavScroll(activeTabName);
         if (options && options.focus) targetButton.focus();
         return targetButton;
+    }
+
+    function updateSubTabOverflowState(container) {
+        var maxScrollLeft;
+        var canScrollLeft;
+        var canScrollRight;
+        if (!container) return;
+        maxScrollLeft = Math.max(0, container.scrollWidth - container.clientWidth);
+        canScrollLeft = container.scrollLeft > 6;
+        canScrollRight = container.scrollLeft < (maxScrollLeft - 6);
+        container.classList.toggle("has-overflow", maxScrollLeft > 1);
+        container.classList.toggle("overflow-left", canScrollLeft);
+        container.classList.toggle("overflow-right", canScrollRight);
+        if (maxScrollLeft > 1) {
+            container.setAttribute("data-overflow-hint", canScrollRight ? "More tools" : "Previous tools");
+        } else {
+            container.removeAttribute("data-overflow-hint");
+        }
     }
 
     function setupNavTabs() {
@@ -2664,6 +3056,18 @@
                 var parentPanel = container.closest(".nav-panel");
                 var parentTabName = getPanelTabName(parentPanel);
                 container.setAttribute("aria-orientation", "horizontal");
+                if (!container._overflowTrackingBound) {
+                    container._overflowTrackingBound = true;
+                    container.addEventListener("scroll", function () {
+                        updateSubTabOverflowState(container);
+                    }, { passive: true });
+                    container.addEventListener("wheel", function (e) {
+                        var hasOverflow = container.scrollWidth > container.clientWidth + 1;
+                        if (!hasOverflow || Math.abs(e.deltaY) <= Math.abs(e.deltaX)) return;
+                        container.scrollLeft += e.deltaY;
+                        e.preventDefault();
+                    }, { passive: false });
+                }
                 for (var j = 0; j < btns.length; j++) {
                     var subName = btns[j].getAttribute("data-sub") || (parentTabName + "-sub-" + j);
                     btns[j].id = btns[j].id || ("sub-tab-" + subName);
@@ -2706,6 +3110,7 @@
                     remember: false,
                     scroll: false
                 });
+                updateSubTabOverflowState(container);
             })(subTabContainers[i]);
         }
 
@@ -2747,11 +3152,7 @@
     function checkSubTabOverflow() {
         var containers = document.querySelectorAll(".sub-tabs");
         for (var i = 0; i < containers.length; i++) {
-            if (containers[i].scrollWidth > containers[i].clientWidth) {
-                containers[i].classList.add("has-overflow");
-            } else {
-                containers[i].classList.remove("has-overflow");
-            }
+            updateSubTabOverflowState(containers[i]);
         }
     }
 
@@ -3033,16 +3434,6 @@
     var jobStepCurrent = 0;
     var jobStepTotal = 0;
 
-    function runWorkflow(steps) {
-        // steps: [{endpoint, payload, label}, ...]
-        if (!steps || !steps.length) return;
-        workflowQueue = steps.slice();
-        workflowActive = true;
-        jobStepTotal = workflowQueue.length;
-        jobStepCurrent = 0;
-        runNextWorkflowStep();
-    }
-
     function runNextWorkflowStep() {
         if (!workflowQueue.length) {
             workflowActive = false;
@@ -3250,12 +3641,12 @@
     function startJob(endpoint, payload, options) {
         var opts = normalizeJobOptions(options);
         if (currentJob || jobStarting) {
-            showAlert("Another task is in progress. You can cancel it from the processing bar above.");
+            showAlert("OpenCut is already processing another task. Stop the active run or wait for it to finish first.");
             runStartJobErrorHook(opts, { reason: "busy" });
             return false;
         }
         if (!selectedPath && payload && !payload.filepath && !payload.no_input) {
-            showAlert("Choose a clip from the Media section above to get started.");
+            showAlert("Choose a source in Media before running this tool.");
             runStartJobErrorHook(opts, { reason: "missing-input" });
             return false;
         }
@@ -3266,7 +3657,7 @@
         // Show persistent processing banner
         var stepPrefix = (jobStepTotal > 1) ? "Step " + jobStepCurrent + "/" + jobStepTotal + ": " : "";
         el.processingBanner.classList.remove("hidden");
-        el.processingMsg.textContent = stepPrefix + "Starting…";
+        el.processingMsg.textContent = stepPrefix + "Preparing run…";
         el.processingFill.style.width = "0%";
         el.processingFill.setAttribute("aria-valuenow", "0");
         el.processingElapsed.textContent = "0s";
@@ -3276,7 +3667,7 @@
         el.resultsSection.classList.add("hidden");
         el.progressBar.style.width = "0%";
         el.progressBar.setAttribute("aria-valuenow", "0");
-        el.progressLabel.textContent = stepPrefix + "Starting…";
+        el.progressLabel.textContent = stepPrefix + "Preparing run…";
         el.cancelBtn.classList.remove("hidden");
 
         // Lock the entire UI
@@ -3393,6 +3784,40 @@
         el.processingMsg.textContent = msg;
     }
 
+    function cleanUiMessage(message) {
+        var text = String(message || "").replace(/\s+/g, " ").trim();
+        var statusMatch = text.match(/\b(4\d\d|5\d\d)\b/);
+        if (!text) return "";
+        if (/Request failed with status code|^HTTP\s+\d+|status:\s*(4\d\d|5\d\d)/i.test(text)) {
+            if (statusMatch && statusMatch[1] === "404") {
+                return "OpenCut couldn't find the local route for that action. Refresh the panel or restart the backend from Settings.";
+            }
+            if (statusMatch && statusMatch[1].charAt(0) === "5") {
+                return "OpenCut hit a local backend problem while handling that request. Try again or review the logs in Settings.";
+            }
+            return "OpenCut couldn't complete that request. Try again in a moment.";
+        }
+        if (/ECONNREFUSED|ERR_CONNECTION_REFUSED|Failed to fetch|NetworkError|network request failed/i.test(text)) {
+            return "OpenCut couldn't reach the local backend. Restart it from Settings, then try again.";
+        }
+        if (/another task is in progress/i.test(text)) {
+            return "OpenCut is already processing another task. Stop the active run or wait for it to finish first.";
+        }
+        if (/choose a clip|select a clip|select media|choose a source|select a source/i.test(text)) {
+            return "Choose a source in Media before running this tool.";
+        }
+        if (/file not found|no such file/i.test(text)) {
+            return "OpenCut couldn't find that source anymore. Re-select the clip or browse to it again.";
+        }
+        if (/permission|access denied|denied/i.test(text)) {
+            return "OpenCut doesn't have permission to read or write that file. Check folder access, then try again.";
+        }
+        if (/timed?\s*out|timeout/i.test(text)) {
+            return "That run took too long to finish. Try a shorter clip, lighter settings, or rerun once the backend is idle.";
+        }
+        return text.replace(/^error:\s*/i, "");
+    }
+
     // Structured error code -> actionable guidance map
     var ERROR_CODE_ACTIONS = {
         "GPU_OUT_OF_MEMORY": { tab: "settings", msg: "GPU ran out of memory. Try CPU mode in Settings." },
@@ -3409,40 +3834,41 @@
     };
 
     function enhanceError(msg, errorData) {
+        var normalizedMsg = cleanUiMessage(msg);
         // 1. Check structured error code FIRST
         if (errorData && errorData.code && ERROR_CODE_ACTIONS[errorData.code]) {
             var action = ERROR_CODE_ACTIONS[errorData.code];
-            var base = action.msg || errorData.error || msg;
+            var base = cleanUiMessage(action.msg || errorData.error || normalizedMsg);
             if (errorData.suggestion) {
-                base = base + " \u2014 " + errorData.suggestion;
+                base = base + " \u2014 " + cleanUiMessage(errorData.suggestion);
             }
             return base;
         }
         // 2. If the server returned a suggestion without a known code, use it directly
         if (errorData && errorData.suggestion) {
-            return (errorData.error || msg) + " \u2014 " + errorData.suggestion;
+            return cleanUiMessage(errorData.error || normalizedMsg) + " \u2014 " + cleanUiMessage(errorData.suggestion);
         }
-        if (!msg) return msg;
+        if (!normalizedMsg) return normalizedMsg;
         // 3. Fallback: regex-based enhancement for legacy/unstructured errors
-        if (/not installed|No module named/i.test(msg)) {
-            return msg + " \u2014 You can install this from the Settings tab.";
+        if (/not installed|No module named/i.test(normalizedMsg)) {
+            return normalizedMsg + " \u2014 You can install this from the Settings tab.";
         }
-        if (/memory|CUDA out of memory|out of memory/i.test(msg)) {
-            return msg + " \u2014 Try a smaller file, lower quality setting, or enable CPU mode in Settings.";
+        if (/memory|CUDA out of memory|out of memory/i.test(normalizedMsg)) {
+            return normalizedMsg + " \u2014 Try a smaller file, lower quality setting, or enable CPU mode in Settings.";
         }
-        if (/Permission|Access denied|denied/i.test(msg)) {
-            return msg + " \u2014 The file may be locked or read-only. Check your file permissions.";
+        if (/Permission|Access denied|denied/i.test(normalizedMsg)) {
+            return normalizedMsg + " \u2014 The file may be locked or read-only. Check your file permissions.";
         }
-        if (/No such file|not found/i.test(msg)) {
-            return msg + " \u2014 The file may have been moved or deleted.";
+        if (/No such file|not found/i.test(normalizedMsg)) {
+            return normalizedMsg + " \u2014 The file may have been moved or deleted.";
         }
-        if (/timed? ?out|timeout/i.test(msg)) {
-            return msg + " \u2014 The operation took too long. Try a shorter clip or simpler settings.";
+        if (/timed? ?out|timeout/i.test(normalizedMsg)) {
+            return normalizedMsg + " \u2014 The operation took too long. Try a shorter clip or simpler settings.";
         }
-        if (/connection|ECONNREFUSED|network/i.test(msg)) {
-            return msg + " \u2014 Make sure the OpenCut server is running.";
+        if (/connection|ECONNREFUSED|network/i.test(normalizedMsg)) {
+            return normalizedMsg + " \u2014 Make sure the OpenCut server is running.";
         }
-        return msg;
+        return normalizedMsg;
     }
 
     function getErrorCodeAction(errorData) {
@@ -3463,11 +3889,12 @@
             hideProgress();
             // Show error in results card for better visibility
             el.resultsSection.classList.remove("hidden");
-            el.resultsTitle.textContent = "Error";
+            el.resultsTitle.textContent = "Run failed";
             el.resultsTitle.removeAttribute("style");
             el.resultsTitle.setAttribute("data-state", "error");
             el.resultsStats.textContent = enhanceError(job.error || job.message || "Unknown error", job);
             el.resultsPath.textContent = "";
+            el.resultsPath.title = "";
             // Show retry button if we have a last job to retry
             if (lastJobEndpoint) {
                 el.retryJobBtn.classList.remove("hidden");
@@ -3519,7 +3946,6 @@
                         }
                     } catch (e) { console.error("XML import parse error:", e); }
                 });
-                lastXmlPath = xmlPath;
             }
 
             // Styled caption overlay video (.mov with alpha)
@@ -3535,7 +3961,6 @@
                         }
                     } catch (e) { console.error("Overlay import parse error:", e, result); }
                 });
-                lastOverlayPath = overlayPath;
             }
 
             // Multiple output files (stem separation)
@@ -3574,7 +3999,6 @@
                             }
                         } catch (e) { console.error("Caption import parse error:", e, result); }
                     });
-                    lastCaptionPath = outputPath;
                 }
                 // Audio/video files - generic import to project
                 else if (ext === "wav" || ext === "mp3" || ext === "flac" || ext === "aac" || ext === "ogg" ||
@@ -3605,7 +4029,6 @@
                         }
                     } catch (e) { console.error("Caption import parse error:", e, result); }
                 });
-                lastCaptionPath = srtPath;
             }
 
             // Re-scan project media after auto-import so new files appear in the clip list
@@ -3627,7 +4050,7 @@
 
     function showResults(job) {
         el.resultsSection.classList.remove("hidden");
-        el.resultsTitle.textContent = "Complete";
+        el.resultsTitle.textContent = "Finished";
         el.resultsTitle.removeAttribute("style");
         el.resultsTitle.setAttribute("data-state", "success");
 
@@ -3688,8 +4111,10 @@
             }
         }
 
-        el.resultsStats.innerHTML = stats || "Processing complete.";
-        el.resultsPath.textContent = r.xml_path || r.output_path || r.overlay_path || (r.output_paths ? r.output_paths.length + " files exported" : "");
+        var resultPath = r.xml_path || r.output_path || r.overlay_path || (r.output_paths ? r.output_paths.length + " files exported" : "");
+        el.resultsStats.innerHTML = stats || "The run finished successfully.";
+        el.resultsPath.textContent = resultPath;
+        el.resultsPath.title = resultPath || "";
     }
 
     function cancelJob() {
@@ -4145,8 +4570,8 @@
                     return;
                 }
                 // Open OAuth URL in user's browser
-                if (typeof cep_node !== "undefined" && cep_node.require) {
-                    cep_node.require("child_process").execFile("cmd", ["/c", "start", "", authUrl]);
+                if (window.cep_node && window.cep_node.require) {
+                    window.cep_node.require("child_process").execFile("cmd", ["/c", "start", "", authUrl]);
                 } else {
                     window.open(authUrl, "_blank");
                 }
@@ -4198,7 +4623,6 @@
 
     // ---- WebSocket Client ----
     var _ws = null;
-    var _wsReconnectTimer = null;
     var _wsConnected = false;
 
     function wsConnect() {
@@ -4264,9 +4688,9 @@
             if (el.processingMsg && message) el.processingMsg.textContent = message;
         } else if (msg.type === "event" && msg.event === "job_complete") {
             // Job completed via WS — trigger poll to pick up result
-            if (currentJob) pollJob();
+            if (currentJob) trackJobPoll(currentJob);
         } else if (msg.type === "event" && msg.event === "job_error") {
-            if (currentJob) pollJob();
+            if (currentJob) trackJobPoll(currentJob);
         }
     }
 
@@ -5788,7 +6212,7 @@
     });
 
     // Listener: Reset step counters after final job (only if no chain/workflow pending)
-    addJobDoneListener(function (job) {
+    addJobDoneListener(function () {
         if (!pendingBurnin && !pendingAnimCap && !pendingTranslate && !workflowActive) {
             jobStepCurrent = 0;
             jobStepTotal = 0;
@@ -5873,7 +6297,6 @@
         }
 
         var totalDuration = getTranscriptTotalDuration(data);
-        var wordCount = Number(data && data.word_count || 0);
         var longest = 0;
         for (var i = 0; i < segments.length; i++) {
             longest = Math.max(longest, Math.max(0, Number(segments[i].end || 0) - Number(segments[i].start || 0)));
@@ -6685,10 +7108,13 @@
 
     function openLogs() {
         var isWin = navigator.platform.indexOf("Win") !== -1;
+        var localRequire = window.cep_node && window.cep_node.require ? window.cep_node.require : null;
+        var localProcess = window.cep_node && window.cep_node.process ? window.cep_node.process : null;
         try {
-            var childProcess = require("child_process");
-            var os = require("os");
-            var home = os.homedir ? os.homedir() : (process.env.USERPROFILE || process.env.HOME || "");
+            if (!localRequire) throw new Error("CEP Node bridge unavailable");
+            var childProcess = localRequire("child_process");
+            var os = localRequire("os");
+            var home = os.homedir ? os.homedir() : ((localProcess && localProcess.env && (localProcess.env.USERPROFILE || localProcess.env.HOME)) || "");
             var logPath = home ? home + (isWin ? "\\.opencut\\server.log" : "/.opencut/server.log") : "";
             var logDir = home ? home + (isWin ? "\\.opencut" : "/.opencut") : "";
 
@@ -6779,17 +7205,6 @@
         try { _recomputeEffectiveOutputDir(); } catch (e) {}
     }
     
-    function getLocalSetting(key, defaultVal) {
-        try {
-            var saved = localStorage.getItem(LOCAL_SETTINGS_KEY);
-            if (saved) {
-                var settings = JSON.parse(saved);
-                return settings[key] !== undefined ? settings[key] : defaultVal;
-            }
-        } catch (e) {}
-        return defaultVal;
-    }
-
     // ================================================================
     // Slider Handlers
     // ================================================================
@@ -6996,8 +7411,8 @@
         }
         el.alertBanner.classList.remove("hidden");
         if (_alertTimer) clearTimeout(_alertTimer);
-        if (tone === "error") return;
-        _alertTimer = setTimeout(function () { el.alertBanner.classList.add("hidden"); }, tone === "warning" ? 18000 : 12000);
+        if (tone === "error" || tone === "warning" || action) return;
+        _alertTimer = setTimeout(function () { el.alertBanner.classList.add("hidden"); }, tone === "success" ? 9000 : 12000);
     }
 
     function showErrorWithAction(errorData) {
@@ -7100,7 +7515,7 @@
             var openHistory = document.createElement("button");
             openHistory.type = "button";
             openHistory.className = "session-context-action session-context-interrupted-btn";
-            openHistory.textContent = "View history";
+            openHistory.textContent = "Open activity";
             openHistory.addEventListener("click", function () {
                 dismissSessionContext();
                 if (el.jobHistory && !el.jobHistory.classList.contains("open")) {
@@ -8611,12 +9026,12 @@
 
     function renderJobHistory() {
         if (!el.jobHistory || !el.jobHistoryToggle) return;
-        setToggleButtonCount(el.jobHistoryToggle, "History", jobHistoryList.length);
+        setToggleButtonCount(el.jobHistoryToggle, "Activity", jobHistoryList.length);
         el.jobHistory.innerHTML = "";
         if (!jobHistoryList.length) {
             el.jobHistory.innerHTML = buildEmptyHintMarkup(
-                "No history yet",
-                "Completed passes, exports, and timeline write-backs will appear here so you can reopen outputs or replay the same run.",
+                "No activity yet",
+                "Completed runs, exports, and timeline write-backs will appear here so you can reopen outputs or rerun the same workflow.",
                 "info"
             );
             return;
@@ -9387,15 +9802,6 @@
         });
     }
 
-    function addToQueue(endpoint, payload) {
-        api("POST", "/queue/add", { endpoint: endpoint, payload: payload }, function (err, data) {
-            if (!err && data) {
-                showToast("Added to queue (position " + data.position + ")", "info");
-                refreshQueueStatus();
-            }
-        });
-    }
-
     function refreshQueueStatus() {
         api("GET", "/queue/list", null, function (err, data) {
             if (err || !data) return;
@@ -9473,7 +9879,7 @@
             if (el.dropZone) el.dropZone.classList.add("drag-active");
         });
 
-        panel.addEventListener("dragleave", function (e) {
+        panel.addEventListener("dragleave", function () {
             dragCounter--;
             if (dragCounter <= 0) {
                 dragCounter = 0;
@@ -9596,10 +10002,6 @@
                 el.transcriptSearchCount.textContent = (_searchIndex + 1) + "/" + _searchMatches.length;
             }
         }
-    }
-
-    function logger(msg) {
-        if (typeof console !== "undefined" && console.log) console.log("[OpenCut] " + msg);
     }
 
     // ================================================================
@@ -9858,6 +10260,8 @@
         setPreviewModalMode("single");
         if (el.previewOriginal) el.previewOriginal.removeAttribute("src");
         if (el.previewProcessed) el.previewProcessed.removeAttribute("src");
+        deactivateOverlay(el.previewModal);
+        _previewModalReturnFocusEl = null;
     }
 
     function initPreviewModal() {
@@ -9887,7 +10291,11 @@
         var ts = el.previewTimestamp ? el.previewTimestamp.value : "00:00:01";
         var previewPath = selectedPath;
         var requestSeq = ++_previewModalRequestSeq;
+        var shouldOpenModal = !el.previewModal || el.previewModal.classList.contains("hidden");
         setPreviewModalMode("single");
+        if (shouldOpenModal) {
+            _previewModalReturnFocusEl = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
+        }
         if (el.previewRefreshBtn) {
             el.previewRefreshBtn.disabled = true;
             var refreshLabel = el.previewRefreshBtn.querySelector(".btn-label");
@@ -9906,8 +10314,15 @@
                 }
                 if (el.previewOriginal) el.previewOriginal.src = "data:image/jpeg;base64," + data.image;
                 if (el.previewProcessed) el.previewProcessed.removeAttribute("src");
-                if (el.previewModal) el.previewModal.classList.remove("hidden");
-                if (el.previewModalClose) el.previewModalClose.focus();
+                if (el.previewModal) {
+                    el.previewModal.classList.remove("hidden");
+                    if (shouldOpenModal) {
+                        activateOverlay(el.previewModal, {
+                            returnFocus: _previewModalReturnFocusEl,
+                            initialFocus: el.previewModalClose
+                        });
+                    }
+                }
             },
             onError: function (job) {
                 if (requestSeq !== _previewModalRequestSeq || previewPath !== selectedPath) return;
@@ -9933,6 +10348,10 @@
             el.audioPreviewPlayer.pause();
             el.audioPreviewPlayer.src = "";
         }
+        if (_audioPreviewReturnFocusEl && typeof _audioPreviewReturnFocusEl.focus === "function") {
+            try { _audioPreviewReturnFocusEl.focus(); } catch (e) {}
+        }
+        _audioPreviewReturnFocusEl = null;
     }
 
     function initAudioPreview() {
@@ -9943,6 +10362,7 @@
 
     function showAudioPreview(filePath) {
         if (!el.audioPreview || !el.audioPreviewPlayer) return;
+        _audioPreviewReturnFocusEl = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
         el.audioPreviewPlayer.src = BACKEND + "/file?path=" + encodeURIComponent(filePath);
         el.audioPreview.classList.remove("hidden");
         if (el.audioPreviewClose) el.audioPreviewClose.focus();
@@ -11543,8 +11963,8 @@
             var activeTab = getActivePaletteTabName();
             var activeLabel = activeTab ? getPaletteTabLabel(activeTab) : "All Tools";
             el.commandPaletteStatus.textContent = _paletteResults.length ?
-                (activeLabel + " tools plus recent actions and pinned shortcuts.") :
-                "Run tools or pin favorites to make the launcher smarter.";
+                (activeLabel + " tools, recent runs, and pinned shortcuts are ready.") :
+                "Run tools or pin favorites to shape this launcher around your workflow.";
             return;
         }
 
@@ -11570,7 +11990,7 @@
         copy.className = "command-palette-empty-copy";
         copy.textContent = query ?
             'Try a broader term like "audio", "captions", or "export".' :
-            "Recent actions and pinned favorites will appear here once you start using the workspace.";
+            "Recent runs and pinned favorites will appear here once you start using the workspace.";
         empty.appendChild(copy);
 
         el.commandPaletteResults.appendChild(empty);
@@ -11649,10 +12069,18 @@
 
     function openCommandPalette() {
         if (!el.commandPaletteOverlay || !el.commandPaletteInput || !el.commandPaletteResults) return;
+        if (!el.commandPaletteOverlay.classList.contains("hidden")) {
+            if (el.commandPaletteInput) el.commandPaletteInput.focus();
+            return;
+        }
         var previousFocus = document.activeElement && document.activeElement !== document.body ? document.activeElement : null;
-        closeAllDropdowns();
+        closeAllDropdowns({ restoreFocus: false });
         _paletteReturnFocusEl = previousFocus;
         el.commandPaletteOverlay.classList.remove("hidden");
+        activateOverlay(el.commandPaletteOverlay, {
+            returnFocus: _paletteReturnFocusEl,
+            initialFocus: el.commandPaletteInput
+        });
         setExpanded(el.commandPaletteInput, true);
         el.commandPaletteInput.value = "";
         el.commandPaletteInput.removeAttribute("aria-activedescendant");
@@ -11670,9 +12098,7 @@
             el.commandPaletteInput.removeAttribute("aria-activedescendant");
         }
         _paletteSelectedIdx = -1;
-        if (restoreFocus && _paletteReturnFocusEl && typeof _paletteReturnFocusEl.focus === "function") {
-            try { _paletteReturnFocusEl.focus(); } catch (e) {}
-        }
+        deactivateOverlay(el.commandPaletteOverlay, { restoreFocus: restoreFocus });
         _paletteReturnFocusEl = null;
     }
 
@@ -11887,53 +12313,6 @@
         });
     }
 
-    // ================================================================
-    // v1.3.0 - Per-Operation Presets
-    // ================================================================
-    function saveOperationPreset(opName) {
-        var settings = {};
-        var activePanel = document.querySelector(".sub-panel:not(.hidden):not([style*='display: none'])");
-        if (!activePanel) activePanel = document.querySelector(".sub-panel.active");
-        if (!activePanel) return;
-        var inputs = activePanel.querySelectorAll("input, select");
-        for (var i = 0; i < inputs.length; i++) {
-            if (!inputs[i].id) continue;
-            if (inputs[i].type === "checkbox") {
-                settings[inputs[i].id] = inputs[i].checked;
-            } else {
-                settings[inputs[i].id] = inputs[i].value;
-            }
-        }
-        var all = {};
-        try { all = JSON.parse(localStorage.getItem("opencut_op_presets") || "{}"); } catch(e) {}
-        all[opName] = settings;
-        try { localStorage.setItem("opencut_op_presets", JSON.stringify(all)); } catch(e) {}
-        showToast("Preset saved for " + opName, "success");
-    }
-
-    function loadOperationPreset(opName) {
-        var all = {};
-        try { all = JSON.parse(localStorage.getItem("opencut_op_presets") || "{}"); } catch(e) {}
-        var settings = all[opName];
-        if (!settings) { showToast("No saved preset for " + opName, "info"); return; }
-        for (var id in settings) {
-            var el2 = document.getElementById(id);
-            if (!el2) continue;
-            if (el2.type === "checkbox") {
-                el2.checked = settings[id];
-            } else {
-                el2.value = settings[id];
-            }
-            // Trigger appropriate event — "input" for sliders (display update), "change" for selects
-            var evtName = (el2.type === "range") ? "input" : "change";
-            var evt;
-            try { evt = new Event(evtName, { bubbles: true }); }
-            catch (err2) { evt = document.createEvent("Event"); evt.initEvent(evtName, true, true); }
-            el2.dispatchEvent(evt);
-        }
-        showToast("Preset loaded for " + opName, "success");
-    }
-
     // Health ping consolidated into checkHealth() above
 
     // ================================================================
@@ -12085,14 +12464,6 @@
     }
 
     // --- Silence mode toggle ---
-    function loadLlmSettings() {
-        loadLLMSettings();
-    }
-
-    function saveLlmSettings() {
-        saveLLMSettings({ toastSuccess: true });
-    }
-
     function saveAudioZoomDefaults() {
         var lufs = parseFloat((document.getElementById("defaultLufs") || {}).value || -14);
         var zoom = parseFloat((document.getElementById("defaultZoom") || {}).value || 1.15);
@@ -13816,11 +14187,15 @@
     document.addEventListener("DOMContentLoaded", function () {
         initCSInterface();
         initDOM();
+        initSkipLinkFocus();
+        initOverlayFocusManagement();
+        initMainScrollTracking();
         setupNavTabs();
         checkSubTabOverflow();
         window.addEventListener("resize", checkSubTabOverflow);
         setupSliders();
         initFormControlSemantics();
+        initNumericInputValidation();
         initCustomDropdowns(); // Initialize custom in-panel dropdowns
         initCutReviewPanel(); // Phase 3.3: Cut review panel
 

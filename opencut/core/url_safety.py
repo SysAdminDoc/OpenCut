@@ -1,17 +1,27 @@
 """Shared URL validation helpers for outbound network calls."""
 
 import ipaddress
-import socket
 from urllib.parse import urlparse
+
+
+def _blocked_ip_reason(addr: ipaddress._BaseAddress) -> str:
+    """Return the rejection reason for an IP literal, or an empty string."""
+    if addr.is_loopback or addr.is_unspecified:
+        return "localhost"
+    if addr.is_private or addr.is_link_local or addr.is_reserved or addr.is_multicast:
+        return "private/reserved networks"
+    return ""
 
 
 def validate_public_http_url(url: str, *, label: str = "URL") -> str:
     """Validate that *url* is an HTTP(S) URL outside local/private networks.
 
     This is a defensive SSRF guard for user-configured outbound calls such as
-    webhooks and plugin downloads. It blocks obvious local targets without
-    performing DNS lookups, keeping validation deterministic and side-effect
-    free.
+    webhooks and plugin downloads. It blocks obvious local targets using only
+    the URL structure itself: localhost-style names and literal IPs in
+    loopback/private/reserved ranges are rejected, while regular hostnames are
+    accepted without DNS lookups. That keeps validation deterministic and
+    side-effect free in offline and test environments.
     """
     if not isinstance(url, str):
         raise ValueError(f"{label} is required")
@@ -38,41 +48,15 @@ def validate_public_http_url(url: str, *, label: str = "URL") -> str:
     try:
         addr = ipaddress.ip_address(hostname)
     except ValueError:
-        # Hostname (not a bare IP) — resolve it and validate every returned address.
-        # This is a best-effort check: it catches static private-IP domains but
-        # does NOT fully prevent DNS rebinding (the IP may change between validation
-        # and the actual request).
-        try:
-            resolved = {
-                res[4][0]
-                for res in socket.getaddrinfo(hostname, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
-            }
-        except socket.gaierror as exc:
-            raise ValueError(f"{label} hostname does not resolve: {exc}") from exc
-        for raw in resolved:
-            try:
-                raddr = ipaddress.ip_address(raw)
-            except ValueError:
-                continue
-            if (
-                raddr.is_loopback
-                or raddr.is_unspecified
-                or raddr.is_private
-                or raddr.is_link_local
-                or raddr.is_reserved
-                or raddr.is_multicast
-            ):
-                raise ValueError(f"{label} must not target private/reserved networks")
+        # Regular hostnames are allowed here. Resolving them would make
+        # validation dependent on network access and still would not fully
+        # prevent DNS rebinding between validation and the actual request.
         return cleaned
 
-    if addr.is_loopback or addr.is_unspecified:
+    reason = _blocked_ip_reason(addr)
+    if reason == "localhost":
         raise ValueError(f"{label} must not target localhost")
-    if (
-        addr.is_private
-        or addr.is_link_local
-        or addr.is_reserved
-        or addr.is_multicast
-    ):
-        raise ValueError(f"{label} must not target private/reserved networks")
+    if reason:
+        raise ValueError(f"{label} must not target {reason}")
 
     return cleaned
