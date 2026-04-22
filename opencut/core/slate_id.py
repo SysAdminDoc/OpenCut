@@ -5,16 +5,19 @@ Florence-2 VLM reads clapperboard from clip-head frames.
 """
 from __future__ import annotations
 
+import io
 import logging
 import re
 import subprocess
 from dataclasses import dataclass, field
-from typing import List
+from typing import Dict, List
 
-from opencut.helpers import _try_import
+from opencut.helpers import _try_import, get_ffmpeg_path
 
 logger = logging.getLogger("opencut")
 INSTALL_HINT = "pip install transformers torch (Florence-2 already used in OpenCut)"
+
+_florence_cache: Dict[str, object] = {}
 
 
 def check_slate_id_available() -> bool:
@@ -49,8 +52,9 @@ def identify(video_path: str, max_head_frames: int = 60) -> SlateInfo:
     try:
         from transformers import AutoProcessor, AutoModelForCausalLM  # type: ignore
 
+        ffmpeg = get_ffmpeg_path()
         cmd = [
-            "ffmpeg", "-i", video_path,
+            ffmpeg, "-i", video_path,
             "-vf", f"select=ite(lt(n\\,{max_head_frames}),1,0)",
             "-vsync", "0", "-vframes", str(min(max_head_frames, 5)),
             "-f", "image2pipe", "-vcodec", "png", "pipe:1",
@@ -60,11 +64,17 @@ def identify(video_path: str, max_head_frames: int = 60) -> SlateInfo:
             return SlateInfo(notes=["No frames extracted from clip head"])
 
         model_name = "microsoft/Florence-2-base"
-        processor = AutoProcessor.from_pretrained(model_name, trust_remote_code=True)
-        model = AutoModelForCausalLM.from_pretrained(model_name, trust_remote_code=True)
+        if "processor" not in _florence_cache:
+            _florence_cache["processor"] = AutoProcessor.from_pretrained(
+                model_name, trust_remote_code=True
+            )
+            _florence_cache["model"] = AutoModelForCausalLM.from_pretrained(
+                model_name, trust_remote_code=True
+            )
+        processor = _florence_cache["processor"]
+        model = _florence_cache["model"]
 
         from PIL import Image  # type: ignore
-        import io
         try:
             img = Image.open(io.BytesIO(raw[:65536])).convert("RGB")
         except Exception:

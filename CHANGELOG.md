@@ -1,5 +1,22 @@
 # Changelog
 
+## [1.28.1] - 2026-04-21
+
+### Fixed — Wave K Bugfix Pass (Phase 3/4 production hardening)
+
+- **All 6 Wave K core modules**: replaced bare `"ffmpeg"` / `"ffprobe"` string literals with `get_ffmpeg_path()` / `get_ffprobe_path()` from `opencut.helpers`. Fixes silent failure in PyInstaller-bundled distributions where FFmpeg is not on PATH.
+- **All 6 Wave K core modules**: wrapped `subprocess.run(..., check=True)` in `try/except CalledProcessError` and re-raised as `RuntimeError` with the FFmpeg stderr included. Debugging FFmpeg failures now gives actionable error messages.
+- **`clip_rating.py`**: Added `threading.Lock()` around all `_load_db()` / `_save_db()` cycles in `rate()`, `tag()`, `untag()`, `search()`, `get()` to prevent concurrent-request data loss. `_save_db()` now uses an atomic write (`os.replace`) to prevent JSON corruption on crash.
+- **`profanity_censor.py`**: Fixed critical bleep-mode logic bug — original audio was mixed with the bleep instead of being silenced during profanity windows, leaving the original speech fully audible. Bleep mode now correctly silences the original and gates a 1 kHz tone to those windows only. Added `_get_audio_duration()` ffprobe helper to generate a full-length bleep track.
+- **`spectral_match.py`**: Added `-t 60` duration cap to the audio decode step, preventing OOM on long files. Analysis uses the first 60 seconds as a representative spectral sample.
+- **`lottie_import.py`**: Fixed silent blank-frame rendering — the PIL fallback created empty transparent frames with no warning. Now raises `RuntimeError` requiring Cairo. Fixed `bg_color` being accepted but not applied — compositing now uses `filter_complex` `color` + `overlay`.
+- **`semantic_search.py`**: Fixed `build_index()` which stored only timestamps — it now extracts the first frame with FFmpeg and computes a real CLIP embedding stored in the index. `search()` now uses pre-built embeddings instead of re-encoding every file per query. Fixed double CLIP import (`clip_mod` / `clip_mod2`). Added `threading.Lock()` for model load and index writes. `_save_index()` is now atomic via `os.replace`.
+- **`subtitle_qa.py`**: Fixed VTT regex that rejected `HH:MM:SS.mmm` timestamps (only `MM:SS.mmm` matched). Added file existence check at top of `validate()`. Renamed loop variable `l` to `line`. Added missing `import os`.
+- **`slate_id.py`**: Added `_florence_cache` dict to cache the Florence-2 processor and model across calls, avoiding a multi-GB reload on every invocation.
+- **`wave_k_routes.py`**: Added `validate_filepath` to security imports. Changed `validate_path` → `validate_filepath` on all file-input route parameters (`batch_reframe`, `subtitle_qa`, `spectral_match` × 3, `lottie_info`) to enforce file existence before handing paths to modules. Simplified Tier 3 stubs `route_gen_video_wan_vace` and `route_highlights_sports` to return `_stub_501()` directly, consistent with all other Tier 3 routes.
+
+---
+
 ## [1.28.0] - 2026-04-21
 
 ### Added — Wave K Completeness Pass (40 features, 59 routes)
