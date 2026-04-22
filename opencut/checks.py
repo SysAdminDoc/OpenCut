@@ -603,3 +603,301 @@ def check_lipsync_advanced_available() -> bool:
         return _c()
     except Exception:
         return False
+
+
+# ---------------------------------------------------------------------------
+# Wave K (Completeness Pass) — v1.28.0
+# ---------------------------------------------------------------------------
+
+def check_audio_watermark(verbose=False):
+    """K1.1 — AudioSeal watermark. Requires audioseal."""
+    from opencut.core.audio_watermark import check_audioseal_available, INSTALL_HINT
+    ok = check_audioseal_available()
+    if verbose:
+        status = "OK" if ok else f"MISSING — {INSTALL_HINT}"
+        print(f"  audio_watermark (audioseal): {status}")
+    return ok
+
+
+def check_batch_reframe(verbose=False):
+    """K1.4 — Batch reframe. Uses FFmpeg only."""
+    from opencut.core.batch_reframe import check_batch_reframe_available
+    ok = check_batch_reframe_available()
+    if verbose:
+        print(f"  batch_reframe: {'OK' if ok else 'MISSING — ffmpeg not found'}")
+    return ok
+
+
+def check_clip_rating(verbose=False):
+    """K1.5 — Clip rating. Stdlib JSON only."""
+    from opencut.core.clip_rating import check_clip_rating_available
+    ok = check_clip_rating_available()
+    if verbose:
+        print(f"  clip_rating: {'OK' if ok else 'MISSING'}")
+    return ok
+
+
+def check_subtitle_qa(verbose=False):
+    """K1.6 — Subtitle QA. Stdlib only."""
+    from opencut.core.subtitle_qa import check_subtitle_qa_available
+    ok = check_subtitle_qa_available()
+    if verbose:
+        print(f"  subtitle_qa: {'OK' if ok else 'MISSING'}")
+    return ok
+
+
+def check_profanity_censor(verbose=False):
+    """K1.7 — Profanity censor. Requires FFmpeg."""
+    from opencut.core.profanity_censor import check_profanity_censor_available
+    ok = check_profanity_censor_available()
+    if verbose:
+        status = "OK" if ok else "MISSING — ffmpeg not found"
+        print(f"  profanity_censor: {status}")
+    return ok
+
+
+def check_spectral_match(verbose=False):
+    """K1.8 — Spectral match. Requires scipy + numpy."""
+    from opencut.core.spectral_match import check_spectral_match_available, INSTALL_HINT
+    ok = check_spectral_match_available()
+    if verbose:
+        status = "OK" if ok else f"MISSING — {INSTALL_HINT}"
+        print(f"  spectral_match: {status}")
+    return ok
+
+
+def check_lottie_import(verbose=False):
+    """K1.9 — Lottie import. Requires lottie pip package."""
+    from opencut.core.lottie_import import check_lottie_available, INSTALL_HINT
+    ok = check_lottie_available()
+    if verbose:
+        status = "OK" if ok else f"MISSING — {INSTALL_HINT}"
+        print(f"  lottie_import: {status}")
+    return ok
+
+
+def check_semantic_search(verbose=False):
+    """K1.10 — Semantic search. Requires torch."""
+    from opencut.core.semantic_search import check_semantic_search_available, INSTALL_HINT
+    ok = check_semantic_search_available()
+    if verbose:
+        status = "OK" if ok else f"MISSING — {INSTALL_HINT}"
+        print(f"  semantic_search: {status}")
+    return ok
+
+
+def check_gptsovits(verbose=False):
+    """K2.1 — GPT-SoVITS TTS stub."""
+    from opencut.core.tts_gptsovits import check_gptsovits_available, INSTALL_HINT
+    ok = check_gptsovits_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  tts_gptsovits: {status}")
+    return ok
+
+
+def check_amphion_tts(verbose=False):
+    """K2.2 — Amphion TTS stub."""
+    from opencut.core.tts_amphion import check_amphion_available, INSTALL_HINT
+    ok = check_amphion_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  tts_amphion: {status}")
+    return ok
+
+
+def check_vevo2(verbose=False):
+    """K2.3 — Vevo2 singing voice stub."""
+    from opencut.core.singing_vevo2 import check_vevo2_available, INSTALL_HINT
+    ok = check_vevo2_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  singing_vevo2: {status}")
+    return ok
+
+
+def check_cosyvoice2(verbose=False):
+    """K2.4 — CosyVoice2 TTS stub."""
+    from opencut.core.tts_cosyvoice2 import check_cosyvoice2_available, INSTALL_HINT
+    ok = check_cosyvoice2_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  tts_cosyvoice2: {status}")
+    return ok
+
+
+def check_echomimic(verbose=False):
+    """K2.5 — EchoMimic lipsync stub."""
+    from opencut.core.lipsync_echomimic import check_echomimic_available, INSTALL_HINT
+    ok = check_echomimic_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  lipsync_echomimic: {status}")
+    return ok
+
+
+def check_tokenflow(verbose=False):
+    """K2.6 — TokenFlow style transfer stub."""
+    from opencut.core.style_tokenflow import check_tokenflow_available, INSTALL_HINT
+    ok = check_tokenflow_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  style_tokenflow: {status}")
+    return ok
+
+
+def check_track_cutie(verbose=False):
+    """K2.7 — Cutie object tracking stub."""
+    from opencut.core.track_cutie import check_cutie_available, INSTALL_HINT
+    ok = check_cutie_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  track_cutie: {status}")
+    return ok
+
+
+def check_track_deva(verbose=False):
+    """K2.8 — DEVA tracking stub."""
+    from opencut.core.track_deva import check_deva_available, INSTALL_HINT
+    ok = check_deva_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  track_deva: {status}")
+    return ok
+
+
+def check_searaft(verbose=False):
+    """K2.9 — SEA-RAFT optical flow stub."""
+    from opencut.core.flow_searaft import check_searaft_available, INSTALL_HINT
+    ok = check_searaft_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  flow_searaft: {status}")
+    return ok
+
+
+def check_diffbir(verbose=False):
+    """K2.10 — DiffBIR restoration stub."""
+    from opencut.core.restore_diffbir import check_diffbir_available, INSTALL_HINT
+    ok = check_diffbir_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  restore_diffbir: {status}")
+    return ok
+
+
+def check_gyroflow(verbose=False):
+    """K2.11 — Gyroflow stabilization stub."""
+    from opencut.core.stabilize_gyroflow import check_gyroflow_available, INSTALL_HINT
+    ok = check_gyroflow_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  stabilize_gyroflow: {status}")
+    return ok
+
+
+def check_deblur_motion(verbose=False):
+    """K2.12 — Motion deblur stub."""
+    from opencut.core.deblur_motion import check_deblur_motion_available, INSTALL_HINT
+    ok = check_deblur_motion_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  deblur_motion: {status}")
+    return ok
+
+
+def check_depth_depthpro(verbose=False):
+    """K2.13 — Depth Pro stub."""
+    from opencut.core.depth_depthpro import check_depthpro_available, INSTALL_HINT
+    ok = check_depthpro_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  depth_depthpro: {status}")
+    return ok
+
+
+def check_depth_flow(verbose=False):
+    """K2.14 — DepthFlow stub."""
+    from opencut.core.depth_flow import check_depthflow_available, INSTALL_HINT
+    ok = check_depthflow_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  depth_flow: {status}")
+    return ok
+
+
+def check_sfx_audiogen(verbose=False):
+    """K2.15 — AudioGen SFX stub."""
+    from opencut.core.sfx_audiogen import check_audiogen_available, INSTALL_HINT
+    ok = check_audiogen_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  sfx_audiogen: {status}")
+    return ok
+
+
+def check_gen_video_opensora(verbose=False):
+    """K2.16 — OpenSora video generation stub."""
+    from opencut.core.gen_video_opensora import check_opensora_available, INSTALL_HINT
+    ok = check_opensora_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  gen_video_opensora: {status}")
+    return ok
+
+
+def check_gen_video_ltx(verbose=False):
+    """K2.17 — LTX-Video generation stub."""
+    from opencut.core.gen_video_ltx import check_ltx_available, INSTALL_HINT
+    ok = check_ltx_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  gen_video_ltx: {status}")
+    return ok
+
+
+def check_audio_reactive_fx(verbose=False):
+    """K2.18 — Audio Reactive FX stub."""
+    from opencut.core.audio_reactive_fx import check_audio_reactive_available, INSTALL_HINT
+    ok = check_audio_reactive_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  audio_reactive_fx: {status}")
+    return ok
+
+
+def check_cinefocus(verbose=False):
+    """K2.19 — CineFocus rack-focus stub."""
+    from opencut.core.cinefocus import check_cinefocus_available, INSTALL_HINT
+    ok = check_cinefocus_available()
+    if verbose:
+        status = "OK" if ok else f"STUB — {INSTALL_HINT}"
+        print(f"  cinefocus: {status}")
+    return ok
+
+
+def check_wave_k(verbose=False):
+    """Run all Wave K availability checks and print a summary."""
+    checks = [
+        check_audio_watermark, check_batch_reframe, check_clip_rating,
+        check_subtitle_qa, check_profanity_censor, check_spectral_match,
+        check_lottie_import, check_semantic_search,
+        check_gptsovits, check_amphion_tts, check_vevo2, check_cosyvoice2,
+        check_echomimic, check_tokenflow, check_track_cutie, check_track_deva,
+        check_searaft, check_diffbir, check_gyroflow, check_deblur_motion,
+        check_depth_depthpro, check_depth_flow, check_sfx_audiogen,
+        check_gen_video_opensora, check_gen_video_ltx,
+        check_audio_reactive_fx, check_cinefocus,
+    ]
+    results = []
+    for fn in checks:
+        try:
+            results.append(fn(verbose=verbose))
+        except Exception as e:
+            if verbose:
+                print(f"  {fn.__name__}: ERROR — {e}")
+            results.append(False)
+    ok_count = sum(1 for r in results if r)
+    if verbose:
+        print(f"\nWave K: {ok_count}/{len(results)} components available")
+    return ok_count, len(results)
