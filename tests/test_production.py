@@ -395,11 +395,10 @@ class TestProductionRoutes(unittest.TestCase):
         self.assertEqual(production_bp.name, "production")
 
     def test_blueprint_in_register_blueprints(self):
-        """production_bp should be registered by register_blueprints."""
+        """production_bp should be present in the core blueprint registry."""
         import opencut.routes as routes_mod
-        source = inspect.getsource(routes_mod.register_blueprints)
-        self.assertIn("production_bp", source)
-        self.assertIn("production_routes", source)
+        names = {bp.name for bp in routes_mod.get_core_blueprints()}
+        self.assertIn("production", names)
 
     def test_credits_generate_route_exists(self):
         """POST /credits/generate route should exist on the app."""

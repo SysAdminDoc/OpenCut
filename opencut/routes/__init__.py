@@ -3,21 +3,45 @@ OpenCut Route Blueprints
 
 All Flask route handlers organized by domain.
 """
-# The blueprint imports below are collected via `locals()` in
-# register_blueprints(); ruff cannot trace through that dynamic access.
-# ruff: noqa: F401
+from collections import defaultdict
 
 
-def register_blueprints(app):
-    """Register all route Blueprints with the Flask app.
+class RouteCollisionError(RuntimeError):
+    """Raised when multiple endpoints claim the same method/path pair."""
 
-    Any name ending in ``_bp`` that is imported inside this function is
-    automatically collected and registered.  ``motion_design_bp`` is registered
-    twice: once by the auto-collection loop (bare ``/motion/*`` routes) and
-    once manually with ``url_prefix="/api"`` to preserve the legacy
-    ``/api/motion/*`` surface for older panel builds.  When adding a new
-    blueprint, add its import here; no other change is needed.
-    """
+
+def find_route_collisions(app):
+    """Return duplicate Flask route registrations keyed by ``(path, methods)``."""
+    collisions = defaultdict(list)
+
+    for rule in app.url_map.iter_rules():
+        methods = tuple(sorted(m for m in rule.methods if m not in {"HEAD", "OPTIONS"}))
+        collisions[(rule.rule, methods)].append(rule.endpoint)
+
+    return {
+        (path, methods): endpoints
+        for (path, methods), endpoints in collisions.items()
+        if len(endpoints) > 1
+    }
+
+
+def assert_no_route_collisions(app) -> None:
+    """Fail fast when two Flask endpoints own the same method/path pair."""
+    duplicates = find_route_collisions(app)
+    if not duplicates:
+        return
+
+    lines = [
+        f"{path} {methods}: {', '.join(endpoints)}"
+        for (path, methods), endpoints in sorted(duplicates.items())
+    ]
+    raise RouteCollisionError(
+        "Duplicate route registrations detected:\n" + "\n".join(lines)
+    )
+
+
+def get_core_blueprints():
+    """Return the ordered tuple of built-in OpenCut blueprints."""
     from .ai_content_routes import ai_content_bp
     from .ai_editing_routes import ai_editing_bp
     from .ai_intelligence_routes import ai_intel_bp
@@ -116,16 +140,124 @@ def register_blueprints(app):
     from .workflow_dev_routes import workflow_dev_bp
     from .workflow_routes import workflow_auto_bp
 
-    blueprints = [
-        v for k, v in locals().items()
-        if k.endswith("_bp")
-    ]
+    return (
+        ai_content_bp,
+        ai_editing_bp,
+        ai_intel_bp,
+        analysis_bp,
+        architecture_bp,
+        audio_bp,
+        audio_adv_bp,
+        audio_expand_bp,
+        audio_post_bp,
+        audio_prod_bp,
+        batch_data_bp,
+        body_transfer_bp,
+        captions_bp,
+        cloud_distrib_bp,
+        collab_review_bp,
+        color_mam_bp,
+        composition_dubbing_bp,
+        content_gen_bp,
+        content_bp,
+        context_bp,
+        creative_bp,
+        deliverables_bp,
+        delivery_master_bp,
+        delivery_bp,
+        dev_scripting_bp,
+        documentary_bp,
+        editing_wf_bp,
+        education_bp,
+        encoding_bp,
+        engagement_content_bp,
+        enhanced_media_bp,
+        enhancement_bp,
+        format_bp,
+        gaming_bp,
+        generative_bp,
+        hw_bp,
+        infra_bp,
+        integration_bp,
+        jobs_bp,
+        journal_bp,
+        motion_design_bp,
+        motion_gen_bp,
+        multiview_repurpose_bp,
+        music_safety_bp,
+        next_gen_ai_bp,
+        nlp_bp,
+        object_intel_bp,
+        overlay_bp,
+        pipeline_intel_bp,
+        platform_infra_bp,
+        platform_ux_bp,
+        plugins_bp,
+        preproduction_proxy_bp,
+        preview_realtime_bp,
+        privacy_spectral_bp,
+        processing_bp,
+        production_bp,
+        professional_bp,
+        qc_bp,
+        remote_realtime_bp,
+        repair_gen_bp,
+        search_bp,
+        settings_bp,
+        solver_agent_bp,
+        sound_music_bp,
+        subtitle_pro_bp,
+        subtitle_bp,
+        system_bp,
+        timeline_bp,
+        timeline_auto_bp,
+        timeline_intel_bp,
+        tools_bp,
+        transcript_edit_bp,
+        utility_bp,
+        ux_intel_bp,
+        vfx_advanced_bp,
+        video_ai_bp,
+        video_core_bp,
+        video_editing_bp,
+        video_effects_bp,
+        video_fx_bp,
+        video_proc_bp,
+        video_specialty_bp,
+        video_vfx_bp,
+        voice_speech_bp,
+        vr_lens_bp,
+        wave_a_bp,
+        wave_b_bp,
+        wave_c_bp,
+        wave_d_bp,
+        wave_e_bp,
+        wave_f_bp,
+        wave_g_bp,
+        wave_h_bp,
+        workflow_bp,
+        workflow_dev_bp,
+        workflow_auto_bp,
+    )
+
+
+def register_blueprints(app):
+    """Register all route Blueprints with the Flask app.
+
+    Built-in route registration is explicit and ordered so startup behavior is
+    deterministic and easy to audit. ``motion_design_bp`` is registered twice:
+    once in the core list (bare ``/motion/*`` routes) and once manually with
+    ``url_prefix="/api"`` to preserve the legacy ``/api/motion/*`` surface for
+    older panel builds.
+    """
+    blueprints = get_core_blueprints()
 
     for bp in blueprints:
         app.register_blueprint(bp)
 
     # Preserve the long-standing /api/motion/* surface alongside the current
     # bare /motion/* routes so older panel builds and tests do not break.
+    motion_design_bp = next(bp for bp in blueprints if bp.name == "motion_design")
     app.register_blueprint(
         motion_design_bp,
         url_prefix="/api",

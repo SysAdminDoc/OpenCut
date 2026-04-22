@@ -247,11 +247,11 @@ def route_room_tone_fill(job_id, filepath, data):
 # M&E Mix Export
 # ===========================================================================
 
-@audio_prod_bp.route("/audio/me-mix", methods=["POST"])
+@audio_prod_bp.route("/audio/me-mix/basic", methods=["POST"])
 @require_csrf
 @async_job("me_mix")
 def route_me_mix(job_id, filepath, data):
-    """Generate M&E (Music & Effects) mix by removing vocals."""
+    """Generate a simplified M&E (Music & Effects) mix by removing vocals."""
     from opencut.core.me_mix import generate_me_mix
 
     method = data.get("method", "subtract")
@@ -271,11 +271,11 @@ def route_me_mix(job_id, filepath, data):
 # Automated Dialogue Premix
 # ===========================================================================
 
-@audio_prod_bp.route("/audio/dialogue-premix", methods=["POST"])
+@audio_prod_bp.route("/audio/dialogue-premix/basic", methods=["POST"])
 @require_csrf
 @async_job("dialogue_premix")
 def route_dialogue_premix(job_id, filepath, data):
-    """Apply broadcast-standard dialogue premix chain."""
+    """Apply the simplified broadcast-standard dialogue premix chain."""
     from opencut.core.dialogue_premix import premix_dialogue, premix_multi_speaker
 
     target_lufs = safe_float(data.get("target_lufs", -23.0), -23.0, min_val=-36.0, max_val=-10.0)

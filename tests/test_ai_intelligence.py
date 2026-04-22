@@ -810,12 +810,10 @@ class TestAIIntelligenceRoutes:
         assert ai_intel_bp.name == "ai_intel"
 
     def test_blueprint_registered_in_init(self):
-        """ai_intel_bp should be listed in register_blueprints."""
-        import inspect
-
+        """ai_intel_bp should be listed in the core blueprint registry."""
         import opencut.routes as routes_pkg
-        source = inspect.getsource(routes_pkg.register_blueprints)
-        assert "ai_intel_bp" in source
+        names = {bp.name for bp in routes_pkg.get_core_blueprints()}
+        assert "ai_intel" in names
 
     def test_route_scene_describe_exists(self):
         """Blueprint should have /api/ai/scene-describe handler."""

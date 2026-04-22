@@ -82,7 +82,7 @@ Clears the remaining Wave D items identified in the initial research pass. Two i
 
 | # | Feature | Module | Routes | Source |
 |---|---------|--------|--------|--------|
-| 20.1 / D3.1 | **Semantic OTIO timeline diff** | `export/otio_diff.py` | `POST /timeline/diff` | [OpenTimelineIO](https://github.com/AcademySoftwareFoundation/OpenTimelineIO) |
+| 20.1 / D3.1 | **Semantic OTIO timeline diff** | `export/otio_diff.py` | `POST /timeline/otio-diff` | [OpenTimelineIO](https://github.com/AcademySoftwareFoundation/OpenTimelineIO) |
 | 20.2 / D4.1 | **Objective quality metrics (VMAF/SSIM/PSNR)** | `core/quality_metrics.py` | `POST /video/quality/compare`, `POST /video/quality/batch-compare`, `GET /video/quality/backends` | [libvmaf](https://github.com/Netflix/vmaf) + FFmpeg filters |
 | 20.3 / D5.2 | **Sentry / GlitchTip optional observability** | `server.py::_init_sentry_if_configured` | `GET /observability/status` | [GlitchTip](https://glitchtip.com/) / [Sentry](https://sentry.io) |
 | 20.4 / D1.1 | **LLM-enriched audio description** (extends v1.15-era `audio_description.py`) | `core/audio_description.py::describe_scene_llm` | — (inside existing `/audio/audio-description` routes) | `core/llm.py` + template fallback |

@@ -197,11 +197,10 @@ def macro_record_stop():
 
 
 @dev_scripting_bp.route("/api/dev/macro/play", methods=["POST"])
-@dev_scripting_bp.route("/api/macro/play", methods=["POST"])
 @require_csrf
 @async_job("macro_play", filepath_required=False)
 def macro_play(job_id, filepath, data):
-    """Play a saved macro.
+    """Play a saved macro asynchronously.
 
     Expects JSON::
 
@@ -210,6 +209,10 @@ def macro_play(job_id, filepath, data):
             "target_file": "/path/to/file.mp4",
             "output_dir": ""
         }
+
+    This route intentionally lives only under ``/api/dev`` so the long-standing
+    ``/api/macro/play`` dry-run endpoint in ``workflow_dev_routes.py`` remains
+    deterministic and returns immediate validation errors.
     """
     from opencut.core.macro_recorder import (
         _macro_path,
