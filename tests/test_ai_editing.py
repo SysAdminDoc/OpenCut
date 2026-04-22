@@ -709,12 +709,10 @@ class TestAiEditingBlueprintRegistration:
         assert ai_editing_bp.name == "ai_editing"
 
     def test_blueprint_in_register_blueprints(self):
-        """Verify ai_editing_bp is registered in routes/__init__.py."""
-        import inspect
-
-        from opencut.routes import register_blueprints
-        source = inspect.getsource(register_blueprints)
-        assert "ai_editing_bp" in source
+        """Verify ai_editing_bp is included in the core blueprint registry."""
+        from opencut.routes import get_core_blueprints
+        names = {bp.name for bp in get_core_blueprints()}
+        assert "ai_editing" in names
 
     def test_routes_defined(self):
         # Blueprint has deferred registrations; check the module has route functions

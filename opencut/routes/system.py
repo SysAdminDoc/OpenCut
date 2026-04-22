@@ -2008,10 +2008,31 @@ def resolve_media():
 @system_bp.route("/resolve/import", methods=["POST"])
 @require_csrf
 def resolve_import():
-    """Import a file into the Resolve media pool."""
-    data = request.get_json(force=True)
-    filepath = data.get("filepath", "").strip()
+    """Import one file, or a list of files, into the Resolve media pool."""
+    data = get_json_dict()
+    filepath = str(data.get("filepath", "") or "").strip()
+    raw_paths = data.get("paths", [])
     bin_name = data.get("bin_name", "OpenCut Output")
+
+    if raw_paths not in (None, []) and not isinstance(raw_paths, list):
+        return jsonify({"error": "paths must be a list"}), 400
+
+    if isinstance(raw_paths, list) and raw_paths:
+        cleaned_paths = []
+        for raw_path in raw_paths:
+            if not isinstance(raw_path, str) or not raw_path.strip():
+                return jsonify({"error": "paths must contain only non-empty strings"}), 400
+            try:
+                cleaned_paths.append(validate_filepath(raw_path.strip()))
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
+        try:
+            from opencut.core.resolve_integration import resolve_import_media
+
+            return jsonify(resolve_import_media(cleaned_paths))
+        except Exception as exc:
+            return safe_error(exc, "resolve_import")
+
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
     try:

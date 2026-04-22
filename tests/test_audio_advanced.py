@@ -758,11 +758,10 @@ class TestAudioAdvancedRoutes(unittest.TestCase):
         self.assertTrue(callable(route_parse_voice_command))
 
     def test_blueprint_registered(self):
-        """Verify audio_adv_bp is included in register_blueprints."""
+        """Verify audio_adv_bp is included in the core blueprint registry."""
         import opencut.routes
-        source = inspect.getsource(opencut.routes.register_blueprints)
-        self.assertIn("audio_adv_bp", source)
-        self.assertIn("audio_advanced_routes", source)
+        names = {bp.name for bp in opencut.routes.get_core_blueprints()}
+        self.assertIn("audio_adv", names)
 
     def test_route_count(self):
         """Verify expected number of routes in the blueprint."""

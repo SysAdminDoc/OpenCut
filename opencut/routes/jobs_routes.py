@@ -233,7 +233,7 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/timeline/export/aaf",
     "/timeline/export/otioz",
     # v1.20.0 additions — Wave C (observability + quality harness + diff)
-    "/timeline/diff",
+    "/timeline/otio-diff",
     "/video/quality/compare",
     "/video/quality/batch-compare",
     # v1.21.0 additions — Wave D (delivery + colour + voice grammar)
