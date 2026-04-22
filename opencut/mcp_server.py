@@ -1,20 +1,25 @@
 """
-OpenCut MCP Server
+OpenCut MCP Server v1.30.0
 
 Exposes OpenCut's API as a Model Context Protocol (MCP) server,
 allowing AI clients (Claude Code, Cursor, etc.) to drive video
 editing operations programmatically.
 
 Usage:
-    python -m opencut.mcp_server          # stdio JSON-RPC transport
+    opencut-mcp-server                          # stdio JSON-RPC (default)
+    opencut-mcp-server --http                   # HTTP transport on port 5681
+    opencut-mcp-server --port 5679              # OpenCut backend on custom port
+    opencut-mcp-server --list-tools             # Print all tools and exit
+    python -m opencut.mcp_server                # same as stdio
 
 The MCP server proxies requests to the running OpenCut Flask backend
-on localhost:5679. Start the backend first: python -m opencut.server
+on localhost:5679. Start the backend first:  opencut server
 
 Protocol: JSON-RPC 2.0 over stdio (one JSON object per line).
-Supports: initialize, tools/list, tools/call, resources/list.
+Supports: initialize, tools/list, tools/call, resources/list, prompts/list.
 """
 
+import argparse
 import json
 import logging
 import re
@@ -22,6 +27,7 @@ import sys
 import time
 import urllib.error
 import urllib.request
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from opencut import __version__
 
@@ -404,6 +410,78 @@ MCP_TOOLS = [
             "required": ["filepath"],
         },
     },
+    # Wave M additions (v1.30.0)
+    {
+        "name": "opencut_dub_video",
+        "description": (
+            "Automatically dub a video into a target language. "
+            "Transcribes speech with Whisper, translates, synthesises dubbed "
+            "voices (with optional voice cloning), and can apply lip-sync."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to source video"},
+                "target_language": {"type": "string", "description": "BCP-47 code (e.g. 'es', 'fr', 'ja')", "default": "es"},
+                "whisper_model": {"type": "string", "description": "Whisper model: tiny/base/small/medium/large", "default": "base"},
+                "voice_clone": {"type": "boolean", "description": "Clone original speaker voice", "default": True},
+                "lip_sync": {"type": "boolean", "description": "Apply lip-sync to dubbed video", "default": False},
+                "preserve_music": {"type": "boolean", "description": "Keep background music track", "default": True},
+                "tts_engine": {"type": "string", "description": "TTS engine: edge / elevenlabs / openai", "default": "edge"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_sports_highlights",
+        "description": (
+            "Detect and extract highlight moments from sports or action video "
+            "using optical-flow motion analysis combined with audio energy scoring."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to source video"},
+                "genre": {"type": "string", "description": "Content genre: sports/concert/reaction/gaming/news", "default": "sports"},
+                "top_n": {"type": "integer", "description": "Max highlights to return", "default": 5},
+                "window_sec": {"type": "number", "description": "Highlight window duration in seconds", "default": 3.0},
+                "min_score": {"type": "number", "description": "Minimum composite score threshold [0-1]", "default": 0.4},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_lipsync_echomimic",
+        "description": (
+            "Animate a portrait image or video to match spoken audio "
+            "using EchoMimic diffusion-based lip-sync."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to portrait image or video"},
+                "audio_path": {"type": "string", "description": "Path to audio file (WAV/MP3)"},
+                "steps": {"type": "integer", "description": "Diffusion inference steps", "default": 20},
+                "cfg_scale": {"type": "number", "description": "Classifier-free guidance scale", "default": 7.5},
+            },
+            "required": ["filepath", "audio_path"],
+        },
+    },
+    {
+        "name": "opencut_chat_edit",
+        "description": (
+            "Send a natural-language editing instruction to the OpenCut AI agent. "
+            "The agent interprets the prompt and returns structured edit actions."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "message": {"type": "string", "description": "Natural-language editing instruction"},
+                "session_id": {"type": "string", "description": "Conversation session ID for multi-turn context", "default": ""},
+            },
+            "required": ["message"],
+        },
+    },
 ]
 
 # Route mapping for tool execution
@@ -431,6 +509,11 @@ _TOOL_ROUTES = {
     "opencut_scene_detect": ("POST", "/video/scenes"),
     "opencut_depth_map": ("POST", "/video/depth/map"),
     "opencut_shorts_pipeline": ("POST", "/video/shorts-pipeline"),
+    # Wave M additions (v1.30.0)
+    "opencut_dub_video": ("POST", "/video/dub"),
+    "opencut_sports_highlights": ("POST", "/video/highlights/sports"),
+    "opencut_lipsync_echomimic": ("POST", "/video/lipsync/echomimic"),
+    "opencut_chat_edit": ("POST", "/agent/chat"),
 }
 
 
@@ -465,7 +548,7 @@ def handle_tool_call(tool_name, arguments):
         return {"error": f"Unknown tool: {tool_name}"}
 
     # Required scalar path keys — empty rejected
-    _required_path_keys = ("filepath", "file", "source", "reference")
+    _required_path_keys = ("filepath", "file", "source", "reference", "audio_path")
     # Optional scalar path keys — empty allowed (means "not provided")
     _optional_path_keys = ("style_image", "voice_ref", "output_dir")
     for key in _required_path_keys:
@@ -607,6 +690,150 @@ def run_mcp_stdio():
         sys.stdout.flush()
 
 
-if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO, stream=sys.stderr)
+# ---------------------------------------------------------------------------
+# HTTP transport (JSON-RPC 2.0 over HTTP on port 5681)
+# ---------------------------------------------------------------------------
+def run_http_server(backend_url: str = BACKEND_URL, port: int = 5681) -> None:
+    """Run a JSON-RPC 2.0 HTTP server that proxies to the OpenCut backend."""
+
+    class _Handler(BaseHTTPRequestHandler):
+        def log_message(self, fmt, *args):
+            logger.debug("MCP HTTP: " + fmt, *args)
+
+        def _send_json(self, data: dict, status: int = 200) -> None:
+            body = json.dumps(data).encode()
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def _read_json(self) -> dict:
+            length = int(self.headers.get("Content-Length", 0))
+            raw = self.rfile.read(length) if length else b""
+            return json.loads(raw) if raw else {}
+
+        def do_GET(self):
+            if self.path in ("/health", "/"):
+                self._send_json({"status": "ok", "server": "opencut-mcp",
+                                  "version": __version__, "tools": len(MCP_TOOLS)})
+            elif self.path == "/tools":
+                self._send_json({"tools": MCP_TOOLS})
+            else:
+                self._send_json({"error": "Not found"}, status=404)
+
+        def do_POST(self):
+            try:
+                body = self._read_json()
+            except Exception:
+                self._send_json({"error": "Invalid JSON"}, status=400)
+                return
+
+            method = body.get("method", "")
+            params = body.get("params") or {}
+            rpc_id = body.get("id")
+
+            if method == "initialize":
+                self._send_json({"jsonrpc": "2.0", "id": rpc_id, "result": {
+                    "protocolVersion": "2024-11-05",
+                    "capabilities": {"tools": {}},
+                    "serverInfo": {"name": "opencut", "version": __version__},
+                }})
+            elif method == "tools/list":
+                self._send_json({"jsonrpc": "2.0", "id": rpc_id,
+                                  "result": {"tools": MCP_TOOLS}})
+            elif method == "tools/call":
+                name = params.get("name", "")
+                arguments = params.get("arguments") or {}
+                result = handle_tool_call(name, arguments)
+                self._send_json({"jsonrpc": "2.0", "id": rpc_id,
+                                  "result": {"content": [{"type": "text",
+                                                          "text": json.dumps(result, indent=2)}]}})
+            elif method in ("resources/list", "prompts/list"):
+                key = method.split("/")[0]
+                self._send_json({"jsonrpc": "2.0", "id": rpc_id,
+                                  "result": {key: []}})
+            else:
+                self._send_json({"jsonrpc": "2.0", "id": rpc_id,
+                                  "error": {"code": -32601,
+                                            "message": f"Method not found: {method}"}}, status=404)
+
+    httpd = HTTPServer(("0.0.0.0", port), _Handler)
+    print(f"OpenCut MCP HTTP server on http://0.0.0.0:{port}", file=sys.stderr)
+    print(f"Proxying to OpenCut backend at {backend_url}", file=sys.stderr)
+    print(f"Tools registered: {len(MCP_TOOLS)}", file=sys.stderr)
+    try:
+        httpd.serve_forever()
+    except KeyboardInterrupt:
+        print("\nMCP server stopped.", file=sys.stderr)
+
+
+# ---------------------------------------------------------------------------
+# CLI entry point
+# ---------------------------------------------------------------------------
+def main() -> None:
+    """Entry point for the ``opencut-mcp-server`` console script."""
+    parser = argparse.ArgumentParser(
+        prog="opencut-mcp-server",
+        description="OpenCut MCP sidecar — exposes OpenCut as MCP tools.",
+    )
+    parser.add_argument(
+        "--port",
+        type=int,
+        default=5679,
+        help="OpenCut backend port (default: 5679)",
+    )
+    parser.add_argument(
+        "--http",
+        action="store_true",
+        help="Use HTTP transport on port 5681 instead of stdio",
+    )
+    parser.add_argument(
+        "--http-port",
+        type=int,
+        default=5681,
+        help="Port for HTTP transport (default: 5681)",
+    )
+    parser.add_argument(
+        "--list-tools",
+        action="store_true",
+        help="Print all registered MCP tools and exit",
+    )
+    parser.add_argument(
+        "--log-level",
+        default="WARNING",
+        choices=["DEBUG", "INFO", "WARNING", "ERROR"],
+    )
+    args = parser.parse_args()
+
+    logging.basicConfig(
+        level=getattr(logging, args.log_level),
+        format="%(asctime)s %(name)s %(levelname)s %(message)s",
+        stream=sys.stderr,
+    )
+
+    # Override global backend URL from --port
+    global BACKEND_URL
+    BACKEND_URL = f"http://127.0.0.1:{args.port}"
+
+    if args.list_tools:
+        for t in MCP_TOOLS:
+            schema = t.get("inputSchema", {})
+            props = schema.get("properties", {})
+            req = set(schema.get("required", []))
+            param_str = ", ".join(
+                f"{k}{'*' if k in req else ''}" for k in props
+            )
+            print(f"  {t['name']:<40}  ({param_str})")
+        print(f"\n{len(MCP_TOOLS)} tools total.")
+        return
+
+    if args.http:
+        run_http_server(backend_url=BACKEND_URL, port=args.http_port)
+        return
+
     run_mcp_stdio()
+
+
+if __name__ == "__main__":
+    main()
