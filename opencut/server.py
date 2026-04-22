@@ -468,8 +468,6 @@ def __getattr__(name: str):
 # ---------------------------------------------------------------------------
 # Extracted to opencut/pid.py.  Re-exported here so any code that previously
 # did `from opencut.server import _read_pid` (or similar) continues to work.
-# Extracted to opencut/pid.py.  Re-exported here so any code that previously
-# did `from opencut.server import _read_pid` (or similar) continues to work.
 from opencut.pid import (  # noqa: E402, F401
     PID_FILE,
     _check_port,
