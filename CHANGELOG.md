@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.30.0] - 2026-05-04
+
+### Added — Wave M (Dubbing Pipeline, Sports Highlights, EchoMimic, MCP Server)
+
+- **`core/dub_pipeline.py`** (`POST /video/dub`): Full automatic dubbing pipeline — delegates to the existing `auto_dub_pipeline.auto_dub()` engine. Supports 27 target languages, Whisper transcription, deep-translation, edge-tts/ElevenLabs/OpenAI voice synthesis, optional voice cloning, lip-sync, and music preservation. Route is `@async_job`; registered in `_ALLOWED_QUEUE_ENDPOINTS`.
+- **`core/highlights_sports.py`** (`POST /video/highlights/sports`): Optical-flow motion scoring (cv2.calcOpticalFlowFarneback at 2fps, 320×180 resize) + ffmpeg astats audio-energy scoring with genre-specific weighting (sports/concert/reaction/gaming/news). Returns non-overlapping top-N highlight windows sorted by start time. Route is `@async_job`; registered in `_ALLOWED_QUEUE_ENDPOINTS`.
+- **`core/lipsync_echomimic.py`** (`POST /video/lipsync/echomimic`): Two-backend EchoMimic lipsync — tries `echomimic` PyPI package first, falls back to `diffusers` + torch with `BadToBest/EchoMimic` HuggingFace weights (~2 GB auto-download to `~/.opencut/models/echomimic/`). Override model directory via `OPENCUT_ECHOMIMIC_MODEL_DIR` env var.
+- **`mcp_server.py`**: MCP sidecar with 27 tools covering all major OpenCut capabilities. Added `main()` CLI entry point, `--http` mode (JSON-RPC 2.0 on port 5681), `--port`, `--list-tools`, and `--log-level` flags. Registered as `opencut-mcp-server` console script.
+- **`pyproject.toml`**: Added `mcp` optional dependency group (`mcp>=1.0`). Registered `opencut-mcp-server` console script.
+
+### Changed
+
+- **`routes/wave_k_routes.py`**: Wired `route_dub_pipeline()` and `route_highlights_sports()` — replaced `_stub_501` with full `@async_job` implementations.
+- **`routes/jobs_routes.py`**: Added `/video/dub` and `/video/highlights/sports` to `_ALLOWED_QUEUE_ENDPOINTS`.
+- **`mcp_server.py`**: Added 4 Wave M tools (`opencut_dub_video`, `opencut_sports_highlights`, `opencut_lipsync_echomimic`, `opencut_chat_edit`) to `MCP_TOOLS` and `_TOOL_ROUTES`. Added `audio_path` to required path validation set.
+
+---
+
 ## [1.29.0] - 2026-04-23
 
 ### Added — Wave L (Premium TTS, Smart Upscaling, AI Face Tools)

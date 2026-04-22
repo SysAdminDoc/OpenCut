@@ -256,6 +256,9 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/upscale/smart",
     "/video/face/reshape",
     "/video/face/retouch",
+    # v1.30.0 additions — Wave M (K-stubs filled)
+    "/video/dub",
+    "/video/highlights/sports",
 })
 
 
