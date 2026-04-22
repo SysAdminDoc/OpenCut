@@ -865,8 +865,43 @@ def route_cinefocus():
 
 @wave_k_bp.route("/video/dub", methods=["POST"])
 @require_csrf
-def route_dub_pipeline():
-    return _stub_501("Dubbing Pipeline (K3.1)")
+@async_job("dub_pipeline")
+def route_dub_pipeline(job_id, filepath, data):
+    from opencut.core.dub_pipeline import dub, SUPPORTED_LANGUAGES
+    from opencut.core.auto_dub_pipeline import DubConfig
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    target_lang = str(data.get("target_language") or "es").strip()
+    if target_lang not in SUPPORTED_LANGUAGES:
+        return {
+            "error": f"Unsupported language: {target_lang!r}",
+            "supported": SUPPORTED_LANGUAGES,
+        }
+
+    result = dub(
+        filepath,
+        target_language=target_lang,
+        whisper_model=str(data.get("whisper_model") or "base"),
+        voice_clone=bool(data.get("voice_clone", True)),
+        lip_sync=bool(data.get("lip_sync", False)),
+        preserve_music=bool(data.get("preserve_music", True)),
+        tts_engine=str(data.get("tts_engine") or "edge"),
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output_path,
+        "source_language": result.source_language,
+        "target_language": result.target_language,
+        "target_language_name": result.target_language_name,
+        "segments_dubbed": result.segments_dubbed,
+        "segments_total": result.segments_total,
+        "voice_cloned": result.voice_cloned,
+        "lip_synced": result.lip_synced,
+        "music_preserved": result.music_preserved,
+        "stages_completed": result.stages_completed,
+        "processing_time": result.processing_time,
+    }
 
 
 @wave_k_bp.route("/video/trailer/generate", methods=["POST"])
@@ -932,8 +967,50 @@ def route_gen_video_wan_vace():
 
 @wave_k_bp.route("/video/highlights/sports", methods=["POST"])
 @require_csrf
-def route_highlights_sports():
-    return _stub_501("Sports Highlights (K3.8)")
+@async_job("sports_highlights")
+def route_highlights_sports(job_id, filepath, data):
+    from opencut.core.highlights_sports import (
+        check_sports_highlights_available, extract, GENRES, INSTALL_HINT,
+    )
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    if not check_sports_highlights_available():
+        return {"error": "Sports highlights unavailable", "hint": INSTALL_HINT}
+
+    genre = str(data.get("genre") or "sports").lower()
+    if genre not in GENRES:
+        genre = "sports"
+
+    top_n = safe_int(data.get("top_n"), default=5)
+    top_n = max(1, min(top_n, 20))
+    window_sec = safe_float(data.get("window_sec"), default=3.0)
+    window_sec = max(1.0, min(window_sec, 30.0))
+    min_score = safe_float(data.get("min_score"), default=0.4)
+
+    highlights = extract(
+        filepath,
+        genre=genre,
+        top_n=top_n,
+        window_sec=window_sec,
+        min_score=min_score,
+        on_progress=_prog,
+    )
+
+    return {
+        "genre": genre,
+        "total_highlights": len(highlights),
+        "highlights": [
+            {
+                "start": h.start,
+                "end": h.end,
+                "duration": round(h.end - h.start, 3),
+                "score": h.score,
+                "signals": h.signals,
+            }
+            for h in highlights
+        ],
+    }
 
 
 @wave_k_bp.route("/video/highlights/genres", methods=["GET"])
