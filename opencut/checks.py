@@ -876,6 +876,67 @@ def check_cinefocus(verbose=False):
     return ok
 
 
+# ---------------------------------------------------------------------------
+# Wave L — v1.29.0
+# ---------------------------------------------------------------------------
+
+def check_elevenlabs_available() -> bool:
+    """L1.1 — ElevenLabs cloud TTS (SDK + API key required)."""
+    try:
+        from opencut.core.tts_elevenlabs import check_elevenlabs_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_upscale_hub_available() -> bool:
+    """L1.2 — Smart upscaling hub (lanczos always available)."""
+    return True
+
+
+def check_face_reshape_available() -> bool:
+    """L1.3 — AI face reshape (mediapipe + cv2 + numpy required)."""
+    try:
+        from opencut.core.face_reshape import check_face_reshape_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_skin_retouch_available() -> bool:
+    """L1.4 — AI skin retouch (cv2 + numpy required)."""
+    try:
+        from opencut.core.skin_retouch import check_skin_retouch_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
+def check_wave_l(verbose=False):
+    """Run all Wave L availability checks and print a summary."""
+    checks = [
+        ("elevenlabs_tts", check_elevenlabs_available),
+        ("upscale_hub", check_upscale_hub_available),
+        ("face_reshape", check_face_reshape_available),
+        ("skin_retouch", check_skin_retouch_available),
+    ]
+    results = []
+    for name, fn in checks:
+        try:
+            ok = fn()
+            results.append(ok)
+            if verbose:
+                print(f"  {name}: {'OK' if ok else 'MISSING'}")
+        except Exception as e:
+            results.append(False)
+            if verbose:
+                print(f"  {name}: ERROR — {e}")
+    ok_count = sum(1 for r in results if r)
+    if verbose:
+        print(f"\nWave L: {ok_count}/{len(results)} components available")
+    return ok_count, len(results)
+
+
 def check_wave_k(verbose=False):
     """Run all Wave K availability checks and print a summary."""
     checks = [
