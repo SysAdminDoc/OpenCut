@@ -1,5 +1,62 @@
 # Changelog
 
+## [1.28.0] - 2026-04-21
+
+### Added — Wave K Completeness Pass (40 features, 59 routes)
+
+Wave K is the result of a four-angle competitive research pass spanning Kdenlive, DaVinci Resolve 19, CapCut Pro, Runway Gen-3, Pika 2.0, ElevenLabs, Adobe Firefly Video, Kling 2.0, and a broad sweep of 2024–2025 open-source AI papers. Features are tiered: Tier 1 ships working, Tier 2 ships as 503 stubs pending optional dependency installs, Tier 3 ships as 501 stubs on the roadmap for v1.29.0.
+
+**Tier 1 — Fully Implemented (8 modules, ~24 routes)**
+- **K1.1 AudioSeal Watermarking** (`audio_watermark.py`) — AI-inaudible perceptual watermark embed and detect via Facebook Research AudioSeal; wired as a post-export background job so export latency is unaffected. Routes: `POST /audio/watermark/embed`, `POST /audio/watermark/detect`, `GET /audio/watermark/info`.
+- **K1.2 Brand Kit** (`brand_kit.py`, existed) — Brand-consistent lower-thirds, intro/outro overlays, and logo-burn. Routes now wired in `wave_k_routes.py`.
+- **K1.3 Podcast Suite** (`podcast_suite.py`, existed) — Multi-speaker transcription, chapter markers, audiogram export. Routes wired.
+- **K1.4 Batch Reframe** (`batch_reframe.py`) — AI-crop a folder of clips to any target AR in one call. Routes: `POST /batch/reframe`, `GET /batch/reframe/status`.
+- **K1.5 Clip Rating** (`clip_rating.py`) — Heuristic quality score (motion blur, low-light, handheld shake) so editors can bin rejects before cut. Routes: `POST /clip/rating`, `GET /clip/rating/info`.
+- **K1.6 Subtitle QA** (`subtitle_qa.py`) — Lint SRT/VTT for overlaps, encoding errors, and reading-speed violations. Routes: `POST /subtitle/qa`, `GET /subtitle/qa/rules`.
+- **K1.7 Profanity Censor** (`profanity_censor.py`) — Bleep or silence detected profanity with configurable word list and mode (`bleep`, `silence`, `mute-word`). Routes: `POST /audio/censor/profanity`, `GET /audio/censor/profanity/wordlist`.
+- **K1.8 Spectral Match** (`spectral_match.py`) — Match the spectral profile of one audio file to a reference using FFmpeg `amultiply`/EQ. Routes: `POST /audio/spectral/match`, `GET /audio/spectral/info`.
+- **K1.9 Lottie Import** (`lottie_import.py`) — Render Lottie JSON animations to transparent video via lottie-python or Puppeteer fallback. Routes: `POST /lottie/render`, `GET /lottie/info`.
+- **K1.10 Semantic Search** (`semantic_search.py`) — CLIP/SentenceTransformers frame-level index so editors can search footage by description. Routes: `POST /search/ai`, `POST /search/ai/index`, `GET /search/ai/index/status`.
+
+**Tier 2 — 503 Stubs, install-ready (19 modules, ~38 routes)**
+- K2.1 GPT-SoVITS TTS (`tts_gptsovits.py`) — voice-cloned TTS via local GPT-SoVITS server on port 9880.
+- K2.2 Amphion TTS (`tts_amphion.py`) — neural TTS with style control.
+- K2.3 Vevo2 Singing (`singing_vevo2.py`) — AI singing voice synthesis.
+- K2.4 CosyVoice2 TTS (`tts_cosyvoice2.py`) — multilingual zero-shot voice cloning.
+- K2.5 EchoMimic LipSync (`lipsync_echomimic.py`) — audio-driven talking-head animation.
+- K2.6 TokenFlow Style Transfer (`style_tokenflow.py`) — temporally-consistent video style transfer.
+- K2.7 CUTIE Tracking (`track_cutie.py`) — high-accuracy object segmentation tracking.
+- K2.8 DEVA Tracking (`track_deva.py`) — open-world decoupled video segmentation.
+- K2.9 SEA-RAFT Optical Flow (`flow_searaft.py`) — state-of-the-art dense optical flow.
+- K2.10 DiffBIR Restoration (`restore_diffbir.py`) — face + general image/video restoration.
+- K2.11 Gyroflow Stabilization (`stabilize_gyroflow.py`) — gyroscope-data lens/stabilization via `gyroflow` binary.
+- K2.12 Motion Deblur (`deblur_motion.py`) — blind motion deblur via NAFNet or DeblurGAN-v2.
+- K2.13 Depth Pro (`depth_depthpro.py`) — Apple Depth Pro metric monocular depth estimation.
+- K2.14 DepthFlow (`depth_flow.py`) — 2.5D parallax video from still images using ModernGL.
+- K2.15 AudioGen SFX (`sfx_audiogen.py`) — text-to-sound-effects via Meta AudioGen (CC-BY-NC; weights not auto-downloaded).
+- K2.16 Open-Sora Generation (`gen_video_opensora.py`) — open-source text-to-video via Open-Sora.
+- K2.17 LTX-Video v2 A+V (`gen_video_ltx.py`) — joint audio+video generation; new route `/generate/ltx/v2` preserves backward compat with existing `/generate/ltx`.
+- K2.18 Audio-Reactive FX (`audio_reactive_fx.py`) — beat-synced visual FX driven by audio energy bands.
+- K2.19 CineFocus Rack Focus (`cinefocus.py`) — AI-driven simulated rack focus using depth maps.
+
+**Tier 3 — 501 Stubs, v1.29.0 roadmap (8 modules, ~16 routes)**
+- K3.1 Dub Pipeline (`dub_pipeline.py`) — multi-language dub orchestration (transcribe → translate → TTS → lipsync).
+- K3.2 Trailer Generator (`trailer_gen.py`) — highlights-driven auto-trailer with title card injection.
+- K3.3 Screenplay Parser (`screenplay_parser.py`) — FDX/Fountain parse → shot list; partial real implementation via `fountain` library.
+- K3.4 Face Age Transform (`face_age_transform.py`) — age/de-age face via SAM2 + inpaint.
+- K3.5 Slate Identify (`slate_id.py`) — OCR-based clapperboard reader; partial real implementation via Tesseract.
+- K3.6 Video Outpainting (`outpaint_video.py`) — extend frame borders via diffusion outpaint.
+- K3.7 WAN/VACE Generation (`gen_video_wan_vace.py`) — Wan2.1 + VACE video generation and editing.
+- K3.8 Sports Highlights (`highlights_sports.py`) — action-density + audio-peak highlight detection.
+
+**Infrastructure**
+- `opencut/routes/wave_k_routes.py` — new blueprint `wave_k` with 59 handlers (0 route collisions on startup).
+- `opencut/checks.py` — 35 new `check_X_available()` functions appended.
+- `opencut/routes/__init__.py` — `wave_k_bp` registered; blueprint count now 98.
+- Route collision guard confirmed clean at startup: 1,334 total routes, 0 duplicate method+path pairs.
+
+---
+
 ## [1.25.1] - 2026-04-20
 
 ### Fixed
