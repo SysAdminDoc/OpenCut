@@ -1,6 +1,14 @@
 # Changelog
 
-## [1.31.0] - 2026-05-09
+## [1.32.0] - 2026-05-09
+
+### Added — Light Theme & Appearance Toggle (CEP Panel)
+
+- **`extension/com.opencut.panel/client/index.html`**: Added FOUC-prevention inline script in `<head>` that reads `opencut_settings.theme` from `localStorage` and applies `html.theme-light` before first paint. Added **Appearance** select (Auto / Dark / Light) to Settings > Preferences.
+- **`extension/com.opencut.panel/client/main.js`**: Added `_applyTheme(pref)` function that toggles `html.theme-light` based on explicit preference or OS `prefers-color-scheme`. Wired `settingsTheme` change event for instant switching. Added `theme` field to `saveLocalSettings`/`loadLocalSettings`. Added `matchMedia` listener to re-apply when OS theme changes in Auto mode.
+- **`extension/com.opencut.panel/client/style.css`**: Added comprehensive `html.theme-light` CSS block — 200+ lines of token overrides and component-specific rules covering: backgrounds, text, borders, sidebar, nav tabs, cards, workspace stage, buttons, form inputs, sub-tabs, empty states, toasts, alert/processing banners, results, job history, command palette, wizard overlay, wizard card, onboarding overlay, scrollbars, and focus rings. Light palette uses professional off-white surfaces (`#f0f3f8` void → `#ffffff` cards), deep blue accent (`#1e4fd8`) with WCAG AA contrast, and light-calibrated shadows.
+
+
 
 ### Changed — Premium UX/UI Polish (CEP Panel)
 
