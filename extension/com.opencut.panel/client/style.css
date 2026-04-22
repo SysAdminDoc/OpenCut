@@ -1,6 +1,5 @@
 /* ============================================================
-   OpenCut CEP Panel v1.25.1 - ULTRA PREMIUM EDITION
-   Next-Generation AI Editing Suite for Adobe Premiere Pro
+   OpenCut CEP Panel — AI Editing Suite for Adobe Premiere Pro
    ============================================================ */
 
 /* Google Fonts removed — external imports hang for 30s+ in air-gapped studios.
@@ -8,89 +7,92 @@
    otherwise the fallback stack provides visually similar alternatives. */
 
 /* ============================================================
-   DESIGN SYSTEM - Studio Graphite Theme
+   DESIGN SYSTEM — Studio Dark Theme
    ============================================================ */
 :root {
     color-scheme: dark;
-    /* Deep Space */
-    --bg-void:       #030308;
-    --bg-deep:       #050510;
-    --bg-base:       #080815;
-    --bg-surface:    #0a0a1a;
-    --bg-card:       #0d0d20;
-    --bg-raised:     #121228;
-    --bg-elevated:   #181838;
-    --bg-input:      #0a0a12;
-    --bg-hover:      #1a1a40;
 
-    /* Neon Cyan - Primary */
-    --neon-cyan:      #00ffff;
-    --neon-cyan-dim:  #00cccc;
-    --neon-cyan-dark: #008888;
-    --cyan-glow:      rgba(0, 255, 255, 0.5);
-    --cyan-subtle:    rgba(0, 255, 255, 0.1);
+    /* Studio Dark backgrounds — neutral with slight blue undertone */
+    --bg-void:       #080810;
+    --bg-deep:       #0c0c18;
+    --bg-base:       #10101e;
+    --bg-surface:    #131322;
+    --bg-card:       #181826;
+    --bg-raised:     #1e1e2e;
+    --bg-elevated:   #252538;
+    --bg-input:      #0e0e1c;
+    --bg-hover:      #20203a;
 
-    /* Neon Magenta - Secondary */
-    --neon-magenta:      #ff00ff;
-    --neon-magenta-dim:  #cc00cc;
-    --magenta-glow:      rgba(255, 0, 255, 0.4);
+    /* Primary accent — professional electric blue */
+    --neon-cyan:      #4d7fff;
+    --neon-cyan-dim:  #6b95ff;
+    --neon-cyan-dark: #2952cc;
+    --cyan-glow:      rgba(77, 127, 255, 0.30);
+    --cyan-subtle:    rgba(77, 127, 255, 0.10);
 
-    /* Neon Purple - Tertiary */
-    --neon-purple:    #bf00ff;
-    --purple-glow:    rgba(191, 0, 255, 0.4);
+    /* Secondary accent — soft violet (not hot magenta) */
+    --neon-magenta:      #8b7ff0;
+    --neon-magenta-dim:  #7068cc;
+    --magenta-glow:      rgba(139, 127, 240, 0.25);
 
-    /* Neon Green - Success */
-    --neon-green:     #00ff88;
-    --green-glow:     rgba(0, 255, 136, 0.5);
+    /* Tertiary — muted indigo */
+    --neon-purple:    #6b6bcc;
+    --purple-glow:    rgba(107, 107, 204, 0.25);
 
-    /* Neon Red - Error */
-    --neon-red:       #ff0055;
-    --red-glow:       rgba(255, 0, 85, 0.4);
+    /* Semantic: success — teal green */
+    --neon-green:     #2dd4a4;
+    --green-glow:     rgba(45, 212, 164, 0.30);
 
-    /* Neon Orange - Warning */
-    --neon-orange:    #ff8800;
-    --orange-glow:    rgba(255, 136, 0, 0.4);
+    /* Semantic: error — calm red */
+    --neon-red:       #e05454;
+    --red-glow:       rgba(224, 84, 84, 0.30);
 
-    /* Neon Yellow - Highlight */
-    --neon-yellow:    #ffee00;
+    /* Semantic: warning — warm amber */
+    --neon-orange:    #f0a020;
+    --orange-glow:    rgba(240, 160, 32, 0.25);
 
-    /* Neon Pink - Action accent */
-    --neon-pink:      #ff3355;
+    /* Semantic: highlight — muted gold */
+    --neon-yellow:    #d4aa30;
 
-    /* Semantic Aliases (used by JS) */
-    --success:        #00ff88;
-    --error:          #ff0055;
-    --error-dim:      #660022;
-    --warning:        #ff8800;
+    /* Action accent — coral */
+    --neon-pink:      #e05470;
 
-    /* Text */
+    /* Semantic aliases (used by JS toast/status system) */
+    --success:        #2dd4a4;
+    --error:          #e05454;
+    --error-dim:      #3a1818;
+    --warning:        #f0a020;
+
+    /* Text scale */
     --text-white:     #ffffff;
-    --text-primary:   #f0f0ff;
-    --text-secondary: #a0a0c0;
-    --text-muted:     #7878a0;
-    --text-faint:     #58587a;
+    --text-primary:   #ededf5;
+    --text-secondary: #9898b8;
+    --text-muted:     #686888;
+    --text-faint:     #505068;
+    --text-disabled:  #404058;
 
     /* Borders */
-    --border:         rgba(255, 255, 255, 0.06);
-    --border-light:   rgba(255, 255, 255, 0.12);
-    --border-glow:    rgba(0, 255, 255, 0.3);
+    --border:         rgba(255, 255, 255, 0.07);
+    --border-light:   rgba(255, 255, 255, 0.13);
+    --border-focus:   rgba(77, 127, 255, 0.5);
+    --border-glow:    rgba(77, 127, 255, 0.25);
 
     /* Glass */
-    --glass:          rgba(13, 13, 32, 0.85);
+    --glass:          rgba(18, 18, 34, 0.85);
     --glass-border:   rgba(255, 255, 255, 0.08);
 
-    /* Accent gradient (header bar, active tab underline, etc.) */
+    /* Accent gradients */
     --accent-grad:    linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta));
-    --accent-grad-bg: linear-gradient(135deg, var(--neon-cyan-dim), var(--neon-cyan-dark));
-    --active-tab-bg:  linear-gradient(180deg, rgba(0, 255, 255, 0.1), transparent);
+    --accent-grad-bg: linear-gradient(135deg, var(--neon-cyan), var(--neon-cyan-dark));
+    --active-tab-bg:  linear-gradient(180deg, rgba(77, 127, 255, 0.12), transparent);
 
-    /* Background effects */
-    --mesh-1:         rgba(0, 255, 255, 0.12);
-    --mesh-2:         rgba(255, 0, 255, 0.08);
-    --mesh-3:         rgba(191, 0, 255, 0.04);
-    --grid-color:     rgba(0, 255, 255, 0.02);
-    --scrollbar-thumb: linear-gradient(180deg, var(--neon-cyan-dark), var(--bg-elevated));
-    --scrollbar-hover: linear-gradient(180deg, var(--neon-cyan), var(--neon-cyan-dark));
+    /* Subtle background effects (static — no animation) */
+    --mesh-1:         rgba(77, 127, 255, 0.06);
+    --mesh-2:         rgba(139, 127, 240, 0.04);
+    --mesh-3:         rgba(107, 107, 204, 0.02);
+    --grid-color:     rgba(255, 255, 255, 0.018);
+    --scrollbar-thumb: rgba(77, 127, 255, 0.25);
+    --scrollbar-hover: rgba(77, 127, 255, 0.45);
 
     /* Radii */
     --r-xs: 6px;
@@ -100,7 +102,7 @@
     --r-xl: 20px;
     --r-full: 9999px;
 
-    /* Spacing — 4px rhythm */
+    /* Spacing — 4px base rhythm */
     --sp-xs: 4px;
     --sp-sm: 8px;
     --sp-md: 12px;
@@ -109,26 +111,26 @@
     --sp-2xl: 32px;
 
     /* Shadows — layered for physical depth */
-    --shadow-sm: 0 1px 2px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.15);
-    --shadow-md: 0 2px 4px rgba(0,0,0,0.3), 0 4px 12px rgba(0,0,0,0.2);
-    --shadow-lg: 0 4px 8px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.25), 0 16px 48px rgba(0,0,0,0.15);
-    --shadow-xl: 0 8px 16px rgba(0,0,0,0.4), 0 16px 48px rgba(0,0,0,0.3), 0 32px 80px rgba(0,0,0,0.2);
-    --shadow-inner: inset 0 1px 3px rgba(0,0,0,0.4), inset 0 0 1px rgba(0,0,0,0.2);
-    --shadow-glow-sm: 0 0 8px var(--cyan-subtle), 0 0 2px var(--cyan-subtle);
-    --shadow-glow-md: 0 0 12px var(--cyan-subtle), 0 0 4px rgba(0,255,255,0.15);
+    --shadow-sm: 0 1px 2px rgba(0,0,0,0.35), 0 1px 3px rgba(0,0,0,0.18);
+    --shadow-md: 0 2px 4px rgba(0,0,0,0.35), 0 4px 12px rgba(0,0,0,0.22);
+    --shadow-lg: 0 4px 8px rgba(0,0,0,0.35), 0 8px 24px rgba(0,0,0,0.28), 0 16px 48px rgba(0,0,0,0.18);
+    --shadow-xl: 0 8px 16px rgba(0,0,0,0.45), 0 16px 48px rgba(0,0,0,0.32), 0 32px 80px rgba(0,0,0,0.22);
+    --shadow-inner: inset 0 1px 3px rgba(0,0,0,0.45), inset 0 0 1px rgba(0,0,0,0.25);
+    --shadow-glow-sm: 0 0 8px var(--cyan-subtle);
+    --shadow-glow-md: 0 0 12px var(--cyan-subtle);
 
     /* Fonts */
     --font-sans: 'Inter', -apple-system, 'Segoe UI', sans-serif;
     --font-mono: 'JetBrains Mono', 'Cascadia Code', 'Consolas', monospace;
 
-    /* Timing — ease-out for entering, ease-in for leaving */
+    /* Timing */
     --t-fast: 0.12s cubic-bezier(0.4, 0, 0.2, 1);
-    --t-med: 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    --t-slow: 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    --t-med:  0.2s  cubic-bezier(0.4, 0, 0.2, 1);
+    --t-slow: 0.32s cubic-bezier(0.4, 0, 0.2, 1);
     --t-spring: cubic-bezier(0.175, 0.885, 0.32, 1.175);
 
-    /* Glow intensity (0 = off, 1 = full) */
-    --glow-opacity: 1;
+    /* Glow intensity — set to 0 to disable all glow effects */
+    --glow-opacity: 0.7;
 }
 
 
@@ -171,43 +173,27 @@ input, textarea, [contenteditable] {
     overflow: hidden;
 }
 
-/* Animated gradient mesh */
+/* Static subtle depth gradients — no animation */
 .app::before {
     content: '';
     position: absolute;
     inset: 0;
-    background: 
-        radial-gradient(ellipse 100% 80% at 10% -20%, var(--mesh-1) 0%, transparent 50%),
-        radial-gradient(ellipse 80% 60% at 90% 120%, var(--mesh-2) 0%, transparent 50%),
-        radial-gradient(ellipse 60% 40% at 50% 50%, var(--mesh-3) 0%, transparent 50%);
-    animation: meshMove 25s ease-in-out infinite;
-    z-index: 0;
-}
-
-@keyframes meshMove {
-    0%, 100% { transform: scale(1) rotate(0deg); opacity: 1; }
-    25% { transform: scale(1.1) rotate(1deg); }
-    50% { transform: scale(1.05) rotate(-1deg); opacity: 0.8; }
-    75% { transform: scale(1.15) rotate(0.5deg); }
-}
-
-/* Grid overlay */
-.app::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background-image: 
-        linear-gradient(var(--grid-color) 1px, transparent 1px),
-        linear-gradient(90deg, var(--grid-color) 1px, transparent 1px);
-    background-size: 30px 30px;
-    animation: gridScroll 40s linear infinite;
+    background:
+        radial-gradient(ellipse 80% 60% at 10% 0%, var(--mesh-1) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 50% at 90% 100%, var(--mesh-2) 0%, transparent 60%);
     pointer-events: none;
     z-index: 0;
 }
 
-@keyframes gridScroll {
-    0% { transform: translate(0, 0); }
-    100% { transform: translate(30px, 30px); }
+/* Subtle static dot grid */
+.app::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, var(--grid-color) 1px, transparent 1px);
+    background-size: 24px 24px;
+    pointer-events: none;
+    z-index: 0;
 }
 
 /* ============================================================
@@ -276,30 +262,23 @@ input, textarea, [contenteditable] {
     }
 }
 
-/* Animated top border on content header */
+/* Static accent line — subtle, no animation */
 .content-header::before {
     content: '';
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    height: 2px;
-    background: var(--accent-grad);
-    background-size: 200% 100%;
-    animation: headerGlow 6s linear infinite;
-}
-
-@keyframes headerGlow {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
+    height: 1px;
+    background: linear-gradient(90deg, var(--neon-cyan), transparent 70%);
+    opacity: 0.5;
 }
 
 .content-title {
     font-size: 13px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--text-primary);
-    text-transform: uppercase;
-    letter-spacing: 1.8px;
+    letter-spacing: -0.2px;
     margin: 0;
     white-space: nowrap;
 }
@@ -345,12 +324,12 @@ input, textarea, [contenteditable] {
 
 .status-dot.connected {
     background: var(--neon-green);
-    box-shadow: 0 0 4px var(--green-glow, rgba(0,255,136,0.4));
+    box-shadow: 0 0 4px var(--green-glow, rgba(45,212,164,0.30));
 }
 
 .status-dot.degraded {
     background: var(--neon-yellow);
-    box-shadow: 0 0 4px rgba(255,238,0,0.4);
+    box-shadow: 0 0 4px var(--orange-glow);
 }
 
 .status-separator {
@@ -401,40 +380,34 @@ input, textarea, [contenteditable] {
     animation: spin 0.6s linear infinite;
 }
 
-/* Logo — quiet confidence, subtle glow */
+/* Logo mark — subtle accent glow */
 .logo-mark {
-    filter: drop-shadow(0 0 6px var(--cyan-glow));
-    transition: filter var(--t-slow);
+    filter: drop-shadow(0 0 4px var(--cyan-glow));
+    opacity: calc(0.5 + 0.5 * var(--glow-opacity));
+    transition: filter var(--t-slow), opacity var(--t-slow);
 }
 
 .sidebar:hover .logo-mark {
-    filter: drop-shadow(0 0 8px var(--cyan-glow)) drop-shadow(0 0 16px var(--cyan-glow));
+    filter: drop-shadow(0 0 6px var(--cyan-glow));
+    opacity: 1;
 }
 
-/* Kept for compat */
+/* Compat stub */
 @keyframes logoPulse {
-    0%, 100% { filter: drop-shadow(0 0 6px var(--cyan-glow)); }
+    0%, 100% { filter: drop-shadow(0 0 4px var(--cyan-glow)); }
 }
 
 .logo-text {
     font-size: 17px;
-    font-weight: 900;
+    font-weight: 800;
     letter-spacing: -0.5px;
 }
 
-/* Animated gradient text */
+/* Static gradient text — no shimmer animation */
 .logo-accent {
-    background: linear-gradient(90deg, var(--neon-cyan), var(--neon-magenta), var(--neon-cyan));
-    background-size: 200% 100%;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-cyan-dim));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
-    animation: textShimmer 3s linear infinite;
-    filter: drop-shadow(0 0 10px var(--cyan-glow));
-}
-
-@keyframes textShimmer {
-    0% { background-position: 200% 0; }
-    100% { background-position: -200% 0; }
 }
 
 /* Version badge — clean, static */
@@ -446,9 +419,9 @@ input, textarea, [contenteditable] {
     background: var(--cyan-subtle);
     padding: 3px 10px;
     border-radius: var(--r-full);
-    border: 1px solid rgba(0,255,255,0.15);
+    border: 1px solid var(--border-glow);
     text-transform: uppercase;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.5px;
 }
 
 /* Kept for compat */
@@ -601,9 +574,9 @@ input, textarea, [contenteditable] {
 
 .processing-cancel {
     font-size: 10px;
-    font-weight: 700;
+    font-weight: 600;
     color: var(--neon-red);
-    background: rgba(255, 0, 85, 0.1);
+    background: var(--error-dim);
     border: 1px solid var(--red-glow);
     border-radius: var(--r-xs);
     padding: 3px 10px;
@@ -614,12 +587,11 @@ input, textarea, [contenteditable] {
         color var(--t-fast),
         transform var(--t-fast),
         box-shadow var(--t-fast);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.3px;
 }
 
 .processing-cancel:hover {
-    background: rgba(255, 0, 85, 0.25);
+    background: rgba(224, 84, 84, 0.22);
     border-color: var(--neon-red);
 }
 .processing-cancel:active {
@@ -1025,33 +997,25 @@ body.job-active .checkbox-row {
     box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
-/* Subtle gradient border on hover — no rainbow, just a refined accent edge */
+/* Hover: subtle accent border highlight — no animation */
 .card::before {
     content: '';
     position: absolute;
     inset: 0;
     border-radius: var(--r-lg);
     padding: 1px;
-    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta), var(--neon-purple), var(--neon-cyan));
-    background-size: 300% 300%;
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
     -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
     -webkit-mask-composite: xor;
     mask-composite: exclude;
     opacity: 0;
     transition: opacity var(--t-slow);
-    animation: borderRotate 6s linear infinite;
     pointer-events: none;
     z-index: 1;
 }
 
-@keyframes borderRotate {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
-}
-
-.card:hover::before { opacity: 0.35; }
+.card:hover::before { opacity: 0.25; }
 
 .card:hover {
     border-color: rgba(255, 255, 255, 0.1);
@@ -1097,16 +1061,15 @@ body.job-active .checkbox-row {
     align-items: center;
     gap: 8px;
     font-size: 11px;
-    font-weight: 700;
+    font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 1.2px;
+    letter-spacing: 0.5px;
     color: var(--text-primary);
 }
 
 .card-title svg {
     color: var(--neon-cyan);
-    opacity: 0.7;
-    filter: drop-shadow(0 0 3px var(--cyan-glow));
+    opacity: 0.65;
 }
 
 /* ============================================================
@@ -1161,43 +1124,17 @@ body.job-active .checkbox-row {
     box-shadow: var(--shadow-sm), inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 
-/* Shine sweep — slower, more subtle */
-.btn-primary::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
-    transition: left 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.btn-primary:hover::before { left: 100%; }
-
-/* Soft underglow */
-.btn-primary::after {
-    content: '';
-    position: absolute;
-    inset: -2px;
-    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-magenta));
-    border-radius: var(--r-md);
-    z-index: -1;
-    opacity: 0;
-    filter: blur(12px);
-    transition: opacity var(--t-med);
-}
+/* No shine sweep or underglow */
+.btn-primary::before { display: none; }
+.btn-primary::after  { display: none; }
 
 .btn-primary:hover {
-    background: linear-gradient(135deg, var(--neon-cyan-dim), var(--neon-cyan-dark));
+    filter: brightness(1.12);
     transform: translateY(-1px);
-    box-shadow:
-        var(--shadow-md),
-        0 0 16px var(--cyan-subtle),
-        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 0.18);
 }
 
-.btn-primary:hover::after { opacity: 0.3; }
+.btn-primary:hover::after { opacity: 0; }
 
 .btn-primary:active {
     transform: translateY(0px) scale(0.98);
@@ -1220,8 +1157,8 @@ body.job-active .checkbox-row {
     justify-content: center;
     gap: 8px;
     padding: 10px 18px;
-    background: rgba(0, 255, 255, 0.04);
-    border: 1px solid rgba(0, 255, 255, 0.2);
+    background: var(--cyan-subtle);
+    border: 1px solid var(--border-glow);
     border-radius: var(--r-sm);
     color: var(--neon-cyan);
     font-family: var(--font-sans);
@@ -1338,7 +1275,7 @@ body.job-active .checkbox-row {
 }
 
 .btn-text:hover::after { transform: scaleX(1); }
-.btn-text:hover { text-shadow: 0 0 10px var(--cyan-glow); }
+.btn-text:hover { color: var(--neon-cyan-dim); }
 .btn-text:disabled { opacity: 0.4; cursor: not-allowed; pointer-events: none; }
 
 .link-btn {
@@ -1421,7 +1358,7 @@ label {
     color: var(--text-muted);
     margin-bottom: 6px;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
+    letter-spacing: 0.5px;
 }
 
 select,
@@ -1582,7 +1519,7 @@ textarea {
 
 .clip-select:focus {
     border-color: var(--neon-cyan-dim);
-    box-shadow: var(--shadow-inner), 0 0 0 2px rgba(0, 255, 255, 0.12);
+    box-shadow: var(--shadow-inner), 0 0 0 2px var(--cyan-subtle);
 }
 
 /* Range slider — refined, physical */
@@ -1606,17 +1543,17 @@ input[type="range"]::-webkit-slider-thumb {
     -webkit-appearance: none;
     width: 16px;
     height: 16px;
-    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-cyan-dim));
+    background: var(--neon-cyan);
     border-radius: 50%;
     cursor: pointer;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.4), 0 0 8px var(--cyan-glow);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.4);
     transition: transform var(--t-fast), box-shadow var(--t-fast);
     border: 2px solid var(--border-light);
 }
 
 input[type="range"]::-webkit-slider-thumb:hover {
     transform: scale(1.15);
-    box-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 0 12px var(--cyan-glow);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.4), 0 0 8px var(--cyan-subtle);
 }
 
 input[type="range"]:disabled {
@@ -1809,9 +1746,9 @@ input[type="checkbox"]:disabled {
 }
 
 .filler-checks label:has(input:checked) {
-    border-color: rgba(0,255,255,0.25);
-    background: rgba(0,255,255,0.06);
-    box-shadow: 0 0 15px var(--cyan-glow), inset 0 0 20px var(--cyan-subtle);
+    border-color: var(--border-glow);
+    background: var(--cyan-subtle);
+    box-shadow: var(--shadow-sm);
 }
 
 /* ============================================================
@@ -2505,7 +2442,7 @@ input[type="checkbox"]:disabled {
 .custom-dropdown-trigger:focus,
 .custom-dropdown.open .custom-dropdown-trigger {
     border-color: var(--neon-cyan-dim);
-    box-shadow: var(--shadow-inner), 0 0 0 2px rgba(0,255,255,0.12);
+    box-shadow: var(--shadow-inner), 0 0 0 2px var(--cyan-subtle);
 }
 
 .custom-dropdown-text {
@@ -2676,10 +2613,10 @@ input[type="checkbox"]:disabled {
 }
 
 .stem-check:has(input:checked) {
-    border-color: rgba(0,255,255,0.25);
-    background: rgba(0,255,255,0.06);
+    border-color: var(--border-glow);
+    background: var(--cyan-subtle);
     color: var(--neon-cyan);
-    box-shadow: var(--shadow-sm), var(--shadow-glow-sm);
+    box-shadow: var(--shadow-sm);
 }
 
 .stem-icon {
@@ -2745,7 +2682,7 @@ input[type="checkbox"]:disabled {
 .drop-zone.drag-over {
     border-color: var(--neon-cyan-dim);
     border-style: solid;
-    background: rgba(0, 255, 255, 0.04);
+    background: var(--cyan-subtle);
     color: var(--neon-cyan);
     box-shadow: var(--shadow-glow-sm);
 }
@@ -2815,7 +2752,7 @@ input[type="checkbox"]:disabled {
     flex-shrink: 0;
 }
 .job-history-status.complete { background: var(--neon-green); }
-.job-history-status.error { background: var(--neon-red, #ff0055); }
+.job-history-status.error { background: var(--neon-red, #e05454); }
 .job-history-status.cancelled { background: var(--text-muted); }
 
 /* ============================================================
@@ -2895,7 +2832,7 @@ input[type="checkbox"]:disabled {
 .model-item-delete {
     background: none;
     border: none;
-    color: var(--neon-red, #ff0055);
+    color: var(--neon-red, #e05454);
     cursor: pointer;
     padding: 2px 6px;
     font-size: 11px;
@@ -2942,11 +2879,11 @@ input[type="checkbox"]:disabled {
 }
 .transcript-segment.search-highlight {
     background: rgba(255, 255, 0, 0.15) !important;
-    border-left: 2px solid var(--neon-orange, #ff8800);
+    border-left: 2px solid var(--neon-orange, #f0a020);
 }
 .transcript-segment.search-active {
     background: rgba(255, 200, 0, 0.25) !important;
-    border-left: 2px solid var(--neon-cyan, #00ffff);
+    border-left: 2px solid var(--neon-cyan, #4d7fff);
 }
 
 /* ============================================================
@@ -2973,7 +2910,7 @@ input[type="checkbox"]:disabled {
 .drop-zone.drag-active {
     border-color: var(--neon-cyan) !important;
     border-style: solid !important;
-    background: rgba(0, 255, 255, 0.06) !important;
+    background: var(--cyan-subtle) !important;
     box-shadow: var(--shadow-glow-md);
 }
 .drop-zone.drag-active .drop-zone-icon {
@@ -3007,9 +2944,9 @@ input[type="checkbox"]:disabled {
     backdrop-filter: blur(20px);
     white-space: nowrap;
 }
-.toast-notification.success { border-left: 2px solid var(--neon-green, #00ff88); }
-.toast-notification.error { border-left: 2px solid var(--neon-red, #ff0055); }
-.toast-notification.info { border-left: 2px solid var(--neon-cyan, #00ffff); }
+.toast-notification.success { border-left: 2px solid var(--neon-green, #2dd4a4); }
+.toast-notification.error { border-left: 2px solid var(--neon-red, #e05454); }
+.toast-notification.info { border-left: 2px solid var(--neon-cyan, #4d7fff); }
 @keyframes toast-slide-up {
     from { transform: translateX(-50%) translateY(100%); opacity: 0; }
     to { transform: translateX(-50%) translateY(0); opacity: 1; }
@@ -3043,10 +2980,10 @@ input[type="checkbox"]:disabled {
     left: 0;
     right: 0;
     height: 2px;
-    background: var(--neon-red, #ff0055);
+    background: var(--neon-red, #e05454);
     cursor: ns-resize;
     pointer-events: auto;
-    box-shadow: 0 0 6px var(--red-glow, rgba(255, 0, 85, 0.4));
+    box-shadow: 0 0 6px var(--red-glow, rgba(224,84,84,0.30));
 }
 .waveform-label {
     text-align: center;
@@ -3301,7 +3238,7 @@ input[type="checkbox"]:disabled {
     padding: 24px;
     max-width: 420px;
     width: 90%;
-    box-shadow: var(--shadow-xl), 0 0 40px rgba(0,255,255,0.04);
+    box-shadow: var(--shadow-xl);
     animation: resultsPop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 .wizard-header {
@@ -4224,8 +4161,8 @@ input[type="range"][title] {
    Server Status Banner
    ================================================================ */
 .server-status-banner {
-    background: rgba(255, 0, 85, 0.15);
-    border-bottom: 1px solid rgba(255, 0, 85, 0.3);
+    background: var(--error-dim);
+    border-bottom: 1px solid var(--red-glow);
     color: var(--neon-red);
     text-align: center;
     padding: 8px 14px;
@@ -16609,3 +16546,5 @@ textarea::placeholder {
 .sub-tabs.overflow-right::after {
     opacity: 1;
 }
+
+
