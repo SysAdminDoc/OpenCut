@@ -1718,6 +1718,8 @@
         el.deleteCustomWorkflowBtn = $("deleteCustomWorkflowBtn");
         // i18n
         el.settingsLang = $("settingsLang");
+        // Appearance theme
+        el.settingsTheme = $("settingsTheme");
         // Time estimate
         el.processingEstimate = $("processingEstimate");
 
@@ -7162,6 +7164,21 @@
     }
 
     // ================================================================
+    // Appearance / Theme
+    // ================================================================
+    function _applyTheme(pref) {
+        var isLight;
+        if (pref === "light") {
+            isLight = true;
+        } else if (pref === "dark") {
+            isLight = false;
+        } else {
+            isLight = !!(window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches);
+        }
+        document.documentElement.classList.toggle("theme-light", isLight);
+    }
+
+    // ================================================================
     // Local Settings Persistence
     // ================================================================
     var LOCAL_SETTINGS_KEY = "opencut_settings";
@@ -7173,7 +7190,8 @@
             showNotifications: el.settingsShowNotifications ? el.settingsShowNotifications.checked : true,
             outputDir: el.settingsOutputDir ? el.settingsOutputDir.value : "",
             defaultModel: el.settingsDefaultModel ? el.settingsDefaultModel.value : "medium",
-            lang: el.settingsLang ? el.settingsLang.value : "en"
+            lang: el.settingsLang ? el.settingsLang.value : "en",
+            theme: el.settingsTheme ? el.settingsTheme.value : "auto"
         };
         try {
             localStorage.setItem(LOCAL_SETTINGS_KEY, JSON.stringify(settings));
@@ -7196,6 +7214,10 @@
                 if (settings.showNotifications !== undefined && el.settingsShowNotifications) el.settingsShowNotifications.checked = settings.showNotifications;
                 if (settings.outputDir && el.settingsOutputDir) el.settingsOutputDir.value = settings.outputDir;
                 if (settings.defaultModel && el.settingsDefaultModel) el.settingsDefaultModel.value = settings.defaultModel;
+                if (settings.theme && el.settingsTheme) {
+                    el.settingsTheme.value = settings.theme;
+                    _applyTheme(settings.theme);
+                }
             }
         } catch (e) {
             // localStorage may not be available
@@ -11345,6 +11367,23 @@
                 saveLocalSettings();
                 loadLocale(_currentLang);
             });
+        }
+
+        if (el.settingsTheme) {
+            el.settingsTheme.addEventListener("change", function () {
+                _applyTheme(this.value);
+                saveLocalSettings();
+            });
+        }
+
+        // Re-apply theme when OS preference changes (for "auto" mode)
+        if (window.matchMedia) {
+            try {
+                window.matchMedia("(prefers-color-scheme: light)").addEventListener("change", function () {
+                    var pref = el.settingsTheme ? el.settingsTheme.value : "auto";
+                    if (pref === "auto") _applyTheme("auto");
+                });
+            } catch (e) {}
         }
     }
 
