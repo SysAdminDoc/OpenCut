@@ -1,5 +1,28 @@
 # Changelog
 
+## [1.31.0] - 2026-05-09
+
+### Changed — Premium UX/UI Polish (CEP Panel)
+
+- **`extension/com.opencut.panel/client/style.css`**: Full premium design-quality pass on the CEP panel stylesheet.
+  - Replaced neon synthwave color system with a professional studio dark theme: accent blue `#4d7fff`, muted violet secondary, calmer semantic success/warning/error tokens, desaturated background layers.
+  - Removed all decorative CSS animations: mesh background, scrolling grid, header gradient bar, logo shimmer, card border rotation, button shine sweeps, and neon button underglow.
+  - Static subtle depth gradients and dot grid replace animated backgrounds.
+  - Typography cleaned throughout: removed excessive letter-spacing on titles and labels, reduced font-weight on card headings, removed forced uppercase transforms.
+  - Eliminated all remaining hardcoded `rgba(0,255,255,...)` and `rgba(255,0,85,...)` values — all colors now flow from CSS custom properties.
+  - Updated CSS variable fallback strings to match new design tokens.
+  - Fixed `--text-muted` typo (`#6868888` → `#686888`).
+  - `.btn-primary`: removed shine sweep (`::before`) and neon underglow (`::after`).
+  - `.btn-outline`: replaced hardcoded neon rgba with design-system variables.
+  - `.filler-checks`, `.stem-check` checked states: replaced neon glow box-shadow with clean variable-driven shadow.
+  - `.custom-dropdown-trigger:focus`: replaced hardcoded rgba focus ring with `var(--cyan-subtle)`.
+  - `.drop-zone.drag-over`, `.drop-zone.drag-active`: use `var(--cyan-subtle)` background.
+  - Wizard `box-shadow`: removed extraneous neon ambient glow.
+  - `.server-status-banner`: replaced hardcoded error-red rgba with `var(--error-dim)` / `var(--red-glow)`.
+- **`extension/com.opencut.panel/CSXS/manifest.xml`**: Updated `ExtensionBundleVersion` and extension `Version` to `1.31.0`.
+
+---
+
 ## [1.30.0] - 2026-05-04
 
 ### Added — Wave M (Dubbing Pipeline, Sports Highlights, EchoMimic, MCP Server)
