@@ -251,6 +251,11 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/settings/brand-kit/preview", "/video/reframe/batch",
     "/audio/censor/profanity", "/audio/spectral-match",
     "/video/lottie/render", "/search/ai", "/search/ai/index",
+    # v1.29.0 additions — Wave L async_job routes
+    "/audio/tts/elevenlabs",
+    "/video/upscale/smart",
+    "/video/face/reshape",
+    "/video/face/retouch",
 })
 
 
