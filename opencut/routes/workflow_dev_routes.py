@@ -432,7 +432,7 @@ def project_archive_contents():
 # 4. Python Scripting Console  (2 routes)
 # ===========================================================================
 
-@workflow_dev_bp.route("/api/scripting/execute", methods=["POST"])
+@workflow_dev_bp.route("/api/workflow/scripting/execute", methods=["POST"])
 @require_csrf
 def scripting_execute():
     """Execute Python code in a sandboxed environment.
@@ -443,6 +443,10 @@ def scripting_execute():
             "code": "print('hello')",
             "context": {"my_var": 42}
         }
+
+    This workflow-focused route intentionally avoids the shared
+    ``/api/scripting/execute`` surface owned by ``dev_scripting_routes`` so
+    endpoint ownership stays deterministic.
     """
     from opencut.core.scripting_console import execute_script
 
