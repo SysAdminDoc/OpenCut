@@ -246,6 +246,11 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/analyze/virality",
     "/analyze/virality/rank",
     "/video/cursor-zoom/resolve",
+    # v1.28.2 additions — Wave K async_job routes
+    "/audio/watermark/embed", "/audio/watermark/detect",
+    "/settings/brand-kit/preview", "/video/reframe/batch",
+    "/audio/censor/profanity", "/audio/spectral-match",
+    "/video/lottie/render", "/search/ai", "/search/ai/index",
 })
 
 

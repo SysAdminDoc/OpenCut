@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.28.2] - 2026-04-22
+
+### Fixed
+
+- **`jobs_routes.py`**: Added 9 Wave K async routes to `_ALLOWED_QUEUE_ENDPOINTS` — they were implemented in v1.28.0 but never registered, making them unreachable via the job queue. Routes added: `/audio/watermark/embed`, `/audio/watermark/detect`, `/settings/brand-kit/preview`, `/video/reframe/batch`, `/audio/censor/profanity`, `/audio/spectral-match`, `/video/lottie/render`, `/search/ai`, `/search/ai/index`.
+- **`wave_k_routes.py`**: Changed `validate_path` → `validate_filepath` on all 16 remaining file-input parameters in Tier 2 synchronous routes (`singing_vevo2`, `lipsync_echomimic`, `style_tokenflow`, `track_cutie`, `track_deva`, `flow_searaft`, `restore_diffbir`, `stabilize_gyroflow`, `deblur_motion`, `depth_depthpro`, `depth_flow`, `audio_reactive_fx`, `cinefocus`, `screenplay_parse`, `slate_id`). Ensures file existence is validated before handing paths to heavy AI modules, giving callers a specific `FILE_NOT_FOUND` error instead of an opaque internal failure.
+- **`server.py`**: Removed duplicate comment block at the PID re-export section.
+
+---
+
 ## [1.28.1] - 2026-04-21
 
 ### Fixed — Wave K Bugfix Pass (Phase 3/4 production hardening)
