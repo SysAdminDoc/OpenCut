@@ -15,7 +15,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import error_response, safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_path
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 wave_k_bp = Blueprint("wave_k", __name__)
@@ -146,7 +146,7 @@ def route_brand_kit_preview(job_id, filepath, data):
 @async_job("batch_reframe", filepath_required=False)
 def route_batch_reframe(job_id, filepath, data):
     from opencut.core import batch_reframe
-    input_path = validate_path(str(data.get("input_path") or ""))
+    input_path = validate_filepath(str(data.get("input_path") or ""))
     ratios = data.get("ratios") or None
     output_dir = str(data.get("output_dir") or "") or None
     def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
@@ -262,7 +262,7 @@ def route_subtitle_qa_validate():
     try:
         from opencut.core import subtitle_qa
         data = request.get_json(force=True, silent=True) or {}
-        subtitle_path = validate_path(str(data.get("subtitle_path") or ""))
+        subtitle_path = validate_filepath(str(data.get("subtitle_path") or ""))
         profile = str(data.get("profile") or "netflix")
         report = subtitle_qa.validate(subtitle_path, profile=profile)
         return jsonify({
@@ -330,7 +330,7 @@ def route_spectral_match(job_id, filepath, data):
     if not spectral_match.check_spectral_match_available():
         raise RuntimeError(spectral_match.INSTALL_HINT)
     def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
-    reference_path = validate_path(str(data.get("reference_path") or ""))
+    reference_path = validate_filepath(str(data.get("reference_path") or ""))
     strength = safe_float(data.get("strength"), default=1.0, min_val=0.0, max_val=2.0)
     output = str(data.get("output") or "") or None
     result = spectral_match.match(filepath, reference_path=reference_path, output=output,
@@ -346,8 +346,8 @@ def route_spectral_match_preview():
         if not spectral_match.check_spectral_match_available():
             return _stub_503("spectral_match", spectral_match.INSTALL_HINT)
         data = request.get_json(force=True, silent=True) or {}
-        input_path = validate_path(str(data.get("input_path") or ""))
-        reference_path = validate_path(str(data.get("reference_path") or ""))
+        input_path = validate_filepath(str(data.get("input_path") or ""))
+        reference_path = validate_filepath(str(data.get("reference_path") or ""))
         result = spectral_match.preview(input_path, reference_path)
         return jsonify(result)
     except (ValueError, KeyError) as exc:
@@ -396,7 +396,7 @@ def route_lottie_info():
     try:
         from opencut.core import lottie_import
         data = request.get_json(force=True, silent=True) or {}
-        lottie_path = validate_path(str(data.get("filepath") or data.get("lottie_path") or ""))
+        lottie_path = validate_filepath(str(data.get("filepath") or data.get("lottie_path") or ""))
         meta = lottie_import.info(lottie_path)
         return jsonify(meta)
     except (ValueError, KeyError) as exc:
@@ -927,40 +927,13 @@ def route_outpaint_video():
 @wave_k_bp.route("/generate/wan-vace", methods=["POST"])
 @require_csrf
 def route_gen_video_wan_vace():
-    try:
-        from opencut.core import gen_video_wan_vace
-        data = request.get_json(force=True, silent=True) or {}
-        result = gen_video_wan_vace.edit(
-            validate_path(str(data.get("video_path") or "")),
-            prompt=str(data.get("prompt") or ""),
-            edit_type=str(data.get("edit_type") or "background"),
-            output=str(data.get("output") or "") or None,
-        )
-        return jsonify({"output": result.output, "edit_type": result.edit_type, "notes": result.notes})
-    except NotImplementedError as exc:
-        return _stub_501("Wan2.1 VACE (K3.7)")
-    except Exception as exc:
-        return safe_error(exc, "gen_video_wan_vace")
+    return _stub_501("Wan2.1 VACE (K3.7)")
 
 
 @wave_k_bp.route("/video/highlights/sports", methods=["POST"])
 @require_csrf
 def route_highlights_sports():
-    try:
-        from opencut.core import highlights_sports
-        if not highlights_sports.check_sports_highlights_available():
-            return _stub_503("Sports Highlights", highlights_sports.INSTALL_HINT)
-        data = request.get_json(force=True, silent=True) or {}
-        result = highlights_sports.extract(
-            validate_path(str(data.get("video_path") or "")),
-            genre=str(data.get("genre") or "sports"),
-            top_n=safe_int(data.get("top_n"), default=5),
-        )
-        return jsonify([{"start": s.start, "end": s.end, "score": s.score} for s in result])
-    except NotImplementedError as exc:
-        return _stub_501("Sports Highlights (K3.8)")
-    except Exception as exc:
-        return safe_error(exc, "highlights_sports")
+    return _stub_501("Sports Highlights (K3.8)")
 
 
 @wave_k_bp.route("/video/highlights/genres", methods=["GET"])

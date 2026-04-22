@@ -16,7 +16,7 @@ import zipfile
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import _try_import
+from opencut.helpers import _try_import, get_ffmpeg_path
 
 logger = logging.getLogger("opencut")
 INSTALL_HINT = "pip install lottie"
@@ -107,12 +107,11 @@ def render(
             if hasattr(exporters, "cairo"):
                 exporters.cairo.export_frame(anim, png_path, frame_num, w=width, h=height)
             else:
-                pil = _try_import("PIL")
-                if pil is None:
-                    raise RuntimeError("PIL/Pillow required as fallback renderer: pip install Pillow")
-                from PIL import Image  # type: ignore
-                img = Image.new("RGBA", (width, height), (0, 0, 0, 0))
-                img.save(png_path)
+                # Blank-frame fallback is not useful; require a real rendering backend.
+                raise RuntimeError(
+                    "Cairo rendering backend not available. "
+                    "Install with: pip install lottie[cairo] or pip install cairocffi"
+                )
             if on_progress and fi % max(1, total_frames // 20) == 0:
                 on_progress(int(5 + fi / total_frames * 80), f"Rendering frame {fi}/{total_frames}")
 
@@ -120,13 +119,29 @@ def render(
             on_progress(85, "Encoding video")
 
         frame_pattern = os.path.join(frame_dir, "frame_%06d.png")
+        ffmpeg = get_ffmpeg_path()
         if bg_color:
-            cmd = ["ffmpeg", "-y", "-framerate", str(fps), "-i", frame_pattern,
-                   "-vf", "colorchannelmixer,format=yuv420p", "-c:v", "libx264", output]
+            # Composite RGBA frames over a solid background colour, then encode H.264
+            fc = (
+                f"color=c={bg_color}:s={width}x{height}:r={fps}[bg];"
+                f"[0:v]format=argb[fg];"
+                f"[bg][fg]overlay[out]"
+            )
+            cmd = [
+                ffmpeg, "-y", "-framerate", str(fps), "-i", frame_pattern,
+                "-filter_complex", fc, "-map", "[out]",
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", output,
+            ]
         else:
-            cmd = ["ffmpeg", "-y", "-framerate", str(fps), "-i", frame_pattern,
-                   "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0", "-crf", "30", output]
-        subprocess.run(cmd, capture_output=True, check=True)
+            cmd = [
+                ffmpeg, "-y", "-framerate", str(fps), "-i", frame_pattern,
+                "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0", "-crf", "30", output,
+            ]
+        try:
+            subprocess.run(cmd, capture_output=True, check=True)
+        except subprocess.CalledProcessError as e:
+            stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
+            raise RuntimeError(f"FFmpeg encode failed (exit {e.returncode}): {stderr_msg[:500]}") from e
     finally:
         shutil.rmtree(frame_dir, ignore_errors=True)
 

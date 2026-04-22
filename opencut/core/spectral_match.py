@@ -13,7 +13,7 @@ import struct
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import _try_import
+from opencut.helpers import _try_import, get_ffmpeg_path
 
 logger = logging.getLogger("opencut")
 INSTALL_HINT = "pip install scipy numpy"
@@ -40,8 +40,19 @@ class SpectralMatchResult:
 
 
 def _decode_to_float(path: str) -> List[float]:
-    cmd = ["ffmpeg", "-y", "-i", path, "-f", "f32le", "-ar", "44100", "-ac", "1", "pipe:1"]
-    raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+    """Decode up to 60 s of audio to float32 PCM; limits RAM for long files."""
+    ffmpeg = get_ffmpeg_path()
+    cmd = [
+        ffmpeg, "-y", "-i", path,
+        "-t", "60",
+        "-f", "f32le", "-ar", "44100", "-ac", "1",
+        "pipe:1",
+    ]
+    try:
+        raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+    except subprocess.CalledProcessError as e:
+        stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
+        raise RuntimeError(f"FFmpeg decode failed (exit {e.returncode}): {stderr_msg[:500]}") from e
     n = len(raw) // 4
     return list(struct.unpack(f"{n}f", raw))
 
@@ -101,12 +112,16 @@ def match(
             bw = fc * 0.4
             eq_filters.append(f"equalizer=f={fc:.1f}:width_type=h:width={bw:.1f}:g={db_val:.2f}")
     if eq_filters:
-        cmd = ["ffmpeg", "-y", "-i", input_path, "-af", ",".join(eq_filters), output]
+        cmd = [get_ffmpeg_path(), "-y", "-i", input_path, "-af", ",".join(eq_filters), output]
     else:
-        cmd = ["ffmpeg", "-y", "-i", input_path, "-c:a", "copy", output]
+        cmd = [get_ffmpeg_path(), "-y", "-i", input_path, "-c:a", "copy", output]
     if on_progress:
         on_progress(70, "Applying spectral correction")
-    subprocess.run(cmd, capture_output=True, check=True)
+    try:
+        subprocess.run(cmd, capture_output=True, check=True)
+    except subprocess.CalledProcessError as e:
+        stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
+        raise RuntimeError(f"FFmpeg EQ apply failed (exit {e.returncode}): {stderr_msg[:500]}") from e
     if on_progress:
         on_progress(100, "Done")
     return SpectralMatchResult(output=output, filter_db=filter_db, notes=[])
