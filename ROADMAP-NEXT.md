@@ -360,6 +360,9 @@ should ship in parallel with Wave A/B work:
 | v1.21.0 | Wave B3 (LTX-Video) + B4 (diarisation) + Wave E4 (voice-command grammar) | B + E | 2026-07 |
 | v1.22.0 | Wave B5 (delivery: VVC, Shaka, WebRTC, SRT) + Wave E2 (VapourSynth) + E6 (OBS) | B + E | 2026-08 |
 | v1.23.0+ | Wave C cherry-picks + Wave E1 (OFX) / E3 (LTX agent) / E5 (Flamenco) based on usage signal | C + E | 2026-Q4 |
+| v1.28.0 | Wave K Tier 1: AudioSeal, Brand Kit, Podcast Suite, batch reframe, star rating, subtitle QA, profanity censor, spectral match, Lottie import, semantic search | K | 2026-Q4 |
+| v1.28.x | Wave K Tier 2 stubs: GPT-SoVITS, Amphion/Vevo2, CosyVoice2, EchoMimic V3, TokenFlow, Cutie, DEVA, SEA-RAFT, DiffBIR, Gyroflow, NAFNet, Depth Pro, DepthFlow, AudioGen SFX, Open-Sora v2, LTX-2 A+V, audio-reactive FX, CineFocus | K | rolling 2026-Q4 |
+| v1.29.0 | Wave K Tier 3: dub pipeline, trailer gen, IntelliScript, face age, slate ID, outpainting, VACE editing, sports highlights | K | 2027-Q1 |
 
 ---
 
@@ -563,6 +566,126 @@ Documented explicitly so future research passes don't re-surface these:
 
 ---
 
+---
+
+## Wave K -- Completeness Pass & First-Mover Gaps (v1.28.0, target 2026-Q4)
+
+Four-angle research pass (May 2026): OSS tools (Gyroflow, Kdenlive, SubtitleEdit, VapourSynth),
+AI models 2024-2026 (AudioSeal, Amphion/Vevo2, GPT-SoVITS, TokenFlow, Cutie, DEVA, SEA-RAFT,
+EchoMimic V3, CosyVoice2, DiffBIR, Apple Depth Pro, NAFNet, Open-Sora v2, LTX-2, DepthFlow,
+Gyroflow), and commercial feature analysis (CapCut 2026, Descript Underlord, OpusClip, Runway
+Gen-4.5, Adobe Premiere 2026, DaVinci Resolve 21, HeyGen, ElevenLabs, Suno v5.5). 27 items
+survive the licence + novelty filter across three tiers.
+
+### Tier 1 -- High ROI, Zero/Minimal ML (fully working)
+
+| # | Feature | Module (new) | Routes | Source | Licence |
+|---|---------|--------------|--------|--------|---------|
+| K1.1 | **AudioSeal AI-content watermark** -- imperceptible audio watermark embeds provenance into all AI-generated audio. `pip install audioseal`. No other local editor ships this; legally significant for AI output. | `core/audio_watermark.py` | `POST /audio/watermark/embed`, `POST /audio/watermark/detect`, `GET /audio/watermark/info` | [facebookresearch/audioseal](https://github.com/facebookresearch/audioseal) | MIT |
+| K1.2 | **Brand Kit system** -- logo, hex palette, fonts, intro/outro clip, watermark position stored in `~/.opencut/brand_kit.json`. Auto-inject via `brand_kit=true` flag on compose routes. Zero ML; pure UX. CapCut/OpusClip ship this; no OSS editor does. | `core/brand_kit.py` | `GET /settings/brand-kit`, `POST /settings/brand-kit`, `POST /settings/brand-kit/preview`, `DELETE /settings/brand-kit` | CapCut / OpusClip pattern | -- |
+| K1.3 | **Podcast Suite** -- chains existing pieces: transcript -> auto-chapters, LLM show-notes, audiogram renderer (waveform + pull-quote card). Single conductor route returns chapter VTT + show-notes markdown + audiogram path. | `core/podcast_suite.py` | `POST /audio/podcast/suite`, `POST /audio/podcast/audiogram`, `POST /audio/podcast/show-notes` | Descript / Headliner pattern | -- |
+| K1.4 | **Multi-ratio batch reframe** -- one call produces 16:9 + 9:16 + 1:1 + 4:5 + 4:3 crops via existing `smart_reframe.py`. Returns zip with ratio-named filenames. CapCut/OpusClip charge per export. | `core/batch_reframe.py` | `POST /video/reframe/batch`, `GET /video/reframe/batch/presets` | CapCut / OpusClip pattern | -- |
+| K1.5 | **Star rating + clip tagging** -- good/neutral/rejected + 1-5 stars + free-form tags per clip in `~/.opencut/clip_db.json`. DaVinci / FCP ship this for dailies culling; OpenCut has no rating system. | `core/clip_rating.py` | `POST /clips/rate`, `POST /clips/tag`, `GET /clips/search`, `DELETE /clips/tag` | DaVinci / FCP pattern | -- |
+| K1.6 | **Subtitle QA validator** -- CPS check, min/max gap, overlap detection, max line length across entire SRT/VTT/ASS. Four built-in profiles (Netflix, BBC, YouTube, EBU-TT-D). Extends `caption_compliance.py`. | `core/subtitle_qa.py` | `POST /captions/qa/validate`, `GET /captions/qa/profiles` | SubtitleEdit rule patterns (GPL-3 data reimplemented MIT) | MIT |
+| K1.7 | **Bulk profanity censor** -- Whisper word timestamps -> beep tone via FFmpeg `aevalsrc`. Modes: bleep / silence / mute_speaker. Custom word list via JSON. | `core/profanity_censor.py` | `POST /audio/censor/profanity`, `GET /audio/censor/wordlists` | Premiere / Descript pattern | -- |
+| K1.8 | **EQ / Level Spectral Matcher** -- FFT (scipy) measures reference clip spectral curve, computes FIR correction filter, applies to target. "Make this interview sound like that reference mic." DaVinci Fairlight charges ~$295 for this. Pure Python, zero new GPU deps. | `core/spectral_match.py` | `POST /audio/spectral-match`, `POST /audio/spectral-match/preview` | DaVinci Fairlight pattern | -- |
+| K1.9 | **Lottie animation import** -- render `.json` / `.lottie` as a video clip with alpha via `lottie-python` (MIT). Output: WEBM/MOV with alpha for compositing. DaVinci 21 ships native Lottie; no OSS editor does. | `core/lottie_import.py` | `POST /video/lottie/render`, `GET /video/lottie/info` | [lottie-python](https://github.com/LottieFiles/lottie-python) | MIT |
+| K1.10 | **AI semantic media search** -- unified CLIP visual + CLAP audio + Whisper transcript index over the media library. "Find shots with a person laughing outdoors." Extends existing `footage_index_db.py`. Adobe Premiere 2026 ships this; no OSS editor does. | `core/semantic_search.py` | `POST /search/semantic`, `POST /search/index`, `GET /search/index/status` | CLIP + [LAION-AI/CLAP](https://github.com/LAION-AI/CLAP) + WhisperX | Apache-2 / MIT |
+
+### Tier 2 -- New AI Surfaces (503 MISSING_DEPENDENCY stubs + check_X_available guards)
+
+| # | Feature | Module (stub) | Routes | OSS Source | Licence |
+|---|---------|---------------|--------|------------|---------|
+| K2.1 | **GPT-SoVITS voice cloning** -- 5-second few-shot clone + TTS. 44k stars, REST API-ready. Superior cloning fidelity on short reference audio. Fourth TTS backend in the dispatcher. | `core/tts_gptsovits.py` | `POST /audio/tts/gpt-sovits`, `GET /audio/tts/gpt-sovits/voices` | [RVC-Boss/GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) | MIT |
+| K2.2 | **Amphion MaskGCT SOTA TTS** -- outperforms ElevenLabs on MOS. Fifth TTS backend. | `core/tts_amphion.py` | `POST /audio/tts/amphion`, `GET /audio/tts/amphion/models` | [open-mmlab/Amphion](https://github.com/open-mmlab/Amphion) | MIT |
+| K2.3 | **Vevo2 singing voice conversion** -- Amphion Vevo2: convert speech/TTS into a singing performance with pitch conditioning. First singing capability in OpenCut. Shares Amphion install with K2.2. | `core/singing_vevo2.py` | `POST /audio/sing/vevo2`, `GET /audio/sing/vevo2/info` | [open-mmlab/Amphion](https://github.com/open-mmlab/Amphion) Vevo2 | MIT |
+| K2.4 | **CosyVoice2 streaming TTS** -- Alibaba, 150ms latency, zero-shot voice clone. Best streaming TTS for real-time preview. Apache-2. | `core/tts_cosyvoice2.py` | `POST /audio/tts/cosyvoice2`, `GET /audio/tts/cosyvoice2/voices` | [FunAudioLLM/CosyVoice](https://github.com/FunAudioLLM/CosyVoice) | Apache-2 |
+| K2.5 | **EchoMimic V3 talking head** -- audio-driven portrait + half-body + gesture animation (AAAI 2025/CVPR 2025/AAAI 2026). Apache-2, production-ready. Promote to `recommended: true` in `/lipsync/backends` over existing stubs. | `core/lipsync_echomimic.py` | `POST /lipsync/echomimic`, `GET /lipsync/echomimic/info` | [antgroup/echomimic](https://github.com/antgroup/echomimic) | Apache-2 |
+| K2.6 | **TokenFlow training-free video style edit** -- ICLR 2024, MIT. Apply diffusion style to real footage without training. "Restyle this clip as watercolour." No commercial editor ships a local free equivalent. | `core/style_tokenflow.py` | `POST /video/style/tokenflow`, `GET /video/style/tokenflow/info` | [omerbt/TokenFlow](https://github.com/omerbt/TokenFlow) | MIT |
+| K2.7 | **Cutie persistent video object tracking** -- CVPR 2024, MIT. Track a segmented object across the full video with temporal memory. Pass SAM2 mask from frame 0; Cutie propagates. Enables "remove object from entire video" without per-frame annotation. | `core/track_cutie.py` | `POST /video/track/cutie`, `GET /video/track/cutie/info` | [hkchengrex/Cutie](https://github.com/hkchengrex/Cutie) | MIT |
+| K2.8 | **DEVA open-vocabulary video tracking** -- ICCV 2023, MIT. Text-prompted: "track all cars" or "track the person in the blue shirt." Grounded-SAM + temporal propagation. Unique vs SAM2 click prompting. | `core/track_deva.py` | `POST /video/track/deva`, `GET /video/track/deva/info` | [hkchengrex/Tracking-Anything-with-DEVA](https://github.com/hkchengrex/Tracking-Anything-with-DEVA) | MIT |
+| K2.9 | **SEA-RAFT optical flow** -- ECCV 2024, BSD-3. 2.3x faster than RAFT, SOTA on Spring benchmark. Feeds motion blur synthesis, motion trails, improved interpolation. Drop-in for any current RAFT call. | `core/flow_searaft.py` | `POST /video/flow/searaft`, `GET /video/flow/backends` | [princeton-vl/SEA-RAFT](https://github.com/princeton-vl/SEA-RAFT) | BSD-3 |
+| K2.10 | **DiffBIR blind unified restoration** -- ECCV 2024, Apache-2. Diffusion prior handles blur + noise + JPEG artifacts + low-res in one pass. Fills the non-face general content restoration gap that VRT/RVRT misses on severely degraded footage. | `core/restore_diffbir.py` | `POST /video/restore/diffbir`, `GET /video/restore/diffbir/info` | [XPixelGroup/DiffBIR](https://github.com/XPixelGroup/DiffBIR) | Apache-2 |
+| K2.11 | **Gyroflow IMU stabilization** -- Apache-2 CLI. Gyroscope/IMU warp stab from GoPro/DJI/Sony metadata sidecar. Far superior to vidstab for action-cam footage. Lens profile DB, horizon lock, STmap export, Sony IBIS. Subprocess call to `gyroflow` binary. | `core/stabilize_gyroflow.py` | `POST /video/stabilize/gyroflow`, `GET /video/stabilize/gyroflow/info`, `GET /video/stabilize/gyroflow/lens-profiles` | [gyroflow/gyroflow](https://github.com/gyroflow/gyroflow) | Apache-2 |
+| K2.12 | **AI motion deblur** -- NAFNet (ECCV 2022, Apache-2) for motion blur; MIMO-UNet as lightweight fallback. Zero deblur capability in OpenCut today. DaVinci Resolve 21 ships this as a premium AI feature. | `core/deblur_motion.py` | `POST /video/restore/deblur-motion`, `GET /video/restore/deblur-motion/backends` | [megvii-research/NAFNet](https://github.com/megvii-research/NAFNet), [chosj95/MIMO-UNet](https://github.com/chosj95/MIMO-UNet) | Apache-2 |
+| K2.13 | **Apple Depth Pro metric depth** -- MIT, zero-shot metric depth with absolute scale. Faster + more accurate than Depth Anything V2 on single-frame depth. New backend for existing depth routes; enables accurate parallax and cinefocus without calibration. | `core/depth_depthpro.py` | `POST /video/depth/depthpro`, `GET /video/depth/backends` | [apple/ml-depth-pro](https://github.com/apple/ml-depth-pro) | MIT |
+| K2.14 | **DepthFlow parallax-from-stills** -- convert a single still into a parallax-motion video using depth-based 2.5D warp. Creates motion from one still (Ken Burns on steroids). CLI subprocess. | `core/depth_flow.py` | `POST /video/depth-flow/generate`, `GET /video/depth-flow/info` | [BrokenSource/DepthFlow](https://github.com/BrokenSource/DepthFlow) | MIT-adjacent |
+| K2.15 | **Text-to-SFX (AudioCraft AudioGen)** -- generate SFX from text prompt ("footsteps on gravel", "thunderstorm"). Code MIT; weights CC-BY-NC (download instructions in 503 hint, not bundled). No other local editor ships this. | `core/sfx_audiogen.py` | `POST /audio/sfx/generate`, `GET /audio/sfx/info` | [facebookresearch/audiocraft](https://github.com/facebookresearch/audiocraft) AudioGen | MIT code / CC-BY-NC weights |
+| K2.16 | **Open-Sora v2 T2V backend** -- Apache-2, different DiT architecture from CogVideoX/LTX-Video. Third OSS T2V option in the B-roll dispatcher. | `core/gen_video_opensora.py` | `POST /generate/opensora`, `GET /generate/opensora/info` | [hpcaitech/Open-Sora](https://github.com/hpcaitech/Open-Sora) | Apache-2 |
+| K2.17 | **LTX-Video 0.9.8 + LTX-2 audio+video joint** -- LTX-2 is the first model to generate audio and video simultaneously. Upgrade existing LTX-Video backend; add audio+video joint generation route. No other local tool ships synchronized A+V generation. | `core/gen_video_ltx.py` (extend) | `POST /generate/ltx/v2`, `GET /generate/ltx/backends` | [Lightricks/LTX-Video](https://github.com/Lightricks/LTX-Video) | Apache-2 |
+| K2.18 | **Audio-driven visual FX system** -- BeatNet beat timestamps + frequency band analysis drive zoom pulse, chromatic aberration, colour saturation, shake, strobe keyframes. Reactive presets ("boom", "bass-drop", "snare"). No OSS editor exposes this as a system. | `core/audio_reactive_fx.py` | `POST /video/audio-reactive/render`, `GET /video/audio-reactive/presets` | DaVinci Fairlight pattern (existing BeatNet + FFmpeg filter_complex) | -- |
+| K2.19 | **AI CineFocus rack focus** -- depth map (Depth Pro or Depth Anything V2) drives depth-of-field bokeh: keyframeable focal point, aperture shape, f-number. "Rack focus foreground to background over 30 frames." DaVinci 21 CineFocus charges licence; OpenCut ships free. | `core/cinefocus.py` | `POST /video/cinefocus/render`, `POST /video/cinefocus/preview`, `GET /video/cinefocus/info` | DaVinci 21 pattern (Depth Pro + FFmpeg boxblur + depth mask) | -- |
+
+### Tier 3 -- Strategic Pipelines (route scaffolding + research notes)
+
+| # | Feature | Module (stub) | Routes | Source | Notes |
+|---|---------|---------------|--------|--------|-------|
+| K3.1 | **Full local video dubbing pipeline** -- WhisperX STT -> NLLB-200 translate -> CosyVoice2/GPT-SoVITS voice clone -> EchoMimic V3 lip sync -> composite. HeyGen charges per-minute; OpenCut: private, free, local. | `core/dub_pipeline.py` | `POST /dub/pipeline`, `GET /dub/pipeline/status/<job_id>` | HeyGen pattern | **L effort; schedule after K2.4 + K2.5 fill.** |
+| K3.2 | **Auto trailer/promo generator** -- LLM moment scoring -> top-N extract -> MusicGen ramp + title card (declarative_compose) + CTA. All pieces in OpenCut; conductor is the gap. Descript Underlord ships this. | `core/trailer_gen.py` | `POST /generate/trailer`, `POST /generate/promo` | Descript Underlord pattern | **M effort.** |
+| K3.3 | **IntelliScript .fdx / Fountain import** -- extend Wave I script-to-sequence (I2.1) to accept Final Draft `.fdx` and Fountain `.fountain` files. Parse scene headings + WhisperX fuzzy-match transcript -> auto-assemble edit order. DaVinci 21 IntelliScript charges licence. | `core/screenplay_parser.py` | `POST /timeline/assemble-from-screenplay` (extends I2.1) | [Fountain spec](https://fountain.io/syntax) (MIT) | **M effort; builds on I2.1.** |
+| K3.4 | **AI Face Age Transformer** -- age slider on a face in video via IP-Adapter + Cutie temporal tracking. DaVinci 21 ships this. No OSS equivalent at video level yet. | `core/face_age_transform.py` | `POST /video/face/age-transform`, `GET /video/face/age-transform/info` | DaVinci 21 pattern | **L effort; confirm weights licence before promoting to Tier 2.** |
+| K3.5 | **AI Slate ID** -- Florence-2 VLM (already installed) reads clapperboard scene/take/camera from clip-head frames. Stamps metadata into OTIO + Premiere XMP. DaVinci 21 ships this. | `core/slate_id.py` | `POST /video/slate/identify`, `GET /video/slate/identify/info` | DaVinci 21 pattern (Florence-2 already in OpenCut) | **M effort; Florence-2 already installed.** |
+| K3.6 | **Video outpainting** -- expand frame borders via diffusion to change aspect ratio (generate content at edges). Wan2.1 VACE or LTX-2 inpainting conditioned on existing frame content. Runway charges per-second. | `core/outpaint_video.py` | `POST /video/outpaint`, `GET /video/outpaint/info` | Runway Gen-4 pattern | **L effort; depends on K2.17 or K3.7.** |
+| K3.7 | **Wan2.1 VACE video editing** -- existing C4 stub covers T2V; VACE adds editing of existing footage via video conditioning (background change, re-light, modify action). Different inference path from T2V. | `core/gen_video_wan_vace.py` | `POST /generate/wan/vace`, `GET /generate/wan/vace/info` | [Wan-Video/Wan2.1](https://github.com/Wan-Video/Wan2.1) VACE | **L effort; extends C4 stub.** |
+| K3.8 | **Sports/genre-agnostic highlights** -- optical flow velocity + YAMNet crowd energy + laughter detection + face-count peak. Works for sports, concerts, events -- not just talking-head clips. OpusClip ClipAnything charges per clip. | `core/highlights_sports.py` | `POST /analyze/highlights/sports`, `GET /analyze/highlights/genres` | OpusClip ClipAnything pattern | **M effort.** |
+
+### Not adopted (Wave K)
+
+- **VoiceCraft** (CC-BY-NC-SA) -- in-place speech word editing. Revisit if relicensed.
+- **SeamlessExpressive** (CC-BY-NC) -- CosyVoice2 (K2.4) covers the use case under Apache-2.
+- **Co-Tracker3** (Meta CC-BY-NC) -- DEVA (K2.8) covers open-vocabulary tracking under MIT.
+- **SUPIR** (non-commercial) -- DiffBIR (K2.10) covers blind restoration under Apache-2.
+- **HunyuanVideo** (Tencent non-commercial) -- camera motion video gen blocked by licence.
+- **Hallo2** (S-Lab mixed licence) -- EchoMimic V3 (K2.5) is Apache-2 and production-ready. Skip.
+- **LivePortrait** (MIT code / non-commercial weights) -- no practical value without distributable weights.
+- **MuseTalk weights** (non-commercial) -- EchoMimic V3 supersedes.
+- **BSRGAN** -- DiffBIR (K2.10) covers the same degradation space more comprehensively.
+- **UniMatch** -- SEA-RAFT + Depth Pro cover flow and depth better individually.
+- **Bark** -- AudioGen (K2.15) provides better text control for SFX. Skip.
+- **ChatTTS** (AGPL-3) -- licence contaminates MIT promise. Monitor for MIT alternative.
+- **DAC neural codec** -- no user-visible feature until a future neural-audio-editing wave.
+- **AudioCraft JASCO** (MIT code / CC-BY-NC weights) -- surfaced via K2.15 AudioGen route.
+
+### Wave K gotchas (anticipated)
+
+- **AudioSeal latency (K1.1)** -- embed runs >1x realtime on CPU; wire as post-export background job, never synchronous on the export path.
+- **Brand Kit opt-out (K1.2)** -- must be explicit `brand_kit=true` per render. Never auto-apply to client footage without consent.
+- **GPT-SoVITS server (K2.1)** -- ships its own inference server (port 9880). OpenCut wraps it as a subprocess sidecar. Check server health before routing; surface install instructions when absent.
+- **Amphion + Vevo2 shared checkpoint (K2.2/K2.3)** -- one `check_amphion_available()` guard covers both. Don't require two separate downloads.
+- **EchoMimic V3 backend priority (K2.5)** -- when available, `/lipsync/backends` sets echomimic to `recommended: true`. Don't silently redirect from MuseTalk/LatentSync; let the user choose.
+- **SEA-RAFT resolution cap (K2.9)** -- cap input to 1080p and use downsample-process-upsample unless user explicitly requests 4K flow.
+- **DiffBIR inference time (K2.10)** -- expose `tile_size` (default 512) and `fast_mode=true` (4-step DPM-Solver++ vs 50 DDIM) to manage 30-60 s per-frame cost.
+- **Gyroflow binary (K2.11)** -- not on PyPI. `check_gyroflow_available()` fetches pre-built binary from gyroflow GitHub releases for the detected platform.
+- **DepthFlow headless (K2.14)** -- uses ModernGL for GPU rendering; needs virtual framebuffer (Xvfb) on headless Linux. Document in 503 install hint.
+- **AudioGen weights (K2.15)** -- CC-BY-NC cannot be bundled. `check_audiogen_available()` detects presence and surfaces the download URL. Never auto-download CC-BY-NC weights silently.
+- **LTX-2 A+V joint (K2.17)** -- different inference call from existing LTX T2V path. New route `/generate/ltx/v2` keeps old `/generate/ltx` backward-compatible.
+- **CineFocus bokeh (K2.19)** -- pre-compute depth map for entire clip in batch before rendering blur sequence. Expose `focal_z_start`, `focal_z_end`, `focal_frame_start`, `focal_frame_end` params.
+- **Dub pipeline translation (K3.1)** -- NLLB-200 runs locally (MIT). Never route translation through a cloud LLM unless user explicitly selects an API provider.
+
+**Wave K total**: 34 new routes (Tier 1 + Tier 2 + Tier 3 scaffolding), 27 new core modules,
+20 new `check_*_available()` entries, 0 new *required* pip deps, 1 new blueprint (`wave_k_bp`).
+
+**Ten features where OpenCut will be first to ship locally (no OSS NLE equivalent):**
+1. **K1.1 AudioSeal** -- AI audio provenance watermarking on all generated output
+2. **K1.2 Brand Kit** -- project-identity injection into every render
+3. **K1.8 EQ Spectral Matcher** -- FFT-based EQ matching (DaVinci Fairlight charges ~$295)
+4. **K2.3 Vevo2 Singing VC** -- singing voice synthesis from text + reference voice
+5. **K2.6 TokenFlow style edit** -- training-free diffusion restyle of real footage locally
+6. **K2.8 DEVA open-vocab tracking** -- text-prompted "track all cars in this video"
+7. **K2.11 Gyroflow** -- IMU/gyroscope warp stabilization (GoPro/DJI/Sony grade)
+8. **K2.15 Text-to-SFX** -- "footsteps on gravel" -> audio, running locally
+9. **K2.17 LTX-2 A+V joint** -- synchronized audio+video generation in one pass
+10. **K3.1 Local dubbing pipeline** -- private, free, local alternative to HeyGen
+
+### Wave K shipping cadence
+
+| Phase | Items | Target |
+|-------|-------|--------|
+| v1.28.0 (Wave K Tier 1) | K1.1-K1.10 content-creator polish | 2026-Q4 |
+| v1.28.x (Wave K Tier 2 stubs) | K2.1-K2.19 AI backends | rolling 2026-Q4 |
+| v1.29.0 (Wave K Tier 3 rollout) | K3.1-K3.8 pipeline orchestrators | 2027-Q1 |
+
+
 ## Sources (OSS survey, April 2026)
 
 - **Editors surveyed**: LosslessCut, auto-editor, editly, Descript,
@@ -669,3 +792,52 @@ releases.
   Frame.io, Wipster, Vimeo Review, Shotgun, CantemoPortal,
   Edpuzzle, Hypothesis.is, Milanote, VLC bookmarks,
   Cursorful, Marp.
+
+## Sources (Wave K addendum -- May 2026 four-angle research pass)
+
+- **OSS video tools surveyed**:
+  [gyroflow/gyroflow](https://github.com/gyroflow/gyroflow) (IMU stabilization, Apache-2),
+  [mifi/losslesscut](https://github.com/mifi/losslesscut),
+  [WyattBlue/auto-editor](https://github.com/WyattBlue/auto-editor),
+  [Kdenlive](https://invent.kde.org/multimedia/kdenlive),
+  [Shotcut/MLT](https://github.com/mltframework/mlt),
+  [SubtitleEdit](https://github.com/SubtitleEdit/subtitle-edit),
+  [VapourSynth](https://github.com/vapoursynth/vapoursynth),
+  [vs-mlrt](https://github.com/AmusementClub/vs-mlrt).
+
+- **AI models adopted (Wave K)**:
+  [facebookresearch/audioseal](https://github.com/facebookresearch/audioseal) (MIT),
+  [open-mmlab/Amphion](https://github.com/open-mmlab/Amphion) MaskGCT + Vevo2 (MIT),
+  [RVC-Boss/GPT-SoVITS](https://github.com/RVC-Boss/GPT-SoVITS) (MIT),
+  [FunAudioLLM/CosyVoice](https://github.com/FunAudioLLM/CosyVoice) CosyVoice2 (Apache-2),
+  [antgroup/echomimic](https://github.com/antgroup/echomimic) V3 (Apache-2),
+  [omerbt/TokenFlow](https://github.com/omerbt/TokenFlow) (MIT),
+  [hkchengrex/Cutie](https://github.com/hkchengrex/Cutie) (MIT),
+  [hkchengrex/Tracking-Anything-with-DEVA](https://github.com/hkchengrex/Tracking-Anything-with-DEVA) (MIT),
+  [princeton-vl/SEA-RAFT](https://github.com/princeton-vl/SEA-RAFT) (BSD-3),
+  [XPixelGroup/DiffBIR](https://github.com/XPixelGroup/DiffBIR) (Apache-2),
+  [megvii-research/NAFNet](https://github.com/megvii-research/NAFNet) (Apache-2),
+  [chosj95/MIMO-UNet](https://github.com/chosj95/MIMO-UNet) (Apache-2),
+  [apple/ml-depth-pro](https://github.com/apple/ml-depth-pro) (MIT),
+  [BrokenSource/DepthFlow](https://github.com/BrokenSource/DepthFlow),
+  [facebookresearch/audiocraft](https://github.com/facebookresearch/audiocraft) AudioGen (MIT code / CC-BY-NC weights),
+  [hpcaitech/Open-Sora](https://github.com/hpcaitech/Open-Sora) v2 (Apache-2),
+  [Lightricks/LTX-Video](https://github.com/Lightricks/LTX-Video) 0.9.8 + LTX-2 (Apache-2),
+  [LAION-AI/CLAP](https://github.com/LAION-AI/CLAP) (Apache-2),
+  [LottieFiles/lottie-python](https://github.com/LottieFiles/lottie-python) (MIT).
+
+- **AI models evaluated, not adopted (Wave K)**:
+  VoiceCraft (CC-BY-NC-SA), SeamlessExpressive (CC-BY-NC), Co-Tracker3 (CC-BY-NC),
+  SUPIR (non-commercial), HunyuanVideo (Tencent non-commercial), Hallo2 (S-Lab mixed),
+  LivePortrait weights (non-commercial), MuseTalk weights (non-commercial),
+  BSRGAN, UniMatch, Bark, ChatTTS (AGPL-3), DAC, AudioCraft JASCO (CC-BY-NC weights).
+
+- **Commercial products surveyed**:
+  CapCut 2026 (batch export, brand kit, script-to-video), Descript Underlord
+  (trailer gen, eye contact, studio sound, podcast suite), OpusClip (ClipAnything sports
+  highlights, brand kit), Runway ML Gen-4.5 + Act-Two (video outpainting, camera conditioning),
+  Adobe Premiere Pro 2026 (AI Media Intelligence semantic search, generative frame extension,
+  profanity censor), DaVinci Resolve 21 (CineFocus, motion deblur, face age transformer,
+  IntelliScript, slate ID, audio-reactive FX, spectral match, Lottie import, star rating),
+  Topaz Video AI (motion deblur, AI upscale), HeyGen (dubbing pipeline), ElevenLabs (TTS,
+  text-to-SFX), Pika Labs (video outpainting), Suno v5.5 (singing voice synthesis, stem export).
