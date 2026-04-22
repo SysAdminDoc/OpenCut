@@ -93,7 +93,7 @@
             <div class="processing-right">
                 <span class="processing-elapsed" id="processingElapsed">0s</span>
                 <span class="processing-estimate" id="processingEstimate"></span>
-                <button type="button" class="processing-cancel" id="processingCancel" title="Cancel" data-i18n="common.cancel">Cancel</button>
+                <button type="button" class="processing-cancel" id="processingCancel" title="Stop run" aria-label="Stop active run">Stop run</button>
             </div>
             <div class="processing-track"><div class="processing-fill" id="processingFill" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Processing progress"></div></div>
         </div>
@@ -134,7 +134,7 @@
             </div>
         </section>
 
-        <main class="main" id="mainContent" tabindex="-1">
+        <main class="main" id="mainContent" tabindex="-1" role="main">
             <div class="server-status-banner hidden" id="serverStatusBanner">
                 <span id="serverStatusMsg">Server disconnected. Reconnecting…</span>
             </div>
@@ -3837,11 +3837,11 @@
             <div class="content-footer">
             <!-- Job History -->
             <div class="job-history-bar">
-                <button type="button" class="utility-btn footer-toggle-btn" id="jobHistoryToggle" title="Toggle job history" aria-expanded="false" aria-controls="jobHistory">
+                <button type="button" class="utility-btn footer-toggle-btn" id="jobHistoryToggle" title="Toggle activity" aria-expanded="false" aria-controls="jobHistory">
                     <span class="btn-icon" aria-hidden="true">
                         <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4.25 5.25h7.5"/><path d="M4.25 8.75H9.5"/><path d="M4.25 12.25h4"/><circle cx="14.25" cy="12.25" r="2.75"/><path d="M14.25 10.75v1.7l1.05.6"/></svg>
                     </span>
-                    <span class="toggle-label">History</span>
+                    <span class="toggle-label">Activity</span>
                     <span class="toggle-count">(0)</span>
                 </button>
             </div>
@@ -3915,7 +3915,7 @@
                 <input type="text" id="commandPaletteInput" placeholder="Search operations… (e.g. denoise, reframe, captions)" autocomplete="off" spellcheck="false" aria-label="Search operations" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="commandPaletteResults" aria-describedby="commandPaletteStatus commandPaletteHint">
                 <div class="command-palette-status" id="commandPaletteStatus" role="status" aria-live="polite"></div>
                 <div class="command-palette-results" id="commandPaletteResults" role="listbox" aria-label="Matching operations"></div>
-                <div class="command-palette-hint" id="commandPaletteHint">Navigate with arrow keys, Enter to open, Esc to close</div>
+                <div class="command-palette-hint" id="commandPaletteHint">Use arrow keys to move, Enter to open, and Esc to close.</div>
             </div>
         </div>
 

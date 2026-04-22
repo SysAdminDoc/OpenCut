@@ -16,6 +16,7 @@ from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir, _unique_output_path
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_bool,
     safe_float,
@@ -174,22 +175,28 @@ def resolve_apply_cuts_route():
         return safe_error(exc, "resolve_cuts")
 
 
-@platform_infra_bp.route("/resolve/import", methods=["POST"])
+@platform_infra_bp.route("/resolve/media/import", methods=["POST"])
 @require_csrf
 def resolve_import_route():
-    """Import media into Resolve media pool."""
+    """Import multiple media files into the Resolve media pool."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         paths = data.get("paths", [])
+        if not isinstance(paths, list) or not paths:
+            return jsonify({"error": "paths must be a non-empty list"}), 400
+        cleaned_paths = []
+        for raw_path in paths:
+            if not isinstance(raw_path, str) or not raw_path.strip():
+                return jsonify({"error": "paths must contain only non-empty strings"}), 400
+            cleaned_paths.append(validate_filepath(raw_path.strip()))
 
         from opencut.core.resolve_integration import resolve_import_media
-        result = resolve_import_media(paths)
+        result = resolve_import_media(cleaned_paths)
         return jsonify(result)
     except Exception as exc:
         return safe_error(exc, "resolve_import")
 
-
-@platform_infra_bp.route("/resolve/timeline", methods=["GET"])
+@platform_infra_bp.route("/resolve/timeline/info", methods=["GET"])
 def resolve_timeline_info():
     """Get current Resolve timeline info."""
     try:
@@ -281,11 +288,12 @@ def plugins_search():
         return safe_error(exc, "plugins_search")
 
 
-@platform_infra_bp.route("/plugins/install", methods=["POST"])
+@platform_infra_bp.route("/plugins/marketplace/install", methods=["POST"])
+@platform_infra_bp.route("/plugins/registry/install", methods=["POST"])
 @require_csrf
 @async_job("plugin-install", filepath_required=False)
 def plugins_install(job_id, filepath, data):
-    """Install a plugin from the marketplace."""
+    """Install a plugin from the marketplace registry."""
     plugin_id = data.get("plugin_id", "")
     if not plugin_id:
         raise ValueError("plugin_id is required")
@@ -304,6 +312,7 @@ def plugins_install(job_id, filepath, data):
 
 
 @platform_infra_bp.route("/plugins/update", methods=["POST"])
+@platform_infra_bp.route("/plugins/registry/update", methods=["POST"])
 @require_csrf
 @async_job("plugin-update", filepath_required=False)
 def plugins_update(job_id, filepath, data):

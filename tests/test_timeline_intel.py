@@ -14,7 +14,7 @@ import json
 import os
 import sys
 import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -834,12 +834,10 @@ class TestTimelineIntelRoutes:
         assert timeline_intel_bp.name == "timeline_intel"
 
     def test_blueprint_registered_in_init(self):
-        """timeline_intel_bp should be listed in register_blueprints."""
-        import inspect
-
+        """timeline_intel_bp should be listed in the core blueprint registry."""
         import opencut.routes as routes_pkg
-        source = inspect.getsource(routes_pkg.register_blueprints)
-        assert "timeline_intel_bp" in source
+        names = {bp.name for bp in routes_pkg.get_core_blueprints()}
+        assert "timeline_intel" in names
 
     def test_route_timeline_quality_exists(self):
         """Blueprint should have /api/timeline/quality handler."""
