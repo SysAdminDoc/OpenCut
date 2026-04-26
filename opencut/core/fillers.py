@@ -145,6 +145,25 @@ def detect_fillers(
                 else:
                     active_phrases[norm] = parts
 
+    # Sort phrases longest-first so greedy matching prefers a 3-word phrase
+    # over a 2-word one that shares a prefix. Previous ordering was dict
+    # insertion order, which made custom multi-word phrases lose to shorter
+    # built-ins at the same position.
+    sorted_phrases = sorted(active_phrases.items(), key=lambda kv: -len(kv[1]))
+
+    def _conf(w) -> float:
+        """Tolerate Whisper backends that emit ``confidence=None`` for unscored words."""
+        c = getattr(w, "confidence", 0.0)
+        if c is None:
+            return 0.0
+        try:
+            cf = float(c)
+        except (TypeError, ValueError):
+            return 0.0
+        if cf != cf:  # NaN
+            return 0.0
+        return cf
+
     hits: List[FillerHit] = []
     total_words = 0
 
@@ -159,15 +178,15 @@ def detect_fillers(
         while i < len(words):
             w = words[i]
 
-            if w.confidence < min_confidence:
+            if _conf(w) < min_confidence:
                 i += 1
                 continue
 
             norm = _normalise(w.text)
 
-            # Check multi-word phrases first (greedy)
+            # Check multi-word phrases first (greedy, longest-first)
             phrase_matched = False
-            for pkey, pwords in active_phrases.items():
+            for pkey, pwords in sorted_phrases:
                 plen = len(pwords)
                 if i + plen <= len(words):
                     candidate = [_normalise(words[i + j].text) for j in range(plen)]
@@ -176,7 +195,7 @@ def detect_fillers(
                         phrase_start = words[i].start
                         phrase_end = words[i + plen - 1].end
                         phrase_text = " ".join(words[i + j].text for j in range(plen))
-                        avg_conf = sum(words[i + j].confidence for j in range(plen)) / plen
+                        avg_conf = sum(_conf(words[i + j]) for j in range(plen)) / plen
 
                         hits.append(FillerHit(
                             text=phrase_text,
@@ -200,7 +219,7 @@ def detect_fillers(
                     filler_key=active_singles[norm],
                     start=w.start,
                     end=w.end,
-                    confidence=w.confidence,
+                    confidence=_conf(w),
                     safe=(active_singles[norm] in SAFE_FILLERS),
                 ))
 

@@ -132,18 +132,35 @@ def export_otio_from_cuts(
         from ..utils.media import probe
         info = probe(filepath)
         total_duration = info.duration
+    if total_duration <= 0:
+        raise ValueError(
+            "Cannot determine source duration — probe failed. "
+            "Pass total_duration explicitly, or verify the file is readable."
+        )
 
-    # Sort cuts by start time
-    sorted_cuts = sorted(cuts, key=lambda c: float(c.get("start", 0)))
+    def _coerce(value, default=0.0):
+        """Coerce cut[start|end] to float; tolerate None/strings."""
+        try:
+            return max(0.0, float(value))
+        except (TypeError, ValueError):
+            return default
+
+    # Sort cuts by start time; drop non-dict / empty cuts defensively so
+    # one malformed entry doesn't raise and lose the whole timeline.
+    sorted_cuts = sorted(
+        (c for c in cuts if isinstance(c, dict)),
+        key=lambda c: _coerce(c.get("start")),
+    )
 
     # Invert: get kept regions
     kept = []
     pos = 0.0
 
     for cut in sorted_cuts:
-        cut_start = float(cut.get("start", 0))
-        cut_end = float(cut.get("end", 0))
-
+        cut_start = _coerce(cut.get("start"))
+        cut_end = _coerce(cut.get("end"))
+        if cut_end <= cut_start:
+            continue  # zero/negative-length cuts would produce no-op or reversed pairs
         if cut_start > pos:
             kept.append(TimeSegment(start=pos, end=cut_start, label="speech"))
         pos = max(pos, cut_end)
@@ -185,6 +202,11 @@ def export_otio_markers(
         from ..utils.media import probe
         info = probe(filepath)
         total_duration = info.duration
+    if total_duration <= 0:
+        raise ValueError(
+            "Cannot determine source duration for marker export. "
+            "Pass total_duration explicitly or verify the file is readable."
+        )
 
     timeline = otio.schema.Timeline(name=sequence_name)
     timeline.global_start_time = otio.opentime.RationalTime(0, framerate)
@@ -369,22 +391,43 @@ def export_otioz(
     if not output_path.lower().endswith(".otioz"):
         output_path = output_path + ".otioz"
 
+    # MediaReferencePolicy semantics (per OTIO file_bundle_utils):
+    #   * ErrorIfNotFile (default) — require every ref resolve to a local
+    #     file; those files then get copied into the OTIOZ bundle.
+    #   * MissingIfNotFile          — replace unresolvable refs with
+    #     MissingReference; resolvable ones still bundled.
+    #   * AllMissing                — replace ALL refs with MissingReference
+    #     (no media copied into the bundle).
+    #
+    # Earlier code had this inverted (and used a nonexistent
+    # ``AllMissingReferences`` attribute, which raised AttributeError at
+    # runtime). The correct mapping: bundle_media=True ⇒ default policy,
+    # bundle_media=False ⇒ AllMissing.
     if bundle_media:
-        # file_bundle_utils ships with OpenTimelineIO and handles zip
-        # layout correctly.  MediaReferencePolicy.ALL_MISSING_REFERENCES
-        # would fail the write if refs can't be resolved; we use
-        # COPY_ALL_REFERENCES to embed the media.
-        from opentimelineio.file_bundle_utils import MediaReferencePolicy
         otio.adapters.write_to_file(
             timeline, output_path,
             adapter_name="otioz",
-            media_policy=MediaReferencePolicy.AllMissingReferences,
         )
     else:
-        otio.adapters.write_to_file(
-            timeline, output_path,
-            adapter_name="otioz",
-        )
+        try:
+            from opentimelineio.file_bundle_utils import MediaReferencePolicy
+            _policy = MediaReferencePolicy.AllMissing
+        except (ImportError, AttributeError):
+            # Very old OTIO releases didn't expose the policy enum; the
+            # plain write still produces a valid bundle, just with media
+            # copied in.
+            _policy = None
+        if _policy is not None:
+            otio.adapters.write_to_file(
+                timeline, output_path,
+                adapter_name="otioz",
+                media_policy=_policy,
+            )
+        else:
+            otio.adapters.write_to_file(
+                timeline, output_path,
+                adapter_name="otioz",
+            )
     logger.info(
         "Exported OTIOZ bundle: %s (%d clips, media_bundled=%s)",
         output_path, len(speech_segments), bundle_media,
@@ -392,8 +435,20 @@ def export_otioz(
     return output_path
 
 
-def _map_color(color_name: str) -> str:
-    """Map color names to OTIO marker color constants."""
+def _map_color(color_name):
+    """Map a color name to an OTIO ``MarkerColor`` value.
+
+    Always returns either a ``MarkerColor`` enum member (when OTIO is
+    importable) or the uppercase string form as a safe fallback. Previous
+    implementation could return one or the other depending on the import
+    path, which confused callers that then passed the result to
+    ``otio.schema.Marker(color=...)`` where a mixed type would raise.
+    """
+    _KNOWN = {"red", "green", "blue", "yellow", "cyan", "magenta",
+              "pink", "orange", "purple", "white", "black"}
+    key = str(color_name or "GREEN").strip().lower()
+    if key not in _KNOWN:
+        key = "green"
     try:
         import opentimelineio as otio
         color_map = {
@@ -409,6 +464,7 @@ def _map_color(color_name: str) -> str:
             "white": otio.schema.MarkerColor.WHITE,
             "black": otio.schema.MarkerColor.BLACK,
         }
-        return color_map.get(color_name.lower(), otio.schema.MarkerColor.GREEN)
+        return color_map[key]
     except (ImportError, AttributeError):
-        return "GREEN"
+        # String form matches OTIO's enum `.value` for fallback consumers.
+        return key.upper()

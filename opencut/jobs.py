@@ -112,16 +112,6 @@ _default_registry = JobRegistry()
 # JobRegistry for new code that needs isolation.
 
 
-def _safe_error(e, context=""):
-    """Log the real exception and return a structured error response.
-
-    Delegates to opencut.errors.safe_error for exception classification
-    so the frontend receives an error code and recovery suggestion.
-    """
-    from opencut.errors import safe_error
-    return safe_error(e, context=context)
-
-
 class TooManyJobsError(RuntimeError):
     """Raised when MAX_CONCURRENT_JOBS is reached."""
     pass
@@ -196,10 +186,16 @@ def _update_job(job_id: str, **kwargs):
     with job_lock:
         if job_id in jobs:
             jobs[job_id].update(kwargs)
-            # Record timing data when a job completes for future estimates
+            # Record timing data when a job completes for future estimates.
+            # Prefer ``started_at`` over ``created`` so the recorded elapsed
+            # excludes queue wait time — otherwise a job that waited 30s in
+            # the priority queue would inflate the historical ratio used by
+            # compute_estimate() and mislead future estimates.
             if kwargs.get("status") == "complete":
                 job = jobs[job_id]
-                elapsed = time.time() - job.get("created", time.time())
+                now = time.time()
+                start = job.get("started_at") or job.get("created", now)
+                elapsed = max(0.0, now - start)
                 _schedule_record_time(job.get("type", ""), elapsed, job.get("filepath", ""))
             # Persist terminal job states to SQLite
             if kwargs.get("status") in ("complete", "error", "cancelled"):
@@ -476,30 +472,33 @@ def _start_periodic_cleanup():
 
 
 def _cleanup_old_jobs():
-    """Remove completed/errored jobs older than JOB_MAX_AGE.
-    Also mark stuck 'running' jobs as error after _JOB_STUCK_TIMEOUT."""
+    """Mark stuck running jobs, purge old terminal jobs, and reap dead procs.
+
+    All three passes run under ``job_lock`` so we never interleave with
+    workers that are mid-update. Persistence of newly-timed-out jobs
+    happens *after* releasing the lock because SQLite writes are I/O-bound.
+    """
     now = time.time()
     jobs_to_persist = []
+    stuck_hrs = _JOB_STUCK_TIMEOUT / 3600
     with job_lock:
-        # Mark stuck running jobs as error
+        expired = []
         for jid, j in jobs.items():
-            if j["status"] == "running" and (now - j["created"]) > _JOB_STUCK_TIMEOUT:
+            status = j.get("status")
+            created = j.get("created", now)
+            age = now - created
+            if status == "running" and age > _JOB_STUCK_TIMEOUT:
                 j["status"] = "error"
-                stuck_hrs = _JOB_STUCK_TIMEOUT / 3600
                 j["error"] = f"Job timed out (stuck for >{stuck_hrs:.0f} hours)"
                 j["message"] = "Timed out"
-                logger.warning("Marking stuck job %s as error (created %.0fs ago)", jid, now - j["created"])
+                logger.warning("Marking stuck job %s as error (created %.0fs ago)", jid, age)
                 jobs_to_persist.append(j.copy())
-        # Clean up old finished jobs
-        expired = [
-            jid for jid, j in jobs.items()
-            if j["status"] in ("complete", "error", "cancelled")
-            and (now - j["created"]) > JOB_MAX_AGE
-        ]
+            elif status in ("complete", "error", "cancelled") and age > JOB_MAX_AGE:
+                expired.append(jid)
         for jid in expired:
             del jobs[jid]
             _job_processes.pop(jid, None)
-        # Clean up _job_processes entries where the process has already terminated
+        # Reap _job_processes entries whose process has already terminated
         stale_procs = []
         for jid, proc in _job_processes.items():
             try:

@@ -495,6 +495,9 @@ _TOOL_ROUTES = {
     "opencut_style_transfer": ("POST", "/video/style/apply"),
     "opencut_face_enhance": ("POST", "/video/face/enhance"),
     "opencut_generate_music": ("POST", "/audio/music-ai/generate"),
+    # ``/status/{job_id}`` placeholder stays for documentation; the handler
+    # below builds the real path from validated args so the literal curly
+    # braces never hit the wire.
     "opencut_job_status": ("GET", "/status/{job_id}"),
     "opencut_repeat_detect": ("POST", "/captions/repeat-detect"),
     "opencut_chapters": ("POST", "/captions/chapters"),
@@ -517,8 +520,17 @@ _TOOL_ROUTES = {
 }
 
 
+_WIN_RESERVED_STEMS = frozenset({"CON", "PRN", "AUX", "NUL"})
+_WIN_RESERVED_RE = re.compile(r"^(COM|LPT)\d$")
+
+
 def _validate_mcp_filepath(args, key="filepath", *, allow_empty=False):
     """Validate filepath arguments at MCP layer (defense-in-depth).
+
+    Mirrors ``opencut.security.validate_path`` checks so the MCP surface
+    can reject bad inputs *before* they hit the backend. The backend still
+    re-validates — this just lets us fail fast with a clearer error and
+    avoids burning a round-trip for obvious garbage.
 
     ``allow_empty=True`` lets optional keys (e.g. ``voice_ref``) omit the
     value by passing an empty string — the server route treats empty as
@@ -530,12 +542,27 @@ def _validate_mcp_filepath(args, key="filepath", *, allow_empty=False):
         return False
     if not path:
         return allow_empty
+    # Reject whitespace-only paths (would collapse to "." on normpath).
+    if not path.strip():
+        return False
     if "\x00" in path:
         return False
+    # Reject other ASCII control characters that can confuse shells/logs.
+    if any(ord(ch) < 0x20 for ch in path):
+        return False
+    # Reject UNC / Win32 device paths (\\server\share, \\?\..., \\.\...).
+    # Cover both slash conventions because Windows accepts forward slashes.
     if path.startswith("\\\\") or path.startswith("//"):
-        return False  # Reject UNC paths
-    # Check for `..` as a *path component* (not just a substring); names like
-    # ``my..file.mp4`` are legal filenames and must not be rejected.
+        return False
+    # Reject Windows reserved device names as the filename stem.
+    try:
+        import os as _os
+        stem = _os.path.splitext(_os.path.basename(path))[0].upper()
+    except Exception:
+        stem = ""
+    if stem in _WIN_RESERVED_STEMS or _WIN_RESERVED_RE.match(stem):
+        return False
+    # Reject `..` path components (substrings like ``my..file.mp4`` are OK).
     parts = path.replace("\\", "/").split("/")
     if ".." in parts:
         return False
@@ -546,6 +573,13 @@ def handle_tool_call(tool_name, arguments):
     """Execute an MCP tool call by proxying to the Flask backend."""
     if tool_name not in _TOOL_ROUTES:
         return {"error": f"Unknown tool: {tool_name}"}
+    # Defensive: the HTTP transport passes ``arguments`` through without
+    # type-checking, and the stdio transport's guard only catches None/non-
+    # dict at the top level. Callers can still send ``arguments=[]`` or
+    # ``arguments="foo"``. Treat anything non-dict as empty so we return a
+    # clear validation error instead of an AttributeError stack trace.
+    if not isinstance(arguments, dict):
+        return {"error": "`arguments` must be a JSON object"}
 
     # Required scalar path keys — empty rejected
     _required_path_keys = ("filepath", "file", "source", "reference", "audio_path")
@@ -596,13 +630,39 @@ def handle_tool_call(tool_name, arguments):
 # ---------------------------------------------------------------------------
 # MCP Protocol (stdio JSON-RPC)
 # ---------------------------------------------------------------------------
+_MAX_STDIO_LINE_BYTES = 4 * 1024 * 1024  # 4 MB — generous for huge JSON-RPC payloads
+
+
 def run_mcp_stdio():
-    """Run MCP server over stdio (JSON-RPC 2.0)."""
+    """Run MCP server over stdio (JSON-RPC 2.0).
+
+    Each input line is capped at ``_MAX_STDIO_LINE_BYTES`` to stop a
+    misbehaving client from blowing up memory with an unterminated line.
+    Lines beyond the cap are rejected with JSON-RPC parse error.
+    """
     logger.info("OpenCut MCP server starting (stdio)")
 
-    for line in sys.stdin:
+    while True:
+        line = sys.stdin.readline(_MAX_STDIO_LINE_BYTES + 1)
+        if line == "":
+            # EOF — client closed stdin.
+            return
+        oversize = len(line) > _MAX_STDIO_LINE_BYTES and not line.endswith("\n")
         line = line.strip()
         if not line:
+            continue
+
+        if oversize:
+            # Drain the rest of the oversized line so we resync on the next \n.
+            while True:
+                chunk = sys.stdin.readline(_MAX_STDIO_LINE_BYTES + 1)
+                if chunk == "" or chunk.endswith("\n"):
+                    break
+            err = {"jsonrpc": "2.0", "id": None,
+                   "error": {"code": -32700,
+                             "message": f"Input line exceeded {_MAX_STDIO_LINE_BYTES} bytes"}}
+            sys.stdout.write(json.dumps(err) + "\n")
+            sys.stdout.flush()
             continue
 
         try:
@@ -693,8 +753,20 @@ def run_mcp_stdio():
 # ---------------------------------------------------------------------------
 # HTTP transport (JSON-RPC 2.0 over HTTP on port 5681)
 # ---------------------------------------------------------------------------
-def run_http_server(backend_url: str = BACKEND_URL, port: int = 5681) -> None:
-    """Run a JSON-RPC 2.0 HTTP server that proxies to the OpenCut backend."""
+def run_http_server(
+    backend_url: str = BACKEND_URL,
+    port: int = 5681,
+    bind: str = "127.0.0.1",
+) -> None:
+    """Run a JSON-RPC 2.0 HTTP server that proxies to the OpenCut backend.
+
+    Defaults to ``127.0.0.1`` so the MCP sidecar matches the Flask backend's
+    loopback-only default. Operators can still opt into LAN exposure with
+    ``--http-bind 0.0.0.0`` if they understand the risk — there is no
+    authentication layer on this transport, so any host that can reach it
+    can invoke every registered tool (transcribe, pip install, style
+    transfer, etc.) with the backend's CSRF token attached.
+    """
 
     class _Handler(BaseHTTPRequestHandler):
         def log_message(self, fmt, *args):
@@ -758,8 +830,14 @@ def run_http_server(backend_url: str = BACKEND_URL, port: int = 5681) -> None:
                                   "error": {"code": -32601,
                                             "message": f"Method not found: {method}"}}, status=404)
 
-    httpd = HTTPServer(("0.0.0.0", port), _Handler)
-    print(f"OpenCut MCP HTTP server on http://0.0.0.0:{port}", file=sys.stderr)
+    httpd = HTTPServer((bind, port), _Handler)
+    print(f"OpenCut MCP HTTP server on http://{bind}:{port}", file=sys.stderr)
+    if bind not in ("127.0.0.1", "localhost", "::1"):
+        print(
+            "  WARNING: bound to a non-loopback interface — there is NO auth "
+            "on this transport. Any reachable host can invoke every tool.",
+            file=sys.stderr,
+        )
     print(f"Proxying to OpenCut backend at {backend_url}", file=sys.stderr)
     print(f"Tools registered: {len(MCP_TOOLS)}", file=sys.stderr)
     try:
@@ -793,6 +871,15 @@ def main() -> None:
         type=int,
         default=5681,
         help="Port for HTTP transport (default: 5681)",
+    )
+    parser.add_argument(
+        "--http-bind",
+        default="127.0.0.1",
+        help=(
+            "Bind address for HTTP transport (default: 127.0.0.1). "
+            "Pass 0.0.0.0 to expose on the LAN — remember that this "
+            "transport has no authentication."
+        ),
     )
     parser.add_argument(
         "--list-tools",
@@ -829,7 +916,11 @@ def main() -> None:
         return
 
     if args.http:
-        run_http_server(backend_url=BACKEND_URL, port=args.http_port)
+        run_http_server(
+            backend_url=BACKEND_URL,
+            port=args.http_port,
+            bind=args.http_bind,
+        )
         return
 
     run_mcp_stdio()

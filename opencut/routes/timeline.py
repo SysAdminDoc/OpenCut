@@ -19,6 +19,7 @@ from opencut.jobs import (
     make_install_route,
 )
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     validate_filepath,
@@ -104,7 +105,13 @@ def timeline_export_from_markers(job_id, filepath, data):
         start = safe_float(marker.get("time", 0), 0, min_val=0.0)
         duration = safe_float(marker.get("duration", 0), 0, min_val=0.0)
 
+        # Sanitise marker name for filesystem use: keep alphanumerics and a
+        # few punctuation characters, collapse runs of ``_``, strip leading
+        # or trailing dots/spaces (Windows silently strips trailing spaces
+        # on disk so returned path disagreed with what ended up written).
         safe_name = "".join(c if c.isalnum() or c in "-_ " else "_" for c in name)
+        safe_name = "_".join(p for p in safe_name.split("_") if p)
+        safe_name = safe_name.strip(" .") or "marker"
         out_path = os.path.join(output_dir, f"{base_name}_{safe_name}_{idx}.{fmt}")
 
         _update_job(job_id, progress=pct, message=f"Extracting marker '{name}' ({idx + 1}/{total})...")
@@ -132,11 +139,19 @@ def timeline_export_from_markers(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 # Timeline: Batch Rename (validation only — execution via ExtendScript)
 # ---------------------------------------------------------------------------
+# Characters Premiere/NTFS reject in item names. We block them up front
+# so the ExtendScript side never has to surface obscure Premiere errors.
+_INVALID_NAME_CHARS = set('/\\\x00<>:"|?*')
+
+
 @timeline_bp.route("/timeline/batch-rename", methods=["POST"])
 @require_csrf
 def timeline_batch_rename():
     """Validate a list of rename operations; returns validated/invalid sets for ExtendScript."""
-    data = request.get_json(force=True)
+    try:
+        data = get_json_dict()
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
     renames = data.get("renames", [])
 
     if not isinstance(renames, list):
@@ -162,9 +177,17 @@ def timeline_batch_rename():
             invalid.append({"nodeId": node_id, "currentName": current_name, "newName": new_name, "reason": "newName is empty"})
             continue
 
-        # Validate: must not contain path separators or null bytes
-        if "/" in new_name or "\\" in new_name or "\x00" in new_name:
-            invalid.append({"nodeId": node_id, "currentName": current_name, "newName": new_name, "reason": "newName contains invalid characters"})
+        # Validate: no path separators, null bytes, NTFS-forbidden chars, or
+        # ASCII control bytes (which break logs and some NLE UIs).
+        bad_chars = _INVALID_NAME_CHARS & set(new_name)
+        has_control = any(ord(ch) < 0x20 for ch in new_name)
+        if bad_chars or has_control:
+            invalid.append({
+                "nodeId": node_id,
+                "currentName": current_name,
+                "newName": new_name,
+                "reason": "newName contains invalid characters",
+            })
             continue
 
         validated.append({"nodeId": node_id, "currentName": current_name, "newName": new_name})
@@ -179,7 +202,10 @@ def timeline_batch_rename():
 @require_csrf
 def timeline_smart_bins():
     """Validate smart-bin rules; returns validated/invalid sets for ExtendScript."""
-    data = request.get_json(force=True)
+    try:
+        data = get_json_dict()
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
     rules = data.get("rules", [])
 
     if not isinstance(rules, list):
@@ -226,8 +252,11 @@ def timeline_smart_bins():
 @require_csrf
 def timeline_srt_to_captions():
     """Parse an SRT file into caption segments, or pass through provided segments."""
-    data = request.get_json(force=True)
-    srt_path = data.get("srt_path", "").strip()
+    try:
+        data = get_json_dict()
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    srt_path = str(data.get("srt_path", "")).strip()
     segments = data.get("segments", None)
 
     # If segments are already provided, pass through
@@ -344,12 +373,13 @@ def timeline_export_otio():
         output_dir (str): Output directory
         sequence_name (str): Name for the timeline
     """
-    data = request.get_json(force=True)
-    filepath = data.get("filepath", "").strip()
+    try:
+        data = get_json_dict()
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    filepath = str(data.get("filepath", "")).strip()
     mode = data.get("mode", "cuts")
-    output_dir = data.get("output_dir", "")
-    if output_dir:
-        output_dir = validate_path(output_dir)
+    output_dir = str(data.get("output_dir", "")).strip()
     sequence_name = data.get("sequence_name", "OpenCut Edit")
 
     if not filepath:
@@ -360,6 +390,9 @@ def timeline_export_otio():
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 
+    # Single validation pass — the previous version validated twice; the
+    # first call could crash the worker with a 500 on bad input because it
+    # wasn't wrapped.
     if output_dir:
         try:
             output_dir = validate_path(output_dir)

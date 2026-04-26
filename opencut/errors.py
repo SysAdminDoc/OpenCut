@@ -95,7 +95,11 @@ def safe_error(exc, context=""):
         user_msg = "Ran out of memory during processing."
         suggestion = "Try a shorter clip, lower quality setting, or switch to CPU mode in Settings."
         status = 503
-    elif isinstance(exc, TimeoutError) or "timed out" in lower or "timeout" in lower:
+    # TimeoutError instances classify directly; string matching intentionally
+    # uses the specific "timed out" / "timeouterror" / subprocess phrases so
+    # free-form text like "adjust the timeout setting" doesn't misclassify an
+    # unrelated error as a 504.
+    elif isinstance(exc, TimeoutError) or "timed out" in lower or "timeouterror" in lower or "operation timed out" in lower:
         code = "OPERATION_TIMEOUT"
         user_msg = "The operation took too long and was stopped."
         suggestion = "Try a shorter clip or simpler settings."

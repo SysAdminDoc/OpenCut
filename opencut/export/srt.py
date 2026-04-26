@@ -229,8 +229,27 @@ def export_ass(
     return output_path
 
 
+def _sanitize_seconds(seconds) -> float:
+    """Coerce *seconds* into a safe non-negative finite float for timecoding.
+
+    Whisper occasionally emits ``None`` (clipped end boundaries) or very
+    small negatives on certain backends. Without coercion those leak into
+    the timecode formatters and produce invalid SRT/VTT/ASS output that
+    downstream players silently drop.
+    """
+    try:
+        s = float(seconds)
+    except (TypeError, ValueError):
+        return 0.0
+    # NaN / ±inf → 0.0; negative → 0.0.
+    if s != s or s in (float("inf"), float("-inf")) or s < 0:
+        return 0.0
+    return s
+
+
 def _format_ass_time(seconds: float) -> str:
     """Format seconds as ASS timecode: H:MM:SS.cc (centiseconds)."""
+    seconds = _sanitize_seconds(seconds)
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)
@@ -255,6 +274,7 @@ def rgb_to_ass_color(r: int, g: int, b: int, a: int = 0) -> str:
 
 def _format_srt_time(seconds: float) -> str:
     """Format seconds as SRT timecode: HH:MM:SS,mmm."""
+    seconds = _sanitize_seconds(seconds)
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)
@@ -264,6 +284,7 @@ def _format_srt_time(seconds: float) -> str:
 
 def _format_vtt_time(seconds: float) -> str:
     """Format seconds as VTT timecode: HH:MM:SS.mmm."""
+    seconds = _sanitize_seconds(seconds)
     hours = int(seconds // 3600)
     minutes = int((seconds % 3600) // 60)
     secs = int(seconds % 60)
@@ -362,13 +383,22 @@ def _split_segments(
 
 
 def _wrap_text(text: str, max_line_length: int, max_lines: int) -> str:
-    """Wrap text to fit within line length constraints."""
+    """Wrap text to fit within line length constraints.
+
+    When the wrapped output would exceed ``max_lines``, the last line is
+    truncated with an ellipsis so the user can see that text was clipped
+    instead of silently losing content. This normally never fires because
+    ``_split_segments`` pre-chunks by word count — the ellipsis is a
+    defensive footprint for unusual inputs (e.g. a single unbreakable
+    token longer than the line limit).
+    """
     if len(text) <= max_line_length:
         return text
 
     words = text.split()
     lines = []
     current_line = ""
+    truncated = False
 
     for word in words:
         test = (current_line + " " + word).strip()
@@ -376,11 +406,22 @@ def _wrap_text(text: str, max_line_length: int, max_lines: int) -> str:
             lines.append(current_line)
             current_line = word
             if len(lines) >= max_lines:
+                # There's still text we haven't emitted — flag it.
+                truncated = True
+                current_line = ""
                 break
         else:
             current_line = test
 
     if current_line and len(lines) < max_lines:
         lines.append(current_line)
+
+    if truncated and lines:
+        last = lines[-1]
+        if not last.endswith("…"):
+            # Trim room for the ellipsis if appending would overflow.
+            if len(last) + 1 > max_line_length:
+                last = last[: max_line_length - 1].rstrip()
+            lines[-1] = last + "…"
 
     return "\n".join(lines)
