@@ -165,42 +165,87 @@ def probe(filepath: str) -> MediaInfo:
     streams = data.get("streams", [])
     fmt = data.get("format", {})
 
+    def _safe_float(value, default=0.0):
+        """Coerce ffprobe numeric fields — they're sometimes ``"N/A"`` on
+        live streams, fragmented sources, or files with missing metadata."""
+        if value is None:
+            return default
+        try:
+            result = float(value)
+        except (TypeError, ValueError):
+            return default
+        # Reject NaN / inf — they corrupt downstream timeline math silently.
+        if result != result or result in (float("inf"), float("-inf")):
+            return default
+        return result
+
+    def _safe_int(value, default=0):
+        try:
+            return int(float(value)) if value is not None else default
+        except (TypeError, ValueError):
+            return default
+
     info = MediaInfo(
         path=filepath,
         filename=os.path.basename(filepath),
-        duration=float(fmt.get("duration", 0)),
+        duration=_safe_float(fmt.get("duration")),
         format_name=fmt.get("format_name", ""),
     )
 
-    # Parse video stream
+    def _is_attached_pic(stream) -> bool:
+        """True if the stream is an embedded thumbnail / album art.
+        ffprobe exposes this as disposition.attached_pic == 1."""
+        disp = stream.get("disposition") or {}
+        return bool(disp.get("attached_pic"))
+
+    # Parse video stream — prefer the first non-attached-pic stream so files
+    # with embedded thumbnails (MP3 album art, MP4 poster frames) report
+    # the real video dimensions rather than the thumbnail's.
     for stream in streams:
-        if stream.get("codec_type") == "video":
-            fps_str = stream.get("r_frame_rate", "30/1")
-            try:
-                fps_frac = Fraction(fps_str)
-                fps = float(fps_frac)
-            except (ValueError, ZeroDivisionError):
-                fps_frac = Fraction(30000, 1001)
-                fps = 29.97
+        if stream.get("codec_type") != "video" or _is_attached_pic(stream):
+            continue
+        fps_str = stream.get("r_frame_rate", "30/1")
+        try:
+            fps_frac = Fraction(fps_str)
+            fps = float(fps_frac)
+        except (ValueError, ZeroDivisionError):
+            fps_frac = Fraction(30000, 1001)
+            fps = 29.97
 
-            # Get pixel aspect ratio
-            sar = stream.get("sample_aspect_ratio", "1:1")
-            if sar == "0:1" or sar == "N/A":
-                sar = "1:1"
+        # Get pixel aspect ratio
+        sar = stream.get("sample_aspect_ratio", "1:1")
+        if sar == "0:1" or sar == "N/A":
+            sar = "1:1"
 
-            field_order = stream.get("field_order", "progressive")
+        field_order = stream.get("field_order", "progressive")
 
-            info.video = VideoStream(
-                width=int(stream.get("width", 1920)),
-                height=int(stream.get("height", 1080)),
-                fps=fps,
-                fps_fraction=fps_frac,
-                codec=stream.get("codec_name", "h264"),
-                duration=float(stream.get("duration", fmt.get("duration", 0))),
-                pixel_aspect_ratio=sar,
-                field_order=field_order,
-            )
-            break
+        info.video = VideoStream(
+            width=_safe_int(stream.get("width"), 1920),
+            height=_safe_int(stream.get("height"), 1080),
+            fps=fps,
+            fps_fraction=fps_frac,
+            codec=stream.get("codec_name", "h264"),
+            duration=_safe_float(stream.get("duration"), _safe_float(fmt.get("duration"))),
+            pixel_aspect_ratio=sar,
+            field_order=field_order,
+        )
+        break
+    # Second pass: if every video stream is attached-pic, fall back to the
+    # first one so we emit *some* dimensions rather than None.
+    if info.video is None:
+        for stream in streams:
+            if stream.get("codec_type") == "video":
+                info.video = VideoStream(
+                    width=_safe_int(stream.get("width"), 1920),
+                    height=_safe_int(stream.get("height"), 1080),
+                    fps=29.97,
+                    fps_fraction=Fraction(30000, 1001),
+                    codec=stream.get("codec_name", "h264"),
+                    duration=_safe_float(stream.get("duration"), _safe_float(fmt.get("duration"))),
+                    pixel_aspect_ratio="1:1",
+                    field_order="progressive",
+                )
+                break
 
     # Parse audio stream
     for stream in streams:
@@ -209,17 +254,18 @@ def probe(filepath: str) -> MediaInfo:
             bit_depth = 16
             bits_raw = stream.get("bits_per_raw_sample") or stream.get("bits_per_sample")
             if bits_raw:
-                try:
-                    bit_depth = int(bits_raw)
-                except ValueError:
+                coerced = _safe_int(bits_raw, 0)
+                if coerced > 0:
+                    bit_depth = coerced
+                else:
                     logger.warning("Could not parse bit depth '%s', using default 16", bits_raw)
 
             info.audio = AudioStream(
-                sample_rate=int(stream.get("sample_rate", 48000)),
-                channels=int(stream.get("channels", 2)),
+                sample_rate=_safe_int(stream.get("sample_rate"), 48000),
+                channels=_safe_int(stream.get("channels"), 2),
                 bit_depth=bit_depth,
                 codec=stream.get("codec_name", "aac"),
-                duration=float(stream.get("duration", fmt.get("duration", 0))),
+                duration=_safe_float(stream.get("duration"), _safe_float(fmt.get("duration"))),
             )
             break
 

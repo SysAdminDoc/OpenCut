@@ -45,11 +45,21 @@ _CONN_LOCK = threading.Lock()
 COMPLETED_JOB_TTL = 7 * 24 * 3600  # 7 days
 
 
+_MAX_JOB_LIST_LIMIT = 1000
+
+
 def _coerce_limit(value, default):
+    """Coerce a user-supplied LIMIT into ``[1, _MAX_JOB_LIST_LIMIT]``.
+
+    Non-numeric or out-of-range inputs fall back to *default*. Capping the
+    upper bound protects against callers that pass ``?limit=999999`` and
+    pin the job-list endpoint while SQLite streams rows.
+    """
     try:
-        return max(1, int(value))
+        coerced = int(value)
     except (TypeError, ValueError):
         return default
+    return max(1, min(_MAX_JOB_LIST_LIMIT, coerced))
 
 
 def _coerce_offset(value, default=0):
