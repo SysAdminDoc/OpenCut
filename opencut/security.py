@@ -165,10 +165,13 @@ def validate_path(path: str, allowed_base: str = None) -> str:
     """
     Validate and resolve a file path, blocking traversal attacks.
 
+    - Rejects empty / whitespace-only paths
     - Rejects null bytes
     - Rejects ``..`` components
+    - Rejects UNC / network / Win32 device paths (``\\\\``, ``\\\\?\\``, ``\\\\.\\``)
     - Resolves symlinks via ``os.path.realpath``
     - Optionally checks the resolved path is under *allowed_base*
+      (case-insensitive on Windows)
 
     Returns the resolved absolute path.
     Raises ``ValueError`` on invalid/dangerous input.
@@ -176,12 +179,20 @@ def validate_path(path: str, allowed_base: str = None) -> str:
     if not path or not isinstance(path, str):
         raise ValueError("Empty or invalid path")
 
+    # Reject whitespace-only paths — ``os.path.normpath("  ")`` becomes ``"."``
+    # which would silently resolve to the server's CWD.
+    stripped = path.strip()
+    if not stripped:
+        raise ValueError("Empty or whitespace-only path")
+
     # Block null bytes
     if "\x00" in path:
         raise ValueError("Null byte in path")
 
-    # Block UNC/network paths (SSRF/NTLM hash leak risk)
-    if path.startswith("\\\\") or path.startswith("//"):
+    # Block UNC / network / Win32 device paths (SSRF / NTLM hash leak risk).
+    # Covers both slashes because Windows accepts forward-slash UNC as well.
+    prefix_checks = (path, path.replace("/", "\\"))
+    if any(p.startswith("\\\\") for p in prefix_checks):
         raise ValueError("UNC/network paths are not allowed")
 
     # Block Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
@@ -201,10 +212,14 @@ def validate_path(path: str, allowed_base: str = None) -> str:
     # Resolve to absolute real path (follows symlinks)
     resolved = os.path.realpath(normed)
 
-    # Optional base-directory confinement
+    # Optional base-directory confinement. Windows paths are case-insensitive,
+    # so compare under ``normcase`` to avoid false negatives when ``realpath``
+    # returns a different case than the caller passed for ``allowed_base``.
     if allowed_base is not None:
         real_base = os.path.realpath(allowed_base)
-        if not (resolved == real_base or resolved.startswith(real_base + os.sep)):
+        cmp_resolved = os.path.normcase(resolved)
+        cmp_base = os.path.normcase(real_base)
+        if not (cmp_resolved == cmp_base or cmp_resolved.startswith(cmp_base + os.sep)):
             raise ValueError("Path outside allowed directory")
 
     return resolved
@@ -287,8 +302,6 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
         python = sys.executable
 
     # Prefer pre-built binary wheels (avoids needing Rust/C compilers)
-    _prefer = "--prefer-binary"
-
     # ~/.opencut/packages — the ONLY directory guaranteed writable without admin
     _target_dir = os.path.join(os.path.expanduser("~"), ".opencut", "packages")
     os.makedirs(_target_dir, exist_ok=True)
@@ -296,17 +309,19 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     if _target_dir not in sys.path:
         sys.path.insert(0, _target_dir)
 
+    _base = [python, "-m", "pip", "install", package, "--prefer-binary", "-q"]
+
     # Build strategy list — --target first to avoid permission errors
     strategies = [
-        ("--target (user-local)", [python, "-m", "pip", "install", package, _prefer, "--target", _target_dir, "-q"]),
-        ("default pip install", [python, "-m", "pip", "install", package, _prefer, "-q"]),
-        ("--user install", [python, "-m", "pip", "install", package, _prefer, "--user", "-q"]),
+        ("--target (user-local)", _base + ["--target", _target_dir]),
+        ("default pip install", list(_base)),
+        ("--user install", _base + ["--user"]),
     ]
 
     # Only allow --break-system-packages inside a virtual environment
     if _in_virtualenv():
         strategies.append(
-            ("--break-system-packages", [python, "-m", "pip", "install", package, _prefer, "--break-system-packages", "-q"])
+            ("--break-system-packages", _base + ["--break-system-packages"])
         )
 
     last_result = None
@@ -541,8 +556,18 @@ def require_rate_limit(key: str, max_concurrent: int = 1):
 
 
 def _in_virtualenv() -> bool:
-    """Return True if running inside a virtual environment."""
-    return (
-        hasattr(sys, "real_prefix")
-        or (hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix)
-    )
+    """Return True if running inside a virtual environment.
+
+    Detects:
+      * legacy ``virtualenv`` (``sys.real_prefix``)
+      * ``venv`` / ``virtualenv>=20`` (``sys.base_prefix != sys.prefix``)
+      * an activated env exporting ``VIRTUAL_ENV`` even when Python itself
+        was launched via a symlink that fooled the prefix check
+    """
+    if hasattr(sys, "real_prefix"):
+        return True
+    if hasattr(sys, "base_prefix") and sys.base_prefix != sys.prefix:
+        return True
+    if os.environ.get("VIRTUAL_ENV"):
+        return True
+    return False

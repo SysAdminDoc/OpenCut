@@ -88,9 +88,15 @@ _cleanup_event = threading.Event()
 
 
 def _cleanup_worker():
-    """Background worker that processes deferred file deletions."""
+    """Background worker that processes deferred file deletions.
+
+    Sleeps just long enough to wake when the next entry is ready, so a
+    file scheduled with ``delay=5.0`` and one retry doesn't take 15-20s
+    to finalise (it used to poll every 5s blindly).
+    """
+    default_wait = 5.0
     while True:
-        _cleanup_event.wait(timeout=5.0)
+        _cleanup_event.wait(timeout=default_wait)
         _cleanup_event.clear()
         now = time.time()
         remaining = []
@@ -119,6 +125,12 @@ def _cleanup_worker():
         if remaining:
             with _cleanup_schedule_lock:
                 _cleanup_queue.extend(remaining)
+            # Wake again near the earliest ready_at so retries don't sit
+            # idle for a whole poll interval.
+            soonest = min(entry[3] for entry in remaining)
+            default_wait = max(0.1, min(5.0, soonest - time.time()))
+        else:
+            default_wait = 5.0
 
 
 _cleanup_thread = threading.Thread(target=_cleanup_worker, daemon=True,
@@ -223,8 +235,13 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
                 _stdout, stderr_bytes = proc.communicate(timeout=5)
             except _sp.TimeoutExpired:
                 stderr_bytes = b""
+            # Surface the tail of captured stderr — plain "timed out" without
+            # any context hides the actual failure reason (wrong codec,
+            # missing font, DRM, etc.) that usually precedes the stall.
+            tail = (stderr_bytes or b"").decode(errors="replace")[-500:].strip()
+            suffix = f" — last stderr: {tail}" if tail else ""
             raise RuntimeError(
-                f"FFmpeg timed out after {timeout}s and was killed"
+                f"FFmpeg timed out after {timeout}s and was killed{suffix}"
             )
         stderr = (stderr_bytes or b"").decode(errors="replace")
         if stderr_cap > 0 and len(stderr) > stderr_cap:
@@ -289,7 +306,7 @@ def get_video_info(filepath: str) -> dict:
         logger.warning("ffprobe failed (rc=%d) for %s — using defaults", result.returncode, filepath)
         return _defaults
     try:
-        data = _json.loads(result.stdout.decode())
+        data = _json.loads(result.stdout.decode(errors="replace"))
         streams = data.get("streams", [])
         if not streams:
             logger.warning("ffprobe returned no streams for %s — using defaults", filepath)
@@ -400,20 +417,25 @@ def _resolve_output_dir(filepath: str, requested_dir: str = "") -> str:
     return fallback
 
 
+_UNIQUE_PATH_MAX_ATTEMPTS = 100
+
+
 def _unique_output_path(path: str) -> str:
     """
     If *path* already exists on disk, append _2, _3, ... before the extension
-    until we find a name that doesn't collide.  Caps at 9999 to prevent
-    infinite loops from filesystem errors.
+    until we find a name that doesn't collide.  Caps at ``_UNIQUE_PATH_MAX_ATTEMPTS``
+    (100) to prevent infinite loops from filesystem errors or races.
     """
     if not os.path.exists(path):
         return path
     base, ext = os.path.splitext(path)
-    for counter in range(2, 102):
+    for counter in range(2, _UNIQUE_PATH_MAX_ATTEMPTS + 2):
         candidate = f"{base}_{counter}{ext}"
         if not os.path.exists(candidate):
             return candidate
-    raise RuntimeError(f"Could not find unique output path after 100 attempts: {path}")
+    raise RuntimeError(
+        f"Could not find unique output path after {_UNIQUE_PATH_MAX_ATTEMPTS} attempts: {path}"
+    )
 
 
 def _make_sequence_name(filepath: str, suffix: str = "") -> str:

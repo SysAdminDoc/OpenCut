@@ -39,12 +39,18 @@ def _env_int(name: str, default: int, *, min_val: int | None = None,
 
 
 def _env_csv(name: str, default: list[str]) -> list[str]:
+    """Parse a comma-separated env var.
+
+    * Unset (``None``) → *default*.
+    * Explicit empty string → ``[]`` (lets operators disable CORS via
+      ``OPENCUT_CORS_ORIGINS=""`` without the default creeping back in).
+    * Non-empty → split, strip, drop blanks.
+    """
     raw = os.environ.get(name)
     if raw is None:
         return list(default)
     items = [item.strip() for item in raw.split(",")]
-    cleaned = [item for item in items if item]
-    return cleaned or list(default)
+    return [item for item in items if item]
 
 
 @dataclass
