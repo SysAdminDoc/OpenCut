@@ -335,8 +335,19 @@ def detect_speech(
                 file_duration=total_duration,
             )
             logger.info("Using Silero VAD for silence detection")
-        except (ImportError, Exception) as e:
-            logger.warning("Silero VAD unavailable (%s), falling back to energy-based detection", e)
+        except ImportError as e:
+            logger.info("Silero VAD not installed (%s), falling back to energy-based detection", e)
+            silences = detect_silences(
+                filepath,
+                threshold_db=config.threshold_db,
+                min_duration=config.min_duration,
+                file_duration=total_duration,
+            )
+        except Exception as e:  # noqa: BLE001 — VAD runtime failure must not kill the job
+            # Log with full stack trace at debug level so real bugs surface
+            # during diagnosis, while the user-facing warning stays concise.
+            logger.warning("Silero VAD failed (%s), falling back to energy-based detection", e)
+            logger.debug("Silero VAD traceback", exc_info=True)
             silences = detect_silences(
                 filepath,
                 threshold_db=config.threshold_db,
@@ -462,11 +473,23 @@ def get_edit_summary(
     }
 
 
-def _format_time(seconds: float) -> str:
-    """Format seconds as HH:MM:SS.mmm (always includes hours for consistent parsing)."""
-    hours = int(seconds // 3600)
-    minutes = int((seconds % 3600) // 60)
-    secs = seconds % 60
+def _format_time(seconds) -> str:
+    """Format seconds as HH:MM:SS.mmm (always includes hours for consistent parsing).
+
+    Tolerates ``None``, ``NaN``, ``inf``, negatives, and non-numeric input —
+    each collapses to ``00:00:00.000`` rather than raising. The edit summary
+    dict is surfaced directly to the frontend so a single bad value here
+    would render an error instead of the timeline stats.
+    """
+    try:
+        s = float(seconds)
+    except (TypeError, ValueError):
+        s = 0.0
+    if s != s or s in (float("inf"), float("-inf")) or s < 0:
+        s = 0.0
+    hours = int(s // 3600)
+    minutes = int((s % 3600) // 60)
+    secs = s % 60
     return f"{hours:02d}:{minutes:02d}:{secs:06.3f}"
 
 

@@ -141,6 +141,8 @@ def record(action: str, label: str, inverse_payload: dict,
     so the panel can replay the forward op on a different clip.
     """
     if action not in VALID_ACTIONS:
+        logger.warning("Rejected journal action %r (allowed: %s)",
+                       action, sorted(VALID_ACTIONS))
         raise ValueError(f"Unknown journal action: {action}")
     init_db()
     conn = _get_conn()
@@ -222,7 +224,7 @@ def clear_all() -> int:
     return cur.rowcount
 
 
-def _row_to_dict(row) -> dict:
+def _row_to_dict(row) -> "dict | None":
     if row is None:
         return None
     try:

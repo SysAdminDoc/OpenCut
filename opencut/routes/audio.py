@@ -33,6 +33,7 @@ from opencut.jobs import (
 )
 from opencut.security import (
     VALID_WHISPER_MODELS,
+    get_json_dict,
     rate_limit,
     rate_limit_release,
     require_csrf,
@@ -490,11 +491,19 @@ def audio_separate(job_id, filepath, data):
             # Remove empty strings from command
             demucs_cmd = [c for c in demucs_cmd if c]
 
+            # text=True with errors="replace": demucs occasionally emits
+            # non-UTF-8 bytes (progress-bar redraws with box-drawing chars,
+            # some locales). A decode error inside the line loop would
+            # escape up to the outer try/finally, the temp dir would be
+            # cleaned up, but the demucs subprocess would keep running
+            # orphaned because ``_unregister_job_process`` only removes the
+            # handle — it doesn't kill.
             process = _sp.Popen(
                 demucs_cmd,
                 stdout=_sp.PIPE,
                 stderr=_sp.STDOUT,
-                universal_newlines=True
+                text=True,
+                errors="replace",
             )
             _register_job_process(job_id, process)
 
@@ -658,8 +667,11 @@ def audio_normalize(job_id, filepath, data):
 @require_csrf
 def audio_measure():
     """Measure audio loudness (EBU R128) without processing."""
-    data = request.get_json(force=True)
-    filepath = data.get("filepath", "").strip()
+    try:
+        data = get_json_dict()
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    filepath = str(data.get("filepath", "")).strip()
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400

@@ -66,19 +66,19 @@ _file_handler.setLevel(logging.DEBUG)
 if _json_formatter:
     _file_handler.setFormatter(_json_formatter)
 else:
+    # _JobLogFilter (attached above) injects ``record.job_id`` on every
+    # record, so the format string is always resolvable. Avoid Formatter's
+    # ``defaults=`` kwarg — it's Python 3.10+ only, and ``requires-python``
+    # still accepts 3.9.
     _file_handler.setFormatter(logging.Formatter(
         "%(asctime)s [%(levelname)s] [%(job_id)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",
-        defaults={"job_id": ""},
     ))
 logger.addHandler(_file_handler)
 
 _console_handler = logging.StreamHandler(sys.stdout)
 _console_handler.setLevel(logging.INFO)
-_console_handler.setFormatter(logging.Formatter(
-    "  %(message)s",
-    defaults={"job_id": ""},
-))
+_console_handler.setFormatter(logging.Formatter("  %(message)s"))
 logger.addHandler(_console_handler)
 
 # ---------------------------------------------------------------------------

@@ -121,8 +121,28 @@ def _build_sequence(
     masterclip_id = "masterclip-1"
     file_defined = [False]  # mutable so _add_clip_items can toggle it
 
+    # Compute the full synchronized-clip "link group" up-front. FCP 7 XML
+    # requires every clipitem in the sync group to emit a <link> entry for
+    # every OTHER member of the group (including itself), so Premiere/Resolve
+    # can rebuild the linkage on import.
+    #
+    # Previously each clipitem emitted only 2 links (itself + one peer), which
+    # meant video linked to audio ch0 but not ch1, and audio channels didn't
+    # link to each other. Tolerant NLEs fell back on time-alignment, but split
+    # operations (unlink, slip, etc.) in Premiere misbehaved.
+    num_audio_tracks = 0
+    if config.include_audio and info.has_audio and info.audio is not None:
+        num_audio_tracks = min(info.audio.channels, 2)
+    has_video_track = bool(config.include_video and info.has_video)
+
+    link_group = []  # list of (id_prefix, media_type, track_index)
+    if has_video_track:
+        link_group.append(("clipitem-video-0", "video", 1))
+    for ch_idx in range(num_audio_tracks):
+        link_group.append((f"clipitem-audio-{ch_idx}", "audio", ch_idx + 1))
+
     # ----- Video Track -----
-    if config.include_video and info.has_video:
+    if has_video_track:
         video_elem = ET.SubElement(media, "video")
 
         # Video format
@@ -146,10 +166,11 @@ def _build_sequence(
             file_id=file_id, masterclip_id=masterclip_id,
             file_defined=file_defined,
             zoom_events=zoom_events,
+            link_group=link_group,
         )
 
     # ----- Audio Track(s) -----
-    if config.include_audio and info.has_audio and info.audio is not None:
+    if num_audio_tracks > 0:
         audio_elem = ET.SubElement(media, "audio")
 
         # Audio format
@@ -162,13 +183,12 @@ def _build_sequence(
         outputs = ET.SubElement(audio_elem, "outputs")
         group = ET.SubElement(outputs, "group")
         _add_text(group, "index", "1")
-        _add_text(group, "numchannels", str(min(info.audio.channels, 2)))
+        _add_text(group, "numchannels", str(num_audio_tracks))
         _add_text(group, "downmix", "0")
         ch = ET.SubElement(group, "channel")
         _add_text(ch, "index", "1")
 
         # Create one audio track per channel (up to stereo)
-        num_audio_tracks = min(info.audio.channels, 2)
         for ch_idx in range(num_audio_tracks):
             track = ET.SubElement(audio_elem, "track")
             _add_text(track, "locked", "FALSE")
@@ -181,6 +201,7 @@ def _build_sequence(
                 channel_index=ch_idx,
                 file_id=file_id, masterclip_id=masterclip_id,
                 file_defined=file_defined,
+                link_group=link_group,
             )
 
     return seq
@@ -200,8 +221,16 @@ def _add_clip_items(
     masterclip_id: str = "masterclip-1",
     file_defined: list = None,
     zoom_events: Optional[List[ZoomEvent]] = None,
+    link_group: Optional[List[tuple]] = None,
 ):
-    """Add clipitem elements for each speech segment."""
+    """Add clipitem elements for each speech segment.
+
+    ``link_group`` is the full list of (id_prefix, media_type, track_index)
+    tuples for every track that participates in the synchronized clip group
+    at this time index (one for video, one per audio channel). Every clipitem
+    emits a <link> per group member, so tolerant NLEs (Premiere) and strict
+    NLEs (Resolve) both reconstruct the linkage correctly.
+    """
     if file_defined is None:
         file_defined = [False]
 
@@ -234,11 +263,25 @@ def _add_clip_items(
         else:
             ET.SubElement(clipitem, "file", id=file_id)
 
-        # Link video/audio
-        if stream_type == "video":
-            _add_link(clipitem, clip_id, f"clipitem-audio-0-{i + 1}", stream_type)
+        # Link this clip to every synchronized peer — including itself —
+        # so NLEs that rely strictly on the <link> relationships keep the
+        # group together when the user slips / splits / unlinks.
+        if link_group:
+            clip_index = i + 1
+            for prefix, media_type, track_index in link_group:
+                link = ET.SubElement(clipitem, "link")
+                _add_text(link, "linkclipref", f"{prefix}-{clip_index}")
+                _add_text(link, "mediatype", media_type)
+                _add_text(link, "trackindex", str(track_index))
+                _add_text(link, "clipindex", str(clip_index))
         else:
-            _add_link(clipitem, clip_id, f"clipitem-video-0-{i + 1}", stream_type)
+            # Legacy fallback: preserves pre-refactor behaviour for callers
+            # that never built a group (shouldn't happen from _build_sequence,
+            # but kept for external callers that reach into this helper).
+            if stream_type == "video":
+                _add_link(clipitem, clip_id, f"clipitem-audio-0-{i + 1}", stream_type)
+            else:
+                _add_link(clipitem, clip_id, f"clipitem-video-0-{i + 1}", stream_type)
 
         # Source channel for audio
         if stream_type == "audio":

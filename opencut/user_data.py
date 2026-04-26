@@ -40,7 +40,12 @@ def _safe_user_filepath(filename: str) -> str:
     filepath = os.path.join(OPENCUT_DIR, filename)
     resolved = os.path.realpath(filepath)
     real_base = os.path.realpath(OPENCUT_DIR)
-    if not (resolved == real_base or resolved.startswith(real_base + os.sep)):
+    # Case-insensitive prefix compare — ``realpath`` on Windows may return a
+    # different case than the caller supplied for OPENCUT_DIR, which would
+    # falsely reject legitimate filenames.
+    cmp_resolved = os.path.normcase(resolved)
+    cmp_base = os.path.normcase(real_base)
+    if not (cmp_resolved == cmp_base or cmp_resolved.startswith(cmp_base + os.sep)):
         raise ValueError("Filename escapes user-data directory")
     return filepath
 

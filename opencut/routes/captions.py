@@ -10,6 +10,8 @@ import logging
 import os
 import tempfile
 import threading
+from collections import OrderedDict
+from types import SimpleNamespace
 
 from flask import Blueprint, jsonify, request
 
@@ -82,8 +84,13 @@ def _safe_probe(filepath):
 
 # ---------------------------------------------------------------------------
 # Transcript Cache (transcribe once, reuse across highlights/shorts/translate)
+#
+# Ordered-dict backed LRU: reads promote a key to the end, and evictions
+# happen from the front. The previous implementation deleted the *first-
+# inserted* key on eviction regardless of recent use, which churned the
+# cache so badly that hot files were evicted while idle ones lingered.
 # ---------------------------------------------------------------------------
-_transcript_cache = {}  # {filepath_hash: {"segments": [...], "language": str, "model": str, "mtime": float}}
+_transcript_cache: "OrderedDict[str, dict]" = OrderedDict()
 _transcript_cache_lock = threading.Lock()
 _TRANSCRIPT_CACHE_MAX = 20
 
@@ -101,14 +108,16 @@ def cache_transcript(filepath, segments, language="", model=""):
     """Cache transcription results for reuse."""
     key = _cache_key(filepath)
     with _transcript_cache_lock:
-        if len(_transcript_cache) >= _TRANSCRIPT_CACHE_MAX:
-            oldest = next(iter(_transcript_cache))
-            del _transcript_cache[oldest]
+        # If the key already exists, overwrite and bump to MRU.
+        if key in _transcript_cache:
+            _transcript_cache.move_to_end(key, last=True)
         _transcript_cache[key] = {
             "segments": segments,
             "language": language,
             "model": model,
         }
+        while len(_transcript_cache) > _TRANSCRIPT_CACHE_MAX:
+            _transcript_cache.popitem(last=False)  # LRU eviction from the front
 
 
 def get_cached_transcript(filepath, model=""):
@@ -117,6 +126,8 @@ def get_cached_transcript(filepath, model=""):
     with _transcript_cache_lock:
         cached = _transcript_cache.get(key)
         if cached and (not model or cached.get("model") == model):
+            # Promote to MRU so future evictions drop genuinely cold keys.
+            _transcript_cache.move_to_end(key, last=True)
             return cached["segments"]
     return None
 
@@ -179,24 +190,26 @@ def generate_captions(job_id, filepath, data):
     cached = get_cached_transcript(filepath, model=model) if _use_cache else None
     if cached:
         _update_job(job_id, progress=20, message="Using cached transcript...")
-        # Build minimal objects with .start/.end/.text for export functions
-        _CachedSeg = type("CachedSeg", (), {})
-        cached_segs = []
-        for cs in cached:
-            seg_obj = _CachedSeg()
-            seg_obj.start = cs.get("start", 0)
-            seg_obj.end = cs.get("end", 0)
-            seg_obj.text = cs.get("text", "")
-            seg_obj.words = []
-            cached_segs.append(seg_obj)
-        # word_count is required by the result payload below; synthesize from
-        # text so the cached-hit fast path doesn't crash with AttributeError.
+        # Build minimal duck-typed segments with .start/.end/.text/.words
+        # for the export functions — SimpleNamespace is cleaner than the
+        # previous dynamic ``type("CachedSeg", (), {})`` pattern and still
+        # satisfies the attribute-based interface export_srt/_vtt/_json
+        # rely on.
+        cached_segs = [
+            SimpleNamespace(
+                start=cs.get("start", 0),
+                end=cs.get("end", 0),
+                text=cs.get("text", ""),
+                words=[],
+            )
+            for cs in cached
+        ]
         _cached_words = sum(len(seg.text.split()) for seg in cached_segs if seg.text)
-        result = type("TranscriptResult", (), {
-            "segments": cached_segs,
-            "language": language or "en",
-            "word_count": _cached_words,
-        })()
+        result = SimpleNamespace(
+            segments=cached_segs,
+            language=language or "en",
+            word_count=_cached_words,
+        )
     else:
         _update_job(job_id, progress=20, message="Transcribing audio (this takes a while for long files)...")
         result = transcribe(filepath, config=config)
