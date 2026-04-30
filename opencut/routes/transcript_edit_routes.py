@@ -12,6 +12,7 @@ from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
     require_csrf,
+    safe_bool,
     validate_filepath,
     validate_path,
 )
@@ -337,7 +338,7 @@ def generate_plan_route(job_id, filepath, data):
             transcript_segments=fd.get("transcript_segments", []),
             keywords_found=fd.get("keywords_found", []),
             highlights=fd.get("highlights", []),
-            has_speech=bool(fd.get("has_speech", False)),
+            has_speech=safe_bool(fd.get("has_speech"), False),
             quality_score=float(fd.get("quality_score", 0)),
         )
         analyzed.append(clip)
@@ -514,7 +515,7 @@ def _reconstruct_map(map_data: dict):
             confidence=float(wd.get("confidence", 1.0)),
             speaker=wd.get("speaker", ""),
             paragraph_index=int(wd.get("paragraph_index", 0)),
-            is_deleted=bool(wd.get("is_deleted", False)),
+            is_deleted=safe_bool(wd.get("is_deleted"), False),
         ))
 
     paragraphs = []

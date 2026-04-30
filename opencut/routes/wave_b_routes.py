@@ -22,7 +22,7 @@ from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, validate_path
+from opencut.security import require_csrf, safe_bool, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -108,7 +108,7 @@ def route_karaoke_render():
         font = str(data.get("font") or "Inter")[:80]
         font_size = safe_int(data.get("font_size", 64), 64, min_val=12, max_val=220)
         margin_v = safe_int(data.get("margin_v", 90), 90, min_val=0, max_val=500)
-        prefer_pyonfx = bool(data.get("prefer_pyonfx", True))
+        prefer_pyonfx = safe_bool(data.get("prefer_pyonfx"), True)
 
         result = ka.render_karaoke_ass(
             segments,

@@ -23,7 +23,7 @@ import os
 from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, validate_filepath, validate_path
+from opencut.security import require_csrf, safe_bool, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -404,7 +404,7 @@ def route_export_otioz(job_id, filepath, data):
     output = validate_path(output)
     framerate = float(data.get("framerate") or 24.0)
     seq = str(data.get("sequence_name") or "OpenCut Edit")[:120]
-    bundle_media = bool(data.get("bundle_media"))
+    bundle_media = safe_bool(data.get("bundle_media"), False)
 
     _update_job(
         job_id, progress=40,
