@@ -18,6 +18,7 @@ import os
 from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import get_ffmpeg_path, run_ffmpeg
+from opencut.security import is_path_within
 
 logger = logging.getLogger("opencut")
 
@@ -321,7 +322,7 @@ def ensure_lut(name: str) -> str:
             user_dir = os.path.join(LUTS_DIR, "user")
             user_path = os.path.join(user_dir, lut_basename + ".cube")
             # Verify resolved path stays within user LUT directory
-            if not os.path.realpath(user_path).startswith(os.path.realpath(user_dir) + os.sep):
+            if not is_path_within(user_path, user_dir):
                 raise ValueError(f"Invalid LUT path: {name}")
             if os.path.exists(user_path):
                 return user_path
@@ -534,7 +535,7 @@ def generate_lut_from_reference(
     user_dir = os.path.join(LUTS_DIR, "user")
     os.makedirs(user_dir, exist_ok=True)
     cube_path = os.path.join(user_dir, f"{lut_name}.cube")
-    if not os.path.realpath(cube_path).startswith(os.path.realpath(user_dir) + os.sep):
+    if not is_path_within(cube_path, user_dir):
         raise ValueError(f"Invalid LUT path: {lut_name}")
 
     with open(cube_path, "w", encoding="utf-8") as f:
@@ -664,7 +665,7 @@ def generate_lut_ai(
     user_dir = os.path.join(LUTS_DIR, "user")
     os.makedirs(user_dir, exist_ok=True)
     cube_path = os.path.join(user_dir, f"{lut_name}.cube")
-    if not os.path.realpath(cube_path).startswith(os.path.realpath(user_dir) + os.sep):
+    if not is_path_within(cube_path, user_dir):
         raise ValueError(f"Invalid LUT path: {lut_name}")
 
     with open(cube_path, "w", encoding="utf-8") as f:
@@ -836,7 +837,7 @@ def blend_luts(
     user_dir = os.path.join(LUTS_DIR, "user")
     os.makedirs(user_dir, exist_ok=True)
     cube_path = os.path.join(user_dir, f"{output_name}.cube")
-    if not os.path.realpath(cube_path).startswith(os.path.realpath(user_dir) + os.sep):
+    if not is_path_within(cube_path, user_dir):
         raise ValueError(f"Invalid LUT path: {output_name}")
 
     # If LUTs are same size and match output, do direct blend

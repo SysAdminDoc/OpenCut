@@ -11,7 +11,7 @@ import os
 from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
-from opencut.security import get_json_dict, require_csrf, validate_path
+from opencut.security import get_json_dict, is_path_within, require_csrf, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -176,9 +176,7 @@ def uninstall_plugin():
 
     plugin_dir = os.path.join(PLUGINS_DIR, name)
     # Verify resolved path stays within PLUGINS_DIR (prevent symlink escape)
-    real_plugin = os.path.realpath(plugin_dir)
-    real_plugins = os.path.realpath(PLUGINS_DIR)
-    if not real_plugin.startswith(real_plugins + os.sep) and real_plugin != real_plugins:
+    if not is_path_within(plugin_dir, PLUGINS_DIR):
         return jsonify({"error": "Invalid plugin path"}), 400
     if not os.path.isdir(plugin_dir):
         return jsonify({"error": f"Plugin '{name}' not found"}), 404
