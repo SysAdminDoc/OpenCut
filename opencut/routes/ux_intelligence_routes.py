@@ -16,7 +16,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int
 
 logger = logging.getLogger("opencut")
 
@@ -190,16 +190,16 @@ def ux_smart_defaults():
             fps=safe_float(profile_data.get("fps", 0.0), min_val=0.0),
             codec=str(profile_data.get("codec", "")),
             duration_s=safe_float(profile_data.get("duration_s", 0.0), min_val=0.0),
-            has_audio=bool(profile_data.get("has_audio", False)),
-            has_video=bool(profile_data.get("has_video", True)),
-            is_static_camera=bool(profile_data.get("is_static_camera", False)),
+            has_audio=safe_bool(profile_data.get("has_audio"), False),
+            has_video=safe_bool(profile_data.get("has_video"), True),
+            is_static_camera=safe_bool(profile_data.get("is_static_camera"), False),
             detected_content_type=str(profile_data.get("detected_content_type", "unknown")),
             width=safe_int(profile_data.get("width", 0), min_val=0),
             height=safe_int(profile_data.get("height", 0), min_val=0),
             audio_channels=safe_int(profile_data.get("audio_channels", 0), min_val=0),
             bitrate_kbps=safe_int(profile_data.get("bitrate_kbps", 0), min_val=0),
             pixel_format=str(profile_data.get("pixel_format", "")),
-            has_alpha=bool(profile_data.get("has_alpha", False)),
+            has_alpha=safe_bool(profile_data.get("has_alpha"), False),
             rotation=safe_int(profile_data.get("rotation", 0), min_val=0),
             sample_rate=safe_int(profile_data.get("sample_rate", 0), min_val=0),
         )

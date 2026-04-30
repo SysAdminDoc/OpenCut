@@ -13,7 +13,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_path
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -252,8 +252,8 @@ def version_compare(job_id, filepath, data):
     frame_interval = safe_float(data.get("frame_interval"), 1.0,
                                 min_val=0.1, max_val=60.0)
     max_frames = safe_int(data.get("max_frames"), 300, min_val=1, max_val=1000)
-    include_audio = data.get("include_audio", True)
-    generate_video = data.get("generate_video", True)
+    include_audio = safe_bool(data.get("include_audio"), True)
+    generate_video = safe_bool(data.get("generate_video"), True)
 
     def on_progress(pct):
         _update_job(job_id, progress=pct,
@@ -499,7 +499,7 @@ def export_edit_history():
 
     try:
         fmt = data.get("format", "json")
-        include_undone = bool(data.get("include_undone", False))
+        include_undone = safe_bool(data.get("include_undone"), False)
         content = export_history(project_id, fmt=fmt,
                                  include_undone=include_undone)
         stats = get_statistics(project_id)
