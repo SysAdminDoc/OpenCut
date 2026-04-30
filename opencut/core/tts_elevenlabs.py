@@ -153,7 +153,7 @@ def synthesize(
     if model not in ELEVENLABS_MODELS:
         model = DEFAULT_MODEL
 
-    from elevenlabs import ElevenLabs, VoiceSettings
+    from elevenlabs import VoiceSettings
 
     if on_progress:
         on_progress(5, "Connecting to ElevenLabs API...")

@@ -88,7 +88,6 @@ def _detect_face_rect(frame, mp_det) -> Optional[Tuple[int, int, int, int]]:
     Detect the dominant face using MediaPipe FaceDetection.
     Returns (x, y, w, h) or None.
     """
-    import numpy as np
     h_img, w_img = frame.shape[:2]
     rgb = frame[:, :, ::-1]
     results = mp_det.process(rgb)
@@ -181,7 +180,6 @@ def _frequency_separation_blend(original_roi, smooth_roi, mask, intensity: float
 def _gfpgan_enhance_frame(frame, restorer, scale: int = 1):
     """Run one frame through GFPGAN restorer. Returns enhanced frame."""
     import cv2
-    import numpy as np
     _, _, restored_imgs = restorer.enhance(
         frame,
         has_aligned=False,
