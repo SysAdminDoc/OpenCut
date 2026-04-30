@@ -882,9 +882,9 @@ def route_dub_pipeline(job_id, filepath, data):
         filepath,
         target_language=target_lang,
         whisper_model=str(data.get("whisper_model") or "base"),
-        voice_clone=bool(data.get("voice_clone", True)),
-        lip_sync=bool(data.get("lip_sync", False)),
-        preserve_music=bool(data.get("preserve_music", True)),
+        voice_clone=safe_bool(data.get("voice_clone"), True),
+        lip_sync=safe_bool(data.get("lip_sync"), False),
+        preserve_music=safe_bool(data.get("preserve_music"), True),
         tts_engine=str(data.get("tts_engine") or "edge"),
         on_progress=_prog,
     )

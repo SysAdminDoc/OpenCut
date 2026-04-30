@@ -13,7 +13,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath
 
 logger = logging.getLogger("opencut")
 
@@ -115,7 +115,7 @@ def compare_preview():
         height = safe_int(data.get("height", 480), min_val=64, max_val=2160)
         wipe_position = safe_float(data.get("wipe_position", 0.5),
                                    min_val=0.0, max_val=1.0)
-        compute_metrics = data.get("compute_metrics", True)
+        compute_metrics = safe_bool(data.get("compute_metrics"), True)
 
         result = generate_comparison(
             original_path=original,
@@ -184,7 +184,7 @@ def generate_scopes():
         scope_type = data.get("scope_type", "")
         preset = data.get("preset", "")
         timestamp = safe_float(data.get("timestamp", 0), min_val=0.0)
-        check_legal = bool(data.get("check_legal", False))
+        check_legal = safe_bool(data.get("check_legal"), False)
 
         if preset:
             from opencut.core.realtime_scopes import generate_scopes_preset

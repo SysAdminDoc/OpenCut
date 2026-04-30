@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath
 
 logger = logging.getLogger("opencut")
 
@@ -95,7 +95,7 @@ def auto_mix(job_id, filepath, data):
 
     tracks = data.get("tracks", [])
     profile = data.get("profile", "podcast")
-    mix_down = bool(data.get("mix_down", False))
+    mix_down = safe_bool(data.get("mix_down"), False)
     output_file = data.get("output_file", "")
 
     if not tracks or not isinstance(tracks, list):

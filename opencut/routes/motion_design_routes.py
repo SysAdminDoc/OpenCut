@@ -12,7 +12,7 @@ from flask import Blueprint, jsonify, request
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_output_path, validate_path
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath, validate_output_path, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -321,7 +321,7 @@ def expression_evaluate(job_id, filepath, data):
     frame_val = safe_int(data.get("frame"), 0, 0, 1000000)
     fps_val = safe_float(data.get("fps"), 30.0, 1.0, 120.0)
     amplitude = safe_float(data.get("audio_amplitude"), 0.0, 0.0, 1.0)
-    beat = bool(data.get("beat", False))
+    beat = safe_bool(data.get("beat"), False)
     custom_vars = data.get("variables", {})
 
     ctx = ExpressionContext(

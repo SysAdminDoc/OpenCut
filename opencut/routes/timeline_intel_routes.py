@@ -14,7 +14,7 @@ import logging
 from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, validate_filepath, validate_path
+from opencut.security import require_csrf, safe_bool, safe_float, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -231,9 +231,9 @@ def audio_auto_dub(job_id, filepath, data):
         target_language=target_language,
         source_language=data.get("source_language", ""),
         whisper_model=data.get("whisper_model", "base"),
-        voice_clone=bool(data.get("voice_clone", True)),
-        lip_sync=bool(data.get("lip_sync", True)),
-        preserve_music=bool(data.get("preserve_music", True)),
+        voice_clone=safe_bool(data.get("voice_clone"), True),
+        lip_sync=safe_bool(data.get("lip_sync"), True),
+        preserve_music=safe_bool(data.get("preserve_music"), True),
         tts_engine=data.get("tts_engine", "edge"),
         output_dir=data.get("output_dir", ""),
     )

@@ -15,7 +15,7 @@ import logging
 from flask import Blueprint
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_path
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -185,7 +185,7 @@ def ai_ocr(job_id, filepath, data):
 
     if query:
         # Search mode
-        case_sensitive = bool(data.get("case_sensitive", False))
+        case_sensitive = safe_bool(data.get("case_sensitive"), False)
 
         result = search_text_in_video(
             video_path=filepath,
@@ -387,7 +387,7 @@ def ai_batch_command(job_id, filepath, data):
         raise ValueError("command text is required")
 
     file_list = data.get("file_list", [])
-    dry_run = bool(data.get("dry_run", True))  # Default to dry run for safety
+    dry_run = safe_bool(data.get("dry_run"), True)  # Default to dry run for safety
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)

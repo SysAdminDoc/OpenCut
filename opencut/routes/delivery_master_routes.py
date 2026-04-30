@@ -11,7 +11,7 @@ import os
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_path
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -65,8 +65,8 @@ def export_dcp(job_id, filepath, data):
         audio_sample_rate=safe_int(data.get("audio_sample_rate"), default=48000),
         audio_bit_depth=safe_int(data.get("audio_bit_depth"), default=24),
         jpeg2000_bandwidth=safe_int(data.get("jpeg2000_bandwidth"), default=0),
-        encrypt=bool(data.get("encrypt", False)),
-        three_d=bool(data.get("three_d", False)),
+        encrypt=safe_bool(data.get("encrypt"), False),
+        three_d=safe_bool(data.get("three_d"), False),
     )
 
     def _progress(pct, msg=""):
@@ -139,7 +139,7 @@ def export_imf(job_id, filepath, data):
         content_kind=data.get("content_kind", "feature"),
         timecode_start=data.get("timecode_start", "01:00:00:00"),
         audio_bit_depth=safe_int(data.get("audio_bit_depth"), default=24),
-        supplemental=bool(data.get("supplemental", False)),
+        supplemental=safe_bool(data.get("supplemental"), False),
         original_cpl_id=data.get("original_cpl_id", ""),
     )
 
@@ -171,9 +171,7 @@ def delivery_validate(job_id, filepath, data):
     from opencut.core.delivery_validate import validate_delivery
 
     spec_name = data.get("spec_name", "netflix").strip()
-    measure_loudness = data.get("measure_loudness", True)
-    if isinstance(measure_loudness, str):
-        measure_loudness = measure_loudness.lower() in ("true", "1", "yes")
+    measure_loudness = safe_bool(data.get("measure_loudness"), True)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -356,14 +354,12 @@ def render_multi(job_id, filepath, data):
             output_suffix=c.get("output_suffix", ""),
             output_dir=c.get("output_dir", ""),
             extra_ffmpeg_args=c.get("extra_ffmpeg_args", []),
-            two_pass=bool(c.get("two_pass", False)),
+            two_pass=safe_bool(c.get("two_pass"), False),
             metadata=c.get("metadata", {}),
         )
         configs.append(rc)
 
-    parallel = data.get("parallel", False)
-    if isinstance(parallel, str):
-        parallel = parallel.lower() in ("true", "1", "yes")
+    parallel = safe_bool(data.get("parallel"), False)
     max_parallel = safe_int(data.get("max_parallel"), default=3, min_val=1, max_val=8)
 
     def _progress(pct, msg=""):
@@ -372,7 +368,7 @@ def render_multi(job_id, filepath, data):
     result = _multi_render(
         filepath,
         configs=configs,
-        parallel=bool(parallel),
+        parallel=parallel,
         max_parallel=max_parallel,
         on_progress=_progress,
     )

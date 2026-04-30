@@ -10,7 +10,7 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int
 
 logger = logging.getLogger("opencut")
 
@@ -53,7 +53,7 @@ def pipeline_health_record():
         return jsonify({"error": "operation is required"}), 400
 
     duration_s = safe_float(data.get("duration_s", 0), 0.0, 0.0)
-    success = bool(data.get("success", True))
+    success = safe_bool(data.get("success"), True)
 
     metric = record_metric(
         operation=operation,
@@ -90,7 +90,7 @@ def create_schedule():
             name=name,
             cron_expr=cron_expr,
             job_config=data.get("job_config"),
-            enabled=bool(data.get("enabled", True)),
+            enabled=safe_bool(data.get("enabled"), True),
             tags=data.get("tags"),
         )
     except ValueError as exc:

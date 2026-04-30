@@ -14,7 +14,7 @@ import logging
 from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath
 
 logger = logging.getLogger("opencut")
 
@@ -35,7 +35,7 @@ def text_segment(job_id, filepath, data):
     if not query:
         raise ValueError("query is required (e.g., 'the red car')")
 
-    use_sam2 = bool(data.get("use_sam2", True))
+    use_sam2 = safe_bool(data.get("use_sam2"), True)
     sam2_model = (data.get("sam2_model") or "tiny").strip()
     grid_cols = safe_int(data.get("grid_cols"), 8, 2, 20)
     grid_rows = safe_int(data.get("grid_rows"), 6, 2, 16)
@@ -141,8 +141,8 @@ def physics_remove(job_id, filepath, data):
             raise ValueError("object_bbox must be [x, y, w, h]")
         object_bbox = tuple(int(v) for v in object_bbox)
 
-    detect_shadows = bool(data.get("detect_shadows", True))
-    detect_reflections = bool(data.get("detect_reflections", True))
+    detect_shadows = safe_bool(data.get("detect_shadows"), True)
+    detect_reflections = safe_bool(data.get("detect_reflections"), True)
     inpaint_method = (data.get("inpaint_method") or "lama").strip()
     sam2_model = (data.get("sam2_model") or "tiny").strip()
     output_dir = (data.get("output_dir") or "").strip()
@@ -241,8 +241,8 @@ def track_overlay(job_id, filepath, data):
         overlay_config = {}
 
     max_frames = safe_int(data.get("max_frames"), 0, 0, 100000)
-    smooth = bool(data.get("smooth", True))
-    export_track_json = bool(data.get("export_track_json", True))
+    smooth = safe_bool(data.get("smooth"), True)
+    export_track_json = safe_bool(data.get("export_track_json"), True)
     output_dir = (data.get("output_dir") or "").strip()
 
     if output_dir:
@@ -313,7 +313,7 @@ def semantic_search_route(job_id, filepath, data):
 
     max_results = safe_int(data.get("max_results"), 20, 1, 200)
     min_score = safe_float(data.get("min_score"), 0.15, 0.0, 1.0)
-    auto_index = bool(data.get("auto_index", True))
+    auto_index = safe_bool(data.get("auto_index"), True)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -354,7 +354,7 @@ def semantic_index_route(job_id, filepath, data):
         raise ValueError("No valid clip paths provided")
 
     frames_per_clip = safe_int(data.get("frames_per_clip"), 12, 1, 100)
-    force_rebuild = bool(data.get("force_rebuild", False))
+    force_rebuild = safe_bool(data.get("force_rebuild"), False)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -380,7 +380,7 @@ def reframe_multi(job_id, filepath, data):
     from opencut.core.ai_reframe_multi import reframe_multi_subject
 
     target_ratio = (data.get("target_ratio") or "9:16").strip()
-    enable_split_screen = bool(data.get("enable_split_screen", True))
+    enable_split_screen = safe_bool(data.get("enable_split_screen"), True)
     analysis_interval = safe_int(data.get("analysis_interval"), 5, 1, 30)
     smooth_strength = safe_int(data.get("smooth_strength"), 15, 1, 60)
     output_dir = (data.get("output_dir") or "").strip()

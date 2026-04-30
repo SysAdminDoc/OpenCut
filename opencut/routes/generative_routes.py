@@ -15,6 +15,7 @@ from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
     require_csrf,
+    safe_bool,
     safe_float,
     safe_int,
     validate_filepath,
@@ -54,7 +55,7 @@ def talking_head_generate(job_id, filepath, data):
     expression_scale = safe_float(data.get("expression_scale", 1.0), 1.0,
                                   min_val=0.0, max_val=3.0)
     pose_style = safe_int(data.get("pose_style", 0), 0, min_val=0, max_val=46)
-    still_mode = bool(data.get("still_mode", False))
+    still_mode = safe_bool(data.get("still_mode"), False)
     enhancer = data.get("enhancer", "").strip()
     preprocess = data.get("preprocess", "crop").strip()
 

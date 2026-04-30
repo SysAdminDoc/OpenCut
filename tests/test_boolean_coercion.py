@@ -1,6 +1,8 @@
+import ast
 import json
 import math
 import time
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
@@ -69,6 +71,27 @@ def test_safe_bool_unknown_string_uses_default():
 def test_safe_bool_nan_float_uses_default():
     assert safe_bool(math.nan, default=True) is True
     assert safe_bool(math.nan, default=False) is False
+
+
+def test_routes_do_not_use_raw_bool_for_getters():
+    offenders = []
+    for path in sorted(Path("opencut/routes").glob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        tree = ast.parse(source, filename=str(path))
+        lines = source.splitlines()
+        for node in ast.walk(tree):
+            if not (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == "bool"
+                and node.args
+            ):
+                continue
+            arg = node.args[0]
+            if isinstance(arg, ast.Call) and isinstance(arg.func, ast.Attribute) and arg.func.attr == "get":
+                offenders.append(f"{path}:{node.lineno}: {lines[node.lineno - 1].strip()}")
+
+    assert not offenders, "Use opencut.security.safe_bool for route getter coercion:\n" + "\n".join(offenders)
 
 
 def poll_job(client, job_id, timeout=10):
