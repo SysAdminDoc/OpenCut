@@ -15,8 +15,6 @@ from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Callable, List, Optional
 
-import numpy as np
-
 from opencut.helpers import _try_import, get_ffmpeg_path
 
 logger = logging.getLogger("opencut")
@@ -214,12 +212,12 @@ def build_index(
 
     if clip_mod_avail is not None:
         try:
-            model, preprocess, clip_mod = _load_clip()
+            model, preprocess, _ = _load_clip()
         except Exception as e:
             logger.warning("CLIP model load failed during indexing: %s — timestamps only", e)
-            model = preprocess = clip_mod = None
+            model = preprocess = None
     else:
-        model = preprocess = clip_mod = None
+        model = preprocess = None
 
     with _index_lock:
         idx = _load_index()

@@ -8,7 +8,7 @@ import logging
 import os
 import subprocess as _sp
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import get_ffmpeg_path

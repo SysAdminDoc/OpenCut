@@ -868,7 +868,6 @@ def route_cinefocus():
 @async_job("dub_pipeline")
 def route_dub_pipeline(job_id, filepath, data):
     from opencut.core.dub_pipeline import dub, SUPPORTED_LANGUAGES
-    from opencut.core.auto_dub_pipeline import DubConfig
 
     def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
 
