@@ -14,6 +14,8 @@ import zipfile
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 
+from opencut.security import is_path_within
+
 logger = logging.getLogger("opencut")
 
 _MANIFEST_NAME = "opencut_manifest.json"
@@ -216,9 +218,7 @@ def restore_archive(
 
             target = os.path.join(dest_path, member)
             # Ensure target stays under dest_path
-            real_target = os.path.realpath(target)
-            real_dest = os.path.realpath(dest_path)
-            if not real_target.startswith(real_dest + os.sep) and real_target != real_dest:
+            if not is_path_within(target, dest_path):
                 logger.warning("Skipping path traversal in archive: %s", member)
                 continue
 

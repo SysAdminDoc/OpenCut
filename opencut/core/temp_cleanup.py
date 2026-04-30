@@ -48,6 +48,8 @@ import time
 from dataclasses import dataclass, field
 from typing import List
 
+from opencut.security import is_path_within
+
 logger = logging.getLogger("opencut")
 
 
@@ -102,15 +104,7 @@ _BG_SHUTDOWN = threading.Event()
 
 def _is_under(candidate: str, root: str) -> bool:
     """True when ``candidate`` resolves to somewhere inside ``root``."""
-    try:
-        cand_real = os.path.realpath(candidate)
-        root_real = os.path.realpath(root)
-    except OSError:
-        return False
-    try:
-        return os.path.commonpath([cand_real, root_real]) == root_real
-    except ValueError:
-        return False
+    return is_path_within(candidate, root)
 
 
 def _entry_bytes(path: str) -> int:

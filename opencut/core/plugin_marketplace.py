@@ -17,6 +17,7 @@ from typing import Callable, Dict, List, Optional
 
 from opencut.core.url_safety import validate_public_http_url
 from opencut.helpers import OPENCUT_DIR
+from opencut.security import is_path_within
 
 logger = logging.getLogger("opencut")
 
@@ -91,7 +92,7 @@ def _validate_plugin_id(plugin_id: str) -> str:
 def _resolve_within(base_dir: str, *parts: str) -> str:
     real_base = os.path.realpath(base_dir)
     candidate = os.path.realpath(os.path.join(real_base, *parts))
-    if candidate != real_base and not candidate.startswith(real_base + os.sep):
+    if not is_path_within(candidate, real_base):
         raise ValueError("Path escapes plugins directory")
     return candidate
 
@@ -99,9 +100,8 @@ def _resolve_within(base_dir: str, *parts: str) -> str:
 def _validate_managed_plugin_path(path: str) -> str:
     if not isinstance(path, str) or not path.strip():
         raise ValueError("Installed plugin path is missing")
-    real_base = os.path.realpath(PLUGINS_DIR)
     real_path = os.path.realpath(path)
-    if real_path != real_base and not real_path.startswith(real_base + os.sep):
+    if not is_path_within(real_path, PLUGINS_DIR):
         raise ValueError("Installed plugin path escapes plugins directory")
     return real_path
 
