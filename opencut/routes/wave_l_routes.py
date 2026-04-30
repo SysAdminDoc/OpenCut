@@ -11,11 +11,11 @@ from __future__ import annotations
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import error_response, safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, safe_bool, validate_filepath
+from opencut.security import require_csrf, safe_float, safe_int, safe_bool
 
 logger = logging.getLogger("opencut")
 wave_l_bp = Blueprint("wave_l", __name__)

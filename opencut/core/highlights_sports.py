@@ -15,13 +15,12 @@ from __future__ import annotations
 import logging
 import os
 import subprocess
-import tempfile
 from dataclasses import dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 import numpy as np
 
-from opencut.helpers import _try_import, get_ffmpeg_path, get_ffprobe_path, get_video_info
+from opencut.helpers import _try_import, get_ffmpeg_path, get_video_info
 
 logger = logging.getLogger("opencut")
 

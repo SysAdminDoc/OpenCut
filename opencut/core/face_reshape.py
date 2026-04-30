@@ -25,7 +25,7 @@ import logging
 import os
 import tempfile
 from dataclasses import dataclass, field
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, List, Optional, Tuple
 
 from opencut.helpers import _try_import, get_ffmpeg_path, get_video_info, run_ffmpeg
 
@@ -250,8 +250,6 @@ def reshape(
 
     import cv2
     import mediapipe as mp
-    import numpy as np
-
     if on_progress:
         on_progress(5, "Initialising FaceMesh model...")
 
