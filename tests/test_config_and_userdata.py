@@ -1,6 +1,8 @@
+import ast
 import importlib
 import json
 import os
+from pathlib import Path
 from unittest.mock import patch
 
 from tests.conftest import csrf_headers
@@ -46,6 +48,34 @@ def test_jobs_module_uses_env_overrides_for_limits():
             assert reloaded._JOB_STUCK_TIMEOUT == 300
     finally:
         importlib.reload(jobs_module)
+
+
+def test_runtime_boot_modules_avoid_pep604_annotations_for_python39():
+    """Python 3.9 evaluates annotations unless postponed; keep boot modules importable."""
+    repo_root = Path(__file__).resolve().parents[1]
+    checked = [
+        repo_root / "opencut" / "config.py",
+        repo_root / "opencut" / "jobs.py",
+        repo_root / "opencut" / "job_store.py",
+        repo_root / "opencut" / "security.py",
+        repo_root / "opencut" / "workers.py",
+    ]
+    offenders = []
+
+    class BitOrVisitor(ast.NodeVisitor):
+        def __init__(self, path):
+            self.path = path
+
+        def visit_BinOp(self, node):
+            if isinstance(node.op, ast.BitOr):
+                offenders.append(f"{self.path}:{node.lineno}")
+            self.generic_visit(node)
+
+    for path in checked:
+        tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+        BitOrVisitor(path.relative_to(repo_root)).visit(tree)
+
+    assert offenders == []
 
 
 def test_create_app_applies_custom_job_config():
