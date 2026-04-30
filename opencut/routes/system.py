@@ -43,6 +43,7 @@ from opencut.security import (
     VALID_WHISPER_MODELS,
     get_csrf_token,
     get_json_dict,
+    is_path_within_any,
     rate_limit,
     rate_limit_release,
     require_csrf,
@@ -1109,12 +1110,11 @@ def serve_file():
 
     # Approved roots: OpenCut user data dir + system temp dir. All legitimate
     # preview files (TTS/SFX/music outputs, intermediate renders) land here.
-    abs_path = os.path.realpath(filepath)
     allowed_roots = [
-        os.path.realpath(tempfile.gettempdir()),
-        os.path.realpath(OPENCUT_DIR),
+        tempfile.gettempdir(),
+        OPENCUT_DIR,
     ]
-    if not any(abs_path == root or abs_path.startswith(root + os.sep) for root in allowed_roots):
+    if not is_path_within_any(filepath, allowed_roots):
         return jsonify({"error": "Access denied"}), 403
 
     mime_type = mimetypes.guess_type(filepath)[0] or "application/octet-stream"
@@ -1800,12 +1800,12 @@ def delete_model():
 
     # Security: only allow deletion within known cache directories
     allowed_roots = [
-        os.path.realpath(os.path.join(os.path.expanduser("~"), ".cache", "huggingface")),
-        os.path.realpath(os.path.join(os.path.expanduser("~"), ".cache", "torch")),
+        os.path.join(os.path.expanduser("~"), ".cache", "huggingface"),
+        os.path.join(os.path.expanduser("~"), ".cache", "torch"),
     ]
     if WHISPER_MODELS_DIR:
-        allowed_roots.append(os.path.realpath(WHISPER_MODELS_DIR))
-    if not any(path == r or path.startswith(r + os.sep) for r in allowed_roots):
+        allowed_roots.append(WHISPER_MODELS_DIR)
+    if not is_path_within_any(path, allowed_roots):
         return jsonify({"error": "Cannot delete files outside of model cache directories"}), 403
     try:
         if os.path.isdir(path):
