@@ -13,6 +13,7 @@ import queue
 import threading
 from concurrent.futures import Future
 from enum import IntEnum
+from typing import Optional
 
 from opencut.jobs import _update_job
 
@@ -190,7 +191,7 @@ class WorkerPool:
 
 
 # Module-level singleton
-_pool: WorkerPool | None = None
+_pool: Optional[WorkerPool] = None
 _pool_lock = threading.Lock()
 
 

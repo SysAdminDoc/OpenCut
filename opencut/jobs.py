@@ -11,6 +11,7 @@ import threading
 import time
 import uuid
 from concurrent.futures import ThreadPoolExecutor
+from typing import Optional, Tuple
 
 from opencut.config import OpenCutConfig
 
@@ -393,7 +394,7 @@ def _kill_job_process(job_id: str):
 
 
 def _cancel_job(job_id: str, *, message: str = "Cancelled by user",
-                persist_sync: bool = False) -> tuple[dict | None, str]:
+                persist_sync: bool = False) -> Tuple[Optional[dict], str]:
     """Cancel a single running job and persist the terminal state."""
     cancelled_job = None
     with job_lock:

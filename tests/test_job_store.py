@@ -224,3 +224,19 @@ class TestJobStore:
 
         assert isolate_db.get_job("first") is not None
         assert isolate_db.get_job("second") is not None
+
+    def test_closed_thread_local_connection_reopens_cleanly(self, isolate_db):
+        created = time.time()
+        isolate_db.init_db()
+        stale = isolate_db._get_conn()
+        stale.close()
+
+        isolate_db.save_job({
+            "id": "after-close",
+            "type": "test",
+            "status": "complete",
+            "created": created,
+        })
+
+        assert isolate_db.get_job("after-close") is not None
+        assert isolate_db._get_conn() is not stale

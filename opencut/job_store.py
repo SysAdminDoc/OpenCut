@@ -31,6 +31,7 @@ import os
 import sqlite3
 import threading
 import time
+from typing import Optional
 
 logger = logging.getLogger("opencut")
 
@@ -46,6 +47,17 @@ COMPLETED_JOB_TTL = 7 * 24 * 3600  # 7 days
 
 
 _MAX_JOB_LIST_LIMIT = 1000
+
+
+def _connection_is_usable(conn: Optional[sqlite3.Connection]) -> bool:
+    """Return True when a cached SQLite connection is still open."""
+    if conn is None:
+        return False
+    try:
+        conn.execute("SELECT 1")
+    except sqlite3.Error:
+        return False
+    return True
 
 
 def _coerce_limit(value, default):
@@ -72,6 +84,13 @@ def _coerce_offset(value, default=0):
 def _get_conn() -> sqlite3.Connection:
     """Get or create a thread-local SQLite connection."""
     conn = getattr(_LOCAL, "conn", None)
+    if conn is not None and not _connection_is_usable(conn):
+        with _CONN_LOCK:
+            for tid, tracked in list(_ALL_CONNECTIONS.items()):
+                if tracked is conn:
+                    _ALL_CONNECTIONS.pop(tid, None)
+        _LOCAL.conn = None
+        conn = None
     if conn is None:
         os.makedirs(os.path.dirname(_DB_PATH), exist_ok=True)
         conn = sqlite3.connect(_DB_PATH, timeout=10)

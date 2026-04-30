@@ -15,6 +15,7 @@ import subprocess
 import sys
 import threading
 import time
+from typing import Optional, Tuple
 
 from flask import Request, jsonify, request
 from werkzeug.exceptions import BadRequest
@@ -70,7 +71,7 @@ def _purge_expired_tokens() -> None:
         del _csrf_tokens[t]
 
 
-def _newest_token() -> tuple[str | None, float]:
+def _newest_token() -> Tuple[Optional[str], float]:
     """Return ``(token, expiry)`` for the newest token, or ``(None, 0)``."""
     if not _csrf_tokens:
         return None, 0.0
@@ -228,7 +229,7 @@ def validate_path(path: str, allowed_base: str = None) -> str:
 # ---------------------------------------------------------------------------
 # Safe pip install
 # ---------------------------------------------------------------------------
-def _find_system_python() -> str | None:
+def _find_system_python() -> Optional[str]:
     """Find system Python executable when running as a frozen (PyInstaller) build."""
     for name in ("python", "python3", "py"):
         path = shutil.which(name)

@@ -22,8 +22,8 @@ def _env_bool(name: str, default: bool = False) -> bool:
     return default
 
 
-def _env_int(name: str, default: int, *, min_val: int | None = None,
-             max_val: int | None = None) -> int:
+def _env_int(name: str, default: int, *, min_val: Optional[int] = None,
+             max_val: Optional[int] = None) -> int:
     raw = os.environ.get(name)
     if raw is None:
         return default
