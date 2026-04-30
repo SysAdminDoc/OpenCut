@@ -15,7 +15,7 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Optional, Tuple
+from typing import Iterable, Optional, Tuple
 
 from flask import Request, jsonify, request
 from werkzeug.exceptions import BadRequest
@@ -162,6 +162,30 @@ def get_json_dict(*, force: bool = True, silent: bool = False) -> dict:
 # ---------------------------------------------------------------------------
 # Path Validation
 # ---------------------------------------------------------------------------
+def is_path_within(path: str, allowed_base: str) -> bool:
+    """Return True when *path* resolves inside *allowed_base*.
+
+    Path containment checks are easy to get subtly wrong with string prefix
+    comparisons: sibling directories can share prefixes and Windows paths are
+    case-insensitive. This helper resolves symlinks, normalizes path casing on
+    platforms that need it, and uses ``commonpath`` for component-aware
+    comparison.
+    """
+    if not path or not allowed_base:
+        return False
+    try:
+        resolved = os.path.normcase(os.path.realpath(path))
+        resolved_base = os.path.normcase(os.path.realpath(allowed_base))
+        return os.path.commonpath([resolved, resolved_base]) == resolved_base
+    except (OSError, TypeError, ValueError):
+        return False
+
+
+def is_path_within_any(path: str, allowed_roots: Iterable[str]) -> bool:
+    """Return True when *path* resolves inside at least one allowed root."""
+    return any(is_path_within(path, root) for root in allowed_roots if root)
+
+
 def validate_path(path: str, allowed_base: str = None) -> str:
     """
     Validate and resolve a file path, blocking traversal attacks.
@@ -217,10 +241,7 @@ def validate_path(path: str, allowed_base: str = None) -> str:
     # so compare under ``normcase`` to avoid false negatives when ``realpath``
     # returns a different case than the caller passed for ``allowed_base``.
     if allowed_base is not None:
-        real_base = os.path.realpath(allowed_base)
-        cmp_resolved = os.path.normcase(resolved)
-        cmp_base = os.path.normcase(real_base)
-        if not (cmp_resolved == cmp_base or cmp_resolved.startswith(cmp_base + os.sep)):
+        if not is_path_within(resolved, allowed_base):
             raise ValueError("Path outside allowed directory")
 
     return resolved

@@ -356,6 +356,38 @@ def test_jobs_sanitize_payload_caps_large_dicts():
     assert isinstance(result, dict)
 
 
+def test_is_path_within_uses_component_boundaries(tmp_path):
+    from opencut.security import is_path_within
+
+    root = tmp_path / "cache"
+    child = root / "models" / "model.bin"
+    sibling = tmp_path / "cache_evil" / "model.bin"
+    child.parent.mkdir(parents=True)
+    sibling.parent.mkdir(parents=True)
+    child.write_bytes(b"ok")
+    sibling.write_bytes(b"no")
+
+    assert is_path_within(str(child), str(root)) is True
+    assert is_path_within(str(root), str(root)) is True
+    assert is_path_within(str(sibling), str(root)) is False
+
+
+def test_is_path_within_normalizes_case(monkeypatch):
+    import os
+
+    from opencut import security
+
+    monkeypatch.setattr(security.os.path, "realpath", lambda value: str(value))
+    monkeypatch.setattr(security.os.path, "normcase", lambda value: os.path.normpath(str(value)).lower())
+
+    root = "/Users/Example/.cache/huggingface"
+    child = "/users/example/.CACHE/HuggingFace/hub/models--openai--whisper"
+    sibling = "/users/example/.CACHE/HuggingFace_evil/model.bin"
+
+    assert security.is_path_within(child, root) is True
+    assert security.is_path_within(sibling, root) is False
+
+
 def test_standard_install_routes_skip_real_installs_in_testing(client, csrf_token):
     headers = csrf_headers(csrf_token)
 
@@ -371,6 +403,27 @@ def test_standard_install_routes_skip_real_installs_in_testing(client, csrf_toke
         assert data["component"] == component
         assert data["testing"] is True
         assert data["job_id"].startswith("test-install-")
+
+
+def test_models_delete_allows_custom_model_cache_file(client, csrf_token, tmp_path, monkeypatch):
+    import opencut.routes.system as system_routes
+
+    model_dir = tmp_path / "models"
+    model_dir.mkdir()
+    model_file = model_dir / "model.bin"
+    model_file.write_bytes(b"model")
+
+    monkeypatch.setattr(system_routes, "WHISPER_MODELS_DIR", str(model_dir))
+
+    resp = client.post(
+        "/models/delete",
+        data=json.dumps({"path": str(model_file)}),
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 200
+    assert resp.get_json()["success"] is True
+    assert not model_file.exists()
 
 
 def test_open_path_blocks_executable_extensions(client, csrf_token):
