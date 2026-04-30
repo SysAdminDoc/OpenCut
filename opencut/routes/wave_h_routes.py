@@ -593,7 +593,7 @@ def route_qe_reflect():
         from opencut.user_data import read_user_file
         state = read_user_file("qe_reflect.json", default={}) or {}
         return jsonify({
-            "probed": bool(state.get("probed")),
+            "probed": safe_bool(state.get("probed"), False),
             "methods": state.get("methods") or [],
             "probed_at": state.get("probed_at") or 0.0,
             "premiere_version": str(state.get("premiere_version") or ""),
