@@ -1919,6 +1919,26 @@
     // Backend Communication
     // ================================================================
     var _inflightRequests = {};
+    function refreshCsrfToken(callback, timeout) {
+        callback = typeof callback === "function" ? callback : function () {};
+        var xhr = new XMLHttpRequest();
+        xhr.open("GET", BACKEND + "/health", true);
+        xhr.timeout = timeout || 10000;
+        xhr.onload = function () {
+            var data = null;
+            try { data = JSON.parse(xhr.responseText); } catch (e) {}
+            if (xhr.status >= 200 && xhr.status < 300 && data && data.csrf_token) {
+                csrfToken = data.csrf_token;
+                callback(true);
+                return;
+            }
+            callback(false);
+        };
+        xhr.onerror = function () { callback(false); };
+        xhr.ontimeout = function () { callback(false); };
+        xhr.send(null);
+    }
+
     function api(method, path, body, callback, timeout) {
         callback = typeof callback === "function" ? callback : function () {};
         var key = method + " " + path;
@@ -1931,47 +1951,67 @@
             }
             return;
         }
-        var xhr = new XMLHttpRequest();
-        xhr.open(method, BACKEND + path, true);
-        xhr.timeout = timeout || 120000;
-        xhr.setRequestHeader("Content-Type", "application/json");
-        if (csrfToken) xhr.setRequestHeader("X-OpenCut-Token", csrfToken);
-        if (method === "GET") {
-            xhr._pendingCallbacks = [];
-            _inflightRequests[key] = xhr;
-        }
-        function _notifyPending(err, data) {
-            var cbs = xhr._pendingCallbacks || [];
-            for (var i = 0; i < cbs.length; i++) {
-                try { cbs[i](err, data); } catch (e) { /* swallow */ }
+
+        function _send(retriedCsrf) {
+            var xhr = new XMLHttpRequest();
+            xhr.open(method, BACKEND + path, true);
+            xhr.timeout = timeout || 120000;
+            xhr.setRequestHeader("Content-Type", "application/json");
+            if (csrfToken) xhr.setRequestHeader("X-OpenCut-Token", csrfToken);
+            if (method === "GET") {
+                xhr._pendingCallbacks = [];
+                _inflightRequests[key] = xhr;
             }
-        }
-        xhr.onload = function () {
-            delete _inflightRequests[key];
-            var err = null, data = null;
-            try { data = JSON.parse(xhr.responseText); }
-            catch (e) { err = e; }
-            // Treat non-2xx HTTP responses as errors
-            if (!err && xhr.status >= 400) {
-                err = new Error((data && data.error) ? data.error : "HTTP " + xhr.status);
-                err.status = xhr.status;
+            function _notifyPending(err, data) {
+                var cbs = xhr._pendingCallbacks || [];
+                for (var i = 0; i < cbs.length; i++) {
+                    try { cbs[i](err, data); } catch (e) { /* swallow */ }
+                }
             }
-            callback(err, data);
-            _notifyPending(err, data);
-        };
-        xhr.onerror = function () {
-            delete _inflightRequests[key];
-            var err = new Error("Network error");
-            callback(err, null);
-            _notifyPending(err, null);
-        };
-        xhr.ontimeout = function () {
-            delete _inflightRequests[key];
-            var err = new Error("Timeout");
-            callback(err, null);
-            _notifyPending(err, null);
-        };
-        xhr.send(body ? JSON.stringify(body) : null);
+            xhr.onload = function () {
+                delete _inflightRequests[key];
+                var err = null, data = null;
+                try { data = JSON.parse(xhr.responseText); }
+                catch (e) { err = e; }
+                if (!err && xhr.status === 403 && method !== "GET" && !retriedCsrf) {
+                    var message = data && data.error ? String(data.error) : "";
+                    if (/csrf|token/i.test(message)) {
+                        refreshCsrfToken(function (ok) {
+                            if (ok) {
+                                _send(true);
+                                return;
+                            }
+                            err = new Error(message || "HTTP 403");
+                            err.status = xhr.status;
+                            callback(err, data);
+                        }, timeout);
+                        return;
+                    }
+                }
+                // Treat non-2xx HTTP responses as errors
+                if (!err && xhr.status >= 400) {
+                    err = new Error((data && data.error) ? data.error : "HTTP " + xhr.status);
+                    err.status = xhr.status;
+                }
+                callback(err, data);
+                _notifyPending(err, data);
+            };
+            xhr.onerror = function () {
+                delete _inflightRequests[key];
+                var err = new Error("Network error");
+                callback(err, null);
+                _notifyPending(err, null);
+            };
+            xhr.ontimeout = function () {
+                delete _inflightRequests[key];
+                var err = new Error("Timeout");
+                callback(err, null);
+                _notifyPending(err, null);
+            };
+            xhr.send(body ? JSON.stringify(body) : null);
+        }
+
+        _send(false);
     }
 
     function getButtonLabelNode(btn) {
