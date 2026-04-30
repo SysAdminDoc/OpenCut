@@ -85,7 +85,6 @@ def render(
 
     meta = info(lottie_path)
     nat_fps = meta["fps"]
-    frames_meta = meta["frames"]
     duration = meta["duration"]
 
     if output is None:
