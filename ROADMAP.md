@@ -1,15 +1,14 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 3.0
-**Updated**: 2026-04-13
-**Baseline**: v1.9.26 (254 routes, 68 core modules, 17 blueprints, 867 tests)
+**Version**: 4.0
+**Updated**: 2026-05-09
+**Baseline**: v1.32.0 (1,275 routes, 99 blueprints, 460+ core modules, 7,551 tests, light theme + premium UX shipped)
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
-> **⚡ Active work (2026-Q2 → 2026-Q4)** lives in
-> [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — Wave A/B/C/D/E covering
-> v1.18.0 → v1.23.0+ from the cross-project OSS research pass. This
-> file is preserved as the long-range 302-feature plan and the v1.14.0
-> strategic-gap analysis below.
+> **⚡ Active work** lives in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
+> and the wave sections in this file (L through S). Wave R (v1.52→v1.55) is the most recent committed plan.
+> Wave S (v1.56→v1.58) below is the post-May-2026 OSS research pass.
+> Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
 ---
 
@@ -1702,3 +1701,175 @@ Step-Video-T2V-Turbo (30 B, HPC) as high-fidelity long-video T2V options.
 - **Step-Video-T2V** — [stepfun-ai/Step-Video-T2V](https://github.com/stepfun-ai/Step-Video-T2V) (MIT); [arXiv:2502.10248](https://arxiv.org/abs/2502.10248); `stepfun-ai/stepvideo-t2v` + `stepfun-ai/stepvideo-t2v-turbo` on HuggingFace; DiffSynth-Studio quantization path; released Feb 2025
 - **Step-Video-Ti2V** — [stepfun-ai/Step-Video-Ti2V](https://github.com/stepfun-ai/Step-Video-Ti2V) (MIT); image-to-video companion; released March 2025
 
+
+
+# Wave S — Video Relighting, Next-Gen ASR, Vision-Language Modernization, FFmpeg 8 + UXP EOL Cutover (v1.56.0 → v1.58.0)
+
+**Updated**: 2026-05-09
+**Baseline**: v1.55.0 (post-Wave R; EzAudio + MuseTalk 1.5 + VideoX-Fun + Mochi-1 + Step-Video shipped)
+**Research pass**: May 2026 OSS survey — SeedVR2 (ICLR 2026), Light-A-Video (ICCV 2025), DiffusionRenderer (NVIDIA Toronto AI Lab), Qwen3-VL (Sept 2025), InternVL3 (April 2025), Parakeet TDT 0.6B v2 (NVIDIA), Canary-1B-Flash (NVIDIA), FFmpeg 8.0 "Huffman" (Aug 2025), Adobe UXP changelog (Premiere 2026), HeartMuLa (Apache-2 music), face_reaging (FRAN reimplementation, MIT)
+
+This wave closes four distinct competitive-parity and platform-modernization gaps that have accumulated since Wave L was authored a year ago:
+1. **Video relighting** — DaVinci Resolve 21's flagship "Relight" / CineFocus tool has no equivalent in OpenCut. Light-A-Video (training-free) + IC-Light V2 (per-frame) + DiffusionRenderer (physically-grounded) collectively close this gap.
+2. **One-step video super-resolution** — SeedVR2 supersedes the FlashVSR/Real-ESRGAN tier on quality and parity with commercial VSR (Topaz Video AI).
+3. **Vision-language model refresh** — Qwen2.5-VL (N3.2) is now a generation behind Qwen3-VL and InternVL3, both Apache-2; refresh keeps OpenCut's video understanding tier competitive.
+4. **Infrastructure modernization** — FFmpeg 8.0 native Whisper filter + Vulkan AV1/VP9/ProRes-RAW encoders + the UXP panel v1.0 final cutover before September 2026 CEP EOL.
+
+---
+
+## Wave S1 — Video Relighting Suite (v1.56.0)
+
+**Goal**: Add the relighting capability that DaVinci Resolve 21 ships as a flagship paid AI feature. Three complementary engines: (a) per-frame image relighting via IC-Light V2 for FLUX (already partly available via Wave M2 FLUX integration); (b) temporally consistent training-free video relighting via Light-A-Video; (c) physically grounded inverse + forward rendering via NVIDIA DiffusionRenderer for full scene relight (replace lighting environment, not just colour-grade).
+**New required deps**: None — all three reuse `diffusers` ≥0.32 (already present from Wave M); `cogvideox-5b` already present from Wave N.
+**New routes**: ~12
+
+### OSS Discoveries — Video Relighting
+
+| # | Feature | Route(s) | Module | Dep | Effort | Licence | Why it matters |
+|---|---------|----------|--------|-----|--------|---------|----------------|
+| S1.1 | **IC-Light V2 per-frame relight** (lllyasviel/IC-Light, Apache-2, FLUX variant 2025) — Per-frame relighting on stills or per-frame on video. Two modes: text-conditioned ("studio softbox light from camera-left, warm 3200K") and background-conditioned (composite into a new HDR scene; lighting follows the new background). Reuses FLUX.1 weights already present from Wave M2.4 (FLUX Kontext). Use as a pre-filter before TokenFlow temporal propagation, or as the per-frame engine inside Light-A-Video (S1.2). | `POST /relight/iclight/text`, `POST /relight/iclight/background`, `GET /relight/iclight/info` | `core/relight_iclight.py` | `diffusers` (already present) + IC-Light V2 LoRA weights (~3 GB) via HuggingFace `lllyasviel/ic-light` | M | Apache-2 (code + LoRAs) | Closes "AI Relight" / "CineFocus" gap (DaVinci Resolve 21); per-frame; FLUX-quality |
+| S1.2 | **Light-A-Video training-free video relighting** (bcmi/Light-A-Video, ICCV 2025, MIT) — Training-free zero-shot video relighting framework that combines a per-frame relighting model (IC-Light from S1.1) with a video diffusion model (CogVideoX-5B already present from Wave N3.3) using two innovations: Consistent Light Attention (CLA) to stabilise lighting across frames and Progressive Light Fusion (PLF) for natural transitions. The first temporally coherent video relighter in the open ecosystem. Use case: change lighting on existing footage ("make this clip look like golden-hour" / "make this clip look like a moonlit night") without retraining or per-clip LoRA. | `POST /relight/video/light_a_video`, `GET /relight/video/info` | `core/relight_video_lav.py` | IC-Light V2 weights (S1.1) + CogVideoX-5B weights (Wave N) — no new heavy deps | L | MIT | First training-free temporally coherent video relighting; closes DaVinci 21 Relight gap end-to-end |
+| S1.3 | **DiffusionRenderer inverse + forward rendering** (nv-tlabs/diffusionrenderer, Apache-2, NVIDIA Toronto AI Lab 2025) — Generalist neural inverse renderer that decomposes a video into intrinsic G-buffers (albedo, normal, depth, roughness, metallic) and a forward renderer that re-renders the scene under arbitrary new lighting (HDR environment map, point lights, area lights). Unlike Light-A-Video (S1.2), which is a 2D pixel-space recoloring approach, DiffusionRenderer is physically grounded — supports environment-map relighting, material edits, and view-coherent multi-clip relighting. Heavy compute (~24 GB VRAM) — gates behind a `quality` flag; default to S1.2 for consumer hardware. | `POST /relight/video/diffrenderer`, `POST /relight/video/diffrenderer/decompose`, `POST /relight/video/diffrenderer/relight`, `GET /relight/video/diffrenderer/info` | `core/relight_diffrenderer.py` | `nv-tlabs/diffusionrenderer` (Apache-2) + DiffusionRenderer weights (~12 GB) via HuggingFace | XL | Apache-2 | Physically grounded relight; HDR env-map support; view-consistent multi-clip relighting; future-proof |
+
+---
+
+## Wave S2 — One-Step VSR + Next-Gen ASR (v1.57.0)
+
+**Goal**: Replace the diffusion-VSR tier (currently FlashVSR + Real-ESRGAN for the smart upscaling hub from Wave L2) with SeedVR2's one-step diffusion approach (~10× faster at equal quality). Add NVIDIA Parakeet TDT and Canary-1B-Flash to the ASR fleet — both are now SOTA on English benchmarks and complement the existing Whisper Large-v3 stack with ultra-low-latency streaming and ultra-fast batch transcription.
+**New required deps**: `nemo_toolkit[asr]` (Apache-2) for Parakeet/Canary; SeedVR2 reuses `diffusers`.
+**New routes**: ~10
+
+### OSS Discoveries — VSR + ASR
+
+| # | Feature | Route(s) | Module | Dep | Effort | Licence | Why it matters |
+|---|---------|----------|--------|-----|--------|---------|----------------|
+| S2.1 | **SeedVR2 one-step diffusion video super-resolution** (ByteDance-Seed/SeedVR, ICLR 2026, Apache-2) — Single-step diffusion VSR that achieves comparable quality to multi-step methods (FlashVSR, VEnhancer) at ~10× the throughput. Two checkpoints: SeedVR2-3B (consumer GPU, 12 GB VRAM) and SeedVR2-7B (24 GB VRAM, higher fidelity). Both Apache-2 with open weights. Becomes the new default backend in `upscale_hub` (Wave L2.2): SeedVR2 → FlashVSR → Real-ESRGAN → Lanczos. Add a `quality` content hint that routes to SeedVR2-7B; `fast` continues to use SeedVR2-3B. | `POST /video/upscale/seedvr2`, `POST /video/upscale/smart` (default backend swap), `GET /video/upscale/seedvr2/info` | `core/upscale_seedvr2.py` (+ `core/upscale_hub.py` registration update) | `diffusers` (already present) + SeedVR2-3B (~6 GB) and SeedVR2-7B (~14 GB) weights via HuggingFace `ByteDance-Seed/SeedVR2-3B` and `SeedVR2-7B` | M | Apache-2 | One-step VSR; supersedes FlashVSR on speed and quality; closes Topaz Video AI commercial gap |
+| S2.2 | **NVIDIA Parakeet TDT 0.6B v2 streaming ASR** (NVIDIA NeMo, CC-BY-4.0 model + Apache-2 NeMo toolkit) — Transducer-based streaming ASR with sub-200 ms first-chunk latency at 0.6B parameters; outperforms Whisper Large-v3 on English while running 4× faster on CPU and 10× faster on consumer GPU. Use case: live captioning during a recording session, real-time subtitle preview in the UXP panel. Ships alongside Whisper (not replacing it — Whisper remains for multilingual and translation; Parakeet is the English-streaming default). | `POST /audio/asr/parakeet`, `POST /audio/asr/parakeet/stream` (SSE), `GET /audio/asr/parakeet/info` | `core/asr_parakeet.py` | `nemo_toolkit[asr]` (Apache-2, ~500 MB) + Parakeet TDT 0.6B v2 weights (~600 MB CC-BY-4.0) via HuggingFace `nvidia/parakeet-tdt-0.6b-v2` | M | CC-BY-4.0 (model) + Apache-2 (NeMo) — both commercial-OK | Streaming ASR with sub-200 ms latency; closes ElevenLabs/AssemblyAI streaming-API gap; live preview in UXP panel |
+| S2.3 | **NVIDIA Canary-1B-Flash batch ASR** (NVIDIA NeMo, CC-BY-4.0) — Batch-optimised English+multilingual ASR at RTFx 1000+ (transcribes 1 hour of audio in <4 seconds on an RTX 4090). Use case: bulk-transcribe an entire footage library overnight; fast retroactive caption generation across long-form content (podcasts, lectures). Complements Whisper (multilingual + translation) and Parakeet (streaming). | `POST /audio/asr/canary`, `POST /audio/asr/canary/batch`, `GET /audio/asr/canary/info` | `core/asr_canary.py` | `nemo_toolkit[asr]` (already added by S2.2) + Canary-1B-Flash weights (~1 GB) via HuggingFace `nvidia/canary-1b-flash` | S | CC-BY-4.0 + Apache-2 | RTFx 1000+ batch ASR; bulk library transcription overnight |
+| S2.4 | **FFmpeg 8.0 native Whisper filter integration** (FFmpeg 8.0 "Huffman", Aug 2025, LGPL/GPL — code only; ggml-whisper bundled separately under MIT) — FFmpeg 8.0 ships a native `whisper` filter built on whisper.cpp/ggml. Replace the Wave A subtitle pipeline's external Whisper invocation with the native FFmpeg filter where available; fallback to existing whisper.cpp path. Eliminates one subprocess hop, simplifies the FFmpeg-Python wiring, and enables on-the-fly subtitle burn-in during transcode. Also adopt FFmpeg 8.0's Vulkan AV1/VP9/ProRes-RAW encoders for hardware acceleration on cross-vendor GPUs (replacing NVENC-only fast path). | `core/transcribe.py` (refactor) + `core/encode_vulkan.py` (new) + `GET /system/ffmpeg/info` (extend) | `core/transcribe.py`, `core/encode_vulkan.py` | FFmpeg 8.0+ binary (bundle in Windows installer; document Linux/macOS upgrade path); no Python deps | M | LGPL (FFmpeg core) — already in stack | Eliminates Whisper subprocess hop; cross-vendor Vulkan AV1 encode; modernises the codec pipeline |
+
+---
+
+## Wave S3 — Vision-Language Modernization + Face Re-Aging (v1.58.0)
+
+**Goal**: Refresh the multimodal video understanding tier. Qwen2.5-VL (N3.2) is now a generation behind — Qwen3-VL extends to 256K-token context (up from 32K) and adds documented two-hour video analysis with frame-level timestamp recall. InternVL3 lands as a parallel option (different lineage, different fine-tuning, different bias profile). Add face age transformation (de-aging / age progression) — DaVinci Resolve 21 ships this as "Face Age Transformer"; the FRAN-based open-source `face_reaging` reimplementation provides a clean MIT path.
+**New required deps**: None — all reuse `transformers` (already present).
+**New routes**: ~10
+
+### OSS Discoveries — VLM Refresh + Face Tools
+
+| # | Feature | Route(s) | Module | Dep | Effort | Licence | Why it matters |
+|---|---------|----------|--------|-----|--------|---------|----------------|
+| S3.1 | **Qwen3-VL multimodal upgrade** (QwenLM/Qwen3-VL, Apache-2, Sept 2025; tech report Nov 2025 arXiv:2511.21631) — Replaces Qwen2.5-VL (Wave N3.2) as the default VLM. Native 256K-token context (extensible to 1M with YaRN), Interleaved-MRoPE for long-horizon video modelling, DeepStack image-language alignment, frame-level timestamp recall in videos up to 2 hours long. Matches or beats Gemini 2.5 Pro and GPT-5 on MathVista, MathVision, DocVQA, VideoMME. Available in 4B, 8B, 32B, 72B, and 235B-A22B (MoE) sizes; default to 8B for consumer GPU with 32B available as a `--quality high` opt-in. | `POST /analyze/video/qwen3vl` (replaces `qwen25vl`), `POST /analyze/video/timestamps`, `GET /analyze/video/qwen3vl/info` | `core/multimodal_qwen3vl.py` (replaces `multimodal_qwen25vl.py`; preserve old route as deprecated alias for one wave) | `transformers` ≥4.45 (update from current pin) + Qwen3-VL-8B-Instruct weights (~16 GB) via HuggingFace `Qwen/Qwen3-VL-8B-Instruct`; optional 32B (~64 GB) | M | Apache-2 | 256K-token context (8× current); 2-hour video analysis; frame-timestamp recall; closes Gemini 2.5 Pro video gap |
+| S3.2 | **InternVL3 alternative VLM** (OpenGVLab/InternVL, Apache-2, April 2025) — Parallel multimodal LLM for users who want a non-Alibaba option (different training data, different bias profile). Variable Visual Position Encoding (V2PE) for long video sequences; native multimodal pretraining (not post-hoc adaptation). Available in 1B, 2B, 8B, 14B, 38B, 78B sizes. Ship as an opt-in alternative to Qwen3-VL — same `/analyze/video` route surface, switchable via `model: "qwen3vl" \| "internvl3"`. | `POST /analyze/video/internvl3`, `GET /analyze/video/internvl3/info` | `core/multimodal_internvl3.py` | `transformers` ≥4.45 (already added by S3.1) + InternVL3-8B weights (~16 GB) via HuggingFace `OpenGVLab/InternVL3-8B` | S | Apache-2 (code + weights) | Vendor diversity for VLM tier; users can pick Qwen3-VL or InternVL3 based on bias / language preferences |
+| S3.3 | **face_reaging (FRAN reimplementation) face age transformation** (timroelofs123/face_reaging, MIT) — Open implementation of Disney Research's "Production-Ready Face Re-Aging for Visual Effects" (FRAN, SIGGRAPH 2022). U-Net architecture trained on synthetic age-paired data; takes a video + target age delta (-30 to +30 years) and outputs the re-aged subject with preserved identity. Combines with MediaPipe face detection (already in stack from Wave L3.3) for per-frame face crop + composition. Ships as `POST /video/face/reage` with `{video_path, target_age_delta: int, strength: 0..1}`. | `POST /video/face/reage`, `GET /video/face/reage/info` | `core/face_reage.py` | `face_reaging` (MIT, ~50 MB) + pretrained FRAN weights (~150 MB) | M | MIT | Closes DaVinci 21 "Face Age Transformer" gap; production VFX-quality age progression / regression |
+| S3.4 | **HeartMuLa music generation** (HeartMuLa/heartlib, Apache-2, 2025/2026) — Family of open music foundation models (text-to-music, high-fidelity neural music codec, lyric transcription) with multilingual lyric conditioning. Complements ACE-Step (Wave L2.2), DiffRhythm (Wave M1.3), and YuE (Wave O3.1) — HeartMuLa's strength is lyric-aligned generation with precise word-level timing, useful for music-video sync workflows. Ship as an alternate engine inside the existing `/music/generate` dispatcher (Wave L); model selection via `engine: "ace-step" \| "diffrhythm" \| "yue" \| "heartmula"`. | `POST /music/generate/heartmula`, `GET /music/generate/heartmula/info` | `core/music_heartmula.py` | HeartMuLa weights (~5 GB) via HuggingFace `HeartMuLa/heartlib`; `transformers` ≥4.45 (added by S3.1) | M | Apache-2 | Lyric-aligned music generation with word-level timing; complements existing music engines for music-video sync |
+| S3.5 | **UXP panel v1.0 final EOL cutover** — Adobe Premiere 2026 (April 2026) made UXP the standard with CEP slated for full removal in Premiere 2027 (~September 2026 cutoff). The Wave P3.3 milestone covered Wave L–P parity in UXP; this milestone covers Q + R + S parity (VACE, CosyVoice, MaskGCT, OmniGen2, SkyReels, EzAudio, MuseTalk, VideoX-Fun, Mochi-1, Step-Video, Light-A-Video, SeedVR2, Parakeet, Qwen3-VL, face_reage, HeartMuLa) and flips the default panel installer to UXP. CEP panel moves to **deprecated** status — security fixes only, no new features. Removed from the installer entirely once Premiere 2027 ships. | `— (panel-only, no new backend routes)` | `panel-uxp/` (Q/R/S feature wiring) + installer `bin/install-panel.ps1` (default flip) | None | L | N/A | CEP EOL <12 months out; this is the last Wave that ships any new CEP-side panel UI; UXP becomes default |
+
+---
+
+## Wave S: S-OSS Ecosystem Survey
+
+| Tool | Org | Licence | Category | Wave S Role |
+|------|-----|---------|----------|-------------|
+| IC-Light V2 (FLUX) | lllyasviel | Apache-2 | Image Relighting | S1.1 — Per-frame text/background relighting |
+| Light-A-Video | bcmi (Beihang) | MIT | Video Relighting | S1.2 — Training-free temporally coherent video relighter |
+| DiffusionRenderer | NVIDIA Toronto AI Lab | Apache-2 | Inverse + Forward Render | S1.3 — Physically grounded video relighting |
+| SeedVR2 | ByteDance-Seed | Apache-2 | Video Super-Resolution | S2.1 — One-step diffusion VSR (3B + 7B) |
+| Parakeet TDT 0.6B v2 | NVIDIA NeMo | CC-BY-4.0 (model) + Apache-2 (toolkit) | ASR (streaming) | S2.2 — Sub-200 ms streaming ASR |
+| Canary-1B-Flash | NVIDIA NeMo | CC-BY-4.0 + Apache-2 | ASR (batch) | S2.3 — RTFx 1000+ batch ASR |
+| FFmpeg 8.0 "Huffman" | FFmpeg | LGPL/GPL | Codec / Filter | S2.4 — Native Whisper filter + Vulkan AV1/VP9 |
+| Qwen3-VL | Alibaba Qwen | Apache-2 | Vision-Language | S3.1 — 256K context, 2-hour video analysis |
+| InternVL3 | OpenGVLab | Apache-2 | Vision-Language | S3.2 — Alternative VLM lineage |
+| face_reaging (FRAN) | timroelofs123 | MIT | Face VFX | S3.3 — Face age transformation (Disney FRAN) |
+| HeartMuLa | HeartMuLa | Apache-2 | Music Generation | S3.4 — Lyric-aligned music with word-level timing |
+| UXP (Adobe) | Adobe | N/A (platform) | Panel Migration | S3.5 — Final CEP→UXP cutover before Premiere 2027 |
+| MyTimeMachine | Toronto / SIGGRAPH 2025 | Academic (unclear) | Face De-Aging | NOT ADOPTED — licence uncertain; revisit if MIT/Apache release confirmed |
+| Wan 2.5 / Wan 2.6 | Alibaba | Closed (API-only) | T2V | NOT ADOPTED — closed weights; no local inference path |
+| RelightVid | aleafy | Unclear | Video Relighting | NOT ADOPTED — Light-A-Video (S1.2) covers same use case under MIT |
+| RelightMaster | ICLR 2026 | Paper-only at time of survey | Video Relighting | WATCH LIST — pending code release with permissive licence |
+
+---
+
+## Wave S: Competitive Gap Closure
+
+| Gap | Competitor | Wave S Feature | Closes? |
+|-----|-----------|---------------|---------|
+| Re-light a clip after the fact (text or background) | DaVinci Resolve 21 "Relight" / CineFocus, Adobe Firefly Relight | S1.1 IC-Light V2 + S1.2 Light-A-Video | Y — text-prompt relight + background-conditioned + temporally coherent |
+| Physically grounded video relighting (HDR env map) | Disney VFX house tools (no commercial parity) | S1.3 DiffusionRenderer | Y — first commodity neural inverse renderer in an editor |
+| Topaz-quality video super-resolution | Topaz Video AI ($300/yr) | S2.1 SeedVR2 | Y — Apache-2; 10× faster than diffusion-VSR baselines |
+| Sub-200 ms streaming ASR (live captions) | ElevenLabs streaming, AssemblyAI realtime | S2.2 Parakeet TDT | Y — local streaming with English SOTA quality |
+| Bulk-transcribe a 100-hour library overnight | AssemblyAI batch API | S2.3 Canary-1B-Flash | Y — RTFx 1000+ on a single 4090 |
+| Hardware-accelerated AV1 encode on AMD/Intel | NVENC-only fast paths | S2.4 FFmpeg 8.0 Vulkan AV1 | Y — cross-vendor Vulkan AV1 encoder |
+| 2-hour video analysis with frame-timestamp recall | Gemini 2.5 Pro Video, GPT-5 Vision | S3.1 Qwen3-VL | Y — 256K context; documented 2-hour analysis |
+| Face age transformation (de-aging / progression) | DaVinci Resolve 21 "Face Age Transformer" | S3.3 face_reaging (FRAN) | Y — production VFX-quality age delta with identity preservation |
+| Lyric-aligned music with word-level timing | Suno, Udio | S3.4 HeartMuLa | Y — local Apache-2 music with lyric timing |
+| Premiere 2027 forward compatibility (CEP EOL) | n/a (platform mandate) | S3.5 UXP v1.0 final | Y — fully UXP-default before CEP removal |
+
+---
+
+## Wave S Gotchas
+
+- **IC-Light V2 FLUX dep**: IC-Light V2 LoRAs target FLUX.1-dev. The Wave M2.4 FLUX Kontext integration already pins FLUX.1-dev — do not bump to FLUX.1-schnell or FLUX.1-pro without re-validating IC-Light compatibility. Pin FLUX.1-dev SHA in `requirements.txt` lock alongside the IC-Light LoRA pin.
+- **Light-A-Video CogVideoX coupling**: Light-A-Video uses CogVideoX-5B as the temporal video diffusion backbone. CogVideoX-5B is already shipped in Wave N3.3, but its weights live in `~/.opencut/models/cogvideox-5b/`. Reuse the existing path; do not re-download. If a user has not installed CogVideoX-5B, `GET /relight/video/info` returns `{available: false, reason: "cogvideox_5b_not_installed", install_route: "/system/models/install/cogvideox-5b"}`.
+- **DiffusionRenderer VRAM**: 24 GB minimum for the full pipeline. On consumer GPUs <24 GB, gate the route behind `quality: "extreme"` and document the requirement in `/info`. Always recommend Light-A-Video (S1.2) as the consumer default — falling back automatically when VRAM probe fails.
+- **DiffusionRenderer HDR input format**: DiffusionRenderer accepts `.exr` and `.hdr` environment maps. Add a small helper `POST /relight/diffrenderer/hdr/upload` that validates the HDR file is RGB float32 and not a tonemapped `.png`. Reject sRGB inputs with a clear error.
+- **SeedVR2 vs FlashVSR fallback**: Update `core/upscale_hub.py` (Wave L2.2 dispatcher) to register SeedVR2 as the new default. Keep FlashVSR + Real-ESRGAN as fallbacks for users who explicitly select them or who have <12 GB VRAM. Document the auto-selection table in `GET /video/upscale/smart/info`.
+- **Parakeet/Canary CC-BY-4.0**: The model weights are CC-BY-4.0, which requires attribution but allows commercial use. Add a one-line attribution to the OpenCut "About" panel ("Includes Parakeet TDT 0.6B v2 and Canary-1B-Flash by NVIDIA, licensed under CC-BY-4.0"). The NeMo toolkit itself is Apache-2.
+- **NeMo Windows install**: `nemo_toolkit[asr]` requires `pynini` for text normalization, which only ships pre-built wheels for Linux. On Windows, fall back to `nemo_toolkit[asr_no_pynini]` and skip text normalization features (numbers stay as digits). Document in `core/asr_parakeet.py` install gate.
+- **FFmpeg 8.0 binary distribution**: FFmpeg 8.0 ships in late 2025 as binaries via gyan.dev and BtbN; the Windows installer must bundle 8.0 (current bundled is 7.x). Update `bin/install-ffmpeg.ps1` to download FFmpeg 8.0 + ggml-whisper model files. Test the `--enable-whisper` build flag is present in the bundled binary; if absent, fall back to subprocess Whisper.
+- **FFmpeg 8.0 Vulkan kernel availability**: Vulkan AV1 encode requires a Vulkan 1.3 driver (NVIDIA 535+, AMD 24.x+, Intel ARC drivers). On older drivers, fall back to NVENC/AMF/QSV. Probe via `vulkaninfo --summary` in `core/encode_vulkan.py`.
+- **Qwen3-VL transformers version**: Qwen3-VL requires `transformers>=4.45.0` with the `Qwen3VLForConditionalGeneration` class. The current pin in `pyproject.toml` is older — bump as part of Wave S1.1 to avoid a surprise mid-wave migration. Validate that no other model (Qwen2.5-VL old code path, EchoMimic, Wan2.2) breaks on the upgrade — run the full multimodal test suite before merging.
+- **Qwen2.5-VL backward compat**: Keep `POST /analyze/video/qwen25vl` route alive as a deprecated alias for one full wave (S1.x → T1.x). Returns the same response shape but logs a deprecation warning and a `Sunset: <date>` HTTP header. Migration guide in `docs/UPGRADE_QWEN3VL.md`.
+- **InternVL3 vs Qwen3-VL prompt format**: The two models use slightly different chat templates. Implement a small adapter in `core/multimodal_dispatcher.py` that translates between OpenCut's canonical message format and each model's native template. Test both engines against the same evaluation suite to confirm semantic equivalence.
+- **face_reaging dependency**: The repository is small (~50 MB) but pulls in `face-alignment` which has a torch dependency. Reuse the existing torch install (already present from Wave N).
+- **face_reaging strength clamping**: Strength values >1.0 produce uncanny artifacts (eye distortion, hairline shift). Clamp to 0..1 in the route handler and document in `/info`.
+- **HeartMuLa lyric format**: HeartMuLa expects time-aligned lyrics in `[mm:ss.cc] line` LRC format. Add a small helper that converts plain text → LRC by splitting on punctuation and distributing evenly across the requested duration; expose as `POST /music/generate/heartmula/lyrics_to_lrc`.
+- **UXP panel CEP feature parity audit**: Before flipping UXP to default in S3.5, run the parity audit (every CEP route → corresponding UXP renderer + UI control). Track in `panel-uxp/PARITY_AUDIT.md`. Specifically validate: GPU topology display, GGUF model status, all Wave Q/R/S new routes, MCP server status, async job queue. Any feature that fails parity stays CEP-only and the UXP panel shows a "fall back to CEP for this feature" link.
+
+---
+
+## Wave S Shipping Cadence
+
+| Release | ETA | Features |
+|---------|-----|---------|
+| v1.56.0 | 2028-Q4 | S1.1 IC-Light V2 per-frame, S1.2 Light-A-Video training-free video relighting, S1.3 DiffusionRenderer (gated) |
+| v1.57.0 | 2029-Q1 | S2.1 SeedVR2 one-step VSR (default backend), S2.2 Parakeet TDT streaming, S2.3 Canary-1B-Flash batch, S2.4 FFmpeg 8.0 + Vulkan AV1 |
+| v1.58.0 | 2029-Q1 | S3.1 Qwen3-VL upgrade, S3.2 InternVL3 alternative, S3.3 face_reaging, S3.4 HeartMuLa, S3.5 UXP v1.0 final cutover |
+
+---
+
+## Wave S: Not Adopted / Deferred
+
+- **MyTimeMachine** (SIGGRAPH 2025) — Personalised facial age transformation (50-selfie reference). Strong quality but academic licence is unclear at time of this survey; the GitHub repo carries no `LICENSE` file. NOT adopted until a permissive (MIT/Apache-2/BSD) licence is published. Watch list. face_reaging (S3.3) covers the use case under MIT.
+- **Wan 2.5 / Wan 2.6** (Alibaba, Sept 2025 / Dec 2025) — Closed-weight cloud-only release; no downloadable inference path. NOT adoptable as a local engine. Wan 2.1 + Wan 2.2 (already in stack from Wave M / N) remain the supported Wan tier. Monitor for an open-weights re-release.
+- **RelightVid** (aleafy) — Temporal-consistent video relighting; functionality overlaps with Light-A-Video (S1.2). NOT adopted to avoid two-engine maintenance burden in the same niche.
+- **RelightMaster** (ICLR 2026 paper) — Multi-plane light images for precise video relighting. Code release pending at survey time. WATCH LIST — re-evaluate for Wave T once code drops with a permissive licence.
+- **HunyuanVideo 1.5** — Tencent released a 1.5 update (Q1 2026) but the geographic licence restrictions from Wave O still apply (EU/UK/SK excluded). Hard pass; remains on the rejected list.
+- **Stable Audio 2.5 / Stable Audio Open community models** — Stability AI Community Licence remains non-commercial. NOT adopted; HeartMuLa (S3.4) covers the music gap.
+- **AI CineFocus / aperture simulation** — DaVinci Resolve 21's depth-of-field synthesis effect. The optical-flow-based focus simulation is implementable but the "click to refocus" UX requires a depth model + a synthetic-bokeh renderer. Wave R already shipped Mochi-1 and Wave N shipped DepthAnythingV2; revisit in Wave T as a higher-level UX layer on top of those building blocks rather than a new model integration.
+- **AI Slate ID / IntelliSearch** — DaVinci 21 AI search + clapperboard reading. Already shipped in Wave K (`/slate/identify`, `/search/ai`). Confirmed parity exists; no Wave S work needed.
+- **Captions.ai AI Twin / generative actors** — Closed-source synthetic actor library; OpenCut already provides the building blocks (SkyReels V3 A2V + ConsisID + MuseTalk). The "AI Twin" UX is a panel-side wizard, not a new engine — schedule as a Wave T panel feature, not a model integration.
+- **Submagic Magic Clips / Opus Clip viral scoring** — Closed-source viral-moment scoring. Wave M sports highlights (`/video/highlights/sports`) covers the engine; the viral-scoring model itself is proprietary. A heuristic open-source equivalent (audio energy + scene change + caption sentiment) is feasible but defers to Wave T as a higher-level pipeline rather than a new model.
+
+---
+
+## Wave S Sources
+
+- **IC-Light V2** — [lllyasviel/IC-Light](https://github.com/lllyasviel/IC-Light) (Apache-2); FLUX variant 2025; ComfyUI nodes by kijai; HuggingFace `lllyasviel/ic-light`
+- **Light-A-Video** — [bcmi/Light-A-Video](https://github.com/bcmi/Light-A-Video) (MIT, ICCV 2025); [arXiv:2502.08590](https://arxiv.org/abs/2502.08590); project page `bujiazi.github.io/light-a-video.github.io`
+- **DiffusionRenderer** — [nv-tlabs/diffusionrenderer](https://github.com/nv-tlabs/diffusionrenderer) (Apache-2, NVIDIA Toronto AI Lab 2025); project page `research.nvidia.com/labs/toronto-ai/DiffusionRenderer`
+- **SeedVR2** — [ByteDance-Seed/SeedVR](https://github.com/ByteDance-Seed/SeedVR) (Apache-2, ICLR 2026); HuggingFace `ByteDance-Seed/SeedVR2-3B` and `ByteDance-Seed/SeedVR2-7B`
+- **Parakeet TDT 0.6B v2** — [NVIDIA/NeMo](https://github.com/NVIDIA/NeMo) (Apache-2 toolkit); HuggingFace `nvidia/parakeet-tdt-0.6b-v2` (CC-BY-4.0 model)
+- **Canary-1B-Flash** — [NVIDIA/NeMo](https://github.com/NVIDIA/NeMo); HuggingFace `nvidia/canary-1b-flash` (CC-BY-4.0); RTFx 1000+ benchmarks documented on the HF model card
+- **FFmpeg 8.0 "Huffman"** — [FFmpeg release notes](https://ffmpeg.org/index.html#pr8.0); August 2025; native Whisper filter (`af_whisper`), Vulkan AV1 encoder, Vulkan VP9 / ProRes-RAW acceleration, VAAPI VVC decode; [Phoronix coverage](https://www.phoronix.com/news/FFmpeg-8.0-Released)
+- **Qwen3-VL** — [QwenLM/Qwen3-VL](https://github.com/QwenLM/Qwen3-VL) (Apache-2, Sept 2025); [arXiv:2511.21631](https://arxiv.org/abs/2511.21631) tech report Nov 2025; HuggingFace `Qwen/Qwen3-VL-8B-Instruct`, `Qwen/Qwen3-VL-32B-Instruct`, `Qwen/Qwen3-VL-235B-A22B-Instruct`
+- **InternVL3** — [OpenGVLab/InternVL](https://github.com/OpenGVLab/InternVL) (Apache-2); [InternVL3 blog](https://internvl.github.io/blog/2025-04-11-InternVL-3.0/); HuggingFace `OpenGVLab/InternVL3-8B`, `OpenGVLab/InternVL3-78B`
+- **face_reaging (FRAN reimplementation)** — [timroelofs123/face_reaging](https://github.com/timroelofs123/face_reaging) (MIT); upstream paper: Disney Research "Production-Ready Face Re-Aging for Visual Effects" (FRAN, SIGGRAPH 2022)
+- **HeartMuLa** — [HeartMuLa/heartlib](https://github.com/HeartMuLa/heartlib) (Apache-2, 2025/2026); music foundation model family
+- **Adobe UXP for Premiere 2026** — [developer.adobe.com/premiere-pro/uxp/](https://developer.adobe.com/premiere-pro/uxp/) — UXP standard since Premiere 2026 (April 2026); CEP scheduled for full removal in Premiere 2027 (~September 2026 timeline); migration guide `developer.adobe.com/premiere-pro/uxp/guides/cep-migration/`
+- **DaVinci Resolve 21** — [What's New](https://www.blackmagicdesign.com/products/davinciresolve/whatsnew); 2026; flagship "Relight" / CineFocus, Face Age Transformer, IntelliSearch, Magic Mask v2 — used as a competitive parity reference for S1, S3.3, and the Wave S Competitive Gap Closure table
+- **NVIDIA NeMo ASR comparison** — [Best open-source STT 2026 — Northflank](https://northflank.com/blog/best-open-source-speech-to-text-stt-model-in-2026-benchmarks); [Gladia 2026 STT benchmarks](https://www.gladia.io/blog/best-open-source-speech-to-text-models)
+- **Awesome AI Video Editing 2026** — [GagnDeep/awesome-best-ai-tools-for-video-editors-2026](https://github.com/GagnDeep/awesome-best-ai-tools-for-video-editors-2026); [awesome-ai-tools/curated-ai-image-video](https://github.com/awesome-ai-tools/curated-ai-image-video) — surveyed as the discovery surface for OSS ecosystem state
+
+---
