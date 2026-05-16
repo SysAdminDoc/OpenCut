@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T19:35:55Z",
-  "total_routes": 1350,
+  "generated_at": "2026-05-16T19:39:03Z",
+  "total_routes": 1351,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
     "GET": 291,
     "PATCH": 1,
-    "POST": 1044,
+    "POST": 1045,
     "PUT": 2
   },
   "blueprints": {
@@ -834,10 +834,10 @@
       ]
     },
     "timeline": {
-      "route_count": 8,
+      "route_count": 9,
       "method_counts": {
         "GET": 1,
-        "POST": 7
+        "POST": 8
       },
       "sample_rules": [
         "/timeline/batch-rename",
@@ -8036,6 +8036,14 @@
       ],
       "endpoint": "platform_infra.resolve_timeline_info",
       "blueprint": "platform_infra"
+    },
+    {
+      "rule": "/review/bundle",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.review_bundle",
+      "blueprint": "timeline"
     },
     {
       "rule": "/review/comment",
