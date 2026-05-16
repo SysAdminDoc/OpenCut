@@ -127,7 +127,8 @@ Explicit rejects and constraints:
 Tier deltas for v4.3:
 
 - **Now**: F093, F094, F095, F096, F097, F098, F099, F100, F111, F112, F115, F117, F118.
-- **Next**: F101, F102, F103, F104, F105, F106, F109, F110, F116, F120.
+- **Next**: F101, F102, F103, F104, F105, F109, F110, F116, F120.
+- **Now (this wave, beyond v4.3)**: F106 — shipped (capability probe at `GET /system/capabilities` with FFmpeg/codec/GPU/disk/Python signals).
 - **Later**: F108, F119.
 - **Under Consideration**: F107, F113.
 - **Rejected**: F114 plus the reject constraints above.
