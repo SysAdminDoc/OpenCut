@@ -2647,6 +2647,42 @@ def auth_rotate():
         return safe_error(exc, "auth_rotate")
 
 
+@system_bp.route("/system/ai-eval/<feature_id>", methods=["GET"])
+def system_ai_eval(feature_id: str):
+    """Return the aggregated eval history for ``feature_id`` (F120)."""
+    try:
+        from opencut.core.ai_eval_harness import summarise_results
+
+        return jsonify(summarise_results(feature_id))
+    except Exception as exc:
+        return safe_error(exc, "system_ai_eval")
+
+
+@system_bp.route("/system/ai-eval", methods=["GET"])
+def system_ai_eval_list():
+    """List feature_ids that have a registered evaluation (F120)."""
+    try:
+        from opencut.core.ai_eval_harness import list_evaluations
+
+        defs = list_evaluations()
+        return jsonify(
+            {
+                "count": len(defs),
+                "evaluations": [
+                    {
+                        "feature_id": d.feature_id,
+                        "description": d.description,
+                        "sample_type": d.sample_type,
+                        "metric_name": d.metric_name,
+                    }
+                    for d in defs
+                ],
+            }
+        )
+    except Exception as exc:
+        return safe_error(exc, "system_ai_eval_list")
+
+
 @system_bp.route("/system/capabilities", methods=["GET"])
 def system_capabilities():
     """Return the capability profile (F106).
