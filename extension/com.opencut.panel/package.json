@@ -7,11 +7,16 @@
     "dev": "vite build --watch",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint client/main.js"
+    "lint": "eslint client/main.js",
+    "audit:check": "node scripts/check-advisories.mjs",
+    "build:verify": "node scripts/verify-build.mjs"
   },
   "devDependencies": {
     "eslint": "^8.0.0",
-    "terser": "^5.39.2",
-    "vite": "^5.0.0"
+    "terser": "^5.47.1",
+    "vite": "^5.4.21"
+  },
+  "overrides": {
+    "esbuild": "^0.25.0"
   }
 }
