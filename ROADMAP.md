@@ -138,14 +138,14 @@ Tier deltas for v4.3:
 - [x] F094 Lockfile/SBOM audit repair - removed the stale self-package lock entry, updated vulnerable lock pins, removed the no-fix `deep-translator` dependency from install surfaces, and verified `pip-audit` reports no known vulnerabilities for both `requirements.txt` and `requirements-lock.txt`.
 - [x] F095 Node advisory upgrade plan - pinned `esbuild` ^0.25 via `overrides` to close GHSA-67mh-4wv8-2f99; waived the remaining `vite` `.map` traversal CVE in `docs/NODE_ADVISORIES.md` (only reachable via `vite dev/preview`, which we never run); added `npm run audit:check` (allow-list gate) and `npm run build:verify` (source-tree smoke) plus a Linux CI step and Python parity tests.
 - [x] F096 UXP version-sync release blocker - synced release, extension, installer, package, and requirements version surfaces to v1.32.0 and verified `scripts/sync_version.py --check`.
-- [ ] F097 Source-linked GitHub issue seeding.
+- [x] F097 Source-linked GitHub issue seeding - added `.github/ISSUE_TEMPLATE/{bug,feature,good_first}.yml`, `.github/labels.yml`, and a curated `.github/issue-seeds.yml` covering every v4.3 Now/Next tier row; `scripts/seed_github_issues.py` ships the seeder (PyYAML-optional, dry-run by default) plus a Python parity test suite (`tests/test_seed_github_issues.py`).
 - [ ] F098 Release smoke matrix.
 - [ ] F099 Generated route/feature manifest.
 - [ ] F100 Stub readiness policy and UI gating.
 - [ ] F111 Caption QC gate.
 - [ ] F112 Local auth and bind-address hardening.
 - [ ] F115 Model/license cards for AI extras.
-- [ ] F117 Good-first backlog generator.
+- [x] F117 Good-first backlog generator - the F097 seeder gained a `--good-first` filter that picks any seed labelled `good first issue` (currently F117 in the manifest); CONTRIBUTING.md now points contributors at the seeded label as the canonical starter-task funnel.
 - [ ] F118 Roadmap source appendix linter.
 
 ### Phase 4 - Applied Roadmap Update
