@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T18:58:28Z",
-  "total_routes": 1344,
+  "generated_at": "2026-05-16T19:03:23Z",
+  "total_routes": 1345,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 288,
+    "GET": 289,
     "PATCH": 1,
     "POST": 1041,
     "PUT": 2
@@ -822,9 +822,9 @@
       ]
     },
     "system": {
-      "route_count": 51,
+      "route_count": 52,
       "method_counts": {
-        "GET": 22,
+        "GET": 23,
         "POST": 30
       },
       "sample_rules": [
@@ -8996,6 +8996,14 @@
       ],
       "endpoint": "settings.estimate_job_time",
       "blueprint": "settings"
+    },
+    {
+      "rule": "/system/feature-state",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.feature_state",
+      "blueprint": "system"
     },
     {
       "rule": "/system/gpu",
