@@ -127,7 +127,7 @@ Explicit rejects and constraints:
 Tier deltas for v4.3:
 
 - **Now**: F093, F094, F095, F096, F097, F098, F099, F100, F111, F112, F115, F117, F118.
-- **Next**: F101, F104, F109.
+- **Next**: F101, F109.
 - **Now (this wave, beyond v4.3)**:
     - F106 — shipped (capability probe at `GET /system/capabilities` with FFmpeg/codec/GPU/disk/Python signals).
     - F102 — shipped (`POST /markers/import` accepts CSV, Premiere CSV, and CMX-3600 EDL; normalised `Marker` dataclass + reject/warning surface; `tests/test_marker_import.py`).
@@ -136,6 +136,7 @@ Tier deltas for v4.3:
     - F116 — shipped (`opencut/core/plugin_manifest.py` defines the v1 schema, `plugin.lock.json` hash file, the `OPENCUT_PLUGIN_ALLOW_UNSIGNED` opt-in, and a `SUPPORTED_CAPABILITIES` allowlist. `opencut/core/plugins.py` calls the validator before mounting any blueprint. `tests/test_plugin_manifest.py`).
     - F103 — shipped (`opencut/core/marker_metadata.py` defines the canonical 10-colour palette with bidirectional aliases for Premiere, DaVinci, Avid, and OTIO; `MarkerMetadata.for_host()` produces host-specific exports; `diff_marker_payloads()` is used by round-trip tests. `tests/test_marker_metadata.py`).
     - F120 — shipped (`opencut/core/ai_eval_harness.py` is a registry of evaluation functions + a runner that captures latency, quality score, environment snapshot, and persists history under `~/.opencut/ai_eval/<feature_id>.json` (capped to 200 entries). `GET /system/ai-eval` lists registered evaluations; `GET /system/ai-eval/<feature_id>` returns p50/p95 latency + quality mean. `tests/test_ai_eval_harness.py`).
+    - F104 — shipped (`opencut/export/fcp_transitions.py` validates transition requests against outbound source tail handle, inbound source head handle, and timeline-side overlap; emits an FCP 7 XML `<transitionitem>`; supports cross-dissolve, dip-to-black, and constant-power audio crossfade; `trim_for_transition` adjusts timeline cut points without touching source ranges. `tests/test_fcp_transitions.py`).
 - **Later**: F108, F119.
 - **Under Consideration**: F107, F113.
 - **Rejected**: F114 plus the reject constraints above.
