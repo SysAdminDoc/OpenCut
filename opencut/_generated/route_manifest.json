@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T19:41:52Z",
-  "total_routes": 1353,
+  "generated_at": "2026-05-16T19:54:32Z",
+  "total_routes": 1355,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 291,
+    "GET": 293,
     "PATCH": 1,
     "POST": 1047,
     "PUT": 2
@@ -822,9 +822,9 @@
       ]
     },
     "system": {
-      "route_count": 55,
+      "route_count": 57,
       "method_counts": {
-        "GET": 25,
+        "GET": 27,
         "POST": 31
       },
       "sample_rules": [
@@ -8956,6 +8956,22 @@
       ],
       "endpoint": "subtitle_pro.shot_aware_timing",
       "blueprint": "subtitle_pro"
+    },
+    {
+      "rule": "/system/ai-eval",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.system_ai_eval_list",
+      "blueprint": "system"
+    },
+    {
+      "rule": "/system/ai-eval/<feature_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.system_ai_eval",
+      "blueprint": "system"
     },
     {
       "rule": "/system/capabilities",
