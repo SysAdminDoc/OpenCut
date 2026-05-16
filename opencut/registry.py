@@ -319,9 +319,10 @@ _FEATURES: List[FeatureRecord] = [
         feature_id="captions.qc",
         label="Caption QC gate",
         category="captions",
-        state=STATE_STUB,
+        state=STATE_AVAILABLE,
+        install_hint="bundled (no extra deps)",
         docs="ROADMAP.md#F111",
-        notes="Roadmap F111. Implementation pending.",
+        notes="Wraps caption_compliance with stricter defaults + forbidden-glyph + overlap rules.",
         routes=["/captions/qc"],
     ),
     FeatureRecord(

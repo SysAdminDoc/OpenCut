@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T19:03:23Z",
-  "total_routes": 1345,
+  "generated_at": "2026-05-16T19:11:40Z",
+  "total_routes": 1346,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
     "GET": 289,
     "PATCH": 1,
-    "POST": 1041,
+    "POST": 1042,
     "PUT": 2
   },
   "blueprints": {
@@ -160,11 +160,11 @@
       ]
     },
     "captions": {
-      "route_count": 23,
+      "route_count": 24,
       "method_counts": {
         "DELETE": 1,
         "GET": 5,
-        "POST": 17
+        "POST": 18
       },
       "sample_rules": [
         "/caption-styles",
@@ -5060,6 +5060,14 @@
       ],
       "endpoint": "wave_k.route_subtitle_qa_validate",
       "blueprint": "wave_k"
+    },
+    {
+      "rule": "/captions/qc",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.captions_qc",
+      "blueprint": "captions"
     },
     {
       "rule": "/captions/repeat-detect",

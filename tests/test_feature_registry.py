@@ -97,7 +97,10 @@ def test_route_returns_manifest():
     data = resp.get_json()
     assert data["version"] == 1
     assert "counts" in data and "features" in data
-    assert any(f["feature_id"] == "captions.qc" and f["state"] == "stub" for f in data["features"])
+    # `captions.qc` shipped as part of F111 — should resolve to `available`.
+    assert any(f["feature_id"] == "captions.qc" and f["state"] == "available" for f in data["features"])
+    # Stubs still surface — pick the lipsync rows that remain on the roadmap.
+    assert any(f["feature_id"] == "lipsync.latentsync" and f["state"] == "stub" for f in data["features"])
 
 
 def test_route_single_feature_lookup():
@@ -105,11 +108,11 @@ def test_route_single_feature_lookup():
 
     app = create_app()
     client = app.test_client()
-    resp = client.get("/system/feature-state?feature_id=captions.qc")
+    resp = client.get("/system/feature-state?feature_id=lipsync.latentsync")
 
     assert resp.status_code == 200
     payload = resp.get_json()
-    assert payload["feature_id"] == "captions.qc"
+    assert payload["feature_id"] == "lipsync.latentsync"
     assert payload["state"] == "stub"
 
 
