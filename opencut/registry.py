@@ -389,6 +389,15 @@ _FEATURES: List[FeatureRecord] = [
         routes=["/system/project-health"],
     ),
     FeatureRecord(
+        feature_id="system.crash-packet",
+        label="Crash + recovery diagnostic packet",
+        category="system",
+        state=STATE_AVAILABLE,
+        install_hint="bundled (no extra deps)",
+        docs="ROADMAP.md#F066",
+        routes=["/system/crash-packet"],
+    ),
+    FeatureRecord(
         feature_id="lipsync.latentsync",
         label="LatentSync diffusion lip-sync",
         category="ai",
