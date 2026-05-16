@@ -2,14 +2,14 @@
 
 ## Supported Versions
 
-OpenCut ships rapidly. We actively support the **latest minor** (`1.24.x`) and the one immediately preceding it (`1.23.x`). Older minors receive security-only backports for 90 days after they're superseded.
+OpenCut ships rapidly. We actively support the **latest minor** (`1.32.x`) and the one immediately preceding it (`1.31.x`). Older minors receive security-only backports for 90 days after they're superseded.
 
 | Version | Supported         | Security fixes until |
 |---------|-------------------|----------------------|
-| 1.24.x  | ✅ Active         | —                    |
-| 1.23.x  | ✅ Previous       | +90 days after 1.25  |
-| 1.22.x  | ⚠️ Critical only  | +30 days after 1.24  |
-| ≤ 1.21  | ❌ End of life    | n/a                  |
+| 1.32.x  | ✅ Active         | —                    |
+| 1.31.x  | ✅ Previous       | +90 days after 1.32  |
+| 1.30.x  | ⚠️ Critical only  | +30 days after 1.32  |
+| ≤ 1.29  | ❌ End of life    | n/a                  |
 
 Version numbers ship in [`opencut/__init__.py`](opencut/__init__.py) and are kept in sync by [`scripts/sync_version.py`](scripts/sync_version.py).
 
@@ -65,7 +65,7 @@ OpenCut's security model leans on a handful of intentional choices:
 
 Operators running OpenCut in a shared-network environment should:
 
-1. Bind to `127.0.0.1` only (default) — the service is single-user.
+1. Bind to `127.0.0.1` only (default) — the service is single-user. Non-loopback binds require `OPENCUT_ALLOW_REMOTE=1`.
 2. Set `SENTRY_DSN` so crashes route to a tracker you control.
 3. Set `PLAUSIBLE_HOST` + `PLAUSIBLE_DOMAIN` (optional) for usage telemetry.
 4. Configure `OPENCUT_TEMP_CLEANUP_*` to fit the expected workload.

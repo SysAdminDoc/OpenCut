@@ -17,7 +17,7 @@
           <path d="M4 2.5a3 3 0 00-1.76 5.43L7.33 11l-5.09 3.07A3 3 0 104.8 19.5a3 3 0 001.76-5.43L8.93 12.6 16.5 17V5L8.93 9.4 6.56 7.93A3 3 0 004 2.5z" fill="var(--accent)"/>
         </svg>
         <span class="oc-logo" translate="no">OpenCut</span>
-        <span class="oc-version" id="uxpHeaderVersion">v1.16.0</span>
+        <span class="oc-version" id="uxpHeaderVersion">v1.32.0</span>
       </div>
       <div class="oc-header-right">
         <div class="oc-connection" id="connectionStatus" title="Backend connection status">
@@ -87,7 +87,7 @@
           <h1 class="oc-workspace-title" id="workspaceOverviewTitle">Cut &amp; Clean</h1>
           <p class="oc-workspace-subtitle" id="workspaceOverviewSubtitle">Trim dead space, fillers, and rough pacing with a tighter review flow.</p>
           <div class="oc-workspace-actions" role="group" aria-label="Workspace shortcuts">
-            <button type="button" class="oc-btn oc-btn-primary" id="workspaceChooseClipBtn">Choose Clip</button>
+            <button type="button" class="oc-btn oc-btn-primary" id="workspaceChooseClipBtn">Choose Media</button>
             <button type="button" class="oc-btn oc-btn-secondary" id="workspaceSearchBtn">Search Library</button>
             <button type="button" class="oc-btn oc-btn-secondary" id="workspaceTimelineBtn">Timeline Tools</button>
           </div>
@@ -95,7 +95,7 @@
         <div class="oc-workspace-meta" role="list" aria-label="Current workspace context">
           <div class="oc-workspace-meta-item" role="listitem">
             <span class="oc-workspace-meta-label">Active Shot</span>
-            <span class="oc-workspace-meta-value" id="workspaceSourceValue" aria-live="polite">Awaiting clip</span>
+            <span class="oc-workspace-meta-value" id="workspaceSourceValue" aria-live="polite">No source selected</span>
           </div>
           <div class="oc-workspace-meta-item" role="listitem">
             <span class="oc-workspace-meta-label">Backend</span>
@@ -108,11 +108,11 @@
         </div>
         <div class="oc-workspace-guide" id="workspaceGuide" aria-live="polite">
           <div class="oc-workspace-guide-copy">
-            <span class="oc-workspace-guide-kicker" id="workspaceGuideKicker">Needs source</span>
+            <span class="oc-workspace-guide-kicker" id="workspaceGuideKicker">Choose media</span>
             <h2 class="oc-workspace-guide-title" id="workspaceGuideTitle">Choose an active shot to start this workspace.</h2>
             <p class="oc-workspace-guide-text" id="workspaceGuideText">OpenCut keeps the current clip in sync across Cut, Captions, Audio, and Video so you can move through the edit without repeated setup.</p>
           </div>
-          <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="workspaceGuideAction" data-action="choose-clip">Choose Clip</button>
+          <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="workspaceGuideAction" data-action="choose-clip">Choose Media</button>
         </div>
       </section>
 
@@ -124,7 +124,7 @@
           <div class="oc-field-row">
             <label class="oc-label" for="clipPathCut">Clip Path</label>
             <div class="oc-input-group">
-              <input type="text" class="oc-input" id="clipPathCut" placeholder="Select or paste clip path…">
+              <input type="text" class="oc-input" id="clipPathCut" placeholder="Paste a clip path or browse media…">
               <button type="button" class="oc-btn oc-btn-secondary" id="browseClipCut">Browse</button>
             </div>
           </div>
@@ -1411,7 +1411,7 @@
         <div class="oc-card">
           <div class="oc-field-row">
             <span class="oc-label">Version</span>
-                <span id="uxpVersionDisplay">1.16.0 (UXP)</span>
+                <span id="uxpVersionDisplay">1.32.0 (UXP)</span>
           </div>
           <div class="oc-field-row">
             <span class="oc-label">Panel</span>
