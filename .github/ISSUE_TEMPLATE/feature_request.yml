@@ -1,0 +1,54 @@
+name: Feature request
+description: Propose a new capability or workflow improvement.
+title: "[feature] "
+labels: ["type:feature", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        OpenCut prioritises local-first, Premiere-automation features. Before
+        opening a request, check [ROADMAP.md](../../blob/main/ROADMAP.md) —
+        many ideas already have a tier and a source-linked entry there.
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem are you trying to solve?
+      description: Describe the workflow pain in 2–4 sentences. Avoid jumping to a solution.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed direction (optional)
+      description: A sketch of how this could work. Bullet points are fine.
+
+  - type: input
+    id: roadmap
+    attributes:
+      label: Roadmap reference
+      description: "If this maps to an existing roadmap ID (F### / H#.# / J#.# / etc.), link it."
+      placeholder: "F099, Wave J Tier 1"
+
+  - type: dropdown
+    id: fit
+    attributes:
+      label: Local-first fit
+      description: OpenCut rejects features that require always-on cloud accounts.
+      options:
+        - "Pure local — no network at all"
+        - "Local with optional cloud LLM/AI (degrades gracefully when offline)"
+        - "Cloud-dependent — would not work offline"
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and the roadmap.
+          required: true
+        - label: I would be willing to test a prototype.
+          required: false

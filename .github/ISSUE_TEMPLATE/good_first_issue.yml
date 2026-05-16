@@ -1,0 +1,44 @@
+name: Good first issue (maintainer-only)
+description: Pre-vetted starter task seeded from the roadmap. Maintainers use this; contributors should pick an existing issue instead.
+title: "[good-first] "
+labels: ["good first issue", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template only when seeding a good-first-issue from the
+        backlog. Make sure the task is small (under a day), well-scoped, and
+        has a clearly named file or module to touch.
+
+  - type: input
+    id: roadmap
+    attributes:
+      label: Roadmap ID
+      description: F### / H#.# / J#.# / etc. — must point at a row in ROADMAP.md.
+      placeholder: "F117"
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: 3–5 bullet points describing what "done" looks like.
+    validations:
+      required: true
+
+  - type: textarea
+    id: pointers
+    attributes:
+      label: File pointers
+      description: Existing files to read first, paths to touch, related tests.
+    validations:
+      required: true
+
+  - type: textarea
+    id: verification
+    attributes:
+      label: How to verify
+      description: Commands or steps a contributor can run locally.
+    validations:
+      required: true
