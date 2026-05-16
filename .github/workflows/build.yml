@@ -74,6 +74,12 @@ jobs:
           npm run build:verify
           npm run build
 
+      - name: Release smoke matrix
+        if: runner.os == 'Linux'
+        run: |
+          python -m pip install pip-audit
+          python scripts/release_smoke.py --json --skip ruff --skip pytest-fast
+
       - name: Smoke test imports
         run: |
           python -c "from opencut.server import create_app; app = create_app(); print('Server OK')"

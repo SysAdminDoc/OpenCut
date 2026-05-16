@@ -1,0 +1,170 @@
+"""Tests for the release smoke matrix runner (F098)."""
+
+from __future__ import annotations
+
+import argparse
+import importlib.util
+import json
+import subprocess
+import sys
+from dataclasses import dataclass
+from pathlib import Path
+from types import SimpleNamespace
+from typing import List
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+SCRIPT_PATH = REPO_ROOT / "scripts" / "release_smoke.py"
+
+
+def load_module():
+    spec = importlib.util.spec_from_file_location("release_smoke_under_test", SCRIPT_PATH)
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_steps_have_unique_names_and_callable_runners():
+    module = load_module()
+    names = [step.name for step in module.STEPS]
+
+    assert len(names) == len(set(names)), "duplicate step names defined"
+    for step in module.STEPS:
+        assert callable(step.runner), f"step {step.name} runner not callable"
+
+
+def test_step_result_serialises_to_dict():
+    module = load_module()
+    res = module.StepResult("demo", "ok", message="hi", duration_ms=42)
+    payload = json.dumps(res.__dict__)
+    parsed = json.loads(payload)
+    assert parsed["name"] == "demo"
+    assert parsed["status"] == "ok"
+    assert parsed["duration_ms"] == 42
+    assert "[PASS] demo (42 ms) — hi" in res.as_line()
+
+
+def _stub_run(rc: int, out: str = "", err: str = ""):
+    def _fake(cmd, *args, **kwargs):  # noqa: ANN001
+        return subprocess.CompletedProcess(cmd, rc, out, err)
+    return _fake
+
+
+def test_step_version_sync_reports_ok_when_script_passes(monkeypatch):
+    module = load_module()
+    monkeypatch.setattr(module, "_run", _stub_run(0, out="OK"))
+
+    result = module.step_version_sync(argparse.Namespace())
+
+    assert result.status == "ok"
+    assert result.exit_code == 0
+    assert "aligned" in result.message
+
+
+def test_step_version_sync_reports_failure_on_drift(monkeypatch):
+    module = load_module()
+    monkeypatch.setattr(module, "_run", _stub_run(1, out="drift!"))
+
+    result = module.step_version_sync(argparse.Namespace())
+
+    assert result.status == "fail"
+    assert result.exit_code == 1
+
+
+def test_step_ruff_skips_when_binary_missing(monkeypatch):
+    module = load_module()
+    monkeypatch.setattr(module.shutil, "which", lambda name: None)
+
+    result = module.step_ruff(argparse.Namespace())
+
+    assert result.status == "skipped"
+    assert "ruff" in result.skipped_reason
+
+
+def test_step_pip_audit_skips_when_module_missing(monkeypatch):
+    module = load_module()
+
+    def _missing_module(cmd, *args, **kwargs):  # noqa: ANN001
+        return subprocess.CompletedProcess(cmd, 1, "", "No module named pip_audit")
+
+    monkeypatch.setattr(module, "_run", _missing_module)
+
+    result = module.step_pip_audit(argparse.Namespace())
+
+    assert result.status == "skipped"
+    assert "pip-audit" in result.skipped_reason
+
+
+def test_overall_status_handles_mixed_results():
+    module = load_module()
+    make = module.StepResult
+    assert module.overall_status([make("a", "ok"), make("b", "skipped")]) == "ok"
+    assert module.overall_status([make("a", "ok"), make("b", "fail")]) == "fail"
+    assert module.overall_status([make("a", "skipped")]) == "skipped"
+    assert module.overall_status([]) == "skipped"
+
+
+def test_run_release_smoke_honours_only_filter(monkeypatch):
+    module = load_module()
+    sentinel: List[str] = []
+
+    def _record(name: str):
+        def runner(_args):
+            sentinel.append(name)
+            return module.StepResult(name, "ok", message="ok")
+        return runner
+
+    monkeypatch.setattr(
+        module,
+        "STEPS",
+        [
+            module.StepDefinition("alpha", _record("alpha")),
+            module.StepDefinition("beta", _record("beta")),
+        ],
+    )
+
+    results = module.run_release_smoke(
+        argparse.Namespace(pytest_extra=[]),
+        only=["beta"],
+    )
+
+    assert [r.name for r in results] == ["beta"]
+    assert sentinel == ["beta"]
+
+
+def test_main_emits_json_and_returns_zero_on_pass(monkeypatch, capsys):
+    module = load_module()
+
+    def _stub_runner(_args):
+        return module.StepResult("noop", "ok", message="trivial pass")
+
+    monkeypatch.setattr(
+        module,
+        "STEPS",
+        [module.StepDefinition("noop", _stub_runner)],
+    )
+
+    rc = module.main(["--json"])
+
+    captured = capsys.readouterr().out
+    payload = json.loads(captured)
+    assert rc == 0
+    assert payload["status"] == "ok"
+    assert payload["steps"][0]["name"] == "noop"
+
+
+def test_main_returns_nonzero_when_any_step_fails(monkeypatch):
+    module = load_module()
+
+    def _stub_runner(_args):
+        return module.StepResult("broken", "fail", exit_code=2, message="broken")
+
+    monkeypatch.setattr(
+        module,
+        "STEPS",
+        [module.StepDefinition("broken", _stub_runner)],
+    )
+
+    rc = module.main([])
+
+    assert rc == 1

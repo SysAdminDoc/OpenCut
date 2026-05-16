@@ -139,7 +139,7 @@ Tier deltas for v4.3:
 - [x] F095 Node advisory upgrade plan - pinned `esbuild` ^0.25 via `overrides` to close GHSA-67mh-4wv8-2f99; waived the remaining `vite` `.map` traversal CVE in `docs/NODE_ADVISORIES.md` (only reachable via `vite dev/preview`, which we never run); added `npm run audit:check` (allow-list gate) and `npm run build:verify` (source-tree smoke) plus a Linux CI step and Python parity tests.
 - [x] F096 UXP version-sync release blocker - synced release, extension, installer, package, and requirements version surfaces to v1.32.0 and verified `scripts/sync_version.py --check`.
 - [x] F097 Source-linked GitHub issue seeding - added `.github/ISSUE_TEMPLATE/{bug,feature,good_first}.yml`, `.github/labels.yml`, and a curated `.github/issue-seeds.yml` covering every v4.3 Now/Next tier row; `scripts/seed_github_issues.py` ships the seeder (PyYAML-optional, dry-run by default) plus a Python parity test suite (`tests/test_seed_github_issues.py`).
-- [ ] F098 Release smoke matrix.
+- [x] F098 Release smoke matrix - `scripts/release_smoke.py` chains bootstrap, version-sync, ruff, focused pytest gates, pip-audit, the npm advisory allow-list, and the panel-source verifier into one runner with `--json`/`--only`/`--skip` filters; CI invokes it on Linux after the dedicated lint/test steps, and `tests/test_release_smoke.py` covers status/runner contract.
 - [ ] F099 Generated route/feature manifest.
 - [ ] F100 Stub readiness policy and UI gating.
 - [ ] F111 Caption QC gate.
