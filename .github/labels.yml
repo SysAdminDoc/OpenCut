@@ -1,0 +1,134 @@
+# Repository label definitions. Apply with `gh label create` via
+# `scripts/seed_github_issues.py --labels`. Colors are 6-char hex without `#`.
+
+- name: "type:bug"
+  color: "d73a4a"
+  description: "Something is broken or behaves incorrectly."
+
+- name: "type:feature"
+  color: "a2eeef"
+  description: "New capability or workflow improvement."
+
+- name: "type:docs"
+  color: "0075ca"
+  description: "Documentation, changelog, or readme work."
+
+- name: "type:chore"
+  color: "fef2c0"
+  description: "Repo plumbing — CI, lint config, formatting, build scripts."
+
+- name: "type:security"
+  color: "b60205"
+  description: "Security advisory or hardening work."
+
+- name: "type:test"
+  color: "c5def5"
+  description: "Test coverage, fixtures, or test infrastructure."
+
+- name: "area:cep-panel"
+  color: "1d76db"
+  description: "CEP panel inside Premiere ≤ 2025."
+
+- name: "area:uxp-plugin"
+  color: "5319e7"
+  description: "UXP plugin for Premiere 2026+."
+
+- name: "area:server"
+  color: "0e8a16"
+  description: "Local HTTP server, CLI, jobs, workers."
+
+- name: "area:web-ui"
+  color: "bfdadc"
+  description: "Standalone web UI / SPA."
+
+- name: "area:installer"
+  color: "fbca04"
+  description: "Inno Setup, PyInstaller, .NET WPF installer."
+
+- name: "area:packaging"
+  color: "f9d0c4"
+  description: "Distribution: pip, Docker, archives, version sync."
+
+- name: "area:docs"
+  color: "0075ca"
+  description: "README, roadmap, guides, ADRs."
+
+- name: "area:ai"
+  color: "8b00ff"
+  description: "AI/ML extras: TTS, captioning, restoration, generation."
+
+- name: "area:captions"
+  color: "f4f1bb"
+  description: "Caption/subtitle features and compliance."
+
+- name: "area:audio"
+  color: "ffb3ba"
+  description: "Audio pipelines: TTS, mix, loudness, separation."
+
+- name: "area:video"
+  color: "bae1ff"
+  description: "Video pipelines: encode, restore, scene detect."
+
+- name: "area:export"
+  color: "8ed1fc"
+  description: "Interchange formats: OTIO, FCP XML, EDL, AAF."
+
+- name: "area:integrations"
+  color: "f7e7c4"
+  description: "External integrations: Premiere bridge, MCP, hosts."
+
+- name: "roadmap:now"
+  color: "b60205"
+  description: "Roadmap Now tier — current ship target."
+
+- name: "roadmap:next"
+  color: "d93f0b"
+  description: "Roadmap Next tier — upcoming wave."
+
+- name: "roadmap:later"
+  color: "fbca04"
+  description: "Roadmap Later tier — backlog."
+
+- name: "roadmap:under-consideration"
+  color: "c2e0c6"
+  description: "Pending validation before promotion."
+
+- name: "priority:p0"
+  color: "b60205"
+  description: "Release blocker."
+
+- name: "priority:p1"
+  color: "d93f0b"
+  description: "High-priority follow-up."
+
+- name: "priority:p2"
+  color: "fbca04"
+  description: "Standard work."
+
+- name: "priority:p3"
+  color: "c2e0c6"
+  description: "Nice-to-have."
+
+- name: "needs-triage"
+  color: "ededed"
+  description: "Needs maintainer review."
+
+- name: "good first issue"
+  color: "7057ff"
+  description: "Approachable starter task with clear scope."
+
+- name: "help wanted"
+  color: "008672"
+  description: "Maintainers want a contributor to pick this up."
+
+- name: "blocked"
+  color: "555555"
+  description: "Waiting on an upstream dependency, decision, or release."
+
+- name: "duplicate"
+  color: "cfd3d7"
+  description: "Already tracked elsewhere."
+
+- name: "wontfix"
+  color: "ffffff"
+  description: "Out of scope or explicitly rejected."
