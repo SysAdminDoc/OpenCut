@@ -537,7 +537,36 @@ def export_edited_transcript():
         else:
             export_srt(result, out_path)
 
-        return jsonify({"output_path": out_path, "format": sub_format})
+        # F111: caption QC gate. Failures return 422 with diagnostics; pass
+        # `?force=1` (or `force: true` in the JSON body) to override.
+        qc_payload = None
+        if sub_format in {"srt", "vtt"}:
+            force_qc = request.args.get("force", "").lower() in {"1", "true", "yes"} or bool(
+                data.get("force")
+            )
+            try:
+                from opencut.core.caption_qc import qc_captions
+
+                qc_result = qc_captions(srt_path=out_path)
+                qc_payload = qc_result.as_dict()
+                if not qc_result.overall_pass and not force_qc:
+                    return (
+                        jsonify(
+                            {
+                                "error": "caption_qc_failed",
+                                "output_path": out_path,
+                                "format": sub_format,
+                                "qc": qc_payload,
+                            }
+                        ),
+                        422,
+                    )
+            except Exception:
+                # Never block exports on a QC failure that's itself broken —
+                # the diagnostics are advisory in that case.
+                qc_payload = {"overall_pass": True, "error_count": 0, "warning_count": 0, "diagnostics": [], "skipped": True}
+
+        return jsonify({"output_path": out_path, "format": sub_format, "qc": qc_payload})
     except Exception as e:
         return safe_error(e, "export_edited_transcript")
 
@@ -1644,3 +1673,49 @@ def captions_repeat_detect(job_id, filepath, data):
         "clean_ranges": clean_ranges,
         "total_removed_seconds": total_removed,
     }
+
+
+@captions_bp.route("/captions/qc", methods=["POST"])
+@require_csrf
+def captions_qc():
+    """Run the caption QC gate (F111).
+
+    Body fields::
+
+        {
+            "srt_path": "/abs/path/to/file.srt",   # OR srt_text
+            "srt_text": "1\\n00:00:01,000 --> ...",
+            "standard": "accessibility",            # see /captions/compliance/standards
+            "mode": "strict"                        # or "advisory"
+        }
+
+    Returns ``{ overall_pass, error_count, warning_count, diagnostics: [...] }``.
+    """
+    from flask import jsonify, request
+
+    from opencut.core.caption_qc import qc_captions
+    from opencut.errors import safe_error
+
+    try:
+        data = request.get_json(force=True) or {}
+        srt_path = (data.get("srt_path") or "").strip() or None
+        srt_text = data.get("srt_text")
+        standard = (data.get("standard") or "accessibility").strip()
+        mode = (data.get("mode") or "strict").strip()
+
+        if not srt_path and not srt_text:
+            return jsonify({"error": "srt_path or srt_text required"}), 400
+
+        result = qc_captions(
+            srt_path=srt_path,
+            srt_text=srt_text,
+            standard=standard,
+            mode=mode,
+        )
+        return jsonify(result.as_dict())
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except FileNotFoundError as exc:
+        return jsonify({"error": f"srt_path not found: {exc.filename}"}), 404
+    except Exception as exc:
+        return safe_error(exc, "captions_qc")
