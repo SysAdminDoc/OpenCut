@@ -474,3 +474,25 @@ def test_validate_output_path_rejects_directory_target(tmp_path):
     from opencut.security import validate_output_path
     with _pt.raises(ValueError, match="is a directory"):
         validate_output_path(str(tmp_path))
+
+
+def test_uxp_engine_registry_escapes_dynamic_attribute_values():
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "extension/com.opencut.uxp/main.js").read_text(encoding="utf-8")
+
+    assert 'data-domain="${UIController.escapeHtml(domain)}"' in source
+    assert 'value="${UIController.escapeHtml(eng.name)}"' in source
+    assert 'for="${UIController.escapeHtml(domainId)}"' in source
+    assert ".replace(/'/g, \"&#39;\")" in source
+
+
+def test_uxp_fetch_wrapper_clears_backend_timeout_timers():
+    from pathlib import Path
+
+    source = (Path(__file__).resolve().parents[1] / "extension/com.opencut.uxp/main.js").read_text(encoding="utf-8")
+
+    assert "async function fetchWithTimeout" in source
+    assert "clearTimeout(timer);" in source
+    assert "await fetchWithTimeout(`${url}/health`, {}, 500)" in source
+    assert "await fetchWithTimeout(url, opts, 120000)" in source
