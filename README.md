@@ -84,7 +84,7 @@ OpenCut v1.28.0 includes **1,334 API routes**, **8 panel tabs** with **50+ sub-t
 | Caption Burn-in | Hard-burn styled captions directly into video | FFmpeg drawtext / ASS |
 | Speaker Diarization | Identify who's speaking for podcasts/interviews | pyannote.audio |
 | Multimodal Diarization | Audio + face cross-modal speaker mapping for multi-camera setups | InsightFace / facenet + pyannote |
-| Translation | Translate captions to 50+ languages | deep-translator / NLLB |
+| Translation | Translate captions to 50+ languages | NLLB / SeamlessM4T |
 | Karaoke Mode | Word-by-word highlight sync for lyrics/captions | Pillow renderer |
 | Transcript Editor | Edit segments in-panel with undo/redo and search | Built-in |
 | YouTube Chapters | LLM-powered topic change detection for chapter timestamps | Ollama / OpenAI / Anthropic |
@@ -324,7 +324,7 @@ flask, flask-cors, click, rich
 pip install opencut[standard]
 ```
 
-Adds: `faster-whisper`, `opencv-python-headless`, `Pillow`, `numpy`, `librosa`, `pydub`, `noisereduce`, `deep-translator`, `scenedetect`
+Adds: `faster-whisper`, `opencv-python-headless`, `Pillow`, `numpy`, `librosa`, `pydub`, `noisereduce`, `scenedetect`
 
 ### Full (everything, ~2-5GB depending on GPU)
 

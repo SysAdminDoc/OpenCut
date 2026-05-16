@@ -23,6 +23,21 @@ python -m opencut.server
 # Server starts on http://localhost:5679
 ```
 
+## Bootstrap Verification
+
+Run the stdlib-only bootstrap verifier before release work or when a local
+checkout behaves inconsistently:
+
+```bash
+python scripts/bootstrap_check.py
+python scripts/bootstrap_check.py --metadata-only  # skip installed dependency checks
+python scripts/bootstrap_check.py --json           # machine-readable output
+```
+
+The verifier checks Python version, local `opencut` import path, version-sync
+state, `requirements-lock.txt` auditability, runtime imports, and
+`opencut.server.create_app` import readiness.
+
 ## CEP Extension Development
 1. Enable unsigned extensions by setting registry key:
    - Windows: `HKCU\Software\Adobe\CSXS.XX\PlayerDebugMode = 1` (for each CC version)
@@ -69,10 +84,12 @@ ruff format opencut/
 ```
 
 ## Version Management
-Version is defined in `opencut/__init__.py` and must match across 7+ files.
+Version is defined in `opencut/__init__.py` and must match across release,
+extension, installer, and package files.
 Use the sync script to update all at once:
 ```bash
 python scripts/sync_version.py --set 1.3.0
+python scripts/sync_version.py --check
 ```
 
 ## UXP Panel Development

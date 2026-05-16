@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.2
+**Version**: 4.3
 **Updated**: 2026-05-16
 **Baseline**: v1.32.0 (1,275 routes, 99 blueprints, 460+ core modules, 7,551 tests, light theme + premium UX shipped)
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -11,9 +11,247 @@
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
 
-> **v4.2 status**: the 2026-05-16 research refresh below is the current source-backed plan. Older waves remain as an archive and backlog reference, but new implementation decisions should start from the fit/risk/tier ledger in this section.
+> **v4.2 status**: the 2026-05-16 research refresh below remains the full source-backed backlog ledger. Older waves remain as an archive and backlog reference, but new implementation decisions should start from the v4.3 audit and tier deltas immediately below.
+>
+> **v4.3 status**: this autonomous audit refresh supersedes v4.2 prioritization where they conflict. It preserves the existing F001-F092 ledger and source appendix, then adds live repo evidence, current GitHub competitor metadata, advisory results, and F093-F120 deltas focused on release trust, migration, packaging, quality gates, and governance.
 
 ---
+
+## 2026-05-16 v4.3 Autonomous Research Audit
+
+### Phase 0 - State of the Repo, Revalidated
+
+OpenCut is not a small prototype. It is a local-first Premiere Pro automation system with a Python/Flask localhost server, CEP and UXP panels, ExtendScript/UXP bridge code, optional FFmpeg/AI media extras, Docker packaging, Windows installer assets, and a large route/test surface [V43-L01][V43-L02][V43-L03][V43-L04]. The repo claims local/offline editing value, no subscriptions, no mandatory cloud APIs, and user-facing editing automation over generic AI novelty [V43-L01][V43-L05].
+
+| Area | Current state | Roadmap implication |
+|------|---------------|---------------------|
+| What works today | Python package `opencut`, Flask server entry points, CLI/server scripts, CEP/UXP extension folders, Dockerfile/compose files, WPF installer project, route blueprints, and broad pytest coverage are present [V43-L02][V43-L03][V43-L04]. | Treat the project as a productized local app with release engineering needs, not as a library-only repo. |
+| What the docs claim | README and roadmap advertise v1.32.0, 1,275+ routes, 99 blueprints, 7,551 tests, premium light UX, local-first workflows, and both CEP and UXP surfaces [V43-L01][V43-L05]. | Docs must become generated or checked because hand-maintained counts are drifting. |
+| What is incomplete | `scripts/sync_version.py --check` fails across CEP/UXP, installer, Inno, PowerShell, Python, and package surfaces; UXP and installer files still report older versions; source scan finds strategic stubs and `NotImplementedError` placeholders in model/FX modules [V43-L06][V43-L07]. | Version truth, stub visibility, and route readiness are release blockers. |
+| Runtime/build constraints | Python 3.9+, Flask, FFmpeg, optional heavy AI extras, Premiere CEP/UXP extension targets, Docker, PyInstaller/Inno, .NET 9 WPF installer, and Windows-first packaging are all in play [V43-L02][V43-L03][V43-L04]. | Release gates must cover Python, Node/Vite, installer, Docker, and extension manifests together. |
+| Security constraints | MIT repo with optional third-party models/codecs/plugins; local-first network posture; CSRF/path validation/SSRF/rate-limit guidance in security docs [V43-L04][V43-L08]. | Add license/model cards and advisory burn-down before broadening AI features. |
+| Live verification blockers | System Python import smoke fails on missing Flask; repo `.venv` fails through a UV trampoline spawn error; `pip-audit` finds `deep-translator` PYSEC-2022-252; `npm audit` finds Vite/esbuild advisories; `requirements-lock.txt` is non-auditable because it pins `opencut==1.4.0` [V43-L09][V43-L10][V43-L11][V43-L12]. | A clean bootstrap/audit path is the first user-developer trust gap to close. |
+| Project management signal | `gh issue list` and `gh pr list` for `SysAdminDoc/OpenCut` return no tracked items; recent git history shows repeated roadmap waves, hardening, versioning, and route fixes [V43-L13][V43-L14]. | Convert this roadmap into source-linked GitHub issues or the plan will remain invisible to contributors. |
+
+Concise state memo: OpenCut already has ambitious breadth. The next defensible roadmap should make that breadth trustworthy: one version truth, one generated route/feature inventory, visible readiness states for stubs, auditable dependencies, UXP parity before CEP end-of-life pressure grows, repeatable packaging, and source-backed contribution tickets.
+
+### Phase 1 - Research Coverage Delta
+
+v4.3 reused the v4.2 source appendix below and added a live check of direct OSS competitors, adjacent video/media systems, commercial editors, community complaints, standards/specs, academic/engineering directions, dependency changelogs, and security advisories. GitHub metadata is a point-in-time snapshot from 2026-05-16 and should be refreshed by automation before each release.
+
+| Source class | Coverage | Signal for OpenCut |
+|--------------|----------|--------------------|
+| Direct OSS editors | Shotcut, Kdenlive, OpenShot, Olive, Flowblade, Pitivi, Blender VSE, Natron, LosslessCut [V43-S01][V43-S02][V43-S03][V43-S04][V43-S05][V43-S06][V43-S07][V43-S08][V43-S09]. | Mature OSS editors compete on stability, packaging, docs, codecs, effects, and trust more than on raw route counts. |
+| Automation/adjacent OSS | auto-editor, editly, Remotion, MoviePy, OTIO, MLT, GStreamer, FFmpeg, PySceneDetect, Bolt UXP/CEP, pymiere, PremiereRemote [V43-S10][V43-S11][V43-S12][V43-S13][V43-S14][V43-S15][V43-S16][V43-S17][V43-S18][V43-S19][V43-S20][V43-S21][V43-S22]. | OpenCut can leapfrog by being a reliable local automation layer around Premiere, not by rebuilding a full NLE. |
+| Plugin/color/VFX adjacent | OpenFX, VapourSynth, OpenColorIO [V43-S23][V43-S24][V43-S25]. | Plugin and color-management roadmaps need license/sandbox boundaries before implementation. |
+| Commercial editors | Adobe Premiere Pro, DaVinci Resolve, CapCut, Descript, Submagic, Captions.ai, VEED, Kapwing, Topaz Video AI [V43-S26][V43-S27][V43-S28][V43-S29][V43-S30][V43-S31][V43-S32][V43-S33][V43-S34]. | Commercial paywalls cluster around captions, templates, collaboration, AI assist, cleanup, brand kits, batch workflows, and exports. |
+| Awesome lists/topic maps | Awesome Video Generation, Awesome Video, Awesome Video Production, Awesome Audio LLM, GitHub video-generation topics [V43-S35][V43-S36][V43-S37][V43-S38][V43-S39]. | Useful for model discovery, but OpenCut should not add another model unless it passes local install, license, hardware, and UX readiness gates. |
+| Academic and engineering research | Any-to-Bokeh, UniVidX, RelightVid, BokehCrafter, and Lumen video relighting/refocusing/generation work [V43-S59][V43-S60][V43-S61][V43-S62][V43-S63]. | These sources justify an AI evaluation harness, not direct feature promises without licensing, hardware, quality, and UX gates. |
+| Community signal | Hacker News search, Reddit search, Stack Overflow tags for Premiere/FFmpeg/OTIO, and competitor issue samples [V43-S40][V43-S41][V43-S42][V43-S43][V43-S44]. | Repeated pain is packaging, broken imports, codec failures, opaque automation, subtitle correctness, and fragile interchange. |
+| Standards/specs/APIs | Adobe Premiere UXP docs, WebVTT, FCC caption quality guidance, C2PA, OpenTimelineIO releases [V43-S45][V43-S46][V43-S47][V43-S48][V43-S14]. | UXP migration, caption QC, provenance sidecars, and OTIO compatibility should be explicit roadmap tracks. |
+| Dependency changelogs | Flask, Vite, esbuild, OpenTimelineIO, faster-whisper/CTranslate2, FFmpeg [V43-S49][V43-S50][V43-S51][V43-S52][V43-S53][V43-S17]. | Upgrade strategy needs compatibility tests, not ad hoc dependency bumps. |
+| Security advisories | GitHub Advisory Database and OSV findings for esbuild, Vite, and deep-translator [V43-S54][V43-S55][V43-S56]. | Advisory burn-down belongs in Now with a reproducible audit report. |
+
+Live OSS snapshot:
+
+| Project | Stars | Last activity checked | Activity signal | Source |
+|---------|------:|-----------------------|-----------------|--------|
+| Shotcut | 13,953 | 2026-05-16 | Active C++/Qt/MLT editor with recent pushes and multi-maintainer history. | [V43-S01] |
+| Kdenlive | 5,047 | 2026-05-16 | Active KDE/MLT editor with deep timeline/effects maturity. | [V43-S02] |
+| OpenShot | 5,765 | 2026-05-16 | Active Python/Qt editor with hundreds of open issues, indicating user support burden. | [V43-S03] |
+| Olive | 9,027 | 2024-12-05 | Popular but slower-moving NLE; useful warning on ambition versus delivery. | [V43-S04] |
+| Flowblade | 3,051 | 2026-05-14 | Active Linux-focused MLT editor. | [V43-S05] |
+| Pitivi mirror | 127 | 2026-04-05 | GStreamer-based editor lineage and pipeline lessons. | [V43-S06] |
+| Blender | 18,411 | 2026-05-16 | Major adjacent editor/compositor/VSE ecosystem. | [V43-S07] |
+| Natron | 5,365 | 2025-07-02 | Node/VFX editor; plugin and packaging cautionary reference. | [V43-S08] |
+| LosslessCut | 40,464 | 2026-05-10 | Strong UX for FFmpeg-backed lossless operations; issue backlog highlights packaging/import/metadata asks. | [V43-S09][V43-S57] |
+| auto-editor | 4,286 | 2026-05-16 | Focused automated cuts prove narrow workflows can beat broad editors. | [V43-S10] |
+| editly | 5,409 | 2025-05-12 | Scriptable video composition surface. | [V43-S11] |
+| Remotion | 47,048 | 2026-05-15 | Programmatic video rendering with strong docs/ecosystem model. | [V43-S12] |
+| MoviePy | 14,613 | 2026-03-07 | Python editing API and compatibility lessons. | [V43-S13] |
+| OpenTimelineIO | 1,863 | 2026-05-01 | Interchange core with active issues around schema/data preservation. | [V43-S14][V43-S58] |
+| MLT | 1,781 | 2026-05-14 | Underlying engine for several OSS NLEs. | [V43-S15] |
+| GStreamer | 3,167 | 2026-05-16 | Pipeline architecture reference for media capability profiling. | [V43-S16] |
+| FFmpeg | 60,167 | 2026-05-16 | Core dependency and codec/capability source of truth. | [V43-S17] |
+| PySceneDetect | 4,812 | 2026-05-05 | Scene detection UX/API reference. | [V43-S18] |
+| Bolt UXP | 166 | 2026-05-16 | UXP extension build-system reference. | [V43-S19] |
+| Bolt CEP | 482 | 2026-01-30 | CEP extension build-system reference while migrating. | [V43-S20] |
+| pymiere | 468 | 2025-03-05 | Premiere automation reference with GPL license caution. | [V43-S21] |
+| PremiereRemote | 80 | 2026-05-14 | Premiere automation reference with small active surface. | [V43-S22] |
+| OpenFX | 529 | 2026-05-07 | Plugin standard reference. | [V43-S23] |
+| VapourSynth | 2,023 | 2026-05-16 | Advanced scripted video-processing plugin ecosystem. | [V43-S24] |
+| OpenColorIO | 2,050 | 2026-05-13 | Color-management correctness reference. | [V43-S25] |
+
+### Phase 2 and 3 - Harvested Feature Delta and Prioritization
+
+F001-F092 in the v4.2 section below remain the broad harvested ledger. v4.3 adds and re-scores the following deltas from current local evidence and live external research. Scores use impact 1-5 and effort 1-5. Fit is `yes`, `conditional`, or `no` against OpenCut's local-first, Premiere-automation philosophy.
+
+| ID | Feature | Category | Sources | Prevalence | Fit | Impact | Effort | Risk/dependencies | Novelty | Tier | Placement reason |
+|----|---------|----------|---------|------------|-----|--------|--------|-------------------|---------|------|------------------|
+| F093 | Hermetic bootstrap verifier | Dev-experience/testing | [V43-L09][V43-L12] | Table-stakes | yes | 5 | 2 | Requires clean venv creation path and CI parity. | Parity | Now | Local imports and tests must work before contributor-facing feature work is credible. |
+| F094 | Lockfile/SBOM audit repair | Security/distribution | [V43-L11][V43-S56] | Table-stakes | yes | 5 | 2 | Requires removing stale `opencut==1.4.0` lock entry and regenerating auditable locks. | Parity | Now | A non-auditable lockfile blocks meaningful dependency security claims. |
+| F095 | Node advisory upgrade plan | Security/dev-experience | [V43-L10][V43-S54][V43-S55] | Table-stakes | yes | 5 | 3 | Vite 8/esbuild changes need extension build regression tests. | Parity | Now | npm audit currently reports advisory paths in the extension toolchain. |
+| F096 | UXP version-sync release blocker | Distribution/packaging | [V43-L06][V43-S45] | Table-stakes | yes | 5 | 1 | Depends on central version manifest and sync script coverage. | Parity | Now | Shipping UXP/installer files with stale versions breaks release trust. |
+| F097 | Source-linked GitHub issue seeding | Dev-experience/docs | [V43-L13][V43-S57][V43-S58] | Common | yes | 4 | 2 | Requires labels, issue templates, and source IDs. | Parity | Now | The public repo has no issue signal, so contributors cannot discover vetted work. |
+| F098 | Release smoke matrix | Testing/distribution | [V43-L06][V43-L09][V43-L10][V43-L11] | Table-stakes | yes | 5 | 3 | Must run Python import, route manifest, npm audit, pip audit, version sync, Docker smoke, and installer metadata checks. | Parity | Now | It turns current manual audit failures into repeatable release gates. |
+| F099 | Generated route/feature manifest | Docs/testing/observability | [V43-L01][V43-L05][V43-L07] | Common | yes | 5 | 3 | Requires route introspection and stable readiness states. | Leapfrog | Now | OpenCut's large route surface needs generated truth for docs, panel availability, and MCP schemas. |
+| F100 | Stub readiness policy and UI gating | UX/reliability | [V43-L07][V43-L08] | Common | yes | 5 | 3 | Needs explicit `available`, `stub`, `missing_dependency`, `experimental` states and tests. | Leapfrog | Now | Users should not discover placeholder model features by hitting 501/503 at runtime. |
+| F101 | Windows ARM64 packaging evaluation | Distribution/packaging | [V43-S57][V43-S09] | Emerging | conditional | 3 | 3 | Depends on FFmpeg/Python/.NET availability and signing decisions. | Parity | Next | Competitor issue signal shows demand, but Windows x64 reliability comes first. |
+| F102 | CSV/EDL/marker import automation | Data/integrations | [V43-S57][V43-S14][V43-S58] | Common | yes | 4 | 3 | Depends on OTIO adapter tests and Premiere marker semantics. | Parity | Next | Import automation is a high-fit Premiere workflow with clear competitor demand. |
+| F103 | Timeline marker color/source metadata preservation | Data/migration | [V43-S58][V43-S14] | Common | yes | 4 | 3 | Needs schema mapping and round-trip tests. | Parity | Next | OTIO issue signal highlights data loss; OpenCut can win on safe interchange. |
+| F104 | FCP XML and transition-trim hardening | Migration/testing | [V43-S58][V43-S14] | Common | yes | 4 | 4 | Needs fixtures from failing adapter cases. | Parity | Next | Professional workflows require boring interchange correctness. |
+| F105 | Portable review bundle with source log | Docs/data/distribution | [V43-S58][V43-S33][V43-S12] | Common | yes | 4 | 3 | Depends on project/media health report and export packaging. | Leapfrog | Next | A local-first alternative to cloud review tools should produce shareable evidence bundles. |
+| F106 | Codec/hardware capability profile | Platform/OS/performance | [V43-S17][V43-S16][V43-L02] | Table-stakes | yes | 4 | 3 | Needs FFmpeg probe, GPU detection, and fallback messaging. | Parity | Next | Most media failures are environment/capability mismatches; detect them before jobs run. |
+| F107 | WebCodecs/browser preview experiment | Platform/OS/performance | [V43-S46][V43-S12] | Emerging | conditional | 3 | 4 | Must not replace native FFmpeg/Premiere workflows. | Leapfrog | Under Consideration | Worth an experiment for previews, not a core dependency yet. |
+| F108 | OpenFX/VapourSynth adapter RFC | Plugin ecosystem | [V43-S23][V43-S24][V43-S25] | Rare | conditional | 3 | 5 | License, sandbox, binary distribution, and crash isolation are hard. | Leapfrog | Later | Potentially powerful, but unsafe before plugin manifest and packaging gates. |
+| F109 | OpenColorIO/ACES validation | Data/quality | [V43-S25][V43-S27] | Common in pro tools | yes | 4 | 4 | Requires color fixtures and UI affordances. | Parity | Next | Color correctness is pro-editor table stakes and aligns with Premiere automation. |
+| F110 | C2PA provenance sidecars | Security/data | [V43-S48][V43-S26][V43-S27] | Emerging | conditional | 3 | 3 | Needs clear scope: sidecars first, no heavyweight trust UI. | Leapfrog | Next | Generated/exported media provenance is becoming a platform expectation. |
+| F111 | Caption QC gate | Accessibility/i18n/testing | [V43-S46][V43-S47][V43-S30][V43-S31] | Table-stakes | yes | 5 | 3 | Needs SRT/WebVTT parsers, timing checks, reading-speed heuristics, and export tests. | Parity | Now | Caption output is both a commercial differentiator and an accessibility obligation. |
+| F112 | Local auth and bind-address hardening | Security/reliability | [V43-L08][V43-S49] | Table-stakes | yes | 5 | 3 | Depends on threat model for non-loopback binding and extension auth tokens. | Parity | Now | Localhost apps become security risks when host binding or CSRF assumptions drift. |
+| F113 | Optional local telemetry policy | Observability/telemetry | [V43-L08][V43-S33][V43-S12] | Common | conditional | 3 | 2 | Must be local/off by default and never cloud-required. | Parity | Under Consideration | Diagnostics help support, but the repo philosophy forbids surprise data collection. |
+| F114 | Mobile companion review/import app | Mobile/offline | [V43-S28][V43-S31][V43-S33] | Common commercially | conditional | 2 | 5 | High product-surface cost and weak fit for Premiere automation. | Parity | Rejected | A full mobile app contradicts current focus; revisit only as import/review companion after core release gates. |
+| F115 | Model/license cards for AI extras | Licensing/security/docs | [V43-S35][V43-S38][V43-S56][V43-L02] | Emerging | yes | 5 | 3 | Requires per-model license, hardware, privacy, install, and quality metadata. | Leapfrog | Now | Optional AI breadth is unsafe without explicit license and readiness disclosure. |
+| F116 | Plugin manifest v1 and sandbox boundary | Plugin ecosystem/security | [V43-S19][V43-S20][V43-S23][V43-S24] | Common | yes | 4 | 4 | Depends on readiness manifest and local auth model. | Leapfrog | Next | Enables extension growth without turning every integration into trusted core code. |
+| F117 | Good-first backlog generator | Dev-experience/docs | [V43-L13][V43-S57][V43-S58] | Table-stakes | yes | 4 | 2 | Requires labels and issue template policy. | Parity | Now | Empty issues waste the public repo's contributor channel. |
+| F118 | Roadmap source appendix linter | Docs/reliability | [V43-L05][V43-L14] | Rare | yes | 4 | 2 | Needs link extraction and tier/source validation in CI. | Leapfrog | Now | The repo's roadmap is source-heavy; CI should prevent uncited wishlist creep. |
+| F119 | Brand/template kit import, local-only | UX/integrations | [V43-S28][V43-S29][V43-S32][V43-S33] | Common commercially | conditional | 3 | 3 | Must be local assets/templates, not cloud accounts. | Parity | Later | Commercial demand is real, but it follows release trust and caption/export basics. |
+| F120 | AI feature evaluation harness | Testing/AI quality | [V43-S35][V43-S38][V43-S53][V43-S59][V43-S60][V43-S61][V43-S62][V43-S63][V43-L07] | Emerging | yes | 4 | 4 | Requires sample media, hardware profiles, latency/quality metrics, and license cards. | Leapfrog | Next | Prevents future model waves from adding unverified placeholders. |
+
+Explicit rejects and constraints:
+
+- Full cloud collaboration suite: rejected for now because it contradicts local-first/offline-first positioning and would require account, hosting, and privacy infrastructure [V43-L01][V43-S29][V43-S33].
+- Full mobile editor: rejected for now; mobile import/review may be revisited after desktop release trust, but a mobile NLE is outside the repo's current architecture [V43-S28][V43-S31][V43-S33].
+- Unscoped model chasing: rejected unless each model passes F115 and F120 gates. Awesome-list presence is not enough evidence to ship a feature [V43-S35][V43-S38][V43-L07].
+- Binary plugin marketplace: under consideration only after F116 sandbox and signing policy. OpenFX/VapourSynth power does not remove binary distribution risk [V43-S23][V43-S24].
+
+Tier deltas for v4.3:
+
+- **Now**: F093, F094, F095, F096, F097, F098, F099, F100, F111, F112, F115, F117, F118.
+- **Next**: F101, F102, F103, F104, F105, F106, F109, F110, F116, F120.
+- **Later**: F108, F119.
+- **Under Consideration**: F107, F113.
+- **Rejected**: F114 plus the reject constraints above.
+
+### v4.3 Implementation Progress
+
+- [x] F093 Hermetic bootstrap verifier - added `scripts/bootstrap_check.py`, JSON/text output, metadata-only mode, docs, focused tests, and verified the full check passes after core install.
+- [x] F094 Lockfile/SBOM audit repair - removed the stale self-package lock entry, updated vulnerable lock pins, removed the no-fix `deep-translator` dependency from install surfaces, and verified `pip-audit` reports no known vulnerabilities for both `requirements.txt` and `requirements-lock.txt`.
+- [ ] F095 Node advisory upgrade plan.
+- [x] F096 UXP version-sync release blocker - synced release, extension, installer, package, and requirements version surfaces to v1.32.0 and verified `scripts/sync_version.py --check`.
+- [ ] F097 Source-linked GitHub issue seeding.
+- [ ] F098 Release smoke matrix.
+- [ ] F099 Generated route/feature manifest.
+- [ ] F100 Stub readiness policy and UI gating.
+- [ ] F111 Caption QC gate.
+- [ ] F112 Local auth and bind-address hardening.
+- [ ] F115 Model/license cards for AI extras.
+- [ ] F117 Good-first backlog generator.
+- [ ] F118 Roadmap source appendix linter.
+
+### Phase 4 - Applied Roadmap Update
+
+This v4.3 section is the current decision layer. The older v4.2 Research Refresh remains below because it contains the full F001-F092 ledger, wave history, and original Appendix A source list. When v4.3 and v4.2 disagree, use v4.3 for priority order and use v4.2 for background evidence.
+
+### Phase 5 - Self-Audit
+
+| Check | Result |
+|-------|--------|
+| Full repo walked before web research | Passed. Top-level docs, `docs/**`, `.github/**`, manifests, source scan, git history, issue/PR state, dependency audit, and version sync were inspected before external synthesis [V43-L01]-[V43-L14]. |
+| Every v4.3 item traceable to sources | Passed. F093-F120 each cite local evidence and/or external URLs in the v4.3 source appendix. |
+| Tier placement justified | Passed. Each feature row includes fit, impact, effort, risk/dependency, novelty, tier, and one-line placement reason. |
+| Required categories covered | Passed. Security: F094/F095/F112/F115. Accessibility/i18n: F111. Observability/telemetry: F113. Testing: F098/F099/F120. Docs: F097/F117/F118. Distribution/packaging: F096/F101/F106. Plugin ecosystem: F108/F116. Mobile: F114 rejected with scope boundary. Offline/resilience: F093/F098/F105. Multi-user/collab: cloud suite rejected for local-first mismatch. Migration paths: F102-F104/F110. Upgrade strategy: F095/F098/F106. |
+| Duplicate tiers avoided | Passed. v4.3 adds deltas and explicitly says v4.2 remains background where overlapping items exist. |
+| Hostile reviewer objections addressed | Passed. The audit calls out version drift, non-auditable lockfiles, empty issues, stubbed features, missing bootstrap, advisory debt, and roadmap citation risk instead of proposing another speculative feature wave. |
+| Written to disk | Passed when this section is present in repo-root `ROADMAP.md`. |
+
+### v4.3 Source Appendix
+
+Local evidence:
+
+| ID | Source |
+|----|--------|
+| V43-L01 | `README.md` at repo root, inspected 2026-05-16. |
+| V43-L02 | `pyproject.toml`, `requirements.txt`, `requirements-lock.txt`, inspected 2026-05-16. |
+| V43-L03 | `extension/com.opencut.panel/package.json`, `extension/com.opencut.uxp/manifest.json`, inspected 2026-05-16. |
+| V43-L04 | `.github/workflows/build.yml`, `Dockerfile`, `docker-compose.yml`, `installer/src/OpenCut.Installer/OpenCut.Installer.csproj`, inspected 2026-05-16. |
+| V43-L05 | `CLAUDE.md`, `CONTRIBUTING.md`, `SECURITY.md`, `docs/UXP_MIGRATION.md`, and existing `ROADMAP.md`, inspected 2026-05-16. |
+| V43-L06 | `python scripts/sync_version.py --check`, run 2026-05-16; failed across CEP/UXP, installer, Inno, package, PowerShell, and requirements version surfaces. |
+| V43-L07 | `rg` scan for `TODO`, `FIXME`, `HACK`, `XXX`, `@deprecated`, `NotImplementedError`, `ROUTE_STUBBED`, `MISSING_DEPENDENCY`, and `stub`, run 2026-05-16. |
+| V43-L08 | `SECURITY.md` and route/security docs, inspected 2026-05-16. |
+| V43-L09 | System Python smoke import of `opencut.server.create_app`, run 2026-05-16; failed on missing Flask. |
+| V43-L10 | `npm audit --json` in `extension/com.opencut.panel`, run 2026-05-16; found esbuild/Vite advisory path. |
+| V43-L11 | `python -m pip_audit -r requirements.txt --format json` and `python -m pip_audit -r requirements-lock.txt --format json`, run 2026-05-16; found `deep-translator` PYSEC-2022-252 and non-auditable lockfile entry. |
+| V43-L12 | `Z:\repos\OpenCut\.venv\Scripts\python.exe` smoke attempt, run 2026-05-16; UV trampoline failed to spawn Python child process. |
+| V43-L13 | `gh issue list` and `gh pr list` for `SysAdminDoc/OpenCut`, run 2026-05-16; both returned empty result sets. |
+| V43-L14 | `git log -200 --date=short --pretty=format`, run 2026-05-16; showed recent roadmap waves plus security, route, versioning, and hardening commits. |
+
+External sources:
+
+| ID | URL |
+|----|-----|
+| V43-S01 | https://github.com/mltframework/shotcut |
+| V43-S02 | https://github.com/KDE/kdenlive |
+| V43-S03 | https://github.com/OpenShot/openshot-qt |
+| V43-S04 | https://github.com/olive-editor/olive |
+| V43-S05 | https://github.com/jliljebl/flowblade |
+| V43-S06 | https://github.com/GNOME/pitivi |
+| V43-S07 | https://github.com/blender/blender |
+| V43-S08 | https://github.com/NatronGitHub/Natron |
+| V43-S09 | https://github.com/mifi/lossless-cut |
+| V43-S10 | https://github.com/WyattBlue/auto-editor |
+| V43-S11 | https://github.com/mifi/editly |
+| V43-S12 | https://github.com/remotion-dev/remotion |
+| V43-S13 | https://github.com/Zulko/moviepy |
+| V43-S14 | https://github.com/AcademySoftwareFoundation/OpenTimelineIO |
+| V43-S15 | https://github.com/mltframework/mlt |
+| V43-S16 | https://gitlab.freedesktop.org/gstreamer/gstreamer |
+| V43-S17 | https://github.com/FFmpeg/FFmpeg |
+| V43-S18 | https://github.com/Breakthrough/PySceneDetect |
+| V43-S19 | https://github.com/hyperbrew/bolt-uxp |
+| V43-S20 | https://github.com/hyperbrew/bolt-cep |
+| V43-S21 | https://github.com/qmasingarbe/pymiere |
+| V43-S22 | https://github.com/sebinside/PremiereRemote |
+| V43-S23 | https://github.com/AcademySoftwareFoundation/openfx |
+| V43-S24 | https://github.com/vapoursynth/vapoursynth |
+| V43-S25 | https://github.com/AcademySoftwareFoundation/OpenColorIO |
+| V43-S26 | https://www.adobe.com/products/premiere.html |
+| V43-S27 | https://www.blackmagicdesign.com/products/davinciresolve |
+| V43-S28 | https://www.capcut.com/ |
+| V43-S29 | https://www.descript.com/video-editing |
+| V43-S30 | https://www.submagic.co/ |
+| V43-S31 | https://www.captions.ai/ |
+| V43-S32 | https://www.veed.io/ |
+| V43-S33 | https://www.kapwing.com/ |
+| V43-S34 | https://www.topazlabs.com/topaz-video-ai |
+| V43-S35 | https://github.com/backblaze-labs/awesome-video-generation |
+| V43-S36 | https://github.com/sitkevij/awesome-video |
+| V43-S37 | https://github.com/ad-si/awesome-video-production |
+| V43-S38 | https://github.com/AudioLLMs/Awesome-Audio-LLM |
+| V43-S39 | https://github.com/topics/video-generation |
+| V43-S40 | https://hn.algolia.com/?q=open%20source%20video%20editor |
+| V43-S41 | https://www.reddit.com/search/?q=open%20source%20video%20editor%20AI |
+| V43-S42 | https://stackoverflow.com/questions/tagged/adobe-premiere |
+| V43-S43 | https://stackoverflow.com/questions/tagged/ffmpeg |
+| V43-S44 | https://stackoverflow.com/questions/tagged/opentimelineio |
+| V43-S45 | https://developer.adobe.com/premiere-pro/uxp/ |
+| V43-S46 | https://www.w3.org/TR/webvtt1/ |
+| V43-S47 | https://www.fcc.gov/general/closed-captioning-video-programming-television |
+| V43-S48 | https://c2pa.org/specifications/specifications/ |
+| V43-S49 | https://flask.palletsprojects.com/ |
+| V43-S50 | https://vite.dev/guide/ |
+| V43-S51 | https://github.com/evanw/esbuild |
+| V43-S52 | https://github.com/AcademySoftwareFoundation/OpenTimelineIO/releases |
+| V43-S53 | https://github.com/SYSTRAN/faster-whisper |
+| V43-S54 | https://github.com/advisories/GHSA-67mh-4wv8-2f99 |
+| V43-S55 | https://github.com/advisories/GHSA-4w7w-66w2-5vf9 |
+| V43-S56 | https://osv.dev/vulnerability/PYSEC-2022-252 |
+| V43-S57 | https://github.com/mifi/lossless-cut/issues |
+| V43-S58 | https://github.com/AcademySoftwareFoundation/OpenTimelineIO/issues |
+| V43-S59 | https://openreview.net/forum?id=h05AulYT7g |
+| V43-S60 | https://huggingface.co/papers/2605.00658 |
+| V43-S61 | https://arxiv.org/abs/2501.16330 |
+| V43-S62 | https://ojs.aaai.org/index.php/AAAI/article/view/37969 |
+| V43-S63 | https://huggingface.co/papers/2508.12945 |
 
 ## 2026-05-16 Research Refresh
 
