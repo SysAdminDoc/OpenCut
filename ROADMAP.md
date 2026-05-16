@@ -2,7 +2,7 @@
 
 **Version**: 4.3
 **Updated**: 2026-05-16
-**Baseline**: v1.32.0 (1,275 routes, 99 blueprints, 460+ core modules, 7,551 tests, light theme + premium UX shipped)
+**Baseline**: v1.32.0 (1,344 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
 > **⚡ Active work** lives in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
@@ -140,7 +140,7 @@ Tier deltas for v4.3:
 - [x] F096 UXP version-sync release blocker - synced release, extension, installer, package, and requirements version surfaces to v1.32.0 and verified `scripts/sync_version.py --check`.
 - [x] F097 Source-linked GitHub issue seeding - added `.github/ISSUE_TEMPLATE/{bug,feature,good_first}.yml`, `.github/labels.yml`, and a curated `.github/issue-seeds.yml` covering every v4.3 Now/Next tier row; `scripts/seed_github_issues.py` ships the seeder (PyYAML-optional, dry-run by default) plus a Python parity test suite (`tests/test_seed_github_issues.py`).
 - [x] F098 Release smoke matrix - `scripts/release_smoke.py` chains bootstrap, version-sync, ruff, focused pytest gates, pip-audit, the npm advisory allow-list, and the panel-source verifier into one runner with `--json`/`--only`/`--skip` filters; CI invokes it on Linux after the dedicated lint/test steps, and `tests/test_release_smoke.py` covers status/runner contract.
-- [ ] F099 Generated route/feature manifest.
+- [x] F099 Generated route/feature manifest - `opencut/tools/dump_route_manifest.py` walks `Flask.url_map` and writes `opencut/_generated/route_manifest.json` (currently 1,344 routes across 101 blueprints); the manifest is now the single source of truth for README/ROADMAP route counts, `release_smoke.py --only route-manifest` enforces drift via CI, and `tests/test_route_manifest.py` pins the contract.
 - [ ] F100 Stub readiness policy and UI gating.
 - [ ] F111 Caption QC gate.
 - [ ] F112 Local auth and bind-address hardening.
