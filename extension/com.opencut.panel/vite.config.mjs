@@ -20,7 +20,7 @@ import { resolve } from "path";
 import { defineConfig } from "vite";
 
 const clientRoot = resolve(__dirname, "client");
-const classicScriptPlaceholders = ["CSInterface.js", "main.js"];
+const classicScriptPlaceholders = ["CSInterface.js", "feature-state.js", "main.js"];
 
 function preserveCepClassicScripts() {
   return {
@@ -29,7 +29,7 @@ function preserveCepClassicScripts() {
       order: "pre",
       handler(html) {
         return html.replace(
-          /<script\s+src="(CSInterface\.js|main\.js)"><\/script>/g,
+          /<script\s+src="(CSInterface\.js|feature-state\.js|main\.js)"><\/script>/g,
           (_, src) => `<!-- OPENCUT_CLASSIC_SCRIPT:${src} -->`,
         );
       },

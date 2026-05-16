@@ -17822,3 +17822,49 @@ html.theme-light .status-bar .status-jobs,
 html.theme-light .status-bar .status-separator {
     color: #526071;
 }
+
+/* ============================================================
+   Feature readiness gating (F100)
+   Buttons/links with data-feature-id whose backend isn't
+   `available` get this treatment so the user sees the state
+   before clicking.
+   ============================================================ */
+.oc-feature-gated {
+    opacity: 0.55;
+    cursor: not-allowed !important;
+    position: relative;
+}
+
+.oc-feature-gated::after {
+    content: attr(data-feature-chip);
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 6px;
+    border-radius: 999px;
+    font-size: 0.65rem;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    line-height: 1.4;
+    font-weight: 600;
+    background: rgba(255, 189, 99, 0.18);
+    color: #ffbd63;
+    border: 1px solid rgba(255, 189, 99, 0.3);
+}
+
+.oc-feature-gated.oc-feature-state-experimental::after {
+    background: rgba(119, 167, 255, 0.18);
+    color: #77a7ff;
+    border-color: rgba(119, 167, 255, 0.3);
+}
+
+.oc-feature-gated.oc-feature-state-stub::after {
+    background: rgba(105, 116, 129, 0.18);
+    color: #b5bfca;
+    border-color: rgba(105, 116, 129, 0.32);
+}
+
+.oc-feature-gated.oc-feature-state-missing_dependency::after {
+    background: rgba(255, 189, 99, 0.18);
+    color: #ffbd63;
+    border-color: rgba(255, 189, 99, 0.3);
+}

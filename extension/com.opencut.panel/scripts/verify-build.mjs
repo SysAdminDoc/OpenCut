@@ -22,6 +22,7 @@ const SOURCE_FILES = [
   "client/main.js",
   "client/style.css",
   "client/CSInterface.js",
+  "client/feature-state.js",
   "CSXS/manifest.xml",
   "host/index.jsx",
 ];
@@ -43,7 +44,7 @@ for (const rel of SOURCE_FILES) {
 const distIndex = resolve(panelRoot, "client/dist/index.html");
 if (existsSync(distIndex)) {
   const html = readFileSync(distIndex, "utf8");
-  for (const tag of ["CSInterface.js", "main.js"]) {
+  for (const tag of ["CSInterface.js", "feature-state.js", "main.js"]) {
     if (!html.includes(`<script src="${tag}"`)) {
       failures.push(`client/dist/index.html lost classic script reference for ${tag}`);
     }

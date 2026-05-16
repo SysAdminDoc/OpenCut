@@ -2104,6 +2104,8 @@
                 syncSettingsBackendSummary(true);
                 updateButtons();
                 loadCapabilities();
+                // F100: refresh feature gating now that we know the backend.
+                refreshFeatureGating();
                 // Restart media scan + status bar pollers after a reconnect.
                 // cleanupTimers() killed them on the preceding disconnect and
                 // without this they would never come back until full reload.
@@ -14263,6 +14265,20 @@
     // ================================================================
     // Init
     // ================================================================
+    // F100: refresh feature readiness gating once we know the backend URL.
+    // Buttons opt in via data-feature-id; the helper greys them out when
+    // their feature isn't `available` so the user sees the state before
+    // clicking instead of hitting a 503/501 round-trip.
+    function refreshFeatureGating() {
+        var fs = (typeof window !== "undefined") ? window.OpenCutFeatureState : null;
+        if (!fs || typeof BACKEND === "undefined" || !BACKEND) return;
+        try {
+            fs.fetchManifest(BACKEND)
+                .then(function () { fs.applyGating(document); })
+                .catch(function () { /* offline / panel-only mode; ignore */ });
+        } catch (err) { /* defensive */ }
+    }
+
     document.addEventListener("DOMContentLoaded", function () {
         initCSInterface();
         initDOM();
