@@ -2683,6 +2683,24 @@ def system_ai_eval_list():
         return safe_error(exc, "system_ai_eval_list")
 
 
+@system_bp.route("/system/ocio", methods=["GET"])
+def system_ocio_validate():
+    """Return the OCIO validation summary (F109).
+
+    Reports availability, the active config, roles, colour spaces,
+    looks, and findings — including non-fatal warnings like
+    "no ACES space found" so the panel can suggest installing the
+    Studio config.
+    """
+    try:
+        from opencut.core.ocio_validate import validate_ocio
+
+        result = validate_ocio()
+        return jsonify(result.as_dict())
+    except Exception as exc:
+        return safe_error(exc, "system_ocio_validate")
+
+
 @system_bp.route("/system/capabilities", methods=["GET"])
 def system_capabilities():
     """Return the capability profile (F106).
