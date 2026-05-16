@@ -125,7 +125,12 @@ TARGETS = [
     # UXP index.html version display
     (
         "extension/com.opencut.uxp/index.html",
-        r'(<span class="oc-version">v)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
+        r'(<span class="oc-version"[^>]*>v)[0-9]+\.[0-9]+\.[0-9]+(</span>)',
+        r'\g<1>{v}\g<2>',
+    ),
+    (
+        "extension/com.opencut.uxp/index.html",
+        r'(<span id="uxpVersionDisplay">)[0-9]+\.[0-9]+\.[0-9]+( \(UXP\)</span>)',
         r'\g<1>{v}\g<2>',
     ),
 ]
@@ -218,7 +223,7 @@ def main() -> None:
         if all_ok:
             print(f"\nAll files in sync at v{version}.")
         else:
-            print(f"\nVersion mismatch detected! Run: python scripts/sync_version.py")
+            print("\nVersion mismatch detected! Run: python scripts/sync_version.py")
             sys.exit(1)
         return
 

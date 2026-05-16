@@ -142,21 +142,53 @@ const WORKSPACE_GUIDES = {
   },
 };
 
+function isTimeoutError(err) {
+  const message = String(err?.message || err || "");
+  return err?.name === "AbortError" || /timed out|abort/i.test(message);
+}
+
+async function fetchWithTimeout(url, opts = {}, timeoutMs = 120000) {
+  const options = { ...opts };
+  let timer = null;
+
+  if (typeof AbortController !== "undefined" && !options.signal) {
+    const controller = new AbortController();
+    timer = setTimeout(() => controller.abort(), timeoutMs);
+    options.signal = controller.signal;
+    try {
+      return await fetch(url, options);
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`Request timed out after ${timeoutMs}ms`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([fetch(url, options), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function safeDomIdSegment(value) {
+  return String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "item";
+}
+
 async function detectBackend() {
   // Try ports 5679-5689 like CEP panel does
   for (let port = 5679; port <= BACKEND_MAX_PORT; port++) {
     const url = `http://127.0.0.1:${port}`;
     try {
-      // AbortSignal.timeout() may not exist in older UXP runtimes
-      const opts = {};
-      if (typeof AbortSignal !== "undefined" && AbortSignal.timeout) {
-        opts.signal = AbortSignal.timeout(500);
-      } else {
-        const ac = new AbortController();
-        setTimeout(() => ac.abort(), 500);
-        opts.signal = ac.signal;
-      }
-      const resp = await fetch(`${url}/health`, opts);
+      const resp = await fetchWithTimeout(`${url}/health`, {}, 500);
       if (resp.ok) return url;
     } catch (e) { /* try next port */ }
   }
@@ -468,17 +500,17 @@ const BackendClient = (() => {
     // forever. Async job submission returns within seconds; the actual
     // long-running work is observed via SSE/polling, not held in this
     // request.
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), 120000);
-
-    const opts = { method, headers, signal: ac.signal };
+    const opts = { method, headers };
     if (body && method !== "GET") opts.body = JSON.stringify(body);
 
     let resp;
     try {
-      resp = await fetch(url, opts);
-    } finally {
-      clearTimeout(timer);
+      resp = await fetchWithTimeout(url, opts, 120000);
+    } catch (err) {
+      if (isTimeoutError(err)) {
+        throw new Error("Backend request timed out. Check that OpenCut Server is still running, then try again.");
+      }
+      throw err;
     }
 
     // Refresh CSRF token if provided in response headers
@@ -520,7 +552,10 @@ const BackendClient = (() => {
       }
       return { ok: true, data, status: resp.status };
     } catch (err) {
-      return { ok: false, error: err.message ?? "Network error" };
+      const fallback = isTimeoutError(err)
+        ? "Backend request timed out. Check that OpenCut Server is still running, then try again."
+        : "Network error";
+      return { ok: false, error: err.message ?? fallback };
     }
   }
 
@@ -988,7 +1023,8 @@ const UIController = (() => {
       .replace(/&/g, "&amp;")
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
   return {
@@ -1086,7 +1122,7 @@ function getWorkspaceSource(tabId) {
 }
 
 function formatWorkspaceSource(pathValue) {
-  if (!pathValue) return "Awaiting clip";
+  if (!pathValue) return "No source selected";
   const normalized = pathValue.replace(/\\/g, "/");
   const parts = normalized.split("/");
   return parts[parts.length - 1] || pathValue;
@@ -1260,7 +1296,7 @@ function updateCaptionsWorkspaceSummary() {
     }
   } else if (!hasSource) {
     setCaptionsSessionState(
-      "Needs source",
+      "Choose media",
       "empty",
       "Choose a clip, then transcribe to unlock chapters, repeat review, and subtitle export.",
       "idle"
@@ -1769,12 +1805,12 @@ function updateWorkspaceOverview(tabId) {
     };
   } else if (TABS_REQUIRING_SOURCE.has(activeTab) && !sourcePath) {
     guide = {
-      kicker: "Needs source",
+      kicker: "Choose media",
       title: "Choose one active shot to unlock this workspace.",
       text: "OpenCut keeps the current clip in sync across Cut, Captions, Audio, and Video so you can move through the edit without repeated setup.",
       state: "warning",
       action: "choose-clip",
-      actionLabel: "Choose Clip",
+      actionLabel: "Choose Media",
     };
   } else if (activeTab === "timeline" && !lastCuts.length && !lastMarkers.length) {
     guide = {
@@ -4446,6 +4482,7 @@ async function uxpLoadEngines() {
   let issueCount = 0;
   let availableEngineCount = 0;
   let html = "";
+  const usedEngineIds = new Set();
 
   for (const domain of domains) {
     const info = engines[domain];
@@ -4456,6 +4493,14 @@ async function uxpLoadEngines() {
     const activeInfo = entries.find(eng => eng.name === active) || null;
     const preferredInfo = entries.find(eng => eng.name === preferred) || null;
     const availableCount = entries.filter(eng => eng.available).length;
+    const domainIdBase = `engine-${safeDomIdSegment(domain)}`;
+    let domainId = domainIdBase;
+    let idSuffix = 2;
+    while (usedEngineIds.has(domainId)) {
+      domainId = `${domainIdBase}-${idSuffix}`;
+      idSuffix += 1;
+    }
+    usedEngineIds.add(domainId);
     availableEngineCount += availableCount;
     const modeLabel = preferredInfo ? "Pinned" : availableCount ? "Auto" : "Needs attention";
     const modeClass = preferredInfo ? "manual" : availableCount ? "auto" : "warning";
@@ -4482,18 +4527,18 @@ async function uxpLoadEngines() {
     html += `<div class="oc-engine-row">`;
     html += `<div class="oc-engine-copy">`;
     html += `<div class="oc-engine-title-row">`;
-    html += `<label class="oc-engine-domain" for="engine-${domain}">${UIController.escapeHtml(domainLabel)}</label>`;
-    html += `<span class="oc-engine-state is-${modeClass}">${modeLabel}</span>`;
+    html += `<label class="oc-engine-domain" for="${UIController.escapeHtml(domainId)}">${UIController.escapeHtml(domainLabel)}</label>`;
+    html += `<span class="oc-engine-state is-${UIController.escapeHtml(modeClass)}">${UIController.escapeHtml(modeLabel)}</span>`;
     html += `</div>`;
     html += `<p class="oc-engine-meta">${UIController.escapeHtml(summary)}</p>`;
     html += `</div>`;
-    html += `<select class="oc-select oc-engine-sel" id="engine-${domain}" data-domain="${domain}" aria-label="${UIController.escapeHtml(domainLabel)} engine preference">`;
+    html += `<select class="oc-select oc-engine-sel" id="${UIController.escapeHtml(domainId)}" data-domain="${UIController.escapeHtml(domain)}" aria-label="${UIController.escapeHtml(domainLabel)} engine preference">`;
     html += `<option value="">Auto (best available)</option>`;
     for (const eng of entries) {
       const sel = (preferred === eng.name) ? " selected" : "";
       const avail = eng.available ? "" : " - unavailable";
       const label = `${eng.display_name} - ${eng.quality}/${eng.speed}${avail}${eng.name === active ? " - active" : ""}`;
-      html += `<option value="${eng.name}"${sel}>${UIController.escapeHtml(label)}</option>`;
+      html += `<option value="${UIController.escapeHtml(eng.name)}"${sel}>${UIController.escapeHtml(label)}</option>`;
     }
     html += `</select></div>`;
   }
