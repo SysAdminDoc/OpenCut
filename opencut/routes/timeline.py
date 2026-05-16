@@ -485,3 +485,63 @@ def timeline_export_otio():
         }), 400
     except Exception as exc:
         return safe_error(exc, "timeline_export_otio")
+
+
+@timeline_bp.route("/markers/import", methods=["POST"])
+@require_csrf
+def markers_import():
+    """Import CSV / Premiere CSV / EDL markers (F102).
+
+    Request body (JSON)::
+
+        {
+            "format": "csv" | "premiere_csv" | "edl",      # optional; auto-detected when omitted
+            "fps": 30.0,                                    # optional; default 30
+            "path": "/abs/path/to/markers.csv",             # OR
+            "text": "..."                                    # inline content
+        }
+
+    The response payload is the normalised marker list. Callers (panel
+    or JSX bridge) are responsible for actually inserting them into the
+    active Premiere sequence — we keep this route data-only so the
+    same import can be re-used by tests, CLI tooling, and the MCP
+    server.
+    """
+    from flask import request
+
+    from opencut.core.marker_import import detect_format, import_markers
+
+    try:
+        data = get_json_dict()
+        explicit_format = (data.get("format") or "").strip().lower() or None
+        fps = safe_float(data.get("fps", 30.0), default=30.0)
+        text = data.get("text")
+        path = (data.get("path") or "").strip() or None
+        if path:
+            try:
+                path = validate_filepath(path)
+            except ValueError as exc:
+                return jsonify({"error": str(exc)}), 400
+        if not text and not path:
+            return jsonify({"error": "supply either 'text' or 'path'"}), 400
+        if text and path:
+            return jsonify({"error": "supply only one of 'text' or 'path'"}), 400
+
+        if not explicit_format and path:
+            explicit_format = detect_format(path)
+
+        result = import_markers(
+            text=text if text is not None else None,
+            path=path if text is None else None,
+            fps=fps,
+            format=explicit_format,
+        )
+        payload = result.as_dict()
+        payload["count"] = len(result.markers)
+        return jsonify(payload)
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except FileNotFoundError as exc:
+        return jsonify({"error": f"path not found: {exc.filename}"}), 404
+    except Exception as exc:
+        return safe_error(exc, "markers_import")

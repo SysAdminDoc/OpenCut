@@ -335,6 +335,15 @@ _FEATURES: List[FeatureRecord] = [
         routes=["/system/capabilities"],
     ),
     FeatureRecord(
+        feature_id="markers.import",
+        label="CSV / EDL / Premiere marker import",
+        category="export",
+        state=STATE_AVAILABLE,
+        install_hint="bundled (no extra deps)",
+        docs="ROADMAP.md#F102",
+        routes=["/markers/import"],
+    ),
+    FeatureRecord(
         feature_id="lipsync.latentsync",
         label="LatentSync diffusion lip-sync",
         category="ai",
