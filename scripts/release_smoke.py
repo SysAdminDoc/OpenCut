@@ -246,6 +246,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_fcp_transitions.py",
     "tests/test_ocio_validate.py",
     "tests/test_windows_arm64_doc.py",
+    "tests/test_project_health.py",
     "tests/test_hardening.py::test_uxp_engine_registry_escapes_dynamic_attribute_values",
     "tests/test_hardening.py::test_uxp_fetch_wrapper_clears_backend_timeout_timers",
     "tests/test_config_and_userdata.py::test_server_main_rejects_remote_bind_without_opt_in",
