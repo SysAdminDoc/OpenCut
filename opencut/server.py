@@ -5,6 +5,7 @@ Local HTTP server that the Premiere Pro CEP panel communicates with.
 Runs on localhost:5679 and handles all processing requests.
 """
 
+import ipaddress
 import logging
 import logging.handlers
 import os
@@ -17,6 +18,8 @@ from contextlib import suppress
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+
+_TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
 
 # ---------------------------------------------------------------------------
 # Logging Setup
@@ -722,6 +725,21 @@ def _pause_on_fatal_exit() -> None:
         pass
 
 
+def _is_loopback_host(host: str) -> bool:
+    """Return True when ``host`` cannot expose the API beyond this machine."""
+    normalized = str(host or "").strip().lower()
+    if normalized == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(normalized.strip("[]")).is_loopback
+    except ValueError:
+        return False
+
+
+def _remote_bind_allowed() -> bool:
+    return os.environ.get("OPENCUT_ALLOW_REMOTE", "").strip().lower() in _TRUE_ENV_VALUES
+
+
 def main():
     """Entry point for `opencut-server` console script (pyproject.toml).
 
@@ -730,6 +748,7 @@ def main():
         OPENCUT_HOST   — bind address (default 127.0.0.1)
         OPENCUT_PORT   — listen port (default 5679)
         OPENCUT_DEBUG  — enable Flask debug mode when set to "true"/"1"
+        OPENCUT_ALLOW_REMOTE — set to "1" to allow non-loopback binds
     """
     try:
         import argparse
@@ -759,6 +778,18 @@ def main():
             os.environ["HF_HUB_DISABLE_EXPERIMENTAL_WARNING"] = "1"
             sys.exit(download_models(args.download_models))
         else:
+            if not _is_loopback_host(args.host):
+                if not _remote_bind_allowed():
+                    print("")
+                    print("  ERROR: Refusing to bind OpenCut to a non-loopback host.")
+                    print(f"  Requested host: {args.host}")
+                    print("  OpenCut's backend is a local, single-user API. Keep it on")
+                    print("  127.0.0.1 unless you intentionally expose it on a trusted network.")
+                    print("  Set OPENCUT_ALLOW_REMOTE=1 to allow a remote bind.")
+                    return 2
+                print("")
+                print(f"  WARNING: Binding OpenCut to non-loopback host {args.host}.")
+                print("  Only use this on a trusted network.")
             run_server(host=args.host, port=args.port, debug=args.debug)
             return 0
     except Exception as _fatal:

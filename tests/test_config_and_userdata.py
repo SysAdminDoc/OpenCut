@@ -223,3 +223,46 @@ def test_server_main_fatal_noninteractive_returns_nonzero(monkeypatch, tmp_path)
 
     assert server.main() == 1
     assert prompts == []
+
+
+def test_server_main_rejects_remote_bind_without_opt_in(monkeypatch, capsys):
+    import opencut.server as server
+
+    calls = []
+
+    monkeypatch.delenv("OPENCUT_ALLOW_REMOTE", raising=False)
+    monkeypatch.setattr(server.sys, "argv", ["opencut-server", "--host", "0.0.0.0"])
+    monkeypatch.setattr(server, "run_server", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    assert server.main() == 2
+    assert calls == []
+
+    out = capsys.readouterr().out
+    assert "Refusing to bind OpenCut to a non-loopback host" in out
+    assert "OPENCUT_ALLOW_REMOTE=1" in out
+
+
+def test_server_main_allows_remote_bind_with_explicit_opt_in(monkeypatch, capsys):
+    import opencut.server as server
+
+    calls = []
+
+    monkeypatch.setenv("OPENCUT_ALLOW_REMOTE", "1")
+    monkeypatch.setattr(server.sys, "argv", ["opencut-server", "--host", "0.0.0.0", "--port", "5680"])
+    monkeypatch.setattr(server, "run_server", lambda *args, **kwargs: calls.append((args, kwargs)))
+
+    assert server.main() == 0
+    assert calls == [((), {"host": "0.0.0.0", "port": 5680, "debug": False})]
+
+    out = capsys.readouterr().out
+    assert "WARNING: Binding OpenCut to non-loopback host 0.0.0.0" in out
+
+
+def test_server_loopback_host_detection_accepts_only_local_addresses():
+    import opencut.server as server
+
+    assert server._is_loopback_host("127.0.0.1")
+    assert server._is_loopback_host("localhost")
+    assert server._is_loopback_host("::1")
+    assert not server._is_loopback_host("0.0.0.0")
+    assert not server._is_loopback_host("192.168.1.25")

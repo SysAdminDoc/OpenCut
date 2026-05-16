@@ -19,6 +19,8 @@ import uuid
 from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Optional
 
+from werkzeug.utils import secure_filename
+
 from opencut.helpers import OPENCUT_DIR
 
 logger = logging.getLogger("opencut")
@@ -136,8 +138,10 @@ def upload_file(session_id: str, filename: str, file_data: bytes) -> UploadedFil
     if session is None:
         raise ValueError(f"Session not found: {session_id}")
 
-    # Sanitize filename
-    safe_name = os.path.basename(filename).replace("..", "").strip()
+    # Sanitize filename. Browsers usually submit a basename, but callers and
+    # tests can pass path-shaped names; normalize both slash styles first.
+    raw_name = str(filename or "").replace("\\", "/").rsplit("/", 1)[-1]
+    safe_name = secure_filename(raw_name)
     if not safe_name:
         safe_name = f"upload_{uuid.uuid4().hex[:8]}"
 
@@ -356,6 +360,28 @@ _SPA_HTML = """\
   const fileList = document.getElementById('fileList');
   const opsGrid = document.getElementById('opsGrid');
 
+  function textEl(tag, className, text) {
+    const el = document.createElement(tag);
+    if (className) el.className = className;
+    el.textContent = text == null ? '' : String(text);
+    return el;
+  }
+
+  function buildOperationCard(cat, op) {
+    const card = document.createElement('div'); card.className='op-card';
+    card.appendChild(textEl('div', 'cat', cat));
+    card.appendChild(textEl('h3', '', op.name));
+    card.appendChild(textEl('p', '', op.description));
+    return card;
+  }
+
+  function buildFileItem(filename, size) {
+    const item = document.createElement('div'); item.className='file-item';
+    item.appendChild(textEl('span', '', filename));
+    item.appendChild(textEl('span', '', `${(size/1024).toFixed(1)} KB`));
+    return item;
+  }
+
   async function initSession() {
     const r = await fetch('/web-ui/session/create', {method:'POST', headers:{'Content-Type':'application/json'}, body:'{}'});
     const d = await r.json(); sessionId = d.session_id;
@@ -366,9 +392,7 @@ _SPA_HTML = """\
     const d = await r.json();
     for (const [cat, ops] of Object.entries(d.catalog || {})) {
       ops.forEach(op => {
-        const card = document.createElement('div'); card.className='op-card';
-        card.innerHTML = `<div class="cat">${cat}</div><h3>${op.name}</h3><p>${op.description}</p>`;
-        opsGrid.appendChild(card);
+        opsGrid.appendChild(buildOperationCard(cat, op));
       });
     }
   }
@@ -385,9 +409,7 @@ _SPA_HTML = """\
       const fd = new FormData(); fd.append('file', file); fd.append('session_id', sessionId);
       const r = await fetch('/web-ui/upload', {method:'POST', body:fd});
       const d = await r.json();
-      const item = document.createElement('div'); item.className='file-item';
-      item.innerHTML = `<span>${d.filename || file.name}</span><span>${(file.size/1024).toFixed(1)} KB</span>`;
-      fileList.appendChild(item);
+      fileList.appendChild(buildFileItem(d.filename || file.name, file.size));
     }
   }
 

@@ -164,6 +164,20 @@ class TestWebUIUpload(unittest.TestCase):
             self.assertNotIn("/", uploaded.filename)
 
     @patch("opencut.core.web_ui.WEB_UPLOADS_DIR")
+    def test_upload_sanitizes_windows_paths_and_markup(self, mock_dir):
+        mock_dir.__str__ = lambda s: self.tmp
+        with patch("opencut.core.web_ui.WEB_UPLOADS_DIR", self.tmp):
+            from opencut.core.web_ui import create_session, upload_file
+
+            session = create_session()
+            uploaded = upload_file(session.session_id, r"C:\temp\<script>alert(1)</script>.mp4", b"test")
+
+            self.assertNotIn("\\", uploaded.filename)
+            self.assertNotIn("/", uploaded.filename)
+            self.assertNotIn("<", uploaded.filename)
+            self.assertTrue(uploaded.filename.endswith(".mp4"))
+
+    @patch("opencut.core.web_ui.WEB_UPLOADS_DIR")
     def test_upload_empty_filename_gets_default(self, mock_dir):
         mock_dir.__str__ = lambda s: self.tmp
         with patch("opencut.core.web_ui.WEB_UPLOADS_DIR", self.tmp):
@@ -254,6 +268,17 @@ class TestWebUIOperationCatalog(unittest.TestCase):
         from opencut.core.web_ui import serve_web_ui
         html = serve_web_ui()
         self.assertIn("<script>", html)
+
+    def test_serve_web_ui_uses_text_nodes_for_dynamic_content(self):
+        from opencut.core.web_ui import serve_web_ui
+
+        html = serve_web_ui()
+
+        self.assertIn("textContent", html)
+        self.assertIn("buildOperationCard", html)
+        self.assertIn("buildFileItem", html)
+        self.assertNotIn("card.innerHTML", html)
+        self.assertNotIn("item.innerHTML", html)
 
     def test_uploaded_file_dataclass(self):
         from opencut.core.web_ui import UploadedFile

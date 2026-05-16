@@ -2903,7 +2903,7 @@
             el.workspaceClipStatus.title = selectedPath || selectedName;
             el.workspaceClipStatus.classList.add("is-active");
         } else {
-            el.workspaceClipStatus.textContent = "No media selected";
+            el.workspaceClipStatus.textContent = "Choose media to begin";
             el.workspaceClipStatus.title = "Choose a clip or drop media to start";
             el.workspaceClipStatus.classList.remove("is-active");
         }

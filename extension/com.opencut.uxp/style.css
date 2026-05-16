@@ -3580,3 +3580,284 @@ body {
     white-space: normal;
   }
 }
+
+/* =========================================================
+   PREMIUM POLISH LAYER — match CEP studio finish
+   ========================================================= */
+:root {
+  --bg-primary: #08090b;
+  --bg-secondary: #0d0f13;
+  --bg-card: #181d26;
+  --bg-card-hdr: #202631;
+  --bg-input: #0f1319;
+  --bg-hover: #242b36;
+  --accent: #77a7ff;
+  --accent-hover: #9bbdff;
+  --accent-dim: rgba(119, 167, 255, 0.13);
+  --text-primary: #f4f6f8;
+  --text-secondary: #b5bfca;
+  --text-disabled: #697481;
+  --border: rgba(220, 230, 242, 0.11);
+  --border-light: rgba(220, 230, 242, 0.17);
+  --border-focus: rgba(119, 167, 255, 0.82);
+  --success: #4fd6a4;
+  --success-dim: rgba(79, 214, 164, 0.12);
+  --error: #ff6f73;
+  --error-dim: rgba(255, 111, 115, 0.13);
+  --warning: #ffbd63;
+  --warning-dim: rgba(255, 189, 99, 0.14);
+  --info: #77a7ff;
+  --radius-sm: 4px;
+  --radius: 6px;
+  --radius-lg: 8px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.24);
+  --shadow: 0 8px 22px rgba(0, 0, 0, 0.20);
+  --shadow-lg: 0 18px 46px rgba(0, 0, 0, 0.30);
+}
+
+body,
+button,
+input,
+select,
+textarea {
+  letter-spacing: 0;
+}
+
+body {
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.018), transparent 34%),
+    linear-gradient(135deg, rgba(119, 167, 255, 0.052), transparent 42%),
+    var(--bg-primary);
+}
+
+.oc-header,
+.oc-tabs,
+.oc-status-bar,
+.oc-processing-banner {
+  background: rgba(13, 15, 19, 0.94);
+  border-color: rgba(220, 230, 242, 0.10);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.oc-header {
+  min-height: 40px;
+}
+
+.oc-logo {
+  font-weight: 680;
+  letter-spacing: 0;
+}
+
+.oc-version,
+.oc-connection,
+.oc-status-pill,
+.oc-inline-value,
+.oc-workspace-meta-item {
+  border: 1px solid rgba(220, 230, 242, 0.13);
+  background: rgba(255, 255, 255, 0.045);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.oc-content {
+  gap: 14px;
+}
+
+.oc-workspace-overview,
+.oc-workspace-guide,
+.oc-card,
+.oc-result-area,
+.oc-empty-state,
+.oc-toast {
+  border-radius: var(--radius-lg);
+  border: 1px solid rgba(220, 230, 242, 0.11);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.045), rgba(255, 255, 255, 0.020)),
+    rgba(17, 20, 26, 0.88);
+  box-shadow: var(--shadow);
+}
+
+.oc-card:hover,
+.oc-workspace-guide:hover,
+.oc-workspace-meta-item:hover {
+  border-color: rgba(220, 230, 242, 0.18);
+  box-shadow: var(--shadow-lg);
+}
+
+.oc-section-title,
+.oc-card-header span,
+.oc-workspace-kicker,
+.oc-workspace-guide-kicker,
+.oc-empty-state-kicker,
+.oc-toast-title,
+.oc-label {
+  letter-spacing: 0;
+}
+
+.oc-workspace-title,
+.oc-section-title,
+.oc-card-header span {
+  color: #f8fafc;
+  font-weight: 680;
+}
+
+.oc-workspace-subtitle,
+.oc-workspace-guide-text,
+.oc-empty-state p,
+.oc-hint,
+.oc-status-line {
+  color: var(--text-secondary);
+}
+
+.oc-tab {
+  min-height: 34px;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  font-weight: 650;
+}
+
+.oc-tab:hover {
+  background: rgba(255, 255, 255, 0.055);
+  border-color: rgba(220, 230, 242, 0.13);
+}
+
+.oc-tab.active {
+  background: rgba(119, 167, 255, 0.13);
+  border-color: rgba(119, 167, 255, 0.24);
+  color: #f8fbff;
+  box-shadow: inset 0 -2px 0 rgba(119, 167, 255, 0.72);
+}
+
+.oc-btn,
+.oc-cancel-btn,
+.oc-icon-btn,
+.oc-chip {
+  min-height: 32px;
+  border-radius: var(--radius);
+  font-weight: 650;
+  letter-spacing: 0;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease,
+    transform 140ms ease;
+}
+
+.oc-btn-primary {
+  border-color: rgba(119, 167, 255, 0.42);
+  background: linear-gradient(180deg, rgba(119, 167, 255, 0.95), rgba(71, 114, 219, 0.95));
+  color: #ffffff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 9px 22px rgba(65, 111, 214, 0.18);
+}
+
+.oc-btn-primary:not(:disabled):hover {
+  background: linear-gradient(180deg, rgba(142, 185, 255, 1), rgba(86, 132, 234, 1));
+  border-color: rgba(163, 196, 255, 0.64);
+  transform: translateY(-1px);
+}
+
+.oc-btn-secondary,
+.oc-cancel-btn,
+.oc-icon-btn {
+  border-color: rgba(220, 230, 242, 0.14);
+  background: rgba(255, 255, 255, 0.045);
+  color: #dbe5ef;
+}
+
+.oc-btn-secondary:not(:disabled):hover,
+.oc-cancel-btn:hover,
+.oc-icon-btn:hover,
+.oc-chip:hover {
+  border-color: rgba(220, 230, 242, 0.24);
+  background: rgba(255, 255, 255, 0.075);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.oc-btn:disabled,
+.oc-cancel-btn:disabled,
+.oc-chip[aria-disabled="true"] {
+  opacity: 0.52;
+  filter: saturate(0.72);
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.oc-input,
+.oc-select,
+input[type="text"],
+input[type="number"],
+select,
+textarea {
+  min-height: 34px;
+  border-radius: var(--radius);
+  border: 1px solid rgba(220, 230, 242, 0.13);
+  background: rgba(8, 11, 15, 0.72);
+  color: var(--text-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+}
+
+.oc-input:hover,
+.oc-select:hover,
+input[type="text"]:hover,
+input[type="number"]:hover,
+select:hover,
+textarea:hover {
+  border-color: rgba(220, 230, 242, 0.22);
+}
+
+.oc-btn:focus-visible,
+.oc-tab:focus-visible,
+.oc-chip:focus-visible,
+.oc-input:focus-visible,
+.oc-select:focus-visible,
+.oc-icon-btn:focus-visible,
+.oc-cancel-btn:focus-visible,
+.oc-card-header[role="button"]:focus-visible {
+  outline: 2px solid var(--border-focus);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(119, 167, 255, 0.14);
+}
+
+.oc-progress-track {
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.oc-progress-fill {
+  background: linear-gradient(90deg, #77a7ff, #4fd6a4);
+}
+
+.oc-empty-state {
+  border-style: dashed;
+  border-color: rgba(220, 230, 242, 0.18);
+  box-shadow: none;
+}
+
+.oc-toast[data-state="success"] {
+  border-color: rgba(79, 214, 164, 0.26);
+  background: linear-gradient(180deg, rgba(18, 58, 45, 0.92), rgba(13, 35, 31, 0.92));
+}
+
+.oc-toast[data-state="warning"] {
+  border-color: rgba(255, 189, 99, 0.28);
+  background: linear-gradient(180deg, rgba(70, 48, 20, 0.92), rgba(36, 28, 17, 0.92));
+}
+
+.oc-toast[data-state="error"] {
+  border-color: rgba(255, 111, 115, 0.28);
+  background: linear-gradient(180deg, rgba(72, 24, 28, 0.92), rgba(38, 18, 22, 0.92));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+  }
+}
