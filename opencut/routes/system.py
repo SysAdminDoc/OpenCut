@@ -2596,6 +2596,57 @@ def engine_resolve():
         return safe_error(e, "engine_resolve")
 
 
+@system_bp.route("/auth/info", methods=["GET"])
+def auth_info():
+    """Return non-sensitive metadata about the local auth token (F112).
+
+    The actual token is **never** included in this response — clients
+    must read it from ``~/.opencut/auth.json`` (which is created with
+    0600 mode on POSIX). This endpoint exists so the panel can render a
+    "Auth required" banner with the exact instructions when the
+    operator switches to a remote bind.
+    """
+    try:
+        from opencut import auth as _auth
+
+        remote_required = _auth.is_remote_bind_enabled()
+        token = _auth.current_token()
+        return jsonify(
+            {
+                "remote_bind_enabled": remote_required,
+                "auth_required_for_remote": remote_required,
+                "token_issued": token is not None,
+                "token_issued_at": token.issued_at if token else None,
+                "token_label": token.label if token else None,
+                "token_file": str(_auth.AUTH_FILE),
+                "header": _auth.AUTH_HEADER,
+            }
+        )
+    except Exception as exc:
+        return safe_error(exc, "auth_info")
+
+
+@system_bp.route("/auth/rotate", methods=["POST"])
+@require_csrf
+def auth_rotate():
+    """Issue a fresh local auth token (F112)."""
+    try:
+        from opencut import auth as _auth
+
+        token = _auth.rotate_token()
+        return jsonify(
+            {
+                "ok": True,
+                "issued_at": token.issued_at,
+                "label": token.label,
+                "token_file": str(_auth.AUTH_FILE),
+                "note": "Token written to disk; read it with the same OS user that runs the server.",
+            }
+        )
+    except Exception as exc:
+        return safe_error(exc, "auth_rotate")
+
+
 @system_bp.route("/system/feature-state", methods=["GET"])
 def feature_state():
     """Return the feature readiness manifest (F100).
