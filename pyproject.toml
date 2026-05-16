@@ -52,7 +52,6 @@ standard = [
     "librosa>=0.10,<1",
     "pydub>=0.25,<1",
     "noisereduce>=3.0,<4",
-    "deep-translator>=1.11,<2",
     "scenedetect[opencv]>=0.6,<1",
 ]
 captions = [
@@ -129,7 +128,6 @@ all = [
     "librosa>=0.10,<1",
     "pydub>=0.25,<1",
     "noisereduce>=3.0,<4",
-    "deep-translator>=1.11,<2",
     "scenedetect[opencv]>=0.6,<1",
     "demucs>=4.0,<5",
     "pedalboard>=0.9,<1",
@@ -147,7 +145,7 @@ all = [
     "opentimelineio>=0.15,<1",
 ]
 dev = [
-    "pytest>=7.0,<9",
+    "pytest>=7.0,<10",
     "pytest-cov>=4.0,<6",
     "pytest-xdist>=3.0,<5",
     "ruff>=0.1,<1",
