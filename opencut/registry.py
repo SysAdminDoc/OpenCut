@@ -380,6 +380,15 @@ _FEATURES: List[FeatureRecord] = [
         routes=["/system/ocio"],
     ),
     FeatureRecord(
+        feature_id="system.project-health",
+        label="Local project + media health report",
+        category="system",
+        state=STATE_AVAILABLE,
+        install_hint="bundled (no extra deps)",
+        docs="ROADMAP.md#F011",
+        routes=["/system/project-health"],
+    ),
+    FeatureRecord(
         feature_id="lipsync.latentsync",
         label="LatentSync diffusion lip-sync",
         category="ai",

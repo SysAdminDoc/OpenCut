@@ -2683,6 +2683,50 @@ def system_ai_eval_list():
         return safe_error(exc, "system_ai_eval_list")
 
 
+@system_bp.route("/system/project-health", methods=["POST"])
+@require_csrf
+def system_project_health():
+    """Run a project + media health report against a directory (F011).
+
+    Body fields::
+
+        {
+            "project_root": "/abs/path/to/project_dir",
+            "media_paths": ["/abs/path/to/source.mp4"],   # optional
+            "min_free_mb": 2048                            # optional
+        }
+    """
+    try:
+        from opencut.core.project_health import build_report
+        from opencut.security import (
+            get_json_dict,
+            require_csrf,
+            validate_path,
+        )
+
+        data = get_json_dict()
+        project_root = (data.get("project_root") or "").strip()
+        if not project_root:
+            return jsonify({"error": "project_root required"}), 400
+        try:
+            project_root = validate_path(project_root)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        media_paths_raw = data.get("media_paths") or []
+        if not isinstance(media_paths_raw, list):
+            return jsonify({"error": "media_paths must be a list"}), 400
+
+        report = build_report(
+            project_root,
+            media_paths=[str(p) for p in media_paths_raw],
+            min_free_mb=int(data.get("min_free_mb") or 2048),
+        )
+        return jsonify(report.as_dict())
+    except Exception as exc:
+        return safe_error(exc, "system_project_health")
+
+
 @system_bp.route("/system/ocio", methods=["GET"])
 def system_ocio_validate():
     """Return the OCIO validation summary (F109).
