@@ -17,7 +17,7 @@ from opencut.core.auto_dub_pipeline import (
     auto_dub,
 )
 
-INSTALL_HINT = "pip install faster-whisper deep-translator edge-tts  # STT + translate + TTS"
+INSTALL_HINT = "pip install faster-whisper ctranslate2 edge-tts  # STT + translate + TTS"
 
 
 def check_dub_pipeline_available() -> bool:

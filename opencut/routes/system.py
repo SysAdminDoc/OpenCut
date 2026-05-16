@@ -647,7 +647,6 @@ def check_dependencies():
         "edge-tts": "edge_tts",
         "audiocraft": "audiocraft",
         "scenedetect": "scenedetect",
-        "deep-translator": "deep_translator",
         "pyannote.audio": "pyannote.audio.pipelines",
         "mediapipe": "mediapipe",
         "torch": "torch",
