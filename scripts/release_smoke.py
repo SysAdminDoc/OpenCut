@@ -237,6 +237,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_model_cards.py",
     "tests/test_roadmap_lint.py",
     "tests/test_capability_profile.py",
+    "tests/test_marker_import.py",
     "tests/test_hardening.py::test_uxp_engine_registry_escapes_dynamic_attribute_values",
     "tests/test_hardening.py::test_uxp_fetch_wrapper_clears_backend_timeout_timers",
     "tests/test_config_and_userdata.py::test_server_main_rejects_remote_bind_without_opt_in",
