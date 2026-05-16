@@ -362,6 +362,15 @@ _FEATURES: List[FeatureRecord] = [
         routes=["/provenance/c2pa", "/provenance/verify"],
     ),
     FeatureRecord(
+        feature_id="system.ai-eval-harness",
+        label="AI evaluation harness",
+        category="system",
+        state=STATE_AVAILABLE,
+        install_hint="bundled (no extra deps)",
+        docs="ROADMAP.md#F120",
+        routes=["/system/ai-eval", "/system/ai-eval/<feature_id>"],
+    ),
+    FeatureRecord(
         feature_id="lipsync.latentsync",
         label="LatentSync diffusion lip-sync",
         category="ai",
