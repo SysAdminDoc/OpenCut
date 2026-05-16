@@ -2683,6 +2683,50 @@ def system_ai_eval_list():
         return safe_error(exc, "system_ai_eval_list")
 
 
+@system_bp.route("/system/crash-packet", methods=["POST"])
+@require_csrf
+def system_crash_packet():
+    """Build a crash + recovery diagnostic packet zip (F066).
+
+    Body fields::
+
+        {
+            "output_path": "/abs/path/to/packet.zip",
+            "log_tail_lines": 500,
+            "crash_tail_bytes": 20000,
+            "include_jobs": true
+        }
+
+    Returns the manifest of the produced packet.
+    """
+    try:
+        from opencut.core.crash_packet import build_packet
+        from opencut.security import (
+            get_json_dict,
+            require_csrf,
+            validate_output_path,
+        )
+
+        data = get_json_dict()
+        output_path = (data.get("output_path") or "").strip()
+        if not output_path:
+            return jsonify({"error": "output_path required"}), 400
+        try:
+            output_path = validate_output_path(output_path)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        packet = build_packet(
+            output_path=output_path,
+            log_tail_lines=int(data.get("log_tail_lines") or 500),
+            crash_tail_bytes=int(data.get("crash_tail_bytes") or 20_000),
+            include_jobs=bool(data.get("include_jobs", True)),
+        )
+        return jsonify(packet.as_dict())
+    except Exception as exc:
+        return safe_error(exc, "system_crash_packet")
+
+
 @system_bp.route("/system/project-health", methods=["POST"])
 @require_csrf
 def system_project_health():
