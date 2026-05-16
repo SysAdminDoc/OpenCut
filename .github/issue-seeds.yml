@@ -20,23 +20,19 @@ seeds:
       Source: ROADMAP.md v4.3 → F097.
 
   - roadmap_id: F098
-    title: "F098: release smoke matrix runner"
+    title: "F098: release smoke matrix runner (shipped)"
     labels: ["type:chore", "area:packaging", "roadmap:now", "priority:p0"]
     body: |
-      Build `scripts/release_smoke.py` that chains the existing checks into
-      one releasable command:
+      Shipped: `scripts/release_smoke.py` chains `bootstrap_check`,
+      `sync_version --check`, ruff, focused pytest gates, `pip-audit`,
+      the npm advisory allow-list, and the panel-source verifier.
 
-      - `python scripts/bootstrap_check.py --json`
-      - `python scripts/sync_version.py --check`
-      - `python -m pytest tests/test_route_manifest.py -q`
-      - `npm --prefix extension/com.opencut.panel run audit:check`
-      - `npm --prefix extension/com.opencut.panel run build:verify`
-      - `pip-audit -r requirements.txt`
-      - Docker image build smoke + installer manifest check (where available)
-
-      Each step must emit a structured PASS/FAIL line so CI can fail fast.
-      Acceptance: `python scripts/release_smoke.py --json` returns a list
-      of step results that pytest can assert against.
+      - `python scripts/release_smoke.py --list` enumerates the steps.
+      - `python scripts/release_smoke.py --json` emits per-step status,
+        exit code, duration, and stdout/stderr tails for CI parsing.
+      - `--only` / `--skip` filters scope to a single step (used by CI
+        to skip the duplicate ruff/pytest gates that already run).
+      - `tests/test_release_smoke.py` pins the runner contract.
 
       Source: ROADMAP.md v4.3 → F098.
 
