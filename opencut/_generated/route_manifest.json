@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T19:54:32Z",
-  "total_routes": 1355,
+  "generated_at": "2026-05-16T20:00:50Z",
+  "total_routes": 1356,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 293,
+    "GET": 294,
     "PATCH": 1,
     "POST": 1047,
     "PUT": 2
@@ -822,9 +822,9 @@
       ]
     },
     "system": {
-      "route_count": 57,
+      "route_count": 58,
       "method_counts": {
-        "GET": 27,
+        "GET": 28,
         "POST": 31
       },
       "sample_rules": [
@@ -9124,6 +9124,14 @@
       ],
       "endpoint": "wave_h.route_issue_report_bundle_post",
       "blueprint": "wave_h"
+    },
+    {
+      "rule": "/system/ocio",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.system_ocio_validate",
+      "blueprint": "system"
     },
     {
       "rule": "/system/open-path",

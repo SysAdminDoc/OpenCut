@@ -371,6 +371,15 @@ _FEATURES: List[FeatureRecord] = [
         routes=["/system/ai-eval", "/system/ai-eval/<feature_id>"],
     ),
     FeatureRecord(
+        feature_id="system.ocio-validate",
+        label="OpenColorIO + ACES validator",
+        category="system",
+        state=STATE_AVAILABLE,
+        install_hint="bundled; pip install PyOpenColorIO for full surface (route returns available=False when missing)",
+        docs="ROADMAP.md#F109",
+        routes=["/system/ocio"],
+    ),
+    FeatureRecord(
         feature_id="lipsync.latentsync",
         label="LatentSync diffusion lip-sync",
         category="ai",
