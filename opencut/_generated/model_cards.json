@@ -15,7 +15,8 @@
       "latency": "~1x realtime on RTX 4060+ for 30 s clips",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_auto_editor_available",
@@ -30,7 +31,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_auto_zoom_available",
@@ -45,7 +47,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_beatnet_available",
@@ -60,7 +63,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_broll_generate_available",
@@ -75,7 +79,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_clip_iqa_available",
@@ -90,7 +95,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_colour_science_available",
@@ -105,7 +111,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_crisper_whisper_available",
@@ -120,7 +127,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_ddcolor_available",
@@ -135,7 +143,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_deepface_available",
@@ -150,7 +159,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_demucs_available",
@@ -165,7 +175,8 @@
       "latency": "~0.3x realtime on CPU; near-real on RTX 3060",
       "quality_notes": "Strong baseline; superseded by BS-RoFormer in newer benches.",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_depth_available",
@@ -180,7 +191,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_edge_tts_available",
@@ -197,7 +209,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Sends synthesis text to Microsoft over HTTPS. Disable for offline-only deployments."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_elevenlabs_available",
@@ -214,7 +227,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Requires an ElevenLabs account. Synthesised audio + reference voices may be retained per their TOS."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_f5_tts_available",
@@ -229,7 +243,8 @@
       "latency": "~1-2x realtime",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_face_reshape_available",
@@ -244,7 +259,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_flashvsr_available",
@@ -261,7 +277,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Roadmap stub; check returns False until the implementation lands."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_gen_video_cloud_available",
@@ -278,7 +295,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Disabled by default. Set HAILUO_API_KEY / SEEDANCE_API_KEY to enable."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_hsemotion_available",
@@ -293,7 +311,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_lipsync_advanced_available",
@@ -310,7 +329,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Roadmap stub (H3.3)."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_llm_available",
@@ -327,7 +347,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Configure OPENCUT_LLM_PROVIDER=ollama to force local; otherwise cloud providers can be hit."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_mediapipe_available",
@@ -342,7 +363,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_multimodal_diarize_available",
@@ -359,7 +381,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "pyannote checkpoints are gated by Hugging Face acceptance — set HUGGINGFACE_HUB_TOKEN."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_neural_deflicker_available",
@@ -374,7 +397,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_ollama_available",
@@ -389,7 +413,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_omnivoice_available",
@@ -404,7 +429,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_propainter_available",
@@ -421,7 +447,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Custom S-Lab license — non-commercial use only. Verify before shipping in paid distributions."
-      ]
+      ],
+      "license_waiver": "Non-commercial source — guarded behind an opt-in check_propainter_available() gate. The default OpenCut install does not include ProPainter; users must explicitly `pip install propainter` and accept the NTU S-Lab license at that point. Maintainers must remove this waiver before any commercial distribution."
     },
     {
       "check_name": "check_pyonfx_available",
@@ -438,7 +465,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "LGPL — using as a library inside a proprietary distribution requires legal review."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_reezsynth_available",
@@ -455,7 +483,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Roadmap stub."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_rembg_available",
@@ -470,7 +499,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_resemble_enhance_available",
@@ -485,7 +515,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_rose_available",
@@ -502,7 +533,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Roadmap stub."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_rvm_available",
@@ -519,7 +551,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "GPL-3.0 — bundling the model with proprietary distributions requires legal review."
-      ]
+      ],
+      "license_waiver": "User installs separately via `pip install robust-video-matting`; OpenCut (MIT) invokes the GPL-3.0 model at runtime only, does not redistribute the weights or library, and the feature is explicitly opt-in. Downstream redistributors must perform their own license review."
     },
     {
       "check_name": "check_sam2_available",
@@ -534,7 +567,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_sammie_available",
@@ -551,7 +585,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Roadmap stub."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_scenedetect_available",
@@ -566,7 +601,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_silero_vad_available",
@@ -581,7 +617,8 @@
       "latency": "real-time on CPU",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_skin_retouch_available",
@@ -596,7 +633,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_transnetv2_available",
@@ -611,7 +649,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_upscale_available",
@@ -626,7 +665,8 @@
       "latency": "~0.2-0.4x realtime on RTX 3060",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_upscale_hub_available",
@@ -643,7 +683,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Each Hugging Face model has its own license — check before redistributing weights."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_video_agent_available",
@@ -660,7 +701,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Roadmap stub. LLM dependency may route through a cloud provider."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_vidmuse_available",
@@ -677,7 +719,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Roadmap stub."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_virality_score_available",
@@ -694,7 +737,8 @@
       "requires_checkpoint_env": null,
       "advisory_notes": [
         "Falls back to a keyword lexicon when no LLM provider is configured."
-      ]
+      ],
+      "license_waiver": ""
     },
     {
       "check_name": "check_voice_grammar_available",
@@ -709,7 +753,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_vrt_available",
@@ -724,7 +769,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     },
     {
       "check_name": "check_watermark_available",
@@ -739,7 +785,8 @@
       "latency": "n/a",
       "quality_notes": "",
       "requires_checkpoint_env": null,
-      "advisory_notes": []
+      "advisory_notes": [],
+      "license_waiver": ""
     }
   ],
   "non_ai_checks": [
