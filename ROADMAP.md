@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.1
+**Version**: 4.2
 **Updated**: 2026-05-16
 **Baseline**: v1.32.0 (1,275 routes, 99 blueprints, 460+ core modules, 7,551 tests, light theme + premium UX shipped)
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -10,6 +10,365 @@
 > Wave S (v1.56→v1.58) is the post-May-2026 OSS research pass.
 > Wave T (v1.59→v1.61) below is the **2026-05-16 fresh-research pass** — closes Captions.ai/Submagic agent-ecosystem gap, refreshes the TTS fleet against post-April 2026 SOTA, and modernises video diffusion against ICLR 2026 / SIGGRAPH 2026 papers.
 > Shipped history is archived in [ROADMAP-COMPLETED.md](ROADMAP-COMPLETED.md).
+
+> **v4.2 status**: the 2026-05-16 research refresh below is the current source-backed plan. Older waves remain as an archive and backlog reference, but new implementation decisions should start from the fit/risk/tier ledger in this section.
+
+---
+
+## 2026-05-16 Research Refresh
+
+### Phase 0 - State of the Repo
+
+OpenCut is a local-first Premiere Pro automation system: a Python/Flask server on localhost, CEP and UXP extension panels, ExtendScript/UXP bridge code, PyInstaller/Inno packaging, Docker images, optional AI/media extras, and a large route/module test surface [L01][L02][L04]. The stated product philosophy is local/offline editing value, no subscriptions, no cloud dependency, no required API keys, incremental migration, user-facing value first, and dependency restraint [L01][L05].
+
+Current live-state findings that must shape the roadmap:
+
+| Finding | Evidence | Roadmap implication |
+|---------|----------|---------------------|
+| Version truth has drifted across surfaces. | `pyproject.toml` and README badges say 1.32.0, while CEP/UXP manifests, installer files, Inno setup, requirements header, and some docs still report 1.25.1 or 1.28.0; `scripts/sync_version.py --check` currently fails [L01][L02][L03]. | Release trust work is a Now item before another feature wave. |
+| The route/feature count is not one single source of truth. | README badge says 1,275 routes, feature text says 1,334 routes, existing roadmap says 302 features, and route registration lives across many blueprints [L01][L05]. | Generate route/feature inventory from code and use it for docs, panel availability, and MCP/tool schemas. |
+| Wave H/K-style strategic stubs still exist. | Stub and TODO scan found 501/503 route stubs and `NotImplementedError` placeholders in audio-reactive FX, cine focus, motion deblur, depth/flow, FlashVSR, and video-agent paths [L06]. | Stub visibility and availability gating belong in Now, not another speculative model wave. |
+| No tracked GitHub issues are available to mine. | `gh issue list --state all` returned no issues for the repo [L10]. | Roadmap signal must come from repo scan, commit history, competitor issues, standards, and dependency/security advisories. |
+| Security/dependency posture needs a visible burn-down. | `pip-audit` reports `deep-translator 1.11.4` advisory PYSEC-2022-252; npm audit flags Vite's esbuild advisory path [L07][L08][S41][S42]. | Security remediation and dependency upgrade testing are Now/Next work. |
+| Platform migration pressure is real. | The repo ships both CEP and UXP panels; Adobe's Premiere Pro UXP documentation is the forward-looking extension surface [L04][S23]. | UXP parity, CEP freeze rules, and migration tests are Now work. |
+| The app already has breadth; the risk is reliability, discoverability, and proof. | Commit history shows many roadmap waves, security hardening commits, and a large Flask/test surface rather than a small prototype [L09]. | Prioritize trust, route readiness, packaging, docs, and evaluation before piling on more unchecked features. |
+
+Hard constraints:
+
+- **Runtime/platform**: Python 3.9+, Flask 3.x, FFmpeg, Premiere 2019+ for CEP, Premiere 25.6+ for UXP, Windows-first packaging with Docker and cross-platform backend intent [L01][L02][L04].
+- **License posture**: MIT repo; optional models, codecs, plugins, and SDKs need separate license gates before inclusion [L02][S15][S18][S49][S50][S51].
+- **Network posture**: core value is local-first. Cloud APIs may be optional connectors only, never mandatory for core editing [L01][S26][S27][S28][S31].
+- **Dependency posture**: existing roadmap principle is one new dependency per feature maximum; prefer FFmpeg/OpenCV/Pillow/existing AI where practical [L05].
+- **Security posture**: localhost is not a free pass; CSRF, path containment, rate limits, dependency advisories, SBOMs, and opt-in telemetry must stay first-class [L04][S41][S42].
+
+### Competitive and Research Inventory
+
+Direct OSS and adjacent OSS scan:
+
+| Project | Source | Stars / last push observed | Maintainer signal | Relevant lesson for OpenCut |
+|---------|--------|----------------------------|-------------------|-----------------------------|
+| Shotcut | [S01] | 13,952 / 2026-05-16 | `ddennedy`, `bmatherly`, `metellius`, `traprog`, `eszlari` | Mature MLT desktop editors win on dependable export/proxy/device workflow, not only feature count. |
+| Kdenlive | [S02] | 5,047 / 2026-05-16 | `j-b-m`, `jlskuz`, `ttill`, `vpinon`, `Montel` | Open editors need proxy, subtitle, effect-stack, and project-management polish. |
+| OpenShot | [S03][S04] | 5,765 / 2026-05-16 | `jonoomph`, `ferdnyc`, `DylanC`, `olielvewen`, `JacksonRG` | Cross-platform friendliness and simple onboarding remain valuable, but stability complaints create opportunity. |
+| Olive | [S05] | 9,027 / 2024-12-05 | `itsmattkc`, `ThomasWilshaw`, `Simran-B`, `pgilfernandez`, `elsandosgrande` | Node/compositor architecture is attractive, but unfinished rewrites are a cautionary signal. |
+| Flowblade | [S06] | 3,051 / 2026-05-14 | `jliljebl`, `smolnp`, `ratherlargerobot`, `ptrg`, `dvdlvr` | Linux NLEs emphasize stable timeline editing, proxy media, and render workflows. |
+| Pitivi | [S07] | 239 / 2026-04-05 | `aleb`, `nekohayo`, `tsaunier`, `bilboed`, `alessandrod` | GStreamer projects reinforce the value of media-pipeline correctness and format breadth. |
+| Blender VSE | [S08] | 18,410 / 2026-05-16 | `ideasman42`, `sergeyvfx`, `brechtvl`, `HansGoudey`, `Hypersomniac` | Power users tolerate complexity when scripting, asset management, rendering, and color tools are strong. |
+| Natron | [S09] | 5,364 / 2025-07-02 | `MrKepzie`, `devernay`, `olear`, `Lexfrenchy`, `rodlie` | Node/VFX plugin surfaces matter, but maintenance burden is high. |
+| LosslessCut | [S10] | 40,461 / 2026-05-10 | `mifi`, contributors, Dependabot | Fast, safe, lossless media operations remain a high-demand category; issues show demand for overwrite warnings, CSV import, ARM64 packaging, segment colors, and cursor ergonomics. |
+| Editly | [S11] | 5,409 / 2025-05-12 | `mifi`, contributors | Scripted video assembly is a useful adjacent workflow for templates and batch rendering. |
+| Auto-Editor | [S12] | 4,286 / 2026-05-16 | `WyattBlue`, contributors | Silence/speech-driven cuts need transparent thresholds and reproducible CLI/project output. |
+| Remotion | [S13] | 47,043 / 2026-05-15 | `JonnyBurger`, `samohovets`, `patsalv`, contributors | Programmatic video, preview, renders, and template ecosystems can become distribution channels. |
+| MoviePy | [S14] | 14,613 / 2026-03-07 | `Zulko`, `tburrows13`, `bearney74`, contributors | Python-first composition lowers automation friction but needs guardrails for performance. |
+| OpenTimelineIO | [S15] | 1,863 / 2026-05-01 | ASWF contributors | Timeline interchange and validation should be a core trust surface, not an export afterthought. |
+| MLT | [S16] | 1,781 / 2026-05-14 | `ddennedy`, `bmatherly`, `j-b-m`, contributors | A stable media engine can support multiple UX shells. |
+| GStreamer | [S17] | 3,167 / 2026-05-16 | `sdroege`, `tp-m`, `thomasvs`, `wtay`, contributors | Pipeline introspection, caps negotiation, and plugin health are useful analogies for OpenCut route readiness. |
+| FFmpeg | [S18] | 60,166 / 2026-05-16 | `michaelni`, `mkver`, `richardpl`, `elenril`, `jamrial` | Expose new filters/codecs only through capability detection and tested presets. |
+| OpenMontage | [S19] | 3,747 / 2026-05-07 | `calesthio`, `itsuzef` | Multi-pipeline production systems point toward orchestrated workflows, but AGPL licensing must be handled carefully. |
+| AutoClip | [S20] | 5,230 / 2026-05-08 | `zhouxiaoka` | Highlight clipping and automatic montage are proven demand, especially for social video. |
+| CaroCut | [S21] | 48 / 2026-04-20 | `yrom`, `hx-w` | Remotion-style agentic editing is emerging, but small/no-license projects are reference signals only. |
+| OpenVideo | [S22] | 227 / 2026-05-05 | `xo-o`, `luis-ar`, `Pablituuu`, `karamble` | WebCodecs/WebGL client-side editing is an adjacent architecture path for previews and browser tooling. |
+| PySceneDetect | [S32] | 4,811 / 2026-05-05 | `Breakthrough`, `wjs018`, `tonycpsu`, contributors | Scene detection should remain explainable and tuneable; OpenCV-based approaches age well. |
+
+Commercial and closed-source scan:
+
+| Product | Source | Paywalled or emphasized capability | Roadmap signal |
+|---------|--------|------------------------------------|----------------|
+| Adobe Premiere Pro | [S23][S24] | UXP extension model, transcript/caption workflows, Firefly/generative editing surfaces | OpenCut should be a stronger local companion to Premiere, not a second generic NLE. |
+| DaVinci Resolve | [S25] | AI rough cuts, speech/dialogue tools, masking, relighting, smart bins, collaboration | Local assistants need timeline-aware analysis, delivery QC, media management, and review workflows. |
+| CapCut | [S26] | Auto captions, templates, social exports, background removal, cloud/mobile convenience | Social packaging, caption styling, and templates are table stakes. |
+| Descript | [S27] | Text-based editing, Studio Sound, speaker workflows, captions, AI assistant | Transcript editing and audio cleanup are high-value editor abstractions. |
+| OpusClip | [S28] | Viral clipping, reframing, captions, B-roll, brand controls | Short-form extraction must include ranking, hooks, safe-zone checks, and brand presets. |
+| Submagic | [S29] | Captions, hooks, B-roll, zooms, sound effects, templates | Creator-polish automations are now expected, not novelty features. |
+| Captions.ai | [S30] | AI creators, editing assistant, captions, avatars, translation | Voice/video generation should remain optional and clearly licensed. |
+| Runway | [S31] | Generative video, background/object editing, collaboration | Treat external generation as connector output with provenance, not core dependency. |
+| Final Cut Pro | [S67] | Magnetic timeline, captions, object tracking/masking, Apple ecosystem speed | Premium editors reduce friction through timeline affordances and fast media organization. |
+| Filmora | [S33] | AI translation, music, thumbnails, masking, templates | Consumer editors package small AI tasks as guided workflows; OpenCut can do the same locally. |
+| VEED | [S34] | Browser editing, captions, avatars, brand kit, collaboration | Web/share/review workflows are purchase drivers even when editing is simple. |
+| Kapwing | [S35] | Team workspace, brand kit, subtitles, templates, browser collaboration | Collaboration can start as review/export artifacts before real-time co-editing. |
+
+Standards, platform, and security scan:
+
+| Area | Sources | Roadmap signal |
+|------|---------|----------------|
+| Adobe extension platform | [S23][S24] | UXP parity and CEP retirement planning need explicit gates. |
+| Timeline interchange | [S15] | OTIO/FCPXML/EDL validation and round-trip tests should be production-grade. |
+| Media engine/API standards | [S16][S17][S18][S66] | Capability detection, plugin health, and filter compatibility should be visible in UI/API. |
+| Provenance | [S36] | C2PA/Content Credentials fit generated media, edits, exports, and audit logs. |
+| Captions and accessibility | [S37][S38][S39][S40] | Caption output must be quality-scored for timing, completeness, placement, and accessibility. |
+| Security advisories | [S41][S42] | Dependency upgrades and SBOM/advisory gates must be release blockers. |
+| Core dependency releases | [S43][S44][S45][S46][S47][S48] | Expose new capability only after benchmark and compatibility tests. |
+| Academic/model research | [S68][S69][S70][S71] | Object tracking and video-generation work is moving quickly, but OpenCut should expose it only behind license, provenance, benchmark, and hardware gates. |
+
+### Feature Harvest and Priority Ledger
+
+Legend: `I/E/R` = impact, effort, risk on a 1-5 scale. `Parity` catches up to common market expectations; `Leapfrog` pushes beyond common OSS editor behavior. Every accepted or rejected item lists its sources.
+
+| ID | Feature / enhancement | Category | Sources | Prevalence | Tier | Fit / score / dependency / novelty / placement |
+|----|-----------------------|----------|---------|------------|------|------------------------------------------------|
+| F001 | Version truth and release-surface sync | distribution/packaging | L01,L02,L03,L04,L09 | table-stakes | Now | Fits release trust; I5/E2/R1; depends on `sync_version.py`; Parity; required because CI already enforces it. |
+| F002 | Generated route/feature manifest used by README, panels, MCP, and tests | dev-experience, docs | L01,L04,L05,L06,S17,S18 | common in mature tools | Now | Fits current scale; I5/E3/R2; depends on route registry scan; Leapfrog; stops count drift and hidden stubs. |
+| F003 | Stub registry with user-visible readiness states | reliability, UX | L06,L09,S10,S17 | rare-but-needed | Now | Fits local trust; I4/E2/R1; depends on manifest; Leapfrog; keeps 501/503 work from being marketed as shipped. |
+| F004 | UXP parity tracker and CEP freeze policy | platform/OS, migration | L04,S23,S24 | table-stakes for Adobe extensions | Now | Fits platform future; I5/E3/R3; depends on panel capability matrix; Parity; needed before more CEP-only features. |
+| F005 | Security advisory burn-down for Vite/esbuild and `deep-translator` | security | L07,L08,S41,S42,S44 | table-stakes | Now | Fits release hygiene; I5/E2/R2; depends on upgrade smoke tests; Parity; known advisories cannot sit behind feature waves. |
+| F006 | SBOM and dependency-license gate for optional AI/model extras | security, licensing | L02,L04,S15,S19,S49,S50,S51,S52 | increasingly common | Now | Fits MIT/local-first promise; I4/E3/R3; depends on extras inventory; Leapfrog; prevents model/license surprises. |
+| F007 | Route smoke harness generated from the manifest | testing, reliability | L04,L06,S17,S18 | table-stakes | Now | Fits CI scale; I5/E3/R2; depends on F002; Parity; turns breadth into audited readiness. |
+| F008 | Panel availability matrix with install/help actions | UX, docs | L01,L04,L06,S10,S26,S27 | common | Now | Fits discoverability; I4/E3/R2; depends on F002/F003; Parity; users need to know why a tool is disabled. |
+| F009 | Caption quality gate for timing, completeness, placement, export formats | accessibility, testing | L02,S27,S29,S37,S38,S40 | table-stakes | Now | Fits current caption stack; I5/E3/R2; depends on sample media fixtures; Parity; accessibility specs make this release-relevant. |
+| F010 | Job/request observability panel with correlation IDs and exportable diagnostics | observability, reliability | L04,L09,S13,S17,S34,S35 | common in pro tools | Now | Fits localhost support; I4/E3/R2; depends on job status/log plumbing; Parity; reduces support friction. |
+| F011 | Local project/media health report | reliability, offline | L01,L04,S10,S15,S25,S67 | common | Now | Fits Premiere companion role; I4/E3/R2; depends on path/media scanners; Parity; prevents broken exports and stale paths. |
+| F012 | Packaging matrix refresh: Windows x64/ARM64, installer, portable, Docker, extension bundle | distribution/packaging | L01,L03,L04,S10,S18,S23 | table-stakes | Now | Fits Windows-first delivery; I5/E3/R3; depends on version sync; Parity; competitors' packaging issues are visible opportunity. |
+| F013 | Transcript-based cut list export and Premiere sequence apply | UX, data | L01,L02,S12,S24,S27,S67 | table-stakes commercially | Next | Fits local editor automation; I5/E4/R3; depends on caption quality and Premiere apply tests; Parity; high user value after trust work. |
+| F014 | Text search/select/delete across transcript, captions, and timeline markers | UX, accessibility | S24,S27,S37,S38 | common | Next | Fits caption/transcript stack; I4/E3/R2; depends on transcript data model; Parity; core Descript-style workflow. |
+| F015 | Speaker diarization and speaker-aware edits | audio, data | L02,S27,S47 | common in transcript tools | Next | Fits optional diarize extra; I4/E4/R3; depends on model gate; Parity; improves interview/podcast editing. |
+| F016 | Studio-sound style dialogue enhancement presets | audio, UX | L02,S27,S29,S48 | common | Next | Fits existing audio cleanup modules; I4/E3/R2; depends on evaluation samples; Parity; must be measurable before UI exposure. |
+| F017 | Silence/filler/retake cleanup with explainable thresholds | UX, automation | L01,S12,S27,S28 | table-stakes | Next | Fits existing silence feature; I5/E3/R2; depends on transcript/timecode alignment; Parity; proven demand in Auto-Editor/Descript. |
+| F018 | Short-form clip ranking with hooks, scores, and edit rationale | automation, UX | S20,S28,S29,S26 | common commercially | Next | Fits creator workflows; I5/E4/R3; depends on transcript/search and metrics; Parity; score transparency avoids black-box cuts. |
+| F019 | Reframe and safe-zone presets for Shorts/Reels/TikTok/YouTube | UX, distribution | S26,S28,S29,S34,S35 | table-stakes | Next | Fits Premiere automation; I4/E3/R2; depends on face/object tracking; Parity; social export is market-standard. |
+| F020 | Brand kit for captions, colors, fonts, watermarks, lower thirds | UX, distribution | S26,S28,S29,S34,S35 | table-stakes | Next | Fits repeat creators; I4/E3/R2; depends on style schema; Parity; paywalled by commercial tools. |
+| F021 | B-roll recommendation queue from local media library | UX, data | S28,S29,S34,S35,S54,S55 | common | Next | Fits local-first if indexed locally; I4/E4/R3; depends on media embeddings/license gate; Parity; avoid cloud-only matching. |
+| F022 | Music/SFX suggestion and local license metadata | audio, licensing | S29,S33,S34,S56 | common | Next | Fits optional local assets; I3/E3/R3; depends on media library metadata; Parity; must avoid unclear stock licenses. |
+| F023 | Social export packaging with titles, thumbnails, chapters, captions | distribution, UX | S26,S28,S29,S34,S35 | table-stakes | Next | Fits export pipeline; I4/E3/R2; depends on brand kit/caption QA; Parity; complements Premiere rather than replacing it. |
+| F024 | Delivery QC report for codecs, loudness, captions, flashes, metadata | testing, distribution | L01,L02,S18,S25,S38,S40 | common in pro tools | Next | Fits export trust; I5/E4/R2; depends on FFprobe/caption gates; Leapfrog for OSS companion tooling. |
+| F025 | OTIO/FCPXML/EDL round-trip validator with visual diff summary | migration, data | L02,S15,S67 | table-stakes for interchange | Next | Fits existing export modules; I5/E4/R3; depends on fixtures; Leapfrog; prevents silent timeline loss. |
+| F026 | Proxy/offline media relink assistant | offline, reliability | S01,S02,S06,S10,S25 | table-stakes in NLEs | Next | Fits local project health; I4/E4/R3; depends on media scanner; Parity; high value for large projects. |
+| F027 | C2PA/Content Credentials export sidecar and generated-media provenance | security, data | S31,S36,S49,S50,S51 | emerging | Next | Fits generated media responsibly; I4/E4/R3; depends on export metadata and model registry; Leapfrog; provenance is becoming expected. |
+| F028 | FFmpeg capability detector and preset validator | performance, reliability | L02,S18,S10 | table-stakes | Next | Fits existing FFmpeg-first stack; I4/E3/R2; depends on platform matrix; Parity; avoids broken codec/filter presets. |
+| F029 | Hardware acceleration planner for NVENC/QSV/AMF/VideoToolbox/Vulkan | performance, platform/OS | S18,S25,S67 | common | Next | Fits export speed; I4/E4/R3; depends on capability detector; Parity; hardware support must be tested per platform. |
+| F030 | OpenFX/VapourSynth-style external effect adapter study | plugin ecosystem | S09,S25,S66 | rare in companion tools | Later | Partly fits; I3/E5/R4; depends on plugin sandbox design; Leapfrog; high maintenance risk pushes it later. |
+| F031 | Plugin manifest schema for local tools, panels, and route packs | plugin ecosystem, dev-experience | L04,L05,S13,S17,S19 | emerging | Now | Fits route breadth; I4/E3/R3; depends on manifest generator; Leapfrog; enables extensions without route sprawl. |
+| F032 | Sandboxed plugin execution policy | security, plugin ecosystem | L04,S17,S19,S41,S42 | emerging | Next | Fits plugin plan; I4/E4/R4; depends on plugin manifest; Leapfrog; required before third-party plugin loading. |
+| F033 | Community template marketplace export/import format | plugin ecosystem, distribution | S13,S26,S29,S34,S35 | common commercially | Later | Fits after manifest; I3/E4/R4; depends on plugin/license/security gates; Parity; defer until local format is stable. |
+| F034 | MCP/tool schema generated from route manifest | dev-experience, integrations | L02,L04,L05,S19,S21 | emerging | Next | Fits existing MCP extra; I4/E3/R3; depends on F002/F031; Leapfrog; makes automation clients safer. |
+| F035 | Project/session audit trail with undoable automation log | reliability, data | L04,S15,S25,S35 | common in pro workflows | Next | Fits local trust; I4/E4/R2; depends on job/request correlation; Leapfrog; allows recovery from batch edits. |
+| F036 | Non-destructive preview/apply workflow for high-risk timeline edits | UX, reliability | L01,L04,S25,S27 | table-stakes | Now | Fits Premiere companion role; I5/E3/R2; depends on diff/apply contracts; Parity; automation must show changes before applying. |
+| F037 | Timeline diff viewer for before/after automation | UX, data | S15,S25,S27,S35 | rare in OSS | Next | Fits non-destructive workflow; I4/E4/R3; depends on OTIO/project snapshot; Leapfrog; improves trust for batch edits. |
+| F038 | Review-package export with playable proxy, captions, and comments JSON | multi-user/collab, distribution | S31,S34,S35 | common commercially | Next | Fits local-first collaboration; I4/E4/R3; depends on proxy/caption/export; Parity; starts collaboration without live co-editing. |
+| F039 | Real-time multi-user co-editing | multi-user/collab | S25,S31,S34,S35 | common in cloud tools | Under Consideration | Weak fit today; I4/E5/R5; depends on project authority server; Parity; contradicts local-first unless optional and later. |
+| F040 | Remote render queue across local LAN machines | performance, distribution | S13,S25,S31 | common in pro/enterprise | Later | Fits power users; I3/E5/R4; depends on job audit/security; Parity; useful but heavy operationally. |
+| F041 | Browser review portal served locally/LAN | multi-user/collab, UX | S34,S35,S22 | common | Later | Fits optional local server; I3/E4/R3; depends on auth and review packages; Parity; do after diagnostics/security. |
+| F042 | Mobile companion for ingest, review, and remote control | mobile | S26,S30,S67,S34,S35 | common commercially | Later | Fits as companion only; I3/E5/R4; depends on API auth/review packages; Parity; not a native mobile editor. |
+| F043 | Full native mobile editor | mobile | S26,S30,S34,S35 | common commercially | Rejected | Poor fit; I2/E5/R5; depends on new product architecture; Parity; would dilute Premiere companion scope. |
+| F044 | Local media semantic search with embeddings | data, UX | S19,S21,S54,S55,S56 | emerging | Next | Fits local library; I4/E4/R3; depends on model/license gate and indexer; Leapfrog; improves B-roll and archive search. |
+| F045 | Visual similarity duplicate/near-duplicate detection | data, reliability | S10,S22,S25,S32 | common | Later | Fits media health; I3/E3/R2; depends on media indexer; Parity; less urgent than broken-path diagnostics. |
+| F046 | Shot-boundary/scene graph cache | performance, data | L02,S32,S25 | common | Next | Fits many features; I4/E3/R2; depends on media indexer; Parity; shared foundation for captions, B-roll, clips, QC. |
+| F047 | Object/person tracking cache with SAM2/Cutie-style adapters | UX, data | S25,S52,S53,S68,S69 | emerging | Later | Fits masking/reframe; I4/E5/R4; depends on model gate and GPU profiles; Leapfrog; costly but strategically useful. |
+| F048 | Local open video generation connector | integrations, data | S49,S50,S51,S31,S70,S71 | emerging | Under Consideration | Partial fit; I3/E5/R5; depends on provenance/license/GPU; Leapfrog; optional connector only, not core requirement. |
+| F049 | Closed cloud video generation connector | integrations | S31,S24,S30 | common commercially | Under Consideration | Partial fit; I3/E4/R5; depends on user keys/provenance; Parity; must be opt-in and never required. |
+| F050 | Generative extend wrapper for Premiere/Firefly-style outputs | integrations, UX | S24,S31,S36,S70,S71 | emerging | Later | Fits if external output is imported with provenance; I3/E4/R4; depends on connector policy; Parity; wait until C2PA/export gate exists. |
+| F051 | Local TTS narration with voice profile registry | audio, i18n | S30,S33,S56 | common | Next | Fits local-first; I4/E4/R4; depends on license/model cards; Parity; useful for drafts and accessibility. |
+| F052 | Voice translation/dubbing workflow | i18n/l10n, audio | S30,S33,S34 | common commercially | Later | Fits optional extras; I4/E5/R5; depends on TTS/ASR/diarization/license gates; Parity; high model/legal risk. |
+| F053 | Multilingual caption translation with side-by-side review | i18n/l10n, accessibility | L02,S30,S33,S34,S37,S38 | common | Next | Fits captions; I4/E4/R3; depends on caption QA and translator replacement; Parity; avoid vulnerable `deep-translator` path. |
+| F054 | RTL/CJK caption styling and line-breaking tests | i18n/l10n, accessibility | S37,S38,S40 | table-stakes globally | Next | Fits caption output; I4/E3/R2; depends on rendering fixtures; Parity; needed for credible localization. |
+| F055 | UI localization framework for CEP/UXP panels | i18n/l10n, UX | S26,S34,S35 | common | Later | Fits broader adoption; I3/E4/R3; depends on UXP parity; Parity; defer until panel architecture is settled. |
+| F056 | Keyboard-only and screen-reader audit for panels | accessibility, UX | L04,S38,S39 | table-stakes | Now | Fits local tool UX; I4/E3/R2; depends on panel inventory; Parity; accessibility cannot wait for redesigns. |
+| F057 | Audio description helper tracks | accessibility | S39,S40,S27 | rare in OSS | Later | Fits export/accessibility; I3/E4/R3; depends on timeline/caption model; Leapfrog; valuable after caption QA. |
+| F058 | Photosensitive flash detector in export QC | accessibility, testing | L05,S18,S38,S40 | common in delivery QC | Next | Fits existing roadmap/FFmpeg; I4/E3/R2; depends on delivery QC; Parity; measurable and standards-aligned. |
+| F059 | Loudness normalization and podcast/social loudness presets | audio, distribution | S18,S25,S27,S34 | common | Next | Fits export/QC; I4/E3/R2; depends on FFmpeg capability detector; Parity; high practical value. |
+| F060 | Speech/music/SFX stem separation refresh | audio, data | L02,S27,S29,S48 | common | Later | Fits audio cleanup; I3/E4/R4; depends on model benchmarking/license gate; Parity; not before advisory burn-down. |
+| F061 | Whisper/faster-whisper/whisper.cpp backend selection benchmark | performance, testing | L02,S45,S46,S56 | common in ASR tools | Next | Fits ASR stack; I4/E3/R2; depends on sample corpus; Leapfrog; lets users choose speed/quality/local binaries. |
+| F062 | Diarization backend benchmark and opt-in model profiles | audio, testing | L02,S47 | emerging | Later | Fits interviews; I3/E4/R3; depends on model gate and dataset; Parity; ship after transcript core. |
+| F063 | Model download manager with checksums, disk budget, offline cache | offline, security | L02,S49,S50,S51,S52,S54,S55 | table-stakes for local AI | Next | Fits local-first; I5/E4/R3; depends on model registry; Parity; prevents silent downloads and cache bloat. |
+| F064 | Per-feature cost estimator: CPU/GPU/RAM/disk/time | UX, observability | L02,S25,S49,S50,S51 | rare | Next | Fits optional AI breadth; I4/E3/R2; depends on benchmarks; Leapfrog; users need to know if a job is practical. |
+| F065 | Benchmark corpus and golden-output evaluation harness | testing, observability | L04,L09,S12,S15,S32,S45,S46 | common in mature ML/media tools | Next | Fits quality control; I5/E4/R3; depends on fixtures and manifests; Leapfrog; required before more model claims. |
+| F066 | Crash/recovery packet: logs, config, versions, deps, last jobs | observability, reliability | L04,L09,S10,S13 | common | Now | Fits support; I4/E2/R1; depends on diagnostics plumbing; Parity; fast win for user support. |
+| F067 | Optional Sentry/telemetry with local default off and explicit export | observability, telemetry | L04,S34,S35,S41 | common | Under Consideration | Partial fit; I3/E3/R4; depends on privacy policy; Parity; must be opt-in due local-first promise. |
+| F068 | Privacy budget and data-retention settings page | security, UX | L01,L04,S31,S34,S35 | common | Next | Fits trust; I4/E3/R2; depends on diagnostics/log audit; Leapfrog; makes opt-in features defensible. |
+| F069 | Local auth/token hardening for non-loopback binds | security | L04,S41,S42 | table-stakes | Now | Fits localhost server; I5/E3/R3; depends on config/env audit; Parity; LAN/review features require it. |
+| F070 | Path containment and unsafe media/path fuzz expansion | security, testing | L04,L09,S41,S42 | table-stakes | Now | Fits recent hardening commits; I5/E3/R2; depends on fuzz fixtures; Parity; keeps media tools safe on hostile paths. |
+| F071 | Export preset migration/versioning system | migration, distribution | L01,L02,S18,S23 | common | Next | Fits user settings; I3/E3/R2; depends on config schema; Parity; prevents old presets breaking new codecs. |
+| F072 | Project backup/restore and settings migration audit | migration, reliability | L04,S25,S35 | common | Later | Fits power users; I3/E4/R3; depends on config schema; Parity; less urgent than preset migration. |
+| F073 | CLI parity for all high-value panel workflows | dev-experience, automation | L02,L04,S11,S12,S13,S14 | common in OSS | Next | Fits Python toolchain; I4/E3/R2; depends on route manifest; Leapfrog; improves testability and batch use. |
+| F074 | Batch/watch-folder automation | automation, offline | S10,S11,S12,S14 | common | Later | Fits CLI; I3/E4/R3; depends on CLI parity and job audit; Parity; useful after routes stabilize. |
+| F075 | WebCodecs browser preview experiment | performance, platform/OS | S22,S13,S34,S35 | emerging | Under Consideration | Partial fit; I3/E5/R4; depends on browser shell decision; Leapfrog; do not distract from Premiere panel. |
+| F076 | Remotion-style template rendering adapter | integrations, distribution | S13,S11,S22 | common adjacent | Later | Fits programmatic exports; I3/E4/R3; depends on plugin manifest/license; Parity; optional path for motion templates. |
+| F077 | MLT/GStreamer backend abstraction study | architecture, performance | S16,S17,S01,S02,S06 | rare | Under Consideration | Weak fit now; I3/E5/R5; depends on architecture RFC; Leapfrog; avoid rewriting proven FFmpeg path without evidence. |
+| F078 | Full NLE/timeline replacement UI | UX, architecture | S01,S02,S03,S05,S06,S25 | common competitor baseline | Rejected | Contradicts Premiere companion focus; I2/E5/R5; depends on new product; Parity; OpenCut should automate Premiere instead. |
+| F079 | In-app feature marketplace with remote code execution | plugin ecosystem, security | S13,S19,S34,S35 | common adjacent | Rejected | Poor security fit; I3/E5/R5; depends on sandbox/business ops; Parity; use signed local packages first. |
+| F080 | AGPL code import from agentic video systems | licensing | S19 | rare | Rejected | License conflict risk; I2/E3/R5; depends on legal review; Parity; can study concepts without importing code. |
+| F081 | No-license small AI editor code reuse | licensing, security | S21 | rare | Rejected | Poor fit; I1/E2/R5; depends on relicense; none; reference patterns only, no code reuse. |
+| F082 | Mandatory cloud account for caption/editing workflows | licensing, UX | S26,S27,S28,S30,S31,S34,S35 | common commercially | Rejected | Contradicts local-first; I2/E3/R5; depends on account backend; Parity; optional connectors only. |
+| F083 | Silent model downloads on first feature use | offline, security | L01,L02,S49,S50,S51,S52 | common failure mode | Rejected | Contradicts transparency; I2/E2/R5; depends on model manager; none; require explicit consent and checksums. |
+| F084 | Route count as a quality metric | docs, reliability | L01,L05,L06 | common anti-pattern | Rejected | Misleading fit; I1/E1/R3; depends on manifest; none; readiness and tests matter more than counts. |
+| F085 | Raw user-media upload to third-party services by default | security, telemetry | L01,S31,S34,S35 | common commercially | Rejected | Contradicts local-first; I2/E3/R5; depends on privacy/legal; none; cloud export must be explicit. |
+| F086 | Rewrite server from Flask before fixing route readiness | architecture | L02,L04,L06,S13,S17 | rare | Rejected | Poor sequencing; I2/E5/R5; depends on test parity; none; Flask is adequate if manifest/tests are fixed. |
+| F087 | FastAPI sidecar for streaming/progress APIs only | architecture, observability | L04,S13,S17 | emerging | Under Consideration | Partial fit; I3/E4/R4; depends on route manifest and measured Flask limits; Leapfrog; only if data shows need. |
+| F088 | Local-first collaboration via exportable review bundles | multi-user/collab | S34,S35,S31,S15 | common | Next | Fits philosophy better than live cloud; I4/E3/R2; depends on review package; Leapfrog; bridge to collaboration safely. |
+| F089 | Public roadmap/source appendix generator | docs, dev-experience | L05,S62,S63,S64,S65 | rare | Now | Fits this roadmap's evidence contract; I3/E2/R1; depends on source ID discipline; Leapfrog; keeps future waves auditable. |
+| F090 | Contributor onboarding issue labels and starter tasks | docs, dev-experience | L10,S01,S02,S03,S10,S15 | table-stakes OSS | Next | Fits no-issues gap; I3/E2/R1; depends on current priorities; Parity; creates real community entry points. |
+| F091 | Good-first-issue backlog from stub/security/version findings | dev-experience, reliability | L03,L06,L07,L08,L10 | table-stakes OSS | Now | Fits empty issue tracker; I3/E2/R1; depends on triage; Parity; turns internal audit into contributor work. |
+| F092 | Release notes generated from commits, versions, route manifest, and advisories | docs, distribution | L01,L03,L04,L09,S41,S42 | common | Next | Fits release trust; I4/E3/R2; depends on manifest/version sync; Parity; prevents stale changelog/README claims. |
+
+### Tier Plan
+
+#### Now - Trust, readiness, and platform survival
+
+These are the next implementation priorities because they remove known false-positive claims, release blockers, or user trust gaps.
+
+1. **Release truth and version sync**: fix every 1.25.1/1.28.0/1.32.0 mismatch, make `sync_version.py --check` green, and add a release artifact smoke that checks README, CEP, UXP, installer, Inno, Python package, and requirements header [F001][F012][S41][S42].
+2. **Generated route/feature readiness system**: generate a manifest from Flask blueprints and feature modules, mark ready/degraded/stubbed/disabled states, feed README counts, panel UI, MCP schemas, route smoke tests, and future roadmap source IDs [F002][F003][F007][F008][F031][F089].
+3. **Known advisory remediation**: remove or replace the `deep-translator` vulnerable path, plan/test the Vite/esbuild upgrade path, and make advisory scans part of release gates [F005][F006][F069][F070].
+4. **UXP parity and CEP freeze**: enumerate every CEP-only command, bridge call, filesystem permission, and panel action; add UXP parity fixtures; declare which future features are UXP-first [F004][F056].
+5. **Non-destructive automation trust**: preview/apply contracts, timeline diff inputs, crash/recovery packets, diagnostics export, path fuzzing, and explicit "what will change" summaries before high-risk edits [F010][F036][F066][F070].
+6. **Caption/accessibility foundation**: validate WebVTT/SRT timing, completeness, line-breaking, placement, keyboard navigation, and screen-reader behavior before new caption styling/generation features [F009][F056].
+7. **Contributor-ready audit backlog**: publish source-backed starter issues for version drift, stubs, security scans, route readiness, and docs-source cleanup [F090][F091].
+
+#### Next - High-value workflows after the trust layer
+
+These should start only after the Now gates have measurable acceptance criteria.
+
+1. **Transcript and speech editing suite**: transcript cut lists, search/delete, speaker diarization, silence/filler cleanup, and ASR backend benchmarks [F013][F014][F015][F017][F061][F062].
+2. **Creator packaging and short-form workflow**: clip ranking, hooks, safe-zone reframing, brand kit, B-roll suggestions, music/SFX metadata, thumbnails, captions, and platform-ready exports [F018][F019][F020][F021][F022][F023].
+3. **Delivery QC and interchange hardening**: loudness, flash detection, codec/caption checks, OTIO/FCPXML/EDL validation, proxy/relink assistant, export preset migrations, and release notes from manifest/advisories [F024][F025][F026][F058][F059][F071][F092].
+4. **Local AI governance and performance**: model manager, checksums, disk budget, per-feature cost estimator, benchmark corpus, model/card license gates, and backend selection [F006][F063][F064][F065].
+5. **Optional collaboration without betraying local-first**: review bundles, local audit trail, project diff, privacy controls, and exportable comments before any live service [F035][F037][F038][F068][F088].
+6. **Developer and automation surface**: CLI parity, generated MCP/tool schemas, plugin sandbox policy, source appendix maintenance, and contributor task flow [F032][F034][F073][F090].
+7. **International captions**: multilingual caption translation, RTL/CJK rendering tests, and review-first localization paths after the vulnerable translator path is removed [F053][F054].
+
+#### Later - Valuable but dependent on stable foundations
+
+These are credible but should wait for platform/security/performance proof.
+
+- Mobile companion for review/ingest/remote control, not a standalone editor [F042].
+- Review portal and LAN workflows after auth/privacy controls are proven [F041].
+- Remote render queue and watch-folder automation after job audit and CLI parity [F040][F074].
+- Object/person tracking cache, visual duplicates, audio description helpers, stem refresh, voice dubbing, UI localization, template import/export, and Remotion-style rendering [F045][F047][F052][F055][F057][F060][F076].
+- OpenFX/VapourSynth adapter study and generated-media connector work only after provenance, model manager, and plugin sandbox gates exist [F030][F050].
+- Settings/project backup and restore audit after config schema/preset migration lands [F072].
+
+#### Under Consideration - Needs evidence or scope decision
+
+- Real-time co-editing, cloud video generation connectors, local open video generation engines, optional telemetry, WebCodecs previews, FastAPI sidecars, and MLT/GStreamer backend abstraction all need RFCs with threat model, cost model, and measured user value before implementation [F039][F048][F049][F067][F075][F077][F087].
+
+#### Rejected - Do not carry forward
+
+- Full native mobile editor, full NLE replacement UI, remote-code marketplace, AGPL/no-license code reuse, mandatory cloud accounts, silent model downloads, route counts as quality claims, default third-party user-media upload, and a Flask rewrite before readiness work [F043][F078][F079][F080][F081][F082][F083][F084][F085][F086].
+
+### Category Coverage Audit
+
+| Category | Status | Covered by |
+|----------|--------|------------|
+| Security | Covered strongly | F005,F006,F032,F068,F069,F070,F083,F085 |
+| Accessibility | Covered strongly | F009,F054,F056,F057,F058 |
+| i18n/l10n | Covered | F052,F053,F054,F055 |
+| Observability/telemetry | Covered | F010,F064,F066,F067,F068 |
+| Testing | Covered strongly | F007,F009,F024,F025,F056,F065,F070 |
+| Docs | Covered | F001,F002,F008,F089,F090,F091,F092 |
+| Distribution/packaging | Covered strongly | F001,F012,F023,F024,F071,F092 |
+| Plugin ecosystem | Covered | F031,F032,F033,F079 |
+| Mobile | Covered with boundary | F042,F043 |
+| Offline/resilience | Covered strongly | F011,F026,F063,F083 |
+| Multi-user/collab | Covered with local-first boundary | F038,F039,F041,F088 |
+| Migration paths | Covered strongly | F004,F025,F071,F072 |
+| Upgrade strategy | Covered strongly | F001,F005,F012,F028,F029,F061,F092 |
+| Licensing | Covered strongly | F006,F022,F027,F048,F080,F081 |
+
+### Self-Audit
+
+- Every accepted and rejected roadmap item above maps to at least one source ID in the Appendix.
+- Every tier has a one-line fit/risk/dependency rationale in the feature ledger and a short placement rationale in the tier plan.
+- The plan consciously preserves OpenCut's Premiere companion and local-first philosophy. Cloud, mobile, live collaboration, and generation features are optional/late or rejected when they contradict that philosophy.
+- The highest-priority work is not another speculative feature wave; it is release truth, route readiness, UXP migration, security advisories, accessibility/caption quality, diagnostics, and contributor-ready issue creation.
+- Duplicate legacy ideas have been collapsed into foundations: manifest, model manager, plugin sandbox, caption QA, delivery QC, and review bundles.
+- Hostile-reviewer concerns addressed: unsupported claims are source-keyed; known failing version sync and advisories are not hidden; unlicensed/AGPL code reuse is rejected; cloud/media upload defaults are rejected; "route count" is not used as a quality proxy.
+
+### Appendix A - Sources
+
+Local evidence:
+
+- [L01] `README.md` at repo root, inspected 2026-05-16.
+- [L02] `pyproject.toml`, `requirements.txt`, and optional dependency extras, inspected 2026-05-16.
+- [L03] `scripts/sync_version.py` plus `python scripts/sync_version.py --check`, run 2026-05-16.
+- [L04] `.github/workflows/build.yml`, `.github/copilot-instructions.md`, `extension/com.opencut.panel/package.json`, `extension/com.opencut.uxp/manifest.json`, installer project files, inspected 2026-05-16.
+- [L05] Existing `ROADMAP.md`, `ROADMAP-NEXT.md`, `ROADMAP-COMPLETED.md`, `features.md`, inspected 2026-05-16.
+- [L06] Source scan for `TODO`, `FIXME`, `HACK`, `XXX`, `@deprecated`, `STUB`, `placeholder`, and `NotImplementedError`, run 2026-05-16.
+- [L07] `npm audit --audit-level=moderate --package-lock-only` in `extension/com.opencut.panel`, run 2026-05-16.
+- [L08] `python -m pip_audit -r requirements.txt`, run 2026-05-16.
+- [L09] `git log -200 --oneline --decorate`, inspected 2026-05-16.
+- [L10] `gh issue list --limit 100 --state all --json ...`, run 2026-05-16.
+
+OSS and adjacent project sources:
+
+- [S01] Shotcut GitHub: https://github.com/mltframework/shotcut
+- [S02] Kdenlive GitHub: https://github.com/KDE/kdenlive
+- [S03] OpenShot Qt GitHub: https://github.com/OpenShot/openshot-qt
+- [S04] libopenshot GitHub: https://github.com/OpenShot/libopenshot
+- [S05] Olive GitHub: https://github.com/olive-editor/olive
+- [S06] Flowblade GitHub: https://github.com/jliljebl/flowblade
+- [S07] Pitivi GitHub: https://github.com/pitivi/pitivi
+- [S08] Blender GitHub: https://github.com/blender/blender
+- [S09] Natron GitHub: https://github.com/NatronGitHub/Natron
+- [S10] LosslessCut GitHub and enhancement issues: https://github.com/mifi/lossless-cut and https://github.com/mifi/lossless-cut/issues?q=is%3Aissue%20state%3Aopen%20label%3Aenhancement
+- [S11] Editly GitHub: https://github.com/mifi/editly
+- [S12] Auto-Editor GitHub: https://github.com/WyattBlue/auto-editor
+- [S13] Remotion GitHub/docs: https://github.com/remotion-dev/remotion and https://www.remotion.dev/
+- [S14] MoviePy GitHub/docs: https://github.com/Zulko/moviepy and https://zulko.github.io/moviepy/
+- [S15] OpenTimelineIO GitHub/docs: https://github.com/AcademySoftwareFoundation/OpenTimelineIO and https://opentimelineio.readthedocs.io/
+- [S16] MLT Framework: https://github.com/mltframework/mlt and https://www.mltframework.org/
+- [S17] GStreamer: https://github.com/GStreamer/gstreamer and https://gstreamer.freedesktop.org/
+- [S18] FFmpeg: https://github.com/FFmpeg/FFmpeg and https://ffmpeg.org/
+- [S19] OpenMontage GitHub: https://github.com/calesthio/OpenMontage
+- [S20] AutoClip GitHub: https://github.com/zhouxiaoka/autoclip
+- [S21] CaroCut GitHub: https://github.com/bilibili/carocut
+- [S22] OpenVideo GitHub: https://github.com/openvideodev/openvideo
+- [S32] PySceneDetect GitHub/docs: https://github.com/Breakthrough/PySceneDetect and https://www.scenedetect.com/
+
+Commercial, platform, standards, and security sources:
+
+- [S23] Adobe Premiere Pro UXP docs: https://developer.adobe.com/premiere-pro/uxp/
+- [S24] Adobe Premiere Pro what's new: https://helpx.adobe.com/premiere-pro/using/whats-new.html
+- [S25] DaVinci Resolve 21 what's new: https://www.blackmagicdesign.com/products/davinciresolve/whatsnew and https://documents.blackmagicdesign.com/SupportNotes/DaVinci_Resolve_21_New_Features_Guide.pdf
+- [S26] CapCut AI video editor/captions tools: https://www.capcut.com/tools/ai-video-editor and https://www.capcut.com/tools/auto-caption-generator
+- [S27] Descript features: https://www.descript.com/features
+- [S28] OpusClip product/features: https://www.opus.pro/
+- [S29] Submagic feature pages: https://www.submagic.co/ and https://www.submagic.co/cs/features/auto-video-editor
+- [S30] Captions.ai product/plans: https://www.captions.ai/ and https://www.captions.ai/plans
+- [S31] Runway product: https://runwayml.com/product
+- [S33] Wondershare Filmora: https://filmora.wondershare.com/
+- [S34] VEED product: https://www.veed.io/
+- [S35] Kapwing product: https://www.kapwing.com/
+- [S67] Apple Final Cut Pro: https://www.apple.com/final-cut-pro/
+- [S36] C2PA specification: https://spec.c2pa.org/specifications/specifications/2.2/specs/C2PA_Specification.html
+- [S37] WebVTT specification: https://www.w3.org/TR/webvtt1/
+- [S38] WCAG captions guidance: https://www.w3.org/WAI/WCAG22/Understanding/captions-prerecorded.html
+- [S39] WCAG audio description guidance: https://www.w3.org/WAI/WCAG22/Understanding/audio-description-prerecorded.html
+- [S40] FCC closed captioning quality guidance: https://www.fcc.gov/general/closed-captioning-video-programming-television
+- [S41] GitHub Advisory GHSA-67mh-4wv8-2f99: https://github.com/advisories/GHSA-67mh-4wv8-2f99
+- [S42] OSV PYSEC-2022-252: https://osv.dev/vulnerability/PYSEC-2022-252
+- [S43] Flask changelog: https://flask.palletsprojects.com/en/stable/changes/
+- [S44] Vite changelog/releases: https://github.com/vitejs/vite/releases and https://www.npmjs.com/package/vite
+- [S66] OpenFX: https://openeffects.org/
+
+AI/model/dependency sources:
+
+- [S45] faster-whisper: https://github.com/SYSTRAN/faster-whisper and https://pypi.org/project/faster-whisper/
+- [S46] whisper.cpp: https://github.com/ggml-org/whisper.cpp
+- [S47] pyannote-audio: https://github.com/pyannote/pyannote-audio
+- [S48] Demucs: https://github.com/facebookresearch/demucs
+- [S49] LTX-Video: https://github.com/Lightricks/LTX-Video
+- [S50] Wan2.1: https://github.com/Wan-Video/Wan2.1
+- [S51] Open-Sora: https://github.com/hpcaitech/Open-Sora
+- [S52] SAM2: https://github.com/facebookresearch/sam2
+- [S53] Cutie video object segmentation: https://github.com/hkchengrex/Cutie
+- [S54] Qwen3-VL: https://github.com/QwenLM/Qwen3-VL
+- [S55] InternVL: https://github.com/OpenGVLab/InternVL
+- [S56] Whisper: https://github.com/openai/whisper
+- [S68] SAM 2 paper: https://arxiv.org/abs/2408.00714
+- [S69] Cutie CVPR 2024 paper/project: https://hkchengrex.com/Cutie and https://openaccess.thecvf.com/content/CVPR2024/papers/Cheng_Putting_the_Object_Back_into_Video_Object_Segmentation_CVPR_2024_paper.pdf
+- [S70] LTX-Video paper: https://arxiv.org/abs/2501.00103
+- [S71] Wan paper: https://arxiv.org/abs/2503.20314
+
+Community and awesome-list sources:
+
+- [S57] Hacker News discussion of OpenShot/video editor pain points: https://news.ycombinator.com/item?id=46832384
+- [S58] Hacker News search for video editor/FFmpeg/OpenShot complaints: https://hn.algolia.com/?q=open%20source%20video%20editor%20ffmpeg
+- [S59] Reddit video editing search for captions/transcript/local editor complaints: https://www.reddit.com/search/?q=open%20source%20video%20editor%20auto%20captions%20transcript%20editing
+- [S60] Reddit Premiere search for CEP/UXP extension migration concerns: https://www.reddit.com/search/?q=Adobe%20Premiere%20CEP%20UXP%20extension%20migration
+- [S61] Reddit FFmpeg search for new codec/filter/platform issues: https://www.reddit.com/search/?q=FFmpeg%208%20whisper%20filter%20Vulkan%20AV1%20Windows
+- [S62] Awesome Video: https://github.com/sitkevij/awesome-video
+- [S63] Awesome Video Diffusion: https://github.com/showlab/Awesome-Video-Diffusion
+- [S64] Awesome FFmpeg: https://github.com/transitive-bullshit/awesome-ffmpeg
+- [S65] Awesome AI Voice: https://github.com/wildminder/awesome-ai-voice
 
 ---
 
