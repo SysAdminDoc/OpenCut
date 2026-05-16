@@ -529,3 +529,33 @@ def interrupted_jobs():
         return jsonify(get_interrupted_jobs())
     except ImportError:
         return jsonify([])
+
+
+@jobs_bp.route("/jobs/<job_id>/diagnostics", methods=["GET"])
+def job_diagnostics(job_id: str):
+    """Return a diagnostic payload for ``job_id`` (F010).
+
+    Combines the persisted job store row with the in-memory job state
+    and a relevant slice of ``opencut.log`` filtered to lines that
+    mention the job_id or its request_id. The response is scrubbed of
+    home directory paths via :mod:`opencut.core.issue_report`.
+    """
+    try:
+        from flask import request as _request
+
+        from opencut.core.job_diagnostics import build_diagnostic
+        from opencut.errors import safe_error as _safe_error
+
+        log_tail = _request.args.get("log_tail_lines", "200")
+        try:
+            log_tail_lines = int(log_tail)
+        except (TypeError, ValueError):
+            log_tail_lines = 200
+
+        diag = build_diagnostic(job_id, log_tail_lines=log_tail_lines)
+        payload = diag.as_dict()
+        status = 200 if diag.found else 404
+        return jsonify(payload), status
+    except Exception as exc:  # pragma: no cover - defensive
+        from opencut.errors import safe_error as _safe_error
+        return _safe_error(exc, "job_diagnostics")
