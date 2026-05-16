@@ -153,6 +153,25 @@ seeds:
 
       Source: ROADMAP.md v4.3 → F118.
 
+  - roadmap_id: F101
+    title: "F101: Windows ARM64 packaging — evaluation tracker"
+    labels: ["type:chore", "area:packaging", "roadmap:next", "priority:p2"]
+    body: |
+      Tracker for the Windows ARM64 packaging evaluation. The component
+      compatibility matrix, gaps, and acceptance criteria for promoting
+      this to the `Now` tier live in `docs/WINDOWS_ARM64_PACKAGING.md`.
+
+      Move into `Now` only when **all** acceptance criteria in that
+      document are met:
+
+      1. `scripts/release_smoke.py` green on Windows ARM64.
+      2. Signed `OpenCut-Setup-arm64.exe` installs + launches on a
+         Surface Pro X / SQ3.
+      3. Route + version sync `--check` pass on the same host.
+      4. At least one third-party tester reports friction-free install.
+
+      Source: ROADMAP.md v4.3 → F101.
+
   - roadmap_id: F102
     title: "F102: CSV/EDL/marker import automation"
     labels: ["type:feature", "area:export", "area:server", "roadmap:next", "priority:p2"]
