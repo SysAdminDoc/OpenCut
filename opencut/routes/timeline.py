@@ -618,3 +618,95 @@ def review_bundle():
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return safe_error(exc, "review_bundle")
+
+
+@timeline_bp.route("/provenance/c2pa", methods=["POST"])
+@require_csrf
+def provenance_c2pa_sidecar():
+    """Write a C2PA sidecar next to a rendered asset (F110)."""
+    from flask import request
+
+    from opencut.core.c2pa_sidecar import (
+        C2paAction,
+        C2paIngredient,
+        build_sidecar,
+    )
+
+    try:
+        data = get_json_dict()
+        asset_path = (data.get("asset_path") or "").strip()
+        if not asset_path:
+            return jsonify({"error": "asset_path required"}), 400
+        try:
+            asset_path = validate_filepath(asset_path)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        ingredients_raw = data.get("ingredients") or []
+        if not isinstance(ingredients_raw, list):
+            return jsonify({"error": "ingredients must be a list"}), 400
+        ingredients = [
+            C2paIngredient(
+                title=str(item.get("title") or ""),
+                sha256=str(item.get("sha256") or ""),
+                bytes=int(item.get("bytes") or 0),
+                role=str(item.get("role") or "source"),
+            )
+            for item in ingredients_raw
+            if isinstance(item, dict)
+        ]
+
+        actions_raw = data.get("actions") or []
+        if not isinstance(actions_raw, list):
+            return jsonify({"error": "actions must be a list"}), 400
+        actions = [
+            C2paAction(
+                action=str(item.get("action") or "c2pa.unknown"),
+                when=str(item.get("when") or ""),
+                parameters=item.get("parameters") or {},
+            )
+            for item in actions_raw
+            if isinstance(item, dict)
+        ]
+
+        build_kwargs = dict(
+            asset_path=asset_path,
+            ingredients=ingredients,
+            actions=actions,
+            title=str(data.get("title") or "").strip() or None,
+        )
+        claim_generator_override = str(data.get("claim_generator") or "").strip()
+        if claim_generator_override:
+            build_kwargs["claim_generator"] = claim_generator_override
+        result = build_sidecar(**build_kwargs)
+        return jsonify(result.as_dict())
+    except FileNotFoundError as exc:
+        return jsonify({"error": f"path not found: {exc.filename}"}), 404
+    except Exception as exc:
+        return safe_error(exc, "provenance_c2pa_sidecar")
+
+
+@timeline_bp.route("/provenance/verify", methods=["POST"])
+@require_csrf
+def provenance_verify():
+    """Verify a C2PA sidecar against the referenced asset (F110)."""
+    from flask import request
+
+    from opencut.core.c2pa_sidecar import verify_sidecar
+
+    try:
+        data = get_json_dict()
+        sidecar_path = (data.get("sidecar_path") or "").strip()
+        if not sidecar_path:
+            return jsonify({"error": "sidecar_path required"}), 400
+        try:
+            sidecar_path = validate_filepath(sidecar_path)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        result = verify_sidecar(sidecar_path)
+        return jsonify(result)
+    except FileNotFoundError as exc:
+        return jsonify({"error": f"sidecar not found: {exc.filename}"}), 404
+    except Exception as exc:
+        return safe_error(exc, "provenance_verify")

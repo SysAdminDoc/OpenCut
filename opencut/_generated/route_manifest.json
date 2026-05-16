@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T19:39:03Z",
-  "total_routes": 1351,
+  "generated_at": "2026-05-16T19:41:52Z",
+  "total_routes": 1353,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
     "GET": 291,
     "PATCH": 1,
-    "POST": 1045,
+    "POST": 1047,
     "PUT": 2
   },
   "blueprints": {
@@ -834,10 +834,10 @@
       ]
     },
     "timeline": {
-      "route_count": 9,
+      "route_count": 11,
       "method_counts": {
         "GET": 1,
-        "POST": 8
+        "POST": 10
       },
       "sample_rules": [
         "/timeline/batch-rename",
@@ -7502,12 +7502,28 @@
       "blueprint": "system"
     },
     {
+      "rule": "/provenance/c2pa",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.provenance_c2pa_sidecar",
+      "blueprint": "timeline"
+    },
+    {
       "rule": "/provenance/generate",
       "methods": [
         "POST"
       ],
       "endpoint": "content.provenance_generate",
       "blueprint": "content"
+    },
+    {
+      "rule": "/provenance/verify",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline.provenance_verify",
+      "blueprint": "timeline"
     },
     {
       "rule": "/proxy/auto-ingest",
