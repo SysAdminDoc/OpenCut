@@ -2594,3 +2594,28 @@ def engine_resolve():
             return jsonify({"error": f"No available engine for domain: {domain}"}), 404
     except Exception as e:
         return safe_error(e, "engine_resolve")
+
+
+@system_bp.route("/system/feature-state", methods=["GET"])
+def feature_state():
+    """Return the feature readiness manifest (F100).
+
+    Used by the CEP / UXP panels to grey out actions whose backend isn't
+    ``available`` instead of waiting for a 503/501 at click time. The
+    response is intentionally cheap to render: it does not boot any
+    heavy AI extras; the only work is calling each feature's lightweight
+    ``check_X_available()`` probe.
+    """
+    try:
+        from opencut.registry import feature_manifest
+
+        manifest = feature_manifest()
+        feature_id = request.args.get("feature_id", "").strip()
+        if feature_id:
+            for record in manifest["features"]:
+                if record["feature_id"] == feature_id:
+                    return jsonify(record)
+            return jsonify({"error": f"unknown feature_id: {feature_id}"}), 404
+        return jsonify(manifest)
+    except Exception as e:
+        return safe_error(e, "feature_state")
