@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T19:15:39Z",
-  "total_routes": 1348,
+  "generated_at": "2026-05-16T19:32:04Z",
+  "total_routes": 1349,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 290,
+    "GET": 291,
     "PATCH": 1,
     "POST": 1043,
     "PUT": 2
@@ -822,9 +822,9 @@
       ]
     },
     "system": {
-      "route_count": 54,
+      "route_count": 55,
       "method_counts": {
-        "GET": 24,
+        "GET": 25,
         "POST": 31
       },
       "sample_rules": [
@@ -8924,6 +8924,14 @@
       ],
       "endpoint": "subtitle_pro.shot_aware_timing",
       "blueprint": "subtitle_pro"
+    },
+    {
+      "rule": "/system/capabilities",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.system_capabilities",
+      "blueprint": "system"
     },
     {
       "rule": "/system/changelog/latest",

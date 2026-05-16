@@ -326,6 +326,15 @@ _FEATURES: List[FeatureRecord] = [
         routes=["/captions/qc"],
     ),
     FeatureRecord(
+        feature_id="system.capabilities",
+        label="Codec + hardware capability probe",
+        category="system",
+        state=STATE_AVAILABLE,
+        install_hint="bundled (no extra deps)",
+        docs="ROADMAP.md#F106",
+        routes=["/system/capabilities"],
+    ),
+    FeatureRecord(
         feature_id="lipsync.latentsync",
         label="LatentSync diffusion lip-sync",
         category="ai",

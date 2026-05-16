@@ -2647,6 +2647,22 @@ def auth_rotate():
         return safe_error(exc, "auth_rotate")
 
 
+@system_bp.route("/system/capabilities", methods=["GET"])
+def system_capabilities():
+    """Return the capability profile (F106).
+
+    Cheap probe of FFmpeg, ffprobe, GPU, disk, and the Python runtime.
+    Used by the panel + CLI to surface friendly fallback messages
+    *before* a job runs.
+    """
+    try:
+        from opencut.core.capability_profile import build_profile
+
+        return jsonify(build_profile())
+    except Exception as exc:
+        return safe_error(exc, "system_capabilities")
+
+
 @system_bp.route("/system/feature-state", methods=["GET"])
 def feature_state():
     """Return the feature readiness manifest (F100).
