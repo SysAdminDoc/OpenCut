@@ -136,7 +136,7 @@ Tier deltas for v4.3:
 
 - [x] F093 Hermetic bootstrap verifier - added `scripts/bootstrap_check.py`, JSON/text output, metadata-only mode, docs, focused tests, and verified the full check passes after core install.
 - [x] F094 Lockfile/SBOM audit repair - removed the stale self-package lock entry, updated vulnerable lock pins, removed the no-fix `deep-translator` dependency from install surfaces, and verified `pip-audit` reports no known vulnerabilities for both `requirements.txt` and `requirements-lock.txt`.
-- [ ] F095 Node advisory upgrade plan.
+- [x] F095 Node advisory upgrade plan - pinned `esbuild` ^0.25 via `overrides` to close GHSA-67mh-4wv8-2f99; waived the remaining `vite` `.map` traversal CVE in `docs/NODE_ADVISORIES.md` (only reachable via `vite dev/preview`, which we never run); added `npm run audit:check` (allow-list gate) and `npm run build:verify` (source-tree smoke) plus a Linux CI step and Python parity tests.
 - [x] F096 UXP version-sync release blocker - synced release, extension, installer, package, and requirements version surfaces to v1.32.0 and verified `scripts/sync_version.py --check`.
 - [ ] F097 Source-linked GitHub issue seeding.
 - [ ] F098 Release smoke matrix.

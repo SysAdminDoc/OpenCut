@@ -29,6 +29,9 @@ installer/dist/
 installer/publish/
 installer/src/*/obj/
 ffmpeg/
+node_modules/
+extension/**/client/dist/
+extension/**/.vite/
 CLAUDE.md
 CODEX-CHANGELOG.md
 CLAUDE-HANDOFF-PROMPT.md

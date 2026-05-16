@@ -65,6 +65,15 @@ jobs:
       - name: Check version sync
         run: python scripts/sync_version.py --check
 
+      - name: CEP panel — install + advisory check + source verify
+        if: runner.os == 'Linux'
+        working-directory: extension/com.opencut.panel
+        run: |
+          npm ci --omit=optional
+          npm run audit:check
+          npm run build:verify
+          npm run build
+
       - name: Smoke test imports
         run: |
           python -c "from opencut.server import create_app; app = create_app(); print('Server OK')"
