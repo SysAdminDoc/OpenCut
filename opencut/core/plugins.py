@@ -238,10 +238,31 @@ def load_all_plugins(app):
     plugins = discover_plugins()
     result = {"loaded": [], "failed": [], "skipped": []}
 
+    # F116: refuse to load plugins whose schema or lock file is invalid.
+    # The validator is intentionally separate so dev installs can opt in
+    # via OPENCUT_PLUGIN_ALLOW_UNSIGNED=1.
+    try:
+        from opencut.core.plugin_manifest import validate_plugin_manifest
+    except Exception:  # pragma: no cover - defensive
+        validate_plugin_manifest = None  # type: ignore[assignment]
+
     for plugin in plugins:
         if not plugin["valid"] or not plugin["enabled"]:
             result["skipped"].append(plugin["name"])
             continue
+
+        if validate_plugin_manifest is not None:
+            validation = validate_plugin_manifest(plugin["path"])
+            if not validation.valid:
+                logger.warning(
+                    "plugin %s refused by manifest validator: %s",
+                    plugin["name"],
+                    "; ".join(validation.errors),
+                )
+                result["failed"].append({"name": plugin["name"], "error": "; ".join(validation.errors)})
+                continue
+            for warn in validation.warnings:
+                logger.info("plugin %s warning: %s", plugin["name"], warn)
 
         routes_file = os.path.join(plugin["path"], "routes.py")
         if not os.path.isfile(routes_file):
