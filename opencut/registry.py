@@ -398,6 +398,15 @@ _FEATURES: List[FeatureRecord] = [
         routes=["/system/crash-packet"],
     ),
     FeatureRecord(
+        feature_id="system.job-diagnostics",
+        label="Per-job diagnostic payload with correlation IDs",
+        category="system",
+        state=STATE_AVAILABLE,
+        install_hint="bundled (no extra deps)",
+        docs="ROADMAP.md#F010",
+        routes=["/jobs/<job_id>/diagnostics"],
+    ),
+    FeatureRecord(
         feature_id="lipsync.latentsync",
         label="LatentSync diffusion lip-sync",
         category="ai",
