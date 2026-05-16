@@ -136,6 +136,25 @@ def step_route_manifest(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_model_cards(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    result = _run(
+        [sys.executable, "-m", "opencut.tools.dump_model_cards", "--check"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "model-cards",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message="model cards in sync" if status == "ok" else "model card drift",
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_version_sync(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     script = REPO_ROOT / "scripts" / "sync_version.py"
@@ -196,6 +215,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_feature_registry.py",
     "tests/test_caption_qc.py",
     "tests/test_local_auth.py",
+    "tests/test_model_cards.py",
     "tests/test_hardening.py::test_uxp_engine_registry_escapes_dynamic_attribute_values",
     "tests/test_hardening.py::test_uxp_fetch_wrapper_clears_backend_timeout_timers",
     "tests/test_config_and_userdata.py::test_server_main_rejects_remote_bind_without_opt_in",
@@ -323,6 +343,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("bootstrap", step_bootstrap, "Run scripts/bootstrap_check.py"),
     StepDefinition("version-sync", step_version_sync, "Check version surfaces"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
+    StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt"),
