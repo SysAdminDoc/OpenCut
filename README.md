@@ -5,8 +5,12 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1275-orange)
-![Tests](https://img.shields.io/badge/Tests-7551-brightgreen)
+![Routes](https://img.shields.io/badge/API%20Routes-1344-orange)
+![Tests](https://img.shields.io/badge/Tests-7600+-brightgreen)
+
+> Route count is generated from `opencut/_generated/route_manifest.json`; run
+> `python -m opencut.tools.dump_route_manifest --check` to verify it is in
+> sync with the live Flask app before bumping the badge.
 
 > A free, open-source Premiere Pro extension that brings AI-powered video editing automation, caption generation, audio processing, and visual effects -- all running locally on your machine. No subscriptions, no cloud, no API keys required.
 
