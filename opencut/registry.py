@@ -344,6 +344,15 @@ _FEATURES: List[FeatureRecord] = [
         routes=["/markers/import"],
     ),
     FeatureRecord(
+        feature_id="review.bundle",
+        label="Portable review bundle export",
+        category="export",
+        state=STATE_AVAILABLE,
+        install_hint="bundled (no extra deps)",
+        docs="ROADMAP.md#F105",
+        routes=["/review/bundle"],
+    ),
+    FeatureRecord(
         feature_id="lipsync.latentsync",
         label="LatentSync diffusion lip-sync",
         category="ai",
