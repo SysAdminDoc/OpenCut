@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T19:11:40Z",
-  "total_routes": 1346,
+  "generated_at": "2026-05-16T19:15:39Z",
+  "total_routes": 1348,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 289,
+    "GET": 290,
     "PATCH": 1,
-    "POST": 1042,
+    "POST": 1043,
     "PUT": 2
   },
   "blueprints": {
@@ -822,10 +822,10 @@
       ]
     },
     "system": {
-      "route_count": 52,
+      "route_count": 54,
       "method_counts": {
-        "GET": 23,
-        "POST": 30
+        "GET": 24,
+        "POST": 31
       },
       "sample_rules": [
         "/health",
@@ -4604,6 +4604,22 @@
       ],
       "endpoint": "production.audiogram_generate",
       "blueprint": "production"
+    },
+    {
+      "rule": "/auth/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.auth_info",
+      "blueprint": "system"
+    },
+    {
+      "rule": "/auth/rotate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.auth_rotate",
+      "blueprint": "system"
     },
     {
       "rule": "/batch-conform/analyze",
