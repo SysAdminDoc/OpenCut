@@ -38,6 +38,9 @@ class ModelCard:
     quality_notes: str = ""
     requires_checkpoint_env: Optional[str] = None
     advisory_notes: List[str] = field(default_factory=list)
+    # When non-empty, downgrades a denied-license error to a warning. Must
+    # contain a written justification (reviewed by the maintainer).
+    license_waiver: str = ""
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -238,6 +241,12 @@ CARDS: List[ModelCard] = [
         advisory_notes=[
             "GPL-3.0 — bundling the model with proprietary distributions requires legal review.",
         ],
+        license_waiver=(
+            "User installs separately via `pip install robust-video-matting`; OpenCut "
+            "(MIT) invokes the GPL-3.0 model at runtime only, does not redistribute the "
+            "weights or library, and the feature is explicitly opt-in. Downstream "
+            "redistributors must perform their own license review."
+        ),
     ),
     ModelCard(
         check_name="check_depth_available",
@@ -263,6 +272,12 @@ CARDS: List[ModelCard] = [
         advisory_notes=[
             "Custom S-Lab license — non-commercial use only. Verify before shipping in paid distributions.",
         ],
+        license_waiver=(
+            "Non-commercial source — guarded behind an opt-in check_propainter_available() "
+            "gate. The default OpenCut install does not include ProPainter; users must "
+            "explicitly `pip install propainter` and accept the NTU S-Lab license at that "
+            "point. Maintainers must remove this waiver before any commercial distribution."
+        ),
     ),
     ModelCard(
         check_name="check_sam2_available",
