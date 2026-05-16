@@ -155,6 +155,25 @@ def step_model_cards(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_license_gate(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    result = _run(
+        [sys.executable, "-m", "opencut.tools.license_gate", "--json"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "license-gate",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message="all licenses on allowlist or waived" if status == "ok" else "license gate failed",
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_roadmap_lint(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     result = _run(
@@ -249,6 +268,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_project_health.py",
     "tests/test_crash_packet.py",
     "tests/test_job_diagnostics.py",
+    "tests/test_license_gate.py",
     "tests/test_hardening.py::test_uxp_engine_registry_escapes_dynamic_attribute_values",
     "tests/test_hardening.py::test_uxp_fetch_wrapper_clears_backend_timeout_timers",
     "tests/test_config_and_userdata.py::test_server_main_rejects_remote_bind_without_opt_in",
@@ -377,6 +397,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("version-sync", step_version_sync, "Check version surfaces"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
     StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),
+    StepDefinition("license-gate", step_license_gate, "Run the license allowlist gate over model cards"),
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
