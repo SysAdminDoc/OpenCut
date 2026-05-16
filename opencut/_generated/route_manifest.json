@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T20:00:50Z",
-  "total_routes": 1356,
+  "generated_at": "2026-05-16T20:21:28Z",
+  "total_routes": 1357,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
     "GET": 294,
     "PATCH": 1,
-    "POST": 1047,
+    "POST": 1048,
     "PUT": 2
   },
   "blueprints": {
@@ -822,10 +822,10 @@
       ]
     },
     "system": {
-      "route_count": 58,
+      "route_count": 59,
       "method_counts": {
         "GET": 28,
-        "POST": 31
+        "POST": 32
       },
       "sample_rules": [
         "/health",
@@ -9139,6 +9139,14 @@
         "POST"
       ],
       "endpoint": "system.open_path",
+      "blueprint": "system"
+    },
+    {
+      "rule": "/system/project-health",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "system.system_project_health",
       "blueprint": "system"
     },
     {
