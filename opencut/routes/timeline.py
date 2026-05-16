@@ -545,3 +545,76 @@ def markers_import():
         return jsonify({"error": f"path not found: {exc.filename}"}), 404
     except Exception as exc:
         return safe_error(exc, "markers_import")
+
+
+@timeline_bp.route("/review/bundle", methods=["POST"])
+@require_csrf
+def review_bundle():
+    """Build a portable review bundle (F105).
+
+    Request body::
+
+        {
+            "output_path": "/abs/path/to/output.zip",
+            "job_label": "Rough Cut v3",
+            "media_path": "/abs/path/to/render.mp4",   # optional
+            "captions_path": "/abs/path/to/captions.srt",
+            "markers_payload": {...},                  # arbitrary JSON
+            "notes": "Free-form notes for the reviewer",
+            "extra_files": ["/abs/path/to/lut.cube"],
+            "include_media": true
+        }
+
+    Returns the manifest of the produced bundle (sha-256, byte count,
+    contained entries).
+    """
+    from flask import request
+
+    from opencut.core.review_bundle import build_review_bundle
+
+    try:
+        data = get_json_dict()
+        output_path = (data.get("output_path") or "").strip()
+        if not output_path:
+            return jsonify({"error": "output_path required"}), 400
+        try:
+            from opencut.security import validate_output_path
+            output_path = validate_output_path(output_path)
+        except ValueError as exc:
+            return jsonify({"error": str(exc)}), 400
+
+        # Optional inputs — each is validated only when supplied so the
+        # route is useful even when only markers + notes are bundled.
+        def _maybe_path(key):
+            raw = (data.get(key) or "").strip() or None
+            if raw is None:
+                return None
+            return validate_filepath(raw)
+
+        extra_files_raw = data.get("extra_files") or []
+        if not isinstance(extra_files_raw, list):
+            return jsonify({"error": "extra_files must be a list"}), 400
+        extra_files = []
+        for raw in extra_files_raw:
+            try:
+                extra_files.append(validate_filepath(str(raw)))
+            except ValueError as exc:
+                return jsonify({"error": f"extra_files: {exc}"}), 400
+
+        bundle = build_review_bundle(
+            output_path=output_path,
+            job_label=str(data.get("job_label") or "").strip(),
+            media_path=_maybe_path("media_path"),
+            captions_path=_maybe_path("captions_path"),
+            markers_payload=data.get("markers_payload"),
+            notes=str(data.get("notes") or ""),
+            extra_files=extra_files or None,
+            include_media=bool(data.get("include_media", True)),
+        )
+        return jsonify(bundle.as_dict())
+    except FileNotFoundError as exc:
+        return jsonify({"error": f"path not found: {exc.filename}"}), 404
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return safe_error(exc, "review_bundle")
