@@ -1,0 +1,209 @@
+# Source-linked issue seeds. Each entry is a single issue that
+# `scripts/seed_github_issues.py` can push into the SysAdminDoc/OpenCut tracker.
+# Keep `roadmap_id` aligned with ROADMAP.md so closing the issue auto-closes
+# the roadmap item via the seeder's `--reconcile` mode.
+
+seeds:
+  - roadmap_id: F097
+    title: "F097: seed initial source-linked issue backlog"
+    labels: ["type:chore", "area:docs", "roadmap:now", "priority:p0"]
+    body: |
+      Run `python scripts/seed_github_issues.py --dry-run` to inspect the
+      generated issue queue, then `--apply --once` to push the first batch
+      into the tracker.
+
+      Acceptance:
+      - All entries from `.github/issue-seeds.yml` exist as open issues.
+      - Issue titles include their roadmap ID so seed dedupe works on rerun.
+      - `.github/labels.yml` has been applied via `--labels`.
+
+      Source: ROADMAP.md v4.3 → F097.
+
+  - roadmap_id: F098
+    title: "F098: release smoke matrix runner"
+    labels: ["type:chore", "area:packaging", "roadmap:now", "priority:p0"]
+    body: |
+      Build `scripts/release_smoke.py` that chains the existing checks into
+      one releasable command:
+
+      - `python scripts/bootstrap_check.py --json`
+      - `python scripts/sync_version.py --check`
+      - `python -m pytest tests/test_route_manifest.py -q`
+      - `npm --prefix extension/com.opencut.panel run audit:check`
+      - `npm --prefix extension/com.opencut.panel run build:verify`
+      - `pip-audit -r requirements.txt`
+      - Docker image build smoke + installer manifest check (where available)
+
+      Each step must emit a structured PASS/FAIL line so CI can fail fast.
+      Acceptance: `python scripts/release_smoke.py --json` returns a list
+      of step results that pytest can assert against.
+
+      Source: ROADMAP.md v4.3 → F098.
+
+  - roadmap_id: F099
+    title: "F099: generated route + feature manifest"
+    labels: ["type:chore", "area:docs", "area:server", "roadmap:now", "priority:p1"]
+    body: |
+      The README and roadmap quote route counts that are drifting. Generate
+      a single canonical manifest under `opencut/_generated/route_manifest.json`
+      from `Flask.url_map`, plus a sibling `feature_manifest.json` keyed by
+      readiness state.
+
+      Acceptance:
+      - `python -m opencut.tools.dump_route_manifest` writes both files.
+      - `tests/test_route_manifest.py` asserts no drift between the live
+        Flask app and the committed manifest.
+      - Docs link the manifest instead of hardcoding numbers.
+
+      Source: ROADMAP.md v4.3 → F099.
+
+  - roadmap_id: F100
+    title: "F100: stub readiness policy + UI gating"
+    labels: ["type:feature", "area:server", "area:cep-panel", "roadmap:now", "priority:p1"]
+    body: |
+      Today, calling a stubbed feature returns 501/503 at runtime, which is
+      a poor first-time-user experience. Introduce explicit readiness
+      states (`available`, `stub`, `missing_dependency`, `experimental`)
+      and surface them through the panel.
+
+      Acceptance:
+      - `opencut/registry.py` (new) holds readiness metadata per feature.
+      - `GET /system/feature-state` returns the manifest.
+      - CEP panel greys out features whose state is not `available` and
+        shows the documented hint instead of a bare error.
+      - Tests cover both the registry and the route shape.
+
+      Source: ROADMAP.md v4.3 → F100.
+
+  - roadmap_id: F111
+    title: "F111: caption QC gate"
+    labels: ["type:feature", "area:captions", "roadmap:now", "priority:p0"]
+    body: |
+      Add a caption quality gate that runs against any SRT/WebVTT export
+      before it leaves the server. Reuses `core/caption_compliance.py`.
+
+      Acceptance:
+      - New module `core/caption_qc.py` enforces reading speed, line
+        length, cue gap, overlap, and forbidden glyph rules.
+      - `POST /captions/qc` returns pass/fail plus a per-cue diagnostic
+        array.
+      - Caption export routes call the gate and fail closed when the
+        result is `fail` unless `?force=1`.
+      - Tests cover three known-bad SRT fixtures and one clean one.
+
+      Source: ROADMAP.md v4.3 → F111.
+
+  - roadmap_id: F112
+    title: "F112: local auth + bind-address hardening"
+    labels: ["type:security", "area:server", "roadmap:now", "priority:p0"]
+    body: |
+      v1.32 already refuses non-loopback binds unless `OPENCUT_ALLOW_REMOTE=1`.
+      Build on that:
+
+      - Persist a per-install API token in `~/.opencut/auth.json` and
+        require it on non-loopback requests when `OPENCUT_ALLOW_REMOTE=1`.
+      - Document the threat model and operator checklist in `SECURITY.md`.
+      - Add tests covering token issuance, rotation, and refusal of
+        unauthenticated remote requests.
+
+      Source: ROADMAP.md v4.3 → F112.
+
+  - roadmap_id: F115
+    title: "F115: model + license cards for AI extras"
+    labels: ["type:feature", "area:ai", "area:docs", "roadmap:now", "priority:p1"]
+    body: |
+      Optional AI backends (TTS, restoration, generation, captions) need
+      machine-readable metadata covering license, hardware, latency,
+      privacy, and install hints.
+
+      Acceptance:
+      - `opencut/_generated/model_cards.json` produced by
+        `python -m opencut.tools.dump_model_cards`.
+      - `docs/MODELS.md` is generated from the same source.
+      - `tests/test_model_cards.py` asserts every `check_*_available`
+        guard has a matching model card row.
+
+      Source: ROADMAP.md v4.3 → F115.
+
+  - roadmap_id: F117
+    title: "F117: good-first-issue backlog generator"
+    labels: ["type:chore", "area:docs", "good first issue", "roadmap:now", "priority:p2"]
+    body: |
+      Extend `scripts/seed_github_issues.py` so it can emit a curated set
+      of `good first issue`-labelled tasks from the roadmap's small-effort
+      rows.
+
+      Acceptance:
+      - `--good-first` flag generates issues from `.github/issue-seeds.yml`
+        entries that opt-in via `good_first: true`.
+      - At least 5 starter tasks are seeded.
+      - Each starter task links to a file path that already exists and
+        names the file/test that proves "done".
+
+      Source: ROADMAP.md v4.3 → F117.
+
+  - roadmap_id: F118
+    title: "F118: roadmap source appendix linter"
+    labels: ["type:chore", "type:test", "area:docs", "roadmap:now", "priority:p1"]
+    body: |
+      The roadmap is heavy on `[V43-Lxx]` and `[V43-Sxx]` citations. Add
+      a CI lint that:
+
+      - Extracts every citation token from `ROADMAP.md`.
+      - Confirms each one resolves to a row in the source appendix.
+      - Confirms every appendix row points at a real local file or a URL
+        that parses cleanly.
+      - Fails the build on dangling or duplicated citations.
+
+      Source: ROADMAP.md v4.3 → F118.
+
+  - roadmap_id: F102
+    title: "F102: CSV/EDL/marker import automation"
+    labels: ["type:feature", "area:export", "area:server", "roadmap:next", "priority:p2"]
+    body: |
+      Premiere editors regularly want to drive marker creation from a CSV
+      or EDL. Add a small import endpoint that accepts both and writes
+      into the current Premiere sequence via the existing JSX bridge.
+
+      Source: ROADMAP.md v4.3 → F102.
+
+  - roadmap_id: F103
+    title: "F103: timeline marker colour/source metadata preservation"
+    labels: ["type:feature", "area:export", "roadmap:next", "priority:p2"]
+    body: |
+      OTIO round-tripping loses marker colour and source comments. Build
+      a schema mapping and round-trip tests against fixtures from Premiere,
+      DaVinci, and Avid.
+
+      Source: ROADMAP.md v4.3 → F103.
+
+  - roadmap_id: F106
+    title: "F106: codec + hardware capability profile endpoint"
+    labels: ["type:feature", "area:server", "roadmap:next", "priority:p2"]
+    body: |
+      Expose `GET /system/capabilities` that returns FFmpeg-detected codec
+      support, GPU/encoder availability, and writeable temp space. Jobs
+      should call this on startup and surface friendly fallback messages
+      when they can't run.
+
+      Source: ROADMAP.md v4.3 → F106.
+
+  - roadmap_id: F109
+    title: "F109: OpenColorIO/ACES validation"
+    labels: ["type:feature", "area:video", "roadmap:next", "priority:p2"]
+    body: |
+      Integrate `PyOpenColorIO` (already shortlisted in Wave B2) and add a
+      gated validation endpoint that returns the active OCIO config, ACES
+      transform availability, and recommended display roles.
+
+      Source: ROADMAP.md v4.3 → F109.
+
+  - roadmap_id: F116
+    title: "F116: plugin manifest v1 + sandbox boundary"
+    labels: ["type:feature", "area:integrations", "roadmap:next", "priority:p2"]
+    body: |
+      Define a v1 manifest format (`plugin.json`) for third-party plugins,
+      pair it with a Python-side sandbox boundary that refuses to load any
+      plugin that hasn't been signed/locked.
+
+      Source: ROADMAP.md v4.3 → F116.

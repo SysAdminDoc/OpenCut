@@ -1,0 +1,92 @@
+name: Bug report
+description: Something broke in OpenCut — Premiere panel, server, installer, or UXP plugin.
+title: "[bug] "
+labels: ["type:bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to file a bug. The more specific you can be
+        about *what you were doing* and *what you saw*, the faster we can fix it.
+        OpenCut is local-first — please confirm you reproduced the issue on your
+        own machine and not against a stale build.
+
+  - type: input
+    id: opencut-version
+    attributes:
+      label: OpenCut version
+      description: "Run `opencut --version` or check the panel footer (Settings → About)."
+      placeholder: "v1.32.0"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: surface
+    attributes:
+      label: Affected surface
+      multiple: true
+      options:
+        - "CEP panel (Premiere ≤ 2025)"
+        - "UXP plugin (Premiere 2026+)"
+        - "HTTP server / CLI"
+        - "Installer / packaging"
+        - "Web UI"
+        - "Docs / website"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - "Windows 11"
+        - "Windows 10"
+        - "macOS"
+        - "Linux"
+        - "Other / not applicable"
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Repro steps
+      description: Minimal sequence to reproduce. Numbered list preferred.
+      placeholder: |
+        1. Open Premiere, load `clip.mp4`.
+        2. In the OpenCut panel, click Cut → Run.
+        3. Observe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual
+      description: One sentence each. What did you expect? What did you see instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs / screenshots
+      description: |
+        Paste a relevant excerpt from `~/.opencut/logs/opencut.log` (Windows:
+        `%USERPROFILE%\.opencut\logs\`) or attach a screenshot. The panel
+        also has a "Send log" button under Settings that bundles a redacted
+        report.
+      render: text
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues for a duplicate.
+          required: true
+        - label: I ran the latest released version (or a recent main).
+          required: true
+        - label: I removed personal paths and credentials from the report.
+          required: true

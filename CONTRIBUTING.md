@@ -107,6 +107,16 @@ Version-bump commits touch `opencut/__init__.py` + 16 other targets. Always run 
 5. `python scripts/sbom.py` to refresh the SBOM (optional but nice).
 6. Tag: `git tag -a vX.Y.Z -m "OpenCut vX.Y.Z"` — GitHub Actions build workflow picks it up and publishes installers.
 
+## Picking a starter task
+
+- Browse [issues labelled `good first issue`](https://github.com/SysAdminDoc/OpenCut/issues?q=is%3Aopen+label%3A%22good+first+issue%22).
+- Each one references a roadmap row (`F###`) so you can dig deeper in
+  [`ROADMAP.md`](ROADMAP.md) before committing.
+- The full seed manifest lives at [`.github/issue-seeds.yml`](.github/issue-seeds.yml);
+  maintainers push it into the tracker with
+  `python scripts/seed_github_issues.py --apply` (run `--dry-run` first to
+  inspect what will be created).
+
 ## Where to ask questions
 
 - Bugs / security: [SECURITY.md](SECURITY.md).

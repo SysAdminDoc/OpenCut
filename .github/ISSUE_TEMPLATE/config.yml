@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security report
+    url: https://github.com/SysAdminDoc/OpenCut/security/advisories/new
+    about: Report a vulnerability privately through GitHub's security advisory flow.
+  - name: Question or discussion
+    url: https://github.com/SysAdminDoc/OpenCut/discussions
+    about: Open-ended questions go in Discussions so issues stay focused on actionable work.
