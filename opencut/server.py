@@ -366,6 +366,38 @@ def create_app(config=None):
     except Exception as _rc_exc:  # noqa: BLE001
         logger.warning("request_correlation install failed: %s", _rc_exc)
 
+    # F112: per-install API token gate for non-loopback binds. The gate
+    # only fires when ``OPENCUT_ALLOW_REMOTE=1`` is set AND the request
+    # peer is non-loopback — local panel/CLI traffic stays trusted.
+    try:
+        from opencut import auth as _auth
+
+        _AUTH_EXEMPT_PATHS = frozenset({"/health", "/auth/info"})
+
+        @_app.before_request
+        def _enforce_remote_auth_token():  # noqa: D401 - tiny middleware
+            if request.path in _AUTH_EXEMPT_PATHS:
+                return None
+            if not _auth.request_requires_auth_token(request.remote_addr):
+                return None
+            token = _auth.extract_request_token(request.headers, request.args)
+            if _auth.is_token_valid(token):
+                return None
+            return jsonify(
+                {
+                    "error": "Missing or invalid X-OpenCut-Auth token",
+                    "code": "AUTH_REQUIRED",
+                    "suggestion": (
+                        "OPENCUT_ALLOW_REMOTE=1 is enabled. Read the token from "
+                        "~/.opencut/auth.json or rotate it via "
+                        "`opencut-server --rotate-auth`."
+                    ),
+                }
+            ), 401
+
+    except Exception as _auth_exc:  # noqa: BLE001
+        logger.warning("auth middleware install failed: %s", _auth_exc)
+
     @_app.errorhandler(413)
     def handle_large_request(e):
         """Return 413 when request payload exceeds MAX_CONTENT_LENGTH."""
@@ -770,7 +802,29 @@ def main():
         parser.add_argument("--download-models", nargs="?", const="base", default=None,
                             metavar="MODEL",
                             help="Download Whisper model (tiny/base/small/medium/large-v3/turbo)")
+        parser.add_argument(
+            "--rotate-auth",
+            action="store_true",
+            help="Rotate the persistent API token (~/.opencut/auth.json) and exit",
+        )
+        parser.add_argument(
+            "--print-auth",
+            action="store_true",
+            help="Print the persisted API token (creating one on first call) and exit",
+        )
         args = parser.parse_args()
+
+        if args.rotate_auth or args.print_auth:
+            from opencut import auth as _auth
+
+            token = _auth.rotate_token() if args.rotate_auth else _auth.ensure_token()
+            print("")
+            print(f"  OpenCut API token: {token.token}")
+            print(f"  Stored in:         {_auth.AUTH_FILE}")
+            print(f"  Header to use:     {_auth.AUTH_HEADER}")
+            print("  This token is only required for non-loopback requests when")
+            print("  OPENCUT_ALLOW_REMOTE=1 is set.")
+            return 0
 
         if args.download_models is not None:
             os.environ["HF_HUB_DISABLE_IMPLICIT_TOKEN"] = "1"
@@ -787,9 +841,22 @@ def main():
                     print("  127.0.0.1 unless you intentionally expose it on a trusted network.")
                     print("  Set OPENCUT_ALLOW_REMOTE=1 to allow a remote bind.")
                     return 2
+                # F112: ensure a token exists before announcing remote binding so
+                # operators can read it from ~/.opencut/auth.json on first boot.
+                try:
+                    from opencut import auth as _auth
+
+                    issued = _auth.ensure_token()
+                except Exception as _auth_exc:  # noqa: BLE001
+                    issued = None
+                    print("")
+                    print(f"  WARNING: could not initialise auth token: {_auth_exc}")
                 print("")
                 print(f"  WARNING: Binding OpenCut to non-loopback host {args.host}.")
-                print("  Only use this on a trusted network.")
+                print("  Non-loopback requests must carry X-OpenCut-Auth.")
+                if issued is not None:
+                    print(f"  Token file: {_auth.AUTH_FILE}")
+                    print("  Rotate with: opencut-server --rotate-auth")
             run_server(host=args.host, port=args.port, debug=args.debug)
             return 0
     except Exception as _fatal:

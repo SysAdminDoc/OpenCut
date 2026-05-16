@@ -66,11 +66,48 @@ OpenCut's security model leans on a handful of intentional choices:
 Operators running OpenCut in a shared-network environment should:
 
 1. Bind to `127.0.0.1` only (default) — the service is single-user. Non-loopback binds require `OPENCUT_ALLOW_REMOTE=1`.
-2. Set `SENTRY_DSN` so crashes route to a tracker you control.
-3. Set `PLAUSIBLE_HOST` + `PLAUSIBLE_DOMAIN` (optional) for usage telemetry.
-4. Configure `OPENCUT_TEMP_CLEANUP_*` to fit the expected workload.
-5. Use the bundled FFmpeg or build FFmpeg explicitly — distro builds can lag on CVE fixes.
-6. Keep `~/.opencut/plugins/` empty until you've audited each plugin manifest.
+2. **Use the persistent local auth token when binding non-loopback.**
+   Setting `OPENCUT_ALLOW_REMOTE=1` automatically issues a token under
+   `~/.opencut/auth.json` (POSIX: mode `0600`). Every non-loopback
+   request must include `X-OpenCut-Auth: <token>`. Loopback peers
+   (`127.0.0.1`, `::1`) still bypass the token to keep the single-user
+   workflow snappy.
+3. Read or rotate the token explicitly:
+   ```bash
+   opencut-server --print-auth     # print the persisted token
+   opencut-server --rotate-auth    # generate a fresh token, then exit
+   ```
+   The `GET /auth/info` endpoint returns *metadata only* — it never
+   includes the token value. Treat `~/.opencut/auth.json` like an SSH
+   private key; never check it into source control.
+4. Set `SENTRY_DSN` so crashes route to a tracker you control.
+5. Set `PLAUSIBLE_HOST` + `PLAUSIBLE_DOMAIN` (optional) for usage telemetry.
+6. Configure `OPENCUT_TEMP_CLEANUP_*` to fit the expected workload.
+7. Use the bundled FFmpeg or build FFmpeg explicitly — distro builds can lag on CVE fixes.
+8. Keep `~/.opencut/plugins/` empty until you've audited each plugin manifest.
+
+### Threat model for non-loopback binds
+
+Default deployment: a single user, on their workstation, talking to
+`127.0.0.1:5679`. The Adobe Premiere CEP/UXP panel sits on the same
+machine. We deliberately do **not** require an API key in that path
+because the token would be visible to anything that can read the panel
+preferences anyway.
+
+When the operator opts into `OPENCUT_ALLOW_REMOTE=1` (e.g. remote
+render host on a private VLAN), the threat surface changes:
+
+- Anyone who can hit the bind address can issue render jobs, read media
+  paths, or call shell-adjacent endpoints (FFmpeg invocations, OS
+  shell-out for ``open``/Finder integration).
+- CSRF alone is not enough — CSRF protects browser sessions, not API
+  clients on the same network.
+
+The local auth token closes that gap: non-loopback callers must include
+the token in the `X-OpenCut-Auth` header (a `?auth=` query string is
+also accepted for tools that can't set headers). `/health` and
+`/auth/info` remain exempt so panels can bootstrap connectivity and
+render a "Authentication required" hint.
 
 ## Software Bill of Materials (SBOM)
 
