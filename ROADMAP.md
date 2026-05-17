@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.17
+**Version**: 4.18
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,344 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -42,6 +42,23 @@
 > **v4.16 status (2026-05-17, thirteenth pass)**: closed **F208** by hardening the legacy `/openapi.json` generator and adding `tests/test_openapi_contract.py` to release smoke. The root OpenAPI 3.0.3 spec now converts Flask `<param>` routes to OpenAPI `{param}` syntax, emits path-parameter objects, uses stable unique operation IDs for aliased endpoints, and documents 400/403 responses for every mutating method. The new gate verifies `/openapi.json` covers every live non-static Flask operation and that `/api/openapi.json` also avoids raw Flask path syntax.
 >
 > **v4.17 status (2026-05-17, fourteenth pass)**: closed **F209** with an MCP route-consistency gate. `opencut_chat_edit` now maps to the shipped `POST /chat` endpoint instead of the planned-but-absent `/agent/chat`, and `tests/test_mcp_server.py` now asserts every MCP tool route plus special action route exists in the live Flask `url_map`.
+>
+> **v4.18 status (2026-05-17, fifteenth pass)**: closed **F218** by pinning deterministic blueprint registration order. `tests/test_route_collisions.py` now asserts the exact `get_core_blueprints()` order and the final `motion_design_api` alias registration, and the route-collision test file is part of release smoke.
+
+---
+
+## 2026-05-17 v4.18 Blueprint Import-Order Stability
+
+F218 is closed locally. Blueprint registration now has an explicit import-order regression gate:
+
+| Surface | Status |
+|---|---|
+| Core order | `tests/test_route_collisions.py` pins the exact 99-blueprint tuple returned by `get_core_blueprints()`. |
+| Alias registration | The same test asserts the live Flask app registers those blueprints first and appends `motion_design_api` last for the legacy `/api/motion/*` surface. |
+| Collision guard | Existing duplicate route-method checks remain in place and now sit beside the import-order test. |
+| Release smoke | `scripts/release_smoke.py` includes `tests/test_route_collisions.py` in `pytest-fast`. |
+
+Validation after the batch: focused route-collision/release-smoke tests passed (`19 passed`), Ruff passed for touched Python files, `tests/test_route_collisions.py` + `scripts/release_smoke.py` compile, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`266 passed` in pytest-fast).
 
 ---
 
@@ -393,7 +410,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (11 open + F191/F195/F197/F199/F202/F204/F207/F208/F209 closed locally, including 1 regulatory still open):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (10 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218 closed locally, including 1 regulatory still open):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
