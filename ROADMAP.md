@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.13
+**Version**: 4.14
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,344 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -34,6 +34,23 @@
 > **v4.12 status (2026-05-17, ninth pass)**: closed **F195** by expanding the curated MCP surface from **27** to **39** tools for the shipped post-Wave-M routes (face reshape, skin retouch, smart upscale, ElevenLabs TTS, caption QC, review bundles, C2PA provenance, marker import, capability probe, Brand Kit, semantic search, and spectral match). `tests/test_mcp_server.py` now pins tool registration, route dispatch, multi-action MCP tools, and the expanded MCP path-validation keys; release smoke includes this MCP gate.
 >
 > **v4.13 status (2026-05-17, tenth pass)**: closed the local tooling portion of **F202** by adding macOS Developer ID signing + notarization release wiring. Tagged/manual macOS release builds now run `scripts/notarize_macos.sh`, sign Mach-O files with hardened runtime, submit `dist/OpenCut-Server-macOS.zip` through `xcrun notarytool`, and upload the notarized ZIP on tag releases. `docs/MACOS_NOTARIZATION.md` documents required GitHub secrets. Full Apple service verification still requires repository secrets and a macOS release runner.
+>
+> **v4.14 status (2026-05-17, eleventh pass)**: closed **F204** by adding automatic CycloneDX SBOM generation and release upload to the Linux release job. Tagged releases now upload `dist/opencut-sbom.cyclonedx.json`; manual release builds archive the same file as the `OpenCut-SBOM-CycloneDX` artifact. `tests/test_release_sbom.py` pins both the generated CycloneDX shape and workflow wiring.
+
+---
+
+## 2026-05-17 v4.14 Release SBOM Attachment
+
+F204 is closed locally. The existing zero-dependency `scripts/sbom.py` generator is now part of the release workflow:
+
+| Surface | Status |
+|---|---|
+| Generation | Linux tagged/manual release builds run `python scripts/sbom.py --format json --output dist/opencut-sbom.cyclonedx.json`. |
+| Workflow artifact | Manual release builds archive the SBOM as `OpenCut-SBOM-CycloneDX`. |
+| GitHub Release upload | Tagged releases upload `dist/opencut-sbom.cyclonedx.json` with `gh release upload --clobber`. |
+| Regression test | `tests/test_release_sbom.py` verifies the generator emits CycloneDX 1.5 JSON and the workflow keeps the generation/archive/upload steps. |
+
+Validation after the batch: `python -m pytest tests\test_release_sbom.py tests\test_release_smoke.py -q` passed (`14 passed`), Ruff passed for touched Python files, workflow YAML parsing passed, `python scripts\sbom.py --format json --output dist\opencut-sbom.cyclonedx.json` generated a valid SBOM, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`251 passed` in pytest-fast). F219 remains open for the deeper completeness assertion against all declared dependencies and model cards.
 
 ---
 
@@ -320,7 +337,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (15 open + F191/F195/F197/F199/F202 closed locally, including 1 regulatory still open):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (14 open + F191/F195/F197/F199/F202/F204 closed locally, including 1 regulatory still open):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
