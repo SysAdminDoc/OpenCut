@@ -136,7 +136,8 @@ def silence(input_file, output, threshold, min_duration, padding_before, padding
 @click.option("--language", type=str, default=None, help="Language code (auto-detect if not set)")
 @click.option("--translate", is_flag=True, help="Translate to English")
 @click.option("--word-timestamps/--no-word-timestamps", default=True, help="Enable word-level timestamps")
-def captions(input_file, output, sub_format, model, language, translate, word_timestamps):
+@click.option("--srt-legacy-bom", is_flag=True, help="Write SRT as UTF-8 with BOM for legacy Windows players")
+def captions(input_file, output, sub_format, model, language, translate, word_timestamps, srt_legacy_bom):
     """Generate captions/subtitles using AI speech recognition.
 
     Uses OpenAI Whisper to transcribe speech and generate subtitle files.
@@ -198,7 +199,7 @@ def captions(input_file, output, sub_format, model, language, translate, word_ti
     console.print(f"[bold]Words:[/bold] {result.word_count}")
 
     if sub_format == "srt":
-        export_srt(result, output)
+        export_srt(result, output, legacy_windows_bom=srt_legacy_bom)
     elif sub_format == "vtt":
         export_vtt(result, output)
     elif sub_format == "json":
@@ -308,7 +309,8 @@ def podcast(input_file, output, speakers, hf_token, min_segment, seq_name):
 @click.option("--skip-captions", is_flag=True, help="Skip caption generation")
 @click.option("--skip-zoom", is_flag=True, help="Skip auto-zoom")
 @click.option("--name", "seq_name", type=str, default="OpenCut Full Edit", help="Sequence name")
-def full(input_file, output, preset, skip_captions, skip_zoom, seq_name):
+@click.option("--srt-legacy-bom", is_flag=True, help="Write SRT as UTF-8 with BOM for legacy Windows players")
+def full(input_file, output, preset, skip_captions, skip_zoom, seq_name, srt_legacy_bom):
     """Run the full editing pipeline: silence removal + captions + zoom.
 
     Combines all OpenCut features into a single workflow.
@@ -367,7 +369,7 @@ def full(input_file, output, preset, skip_captions, skip_zoom, seq_name):
                 from .core.captions import transcribe
                 from .export.srt import export_srt
                 result = transcribe(input_file, config=cfg.captions)
-                export_srt(result, srt_path)
+                export_srt(result, srt_path, legacy_windows_bom=srt_legacy_bom)
                 progress.update(task, description=f"[green]Step 3/3: Generated {len(result.segments)} caption segments")
                 progress.stop()
             console.print(f"[bold]Captions saved:[/bold] {srt_path}")

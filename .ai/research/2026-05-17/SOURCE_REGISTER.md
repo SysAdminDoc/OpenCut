@@ -676,3 +676,24 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P20-L14 | `python scripts/release_smoke.py --json` — PASS, all 14 steps green; `text-shaping` reports one advisory Pillow RAQM warning; pytest-fast `289 passed`; pip-audit no vulnerabilities; npm advisory gate reports only the documented Vite waiver |
 
 **Source coverage assessment (Pass 20):** Pass 20 claims in `ROADMAP.md` v4.23, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P20-L01 through R-P20-L14.
+
+---
+
+## Pass 21 — F243 UTF-8 no-BOM SRT policy (2026-05-17 twenty-first pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P21-L01 | `opencut/export/srt.py` — `export_srt` now defaults to UTF-8 without BOM, rejects non-UTF-8 encodings, and supports `legacy_windows_bom=True` / `encoding="utf-8-sig"` |
+| R-P21-L02 | `opencut/routes/captions.py` — `/captions`, `/transcript/export`, `/full`, and `/interview-polish` accept `srt_legacy_bom`, `windows_legacy_bom`, or `legacy_bom` and report `srt_encoding` for SRT output |
+| R-P21-L03 | `opencut/cli.py` — `opencut captions` and `opencut full` expose `--srt-legacy-bom` |
+| R-P21-L04 | `opencut/core/subtitle_shot_aware.py` — `export_to_file(..., fmt="srt")` now uses the shared writer and accepts `legacy_windows_bom=True` |
+| R-P21-L05 | `tests/test_srt_encoding.py` — byte-level tests for default no-BOM output, opt-in BOM output, encoding validation, route alias parsing, and shot-aware export behavior |
+| R-P21-L06 | `scripts/release_smoke.py` — added `tests/test_srt_encoding.py` to `pytest-fast` |
+| R-P21-L07 | `python -m pytest tests/test_srt_encoding.py tests/test_captions_regressions.py tests/test_core.py::TestSRTExport tests/test_subtitle_pro.py::TestShotAwareExport -q --tb=short` — PASS, `13 passed` |
+| R-P21-L08 | `ruff check opencut/export/srt.py opencut/routes/captions.py opencut/cli.py opencut/core/subtitle_shot_aware.py scripts/release_smoke.py tests/test_srt_encoding.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P21-L09 | `python -m py_compile opencut/export/srt.py opencut/routes/captions.py opencut/cli.py opencut/core/subtitle_shot_aware.py scripts/release_smoke.py tests/test_srt_encoding.py` — PASS |
+| R-P21-L10 | `python scripts/release_smoke.py --json` — PASS, all 14 steps green; pytest-fast `294 passed`; pip-audit no vulnerabilities; npm advisory gate reports only the documented Vite waiver |
+
+**Source coverage assessment (Pass 21):** Pass 21 claims in `ROADMAP.md` v4.24, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P21-L01 through R-P21-L10.

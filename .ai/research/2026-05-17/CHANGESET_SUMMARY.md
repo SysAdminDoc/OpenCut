@@ -877,3 +877,40 @@ Pass 20 closed F241.
 ### Remaining immediate work
 
 F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F243 and F244. F251 and F259 need fresh Adobe/UXP verification before implementation.
+
+---
+
+## 26. Pass 21 additions (same day, F243 UTF-8 no-BOM SRT policy)
+
+Pass 21 closed F243.
+
+### Files added or edited in Pass 21
+
+| Path | Change |
+|---|---|
+| `opencut/export/srt.py` | Added the explicit SRT encoding policy: UTF-8 without BOM by default, `legacy_windows_bom=True` / `encoding="utf-8-sig"` for old Windows players, and rejection of non-UTF-8 encodings. |
+| `opencut/routes/captions.py` | Added `srt_legacy_bom` / `windows_legacy_bom` / `legacy_bom` request aliases and SRT response `srt_encoding` metadata for caption export routes. |
+| `opencut/cli.py` | Added `--srt-legacy-bom` to `opencut captions` and `opencut full`. |
+| `opencut/core/subtitle_shot_aware.py` | Reused the shared SRT writer for file export and accepted `legacy_windows_bom=True`. |
+| `tests/test_srt_encoding.py` | Added byte-level regression tests for no-BOM default, opt-in BOM, encoding validation, route alias parsing, and shot-aware export behavior. |
+| `scripts/release_smoke.py` | Added `tests/test_srt_encoding.py` to the `pytest-fast` release gate. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Marked F243 closed and documented the encoding policy evidence. |
+
+### Items closed in Pass 21
+
+| F# | Result |
+|---|---|
+| F243 | Closed — newly exported SRT files are UTF-8 without BOM by default, with an explicit legacy Windows BOM opt-in at the Python API, route, CLI, and shot-aware file-export surfaces. |
+
+### Validation after Pass 21
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_srt_encoding.py tests/test_captions_regressions.py tests/test_core.py::TestSRTExport tests/test_subtitle_pro.py::TestShotAwareExport -q --tb=short` | PASS — `13 passed` |
+| `ruff check opencut/export/srt.py opencut/routes/captions.py opencut/cli.py opencut/core/subtitle_shot_aware.py scripts/release_smoke.py tests/test_srt_encoding.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/export/srt.py opencut/routes/captions.py opencut/cli.py opencut/core/subtitle_shot_aware.py scripts/release_smoke.py tests/test_srt_encoding.py` | PASS |
+| `python scripts\release_smoke.py --json` | PASS — all 14 steps green; pytest-fast `294 passed` |
+
+### Remaining immediate work
+
+F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now item is F244. F251 and F259 need fresh Adobe/UXP verification before implementation.
