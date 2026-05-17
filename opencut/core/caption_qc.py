@@ -42,6 +42,11 @@ from opencut.core.caption_compliance import (
     _strip_tags,
     check_caption_compliance,
 )
+from opencut.core.caption_reading_profiles import (
+    get_reading_speed_profile,
+    normalize_reading_profile,
+    reading_profile_rule_overrides,
+)
 
 # ---------------------------------------------------------------------------
 # Forbidden-glyph rule
@@ -86,10 +91,13 @@ class QcResult:
     total_cues: int
     error_count: int
     warning_count: int
+    reading_profile: Optional[str] = None
+    reading_profile_label: Optional[str] = None
+    reading_profile_source_confidence: Optional[str] = None
     diagnostics: List[QcDiagnostic] = field(default_factory=list)
 
     def as_dict(self) -> dict:
-        return {
+        payload = {
             "overall_pass": self.overall_pass,
             "standard": self.standard,
             "mode": self.mode,
@@ -98,6 +106,17 @@ class QcResult:
             "warning_count": self.warning_count,
             "diagnostics": [d.as_dict() for d in self.diagnostics],
         }
+        if self.reading_profile:
+            payload.update(
+                {
+                    "reading_profile": self.reading_profile,
+                    "reading_profile_label": self.reading_profile_label,
+                    "reading_profile_source_confidence": (
+                        self.reading_profile_source_confidence
+                    ),
+                }
+            )
+        return payload
 
 
 # ---------------------------------------------------------------------------
@@ -108,6 +127,9 @@ class QcResult:
 def _violation_to_diagnostic(violation: Violation, mode: str) -> QcDiagnostic:
     severity = violation.severity
     if mode == "advisory" and violation.violation_type in {
+        "characters_per_line",
+        "chars_per_second",
+        "reading_speed",
         "max_cpl_exceeded",
         "max_cps_exceeded",
         "max_wpm_exceeded",
@@ -201,6 +223,7 @@ def qc_captions(
     *,
     standard: str = "accessibility",
     mode: str = "strict",
+    reading_profile: Optional[str] = None,
 ) -> QcResult:
     """Run the caption QC gate against an SRT file or inline string.
 
@@ -214,6 +237,13 @@ def qc_captions(
         raise ValueError(f"unknown QC mode: {mode!r}; expected 'strict' or 'advisory'")
     if (srt_path is None) == (srt_text is None):
         raise ValueError("supply exactly one of srt_path / srt_text")
+
+    profile_key = normalize_reading_profile(reading_profile)
+    profile_meta = get_reading_speed_profile(profile_key) if profile_key else None
+    rule_overrides = reading_profile_rule_overrides(profile_key) if profile_key else None
+    standard_label = None
+    if profile_meta:
+        standard_label = f"{STANDARDS[standard]['label']} + {profile_meta['label']}"
 
     cleanup_path: Optional[str] = None
     try:
@@ -230,7 +260,12 @@ def qc_captions(
             srt_path = tmp.name
             cleanup_path = tmp.name
 
-        compliance = check_caption_compliance(srt_path, standard=standard)
+        compliance = check_caption_compliance(
+            srt_path,
+            standard=standard,
+            rule_overrides=rule_overrides,
+            standard_label=standard_label,
+        )
         subtitles = _parse_srt(srt_path)
 
         diagnostics: List[QcDiagnostic] = []
@@ -248,6 +283,11 @@ def qc_captions(
             total_cues=len(subtitles),
             error_count=errors,
             warning_count=warnings,
+            reading_profile=profile_key,
+            reading_profile_label=profile_meta["label"] if profile_meta else None,
+            reading_profile_source_confidence=(
+                profile_meta["source_confidence"] if profile_meta else None
+            ),
             diagnostics=diagnostics,
         )
     finally:
@@ -262,6 +302,7 @@ def enforce_export_gate(
     srt_path: str,
     *,
     standard: str = "accessibility",
+    reading_profile: Optional[str] = None,
     force: bool = False,
 ) -> QcResult:
     """Hook for export routes — raises :class:`ValueError` on failure.
@@ -270,7 +311,12 @@ def enforce_export_gate(
     makes "fail closed unless ``force=True``" trivial to add at any
     export site.
     """
-    result = qc_captions(srt_path=srt_path, standard=standard, mode="strict")
+    result = qc_captions(
+        srt_path=srt_path,
+        standard=standard,
+        mode="strict",
+        reading_profile=reading_profile,
+    )
     if not result.overall_pass and not force:
         raise CaptionQcFailure(result)
     return result

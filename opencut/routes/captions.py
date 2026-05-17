@@ -1719,6 +1719,7 @@ def captions_qc():
             "srt_path": "/abs/path/to/file.srt",   # OR srt_text
             "srt_text": "1\\n00:00:01,000 --> ...",
             "standard": "accessibility",            # see /captions/compliance/standards
+            "reading_profile": "netflix-children",  # optional; see /captions/qc/reading-profiles
             "mode": "strict"                        # or "advisory"
         }
 
@@ -1735,6 +1736,14 @@ def captions_qc():
         srt_text = data.get("srt_text")
         standard = (data.get("standard") or "accessibility").strip()
         mode = (data.get("mode") or "strict").strip()
+        reading_profile = (
+            data.get("reading_profile")
+            or data.get("profile")
+            or data.get("speed_profile")
+            or None
+        )
+        if isinstance(reading_profile, str):
+            reading_profile = reading_profile.strip() or None
 
         if not srt_path and not srt_text:
             return jsonify({"error": "srt_path or srt_text required"}), 400
@@ -1744,6 +1753,7 @@ def captions_qc():
             srt_text=srt_text,
             standard=standard,
             mode=mode,
+            reading_profile=reading_profile,
         )
         return jsonify(result.as_dict())
     except ValueError as exc:
@@ -1752,3 +1762,24 @@ def captions_qc():
         return jsonify({"error": f"srt_path not found: {exc.filename}"}), 404
     except Exception as exc:
         return safe_error(exc, "captions_qc")
+
+
+@captions_bp.route("/captions/qc/reading-profiles", methods=["GET"])
+def captions_qc_reading_profiles():
+    """Return source-backed caption reading-speed profiles (F240)."""
+    try:
+        from opencut.core.caption_reading_profiles import (
+            CORRECTION_NOTE,
+            SOURCE_URLS,
+            get_reading_speed_profiles,
+        )
+
+        return jsonify(
+            {
+                "profiles": get_reading_speed_profiles(),
+                "source_urls": SOURCE_URLS,
+                "correction_note": CORRECTION_NOTE,
+            }
+        )
+    except Exception as e:
+        return safe_error(e, "captions_qc_reading_profiles")

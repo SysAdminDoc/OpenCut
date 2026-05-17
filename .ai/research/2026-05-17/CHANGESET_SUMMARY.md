@@ -798,3 +798,45 @@ Pass 18 closed F237.
 ### Remaining immediate work
 
 F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F240, F241, F243, and F244. F251 and F259 need fresh Adobe/UXP verification before implementation.
+
+---
+
+## 24. Pass 19 additions (same day, F240 caption reading-speed profiles)
+
+Pass 19 closed F240.
+
+### Files added or edited in Pass 19
+
+| Path | Change |
+|---|---|
+| `opencut/core/caption_reading_profiles.py` | Added source-backed reading-speed profiles for Netflix adult/children, BBC editorial, DCMP upper-level educational media, FCC qualitative timing, and YouTube advisory captions. |
+| `opencut/core/caption_compliance.py` | Added per-call rule overrides so speed profiles can be applied without mutating the global standards table. |
+| `opencut/core/caption_qc.py` | Added `reading_profile` overlay support, profile metadata in `QcResult.as_dict()`, and advisory-mode downgrades for the actual compliance violation names. |
+| `opencut/routes/captions.py` | Added `GET /captions/qc/reading-profiles` and `reading_profile`/`profile`/`speed_profile` handling on `POST /captions/qc`. |
+| `tests/test_caption_reading_profiles.py` | Added F240 regression tests for source facts, aliases, Netflix adult-vs-children CPS, BBC WPM warnings, and route payloads. |
+| `scripts/release_smoke.py` | Added `tests/test_caption_reading_profiles.py` to the `pytest-fast` release gate. |
+| `opencut/_generated/route_manifest.json` | Regenerated after adding one route; now 1,362 routes / 101 blueprints. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Marked F240 closed and documented the corrected Netflix/FCC/YouTube source evidence. |
+
+### Items closed in Pass 19
+
+| F# | Result |
+|---|---|
+| F240 | Closed — caption QC now exposes source-backed reading-speed profiles and correctly distinguishes official hard caps from qualitative/advisory profile assumptions. |
+
+### Validation after Pass 19
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_caption_reading_profiles.py tests/test_caption_qc.py tests/test_analysis.py::TestCaptionCompliance -q --tb=short` | PASS — `31 passed` |
+| `ruff check opencut/core/caption_reading_profiles.py opencut/core/caption_compliance.py opencut/core/caption_qc.py opencut/routes/captions.py scripts/release_smoke.py tests/test_caption_reading_profiles.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/core/caption_reading_profiles.py opencut/core/caption_compliance.py opencut/core/caption_qc.py opencut/routes/captions.py scripts/release_smoke.py tests/test_caption_reading_profiles.py` | PASS |
+| `python -m opencut.tools.dump_route_manifest` | PASS — wrote 1,362 routes / 101 blueprints |
+| `python -m opencut.tools.dump_route_manifest --check --quiet` | PASS — 1,362 routes / 101 blueprints |
+| `python -m opencut.tools.dump_api_aliases --check` | PASS — 15 aliases / 218 canonical `/api` routes |
+| `python -m opencut.tools.dump_feature_readiness --check` | PASS — 58 generated records / 67 route bindings |
+| `python scripts\release_smoke.py --json` | PASS — all 13 steps green; pytest-fast `284 passed` |
+
+### Remaining immediate work
+
+F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F241, F243, and F244. F251 and F259 need fresh Adobe/UXP verification before implementation.

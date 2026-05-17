@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-17T20:46:11Z",
-  "total_routes": 1361,
+  "generated_at": "2026-05-17T21:37:09Z",
+  "total_routes": 1362,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 296,
+    "GET": 297,
     "PATCH": 1,
     "POST": 1050,
     "PUT": 2
@@ -160,10 +160,10 @@
       ]
     },
     "captions": {
-      "route_count": 26,
+      "route_count": 27,
       "method_counts": {
         "DELETE": 1,
-        "GET": 6,
+        "GET": 7,
         "POST": 19
       },
       "sample_rules": [
@@ -5099,6 +5099,14 @@
         "POST"
       ],
       "endpoint": "captions.captions_qc",
+      "blueprint": "captions"
+    },
+    {
+      "rule": "/captions/qc/reading-profiles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "captions.captions_qc_reading_profiles",
       "blueprint": "captions"
     },
     {

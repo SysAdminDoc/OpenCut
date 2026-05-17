@@ -618,3 +618,36 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P18-L12 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; route manifest `1,361` routes / `101` blueprints; pytest-fast `278 passed` |
 
 **Source coverage assessment (Pass 18):** Pass 18 claims in `ROADMAP.md` v4.21, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P18-E01 through R-P18-E06 and R-P18-L01 through R-P18-L12.
+
+---
+
+## Pass 19 — F240 caption reading-speed profiles (2026-05-17 nineteenth pass)
+
+### External source evidence
+
+| ID | Source |
+|---|---|
+| R-P19-E01 | Netflix English (USA) Timed Text Style Guide — https://partnerhelp.netflixstudios.com/hc/en-us/articles/217350977-English-USA-Timed-Text-Style-Guide — current public guide lists adult programs at up to 20 characters per second and children's programs at up to 17 characters per second |
+| R-P19-E02 | BBC Subtitle Guidelines archived official page — https://archive.ph/2026.01.08-135056/https%3A/www.bbc.co.uk/accessibility/forproducts/guides/subtitles/%23Spelling-out — version 1.2.4a recommends 160-180 words per minute and notes editorial adjustment by programme |
+| R-P19-E03 | DCMP Captioning Key print page — https://dcmp.org/captioningkey/print — presentation-rate section says lower/middle/upper educational media should not exceed 130/140/160 words per minute |
+| R-P19-E04 | 47 CFR § 79.1 eCFR/Cornell mirror — https://www.law.cornell.edu/cfr/text/47/79.1 — FCC caption quality rules require offline captions to display with enough time to be read completely but do not set a fixed WPM cap |
+| R-P19-E05 | YouTube Help, Add subtitles & captions — https://support.google.com/youtube/answer/2734796?hl=en — official help documents caption text and timestamps but does not publish a hard reading-speed limit |
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P19-L01 | `opencut/core/caption_reading_profiles.py` — new source-backed registry for Netflix adult/children, BBC editorial, DCMP upper-level, FCC qualitative, and YouTube advisory reading-speed profiles |
+| R-P19-L02 | `opencut/core/caption_compliance.py` — added per-call rule overrides so QC can apply reading-speed profiles without mutating global standards |
+| R-P19-L03 | `opencut/core/caption_qc.py` — added `reading_profile` overlay support, profile metadata in API dictionaries, and fixed advisory-mode downgrades for actual violation names |
+| R-P19-L04 | `opencut/routes/captions.py` — added `GET /captions/qc/reading-profiles` and `reading_profile` / `profile` / `speed_profile` support on `POST /captions/qc` |
+| R-P19-L05 | `tests/test_caption_reading_profiles.py` — new F240 regression tests for source facts, aliases, adult-vs-children Netflix CPS, BBC WPM warnings, and route payloads |
+| R-P19-L06 | `scripts/release_smoke.py` — added `tests/test_caption_reading_profiles.py` to `pytest-fast` |
+| R-P19-L07 | `python -m opencut.tools.dump_route_manifest` — regenerated `opencut/_generated/route_manifest.json`, now 1,362 routes / 101 blueprints |
+| R-P19-L08 | `python -m pytest tests/test_caption_reading_profiles.py tests/test_caption_qc.py tests/test_analysis.py::TestCaptionCompliance -q --tb=short` — PASS, `31 passed` |
+| R-P19-L09 | `ruff check opencut/core/caption_reading_profiles.py opencut/core/caption_compliance.py opencut/core/caption_qc.py opencut/routes/captions.py scripts/release_smoke.py tests/test_caption_reading_profiles.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P19-L10 | `python -m py_compile opencut/core/caption_reading_profiles.py opencut/core/caption_compliance.py opencut/core/caption_qc.py opencut/routes/captions.py scripts/release_smoke.py tests/test_caption_reading_profiles.py` — PASS |
+| R-P19-L11 | `python -m opencut.tools.dump_route_manifest --check --quiet`, `python -m opencut.tools.dump_api_aliases --check`, `python -m opencut.tools.dump_feature_readiness --check` — PASS; route manifest 1,362 routes / 101 blueprints, aliases 15 / 218, readiness 58 records / 67 bindings |
+| R-P19-L12 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `284 passed`; pip-audit no vulnerabilities; npm advisory gate reports only the documented Vite waiver |
+
+**Source coverage assessment (Pass 19):** Pass 19 claims in `ROADMAP.md` v4.22, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P19-E01 through R-P19-E05 and R-P19-L01 through R-P19-L12.
