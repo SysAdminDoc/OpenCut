@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.25
+**Version**: 4.26
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -58,6 +58,26 @@
 > **v4.24 status (2026-05-17, twenty-first pass)**: closed **F243** by making the primary SRT writer UTF-8 without BOM by default and adding an explicit legacy Windows BOM toggle. `export_srt(..., legacy_windows_bom=True)` writes `utf-8-sig`; `/captions`, `/transcript/export`, `/full`, `/interview-polish`, and the CLI expose the opt-in path; `tests/test_srt_encoding.py` pins default no-BOM bytes, legacy BOM bytes, route alias parsing, and shot-aware export behavior.
 >
 > **v4.25 status (2026-05-17, twenty-second pass)**: closed **F244** by carrying segment ASR confidence, language confidence, and human-review flags through Whisper transcription, transcript cache/state, JSON export, `/captions`, `/transcript`, `/transcript/export`, `/full`, `/interview-polish`, and the CLI. Hindi/Arabic segments are flagged for human review; low ASR and low language-confidence segments get stable review reason codes. `tests/test_caption_language_confidence.py` is now part of release smoke.
+>
+> **v4.26 status (2026-05-17, wrap-up pass)**: reattempted **F205** with a long CI-style coverage run, then stopped after the session was interrupted at 36m46s. A partial ignored `dist\coverage-f205.json` parsed as 52.12% line coverage across 670 files, but because pytest did not complete, this is **not** a valid coverage-floor measurement. One leftover pytest process was stopped, the CI floor remains `--cov-fail-under=50`, and F205 remains open until a complete run finishes.
+
+---
+
+## 2026-05-17 v4.26 F205 Coverage Reattempt Wrap-Up
+
+F205 remains open. The second local coverage attempt ran long enough to write a JSON report, but the pytest session was interrupted before completion, so the result is partial evidence only and cannot justify changing CI policy.
+
+| Surface | Status |
+|---|---|
+| Attempted command | `python -m pytest tests/ -q --tb=short --cov=opencut --cov-report=term-missing --cov-report=json:dist\coverage-f205.json --cov-fail-under=0 -n auto --dist worksteal` |
+| Runtime | Interrupted after 2,206.6 seconds (36m46s). |
+| Partial artifact | Ignored `dist\coverage-f205.json`, 5,490,775 bytes, SHA256 `63DD45BF6C617BB05A7944911DEFF735A528F37F96CAD4CCC10F6E93CF59A6F9`; removed after evidence capture so the next coverage run starts cleanly. |
+| Partial totals | Valid JSON from coverage.py 7.14.0; 126,421 statements, 65,890 covered, 60,531 missing, 52.1195% reported coverage across 670 files. |
+| Process cleanup | A leftover `python.exe -m pytest tests sidecar/tests -q` process was stopped during wrap-up. |
+| Decision | Do **not** raise `--cov-fail-under=50`; rerun F205 only on a runner where the full pytest+coverage command can finish. |
+| Evidence note | `.ai/research/2026-05-17/F205_INTERRUPTED_COVERAGE_NOTE.md` records the exact wrap-up evidence and limitations. |
+
+No source-code behavior changed in this wrap-up pass.
 
 ---
 
@@ -549,7 +569,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (3 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, [x] **F240 (caption reading-speed profiles)**, [x] **F241 (HarfBuzz CI gate)**, [x] **F243 (UTF-8 no-BOM SRT)**, [x] F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (3 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; Pass 23 reattempt interrupted after 36m46s with only partial 52.12% JSON), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, [x] **F240 (caption reading-speed profiles)**, [x] **F241 (HarfBuzz CI gate)**, [x] **F243 (UTF-8 no-BOM SRT)**, [x] F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML

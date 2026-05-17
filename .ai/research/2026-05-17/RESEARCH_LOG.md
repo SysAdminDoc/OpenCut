@@ -703,3 +703,30 @@ Pass 22 was a local implementation and verification pass. No new external search
 ### Pass 22 saturation note
 
 F244 is complete for repository-side confidence metadata and human-review surfacing. The thresholds remain pragmatic review heuristics, not a statistical calibration claim; future ASR-evaluation work should tune them against the F176/F178 evaluation corpus once that corpus exists.
+
+---
+
+## Pass 23 (2026-05-17 — F205 interrupted coverage reattempt wrap-up)
+
+Pass 23 was a wrap-up pass after the autonomous development loop started a second F205 coverage measurement and the session was interrupted before pytest completed. No external research was needed.
+
+### Pass 23 local probes
+
+| Probe | Result |
+|---|---|
+| Running Python/pytest processes | One leftover process remained: `python.exe -m pytest tests sidecar/tests -q`; it was stopped and a follow-up process list was empty. |
+| `dist\coverage-f205.json` | Parsed as valid coverage.py 7.14.0 JSON, but pytest did not complete, so the data is partial. |
+| Ignored artifact status | `.coverage` and `dist/` are ignored, so the partial coverage report was not committed; stale `.coverage` and `dist\coverage-f205.json` were removed after evidence capture. |
+
+### Pass 23 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 23.1 | Checked for leftover coverage/test processes. | Stopped one leftover pytest process. |
+| Pass 23.2 | Parsed the partial coverage JSON. | 126,421 statements, 65,890 covered, 60,531 missing, 52.1195% coverage across 670 files; SHA256 captured in the source register. |
+| Pass 23.3 | Updated roadmap and memory/state files. | F205 remains open; F251/F259 remain the other Now items. |
+| Pass 23.4 | Added a Codex memory checkpoint. | Wrote `C:\Users\Xray\.codex\memories\extensions\ad_hoc\notes\2026-05-17T19-45-34-opencut-f205-wrapup.md`. |
+
+### Pass 23 saturation note
+
+The partial 52.12% number is intentionally treated as unusable for policy. A complete F205 run still needs a runner where the CI-style pytest+coverage command exits cleanly; only then should `.github/workflows/build.yml` move above `--cov-fail-under=50`.
