@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.15
+**Version**: 4.16
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,344 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -38,6 +38,26 @@
 > **v4.14 status (2026-05-17, eleventh pass)**: closed **F204** by adding automatic CycloneDX SBOM generation and release upload to the Linux release job. Tagged releases now upload `dist/opencut-sbom.cyclonedx.json`; manual release builds archive the same file as the `OpenCut-SBOM-CycloneDX` artifact. `tests/test_release_sbom.py` pins both the generated CycloneDX shape and workflow wiring.
 >
 > **v4.15 status (2026-05-17, twelfth pass)**: attempted **F205** coverage measurement, but the full CI-style coverage run timed out after 20 minutes on this VM after installing missing `pytest-cov`/`pytest-xdist`, so the coverage floor remains unchanged. Closed **F207** by pinning the bundled FFmpeg/ffprobe version (`8.0.1-essentials_build-www.gyan.dev`) in WPF installer constants, writing `~/.opencut/installer.json` from both WPF and Inno installers, and adding release-gate tests for the manifest contract.
+>
+> **v4.16 status (2026-05-17, thirteenth pass)**: closed **F208** by hardening the legacy `/openapi.json` generator and adding `tests/test_openapi_contract.py` to release smoke. The root OpenAPI 3.0.3 spec now converts Flask `<param>` routes to OpenAPI `{param}` syntax, emits path-parameter objects, uses stable unique operation IDs for aliased endpoints, and documents 400/403 responses for every mutating method. The new gate verifies `/openapi.json` covers every live non-static Flask operation and that `/api/openapi.json` also avoids raw Flask path syntax.
+
+---
+
+## 2026-05-17 v4.16 OpenAPI Contract Gate
+
+F208 is closed locally. The OpenAPI contract now has an automated release-gate test:
+
+| Surface | Status |
+|---|---|
+| Flask path conversion | `opencut/openapi.py` converts `/status/<job_id>` to `/status/{job_id}` and emits OpenAPI path parameter objects with converter-derived schema types. |
+| Operation IDs | Aliased endpoints now receive path-qualified operation IDs, removing duplicate IDs such as repeated `dev_scripting.scripting_execute_post`. |
+| Error responses | POST/PUT/PATCH/DELETE operations include 400 validation and 403 CSRF response shapes in addition to 200 JSON responses. |
+| Regression test | `tests/test_openapi_contract.py` checks root `/openapi.json` route coverage against `app.url_map`, validates operation IDs/responses/schema fragments, and verifies `/api/openapi.json` also uses OpenAPI path-parameter syntax. |
+| Release smoke | `scripts/release_smoke.py` includes the OpenAPI contract test in `pytest-fast`. |
+
+Validation after the batch: focused OpenAPI/release-smoke tests passed (`16 passed`), Ruff passed for touched Python files, `opencut/openapi.py` + `scripts/release_smoke.py` + the new test file compile, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`258 passed` in pytest-fast).
+
+F205 remains open. The previous full CI-style coverage measurement timed out after 20 minutes without producing `dist\coverage-f205.json`; the CI floor stays at 50% until a complete measurement exists.
 
 ---
 
@@ -356,7 +376,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (13 open + F191/F195/F197/F199/F202/F204/F207 closed locally, including 1 regulatory still open):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (12 open + F191/F195/F197/F199/F202/F204/F207/F208 closed locally, including 1 regulatory still open):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
