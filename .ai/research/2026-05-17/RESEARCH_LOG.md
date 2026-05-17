@@ -626,3 +626,41 @@ Pass 20 was a local implementation and verification pass. No new external search
 ### Pass 20 saturation note
 
 F241 is complete for the CI/release-gate layer. It does not rewrite the Pillow renderer to shape complex scripts; it exposes that limitation as a machine-readable warning by default and as a strict failure when packaging environments opt into `--require-pillow-raqm`.
+
+---
+
+## Pass 21 (2026-05-17 — F243 UTF-8 no-BOM SRT policy)
+
+Pass 21 was a local implementation and verification pass focused on SRT writer behavior and route/CLI exposure.
+
+### Pass 21 local probes
+
+| Probe | Result |
+|---|---|
+| `opencut/export/srt.py` | Found the primary Whisper transcript SRT writer; it already wrote UTF-8 without BOM but had no explicit policy, validation, or opt-in legacy toggle. |
+| `opencut/routes/captions.py` | Found four SRT export surfaces that should share the same toggle: `/captions`, `/transcript/export`, `/full`, and `/interview-polish`. |
+| `opencut/cli.py` | Found two CLI SRT output paths: `captions` and `full`. |
+| `opencut/core/subtitle_shot_aware.py` | Found a secondary SRT file writer used by shot-aware subtitle post-processing. |
+
+### Pass 21 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 21.1 | Updated `opencut/export/srt.py`. | Added `srt_text_encoding`, `write_srt_text`, `has_utf8_bom`, and `legacy_windows_bom` support on `export_srt`. |
+| Pass 21.2 | Wired routes and CLI. | SRT routes accept `srt_legacy_bom`, `windows_legacy_bom`, or `legacy_bom`; SRT responses report `srt_encoding`; CLI commands expose `--srt-legacy-bom`. |
+| Pass 21.3 | Updated shot-aware file export. | `export_to_file(..., fmt="srt")` now uses the shared SRT writer and accepts `legacy_windows_bom=True`. |
+| Pass 21.4 | Added `tests/test_srt_encoding.py` and release-smoke wiring. | Tests pin byte-level no-BOM default, opt-in BOM, encoding validation, route aliases, and shot-aware export behavior. |
+| Pass 21.5 | Updated roadmap and research state files. | F243 marked closed; next local-verifiable Now queue is F244 while F205 remains blocked by long coverage runtime. |
+
+### Pass 21 validation results
+
+| Check | Result |
+|---|---|
+| Focused SRT encoding/caption-regression/core/subtitle export tests | **PASS** — `13 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for touched Python files | **PASS** |
+| Full release smoke | **PASS** — all 14 steps green; pytest-fast `294 passed` |
+
+### Pass 21 saturation note
+
+F243 is complete for repository SRT export behavior and user-facing toggles. Existing SRT readers continue accepting BOMmed input through `utf-8-sig`; this pass only controls newly written SRT bytes.

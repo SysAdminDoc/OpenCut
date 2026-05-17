@@ -35,14 +35,14 @@ logger = logging.getLogger("opencut")
 
 # Core imports used by multiple routes (try relative/absolute, tolerate missing)
 detect_speech = get_edit_summary = generate_zoom_events = None
-export_premiere_xml = export_ass = export_json = export_srt = export_vtt = None
+export_premiere_xml = export_ass = export_json = export_vtt = None
 CaptionConfig = ExportConfig = get_preset = _probe_media = LLMConfig = None
 try:
     from ..core.llm import LLMConfig  # noqa: F811
     from ..core.silence import detect_speech, get_edit_summary  # noqa: F811
     from ..core.zoom import generate_zoom_events  # noqa: F811
     from ..export.premiere import export_premiere_xml  # noqa: F811
-    from ..export.srt import export_ass, export_json, export_srt, export_vtt  # noqa: F811
+    from ..export.srt import export_ass, export_json, export_vtt  # noqa: F811
     from ..utils.config import CaptionConfig, ExportConfig, get_preset  # noqa: F811
     from ..utils.media import probe as _probe_media  # noqa: F811
 except ImportError:
@@ -51,7 +51,7 @@ except ImportError:
         from opencut.core.silence import detect_speech, get_edit_summary  # noqa: F811
         from opencut.core.zoom import generate_zoom_events  # noqa: F811
         from opencut.export.premiere import export_premiere_xml  # noqa: F811
-        from opencut.export.srt import export_ass, export_json, export_srt, export_vtt  # noqa: F811
+        from opencut.export.srt import export_ass, export_json, export_vtt  # noqa: F811
         from opencut.utils.config import CaptionConfig, ExportConfig, get_preset  # noqa: F811
         from opencut.utils.media import probe as _probe_media  # noqa: F811
     except ImportError:
@@ -150,6 +150,22 @@ def _sanitize_font_name(s: str) -> str:
     return "Arial"
 
 
+def _legacy_srt_bom_requested(data: dict) -> bool:
+    """Return whether the request opted into a legacy UTF-8 BOM for SRT output."""
+    for key in ("srt_legacy_bom", "windows_legacy_bom", "legacy_bom"):
+        if key in data:
+            return safe_bool(data.get(key), False)
+    return False
+
+
+def _export_srt_with_policy(result, out_path: str, *, legacy_windows_bom: bool = False) -> str:
+    from opencut.export import srt as srt_export
+
+    if legacy_windows_bom:
+        return srt_export.export_srt(result, out_path, legacy_windows_bom=True)
+    return srt_export.export_srt(result, out_path)
+
+
 # ---------------------------------------------------------------------------
 # Captions
 # ---------------------------------------------------------------------------
@@ -170,6 +186,7 @@ def generate_captions(job_id, filepath, data):
     if sub_format not in ("srt", "vtt", "json", "ass"):
         sub_format = "srt"
     word_timestamps = safe_bool(data.get("word_timestamps", True), True)
+    legacy_srt_bom = _legacy_srt_bom_requested(data)
 
     from opencut.core.captions import check_whisper_available, transcribe
 
@@ -245,15 +262,18 @@ def generate_captions(job_id, filepath, data):
             karaoke=word_timestamps,
         )
     else:
-        export_srt(result, out_path)
+        _export_srt_with_policy(result, out_path, legacy_windows_bom=legacy_srt_bom)
 
-    return {
+    response = {
         "output_path": out_path,
         "language": getattr(result, "language", language or "en"),
         "segments": len(result.segments),
         "caption_segments": len(result.segments),
         "words": getattr(result, "word_count", 0),
     }
+    if sub_format == "srt":
+        response["srt_encoding"] = "utf-8-sig" if legacy_srt_bom else "utf-8"
+    return response
 
 
 # ---------------------------------------------------------------------------
@@ -505,6 +525,7 @@ def export_edited_transcript():
     if sub_format not in ("srt", "vtt", "json", "ass"):
         sub_format = "srt"
     language = data.get("language", "en")
+    legacy_srt_bom = _legacy_srt_bom_requested(data)
 
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -560,7 +581,7 @@ def export_edited_transcript():
             vid_h = info.video.height if info and info.video else 1080
             export_ass(result, out_path, video_width=vid_w, video_height=vid_h, karaoke=True)
         else:
-            export_srt(result, out_path)
+            _export_srt_with_policy(result, out_path, legacy_windows_bom=legacy_srt_bom)
 
         # F111: caption QC gate. Failures return 422 with diagnostics; pass
         # `?force=1` (or `force: true` in the JSON body) to override.
@@ -592,7 +613,10 @@ def export_edited_transcript():
                 # the diagnostics are advisory in that case.
                 qc_payload = {"overall_pass": True, "error_count": 0, "warning_count": 0, "diagnostics": [], "skipped": True}
 
-        return jsonify({"output_path": out_path, "format": sub_format, "qc": qc_payload})
+        payload = {"output_path": out_path, "format": sub_format, "qc": qc_payload}
+        if sub_format == "srt":
+            payload["srt_encoding"] = "utf-8-sig" if legacy_srt_bom else "utf-8"
+        return jsonify(payload)
     except Exception as e:
         return safe_error(e, "export_edited_transcript")
 
@@ -666,6 +690,7 @@ def full_pipeline(job_id, filepath, data):
     skip_zoom = safe_bool(data.get("skip_zoom", False), False)
     remove_fillers = safe_bool(data.get("remove_fillers", False), False)
     seq_name = data.get("sequence_name", "")
+    legacy_srt_bom = _legacy_srt_bom_requested(data)
 
     cfg = get_preset(preset)
     effective_name = seq_name or _make_sequence_name(filepath, "Full Edit")
@@ -793,7 +818,7 @@ def full_pipeline(job_id, filepath, data):
                 f"condensed duration {captions_result.duration:.1f}s"
             )
 
-            export_srt(captions_result, srt_path)
+            _export_srt_with_policy(captions_result, srt_path, legacy_windows_bom=legacy_srt_bom)
 
     if _is_cancelled(job_id):
         return {"cancelled": True}
@@ -814,6 +839,7 @@ def full_pipeline(job_id, filepath, data):
     }
     if captions_result:
         result_data["srt_path"] = srt_path
+        result_data["srt_encoding"] = "utf-8-sig" if legacy_srt_bom else "utf-8"
         result_data["caption_segments"] = len(captions_result.segments)
         result_data["words"] = captions_result.word_count
         result_data["language"] = captions_result.language
@@ -852,7 +878,6 @@ def interview_polish(job_id, filepath, data):
     )
     from opencut.core.fillers import detect_fillers, remove_fillers_from_segments
     from opencut.core.repeat_detect import detect_repeated_takes, merge_repeat_ranges
-    from opencut.export.srt import export_srt
     from opencut.polish_state import (
         _transcription_from_dict,
         _transcription_to_dict,
@@ -872,6 +897,7 @@ def interview_polish(job_id, filepath, data):
     diarize_flag = safe_bool(data.get("diarize", True), True)
     remove_fillers_flag = safe_bool(data.get("remove_fillers", True), True)
     detect_repeats_flag = safe_bool(data.get("detect_repeats", True), True)
+    legacy_srt_bom = _legacy_srt_bom_requested(data)
 
     cfg = get_preset(preset)
     effective_name = seq_name or _make_sequence_name(filepath, "Interview Polish")
@@ -1055,7 +1081,7 @@ def interview_polish(job_id, filepath, data):
     if transcription:
         try:
             captions_result = remap_captions_to_segments(transcription, segments)
-            export_srt(captions_result, srt_path)
+            _export_srt_with_policy(captions_result, srt_path, legacy_windows_bom=legacy_srt_bom)
         except Exception as e:
             logger.warning("Caption export failed: %s", e)
 
@@ -1095,6 +1121,7 @@ def interview_polish(job_id, filepath, data):
     result_data = {
         "xml_path": xml_path,
         "srt_path": srt_path if captions_result else "",
+        "srt_encoding": "utf-8-sig" if captions_result and legacy_srt_bom else "utf-8" if captions_result else "",
         "chapters_path": chapters_path if chapters_data and chapters_data.get("description_block") else "",
         "segments": len(segments),
         "speech_duration": round(sum(s.end - s.start for s in segments), 2),
