@@ -24,7 +24,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F192 | Bulk OpenAPI response schemas for top 50 routes | Move from 30 typed + 1300 untyped to ~80 typed | ROUTE_READINESS_AUDIT §4 | M | Next |
 | F193 | Introspection-based OpenAPI schema (replace hand-table) | Walk `core/*Result` dataclasses to generate schemas | ROUTE_READINESS_AUDIT §4 | M | Later |
 | F194 | Auto-generate extended MCP tools from manifest | 27 → ~300 tools (tagged auto vs curated) | ROUTE_READINESS_AUDIT §5 | L | Next |
-| F195 | Add 12 missing MCP tools for shipped post-Wave-M routes | face_reshape, skin_retouch, smart_upscale, elevenlabs_tts, caption_qc, review_bundle, c2pa_provenance, marker_import, capability_probe, brand_kit, semantic_search, spectral_match | ROUTE_READINESS_AUDIT §5 | S | Now |
+| F195 | Add 12 missing MCP tools for shipped post-Wave-M routes | DONE in Pass 9 — curated MCP surface is now 39 tools, including face_reshape, skin_retouch, smart_upscale, elevenlabs_tts, caption_qc, review_bundle, c2pa_provenance, marker_import, capability_probe, brand_kit, semantic_search, and spectral_match | ROUTE_READINESS_AUDIT §5 | S | Done |
 | F196 | Make `registry.py` primary; derive `model_cards.py` / `checks.py` from it | Single source of truth | ROUTE_READINESS_AUDIT §6 | L | Later |
 | F197 | `NON_AI_CHECKS` allowlist in `registry.py` | DONE in Pass 8 — registry owns the allowlist; model_cards imports it | ROUTE_READINESS_AUDIT §6 | S | Done |
 | F198 | CEP-only route catalogue + UXP replacement plan | Enumerate the ~30 ExtendScript-bound routes | ROUTE_READINESS_AUDIT §7 + UXP subagent §10 | M | Next |
@@ -127,8 +127,8 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | Tier | Pass-2 F-numbers added | Total (cumulative) |
 |---|---|---|
-| **Now** | F195, F202 (priority-bumped), F204, F205, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244, F251, F259 | 17 |
-| **Done locally after Pass 8** | F191, F197, F199 | 3 |
+| **Now** | F202 (priority-bumped), F204, F205, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244, F251, F259 | 16 |
+| **Done locally after Pass 9** | F191, F195, F197, F199 | 4 |
 | **Next** | F192, F194, F198, F200, F201, F203, F211, F213, F214, F215, F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 

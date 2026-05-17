@@ -390,3 +390,24 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P4-E05 | https://advisories.gitlab.com/npm/vite/GHSA-4w7w-66w2-5vf9/ — Vite `.map` path traversal advisory; affected/fixed versions and CVSS 5.3 medium |
 
 **Source coverage assessment (Pass 4):** Pass 4 claims in `LIVE_VERIFICATION.md`, `PROJECT_CONTEXT.md`, `ROADMAP.md` v4.7, `CHANGESET_SUMMARY.md`, and `CONTINUE_FROM_HERE.md` trace to R-P4-L01 through R-P4-L09 plus R-P4-E01 through R-P4-E05.
+
+---
+
+## Pass 9 — F195 MCP curated tool expansion (2026-05-17 ninth pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P9-L01 | `opencut/mcp_server.py` — MCP tool definitions, `_TOOL_ROUTES`, path validation, and `handle_tool_call` dispatch |
+| R-P9-L02 | `opencut/routes/wave_l_routes.py` — source routes for face reshape, skin retouch, smart upscale, and ElevenLabs TTS |
+| R-P9-L03 | `opencut/routes/captions.py` — source route for `POST /captions/qc` |
+| R-P9-L04 | `opencut/routes/timeline.py` — source routes for marker import, review bundle, and C2PA provenance |
+| R-P9-L05 | `opencut/routes/system.py` — source route for `GET /system/capabilities` |
+| R-P9-L06 | `opencut/routes/wave_k_routes.py` — source routes for Brand Kit, semantic search, and spectral match |
+| R-P9-L07 | `python -m py_compile opencut/mcp_server.py scripts/release_smoke.py tests/test_mcp_server.py` — PASS |
+| R-P9-L08 | `python -m pytest tests/test_mcp_server.py tests/test_release_smoke.py -q` — PASS, `17 passed` |
+| R-P9-L09 | `ruff check opencut/mcp_server.py scripts/release_smoke.py tests/test_mcp_server.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P9-L10 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `246 passed` |
+
+**Source coverage assessment (Pass 9):** Pass 9 claims in `ROADMAP.md` v4.12, `PROJECT_CONTEXT.md`, `ROUTE_READINESS_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, and `CONTINUE_FROM_HERE.md` trace to R-P9-L01 through R-P9-L10. No new external source was used.

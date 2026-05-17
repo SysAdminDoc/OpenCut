@@ -451,3 +451,33 @@ Pass 8 closed the generated feature-readiness registry and registry-owned allowl
 | `python -m pytest tests/test_feature_registry.py tests/test_feature_readiness_generator.py tests/test_model_cards.py tests/test_release_smoke.py -q` | PASS — `35 passed` |
 | `python scripts/release_smoke.py --only feature-readiness --json` | PASS |
 | `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast reported `241 passed` |
+
+---
+
+## 14. Pass 9 additions (same day, F195 MCP curated tool expansion)
+
+Pass 9 closed the missing post-Wave-M curated MCP tools item.
+
+### Files added or edited in Pass 9
+
+| Path | Change |
+|---|---|
+| `opencut/mcp_server.py` | Expanded `MCP_TOOLS` from 27 to 39 entries, added route mappings for 12 shipped routes, added Brand Kit and semantic-search action dispatch, and expanded MCP path validation for new scalar/array path keys. |
+| `tests/test_mcp_server.py` | Added registration, route mapping, dispatch, special-action, and MCP path-validation coverage. |
+| `scripts/release_smoke.py` | Added `tests/test_mcp_server.py` to the release-gate pytest slice. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `ROUTE_READINESS_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CONTINUE_FROM_HERE.md` | Marked F195 closed, updated MCP tool counts from 27 to 39, and recorded the remaining route/tooling gaps. |
+
+### Items closed in Pass 9
+
+| F# | Result |
+|---|---|
+| F195 | Closed — curated MCP coverage now includes face reshape, skin retouch, smart upscale, ElevenLabs TTS, caption QC, review bundles, C2PA provenance, marker import, capability probe, Brand Kit, semantic search, and spectral match. |
+
+### Validation after Pass 9
+
+| Command | Result |
+|---|---|
+| `python -m py_compile opencut/mcp_server.py scripts/release_smoke.py tests/test_mcp_server.py` | PASS |
+| `python -m pytest tests/test_mcp_server.py tests/test_release_smoke.py -q` | PASS — `17 passed` |
+| `ruff check opencut/mcp_server.py scripts/release_smoke.py tests/test_mcp_server.py --select E,F,I --ignore E501,E402` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast reported `246 passed` |
