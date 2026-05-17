@@ -22,6 +22,24 @@
 > **v4.6 status (2026-05-17, third pass)**: a verification pass executed the live `dump_route_manifest --check`, `sync_version --check`, `bootstrap_check`, `pip-audit`, and `npm audit` commands — **all four governance gates PASS**, and the Vite advisory matches the F095 documented waiver. **One real shipped-vs-actual gap discovered:** Wave I I1.4 cross-platform launchers were marked shipped but the macOS `.command` and Linux `.sh` files do NOT exist — only Windows scripts ship today. Pass 3 also walked `host/index.jsx` and produced [`CEP_UXP_PARITY_MATRIX.md`](.ai/research/2026-05-17/CEP_UXP_PARITY_MATRIX.md) (18 JSX functions, **only 2 are truly CEP-only** — `ocAddNativeCaptionTrack` and `ocQeReflect`), [`LIVE_VERIFICATION.md`](.ai/research/2026-05-17/LIVE_VERIFICATION.md), [`AGENT_UX_RFC.md`](.ai/research/2026-05-17/AGENT_UX_RFC.md) (F143-F145 design RFC adopting Copilot Workspace plan + Cursor checkpoint + Underlord self-review + Aider snapshot patterns), and [`MARKET_POSITIONING.md`](.ai/research/2026-05-17/MARKET_POSITIONING.md) (OpenCut replaces ~$1,400/yr of subscriptions; Mister Horse free-shell + paid-packs as distribution model). F261-F272 added (+12 items, total F-numbers now F121-F272 = 152 new).
 >
 > **v4.7 status (2026-05-17, fourth pass)**: the previously deferred full `python scripts/release_smoke.py --json` gate was run to completion after safe Ruff cleanup. Result: **PASS**. Bootstrap, version sync, route manifest, model cards, license gate, roadmap lint, Ruff (`E,F,I`), pytest-fast (`232 passed`), pip-audit, npm advisory allow-list, and panel-source verification all passed. The F138 hardening batch is validated and ready in the local checkpoint commit.
+>
+> **v4.8 status (2026-05-17, fifth pass)**: the first implementation batch after the research checkpoint closed three Pass-3 Now items: **F261** (`OpenCut-Server.command` + `OpenCut-Server.sh`), **F262** (UXP sample-repo URL typo), and **F270** (README "$1,400/year" positioning lead + macOS/Linux launcher instructions). F264 and F266 remain the open items from the Pass-3 Now list.
+
+---
+
+## 2026-05-17 v4.8 Launcher and Positioning Quick Wins
+
+This pass converted the smallest Pass-3 research findings into shipped repository changes:
+
+| Item | Status | Evidence |
+|---|---|---|
+| F261 — missing macOS/Linux launchers | **DONE** | Added `OpenCut-Server.command` and `OpenCut-Server.sh`; both mirror the Windows launcher's bundled Python, FFmpeg, and model-cache environment handling. |
+| F262 — stale UXP sample repo URL | **DONE** | `extension/com.opencut.uxp/uxp-api-notes.md` now points to `https://github.com/AdobeDocs/uxp-premiere-pro-samples`. |
+| F270 — README "$1,400/year" positioning lead | **DONE** | README lead now uses the quantified subscription-replacement story from `MARKET_POSITIONING.md` and names the macOS/Linux launchers in Quick Start. |
+
+Validation after the batch: `git diff --check` passed and `python scripts/release_smoke.py --json` exited `0` (pytest-fast: `232 passed`).
+
+Open Pass-3 Now items after this batch: F264 (machine-parseable CI npm-audit assertion) and F266 (document the two-function CEP residual + drop-QE plan).
 
 ---
 
@@ -37,7 +55,7 @@ Pass 4 closed the release-smoke gap left by Pass 3:
 | Release-smoke Ruff | **PASS** after safe unused-import/import-order cleanup in `opencut/` and `scripts/` |
 | Dependency advisories | **PASS** — `pip-audit` found no known vulnerabilities; npm advisory allow-list step passed |
 
-This does not close F261 (missing macOS/Linux launchers), F179 (full `features.md` reconciliation), or F252/F253 (UXP migration decisions). It does raise confidence that the research + F138 security-hardening checkpoint can be committed without leaving the repo in a failing release-gate state.
+Pass 5 later closed F261, F262, and F270. This still does not close F179 (full `features.md` reconciliation) or F252/F253 (UXP migration decisions). It does raise confidence that the research + F138 security-hardening checkpoint can be committed without leaving the repo in a failing release-gate state.
 
 ---
 
@@ -122,7 +140,7 @@ Pass-3 NLE-pricing subagent built the dollar comparison the README has been miss
 
 Full ledger in the three Pass-3 artefacts. Tier summary:
 
-**Now (5 items):** F261 (ship missing macOS `.command` + Linux `.sh` launchers — closes Wave I I1.4 ledger discrepancy), F262 (fix uxp-api-notes URL typo), F264 (CI npm-audit machine-parseable assertion), F266 (document 2-function CEP residual + drop-QE plan), F270 (README "$1,400/yr" marketing copy refresh).
+**Now (2 open, 3 closed in v4.8):** [x] F261 (ship missing macOS `.command` + Linux `.sh` launchers — closes Wave I I1.4 ledger discrepancy), [x] F262 (fix uxp-api-notes URL typo), [ ] F264 (CI npm-audit machine-parseable assertion), [ ] F266 (document 2-function CEP residual + drop-QE plan), [x] F270 (README "$1,400/yr" marketing copy refresh).
 
 **Next (5 items):** F263 (pip-audit full `[all]` extras), F267 (UDT test harness for 14 low-risk JSX→UXP ports), F268 (Adobe Exchange storefront listing), F271 (per-feature VRAM requirement UI), F272 (wedding-specific Skill).
 
