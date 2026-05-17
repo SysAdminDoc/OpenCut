@@ -719,3 +719,20 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P22-L11 | `python scripts/release_smoke.py --json` — PASS, all 14 steps green; pytest-fast `300 passed`; pip-audit no vulnerabilities; npm advisory gate reports only the documented Vite waiver |
 
 **Source coverage assessment (Pass 22):** Pass 22 claims in `ROADMAP.md` v4.25, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-N17 and R-P22-L01 through R-P22-L11.
+
+---
+
+## Pass 23 — F205 interrupted coverage reattempt wrap-up (2026-05-17 twenty-third pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P23-L01 | F205 coverage command attempted: `python -m pytest tests/ -q --tb=short --cov=opencut --cov-report=term-missing --cov-report=json:dist\coverage-f205.json --cov-fail-under=0 -n auto --dist worksteal`; tool output reported `aborted by user` after 2,206.6 seconds |
+| R-P23-L02 | `Get-Process` / `Get-CimInstance Win32_Process` wrap-up probe — found one leftover Python pytest process with command line `python.exe -m pytest tests sidecar/tests -q`; `Stop-Process -Id 15924 -Force` stopped it, and a follow-up process list was empty |
+| R-P23-L03 | `dist\coverage-f205.json` inspection — valid coverage.py 7.14.0 JSON; 126,421 statements, 65,890 covered, 60,531 missing, 52.11950546190902% covered, 670 files |
+| R-P23-L04 | `Get-FileHash -Algorithm SHA256 dist\coverage-f205.json` — SHA256 `63DD45BF6C617BB05A7944911DEFF735A528F37F96CAD4CCC10F6E93CF59A6F9`; file length 5,490,775 bytes |
+| R-P23-L05 | `git status --ignored --short dist .coverage` — `.coverage` and `dist/` are ignored artifacts, so the partial coverage JSON was intentionally not committed; stale `.coverage` and `dist\coverage-f205.json` were removed after recording their evidence |
+| R-P23-L06 | `.ai/research/2026-05-17/F205_INTERRUPTED_COVERAGE_NOTE.md` — durable summary of the interrupted run and why F205 remains open |
+
+**Source coverage assessment (Pass 23):** Pass 23 claims in `ROADMAP.md` v4.26, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `TEST_COVERAGE_GAPS.md`, `INSTALLER_AUDIT.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md`, and `F205_INTERRUPTED_COVERAGE_NOTE.md` trace to R-P23-L01 through R-P23-L06. No new external source was used.

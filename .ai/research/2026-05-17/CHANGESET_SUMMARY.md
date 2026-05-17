@@ -952,3 +952,31 @@ Pass 22 closed F244.
 ### Remaining immediate work
 
 F205 remains open after the Pass 12 coverage timeout. The remaining Now items are F205, F251, and F259. F251 and F259 need fresh Adobe/UXP verification before implementation.
+
+---
+
+## 29. Pass 23 additions (same day, F205 interrupted coverage reattempt wrap-up)
+
+Pass 23 wrapped up an interrupted F205 coverage reattempt. No application code changed, and no F-number was closed.
+
+### Files added or edited in Pass 23
+
+| Path | Change |
+|---|---|
+| `.ai/research/2026-05-17/F205_INTERRUPTED_COVERAGE_NOTE.md` | Added a durable note for the interrupted coverage command, partial JSON totals, SHA256, cleanup action, and the reason F205 remains open. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `TEST_COVERAGE_GAPS.md`, `INSTALLER_AUDIT.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Updated current memory/state files so future agents do not mistake the partial coverage artifact for a valid floor-setting run. |
+| `C:\Users\Xray\.codex\memories\extensions\ad_hoc\notes\2026-05-17T19-45-34-opencut-f205-wrapup.md` | Added the Codex memory checkpoint requested by the user. |
+
+### F205 wrap-up facts
+
+| Item | Result |
+|---|---|
+| Coverage command | Interrupted after 2,206.6 seconds (36m46s). |
+| Partial JSON | Valid but incomplete: 126,421 statements, 65,890 covered, 60,531 missing, 52.1195% coverage across 670 files. |
+| Artifact hash | `dist\coverage-f205.json` SHA256 `63DD45BF6C617BB05A7944911DEFF735A528F37F96CAD4CCC10F6E93CF59A6F9` (ignored, not committed). |
+| Cleanup | Stopped leftover `python.exe -m pytest tests sidecar/tests -q`, then removed stale `.coverage` and `dist\coverage-f205.json` after recording the evidence. |
+| Decision | F205 remains open; CI coverage floor remains `--cov-fail-under=50`. |
+
+### Remaining immediate work
+
+F205 should resume only where the full CI-style coverage command can finish. F251 and F259 remain open and need fresh Adobe/UXP verification before implementation.

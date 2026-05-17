@@ -1,26 +1,36 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 23)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 24)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (after Pass 22; Passes 1-22 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, and Pass 22 closed F244 Whisper confidence + human-review flags. This file documents deferred research/product work for a future Pass 23+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (after Pass 23 wrap-up; Passes 1-23 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, Pass 22 closed F244 Whisper confidence + human-review flags, and Pass 23 wrapped up an interrupted F205 coverage reattempt without changing the coverage floor. This file documents deferred research/product work for a future Pass 24+, not a broken or incomplete research run.
 
 ---
 
 ## 1. State at hand-off
 
-- **Repo branch:** `main`, expected 45 commits ahead of `origin/main` after the Pass-22 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
+- **Repo branch:** `main`, expected 46 commits ahead of `origin/main` after the Pass-23 wrap-up commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
 - **Live counts:** 1,362 routes / 101 blueprints / 525 core modules / 143 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
-### Pass 23 entry point
+### Pass 24 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Continue the remaining Now queue.** F205 remains open but should only resume where a full coverage command can finish. F251 and F259 need fresh Adobe/UXP verification before implementation because beta typings and the macOS HTTP bug status can drift.
+2. **Continue the remaining Now queue.** F205 remains open but should only resume where a full coverage command can finish; the Pass 23 partial 52.12% JSON is not a floor-setting measurement. F251 and F259 need fresh Adobe/UXP verification before implementation because beta typings and the macOS HTTP bug status can drift.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 23 checkpoint
+
+| Item | Status |
+|---|---|
+| F205 | **OPEN** — second local CI-style coverage attempt was interrupted after 2,206.6 seconds (36m46s). |
+| Partial evidence | `dist\coverage-f205.json` parsed successfully but is ignored and incomplete: coverage.py 7.14.0, 126,421 statements, 65,890 covered, 60,531 missing, 52.1195% reported coverage across 670 files; SHA256 `63DD45BF6C617BB05A7944911DEFF735A528F37F96CAD4CCC10F6E93CF59A6F9`. |
+| Cleanup | Stopped one leftover `python.exe -m pytest tests sidecar/tests -q` process, then removed stale `.coverage` and `dist\coverage-f205.json` after recording their evidence. |
+| Decision | Do not update `.github/workflows/build.yml`; `--cov-fail-under=50` remains the only valid CI floor until a full coverage command completes. |
+| Evidence file | `.ai/research/2026-05-17/F205_INTERRUPTED_COVERAGE_NOTE.md`. |
 
 ### Pass 22 checkpoint
 
@@ -730,3 +740,25 @@ Pass 14 closed the MCP tool/route consistency item.
 
 - F205 remains open and should resume only where a full coverage command can finish.
 - The next local-verifiable Now items are F218 (blueprint import-order stability) and F219 (SBOM completeness).
+
+---
+
+## 28. Pass 23 update (same day, F205 interrupted coverage reattempt wrap-up)
+
+Pass 23 did not close an F-number. It was a wrap-up pass after the autonomous loop started a second F205 coverage measurement and the session was interrupted before pytest completed.
+
+### F205 status after Pass 23
+
+| Item | Status |
+|---|---|
+| Attempted command | `python -m pytest tests/ -q --tb=short --cov=opencut --cov-report=term-missing --cov-report=json:dist\coverage-f205.json --cov-fail-under=0 -n auto --dist worksteal` |
+| Runtime | Interrupted after 2,206.6 seconds (36m46s). |
+| Partial JSON | Valid JSON, but incomplete because pytest did not complete: 126,421 statements, 65,890 covered, 60,531 missing, 52.1195% reported coverage across 670 files. |
+| Cleanup | Stopped one leftover pytest process (`python.exe -m pytest tests sidecar/tests -q`), then removed stale `.coverage` and `dist\coverage-f205.json` after recording their evidence. |
+| Decision | F205 remains open. Do not raise `--cov-fail-under=50` from this partial run. |
+
+### Remaining immediate work
+
+- F205 should resume only on a local or CI runner where the full coverage command can finish cleanly.
+- F251 and F259 remain the other Now items and need fresh Adobe/UXP verification before implementation.
+- Push remains blocked by the `SysAdminDoc/OpenCut` vs local GitHub-account mismatch.

@@ -119,7 +119,7 @@ Pass 16 closed **F219 — SBOM completeness test**. `scripts/sbom.py` now emits 
 
 Current: `--cov-fail-under=50`. CHANGELOG / ROADMAP claim 7,551+ tests, which would imply much higher actual coverage. A pragmatic uplift sequence:
 
-1. **F205** (already proposed in INSTALLER_AUDIT.md) — measure actual coverage today, then floor at `actual - 5%` to absorb noise.
+1. **F205** (already proposed in INSTALLER_AUDIT.md) — measure actual coverage today, then floor at `actual - 5%` to absorb noise. Pass 23's interrupted 36m46s local run produced partial ignored JSON reporting 52.12% coverage, but pytest did not complete, so the number is not usable for this decision.
 2. After F176 (eval dataset bundle) + F215 (fuzz extend) + F218 (import-order test) ship: re-measure and re-floor.
 3. Target: 75-80% actual coverage with a 70% floor by v1.40.
 
