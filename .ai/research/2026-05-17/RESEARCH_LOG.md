@@ -350,3 +350,31 @@ Pass 12 began with F205 because it was next in the Now queue, but the measuremen
 ### Pass 12 saturation note
 
 F207 is complete at repository/source level. F205 should resume on a machine or CI runner where the full coverage command can finish; do not infer a new threshold from partial local data.
+
+---
+
+## Pass 13 (2026-05-17 — F208 OpenAPI contract gate)
+
+Pass 13 was a local implementation and verification pass. No new external research was needed; the work compared the live Flask `url_map` against the two in-repo OpenAPI generators.
+
+### Pass 13 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 13.1 | Inspected the legacy `opencut/openapi.py` generator, `/api/openapi.json` generator, and existing OpenAPI tests. | Confirmed `/openapi.json` still emitted Flask `<param>` syntax and duplicate operation IDs for aliased endpoints. |
+| Pass 13.2 | Added path conversion, path parameter metadata, unique path-qualified operation IDs, and mutating-method error responses to `opencut/openapi.py`. | `/status/<job_id>` now appears as `/status/{job_id}` with a required string path parameter. |
+| Pass 13.3 | Added `tests/test_openapi_contract.py` and wired it into release smoke. | The test compares root OpenAPI operations to every live non-static Flask route/method and checks response/schema shape. |
+| Pass 13.4 | Updated roadmap and research state files. | F208 marked closed; F205 remains open after the Pass 12 coverage timeout. |
+
+### Pass 13 validation results
+
+| Check | Result |
+|---|---|
+| Focused OpenAPI/release-smoke tests | **PASS** — `16 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for touched Python files | **PASS** |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `258 passed` |
+
+### Pass 13 saturation note
+
+F208 is complete for structural OpenAPI validity and route coverage. It does not close F192/F193, which remain the richer typed-schema expansion and introspection work for the ~1,250 mostly generic response schemas.

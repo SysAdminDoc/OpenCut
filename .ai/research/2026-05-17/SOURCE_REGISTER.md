@@ -479,3 +479,22 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P12-L11 | F205 coverage measurement command — timed out after 20 minutes; no `dist/coverage-f205.json` output |
 
 **Source coverage assessment (Pass 12):** Pass 12 claims in `ROADMAP.md` v4.15, `PROJECT_CONTEXT.md`, `INSTALLER_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, and `CONTINUE_FROM_HERE.md` trace to R-P12-L01 through R-P12-L11. No new external source was used.
+
+---
+
+## Pass 13 — F208 OpenAPI contract gate (2026-05-17 thirteenth pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P13-L01 | `opencut/openapi.py` — legacy OpenAPI 3.0.3 generator updated to convert Flask `<param>` syntax, emit path parameters, unique operation IDs, and mutating-method 400/403 responses |
+| R-P13-L02 | `opencut/core/openapi_spec.py` — existing `/api/openapi.json` OpenAPI 3.1 generator already converts Flask path syntax |
+| R-P13-L03 | `tests/test_openapi_contract.py` — new F208 route-parity and response-shape contract tests |
+| R-P13-L04 | `scripts/release_smoke.py` — added `tests/test_openapi_contract.py` to the `pytest-fast` release gate |
+| R-P13-L05 | `python -m pytest tests/test_openapi_contract.py tests/test_release_smoke.py -q` — PASS, `16 passed` |
+| R-P13-L06 | `ruff check opencut/openapi.py tests/test_openapi_contract.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P13-L07 | `python -m py_compile opencut/openapi.py scripts/release_smoke.py tests/test_openapi_contract.py` — PASS |
+| R-P13-L08 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `258 passed` |
+
+**Source coverage assessment (Pass 13):** Pass 13 claims in `ROADMAP.md` v4.16, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P13-L01 through R-P13-L08. No new external source was used.

@@ -584,3 +584,37 @@ Pass 12 attempted F205 and closed F207.
 ### F205 attempt
 
 Installed missing local plugins with `python -m pip install pytest-cov pytest-xdist`, then attempted the CI-style coverage measurement with the floor disabled. The command timed out after 20 minutes and produced no `dist\coverage-f205.json`, so F205 remains open.
+
+---
+
+## 18. Pass 13 additions (same day, F208 OpenAPI contract gate)
+
+Pass 13 closed F208.
+
+### Files added or edited in Pass 13
+
+| Path | Change |
+|---|---|
+| `opencut/openapi.py` | Converts Flask path parameters to OpenAPI `{param}` syntax, emits path parameter metadata, generates unique path-qualified operation IDs for aliased endpoints, and adds 400/403 response shapes for every mutating method. |
+| `tests/test_openapi_contract.py` | New contract tests for `/openapi.json` route parity, path parameters, operation IDs, response schemas, and `/api/openapi.json` path-parameter syntax. |
+| `scripts/release_smoke.py` | Added `tests/test_openapi_contract.py` to the `pytest-fast` release gate. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Marked F208 closed and updated the next-pass handoff. |
+
+### Items closed in Pass 13
+
+| F# | Result |
+|---|---|
+| F208 | Closed — OpenAPI structural validity and route coverage are pinned in release smoke. |
+
+### Validation after Pass 13
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_openapi_contract.py tests/test_release_smoke.py -q` | PASS — `16 passed` |
+| `ruff check opencut/openapi.py tests/test_openapi_contract.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/openapi.py scripts/release_smoke.py tests/test_openapi_contract.py` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `258 passed` |
+
+### Remaining immediate work
+
+F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F209, F218, and F219.
