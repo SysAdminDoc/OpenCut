@@ -107,7 +107,7 @@ There's `tests/uxp/` (not seen in listing) or equivalent? No — the test list s
 
 ### 3.11 Cross-blueprint dependency tests
 
-If wave K imports something from wave A and the import order in `routes/__init__.py` changes, the import could break silently in a hot-reload scenario. The route-collision guard (per `routes/__init__.py` in v1.25.1) catches duplicate paths but not import-order regressions. **F218 — import-order stability test for blueprint registration** (S).
+Pass 15 closed **F218 — import-order stability test for blueprint registration**. `tests/test_route_collisions.py` now pins the exact `get_core_blueprints()` order, asserts the live app appends `motion_design_api` last for the legacy `/api/motion/*` surface, and is included in release smoke.
 
 ### 3.12 SBOM regression
 
@@ -141,5 +141,5 @@ This is a single F number: **F205**, already on the Now tier.
 | F215 | Extend fuzz harness with 8 additional targets | Next | M |
 | F216 | Concurrent job-cancellation race test | Next | M |
 | F217 | UXP backend-client contract test | Next | S |
-| F218 | Import-order stability test for blueprint registration | Now | S |
+| F218 | Import-order stability test for blueprint registration | Done in Pass 15 | S |
 | F219 | SBOM completeness test | Now | S |

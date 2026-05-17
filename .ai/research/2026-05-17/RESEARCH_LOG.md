@@ -407,3 +407,31 @@ Pass 14 was a local implementation and verification pass. No new external resear
 ### Pass 14 saturation note
 
 F209 is complete for curated MCP route drift. It does not generate new MCP tools from the full route catalogue; that remains F194/T1.5-style extended MCP surface work.
+
+---
+
+## Pass 15 (2026-05-17 — F218 blueprint import-order stability)
+
+Pass 15 was a local test-hardening pass. No new external research was needed; the work pinned the existing explicit blueprint registration order.
+
+### Pass 15 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 15.1 | Inspected `opencut/routes/__init__.py` and existing route-collision tests. | Confirmed explicit `get_core_blueprints()` order plus special `motion_design_api` registration. |
+| Pass 15.2 | Added a blueprint order regression test. | `tests/test_route_collisions.py` now pins the 99 core blueprint names and final alias registration. |
+| Pass 15.3 | Added the route-collision/import-order test file to release smoke. | `scripts/release_smoke.py` now includes `tests/test_route_collisions.py`. |
+| Pass 15.4 | Updated roadmap and research state files. | F218 marked closed; F219 is the next local-verifiable Now item. |
+
+### Pass 15 validation results
+
+| Check | Result |
+|---|---|
+| Focused route-collision/release-smoke tests | **PASS** — `19 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for touched Python files | **PASS** |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `266 passed` |
+
+### Pass 15 saturation note
+
+F218 is complete for deterministic built-in blueprint order. It does not test third-party plugin registration order, which remains dynamic by design and should stay covered by plugin manifest validation rather than this core-order gate.

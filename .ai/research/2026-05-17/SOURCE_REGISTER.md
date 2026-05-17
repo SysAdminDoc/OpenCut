@@ -517,3 +517,21 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P14-L08 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `259 passed` |
 
 **Source coverage assessment (Pass 14):** Pass 14 claims in `ROADMAP.md` v4.17, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P14-L01 through R-P14-L08. No new external source was used.
+
+---
+
+## Pass 15 — F218 blueprint import-order stability (2026-05-17 fifteenth pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P15-L01 | `opencut/routes/__init__.py` — explicit `get_core_blueprints()` order and `motion_design_api` alias registration |
+| R-P15-L02 | `tests/test_route_collisions.py` — added stable blueprint order and alias-registration assertions |
+| R-P15-L03 | `scripts/release_smoke.py` — added `tests/test_route_collisions.py` to `pytest-fast` |
+| R-P15-L04 | `python -m pytest tests/test_route_collisions.py tests/test_release_smoke.py -q` — PASS, `19 passed` |
+| R-P15-L05 | `ruff check tests/test_route_collisions.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` — PASS after import-order formatting |
+| R-P15-L06 | `python -m py_compile tests/test_route_collisions.py scripts/release_smoke.py` — PASS |
+| R-P15-L07 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `266 passed` |
+
+**Source coverage assessment (Pass 15):** Pass 15 claims in `ROADMAP.md` v4.18, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P15-L01 through R-P15-L07. No new external source was used.

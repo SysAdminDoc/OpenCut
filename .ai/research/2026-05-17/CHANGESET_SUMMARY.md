@@ -652,3 +652,36 @@ Pass 14 closed F209.
 ### Remaining immediate work
 
 F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F218 and F219.
+
+---
+
+## 20. Pass 15 additions (same day, F218 blueprint import-order stability)
+
+Pass 15 closed F218.
+
+### Files added or edited in Pass 15
+
+| Path | Change |
+|---|---|
+| `tests/test_route_collisions.py` | Added `EXPECTED_CORE_BLUEPRINT_ORDER` and a test that pins the 99 core blueprints plus final `motion_design_api` alias registration order. |
+| `scripts/release_smoke.py` | Added `tests/test_route_collisions.py` to the `pytest-fast` release gate. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Marked F218 closed and updated the next-pass handoff. |
+
+### Items closed in Pass 15
+
+| F# | Result |
+|---|---|
+| F218 | Closed — deterministic built-in blueprint registration order now fails release smoke if it drifts unintentionally. |
+
+### Validation after Pass 15
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_route_collisions.py tests/test_release_smoke.py -q` | PASS — `19 passed` |
+| `ruff check tests/test_route_collisions.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile tests/test_route_collisions.py scripts/release_smoke.py` | PASS |
+| `python scripts\release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `266 passed` |
+
+### Remaining immediate work
+
+F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now item is F219.

@@ -156,7 +156,7 @@ These are not OpenCut work but should be tracked in the same ledger.
 
 The second autonomous research pass on 2026-05-17 added 70 more F-numbers across four sources: route audit, installer audit, test coverage, features.md reconciliation, plus three subagents (Frame.io review, niche AI / accessibility / standards, UXP migration deep-dive). Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](FEATURE_BACKLOG_ADDENDUM.md). Tier deltas:
 
-**Now (priority bumps + new): 11 open items; F191/F195/F197/F199/F202/F204/F207/F208/F209 closed locally after Pass 14**
+**Now (priority bumps + new): 10 open items; F191/F195/F197/F199/F202/F204/F207/F208/F209/F218 closed locally after Pass 15**
 
 | F# | Title | Why priority |
 |---|---|---|
@@ -170,7 +170,7 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 | [x] F207 | Embed bundled FFmpeg version in installer manifest | Closed in Pass 12 with WPF/Inno installer manifests |
 | [x] F208 | OpenAPI spec validity test | Closed in Pass 13 with `/openapi.json` path-parameter normalization, unique operation IDs, mutating-method 400/403 responses, and release-smoke contract tests |
 | [x] F209 | MCP tool ↔ route consistency test | Closed in Pass 14 with live Flask route checks for all MCP routes and special action dispatch paths |
-| F218 | Import-order stability test | Catch hot-reload bugs |
+| [x] F218 | Import-order stability test | Closed in Pass 15 with a pinned core blueprint order and release-smoke route-collision/import-order gate |
 | F219 | SBOM completeness test | Match deps + cards |
 | **F236** | **FCC user-overridable caption style tokens** | **FCC Aug 17 2026 readily-accessible rule (regulatory)** |
 | F237 | EBU R128 v5.0 + BS.1770-4 confirmation | Drop speculative -5 reference |
