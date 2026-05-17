@@ -457,3 +457,25 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P11-L08 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `251 passed` |
 
 **Source coverage assessment (Pass 11):** Pass 11 claims in `ROADMAP.md` v4.14, `PROJECT_CONTEXT.md`, `INSTALLER_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, and `CONTINUE_FROM_HERE.md` trace to R-P11-L01 through R-P11-L08. No new external source was used.
+
+---
+
+## Pass 12 — F205 attempt + F207 installer FFmpeg manifest (2026-05-17 twelfth pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P12-L01 | `ffmpeg/ffmpeg.exe -version` — bundled FFmpeg reports `8.0.1-essentials_build-www.gyan.dev` |
+| R-P12-L02 | `installer/src/OpenCut.Installer/Models/AppConstants.cs` — added FFmpeg/ffprobe version constants |
+| R-P12-L03 | `installer/src/OpenCut.Installer/Services/InstallEngine.cs` — WPF manifest writer |
+| R-P12-L04 | `OpenCut.iss` — Inno manifest writer |
+| R-P12-L05 | `tests/test_ffmpeg_installer_manifest.py` — static F207 contract test |
+| R-P12-L06 | `python -m pytest tests/test_ffmpeg_installer_manifest.py tests/test_release_smoke.py -q` — PASS, `15 passed` |
+| R-P12-L07 | `ruff check tests/test_ffmpeg_installer_manifest.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P12-L08 | `python -m py_compile scripts/release_smoke.py` — PASS |
+| R-P12-L09 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `254 passed` |
+| R-P12-L10 | `dotnet build installer/src/OpenCut.Installer/OpenCut.Installer.csproj --no-restore` — BLOCKED, no .NET SDK installed |
+| R-P12-L11 | F205 coverage measurement command — timed out after 20 minutes; no `dist/coverage-f205.json` output |
+
+**Source coverage assessment (Pass 12):** Pass 12 claims in `ROADMAP.md` v4.15, `PROJECT_CONTEXT.md`, `INSTALLER_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, and `CONTINUE_FROM_HERE.md` trace to R-P12-L01 through R-P12-L11. No new external source was used.

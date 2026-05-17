@@ -5,6 +5,8 @@
 #define MyAppVersion "1.32.0"
 #define MyAppPublisher "SysAdminDoc"
 #define MyAppURL "https://github.com/SysAdminDoc/OpenCut"
+#define BundledFfmpegVersion "8.0.1-essentials_build-www.gyan.dev"
+#define BundledFfprobeVersion "8.0.1-essentials_build-www.gyan.dev"
 
 [Setup]
 AppId={{8A7B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}
@@ -142,6 +144,34 @@ begin
   end;
 end;
 
+function JsonEscape(Value: string): string;
+begin
+  Result := Value;
+  StringChangeEx(Result, '\', '\\', True);
+  StringChangeEx(Result, '"', '\"', True);
+end;
+
+procedure WriteInstallerManifest();
+var
+  ManifestDir, ManifestPath, Json: string;
+begin
+  ManifestDir := ExpandConstant('{%USERPROFILE}\.opencut');
+  ManifestPath := ManifestDir + '\installer.json';
+  ForceDirectories(ManifestDir);
+  Json :=
+    '{' + #13#10 +
+    '  "app_name": "' + JsonEscape('{#MyAppName}') + '",' + #13#10 +
+    '  "app_version": "' + JsonEscape('{#MyAppVersion}') + '",' + #13#10 +
+    '  "installer_kind": "inno",' + #13#10 +
+    '  "install_path": "' + JsonEscape(ExpandConstant('{app}')) + '",' + #13#10 +
+    '  "server_path": "' + JsonEscape(ExpandConstant('{app}\server')) + '",' + #13#10 +
+    '  "ffmpeg_path": "' + JsonEscape(ExpandConstant('{app}\ffmpeg')) + '",' + #13#10 +
+    '  "bundled_ffmpeg_version": "' + JsonEscape('{#BundledFfmpegVersion}') + '",' + #13#10 +
+    '  "bundled_ffprobe_version": "' + JsonEscape('{#BundledFfprobeVersion}') + '"' + #13#10 +
+    '}' + #13#10;
+  SaveStringToFile(ManifestPath, Json, False);
+end;
+
 procedure RemoveFromPath(Dir: string);
 var
   OldPath, UpperDir, UpperPath: string;
@@ -232,6 +262,8 @@ begin
   begin
     // Add bundled FFmpeg to user PATH
     AddToPath(ExpandConstant('{app}\ffmpeg'));
+    // Write machine-readable installer manifest for support/debug tooling
+    WriteInstallerManifest();
     // Install CEP extension
     if WizardIsTaskSelected('installextension') then
       InstallCEPExtension();

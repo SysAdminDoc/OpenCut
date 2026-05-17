@@ -1,17 +1,17 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 12)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 13)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (during Pass 11; Passes 1-11 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, and Pass 11 closed F204 release SBOM upload. This file documents deferred research/product work for a future Pass 12+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (during Pass 12; Passes 1-12 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, and Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout. This file documents deferred research/product work for a future Pass 13+, not a broken or incomplete research run.
 
 ---
 
 ## 1. State at hand-off
 
-- **Repo branch:** `main`, expected 34 commits ahead of `origin/main` after the Pass-11 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
+- **Repo branch:** `main`, expected 35 commits ahead of `origin/main` after the Pass-12 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
-- **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 133 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
+- **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 136 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
@@ -215,10 +215,10 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 | npm advisory state | **PASS** in release-smoke allow-list step; raw `npm audit --json` still shows the known moderate Vite `.map` advisory that F095 documents |
 | `npm view @adobe/premierepro version dist-tags --json` | Confirmed `latest=26.2.0`, `beta=26.3.0-beta.67` |
 
-### Pass 12 entry point
+### Pass 13 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Continue the F191-F260 Now queue.** F205 is the next listed item after F204, but it may require a reliable coverage measurement strategy; F207/F208/F209/F218/F219 are also local-verifiable.
+2. **Continue the F191-F260 Now queue.** F205 remains open but needs a reliable long-running coverage measurement. The next local-verifiable implementation items are F208/F209/F218/F219.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
@@ -430,3 +430,36 @@ Pass 11 closed the SBOM release attachment item.
 
 - F205 coverage-floor uplift is next in the Now list; it needs an actual coverage measurement before changing `--cov-fail-under`.
 - F219 remains open; F204 attaches the SBOM, but F219 must assert completeness against declared deps and model cards.
+
+---
+
+## 18. Pass 12 update (same day, F205 attempt + F207 installer FFmpeg manifest)
+
+Pass 12 attempted F205 and closed F207.
+
+### F205 status
+
+The local environment initially lacked `pytest-cov` and `pytest-xdist`; those were installed with `python -m pip install pytest-cov pytest-xdist`. The full CI-style measurement command then timed out after 20 minutes:
+
+```powershell
+python -m pytest tests/ -q --tb=short --cov=opencut --cov-report=term --cov-report=json:dist\coverage-f205.json --cov-fail-under=0 -n auto --dist worksteal
+```
+
+No `dist\coverage-f205.json` was produced. F205 remains open; do not raise `--cov-fail-under=50` until a complete measurement exists.
+
+### What Pass 12 closed
+
+| Item | Status |
+|---|---|
+| F207 | **DONE** — current bundled FFmpeg/ffprobe version is pinned as `8.0.1-essentials_build-www.gyan.dev`; WPF and Inno installers write it to `~/.opencut/installer.json`. |
+
+### Validation after Pass 12
+
+| Command | Result |
+|---|---|
+| `.\ffmpeg\ffmpeg.exe -version` | PASS — first line reports `8.0.1-essentials_build-www.gyan.dev` |
+| `python -m pytest tests/test_ffmpeg_installer_manifest.py tests/test_release_smoke.py -q` | PASS — `15 passed` |
+| `ruff check tests/test_ffmpeg_installer_manifest.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile scripts/release_smoke.py` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `254 passed` |
+| `dotnet build installer/src/OpenCut.Installer/OpenCut.Installer.csproj --no-restore` | BLOCKED — no .NET SDK installed on this VM |
