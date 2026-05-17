@@ -26,6 +26,31 @@
 > **v4.8 status (2026-05-17, fifth pass)**: the first implementation batch after the research checkpoint closed three Pass-3 Now items: **F261** (`OpenCut-Server.command` + `OpenCut-Server.sh`), **F262** (UXP sample-repo URL typo), and **F270** (README "$1,400/year" positioning lead + macOS/Linux launcher instructions). F264 and F266 remain the open items from the Pass-3 Now list.
 >
 > **v4.9 status (2026-05-17, sixth pass)**: closed the remaining Pass-3 Now items: **F264** (`npm-advisory` release-smoke now consumes machine-parseable JSON from `check-advisories.mjs --json`) and **F266** (`docs/UXP_MIGRATION.md` now documents the two CEP-only residuals and the drop-QE plan). The Pass-3 Now list is now fully closed locally.
+>
+> **v4.10 status (2026-05-17, seventh pass)**: closed **F199** with `opencut/_generated/api_aliases.json`, `opencut.tools.dump_api_aliases`, release-smoke drift checking, and tests. Live correction: the app has **233 `/api/*` routes**, but only **15** are true dual-registered aliases with equivalent bare routes; the remaining **218** are canonical `/api` routes.
+
+---
+
+## 2026-05-17 v4.10 API Alias Manifest
+
+F199 is closed locally. The generated alias policy now lives in `opencut/_generated/api_aliases.json` and is regenerated with:
+
+```sh
+python -m opencut.tools.dump_api_aliases
+python -m opencut.tools.dump_api_aliases --check
+```
+
+The manifest separates:
+
+| Class | Count | Meaning |
+|---|---:|---|
+| True aliases | 15 | `/api/*` route has the same methods as an equivalent bare route after stripping `/api`. |
+| Canonical `/api` routes | 218 | `/api/*` route has no equivalent bare route and should not be treated as compatibility duplication. |
+| Total `/api` routes | 233 | Alias + canonical `/api` route surface. |
+
+This corrects the Pass-2 wording that described all 233 `/api/*` routes as alias pairs. The live code only dual-registers the motion-design compatibility surface plus one overlapping audio route.
+
+Validation after the batch: `python -m opencut.tools.dump_api_aliases --check` passed, F199 focused tests passed (`16 passed`), and full `python scripts/release_smoke.py --json` exited `0` (`236 passed` in pytest-fast).
 
 ---
 
@@ -40,7 +65,7 @@ This pass closed the remaining Pass-3 Now items:
 
 Validation after the batch: targeted F264/F266 tests passed (`20 passed`) and full `python scripts/release_smoke.py --json` exited `0` (`232 passed` in pytest-fast).
 
-Pass-3 Now items after v4.9: F261, F262, F264, F266, and F270 are all closed locally. The next small implementation candidate is F199 (`opencut/_generated/api_aliases.json`) unless the run pivots to the larger F179 `features.md` reconciliation.
+Pass-3 Now items after v4.9: F261, F262, F264, F266, and F270 are all closed locally. Pass 7 later closed F199 (`opencut/_generated/api_aliases.json`). The next candidate is the larger F179 `features.md` reconciliation unless a smaller Now-tier trust item is selected.
 
 ---
 
@@ -193,7 +218,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 3. **`ProjectConverter.importFromFinalCutProXML` and `importFromOpenTimelineIO` were REMOVED in the 26.3.0-beta typings.** Export still works; round-trip import via UXP is currently impossible. This is a **new** Adobe gap report — **F261** (replacement for F186-F190 set).
 4. **UXP Hybrid Plugins** (.uxpaddon, C++ bundled per-platform) are the **only** path for some CEP-blocked features post-Sept 2026. Bolt UXP 1.3.0 (May 2026) added a win-arm64 hybrid template. **F253** is the implementation; **F251** is the per-week `@adobe/premierepro@beta` diff tracker that catches new APIs the moment Adobe ships them.
 5. **Two regulatory deadlines** (Apple notarisation 2026-09-01, FCC caption 2026-08-17) escalate F202 and F236 from "Next" to "Now". Niche AI / accessibility / standards subagent confirmed both deadlines with primary-source citations.
-6. **The /api/* alias surface is 233 routes** — every blueprint registers both a canonical `/foo/bar` and an `/api/foo/bar` mirror, doubling maintenance surface. **F199** documents the policy. No code change recommended; just policy + alias map.
+6. **The `/api/*` surface is 233 routes, but not 233 alias pairs** — Pass 7 corrected the earlier wording. F199 now ships `opencut/_generated/api_aliases.json`: 15 true aliases and 218 canonical `/api` routes.
 7. **basicsr is dead and gfpgan/realesrgan depend on it** — Pass 1 flagged this; Pass 2's UXP work confirmed it's a torch-cascade blocker that compounds the audiocraft `torch==2.1.0` pin. **F124** (basicsr replacement) is on the critical path for any torch ≥2.6 bump.
 8. **Test coverage floor is 50%** (`--cov-fail-under=50`). Actual coverage is much higher per the 7,551-test claim — but nobody has measured it precisely. **F205** floors at actual - 5%.
 
@@ -219,7 +244,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (20 items, including 2 regulatory):** F191 (auto-derive registry), F195 (12 missing MCP tools), F197 (NON_AI_CHECKS allowlist), F199 (/api/* alias policy), **F202 (Apple notarisation, regulatory)**, F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (19 open + F199 closed locally, including 2 regulatory):** F191 (auto-derive registry), F195 (12 missing MCP tools), F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), **F202 (Apple notarisation, regulatory)**, F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML

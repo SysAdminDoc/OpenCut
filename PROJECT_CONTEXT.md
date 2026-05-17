@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-05-17 (six autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh. Pass 6 closed F264/F266 with machine-readable npm-advisory release-smoke output and the CEP-residual/drop-QE migration note.
+**Last consolidated:** 2026-05-17 (seven autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh. Pass 6 closed F264/F266 with machine-readable npm-advisory release-smoke output and the CEP-residual/drop-QE migration note. Pass 7 closed F199 with a generated `/api` alias manifest and corrected the earlier "233 alias pairs" claim to 15 true aliases + 218 canonical `/api` routes.
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -24,6 +24,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | Route files (`opencut/routes/`) | **101** | `ls opencut/routes` |
 | Tests | **131 files** (≥7,600 tests claimed) | `ls tests/` |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
+| `/api/*` routes | **233** total; **15** true aliases; **218** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |
 | Feature readiness records | **29** with explicit readiness state | `opencut/registry.py` (F100) |
 | CEP locale keys (English) | 417 | `extension/com.opencut.panel/client/locales/en.json` |
 | Current version | **1.32.0** | `pyproject.toml`, `python scripts/sync_version.py --check` |
@@ -166,6 +167,7 @@ Highlights only. Full ledger in `ROADMAP.md` + `.ai/research/2026-05-17/PRIORITI
 - F167 OmniVoice fill of Wave H2.4
 - F176-F178 eval dataset bundle, model cards sweep, eval harness v2
 - F181-F185 bootstrap/cleanup fixes
+- [x] F199 generated `/api` alias policy manifest
 - [x] F261 cross-platform source launchers (`OpenCut-Server.command` + `OpenCut-Server.sh`)
 - [x] F262 UXP sample-repo URL fix
 - [x] F270 README "$1,400/year" positioning lead
@@ -309,5 +311,11 @@ This file is the **canonical project context**. It is intentionally small. The s
 - `docs/UXP_MIGRATION.md` — F266 CEP-residual table and drop-QE rules
 - `tests/test_release_smoke.py`, `tests/test_node_advisories.py`, `tests/test_uxp_migration_docs.py` — regression coverage for F264/F266
 - Validation: targeted F264/F266 tests PASS (`20 passed`); full `python scripts/release_smoke.py --json` PASS (`232 passed` in pytest-fast)
+
+**Pass 7 updates (no new standalone file):**
+- `opencut/tools/dump_api_aliases.py` + `opencut/_generated/api_aliases.json` — F199 alias policy manifest
+- `scripts/release_smoke.py` — added `api-aliases` drift check
+- `tests/test_api_aliases.py` — committed-vs-live alias manifest guard
+- `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGESET_SUMMARY.md`, `CONTINUE_FROM_HERE.md` — status updates and correction of the earlier 233-alias-pairs wording
 
 Future research runs should land under `.ai/research/<YYYY-MM-DD>/` and update this file's *§ 9 Shipping cadence* + *§ 9.5 regulatory deadlines* + *§ 10 The biggest non-obvious gaps*. The next planned run is documented in `.ai/research/2026-05-17/CONTINUE_FROM_HERE.md`.
