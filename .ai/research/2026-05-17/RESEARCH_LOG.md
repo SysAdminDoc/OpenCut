@@ -319,3 +319,34 @@ Pass 11 was a local release-plumbing implementation pass. No new external resear
 ### Pass 11 saturation note
 
 F204 is complete as release plumbing. F219 remains the right place to enforce SBOM completeness against all declared dependencies and model cards; do not treat the F204 generator smoke test as that deeper coverage.
+
+---
+
+## Pass 12 (2026-05-17 — F205 attempt + F207 installer FFmpeg manifest)
+
+Pass 12 began with F205 because it was next in the Now queue, but the measurement could not complete locally. The pass then moved to F207, which was local-verifiable.
+
+### Pass 12 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 12.1 | Tried to run the CI coverage measurement; local env lacked `pytest-cov`/`pytest-xdist`. | Installed missing plugins with pip. |
+| Pass 12.2 | Reran the CI-style coverage measurement with `--cov-fail-under=0`. | Timed out after 20 minutes; no coverage JSON. F205 remains open. |
+| Pass 12.3 | Read WPF/Inno installer code and the bundled FFmpeg binaries. | Confirmed current bundled version is `8.0.1-essentials_build-www.gyan.dev`. |
+| Pass 12.4 | Added FFmpeg version constants and WPF/Inno `installer.json` writers. | `AppConstants.cs`, `InstallEngine.cs`, `OpenCut.iss` |
+| Pass 12.5 | Added static tests and release-smoke gate inclusion. | `tests/test_ffmpeg_installer_manifest.py`, `scripts/release_smoke.py` |
+
+### Pass 12 validation results
+
+| Check | Result |
+|---|---|
+| Bundled FFmpeg version probe | **PASS** — first line reports `8.0.1-essentials_build-www.gyan.dev` |
+| Focused F207/release-smoke tests | **PASS** — `15 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for `scripts/release_smoke.py` | **PASS** |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `254 passed` |
+| WPF .NET build | **BLOCKED** — no .NET SDK installed on this VM |
+
+### Pass 12 saturation note
+
+F207 is complete at repository/source level. F205 should resume on a machine or CI runner where the full coverage command can finish; do not infer a new threshold from partial local data.

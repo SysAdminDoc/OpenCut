@@ -156,7 +156,7 @@ These are not OpenCut work but should be tracked in the same ledger.
 
 The second autonomous research pass on 2026-05-17 added 70 more F-numbers across four sources: route audit, installer audit, test coverage, features.md reconciliation, plus three subagents (Frame.io review, niche AI / accessibility / standards, UXP migration deep-dive). Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](FEATURE_BACKLOG_ADDENDUM.md). Tier deltas:
 
-**Now (priority bumps + new): 14 open items; F191/F195/F197/F199/F202/F204 closed locally after Pass 11**
+**Now (priority bumps + new): 13 open items; F191/F195/F197/F199/F202/F204/F207 closed locally after Pass 12**
 
 | F# | Title | Why priority |
 |---|---|---|
@@ -166,8 +166,8 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 | [x] F199 | Document `/api/*` alias policy | Closed in Pass 7; 15 aliases + 218 canonical `/api` routes |
 | [x] **F202** | **Apple notarisation for macOS PyInstaller bundle** | Closed locally in Pass 10 with Developer ID signing + notarytool release wiring; first live acceptance requires configured GitHub secrets |
 | [x] F204 | Auto-attach SBOM to GitHub release | Closed in Pass 11 with Linux release generation, artifact archive, and tag release upload |
-| F205 | Raise CI coverage floor from 50% to actual | Measure-first |
-| F207 | Embed bundled FFmpeg version in installer manifest | Undocumented today |
+| F205 | Raise CI coverage floor from 50% to actual | Still open; Pass 12 local measurement timed out after 20 minutes |
+| [x] F207 | Embed bundled FFmpeg version in installer manifest | Closed in Pass 12 with WPF/Inno installer manifests |
 | F208 | OpenAPI spec validity test | Pin contract |
 | F209 | MCP tool ↔ route consistency test | Catch drift |
 | F218 | Import-order stability test | Catch hot-reload bugs |

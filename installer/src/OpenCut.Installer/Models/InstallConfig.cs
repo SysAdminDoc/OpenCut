@@ -18,6 +18,10 @@ public class InstallConfig
     public string ExtensionPath => Path.Combine(InstallPath, "extension", AppConstants.CepExtensionId);
     public string LogsPath => Path.Combine(InstallPath, "logs");
     public string UninstallExePath => Path.Combine(InstallPath, "OpenCut-Uninstall.exe");
+    public string InstallerManifestPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".opencut",
+        AppConstants.InstallerManifestFile);
 
     public string CepTargetPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

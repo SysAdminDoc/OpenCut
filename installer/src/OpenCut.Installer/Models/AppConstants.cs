@@ -8,6 +8,9 @@ public static class AppConstants
     public const string AppPublisher = "SysAdminDoc";
     public const string AppUrl = "https://github.com/SysAdminDoc/OpenCut";
     public const string AppGuid = "{8A7B9C0D-1E2F-3A4B-5C6D-7E8F9A0B1C2D}";
+    public const string BundledFfmpegVersion = "8.0.1-essentials_build-www.gyan.dev";
+    public const string BundledFfprobeVersion = "8.0.1-essentials_build-www.gyan.dev";
+    public const string InstallerManifestFile = "installer.json";
 
     public const string DefaultInstallPath = @"C:\Program Files\OpenCut";
     public const string ServerExeName = "OpenCut-Server.exe";
