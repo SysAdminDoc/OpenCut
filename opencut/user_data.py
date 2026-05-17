@@ -119,10 +119,17 @@ def write_user_file(filename: str, data):
     lock = _get_lock(filepath)
     with lock:
         try:
-            os.makedirs(OPENCUT_DIR, exist_ok=True)
-            # Atomic write: write to temp file then rename to prevent corruption
+            # Ensure both the root and any nested subdir requested by the
+            # caller exist before mkstemp tries to create the staging file.
+            parent_dir = os.path.dirname(filepath) or OPENCUT_DIR
+            os.makedirs(parent_dir, exist_ok=True)
+            # mkstemp's ``prefix`` rejects path separators on Windows, so
+            # base the prefix on the filename's leaf only. Stage the temp
+            # file in the same directory as the final target to keep the
+            # os.replace() atomic across filesystem partitions.
+            tmp_prefix = os.path.basename(filename) + "."
             fd, tmp_path = tempfile.mkstemp(
-                dir=OPENCUT_DIR, suffix=".tmp", prefix=filename + "."
+                dir=parent_dir, suffix=".tmp", prefix=tmp_prefix
             )
             try:
                 with os.fdopen(fd, "w", encoding="utf-8") as f:

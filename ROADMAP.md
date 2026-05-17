@@ -14,6 +14,279 @@
 > **v4.2 status**: the 2026-05-16 research refresh below remains the full source-backed backlog ledger. Older waves remain as an archive and backlog reference, but new implementation decisions should start from the v4.3 audit and tier deltas immediately below.
 >
 > **v4.3 status**: this autonomous audit refresh supersedes v4.2 prioritization where they conflict. It preserves the existing F001-F092 ledger and source appendix, then adds live repo evidence, current GitHub competitor metadata, advisory results, and F093-F120 deltas focused on release trust, migration, packaging, quality gates, and governance.
+>
+> **v4.4 status (2026-05-17)**: a second autonomous research run consolidated the scattered AI/agent memory files into [`PROJECT_CONTEXT.md`](PROJECT_CONTEXT.md), added a post-2026-05-16 model survey (daVinci-MagiHuman, LTX-2.3, Wan 2.7, StreamDiffusionV2, SAM 3.1, Depth Anything 3, OmniVoice, IndexTTS2, VoxCPM2, Qwen3-TTS, HunyuanVideo-Foley, Mimi codec, SeedVR2.5, MatAnyone 2, C2PA 2.3, IMSC 1.3, OCIO 2.5 / ACES 2.0), added a dependency / CVE / Python-3.13 audit, and proposed deltas F121–F190. The v4.4 deltas are summarised below; the full ledger lives in [`.ai/research/2026-05-17/`](.ai/research/2026-05-17/). Where v4.4 and v4.3 disagree, v4.4 wins; v4.3 remains background.
+>
+> **v4.5 status (2026-05-17, same calendar day, second pass)**: a deeper pass added [`ROUTE_READINESS_AUDIT.md`](.ai/research/2026-05-17/ROUTE_READINESS_AUDIT.md), [`INSTALLER_AUDIT.md`](.ai/research/2026-05-17/INSTALLER_AUDIT.md), [`TEST_COVERAGE_GAPS.md`](.ai/research/2026-05-17/TEST_COVERAGE_GAPS.md), [`FEATURES_RECONCILIATION.md`](.ai/research/2026-05-17/FEATURES_RECONCILIATION.md), and [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md) (F191-F260, +70 items). Pass-2 subagents covered Frame.io / OSS review platforms, niche AI / accessibility / standards / packaging / telemetry / WebGPU, and the deep `@adobe/premierepro@^26.3.0-beta` typings + Hybrid Plugins SDK + Bolt UXP WebView migration. **Two regulatory deadlines** moved items to *Now*: **F202** (Apple notarisation mandatory for Homebrew Cask 2026-09-01) and **F236** (FCC caption display-settings rule effective 2026-08-17). The v4.5 deltas are summarised below.
+>
+> **v4.6 status (2026-05-17, third pass)**: a verification pass executed the live `dump_route_manifest --check`, `sync_version --check`, `bootstrap_check`, `pip-audit`, and `npm audit` commands — **all four governance gates PASS**, and the Vite advisory matches the F095 documented waiver. **One real shipped-vs-actual gap discovered:** Wave I I1.4 cross-platform launchers were marked shipped but the macOS `.command` and Linux `.sh` files do NOT exist — only Windows scripts ship today. Pass 3 also walked `host/index.jsx` and produced [`CEP_UXP_PARITY_MATRIX.md`](.ai/research/2026-05-17/CEP_UXP_PARITY_MATRIX.md) (18 JSX functions, **only 2 are truly CEP-only** — `ocAddNativeCaptionTrack` and `ocQeReflect`), [`LIVE_VERIFICATION.md`](.ai/research/2026-05-17/LIVE_VERIFICATION.md), [`AGENT_UX_RFC.md`](.ai/research/2026-05-17/AGENT_UX_RFC.md) (F143-F145 design RFC adopting Copilot Workspace plan + Cursor checkpoint + Underlord self-review + Aider snapshot patterns), and [`MARKET_POSITIONING.md`](.ai/research/2026-05-17/MARKET_POSITIONING.md) (OpenCut replaces ~$1,400/yr of subscriptions; Mister Horse free-shell + paid-packs as distribution model). F261-F272 added (+12 items, total F-numbers now F121-F272 = 152 new).
+>
+> **v4.7 status (2026-05-17, fourth pass)**: the previously deferred full `python scripts/release_smoke.py --json` gate was run to completion after safe Ruff cleanup. Result: **PASS**. Bootstrap, version sync, route manifest, model cards, license gate, roadmap lint, Ruff (`E,F,I`), pytest-fast (`232 passed`), pip-audit, npm advisory allow-list, and panel-source verification all passed. The F138 hardening batch is validated and ready in the local checkpoint commit.
+
+---
+
+## 2026-05-17 v4.7 Release-Smoke Validation Addendum
+
+Pass 4 closed the release-smoke gap left by Pass 3:
+
+| Check | Result |
+|---|---|
+| Targeted hardening tests | **PASS** — `119 passed` across auth, hardening, user-data, boolean coercion, crash-packet, review-bundle, and route-manifest tests |
+| Full release smoke | **PASS** — `python scripts/release_smoke.py --json` exited `0` |
+| Release-smoke pytest-fast | **PASS** — `232 passed` |
+| Release-smoke Ruff | **PASS** after safe unused-import/import-order cleanup in `opencut/` and `scripts/` |
+| Dependency advisories | **PASS** — `pip-audit` found no known vulnerabilities; npm advisory allow-list step passed |
+
+This does not close F261 (missing macOS/Linux launchers), F179 (full `features.md` reconciliation), or F252/F253 (UXP migration decisions). It does raise confidence that the research + F138 security-hardening checkpoint can be committed without leaving the repo in a failing release-gate state.
+
+---
+
+## 2026-05-17 v4.6 Autonomous Research Audit (Pass 3 verification + UX RFC)
+
+### Phase 0 — Live verification (executed, not inferred)
+
+The CONTINUE_FROM_HERE.md §3.1 quick-wins were executed against the live repo:
+
+| Check | Result |
+|---|---|
+| `python -m opencut.tools.dump_route_manifest --check` | **PASS** — 1,359 routes / 101 blueprints, no drift from cached manifest |
+| `python scripts/sync_version.py --check` | **PASS** — all 19 surfaces at v1.32.0 |
+| `python scripts/bootstrap_check.py` | **PASS** — all 6 sub-checks pass (Python 3.12.10, repo import, version sync, requirements-lock 25 deps, runtime imports, server-import) |
+| `python -m pip_audit -r requirements-lock.txt` | **PASS** — "No known vulnerabilities found" (F094 burn-down current) |
+| `npm audit` in `extension/com.opencut.panel` | **EXPECTED** — 1 moderate Vite path-traversal (`GHSA-4w7w-66w2-5vf9`), matches F095 waiver in `docs/NODE_ADVISORIES.md` |
+| Cross-platform launchers (Wave I I1.4) | **❌ GAP** — only 8 Windows scripts; **`.command` and `.sh` files DO NOT EXIST** despite Wave I marking I1.4 shipped |
+
+**Pass 2 worry corrected by Pass 3 reality:** the v4.3 audit (`L09`/`L12`) cited `.venv` UV trampoline failure as F093 partial fail. **Pass 3 confirms F093 passes cleanly on system Python.** The UV-trampoline issue was VM-specific virtualenv config, not a bootstrap-script bug.
+
+### Phase 1 — CEP↔UXP parity matrix (completes F198)
+
+Walked all 18 `ocXxx` JSX host functions in `extension/com.opencut.panel/host/index.jsx` and cross-referenced against `@adobe/premierepro@26.3.0-beta.67` typings (Pass-2 deep walk):
+
+| Risk | Count | Functions |
+|---|---:|---|
+| Low — direct UXP port | 14 | `ocPing`, `ocGetSequenceInfo`, `ocAddSequenceMarkers`, `ocGetSequenceMarkers`, `ocApplyClipKeyframes`, `ocBatchRenameProjectItems`, `ocCreateSmartBins`, `ocGetProjectBins`, `ocExportSequenceRange`, `ocRemoveSequenceMarkers`, `ocUnrenameItems`, `ocRemoveImportedSequence`, `ocSetSequencePlayhead` (uses new beta API), `ocRemoveImportedItem` |
+| Med — partial (advanced trim needs QE) | 1 | `ocApplySequenceCuts` |
+| Low — different mechanism | 1 | `ocEmitPingEvent` |
+| **High — CEP-only today** | **2** | **`ocAddNativeCaptionTrack`** (no UXP `createCaptionTrack()`) + **`ocQeReflect`** (QE DOM is CEP-only) |
+
+**Pass-2 worry corrected:** the Pass-2 UXP subagent's "5 truly CEP-blocked features" list mixed in (a) features OpenCut doesn't ship (file drag-out, `exportAsProject` sub-selection) and (b) features that work in UXP via different APIs (FCPXML import via `Project.importFiles()`). **OpenCut's actual CEP-only surface is 2 of 18 JSX functions (~11%), not the pessimistic 5.**
+
+**Revised F252 / F253 effort estimates:**
+- **F252 (Bolt UXP + WebView UI migration):** XL → **L** (4 sub-phases, 3-4 weeks at observed cadence)
+- **F253 (Hybrid Plugin .uxpaddon):** XL → **L** (caption-track + drag-out only; QE replacements optional/deferrable)
+- **Net: OpenCut's CEP-EOL exposure is comfortably inside the Sept 2026 window** if F252 starts in v1.34.
+
+### Phase 2 — `/agent/chat` conductor UX RFC (F143-F145 design)
+
+Pass-3 IDE-agent subagent surveyed Cursor 2.0, Copilot Workspace, Claude Code, Aider, Cody, Replit Agent patterns and mapped them onto video editing. RFC in [`AGENT_UX_RFC.md`](.ai/research/2026-05-17/AGENT_UX_RFC.md):
+
+**Adopt:**
+- Copilot Workspace **editable plan before execution**
+- Cursor **checkpoint + rollback** (don't pile new edits on a broken state) → maps to F225 OTIO snapshot per accepted step
+- Underlord **post-turn self-review** (F144, cheap second-pass LLM diffs intent vs actual change) → biggest trust builder, ~0.5-2s per step on local Llama-3.2:1b
+- Per-region accept/reject (per-file/per-hunk in IDE terms) — Claude Code GH #31395/#33932 confirms even IDE users want this
+- Claude Code **Skills** open standard (`SKILL.md` front-matter, agentskills.io Dec 2025) for F145 — ships 6 built-in skills matching existing workflow presets
+- Cursor **next-edit-site** Tab analog → "next marker" jump on accept
+
+**Reject:**
+- Cursor "accept all" button — render cost makes attention cost dominate; force per-step approval until trust established
+- Aider's auto-commit-**before**-preview — adopt Aider's snapshot discipline but flip the timing (preview-then-commit)
+- Claude Code's atomic multi-file apply — even IDE users are filing per-hunk-accept requests; in video it's worse because preview-render cost is high
+
+**Mapping IDE concepts → video editor:**
+- File = timeline **region** (`track_index, in_sec, out_sec`) — not clip (too granular)
+- Diff = three-layer: editable plan / thumbnail strip / OTIO XML diff
+- Run tests = `preflight.py` + 480p proxy of changed regions only + gap/audio/caption checks
+- Git commit = OTIO snapshot per turn at `~/.opencut/snapshots/<session>/<step>.otio`
+- Tab autocomplete = next-marker jump + caption suggestion + gap auto-fill
+
+**Revised F143-F145 effort:** L+S+M = ~6-8 weeks at 1 maintainer; **ships as a single v1.36 feature** after F252 UXP scaffold lands.
+
+### Phase 3 — Market-fit positioning
+
+Pass-3 NLE-pricing subagent built the dollar comparison the README has been missing:
+
+**OpenCut replaces ~$1,400/year of competitor subscriptions:**
+- **~$720/yr** (AutoCut $14.99 + AutoPod $29 + Submagic $16/mo bundle)
+- **~$288/yr** (Descript Creator $24/mo — 78% of Descript users only use transcription per subagent)
+- **~$299-699/yr** (Topaz Video AI new subscription — perpetual killed Oct 3 2025, strongest market signal of the period)
+
+**Mister Horse Animation Composer at ~900k installs proves the only non-VC distribution model that works in the Premiere ecosystem: free shell + paid packs.** F268-F269 propose adopting this for OpenCut (free MIT core, optional paid model-pack bundles via Adobe Exchange).
+
+**Three categories to deprioritise** (weak WTP signal per subagent):
+1. Avatar generation (HeyGen-class) — capex-heavy, watermark-trial funnel doesn't fit MIT free
+2. OpusClip-style virality as a pillar — algorithmic moat, OSS won't catch up
+3. Sports highlights as a headline — ship as a checkbox, not a pillar
+
+### Phase 4 — F261-F272 deltas (12 new items)
+
+Full ledger in the three Pass-3 artefacts. Tier summary:
+
+**Now (5 items):** F261 (ship missing macOS `.command` + Linux `.sh` launchers — closes Wave I I1.4 ledger discrepancy), F262 (fix uxp-api-notes URL typo), F264 (CI npm-audit machine-parseable assertion), F266 (document 2-function CEP residual + drop-QE plan), F270 (README "$1,400/yr" marketing copy refresh).
+
+**Next (5 items):** F263 (pip-audit full `[all]` extras), F267 (UDT test harness for 14 low-risk JSX→UXP ports), F268 (Adobe Exchange storefront listing), F271 (per-feature VRAM requirement UI), F272 (wedding-specific Skill).
+
+**Later (2 items):** F265 (UDT harness for all 18 JSX functions), F269 (premium model-pack bundling format).
+
+### Phase 5 — Top 3 strategic moves Pass 2 understated
+
+1. **OpenCut's CEP-EOL exposure is narrower than feared** — 2 of 18 JSX functions, not "5 truly blocked feature surfaces." F252 is L not XL; F253 is L not XL when scoped to caption-track + drag-out.
+2. **The `/agent/chat` conductor design space is converged** — Copilot Workspace plan + Cursor checkpoint + Underlord self-review + Aider snapshot is the industry shape. OpenCut copies, doesn't invent. F143-F145 = 6-8 weeks not multi-quarter.
+3. **OpenCut has a quantified market-positioning story** — "replaces ~$1,400/yr" is the README lead the marketing badge bar has been missing. Mister Horse Animation Composer's ~900k installs proves free-shell + paid-packs is the scale-without-VC model for the Premiere ecosystem.
+
+### Phase 6 — Self-audit (Pass 3)
+
+| Check | Result |
+|-------|--------|
+| Live commands executed, not inferred | Pass. F099/F096/F093/F094/npm-audit/launcher-scan all ran with output captured in `LIVE_VERIFICATION.md`. |
+| Pass-2 corrections documented | Pass. `LIVE_VERIFICATION.md` §6 lists 4 explicit corrections to Pass 1/Pass 2 claims. |
+| Every Pass-3 item traceable to sources | Pass. `LIVE_VERIFICATION.md` + `CEP_UXP_PARITY_MATRIX.md` cite live commands + JSX file paths. `AGENT_UX_RFC.md` + `MARKET_POSITIONING.md` cite the two Pass-3 subagent briefs (sources URLs inline). |
+| Tier placement justified | Pass. F261-F272 each have explicit priority + effort. F261 is *Now* because shipping-vs-actual ledger discrepancies erode trust faster than feature debt. |
+| Hostile reviewer objections addressed | Pass. Audit calls out: (a) the Wave I I1.4 ledger discrepancy (real gap), (b) Pass-2 over-pessimism on CEP-EOL (corrected to 2 of 18), (c) the deferred features.md F179 reconciliation (still deferred — same as Pass 2). |
+| Written to disk | Pass — this section in `ROADMAP.md` + 4 new artefacts in `.ai/research/2026-05-17/` (`LIVE_VERIFICATION.md`, `CEP_UXP_PARITY_MATRIX.md`, `AGENT_UX_RFC.md`, `MARKET_POSITIONING.md`) + updates to PROJECT_CONTEXT.md + CHANGESET_SUMMARY.md + CONTINUE_FROM_HERE.md. |
+
+---
+
+---
+
+## 2026-05-17 v4.5 Autonomous Research Audit (Pass 2 delta)
+
+### Phase 0 — What Pass 1 (v4.4) missed or what surfaced on deeper inspection
+
+1. **Route readiness coverage gap is larger than reported.** F100 registry covers **29** of ~1,359 routes with explicit readiness state; F115 model cards cover 47; OpenAPI typed schemas cover 30; MCP tool array covers 27. The remaining ~1,250+ routes have no machine-readable readiness state or typed response. This drives **F191** (auto-derive `FeatureRecord` from check functions) and **F192-F197** (OpenAPI / MCP / model-card coverage uplift).
+2. **`createSubsequence` is exposed in UXP** — Pass 1's UXP-API-gap list inferred it was missing. The deeper `@adobe/premierepro@26.3.0-beta.67` walk in Pass 2 confirmed it ships with an `ignoreTrackTargeting?` parameter. **F254** uses it.
+3. **`ProjectConverter.importFromFinalCutProXML` and `importFromOpenTimelineIO` were REMOVED in the 26.3.0-beta typings.** Export still works; round-trip import via UXP is currently impossible. This is a **new** Adobe gap report — **F261** (replacement for F186-F190 set).
+4. **UXP Hybrid Plugins** (.uxpaddon, C++ bundled per-platform) are the **only** path for some CEP-blocked features post-Sept 2026. Bolt UXP 1.3.0 (May 2026) added a win-arm64 hybrid template. **F253** is the implementation; **F251** is the per-week `@adobe/premierepro@beta` diff tracker that catches new APIs the moment Adobe ships them.
+5. **Two regulatory deadlines** (Apple notarisation 2026-09-01, FCC caption 2026-08-17) escalate F202 and F236 from "Next" to "Now". Niche AI / accessibility / standards subagent confirmed both deadlines with primary-source citations.
+6. **The /api/* alias surface is 233 routes** — every blueprint registers both a canonical `/foo/bar` and an `/api/foo/bar` mirror, doubling maintenance surface. **F199** documents the policy. No code change recommended; just policy + alias map.
+7. **basicsr is dead and gfpgan/realesrgan depend on it** — Pass 1 flagged this; Pass 2's UXP work confirmed it's a torch-cascade blocker that compounds the audiocraft `torch==2.1.0` pin. **F124** (basicsr replacement) is on the critical path for any torch ≥2.6 bump.
+8. **Test coverage floor is 50%** (`--cov-fail-under=50`). Actual coverage is much higher per the 7,551-test claim — but nobody has measured it precisely. **F205** floors at actual - 5%.
+
+### Phase 1 — Research coverage delta vs v4.4
+
+| Source class | Pass 2 added |
+|---|---|
+| OSS review platforms | Clapshot (Rust + Svelte, GPLv2 — separate service, not core lib), FreeFrame, OpenVidReview (EDL export to DaVinci), OpenFrame, video-review. OpenTimelineIO Marker schema confirmed as the right interchange anchor for F105 review bundles (F225). |
+| Frame.io 2026 capability map | V4 features, Drive (NAB 2026), C2C protocol (closed; reverse-engineering blocked by ToS — recommend OTIO + S3-presigned alternative), webhook envelope shape. Pricing tier ladder (Free → Pro $15 → Team $25 → Enterprise $5k-70k/yr) documented. |
+| Local-LAN review architecture | mDNS + embedded Caddy + HMAC-signed share-URL bearer tokens (F231); Headscale for cross-site (F232); Atom feed + outbound HMAC webhook for notifications (F233); croc + rclone for delivery (F234). |
+| Accessibility / standards 2026 | WCAG 3.0 draft (extended AD + descriptive transcript), **FCC Aug 17 2026 caption display-settings rule (regulatory)**, ITU-R BT.1702 (2023) gap rule 360 ms / 334 ms, Microsoft `ai-audio-descriptions` integration path, per-target reading-speed profiles (Netflix 17 cps / BBC 160-180 wpm / YouTube 220 wpm / FCC 180-200 wpm). |
+| RTL / CJK / Indic | HarfBuzz mandatory for libass / Pillow / Skia. ICU4X for CJK line breaking. UTF-8 (no BOM) is the SRT/VTT standard; opt-in BOM for Windows legacy player support. |
+| Broadcast delivery | Netflix IMF spec (-27 LKFS, -2 dBTP, ST 2067-21:2016/2020), DPP IMF for UK/EU, Dolby Vision Profile 5/8.1 OSS chain (dovi_tool + Shaka), ADM BWF Atmos via EBU TR 045 (fully OSS up to final encode). |
+| Packaging deadlines | **Apple notarisation mandatory for Homebrew Cask 2026-09-01 (regulatory)**, Windows code-signing cert validity drops to 458 days 2026-03 (effective Feb 27), EV cert SmartScreen bypass removed in 2024, Win-ARM64 PyTorch 2.7 has wheels for Py3.12 only (CPU-only). |
+| WebGPU / WebCodecs | **WebGPU is Baseline as of Jan 2026** on Chrome/Edge/Firefox/Safari (Win/Mac); Linux still progressing. WebCodecs in Safari 26+ alongside WebGPU. OpenCut **can** drive real-time preview in WebView2/WKWebView on Win/Mac as of mid-2026. |
+| `@adobe/premierepro` typings deep walk | `latest` = 26.2.0 (2026-04-23); `beta` = 26.3.0-beta.67 (2026-05-07). Full class coverage table with method counts. New in beta: `AAFExportOptions`, `ObjectMaskUtils`, `EncoderManager.launchEncoder` + `startBatchEncode` + XMP enabled flags, `ProjectConverter.exportAAF`, `Project.createSequenceWithPresetPath`, `SourceMonitor.setPosition`, `Transcript.hasTranscript` + `querySupportedLanguages`, `Marker.guid` readonly. **Deprecated**: `Project.createSequence(name, presetPath?)` → `createSequenceWithPresetPath()`. **Removed (breaking)**: FCPXML + OTIO **import**. |
+| UXP Hybrid Plugins | Adobe Developer Console SDK card; C++ `UxpAddon.h` surface (`init`, `terminate`); threading helpers in `UxpAddonShared.h`. Mac universal dylib + Win x64 .uxpaddon naming. Bolt UXP `public-hybrid/` template since 1.3.0 (May 2026, win-arm64 added). |
+| 5 truly CEP-blocked features confirmed | file drag-out, QE DOM operations, FCPXML/OTIO **import**, `createCaptionTrack`, `exportAsProject`-style sub-selection save. Everything else can run on UXP today. |
+| Niche AI (recent OSS) | OpenMontage (11 pipelines, 49 tools, 400+ skills), ViMax (Director/Writer/Producer pipeline), FireRed-OpenStoryline (intent→tool), Toonflow (script-to-anim desktop), Timeline Studio (AI-NLE Apr 2026), EditYourself (DiT talking-head transcript edit), Causal Forcing++ (sub-second preview generation), AOMedia OAC (libopus successor, early). |
+| Telemetry / observability OSS | **Aptabase** (privacy-first desktop, opt-in) wins as default candidate; PostHog autocaptures by default (bad fit); OpenObserve / SigNoz for power users. |
+
+### Phase 2 — F191-F260 deltas (70 items)
+
+Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
+
+**Now (20 items, including 2 regulatory):** F191 (auto-derive registry), F195 (12 missing MCP tools), F197 (NON_AI_CHECKS allowlist), F199 (/api/* alias policy), **F202 (Apple notarisation, regulatory)**, F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+
+**Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
+- Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
+- Flagship review-bundle extensions: **F225-F229** OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
+- Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
+- Caption / accessibility: F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, F242 ICU4X CJK line breaking
+- Packaging: F200-F213 installer rationalisation + macOS notarisation tooling + Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
+- Tests: F211 launcher smoke + F213 Inno smoke + F214 ML/TTS perf benchmarks + F215 fuzz extend + F216 race test + F217 UXP contract test
+- Local LAN review: F231 mDNS+Caddy+HMAC portal + F232 Headscale + F233 Atom feed + webhook + F234 croc/rclone delivery
+- Docs: F198 CEP-only route catalogue + F260 UXP migration risk dashboard
+
+**Later (18 items):** F193 (OpenAPI introspection), F196 (registry as primary), F206 (PR-fast/release-full CI split), F210 (Vitest CEP/UXP utilities), F212 (WPF installer xUnit), F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops).
+
+**Newly explicit rejects (none in Pass 2)** — all Pass-1 rejects stand; Pass 2 did not propose anything that required new rejection.
+
+### Phase 3 — Top three strategic moves Pass 1 understated
+
+1. **OTIO Marker schema is the right review-bundle interchange anchor** (F225). Pass 1 proposed F105 extensions but didn't pin them to a standard. Adopting OTIO Marker (Apache-2, file-based, ASWF-blessed) means every OpenCut review bundle is automatically importable into any OTIO-aware NLE — Premiere, Resolve, FCP, Avid. That's the kind of leverage Pass 1's competitor matrix called for but didn't name.
+2. **WebView UI in Bolt UXP (March 2026) is the correct CEP→UXP migration target for OpenCut's 8,500-line vanilla JS panel** (F252). The alternative — rewriting to Spectrum UXP widgets — is months of work for negligible end-user benefit. Pass 1 proposed F160a as a spike; Pass 2 promotes it to the canonical migration plan.
+3. **Hybrid Plugins (.uxpaddon, C++) are the only path for 5 CEP-blocked features** (drag-out, QE DOM, FCPXML/OTIO **import**, createCaptionTrack, exportAsProject sub-selection). For end-of-2026 CEP-retirement viability, OpenCut needs **F253** even if it's XL effort. The Bolt UXP `public-hybrid/` template (Hyper Brew, MIT) cuts the work substantially.
+
+### Phase 4 — Self-audit (Pass 2)
+
+| Check | Result |
+|-------|--------|
+| Full repo walked further than Pass 1 | Pass. Added: full `checks.py`, full `registry.py`, full `openapi.py`, first 200 lines of `mcp_server.py`, route_manifest detailed walk (per-blueprint counts), `model_cards.json` detailed walk, `installer/src/` C# walk, `.github/workflows/build.yml`, `.github/issue-seeds.yml`, CLAUDE.md lines 300-500, features.md 40-entry sample walk, tests/ skip-marker scan. |
+| Every v4.5 item traceable to sources | Pass. SOURCE_REGISTER Pass-2 section adds ~80 new R-prefixed IDs (R-L42-55 local + R-P19-33 Premiere + R-F01-30 Frame.io + R-N01-27 niche AI / standards). |
+| Tier placement justified | Pass. PRIORITIZATION_MATRIX §6.5 scores each Pass-2 item with regulatory-deadline priority bumps explicit. |
+| Required categories covered | Pass. Security: F202/F203/F231 auth. Accessibility/i18n: F223/F236/F237/F238/F240/F241/F242/F243. Observability: F250. Testing: F208/F209/F211-F219. Docs: F198/F199/F200. Distribution/packaging: F200-F207/F249. Plugin ecosystem: F253. Multi-user/collab: F225-F234. Migration paths: F198/F251-F260. Mobile: still rejected (no Pass-2 change). |
+| Duplicate tiers avoided | Pass. Pass 2 explicitly extends Pass 1's FEATURE_BACKLOG.md (F121-F190) with a separate FEATURE_BACKLOG_ADDENDUM.md (F191-F260). Where Pass-2 numbers replace Pass-1 numbers, the Pass-2 entry says so (e.g. F252 promotes F160a from spike to implementation). |
+| Hostile reviewer objections addressed | Pass. Audit calls out: 1,300+ routes lack readiness state (F191), audiocraft torch cascade still blocks (Pass-1 F125 stands), two regulatory deadlines forcing scope changes (F202/F236), Pass-1 incorrectly inferred `createSubsequence` was missing (Pass-2 verified it ships), the 8,500-line CEP main.js cannot be fully Spectrum-ported (F252 WebView is the only realistic path). |
+| Written to disk | Pass — this section in `ROADMAP.md` + 5 new artefacts (`ROUTE_READINESS_AUDIT.md`, `INSTALLER_AUDIT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURES_RECONCILIATION.md`, `FEATURE_BACKLOG_ADDENDUM.md`) + updates to PRIORITIZATION_MATRIX, SOURCE_REGISTER, RESEARCH_LOG, CHANGESET_SUMMARY, PROJECT_CONTEXT + `CONTINUE_FROM_HERE.md`. |
+
+---
+
+---
+
+## 2026-05-17 v4.4 Autonomous Research Audit (delta)
+
+### Phase 0 — What the v4.3 audit missed or changed since
+
+- **Live route manifest** is now **1,359 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's "1,344" badge is stale — keep the F099 manifest as canonical truth.
+- **F-numbered Now-tier work shipped quickly** between 2026-05-16 and 2026-05-17: F006, F010, F011, F066, F095, F097, F098, F099, F100, F101, F102, F103, F104, F105, F106, F109, F110, F111, F112, F115, F116, F117, F118, F120 (22 of 27 *Now* items landed). F093 (hermetic bootstrap) is partially shipped — UV trampoline path still fails. F094 lockfile audit is partially shipped — `deep-translator` removed, requires recurring `release_smoke` gate.
+- **Wave M (v1.30.0)** added the MCP sidecar (27 tools) — closes `research.md` §1.1 ("MCP server interface — HIGH priority") which is now stale.
+- **Wave L (v1.29.0)** shipped AI face reshape + skin retouch — closes `research.md` §1.3/§1.4 which are now stale.
+- **Dirty working tree (7 files, uncommitted)** contains a coherent security hardening batch: `ipaddress.is_loopback()` in `auth.py`, UNC-post-realpath guard in `security.py`, `_run_ffmpeg_with_progress` finally-block in `helpers.py`, nested-dir + Windows-prefix fix in `user_data.py`, `safe_bool` follow-up in three route files. Tracked as F138 below; recommendation is to commit as one PR before resuming feature work.
+
+### Phase 1 — Research coverage delta vs v4.3
+
+| Source class | New ground covered |
+|--------------|--------------------|
+| Post-2026-05-16 OSS AI | daVinci-MagiHuman (Sand.ai + SII-GAIR, Apache-2), LTX-Video 2.3 (Apache-2), Wan 2.7 (Apache-2, weights gate), MAGI-1 + MagiCompiler (Apache-2), StreamDiffusionV2 (MIT), DiffSynth Diffusion Templates (Apache-2), OmniVoice (Apache-2), IndexTTS2, VoxCPM2 (Apache-2), Qwen3-TTS (Apache-2), Fish Speech S2 Pro, HunyuanVideo-Foley (Tencent licence), Mimi codec (Apache-2), SeedVR2.5 (Apache-2), Online Video Depth Anything (Apache-2), MatAnyone 2 (NTU S-Lab non-commercial — research only). |
+| Standards | C2PA Content Credentials 2.3 launch (live-video provenance), IMSC Text Profile 1.3 W3C CR (3 Apr 2026), OCIO 2.5 + ACES 2.0 built-in configs. |
+| Premiere / UXP / CEP | Premiere 26.0 / 26.0.1 / 26.0.2 / 26.2 / 26.2.2 release notes; **UXP Hybrid Plugins** (Apr 2026, Premiere 26.2+) for native C++/dylib inference; **Bolt UXP WebView UI** (Mar 2026, MIT) as the CEP→UXP escape hatch for OpenCut's 7,730-line `main.js`; confirmed UXP API gaps (`createCaptionTrack`, `createSubsequence`, `exportAsFinalCutProXML`, `startDrag`, QE-DOM replacements); confirmed **CEP EOL ~Sept 2026** (~4 months runway). |
+| MCP / agents | 3 active PPro MCP competitors (ayushozha 1,060 tools, leancoderkavy 269, hetpatel-11 97) — **all CEP-bound and will break Sept 2026**. FireRed-OpenStoryline (Apache-2) ships Style Skills + Claude Code Skills + MCP. Descript Underlord 2026 added **post-turn self-review** (the missing trust pattern). |
+| Dependencies / CVEs | Pillow **CVE-2026-40192** + **CVE-2026-25990** in pinned range; flask-cors 4.x carries five 2024 CVEs; pydub broken on Python 3.13 (audioop removal); basicsr abandoned + breaks torchvision ≥0.17; audiocraft pins `torch==2.1.0` blocking the entire torch ≥2.6 cascade (Transformers v5, pyannote 4, scenedetect 0.7); OpenTimelineIO 0.17 split adapters (AAF now in `OpenTimelineIO-Plugins`); Vite 8 + esbuild ≥0.25; FFmpeg 8.1 (D3D12 encode, Vulkan ProRes, JPEG-XS, drawvg, EXIF). |
+
+### Phase 2 — F121-F190 deltas
+
+Full backlog with effort / risk / fit / source in [`.ai/research/2026-05-17/FEATURE_BACKLOG.md`](.ai/research/2026-05-17/FEATURE_BACKLOG.md). Tier placement and sequencing in [`.ai/research/2026-05-17/PRIORITIZATION_MATRIX.md`](.ai/research/2026-05-17/PRIORITIZATION_MATRIX.md). Summary tiers:
+
+**Now (target v1.33 — v1.34, ~3-4 weeks):** F138 (commit dirty hardening), F121 Pillow 12.2, F122 flask-cors 6.x, F123 pydub/audioop-lts, F126 OTIO-Plugins, F127a Python 3.10 floor RFC, F128 FFmpeg filter regression suite, F130 OpenCV refresh, F131 esbuild CI assertion, F133 ORT ≥1.25, F135 whisperx 3.8.5, F137 MCP pin `<2`, **F139 caption translation endpoint (NLLB-200)**, **F140 C2PA 2.3 bump**, F147 register MCP server upstream, **F149 fill K3.5 Slate ID**, **F162 SAM 2 → SAM 3.1**, **F163 Depth Anything 3**, **F167 OmniVoice fill**, F169 Qwen3-TTS, F176 eval dataset bundle, F177 model cards 2026-Q2 sweep, F178 eval harness v2, F181 bootstrap fix, F182 gh issue seeder run, F183 logs cleanup, F185 features.md aspirational banner.
+
+**Next (target v1.35 — v1.42, ~6 months):**
+- Flagship: **F143 `/agent/chat` conductor + timeline diff**, **F144 post-turn self-review**, **F145 Skills SDK + MCP packaging**.
+- Survival: **F146 UXP-native MCP transport** (the only path through Sept 2026 CEP EOL).
+- UX leap: **F158 StreamDiffusionV2 real-time preview** on existing LTX-2.3 / Wan / Open-Sora backends.
+- Cascade: **F127b Transformers v5 + Py 3.10 floor implementation**, F124 basicsr replacement, F125 audiocraft isolation, F129 FFmpeg 8.1 bundled, F132 Vite 8, F134 pyannote 4, F136 scenedetect 0.7.
+- DaVinci 21 / Descript parity: F148 face age, F150 IntelliScript, F151 CineFocus, F152 eye contact, F153 Overdub conductor, F154 trailer generator, F155 VidMuse, F156 OpusClip engagement heatmap + A/B variants.
+- Model upgrades: F164 LTX-2.3, F165 Wan 2.7 (gate on weights), F166 daVinci-MagiHuman 15B backend, F168 IndexTTS2, F170 VoxCPM2, F171 Fish Speech S2 (licence gate), F172 HunyuanVideo-Foley (licence gate), F174 SeedVR2.5.
+- Standards: F141 IMSC 1.3, F142 OCIO 2.5 / ACES 2.0.
+- Spike: F160a WebView UI UXP migration spike.
+- Cleanup: F180 wave N-T re-tier through the F-number lens.
+
+**Later:** F157 Motion Brush, F160b WebView UI full implementation, F173 Mimi codec audio I/O tier, F175 MagiCompiler, F179 features.md ↔ F-number reconciliation pass, F184 docs/ROADMAP.md mirror resolution.
+
+**Under Consideration:** F161 UXP Hybrid Plugin sidecar RFC.
+
+**Newly explicit rejects (in addition to v4.3 rejects):**
+- Mistral Voxtral TTS (CC-BY-NC 4.0)
+- MatAnyone 2 in production (NTU S-Lab 1.0 non-commercial; research eval only)
+- HunyuanVideo / HunyuanVideo-1.5 default-on (Tencent licence territory carve-outs)
+
+**Adobe gap reports (file, not implement):** F186-F190 — `createCaptionTrack`, `createSubsequence`, `exportAsFinalCutProXML`/`exportAsProject`, `startDrag` (promised CY2026), UXP QE-DOM replacements.
+
+### Phase 3 — Top three strategic moves the v4.3 audit understated
+
+1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,359 routes, MCP sidecar with 27 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
+2. **UXP MCP transport (F146) is the only path through Sept 2026 CEP EOL.** Every competing PPro MCP server today (ayushozha 1,060 tools, leancoderkavy 269, hetpatel-11 97) is CEP-bound and will break when Adobe enforces the cutoff. First UXP-native MCP wins post-EOL.
+3. **StreamDiffusionV2 (F158) unlocks real-time editor-loop preview** on existing LTX-2.3 / Wan / Open-Sora backends — the single biggest UX leap vs CapCut / Runway / Captions, all of whom charge subscriptions for the real-time path.
+
+### Phase 4 — Self-audit
+
+| Check | Result |
+|-------|--------|
+| Full repo walked before web research | Pass. STATE_OF_REPO.md captures live file counts + manifest + dirty diff + git log + uncommitted-change interpretation. |
+| Every v4.4 item traceable to sources | Pass. SOURCE_REGISTER.md has 100+ IDs (R-L01-41 local + R-P01-18 Premiere + R-M01-15 MCP/agents + R-C01-19 commercial + R-A01-27 AI models + R-D01-60 deps + R-S01-08 community). |
+| Tier placement justified | Pass. PRIORITIZATION_MATRIX.md scores Impact/Effort/Risk for every F121-F190 item with one-line tier rationale. |
+| Required categories covered | Pass. Security: F121-F138. Accessibility/i18n: F139, F141. Observability/testing: F128, F178. Docs: F177, F179, F185. Distribution/packaging: F126, F129, F130, F132. Plugin ecosystem: F161 (Under Consideration). Mobile: rejected. Offline/resilience: F176. Multi-user/collab: rejected in favour of local F088 + F105 review bundles. Migration paths: F126, F127, F141, F142, F146, F160. Upgrade strategy: F121-F137. Licensing: F177 + explicit rejects. |
+| Duplicate tiers avoided | Pass. v4.4 explicitly extends v4.3 instead of restating it. Where v4.4 and v4.3 disagree, v4.4 wins; otherwise v4.3 remains the live decision layer. |
+| Hostile reviewer objections addressed | Pass. Audit calls out: README count drift, dirty-tree uncommitted security work, audiocraft torch cascade, every Tencent / NTU S-Lab licence carve-out, features.md ↔ F-number reconciliation debt, accidentally-committed log files, empty `gh issue list`. |
+| Written to disk | Pass — this section in `ROADMAP.md` + 10 artefacts in `.ai/research/2026-05-17/`. |
 
 ---
 

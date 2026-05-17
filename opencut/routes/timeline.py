@@ -21,6 +21,7 @@ from opencut.jobs import (
 from opencut.security import (
     get_json_dict,
     require_csrf,
+    safe_bool,
     safe_float,
     validate_filepath,
     validate_path,
@@ -507,8 +508,6 @@ def markers_import():
     same import can be re-used by tests, CLI tooling, and the MCP
     server.
     """
-    from flask import request
-
     from opencut.core.marker_import import detect_format, import_markers
 
     try:
@@ -568,8 +567,6 @@ def review_bundle():
     Returns the manifest of the produced bundle (sha-256, byte count,
     contained entries).
     """
-    from flask import request
-
     from opencut.core.review_bundle import build_review_bundle
 
     try:
@@ -609,7 +606,7 @@ def review_bundle():
             markers_payload=data.get("markers_payload"),
             notes=str(data.get("notes") or ""),
             extra_files=extra_files or None,
-            include_media=bool(data.get("include_media", True)),
+            include_media=safe_bool(data.get("include_media"), default=True),
         )
         return jsonify(bundle.as_dict())
     except FileNotFoundError as exc:
@@ -624,8 +621,6 @@ def review_bundle():
 @require_csrf
 def provenance_c2pa_sidecar():
     """Write a C2PA sidecar next to a rendered asset (F110)."""
-    from flask import request
-
     from opencut.core.c2pa_sidecar import (
         C2paAction,
         C2paIngredient,
@@ -690,8 +685,6 @@ def provenance_c2pa_sidecar():
 @require_csrf
 def provenance_verify():
     """Verify a C2PA sidecar against the referenced asset (F110)."""
-    from flask import request
-
     from opencut.core.c2pa_sidecar import verify_sidecar
 
     try:

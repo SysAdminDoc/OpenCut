@@ -50,7 +50,7 @@ def identify(video_path: str, max_head_frames: int = 60) -> SlateInfo:
         return SlateInfo(notes=["transformers/torch not available; slate ID skipped"])
 
     try:
-        from transformers import AutoProcessor, AutoModelForCausalLM  # type: ignore
+        from transformers import AutoModelForCausalLM, AutoProcessor  # type: ignore
 
         ffmpeg = get_ffmpeg_path()
         cmd = [

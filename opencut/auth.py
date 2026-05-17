@@ -28,6 +28,7 @@ Design choices:
 from __future__ import annotations
 
 import hmac
+import ipaddress
 import json
 import logging
 import os
@@ -50,10 +51,12 @@ TOKEN_BYTES = 32  # 256 bits
 
 _TRUE_ENV_VALUES = {"1", "true", "yes", "on"}
 
-# Hosts we never require an auth token on. The match is performed against the
-# Flask request remote_addr; localhost names are resolved to loopback by the
-# OS so this list is intentionally tiny.
-_LOOPBACK_ADDRESSES = frozenset({"127.0.0.1", "::1", "localhost"})
+# Hostnames we never require an auth token on. Numeric addresses are
+# classified via ``ipaddress.is_loopback`` so the full ``127.0.0.0/8``
+# range plus ``::1`` are recognised — a strict literal match would have
+# let ``127.0.0.2`` (still loopback) bypass the gate when the operator
+# binds to ``0.0.0.0`` with ``OPENCUT_ALLOW_REMOTE=1``.
+_LOOPBACK_HOSTNAMES = frozenset({"localhost"})
 
 _lock = threading.Lock()
 
@@ -165,11 +168,28 @@ def is_remote_bind_enabled() -> bool:
 
 
 def _request_is_loopback(remote_addr: Optional[str]) -> bool:
+    """Return True when ``remote_addr`` is a loopback address.
+
+    Accepts either a hostname (``localhost``) or a numeric address. For
+    numeric addresses we delegate to ``ipaddress.is_loopback`` so the full
+    IPv4 ``127.0.0.0/8`` range and IPv6 ``::1`` are covered. IPv6 scoped
+    addresses (``fe80::1%eth0``) and bracketed forms (``[::1]``) are
+    normalised first so the classification matches the underlying interface.
+    """
     if not remote_addr:
         return False
-    # Werkzeug normalises addresses to strings; strip IPv6 zone suffix.
-    addr = remote_addr.split("%", 1)[0]
-    return addr in _LOOPBACK_ADDRESSES
+    addr = remote_addr.strip()
+    if not addr:
+        return False
+    # Strip IPv6 zone suffix and surrounding brackets that Werkzeug or
+    # downstream proxies may leave attached.
+    addr = addr.split("%", 1)[0].strip("[]")
+    if addr.lower() in _LOOPBACK_HOSTNAMES:
+        return True
+    try:
+        return ipaddress.ip_address(addr).is_loopback
+    except ValueError:
+        return False
 
 
 def request_requires_auth_token(remote_addr: Optional[str]) -> bool:

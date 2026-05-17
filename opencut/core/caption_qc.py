@@ -43,7 +43,6 @@ from opencut.core.caption_compliance import (
     check_caption_compliance,
 )
 
-
 # ---------------------------------------------------------------------------
 # Forbidden-glyph rule
 # ---------------------------------------------------------------------------

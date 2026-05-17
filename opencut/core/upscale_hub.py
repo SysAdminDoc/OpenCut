@@ -184,6 +184,7 @@ def _upscale_video2x(video_path: str, scale: int, output: str, on_progress) -> s
 def _upscale_flashvsr(video_path: str, scale: int, output: str, on_progress) -> str:
     """FlashVSR real-time streaming SR."""
     import torch
+
     from opencut.helpers import get_ffmpeg_path, get_video_info, run_ffmpeg
 
     if on_progress:

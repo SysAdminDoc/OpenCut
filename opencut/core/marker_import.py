@@ -32,8 +32,7 @@ import io
 import logging
 import re
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
-from typing import Iterable, List, Optional, Sequence, Tuple
+from typing import List, Optional, Sequence
 
 logger = logging.getLogger("opencut")
 

@@ -541,8 +541,9 @@ def export_edited_transcript():
         # `?force=1` (or `force: true` in the JSON body) to override.
         qc_payload = None
         if sub_format in {"srt", "vtt"}:
-            force_qc = request.args.get("force", "").lower() in {"1", "true", "yes"} or bool(
-                data.get("force")
+            force_qc = (
+                safe_bool(request.args.get("force"), default=False)
+                or safe_bool(data.get("force"), default=False)
             )
             try:
                 from opencut.core.caption_qc import qc_captions

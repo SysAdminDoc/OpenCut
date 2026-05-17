@@ -1,0 +1,302 @@
+# OpenCut — Changeset Summary (2026-05-17 research run)
+
+**Run scope:** Autonomous deep research, memory consolidation, and roadmap planning. Read-only on existing code (no functional changes); created / appended documentation artefacts only.
+
+---
+
+## 1. Files created
+
+### Repo root (1 file)
+
+| Path | Purpose |
+|---|---|
+| `PROJECT_CONTEXT.md` | Canonical, cross-tool source of truth. Identity + current numbers + architecture + documentation map + question-routing table + hard constraints + active in-flight changes + Now/Next/Later cadence summary + biggest gaps + onboarding guide. ~280 lines. Replaces no existing file; supplements `CLAUDE.md` and `ROADMAP.md`. |
+
+### `.ai/research/2026-05-17/` (10 files)
+
+| Path | Purpose | Approx. size |
+|---|---|---|
+| `.ai/research/2026-05-17/STATE_OF_REPO.md` | Local repo reconnaissance: identity, live counts (1,359 routes / 101 blueprints / 523 core modules / 131 test files / 47 model cards), architecture diagram, wave + F-number ledger snapshot, dirty working tree breakdown, CI/build/release infrastructure, known infrastructure debt, security posture snapshot, what this audit changed | ~300 lines |
+| `.ai/research/2026-05-17/MEMORY_CONSOLIDATION.md` | Inventory + reconciliation of every AI/agent instruction file, roadmap doc, changelog. Reconciliation logic (where files agree / disagree / duplicate / conflict). Open conflicts. Recommended changes to AGENTS.md + CLAUDE.md. What gets extracted to PROJECT_CONTEXT.md. Question-routing table. Gaps no doc owns. Action items | ~270 lines |
+| `.ai/research/2026-05-17/SECURITY_AND_DEPENDENCY_REVIEW.md` | TL;DR action table. Per-dependency tables (core web / scientific / audio / ASR / generative / ML framework / tooling / frontend / FFmpeg). The torch ≥2.6 cascade analysis. Action items mapped to F-numbers. Repo-side hardening in the dirty working tree. CVE summary table | ~300 lines |
+| `.ai/research/2026-05-17/COMPETITOR_MATRIX.md` | Direct Premiere extension competitors. OSS NLEs. Adjacent OSS automation. Commercial closed-source AI tools. **Agentic / chat-driven editing systems** (Underlord, FireRed, vibeframe, VideoAgent, ViMax, etc.). Mind-the-gap summary. Notable paywalls that exist because local-AI alternative isn't ready | ~260 lines |
+| `.ai/research/2026-05-17/DATASET_MODEL_INTEGRATION_REVIEW.md` | Models the team has not yet considered (post-2026-05-16): video gen, TTS/voice/dub, restoration/upscaling/depth/tracking, standards/spec, agentic/MCP/tooling. Datasets relevant to evaluation harness. External APIs/integrations. Model card / licence hygiene. AI eval harness v2 extensions. Priority for AI/integration items | ~330 lines |
+| `.ai/research/2026-05-17/FEATURE_BACKLOG.md` | Raw harvest of 70 new F-numbers F121-F190. Grouped: A) security/deps, B) caption/accessibility/standards, C) agentic/chat/MCP, D) AI capability gaps, E) real-time/streaming, F) model surface refreshes, G) eval/governance/docs, H) Premiere UXP gap reports for Adobe. Explicit declined items | ~190 lines |
+| `.ai/research/2026-05-17/PRIORITIZATION_MATRIX.md` | Now / Next / Later / Under Consideration / Rejected tier placement with Impact/Effort/Risk scores. Sequencing summary v1.33-v1.43+. Capacity assumptions | ~210 lines |
+| `.ai/research/2026-05-17/SOURCE_REGISTER.md` | Every local + external source cited. Local R-L01-41 (41 files/commands). External: R-P01-18 Premiere (18), R-M01-15 MCP/agents (15), R-C01-19 commercial products (19), R-A01-27 AI models (27), R-D01-60 dependency advisories (60), R-S01-08 community signal (8) | ~250 lines |
+| `.ai/research/2026-05-17/RESEARCH_LOG.md` | Phases executed. Subagent prompts. Search strategies. Saturation tests per category. Failed searches / dead ends. Bias / assumptions to flag. Things this audit did NOT do. Continuation hints | ~230 lines |
+| `.ai/research/2026-05-17/CHANGESET_SUMMARY.md` | This file | ~150 lines |
+
+**Total new content:** ~2,770 lines of structured markdown across 11 files.
+
+---
+
+## 2. Files edited (minimal, additive)
+
+| Path | Change | Lines added |
+|---|---|---|
+| `AGENTS.md` | Appended "Canonical Project Context" block (pointer to `PROJECT_CONTEXT.md` + `ROADMAP.md` + `CHANGELOG.md` + `.ai/research/2026-05-17/`). Pre-existing 9-line content preserved verbatim. | ~12 |
+| `CLAUDE.md` | Inserted "Canonical Project Context" block immediately after the `# OpenCut - CLAUDE.md` title and before `## Tech Stack`. Pre-existing 1,509-line content preserved verbatim. Markdown-lint warnings on the heading are pre-existing throughout the file (tight heading format). **NOTE**: `CLAUDE.md`, `CODEX-CHANGELOG.md`, `CLAUDE-HANDOFF-PROMPT.md`, and `research.md` are listed in `.gitignore` (team convention: agent memory is local-only). The edit persists on disk for future agent sessions on this machine but will not appear in `git diff` or commits. The corresponding pointer in `AGENTS.md` is the *tracked* analogue. | ~12 |
+| `ROADMAP.md` | Appended a new "**2026-05-17 v4.4 Autonomous Research Audit (delta)**" section between the v4.3 status note and the existing v4.3 Phase 0 heading. Includes: Phase 0 delta (what v4.3 missed or what changed since 2026-05-16), Phase 1 research coverage delta, Phase 2 F121-F190 tier summary, Phase 3 top three strategic moves the v4.3 audit understated, Phase 4 self-audit. References the 10 supporting artefacts in `.ai/research/2026-05-17/`. Existing v4.3 content (sections from "## 2026-05-16 v4.3 Autonomous Research Audit" through the v4.3 source appendix) preserved verbatim. | ~70 |
+
+---
+
+## 3. Files NOT changed (deliberately)
+
+- `README.md` — marketing-soft route count (1,344) is stale vs manifest (1,359). Did not edit; the F099 manifest is the truth and is documented in `PROJECT_CONTEXT.md`. The README badge regeneration is a separate cleanup.
+- `ROADMAP-NEXT.md` — predecessor to ROADMAP.md v4.3 / v4.4. Kept as archive with its source URLs and per-wave gotchas.
+- `ROADMAP-COMPLETED.md` — high-level summary, stale relative to CHANGELOG.md. Kept; banner is on the F185 backlog.
+- `CHANGELOG.md` — authoritative for ship dates. Not edited (no release shipped today).
+- `MODERNIZATION.md` — module-by-module dep audit, baseline v1.9.18. Regeneration covered by F177 model cards sweep.
+- `AUDIT.md`, `research.md` — v1.11.0 / v1.28.2 competitive audits. Kept as predecessor to ROADMAP.md v4.3 / v4.4.
+- `features.md` — 402-feature aspirational catalogue. Banner pending F185 (Now tier).
+- `CODEX-CHANGELOG.md` — Codex handoff snapshot. Kept.
+- `CLAUDE-HANDOFF-PROMPT.md` — boilerplate prompt. Kept.
+- `docs/*` — `MODELS.md`, `NODE_ADVISORIES.md`, `RESEARCH.md`, `ROADMAP.md`, `ROADMAP-COMPLETED.md`, `UXP_MIGRATION.md`, `WINDOWS_ARM64_PACKAGING.md`. Auto-generated or live artefacts; not edited.
+- `.github/copilot-instructions.md` — should get the same canonical-context pointer eventually, but deferred. Out of scope for this run.
+- **All Python source files** (`opencut/**/*.py`) — read-only research; no functional changes.
+- **All test files** (`tests/**/*.py`) — read-only; no test changes.
+- **The 7 dirty modified files in the working tree** (auth.py, security.py, helpers.py, user_data.py, routes/captions.py, routes/system.py, routes/timeline.py) — left exactly as found. Documented as **F138 commit-pending** in PRIORITIZATION_MATRIX.md and PROJECT_CONTEXT.md §8.
+
+---
+
+## 4. Files NOT created (and why)
+
+- **`CONTINUE_FROM_HERE.md`** — not needed. This audit completed within session budget. Continuation hints are captured in `RESEARCH_LOG.md` §8.
+
+---
+
+## 5. Total impact
+
+| Metric | Value |
+|---|---|
+| Files created | 11 |
+| Files edited | 3 |
+| Lines added across edited files | ~94 |
+| Lines created in new files | ~2,770 |
+| Source citations (this run alone) | 138 unique R-prefixed IDs |
+| New F-numbers proposed | 70 (F121-F190) |
+| Existing F-numbers status-updated | 0 (v4.3 ledger preserved verbatim) |
+| Wave letters touched | 0 (wave-letter plan preserved; F180 calls for future re-tier) |
+| Python / JSX / JS / CSS / config changes | 0 |
+| Tests added or modified | 0 |
+| Dependency pins changed | 0 (recommendations only — see SECURITY_AND_DEPENDENCY_REVIEW.md for action items) |
+| Commits made | 0 (read-only research run; F138 recommends committing the dirty tree as a separate PR) |
+| Pushes attempted | 0 (push to `SysAdminDoc/OpenCut` is blocked from this VM per persistent memory) |
+
+---
+
+## 6. Verification checklist (post-run)
+
+A future session can verify this audit by running:
+
+```bash
+# All artefacts in place
+ls Z:/repos/OpenCut/.ai/research/2026-05-17/
+ls Z:/repos/OpenCut/PROJECT_CONTEXT.md
+
+# Cross-tool pointers
+grep -l "PROJECT_CONTEXT.md" Z:/repos/OpenCut/AGENTS.md Z:/repos/OpenCut/CLAUDE.md
+
+# v4.4 section in ROADMAP.md
+grep -n "v4.4 Autonomous Research Audit" Z:/repos/OpenCut/ROADMAP.md
+
+# No accidental code touches
+cd Z:/repos/OpenCut && git status --short
+# Should show only the 7 pre-existing modified files (auth.py, security.py, helpers.py, user_data.py, captions.py, system.py, timeline.py)
+# AND the new files / edits this run added:
+#   AGENTS.md (modified)
+#   CLAUDE.md (modified)
+#   PROJECT_CONTEXT.md (untracked)
+#   ROADMAP.md (modified)
+#   .ai/research/2026-05-17/* (untracked)
+```
+
+---
+
+## 7. What is now true that was not before
+
+1. There is a single `PROJECT_CONTEXT.md` at the repo root that an agent or contributor can open first and route from.
+2. The wave-letter vs F-number distinction is named.
+3. The dirty working tree is documented as a coherent security batch (F138), not random in-flight noise.
+4. Post-2026-05-16 model surfaces (daVinci-MagiHuman, LTX-2.3, etc.), standards (C2PA 2.3, IMSC 1.3, OCIO 2.5), and dependency exposures (Pillow CVEs, audiocraft cascade) are tracked.
+5. The Now-tier security debt is explicit: Pillow 12.2, flask-cors 6.x, pydub-on-3.13, OpenTimelineIO-Plugins migration.
+6. The Next-tier flagship is named: `/agent/chat` conductor + UXP MCP transport + StreamDiffusionV2 real-time preview.
+7. ROADMAP.md self-cites the v4.4 audit; future v4.5 audits know to read this run.
+
+---
+
+## 7.5 Pass 2 additions (same day, second autonomous research run)
+
+Pass 2 added 5 new artefacts + extended 6 existing ones + appended ROADMAP.md v4.5 section + updated PROJECT_CONTEXT.md + wrote CONTINUE_FROM_HERE.md.
+
+### Files created in Pass 2 (`.ai/research/2026-05-17/`)
+
+| Path | Purpose | Approx lines |
+|---|---|---|
+| `ROUTE_READINESS_AUDIT.md` | F100 / F115 / MCP / OpenAPI coverage gaps; CEP-bound route catalogue; /api/* alias surface; proposes F191-F199 | 220 |
+| `INSTALLER_AUDIT.md` | WPF .NET 9 + Inno + PyInstaller + Docker + Windows ARM64 (F101); CI walk; signing/notarisation deadlines; proposes F200-F207 | 200 |
+| `TEST_COVERAGE_GAPS.md` | 12 specific gaps (OpenAPI validity, MCP consistency, JS unit tests, launcher smoke, WPF installer tests, ML perf benchmarks, fuzz extensions, race conditions, UXP contract, SBOM completeness); proposes F208-F219 | 230 |
+| `FEATURES_RECONCILIATION.md` | features.md (402 entries) sample walk on 40 entries; status methodology; ~60% SHIPPED, ~27% UNCLEAR; proposes F220-F224 | 220 |
+| `FEATURE_BACKLOG_ADDENDUM.md` | F191-F260 (+70 items) consolidated from the four new artefacts + 3 Pass-2 subagent briefs; tier summary with regulatory-deadline priority bumps (F202, F236) | 230 |
+| `CONTINUE_FROM_HERE.md` | Pass-3 hand-off: quick wins / medium / large items; known limitations; suggested entry point | 250 |
+
+### Files extended in Pass 2
+
+| Path | What was added |
+|---|---|
+| `PRIORITIZATION_MATRIX.md` | §6.5 — Pass-2 tier deltas with two regulatory-deadline bumps to *Now* (F202, F236) |
+| `SOURCE_REGISTER.md` | Pass-2 section — 14 new local IDs (R-L42-55) + 15 Premiere/UXP IDs (R-P19-33) + 30 Frame.io IDs (R-F01-30) + 27 niche AI / accessibility / standards IDs (R-N01-27) — ~85 new R-prefixed sources |
+| `RESEARCH_LOG.md` | Pass-2 section — phases, subagent prompts, saturation tests, failed searches, bias, things-not-done, continuation hints |
+| `CHANGESET_SUMMARY.md` | This addition (§7.5) |
+| `ROADMAP.md` (root) | Appended v4.5 audit section: Phase 0 (what Pass 1 missed) + Phase 1 (research delta) + Phase 2 (F191-F260 tier summary) + Phase 3 (top 3 strategic moves Pass 1 understated: OTIO Marker review-bundle anchor, Bolt UXP WebView migration, Hybrid Plugins for 5 CEP-blocked features) + Phase 4 (self-audit) |
+| `PROJECT_CONTEXT.md` (root) | §1 last-consolidated note ("two passes that day"); §3 wave/F-number table extended to F260; new §9.5 regulatory deadlines block (F202, F236); §10 expanded with 4 new biggest-gaps entries (features.md reconciliation 60% shipped, OTIO Marker anchor, WebView UI migration target, route-readiness coverage gap); §12 artefact list extended with Pass-2 files |
+
+### Files NOT changed in Pass 2
+
+- All Python source files — read-only research; no functional changes.
+- All test files — no test additions.
+- All build / installer configs — no changes.
+- `AGENTS.md` / `CLAUDE.md` — already received the canonical-context pointer in Pass 1; no further edits in Pass 2.
+- The 7 dirty modified files in working tree — promoted into the Pass-4 validated local checkpoint as F138.
+
+### Cumulative impact (Pass 1 + Pass 2)
+
+| Metric | Pass 1 | Pass 2 | Total |
+|---|---:|---:|---:|
+| Files created | 11 | 6 | 17 |
+| Files edited | 3 | 6 (incl. 4 existing artefacts + ROADMAP + PROJECT_CONTEXT) | 9 unique files touched |
+| Lines created in new files | ~2,770 | ~1,350 | ~4,120 |
+| Lines added to edited files | ~94 | ~480 | ~574 |
+| F-numbers newly proposed | F121-F190 (70) | F191-F260 (70) | F121-F260 (**140 new**) |
+| Wave letters touched | 0 | 0 | 0 (F180 retire-wave-letters-into-F-numbers still deferred) |
+| Source citations | 138 R-prefixed | +85 R-prefixed | ~225 unique R-prefixed |
+| Subagents launched | 3 | 3 | 6 total |
+| Python / JS / config changes | 0 | 0 | 0 |
+| Tests added or modified | 0 | 0 | 0 |
+| Dependency pins changed | 0 | 0 | 0 (recommendations only) |
+| Commits made | 0 | 0 | 0 |
+| Pushes attempted | 0 | 0 | 0 |
+
+---
+
+## 7.6 Pass 3 additions (same day, third autonomous research run)
+
+Pass 3 added 4 new artefacts + updated PROJECT_CONTEXT.md (§9.4 live verification block + §10 expansions 12-13) + appended ROADMAP.md v4.6 + extended CHANGESET (this section) + CONTINUE_FROM_HERE.md.
+
+### Files created in Pass 3 (`.ai/research/2026-05-17/`)
+
+| Path | Purpose | Approx lines |
+|---|---|---|
+| `LIVE_VERIFICATION.md` | Executed CONTINUE_FROM_HERE §3.1 quick-wins. F099/F096/F093/F094/npm-audit live results. **Cross-platform launcher gap confirmed (F261)**. Side-channel: bootstrap warnings, FFmpeg path detection. JSX inventory (18 `ocXxx` functions). Pass-3 corrections to Pass 1/2. Proposes F261-F265 | 240 |
+| `CEP_UXP_PARITY_MATRIX.md` | **Completes F198** (CEP-only route catalogue). All 18 JSX functions × `@adobe/premierepro@26.3.0-beta.67` typings; risk classification (14 low, 1 med, 1 different-mechanism, 2 truly CEP-only). Deep-dive on `ocAddNativeCaptionTrack` and `ocQeReflect`. Revised F252 (XL→L) + F253 (XL→L) effort estimates with sub-phases. Proposes F266-F267 | 220 |
+| `AGENT_UX_RFC.md` | F143-F145 design space RFC. Adopts: Copilot Workspace editable-plan, Cursor checkpoint+rollback, Underlord post-turn self-review, Aider snapshot discipline, per-region accept/reject, Claude Code Skills format. Rejects: accept-all, auto-commit-before-preview, atomic multi-file apply. Endpoint shape, self-review sketch, Skills SDK layout. Proposes phasing within v1.36. Open questions for maintainer | 280 |
+| `MARKET_POSITIONING.md` | OpenCut replaces ~$1,400/yr subscriptions ($720 AutoCut+AutoPod+Submagic + $288 Descript + $299-699 Topaz). Mister Horse Animation Composer ~900k installs proves free-shell + paid-packs model. Per-creator-type pain-point map. README copy proposal. Proposes F268-F272 | 200 |
+
+### Files extended in Pass 3
+
+| Path | What was added |
+|---|---|
+| `PROJECT_CONTEXT.md` (root) | §9.4 — live verification of governance gates + 2-function CEP residual; §10 expanded with 2 more biggest-gaps entries (#12 agent conductor convergence, #13 market positioning); §12 artefact list extended with Pass-3 files |
+| `ROADMAP.md` (root) | Appended v4.6 section: Phase 0 live verification (4 gates pass, 1 ledger gap), Phase 1 CEP↔UXP parity (2 of 18 CEP-only), Phase 2 agent UX RFC, Phase 3 market positioning, Phase 4 F261-F272 deltas, Phase 5 top 3 strategic moves Pass 2 understated, Phase 6 self-audit |
+| `CHANGESET_SUMMARY.md` | This section (§7.6) |
+| `CONTINUE_FROM_HERE.md` | Pass-4 hand-off updated with what Pass 3 closed + remaining deferrals |
+
+### Pass-3 subagents launched
+
+1. **NLE plugin pricing market-fit signal** — Descript ARR + 78% transcription-only stat; OpusClip + Submagic + HeyGen pricing structure; **Topaz killed perpetual Oct 3, 2025** (strongest market signal of period); Aescripts top-sellers reconstruction; Mister Horse Animation Composer 900k-install model; SaaS↔OSS migration drivers; per-creator-type pain points
+2. **Cursor/Copilot/IDE-agent patterns** — Cursor 2.0 Composer + checkpoints; Copilot Workspace editable-plan; Claude Code Skills open standard (agentskills.io); Aider git-commit-per-edit discipline; Cody 2-stage agentic chat; MCP Inspector; mapping IDE concepts to video editor; 3 patterns to copy + 3 to deliberately NOT copy
+
+### F-numbers added in Pass 3
+
+| F# | Title | Tier |
+|---|---|---|
+| F261 | Ship missing `OpenCut-Server.command` + `.sh` launchers (closes Wave I I1.4 ledger discrepancy) | **Now** |
+| F262 | Fix uxp-api-notes.md sample-repo URL typo | Now |
+| F263 | Re-run pip-audit on full `[all]` extras | Next |
+| F264 | Add `npm audit --json` machine-parseable CI assertion | Now |
+| F265 | UDT test harness for all 18 `ocXxx` JSX functions | Later |
+| F266 | Document 2-function CEP residual + drop-QE plan | Now |
+| F267 | UDT test harness for 14 low-risk JSX→UXP ports | Next |
+| F268 | Adobe Exchange storefront listing | Next |
+| F269 | Premium model-pack bundling format | Later |
+| F270 | README "$1,400/yr" marketing copy refresh | Now |
+| F271 | Per-feature VRAM requirement UI surface | Next |
+| F272 | Wedding-specific Skill (color match + beat sync + 4-min reel) | Next |
+
+### Cumulative impact (Pass 1 + Pass 2 + Pass 3)
+
+| Metric | Pass 1 | Pass 2 | Pass 3 | Total |
+|---|---:|---:|---:|---:|
+| Files created in `.ai/research/2026-05-17/` | 10 | 6 | 4 | 20 |
+| Root files created | 1 (PROJECT_CONTEXT) | 0 | 0 | 1 |
+| Root files edited | 2 (AGENTS, ROADMAP) + 1 (CLAUDE gitignored) | 1 (ROADMAP) + 1 (PROJECT_CONTEXT) | 1 (ROADMAP) + 1 (PROJECT_CONTEXT) | 4 unique tracked + 1 gitignored |
+| Lines created in new files | ~2,770 | ~1,350 | ~940 | ~5,060 |
+| Lines added to edited root files | ~94 | ~480 | ~190 | ~764 |
+| F-numbers newly proposed | F121-F190 (70) | F191-F260 (70) | F261-F272 (12) | **152 new** |
+| Source citations (R-prefixed) | 138 | +85 | +20 | ~243 unique |
+| Subagents launched | 3 | 3 | 2 | **8 total** |
+| Live commands executed | 0 | 0 | 6 | 6 |
+| Python / JS / config code changes | 0 | 0 | 0 | 0 |
+| Tests added or modified | 0 | 0 | 0 | 0 |
+| Dependency pins changed | 0 | 0 | 0 | 0 (recommendations only) |
+| Commits made | 0 | 0 | 0 | 0 |
+| Pushes attempted | 0 | 0 | 0 | 0 (auth blocked from this VM) |
+
+---
+
+## 8. Recommended next-session actions (in priority order)
+
+1. **Commit the 7-file dirty hardening batch** as F138 (single PR: *"Harden auth loopback classification, UNC realpath, helper lifecycle, and safe_bool follow-up"*).
+2. **Push the 25-commit backlog** to `SysAdminDoc/OpenCut` (auth needs to come from a machine with push permission — this VM is blocked).
+3. **Run the `gh issue` seeder** (F182) — `python scripts/seed_github_issues.py` — to populate the contributor channel from `.github/issue-seeds.yml`.
+4. **Take F121 + F122 + F126 + F130 + F133 + F135 + F137** as a single dependency-bump release (v1.33.0) — they are independent low-risk security fixes with no API impact.
+5. **Schedule F123 (pydub) + F128 (FFmpeg filter regression suite)** as a paired pre-release task. These unblock F129 bundled FFmpeg bump and full Python 3.13 support.
+6. **Open an RFC issue for F127 (Python 3.10 floor + Transformers v5)** — this is the highest-impact strategic decision in the audit and deserves a dedicated discussion thread before implementation.
+7. **Open an RFC issue for F143 (`/agent/chat` conductor)** — the flagship Next-tier item; design space includes UI surface (CEP+UXP), LLM provider routing, timeline diff representation, and post-turn self-review semantics.
+
+---
+
+## 9. Pass 4 additions (same day, release-smoke validation)
+
+Pass 4 converted the research checkpoint from "well documented" to "release-gate clean".
+
+### Files extended in Pass 4
+
+| Path | What was added |
+|---|---|
+| `PROJECT_CONTEXT.md` | Updated "last consolidated" to Pass 4, changed the F-number range to F001-F272, replaced the stale "uncommitted hardening" section with Pass-4 validation status, and added release-smoke PASS details. |
+| `ROADMAP.md` | Added v4.7 status note and a release-smoke validation addendum. |
+| `.ai/research/2026-05-17/LIVE_VERIFICATION.md` | Added §8 with first failed release-smoke run, Ruff cleanup actions, final PASS matrix, and targeted `119 passed` validation. |
+| `.ai/research/2026-05-17/SOURCE_REGISTER.md` | Added Pass-4 local command evidence R-P4-L01 through R-P4-L09 and external source refresh R-P4-E01 through R-P4-E05. |
+| `.ai/research/2026-05-17/RESEARCH_LOG.md` | Added Pass-4 phases, validation results, and saturation note. |
+| `.ai/research/2026-05-17/CONTINUE_FROM_HERE.md` | Updated header from Pass 3 to Pass 5 and added Pass-4 handoff state. |
+
+### Code cleanup included in Pass 4
+
+| Scope | Change |
+|---|---|
+| F138 hardening batch | Kept the security changes from the dirty working tree: loopback classification, UNC realpath guard, FFmpeg helper lifecycle, nested user-data writes, and safe_bool follow-up. |
+| Release-smoke lint scope | Applied Ruff safe fixes for unused imports and import ordering in `opencut/` and `scripts/` so `ruff check opencut --select E,F,I --ignore E501,E402` passes. |
+
+### Validation after Pass 4
+
+| Command | Result |
+|---|---|
+| `python -m opencut.tools.dump_route_manifest --check` | PASS |
+| `python scripts/sync_version.py --check` | PASS |
+| `python scripts/bootstrap_check.py` | PASS |
+| `python -m pip_audit -r requirements-lock.txt` | PASS |
+| `ruff check opencut --select E,F,I --ignore E501,E402` | PASS |
+| Targeted pytest slice | PASS — `119 passed` |
+| `python scripts/release_smoke.py --json` | PASS — release-smoke pytest-fast `232 passed` |
+
+### Cumulative impact after Pass 4
+
+| Metric | Total |
+|---|---:|
+| Research files in `.ai/research/2026-05-17/` | 20 |
+| Root files created | 1 (`PROJECT_CONTEXT.md`) |
+| F-numbers newly proposed this research date | 152 (F121-F272) |
+| Local validation gates passed in final state | route manifest, version sync, bootstrap, model cards, license gate, roadmap lint, Ruff, pytest-fast, pip-audit, npm advisory allow-list, panel-source |
+| Commits made by Pass 4 | 1 local checkpoint commit |

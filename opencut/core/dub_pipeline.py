@@ -10,10 +10,10 @@ from __future__ import annotations
 from typing import Callable, Optional
 
 from opencut.core.auto_dub_pipeline import (
+    LANGUAGE_NAMES,
+    SUPPORTED_LANGUAGES,
     DubConfig,
     DubResult,
-    SUPPORTED_LANGUAGES,
-    LANGUAGE_NAMES,
     auto_dub,
 )
 
