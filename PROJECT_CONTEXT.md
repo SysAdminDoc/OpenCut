@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-05-17 (four autonomous research/verification passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit.
+**Last consolidated:** 2026-05-17 (five autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh.
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -86,7 +86,7 @@ For module-level patterns and the deep gotcha list (~270 entries), see **[`CLAUD
 | Node advisories disposition | `docs/NODE_ADVISORIES.md` (F095) |
 | 2026-04 competitive analysis | `AUDIT.md` (v1.11) + `research.md` (v1.28.2) — both predate ROADMAP v4.3 |
 | 402-feature aspirational catalogue | `features.md` — *aspirational; not a ship promise* |
-| 2026-05-17 research run (this run) | `.ai/research/2026-05-17/` (20 research artefacts + Pass-4 validation updates) |
+| 2026-05-17 research run (this run) | `.ai/research/2026-05-17/` (20 research artefacts + Pass-4 validation updates + Pass-5 implementation handoff updates) |
 | Codex-era handoff snapshot | `CODEX-CHANGELOG.md` (already-merged work, kept for historical reference) |
 | Future-Claude session handoff | `CLAUDE-HANDOFF-PROMPT.md` |
 
@@ -166,6 +166,11 @@ Highlights only. Full ledger in `ROADMAP.md` + `.ai/research/2026-05-17/PRIORITI
 - F167 OmniVoice fill of Wave H2.4
 - F176-F178 eval dataset bundle, model cards sweep, eval harness v2
 - F181-F185 bootstrap/cleanup fixes
+- [x] F261 cross-platform source launchers (`OpenCut-Server.command` + `OpenCut-Server.sh`)
+- [x] F262 UXP sample-repo URL fix
+- [x] F270 README "$1,400/year" positioning lead
+- F264 CI npm-audit machine-parseable assertion
+- F266 two-function CEP residual + drop-QE documentation
 
 **Next (v1.35 — v1.42, ~6 months):**
 - **F143–F145** `/agent/chat` conductor + post-turn self-review + Skills SDK + MCP packaging (flagship)
@@ -201,7 +206,7 @@ Pass 3 executed the F-numbered governance gates against the live repo:
 | `python scripts/bootstrap_check.py` | ✅ PASS — all 6 sub-checks (Python 3.12.10, 25-dep auditable lock, server import) |
 | `python -m pip_audit -r requirements-lock.txt` | ✅ PASS — "No known vulnerabilities found" |
 | `npm audit` in `extension/com.opencut.panel` | ✅ EXPECTED — 1 moderate Vite path-traversal matches the F095 waiver |
-| Cross-platform launchers (Wave I I1.4) | ❌ **GAP** — only 8 Windows scripts; `.command` (macOS) + `.sh` (Linux) **do not exist**. New F261 ships the missing launchers. |
+| Cross-platform launchers (Wave I I1.4) | **PASS after Pass 5** — `OpenCut-Server.command` (macOS) and `OpenCut-Server.sh` (Linux) now exist and mirror the Windows launcher's bundled Python, FFmpeg, and model-cache environment handling. Pass 3 originally identified this as the F261 gap. |
 
 **Side finding from Pass 3 deep walk:** OpenCut's CEP-only JSX surface is **2 of 18 functions (~11%)**, not the 5 features Pass 2's UXP subagent listed. Only `ocAddNativeCaptionTrack` (no UXP `createCaptionTrack()`) and `ocQeReflect` (QE DOM CEP-only) lack UXP equivalents in `@adobe/premierepro@26.3.0-beta.67`. F252 (UXP migration) revised from XL to L; F253 (Hybrid Plugin) revised from XL to L if scoped to caption-track + drag-out only.
 
@@ -236,7 +241,7 @@ These deserve explicit attention because they are not currently owned by any sin
 10. **WebView UI in Bolt UXP (March 2026, MIT) is the correct CEP→UXP migration target for the 7,730-line vanilla JS main.js** (Pass 2, F252). Rewriting to Spectrum widgets is months of work for negligible end-user benefit. Bolt UXP 1.3 also ships a `public-hybrid/` template for the C++ `.uxpaddon` path (F253) that covers the 5 truly CEP-blocked features (file drag-out, QE DOM, FCPXML/OTIO **import**, `createCaptionTrack`, `exportAsProject` sub-selection save).
 11. **The route-readiness state surface is dramatically incomplete** (Pass 2): F100 registry covers **29** of ~1,359 routes; F115 model cards cover 47; OpenAPI typed schemas cover 30; MCP tool array covers 27. The remaining ~1,250 routes have no machine-readable readiness state or typed response. F191 (auto-derive `FeatureRecord`) + F192 (OpenAPI bulk-type) + F195 (12 missing MCP tools) + F209 (consistency test) close most of this.
 12. **`/agent/chat` conductor design is converged** (Pass 3, [AGENT_UX_RFC.md](.ai/research/2026-05-17/AGENT_UX_RFC.md)) — Copilot Workspace editable-plan + Cursor checkpoint+rollback + Underlord post-turn self-review + Aider snapshot-discipline + Claude Code Skills format. **Adopt**, don't invent. F143 (L) + F144 (S) + F145 (M) = ~6-8 weeks at 1 maintainer, ships v1.36 inside the F252 UXP shell. Three patterns deliberately **NOT** copied: Cursor's "accept all" button (render-cost dominates attention), Aider's auto-commit-before-preview (user must see the render first), Claude Code's atomic multi-file apply (even Claude users file per-hunk-accept requests).
-13. **OpenCut has a quantified market-positioning story** (Pass 3, [MARKET_POSITIONING.md](.ai/research/2026-05-17/MARKET_POSITIONING.md)) — replaces ~**$1,400/yr** of competitor subscriptions: ~$720/yr (AutoCut + AutoPod + Submagic bundle) + ~$288/yr (Descript Creator) + ~$299-699/yr (Topaz Video AI new subscription, perpetual killed Oct 3 2025). **Mister Horse Animation Composer ~900k installs proves free-shell + paid-packs is the scale-without-VC model for the Premiere ecosystem.** Three categories to deprioritise (weak WTP): avatar generation, OpusClip-virality-as-pillar, sports-highlights-as-headline.
+13. **OpenCut has a quantified market-positioning story** (Pass 3, [MARKET_POSITIONING.md](.ai/research/2026-05-17/MARKET_POSITIONING.md); README lead shipped in Pass 5) — replaces ~**$1,400/yr** of competitor subscriptions: ~$720/yr (AutoCut + AutoPod + Submagic bundle) + ~$288/yr (Descript Creator) + ~$299-699/yr (Topaz Video AI new subscription, perpetual killed Oct 3 2025). **Mister Horse Animation Composer ~900k installs proves free-shell + paid-packs is the scale-without-VC model for the Premiere ecosystem.** Three categories to deprioritise (weak WTP): avatar generation, OpusClip-virality-as-pillar, sports-highlights-as-headline.
 
 ---
 
@@ -255,7 +260,7 @@ These deserve explicit attention because they are not currently owned by any sin
 
 ## 12. Where this consolidation lives
 
-This file is the **canonical project context**. It is intentionally small. The supporting artefacts from the 2026-05-17 research runs (Passes 1-4, same day) live in **`.ai/research/2026-05-17/`**:
+This file is the **canonical project context**. It is intentionally small. The supporting artefacts from the 2026-05-17 research runs (Passes 1-4, same day) and Pass-5 implementation updates live in **`.ai/research/2026-05-17/`**:
 
 **Pass 1 artefacts (10 files):**
 - `STATE_OF_REPO.md` — live repo reconnaissance
@@ -288,5 +293,13 @@ This file is the **canonical project context**. It is intentionally small. The s
 - `RESEARCH_LOG.md` Pass 4 section — phases, limitations, saturation note
 - `CHANGESET_SUMMARY.md` §9 — Pass 4 file/code/validation summary
 - `CONTINUE_FROM_HERE.md` §10 — Pass 5 entry point
+
+**Pass 5 updates (no new standalone file):**
+- `.gitattributes` — LF line-ending rules for POSIX launchers
+- `OpenCut-Server.command` + `OpenCut-Server.sh` — F261 launchers
+- `README.md` — F270 market-positioning lead + macOS/Linux launch instructions
+- `extension/com.opencut.uxp/uxp-api-notes.md` — F262 sample URL fix
+- `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGESET_SUMMARY.md`, `CONTINUE_FROM_HERE.md`, `LIVE_VERIFICATION.md`, `INSTALLER_AUDIT.md` — status updates marking the batch closed
+- Validation: `git diff --check` PASS; `python scripts/release_smoke.py --json` PASS (`232 passed` in pytest-fast)
 
 Future research runs should land under `.ai/research/<YYYY-MM-DD>/` and update this file's *§ 9 Shipping cadence* + *§ 9.5 regulatory deadlines* + *§ 10 The biggest non-obvious gaps*. The next planned run is documented in `.ai/research/2026-05-17/CONTINUE_FROM_HERE.md`.

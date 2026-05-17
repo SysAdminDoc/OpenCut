@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 5)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 6)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (end of Pass 4; Passes 1-4 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, and no hard limit was hit. This file documents deferred research/product work for a future Pass 5+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (during Pass 5; Passes 1-5 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, and Pass 5 closed the F261/F262/F270 quick-win batch. This file documents deferred research/product work for a future Pass 6+, not a broken or incomplete research run.
 
 ---
 
@@ -42,7 +42,7 @@
 | **`MARKET_POSITIONING.md`** | **Pass 3** | 200 |
 | **`CONTINUE_FROM_HERE.md`** | **this file** | ~350 |
 
-**At repo root:** `PROJECT_CONTEXT.md` (canonical context, Pass 1-4 updates), `ROADMAP.md` (v4.3-v4.7 sections), `AGENTS.md` (pointer added), `CLAUDE.md` (pointer added, gitignored).
+**At repo root:** `PROJECT_CONTEXT.md` (canonical context, Pass 1-5 updates), `ROADMAP.md` (v4.3-v4.8 sections), `AGENTS.md` (pointer added), `CLAUDE.md` (pointer added, gitignored).
 
 ---
 
@@ -215,11 +215,11 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 | npm advisory state | **PASS** in release-smoke allow-list step; raw `npm audit --json` still shows the known moderate Vite `.map` advisory that F095 documents |
 | `npm view @adobe/premierepro version dist-tags --json` | Confirmed `latest=26.2.0`, `beta=26.3.0-beta.67` |
 
-### Pass 5 entry point
+### Pass 6 entry point
 
-1. **Push checkpoint commit** once GitHub auth is available on this machine.
-2. **Implement F261** (`OpenCut-Server.command` + `OpenCut-Server.sh`) or update the Wave I ledger to mark launcher support Windows-only.
-3. **Fix F262** (`extension/com.opencut.uxp/uxp-api-notes.md` sample repo URL typo).
+1. **Push checkpoint commits** once GitHub auth is available on this machine.
+2. **Implement F264** — add a machine-parseable `npm audit --json` assertion to release smoke so the known Vite advisory stays explicitly allow-listed below the high-severity gate.
+3. **Implement F266** — document the two-function CEP residual (`ocAddNativeCaptionTrack`, `ocQeReflect`) and the drop-QE plan.
 4. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 5. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
@@ -229,3 +229,30 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 - No Premiere UDT runtime verification of the 14 low-risk JSX to UXP ports.
 - No push attempted; local auth still needs to be fixed outside the repo.
 - The raw `npm audit --json` output still reports the moderate Vite advisory because the repo intentionally allows it below the release-smoke threshold; keep F095/`docs/NODE_ADVISORIES.md` as the disposition.
+
+---
+
+## 11. Pass 5 update (same day, launcher/docs implementation)
+
+Pass 5 closed the three smallest Pass-3 Now items and left the larger research/development queue intact.
+
+### What Pass 5 closed
+
+| Item | Status |
+|---|---|
+| F261 | **DONE** — added `OpenCut-Server.command` and `OpenCut-Server.sh`; the shell launcher sets `OPENCUT_HOME`, handles bundled/system Python 3.9+, bundled FFmpeg, bundled model env vars, and starts `python -m opencut.server`. |
+| F262 | **DONE** — fixed `extension/com.opencut.uxp/uxp-api-notes.md` sample repo URL to `AdobeDocs/uxp-premiere-pro-samples`. |
+| F270 | **DONE** — README lead now uses the "$1,400/year" subscription-replacement story and Quick Start names the macOS/Linux launchers. |
+
+### Validation after Pass 5
+
+| Command | Result |
+|---|---|
+| `git diff --check` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — bootstrap, version-sync, route-manifest, model-cards, license-gate, roadmap-lint, Ruff, pytest-fast (`232 passed`), pip-audit, npm-advisory, and panel-source all green |
+
+### Remaining immediate work
+
+- F264 and F266 are the remaining open Pass-3 Now items.
+- F179 remains the largest knowledge debt.
+- Cross-platform launcher runtime verification still needs macOS/Linux CI or local runtime coverage (related to F211).

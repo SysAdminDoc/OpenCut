@@ -14,7 +14,7 @@
 | **F093** `python scripts/bootstrap_check.py` | python-version, repo-import, version-sync, requirements-lock, runtime-imports, server-import all PASS | **All 6 PASS; lock has 25 auditable deps; Python 3.12.10** | ✅ PASS |
 | **F094** `python -m pip_audit -r requirements-lock.txt` | No known vulns | **"No known vulnerabilities found"** | ✅ PASS |
 | **F095** `npm audit` in `extension/com.opencut.panel` | esbuild ≥0.25 + Vite waived `.map` traversal | **1 moderate: Vite path-traversal `.map` (GHSA-4w7w-66w2-5vf9)** — exactly the F095-waived advisory | ✅ EXPECTED (waiver documented) |
-| **Cross-platform launchers** (Wave I I1.4) | Both `.command` (macOS) + `.sh` (Linux) shipped per ROADMAP-NEXT.md | **NOT PRESENT — only 8 Windows scripts (`BUILD.bat`, `Install.bat`, `Install.ps1`, `InstallerBuilder.ps1`, `OpenCut-Launcher.vbs`, `OpenCut-Server.bat`, `OpenCut-Server.vbs`, `Uninstall.bat`)** | ❌ **GAP — Wave I I1.4 marked shipped but two of four launchers missing** |
+| **Cross-platform launchers** (Wave I I1.4) | Both `.command` (macOS) + `.sh` (Linux) shipped per ROADMAP-NEXT.md | **PASS after Pass 5** — `OpenCut-Server.command` and `OpenCut-Server.sh` now exist alongside the Windows scripts | **F261 closed** |
 
 ---
 
@@ -104,6 +104,8 @@ Uninstall.bat
 
 **Action:** new F-number — **F261** — ship the missing `OpenCut-Server.command` (`#!/bin/sh` + `chmod +x`, must be Gatekeeper-friendly per ROADMAP-NEXT Wave I gotcha) and `OpenCut-Server.sh` (Linux equivalent), or update the ledger to mark I1.4 as Windows-only.
 
+**Pass 5 update:** F261 is now closed. `OpenCut-Server.command` delegates to `OpenCut-Server.sh`; the `.sh` launcher sets `OPENCUT_HOME`, finds bundled or system Python 3.9+, adds bundled FFmpeg to `PATH`, exports bundled model paths when `models/` exists, and starts `python -m opencut.server`.
+
 ---
 
 ## 3. Side-channel discoveries from `bootstrap_check`
@@ -187,8 +189,8 @@ Pass-2 UXP subagent §10 named 5 CEP-blocked feature surfaces. Cross-referenced 
 
 | F# | Title | Priority | Effort |
 |---|---|---|---|
-| **F261** | Ship missing `OpenCut-Server.command` (macOS) + `OpenCut-Server.sh` (Linux) launchers | **Now** | S |
-| F262 | Fix uxp-api-notes.md sample-repo URL typo (`adobe/premiere-pro-uxp-samples` → `AdobeDocs/uxp-premiere-pro-samples`) | Now | trivial |
+| **F261** | Ship missing `OpenCut-Server.command` (macOS) + `OpenCut-Server.sh` (Linux) launchers | **Done in Pass 5** | S |
+| F262 | Fix uxp-api-notes.md sample-repo URL typo (`adobe/premiere-pro-uxp-samples` → `AdobeDocs/uxp-premiere-pro-samples`) | Done in Pass 5 | trivial |
 | F263 | Re-run pip-audit on full `[all]` extras (not just lockfile) and capture per-extra advisory state | Next | S |
 | F264 | Add `npm audit --json` machine-parseable assertion to CI release-smoke (today's CI runs `audit:check` which is `npm audit --audit-level=high`; this confirms the moderate Vite advisory is below threshold and the waiver is still load-bearing) | Now | trivial |
 | F265 | UDT verification harness — exercise the 18 `ocXxx` JSX functions in a real Premiere UDT instance, output per-function CEP-vs-UXP support matrix | Later | M |
@@ -224,3 +226,19 @@ Final rerun result: **PASS**. `python scripts/release_smoke.py --json` exited `0
 | panel-source | PASS |
 
 Additional targeted hardening validation also passed: `119 passed` across `test_local_auth.py`, `test_hardening.py`, `test_config_and_userdata.py`, `test_boolean_coercion.py`, `test_crash_packet.py`, `test_review_bundle.py`, and `test_route_manifest.py`.
+
+---
+
+## 9. Pass 5 implementation update
+
+Pass 5 closed the quick implementation findings from this verification pass:
+
+| Item | Status |
+|---|---|
+| F261 | Done — macOS/Linux source launchers added. |
+| F262 | Done — UXP sample URL corrected. |
+| F270 | Done — README lead and launcher instructions updated. |
+
+Validation after Pass 5: `git diff --check` passed and `python scripts/release_smoke.py --json` exited `0` with all 11 release-smoke steps green (`pytest-fast`: `232 passed`).
+
+F264 remains open from this file's Pass-3 Now tier; F266 remains open in the broader ROADMAP.md Pass-3 Now list.

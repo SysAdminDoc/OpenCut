@@ -144,10 +144,10 @@ Per the wave I I1.4 plan (shipped in v1.26.0):
 - `OpenCut-Server.bat` — Windows
 - `OpenCut-Server.vbs` — Windows silent launcher
 - `OpenCut-Launcher.vbs` — Windows launcher with path quoting for `C:\Program Files\OpenCut`
-- `OpenCut-Server.command` — macOS (planned per Wave I1.4; not verified in repo root listing)
-- `OpenCut-Server.sh` — Linux (planned per Wave I1.4; not verified)
+- `OpenCut-Server.command` — macOS (added in Pass 5 / F261)
+- `OpenCut-Server.sh` — Linux (added in Pass 5 / F261)
 
-**Action:** verify the `.command` / `.sh` launchers are actually present and executable.
+**Pass 5 update:** the `.command` / `.sh` launchers are now present. Validation still needs a real macOS/Linux runtime or CI launcher-smoke coverage (F211).
 
 ---
 

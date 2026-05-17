@@ -120,6 +120,6 @@ OpenCut already wins on all three. The README copy should lead with this directl
 |---|---|---|---|---|
 | F268 | Adobe Exchange storefront listing for free OpenCut core panel | Next | M | Mister Horse Animation Composer's distribution channel; ~900k installs proof |
 | F269 | Premium model-pack bundling format + skeleton (`~/.opencut/packs/`) | Later | M | Free shell + paid packs, Mister Horse model |
-| F270 | README marketing copy refresh ("replaces $1,400/yr") | Now | S | Lead with concrete dollar comparisons |
+| F270 | README marketing copy refresh ("replaces $1,400/yr") | Done in Pass 5 | S | Lead with concrete dollar comparisons |
 | F271 | Per-feature VRAM requirement UI surface | Next | S | Closes the #2 OSS-to-SaaS migration driver |
 | F272 | Wedding-specific Skill (F145) — color match + beat sync + 4-min reel | Next | M | Most under-served creator type per §5 |
