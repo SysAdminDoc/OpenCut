@@ -587,3 +587,42 @@ Pass 19 combined targeted external standards verification with a local caption-Q
 ### Pass 19 saturation note
 
 F240 is complete for repository-side source-backed reading-speed profiles and QC API exposure. It intentionally keeps FCC as qualitative and YouTube's 220 WPM profile as a low-confidence advisory because no official numeric cap was found in the checked sources.
+
+---
+
+## Pass 20 (2026-05-17 — F241 text-shaping gate)
+
+Pass 20 was a local implementation and verification pass. No new external search was needed because the work closes a repository capability gate against local FFmpeg/Pillow/Skia surfaces already identified by the Pass-2 niche standards research.
+
+### Pass 20 local probes
+
+| Probe | Result |
+|---|---|
+| `opencut/core/caption_burnin.py` | Confirmed subtitle burn-in uses FFmpeg `ass` / `subtitles` filters, so libass is the hard release surface. |
+| `opencut/core/styled_captions.py` | Confirmed styled overlays use Pillow by default and optional `skia-python` when installed. |
+| bundled `ffmpeg/ffmpeg.exe -hide_banner -version` | Confirmed the bundled build exposes `--enable-libass`, `--enable-libharfbuzz`, and `--enable-libfribidi`. |
+| bundled `ffmpeg/ffmpeg.exe -hide_banner -filters` | Confirmed exact `ass` and `subtitles` filters; also confirmed why substring parsing is unsafe (`greyedge assumption`). |
+| Pillow feature probe | Local Pillow `12.2.0` lacks RAQM/HarfBuzz/FriBidi but has Freetype, so the default gate records an advisory instead of failing this dev environment. |
+
+### Pass 20 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 20.1 | Added `opencut/tools/text_shaping_gate.py`. | New JSON/human CLI resolves FFmpeg, hard-checks libass/HarfBuzz/FriBidi/filter support, and reports Pillow RAQM plus optional Skia shaping status. |
+| Pass 20.2 | Wired release smoke and CI. | `scripts/release_smoke.py` now has a `text-shaping` step; `.github/workflows/build.yml` runs the same gate after standard dependency install. |
+| Pass 20.3 | Added `tests/test_text_shaping_gate.py`. | Tests cover exact FFmpeg parsing, missing-HarfBuzz failure, strict Pillow promotion, release-smoke wiring, and workflow wiring. |
+| Pass 20.4 | Updated roadmap and research state files. | F241 marked closed; next local-verifiable Now queue is F243/F244 while F205 remains blocked by long coverage runtime. |
+
+### Pass 20 validation results
+
+| Check | Result |
+|---|---|
+| Text-shaping gate CLI | **PASS** — FFmpeg/libass hard gates OK; Pillow RAQM warning; Skia skipped |
+| Focused text-shaping/release-smoke tests | **PASS** — `17 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for touched Python files | **PASS** |
+| Full release smoke | **PASS** — all 14 steps green; pytest-fast `289 passed` |
+
+### Pass 20 saturation note
+
+F241 is complete for the CI/release-gate layer. It does not rewrite the Pillow renderer to shape complex scripts; it exposes that limitation as a machine-readable warning by default and as a strict failure when packaging environments opt into `--require-pillow-raqm`.
