@@ -554,3 +554,33 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P16-L08 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `269 passed` |
 
 **Source coverage assessment (Pass 16):** Pass 16 claims in `ROADMAP.md` v4.19, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P16-L01 through R-P16-L08. No new external source was used.
+
+---
+
+## Pass 17 — F236 FCC caption display-settings tokens (2026-05-17 seventeenth pass)
+
+### External source evidence
+
+| ID | Source |
+|---|---|
+| R-P17-E01 | 47 CFR § 79.103(e), eCFR/Cornell mirror — https://www.law.cornell.edu/cfr/text/47/79.103 — readily-accessible caption display-setting factors: proximity, discoverability, previewability, consistency/persistence; compliance required for next-generation operating systems deployed after August 17, 2026 |
+| R-P17-E02 | Federal Register final rule/compliance-date notice, FR Doc. 2025-02816 — https://www.federalregister.gov/d/2025-02816 — effective February 21, 2025; compliance date for 47 CFR 79.103(e) is August 17, 2026 |
+| R-P17-E03 | FCC 24-79 Third Report and Order PDF — https://docs.fcc.gov/public/attachments/FCC-24-79A1_Rcd.pdf — display-setting surface includes caption presentation, color, opacity, size, font, caption background color/opacity, character edge attributes, and caption window color |
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P17-L01 | `opencut/core/caption_display_settings.py` — new canonical display-setting token schema, normalization, CSS preview values, and ASS `force_style` conversion |
+| R-P17-L02 | `opencut/routes/captions.py` — added `/captions/display-settings/tokens`, `/captions/display-settings/preview`, and `display_settings` handling for `/captions/burnin/file` |
+| R-P17-L03 | `tests/test_caption_display_settings.py` — new F236 regression tests for FCC factors, token coverage, normalization, preview payloads, and routes |
+| R-P17-L04 | `scripts/release_smoke.py` — added `tests/test_caption_display_settings.py` to `pytest-fast` |
+| R-P17-L05 | `python -m opencut.tools.dump_route_manifest` — regenerated `opencut/_generated/route_manifest.json`, now 1,361 routes / 101 blueprints |
+| R-P17-L06 | `python -m opencut.tools.dump_api_aliases --check` — PASS, 15 aliases / 218 canonical `/api` routes |
+| R-P17-L07 | `python -m opencut.tools.dump_feature_readiness --check` — PASS, 58 generated records / 67 route bindings |
+| R-P17-L08 | `python -m pytest tests/test_caption_display_settings.py tests/test_route_manifest.py tests/test_release_smoke.py -q` — PASS, `21 passed` |
+| R-P17-L09 | `ruff check opencut/core/caption_display_settings.py opencut/routes/captions.py tests/test_caption_display_settings.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P17-L10 | `python -m py_compile opencut/core/caption_display_settings.py opencut/routes/captions.py tests/test_caption_display_settings.py scripts/release_smoke.py` — PASS |
+| R-P17-L11 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; route manifest `1,361` routes / `101` blueprints; pytest-fast `273 passed` |
+
+**Source coverage assessment (Pass 17):** Pass 17 claims in `ROADMAP.md` v4.20, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P17-E01 through R-P17-E03 and R-P17-L01 through R-P17-L11.

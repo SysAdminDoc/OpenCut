@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-16T20:36:05Z",
-  "total_routes": 1359,
+  "generated_at": "2026-05-17T20:46:11Z",
+  "total_routes": 1361,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 295,
+    "GET": 296,
     "PATCH": 1,
-    "POST": 1049,
+    "POST": 1050,
     "PUT": 2
   },
   "blueprints": {
@@ -160,16 +160,16 @@
       ]
     },
     "captions": {
-      "route_count": 24,
+      "route_count": 26,
       "method_counts": {
         "DELETE": 1,
-        "GET": 5,
-        "POST": 18
+        "GET": 6,
+        "POST": 19
       },
       "sample_rules": [
         "/caption-styles",
         "/captions",
-        "/styled-captions"
+        "/captions/display-settings/tokens"
       ]
     },
     "cloud_distrib": {
@@ -4995,6 +4995,22 @@
         "POST"
       ],
       "endpoint": "captions.captions_convert",
+      "blueprint": "captions"
+    },
+    {
+      "rule": "/captions/display-settings/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "captions.caption_display_setting_preview",
+      "blueprint": "captions"
+    },
+    {
+      "rule": "/captions/display-settings/tokens",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "captions.caption_display_setting_tokens",
       "blueprint": "captions"
     },
     {

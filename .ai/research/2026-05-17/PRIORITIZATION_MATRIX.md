@@ -156,7 +156,7 @@ These are not OpenCut work but should be tracked in the same ledger.
 
 The second autonomous research pass on 2026-05-17 added 70 more F-numbers across four sources: route audit, installer audit, test coverage, features.md reconciliation, plus three subagents (Frame.io review, niche AI / accessibility / standards, UXP migration deep-dive). Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](FEATURE_BACKLOG_ADDENDUM.md). Tier deltas:
 
-**Now (priority bumps + new): 9 open items; F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219 closed locally after Pass 16**
+**Now (priority bumps + new): 8 open items; F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236 closed locally after Pass 17**
 
 | F# | Title | Why priority |
 |---|---|---|
@@ -172,7 +172,7 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 | [x] F209 | MCP tool ↔ route consistency test | Closed in Pass 14 with live Flask route checks for all MCP routes and special action dispatch paths |
 | [x] F218 | Import-order stability test | Closed in Pass 15 with a pinned core blueprint order and release-smoke route-collision/import-order gate |
 | [x] F219 | SBOM completeness test | Closed in Pass 16 with declared-dependency, model-card, and dependency-graph coverage in release smoke |
-| **F236** | **FCC user-overridable caption style tokens** | **FCC Aug 17 2026 readily-accessible rule (regulatory)** |
+| [x] **F236** | **FCC user-overridable caption style tokens** | **Closed in Pass 17 with FCC-sourced token schema, preview route, and burn-in integration** |
 | F237 | EBU R128 v5.0 + BS.1770-4 confirmation | Drop speculative -5 reference |
 | F240 | Per-target reading-speed profile (Netflix/BBC/YouTube/FCC) | Caption QC extension |
 | F241 | HarfBuzz-mandatory CI gate | RTL/CJK/Indic correctness |
@@ -187,7 +187,7 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 
 **Two regulatory deadlines bumped to Now:**
 - F202 Apple notarisation (Homebrew Cask mandatory Sept 1, 2026)
-- F236 FCC caption style tokens (effective Aug 17, 2026)
+- F236 FCC caption style tokens (effective Aug 17, 2026; repository-side token contract closed in Pass 17)
 
 Both should ship in v1.33 or earliest v1.34 to keep Mac users on Homebrew and US broadcast users compliant.
 

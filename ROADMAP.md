@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.19
+**Version**: 4.20
 **Updated**: 2026-05-17
-**Baseline**: v1.32.0 (1,344 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Baseline**: v1.32.0 (1,361 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
 > **⚡ Active work** lives in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
@@ -46,6 +46,27 @@
 > **v4.18 status (2026-05-17, fifteenth pass)**: closed **F218** by pinning deterministic blueprint registration order. `tests/test_route_collisions.py` now asserts the exact `get_core_blueprints()` order and the final `motion_design_api` alias registration, and the route-collision test file is part of release smoke.
 >
 > **v4.19 status (2026-05-17, sixteenth pass)**: closed **F219** by making the release SBOM complete enough to audit. `scripts/sbom.py` now emits unique declared Python dependency components, 47 model-card components, and a non-empty CycloneDX dependency graph; `tests/test_sbom_completeness.py` verifies the SBOM covers every `pyproject.toml`/`requirements.txt` dependency, every committed model card, and every component reference in the dependency graph.
+>
+> **v4.20 status (2026-05-17, seventeenth pass)**: closed **F236** by adding canonical FCC-style caption display setting tokens. `opencut/core/caption_display_settings.py` now normalizes user-overridable font, size, text color/opacity, background color/opacity, edge, and window tokens; `/captions/display-settings/tokens` exposes the schema and `/captions/display-settings/preview` returns CSS/ASS preview metadata. Burn-in from subtitle files can consume `display_settings`, and `tests/test_caption_display_settings.py` pins the rule factors, token coverage, normalization, preview output, and routes.
+
+---
+
+## 2026-05-17 v4.20 FCC Caption Display-Settings Tokens
+
+F236 is closed locally. OpenCut now has one machine-readable caption display token contract for UI preview and burn-in exports:
+
+| Surface | Status |
+|---|---|
+| Regulatory source | The implementation is tied to 47 CFR 79.103(e)'s readily-accessible factors — proximity, discoverability, previewability, and consistency/persistence — and the Federal Register compliance date of **August 17, 2026**. |
+| Evidence | Source IDs `R-P17-E01` through `R-P17-E03` in `.ai/research/2026-05-17/SOURCE_REGISTER.md` capture the eCFR/Cornell text, Federal Register compliance-date notice, and FCC 24-79 Report and Order. |
+| Token schema | `opencut/core/caption_display_settings.py` defines user-overridable font, size, text color/opacity, caption background color/opacity, edge style, and window color/opacity tokens. |
+| Previewability | `POST /captions/display-settings/preview` returns normalized tokens, CSS-like preview values, and ASS `force_style` output for a sample caption. |
+| Discoverability | `GET /captions/display-settings/tokens` exposes the schema, defaults, source URLs, and implementation hints for the four readily-accessible factors. |
+| Burn-in integration | `/captions/burnin/file` now accepts a `display_settings` object and converts it to a sanitized, generated ASS `force_style` string for FFmpeg/libass. |
+| Regression test | `tests/test_caption_display_settings.py` covers the schema, normalization, preview rendering values, and route payloads; release smoke includes the test. |
+| Generated manifest | `opencut/_generated/route_manifest.json` was regenerated and now reports 1,361 routes / 101 blueprints. |
+
+Validation after the batch: focused caption-display/route-manifest/release-smoke tests passed (`21 passed`), Ruff passed for touched Python files, `opencut/core/caption_display_settings.py` + `opencut/routes/captions.py` + `tests/test_caption_display_settings.py` + `scripts/release_smoke.py` compile, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`273 passed` in pytest-fast).
 
 ---
 
@@ -293,7 +314,7 @@ The CONTINUE_FROM_HERE.md §3.1 quick-wins were executed against the live repo:
 
 | Check | Result |
 |---|---|
-| `python -m opencut.tools.dump_route_manifest --check` | **PASS** — 1,359 routes / 101 blueprints, no drift from cached manifest |
+| `python -m opencut.tools.dump_route_manifest --check` | **PASS** — 1,361 routes / 101 blueprints, no drift from cached manifest |
 | `python scripts/sync_version.py --check` | **PASS** — all 19 surfaces at v1.32.0 |
 | `python scripts/bootstrap_check.py` | **PASS** — all 6 sub-checks pass (Python 3.12.10, repo import, version sync, requirements-lock 25 deps, runtime imports, server-import) |
 | `python -m pip_audit -r requirements-lock.txt` | **PASS** — "No known vulnerabilities found" (F094 burn-down current) |
@@ -397,11 +418,11 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 ### Phase 0 — What Pass 1 (v4.4) missed or what surfaced on deeper inspection
 
-1. **Route readiness coverage gap is larger than reported.** F100 registry covers **29** of ~1,359 routes with explicit readiness state; F115 model cards cover 47; OpenAPI typed schemas cover 30; MCP tool array covers 27. The remaining ~1,250+ routes have no machine-readable readiness state or typed response. This drives **F191** (auto-derive `FeatureRecord` from check functions) and **F192-F197** (OpenAPI / MCP / model-card coverage uplift).
+1. **Route readiness coverage gap is larger than reported.** F100 registry covers **29** of ~1,361 routes with explicit readiness state; F115 model cards cover 47; OpenAPI typed schemas cover 30; MCP tool array covers 27. The remaining ~1,250+ routes have no machine-readable readiness state or typed response. This drives **F191** (auto-derive `FeatureRecord` from check functions) and **F192-F197** (OpenAPI / MCP / model-card coverage uplift).
 2. **`createSubsequence` is exposed in UXP** — Pass 1's UXP-API-gap list inferred it was missing. The deeper `@adobe/premierepro@26.3.0-beta.67` walk in Pass 2 confirmed it ships with an `ignoreTrackTargeting?` parameter. **F254** uses it.
 3. **`ProjectConverter.importFromFinalCutProXML` and `importFromOpenTimelineIO` were REMOVED in the 26.3.0-beta typings.** Export still works; round-trip import via UXP is currently impossible. This is a **new** Adobe gap report — **F261** (replacement for F186-F190 set).
 4. **UXP Hybrid Plugins** (.uxpaddon, C++ bundled per-platform) are the **only** path for some CEP-blocked features post-Sept 2026. Bolt UXP 1.3.0 (May 2026) added a win-arm64 hybrid template. **F253** is the implementation; **F251** is the per-week `@adobe/premierepro@beta` diff tracker that catches new APIs the moment Adobe ships them.
-5. **Two regulatory deadlines** (Apple notarisation 2026-09-01, FCC caption 2026-08-17) escalate F202 and F236 from "Next" to "Now". Niche AI / accessibility / standards subagent confirmed both deadlines with primary-source citations.
+5. **Two regulatory deadlines** (Apple notarisation 2026-09-01, FCC caption 2026-08-17) escalated F202 and F236 from "Next" to "Now"; both now have repository-side implementations, with live acceptance still dependent on release secrets / downstream UI packaging.
 6. **The `/api/*` surface is 233 routes, but not 233 alias pairs** — Pass 7 corrected the earlier wording. F199 now ships `opencut/_generated/api_aliases.json`: 15 true aliases and 218 canonical `/api` routes.
 7. **basicsr is dead and gfpgan/realesrgan depend on it** — Pass 1 flagged this; Pass 2's UXP work confirmed it's a torch-cascade blocker that compounds the audiocraft `torch==2.1.0` pin. **F124** (basicsr replacement) is on the critical path for any torch ≥2.6 bump.
 8. **Test coverage floor is 50%** (`--cov-fail-under=50`). Actual coverage is much higher per the 7,551-test claim — but nobody has measured it precisely. **F205** floors at actual - 5%.
@@ -428,7 +449,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (9 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219 closed locally, including 1 regulatory still open):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (8 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
@@ -470,7 +491,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 ### Phase 0 — What the v4.3 audit missed or changed since
 
-- **Live route manifest** is now **1,359 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's "1,344" badge is stale — keep the F099 manifest as canonical truth.
+- **Live route manifest** is now **1,361 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's "1,344" badge is stale — keep the F099 manifest as canonical truth.
 - **F-numbered Now-tier work shipped quickly** between 2026-05-16 and 2026-05-17: F006, F010, F011, F066, F095, F097, F098, F099, F100, F101, F102, F103, F104, F105, F106, F109, F110, F111, F112, F115, F116, F117, F118, F120 (22 of 27 *Now* items landed). F093 (hermetic bootstrap) is partially shipped — UV trampoline path still fails. F094 lockfile audit is partially shipped — `deep-translator` removed, requires recurring `release_smoke` gate.
 - **Wave M (v1.30.0)** added the MCP sidecar (27 tools) — closes `research.md` §1.1 ("MCP server interface — HIGH priority") which is now stale.
 - **Wave L (v1.29.0)** shipped AI face reshape + skin retouch — closes `research.md` §1.3/§1.4 which are now stale.
@@ -516,7 +537,7 @@ Full backlog with effort / risk / fit / source in [`.ai/research/2026-05-17/FEAT
 
 ### Phase 3 — Top three strategic moves the v4.3 audit understated
 
-1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,359 routes, MCP sidecar with 27 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
+1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,361 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
 2. **UXP MCP transport (F146) is the only path through Sept 2026 CEP EOL.** Every competing PPro MCP server today (ayushozha 1,060 tools, leancoderkavy 269, hetpatel-11 97) is CEP-bound and will break when Adobe enforces the cutoff. First UXP-native MCP wins post-EOL.
 3. **StreamDiffusionV2 (F158) unlocks real-time editor-loop preview** on existing LTX-2.3 / Wan / Open-Sora backends — the single biggest UX leap vs CapCut / Runway / Captions, all of whom charge subscriptions for the real-time path.
 

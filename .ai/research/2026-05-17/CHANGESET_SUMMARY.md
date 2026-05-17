@@ -719,4 +719,43 @@ Pass 16 closed F219.
 
 ### Remaining immediate work
 
-F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F237, F240, F243, and F244; F236/F251/F259 may need fresh external/regulatory/API checks before implementation.
+F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F237, F240, F243, and F244; F236 was closed in Pass 17, while F251/F259 may need fresh external/API checks before implementation.
+
+---
+
+## 22. Pass 17 additions (same day, F236 FCC caption display-settings tokens)
+
+Pass 17 closed F236.
+
+### Files added or edited in Pass 17
+
+| Path | Change |
+|---|---|
+| `opencut/core/caption_display_settings.py` | Added the canonical caption display setting token schema, normalization, preview CSS conversion, and ASS `force_style` conversion. |
+| `opencut/routes/captions.py` | Added token/preview routes and wired `display_settings` into `/captions/burnin/file`. |
+| `tests/test_caption_display_settings.py` | Added the F236 regression tests for FCC factors, token coverage, normalization, preview payloads, and routes. |
+| `scripts/release_smoke.py` | Added `tests/test_caption_display_settings.py` to the `pytest-fast` release gate. |
+| `opencut/_generated/route_manifest.json` | Regenerated after adding two routes; now 1,361 routes / 101 blueprints. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Marked F236 closed, added FCC/eCFR source evidence, and updated route/test counts. |
+
+### Items closed in Pass 17
+
+| F# | Result |
+|---|---|
+| F236 | Closed — OpenCut now has a FCC-sourced caption display token contract with preview and burn-in integration. |
+
+### Validation after Pass 17
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_caption_display_settings.py tests/test_route_manifest.py tests/test_release_smoke.py -q` | PASS — `21 passed` |
+| `ruff check opencut/core/caption_display_settings.py opencut/routes/captions.py tests/test_caption_display_settings.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/core/caption_display_settings.py opencut/routes/captions.py tests/test_caption_display_settings.py scripts/release_smoke.py` | PASS |
+| `python -m opencut.tools.dump_route_manifest` | PASS — wrote 1,361 routes / 101 blueprints |
+| `python -m opencut.tools.dump_api_aliases --check` | PASS — 15 aliases / 218 canonical `/api` routes |
+| `python -m opencut.tools.dump_feature_readiness --check` | PASS — 58 generated records / 67 route bindings |
+| `python scripts\release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `273 passed` |
+
+### Remaining immediate work
+
+F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F237, F240, F241, F243, and F244. F251 and F259 need fresh Adobe/UXP verification before implementation.

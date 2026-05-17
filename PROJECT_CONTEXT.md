@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-05-17 (sixteen autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh. Pass 6 closed F264/F266 with machine-readable npm-advisory release-smoke output and the CEP-residual/drop-QE migration note. Pass 7 closed F199 with a generated `/api` alias manifest and corrected the earlier "233 alias pairs" claim to 15 true aliases + 218 canonical `/api` routes. Pass 8 closed F191/F197 with a generated route/check readiness manifest and moved the `NON_AI_CHECKS` allowlist into the registry. Pass 9 closed F195 by expanding the curated MCP tool surface from 27 to 39 tools and adding MCP route/dispatch/path-validation tests. Pass 10 closed the local F202 notarization tooling with a macOS signing/notarytool workflow and docs; live Apple acceptance still needs configured repository secrets. Pass 11 closed F204 by generating/archiving/uploading the CycloneDX SBOM from the Linux release job. Pass 12 closed F207 by writing bundled FFmpeg version data into both installer manifests; F205 stayed open because the full coverage measurement timed out locally. Pass 13 closed F208 by normalizing Flask path parameters in `/openapi.json`, making OpenAPI operation IDs unique, and adding the OpenAPI contract to release smoke. Pass 14 closed F209 by fixing the stale `opencut_chat_edit` MCP route and adding live Flask route consistency coverage for every MCP route and special action route. Pass 15 closed F218 by pinning the core blueprint registration order and adding the route-collision/import-order test file to release smoke. Pass 16 closed F219 by adding SBOM completeness coverage for declared Python dependencies, model-card components, and CycloneDX dependency graph entries.
+**Last consolidated:** 2026-05-17 (seventeen autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh. Pass 6 closed F264/F266 with machine-readable npm-advisory release-smoke output and the CEP-residual/drop-QE migration note. Pass 7 closed F199 with a generated `/api` alias manifest and corrected the earlier "233 alias pairs" claim to 15 true aliases + 218 canonical `/api` routes. Pass 8 closed F191/F197 with a generated route/check readiness manifest and moved the `NON_AI_CHECKS` allowlist into the registry. Pass 9 closed F195 by expanding the curated MCP tool surface from 27 to 39 tools and adding MCP route/dispatch/path-validation tests. Pass 10 closed the local F202 notarization tooling with a macOS signing/notarytool workflow and docs; live Apple acceptance still needs configured repository secrets. Pass 11 closed F204 by generating/archiving/uploading the CycloneDX SBOM from the Linux release job. Pass 12 closed F207 by writing bundled FFmpeg version data into both installer manifests; F205 stayed open because the full coverage measurement timed out locally. Pass 13 closed F208 by normalizing Flask path parameters in `/openapi.json`, making OpenAPI operation IDs unique, and adding the OpenAPI contract to release smoke. Pass 14 closed F209 by fixing the stale `opencut_chat_edit` MCP route and adding live Flask route consistency coverage for every MCP route and special action route. Pass 15 closed F218 by pinning the core blueprint registration order and adding the route-collision/import-order test file to release smoke. Pass 16 closed F219 by adding SBOM completeness coverage for declared Python dependencies, model-card components, and CycloneDX dependency graph entries. Pass 17 closed F236 by adding FCC-style user-overridable caption display setting tokens, preview routes, and burn-in integration.
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -18,11 +18,11 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 
 | Surface | Count | Source of truth |
 |---|---|---|
-| API routes | **1,359** | `opencut/_generated/route_manifest.json` (F099) |
+| API routes | **1,361** | `opencut/_generated/route_manifest.json` (F099) |
 | Blueprints | **101** | same |
 | Core processing modules (`opencut/core/`) | **523** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **101** | `ls opencut/routes` |
-| Tests | **137 files** (≥7,600 tests claimed) | `ls tests/` |
+| Tests | **139 files** (≥7,600 tests claimed) | `ls tests/` |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **233** total; **15** true aliases; **218** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |
 | Feature readiness records | **84** total; **58** route-derived records / **67** route bindings | `opencut/registry.py` + `opencut/_generated/feature_readiness.json` (F100/F191/F197) |
@@ -179,6 +179,7 @@ Highlights only. Full ledger in `ROADMAP.md` + `.ai/research/2026-05-17/PRIORITI
 - [x] F209 MCP tool/route consistency gate
 - [x] F218 blueprint import-order stability gate
 - [x] F219 SBOM completeness gate
+- [x] F236 FCC caption display-settings token gate
 - [x] F261 cross-platform source launchers (`OpenCut-Server.command` + `OpenCut-Server.sh`)
 - [x] F262 UXP sample-repo URL fix
 - [x] F270 README "$1,400/year" positioning lead
@@ -214,7 +215,7 @@ Pass 3 executed the F-numbered governance gates against the live repo:
 
 | Check | Result |
 |---|---|
-| `python -m opencut.tools.dump_route_manifest --check` | ✅ PASS — 1,359 routes / 101 blueprints, no drift |
+| `python -m opencut.tools.dump_route_manifest --check` | ✅ PASS — 1,361 routes / 101 blueprints, no drift |
 | `python scripts/sync_version.py --check` | ✅ PASS — 19 surfaces at v1.32.0 |
 | `python scripts/bootstrap_check.py` | ✅ PASS — all 6 sub-checks (Python 3.12.10, 25-dep auditable lock, server import) |
 | `python -m pip_audit -r requirements-lock.txt` | ✅ PASS — "No known vulnerabilities found" |
@@ -232,9 +233,9 @@ Pass 3 executed the F-numbered governance gates against the live repo:
 Pass 2 surfaced two deadlines that force scope changes regardless of feature backlog:
 
 1. **F202 — Apple notarisation mandatory for Homebrew Cask 2026-09-01.** Pass 10 added Developer ID signing + `xcrun notarytool` release wiring and `docs/MACOS_NOTARIZATION.md`. **Remaining operational action:** configure the GitHub secrets and validate the first tagged macOS release against Apple's service.
-2. **F236 — FCC "readily-accessible" caption display-settings rule effective 2026-08-17.** All covered displays (TVs, STBs, PCs, phones, tablets, MVPD apps) must expose user-overridable caption settings (font, size, colour). OpenCut's caption export must surface these as style tokens, not bake them into burn-ins. **Action:** add style-token export schema before Aug 17, 2026.
+2. **F236 — FCC "readily-accessible" caption display-settings rule effective 2026-08-17.** Repository-side token schema, preview route, and burn-in integration are now closed locally in Pass 17. Remaining product work is UI persistence/discoverability polish rather than the core token contract.
 
-Both deadlines fall before the next Wave (~v1.35) is expected to ship. F202's repository-side tooling is now in place; F236 still needs to ride along with the next dependency-bump release.
+Both deadlines fall before the next Wave (~v1.35) is expected to ship. F202's repository-side tooling is now in place; F236's core token contract is also in place, with live acceptance still dependent on downstream app/UI packaging choices.
 
 ---
 
@@ -242,7 +243,7 @@ Both deadlines fall before the next Wave (~v1.35) is expected to ship. F202's re
 
 These deserve explicit attention because they are not currently owned by any single document:
 
-1. **Chat-conductor agent (F143)** — Descript Underlord and FireRed-OpenStoryline have proven sidebar-chat + timeline-diff + post-turn self-review is the converging UX. OpenCut has every building block (1,359 routes, MCP sidecar, LLM abstraction) but no conductor. Highest-leverage gap.
+1. **Chat-conductor agent (F143)** — Descript Underlord and FireRed-OpenStoryline have proven sidebar-chat + timeline-diff + post-turn self-review is the converging UX. OpenCut has every building block (1,361 routes, MCP sidecar, LLM abstraction) but no conductor. Highest-leverage gap.
 2. **UXP MCP transport (F146)** — every competing PPro MCP server today is CEP-bound and will break Sept 2026. The first UXP-MCP wins post-EOL.
 3. **Real-time editor-loop preview (F158)** — StreamDiffusionV2 + Diffusion Templates (Apr 2026, MIT) unlock real-time on existing LTX-2.3 / Wan backends. CapCut / Runway / Captions charge for this.
 4. **Caption translation standalone (F139)** — every commercial editor ships it; OpenCut has full dubbing but no SRT-in-SRT-out path.
@@ -346,5 +347,6 @@ This file is the **canonical project context**. It is intentionally small. The s
 - Pass 14 closed F209 by fixing `opencut_chat_edit` to shipped `POST /chat` and adding a live Flask route-consistency test for all MCP default and special action routes; full release smoke PASS (`259 passed` in pytest-fast).
 - Pass 15 closed F218 by pinning the 99-blueprint core registration order plus `motion_design_api` alias ordering, and by adding `tests/test_route_collisions.py` to release smoke; full release smoke PASS (`266 passed` in pytest-fast).
 - Pass 16 closed F219 by extending `scripts/sbom.py` with 40 unique declared Python dependency components, 47 model-card components, and 88 CycloneDX dependency graph entries; full release smoke PASS (`269 passed` in pytest-fast).
+- Pass 17 closed F236 by adding FCC-style caption display setting tokens, schema/preview routes, and burn-in `display_settings` integration; full release smoke PASS (`273 passed` in pytest-fast).
 
 Future research runs should land under `.ai/research/<YYYY-MM-DD>/` and update this file's *§ 9 Shipping cadence* + *§ 9.5 regulatory deadlines* + *§ 10 The biggest non-obvious gaps*. The next planned run is documented in `.ai/research/2026-05-17/CONTINUE_FROM_HERE.md`.

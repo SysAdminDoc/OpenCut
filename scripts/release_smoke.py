@@ -304,6 +304,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_sbom_completeness.py",
     "tests/test_ffmpeg_installer_manifest.py",
     "tests/test_caption_qc.py",
+    "tests/test_caption_display_settings.py",
     "tests/test_local_auth.py",
     "tests/test_model_cards.py",
     "tests/test_roadmap_lint.py",
