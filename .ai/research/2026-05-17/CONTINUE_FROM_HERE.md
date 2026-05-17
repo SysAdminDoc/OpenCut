@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 8)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 9)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
 **Last update:** 2026-05-17 (during Pass 7; Passes 1-7 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, and Pass 7 closed F199. This file documents deferred research/product work for a future Pass 8+, not a broken or incomplete research run.
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, and Pass 8 closed F191/F197. This file documents deferred research/product work for a future Pass 9+, not a broken or incomplete research run.
 
 ---
 
@@ -11,7 +11,7 @@
 
 - **Repo branch:** `main`, 25 commits ahead of `origin/main` before the Pass-4 checkpoint commit. Push to `SysAdminDoc/OpenCut` still depends on local GitHub auth.
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
-- **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 131 test files / 47 model cards / 105 `check_X_available()` functions / 29 `FeatureRecord` entries / 27 MCP tools / 30 OpenAPI-typed endpoints.
+- **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 131 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 27 MCP tools / 30 OpenAPI-typed endpoints.
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
@@ -68,7 +68,7 @@ This section is preserved because Pass 3/4 used it as the checklist. See §7 and
 1. **Complete the F179 features.md reconciliation** — Pass 2 sample-walked 40 entries; ~370 remain. Estimated 1-2 days. Output: `features_status.md` companion with `[shipped]` / `[planned-F###]` / `[planned-W###]` / `[rejected]` / `[unclear]` markers per entry. Likely surfaces another 10-20 F-numbers.
 2. **Walk CLAUDE.md lines 500-1509** — Pass 1 sampled 1-300, Pass 2 sampled 300-500. Lines 500-1509 are mostly v1.18.0 and earlier change history. Lower-priority for forward planning but useful for confirming the SHIPPED status of older features.
 3. **Catalogue CEP-only routes** (F198 *Next* tier) — Pass 2 estimated ~30 routes are ExtendScript-bound. A precise list requires walking `extension/com.opencut.panel/host/index.jsx` + every route that calls into it. Per-route UXP-replacement plan.
-4. **Generate `opencut/_generated/api_aliases.json`** (F199 *Now* tier) — map `/api/*` aliases to canonical routes (233 pairs).
+4. **Generate `opencut/_generated/api_aliases.json`** (F199 *Now* tier) — **DONE in Pass 7**; live result is 15 true aliases + 218 canonical `/api` routes.
 5. **Live PyPI / npm install-matrix check** — `pip install -e ".[all]"` on Python 3.10 / 3.11 / 3.12 / 3.13; `npm ci` in `extension/com.opencut.panel`. Catch silent-dead packages (e.g. `realesrgan>=0.3,<1` may no longer install on Py3.13).
 
 ### 3.3 Larger investigations
@@ -151,7 +151,7 @@ Pass 3 closed several items from §3.1 and §3.4 above, and surfaced one real sh
 | §3.1.2 Run `python scripts/release_smoke.py --json` end-to-end | F098 runner not executed in Pass 3 (too long for the session window; would have run pip-audit + ruff + pytest + npm-audit serially). Run in Pass 4. |
 | §3.2.1 **Complete F179 features.md reconciliation** (370 remaining entries) | Largest single deferred item across all 3 passes. Still 1-2 days. Pass 4 should pick this up if no shipping-blocker arises. |
 | §3.2.2 Walk CLAUDE.md lines 500-1509 | Pass 3 read lines 300-500. Lines 500-1509 are mostly v1.18.0 and earlier change history; lower priority. |
-| §3.2.4 Generate `opencut/_generated/api_aliases.json` | F199 deliverable; needs a small Python script that walks the manifest. Easy Pass-4 quick win. |
+| §3.2.4 Generate `opencut/_generated/api_aliases.json` | DONE in Pass 7. |
 | §3.2.5 Live PyPI / npm install-matrix check | Needs Python 3.10/3.11/3.13 environments; only Python 3.12 available on this VM. Defer until a CI-runner can do the matrix. |
 | §3.3.3 Adobe Premiere 26.3+ beta release notes weekly diff | F251 — proposed as a CI step, not a one-shot research pass. Schedule the CI step rather than a Pass-4 research run. |
 | §3.4.1 F127 RFC — Python 3.10 floor + Transformers v5 cascade | Strategic decision waiting on maintainer input. Not a research task. |
@@ -181,7 +181,7 @@ If a Pass 4 opens:
    - **F270** — paste the proposed README lead from `MARKET_POSITIONING.md` §7 (5 minutes)
 3. If Pass 4 has time for research, the highest-value deferred items are:
    - **§3.2.1 F179 features.md reconciliation** (1-2 days, largest knowledge debt) — emits `features_status.md` companion
-   - **§3.2.4 F199 api_aliases.json** (30 minutes, small script)
+   - **§3.2.4 F199 api_aliases.json** (DONE in Pass 7)
    - **Walk CLAUDE.md lines 500-1509** (still unread; ~45 min) — extract any remaining patterns
 4. **Strategic decisions awaiting maintainer**: F127 (Py 3.10 floor), F161 (Hybrid Plugin), F200 (WPF vs Inno), F252 (UXP migration commit). All four have full RFC text in Pass-2 + Pass-3 artefacts; ready for maintainer review.
 
@@ -215,7 +215,7 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 | npm advisory state | **PASS** in release-smoke allow-list step; raw `npm audit --json` still shows the known moderate Vite `.map` advisory that F095 documents |
 | `npm view @adobe/premierepro version dist-tags --json` | Confirmed `latest=26.2.0`, `beta=26.3.0-beta.67` |
 
-### Pass 8 entry point
+### Pass 9 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
 2. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
@@ -225,7 +225,7 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 
 - No full cross-version Python install matrix.
 - No Premiere UDT runtime verification of the 14 low-risk JSX to UXP ports.
-- No push attempted; local auth still needs to be fixed outside the repo.
+- Push was attempted and failed with `remote: Permission to SysAdminDoc/OpenCut.git denied to MavenImaging.` Local auth still needs to be fixed outside the repo.
 - The raw `npm audit --json` output still reports the moderate Vite advisory because the repo intentionally allows it below the release-smoke threshold; keep F095/`docs/NODE_ADVISORIES.md` as the disposition.
 
 ---
@@ -313,6 +313,40 @@ The app has 233 `/api/*` routes. Only 15 are true aliases with equivalent bare r
 
 ### Remaining immediate work
 
+- F179 full `features.md` reconciliation remains the largest knowledge debt.
+- Python 3.10/3.11/3.13 `[all]` install matrix remains unproven on this VM.
+- Push remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
+
+---
+
+## 14. Pass 8 update (same day, F191/F197 feature readiness)
+
+Pass 8 closed the route/check readiness generation item and the registry-owned allowlist item.
+
+### What Pass 8 closed
+
+| Item | Status |
+|---|---|
+| F191 | **DONE** — added `opencut/tools/dump_feature_readiness.py`, generated `opencut/_generated/feature_readiness.json`, loaded/merged generated records in `opencut/registry.py`, wired `feature-readiness` into release smoke, and added generator/registry tests. |
+| F197 | **DONE** — moved `NON_AI_CHECKS` into `opencut/registry.py`; `opencut/model_cards.py` now imports the registry-owned tuple so model-card validation and readiness derivation share one allowlist. |
+
+### Validation after Pass 8
+
+| Command | Result |
+|---|---|
+| `python -m opencut.tools.dump_feature_readiness` | PASS — generated 58 records / 67 route bindings |
+| `python -m py_compile opencut/registry.py opencut/model_cards.py opencut/tools/dump_feature_readiness.py scripts/release_smoke.py` | PASS |
+| `python -m pytest tests/test_feature_registry.py tests/test_feature_readiness_generator.py tests/test_model_cards.py tests/test_release_smoke.py -q` | PASS — `35 passed` |
+| `python scripts/release_smoke.py --only feature-readiness --json` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `241 passed` |
+
+### Live correction
+
+`/system/feature-state` now exposes 84 feature records. The generated F191 manifest covers direct route functions that visibly call public `checks.py` probes. It is not a full per-route readiness matrix for all 1,359 routes; deeper core-only gates still belong to F196/F209.
+
+### Remaining immediate work
+
+- F195 (12 missing MCP tools) is the next active Now-tier route/tooling item.
 - F179 full `features.md` reconciliation remains the largest knowledge debt.
 - Python 3.10/3.11/3.13 `[all]` install matrix remains unproven on this VM.
 - Push remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.

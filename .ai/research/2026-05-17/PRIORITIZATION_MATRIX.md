@@ -156,14 +156,14 @@ These are not OpenCut work but should be tracked in the same ledger.
 
 The second autonomous research pass on 2026-05-17 added 70 more F-numbers across four sources: route audit, installer audit, test coverage, features.md reconciliation, plus three subagents (Frame.io review, niche AI / accessibility / standards, UXP migration deep-dive). Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](FEATURE_BACKLOG_ADDENDUM.md). Tier deltas:
 
-**Now (priority bumps + new): 20 items**
+**Now (priority bumps + new): 17 open items; F191/F197/F199 closed locally after Pass 8**
 
 | F# | Title | Why priority |
 |---|---|---|
-| F191 | Auto-derive `FeatureRecord` from check functions | 1,300+ routes lack readiness state today |
+| [x] F191 | Auto-derive `FeatureRecord` from check functions | Closed in Pass 8 with 58 generated records / 67 route bindings |
 | F195 | Add 12 missing MCP tools for post-Wave-M shipped routes | 27→39 tool coverage |
-| F197 | `NON_AI_CHECKS` allowlist in `registry.py` | Quick hygiene |
-| F199 | Document `/api/*` alias policy | 233 dup routes need policy |
+| [x] F197 | `NON_AI_CHECKS` allowlist in `registry.py` | Closed in Pass 8; registry now owns allowlist |
+| [x] F199 | Document `/api/*` alias policy | Closed in Pass 7; 15 aliases + 218 canonical `/api` routes |
 | **F202** | **Apple notarisation for macOS PyInstaller bundle** | **Mandatory for Homebrew Cask Sept 1 2026 (regulatory deadline)** |
 | F204 | Auto-attach SBOM to GitHub release | One-line CI step |
 | F205 | Raise CI coverage floor from 50% to actual | Measure-first |

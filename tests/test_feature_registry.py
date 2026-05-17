@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from opencut import registry
+from opencut import model_cards, registry
 
 
 def test_states_constant_covers_every_state_used():
@@ -63,12 +63,30 @@ def test_manifest_counts_match_features():
         assert state in registry.STATES
 
 
+def test_non_ai_allowlist_is_shared_with_model_cards():
+    assert registry.NON_AI_CHECKS == model_cards.NON_AI_CHECKS
+
+
 def test_manifest_includes_required_fields():
     manifest = registry.feature_manifest()
     sample = manifest["features"][0]
 
-    for field in ("feature_id", "label", "category", "state", "routes"):
+    for field in ("feature_id", "label", "category", "state", "routes", "source"):
         assert field in sample, f"manifest entry missing field {field!r}"
+
+
+def test_generated_readiness_records_are_merged_into_manifest():
+    manifest = registry.feature_manifest()
+
+    assert manifest["generated"]["record_count"] >= 50
+    assert manifest["generated"]["route_count"] >= 60
+    assert registry.get_feature("auto.gptsovits") is not None
+    assert "/tts/gptsovits" in registry.get_feature("auto.gptsovits").routes
+    # Existing curated records keep their stable feature_id while gaining routes
+    # discovered from the route/check scan.
+    otio = registry.get_feature("export.otio")
+    assert otio is not None
+    assert "/timeline/export-otio" in otio.routes
 
 
 def test_assert_states_valid_rejects_unknown():
