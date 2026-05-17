@@ -269,6 +269,31 @@ def get_caption_styles():
         return safe_error(e, "caption styles")
 
 
+@captions_bp.route("/captions/display-settings/tokens", methods=["GET"])
+def caption_display_setting_tokens():
+    """Return user-overridable closed-caption display setting tokens."""
+    try:
+        from opencut.core.caption_display_settings import token_schema
+        return jsonify(token_schema())
+    except Exception as e:
+        return safe_error(e, "caption_display_setting_tokens")
+
+
+@captions_bp.route("/captions/display-settings/preview", methods=["POST"])
+@require_csrf
+def caption_display_setting_preview():
+    """Return normalized display settings and preview styles for a sample caption."""
+    try:
+        from opencut.core.caption_display_settings import build_preview_payload
+
+        data = request.get_json(force=True) or {}
+        settings = data.get("settings") or {}
+        sample_text = str(data.get("sample_text") or "Caption preview")
+        return jsonify(build_preview_payload(settings=settings, sample_text=sample_text))
+    except Exception as e:
+        return safe_error(e, "caption_display_setting_preview")
+
+
 @captions_bp.route("/styled-captions", methods=["POST"])
 @require_csrf
 @async_job("styled-captions")
@@ -1355,17 +1380,24 @@ def burnin_from_file(job_id, filepath, data):
     subtitle_path = validate_filepath(subtitle_path)
 
     from opencut.core.caption_burnin import burnin_subtitles
+    from opencut.core.caption_display_settings import settings_to_ass_force_style
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
 
     effective_dir = _resolve_output_dir(video_path, output_dir)
+    display_settings = data.get("display_settings")
+    force_style = (
+        settings_to_ass_force_style(display_settings)
+        if isinstance(display_settings, dict)
+        else _sanitize_force_style(data.get("force_style", ""))
+    )
     out = burnin_subtitles(
         video_path, subtitle_path,
         output_dir=effective_dir,
         font_size=safe_int(data.get("font_size", 0)),
         margin_bottom=safe_int(data.get("margin_bottom", 0)),
-        force_style=_sanitize_force_style(data.get("force_style", "")),
+        force_style=force_style,
         on_progress=_on_progress,
     )
     return {"output_path": out}
