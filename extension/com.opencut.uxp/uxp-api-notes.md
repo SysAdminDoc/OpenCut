@@ -71,5 +71,5 @@ access:
 ## References
 
 - Adobe UXP Developer Docs: https://developer.adobe.com/premiere-pro/uxp/
-- UXP Plugin Samples: https://github.com/adobe/premiere-pro-uxp-samples
+- UXP Plugin Samples: https://github.com/AdobeDocs/uxp-premiere-pro-samples
 - UXP Community Forum: https://community.adobe.com/t5/premiere-pro/ct-p/ct-premiere-pro
