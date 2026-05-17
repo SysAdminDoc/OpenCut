@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 6)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 7)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (during Pass 5; Passes 1-5 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, and Pass 5 closed the F261/F262/F270 quick-win batch. This file documents deferred research/product work for a future Pass 6+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (during Pass 6; Passes 1-6 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, and Pass 6 closed F264/F266. This file documents deferred research/product work for a future Pass 7+, not a broken or incomplete research run.
 
 ---
 
@@ -42,7 +42,7 @@
 | **`MARKET_POSITIONING.md`** | **Pass 3** | 200 |
 | **`CONTINUE_FROM_HERE.md`** | **this file** | ~350 |
 
-**At repo root:** `PROJECT_CONTEXT.md` (canonical context, Pass 1-5 updates), `ROADMAP.md` (v4.3-v4.8 sections), `AGENTS.md` (pointer added), `CLAUDE.md` (pointer added, gitignored).
+**At repo root:** `PROJECT_CONTEXT.md` (canonical context, Pass 1-6 updates), `ROADMAP.md` (v4.3-v4.9 sections), `AGENTS.md` (pointer added), `CLAUDE.md` (pointer added, gitignored).
 
 ---
 
@@ -215,13 +215,12 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 | npm advisory state | **PASS** in release-smoke allow-list step; raw `npm audit --json` still shows the known moderate Vite `.map` advisory that F095 documents |
 | `npm view @adobe/premierepro version dist-tags --json` | Confirmed `latest=26.2.0`, `beta=26.3.0-beta.67` |
 
-### Pass 6 entry point
+### Pass 7 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Implement F264** — add a machine-parseable `npm audit --json` assertion to release smoke so the known Vite advisory stays explicitly allow-listed below the high-severity gate.
-3. **Implement F266** — document the two-function CEP residual (`ocAddNativeCaptionTrack`, `ocQeReflect`) and the drop-QE plan.
-4. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
-5. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+2. **Implement F199** — generate `opencut/_generated/api_aliases.json` mapping `/api/*` aliases to canonical routes, plus a consistency test.
+3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
+4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
 ### Current limitations
 
@@ -253,7 +252,36 @@ Pass 5 closed the three smallest Pass-3 Now items and left the larger research/d
 
 ### Remaining immediate work
 
-- F264 and F266 are the remaining open Pass-3 Now items.
+- Pass-3 Now items F261, F262, F264, F266, and F270 are closed locally.
 - F179 remains the largest knowledge debt.
 - Cross-platform launcher runtime verification still needs macOS/Linux CI or local runtime coverage (related to F211).
 - Push is blocked by GitHub auth: `git push origin main` failed with `remote: Permission to SysAdminDoc/OpenCut.git denied to MavenImaging.` / HTTP 403. The local commits are valid; pushing needs credentials with write access to `SysAdminDoc/OpenCut`.
+
+---
+
+## 12. Pass 6 update (same day, F264/F266 implementation)
+
+Pass 6 closed the remaining Pass-3 Now items.
+
+### What Pass 6 closed
+
+| Item | Status |
+|---|---|
+| F264 | **DONE** — `check-advisories.mjs --json` emits a stable machine-readable report; `scripts/release_smoke.py` parses it and fails closed on malformed JSON, non-`ok` status, or unwaived advisories. |
+| F266 | **DONE** — `docs/UXP_MIGRATION.md` now documents `ocAddNativeCaptionTrack` and `ocQeReflect` as the two CEP residuals, keeps native caption track creation as the Hybrid Plugin target, and marks QE reflection as retire/replace-by-use-case. |
+
+### Validation after Pass 6
+
+| Command | Result |
+|---|---|
+| `node scripts/check-advisories.mjs --json` | PASS — one Vite advisory allowed, zero unwaived |
+| `python scripts/release_smoke.py --only npm-advisory --json` | PASS — machine-readable advisory path reports `1 allowed` |
+| `python -m pytest tests/test_release_smoke.py tests/test_node_advisories.py tests/test_uxp_migration_docs.py -q` | PASS — `20 passed` |
+| `node --check extension/com.opencut.panel/scripts/check-advisories.mjs` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 11 steps green; pytest-fast `232 passed` |
+
+### Remaining immediate work
+
+- F199 is the smallest remaining Now-tier implementation candidate from the Pass-2 deferred list.
+- F179 remains the largest knowledge debt.
+- Push remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.

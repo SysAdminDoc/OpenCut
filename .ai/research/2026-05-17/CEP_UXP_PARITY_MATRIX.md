@@ -145,7 +145,7 @@ Given the Pass 3 risk reclassification:
 | (existing) F198 | CEP-only route catalogue | — | — | **This file is the deliverable.** |
 | (existing) F252 | Bolt UXP + WebView UI migration | Next | revised L | Subdivided into F252.1-F252.5 |
 | (existing) F253 | UXP Hybrid Plugin sidecar | Next/Later | revised L | Subdivided into F253.1-F253.4 |
-| F266 | Document the 2-function CEP residual + drop-QE-features plan | Now | S | Honest about scope cut |
+| F266 | Document the 2-function CEP residual + drop-QE-features plan | Done in Pass 6 | S | Documented in `docs/UXP_MIGRATION.md` |
 | F267 | UDT test harness for the 14 low-risk JSX→UXP ports | Next | M | Validate F252.2 before users see it |
 
 ---

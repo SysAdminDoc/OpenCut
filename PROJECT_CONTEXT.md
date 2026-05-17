@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-05-17 (five autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh.
+**Last consolidated:** 2026-05-17 (six autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh. Pass 6 closed F264/F266 with machine-readable npm-advisory release-smoke output and the CEP-residual/drop-QE migration note.
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -169,8 +169,8 @@ Highlights only. Full ledger in `ROADMAP.md` + `.ai/research/2026-05-17/PRIORITI
 - [x] F261 cross-platform source launchers (`OpenCut-Server.command` + `OpenCut-Server.sh`)
 - [x] F262 UXP sample-repo URL fix
 - [x] F270 README "$1,400/year" positioning lead
-- F264 CI npm-audit machine-parseable assertion
-- F266 two-function CEP residual + drop-QE documentation
+- [x] F264 CI npm-audit machine-parseable assertion
+- [x] F266 two-function CEP residual + drop-QE documentation
 
 **Next (v1.35 — v1.42, ~6 months):**
 - **F143–F145** `/agent/chat` conductor + post-turn self-review + Skills SDK + MCP packaging (flagship)
@@ -301,5 +301,13 @@ This file is the **canonical project context**. It is intentionally small. The s
 - `extension/com.opencut.uxp/uxp-api-notes.md` — F262 sample URL fix
 - `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGESET_SUMMARY.md`, `CONTINUE_FROM_HERE.md`, `LIVE_VERIFICATION.md`, `INSTALLER_AUDIT.md` — status updates marking the batch closed
 - Validation: `git diff --check` PASS; `python scripts/release_smoke.py --json` PASS (`232 passed` in pytest-fast)
+
+**Pass 6 updates (no new standalone file):**
+- `extension/com.opencut.panel/scripts/check-advisories.mjs` — `--json` output for machine-readable advisory status
+- `scripts/release_smoke.py` — `npm-advisory` step parses advisory JSON and fails closed if it is missing, malformed, non-`ok`, or has unwaived findings
+- `docs/NODE_ADVISORIES.md` — documents the `--json` release-smoke contract
+- `docs/UXP_MIGRATION.md` — F266 CEP-residual table and drop-QE rules
+- `tests/test_release_smoke.py`, `tests/test_node_advisories.py`, `tests/test_uxp_migration_docs.py` — regression coverage for F264/F266
+- Validation: targeted F264/F266 tests PASS (`20 passed`); full `python scripts/release_smoke.py --json` PASS (`232 passed` in pytest-fast)
 
 Future research runs should land under `.ai/research/<YYYY-MM-DD>/` and update this file's *§ 9 Shipping cadence* + *§ 9.5 regulatory deadlines* + *§ 10 The biggest non-obvious gaps*. The next planned run is documented in `.ai/research/2026-05-17/CONTINUE_FROM_HERE.md`.

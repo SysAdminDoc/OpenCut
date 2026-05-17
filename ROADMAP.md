@@ -24,6 +24,23 @@
 > **v4.7 status (2026-05-17, fourth pass)**: the previously deferred full `python scripts/release_smoke.py --json` gate was run to completion after safe Ruff cleanup. Result: **PASS**. Bootstrap, version sync, route manifest, model cards, license gate, roadmap lint, Ruff (`E,F,I`), pytest-fast (`232 passed`), pip-audit, npm advisory allow-list, and panel-source verification all passed. The F138 hardening batch is validated and ready in the local checkpoint commit.
 >
 > **v4.8 status (2026-05-17, fifth pass)**: the first implementation batch after the research checkpoint closed three Pass-3 Now items: **F261** (`OpenCut-Server.command` + `OpenCut-Server.sh`), **F262** (UXP sample-repo URL typo), and **F270** (README "$1,400/year" positioning lead + macOS/Linux launcher instructions). F264 and F266 remain the open items from the Pass-3 Now list.
+>
+> **v4.9 status (2026-05-17, sixth pass)**: closed the remaining Pass-3 Now items: **F264** (`npm-advisory` release-smoke now consumes machine-parseable JSON from `check-advisories.mjs --json`) and **F266** (`docs/UXP_MIGRATION.md` now documents the two CEP-only residuals and the drop-QE plan). The Pass-3 Now list is now fully closed locally.
+
+---
+
+## 2026-05-17 v4.9 Advisory and CEP-Residual Closure
+
+This pass closed the remaining Pass-3 Now items:
+
+| Item | Status | Evidence |
+|---|---|---|
+| F264 — machine-parseable npm advisory assertion | **DONE** | `extension/com.opencut.panel/scripts/check-advisories.mjs --json` emits stable JSON; `scripts/release_smoke.py` parses it and fails on unparseable output, non-`ok` status, or any unwaived advisory. |
+| F266 — two-function CEP residual + drop-QE plan | **DONE** | `docs/UXP_MIGRATION.md` names `ocAddNativeCaptionTrack` and `ocQeReflect`, keeps native captions as the Hybrid Plugin target, and marks QE reflection as retire/replace-by-use-case. |
+
+Validation after the batch: targeted F264/F266 tests passed (`20 passed`) and full `python scripts/release_smoke.py --json` exited `0` (`232 passed` in pytest-fast).
+
+Pass-3 Now items after v4.9: F261, F262, F264, F266, and F270 are all closed locally. The next small implementation candidate is F199 (`opencut/_generated/api_aliases.json`) unless the run pivots to the larger F179 `features.md` reconciliation.
 
 ---
 
@@ -39,7 +56,7 @@ This pass converted the smallest Pass-3 research findings into shipped repositor
 
 Validation after the batch: `git diff --check` passed and `python scripts/release_smoke.py --json` exited `0` (pytest-fast: `232 passed`).
 
-Open Pass-3 Now items after this batch: F264 (machine-parseable CI npm-audit assertion) and F266 (document the two-function CEP residual + drop-QE plan).
+Pass 6 later closed the remaining Pass-3 Now items: F264 and F266.
 
 ---
 
@@ -140,7 +157,7 @@ Pass-3 NLE-pricing subagent built the dollar comparison the README has been miss
 
 Full ledger in the three Pass-3 artefacts. Tier summary:
 
-**Now (2 open, 3 closed in v4.8):** [x] F261 (ship missing macOS `.command` + Linux `.sh` launchers — closes Wave I I1.4 ledger discrepancy), [x] F262 (fix uxp-api-notes URL typo), [ ] F264 (CI npm-audit machine-parseable assertion), [ ] F266 (document 2-function CEP residual + drop-QE plan), [x] F270 (README "$1,400/yr" marketing copy refresh).
+**Now (5 closed locally by v4.9):** [x] F261 (ship missing macOS `.command` + Linux `.sh` launchers — closes Wave I I1.4 ledger discrepancy), [x] F262 (fix uxp-api-notes URL typo), [x] F264 (CI npm-audit machine-parseable assertion), [x] F266 (document 2-function CEP residual + drop-QE plan), [x] F270 (README "$1,400/yr" marketing copy refresh).
 
 **Next (5 items):** F263 (pip-audit full `[all]` extras), F267 (UDT test harness for 14 low-risk JSX→UXP ports), F268 (Adobe Exchange storefront listing), F271 (per-feature VRAM requirement UI), F272 (wedding-specific Skill).
 

@@ -241,4 +241,4 @@ Pass 5 closed the quick implementation findings from this verification pass:
 
 Validation after Pass 5: `git diff --check` passed and `python scripts/release_smoke.py --json` exited `0` with all 11 release-smoke steps green (`pytest-fast`: `232 passed`).
 
-F264 remains open from this file's Pass-3 Now tier; F266 remains open in the broader ROADMAP.md Pass-3 Now list.
+Pass 6 update: F264 is closed. `check-advisories.mjs --json` now emits a stable machine-readable report and `scripts/release_smoke.py` parses it in the `npm-advisory` step. F266 is also closed in `docs/UXP_MIGRATION.md`, which now names `ocAddNativeCaptionTrack` and `ocQeReflect` as the two CEP residuals and documents the drop-QE plan.

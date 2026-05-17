@@ -39,10 +39,14 @@ this table in the same commit.
 # From extension/com.opencut.panel
 npm install                  # respects overrides; no high/critical advisories
 npm run audit:check          # parses `npm audit --json`, asserts allow-list
+node scripts/check-advisories.mjs --json  # machine-readable release-smoke output
 npm run lint                 # eslint over client/main.js
 npm run build:verify         # smoke-check source tree + optional dist output
 npm run build                # full Vite production build (CI; Linux preferred)
 ```
+
+`scripts/release_smoke.py` uses the `--json` form and fails if the checker
+does not emit parseable JSON with `status: "ok"` and zero unwaived advisories.
 
 ## Upgrade plan when Vite 6+ becomes safe to adopt here
 

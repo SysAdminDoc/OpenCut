@@ -1,8 +1,8 @@
 # OpenCut — CEP to UXP Migration Plan
 
 > **Deadline:** CEP support removed from Premiere Pro ~September 2026
-> **Current state:** Dual CEP + UXP panels, UXP has ~98% feature parity (March 2026)
-> **Last updated:** 2026-03-26
+> **Current state:** Dual CEP + UXP panels. Pass-3 audit found 16/18 JSX host functions have a UXP path; 2 remain CEP-only.
+> **Last updated:** 2026-05-17
 
 ## Migration Strategy
 
@@ -36,7 +36,27 @@ Map each ExtendScript function in `host/index.jsx` to its UXP equivalent.
 | `ocGetSequenceInfo()` | `Sequence.getSettings()` | Implemented in PProBridge |
 | `ocBatchRenameProjectItems()` | Item rename API | Low priority (CEP ExtendScript works) |
 | `ocCreateSmartBins()` | Bin creation API | Low priority (CEP ExtendScript works) |
+| `ocAddNativeCaptionTrack()` | No UXP write API yet | CEP-only until Adobe ships `createCaptionTrack()` or F253 Hybrid Plugin adds it |
+| `ocQeReflect()` | No supported UXP API | Retire after CEP EOL; replace individual QE use cases with documented UXP APIs |
 | `startOpenCutBackend()` | UXP `shell.openExternal()` | N/A (backend started externally in UXP) |
+
+## F266 — CEP Residual and Drop-QE Plan
+
+The 2026-05-17 parity audit walked all 18 `ocXxx` functions in
+`extension/com.opencut.panel/host/index.jsx` against the `@adobe/premierepro`
+26.3 beta typings and `extension/com.opencut.uxp/main.js`.
+
+| Function | Current role | Post-CEP plan |
+|---|---|---|
+| `ocAddNativeCaptionTrack(srtJSON)` | Creates a native Premiere caption track from SRT-style segments. | Keep CEP fallback while CEP exists. Long-term target is F253 Hybrid Plugin `createCaptionTrack(sequence, srtBytes)` or an Adobe UXP `createCaptionTrack()` API. Until then, UXP keeps SRT validation, project import, manual timeline placement, and burn-in captions as the fallback paths. |
+| `ocQeReflect()` | Diagnostic probe for undocumented QE DOM methods, cached for `/system/qe-reflect`. | Do not port wholesale. Treat QE reflection as a research aid and retire it after CEP EOL. Replace real user workflows one by one with documented UXP APIs: `SequenceEditor.createRemoveItemsAction(ripple=true)` for most ripple-delete cases, `VideoFilterFactory` / `AudioFilterFactory` for effect creation, and explicit adjacent-clip recompute for advanced trim cases. |
+
+Rules for new migration work:
+
+1. No new user-facing feature should depend on QE reflection.
+2. Hybrid Plugin scope should prioritize native caption-track creation before any QE-like wrapper.
+3. A QE replacement only gets built if UDT testing proves a shipped workflow still lacks a documented UXP route.
+4. The UXP panel should phrase unsupported native-caption and QE paths as capability limitations, not generic "UXP failed" errors.
 
 ### Phase 3: TypeScript + Framework Migration (Weeks 6-8)
 1. Convert vanilla JS to TypeScript (prevents null-reference bugs)
@@ -88,8 +108,9 @@ UXP Architecture (target):
 - [x] `PProBridge` wraps UXP Premiere API (project items, markers, sequence info, cuts, selected clips, import)
 - [x] `getSelectedClips()` — selection via `Sequence.getSelection()`
 - [x] `importFiles()` — import via `Project.importFiles()` with optional bin
-- [ ] Remaining: `ocBatchRenameProjectItems()`, `ocCreateSmartBins()` (low priority, UI-only convenience)
-- [ ] Full timeline write-back without ExtendScript (blocked on UXP API maturity)
+- [ ] Remaining UXP ports: `ocBatchRenameProjectItems()`, `ocCreateSmartBins()` (low priority, UI-only convenience)
+- [ ] Residual CEP-only paths: native caption-track creation and QE reflection (documented in F266 above)
+- [ ] Full timeline write-back without ExtendScript for advanced trim edge cases (blocked on UXP API maturity)
 
 ### Key Files
 - `extension/com.opencut.uxp/csinterface-shim.js` — CSInterface→postMessage bridge for WebView

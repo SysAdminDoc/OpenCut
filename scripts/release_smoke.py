@@ -12,7 +12,7 @@ Steps (in order):
 3. ``ruff`` — lint the python package
 4. ``pytest-fast`` — focused test ids covering release gates
 5. ``pip-audit`` — Python dependency advisories (skipped if not installed)
-6. ``npm-advisory`` — CEP panel allow-list check
+6. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
 7. ``panel-source`` — CEP panel source tree smoke
 
 Each step records ``status`` (``ok|fail|skipped``), an exit code, a duration
@@ -358,23 +358,68 @@ def _node_command(*node_args: str, cwd: Path) -> StepResult:
 
 
 def step_npm_advisory(_args: argparse.Namespace) -> StepResult:
-    if not (PANEL_DIR / "scripts" / "check-advisories.mjs").exists():
+    start = time.time()
+    script = PANEL_DIR / "scripts" / "check-advisories.mjs"
+    if not script.exists():
         return StepResult(
             "npm-advisory",
             "skipped",
             skipped_reason="check-advisories.mjs missing",
+            duration_ms=int((time.time() - start) * 1000),
         )
     if not (PANEL_DIR / "node_modules").exists():
         return StepResult(
             "npm-advisory",
             "skipped",
             skipped_reason="node_modules absent; run `npm ci` first",
+            duration_ms=int((time.time() - start) * 1000),
         )
-    res = _node_command("scripts/check-advisories.mjs", cwd=PANEL_DIR)
-    res.name = "npm-advisory"
-    if res.status == "ok":
-        res.message = "advisories on allow-list"
-    return res
+    node_bin = next((shutil.which(name) for name in ("node", "node.exe") if shutil.which(name)), None)
+    if not node_bin:
+        return StepResult(
+            "npm-advisory",
+            "skipped",
+            skipped_reason="node not on PATH",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+
+    result = _run([node_bin, "scripts/check-advisories.mjs", "--json"], cwd=PANEL_DIR)
+    duration = int((time.time() - start) * 1000)
+
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError as exc:
+        return StepResult(
+            "npm-advisory",
+            "fail",
+            exit_code=result.returncode,
+            duration_ms=duration,
+            message=f"advisory checker did not emit parseable JSON: {exc}",
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
+
+    summary = payload.get("summary", {})
+    allowed = int(summary.get("allowed") or 0)
+    unwaived = int(summary.get("unwaived") or 0)
+    status = payload.get("status")
+    ok = result.returncode == 0 and status == "ok" and unwaived == 0
+    message = (
+        f"advisories on allow-list ({allowed} allowed)"
+        if ok and allowed
+        else "no advisories reported by npm audit"
+        if ok
+        else f"unwaived advisories detected ({unwaived})"
+    )
+    return StepResult(
+        "npm-advisory",
+        "ok" if ok else "fail",
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=message,
+        stdout_tail=_tail(json.dumps(payload, indent=2)),
+        stderr_tail=_tail(result.stderr),
+    )
 
 
 def step_panel_source(_args: argparse.Namespace) -> StepResult:
