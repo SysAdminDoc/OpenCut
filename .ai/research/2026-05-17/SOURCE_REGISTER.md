@@ -498,3 +498,22 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P13-L08 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `258 passed` |
 
 **Source coverage assessment (Pass 13):** Pass 13 claims in `ROADMAP.md` v4.16, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P13-L01 through R-P13-L08. No new external source was used.
+
+---
+
+## Pass 14 — F209 MCP route consistency gate (2026-05-17 fourteenth pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P14-L01 | `opencut/mcp_server.py` — `_TOOL_ROUTES` corrected so `opencut_chat_edit` points to shipped `POST /chat` |
+| R-P14-L02 | `tests/test_mcp_server.py` — added live Flask route consistency test for all MCP default routes and special action routes |
+| R-P14-L03 | `opencut/routes/system.py` — shipped `POST /chat` route for the chat editing assistant |
+| R-P14-L04 | `python -m pytest tests/test_mcp_server.py tests/test_release_smoke.py -q` — PASS, `18 passed` |
+| R-P14-L05 | `ruff check opencut/mcp_server.py tests/test_mcp_server.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P14-L06 | `python -m py_compile opencut/mcp_server.py tests/test_mcp_server.py` — PASS |
+| R-P14-L07 | live route-table probe — PASS, `39` MCP tools / `39` route mappings / `0` missing backend routes |
+| R-P14-L08 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `259 passed` |
+
+**Source coverage assessment (Pass 14):** Pass 14 claims in `ROADMAP.md` v4.17, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P14-L01 through R-P14-L08. No new external source was used.
