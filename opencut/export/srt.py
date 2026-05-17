@@ -1,12 +1,17 @@
-"""
-SRT and VTT subtitle export.
+"""SRT and VTT subtitle export.
 
-Generates standard subtitle files from transcription results.
+Generates standard subtitle files from transcription results. SRT output is
+UTF-8 without a BOM by default; pass ``legacy_windows_bom=True`` only for
+legacy Windows players that require a UTF-8 signature.
 """
 
-from typing import List
+from typing import List, Optional
 
 from ..core.captions import CaptionSegment, TranscriptionResult
+
+UTF8_NO_BOM = "utf-8"
+UTF8_WITH_BOM = "utf-8-sig"
+UTF8_BOM = b"\xef\xbb\xbf"
 
 
 def export_srt(
@@ -14,6 +19,9 @@ def export_srt(
     output_path: str,
     max_line_length: int = 42,
     max_lines: int = 2,
+    *,
+    legacy_windows_bom: bool = False,
+    encoding: Optional[str] = None,
 ) -> str:
     """
     Export transcription as SRT (SubRip) subtitle file.
@@ -23,6 +31,9 @@ def export_srt(
         output_path: Output file path.
         max_line_length: Maximum characters per line.
         max_lines: Maximum lines per subtitle entry.
+        legacy_windows_bom: If True, write UTF-8 with BOM for old Windows players.
+        encoding: Optional explicit text encoding. Defaults to UTF-8 without BOM
+            unless legacy_windows_bom is true.
 
     Returns:
         Path to the generated SRT file.
@@ -40,8 +51,7 @@ def export_srt(
         lines.append(text)
         lines.append("")  # Blank line separator
 
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write("\n".join(lines))
+    write_srt_text(output_path, "\n".join(lines), legacy_windows_bom=legacy_windows_bom, encoding=encoding)
 
     return output_path
 
@@ -128,6 +138,38 @@ def export_json(
         json.dump(data, f, indent=2, ensure_ascii=False)
 
     return output_path
+
+
+def srt_text_encoding(*, legacy_windows_bom: bool = False, encoding: Optional[str] = None) -> str:
+    """Resolve the SRT writer encoding for default/legacy output."""
+    if encoding:
+        normalised = encoding.strip().lower().replace("_", "-")
+        if normalised in {UTF8_NO_BOM, "utf8"}:
+            return UTF8_NO_BOM
+        if normalised in {UTF8_WITH_BOM, "utf8-sig", "utf-8-bom"}:
+            return UTF8_WITH_BOM
+        raise ValueError("SRT export supports only utf-8 or utf-8-sig encodings")
+    return UTF8_WITH_BOM if legacy_windows_bom else UTF8_NO_BOM
+
+
+def write_srt_text(
+    output_path: str,
+    text: str,
+    *,
+    legacy_windows_bom: bool = False,
+    encoding: Optional[str] = None,
+) -> str:
+    """Write SRT text with the repository's BOM policy."""
+    resolved = srt_text_encoding(legacy_windows_bom=legacy_windows_bom, encoding=encoding)
+    with open(output_path, "w", encoding=resolved, newline="\n") as f:
+        f.write(text)
+    return output_path
+
+
+def has_utf8_bom(path: str) -> bool:
+    """Return True when a file starts with a UTF-8 BOM."""
+    with open(path, "rb") as f:
+        return f.read(3) == UTF8_BOM
 
 
 def export_ass(
