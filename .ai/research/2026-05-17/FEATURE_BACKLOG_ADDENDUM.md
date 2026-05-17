@@ -57,7 +57,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F215 | Extend fuzz harness with 8 targets | validate_path, OTIO parse, FCP XML, marker import, C2PA sidecar, plugin manifest, webhook sig, safe_pip_install | TEST_COVERAGE §3.8 | M | Next |
 | F216 | Concurrent job-cancellation race test | Exercises the dirty-tree helpers.py finally-block fix | TEST_COVERAGE §3.9 | M | Next |
 | F217 | UXP backend-client contract test | Pin BackendClient HTTP shape | TEST_COVERAGE §3.10 | S | Next |
-| F218 | Import-order stability test for blueprint registration | Catch silent breakage on hot-reload | TEST_COVERAGE §3.11 | S | Now |
+| F218 | Import-order stability test for blueprint registration | DONE in Pass 15 — pins the 99-blueprint core order and final `motion_design_api` alias registration in release smoke | TEST_COVERAGE §3.11 | S | Done |
 | F219 | SBOM completeness test | Ensure CycloneDX matches declared deps + 47 model cards | TEST_COVERAGE §3.12 | S | Now |
 
 ## D. features.md UNCLEAR → F-number graduations
@@ -127,8 +127,8 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | Tier | Pass-2 F-numbers added | Total (cumulative) |
 |---|---|---|
-| **Now** | F205, F218, F219, F236, F237, F240, F241, F243, F244, F251, F259 | 11 |
-| **Done locally after Pass 14** | F191, F195, F197, F199, F202, F204, F207, F208, F209 | 9 |
+| **Now** | F205, F219, F236, F237, F240, F241, F243, F244, F251, F259 | 10 |
+| **Done locally after Pass 15** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218 | 10 |
 | **Next** | F192, F194, F198, F200, F201, F203, F211, F213, F214, F215, F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
