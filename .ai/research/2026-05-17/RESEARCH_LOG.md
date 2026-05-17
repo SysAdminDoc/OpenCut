@@ -464,3 +464,44 @@ Pass 16 was a local implementation and verification pass. No new external resear
 ### Pass 16 saturation note
 
 F219 is complete for in-repo SBOM completeness against declared Python dependencies and OpenCut model cards. It does not claim installed transitive dependency capture; `scripts/sbom.py` remains a declaration-level SBOM generator, while installed-environment SBOMs should still use tools such as `cyclonedx-py` or `syft`.
+
+---
+
+## Pass 17 (2026-05-17 — F236 FCC caption display-settings tokens)
+
+Pass 17 combined targeted external regulatory verification with local implementation. The regulatory source was refreshed because F236 depends on a current legal compliance date and rule text.
+
+### Pass 17 external searches
+
+| Query / source | Result |
+|---|---|
+| `FCC caption display settings readily accessible August 17 2026 rule closed captioning user settings font size color opacity edge background 2026` | Found the codified 47 CFR § 79.103(e) text, FCC 24-79 Report and Order, and Federal Register compliance-date notice. |
+| 47 CFR § 79.103(e) | Confirmed the four readily-accessible factors: proximity, discoverability, previewability, consistency/persistence. |
+| Federal Register FR Doc. 2025-02816 | Confirmed effective date February 21, 2025 and compliance date August 17, 2026 for 47 CFR 79.103(e). |
+| FCC 24-79 PDF | Confirmed the display-setting surface includes presentation, color, opacity, size, font, caption background color/opacity, character edge attributes, and caption window color. |
+
+### Pass 17 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 17.1 | Inspected caption burn-in, styled caption, caption route, and caption QC code. | Found existing style presets and burn-in `force_style` support but no canonical user-overridable display token contract. |
+| Pass 17.2 | Added `opencut/core/caption_display_settings.py`. | New schema normalizes FCC-style font, size, text color/opacity, background color/opacity, edge, and window tokens; emits CSS preview values and ASS `force_style`. |
+| Pass 17.3 | Added routes and burn-in integration. | `/captions/display-settings/tokens` exposes the schema; `/captions/display-settings/preview` returns normalized preview payloads; `/captions/burnin/file` accepts `display_settings`. |
+| Pass 17.4 | Added `tests/test_caption_display_settings.py`, wired it into release smoke, and regenerated route manifest. | Route manifest now reports 1,361 routes / 101 blueprints. |
+| Pass 17.5 | Updated roadmap and research state files. | F236 marked closed; next Now items are F237/F240/F241/F243/F244/F251/F259, with F205 still blocked by the coverage timeout. |
+
+### Pass 17 validation results
+
+| Check | Result |
+|---|---|
+| Focused caption-display/route-manifest/release-smoke tests | **PASS** — `21 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for touched Python files | **PASS** |
+| Route manifest regeneration | **PASS** — 1,361 routes / 101 blueprints |
+| API alias drift check | **PASS** — 15 aliases / 218 canonical `/api` routes |
+| Feature-readiness drift check | **PASS** — 58 generated records / 67 route bindings |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `273 passed` |
+
+### Pass 17 saturation note
+
+F236 is complete for the repository-side token contract and burn-in integration. It does not prove end-user UI discoverability in the Premiere panel; that remains downstream UI/persistence polish and should be tested with the eventual UXP/CEP settings surface.
