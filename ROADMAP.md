@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.22
+**Version**: 4.23
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -52,6 +52,26 @@
 > **v4.21 status (2026-05-17, eighteenth pass)**: closed **F237** by replacing scattered loudness target constants with `opencut/core/loudness_standards.py`. Fresh source verification found that **ITU-R BS.1770-5** is the in-force recommendation and **BS.1770-4 is superseded**, so the original "drop speculative -5" wording was stale. The API now exposes EBU R 128 v5.0, ITU BS.1770-5, FFmpeg loudnorm, and platform/profile source metadata through `/audio/loudness-presets`; `tests/test_loudness_standards.py` pins the corrected standards and preset targets.
 >
 > **v4.22 status (2026-05-17, nineteenth pass)**: closed **F240** by adding `opencut/core/caption_reading_profiles.py`, `GET /captions/qc/reading-profiles`, and optional `reading_profile` overlays for `POST /captions/qc`. Fresh source verification corrected the backlog wording: Netflix's current English guide uses **20 CPS for adult** and **17 CPS for children's** programs; BBC's archived official guidance recommends **160-180 WPM**; DCMP upper-level educational captions cap at **160 WPM**; FCC and YouTube official sources do **not** publish hard numeric WPM caps, so OpenCut marks FCC timing as qualitative and the YouTube 220 WPM profile as advisory/heuristic.
+>
+> **v4.23 status (2026-05-17, twentieth pass)**: closed **F241** by adding a machine-readable text-shaping gate for caption rendering. `python -m opencut.tools.text_shaping_gate --json` now hard-fails when FFmpeg/libass lacks HarfBuzz, FriBidi, ASS, or subtitles support; release smoke runs it as the new `text-shaping` step; GitHub Actions runs the same gate after dependency install. Pillow RAQM and optional Skia shaping are reported in the gate and can be promoted to hard failures with strict flags.
+
+---
+
+## 2026-05-17 v4.23 Text Shaping CI Gate
+
+F241 is closed locally. Caption burn-in now has a deterministic shaping preflight instead of relying on a successful install to imply RTL / CJK / Indic readiness:
+
+| Surface | Status |
+|---|---|
+| Gate module | `opencut/tools/text_shaping_gate.py` resolves FFmpeg from `--ffmpeg`, `OPENCUT_FFMPEG`, `FFMPEG_BINARY`, PATH, or the bundled `ffmpeg/` directory. |
+| Hard check | The gate requires FFmpeg configuration flags for `libass`, `libharfbuzz`, and `libfribidi`, plus exact `ass` and `subtitles` filter names. It avoids substring matches such as `assumption`. |
+| Renderer report | Pillow RAQM/HarfBuzz/FriBidi and optional Skia shaping/textlayout support are reported in the same JSON payload. Current local Pillow reports `raqm=false`, `harfbuzz=false`, `fribidi=false`, `freetype2=true`; the gate keeps this advisory by default because FFmpeg/libass remains the shaped burn-in path. |
+| Strict modes | `--require-pillow-raqm` and `--require-skia` promote those renderer checks to hard failures for packaging environments that choose to make styled overlay shaping mandatory. |
+| Release smoke | `scripts/release_smoke.py` now includes the `text-shaping` step and adds `tests/test_text_shaping_gate.py` to `pytest-fast`. |
+| CI | `.github/workflows/build.yml` runs `python -m opencut.tools.text_shaping_gate --json` after `pip install -e ".[standard]"` on every build matrix OS. |
+| Regression test | `tests/test_text_shaping_gate.py` pins FFmpeg flag/filter parsing, missing-HarfBuzz failure, advisory-to-strict Pillow behavior, release-smoke wiring, and workflow wiring. |
+
+Validation after the batch: `python -m opencut.tools.text_shaping_gate --json` passed with FFmpeg/libass hard gates OK, one advisory Pillow RAQM warning, and Skia skipped; focused text-shaping/release-smoke tests passed (`17 passed`); Ruff passed for touched Python files; touched Python files compile; full `python scripts\release_smoke.py --json` exited `0` with all 14 steps green (`289 passed` in pytest-fast).
 
 ---
 
@@ -489,7 +509,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (6 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237/F240 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, [x] **F240 (caption reading-speed profiles)**, F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (5 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, [x] **F240 (caption reading-speed profiles)**, [x] **F241 (HarfBuzz CI gate)**, F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
