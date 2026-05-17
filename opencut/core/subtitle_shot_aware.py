@@ -666,6 +666,7 @@ def export_to_file(
         **kwargs: Additional args for ASS export (title, video_width, video_height).
     """
     fmt = fmt.lower().strip()
+    legacy_windows_bom = bool(kwargs.pop("legacy_windows_bom", False))
     if fmt == "srt":
         content = export_srt(segments)
     elif fmt == "vtt":
@@ -675,7 +676,12 @@ def export_to_file(
     else:
         raise ValueError(f"Unsupported format: {fmt}. Use srt, vtt, or ass.")
     os.makedirs(os.path.dirname(output_path) or ".", exist_ok=True)
-    with open(output_path, "w", encoding="utf-8") as f:
-        f.write(content)
+    if fmt == "srt":
+        from opencut.export.srt import write_srt_text
+
+        write_srt_text(output_path, content, legacy_windows_bom=legacy_windows_bom)
+    else:
+        with open(output_path, "w", encoding="utf-8") as f:
+            f.write(content)
     logger.info("Exported %d subtitles to %s (%s)", len(segments), output_path, fmt)
     return output_path
