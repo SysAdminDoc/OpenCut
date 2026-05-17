@@ -166,6 +166,90 @@ def _export_srt_with_policy(result, out_path: str, *, legacy_windows_bom: bool =
     return srt_export.export_srt(result, out_path)
 
 
+def _word_namespace_from_dict(word_data):
+    """Build a word-like object from cached/editable transcript JSON."""
+    if not isinstance(word_data, dict):
+        return word_data
+    text = word_data.get("text", word_data.get("word", ""))
+    return SimpleNamespace(
+        text=text,
+        word=text,
+        start=word_data.get("start", 0),
+        end=word_data.get("end", 0),
+        confidence=word_data.get("confidence", 1.0),
+    )
+
+
+def _segment_namespace_from_dict(seg_data):
+    """Build a segment-like object while preserving ASR review metadata."""
+    if not isinstance(seg_data, dict):
+        return seg_data
+    return SimpleNamespace(
+        start=seg_data.get("start", 0),
+        end=seg_data.get("end", 0),
+        text=seg_data.get("text", ""),
+        words=[_word_namespace_from_dict(w) for w in (seg_data.get("words") or [])],
+        speaker=seg_data.get("speaker"),
+        language=seg_data.get("language"),
+        language_confidence=seg_data.get("language_confidence", 1.0),
+        confidence=seg_data.get("confidence", 1.0),
+        human_review_recommended=bool(seg_data.get("human_review_recommended", False)),
+        review_reasons=list(seg_data.get("review_reasons") or []),
+    )
+
+
+def _segment_payload(seg, *, include_words=True, precision=None):
+    from opencut.core.captions import caption_segment_to_dict
+
+    return caption_segment_to_dict(
+        seg,
+        include_words=include_words,
+        precision=precision,
+    )
+
+
+def _segment_payloads(segments, *, include_words=True, precision=None):
+    return [
+        _segment_payload(seg, include_words=include_words, precision=precision)
+        for seg in (segments or [])
+    ]
+
+
+def _caption_review_summary(result_or_segments):
+    if isinstance(result_or_segments, dict):
+        segments = result_or_segments.get("segments", []) or []
+    else:
+        segments = getattr(result_or_segments, "segments", result_or_segments) or []
+    review_count = 0
+    low_confidence_count = 0
+    language_review_count = 0
+    languages = set()
+    for seg in segments:
+        if isinstance(seg, dict):
+            reasons = set(seg.get("review_reasons", []) or [])
+            human_review = bool(seg.get("human_review_recommended", False))
+            language = seg.get("language")
+        else:
+            reasons = set(getattr(seg, "review_reasons", []) or [])
+            human_review = bool(getattr(seg, "human_review_recommended", False))
+            language = getattr(seg, "language", None)
+        if human_review:
+            review_count += 1
+        if reasons.intersection({"low_asr_confidence", "low_language_confidence"}):
+            low_confidence_count += 1
+        if "language_requires_human_review" in reasons:
+            language_review_count += 1
+            if language:
+                languages.add(str(language))
+    return {
+        "human_review_recommended": review_count > 0,
+        "human_review_segments": review_count,
+        "low_confidence_segments": low_confidence_count,
+        "language_review_segments": language_review_count,
+        "human_review_languages": sorted(languages),
+    }
+
+
 # ---------------------------------------------------------------------------
 # Captions
 # ---------------------------------------------------------------------------
@@ -213,19 +297,28 @@ def generate_captions(job_id, filepath, data):
         # satisfies the attribute-based interface export_srt/_vtt/_json
         # rely on.
         cached_segs = [
-            SimpleNamespace(
-                start=cs.get("start", 0),
-                end=cs.get("end", 0),
-                text=cs.get("text", ""),
-                words=[],
-            )
+            _segment_namespace_from_dict(cs)
             for cs in cached
         ]
-        _cached_words = sum(len(seg.text.split()) for seg in cached_segs if seg.text)
+        _cached_words = sum(
+            len(getattr(seg, "words", []) or []) or len(seg.text.split())
+            for seg in cached_segs
+            if seg.text
+        )
         result = SimpleNamespace(
             segments=cached_segs,
             language=language or "en",
             word_count=_cached_words,
+            language_confidence=1.0,
+            human_review_recommended=any(
+                bool(getattr(seg, "human_review_recommended", False))
+                for seg in cached_segs
+            ),
+            review_segment_count=sum(
+                1
+                for seg in cached_segs
+                if bool(getattr(seg, "human_review_recommended", False))
+            ),
         )
     else:
         _update_job(job_id, progress=20, message="Transcribing audio (this takes a while for long files)...")
@@ -234,7 +327,7 @@ def generate_captions(job_id, filepath, data):
         if hasattr(result, "segments"):
             raw_segs = result.segments or []
             if raw_segs and hasattr(raw_segs[0], "start"):
-                segs = [{"start": s.start, "end": s.end, "text": s.text} for s in raw_segs]
+                segs = _segment_payloads(raw_segs, include_words=True)
             else:
                 segs = list(raw_segs)
             cache_transcript(filepath, segs, language=getattr(result, "language", ""), model=model)
@@ -271,6 +364,7 @@ def generate_captions(job_id, filepath, data):
         "caption_segments": len(result.segments),
         "words": getattr(result, "word_count", 0),
     }
+    response.update(_caption_review_summary(result))
     if sub_format == "srt":
         response["srt_encoding"] = "utf-8-sig" if legacy_srt_bom else "utf-8"
     return response
@@ -489,13 +583,12 @@ def get_transcript(job_id, filepath, data):
         "duration": result.duration,
         "word_count": result.word_count,
         "full_text": result.text,
+        "language_confidence": getattr(result, "language_confidence", 1.0),
+        **_caption_review_summary(result),
         "segments": [
             {
+                **_segment_payload(seg, include_words=False, precision=3),
                 "id": i,
-                "text": seg.text.strip(),
-                "start": round(seg.start, 3),
-                "end": round(seg.end, 3),
-                "speaker": seg.speaker,
                 "words": [
                     {
                         "text": w.text.strip(),
@@ -557,6 +650,28 @@ def export_edited_transcript():
                 end=safe_float(seg.get("end", 0.0)),
                 words=words,
                 speaker=seg.get("speaker"),
+                language=seg.get("language") or language,
+                language_confidence=safe_float(
+                    seg.get("language_confidence", 1.0),
+                    default=1.0,
+                    min_val=0.0,
+                    max_val=1.0,
+                ),
+                confidence=safe_float(
+                    seg.get("confidence", 1.0),
+                    default=1.0,
+                    min_val=0.0,
+                    max_val=1.0,
+                ),
+                human_review_recommended=safe_bool(
+                    seg.get("human_review_recommended", False),
+                    default=False,
+                ),
+                review_reasons=[
+                    str(reason)
+                    for reason in (seg.get("review_reasons") or [])
+                    if isinstance(reason, (str, int, float))
+                ][:16],
             ))
 
         # Use max() instead of last-element access so out-of-order segments
@@ -843,6 +958,7 @@ def full_pipeline(job_id, filepath, data):
         result_data["caption_segments"] = len(captions_result.segments)
         result_data["words"] = captions_result.word_count
         result_data["language"] = captions_result.language
+        result_data.update(_caption_review_summary(captions_result))
     if filler_stats:
         result_data["filler_stats"] = filler_stats
 
@@ -982,7 +1098,7 @@ def interview_polish(job_id, filepath, data):
         step_progress("Finding repeated takes")
         try:
             seg_dicts = [
-                {"start": s.start, "end": s.end, "text": s.text or ""}
+                _segment_payload(s, include_words=False)
                 for s in transcription.segments
             ]
             repeats = detect_repeated_takes(seg_dicts, threshold=0.6, gap_tolerance=2.0)
@@ -1091,7 +1207,7 @@ def interview_polish(job_id, filepath, data):
             from opencut.core.chapter_gen import generate_chapters
             from opencut.core.llm import LLMConfig
             seg_dicts = [
-                {"start": s.start, "end": s.end, "text": s.text or ""}
+                _segment_payload(s, include_words=False)
                 for s in transcription.segments
             ]
             llm = None
@@ -1134,6 +1250,24 @@ def interview_polish(job_id, filepath, data):
     }
     if chapters_data:
         result_data["chapters"] = chapters_data.get("chapters", [])
+    if captions_result:
+        _caption_segments = (
+            captions_result.get("segments", [])
+            if isinstance(captions_result, dict)
+            else getattr(captions_result, "segments", [])
+        )
+        result_data["caption_segments"] = len(_caption_segments)
+        result_data["words"] = (
+            captions_result.get("word_count", 0)
+            if isinstance(captions_result, dict)
+            else getattr(captions_result, "word_count", 0)
+        )
+        result_data["language"] = (
+            captions_result.get("language", "")
+            if isinstance(captions_result, dict)
+            else getattr(captions_result, "language", "")
+        )
+        result_data.update(_caption_review_summary(captions_result))
     return result_data
 
 
@@ -1549,7 +1683,7 @@ def transcript_summarize(job_id, filepath, data):
         from opencut.core.captions import transcribe as _transcribe
         t_result = _transcribe(filepath)
         transcript_segments = [
-            {"start": s.start, "end": s.end, "text": s.text}
+            _segment_payload(s, include_words=False)
             for s in t_result.segments
         ]
 
@@ -1637,7 +1771,7 @@ def captions_chapters(job_id, filepath, data):
             result = transcribe(filepath, config=config)
             if hasattr(result, "segments"):
                 effective_segments = [
-                    {"start": s.start, "end": s.end, "text": s.text}
+                    _segment_payload(s, include_words=False)
                     for s in result.segments
                 ]
                 cache_transcript(filepath, effective_segments, model=transcribe_model)
@@ -1705,9 +1839,7 @@ def captions_repeat_detect(job_id, filepath, data):
         result = transcribe(filepath, config=config)
         if hasattr(result, "segments"):
             segments = [
-                {"start": s.start, "end": s.end, "text": s.text,
-                 "words": [{"word": w.word, "start": w.start, "end": w.end}
-                           for w in getattr(s, "words", [])] if hasattr(s, "words") else []}
+                _segment_payload(s, include_words=True)
                 for s in result.segments
             ]
             cache_transcript(filepath, segments, model=model)
