@@ -300,3 +300,39 @@ Pass 4 converted the research checkpoint from "well documented" to "release-gate
 | F-numbers newly proposed this research date | 152 (F121-F272) |
 | Local validation gates passed in final state | route manifest, version sync, bootstrap, model cards, license gate, roadmap lint, Ruff, pytest-fast, pip-audit, npm advisory allow-list, panel-source |
 | Commits made by Pass 4 | 1 local checkpoint commit |
+
+---
+
+## 10. Pass 5 additions (same day, launcher/docs implementation)
+
+Pass 5 converted three Pass-3 Now items from research findings into repository changes.
+
+### Files added or edited in Pass 5
+
+| Path | Change |
+|---|---|
+| `.gitattributes` | Added LF line-ending rules for POSIX launchers so shell scripts remain runnable from release/source checkouts. |
+| `OpenCut-Server.command` | Added macOS double-click launcher that delegates to the POSIX shell launcher. |
+| `OpenCut-Server.sh` | Added Linux/POSIX launcher with `OPENCUT_HOME`, bundled/system Python 3.9+ detection, bundled FFmpeg path support, bundled model environment variables, and `python -m opencut.server` startup. |
+| `README.md` | Replaced the generic local-first lead with the quantified "$1,400/year" subscription-replacement lead and added macOS/Linux launch instructions. |
+| `extension/com.opencut.uxp/uxp-api-notes.md` | Corrected the UXP sample repository URL to `AdobeDocs/uxp-premiere-pro-samples`. |
+| `ROADMAP.md` | Added v4.8 status/addendum and marked F261/F262/F270 closed. |
+| `PROJECT_CONTEXT.md` | Updated canonical context for Pass 5 and marked cross-platform launchers/README positioning current. |
+| `.ai/research/2026-05-17/LIVE_VERIFICATION.md` | Updated the launcher gap to closed after Pass 5 and added a Pass-5 implementation note. |
+| `.ai/research/2026-05-17/INSTALLER_AUDIT.md` | Updated launcher inventory to show the macOS/Linux files now exist. |
+| `.ai/research/2026-05-17/CONTINUE_FROM_HERE.md` | Moved the handoff to Pass 6 and listed remaining immediate work. |
+
+### Items closed in Pass 5
+
+| F# | Result |
+|---|---|
+| F261 | Closed — macOS/Linux source launchers exist. |
+| F262 | Closed — UXP docs URL typo fixed. |
+| F270 | Closed — README lead and launcher instructions updated. |
+
+### Validation after Pass 5
+
+| Command | Result |
+|---|---|
+| `git diff --check` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 11 release-smoke steps green; pytest-fast reported `232 passed` |

@@ -12,7 +12,7 @@
 > `python -m opencut.tools.dump_route_manifest --check` to verify it is in
 > sync with the live Flask app before bumping the badge.
 
-> A free, open-source Premiere Pro extension that brings AI-powered video editing automation, caption generation, audio processing, and visual effects -- all running locally on your machine. No subscriptions, no cloud, no API keys required.
+> **OpenCut replaces ~$1,400/year of video-editing subscriptions** with a free, MIT-licensed Premiere Pro extension. Silence-cut, podcast editing, styled captions, local transcript editing, and AI upscaling run on your own machine -- no subscriptions, no cloud upload, and no API keys required for core features.
 
 ---
 
@@ -21,7 +21,7 @@
 ### Prerequisites
 
 - **Adobe Premiere Pro** 2019 or later (CEP panel) / 25.6+ (UXP panel)
-- **Windows 10/11** (macOS/Linux: server works, installer is Windows-only)
+- **Windows 10/11, macOS, or Linux** (installer is Windows-only; source launchers ship for macOS/Linux)
 
 ### Installation
 
@@ -53,7 +53,7 @@ docker-compose -f docker-compose.gpu.yml up  # With GPU
 
 ### Launch
 
-1. Start the backend: run `OpenCut-Server.bat`, the installed launcher, or `python -m opencut.server`
+1. Start the backend: run `OpenCut-Server.bat` on Windows, `OpenCut-Server.command` on macOS, `./OpenCut-Server.sh` on Linux, the installed launcher, or `python -m opencut.server`
 2. In Premiere Pro: **Window > Extensions > OpenCut**
 3. Select a clip and start editing
 
