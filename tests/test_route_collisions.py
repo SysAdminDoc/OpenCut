@@ -1,5 +1,5 @@
-from flask import Flask
 import pytest
+from flask import Flask
 
 from opencut.config import OpenCutConfig
 from opencut.routes import (
@@ -9,6 +9,108 @@ from opencut.routes import (
     get_core_blueprints,
 )
 from opencut.server import create_app
+
+EXPECTED_CORE_BLUEPRINT_ORDER = (
+    "ai_content",
+    "ai_editing",
+    "ai_intel",
+    "analysis",
+    "architecture",
+    "audio",
+    "audio_adv",
+    "audio_expand",
+    "audio_post",
+    "audio_prod",
+    "batch_data",
+    "body_transfer",
+    "captions",
+    "cloud_distrib",
+    "collab_review",
+    "color_mam",
+    "composition_dubbing",
+    "content_gen",
+    "content",
+    "context",
+    "creative",
+    "deliverables",
+    "delivery_master",
+    "delivery",
+    "dev_scripting",
+    "documentary",
+    "editing_wf",
+    "education",
+    "encoding",
+    "engagement_content",
+    "enhanced_media",
+    "enhancement",
+    "format",
+    "gaming",
+    "generative",
+    "hw",
+    "infra",
+    "integration",
+    "jobs",
+    "journal",
+    "motion_design",
+    "motion_gen",
+    "multiview_repurpose",
+    "music_safety",
+    "next_gen_ai",
+    "nlp",
+    "object_intel",
+    "overlay",
+    "pipeline_intel",
+    "platform_infra",
+    "platform_ux",
+    "plugins",
+    "preproduction_proxy",
+    "preview_realtime",
+    "privacy_spectral",
+    "processing",
+    "production",
+    "professional",
+    "qc",
+    "remote_realtime",
+    "repair_gen",
+    "search",
+    "settings",
+    "solver_agent",
+    "sound_music",
+    "subtitle_pro",
+    "subtitle",
+    "system",
+    "timeline",
+    "timeline_auto",
+    "timeline_intel",
+    "tools",
+    "transcript_edit",
+    "utility",
+    "ux_intel",
+    "vfx_advanced",
+    "video_ai",
+    "video_core",
+    "video_editing",
+    "video_effects",
+    "video_fx",
+    "video_proc",
+    "video_specialty",
+    "video_vfx",
+    "voice_speech",
+    "vr_lens",
+    "wave_a",
+    "wave_b",
+    "wave_c",
+    "wave_d",
+    "wave_e",
+    "wave_f",
+    "wave_g",
+    "wave_h",
+    "wave_k",
+    "wave_l",
+    "workflow",
+    "workflow_dev",
+    "workflow_auto",
+)
 
 
 def test_no_duplicate_route_method_pairs(app):
@@ -22,6 +124,15 @@ def test_core_blueprint_registry_has_unique_names():
     assert len(names) == len(set(names))
     assert "motion_design" in names
     assert "system" in names
+
+
+def test_core_blueprint_registration_order_is_stable(app):
+    core_names = tuple(bp.name for bp in get_core_blueprints())
+    registered_names = tuple(app.blueprints)
+
+    assert core_names == EXPECTED_CORE_BLUEPRINT_ORDER
+    assert registered_names == EXPECTED_CORE_BLUEPRINT_ORDER + ("motion_design_api",)
+    assert app.blueprints["motion_design_api"] is app.blueprints["motion_design"]
 
 
 def test_collision_prone_routes_bind_to_expected_endpoints(app):
