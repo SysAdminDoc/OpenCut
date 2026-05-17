@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 7)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 8)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (during Pass 6; Passes 1-6 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, and Pass 6 closed F264/F266. This file documents deferred research/product work for a future Pass 7+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (during Pass 7; Passes 1-7 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, and Pass 7 closed F199. This file documents deferred research/product work for a future Pass 8+, not a broken or incomplete research run.
 
 ---
 
@@ -42,7 +42,7 @@
 | **`MARKET_POSITIONING.md`** | **Pass 3** | 200 |
 | **`CONTINUE_FROM_HERE.md`** | **this file** | ~350 |
 
-**At repo root:** `PROJECT_CONTEXT.md` (canonical context, Pass 1-6 updates), `ROADMAP.md` (v4.3-v4.9 sections), `AGENTS.md` (pointer added), `CLAUDE.md` (pointer added, gitignored).
+**At repo root:** `PROJECT_CONTEXT.md` (canonical context, Pass 1-7 updates), `ROADMAP.md` (v4.3-v4.10 sections), `AGENTS.md` (pointer added), `CLAUDE.md` (pointer added, gitignored).
 
 ---
 
@@ -215,12 +215,11 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 | npm advisory state | **PASS** in release-smoke allow-list step; raw `npm audit --json` still shows the known moderate Vite `.map` advisory that F095 documents |
 | `npm view @adobe/premierepro version dist-tags --json` | Confirmed `latest=26.2.0`, `beta=26.3.0-beta.67` |
 
-### Pass 7 entry point
+### Pass 8 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Implement F199** — generate `opencut/_generated/api_aliases.json` mapping `/api/*` aliases to canonical routes, plus a consistency test.
-3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
-4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+2. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
+3. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
 ### Current limitations
 
@@ -282,6 +281,38 @@ Pass 6 closed the remaining Pass-3 Now items.
 
 ### Remaining immediate work
 
-- F199 is the smallest remaining Now-tier implementation candidate from the Pass-2 deferred list.
+- F199 is closed locally. Live correction: 233 `/api/*` routes exist, but only 15 are true aliases; 218 are canonical `/api` routes.
 - F179 remains the largest knowledge debt.
+- Push remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
+
+---
+
+## 13. Pass 7 update (same day, F199 API alias manifest)
+
+Pass 7 closed F199 and corrected the earlier Pass-2 wording.
+
+### What Pass 7 closed
+
+| Item | Status |
+|---|---|
+| F199 | **DONE** — added `opencut/tools/dump_api_aliases.py`, generated `opencut/_generated/api_aliases.json`, wired `api-aliases` into release smoke, and added `tests/test_api_aliases.py`. |
+
+### Validation after Pass 7
+
+| Command | Result |
+|---|---|
+| `python -m opencut.tools.dump_api_aliases --check` | PASS — 15 aliases, 218 canonical `/api` routes |
+| `python -m pytest tests/test_api_aliases.py tests/test_release_smoke.py -q` | PASS — `16 passed` |
+| `python -m py_compile opencut/tools/dump_api_aliases.py scripts/release_smoke.py` | PASS |
+| `ruff check opencut/tools/dump_api_aliases.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 12 release-smoke steps green; pytest-fast `236 passed` |
+
+### Live correction
+
+The app has 233 `/api/*` routes. Only 15 are true aliases with equivalent bare routes; 218 are canonical `/api` routes. Future docs should not describe the surface as "233 alias pairs."
+
+### Remaining immediate work
+
+- F179 full `features.md` reconciliation remains the largest knowledge debt.
+- Python 3.10/3.11/3.13 `[all]` install matrix remains unproven on this VM.
 - Push remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.

@@ -1,0 +1,2150 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-17T17:51:12Z",
+  "source": "opencut/_generated/route_manifest.json",
+  "total_api_routes": 233,
+  "alias_count": 15,
+  "api_only_count": 218,
+  "method_counts": {
+    "DELETE": 5,
+    "GET": 56,
+    "PATCH": 1,
+    "POST": 169,
+    "PUT": 2
+  },
+  "policy": {
+    "alias_definition": "A route is an alias only when an /api/* rule has the same methods as an equivalent bare rule after stripping the /api prefix.",
+    "api_only_definition": "An /api/* route without an equivalent bare rule is treated as a canonical API route, not a compatibility alias."
+  },
+  "aliases": [
+    {
+      "alias_rule": "/api/audio/stem-remix",
+      "canonical_rule": "/audio/stem-remix",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "audio_expand.stem_remix",
+      "canonical_endpoint": "sound_music.route_stem_remix",
+      "alias_blueprint": "audio_expand",
+      "canonical_blueprint": "sound_music"
+    },
+    {
+      "alias_rule": "/api/motion/data-animation",
+      "canonical_rule": "/motion/data-animation",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "motion_design_api.data_animation_render",
+      "canonical_endpoint": "motion_design.data_animation_render",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/data-animation/validate",
+      "canonical_rule": "/motion/data-animation/validate",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "motion_design_api.data_animation_validate",
+      "canonical_endpoint": "motion_design.data_animation_validate",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/expression/evaluate",
+      "canonical_rule": "/motion/expression/evaluate",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "motion_design_api.expression_evaluate",
+      "canonical_endpoint": "motion_design.expression_evaluate",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/expression/timeline",
+      "canonical_rule": "/motion/expression/timeline",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "motion_design_api.expression_timeline",
+      "canonical_endpoint": "motion_design.expression_timeline",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/kinetic-text",
+      "canonical_rule": "/motion/kinetic-text",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "motion_design_api.kinetic_text_render",
+      "canonical_endpoint": "motion_design.kinetic_text_render",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/kinetic-text/presets",
+      "canonical_rule": "/motion/kinetic-text/presets",
+      "methods": [
+        "GET"
+      ],
+      "alias_endpoint": "motion_design_api.kinetic_text_presets",
+      "canonical_endpoint": "motion_design.kinetic_text_presets",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/kinetic-text/preview",
+      "canonical_rule": "/motion/kinetic-text/preview",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "motion_design_api.kinetic_text_preview",
+      "canonical_endpoint": "motion_design.kinetic_text_preview",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/particles",
+      "canonical_rule": "/motion/particles",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "motion_design_api.particles_render",
+      "canonical_endpoint": "motion_design.particles_render",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/particles/presets",
+      "canonical_rule": "/motion/particles/presets",
+      "methods": [
+        "GET"
+      ],
+      "alias_endpoint": "motion_design_api.particles_presets",
+      "canonical_endpoint": "motion_design.particles_presets",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/particles/preview",
+      "canonical_rule": "/motion/particles/preview",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "motion_design_api.particles_preview",
+      "canonical_endpoint": "motion_design.particles_preview",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/shape-animate",
+      "canonical_rule": "/motion/shape-animate",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "motion_design_api.shape_animate_render",
+      "canonical_endpoint": "motion_design.shape_animate_render",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/motion/shape-animate/types",
+      "canonical_rule": "/motion/shape-animate/types",
+      "methods": [
+        "GET"
+      ],
+      "alias_endpoint": "motion_design_api.shape_animate_types",
+      "canonical_endpoint": "motion_design.shape_animate_types",
+      "alias_blueprint": "motion_design_api",
+      "canonical_blueprint": "motion_design"
+    },
+    {
+      "alias_rule": "/api/openapi.json",
+      "canonical_rule": "/openapi.json",
+      "methods": [
+        "GET"
+      ],
+      "alias_endpoint": "wave_f.route_openapi_json",
+      "canonical_endpoint": "system.openapi_spec",
+      "alias_blueprint": "wave_f",
+      "canonical_blueprint": "system"
+    },
+    {
+      "alias_rule": "/api/review/comments",
+      "canonical_rule": "/review/comments",
+      "methods": [
+        "POST"
+      ],
+      "alias_endpoint": "collab_review.add_review_comment",
+      "canonical_endpoint": "platform_infra.review_get_comments",
+      "alias_blueprint": "collab_review",
+      "canonical_blueprint": "platform_infra"
+    }
+  ],
+  "api_only": [
+    {
+      "rule": "/api/aaf/export",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.aaf_export",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/aaf/export"
+    },
+    {
+      "rule": "/api/adjustment-layers/apply",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.apply_adjustment_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/adjustment-layers/apply"
+    },
+    {
+      "rule": "/api/adjustment-layers/create",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.create_adjustment_layer_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/adjustment-layers/create"
+    },
+    {
+      "rule": "/api/adjustment-layers/presets",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "integration.list_presets_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/adjustment-layers/presets"
+    },
+    {
+      "rule": "/api/adjustment-layers/presets",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.save_preset_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/adjustment-layers/presets"
+    },
+    {
+      "rule": "/api/ai/batch-command",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "ai_intel.ai_batch_command",
+      "blueprint": "ai_intel",
+      "canonical_candidate": "/ai/batch-command"
+    },
+    {
+      "rule": "/api/ai/emotion-timeline",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "ai_intel.ai_emotion_timeline",
+      "blueprint": "ai_intel",
+      "canonical_candidate": "/ai/emotion-timeline"
+    },
+    {
+      "rule": "/api/ai/ocr",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "ai_intel.ai_ocr",
+      "blueprint": "ai_intel",
+      "canonical_candidate": "/ai/ocr"
+    },
+    {
+      "rule": "/api/ai/organize-project",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "ai_intel.ai_organize_project",
+      "blueprint": "ai_intel",
+      "canonical_candidate": "/ai/organize-project"
+    },
+    {
+      "rule": "/api/ai/scene-describe",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "ai_intel.ai_scene_describe",
+      "blueprint": "ai_intel",
+      "canonical_candidate": "/ai/scene-describe"
+    },
+    {
+      "rule": "/api/ai/summarize",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "ai_intel.ai_summarize",
+      "blueprint": "ai_intel",
+      "canonical_candidate": "/ai/summarize"
+    },
+    {
+      "rule": "/api/approval/advance",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "collab_review.approval_advance",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/approval/advance"
+    },
+    {
+      "rule": "/api/approval/create",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "collab_review.approval_create",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/approval/create"
+    },
+    {
+      "rule": "/api/approval/status",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "collab_review.approval_status",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/approval/status"
+    },
+    {
+      "rule": "/api/audio/auto-dub",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_intel.audio_auto_dub",
+      "blueprint": "timeline_intel",
+      "canonical_candidate": "/audio/auto-dub"
+    },
+    {
+      "rule": "/api/audio/auto-dub/languages",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "timeline_intel.list_auto_dub_languages",
+      "blueprint": "timeline_intel",
+      "canonical_candidate": "/audio/auto-dub/languages"
+    },
+    {
+      "rule": "/api/audio/generate-sfx",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio_expand.generate_sfx",
+      "blueprint": "audio_expand",
+      "canonical_candidate": "/audio/generate-sfx"
+    },
+    {
+      "rule": "/api/audio/overdub",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_overdub",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/audio/overdub"
+    },
+    {
+      "rule": "/api/audio/overdub/clone-voice",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_clone_voice",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/audio/overdub/clone-voice"
+    },
+    {
+      "rule": "/api/audio/spatial",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio_expand.spatial_audio",
+      "blueprint": "audio_expand",
+      "canonical_candidate": "/audio/spatial"
+    },
+    {
+      "rule": "/api/audio/transition-sfx",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio_expand.transition_sfx",
+      "blueprint": "audio_expand",
+      "canonical_candidate": "/audio/transition-sfx"
+    },
+    {
+      "rule": "/api/audio/voice-convert",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_voice_convert",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/audio/voice-convert"
+    },
+    {
+      "rule": "/api/audio/voice-convert/profile",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_create_voice_profile",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/audio/voice-convert/profile"
+    },
+    {
+      "rule": "/api/audio/voice-convert/profiles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "voice_speech.route_list_voice_profiles",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/audio/voice-convert/profiles"
+    },
+    {
+      "rule": "/api/batch/execute",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.batch_execute",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/batch/execute"
+    },
+    {
+      "rule": "/api/batch/validate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.batch_validate",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/batch/validate"
+    },
+    {
+      "rule": "/api/dev/macro/play",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.macro_play",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/dev/macro/play"
+    },
+    {
+      "rule": "/api/dev/scripting/execute",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.scripting_execute",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/dev/scripting/execute"
+    },
+    {
+      "rule": "/api/display/test-pattern",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_effects.display_test_pattern",
+      "blueprint": "video_effects",
+      "canonical_candidate": "/display/test-pattern"
+    },
+    {
+      "rule": "/api/docs",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_f.route_docs",
+      "blueprint": "wave_f",
+      "canonical_candidate": "/docs"
+    },
+    {
+      "rule": "/api/drone/flight-map",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.flight_map_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/drone/flight-map"
+    },
+    {
+      "rule": "/api/drone/gps-sample",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.gps_sample_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/drone/gps-sample"
+    },
+    {
+      "rule": "/api/drone/hyperlapse",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.aerial_hyperlapse_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/drone/hyperlapse"
+    },
+    {
+      "rule": "/api/drone/map-overlay",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.map_overlay_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/drone/map-overlay"
+    },
+    {
+      "rule": "/api/drone/parse-gps",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.parse_gps_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/drone/parse-gps"
+    },
+    {
+      "rule": "/api/edit-history/export",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "collab_review.export_edit_history",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/edit-history/export"
+    },
+    {
+      "rule": "/api/edl/export",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.edl_export",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/edl/export"
+    },
+    {
+      "rule": "/api/edl/import",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.edl_import",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/edl/import"
+    },
+    {
+      "rule": "/api/education/pip-detect",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.pip_detect",
+      "blueprint": "education",
+      "canonical_candidate": "/education/pip-detect"
+    },
+    {
+      "rule": "/api/education/pip-extract",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.pip_extract",
+      "blueprint": "education",
+      "canonical_candidate": "/education/pip-extract"
+    },
+    {
+      "rule": "/api/education/pip-side-by-side",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.pip_side_by_side",
+      "blueprint": "education",
+      "canonical_candidate": "/education/pip-side-by-side"
+    },
+    {
+      "rule": "/api/education/quiz-generate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.quiz_generate_route",
+      "blueprint": "education",
+      "canonical_candidate": "/education/quiz-generate"
+    },
+    {
+      "rule": "/api/education/quiz-insert",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.quiz_insert",
+      "blueprint": "education",
+      "canonical_candidate": "/education/quiz-insert"
+    },
+    {
+      "rule": "/api/education/quiz-render",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.quiz_render",
+      "blueprint": "education",
+      "canonical_candidate": "/education/quiz-render"
+    },
+    {
+      "rule": "/api/education/slide-chapters",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.slide_chapters_route",
+      "blueprint": "education",
+      "canonical_candidate": "/education/slide-chapters"
+    },
+    {
+      "rule": "/api/education/slide-detect",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.slide_detect",
+      "blueprint": "education",
+      "canonical_candidate": "/education/slide-detect"
+    },
+    {
+      "rule": "/api/education/slide-extract",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.slide_extract",
+      "blueprint": "education",
+      "canonical_candidate": "/education/slide-extract"
+    },
+    {
+      "rule": "/api/encoding/intermediate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_effects.lossless_intermediate",
+      "blueprint": "video_effects",
+      "canonical_candidate": "/encoding/intermediate"
+    },
+    {
+      "rule": "/api/filter-chain/build",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.filter_chain_build",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/filter-chain/build"
+    },
+    {
+      "rule": "/api/filter-chain/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.filter_chain_preview",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/filter-chain/preview"
+    },
+    {
+      "rule": "/api/fonts/download",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio_expand.font_download",
+      "blueprint": "audio_expand",
+      "canonical_candidate": "/fonts/download"
+    },
+    {
+      "rule": "/api/fonts/list",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "audio_expand.fonts_list",
+      "blueprint": "audio_expand",
+      "canonical_candidate": "/fonts/list"
+    },
+    {
+      "rule": "/api/gpu/models",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "infra.gpu_models",
+      "blueprint": "infra",
+      "canonical_candidate": "/gpu/models"
+    },
+    {
+      "rule": "/api/gpu/status",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "infra.gpu_status",
+      "blueprint": "infra",
+      "canonical_candidate": "/gpu/status"
+    },
+    {
+      "rule": "/api/gpu/unload",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "infra.gpu_unload",
+      "blueprint": "infra",
+      "canonical_candidate": "/gpu/unload"
+    },
+    {
+      "rule": "/api/hardware/jog/default",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "integration.jog_default_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/jog/default"
+    },
+    {
+      "rule": "/api/hardware/jog/devices",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "integration.jog_devices_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/jog/devices"
+    },
+    {
+      "rule": "/api/hardware/jog/mapping",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.jog_mapping_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/jog/mapping"
+    },
+    {
+      "rule": "/api/hardware/jog/save",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.jog_save_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/jog/save"
+    },
+    {
+      "rule": "/api/hardware/midi/devices",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "integration.midi_devices_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/midi/devices"
+    },
+    {
+      "rule": "/api/hardware/midi/load",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.midi_load_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/midi/load"
+    },
+    {
+      "rule": "/api/hardware/midi/mapping",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.midi_mapping_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/midi/mapping"
+    },
+    {
+      "rule": "/api/hardware/midi/save",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.midi_save_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/midi/save"
+    },
+    {
+      "rule": "/api/hardware/stream-deck/button",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.stream_deck_button_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/stream-deck/button"
+    },
+    {
+      "rule": "/api/hardware/stream-deck/export",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.stream_deck_export_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/stream-deck/export"
+    },
+    {
+      "rule": "/api/hardware/stream-deck/profile",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "integration.stream_deck_get_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/stream-deck/profile"
+    },
+    {
+      "rule": "/api/hardware/stream-deck/profile",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.stream_deck_save_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/stream-deck/profile"
+    },
+    {
+      "rule": "/api/hardware/stream-deck/profiles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "integration.stream_deck_list_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/stream-deck/profiles"
+    },
+    {
+      "rule": "/api/hardware/touch/config",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "integration.touch_config_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/touch/config"
+    },
+    {
+      "rule": "/api/hardware/touch/config",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.touch_save_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/touch/config"
+    },
+    {
+      "rule": "/api/hardware/touch/gesture",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.touch_gesture_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/touch/gesture"
+    },
+    {
+      "rule": "/api/hardware/touch/optimize-layout",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.touch_optimize_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/touch/optimize-layout"
+    },
+    {
+      "rule": "/api/hardware/touch/pen",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "integration.touch_pen_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/hardware/touch/pen"
+    },
+    {
+      "rule": "/api/integrations/discord/send",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.discord_send_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/integrations/discord/send"
+    },
+    {
+      "rule": "/api/integrations/notify/format",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.format_notification_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/integrations/notify/format"
+    },
+    {
+      "rule": "/api/integrations/notion/entry",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.notion_create_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/integrations/notion/entry"
+    },
+    {
+      "rule": "/api/integrations/notion/page",
+      "methods": [
+        "PATCH"
+      ],
+      "endpoint": "integration.notion_update_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/integrations/notion/page"
+    },
+    {
+      "rule": "/api/integrations/notion/sync",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.notion_sync_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/integrations/notion/sync"
+    },
+    {
+      "rule": "/api/integrations/slack/send",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.slack_send_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/integrations/slack/send"
+    },
+    {
+      "rule": "/api/integrations/webhooks",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "integration.webhook_list_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/integrations/webhooks"
+    },
+    {
+      "rule": "/api/integrations/webhooks/inbound",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.webhook_inbound_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/integrations/webhooks/inbound"
+    },
+    {
+      "rule": "/api/integrations/webhooks/register",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.webhook_register_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/integrations/webhooks/register"
+    },
+    {
+      "rule": "/api/integrations/webhooks/send",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.webhook_send_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/integrations/webhooks/send"
+    },
+    {
+      "rule": "/api/lens/auto-detect",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "vr_lens.lens_auto_detect",
+      "blueprint": "vr_lens",
+      "canonical_candidate": "/lens/auto-detect"
+    },
+    {
+      "rule": "/api/lens/chromatic-aberration",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "vr_lens.lens_chromatic_aberration",
+      "blueprint": "vr_lens",
+      "canonical_candidate": "/lens/chromatic-aberration"
+    },
+    {
+      "rule": "/api/lens/correct-distortion",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "vr_lens.lens_correct_distortion",
+      "blueprint": "vr_lens",
+      "canonical_candidate": "/lens/correct-distortion"
+    },
+    {
+      "rule": "/api/lens/profiles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "vr_lens.lens_profiles",
+      "blueprint": "vr_lens",
+      "canonical_candidate": "/lens/profiles"
+    },
+    {
+      "rule": "/api/macro/<name>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "dev_scripting.macro_delete",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/macro/<name>"
+    },
+    {
+      "rule": "/api/macro/list",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "dev_scripting.macro_list",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/macro/list"
+    },
+    {
+      "rule": "/api/macro/load",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.macro_load",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/macro/load"
+    },
+    {
+      "rule": "/api/macro/play",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.macro_play",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/macro/play"
+    },
+    {
+      "rule": "/api/macro/record/start",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.macro_record_start",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/macro/record/start"
+    },
+    {
+      "rule": "/api/macro/record/stop",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.macro_record_stop",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/macro/record/stop"
+    },
+    {
+      "rule": "/api/macro/save",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.macro_save",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/macro/save"
+    },
+    {
+      "rule": "/api/macro/start",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.macro_start",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/macro/start"
+    },
+    {
+      "rule": "/api/macro/stop",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.macro_stop",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/macro/stop"
+    },
+    {
+      "rule": "/api/mcp/compound",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "infra.mcp_compound",
+      "blueprint": "infra",
+      "canonical_candidate": "/mcp/compound"
+    },
+    {
+      "rule": "/api/mcp/tools",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "infra.mcp_tools",
+      "blueprint": "infra",
+      "canonical_candidate": "/mcp/tools"
+    },
+    {
+      "rule": "/api/models/download",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "infra.download_model",
+      "blueprint": "infra",
+      "canonical_candidate": "/models/download"
+    },
+    {
+      "rule": "/api/models/installed",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "infra.installed_models",
+      "blueprint": "infra",
+      "canonical_candidate": "/models/installed"
+    },
+    {
+      "rule": "/api/models/progress",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "infra.download_progress",
+      "blueprint": "infra",
+      "canonical_candidate": "/models/progress"
+    },
+    {
+      "rule": "/api/models/quantization",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "infra.list_quantizable",
+      "blueprint": "infra",
+      "canonical_candidate": "/models/quantization"
+    },
+    {
+      "rule": "/api/models/quantize",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "infra.quantize_model",
+      "blueprint": "infra",
+      "canonical_candidate": "/models/quantize"
+    },
+    {
+      "rule": "/api/pipeline/errors",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.pipeline_errors",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/errors"
+    },
+    {
+      "rule": "/api/pipeline/estimate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "pipeline_intel.estimate_processing_time",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/estimate"
+    },
+    {
+      "rule": "/api/pipeline/estimate/accuracy",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.get_estimate_accuracy",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/estimate/accuracy"
+    },
+    {
+      "rule": "/api/pipeline/estimate/baselines",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.get_estimate_baselines",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/estimate/baselines"
+    },
+    {
+      "rule": "/api/pipeline/estimate/batch",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "pipeline_intel.batch_estimate_time",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/estimate/batch"
+    },
+    {
+      "rule": "/api/pipeline/health",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.pipeline_health",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/health"
+    },
+    {
+      "rule": "/api/pipeline/health/record",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "pipeline_intel.pipeline_health_record",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/health/record"
+    },
+    {
+      "rule": "/api/pipeline/resources",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.resource_snapshot",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/resources"
+    },
+    {
+      "rule": "/api/pipeline/resources/check",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "pipeline_intel.resource_availability_check",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/resources/check"
+    },
+    {
+      "rule": "/api/pipeline/resources/gpu",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.resource_gpu",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/resources/gpu"
+    },
+    {
+      "rule": "/api/pipeline/resources/history",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.resource_history",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/resources/history"
+    },
+    {
+      "rule": "/api/pipeline/schedules",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.list_schedules",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/schedules"
+    },
+    {
+      "rule": "/api/pipeline/schedules",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "pipeline_intel.create_schedule",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/schedules"
+    },
+    {
+      "rule": "/api/pipeline/schedules/<schedule_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "pipeline_intel.delete_schedule",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/schedules/<schedule_id>"
+    },
+    {
+      "rule": "/api/pipeline/schedules/<schedule_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.get_schedule",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/schedules/<schedule_id>"
+    },
+    {
+      "rule": "/api/pipeline/schedules/<schedule_id>",
+      "methods": [
+        "PUT"
+      ],
+      "endpoint": "pipeline_intel.update_schedule",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/schedules/<schedule_id>"
+    },
+    {
+      "rule": "/api/pipeline/schedules/due",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.check_due_schedules",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/schedules/due"
+    },
+    {
+      "rule": "/api/pipeline/schedules/history",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.schedule_history",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/pipeline/schedules/history"
+    },
+    {
+      "rule": "/api/podcast/extract-audio",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio_expand.podcast_extract_audio",
+      "blueprint": "audio_expand",
+      "canonical_candidate": "/podcast/extract-audio"
+    },
+    {
+      "rule": "/api/presets/shared",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "collab_review.list_shared_presets",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/presets/shared"
+    },
+    {
+      "rule": "/api/presets/shared",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "collab_review.upload_shared_preset",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/presets/shared"
+    },
+    {
+      "rule": "/api/preview/cache",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "preview_realtime.clear_cache",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/cache"
+    },
+    {
+      "rule": "/api/preview/cache/stats",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "preview_realtime.cache_stats",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/cache/stats"
+    },
+    {
+      "rule": "/api/preview/cache/warm",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "preview_realtime.warm_cache",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/cache/warm"
+    },
+    {
+      "rule": "/api/preview/compare",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "preview_realtime.compare_preview",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/compare"
+    },
+    {
+      "rule": "/api/preview/compare/metrics",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "preview_realtime.compare_metrics",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/compare/metrics"
+    },
+    {
+      "rule": "/api/preview/effects",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "preview_realtime.list_effects",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/effects"
+    },
+    {
+      "rule": "/api/preview/live",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "preview_realtime.live_preview",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/live"
+    },
+    {
+      "rule": "/api/preview/pipeline",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "preview_realtime.run_pipeline",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/pipeline"
+    },
+    {
+      "rule": "/api/preview/pipeline/status",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "preview_realtime.pipeline_status",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/pipeline/status"
+    },
+    {
+      "rule": "/api/preview/scopes",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "preview_realtime.generate_scopes",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/scopes"
+    },
+    {
+      "rule": "/api/preview/scopes/presets",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "preview_realtime.scope_presets",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/scopes/presets"
+    },
+    {
+      "rule": "/api/preview/scrub",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "preview_realtime.scrub_preview",
+      "blueprint": "preview_realtime",
+      "canonical_candidate": "/preview/scrub"
+    },
+    {
+      "rule": "/api/project/archive",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.project_archive",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/project/archive"
+    },
+    {
+      "rule": "/api/project/archive/contents",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.project_archive_contents",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/project/archive/contents"
+    },
+    {
+      "rule": "/api/project/restore",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.project_restore",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/project/restore"
+    },
+    {
+      "rule": "/api/review/comments",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "collab_review.list_review_comments",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/review/comments"
+    },
+    {
+      "rule": "/api/review/comments/<comment_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "collab_review.delete_review_comment",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/review/comments/<comment_id>"
+    },
+    {
+      "rule": "/api/review/comments/<comment_id>/resolve",
+      "methods": [
+        "PUT"
+      ],
+      "endpoint": "collab_review.resolve_review_comment",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/review/comments/<comment_id>/resolve"
+    },
+    {
+      "rule": "/api/review/comments/export",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "collab_review.export_review_comments",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/review/comments/export"
+    },
+    {
+      "rule": "/api/routes",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_f.route_routes",
+      "blueprint": "wave_f",
+      "canonical_candidate": "/routes"
+    },
+    {
+      "rule": "/api/scripting/execute",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.scripting_execute",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/scripting/execute"
+    },
+    {
+      "rule": "/api/scripting/history",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "dev_scripting.scripting_history",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/scripting/history"
+    },
+    {
+      "rule": "/api/scripting/modules",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "workflow_dev.scripting_modules",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/scripting/modules"
+    },
+    {
+      "rule": "/api/scripting/namespace",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "dev_scripting.scripting_namespace",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/scripting/namespace"
+    },
+    {
+      "rule": "/api/sfx/download",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio_expand.sfx_download",
+      "blueprint": "audio_expand",
+      "canonical_candidate": "/sfx/download"
+    },
+    {
+      "rule": "/api/sfx/search",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio_expand.sfx_search",
+      "blueprint": "audio_expand",
+      "canonical_candidate": "/sfx/search"
+    },
+    {
+      "rule": "/api/snapshots/compare",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.snapshots_compare",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/snapshots/compare"
+    },
+    {
+      "rule": "/api/snapshots/create",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.snapshots_create",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/snapshots/create"
+    },
+    {
+      "rule": "/api/snapshots/list",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "workflow_dev.snapshots_list",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/snapshots/list"
+    },
+    {
+      "rule": "/api/snapshots/restore",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.snapshots_restore",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/snapshots/restore"
+    },
+    {
+      "rule": "/api/system/apple-silicon",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "infra.apple_silicon_info",
+      "blueprint": "infra",
+      "canonical_candidate": "/system/apple-silicon"
+    },
+    {
+      "rule": "/api/system/check-updates",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "infra.check_updates",
+      "blueprint": "infra",
+      "canonical_candidate": "/system/check-updates"
+    },
+    {
+      "rule": "/api/system/update",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "infra.trigger_update",
+      "blueprint": "infra",
+      "canonical_candidate": "/system/update"
+    },
+    {
+      "rule": "/api/timeline/assemble",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_auto.template_assemble",
+      "blueprint": "timeline_auto",
+      "canonical_candidate": "/timeline/assemble"
+    },
+    {
+      "rule": "/api/timeline/auto-mix",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_auto.auto_mix",
+      "blueprint": "timeline_auto",
+      "canonical_candidate": "/timeline/auto-mix"
+    },
+    {
+      "rule": "/api/timeline/auto-mix/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_auto.auto_mix_preview",
+      "blueprint": "timeline_auto",
+      "canonical_candidate": "/timeline/auto-mix/preview"
+    },
+    {
+      "rule": "/api/timeline/batch-ops",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_auto.batch_ops",
+      "blueprint": "timeline_auto",
+      "canonical_candidate": "/timeline/batch-ops"
+    },
+    {
+      "rule": "/api/timeline/batch-ops/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_auto.batch_ops_preview",
+      "blueprint": "timeline_auto",
+      "canonical_candidate": "/timeline/batch-ops/preview"
+    },
+    {
+      "rule": "/api/timeline/create-nested",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.create_nested_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/timeline/create-nested"
+    },
+    {
+      "rule": "/api/timeline/detect-gaps",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.timeline_detect_gaps",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/timeline/detect-gaps"
+    },
+    {
+      "rule": "/api/timeline/detect-patterns",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.detect_patterns_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/timeline/detect-patterns"
+    },
+    {
+      "rule": "/api/timeline/narrative",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_intel.timeline_narrative",
+      "blueprint": "timeline_intel",
+      "canonical_candidate": "/timeline/narrative"
+    },
+    {
+      "rule": "/api/timeline/quality",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_intel.timeline_quality",
+      "blueprint": "timeline_intel",
+      "canonical_candidate": "/timeline/quality"
+    },
+    {
+      "rule": "/api/timeline/replace-nested",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "integration.replace_nested_route",
+      "blueprint": "integration",
+      "canonical_candidate": "/timeline/replace-nested"
+    },
+    {
+      "rule": "/api/timeline/ripple-close",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.timeline_ripple_close",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/timeline/ripple-close"
+    },
+    {
+      "rule": "/api/timeline/rough-cut",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_auto.rough_cut",
+      "blueprint": "timeline_auto",
+      "canonical_candidate": "/timeline/rough-cut"
+    },
+    {
+      "rule": "/api/timeline/score",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_intel.timeline_score",
+      "blueprint": "timeline_intel",
+      "canonical_candidate": "/timeline/score"
+    },
+    {
+      "rule": "/api/timeline/smart-trim",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_auto.smart_trim_route",
+      "blueprint": "timeline_auto",
+      "canonical_candidate": "/timeline/smart-trim"
+    },
+    {
+      "rule": "/api/timeline/smart-trim/batch",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_auto.smart_trim_batch",
+      "blueprint": "timeline_auto",
+      "canonical_candidate": "/timeline/smart-trim/batch"
+    },
+    {
+      "rule": "/api/timeline/templates",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "timeline_auto.list_templates_route",
+      "blueprint": "timeline_auto",
+      "canonical_candidate": "/timeline/templates"
+    },
+    {
+      "rule": "/api/timeline/templates/validate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_auto.validate_template_route",
+      "blueprint": "timeline_auto",
+      "canonical_candidate": "/timeline/templates/validate"
+    },
+    {
+      "rule": "/api/timeline/through-edits",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.timeline_through_edits",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/timeline/through-edits"
+    },
+    {
+      "rule": "/api/transcript/edit",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_transcript_edit",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/transcript/edit"
+    },
+    {
+      "rule": "/api/transcript/parse",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_transcript_parse",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/transcript/parse"
+    },
+    {
+      "rule": "/api/transcript/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_transcript_preview",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/transcript/preview"
+    },
+    {
+      "rule": "/api/tutorial/callout",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.generate_callout_route",
+      "blueprint": "education",
+      "canonical_candidate": "/tutorial/callout"
+    },
+    {
+      "rule": "/api/tutorial/click-overlay",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.click_overlay",
+      "blueprint": "education",
+      "canonical_candidate": "/tutorial/click-overlay"
+    },
+    {
+      "rule": "/api/tutorial/detect-roi",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.detect_roi_route",
+      "blueprint": "education",
+      "canonical_candidate": "/tutorial/detect-roi"
+    },
+    {
+      "rule": "/api/tutorial/ken-burns-keyframes",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.ken_burns_keyframes_route",
+      "blueprint": "education",
+      "canonical_candidate": "/tutorial/ken-burns-keyframes"
+    },
+    {
+      "rule": "/api/tutorial/keystroke-overlay",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.keystroke_overlay",
+      "blueprint": "education",
+      "canonical_candidate": "/tutorial/keystroke-overlay"
+    },
+    {
+      "rule": "/api/tutorial/parse-click-log",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.parse_click_log_route",
+      "blueprint": "education",
+      "canonical_candidate": "/tutorial/parse-click-log"
+    },
+    {
+      "rule": "/api/tutorial/screenshot-video",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.screenshot_video",
+      "blueprint": "education",
+      "canonical_candidate": "/tutorial/screenshot-video"
+    },
+    {
+      "rule": "/api/tutorial/spotlight",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.create_spotlight_route",
+      "blueprint": "education",
+      "canonical_candidate": "/tutorial/spotlight"
+    },
+    {
+      "rule": "/api/tutorial/step-callout",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "education.create_step_callout_route",
+      "blueprint": "education",
+      "canonical_candidate": "/tutorial/step-callout"
+    },
+    {
+      "rule": "/api/undo/clear",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.undo_clear",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/undo/clear"
+    },
+    {
+      "rule": "/api/undo/history",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "workflow_dev.undo_history",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/undo/history"
+    },
+    {
+      "rule": "/api/undo/push",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.undo_push",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/undo/push"
+    },
+    {
+      "rule": "/api/undo/undo",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.undo_last",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/undo/undo"
+    },
+    {
+      "rule": "/api/version/compare",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "collab_review.version_compare",
+      "blueprint": "collab_review",
+      "canonical_candidate": "/version/compare"
+    },
+    {
+      "rule": "/api/video/cinemagraph",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_effects.cinemagraph",
+      "blueprint": "video_effects",
+      "canonical_candidate": "/video/cinemagraph"
+    },
+    {
+      "rule": "/api/video/classify-content",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "pipeline_intel.classify_content",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/video/classify-content"
+    },
+    {
+      "rule": "/api/video/color-intent",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_intel.video_color_intent",
+      "blueprint": "timeline_intel",
+      "canonical_candidate": "/video/color-intent"
+    },
+    {
+      "rule": "/api/video/color-intent/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "timeline_intel.video_color_intent_preview",
+      "blueprint": "timeline_intel",
+      "canonical_candidate": "/video/color-intent/preview"
+    },
+    {
+      "rule": "/api/video/color-intents",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "timeline_intel.list_color_intents",
+      "blueprint": "timeline_intel",
+      "canonical_candidate": "/video/color-intents"
+    },
+    {
+      "rule": "/api/video/content-types",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "pipeline_intel.list_content_types",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/video/content-types"
+    },
+    {
+      "rule": "/api/video/eye-contact",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_eye_contact",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/video/eye-contact"
+    },
+    {
+      "rule": "/api/video/eye-contact/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_eye_contact_preview",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/video/eye-contact/preview"
+    },
+    {
+      "rule": "/api/video/hyperlapse",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_effects.hyperlapse",
+      "blueprint": "video_effects",
+      "canonical_candidate": "/video/hyperlapse"
+    },
+    {
+      "rule": "/api/video/lip-sync",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_lip_sync",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/video/lip-sync"
+    },
+    {
+      "rule": "/api/video/lip-sync/preview",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "voice_speech.route_lip_sync_preview",
+      "blueprint": "voice_speech",
+      "canonical_candidate": "/video/lip-sync/preview"
+    },
+    {
+      "rule": "/api/video/log-apply",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_effects.log_apply_idt",
+      "blueprint": "video_effects",
+      "canonical_candidate": "/video/log-apply"
+    },
+    {
+      "rule": "/api/video/log-detect",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_effects.log_detect",
+      "blueprint": "video_effects",
+      "canonical_candidate": "/video/log-detect"
+    },
+    {
+      "rule": "/api/video/lut-stack",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_effects.lut_stack",
+      "blueprint": "video_effects",
+      "canonical_candidate": "/video/lut-stack"
+    },
+    {
+      "rule": "/api/video/sky-replace",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_effects.sky_replace",
+      "blueprint": "video_effects",
+      "canonical_candidate": "/video/sky-replace"
+    },
+    {
+      "rule": "/api/video/suggest-workflow",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "pipeline_intel.suggest_workflow",
+      "blueprint": "pipeline_intel",
+      "canonical_candidate": "/video/suggest-workflow"
+    },
+    {
+      "rule": "/api/vr/extract-fov",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "vr_lens.vr_extract_fov",
+      "blueprint": "vr_lens",
+      "canonical_candidate": "/vr/extract-fov"
+    },
+    {
+      "rule": "/api/vr/reframe",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "vr_lens.vr_reframe",
+      "blueprint": "vr_lens",
+      "canonical_candidate": "/vr/reframe"
+    },
+    {
+      "rule": "/api/vr/spatial-audio",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "vr_lens.vr_spatial_audio",
+      "blueprint": "vr_lens",
+      "canonical_candidate": "/vr/spatial-audio"
+    },
+    {
+      "rule": "/api/vr/stabilize",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "vr_lens.vr_stabilize",
+      "blueprint": "vr_lens",
+      "canonical_candidate": "/vr/stabilize"
+    },
+    {
+      "rule": "/api/webhooks",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "dev_scripting.webhook_list",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/webhooks"
+    },
+    {
+      "rule": "/api/webhooks",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.webhook_register",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/webhooks"
+    },
+    {
+      "rule": "/api/webhooks/<webhook_id>",
+      "methods": [
+        "DELETE"
+      ],
+      "endpoint": "dev_scripting.webhook_delete",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/webhooks/<webhook_id>"
+    },
+    {
+      "rule": "/api/webhooks/test",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "dev_scripting.webhook_test",
+      "blueprint": "dev_scripting",
+      "canonical_candidate": "/webhooks/test"
+    },
+    {
+      "rule": "/api/workflow/scripting/execute",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "workflow_dev.scripting_execute",
+      "blueprint": "workflow_dev",
+      "canonical_candidate": "/workflow/scripting/execute"
+    }
+  ]
+}

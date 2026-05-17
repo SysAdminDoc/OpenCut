@@ -179,10 +179,10 @@ A quick grep through the manifest for endpoints that obviously depend on ExtendS
 
 ## 8. Auto-routes via `/api/*` aliases
 
-The manifest contains **233 routes under `/api/*`**. These are mostly aliases over the same handlers as the canonical routes (e.g. `/api/sequence/info` mirrors `/timeline/info`). The aliases were added during Wave I (script-to-sequence) and the UXP panel migration. This **doubles up** the effective surface area to maintain.
+The manifest contains **233 routes under `/api/*`**. Pass 7 corrected the original assumption that these were mostly aliases: `opencut/_generated/api_aliases.json` shows **15 true aliases** and **218 canonical `/api` routes**. A route is now counted as an alias only when an `/api/*` rule has the same methods as an equivalent bare rule after stripping `/api`.
 
 **Action:**
-- **F199** — Document the `/api/*` alias policy explicitly in `CLAUDE.md`. Pin one direction (`/api/*` or canonical) as primary for new work. Generate alias map in `opencut/_generated/api_aliases.json`.
+- **F199** — **DONE in Pass 7.** `opencut.tools.dump_api_aliases` generates `opencut/_generated/api_aliases.json`, and release smoke checks it with `python -m opencut.tools.dump_api_aliases --check`.
 
 ---
 
@@ -198,6 +198,6 @@ The manifest contains **233 routes under `/api/*`**. These are mostly aliases ov
 | F196 | Make `registry.py` primary; derive `model_cards` / `checks` | Later | L |
 | F197 | Add `NON_AI_CHECKS` allowlist to `registry.py` | Now | S |
 | F198 | CEP-only route catalogue + UXP replacement plan | Next | M |
-| F199 | Document `/api/*` alias policy + generate alias map | Now | S |
+| F199 | Document `/api/*` alias policy + generate alias map | Done in Pass 7 | S |
 
 All flow into Pass-2 updates to `FEATURE_BACKLOG.md`, `PRIORITIZATION_MATRIX.md`, and ROADMAP v4.5.

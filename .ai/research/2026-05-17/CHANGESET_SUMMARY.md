@@ -337,6 +337,38 @@ Pass 5 converted three Pass-3 Now items from research findings into repository c
 | `git diff --check` | PASS |
 | `python scripts/release_smoke.py --json` | PASS — all 11 release-smoke steps green; pytest-fast reported `232 passed` |
 
+---
+
+## 12. Pass 7 additions (same day, F199 implementation)
+
+Pass 7 closed F199 and corrected the earlier alias-count assumption.
+
+### Files added or edited in Pass 7
+
+| Path | Change |
+|---|---|
+| `opencut/tools/dump_api_aliases.py` | Added generator/checker for `/api` alias policy derived from the live route manifest. |
+| `opencut/_generated/api_aliases.json` | New generated manifest: 233 total `/api/*` routes, 15 true aliases, 218 canonical `/api` routes. |
+| `scripts/release_smoke.py` | Added `api-aliases` drift check to the release-smoke matrix. |
+| `tests/test_api_aliases.py` | Added committed-vs-live manifest guard plus shape/policy checks. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CONTINUE_FROM_HERE.md` | Marked F199 closed and corrected "233 alias pairs" wording. |
+
+### Item closed in Pass 7
+
+| F# | Result |
+|---|---|
+| F199 | Closed — generated `/api` alias policy manifest and drift checks. |
+
+### Validation after Pass 7
+
+| Command | Result |
+|---|---|
+| `python -m opencut.tools.dump_api_aliases --check` | PASS — 15 aliases, 218 canonical `/api` routes |
+| `python -m pytest tests/test_api_aliases.py tests/test_release_smoke.py -q` | PASS — `16 passed` |
+| `python -m py_compile opencut/tools/dump_api_aliases.py scripts/release_smoke.py` | PASS |
+| `ruff check opencut/tools/dump_api_aliases.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 12 release-smoke steps green; pytest-fast reported `236 passed` |
+
 ### Push status after Pass 5
 
 `git push origin main` failed with HTTP 403:
