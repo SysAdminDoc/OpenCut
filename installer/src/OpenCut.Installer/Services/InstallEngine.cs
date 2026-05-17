@@ -24,7 +24,7 @@ public class InstallEngine
 
     public void RunInstall(IProgress<InstallProgress> progress)
     {
-        int totalSteps = 17;
+        int totalSteps = 18;
         int step = 0;
 
         var tempDir = Path.Combine(Path.GetTempPath(), $"OpenCut-Install-{Guid.NewGuid():N}");
@@ -138,19 +138,23 @@ public class InstallEngine
             step = 14;
             _registryManager.RegisterUninstall(_config, progress, step, totalSteps);
 
-            // Step 15: Download Whisper model (optional)
+            // Step 15: Write machine-readable install manifest
             step = 15;
+            WriteInstallerManifest(progress, step, totalSteps);
+
+            // Step 16: Download Whisper model (optional)
+            step = 16;
             if (_config.DownloadWhisperModel)
                 _whisperDownloader.DownloadModel(_config, progress, step, totalSteps);
             else
                 Report(progress, step, totalSteps, "Whisper model", "Skipped (not selected).", LogLevel.Debug);
 
-            // Step 16: Install optional Python tools
-            step = 16;
+            // Step 17: Install optional Python tools
+            step = 17;
             _dependencyInstaller.InstallDeps(_config, progress, step, totalSteps);
 
-            // Step 17: Cleanup temp
-            step = 17;
+            // Step 18: Cleanup temp
+            step = 18;
             Report(progress, step, totalSteps, "Cleaning up", "Removing temporary files...");
             try
             {
@@ -188,5 +192,31 @@ public class InstallEngine
             Message = message,
             Level = level
         });
+    }
+
+    private void WriteInstallerManifest(IProgress<InstallProgress> progress, int step, int totalSteps)
+    {
+        Report(progress, step, totalSteps, "Installer manifest", "Writing installer manifest...");
+
+        var dir = Path.GetDirectoryName(_config.InstallerManifestPath);
+        if (!string.IsNullOrEmpty(dir))
+            Directory.CreateDirectory(dir);
+
+        var manifest = new SortedDictionary<string, object?>
+        {
+            ["app_name"] = AppConstants.AppName,
+            ["app_version"] = AppConstants.AppVersion,
+            ["installer_kind"] = "wpf",
+            ["install_path"] = _config.InstallPath,
+            ["server_path"] = _config.ServerPath,
+            ["ffmpeg_path"] = _config.FfmpegPath,
+            ["bundled_ffmpeg_version"] = AppConstants.BundledFfmpegVersion,
+            ["bundled_ffprobe_version"] = AppConstants.BundledFfprobeVersion,
+            ["installed_at_utc"] = DateTime.UtcNow.ToString("O"),
+        };
+
+        var json = JsonSerializer.Serialize(manifest, new JsonSerializerOptions { WriteIndented = true });
+        File.WriteAllText(_config.InstallerManifestPath, json);
+        Report(progress, step, totalSteps, "Installer manifest", _config.InstallerManifestPath, LogLevel.Success);
     }
 }

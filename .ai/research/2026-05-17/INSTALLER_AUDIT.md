@@ -153,12 +153,11 @@ Per the wave I I1.4 plan (shipped in v1.26.0):
 
 ## 9. Installer-side dependencies (FFmpeg + Python)
 
-- FFmpeg: bundled in installer payload (Windows installer copies `ffmpeg.exe` / `ffprobe.exe` from CI choco-installed location). Bundled version lags upstream — recommendation in `SECURITY_AND_DEPENDENCY_REVIEW.md` is to bump to FFmpeg 8.1 (F129) after F128 regression suite.
+- FFmpeg: bundled in installer payload (Windows installer copies `ffmpeg.exe` / `ffprobe.exe` from CI choco-installed location). Pass 12 pinned the current bundled build as `8.0.1-essentials_build-www.gyan.dev` in both installer manifest paths. Bundled version still lags upstream — recommendation in `SECURITY_AND_DEPENDENCY_REVIEW.md` is to bump to FFmpeg 8.1 (F129) after F128 regression suite.
 - Python: WPF installer detects system Python (uses bundled if not found). Bundled Python version is whatever PyInstaller `python_version` resolved to (likely 3.12 today).
 - Whisper models: optional download via `WhisperDownloader.cs` service.
 
-**Gap:** the WPF installer's bundled FFmpeg version is **not documented anywhere**. Recommendation:
-- **F207** — Embed FFmpeg version in `AppConstants.cs` and surface in installer welcome page + the installed `~/.opencut/installer.json` manifest.
+**Pass 12 update:** F207 now embeds the bundled FFmpeg/ffprobe version in `AppConstants.cs` and writes it to `~/.opencut/installer.json` from both WPF and Inno installers. A future UI polish can surface the value on the installer welcome page.
 
 ---
 
@@ -173,4 +172,4 @@ Per the wave I I1.4 plan (shipped in v1.26.0):
 | F204 | Auto-attach SBOM (from `scripts/sbom.py`) to GitHub releases | Done in Pass 11 | S |
 | F205 | Raise CI coverage floor from 50% to current actual (~75-80% est.) | Now | S |
 | F206 | Split CI into PR-fast and release-full workflows | Later | M |
-| F207 | Embed bundled FFmpeg version in `AppConstants.cs` + installer manifest | Now | S |
+| F207 | Embed bundled FFmpeg version in `AppConstants.cs` + installer manifest | Done in Pass 12 | S |

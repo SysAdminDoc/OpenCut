@@ -299,6 +299,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_mcp_server.py",
     "tests/test_macos_notarization.py",
     "tests/test_release_sbom.py",
+    "tests/test_ffmpeg_installer_manifest.py",
     "tests/test_caption_qc.py",
     "tests/test_local_auth.py",
     "tests/test_model_cards.py",

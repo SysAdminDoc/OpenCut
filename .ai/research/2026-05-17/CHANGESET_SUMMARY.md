@@ -544,3 +544,43 @@ Pass 11 closed automatic SBOM attachment for release builds.
 | `python -c "import pathlib, yaml; yaml.safe_load(pathlib.Path('.github/workflows/build.yml').read_text())"` | PASS |
 | `python scripts/sbom.py --format json --output dist/opencut-sbom.cyclonedx.json` | PASS |
 | `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast reported `251 passed` |
+
+---
+
+## 17. Pass 12 additions (same day, F205 attempt + F207 installer FFmpeg manifest)
+
+Pass 12 attempted F205 and closed F207.
+
+### Files added or edited in Pass 12
+
+| Path | Change |
+|---|---|
+| `installer/src/OpenCut.Installer/Models/AppConstants.cs` | Added bundled FFmpeg/ffprobe version constants and the installer manifest filename. |
+| `installer/src/OpenCut.Installer/Models/InstallConfig.cs` | Added `InstallerManifestPath` for `~/.opencut/installer.json`. |
+| `installer/src/OpenCut.Installer/Services/InstallEngine.cs` | Added a manifest-writing step that emits app/install paths, installer kind, FFmpeg versions, and install timestamp. |
+| `installer/src/OpenCut.Installer/GlobalUsings.cs` | Added `System.Text.Json` for manifest serialization. |
+| `OpenCut.iss` | Added bundled FFmpeg/ffprobe version defines and an Inno post-install manifest writer. |
+| `tests/test_ffmpeg_installer_manifest.py` | Added static coverage for WPF/Inno FFmpeg version manifest contracts. |
+| `scripts/release_smoke.py` | Added `tests/test_ffmpeg_installer_manifest.py` to the release-gate pytest slice. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `INSTALLER_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CONTINUE_FROM_HERE.md` | Marked F207 closed and recorded the F205 coverage timeout blocker. |
+
+### Items closed in Pass 12
+
+| F# | Result |
+|---|---|
+| F207 | Closed — bundled FFmpeg version is now in `AppConstants.cs` and the installed `~/.opencut/installer.json` manifest for both WPF and Inno paths. |
+
+### Validation after Pass 12
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_ffmpeg_installer_manifest.py tests/test_release_smoke.py -q` | PASS — `15 passed` |
+| `ruff check tests/test_ffmpeg_installer_manifest.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile scripts/release_smoke.py` | PASS |
+| `.\ffmpeg\ffmpeg.exe -version` | PASS — reports `8.0.1-essentials_build-www.gyan.dev` |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast reported `254 passed` |
+| `dotnet build installer/src/OpenCut.Installer/OpenCut.Installer.csproj --no-restore` | BLOCKED — no .NET SDK installed on this VM |
+
+### F205 attempt
+
+Installed missing local plugins with `python -m pip install pytest-cov pytest-xdist`, then attempted the CI-style coverage measurement with the floor disabled. The command timed out after 20 minutes and produced no `dist\coverage-f205.json`, so F205 remains open.
