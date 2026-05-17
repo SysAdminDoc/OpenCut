@@ -482,6 +482,177 @@ MCP_TOOLS = [
             "required": ["message"],
         },
     },
+    # F195 post-Wave-M shipped surface expansion
+    {
+        "name": "opencut_face_reshape",
+        "description": "Apply AI face reshaping operations such as slim face, enlarge eyes, or smooth jaw.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to source video"},
+                "operation": {"type": "string", "default": "slim_face"},
+                "strength": {"type": "number", "default": 0.5},
+                "output": {"type": "string", "description": "Optional output path"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_skin_retouch",
+        "description": "Retouch skin and blemishes in video using bilateral or GFPGAN-backed processing.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to source video"},
+                "intensity": {"type": "number", "default": 0.6},
+                "mode": {"type": "string", "default": "bilateral", "enum": ["bilateral", "gfpgan"]},
+                "radiance": {"type": "number", "default": 0.0},
+                "output": {"type": "string", "description": "Optional output path"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_smart_upscale",
+        "description": "Upscale video through OpenCut's smart backend selector with Lanczos fallback.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to source video"},
+                "scale": {"type": "integer", "default": 2},
+                "hint": {"type": "string", "default": "auto"},
+                "backend": {"type": "string", "default": "auto"},
+                "output": {"type": "string", "description": "Optional output path"},
+            },
+            "required": ["filepath"],
+        },
+    },
+    {
+        "name": "opencut_elevenlabs_tts",
+        "description": "Generate speech through the optional ElevenLabs cloud TTS integration.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "text": {"type": "string", "description": "Text to synthesize"},
+                "voice": {"type": "string", "default": "Rachel"},
+                "model": {"type": "string", "default": "eleven_multilingual_v2"},
+                "stability": {"type": "number", "default": 0.5},
+                "similarity_boost": {"type": "number", "default": 0.75},
+                "style": {"type": "number", "default": 0.0},
+                "use_speaker_boost": {"type": "boolean", "default": True},
+                "output": {"type": "string", "description": "Optional output path"},
+            },
+            "required": ["text"],
+        },
+    },
+    {
+        "name": "opencut_caption_qc",
+        "description": "Run the caption QC gate over SRT text or an SRT file.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "srt_path": {"type": "string", "description": "Path to SRT file"},
+                "srt_text": {"type": "string", "description": "Inline SRT text"},
+                "standard": {"type": "string", "default": "accessibility"},
+                "mode": {"type": "string", "default": "strict", "enum": ["strict", "advisory"]},
+            },
+        },
+    },
+    {
+        "name": "opencut_review_bundle",
+        "description": "Build a portable review bundle zip with media, captions, markers, notes, and extra files.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "output_path": {"type": "string", "description": "Destination .zip path"},
+                "job_label": {"type": "string", "description": "Human label for the bundle"},
+                "media_path": {"type": "string", "description": "Optional rendered media path"},
+                "captions_path": {"type": "string", "description": "Optional captions path"},
+                "markers_payload": {"type": "object", "description": "Optional marker/comment payload"},
+                "notes": {"type": "string", "description": "Free-form reviewer notes"},
+                "extra_files": {"type": "array", "items": {"type": "string"}},
+                "include_media": {"type": "boolean", "default": True},
+            },
+            "required": ["output_path"],
+        },
+    },
+    {
+        "name": "opencut_c2pa_provenance",
+        "description": "Write a lightweight C2PA provenance sidecar next to a rendered asset.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "asset_path": {"type": "string", "description": "Rendered asset path"},
+                "title": {"type": "string", "description": "Optional manifest title"},
+                "ingredients": {"type": "array", "items": {"type": "object"}},
+                "actions": {"type": "array", "items": {"type": "object"}},
+                "claim_generator": {"type": "string", "description": "Optional claim-generator override"},
+            },
+            "required": ["asset_path"],
+        },
+    },
+    {
+        "name": "opencut_marker_import",
+        "description": "Parse CSV, Premiere CSV, or EDL markers into OpenCut's normalized marker format.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "path": {"type": "string", "description": "Path to marker file"},
+                "text": {"type": "string", "description": "Inline marker text"},
+                "format": {"type": "string", "description": "csv, premiere_csv, or edl"},
+                "fps": {"type": "number", "default": 30.0},
+            },
+        },
+    },
+    {
+        "name": "opencut_capability_probe",
+        "description": "Return OpenCut's FFmpeg, ffprobe, GPU, disk, and Python capability profile.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {},
+        },
+    },
+    {
+        "name": "opencut_brand_kit",
+        "description": "Get, save, delete, or preview the local Brand Kit settings.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "default": "get", "enum": ["get", "save", "delete", "preview"]},
+                "filepath": {"type": "string", "description": "Source media path for preview action"},
+                "brand_kit": {"type": "object", "description": "Brand Kit settings for save or preview"},
+                "output": {"type": "string", "description": "Optional preview output path"},
+            },
+        },
+    },
+    {
+        "name": "opencut_semantic_search",
+        "description": "Search media paths by semantic text query or index media for semantic search.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "action": {"type": "string", "default": "search", "enum": ["search", "index", "status"]},
+                "query": {"type": "string", "description": "Search query"},
+                "media_paths": {"type": "array", "items": {"type": "string"}},
+                "mode": {"type": "string", "default": "all"},
+                "top_k": {"type": "integer", "default": 10},
+            },
+        },
+    },
+    {
+        "name": "opencut_spectral_match",
+        "description": "Match a clip's spectral profile to a reference audio or video file.",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "filepath": {"type": "string", "description": "Path to source media"},
+                "reference_path": {"type": "string", "description": "Reference media path"},
+                "strength": {"type": "number", "default": 1.0},
+                "output": {"type": "string", "description": "Optional output path"},
+            },
+            "required": ["filepath", "reference_path"],
+        },
+    },
 ]
 
 # Route mapping for tool execution
@@ -517,6 +688,19 @@ _TOOL_ROUTES = {
     "opencut_sports_highlights": ("POST", "/video/highlights/sports"),
     "opencut_lipsync_echomimic": ("POST", "/video/lipsync/echomimic"),
     "opencut_chat_edit": ("POST", "/agent/chat"),
+    # F195 post-Wave-M shipped surface expansion
+    "opencut_face_reshape": ("POST", "/video/face/reshape"),
+    "opencut_skin_retouch": ("POST", "/video/face/retouch"),
+    "opencut_smart_upscale": ("POST", "/video/upscale/smart"),
+    "opencut_elevenlabs_tts": ("POST", "/audio/tts/elevenlabs"),
+    "opencut_caption_qc": ("POST", "/captions/qc"),
+    "opencut_review_bundle": ("POST", "/review/bundle"),
+    "opencut_c2pa_provenance": ("POST", "/provenance/c2pa"),
+    "opencut_marker_import": ("POST", "/markers/import"),
+    "opencut_capability_probe": ("GET", "/system/capabilities"),
+    "opencut_brand_kit": ("GET", "/settings/brand-kit"),
+    "opencut_semantic_search": ("POST", "/search/ai"),
+    "opencut_spectral_match": ("POST", "/audio/spectral-match"),
 }
 
 
@@ -582,9 +766,28 @@ def handle_tool_call(tool_name, arguments):
         return {"error": "`arguments` must be a JSON object"}
 
     # Required scalar path keys — empty rejected
-    _required_path_keys = ("filepath", "file", "source", "reference", "audio_path")
+    _required_path_keys = (
+        "filepath",
+        "file",
+        "source",
+        "reference",
+        "audio_path",
+        "asset_path",
+        "media_path",
+        "captions_path",
+        "srt_path",
+        "path",
+        "reference_path",
+    )
     # Optional scalar path keys — empty allowed (means "not provided")
-    _optional_path_keys = ("style_image", "voice_ref", "output_dir")
+    _optional_path_keys = (
+        "style_image",
+        "voice_ref",
+        "output_dir",
+        "output",
+        "output_path",
+        "sidecar_path",
+    )
     for key in _required_path_keys:
         if key in arguments and not _validate_mcp_filepath(arguments, key, allow_empty=False):
             return {"error": f"Invalid {key}: path traversal, null byte, or UNC path detected"}
@@ -593,7 +796,7 @@ def handle_tool_call(tool_name, arguments):
             return {"error": f"Invalid {key}: path traversal, null byte, or UNC path detected"}
 
     # Validate filepath arrays (e.g. "files" in index_footage / loudness_match)
-    for key in ("files",):
+    for key in ("files", "media_paths", "extra_files"):
         if key in arguments and isinstance(arguments[key], list):
             for i, item in enumerate(arguments[key]):
                 if not isinstance(item, str) or not item or "\x00" in item \
@@ -623,6 +826,30 @@ def handle_tool_call(tool_name, arguments):
         style = arguments.get("style", "")
         if style == "arbitrary":
             path = "/video/style/arbitrary"
+
+    if tool_name == "opencut_brand_kit":
+        action = str(arguments.get("action") or "get").strip().lower()
+        if action == "get":
+            return _api("GET", "/settings/brand-kit")
+        if action == "delete":
+            return _api("DELETE", "/settings/brand-kit")
+        if action == "preview":
+            return _api("POST", "/settings/brand-kit/preview", arguments)
+        if action == "save":
+            payload = {k: v for k, v in arguments.items() if k != "action"}
+            if "brand_kit" in payload and isinstance(payload["brand_kit"], dict):
+                payload = payload["brand_kit"]
+            return _api("POST", "/settings/brand-kit", payload)
+        return {"error": "Invalid action for opencut_brand_kit"}
+
+    if tool_name == "opencut_semantic_search":
+        action = str(arguments.get("action") or "search").strip().lower()
+        if action == "index":
+            path = "/search/ai/index"
+        elif action == "status":
+            return _api("GET", "/search/ai/index/status")
+        elif action != "search":
+            return {"error": "Invalid action for opencut_semantic_search"}
 
     return _api(method, path, arguments)
 

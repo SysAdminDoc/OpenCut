@@ -1,17 +1,17 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 9)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 10)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (during Pass 7; Passes 1-7 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, and Pass 8 closed F191/F197. This file documents deferred research/product work for a future Pass 9+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (during Pass 9; Passes 1-9 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, and Pass 9 closed F195. This file documents deferred research/product work for a future Pass 10+, not a broken or incomplete research run.
 
 ---
 
 ## 1. State at hand-off
 
-- **Repo branch:** `main`, 25 commits ahead of `origin/main` before the Pass-4 checkpoint commit. Push to `SysAdminDoc/OpenCut` still depends on local GitHub auth.
+- **Repo branch:** `main`, expected 32 commits ahead of `origin/main` after the Pass-9 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
-- **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 131 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 27 MCP tools / 30 OpenAPI-typed endpoints.
+- **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 133 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
@@ -42,7 +42,7 @@
 | **`MARKET_POSITIONING.md`** | **Pass 3** | 200 |
 | **`CONTINUE_FROM_HERE.md`** | **this file** | ~350 |
 
-**At repo root:** `PROJECT_CONTEXT.md` (canonical context, Pass 1-7 updates), `ROADMAP.md` (v4.3-v4.10 sections), `AGENTS.md` (pointer added), `CLAUDE.md` (pointer added, gitignored).
+**At repo root:** `PROJECT_CONTEXT.md` (canonical context, Pass 1-9 updates), `ROADMAP.md` (v4.3-v4.12 sections), `AGENTS.md` (pointer added), `CLAUDE.md` (pointer added, gitignored).
 
 ---
 
@@ -215,11 +215,12 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 | npm advisory state | **PASS** in release-smoke allow-list step; raw `npm audit --json` still shows the known moderate Vite `.map` advisory that F095 documents |
 | `npm view @adobe/premierepro version dist-tags --json` | Confirmed `latest=26.2.0`, `beta=26.3.0-beta.67` |
 
-### Pass 9 entry point
+### Pass 10 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
-3. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+2. **Continue the F191-F260 Now queue.** F202 is the next listed item but likely needs Apple Developer notarisation credentials; if unavailable, prefer a local-verifiable S item such as F208/F209/F218/F219.
+3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
+4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
 ### Current limitations
 
@@ -346,7 +347,34 @@ Pass 8 closed the route/check readiness generation item and the registry-owned a
 
 ### Remaining immediate work
 
-- F195 (12 missing MCP tools) is the next active Now-tier route/tooling item.
+- F195 is closed locally; the next route/tooling item in the same family is F209 (MCP tool/route consistency gate).
 - F179 full `features.md` reconciliation remains the largest knowledge debt.
 - Python 3.10/3.11/3.13 `[all]` install matrix remains unproven on this VM.
+- Push remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
+
+---
+
+## 15. Pass 9 update (same day, F195 MCP curated tool expansion)
+
+Pass 9 closed the missing curated MCP tools item.
+
+### What Pass 9 closed
+
+| Item | Status |
+|---|---|
+| F195 | **DONE** — expanded `MCP_TOOLS` from 27 to 39 entries, added route mappings for 12 shipped post-Wave-M routes, handled Brand Kit and semantic-search multi-action dispatch, and expanded MCP path validation to cover the new scalar/array path keys. |
+
+### Validation after Pass 9
+
+| Command | Result |
+|---|---|
+| `python -m py_compile opencut/mcp_server.py scripts/release_smoke.py tests/test_mcp_server.py` | PASS |
+| `python -m pytest tests/test_mcp_server.py tests/test_release_smoke.py -q` | PASS — `17 passed` |
+| `ruff check opencut/mcp_server.py scripts/release_smoke.py tests/test_mcp_server.py --select E,F,I --ignore E501,E402` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `246 passed` |
+
+### Remaining immediate work
+
+- F202 is still first in the Now list after F195 but likely requires Apple Developer notarisation credentials for full implementation.
+- Local-verifiable next candidates: F208 (OpenAPI validity test), F209 (MCP tool/route consistency test), F218 (blueprint import-order stability), F219 (SBOM completeness test), or F204 (release SBOM attach plumbing).
 - Push remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.

@@ -1,7 +1,7 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.3
-**Updated**: 2026-05-16
+**Version**: 4.12
+**Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,344 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
@@ -30,6 +30,35 @@
 > **v4.10 status (2026-05-17, seventh pass)**: closed **F199** with `opencut/_generated/api_aliases.json`, `opencut.tools.dump_api_aliases`, release-smoke drift checking, and tests. Live correction: the app has **233 `/api/*` routes**, but only **15** are true dual-registered aliases with equivalent bare routes; the remaining **218** are canonical `/api` routes.
 >
 > **v4.11 status (2026-05-17, eighth pass)**: closed **F191** and **F197** with `opencut/_generated/feature_readiness.json`, `opencut.tools.dump_feature_readiness`, registry-side generated-record loading/merging, a registry-owned `NON_AI_CHECKS` allowlist shared by model cards, release-smoke drift checking, and tests. The feature-state manifest now exposes **84** records total, including **58** route-derived records across **67** direct route/check bindings.
+>
+> **v4.12 status (2026-05-17, ninth pass)**: closed **F195** by expanding the curated MCP surface from **27** to **39** tools for the shipped post-Wave-M routes (face reshape, skin retouch, smart upscale, ElevenLabs TTS, caption QC, review bundles, C2PA provenance, marker import, capability probe, Brand Kit, semantic search, and spectral match). `tests/test_mcp_server.py` now pins tool registration, route dispatch, multi-action MCP tools, and the expanded MCP path-validation keys; release smoke includes this MCP gate.
+
+---
+
+## 2026-05-17 v4.12 MCP Curated Tool Expansion
+
+F195 is closed locally. `opencut/mcp_server.py` now exposes 39 curated MCP tools instead of the previous 27. The added tools map to already-shipped backend routes:
+
+| Tool | Route |
+|---|---|
+| `opencut_face_reshape` | `POST /video/face/reshape` |
+| `opencut_skin_retouch` | `POST /video/face/retouch` |
+| `opencut_smart_upscale` | `POST /video/upscale/smart` |
+| `opencut_elevenlabs_tts` | `POST /audio/tts/elevenlabs` |
+| `opencut_caption_qc` | `POST /captions/qc` |
+| `opencut_review_bundle` | `POST /review/bundle` |
+| `opencut_c2pa_provenance` | `POST /provenance/c2pa` |
+| `opencut_marker_import` | `POST /markers/import` |
+| `opencut_capability_probe` | `GET /system/capabilities` |
+| `opencut_brand_kit` | `GET/POST/DELETE /settings/brand-kit` plus `POST /settings/brand-kit/preview` by action |
+| `opencut_semantic_search` | `POST /search/ai`, `POST /search/ai/index`, and `GET /search/ai/index/status` by action |
+| `opencut_spectral_match` | `POST /audio/spectral-match` |
+
+The MCP layer now also validates the new scalar and array filepath keys used by these tools (`asset_path`, `media_path`, `captions_path`, `srt_path`, `path`, `reference_path`, `output_path`, `media_paths`, `extra_files`) before proxying to the Flask backend.
+
+Validation after the batch: `python -m py_compile opencut\mcp_server.py scripts\release_smoke.py tests\test_mcp_server.py` passed, focused MCP/release-smoke tests passed (`17 passed`), Ruff passed for the touched files, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`246 passed` in pytest-fast).
+
+Limit: this is still a curated MCP surface. F194 remains the larger generated/extended-tool proposal, and F209 remains the consistency gate that should fail when a curated MCP tool maps to a missing route.
 
 ---
 
@@ -271,7 +300,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (17 open + F191/F197/F199 closed locally, including 2 regulatory):** [x] F191 (auto-derive registry), F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), **F202 (Apple notarisation, regulatory)**, F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (16 open + F191/F195/F197/F199 closed locally, including 2 regulatory):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), **F202 (Apple notarisation, regulatory)**, F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
