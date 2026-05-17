@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.18
+**Version**: 4.19
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,344 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -44,6 +44,24 @@
 > **v4.17 status (2026-05-17, fourteenth pass)**: closed **F209** with an MCP route-consistency gate. `opencut_chat_edit` now maps to the shipped `POST /chat` endpoint instead of the planned-but-absent `/agent/chat`, and `tests/test_mcp_server.py` now asserts every MCP tool route plus special action route exists in the live Flask `url_map`.
 >
 > **v4.18 status (2026-05-17, fifteenth pass)**: closed **F218** by pinning deterministic blueprint registration order. `tests/test_route_collisions.py` now asserts the exact `get_core_blueprints()` order and the final `motion_design_api` alias registration, and the route-collision test file is part of release smoke.
+>
+> **v4.19 status (2026-05-17, sixteenth pass)**: closed **F219** by making the release SBOM complete enough to audit. `scripts/sbom.py` now emits unique declared Python dependency components, 47 model-card components, and a non-empty CycloneDX dependency graph; `tests/test_sbom_completeness.py` verifies the SBOM covers every `pyproject.toml`/`requirements.txt` dependency, every committed model card, and every component reference in the dependency graph.
+
+---
+
+## 2026-05-17 v4.19 SBOM Completeness Gate
+
+F219 is closed locally. The release SBOM now has a completeness guard beyond the F204 workflow smoke test:
+
+| Surface | Status |
+|---|---|
+| Declared Python dependencies | `scripts/sbom.py` now de-duplicates dependency components across `pyproject.toml`, optional extras, and `requirements.txt`; the current SBOM has 40 Python package components, including 14 required components. |
+| Model-card surface | The SBOM includes one optional component for each of the 47 committed `opencut.model_cards.CARDS` entries, with check-name, feature-id, category, hardware, install-hint, privacy, upstream, and license metadata. |
+| Dependency graph | The CycloneDX JSON/XML output now includes a non-empty `dependencies` array: the root OpenCut application depends on every component, and every component has a stable graph entry. |
+| Regression test | `tests/test_sbom_completeness.py` checks declared dependency coverage, generated model-card parity, unique `bom-ref` values, and dependency graph coverage. |
+| Release smoke | `scripts/release_smoke.py` includes `tests/test_sbom_completeness.py` in `pytest-fast`. |
+
+Validation after the batch: focused SBOM/release-smoke tests passed (`17 passed`), Ruff passed for touched Python files, `scripts/sbom.py` + `tests/test_sbom_completeness.py` + `scripts/release_smoke.py` compile, JSON/XML generation reports 14 required components, 73 optional components, and 47 model-card components, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`269 passed` in pytest-fast).
 
 ---
 
@@ -123,7 +141,7 @@ F204 is closed locally. The existing zero-dependency `scripts/sbom.py` generator
 | GitHub Release upload | Tagged releases upload `dist/opencut-sbom.cyclonedx.json` with `gh release upload --clobber`. |
 | Regression test | `tests/test_release_sbom.py` verifies the generator emits CycloneDX 1.5 JSON and the workflow keeps the generation/archive/upload steps. |
 
-Validation after the batch: `python -m pytest tests\test_release_sbom.py tests\test_release_smoke.py -q` passed (`14 passed`), Ruff passed for touched Python files, workflow YAML parsing passed, `python scripts\sbom.py --format json --output dist\opencut-sbom.cyclonedx.json` generated a valid SBOM, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`251 passed` in pytest-fast). F219 remains open for the deeper completeness assertion against all declared dependencies and model cards.
+Validation after the batch: `python -m pytest tests\test_release_sbom.py tests\test_release_smoke.py -q` passed (`14 passed`), Ruff passed for touched Python files, workflow YAML parsing passed, `python scripts\sbom.py --format json --output dist\opencut-sbom.cyclonedx.json` generated a valid SBOM, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`251 passed` in pytest-fast). The deeper F219 completeness assertion was closed later in v4.19.
 
 ---
 
@@ -410,7 +428,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (10 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218 closed locally, including 1 regulatory still open):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (9 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219 closed locally, including 1 regulatory still open):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML

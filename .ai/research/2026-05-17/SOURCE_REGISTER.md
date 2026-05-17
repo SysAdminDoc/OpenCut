@@ -535,3 +535,22 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P15-L07 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `266 passed` |
 
 **Source coverage assessment (Pass 15):** Pass 15 claims in `ROADMAP.md` v4.18, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P15-L01 through R-P15-L07. No new external source was used.
+
+---
+
+## Pass 16 — F219 SBOM completeness gate (2026-05-17 sixteenth pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P16-L01 | `scripts/sbom.py` — added unique dependency component assembly, model-card components, JSON/XML dependency graph output, and SBOM CLI counts |
+| R-P16-L02 | `tests/test_sbom_completeness.py` — new F219 regression tests for declared dependency coverage, 47 model-card components, unique `bom-ref` values, and dependency graph references |
+| R-P16-L03 | `scripts/release_smoke.py` — added `tests/test_sbom_completeness.py` to `pytest-fast` |
+| R-P16-L04 | `python -m pytest tests/test_sbom_completeness.py tests/test_release_sbom.py tests/test_release_smoke.py -q` — PASS, `17 passed` |
+| R-P16-L05 | `ruff check scripts/sbom.py tests/test_sbom_completeness.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P16-L06 | `python -m py_compile scripts/sbom.py tests/test_sbom_completeness.py scripts/release_smoke.py` — PASS |
+| R-P16-L07 | `python scripts/sbom.py --format json --output dist/opencut-sbom-f219.cyclonedx.json` and `python scripts/sbom.py --format xml --output dist/opencut-sbom-f219.cyclonedx.xml` — PASS, 14 required components / 73 optional components / 47 model-card components |
+| R-P16-L08 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `269 passed` |
+
+**Source coverage assessment (Pass 16):** Pass 16 claims in `ROADMAP.md` v4.19, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P16-L01 through R-P16-L08. No new external source was used.
