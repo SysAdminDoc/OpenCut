@@ -27,7 +27,6 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from typing import Dict, Iterable, List, Optional
 
-
 # Canonical palette — the names used throughout OpenCut. Everything else
 # normalises into this list. Order matches Premiere's marker palette so
 # the most common cases land near the top.

@@ -23,8 +23,7 @@ from __future__ import annotations
 
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
-from typing import Iterable, List, Optional
-
+from typing import List, Optional
 
 # FCP 7 XML transition effect ids that Premiere recognises out of the
 # box. Keep this list short — the goal is round-trippable fidelity, not

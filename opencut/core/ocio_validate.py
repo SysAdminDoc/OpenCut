@@ -27,8 +27,7 @@ from __future__ import annotations
 import logging
 import os
 from dataclasses import asdict, dataclass, field
-from pathlib import Path
-from typing import Iterable, List, Optional
+from typing import List
 
 logger = logging.getLogger("opencut")
 

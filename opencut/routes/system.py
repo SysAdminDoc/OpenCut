@@ -2703,7 +2703,6 @@ def system_crash_packet():
         from opencut.core.crash_packet import build_packet
         from opencut.security import (
             get_json_dict,
-            require_csrf,
             validate_output_path,
         )
 
@@ -2720,7 +2719,7 @@ def system_crash_packet():
             output_path=output_path,
             log_tail_lines=int(data.get("log_tail_lines") or 500),
             crash_tail_bytes=int(data.get("crash_tail_bytes") or 20_000),
-            include_jobs=bool(data.get("include_jobs", True)),
+            include_jobs=safe_bool(data.get("include_jobs"), default=True),
         )
         return jsonify(packet.as_dict())
     except Exception as exc:
@@ -2744,7 +2743,6 @@ def system_project_health():
         from opencut.core.project_health import build_report
         from opencut.security import (
             get_json_dict,
-            require_csrf,
             validate_path,
         )
 
