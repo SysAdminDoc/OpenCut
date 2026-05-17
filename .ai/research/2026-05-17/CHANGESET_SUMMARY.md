@@ -336,3 +336,14 @@ Pass 5 converted three Pass-3 Now items from research findings into repository c
 |---|---|
 | `git diff --check` | PASS |
 | `python scripts/release_smoke.py --json` | PASS — all 11 release-smoke steps green; pytest-fast reported `232 passed` |
+
+### Push status after Pass 5
+
+`git push origin main` failed with HTTP 403:
+
+```
+remote: Permission to SysAdminDoc/OpenCut.git denied to MavenImaging.
+fatal: unable to access 'https://github.com/SysAdminDoc/OpenCut.git/': The requested URL returned error: 403
+```
+
+The local commits are intact; pushing requires GitHub credentials with write access to `SysAdminDoc/OpenCut`.
