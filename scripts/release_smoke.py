@@ -346,6 +346,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_ffmpeg_installer_manifest.py",
     "tests/test_text_shaping_gate.py",
     "tests/test_srt_encoding.py",
+    "tests/test_caption_language_confidence.py",
     "tests/test_caption_qc.py",
     "tests/test_caption_reading_profiles.py",
     "tests/test_caption_display_settings.py",

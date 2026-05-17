@@ -913,4 +913,42 @@ Pass 21 closed F243.
 
 ### Remaining immediate work
 
-F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now item is F244. F251 and F259 need fresh Adobe/UXP verification before implementation.
+F205 remains open after the Pass 12 coverage timeout. F244 is now closed in Pass 22; the remaining Now items are F205, F251, and F259. F251 and F259 need fresh Adobe/UXP verification before implementation.
+
+---
+
+## 27. Pass 22 additions (same day, F244 Whisper confidence + human-review flags)
+
+Pass 22 closed F244.
+
+### Files added or edited in Pass 22
+
+| Path | Change |
+|---|---|
+| `opencut/core/captions.py` | Added clamped word/segment confidence metadata, language confidence, Hindi/Arabic human-review rules, low-confidence review reasons, shared `caption_segment_to_dict`, and backend mappers for OpenAI Whisper, faster-whisper, and WhisperX. |
+| `opencut/routes/captions.py` | Preserved/exposed review metadata through `/captions`, `/transcript`, `/transcript/export`, `/full`, `/interview-polish`, transcript cache reuse, summarize, chapters, and repeat-detect segment payloads. |
+| `opencut/export/srt.py` | Included review metadata in JSON exports and made JSON export tolerant of namespace-style cached transcription results. |
+| `opencut/polish_state.py` | Persisted/restored language confidence, segment confidence, review flags/reasons, speaker, and word confidence for interview-polish resume state. |
+| `opencut/cli.py` | Added a review recommendation line to `opencut captions` when any segment is flagged. |
+| `tests/test_caption_language_confidence.py` | Added F244 regression coverage for language flags, low-confidence reasons, JSON export, remap preservation, transcript route payloads, and edited-transcript export preservation. |
+| `scripts/release_smoke.py` | Added `tests/test_caption_language_confidence.py` to the `pytest-fast` release gate. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Marked F244 closed and documented the validation evidence. |
+
+### Items closed in Pass 22
+
+| F# | Result |
+|---|---|
+| F244 | Closed — Whisper transcript segments now carry ASR confidence, language confidence, Hindi/Arabic review flags, and stable low-confidence review reason codes across route, cache, state, JSON export, edited export, and CLI surfaces. |
+
+### Validation after Pass 22
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_caption_language_confidence.py tests/test_captions_regressions.py tests/test_srt_encoding.py -q --tb=short` | PASS — `12 passed` |
+| `ruff check opencut/core/captions.py opencut/routes/captions.py opencut/export/srt.py opencut/polish_state.py opencut/cli.py scripts/release_smoke.py tests/test_caption_language_confidence.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/core/captions.py opencut/routes/captions.py opencut/export/srt.py opencut/polish_state.py opencut/cli.py scripts/release_smoke.py tests/test_caption_language_confidence.py` | PASS |
+| `python scripts\release_smoke.py --json` | PASS — all 14 steps green; pytest-fast `300 passed` |
+
+### Remaining immediate work
+
+F205 remains open after the Pass 12 coverage timeout. The remaining Now items are F205, F251, and F259. F251 and F259 need fresh Adobe/UXP verification before implementation.

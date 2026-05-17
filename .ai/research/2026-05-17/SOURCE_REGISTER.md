@@ -697,3 +697,25 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P21-L10 | `python scripts/release_smoke.py --json` — PASS, all 14 steps green; pytest-fast `294 passed`; pip-audit no vulnerabilities; npm advisory gate reports only the documented Vite waiver |
 
 **Source coverage assessment (Pass 21):** Pass 21 claims in `ROADMAP.md` v4.24, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P21-L01 through R-P21-L10.
+
+---
+
+## Pass 22 — F244 Whisper confidence and human-review flags (2026-05-17 twenty-second pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P22-L01 | `opencut/core/captions.py` — `Word`, `CaptionSegment`, and `TranscriptionResult` now carry clamped confidence metadata, language confidence, review flags, and stable review reason codes; OpenAI Whisper, faster-whisper, and WhisperX map available backend confidence signals into those fields |
+| R-P22-L02 | `opencut/routes/captions.py` — `/captions`, `/transcript`, `/transcript/export`, `/full`, `/interview-polish`, transcript cache reuse, chapters, summarize, and repeat-detect paths now preserve or expose caption review metadata through shared segment serialization |
+| R-P22-L03 | `opencut/export/srt.py` — JSON export now includes result/segment confidence and human-review metadata and tolerates namespace-style cached transcription results |
+| R-P22-L04 | `opencut/polish_state.py` — interview-polish cached transcription state now persists and restores language confidence, segment confidence, review flags, reasons, speaker, and word confidence |
+| R-P22-L05 | `opencut/cli.py` — `opencut captions` prints a human-review recommendation when any segment is flagged |
+| R-P22-L06 | `tests/test_caption_language_confidence.py` — new F244 tests for Hindi/Arabic review flags, low ASR/language confidence reasons, JSON export metadata, remap preservation, transcript route payloads, and edited-transcript export preservation |
+| R-P22-L07 | `scripts/release_smoke.py` — added `tests/test_caption_language_confidence.py` to `pytest-fast` |
+| R-P22-L08 | `python -m pytest tests/test_caption_language_confidence.py tests/test_captions_regressions.py tests/test_srt_encoding.py -q --tb=short` — PASS, `12 passed` |
+| R-P22-L09 | `ruff check opencut/core/captions.py opencut/routes/captions.py opencut/export/srt.py opencut/polish_state.py opencut/cli.py scripts/release_smoke.py tests/test_caption_language_confidence.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P22-L10 | `python -m py_compile opencut/core/captions.py opencut/routes/captions.py opencut/export/srt.py opencut/polish_state.py opencut/cli.py scripts/release_smoke.py tests/test_caption_language_confidence.py` — PASS |
+| R-P22-L11 | `python scripts/release_smoke.py --json` — PASS, all 14 steps green; pytest-fast `300 passed`; pip-audit no vulnerabilities; npm advisory gate reports only the documented Vite waiver |
+
+**Source coverage assessment (Pass 22):** Pass 22 claims in `ROADMAP.md` v4.25, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-N17 and R-P22-L01 through R-P22-L11.

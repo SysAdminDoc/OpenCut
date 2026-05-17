@@ -153,7 +153,7 @@ def _transcription_to_dict(result: Any) -> dict:
     if isinstance(result, dict):
         return result
     out: dict = {}
-    for attr in ("language", "duration", "word_count"):
+    for attr in ("language", "duration", "word_count", "language_confidence"):
         if hasattr(result, attr):
             out[attr] = getattr(result, attr)
     segs = getattr(result, "segments", None) or []
@@ -166,6 +166,12 @@ def _transcription_to_dict(result: Any) -> dict:
             "start": getattr(seg, "start", 0),
             "end":   getattr(seg, "end", 0),
             "text":  getattr(seg, "text", ""),
+            "speaker": getattr(seg, "speaker", None),
+            "language": getattr(seg, "language", None),
+            "language_confidence": getattr(seg, "language_confidence", 1.0),
+            "confidence": getattr(seg, "confidence", 1.0),
+            "human_review_recommended": getattr(seg, "human_review_recommended", False),
+            "review_reasons": list(getattr(seg, "review_reasons", []) or []),
         }
         words = getattr(seg, "words", None)
         if words:
@@ -174,6 +180,8 @@ def _transcription_to_dict(result: Any) -> dict:
                     "start": getattr(w, "start", 0),
                     "end":   getattr(w, "end", 0),
                     "word":  getattr(w, "word", "") or getattr(w, "text", ""),
+                    "text":  getattr(w, "text", "") or getattr(w, "word", ""),
+                    "confidence": getattr(w, "confidence", 1.0),
                 }
                 for w in words
             ]
@@ -191,13 +199,30 @@ def _transcription_from_dict(d: dict):
     """
     from types import SimpleNamespace
 
+    try:
+        from opencut.core.captions import caption_review_reasons
+    except Exception:
+        caption_review_reasons = None
+
     segs = []
     for seg in d.get("segments", []) or []:
+        review_reasons = list(seg.get("review_reasons") or [])
+        if caption_review_reasons is not None:
+            review_reasons.extend(
+                caption_review_reasons(
+                    language=seg.get("language"),
+                    language_confidence=seg.get("language_confidence", 1.0),
+                    confidence=seg.get("confidence", 1.0),
+                )
+            )
+        review_reasons = list(dict.fromkeys(str(r) for r in review_reasons if str(r).strip()))
         words = [
             SimpleNamespace(
                 start=w.get("start", 0),
                 end=w.get("end", 0),
                 word=w.get("word", ""),
+                text=w.get("text", w.get("word", "")),
+                confidence=w.get("confidence", 1.0),
             )
             for w in (seg.get("words") or [])
         ]
@@ -206,10 +231,23 @@ def _transcription_from_dict(d: dict):
             end=seg.get("end", 0),
             text=seg.get("text", ""),
             words=words,
+            speaker=seg.get("speaker"),
+            language=seg.get("language"),
+            language_confidence=seg.get("language_confidence", 1.0),
+            confidence=seg.get("confidence", 1.0),
+            human_review_recommended=bool(seg.get("human_review_recommended", False) or review_reasons),
+            review_reasons=review_reasons,
         ))
     return SimpleNamespace(
         language=d.get("language", ""),
         duration=d.get("duration", 0),
+        language_confidence=d.get("language_confidence", 1.0),
         word_count=d.get("word_count", sum(len(s.text.split()) for s in segs)),
         segments=segs,
+        human_review_recommended=any(
+            bool(getattr(s, "human_review_recommended", False)) for s in segs
+        ),
+        review_segment_count=sum(
+            1 for s in segs if bool(getattr(s, "human_review_recommended", False))
+        ),
     )

@@ -197,6 +197,12 @@ def captions(input_file, output, sub_format, model, language, translate, word_ti
     console.print(f"\n[bold]Language detected:[/bold] {result.language}")
     console.print(f"[bold]Segments:[/bold] {len(result.segments)}")
     console.print(f"[bold]Words:[/bold] {result.word_count}")
+    review_count = getattr(result, "review_segment_count", 0)
+    if review_count:
+        console.print(
+            f"[yellow]Human review recommended for {review_count} segment(s) "
+            "because of language or ASR confidence.[/yellow]"
+        )
 
     if sub_format == "srt":
         export_srt(result, output, legacy_windows_bom=srt_legacy_bom)

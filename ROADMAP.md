@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.24
+**Version**: 4.25
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -56,6 +56,26 @@
 > **v4.23 status (2026-05-17, twentieth pass)**: closed **F241** by adding a machine-readable text-shaping gate for caption rendering. `python -m opencut.tools.text_shaping_gate --json` now hard-fails when FFmpeg/libass lacks HarfBuzz, FriBidi, ASS, or subtitles support; release smoke runs it as the new `text-shaping` step; GitHub Actions runs the same gate after dependency install. Pillow RAQM and optional Skia shaping are reported in the gate and can be promoted to hard failures with strict flags.
 >
 > **v4.24 status (2026-05-17, twenty-first pass)**: closed **F243** by making the primary SRT writer UTF-8 without BOM by default and adding an explicit legacy Windows BOM toggle. `export_srt(..., legacy_windows_bom=True)` writes `utf-8-sig`; `/captions`, `/transcript/export`, `/full`, `/interview-polish`, and the CLI expose the opt-in path; `tests/test_srt_encoding.py` pins default no-BOM bytes, legacy BOM bytes, route alias parsing, and shot-aware export behavior.
+>
+> **v4.25 status (2026-05-17, twenty-second pass)**: closed **F244** by carrying segment ASR confidence, language confidence, and human-review flags through Whisper transcription, transcript cache/state, JSON export, `/captions`, `/transcript`, `/transcript/export`, `/full`, `/interview-polish`, and the CLI. Hindi/Arabic segments are flagged for human review; low ASR and low language-confidence segments get stable review reason codes. `tests/test_caption_language_confidence.py` is now part of release smoke.
+
+---
+
+## 2026-05-17 v4.25 Whisper Confidence + Human Review Flags
+
+F244 is closed locally. Caption/transcript generation now surfaces segment-level confidence and review metadata instead of hiding uncertainty inside backend-specific Whisper objects:
+
+| Surface | Status |
+|---|---|
+| Core metadata | `CaptionSegment` now carries `language`, `language_confidence`, segment `confidence`, `human_review_recommended`, and stable `review_reasons`; `TranscriptionResult` carries `language_confidence` plus aggregate review helpers. |
+| Review rules | Hindi and Arabic language codes/names are flagged for human review; `low_asr_confidence` and `low_language_confidence` are emitted when confidence falls below the repository heuristics. |
+| Whisper backends | OpenAI Whisper, faster-whisper, and WhisperX map word probabilities and backend language probability into segment metadata where available, falling back conservatively when a backend lacks the signal. |
+| Serialization | `caption_segment_to_dict` is shared by `transcribe_audio`, caption routes, cached transcripts, JSON export, and interview-polish state, so metadata survives cache/retry/edit/export paths. |
+| Routes and CLI | `/captions`, `/transcript`, `/transcript/export`, `/full`, and `/interview-polish` expose review counts and per-segment metadata; `opencut captions` prints a review recommendation when any segment is flagged. |
+| Regression test | `tests/test_caption_language_confidence.py` covers Hindi/Arabic flags, low-confidence reasons, JSON export, remapping, transcript route payloads, and edited-transcript export preservation. |
+| Release smoke | `scripts/release_smoke.py` includes the new confidence/review test file in `pytest-fast`. |
+
+Validation after the batch: focused caption confidence/regression/SRT tests passed (`12 passed`), Ruff passed for touched Python files, touched Python files compile, and full `python scripts\release_smoke.py --json` exited `0` with all 14 steps green (`300 passed` in pytest-fast).
 
 ---
 
@@ -529,7 +549,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (4 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, [x] **F240 (caption reading-speed profiles)**, [x] **F241 (HarfBuzz CI gate)**, [x] **F243 (UTF-8 no-BOM SRT)**, F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (3 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, [x] **F240 (caption reading-speed profiles)**, [x] **F241 (HarfBuzz CI gate)**, [x] **F243 (UTF-8 no-BOM SRT)**, [x] F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML

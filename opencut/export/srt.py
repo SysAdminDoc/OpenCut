@@ -7,7 +7,7 @@ legacy Windows players that require a UTF-8 signature.
 
 from typing import List, Optional
 
-from ..core.captions import CaptionSegment, TranscriptionResult
+from ..core.captions import CaptionSegment, TranscriptionResult, caption_segment_to_dict
 
 UTF8_NO_BOM = "utf-8"
 UTF8_WITH_BOM = "utf-8-sig"
@@ -109,29 +109,22 @@ def export_json(
     """
     import json
 
+    segments = list(getattr(result, "segments", []) or [])
+    text = getattr(result, "text", " ".join(str(getattr(seg, "text", "")).strip() for seg in segments))
+    word_count = getattr(result, "word_count", sum(len(getattr(seg, "words", []) or []) for seg in segments))
+
     data = {
-        "language": result.language,
-        "duration": result.duration,
-        "text": result.text,
-        "word_count": result.word_count,
+        "language": getattr(result, "language", "en"),
+        "duration": getattr(result, "duration", 0.0),
+        "language_confidence": getattr(result, "language_confidence", 1.0),
+        "text": text,
+        "word_count": word_count,
         "segments": [
-            {
-                "text": seg.text,
-                "start": seg.start,
-                "end": seg.end,
-                "speaker": seg.speaker,
-                "words": [
-                    {
-                        "text": w.text,
-                        "start": w.start,
-                        "end": w.end,
-                        "confidence": w.confidence,
-                    }
-                    for w in seg.words
-                ],
-            }
-            for seg in result.segments
+            caption_segment_to_dict(seg, include_words=True)
+            for seg in segments
         ],
+        "human_review_recommended": bool(getattr(result, "human_review_recommended", False)),
+        "review_segment_count": int(getattr(result, "review_segment_count", 0)),
     }
 
     with open(output_path, "w", encoding="utf-8") as f:
@@ -367,6 +360,12 @@ def _split_segments(
                         start=current_words[0].start,
                         end=current_words[-1].end,
                         words=list(current_words),
+                        speaker=getattr(seg, "speaker", None),
+                        language=getattr(seg, "language", None),
+                        language_confidence=getattr(seg, "language_confidence", 1.0),
+                        confidence=getattr(seg, "confidence", 1.0),
+                        human_review_recommended=getattr(seg, "human_review_recommended", False),
+                        review_reasons=list(getattr(seg, "review_reasons", []) or []),
                     ))
                     current_words = [word]
                     current_text = word.text
@@ -381,6 +380,12 @@ def _split_segments(
                     start=current_words[0].start,
                     end=current_words[-1].end,
                     words=list(current_words),
+                    speaker=getattr(seg, "speaker", None),
+                    language=getattr(seg, "language", None),
+                    language_confidence=getattr(seg, "language_confidence", 1.0),
+                    confidence=getattr(seg, "confidence", 1.0),
+                    human_review_recommended=getattr(seg, "human_review_recommended", False),
+                    review_reasons=list(getattr(seg, "review_reasons", []) or []),
                 ))
         else:
             # No word timestamps — split by character count with proportional timing
@@ -406,6 +411,12 @@ def _split_segments(
                         text=current_chunk.strip(),
                         start=t_start,
                         end=t_end,
+                        speaker=getattr(seg, "speaker", None),
+                        language=getattr(seg, "language", None),
+                        language_confidence=getattr(seg, "language_confidence", 1.0),
+                        confidence=getattr(seg, "confidence", 1.0),
+                        human_review_recommended=getattr(seg, "human_review_recommended", False),
+                        review_reasons=list(getattr(seg, "review_reasons", []) or []),
                     ))
 
                     chunk_start_ratio = end_ratio
@@ -419,6 +430,12 @@ def _split_segments(
                     text=current_chunk.strip(),
                     start=t_start,
                     end=seg.end,
+                    speaker=getattr(seg, "speaker", None),
+                    language=getattr(seg, "language", None),
+                    language_confidence=getattr(seg, "language_confidence", 1.0),
+                    confidence=getattr(seg, "confidence", 1.0),
+                    human_review_recommended=getattr(seg, "human_review_recommended", False),
+                    review_reasons=list(getattr(seg, "review_reasons", []) or []),
                 ))
 
     return result

@@ -664,3 +664,42 @@ Pass 21 was a local implementation and verification pass focused on SRT writer b
 ### Pass 21 saturation note
 
 F243 is complete for repository SRT export behavior and user-facing toggles. Existing SRT readers continue accepting BOMmed input through `utf-8-sig`; this pass only controls newly written SRT bytes.
+
+---
+
+## Pass 22 (2026-05-17 — F244 Whisper confidence + human-review flags)
+
+Pass 22 was a local implementation and verification pass. No new external search was needed because the Pass-2 niche standards research already identified Whisper Hindi/Arabic accuracy risk (`R-N17`), and the work was to wire that risk through existing local transcription/export surfaces.
+
+### Pass 22 local probes
+
+| Probe | Result |
+|---|---|
+| `opencut/core/captions.py` | Found `Word`, `CaptionSegment`, and `TranscriptionResult` lacked segment language/confidence/review metadata even though Whisper backends expose word probabilities and faster-whisper exposes language probability. |
+| `opencut/routes/captions.py` | Found `/captions`, `/transcript`, `/transcript/export`, `/full`, `/interview-polish`, transcript cache reuse, chapters, summarize, and repeat-detect build their own segment dict shapes. |
+| `opencut/export/srt.py` | Found JSON export was the right durable carrier for per-segment review metadata. |
+| `opencut/polish_state.py` | Found interview-polish resume state would drop any new segment metadata unless explicitly persisted/restored. |
+| `scripts/release_smoke.py` | Confirmed caption/release-gate test files are curated explicitly, so the new F244 test file needed to be added. |
+
+### Pass 22 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 22.1 | Extended caption dataclasses and backend mappers. | `CaptionSegment` now carries `language`, `language_confidence`, segment `confidence`, `human_review_recommended`, and `review_reasons`; OpenAI Whisper, faster-whisper, and WhisperX populate the fields from word probability, avg-logprob/no-speech, and language probability where available. |
+| Pass 22.2 | Added shared segment serialization. | `caption_segment_to_dict` is now used by route dicts, `transcribe_audio`, transcript cache payloads, JSON export, and repeat/chapter/summarize paths. |
+| Pass 22.3 | Wired routes, cache/state, and CLI. | Caption/transcript/full/interview-polish responses expose review summaries; edited transcript export preserves metadata; interview-polish state preserves/restores it; `opencut captions` prints review recommendations. |
+| Pass 22.4 | Added `tests/test_caption_language_confidence.py` and release-smoke wiring. | Tests cover Hindi/Arabic flags, low ASR/language confidence reasons, JSON export, remap preservation, transcript route payloads, edited transcript export, and release-smoke inclusion. |
+| Pass 22.5 | Updated roadmap and research state files. | F244 marked closed; remaining Now queue is F205, F251, and F259, with F205 still blocked by long coverage runtime and F251/F259 needing fresh Adobe/UXP verification. |
+
+### Pass 22 validation results
+
+| Check | Result |
+|---|---|
+| Focused caption confidence/regression/SRT tests | **PASS** — `12 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for touched Python files | **PASS** |
+| Full release smoke | **PASS** — all 14 steps green; pytest-fast `300 passed` |
+
+### Pass 22 saturation note
+
+F244 is complete for repository-side confidence metadata and human-review surfacing. The thresholds remain pragmatic review heuristics, not a statistical calibration claim; future ASR-evaluation work should tune them against the F176/F178 evaluation corpus once that corpus exists.
