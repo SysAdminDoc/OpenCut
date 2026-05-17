@@ -132,7 +132,7 @@ Evaluated in `docs/WINDOWS_ARM64_PACKAGING.md` with the F101 commit (`706c1c3`):
 - **No WPF installer build in CI** — only Inno Setup runs. The premium WPF installer must be built manually via `installer/InstallerBuilder.ps1` and committed to releases. **F201 — automate WPF installer build in CI**.
 - **macOS notarisation step added in Pass 10** — tagged/manual macOS release builds now call `scripts/notarize_macos.sh`, sign Mach-O files with hardened runtime, submit `OpenCut-Server-macOS.zip` via `xcrun notarytool`, and upload the notarized ZIP on tag releases. **F202 repository-side tooling is done; first live acceptance still needs GitHub secrets.**
 - **No SmartScreen/Authenticode signing for Windows** — Inno Setup output is unsigned. **F203 — code-signing for Windows installer**.
-- **No SBOM upload to release** — `scripts/sbom.py` is run on demand, not as a CI release step. **F204 — auto-attach SBOM to GitHub release**.
+- **SBOM upload added in Pass 11** — Linux tagged/manual release builds now run `scripts/sbom.py`, archive `OpenCut-SBOM-CycloneDX`, and upload `dist/opencut-sbom.cyclonedx.json` to tagged GitHub Releases. **F204 is done; F219 still needs a deeper completeness test.**
 - **50% coverage floor is the minimum** — actual coverage is higher per CHANGELOG.md (7,551 tests). **F205 — raise CI coverage floor to current actual level once measured**.
 - **No PR-only quick CI** — every PR runs the full matrix (3 OS × full pytest + PyInstaller). Could add a lighter `pull_request_target` workflow. **F206 — split CI into PR-fast and release-full workflows**.
 
@@ -170,7 +170,7 @@ Per the wave I I1.4 plan (shipped in v1.26.0):
 | F201 | Automate WPF installer build in CI | Next | M |
 | F202 | Apple notarisation for macOS PyInstaller bundle | Done in Pass 10; live acceptance requires configured secrets | M |
 | F203 | Authenticode code-signing for Windows installer | Next | M |
-| F204 | Auto-attach SBOM (from `scripts/sbom.py`) to GitHub releases | Now | S |
+| F204 | Auto-attach SBOM (from `scripts/sbom.py`) to GitHub releases | Done in Pass 11 | S |
 | F205 | Raise CI coverage floor from 50% to current actual (~75-80% est.) | Now | S |
 | F206 | Split CI into PR-fast and release-full workflows | Later | M |
 | F207 | Embed bundled FFmpeg version in `AppConstants.cs` + installer manifest | Now | S |

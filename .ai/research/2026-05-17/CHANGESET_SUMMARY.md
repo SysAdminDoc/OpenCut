@@ -513,3 +513,34 @@ Pass 10 closed the repository-side macOS signing/notarization release path.
 | `ruff check tests/test_macos_notarization.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
 | `C:\Program Files\Git\bin\bash.exe -n scripts/notarize_macos.sh` | PASS |
 | `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast reported `249 passed` |
+
+---
+
+## 16. Pass 11 additions (same day, F204 release SBOM attachment)
+
+Pass 11 closed automatic SBOM attachment for release builds.
+
+### Files added or edited in Pass 11
+
+| Path | Change |
+|---|---|
+| `.github/workflows/build.yml` | Linux tagged/manual release builds now generate `dist/opencut-sbom.cyclonedx.json`, archive it as `OpenCut-SBOM-CycloneDX`, and upload it to GitHub Releases on tags. |
+| `tests/test_release_sbom.py` | Added generator smoke coverage and workflow wiring assertions for SBOM generation/archive/upload. |
+| `scripts/release_smoke.py` | Added `tests/test_release_sbom.py` to the release-gate pytest slice. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `INSTALLER_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CONTINUE_FROM_HERE.md` | Marked F204 closed and kept F219 as the deeper SBOM completeness gap. |
+
+### Items closed in Pass 11
+
+| F# | Result |
+|---|---|
+| F204 | Closed — release builds now attach the generated CycloneDX SBOM. |
+
+### Validation after Pass 11
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_release_sbom.py tests/test_release_smoke.py -q` | PASS — `14 passed` |
+| `ruff check tests/test_release_sbom.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -c "import pathlib, yaml; yaml.safe_load(pathlib.Path('.github/workflows/build.yml').read_text())"` | PASS |
+| `python scripts/sbom.py --format json --output dist/opencut-sbom.cyclonedx.json` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast reported `251 passed` |
