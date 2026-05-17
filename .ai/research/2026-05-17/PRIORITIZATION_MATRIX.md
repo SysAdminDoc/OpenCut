@@ -156,7 +156,7 @@ These are not OpenCut work but should be tracked in the same ledger.
 
 The second autonomous research pass on 2026-05-17 added 70 more F-numbers across four sources: route audit, installer audit, test coverage, features.md reconciliation, plus three subagents (Frame.io review, niche AI / accessibility / standards, UXP migration deep-dive). Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](FEATURE_BACKLOG_ADDENDUM.md). Tier deltas:
 
-**Now (priority bumps + new): 7 open items; F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237 closed locally after Pass 18**
+**Now (priority bumps + new): 5 open items; F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241 closed locally after Pass 20**
 
 | F# | Title | Why priority |
 |---|---|---|
@@ -175,7 +175,7 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 | [x] **F236** | **FCC user-overridable caption style tokens** | **Closed in Pass 17 with FCC-sourced token schema, preview route, and burn-in integration** |
 | [x] **F237** | **EBU R128 v5.0 + BS.1770-5 correction** | **Closed in Pass 18 with source-backed loudness registry; ITU BS.1770-5 is in force and BS.1770-4 is superseded** |
 | [x] F240 | Per-target reading-speed profile (Netflix/BBC/DCMP/FCC/YouTube) | Closed in Pass 19 with source-backed caption QC profile overlays |
-| F241 | HarfBuzz-mandatory CI gate | RTL/CJK/Indic correctness |
+| [x] F241 | HarfBuzz-mandatory CI gate | Closed in Pass 20 with a release-smoke/CI text-shaping gate for FFmpeg/libass HarfBuzz/FriBidi plus Pillow RAQM and optional Skia capability reporting |
 | F243 | UTF-8 (no BOM) SRT writer + opt-in legacy toggle | Spec compliance |
 | F244 | Language confidence per Whisper segment | Surface low-confidence ASR |
 | F251 | Track `@adobe/premierepro@beta` per-week diff in CI | Catch UXP-gap-closing APIs early |

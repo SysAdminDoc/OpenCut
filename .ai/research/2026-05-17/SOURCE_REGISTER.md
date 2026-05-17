@@ -651,3 +651,28 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P19-L12 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `284 passed`; pip-audit no vulnerabilities; npm advisory gate reports only the documented Vite waiver |
 
 **Source coverage assessment (Pass 19):** Pass 19 claims in `ROADMAP.md` v4.22, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P19-E01 through R-P19-E05 and R-P19-L01 through R-P19-L12.
+
+---
+
+## Pass 20 — F241 text-shaping gate (2026-05-17 twentieth pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P20-L01 | `opencut/core/caption_burnin.py` — burn-in path uses FFmpeg `ass` / `subtitles` filters for caption hardcoding |
+| R-P20-L02 | `opencut/core/styled_captions.py` — styled caption overlay path uses Pillow by default and optional `skia-python` when installed |
+| R-P20-L03 | bundled `ffmpeg/ffmpeg.exe -hide_banner -version` — reports `8.0.1-essentials_build-www.gyan.dev` with `--enable-libass`, `--enable-libharfbuzz`, and `--enable-libfribidi` in configuration |
+| R-P20-L04 | bundled `ffmpeg/ffmpeg.exe -hide_banner -filters` — exposes exact `ass` and `subtitles` video filters; `greyedge assumption` confirmed why substring matches are unsafe |
+| R-P20-L05 | local Pillow feature probe — Pillow `12.2.0` reports `raqm=false`, `harfbuzz=false`, `fribidi=false`, `freetype2=true` |
+| R-P20-L06 | `opencut/tools/text_shaping_gate.py` — new machine-readable gate resolving FFmpeg, checking libass/HarfBuzz/FriBidi/filter support, and reporting Pillow/Skia shaping capability |
+| R-P20-L07 | `scripts/release_smoke.py` — added `text-shaping` step and included `tests/test_text_shaping_gate.py` in `pytest-fast` |
+| R-P20-L08 | `.github/workflows/build.yml` — CI now runs `python -m opencut.tools.text_shaping_gate --json` after standard dependency installation |
+| R-P20-L09 | `tests/test_text_shaping_gate.py` — new F241 regression tests for exact FFmpeg parsing, missing-HarfBuzz failure, strict Pillow promotion, release-smoke wiring, and workflow wiring |
+| R-P20-L10 | `python -m opencut.tools.text_shaping_gate --json` — PASS; FFmpeg/libass hard gate OK, Pillow RAQM advisory warning, Skia skipped |
+| R-P20-L11 | `python -m pytest tests/test_text_shaping_gate.py tests/test_release_smoke.py -q --tb=short` — PASS, `17 passed` |
+| R-P20-L12 | `ruff check opencut/tools/text_shaping_gate.py scripts/release_smoke.py tests/test_text_shaping_gate.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P20-L13 | `python -m py_compile opencut/tools/text_shaping_gate.py scripts/release_smoke.py tests/test_text_shaping_gate.py` — PASS |
+| R-P20-L14 | `python scripts/release_smoke.py --json` — PASS, all 14 steps green; `text-shaping` reports one advisory Pillow RAQM warning; pytest-fast `289 passed`; pip-audit no vulnerabilities; npm advisory gate reports only the documented Vite waiver |
+
+**Source coverage assessment (Pass 20):** Pass 20 claims in `ROADMAP.md` v4.23, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P20-L01 through R-P20-L14.

@@ -52,6 +52,9 @@ jobs:
           pip install pyinstaller
           pip install -e ".[standard]"
 
+      - name: Text shaping gate
+        run: python -m opencut.tools.text_shaping_gate --json
+
       - name: Lint with ruff
         run: |
           pip install ruff

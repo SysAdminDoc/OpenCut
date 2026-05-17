@@ -840,3 +840,40 @@ Pass 19 closed F240.
 ### Remaining immediate work
 
 F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F241, F243, and F244. F251 and F259 need fresh Adobe/UXP verification before implementation.
+
+---
+
+## 25. Pass 20 additions (same day, F241 text-shaping gate)
+
+Pass 20 closed F241.
+
+### Files added or edited in Pass 20
+
+| Path | Change |
+|---|---|
+| `opencut/tools/text_shaping_gate.py` | Added the machine-readable text-shaping gate for FFmpeg/libass HarfBuzz/FriBidi/ASS/subtitles support plus Pillow RAQM and optional Skia shaping reporting. |
+| `scripts/release_smoke.py` | Added the `text-shaping` step and included `tests/test_text_shaping_gate.py` in `pytest-fast`. |
+| `.github/workflows/build.yml` | Added a build-matrix text-shaping gate after standard dependency installation. |
+| `tests/test_text_shaping_gate.py` | Added F241 regression tests for exact FFmpeg parsing, missing-HarfBuzz failure, strict Pillow promotion, release-smoke wiring, and workflow wiring. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Marked F241 closed and documented the local FFmpeg/Pillow/Skia capability evidence. |
+
+### Items closed in Pass 20
+
+| F# | Result |
+|---|---|
+| F241 | Closed — release smoke and CI now fail when the FFmpeg/libass burn-in path lacks HarfBuzz/FriBidi shaping support, while Pillow RAQM and optional Skia shaping are surfaced as reportable capabilities with strict flags. |
+
+### Validation after Pass 20
+
+| Command | Result |
+|---|---|
+| `python -m opencut.tools.text_shaping_gate --json` | PASS — FFmpeg/libass hard gates OK; Pillow RAQM advisory warning; Skia skipped |
+| `python -m pytest tests/test_text_shaping_gate.py tests/test_release_smoke.py -q --tb=short` | PASS — `17 passed` |
+| `ruff check opencut/tools/text_shaping_gate.py scripts/release_smoke.py tests/test_text_shaping_gate.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/tools/text_shaping_gate.py scripts/release_smoke.py tests/test_text_shaping_gate.py` | PASS |
+| `python scripts\release_smoke.py --only text-shaping --json` | PASS — one advisory Pillow warning |
+| `python scripts\release_smoke.py --json` | PASS — all 14 steps green; pytest-fast `289 passed` |
+
+### Remaining immediate work
+
+F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F243 and F244. F251 and F259 need fresh Adobe/UXP verification before implementation.

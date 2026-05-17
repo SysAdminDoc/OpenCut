@@ -15,11 +15,12 @@ Steps (in order):
 6. ``model-cards`` — generated model/license card drift check
 7. ``license-gate`` — model/dependency license allow-list check
 8. ``roadmap-lint`` — roadmap citation sanity check
-9. ``ruff`` — lint the python package
-10. ``pytest-fast`` — focused test ids covering release gates
-11. ``pip-audit`` — Python dependency advisories (skipped if not installed)
-12. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
-13. ``panel-source`` — CEP panel source tree smoke
+9. ``text-shaping`` — FFmpeg/libass HarfBuzz/FriBidi + renderer capability gate
+10. ``ruff`` — lint the python package
+11. ``pytest-fast`` — focused test ids covering release gates
+12. ``pip-audit`` — Python dependency advisories (skipped if not installed)
+13. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
+14. ``panel-source`` — CEP panel source tree smoke
 
 Each step records ``status`` (``ok|fail|skipped``), an exit code, a duration
 in ms, and a short message. The script exits with code 1 if any non-skipped
@@ -260,6 +261,46 @@ def step_version_sync(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_text_shaping(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    result = _run(
+        [sys.executable, "-m", "opencut.tools.text_shaping_gate", "--json"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+
+    try:
+        payload = json.loads(result.stdout or "{}")
+    except json.JSONDecodeError as exc:
+        return StepResult(
+            "text-shaping",
+            "fail",
+            exit_code=result.returncode,
+            duration_ms=duration,
+            message=f"text shaping gate did not emit parseable JSON: {exc}",
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
+
+    summary = payload.get("summary", {})
+    status = "ok" if result.returncode == 0 and payload.get("status") == "ok" else "fail"
+    warning_count = int(summary.get("warnings") or 0)
+    message = (
+        f"hard shaping gates passed ({warning_count} advisory warnings)"
+        if status == "ok"
+        else "text shaping gate failed"
+    )
+    return StepResult(
+        "text-shaping",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=message,
+        stdout_tail=_tail(json.dumps(payload, indent=2)),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_ruff(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     if shutil.which("ruff") is None:
@@ -303,6 +344,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_release_sbom.py",
     "tests/test_sbom_completeness.py",
     "tests/test_ffmpeg_installer_manifest.py",
+    "tests/test_text_shaping_gate.py",
     "tests/test_caption_qc.py",
     "tests/test_caption_reading_profiles.py",
     "tests/test_caption_display_settings.py",
@@ -501,6 +543,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),
     StepDefinition("license-gate", step_license_gate, "Run the license allowlist gate over model cards"),
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),
+    StepDefinition("text-shaping", step_text_shaping, "Check FFmpeg/libass and renderer text shaping support"),
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt"),
