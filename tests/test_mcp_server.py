@@ -1,3 +1,5 @@
+import re
+
 from opencut import mcp_server
 
 F195_TOOL_ROUTES = {
@@ -14,6 +16,34 @@ F195_TOOL_ROUTES = {
     "opencut_semantic_search": ("POST", "/search/ai"),
     "opencut_spectral_match": ("POST", "/audio/spectral-match"),
 }
+
+F209_SPECIAL_ACTION_ROUTES = {
+    "opencut_generate_music": {("POST", "/audio/music-ai/ace-step")},
+    "opencut_style_transfer": {("POST", "/video/style/arbitrary")},
+    "opencut_brand_kit": {
+        ("GET", "/settings/brand-kit"),
+        ("DELETE", "/settings/brand-kit"),
+        ("POST", "/settings/brand-kit"),
+        ("POST", "/settings/brand-kit/preview"),
+    },
+    "opencut_semantic_search": {
+        ("POST", "/search/ai"),
+        ("POST", "/search/ai/index"),
+        ("GET", "/search/ai/index/status"),
+    },
+}
+
+
+def _mcp_path_to_flask_rule(path):
+    return re.sub(r"{([A-Za-z_][A-Za-z0-9_]*)}", r"<\1>", path)
+
+
+def _live_flask_operations(app):
+    operations = set()
+    for rule in app.url_map.iter_rules():
+        for method in sorted((rule.methods or set()) - {"HEAD", "OPTIONS"}):
+            operations.add((method, str(rule.rule)))
+    return operations
 
 
 def _capture_api(monkeypatch):
@@ -37,6 +67,28 @@ def test_f195_tools_are_registered_and_mapped():
     for name, route in F195_TOOL_ROUTES.items():
         assert mcp_server._TOOL_ROUTES[name] == route
         assert tools_by_name[name]["inputSchema"]["type"] == "object"
+
+
+def test_f209_mcp_tools_map_to_live_flask_routes(app):
+    tools_by_name = {tool["name"]: tool for tool in mcp_server.MCP_TOOLS}
+    live_operations = _live_flask_operations(app)
+
+    assert set(mcp_server._TOOL_ROUTES) == set(tools_by_name)
+
+    missing = []
+    for tool_name, (method, path) in sorted(mcp_server._TOOL_ROUTES.items()):
+        flask_rule = _mcp_path_to_flask_rule(path)
+        if (method, flask_rule) not in live_operations:
+            missing.append(f"{tool_name}: {method} {path}")
+
+    for tool_name, routes in sorted(F209_SPECIAL_ACTION_ROUTES.items()):
+        assert tool_name in tools_by_name
+        for method, path in sorted(routes):
+            flask_rule = _mcp_path_to_flask_rule(path)
+            if (method, flask_rule) not in live_operations:
+                missing.append(f"{tool_name}: {method} {path}")
+
+    assert missing == []
 
 
 def test_f195_simple_tools_dispatch_to_backend(monkeypatch):

@@ -618,3 +618,37 @@ Pass 13 closed F208.
 ### Remaining immediate work
 
 F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F209, F218, and F219.
+
+---
+
+## 19. Pass 14 additions (same day, F209 MCP route consistency)
+
+Pass 14 closed F209.
+
+### Files added or edited in Pass 14
+
+| Path | Change |
+|---|---|
+| `opencut/mcp_server.py` | Corrected `opencut_chat_edit` from planned `/agent/chat` to the shipped `POST /chat` route. |
+| `tests/test_mcp_server.py` | Added a live Flask route-consistency test covering all 39 MCP tool routes plus dynamic action routes for music, style transfer, Brand Kit, semantic search, and job status. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Marked F209 closed and updated the next-pass handoff. |
+
+### Items closed in Pass 14
+
+| F# | Result |
+|---|---|
+| F209 | Closed — curated MCP route drift now fails release smoke. |
+
+### Validation after Pass 14
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_mcp_server.py tests/test_release_smoke.py -q` | PASS — `18 passed` |
+| `ruff check opencut/mcp_server.py tests/test_mcp_server.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/mcp_server.py tests/test_mcp_server.py` | PASS |
+| live route-table probe | PASS — 39 MCP tools / 39 route mappings / 0 missing backend routes |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `259 passed` |
+
+### Remaining immediate work
+
+F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F218 and F219.

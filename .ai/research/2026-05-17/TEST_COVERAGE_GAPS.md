@@ -53,7 +53,7 @@ The Wave K/H Tier 2 stubs (FlashVSR, ROSE, Sammie, OmniVoice, ReEzSynth, VidMuse
 
 ### 3.3 MCP tool coverage
 
-No test ensures every tool in `MCP_TOOLS` corresponds to a live route, or that every required tool param has a matching backend route param. **F209 — MCP tool ↔ route consistency test** (small).
+Pass 14 closed **F209 — MCP tool ↔ route consistency test**. `tests/test_mcp_server.py` now verifies every tool in `MCP_TOOLS` has a route mapping, every mapped route exists in the live Flask app, and dynamic dispatch routes for Brand Kit, semantic search, music generation, arbitrary style transfer, and job status remain valid.
 
 ### 3.4 Frontend (CEP main.js + UXP main.js)
 
@@ -132,7 +132,7 @@ This is a single F number: **F205**, already on the Now tier.
 | F# | Title | Priority | Effort |
 |---|---|---|---|
 | F208 | OpenAPI spec validity test (per-endpoint 200/400/403) | Done in Pass 13 | S |
-| F209 | MCP tool ↔ route consistency test | Now | S |
+| F209 | MCP tool ↔ route consistency test | Done in Pass 14 | S |
 | F210 | Vitest unit tests for CEP/UXP utility functions | Later | M |
 | F211 | Cross-platform launcher script smoke tests in CI | Next | S |
 | F212 | WPF installer test suite (xUnit + headless install) | Later | XL |
