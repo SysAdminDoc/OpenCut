@@ -411,3 +411,30 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P9-L10 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `246 passed` |
 
 **Source coverage assessment (Pass 9):** Pass 9 claims in `ROADMAP.md` v4.12, `PROJECT_CONTEXT.md`, `ROUTE_READINESS_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, and `CONTINUE_FROM_HERE.md` trace to R-P9-L01 through R-P9-L10. No new external source was used.
+
+---
+
+## Pass 10 — F202 macOS notarization tooling (2026-05-17 tenth pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P10-L01 | `.github/workflows/build.yml` — existing PyInstaller release workflow; Pass 10 added macOS notarization and ZIP release upload wiring |
+| R-P10-L02 | `opencut_server.spec` — PyInstaller bundle source for `dist/OpenCut-Server` |
+| R-P10-L03 | `scripts/notarize_macos.sh` — Developer ID signing + notarytool submission script |
+| R-P10-L04 | `docs/MACOS_NOTARIZATION.md` — required secrets and local release commands |
+| R-P10-L05 | `python -m pytest tests/test_macos_notarization.py tests/test_release_smoke.py -q` — PASS, `15 passed` |
+| R-P10-L06 | `ruff check tests/test_macos_notarization.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P10-L07 | `C:\Program Files\Git\bin\bash.exe -n scripts/notarize_macos.sh` — PASS |
+| R-P10-L08 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `249 passed` |
+
+### External source evidence
+
+| ID | Source |
+|---|---|
+| R-P10-E01 | https://developer.apple.com/documentation/security/notarizing-macos-software-before-distribution — Apple notarization overview; confirms notary service behavior and altool retirement |
+| R-P10-E02 | https://developer.apple.com/documentation/security/notarizing_macos_software_before_distribution/customizing_the_notarization_workflow — Apple custom workflow; confirms `xcrun notarytool submit --wait` and ZIP submission caveat |
+| R-P10-E03 | https://developer.apple.com/documentation/technotes/tn3147-migrating-to-the-latest-notarization-tool — Apple migration note for the latest notarization tool |
+
+**Source coverage assessment (Pass 10):** Pass 10 claims in `ROADMAP.md` v4.13, `PROJECT_CONTEXT.md`, `INSTALLER_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, and `CONTINUE_FROM_HERE.md` trace to R-P10-L01 through R-P10-L08 plus R-P10-E01 through R-P10-E03.

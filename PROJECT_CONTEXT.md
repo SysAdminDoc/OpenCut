@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-05-17 (nine autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh. Pass 6 closed F264/F266 with machine-readable npm-advisory release-smoke output and the CEP-residual/drop-QE migration note. Pass 7 closed F199 with a generated `/api` alias manifest and corrected the earlier "233 alias pairs" claim to 15 true aliases + 218 canonical `/api` routes. Pass 8 closed F191/F197 with a generated route/check readiness manifest and moved the `NON_AI_CHECKS` allowlist into the registry. Pass 9 closed F195 by expanding the curated MCP tool surface from 27 to 39 tools and adding MCP route/dispatch/path-validation tests.
+**Last consolidated:** 2026-05-17 (ten autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh. Pass 6 closed F264/F266 with machine-readable npm-advisory release-smoke output and the CEP-residual/drop-QE migration note. Pass 7 closed F199 with a generated `/api` alias manifest and corrected the earlier "233 alias pairs" claim to 15 true aliases + 218 canonical `/api` routes. Pass 8 closed F191/F197 with a generated route/check readiness manifest and moved the `NON_AI_CHECKS` allowlist into the registry. Pass 9 closed F195 by expanding the curated MCP tool surface from 27 to 39 tools and adding MCP route/dispatch/path-validation tests. Pass 10 closed the local F202 notarization tooling with a macOS signing/notarytool workflow and docs; live Apple acceptance still needs configured repository secrets.
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -84,6 +84,7 @@ For module-level patterns and the deep gotcha list (~270 entries), see **[`CLAUD
 | Threat model + responsible disclosure | `SECURITY.md` |
 | Dev setup | `DEVELOPMENT.md` + `CONTRIBUTING.md` |
 | UXP migration plan | `docs/UXP_MIGRATION.md` |
+| macOS notarization release path | `docs/MACOS_NOTARIZATION.md` |
 | Windows ARM64 packaging | `docs/WINDOWS_ARM64_PACKAGING.md` (F101) |
 | Node advisories disposition | `docs/NODE_ADVISORIES.md` (F095) |
 | 2026-04 competitive analysis | `AUDIT.md` (v1.11) + `research.md` (v1.28.2) — both predate ROADMAP v4.3 |
@@ -223,10 +224,10 @@ Pass 3 executed the F-numbered governance gates against the live repo:
 
 Pass 2 surfaced two deadlines that force scope changes regardless of feature backlog:
 
-1. **F202 — Apple notarisation mandatory for Homebrew Cask 2026-09-01.** OpenCut's macOS PyInstaller bundle is currently unsigned and unnotarised. Shipping to Homebrew Cask (the canonical macOS package channel) requires notarisation by Sept 1, 2026. **Action:** budget Apple Developer ID + notarisation service in v1.33 or v1.34.
+1. **F202 — Apple notarisation mandatory for Homebrew Cask 2026-09-01.** Pass 10 added Developer ID signing + `xcrun notarytool` release wiring and `docs/MACOS_NOTARIZATION.md`. **Remaining operational action:** configure the GitHub secrets and validate the first tagged macOS release against Apple's service.
 2. **F236 — FCC "readily-accessible" caption display-settings rule effective 2026-08-17.** All covered displays (TVs, STBs, PCs, phones, tablets, MVPD apps) must expose user-overridable caption settings (font, size, colour). OpenCut's caption export must surface these as style tokens, not bake them into burn-ins. **Action:** add style-token export schema before Aug 17, 2026.
 
-Both deadlines fall before the next Wave (~v1.35) is expected to ship. They should ride along with the next dependency-bump release.
+Both deadlines fall before the next Wave (~v1.35) is expected to ship. F202's repository-side tooling is now in place; F236 still needs to ride along with the next dependency-bump release.
 
 ---
 
