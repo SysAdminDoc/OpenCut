@@ -1,7 +1,7 @@
 # OpenCut — Route Readiness Audit
 
 **Audit date:** 2026-05-17 (Pass 2)
-**Source of truth:** `opencut/_generated/route_manifest.json` (generated 2026-05-16T20:36:05Z), `opencut/registry.py` (F100/F191 feature catalogue), `opencut/_generated/feature_readiness.json` (58 generated records / 67 route bindings), `opencut/checks.py` (117 public `check_*` probes, 86 `check_*_available` gates), `opencut/_generated/model_cards.json` (47 cards), `opencut/openapi.py` (mapping table).
+**Source of truth:** `opencut/_generated/route_manifest.json` (generated 2026-05-16T20:36:05Z), `opencut/registry.py` (F100/F191 feature catalogue), `opencut/_generated/feature_readiness.json` (58 generated records / 67 route bindings), `opencut/checks.py` (117 public `check_*` probes, 86 `check_*_available` gates), `opencut/_generated/model_cards.json` (47 cards), `opencut/openapi.py` (mapping table), `opencut/mcp_server.py` (39 curated tools after F195).
 
 ---
 
@@ -21,9 +21,9 @@
 | Routes with explicit response-schema in `openapi.py` | **30** |
 | Public `check_*` probes / `check_*_available` gates | **117** / **86** (in `opencut/checks.py`) |
 | Model cards in `model_cards.json` (F115) | **47** |
-| MCP tools in `mcp_server.py` MCP_TOOLS array | **27** |
+| MCP tools in `mcp_server.py` MCP_TOOLS array | **39** |
 
-Coverage gap after Pass 8: 1,359 routes vs 84 registry records / 67 generated route bindings vs 30 OpenAPI schemas vs 27 MCP tools. F191 improved the readiness surface for direct route/check bindings, but the vast majority of routes still have no typed response schema and no MCP surface. This remains a structural visibility gap.
+Coverage gap after Pass 9: 1,359 routes vs 84 registry records / 67 generated route bindings vs 30 OpenAPI schemas vs 39 curated MCP tools. F191 improved the readiness surface for direct route/check bindings and F195 added 12 shipped post-Wave-M MCP tools, but the vast majority of routes still have no typed response schema and no MCP surface. This remains a structural visibility gap.
 
 ---
 
@@ -102,7 +102,7 @@ Coverage gap after Pass 8: 1,359 routes vs 84 registry records / 67 generated ro
 
 ## 5. MCP tool coverage gap
 
-`mcp_server.py` exposes **27 MCP tools**:
+`mcp_server.py` exposes **39 MCP tools** after F195:
 1. `opencut_transcribe`
 2. `opencut_silence_remove`
 3. `opencut_export_video`
@@ -130,12 +130,24 @@ Coverage gap after Pass 8: 1,359 routes vs 84 registry records / 67 generated ro
 25. `opencut_sports_highlights` (Wave M)
 26. `opencut_lipsync_echomimic` (Wave M)
 27. `opencut_chat_edit` (Wave M)
+28. `opencut_face_reshape`
+29. `opencut_skin_retouch`
+30. `opencut_smart_upscale`
+31. `opencut_elevenlabs_tts`
+32. `opencut_caption_qc`
+33. `opencut_review_bundle`
+34. `opencut_c2pa_provenance`
+35. `opencut_marker_import`
+36. `opencut_capability_probe`
+37. `opencut_brand_kit`
+38. `opencut_semantic_search`
+39. `opencut_spectral_match`
 
-**Coverage: 27 of 1,359 routes (~2%).** The competing AdobePremiereProMCP server exposes 1,060 tools (mostly auto-generated boilerplate over Premiere CEP calls). OpenCut's choice to hand-curate 27 ergonomic tools is the right one **for now** — but the maintainer should at least consider auto-generation for tier-2 surfaces.
+**Coverage: 39 of 1,359 routes (~3%).** The competing AdobePremiereProMCP server exposes 1,060 tools (mostly auto-generated boilerplate over Premiere CEP calls). OpenCut's choice to hand-curate ergonomic tools is the right one **for now** — but the maintainer should at least consider auto-generation for tier-2 surfaces.
 
 **Recommended fix:**
 - **F194** — Auto-generate a `tools/extended/` set of MCP tools from the route manifest + OpenAPI schema. Tag them clearly as "auto-generated, lower priority" so MCP clients (Claude Code, Cursor) can opt in/out. This pairs with F192 (typed schemas).
-- **F195** — Extend the MCP_TOOLS with the post-Wave-M shipped routes: `opencut_face_reshape`, `opencut_skin_retouch`, `opencut_smart_upscale`, `opencut_elevenlabs_tts`, `opencut_caption_qc`, `opencut_review_bundle`, `opencut_c2pa_provenance`, `opencut_marker_import`, `opencut_capability_probe`, `opencut_brand_kit`, `opencut_semantic_search`, `opencut_spectral_match`. (~12 new entries.)
+- **F195** — **DONE in Pass 9.** `opencut/mcp_server.py` now exposes `opencut_face_reshape`, `opencut_skin_retouch`, `opencut_smart_upscale`, `opencut_elevenlabs_tts`, `opencut_caption_qc`, `opencut_review_bundle`, `opencut_c2pa_provenance`, `opencut_marker_import`, `opencut_capability_probe`, `opencut_brand_kit`, `opencut_semantic_search`, and `opencut_spectral_match`; `tests/test_mcp_server.py` pins registration, dispatch, special actions, and path validation.
 
 ---
 
@@ -191,7 +203,7 @@ The manifest contains **233 routes under `/api/*`**. Pass 7 corrected the origin
 | F192 | Bulk add OpenAPI response schemas for top 50 routes | Next | M |
 | F193 | Replace `_ENDPOINT_SCHEMAS` hand-table with dataclass introspection | Later | M |
 | F194 | Auto-generate "extended" MCP tools from route manifest | Next | L |
-| F195 | Add 12 missing MCP tools for post-Wave-M shipped routes | Now | S |
+| F195 | Add 12 missing MCP tools for post-Wave-M shipped routes | Done in Pass 9 | S |
 | F196 | Make `registry.py` primary; derive `model_cards` / `checks` | Later | L |
 | F197 | Add `NON_AI_CHECKS` allowlist to `registry.py` | Done in Pass 8 | S |
 | F198 | CEP-only route catalogue + UXP replacement plan | Next | M |

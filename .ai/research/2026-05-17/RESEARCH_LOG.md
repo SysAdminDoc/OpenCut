@@ -234,3 +234,31 @@ Pass 4 was a verification and consolidation pass, not a new feature-harvest wave
 ### Pass 4 saturation note
 
 The research corpus is now saturated enough for the user-requested roadmap operation. Remaining gaps are execution tasks (F261, F262, F270), strategic decisions (F127, F161, F200, F252), or multi-day audits (F179). Additional web searching would mostly duplicate the source classes already captured unless it focuses on one of those deferred items.
+
+---
+
+## Pass 9 (2026-05-17 — F195 MCP implementation)
+
+Pass 9 was an implementation pass, not a new external research pass. It used local route sources only.
+
+### Pass 9 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 9.1 | Inspected `opencut/mcp_server.py` and the shipped route modules for the 12 missing post-Wave-M surfaces. | Confirmed routes and payload shapes for F195. |
+| Pass 9.2 | Added curated MCP tools, route mappings, multi-action dispatch for Brand Kit / semantic search, and path-validation coverage for new path keys. | `opencut/mcp_server.py` |
+| Pass 9.3 | Added focused MCP tests and release-smoke gate coverage. | `tests/test_mcp_server.py`, `scripts/release_smoke.py` |
+| Pass 9.4 | Updated roadmap/context/research artefacts with 27→39 MCP tool count and F195 closure. | `ROADMAP.md`, `PROJECT_CONTEXT.md`, `.ai/research/2026-05-17/*` |
+
+### Pass 9 validation results
+
+| Check | Result |
+|---|---|
+| Python compile on touched Python files | **PASS** |
+| Focused MCP + release-smoke tests | **PASS** — `17 passed` |
+| Ruff on touched files | **PASS** |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `246 passed` |
+
+### Pass 9 saturation note
+
+No new external searching was needed. The next research-heavy gaps are still F179 (features.md reconciliation), F202/F236 regulatory implementation detail, and the Python cross-version install matrix. The next local-verifiable implementation gaps are F208/F209/F218/F219/F204.
