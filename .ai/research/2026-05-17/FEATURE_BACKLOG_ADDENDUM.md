@@ -38,7 +38,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F201 | Automate WPF installer build in CI | Currently manual via `InstallerBuilder.ps1` | INSTALLER_AUDIT §7 | M | Next |
 | F202 | Apple notarisation for macOS PyInstaller bundle | DONE in Pass 10 — macOS release workflow signs with Developer ID, submits `OpenCut-Server-macOS.zip` through `xcrun notarytool`, and documents required secrets; first live acceptance still needs configured GitHub secrets | INSTALLER_AUDIT §7 + niche AI §5 | M | Done |
 | F203 | Authenticode code-signing for Windows installer + signing-cert renewal policy | Cert validity drops to 458 days March 2026; EV bypass for SmartScreen no longer auto-trusted | INSTALLER_AUDIT §7 + niche AI §5 | M | Next |
-| F204 | Auto-attach SBOM (CycloneDX 1.5) to GitHub release | `scripts/sbom.py` is on-demand only | INSTALLER_AUDIT §7 | S | Now |
+| F204 | Auto-attach SBOM (CycloneDX 1.5) to GitHub release | DONE in Pass 11 — Linux release job generates, archives, and uploads `dist/opencut-sbom.cyclonedx.json` | INSTALLER_AUDIT §7 | S | Done |
 | F205 | Raise CI coverage floor from 50% to current actual (~75-80%) | Measure first, then floor at actual - 5% | INSTALLER_AUDIT §7 + TEST_COVERAGE §4 | S | Now |
 | F206 | Split CI into PR-fast and release-full workflows | Every PR currently runs full 3-OS matrix | INSTALLER_AUDIT §7 | M | Later |
 | F207 | Embed bundled FFmpeg version in `AppConstants.cs` + installer manifest | Currently undocumented | INSTALLER_AUDIT §9 | S | Now |
@@ -127,8 +127,8 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | Tier | Pass-2 F-numbers added | Total (cumulative) |
 |---|---|---|
-| **Now** | F204, F205, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244, F251, F259 | 15 |
-| **Done locally after Pass 10** | F191, F195, F197, F199, F202 | 5 |
+| **Now** | F205, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244, F251, F259 | 14 |
+| **Done locally after Pass 11** | F191, F195, F197, F199, F202, F204 | 6 |
 | **Next** | F192, F194, F198, F200, F201, F203, F211, F213, F214, F215, F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
