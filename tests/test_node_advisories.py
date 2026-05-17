@@ -53,6 +53,10 @@ def test_check_advisories_script_present_and_executable_text():
     assert "ALLOWED" in text
     assert "GHSA-" in text
     assert "npm audit" in text
+    assert "--json" in text
+    assert "JSON.stringify" in text
+    assert "powershell.exe" in text
+    assert "Set-Location -LiteralPath" in text
 
 
 def test_verify_build_script_validates_required_sources():
