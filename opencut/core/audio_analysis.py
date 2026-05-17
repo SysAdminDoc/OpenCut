@@ -14,21 +14,10 @@ import subprocess
 from dataclasses import dataclass
 from typing import Callable, Dict, Optional
 
+from opencut.core.loudness_standards import PLATFORM_TARGETS
 from opencut.helpers import get_ffmpeg_path
 
 logger = logging.getLogger("opencut")
-
-
-# ---------------------------------------------------------------------------
-# Platform loudness targets (LUFS)
-# ---------------------------------------------------------------------------
-PLATFORM_TARGETS: Dict[str, float] = {
-    "youtube": -14.0,
-    "spotify": -14.0,
-    "apple_podcasts": -16.0,
-    "broadcast": -24.0,
-    "tiktok": -14.0,
-}
 
 
 # ---------------------------------------------------------------------------

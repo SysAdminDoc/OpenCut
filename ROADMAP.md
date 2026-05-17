@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.20
+**Version**: 4.21
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,361 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -48,6 +48,27 @@
 > **v4.19 status (2026-05-17, sixteenth pass)**: closed **F219** by making the release SBOM complete enough to audit. `scripts/sbom.py` now emits unique declared Python dependency components, 47 model-card components, and a non-empty CycloneDX dependency graph; `tests/test_sbom_completeness.py` verifies the SBOM covers every `pyproject.toml`/`requirements.txt` dependency, every committed model card, and every component reference in the dependency graph.
 >
 > **v4.20 status (2026-05-17, seventeenth pass)**: closed **F236** by adding canonical FCC-style caption display setting tokens. `opencut/core/caption_display_settings.py` now normalizes user-overridable font, size, text color/opacity, background color/opacity, edge, and window tokens; `/captions/display-settings/tokens` exposes the schema and `/captions/display-settings/preview` returns CSS/ASS preview metadata. Burn-in from subtitle files can consume `display_settings`, and `tests/test_caption_display_settings.py` pins the rule factors, token coverage, normalization, preview output, and routes.
+>
+> **v4.21 status (2026-05-17, eighteenth pass)**: closed **F237** by replacing scattered loudness target constants with `opencut/core/loudness_standards.py`. Fresh source verification found that **ITU-R BS.1770-5** is the in-force recommendation and **BS.1770-4 is superseded**, so the original "drop speculative -5" wording was stale. The API now exposes EBU R 128 v5.0, ITU BS.1770-5, FFmpeg loudnorm, and platform/profile source metadata through `/audio/loudness-presets`; `tests/test_loudness_standards.py` pins the corrected standards and preset targets.
+
+---
+
+## 2026-05-17 v4.21 Loudness Standards Registry
+
+F237 is closed locally. OpenCut now has one source-backed loudness standards registry used by normalization, analysis, broadcast QC metadata, and the preset API:
+
+| Surface | Status |
+|---|---|
+| ITU evidence correction | Fresh ITU verification shows `BS.1770-5 (11/2023)` is **in force** and `BS.1770-4 (10/2015)` is superseded, so F237 corrected the stale "speculative -5" note instead of deleting BS.1770-5 references. |
+| EBU R 128 v5.0 | The registry records EBU R 128 v5.0 (November 2023), target programme loudness `-23 LUFS`, maximum true peak `-1 dBTP`, and the ITU BS.1770 measurement basis. |
+| Presets | `opencut/core/loudness_standards.py` keeps backward-compatible `i` / `tp` / `lra` fields while adding labels, categories, measurement standards, implementation IDs, source URLs, and correction notes. |
+| Normalization | `opencut/core/audio_suite.py` now imports the canonical preset table and keeps the older `LOUDNESS_PRESETS` export for compatibility. |
+| Analysis | `opencut/core/audio_analysis.py` imports the shared platform target map; existing `broadcast = -24 LUFS` semantics are preserved while `ebu_broadcast = -23 LUFS` is explicit. |
+| Broadcast QC | EBU R 128 broadcast QC metadata now names `ITU-R BS.1770-5`, `EBU R 128 v5.0`, and the source URL. |
+| API | `GET /audio/loudness-presets` returns `presets`, `standards`, and a correction note that distinguishes universal standards from generic profiles. |
+| Regression test | `tests/test_loudness_standards.py` covers the current ITU/EBU metadata, corrected preset targets, compatibility export, platform target semantics, and route payload. |
+
+Validation after the batch: focused loudness/release-smoke tests passed (`17 passed` for `tests/test_loudness_standards.py tests/test_release_smoke.py`; `9 passed` for the focused compatibility/route slice), Ruff passed for touched Python files, all touched Python files compile, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`278 passed` in pytest-fast).
 
 ---
 
@@ -449,7 +470,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (8 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (7 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
