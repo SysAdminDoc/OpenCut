@@ -18,7 +18,9 @@ A test (``tests/test_model_cards.py``) asserts:
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass, field
-from typing import Iterable, List, Optional, Tuple
+from typing import Iterable, List, Optional
+
+from opencut.registry import NON_AI_CHECKS
 
 
 @dataclass
@@ -47,49 +49,9 @@ class ModelCard:
 
 
 # Checks that don't gate a model — infrastructure guards, codecs, dev tools.
-# These are deliberately excluded from the model-card surface.
-NON_AI_CHECKS: Tuple[str, ...] = (
-    # Infrastructure, codecs, plumbing — no model under the hood.
-    "check_aaf_adapter_available",
-    "check_ab_av1_available",
-    "check_atheris_available",
-    "check_birefnet_available",
-    "check_changelog_feed_available",
-    "check_color_match_available",
-    "check_cursor_zoom_available",
-    "check_declarative_compose_available",
-    "check_demo_bundle_available",
-    "check_deprecation_registry_available",
-    "check_disk_monitor_available",
-    "check_event_moments_available",
-    "check_footage_search_available",
-    "check_gist_sync_available",
-    "check_gpu_semaphore_available",
-    "check_issue_report_available",
-    "check_loudness_match_available",
-    "check_neural_interp_available",
-    "check_obs_bridge_available",
-    "check_onboarding_available",
-    "check_openapi_available",
-    "check_otio_available",
-    "check_otio_diff_available",
-    "check_pedalboard_available",
-    "check_quality_metrics_available",
-    "check_rate_limit_categories_available",
-    "check_request_correlation_available",
-    "check_resolve_available",
-    "check_rife_cli_available",
-    "check_runpod_available",
-    "check_sentry_available",
-    "check_shaka_available",
-    "check_social_post_available",
-    "check_srt_available",
-    "check_svtav1_psy_available",
-    "check_temp_cleanup_available",
-    "check_vmaf_available",
-    "check_vvc_available",
-    "check_websocket_available",
-)
+# These are deliberately excluded from the model-card surface. The canonical
+# allowlist lives in ``opencut.registry`` so F191 readiness derivation and F115
+# model-card validation share the same taxonomy.
 
 
 # ---------------------------------------------------------------------------
