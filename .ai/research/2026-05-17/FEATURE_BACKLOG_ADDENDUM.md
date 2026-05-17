@@ -98,7 +98,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F241 | HarfBuzz-mandatory CI gate (libass + Pillow + Skia) | DONE in Pass 20 — `opencut.tools.text_shaping_gate` hard-fails missing FFmpeg/libass HarfBuzz/FriBidi/ASS/subtitles support, reports Pillow RAQM and optional Skia shaping status, and is wired into release smoke plus CI | Niche AI §3 + F223 + R-P20-L01/R-P20-L10 | S | Done |
 | F242 | ICU4X-based CJK line breaking | Replace naive whitespace splitting | Niche AI §3 | M | Next |
 | F243 | UTF-8 (no BOM) SRT writer + opt-in Windows-legacy BOM toggle | DONE in Pass 21 — primary SRT export defaults to UTF-8 without BOM, `legacy_windows_bom=True` / `--srt-legacy-bom` opts into `utf-8-sig`, and route aliases expose/report the encoding policy | Niche AI §3 + R-P21-L01/R-P21-L08 | S | Done |
-| F244 | Language confidence per Whisper segment + Hindi/Arabic human-review flag | Surface low-confidence ASR for reviewer | Niche AI §3 | S | Now |
+| F244 | Language confidence per Whisper segment + Hindi/Arabic human-review flag | DONE in Pass 22 — Whisper segment metadata now carries ASR confidence, language confidence, Hindi/Arabic review flags, low-confidence review reasons, and survives transcript cache/state, JSON export, edited transcript export, and CLI output | Niche AI §3 + R-N17 + R-P22-L01/R-P22-L08 | S | Done |
 | F245 | Netflix IMF builder macro (Bento4 + dovi_tool) | Apache-2 + open OSS chain | Niche AI §4 | L | Later |
 | F246 | DPP IMF (BBC / ARD / EBU) preset | Public-broadcaster delivery | Niche AI §4 | L | Later |
 | F247 | Dolby Vision Profile 5/8.1 OSS pipeline (dovi_tool + Shaka) | Profile 7 still painful; document constraints | Niche AI §4 | L | Later |
@@ -127,8 +127,8 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | Tier | Pass-2 F-numbers added | Total (cumulative) |
 |---|---|---|
-| **Now** | F205, F244, F251, F259 | 4 |
-| **Done locally after Pass 21** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243 | 16 |
+| **Now** | F205, F251, F259 | 3 |
+| **Done locally after Pass 22** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
 | **Next** | F192, F194, F198, F200, F201, F203, F211, F213, F214, F215, F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 

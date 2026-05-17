@@ -1,19 +1,35 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 22)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 23)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (after Pass 21; Passes 1-21 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, and Pass 21 closed F243 UTF-8 no-BOM SRT policy. This file documents deferred research/product work for a future Pass 22+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (after Pass 22; Passes 1-22 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, and Pass 22 closed F244 Whisper confidence + human-review flags. This file documents deferred research/product work for a future Pass 23+, not a broken or incomplete research run.
 
 ---
 
 ## 1. State at hand-off
 
-- **Repo branch:** `main`, expected 44 commits ahead of `origin/main` after the Pass-21 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
+- **Repo branch:** `main`, expected 45 commits ahead of `origin/main` after the Pass-22 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
-- **Live counts:** 1,362 routes / 101 blueprints / 525 core modules / 142 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
+- **Live counts:** 1,362 routes / 101 blueprints / 525 core modules / 143 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
+
+### Pass 23 entry point
+
+1. **Push checkpoint commits** once GitHub auth is available on this machine.
+2. **Continue the remaining Now queue.** F205 remains open but should only resume where a full coverage command can finish. F251 and F259 need fresh Adobe/UXP verification before implementation because beta typings and the macOS HTTP bug status can drift.
+3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
+4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 22 checkpoint
+
+| Item | Status |
+|---|---|
+| F244 | **DONE** — Whisper transcript segments now carry ASR confidence, language confidence, Hindi/Arabic review flags, and stable low-confidence review reason codes across route, cache, state, JSON export, edited export, and CLI surfaces. |
+| Focused validation | PASS — `12 passed` for `tests/test_caption_language_confidence.py tests/test_captions_regressions.py tests/test_srt_encoding.py`. |
+| Release smoke | PASS — all 14 steps green; pytest-fast `300 passed`. |
+| Files to review | `opencut/core/captions.py`, `opencut/routes/captions.py`, `opencut/export/srt.py`, `opencut/polish_state.py`, `opencut/cli.py`, `tests/test_caption_language_confidence.py`, `scripts/release_smoke.py`, plus roadmap/research docs. |
 
 ---
 
@@ -218,7 +234,7 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 ### Pass 13 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Continue the F191-F260 Now queue.** F205 remains open but needs a reliable long-running coverage measurement. F236, F237, F240, F241, and F243 are closed; the next local-verifiable implementation item is F244. F251 and F259 likely need refreshed Adobe/UXP verification before implementation.
+2. **Continue the F191-F260 Now queue.** F205 remains open but needs a reliable long-running coverage measurement. F236, F237, F240, F241, F243, and F244 are closed; the remaining Now items are F205, F251, and F259. F251 and F259 likely need refreshed Adobe/UXP verification before implementation.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
@@ -627,7 +643,7 @@ Pass 21 closed the SRT writer encoding policy item.
 ### Remaining immediate work
 
 - F205 remains open and should resume only where a full coverage command can finish.
-- The next local-verifiable Now item is F244.
+- F244 is now closed in Pass 22; remaining Now items are F205, F251, and F259.
 - F251 and F259 likely need fresh Adobe/UXP verification before implementation.
 
 ---

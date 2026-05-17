@@ -6,15 +6,48 @@ Falls back gracefully if Whisper is not installed.
 """
 
 import logging
+import math
 import os
 import tempfile
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 from ..utils.config import CaptionConfig
 from .audio import extract_audio_wav
 
 logger = logging.getLogger(__name__)
+
+
+REVIEW_ASR_CONFIDENCE_THRESHOLD = 0.70
+REVIEW_LANGUAGE_CONFIDENCE_THRESHOLD = 0.80
+HUMAN_REVIEW_LANGUAGE_CODES = frozenset({
+    "ar",
+    "arb",
+    "arz",
+    "ary",
+    "arq",
+    "ars",
+    "apc",
+    "acm",
+    "hi",
+    "hin",
+})
+_LANGUAGE_ALIASES = {
+    "arabic": "ar",
+    "hindi": "hi",
+    "modern standard arabic": "ar",
+}
+
+
+def _clamp_confidence(value: Any, default: float = 1.0) -> float:
+    """Coerce a backend confidence value into the 0..1 range."""
+    try:
+        score = float(value)
+    except (TypeError, ValueError):
+        score = default
+    if math.isnan(score) or math.isinf(score):
+        score = default
+    return max(0.0, min(1.0, score))
 
 
 @dataclass
@@ -25,6 +58,94 @@ class Word:
     end: float
     confidence: float = 1.0
 
+    def __post_init__(self) -> None:
+        self.confidence = _clamp_confidence(self.confidence)
+
+
+def normalize_language_code(language: Optional[str]) -> str:
+    """Return a stable lower-case language code/name for review rules."""
+    if not language:
+        return ""
+    value = str(language).strip().lower().replace("_", "-")
+    if not value:
+        return ""
+    value = _LANGUAGE_ALIASES.get(value, value)
+    if "-" in value:
+        value = value.split("-", 1)[0]
+    return _LANGUAGE_ALIASES.get(value, value)
+
+
+def is_human_review_language(language: Optional[str]) -> bool:
+    """Return True for languages that should receive manual ASR review."""
+    code = normalize_language_code(language)
+    return code in HUMAN_REVIEW_LANGUAGE_CODES
+
+
+def segment_confidence_from_words(words: List[Word], fallback: float = 1.0) -> float:
+    """Average word confidence values for a segment."""
+    scores = [
+        _clamp_confidence(getattr(w, "confidence", fallback), fallback)
+        for w in (words or [])
+    ]
+    if not scores:
+        return _clamp_confidence(fallback)
+    return round(sum(scores) / len(scores), 4)
+
+
+def _confidence_from_backend_metadata(
+    words: List[Word],
+    *,
+    avg_logprob: Optional[float] = None,
+    no_speech_prob: Optional[float] = None,
+    fallback: float = 1.0,
+) -> float:
+    """Derive a segment confidence from word or backend-level signals."""
+    if words:
+        return segment_confidence_from_words(words, fallback=fallback)
+
+    candidates: List[float] = []
+    try:
+        if avg_logprob is not None:
+            candidates.append(_clamp_confidence(math.exp(float(avg_logprob)), fallback))
+    except (TypeError, ValueError, OverflowError):
+        pass
+    try:
+        if no_speech_prob is not None:
+            candidates.append(_clamp_confidence(1.0 - float(no_speech_prob), fallback))
+    except (TypeError, ValueError):
+        pass
+    if candidates:
+        return round(min(candidates), 4)
+    return _clamp_confidence(fallback)
+
+
+def caption_review_reasons(
+    *,
+    language: Optional[str],
+    language_confidence: float = 1.0,
+    confidence: float = 1.0,
+) -> List[str]:
+    """Return stable machine-readable reasons a segment needs review."""
+    reasons: List[str] = []
+    if is_human_review_language(language):
+        reasons.append("language_requires_human_review")
+    if _clamp_confidence(language_confidence) < REVIEW_LANGUAGE_CONFIDENCE_THRESHOLD:
+        reasons.append("low_language_confidence")
+    if _clamp_confidence(confidence) < REVIEW_ASR_CONFIDENCE_THRESHOLD:
+        reasons.append("low_asr_confidence")
+    return reasons
+
+
+def _dedupe_reasons(reasons: List[str]) -> List[str]:
+    seen = set()
+    out: List[str] = []
+    for reason in reasons or []:
+        key = str(reason).strip()
+        if key and key not in seen:
+            seen.add(key)
+            out.append(key)
+    return out
+
 
 @dataclass
 class CaptionSegment:
@@ -34,6 +155,27 @@ class CaptionSegment:
     end: float
     words: List[Word] = field(default_factory=list)
     speaker: Optional[str] = None
+    language: Optional[str] = None
+    language_confidence: float = 1.0
+    confidence: float = 1.0
+    human_review_recommended: bool = False
+    review_reasons: List[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.words and self.confidence == 1.0:
+            self.confidence = segment_confidence_from_words(self.words)
+        else:
+            self.confidence = _clamp_confidence(self.confidence)
+        self.language_confidence = _clamp_confidence(self.language_confidence)
+        computed = caption_review_reasons(
+            language=self.language,
+            language_confidence=self.language_confidence,
+            confidence=self.confidence,
+        )
+        self.review_reasons = _dedupe_reasons([*self.review_reasons, *computed])
+        self.human_review_recommended = bool(
+            self.human_review_recommended or self.review_reasons
+        )
 
     @property
     def duration(self) -> float:
@@ -46,6 +188,10 @@ class TranscriptionResult:
     segments: List[CaptionSegment]
     language: str = "en"
     duration: float = 0.0
+    language_confidence: float = 1.0
+
+    def __post_init__(self) -> None:
+        self.language_confidence = _clamp_confidence(self.language_confidence)
 
     @property
     def text(self) -> str:
@@ -54,6 +200,65 @@ class TranscriptionResult:
     @property
     def word_count(self) -> int:
         return sum(len(s.words) for s in self.segments)
+
+    @property
+    def human_review_recommended(self) -> bool:
+        return any(getattr(s, "human_review_recommended", False) for s in self.segments)
+
+    @property
+    def review_segment_count(self) -> int:
+        return sum(1 for s in self.segments if getattr(s, "human_review_recommended", False))
+
+
+def caption_segment_to_dict(
+    seg: CaptionSegment,
+    *,
+    include_words: bool = True,
+    precision: Optional[int] = None,
+) -> Dict:
+    """Serialize a caption segment with review metadata."""
+
+    def _number(value: Any) -> float:
+        try:
+            val = float(value)
+        except (TypeError, ValueError):
+            val = 0.0
+        return round(val, precision) if precision is not None else val
+
+    language = getattr(seg, "language", None)
+    language_confidence = _clamp_confidence(getattr(seg, "language_confidence", 1.0))
+    confidence = _clamp_confidence(getattr(seg, "confidence", 1.0))
+    review_reasons = _dedupe_reasons([
+        *list(getattr(seg, "review_reasons", []) or []),
+        *caption_review_reasons(
+            language=language,
+            language_confidence=language_confidence,
+            confidence=confidence,
+        ),
+    ])
+
+    payload = {
+        "text": str(getattr(seg, "text", "")),
+        "start": _number(getattr(seg, "start", 0.0)),
+        "end": _number(getattr(seg, "end", 0.0)),
+        "speaker": getattr(seg, "speaker", None),
+        "language": language,
+        "language_confidence": language_confidence,
+        "confidence": confidence,
+        "human_review_recommended": bool(getattr(seg, "human_review_recommended", False) or review_reasons),
+        "review_reasons": review_reasons,
+    }
+    if include_words:
+        payload["words"] = [
+            {
+                "text": str(getattr(w, "text", getattr(w, "word", ""))).strip(),
+                "start": _number(getattr(w, "start", 0.0)),
+                "end": _number(getattr(w, "end", 0.0)),
+                "confidence": _clamp_confidence(getattr(w, "confidence", 1.0)),
+            }
+            for w in (getattr(seg, "words", None) or [])
+        ]
+    return payload
 
 
 def check_whisper_available() -> Tuple[bool, str]:
@@ -180,12 +385,18 @@ def remap_captions_to_segments(
             end=round(new_end, 4),
             words=new_words,
             speaker=cap.speaker,
+            language=getattr(cap, "language", None),
+            language_confidence=getattr(cap, "language_confidence", 1.0),
+            confidence=getattr(cap, "confidence", 1.0),
+            human_review_recommended=getattr(cap, "human_review_recommended", False),
+            review_reasons=list(getattr(cap, "review_reasons", []) or []),
         ))
 
     return TranscriptionResult(
         segments=new_segments,
         language=captions.language,
         duration=total_condensed,
+        language_confidence=getattr(captions, "language_confidence", 1.0),
     )
 
 
@@ -292,12 +503,7 @@ def transcribe_audio(
             continue
         # Dataclass / namespace-style object
         try:
-            out.append({
-                "start": float(getattr(seg, "start", 0.0)),
-                "end": float(getattr(seg, "end", 0.0)),
-                "text": str(getattr(seg, "text", "")),
-                "words": getattr(seg, "words", None),
-            })
+            out.append(caption_segment_to_dict(seg, include_words=True))
         except (TypeError, ValueError):
             continue
     return out
@@ -325,6 +531,9 @@ def _transcribe_openai_whisper(wav_path: str, config: CaptionConfig) -> Transcri
         verbose=False,
     )
 
+    language = result.get("language", config.language or "en")
+    language_confidence = _clamp_confidence(result.get("language_probability", 1.0))
+
     segments = []
     for seg in result.get("segments", []):
         words = []
@@ -336,17 +545,26 @@ def _transcribe_openai_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                     end=w.get("end", 0.0),
                     confidence=w.get("probability", 1.0),
                 ))
+        segment_confidence = _confidence_from_backend_metadata(
+            words,
+            avg_logprob=seg.get("avg_logprob"),
+            no_speech_prob=seg.get("no_speech_prob"),
+        )
 
         segments.append(CaptionSegment(
             text=seg.get("text", "").strip(),
             start=seg.get("start", 0.0),
             end=seg.get("end", 0.0),
             words=words,
+            language=language,
+            language_confidence=language_confidence,
+            confidence=segment_confidence,
         ))
 
     return TranscriptionResult(
         segments=segments,
-        language=result.get("language", config.language or "en"),
+        language=language,
+        language_confidence=language_confidence,
     )
 
 
@@ -524,6 +742,9 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
 
         logger.info(f"Transcription complete: {len(result_segments)} segments")
 
+        language = info.language or config.language or "en"
+        language_confidence = _clamp_confidence(getattr(info, "language_probability", 1.0))
+
         segments = []
         for seg in result_segments:
             words = []
@@ -535,17 +756,26 @@ def _transcribe_faster_whisper(wav_path: str, config: CaptionConfig) -> Transcri
                         end=w.end,
                         confidence=w.probability,
                     ))
+            segment_confidence = _confidence_from_backend_metadata(
+                words,
+                avg_logprob=getattr(seg, "avg_logprob", None),
+                no_speech_prob=getattr(seg, "no_speech_prob", None),
+            )
 
             segments.append(CaptionSegment(
                 text=seg.text.strip(),
                 start=seg.start,
                 end=seg.end,
                 words=words,
+                language=language,
+                language_confidence=language_confidence,
+                confidence=segment_confidence,
             ))
 
         return TranscriptionResult(
             segments=segments,
-            language=info.language or config.language or "en",
+            language=language,
+            language_confidence=language_confidence,
         )
     finally:
         try:
@@ -670,6 +900,9 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
         if torch.cuda.is_available():
             torch.cuda.empty_cache()
 
+    language = result.get("language", config.language or "en")
+    language_confidence = _clamp_confidence(result.get("language_probability", 1.0))
+
     segments = []
     for seg in result.get("segments", []):
         words = []
@@ -681,6 +914,7 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
                     end=w.get("end", 0.0),
                     confidence=w.get("score", 1.0),
                 ))
+        segment_confidence = _confidence_from_backend_metadata(words)
 
         segments.append(CaptionSegment(
             text=seg.get("text", "").strip(),
@@ -688,9 +922,13 @@ def _transcribe_whisperx(wav_path: str, config: CaptionConfig) -> TranscriptionR
             end=seg.get("end", 0.0),
             words=words,
             speaker=seg.get("speaker") if isinstance(seg.get("speaker"), str) else None,
+            language=language,
+            language_confidence=language_confidence,
+            confidence=segment_confidence,
         ))
 
     return TranscriptionResult(
         segments=segments,
-        language=result.get("language", config.language or "en"),
+        language=language,
+        language_confidence=language_confidence,
     )
