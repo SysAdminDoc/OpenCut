@@ -347,3 +347,39 @@ fatal: unable to access 'https://github.com/SysAdminDoc/OpenCut.git/': The reque
 ```
 
 The local commits are intact; pushing requires GitHub credentials with write access to `SysAdminDoc/OpenCut`.
+
+---
+
+## 11. Pass 6 additions (same day, F264/F266 implementation)
+
+Pass 6 closed the remaining Pass-3 Now items.
+
+### Files added or edited in Pass 6
+
+| Path | Change |
+|---|---|
+| `extension/com.opencut.panel/scripts/check-advisories.mjs` | Added `--json` mode with stable `status`, `summary`, `allowed`, and `unwaived` fields. |
+| `scripts/release_smoke.py` | Changed `npm-advisory` to invoke `check-advisories.mjs --json`, parse the machine-readable report, and fail on malformed output or unwaived advisories. |
+| `docs/NODE_ADVISORIES.md` | Documented the JSON advisory-check command and release-smoke contract. |
+| `docs/UXP_MIGRATION.md` | Added F266 section naming `ocAddNativeCaptionTrack` and `ocQeReflect`, plus the drop-QE rules. |
+| `tests/test_release_smoke.py` | Added coverage for the JSON advisory contract and malformed-output failure. |
+| `tests/test_node_advisories.py` | Added text guard for JSON output support in the Node checker. |
+| `tests/test_uxp_migration_docs.py` | Added F266 documentation guard. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CONTINUE_FROM_HERE.md` | Updated status to mark F264/F266 closed and identify F199/F179 as the next work. |
+
+### Items closed in Pass 6
+
+| F# | Result |
+|---|---|
+| F264 | Closed — release smoke now asserts machine-readable npm advisory JSON. |
+| F266 | Closed — CEP residual and drop-QE plan documented. |
+
+### Validation after Pass 6
+
+| Command | Result |
+|---|---|
+| `node scripts/check-advisories.mjs --json` | PASS — one Vite advisory reported as allowed, zero unwaived |
+| `python scripts/release_smoke.py --only npm-advisory --json` | PASS — `npm-advisory` reports `advisories on allow-list (1 allowed)` |
+| `python -m pytest tests/test_release_smoke.py tests/test_node_advisories.py tests/test_uxp_migration_docs.py -q` | PASS — `20 passed` |
+| `node --check extension/com.opencut.panel/scripts/check-advisories.mjs` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 11 release-smoke steps green; pytest-fast reported `232 passed` |

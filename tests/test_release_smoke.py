@@ -95,6 +95,47 @@ def test_step_pip_audit_skips_when_module_missing(monkeypatch):
     assert "pip-audit" in result.skipped_reason
 
 
+def test_step_npm_advisory_requires_machine_parseable_json(monkeypatch, tmp_path):
+    module = load_module()
+    panel_dir = tmp_path / "panel"
+    (panel_dir / "scripts").mkdir(parents=True)
+    (panel_dir / "scripts" / "check-advisories.mjs").write_text("// ok", encoding="utf-8")
+    (panel_dir / "node_modules").mkdir()
+
+    monkeypatch.setattr(module, "PANEL_DIR", panel_dir)
+    monkeypatch.setattr(module.shutil, "which", lambda name: "node" if name == "node" else None)
+
+    def _fake_run(cmd, cwd=None, env=None):  # noqa: ANN001
+        assert cmd[-1] == "--json"
+        assert cwd == panel_dir
+        payload = {"status": "ok", "summary": {"allowed": 1, "unwaived": 0}}
+        return subprocess.CompletedProcess(cmd, 0, json.dumps(payload), "")
+
+    monkeypatch.setattr(module, "_run", _fake_run)
+
+    result = module.step_npm_advisory(argparse.Namespace())
+
+    assert result.status == "ok"
+    assert result.message == "advisories on allow-list (1 allowed)"
+
+
+def test_step_npm_advisory_fails_on_unparseable_json(monkeypatch, tmp_path):
+    module = load_module()
+    panel_dir = tmp_path / "panel"
+    (panel_dir / "scripts").mkdir(parents=True)
+    (panel_dir / "scripts" / "check-advisories.mjs").write_text("// ok", encoding="utf-8")
+    (panel_dir / "node_modules").mkdir()
+
+    monkeypatch.setattr(module, "PANEL_DIR", panel_dir)
+    monkeypatch.setattr(module.shutil, "which", lambda name: "node" if name == "node" else None)
+    monkeypatch.setattr(module, "_run", _stub_run(0, out="[advisory-check] ok"))
+
+    result = module.step_npm_advisory(argparse.Namespace())
+
+    assert result.status == "fail"
+    assert "parseable JSON" in result.message
+
+
 def test_overall_status_handles_mixed_results():
     module = load_module()
     make = module.StepResult

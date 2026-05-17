@@ -21,6 +21,8 @@ import { dirname, resolve } from "node:path";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const panelRoot = resolve(__dirname, "..");
 
+const JSON_MODE = process.argv.includes("--json");
+
 const ALLOWED = new Map([
   [
     "GHSA-4w7w-66w2-5vf9",
@@ -35,14 +37,20 @@ const ALLOWED = new Map([
 
 function runAudit() {
   const isWin = process.platform === "win32";
-  // On Windows, `npm` resolves to `npm.cmd` which can only be launched via the
-  // shell. We hardcode the argv (no user input) so shell expansion is safe.
+  // On Windows, Node cannot spawn npm.cmd directly in this environment, and
+  // cmd.exe silently falls back to C:\Windows when cwd is a UNC/HGFS path.
+  // PowerShell handles UNC working directories correctly.
+  const quotedPanelRoot = panelRoot.replace(/'/g, "''");
   const result = isWin
-    ? spawnSync("cmd.exe", ["/d", "/s", "/c", "npm audit --json"], {
-        cwd: panelRoot,
+    ? spawnSync("powershell.exe", [
+        "-NoProfile",
+        "-ExecutionPolicy",
+        "Bypass",
+        "-Command",
+        `Set-Location -LiteralPath '${quotedPanelRoot}'; npm audit --json`,
+      ], {
         encoding: "utf8",
         maxBuffer: 64 * 1024 * 1024,
-        windowsVerbatimArguments: true,
       })
     : spawnSync("npm", ["audit", "--json"], {
         cwd: panelRoot,
@@ -85,14 +93,34 @@ function main() {
     const ids = gatherAdvisoryIds(payload.via);
     const ok = ids.length > 0 && ids.every((id) => ALLOWED.has(id));
     if (ok) {
-      allowed.push({ pkg, severity: payload.severity, ids });
+      allowed.push({
+        pkg,
+        severity: payload.severity,
+        ids,
+        waivers: ids.map((id) => ALLOWED.get(id)),
+      });
     } else {
       findings.push({ pkg, severity: payload.severity, ids });
     }
   }
 
+  const output = {
+    status: findings.length > 0 ? "fail" : "ok",
+    summary: {
+      total: allowed.length + findings.length,
+      allowed: allowed.length,
+      unwaived: findings.length,
+    },
+    allowed,
+    unwaived: findings,
+  };
+
+  if (JSON_MODE) {
+    console.log(JSON.stringify(output, null, 2));
+  }
+
   if (findings.length > 0) {
-    console.error("\n[advisory-check] Unwaived advisories detected:");
+    if (!JSON_MODE) console.error("\n[advisory-check] Unwaived advisories detected:");
     for (const f of findings) {
       console.error(`  - ${f.pkg} (${f.severity}): ${f.ids.join(", ") || "<no GHSA id>"}`);
     }
@@ -100,6 +128,10 @@ function main() {
       "\nAdd a justified entry to scripts/check-advisories.mjs ALLOWED + docs/NODE_ADVISORIES.md before re-running.",
     );
     process.exit(1);
+  }
+
+  if (JSON_MODE) {
+    return;
   }
 
   if (allowed.length > 0) {
