@@ -6,6 +6,7 @@ Schema classes from opencut.schemas are mapped to known endpoints for
 response definitions.
 """
 
+import re
 from dataclasses import fields as dc_fields
 from typing import Any, Dict, List, Optional, get_args, get_origin
 
@@ -90,6 +91,49 @@ _JOB_ENDPOINTS = {
 
 # Methods to skip (HEAD is auto-added by Flask; OPTIONS for CORS)
 _SKIP_METHODS = {"HEAD", "OPTIONS"}
+_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+_FLASK_PATH_PARAM_RE = re.compile(
+    r"<(?:(?P<converter>[A-Za-z_][A-Za-z0-9_]*):)?"
+    r"(?P<name>[A-Za-z_][A-Za-z0-9_]*)>"
+)
+_OPENAPI_OPERATION_ID_RE = re.compile(r"[^0-9A-Za-z_]+")
+_FLASK_CONVERTER_TYPES = {
+    "string": "string",
+    "path": "string",
+    "uuid": "string",
+    "int": "integer",
+    "float": "number",
+}
+
+
+def _flask_rule_to_openapi_path(rule: str) -> tuple[str, List[dict]]:
+    """Convert Flask path converter syntax to OpenAPI path syntax."""
+    parameters: List[dict] = []
+
+    def _replace(match: re.Match) -> str:
+        converter = (match.group("converter") or "string").lower()
+        name = match.group("name")
+        parameters.append({
+            "name": name,
+            "in": "path",
+            "required": True,
+            "schema": {
+                "type": _FLASK_CONVERTER_TYPES.get(converter, "string"),
+            },
+            "description": f"Flask converter: {converter}",
+        })
+        return "{" + name + "}"
+
+    return _FLASK_PATH_PARAM_RE.sub(_replace, rule), parameters
+
+
+def _operation_id(endpoint: str, method: str, openapi_path: str) -> str:
+    """Build a stable OpenAPI operationId that remains unique for aliases."""
+    path_part = openapi_path.strip("/") or "root"
+    raw = f"{endpoint}_{method.lower()}_{path_part}"
+    safe = _OPENAPI_OPERATION_ID_RE.sub("_", raw)
+    return re.sub(r"_+", "_", safe).strip("_")
 
 
 def _python_type_to_json(tp) -> dict:
@@ -141,9 +185,10 @@ def generate_openapi_spec(app) -> dict:
     paths: Dict[str, dict] = {}
 
     for rule in app.url_map.iter_rules():
-        path = rule.rule
+        raw_path = rule.rule
+        path, path_parameters = _flask_rule_to_openapi_path(raw_path)
         # Skip static endpoint
-        if path.startswith("/static"):
+        if raw_path.startswith("/static"):
             continue
 
         methods = sorted(rule.methods - _SKIP_METHODS)
@@ -155,11 +200,17 @@ def generate_openapi_spec(app) -> dict:
         docstring = (view_func.__doc__ or "").strip() if view_func else ""
 
         path_item = paths.setdefault(path, {})
+        if path_parameters:
+            existing_parameters = path_item.setdefault("parameters", [])
+            existing_names = {param.get("name") for param in existing_parameters}
+            for parameter in path_parameters:
+                if parameter["name"] not in existing_names:
+                    existing_parameters.append(parameter)
 
         for method in methods:
             operation: Dict[str, Any] = {
                 "summary": docstring.split("\n")[0] if docstring else rule.endpoint,
-                "operationId": f"{rule.endpoint}_{method.lower()}",
+                "operationId": _operation_id(rule.endpoint, method, path),
                 "tags": [rule.endpoint.split(".")[0] if "." in rule.endpoint else "default"],
                 "responses": {},
             }
@@ -168,10 +219,10 @@ def generate_openapi_spec(app) -> dict:
                 operation["description"] = docstring
 
             # Build response schema
-            schema_cls = _ENDPOINT_SCHEMAS.get(path)
+            schema_cls = _ENDPOINT_SCHEMAS.get(raw_path)
             if schema_cls is not None:
                 response_schema = _dataclass_to_schema(schema_cls)
-            elif path in _JOB_ENDPOINTS and method == "POST":
+            elif raw_path in _JOB_ENDPOINTS and method == "POST":
                 response_schema = _dataclass_to_schema(JobResponse)
             else:
                 response_schema = {"type": "object"}
@@ -183,8 +234,9 @@ def generate_openapi_spec(app) -> dict:
                 },
             }
 
-            # Add 400/403 for POST endpoints
-            if method == "POST":
+            # Add common mutating-route error responses. GET endpoints can still
+            # define their own richer errors later through typed schemas.
+            if method in _MUTATING_METHODS:
                 operation["responses"]["400"] = {
                     "description": "Validation error",
                     "content": {

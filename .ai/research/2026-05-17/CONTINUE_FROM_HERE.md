@@ -1,17 +1,17 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 13)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 14)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (during Pass 12; Passes 1-12 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, and Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout. This file documents deferred research/product work for a future Pass 13+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (during Pass 13; Passes 1-13 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, and Pass 13 closed F208 OpenAPI contract validation. This file documents deferred research/product work for a future Pass 14+, not a broken or incomplete research run.
 
 ---
 
 ## 1. State at hand-off
 
-- **Repo branch:** `main`, expected 35 commits ahead of `origin/main` after the Pass-12 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
+- **Repo branch:** `main`, expected 36 commits ahead of `origin/main` after the Pass-13 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
-- **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 136 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
+- **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 137 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
@@ -218,7 +218,7 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 ### Pass 13 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Continue the F191-F260 Now queue.** F205 remains open but needs a reliable long-running coverage measurement. The next local-verifiable implementation items are F208/F209/F218/F219.
+2. **Continue the F191-F260 Now queue.** F205 remains open but needs a reliable long-running coverage measurement. The next local-verifiable implementation items are F209/F218/F219.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
@@ -463,3 +463,29 @@ No `dist\coverage-f205.json` was produced. F205 remains open; do not raise `--co
 | `python -m py_compile scripts/release_smoke.py` | PASS |
 | `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `254 passed` |
 | `dotnet build installer/src/OpenCut.Installer/OpenCut.Installer.csproj --no-restore` | BLOCKED — no .NET SDK installed on this VM |
+
+---
+
+## 19. Pass 13 update (same day, F208 OpenAPI contract gate)
+
+Pass 13 closed the OpenAPI validity test item.
+
+### What Pass 13 closed
+
+| Item | Status |
+|---|---|
+| F208 | **DONE** — `/openapi.json` now converts Flask `<param>` path syntax to OpenAPI `{param}` syntax, emits path parameter objects, uses unique path-qualified operation IDs, documents mutating-method 400/403 responses, and has a release-smoke contract test. |
+
+### Validation after Pass 13
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_openapi_contract.py tests/test_release_smoke.py -q` | PASS — `16 passed` |
+| `ruff check opencut/openapi.py tests/test_openapi_contract.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/openapi.py scripts/release_smoke.py tests/test_openapi_contract.py` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `258 passed` |
+
+### Remaining immediate work
+
+- F205 remains open and should resume only where a full coverage command can finish.
+- The next local-verifiable Now items are F209 (MCP tool/route consistency), F218 (blueprint import-order stability), and F219 (SBOM completeness).
