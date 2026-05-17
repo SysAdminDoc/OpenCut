@@ -759,3 +759,42 @@ Pass 17 closed F236.
 ### Remaining immediate work
 
 F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F237, F240, F241, F243, and F244. F251 and F259 need fresh Adobe/UXP verification before implementation.
+
+---
+
+## 23. Pass 18 additions (same day, F237 loudness standards registry)
+
+Pass 18 closed F237.
+
+### Files added or edited in Pass 18
+
+| Path | Change |
+|---|---|
+| `opencut/core/loudness_standards.py` | Added canonical standards, source URL, preset, and platform target metadata for ITU BS.1770-5, EBU R128 v5.0, FFmpeg loudnorm, and loudness profiles. |
+| `opencut/core/audio_suite.py` | Replaced the local preset literal with the canonical registry while preserving the historical `LOUDNESS_PRESETS` export. |
+| `opencut/core/audio_analysis.py` | Imports the shared platform target map and keeps existing `broadcast = -24 LUFS` semantics alongside `ebu_broadcast = -23 LUFS`. |
+| `opencut/core/broadcast_qc.py` | Added source-backed EBU R128 / ITU BS.1770-5 metadata to broadcast QC standards. |
+| `opencut/routes/audio.py` | `/audio/loudness-presets` now returns standards metadata and correction notes; `/audio/normalize` returns target/source metadata. |
+| `tests/test_loudness_standards.py` | Added F237 tests for current ITU/EBU facts, corrected preset targets, compatibility exports, platform targets, and route payload. |
+| `scripts/release_smoke.py` | Added `tests/test_loudness_standards.py` to the `pytest-fast` release gate. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Marked F237 closed and documented the corrected BS.1770-5 evidence. |
+
+### Items closed in Pass 18
+
+| F# | Result |
+|---|---|
+| F237 | Closed — loudness target metadata is now centralized and the roadmap now reflects that ITU-R BS.1770-5 is in force while BS.1770-4 is superseded. |
+
+### Validation after Pass 18
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_loudness_standards.py tests/test_release_smoke.py -q` | PASS — `17 passed` |
+| focused compatibility/route pytest slice | PASS — `9 passed` |
+| `ruff check opencut/core/loudness_standards.py opencut/core/audio_suite.py opencut/core/audio_analysis.py opencut/core/broadcast_qc.py opencut/routes/audio.py tests/test_loudness_standards.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/core/loudness_standards.py opencut/core/audio_suite.py opencut/core/audio_analysis.py opencut/core/broadcast_qc.py opencut/routes/audio.py tests/test_loudness_standards.py scripts/release_smoke.py` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 steps green; pytest-fast `278 passed` |
+
+### Remaining immediate work
+
+F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F240, F241, F243, and F244. F251 and F259 need fresh Adobe/UXP verification before implementation.

@@ -623,7 +623,8 @@ def audio_separate(job_id, filepath, data):
 @async_job("normalize")
 def audio_normalize(job_id, filepath, data):
     """Normalize audio loudness to broadcast/platform standards."""
-    from opencut.core.audio_suite import LOUDNESS_PRESETS, normalize_loudness
+    from opencut.core.audio_suite import normalize_loudness
+    from opencut.core.loudness_standards import get_loudness_preset
 
     output_dir = data.get("output_dir", "")
     if output_dir:
@@ -641,7 +642,8 @@ def audio_normalize(job_id, filepath, data):
     ext = os.path.splitext(filepath)[1]
     out_path = os.path.join(effective_dir, f"{base_name}_normalized{ext}")
 
-    targets = LOUDNESS_PRESETS.get(preset, LOUDNESS_PRESETS["youtube"])
+    targets = get_loudness_preset(preset)
+    effective_target_loudness = target_lufs if target_lufs is not None else targets["i"]
 
     out_path, info = normalize_loudness(
         filepath, out_path,
@@ -654,7 +656,11 @@ def audio_normalize(job_id, filepath, data):
         "output_path": out_path,
         "preset": preset,
         "input_loudness": info.input_i,
-        "target_loudness": targets["i"],
+        "target_loudness": effective_target_loudness,
+        "target_peak": targets["tp"],
+        "target_lra": targets["lra"],
+        "measurement_standard": targets.get("measurement_standard", "itu_r_bs1770"),
+        "source_url": targets.get("source_url", ""),
         "input_peak": info.input_tp,
         "loudness_range": info.input_lra,
     }
@@ -768,17 +774,18 @@ def audio_effects_apply(job_id, filepath, data):
 def loudness_presets():
     """Return available loudness normalization presets."""
     try:
-        from opencut.core.audio_suite import LOUDNESS_PRESETS
-        presets = []
-        for name, vals in LOUDNESS_PRESETS.items():
-            presets.append({
-                "name": name,
-                "label": name.replace("_", " ").title(),
-                "target_lufs": vals["i"],
-                "target_tp": vals["tp"],
-                "target_lra": vals["lra"],
-            })
-        return jsonify({"presets": presets})
+        from opencut.core.loudness_standards import (
+            get_loudness_presets,
+            get_loudness_standards,
+        )
+        return jsonify({
+            "presets": get_loudness_presets(),
+            "standards": get_loudness_standards(),
+            "correction_note": (
+                "ITU-R BS.1770-5 is in force; BS.1770-4 is superseded. "
+                "Generic streaming/podcast targets are profiles, not universal compliance mandates."
+            ),
+        })
     except Exception as e:
         return safe_error(e, "loudness_presets")
 

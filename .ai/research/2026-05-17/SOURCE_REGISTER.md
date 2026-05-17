@@ -584,3 +584,37 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P17-L11 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; route manifest `1,361` routes / `101` blueprints; pytest-fast `273 passed` |
 
 **Source coverage assessment (Pass 17):** Pass 17 claims in `ROADMAP.md` v4.20, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P17-E01 through R-P17-E03 and R-P17-L01 through R-P17-L11.
+
+---
+
+## Pass 18 — F237 loudness standards registry (2026-05-17 eighteenth pass)
+
+### External source evidence
+
+| ID | Source |
+|---|---|
+| R-P18-E01 | ITU-R BS.1770 recommendation page — https://www.itu.int/rec/R-REC-BS.1770-5-202311-I/en — confirms Recommendation BS.1770-5 (11/2023), approved 2023-11-22, status In force, free download |
+| R-P18-E02 | ITU-R BS.1770 version listing — https://www.itu.int/rec/r-rec-bs.1770/_page.print — confirms BS.1770-5 is Main/In force and BS.1770-4 (10/2015) is Superseded |
+| R-P18-E03 | ITU-R BS.1770-5 PDF — https://www.itu.int/dms_pubrec/itu-r/rec/bs/R-REC-BS.1770-5-202311-I!!PDF-E.pdf — defines algorithms for programme loudness and true-peak signal level |
+| R-P18-E04 | EBU R 128 publication page — https://tech.ebu.ch/fr/publications/r128 — confirms Version 5.0 (November 2023), target average programme loudness -23 LUFS, and maximum true peak descriptor |
+| R-P18-E05 | FFmpeg filters documentation, loudnorm — https://ffmpeg.org/ffmpeg-filters.html#loudnorm — confirms `loudnorm` is EBU R128 normalization that can target integrated loudness, LRA, and maximum true peak |
+| R-P18-E06 | Spotify loudness normalization guidance — https://support.spotify.com/ee-en/artists/article/loudness-normalization/ — confirms Spotify adjusts tracks to -14 dB LUFS according to ITU 1770 and recommends masters below -1 dBTP |
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P18-L01 | `opencut/core/loudness_standards.py` — new canonical source-backed loudness standards, preset, and platform target registry |
+| R-P18-L02 | `opencut/core/audio_suite.py` — now imports canonical loudness presets while preserving the historical `LOUDNESS_PRESETS` export |
+| R-P18-L03 | `opencut/core/audio_analysis.py` — now imports the shared platform target map, preserving existing `broadcast = -24 LUFS` behavior and adding `ebu_broadcast = -23 LUFS` |
+| R-P18-L04 | `opencut/core/broadcast_qc.py` — EBU R128 QC metadata now names ITU-R BS.1770-5, EBU R128 v5.0, and the EBU source URL |
+| R-P18-L05 | `opencut/routes/audio.py` — `/audio/loudness-presets` now exposes presets, standards, and correction metadata; `/audio/normalize` response includes target/source metadata |
+| R-P18-L06 | `tests/test_loudness_standards.py` — new F237 tests for current ITU/EBU facts, preset targets, compatibility exports, platform target semantics, and route payload |
+| R-P18-L07 | `scripts/release_smoke.py` — added `tests/test_loudness_standards.py` to `pytest-fast` |
+| R-P18-L08 | `python -m pytest tests/test_loudness_standards.py tests/test_release_smoke.py -q` — PASS, `17 passed` |
+| R-P18-L09 | focused compatibility route slice — PASS, `9 passed` for loudness standards, legacy preset export, platform target tests, and route smoke |
+| R-P18-L10 | `ruff check opencut/core/loudness_standards.py opencut/core/audio_suite.py opencut/core/audio_analysis.py opencut/core/broadcast_qc.py opencut/routes/audio.py tests/test_loudness_standards.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P18-L11 | `python -m py_compile opencut/core/loudness_standards.py opencut/core/audio_suite.py opencut/core/audio_analysis.py opencut/core/broadcast_qc.py opencut/routes/audio.py tests/test_loudness_standards.py scripts/release_smoke.py` — PASS |
+| R-P18-L12 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; route manifest `1,361` routes / `101` blueprints; pytest-fast `278 passed` |
+
+**Source coverage assessment (Pass 18):** Pass 18 claims in `ROADMAP.md` v4.21, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P18-E01 through R-P18-E06 and R-P18-L01 through R-P18-L12.
