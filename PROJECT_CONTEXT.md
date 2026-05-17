@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-05-17 (seven autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh. Pass 6 closed F264/F266 with machine-readable npm-advisory release-smoke output and the CEP-residual/drop-QE migration note. Pass 7 closed F199 with a generated `/api` alias manifest and corrected the earlier "233 alias pairs" claim to 15 true aliases + 218 canonical `/api` routes.
+**Last consolidated:** 2026-05-17 (eight autonomous research/verification/implementation passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Pass 5 closed F261/F262/F270 with cross-platform launchers, the UXP sample-link fix, and the README positioning refresh. Pass 6 closed F264/F266 with machine-readable npm-advisory release-smoke output and the CEP-residual/drop-QE migration note. Pass 7 closed F199 with a generated `/api` alias manifest and corrected the earlier "233 alias pairs" claim to 15 true aliases + 218 canonical `/api` routes. Pass 8 closed F191/F197 with a generated route/check readiness manifest and moved the `NON_AI_CHECKS` allowlist into the registry.
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -25,7 +25,7 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 | Tests | **131 files** (≥7,600 tests claimed) | `ls tests/` |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **233** total; **15** true aliases; **218** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |
-| Feature readiness records | **29** with explicit readiness state | `opencut/registry.py` (F100) |
+| Feature readiness records | **84** total; **58** route-derived records / **67** route bindings | `opencut/registry.py` + `opencut/_generated/feature_readiness.json` (F100/F191/F197) |
 | CEP locale keys (English) | 417 | `extension/com.opencut.panel/client/locales/en.json` |
 | Current version | **1.32.0** | `pyproject.toml`, `python scripts/sync_version.py --check` |
 
@@ -55,9 +55,9 @@ DaVinci Resolve ────┤   WebSocket :5680           ├─ routes/* (101
 MCP client     ─────┘   MCP HTTP :5681            ├─ jobs.py (@async_job decorator, SQLite persistence, GPU rate limit)
                                                   ├─ security.py (CSRF, path-traversal, SSRF guards, safe_pip_install)
                                                   ├─ auth.py (loopback bypass + 256-bit token for non-loopback)
-                                                  ├─ registry.py (feature readiness states for UI gating)
+                                                  ├─ registry.py + _generated/feature_readiness.json (feature readiness states for UI gating)
                                                   ├─ model_cards.py + opencut/_generated/* (license/model truth)
-                                                  └─ checks.py (35+ check_X_available() gates)
+                                                  └─ checks.py (117 public check_* probes; 86 check_*_available gates)
 ```
 
 Key invariants:
@@ -99,7 +99,7 @@ When two roadmap files disagree, **ROADMAP.md v4.3 wins**. When ROADMAP.md and t
 
 | Question | Look here |
 |---|---|
-| Why is route X failing with 503? | `opencut/checks.py` → `check_X_available()`; `opencut/registry.py` for readiness state; `docs/MODELS.md` for install hint. |
+| Why is route X failing with 503? | `opencut/checks.py` → `check_*` probe; `opencut/registry.py` + `_generated/feature_readiness.json` for readiness state; `docs/MODELS.md` for install hint. |
 | How do I write an async route? | `CLAUDE.md` → `@async_job` decorator section. |
 | What's the SQLite job store schema? | `opencut/job_store.py` (~200 lines). |
 | How do I add a new optional AI extra? | `opencut/checks.py` (add `check_X_available()`), `opencut/model_cards.py` (add card), `opencut/registry.py` (add `FeatureRecord`), then a route in the appropriate wave file. |
@@ -111,7 +111,7 @@ When two roadmap files disagree, **ROADMAP.md v4.3 wins**. When ROADMAP.md and t
 | What does the MCP server expose? | `opencut/mcp_server.py` (930 lines, 27 tools). |
 | What's the threat model? | `SECURITY.md` + `opencut/auth.py` + `opencut/security.py`. |
 | How are version surfaces synced? | `scripts/sync_version.py --check` (covers 19 surfaces). |
-| What does the release smoke matrix check? | `scripts/release_smoke.py` (F098) chains bootstrap, version-sync, ruff, focused pytest, pip-audit, npm advisory allow-list, panel-source verifier. |
+| What does the release smoke matrix check? | `scripts/release_smoke.py` (F098) chains bootstrap, version-sync, route/api/feature/model generated-manifest drift checks, ruff, focused pytest, pip-audit, npm advisory allow-list, panel-source verifier. |
 | Why is the README route count different from the manifest? | The README marketing badge has drifted. The manifest is the truth (F099). |
 
 ---
@@ -167,6 +167,8 @@ Highlights only. Full ledger in `ROADMAP.md` + `.ai/research/2026-05-17/PRIORITI
 - F167 OmniVoice fill of Wave H2.4
 - F176-F178 eval dataset bundle, model cards sweep, eval harness v2
 - F181-F185 bootstrap/cleanup fixes
+- [x] F191 generated route/check readiness registry
+- [x] F197 registry-owned `NON_AI_CHECKS` allowlist
 - [x] F199 generated `/api` alias policy manifest
 - [x] F261 cross-platform source launchers (`OpenCut-Server.command` + `OpenCut-Server.sh`)
 - [x] F262 UXP sample-repo URL fix
@@ -241,7 +243,7 @@ These deserve explicit attention because they are not currently owned by any sin
 8. **`features.md` (402 features) ↔ F-number reconciliation** is overdue (F179). Currently ~250 of the 402 items live in implicit limbo. Pass 2 sample-walk (40 entries) found ~60% SHIPPED, ~27% UNCLEAR → 5 new F-numbers graduated (F220-F224).
 9. **OpenTimelineIO Marker schema is the right F105 review-bundle interchange anchor** (Pass 2, F225). Premiere/Resolve/Final Cut all import OTIO Markers with color + comment fields. Anchoring on OTIO means every OpenCut review bundle becomes round-trippable into any OTIO-aware NLE for free. This is the leverage move Pass 1's competitor matrix called for but didn't name.
 10. **WebView UI in Bolt UXP (March 2026, MIT) is the correct CEP→UXP migration target for the 7,730-line vanilla JS main.js** (Pass 2, F252). Rewriting to Spectrum widgets is months of work for negligible end-user benefit. Bolt UXP 1.3 also ships a `public-hybrid/` template for the C++ `.uxpaddon` path (F253) that covers the 5 truly CEP-blocked features (file drag-out, QE DOM, FCPXML/OTIO **import**, `createCaptionTrack`, `exportAsProject` sub-selection save).
-11. **The route-readiness state surface is dramatically incomplete** (Pass 2): F100 registry covers **29** of ~1,359 routes; F115 model cards cover 47; OpenAPI typed schemas cover 30; MCP tool array covers 27. The remaining ~1,250 routes have no machine-readable readiness state or typed response. F191 (auto-derive `FeatureRecord`) + F192 (OpenAPI bulk-type) + F195 (12 missing MCP tools) + F209 (consistency test) close most of this.
+11. **The route-readiness state surface is better but still not complete** (Pass 8): F191 now adds `opencut/_generated/feature_readiness.json` with **58** route-derived readiness records across **67** direct route/check bindings, and the `/system/feature-state` manifest now exposes **84** records. F192 (OpenAPI bulk-type), F195 (12 missing MCP tools), and F209 (consistency test) still need to close the broader ~1,250-route typed-contract gap.
 12. **`/agent/chat` conductor design is converged** (Pass 3, [AGENT_UX_RFC.md](.ai/research/2026-05-17/AGENT_UX_RFC.md)) — Copilot Workspace editable-plan + Cursor checkpoint+rollback + Underlord post-turn self-review + Aider snapshot-discipline + Claude Code Skills format. **Adopt**, don't invent. F143 (L) + F144 (S) + F145 (M) = ~6-8 weeks at 1 maintainer, ships v1.36 inside the F252 UXP shell. Three patterns deliberately **NOT** copied: Cursor's "accept all" button (render-cost dominates attention), Aider's auto-commit-before-preview (user must see the render first), Claude Code's atomic multi-file apply (even Claude users file per-hunk-accept requests).
 13. **OpenCut has a quantified market-positioning story** (Pass 3, [MARKET_POSITIONING.md](.ai/research/2026-05-17/MARKET_POSITIONING.md); README lead shipped in Pass 5) — replaces ~**$1,400/yr** of competitor subscriptions: ~$720/yr (AutoCut + AutoPod + Submagic bundle) + ~$288/yr (Descript Creator) + ~$299-699/yr (Topaz Video AI new subscription, perpetual killed Oct 3 2025). **Mister Horse Animation Composer ~900k installs proves free-shell + paid-packs is the scale-without-VC model for the Premiere ecosystem.** Three categories to deprioritise (weak WTP): avatar generation, OpusClip-virality-as-pillar, sports-highlights-as-headline.
 
@@ -262,7 +264,7 @@ These deserve explicit attention because they are not currently owned by any sin
 
 ## 12. Where this consolidation lives
 
-This file is the **canonical project context**. It is intentionally small. The supporting artefacts from the 2026-05-17 research runs (Passes 1-4, same day) and Pass-5 implementation updates live in **`.ai/research/2026-05-17/`**:
+This file is the **canonical project context**. It is intentionally small. The supporting artefacts from the 2026-05-17 research runs and implementation passes live in **`.ai/research/2026-05-17/`**:
 
 **Pass 1 artefacts (10 files):**
 - `STATE_OF_REPO.md` — live repo reconnaissance
@@ -317,5 +319,13 @@ This file is the **canonical project context**. It is intentionally small. The s
 - `scripts/release_smoke.py` — added `api-aliases` drift check
 - `tests/test_api_aliases.py` — committed-vs-live alias manifest guard
 - `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGESET_SUMMARY.md`, `CONTINUE_FROM_HERE.md` — status updates and correction of the earlier 233-alias-pairs wording
+
+**Pass 8 updates (no new standalone file):**
+- `opencut/tools/dump_feature_readiness.py` + `opencut/_generated/feature_readiness.json` — F191 generated readiness manifest from route functions that call public `checks.py` probes
+- `opencut/registry.py` — loads generated readiness records, merges generated routes into curated records, and owns `NON_AI_CHECKS` (F197)
+- `opencut/model_cards.py` — consumes the registry-owned `NON_AI_CHECKS` allowlist
+- `scripts/release_smoke.py` — added `feature-readiness` drift check and release-gate tests
+- `tests/test_feature_readiness_generator.py`, `tests/test_feature_registry.py` — committed-vs-live generator checks and manifest merge coverage
+- Validation: focused F191/F197 tests PASS (`35 passed`); full `python scripts/release_smoke.py --json` PASS (`241 passed` in pytest-fast)
 
 Future research runs should land under `.ai/research/<YYYY-MM-DD>/` and update this file's *§ 9 Shipping cadence* + *§ 9.5 regulatory deadlines* + *§ 10 The biggest non-obvious gaps*. The next planned run is documented in `.ai/research/2026-05-17/CONTINUE_FROM_HERE.md`.
