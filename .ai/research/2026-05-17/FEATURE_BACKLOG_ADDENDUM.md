@@ -91,7 +91,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|---|---|---|
 | F235 | WCAG 3.0-draft compatibility hooks (descriptive transcript, extended AD timing) | Future-proof caption renderer | Niche AI §2 | M | Later |
 | F236 | FCC user-overridable caption style tokens | DONE in Pass 17 — canonical font/size/color/opacity/background/edge/window token schema, preview route, and burn-in integration | Niche AI §2 + R-P17-E01/R-P17-E02 | S | Done |
-| F237 | EBU R128 v5.0 + BS.1770-4 confirmation (drop speculative -5 reference) | Loudness presets: broadcast/-23, streaming/-16, podcast/-14, true-peak -1 dBTP | Niche AI §2 | S | Now |
+| F237 | EBU R128 v5.0 + BS.1770-5 correction | DONE in Pass 18 — source-backed loudness registry; ITU BS.1770-5 is in force, BS.1770-4 is superseded, EBU R128 v5.0 broadcast target is -23 LUFS / -1 dBTP | Niche AI §2 + R-P18-E01/R-P18-E04 | S | Done |
 | F238 | ITU-R BT.1702 PSE checker with 360ms/334ms gap rule + Japan red-flash threshold | Hitachi Flicker Check reference implementation; extends J1.4 | Niche AI §2 | M | Next |
 | F239 | Microsoft `ai-audio-descriptions` integration | Per-scene description + dialogue transcript; pair with IndexTTS2 (F168) | Niche AI §2 | M | Next |
 | F240 | Per-target reading-speed profile (Netflix 17 cps / BBC 160-180 wpm / YouTube 220 wpm / FCC 180-200 wpm) | Caption QC extension | Niche AI §2 | S | Now |
@@ -127,8 +127,8 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | Tier | Pass-2 F-numbers added | Total (cumulative) |
 |---|---|---|
-| **Now** | F205, F237, F240, F241, F243, F244, F251, F259 | 8 |
-| **Done locally after Pass 17** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236 | 12 |
+| **Now** | F205, F240, F241, F243, F244, F251, F259 | 7 |
+| **Done locally after Pass 18** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237 | 13 |
 | **Next** | F192, F194, F198, F200, F201, F203, F211, F213, F214, F215, F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 

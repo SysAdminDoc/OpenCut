@@ -156,7 +156,7 @@ These are not OpenCut work but should be tracked in the same ledger.
 
 The second autonomous research pass on 2026-05-17 added 70 more F-numbers across four sources: route audit, installer audit, test coverage, features.md reconciliation, plus three subagents (Frame.io review, niche AI / accessibility / standards, UXP migration deep-dive). Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](FEATURE_BACKLOG_ADDENDUM.md). Tier deltas:
 
-**Now (priority bumps + new): 8 open items; F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236 closed locally after Pass 17**
+**Now (priority bumps + new): 7 open items; F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237 closed locally after Pass 18**
 
 | F# | Title | Why priority |
 |---|---|---|
@@ -173,7 +173,7 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 | [x] F218 | Import-order stability test | Closed in Pass 15 with a pinned core blueprint order and release-smoke route-collision/import-order gate |
 | [x] F219 | SBOM completeness test | Closed in Pass 16 with declared-dependency, model-card, and dependency-graph coverage in release smoke |
 | [x] **F236** | **FCC user-overridable caption style tokens** | **Closed in Pass 17 with FCC-sourced token schema, preview route, and burn-in integration** |
-| F237 | EBU R128 v5.0 + BS.1770-4 confirmation | Drop speculative -5 reference |
+| [x] **F237** | **EBU R128 v5.0 + BS.1770-5 correction** | **Closed in Pass 18 with source-backed loudness registry; ITU BS.1770-5 is in force and BS.1770-4 is superseded** |
 | F240 | Per-target reading-speed profile (Netflix/BBC/YouTube/FCC) | Caption QC extension |
 | F241 | HarfBuzz-mandatory CI gate | RTL/CJK/Indic correctness |
 | F243 | UTF-8 (no BOM) SRT writer + opt-in legacy toggle | Spec compliance |
@@ -190,6 +190,8 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 - F236 FCC caption style tokens (effective Aug 17, 2026; repository-side token contract closed in Pass 17)
 
 Both should ship in v1.33 or earliest v1.34 to keep Mac users on Homebrew and US broadcast users compliant.
+
+Adjacent standards correction: F237 closed in Pass 18 with the source-backed BS.1770-5 / EBU R128 v5.0 loudness registry.
 
 ---
 
