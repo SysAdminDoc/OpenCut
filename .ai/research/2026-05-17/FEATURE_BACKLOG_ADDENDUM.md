@@ -48,7 +48,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F# | Title | What | Source | Effort | Tier |
 |---|---|---|---|---|---|
 | F208 | OpenAPI spec validity test (per-endpoint 200/400/403) | DONE in Pass 13 — `/openapi.json` now emits OpenAPI path params, unique operation IDs, mutating-method 400/403 responses, and a release-gate contract test | TEST_COVERAGE §3.2 | S | Done |
-| F209 | MCP tool ↔ route consistency test | Catch drift | TEST_COVERAGE §3.3 | S | Now |
+| F209 | MCP tool ↔ route consistency test | DONE in Pass 14 — fixed `opencut_chat_edit` to shipped `POST /chat` and added a live Flask route-consistency gate for all MCP default and special action routes | TEST_COVERAGE §3.3 | S | Done |
 | F210 | Vitest unit tests for CEP/UXP utility functions | `esc()`, `escPath()`, command-palette indexer, lazy DOM proxy | TEST_COVERAGE §3.4 | M | Later |
 | F211 | Cross-platform launcher script smoke tests in CI | `.bat`, `.vbs`, `.command`, `.sh` | TEST_COVERAGE §3.5 | S | Next |
 | F212 | WPF installer xUnit test suite + headless install in Windows runner | Largest single coverage gap | TEST_COVERAGE §3.6 | XL | Later |
@@ -127,8 +127,8 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | Tier | Pass-2 F-numbers added | Total (cumulative) |
 |---|---|---|
-| **Now** | F205, F209, F218, F219, F236, F237, F240, F241, F243, F244, F251, F259 | 12 |
-| **Done locally after Pass 13** | F191, F195, F197, F199, F202, F204, F207, F208 | 8 |
+| **Now** | F205, F218, F219, F236, F237, F240, F241, F243, F244, F251, F259 | 11 |
+| **Done locally after Pass 14** | F191, F195, F197, F199, F202, F204, F207, F208, F209 | 9 |
 | **Next** | F192, F194, F198, F200, F201, F203, F211, F213, F214, F215, F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 

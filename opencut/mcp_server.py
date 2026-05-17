@@ -687,7 +687,7 @@ _TOOL_ROUTES = {
     "opencut_dub_video": ("POST", "/video/dub"),
     "opencut_sports_highlights": ("POST", "/video/highlights/sports"),
     "opencut_lipsync_echomimic": ("POST", "/video/lipsync/echomimic"),
-    "opencut_chat_edit": ("POST", "/agent/chat"),
+    "opencut_chat_edit": ("POST", "/chat"),
     # F195 post-Wave-M shipped surface expansion
     "opencut_face_reshape": ("POST", "/video/face/reshape"),
     "opencut_skin_retouch": ("POST", "/video/face/retouch"),

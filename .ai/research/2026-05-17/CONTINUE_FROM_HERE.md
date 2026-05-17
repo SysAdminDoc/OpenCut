@@ -1,15 +1,15 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 14)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 15)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (during Pass 13; Passes 1-13 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, and Pass 13 closed F208 OpenAPI contract validation. This file documents deferred research/product work for a future Pass 14+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (during Pass 14; Passes 1-14 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, and Pass 14 closed F209 MCP route consistency. This file documents deferred research/product work for a future Pass 15+, not a broken or incomplete research run.
 
 ---
 
 ## 1. State at hand-off
 
-- **Repo branch:** `main`, expected 36 commits ahead of `origin/main` after the Pass-13 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
+- **Repo branch:** `main`, expected 37 commits ahead of `origin/main` after the Pass-14 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
 - **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 137 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
@@ -218,7 +218,7 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 ### Pass 13 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Continue the F191-F260 Now queue.** F205 remains open but needs a reliable long-running coverage measurement. The next local-verifiable implementation items are F209/F218/F219.
+2. **Continue the F191-F260 Now queue.** F205 remains open but needs a reliable long-running coverage measurement. The next local-verifiable implementation items are F218/F219.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
@@ -488,4 +488,31 @@ Pass 13 closed the OpenAPI validity test item.
 ### Remaining immediate work
 
 - F205 remains open and should resume only where a full coverage command can finish.
-- The next local-verifiable Now items are F209 (MCP tool/route consistency), F218 (blueprint import-order stability), and F219 (SBOM completeness).
+- The next local-verifiable Now items are F218 (blueprint import-order stability) and F219 (SBOM completeness).
+
+---
+
+## 20. Pass 14 update (same day, F209 MCP route consistency)
+
+Pass 14 closed the MCP tool/route consistency item.
+
+### What Pass 14 closed
+
+| Item | Status |
+|---|---|
+| F209 | **DONE** — fixed `opencut_chat_edit` from planned `/agent/chat` to shipped `POST /chat`, then added a live Flask route-consistency test for all 39 MCP tool route mappings plus special action dispatch paths. |
+
+### Validation after Pass 14
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_mcp_server.py tests/test_release_smoke.py -q` | PASS — `18 passed` |
+| `ruff check opencut/mcp_server.py tests/test_mcp_server.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/mcp_server.py tests/test_mcp_server.py` | PASS |
+| live route-table probe | PASS — 39 MCP tools / 39 route mappings / 0 missing backend routes |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `259 passed` |
+
+### Remaining immediate work
+
+- F205 remains open and should resume only where a full coverage command can finish.
+- The next local-verifiable Now items are F218 (blueprint import-order stability) and F219 (SBOM completeness).
