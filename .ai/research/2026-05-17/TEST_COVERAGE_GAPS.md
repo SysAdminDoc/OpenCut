@@ -111,7 +111,7 @@ Pass 15 closed **F218 — import-order stability test for blueprint registration
 
 ### 3.12 SBOM regression
 
-`scripts/sbom.py` generates a CycloneDX 1.5 JSON. There's no test asserting the SBOM contains every declared pip dep + matches the model card list (47 entries) + has a non-empty `dependencies` array. **F219 — SBOM completeness test** (S).
+Pass 16 closed **F219 — SBOM completeness test**. `scripts/sbom.py` now emits unique declared Python dependency components, model-card components for all 47 `opencut.model_cards.CARDS` entries, and a non-empty CycloneDX `dependencies` graph. `tests/test_sbom_completeness.py` is wired into release smoke and asserts declared dependency coverage, generated model-card parity, unique `bom-ref` values, and dependency graph coverage.
 
 ---
 
@@ -142,4 +142,4 @@ This is a single F number: **F205**, already on the Now tier.
 | F216 | Concurrent job-cancellation race test | Next | M |
 | F217 | UXP backend-client contract test | Next | S |
 | F218 | Import-order stability test for blueprint registration | Done in Pass 15 | S |
-| F219 | SBOM completeness test | Now | S |
+| F219 | SBOM completeness test | Done in Pass 16 | S |

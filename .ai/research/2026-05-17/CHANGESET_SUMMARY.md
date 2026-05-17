@@ -685,3 +685,38 @@ Pass 15 closed F218.
 ### Remaining immediate work
 
 F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now item is F219.
+
+---
+
+## 21. Pass 16 additions (same day, F219 SBOM completeness)
+
+Pass 16 closed F219.
+
+### Files added or edited in Pass 16
+
+| Path | Change |
+|---|---|
+| `scripts/sbom.py` | Added unique dependency component assembly, model-card components, CycloneDX dependency graph output for JSON/XML, and SBOM CLI counts. |
+| `tests/test_sbom_completeness.py` | Added the F219 completeness gate for declared dependencies, 47 model cards, unique `bom-ref` values, and dependency graph references. |
+| `scripts/release_smoke.py` | Added `tests/test_sbom_completeness.py` to the `pytest-fast` release gate. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Marked F219 closed and updated the next-pass handoff. |
+
+### Items closed in Pass 16
+
+| F# | Result |
+|---|---|
+| F219 | Closed — the release SBOM now fails release smoke if declared dependencies, model cards, or dependency graph entries drift. |
+
+### Validation after Pass 16
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_sbom_completeness.py tests/test_release_sbom.py tests/test_release_smoke.py -q` | PASS — `17 passed` |
+| `ruff check scripts/sbom.py tests/test_sbom_completeness.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile scripts/sbom.py tests/test_sbom_completeness.py scripts/release_smoke.py` | PASS |
+| `python scripts/sbom.py --format json --output dist/opencut-sbom-f219.cyclonedx.json` and XML equivalent | PASS — 14 required components / 73 optional components / 47 model-card components |
+| `python scripts\release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `269 passed` |
+
+### Remaining immediate work
+
+F205 remains open after the Pass 12 coverage timeout. The next local-verifiable Now items are F237, F240, F243, and F244; F236/F251/F259 may need fresh external/regulatory/API checks before implementation.

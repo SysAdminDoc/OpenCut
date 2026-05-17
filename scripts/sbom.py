@@ -2,8 +2,9 @@
 Generate a CycloneDX 1.5 SBOM for the OpenCut repository.
 
 Reads dependency declarations from ``pyproject.toml`` +
-``requirements.txt`` and emits a CycloneDX JSON document at
-``dist/opencut-sbom.cyclonedx.json`` (or XML with ``--format xml``).
+``requirements.txt`` plus OpenCut model-card metadata and emits a
+CycloneDX JSON document at ``dist/opencut-sbom.cyclonedx.json`` (or XML
+with ``--format xml``).
 
 Does **not** walk installed site-packages — the output reflects the
 repository's *declared* dependency surface, which is what downstream
@@ -140,8 +141,12 @@ def _split_requirement(req: str) -> Tuple[str, Optional[str]]:
     return (re.split(r"\[|\s|;", req, maxsplit=1)[0], None)
 
 
+def _normalise_pypi_name(name: str) -> str:
+    return re.sub(r"[-_.]+", "-", (name or "").strip().lower()).strip("-")
+
+
 def _purl(name: str, version: Optional[str]) -> str:
-    name = (name or "").lower().replace("_", "-")
+    name = _normalise_pypi_name(name)
     if version:
         return f"pkg:pypi/{name}@{version}"
     return f"pkg:pypi/{name}"
@@ -152,18 +157,144 @@ def _purl(name: str, version: Optional[str]) -> str:
 # ---------------------------------------------------------------------------
 
 def _make_component(
-    name: str, version: Optional[str], *, scope: str = "required",
+    name: str,
+    version: Optional[str],
+    *,
+    scope: str = "required",
+    component_type: str = "library",
+    bom_ref: str = "",
+    purl: str = "",
+    properties: Optional[List[Dict[str, str]]] = None,
+    external_references: Optional[List[Dict[str, str]]] = None,
+    licenses: Optional[List[Dict[str, Dict[str, str]]]] = None,
 ) -> Dict:
+    component_ref = bom_ref or _purl(name, version)
     component: Dict = {
-        "type": "library",
-        "bom-ref": _purl(name, version),
+        "type": component_type,
+        "bom-ref": component_ref,
         "name": name,
-        "purl": _purl(name, version),
         "scope": scope,
     }
+    if purl or (component_type == "library" and not bom_ref):
+        component["purl"] = purl or _purl(name, version)
     if version:
         component["version"] = version
+    if properties:
+        component["properties"] = properties
+    if external_references:
+        component["externalReferences"] = external_references
+    if licenses:
+        component["licenses"] = licenses
     return component
+
+
+def _record_dependency(
+    records: Dict[str, Dict],
+    name: str,
+    version: Optional[str],
+    *,
+    scope: str,
+    source: str,
+) -> None:
+    key = _normalise_pypi_name(name)
+    if not key:
+        return
+    record = records.setdefault(
+        key,
+        {
+            "name": key,
+            "version": None,
+            "scope": "optional",
+            "sources": set(),
+        },
+    )
+    if version and not record["version"]:
+        record["version"] = version
+    if scope == "required":
+        record["scope"] = "required"
+    record["sources"].add(source)
+
+
+def _dependency_components(records: Dict[str, Dict]) -> List[Dict]:
+    components: List[Dict] = []
+    for key in sorted(records):
+        record = records[key]
+        sources = ", ".join(sorted(record["sources"]))
+        components.append(
+            _make_component(
+                record["name"],
+                record["version"],
+                scope=record["scope"],
+                properties=[{"name": "opencut:dependency-sources", "value": sources}],
+            )
+        )
+    return components
+
+
+def _model_card_bom_ref(check_name: str) -> str:
+    slug = re.sub(r"[^a-z0-9_.-]+", "-", check_name.lower()).strip("-")
+    return f"opencut:model-card:{slug}"
+
+
+def _model_card_components() -> List[Dict]:
+    if REPO_ROOT not in sys.path:
+        sys.path.insert(0, REPO_ROOT)
+
+    from opencut.model_cards import CARDS
+
+    components: List[Dict] = []
+    for card in sorted(CARDS, key=lambda c: c.check_name):
+        properties = [
+            {"name": "opencut:surface", "value": "model-card"},
+            {"name": "opencut:model-card:check-name", "value": card.check_name},
+            {"name": "opencut:model-card:feature-id", "value": card.feature_id},
+            {"name": "opencut:model-card:category", "value": card.category},
+            {"name": "opencut:model-card:hardware", "value": card.hardware},
+            {"name": "opencut:model-card:install-hint", "value": card.install_hint},
+            {"name": "opencut:model-card:privacy", "value": card.privacy},
+        ]
+        if card.requires_checkpoint_env:
+            properties.append(
+                {
+                    "name": "opencut:model-card:requires-checkpoint-env",
+                    "value": card.requires_checkpoint_env,
+                }
+            )
+
+        components.append(
+            _make_component(
+                card.label,
+                None,
+                scope="optional",
+                bom_ref=_model_card_bom_ref(card.check_name),
+                properties=properties,
+                external_references=[{"type": "website", "url": card.upstream}],
+                licenses=[{"license": {"name": card.license}}],
+            )
+        )
+    return components
+
+
+def _dedup_components(components: Iterable[Dict]) -> List[Dict]:
+    seen: Dict[str, Dict] = {}
+    for component in components:
+        ref = component.get("bom-ref", "")
+        if not ref:
+            continue
+        if ref not in seen:
+            seen[ref] = component
+            continue
+        existing = seen[ref]
+        if component.get("scope") == "required":
+            existing["scope"] = "required"
+        if component.get("version") and not existing.get("version"):
+            existing["version"] = component["version"]
+        for key in ("properties", "externalReferences", "licenses"):
+            existing_items = existing.setdefault(key, [])
+            for item in component.get(key, []):
+                if item not in existing_items:
+                    existing_items.append(item)
+    return [seen[ref] for ref in sorted(seen)]
 
 
 def _dedup(
@@ -173,10 +304,18 @@ def _dedup(
     for name, ver in pairs:
         if not name:
             continue
-        key = name.lower().replace("_", "-")
+        key = _normalise_pypi_name(name)
         if key not in seen or (ver and not seen[key]):
             seen[key] = ver
     return [(n, v) for n, v in seen.items()]
+
+
+def _dependency_graph(root_ref: str, components: List[Dict]) -> List[Dict]:
+    component_refs = sorted(c["bom-ref"] for c in components)
+    return [{"ref": root_ref, "dependsOn": component_refs}] + [
+        {"ref": ref, "dependsOn": []}
+        for ref in component_refs
+    ]
 
 
 def build_sbom() -> Dict:
@@ -184,23 +323,24 @@ def build_sbom() -> Dict:
     req_txt = _parse_requirements_txt(os.path.join(REPO_ROOT, "requirements.txt"))
     pyproject = _parse_pyproject_dependencies(os.path.join(REPO_ROOT, "pyproject.toml"))
 
-    runtime: List[Tuple[str, Optional[str]]] = []
-    runtime.extend(pyproject.get("runtime", []))
-    runtime.extend(req_txt)
-    runtime = _dedup(runtime)
-
-    components = [
-        _make_component(n, v, scope="required")
-        for n, v in sorted(runtime)
-    ]
+    dependency_records: Dict[str, Dict] = {}
+    for n, v in pyproject.get("runtime", []):
+        _record_dependency(dependency_records, n, v, scope="required", source="pyproject.runtime")
+    for n, v in req_txt:
+        _record_dependency(dependency_records, n, v, scope="required", source="requirements.txt")
 
     for extra_key, reqs in sorted(pyproject.items()):
         if not extra_key.startswith("extras."):
             continue
-        for n, v in _dedup(reqs):
-            components.append(
-                _make_component(n, v, scope="optional")
-            )
+        for n, v in reqs:
+            _record_dependency(dependency_records, n, v, scope="optional", source=extra_key)
+
+    components = _dedup_components(
+        [
+            *_dependency_components(dependency_records),
+            *_model_card_components(),
+        ]
+    )
 
     root_component = {
         "type": "application",
@@ -228,6 +368,7 @@ def build_sbom() -> Dict:
             "component": root_component,
         },
         "components": components,
+        "dependencies": _dependency_graph(root_component["bom-ref"], components),
     }
 
 
@@ -251,8 +392,12 @@ def _to_xml(bom: Dict) -> str:
     meta = SubElement(root, "metadata")
     ts = SubElement(meta, "timestamp")
     ts.text = bom["metadata"]["timestamp"]
-    comp = SubElement(meta, "component", {"type": "application"})
     rc = bom["metadata"]["component"]
+    comp = SubElement(
+        meta,
+        "component",
+        {"type": "application", "bom-ref": rc.get("bom-ref", "")},
+    )
     for key in ("name", "version", "purl", "description"):
         if rc.get(key):
             el = SubElement(comp, key)
@@ -264,10 +409,39 @@ def _to_xml(bom: Dict) -> str:
             components_el, "component",
             {"type": c.get("type", "library"), "bom-ref": c.get("bom-ref", "")},
         )
-        for key in ("name", "version", "purl", "scope"):
+        for key in ("name", "version", "purl", "scope", "description"):
             if c.get(key):
                 el = SubElement(ce, key)
                 el.text = str(c[key])
+        if c.get("licenses"):
+            licenses_el = SubElement(ce, "licenses")
+            for license_entry in c["licenses"]:
+                license_el = SubElement(licenses_el, "license")
+                name = license_entry.get("license", {}).get("name")
+                if name:
+                    name_el = SubElement(license_el, "name")
+                    name_el.text = str(name)
+        if c.get("externalReferences"):
+            refs_el = SubElement(ce, "externalReferences")
+            for ref in c["externalReferences"]:
+                attrs = {"type": ref.get("type", "")}
+                ref_el = SubElement(refs_el, "reference", attrs)
+                url = ref.get("url")
+                if url:
+                    url_el = SubElement(ref_el, "url")
+                    url_el.text = str(url)
+        if c.get("properties"):
+            props_el = SubElement(ce, "properties")
+            for prop in c["properties"]:
+                prop_el = SubElement(props_el, "property", {"name": prop.get("name", "")})
+                prop_el.text = str(prop.get("value", ""))
+
+    if bom.get("dependencies"):
+        dependencies_el = SubElement(root, "dependencies")
+        for dependency in bom["dependencies"]:
+            dep_el = SubElement(dependencies_el, "dependency", {"ref": dependency.get("ref", "")})
+            for ref in dependency.get("dependsOn", []):
+                SubElement(dep_el, "dependency", {"ref": ref})
 
     return tostring(root, encoding="utf-8", xml_declaration=True).decode()
 
@@ -307,10 +481,17 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     n_runtime = sum(1 for c in bom["components"] if c.get("scope") == "required")
     n_optional = sum(1 for c in bom["components"] if c.get("scope") == "optional")
+    n_model_cards = sum(
+        1
+        for c in bom["components"]
+        for prop in c.get("properties", [])
+        if prop == {"name": "opencut:surface", "value": "model-card"}
+    )
     print(
         f"SBOM written: {out_path}\n"
         f"  runtime:  {n_runtime}\n"
-        f"  optional: {n_optional}"
+        f"  optional: {n_optional}\n"
+        f"  model cards: {n_model_cards}"
     )
     return 0
 

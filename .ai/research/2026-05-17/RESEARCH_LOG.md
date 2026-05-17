@@ -318,7 +318,7 @@ Pass 11 was a local release-plumbing implementation pass. No new external resear
 
 ### Pass 11 saturation note
 
-F204 is complete as release plumbing. F219 remains the right place to enforce SBOM completeness against all declared dependencies and model cards; do not treat the F204 generator smoke test as that deeper coverage.
+F204 is complete as release plumbing. Pass 16 later closed F219, which enforces SBOM completeness against all declared dependencies, model cards, and dependency graph entries.
 
 ---
 
@@ -435,3 +435,32 @@ Pass 15 was a local test-hardening pass. No new external research was needed; th
 ### Pass 15 saturation note
 
 F218 is complete for deterministic built-in blueprint order. It does not test third-party plugin registration order, which remains dynamic by design and should stay covered by plugin manifest validation rather than this core-order gate.
+
+---
+
+## Pass 16 (2026-05-17 — F219 SBOM completeness gate)
+
+Pass 16 was a local implementation and verification pass. No new external research was needed; the work compared the release SBOM generator against the repo's declared dependency and model-card sources.
+
+### Pass 16 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 16.1 | Inspected `scripts/sbom.py`, `tests/test_release_sbom.py`, `pyproject.toml`, `requirements.txt`, and `opencut/_generated/model_cards.json`. | Confirmed F204 only smoked SBOM shape/workflow upload; it did not assert dependency completeness, model-card coverage, or a `dependencies` graph. |
+| Pass 16.2 | Extended `scripts/sbom.py`. | SBOM output now has unique declared Python dependency components, 47 model-card components, JSON/XML dependency graph output, and CLI component counts. |
+| Pass 16.3 | Added `tests/test_sbom_completeness.py` and wired it into release smoke. | The test asserts every declared dependency is present, every committed model card is represented, `bom-ref` values are unique, and every component is in the dependency graph. |
+| Pass 16.4 | Updated roadmap and research state files. | F219 marked closed; the remaining local-verifiable Now queue starts with F237/F240/F243/F244 after the F205 coverage timeout. |
+
+### Pass 16 validation results
+
+| Check | Result |
+|---|---|
+| Focused SBOM/release-smoke tests | **PASS** — `17 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for touched Python files | **PASS** |
+| JSON/XML SBOM generation | **PASS** — 14 required components / 73 optional components / 47 model-card components |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `269 passed` |
+
+### Pass 16 saturation note
+
+F219 is complete for in-repo SBOM completeness against declared Python dependencies and OpenCut model cards. It does not claim installed transitive dependency capture; `scripts/sbom.py` remains a declaration-level SBOM generator, while installed-environment SBOMs should still use tools such as `cyclonedx-py` or `syft`.
