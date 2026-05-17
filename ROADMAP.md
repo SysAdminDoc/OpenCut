@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.21
+**Version**: 4.22
 **Updated**: 2026-05-17
-**Baseline**: v1.32.0 (1,361 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
 > **⚡ Active work** lives in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
@@ -50,6 +50,25 @@
 > **v4.20 status (2026-05-17, seventeenth pass)**: closed **F236** by adding canonical FCC-style caption display setting tokens. `opencut/core/caption_display_settings.py` now normalizes user-overridable font, size, text color/opacity, background color/opacity, edge, and window tokens; `/captions/display-settings/tokens` exposes the schema and `/captions/display-settings/preview` returns CSS/ASS preview metadata. Burn-in from subtitle files can consume `display_settings`, and `tests/test_caption_display_settings.py` pins the rule factors, token coverage, normalization, preview output, and routes.
 >
 > **v4.21 status (2026-05-17, eighteenth pass)**: closed **F237** by replacing scattered loudness target constants with `opencut/core/loudness_standards.py`. Fresh source verification found that **ITU-R BS.1770-5** is the in-force recommendation and **BS.1770-4 is superseded**, so the original "drop speculative -5" wording was stale. The API now exposes EBU R 128 v5.0, ITU BS.1770-5, FFmpeg loudnorm, and platform/profile source metadata through `/audio/loudness-presets`; `tests/test_loudness_standards.py` pins the corrected standards and preset targets.
+>
+> **v4.22 status (2026-05-17, nineteenth pass)**: closed **F240** by adding `opencut/core/caption_reading_profiles.py`, `GET /captions/qc/reading-profiles`, and optional `reading_profile` overlays for `POST /captions/qc`. Fresh source verification corrected the backlog wording: Netflix's current English guide uses **20 CPS for adult** and **17 CPS for children's** programs; BBC's archived official guidance recommends **160-180 WPM**; DCMP upper-level educational captions cap at **160 WPM**; FCC and YouTube official sources do **not** publish hard numeric WPM caps, so OpenCut marks FCC timing as qualitative and the YouTube 220 WPM profile as advisory/heuristic.
+
+---
+
+## 2026-05-17 v4.22 Caption Reading-Speed Profiles
+
+F240 is closed locally. Caption QC now has explicit, source-backed reading-speed profile metadata instead of burying platform assumptions inside the generic compliance standard table:
+
+| Surface | Status |
+|---|---|
+| Evidence correction | The original F240 shorthand said "Netflix 17 cps / BBC 160-180 wpm / YouTube 220 wpm / FCC 180-200 wpm". Fresh source checks corrected that: Netflix English timed text is 20 CPS for adult programs and 17 CPS for children's programs; FCC and YouTube official sources used here do not contain hard numeric WPM caps. |
+| Registry | `opencut/core/caption_reading_profiles.py` defines `netflix-adult`, `netflix-children`, `bbc-editorial`, `dcmp-upper`, `fcc-quality`, and `youtube-advisory` with source URLs, confidence labels, enforcement semantics, and per-profile `max_cps` / `max_wpm` overrides. |
+| QC overlay | `opencut/core/caption_qc.py` accepts `reading_profile` while preserving the existing `standard` parameter. The overlay updates only reading-speed rules, so callers can keep their line-length/duration standard and choose a target-specific speed profile. |
+| API | `GET /captions/qc/reading-profiles` returns the registry, source URLs, and the correction note; `POST /captions/qc` accepts `reading_profile`, `profile`, or `speed_profile` aliases and includes profile metadata in the response. |
+| Regression test | `tests/test_caption_reading_profiles.py` pins the corrected Netflix/BBC/FCC/YouTube facts, alias normalization, adult-vs-children CPS behavior, BBC WPM warnings, and route payloads. |
+| Generated manifest | `opencut/_generated/route_manifest.json` was regenerated and now reports 1,362 routes / 101 blueprints. |
+
+Validation after the batch: focused caption tests passed (`31 passed` for `tests/test_caption_reading_profiles.py tests/test_caption_qc.py tests/test_analysis.py::TestCaptionCompliance`), Ruff passed for touched Python files, touched Python files compile, generated route/API/readiness checks passed, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`284 passed` in pytest-fast).
 
 ---
 
@@ -439,7 +458,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 ### Phase 0 — What Pass 1 (v4.4) missed or what surfaced on deeper inspection
 
-1. **Route readiness coverage gap is larger than reported.** F100 registry covers **29** of ~1,361 routes with explicit readiness state; F115 model cards cover 47; OpenAPI typed schemas cover 30; MCP tool array covers 27. The remaining ~1,250+ routes have no machine-readable readiness state or typed response. This drives **F191** (auto-derive `FeatureRecord` from check functions) and **F192-F197** (OpenAPI / MCP / model-card coverage uplift).
+1. **Route readiness coverage gap is larger than reported.** F100 registry covers **29** of ~1,362 routes with explicit readiness state; F115 model cards cover 47; OpenAPI typed schemas cover 30; MCP tool array covers 27. The remaining ~1,250+ routes have no machine-readable readiness state or typed response. This drives **F191** (auto-derive `FeatureRecord` from check functions) and **F192-F197** (OpenAPI / MCP / model-card coverage uplift).
 2. **`createSubsequence` is exposed in UXP** — Pass 1's UXP-API-gap list inferred it was missing. The deeper `@adobe/premierepro@26.3.0-beta.67` walk in Pass 2 confirmed it ships with an `ignoreTrackTargeting?` parameter. **F254** uses it.
 3. **`ProjectConverter.importFromFinalCutProXML` and `importFromOpenTimelineIO` were REMOVED in the 26.3.0-beta typings.** Export still works; round-trip import via UXP is currently impossible. This is a **new** Adobe gap report — **F261** (replacement for F186-F190 set).
 4. **UXP Hybrid Plugins** (.uxpaddon, C++ bundled per-platform) are the **only** path for some CEP-blocked features post-Sept 2026. Bolt UXP 1.3.0 (May 2026) added a win-arm64 hybrid template. **F253** is the implementation; **F251** is the per-week `@adobe/premierepro@beta` diff tracker that catches new APIs the moment Adobe ships them.
@@ -455,7 +474,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 | OSS review platforms | Clapshot (Rust + Svelte, GPLv2 — separate service, not core lib), FreeFrame, OpenVidReview (EDL export to DaVinci), OpenFrame, video-review. OpenTimelineIO Marker schema confirmed as the right interchange anchor for F105 review bundles (F225). |
 | Frame.io 2026 capability map | V4 features, Drive (NAB 2026), C2C protocol (closed; reverse-engineering blocked by ToS — recommend OTIO + S3-presigned alternative), webhook envelope shape. Pricing tier ladder (Free → Pro $15 → Team $25 → Enterprise $5k-70k/yr) documented. |
 | Local-LAN review architecture | mDNS + embedded Caddy + HMAC-signed share-URL bearer tokens (F231); Headscale for cross-site (F232); Atom feed + outbound HMAC webhook for notifications (F233); croc + rclone for delivery (F234). |
-| Accessibility / standards 2026 | WCAG 3.0 draft (extended AD + descriptive transcript), **FCC Aug 17 2026 caption display-settings rule (regulatory)**, ITU-R BT.1702 (2023) gap rule 360 ms / 334 ms, Microsoft `ai-audio-descriptions` integration path, per-target reading-speed profiles (Netflix 17 cps / BBC 160-180 wpm / YouTube 220 wpm / FCC 180-200 wpm). |
+| Accessibility / standards 2026 | WCAG 3.0 draft (extended AD + descriptive transcript), **FCC Aug 17 2026 caption display-settings rule (regulatory)**, ITU-R BT.1702 (2023) gap rule 360 ms / 334 ms, Microsoft `ai-audio-descriptions` integration path, per-target reading-speed profiles (Netflix adult 20 cps / Netflix children 17 cps / BBC 160-180 wpm / DCMP upper-level 160 wpm; FCC qualitative and YouTube advisory because official sources do not publish hard numeric caps). |
 | RTL / CJK / Indic | HarfBuzz mandatory for libass / Pillow / Skia. ICU4X for CJK line breaking. UTF-8 (no BOM) is the SRT/VTT standard; opt-in BOM for Windows legacy player support. |
 | Broadcast delivery | Netflix IMF spec (-27 LKFS, -2 dBTP, ST 2067-21:2016/2020), DPP IMF for UK/EU, Dolby Vision Profile 5/8.1 OSS chain (dovi_tool + Shaka), ADM BWF Atmos via EBU TR 045 (fully OSS up to final encode). |
 | Packaging deadlines | **Apple notarisation mandatory for Homebrew Cask 2026-09-01 (regulatory)**, Windows code-signing cert validity drops to 458 days 2026-03 (effective Feb 27), EV cert SmartScreen bypass removed in 2024, Win-ARM64 PyTorch 2.7 has wheels for Py3.12 only (CPU-only). |
@@ -470,7 +489,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (7 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (6 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237/F240 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; measurement timed out locally), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, [x] **F240 (caption reading-speed profiles)**, F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
@@ -512,7 +531,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 ### Phase 0 — What the v4.3 audit missed or changed since
 
-- **Live route manifest** is now **1,361 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's "1,344" badge is stale — keep the F099 manifest as canonical truth.
+- **Live route manifest** is now **1,362 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's "1,344" badge is stale — keep the F099 manifest as canonical truth.
 - **F-numbered Now-tier work shipped quickly** between 2026-05-16 and 2026-05-17: F006, F010, F011, F066, F095, F097, F098, F099, F100, F101, F102, F103, F104, F105, F106, F109, F110, F111, F112, F115, F116, F117, F118, F120 (22 of 27 *Now* items landed). F093 (hermetic bootstrap) is partially shipped — UV trampoline path still fails. F094 lockfile audit is partially shipped — `deep-translator` removed, requires recurring `release_smoke` gate.
 - **Wave M (v1.30.0)** added the MCP sidecar (27 tools) — closes `research.md` §1.1 ("MCP server interface — HIGH priority") which is now stale.
 - **Wave L (v1.29.0)** shipped AI face reshape + skin retouch — closes `research.md` §1.3/§1.4 which are now stale.
@@ -558,7 +577,7 @@ Full backlog with effort / risk / fit / source in [`.ai/research/2026-05-17/FEAT
 
 ### Phase 3 — Top three strategic moves the v4.3 audit understated
 
-1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,361 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
+1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,362 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
 2. **UXP MCP transport (F146) is the only path through Sept 2026 CEP EOL.** Every competing PPro MCP server today (ayushozha 1,060 tools, leancoderkavy 269, hetpatel-11 97) is CEP-bound and will break when Adobe enforces the cutoff. First UXP-native MCP wins post-EOL.
 3. **StreamDiffusionV2 (F158) unlocks real-time editor-loop preview** on existing LTX-2.3 / Wan / Open-Sora backends — the single biggest UX leap vs CapCut / Runway / Captions, all of whom charge subscriptions for the real-time path.
 

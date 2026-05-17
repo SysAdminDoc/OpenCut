@@ -174,7 +174,7 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 | [x] F219 | SBOM completeness test | Closed in Pass 16 with declared-dependency, model-card, and dependency-graph coverage in release smoke |
 | [x] **F236** | **FCC user-overridable caption style tokens** | **Closed in Pass 17 with FCC-sourced token schema, preview route, and burn-in integration** |
 | [x] **F237** | **EBU R128 v5.0 + BS.1770-5 correction** | **Closed in Pass 18 with source-backed loudness registry; ITU BS.1770-5 is in force and BS.1770-4 is superseded** |
-| F240 | Per-target reading-speed profile (Netflix/BBC/YouTube/FCC) | Caption QC extension |
+| [x] F240 | Per-target reading-speed profile (Netflix/BBC/DCMP/FCC/YouTube) | Closed in Pass 19 with source-backed caption QC profile overlays |
 | F241 | HarfBuzz-mandatory CI gate | RTL/CJK/Indic correctness |
 | F243 | UTF-8 (no BOM) SRT writer + opt-in legacy toggle | Spec compliance |
 | F244 | Language confidence per Whisper segment | Surface low-confidence ASR |
