@@ -867,7 +867,7 @@ def route_cinefocus():
 @require_csrf
 @async_job("dub_pipeline")
 def route_dub_pipeline(job_id, filepath, data):
-    from opencut.core.dub_pipeline import dub, SUPPORTED_LANGUAGES
+    from opencut.core.dub_pipeline import SUPPORTED_LANGUAGES, dub
 
     def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
 
@@ -969,7 +969,10 @@ def route_gen_video_wan_vace():
 @async_job("sports_highlights")
 def route_highlights_sports(job_id, filepath, data):
     from opencut.core.highlights_sports import (
-        check_sports_highlights_available, extract, GENRES, INSTALL_HINT,
+        GENRES,
+        INSTALL_HINT,
+        check_sports_highlights_available,
+        extract,
     )
 
     def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))

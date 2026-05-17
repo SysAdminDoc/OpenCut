@@ -15,7 +15,7 @@ from flask import Blueprint, jsonify
 
 from opencut.errors import error_response, safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int, safe_bool
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int
 
 logger = logging.getLogger("opencut")
 wave_l_bp = Blueprint("wave_l", __name__)
@@ -91,8 +91,9 @@ def route_tts_elevenlabs_voices():
 def route_tts_elevenlabs_info():
     """Return ElevenLabs availability status."""
     try:
-        from opencut.core import tts_elevenlabs
         import os
+
+        from opencut.core import tts_elevenlabs
         from opencut.helpers import _try_import
         has_key = bool(os.environ.get("OPENCUT_ELEVENLABS_API_KEY", "").strip())
         return jsonify({

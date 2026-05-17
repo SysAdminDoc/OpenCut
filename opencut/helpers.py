@@ -621,8 +621,12 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     Run an FFmpeg command via Popen, parsing ``-progress pipe:1`` output
     to update job progress.  Returns a (returncode, stderr) tuple.
     Registers the process for kill-on-cancel support.
+
+    The process is unregistered in a ``finally`` block, so even an unhandled
+    exception in the progress loop releases the slot in ``_job_processes``
+    and the stderr drain thread is always joined before returning.
     """
-    from opencut.jobs import _is_cancelled, _job_processes, _register_job_process, _update_job, job_lock
+    from opencut.jobs import _is_cancelled, _register_job_process, _unregister_job_process, _update_job
 
     full_cmd = list(cmd) + ["-progress", "pipe:1"]
     proc = _sp.Popen(full_cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True)
@@ -648,50 +652,59 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     last_pct = 0
 
     try:
-        for line in proc.stdout:
-            if _is_cancelled(job_id):
-                proc.terminate()
-                try:
-                    proc.wait(timeout=3)
-                except Exception:
-                    proc.kill()
-                break
-
-            line = line.strip()
-            if line.startswith("out_time_us="):
-                try:
-                    us = int(line.split("=", 1)[1])
-                    if duration_sec > 0:
-                        pct = min(int((us / 1_000_000) / duration_sec * 100), 99)
-                        if pct > last_pct:
-                            last_pct = pct
-                            _update_job(job_id, progress=pct,
-                                        message=f"Processing... {pct}%")
-                except (ValueError, ZeroDivisionError):
-                    pass
-    except Exception as e:
-        logger.debug("Error reading FFmpeg stdout for job %s: %s", job_id, e)
-
-    try:
-        proc.wait(timeout=10)
-    except Exception as e:
-        logger.debug("FFmpeg process did not exit cleanly for job %s, killing: %s", job_id, e)
         try:
-            proc.kill()
-        except OSError:
-            pass
+            for line in proc.stdout:
+                if _is_cancelled(job_id):
+                    proc.terminate()
+                    try:
+                        proc.wait(timeout=3)
+                    except Exception:
+                        proc.kill()
+                    break
+
+                line = line.strip()
+                if line.startswith("out_time_us="):
+                    try:
+                        us = int(line.split("=", 1)[1])
+                        if duration_sec > 0:
+                            pct = min(int((us / 1_000_000) / duration_sec * 100), 99)
+                            if pct > last_pct:
+                                last_pct = pct
+                                _update_job(job_id, progress=pct,
+                                            message=f"Processing... {pct}%")
+                    except (ValueError, ZeroDivisionError):
+                        pass
+        except Exception as e:
+            logger.debug("Error reading FFmpeg stdout for job %s: %s", job_id, e)
+
         try:
-            proc.wait(timeout=5)
-        except Exception:
+            proc.wait(timeout=10)
+        except Exception as e:
+            logger.debug("FFmpeg process did not exit cleanly for job %s, killing: %s", job_id, e)
+            try:
+                proc.kill()
+            except OSError:
+                pass
+            try:
+                proc.wait(timeout=5)
+            except Exception:
+                pass
+    finally:
+        # Ensure stderr drain always completes, even if the loop above raised.
+        stderr_thread.join(timeout=10)
+        # Always release the registered slot — leaking a stale Popen here
+        # would let a subsequent cancel target an unrelated process if the
+        # OS recycles the PID.
+        try:
+            _unregister_job_process(job_id)
+        except Exception:  # noqa: BLE001
             pass
 
-    stderr_thread.join(timeout=10)
-
-    # Cleanup process registration
-    with job_lock:
-        _job_processes.pop(job_id, None)
-
-    return proc.returncode, "".join(stderr_lines)
+    # ``proc.returncode`` can still be None if both wait() calls timed out;
+    # callers expect a numeric return code (non-zero == failure) so map
+    # the unknown state to a sentinel rather than silently passing None.
+    rc = proc.returncode if proc.returncode is not None else -1
+    return rc, "".join(stderr_lines)
 
 
 # ---------------------------------------------------------------------------

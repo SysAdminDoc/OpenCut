@@ -1,0 +1,292 @@
+# OpenCut — Project Context
+
+**Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
+**Last consolidated:** 2026-05-17 (four autonomous research/verification passes that day — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit.
+**Live version:** v1.32.0.
+
+> This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
+
+---
+
+## 1. Identity (one paragraph)
+
+OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere Pro**, with a DaVinci Resolve scripting bridge and an MCP server sidecar. The backend is a Python/Flask server bound to `127.0.0.1:5679` (HTTP) + `:5680` (WebSocket) + `:5681` (MCP JSON-RPC). Two Premiere panels ship with it: a **CEP** panel (`com.opencut.panel`, ~7,730-line `main.js`) for Premiere 2019–25.5, and a **UXP** panel (`com.opencut.uxp`, ~1,500-line ES module) for Premiere 25.6+. Both panels talk to the same backend. No subscriptions, no cloud, no API keys required for core features.
+
+---
+
+## 2. Numbers you should trust (live as of 2026-05-17)
+
+| Surface | Count | Source of truth |
+|---|---|---|
+| API routes | **1,359** | `opencut/_generated/route_manifest.json` (F099) |
+| Blueprints | **101** | same |
+| Core processing modules (`opencut/core/`) | **523** Python files | `ls opencut/core` |
+| Route files (`opencut/routes/`) | **101** | `ls opencut/routes` |
+| Tests | **131 files** (≥7,600 tests claimed) | `ls tests/` |
+| Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
+| Feature readiness records | **29** with explicit readiness state | `opencut/registry.py` (F100) |
+| CEP locale keys (English) | 417 | `extension/com.opencut.panel/client/locales/en.json` |
+| Current version | **1.32.0** | `pyproject.toml`, `python scripts/sync_version.py --check` |
+
+The README narrative cites "1,344 routes" — that's a stale marketing badge. **The manifest is the source of truth.** Never quote a hand-edited number in CI or docs that bypasses the manifest.
+
+---
+
+## 3. The two planning paradigms in this repo
+
+Two parallel planning ledgers coexist. They are not contradictory — they describe different things:
+
+| Ledger | What it is | Owner doc | Status entry |
+|---|---|---|---|
+| **Wave letters** (A → T) | AI-model feature *surfaces*. Each wave bundles 5–20 new core modules + routes + checks under a wave-letter blueprint (`wave_a_routes.py` … `wave_l_routes.py`). | `ROADMAP-NEXT.md` + `CHANGELOG.md` + wave sections of `ROADMAP.md` | A-M shipped; N-T planned. |
+| **F-numbers** (F001 → F272) | Governance, infrastructure, security, release-trust, packaging, accessibility, and standards items. Started by the v4.3 audit on 2026-05-16. | `ROADMAP.md` v4.3+ tier table | F001-F120 shipped or actively in flight; F121-F190 came from Pass 1, F191-F260 from Pass 2, and F261-F272 from Pass 3 of the 2026-05-17 research run. |
+
+Hold both in your head. When a new piece of work arrives, ask: "is this a model surface (wave letter) or a governance/infra item (F-number)?" Most agent-driven work will be one or the other; chat-conductor work (F143-F145) is on the F-number side because it's a governance/UX item more than a model integration.
+
+---
+
+## 4. Architecture in one diagram
+
+```
+Premiere CEP panel ─┐
+Premiere UXP panel ─┼─► HTTP localhost:5679  ─► Flask app (create_app() factory)
+DaVinci Resolve ────┤   WebSocket :5680           ├─ routes/* (101 blueprints) ─► core/* (523 modules) ─► FFmpeg / Whisper / Demucs / Torch / ONNX
+MCP client     ─────┘   MCP HTTP :5681            ├─ jobs.py (@async_job decorator, SQLite persistence, GPU rate limit)
+                                                  ├─ security.py (CSRF, path-traversal, SSRF guards, safe_pip_install)
+                                                  ├─ auth.py (loopback bypass + 256-bit token for non-loopback)
+                                                  ├─ registry.py (feature readiness states for UI gating)
+                                                  ├─ model_cards.py + opencut/_generated/* (license/model truth)
+                                                  └─ checks.py (35+ check_X_available() gates)
+```
+
+Key invariants:
+- **`@async_job("type")` is the only sanctioned way** to write long-running routes. It handles thread spawn, job_id correlation, cancellation, SQLite persistence (`~/.opencut/jobs.db`), structured error mapping, and rate-limit acquire/release pairing.
+- **All blueprints** are registered through a deterministic ordered tuple in `routes/__init__.py`. A runtime route-collision guard refuses startup on duplicate `(method, path)` pairs.
+- **User data** lives at `~/.opencut/` — jobs.db, footage_index.db, social_credentials.json, llm_settings.json, brand_kit.json, onboarding.json, plugin/lock files, model caches, auth.json (F112). All access goes through `user_data.py` wrappers with per-file locks and atomic `os.replace` writes.
+- **Plugin manifest v1** (F116) validates `plugin.json` + `plugin.lock.json` hash, capability allowlist, and `OPENCUT_PLUGIN_ALLOW_UNSIGNED` opt-in before mounting any blueprint.
+
+For module-level patterns and the deep gotcha list (~270 entries), see **[`CLAUDE.md`](CLAUDE.md)** — it is the authoritative developer + agent reference.
+
+---
+
+## 5. Documentation map (what to read for what)
+
+| You want to know… | Read this |
+|---|---|
+| What features ship today, with examples | `README.md` |
+| Module-level patterns, every async-job rule, every safe_bool / UXP / CEP convention | `CLAUDE.md` |
+| What's planned, in what tier, with sources | `ROADMAP.md` (v4.3 sections — F001-F120 + Wave 1-7 + Wave N-T) |
+| What shipped in each release | `CHANGELOG.md` (v1.0 → v1.32.0) |
+| Wave-letter detail (Apr 2026 plan) | `ROADMAP-NEXT.md` |
+| Per-dependency / per-model upgrade ledger | `MODERNIZATION.md` + `docs/MODELS.md` (auto-generated, F115) |
+| Threat model + responsible disclosure | `SECURITY.md` |
+| Dev setup | `DEVELOPMENT.md` + `CONTRIBUTING.md` |
+| UXP migration plan | `docs/UXP_MIGRATION.md` |
+| Windows ARM64 packaging | `docs/WINDOWS_ARM64_PACKAGING.md` (F101) |
+| Node advisories disposition | `docs/NODE_ADVISORIES.md` (F095) |
+| 2026-04 competitive analysis | `AUDIT.md` (v1.11) + `research.md` (v1.28.2) — both predate ROADMAP v4.3 |
+| 402-feature aspirational catalogue | `features.md` — *aspirational; not a ship promise* |
+| 2026-05-17 research run (this run) | `.ai/research/2026-05-17/` (20 research artefacts + Pass-4 validation updates) |
+| Codex-era handoff snapshot | `CODEX-CHANGELOG.md` (already-merged work, kept for historical reference) |
+| Future-Claude session handoff | `CLAUDE-HANDOFF-PROMPT.md` |
+
+When two roadmap files disagree, **ROADMAP.md v4.3 wins**. When ROADMAP.md and the live code disagree, **the code wins** (and ROADMAP.md drifted — open an F-number).
+
+---
+
+## 6. Where to look for each kind of question
+
+| Question | Look here |
+|---|---|
+| Why is route X failing with 503? | `opencut/checks.py` → `check_X_available()`; `opencut/registry.py` for readiness state; `docs/MODELS.md` for install hint. |
+| How do I write an async route? | `CLAUDE.md` → `@async_job` decorator section. |
+| What's the SQLite job store schema? | `opencut/job_store.py` (~200 lines). |
+| How do I add a new optional AI extra? | `opencut/checks.py` (add `check_X_available()`), `opencut/model_cards.py` (add card), `opencut/registry.py` (add `FeatureRecord`), then a route in the appropriate wave file. |
+| What's planned for the next release? | `ROADMAP.md` → Now / Next tier tables; `gh issue list` once F182 (issue seeder run) is executed. |
+| What shipped in the last release? | `CHANGELOG.md`. |
+| Why was X rejected? | `ROADMAP.md` → Rejected tier (F043, F078-F086) + this file § 9 for newly explicit rejects. |
+| How does the CEP panel call ExtendScript? | `extension/com.opencut.panel/host/index.jsx` + `PremiereBridge` abstraction in `main.js`. |
+| How does the UXP panel access Premiere? | `extension/com.opencut.uxp/main.js` → `PProBridge` class; `premierepro` UXP module lazy-imported. |
+| What does the MCP server expose? | `opencut/mcp_server.py` (930 lines, 27 tools). |
+| What's the threat model? | `SECURITY.md` + `opencut/auth.py` + `opencut/security.py`. |
+| How are version surfaces synced? | `scripts/sync_version.py --check` (covers 19 surfaces). |
+| What does the release smoke matrix check? | `scripts/release_smoke.py` (F098) chains bootstrap, version-sync, ruff, focused pytest, pip-audit, npm advisory allow-list, panel-source verifier. |
+| Why is the README route count different from the manifest? | The README marketing badge has drifted. The manifest is the truth (F099). |
+
+---
+
+## 7. Hard constraints (do not violate)
+
+1. **License posture**: MIT repo. Optional models/codecs/plugins each need a model card with an explicit licence. CC-BY-NC, research-only, and non-commercial licences are tracked but not shipped enabled by default. AGPL / GPL is rejected for code reuse (reference patterns OK).
+2. **Network posture**: core editing must work entirely offline. Cloud APIs may be optional connectors only, never mandatory for core editing. Telemetry off by default.
+3. **Runtime**: Python ≥3.9 (today). A 2026-Q3 decision will likely bump the floor to 3.10 (F127) — see `.ai/research/2026-05-17/SECURITY_AND_DEPENDENCY_REVIEW.md` §3 for the cascade.
+4. **One new pip dep per feature, max.** Prefer extending existing deps (FFmpeg, OpenCV, Pillow, transformers).
+5. **Graceful degradation**: every optional dependency gated by a `check_X_available()` function returning 503 `MISSING_DEPENDENCY` with an install hint.
+6. **Security**: CSRF on all POST/DELETE; loopback bypass + 256-bit auth token for non-loopback (F112); plugin sandbox (F116) refuses unsigned plugins unless explicitly enabled; path validation rejects `..`, null bytes, UNC/network paths (including post-realpath); SSRF protection on outbound URLs.
+7. **C2PA provenance** on generated/exported media (F110 → upgrading to 2.3 in F140).
+
+---
+
+## 8. Pass 4 hardening + release-gate cleanup (2026-05-17)
+
+The seven-file security hardening batch that Pass 1 found dirty was validated in Pass 4 and included in the local checkpoint commit. Pass 4 also applied Ruff's safe unused-import / import-order fixes to the release-smoke lint scope so `python scripts/release_smoke.py --json` is green. Branch was **25 commits ahead** of `origin/main` before this checkpoint; pushing to `SysAdminDoc/OpenCut` still depends on local GitHub auth.
+
+| File | What | Why |
+|---|---|---|
+| `opencut/auth.py` | `ipaddress.is_loopback()` replaces literal `{127.0.0.1, ::1}` set; strips IPv6 zone + brackets | Closes `127.0.0.2` bypass of F112 auth gate |
+| `opencut/security.py` | Rejects realpath starting with `\\` or `//` | Closes symlink-to-UNC bypass |
+| `opencut/helpers.py` | `_run_ffmpeg_with_progress` re-architected with `finally` that always unregisters job process + joins stderr drain; returns `-1` sentinel on double-timeout | Fixes process-registry leak + `None.returncode` foot-gun |
+| `opencut/user_data.py` | `write_user_file` mkdirs nested parent + works around `mkstemp` Windows path-sep refusal | Future-proofs nested user-data |
+| `opencut/routes/captions.py` | `force` flag uses `safe_bool` | Catches v1.9.22 audit miss |
+| `opencut/routes/system.py` | `include_jobs` uses `safe_bool` | Same |
+| `opencut/routes/timeline.py` | `include_media` uses `safe_bool` | Same |
+
+**Validation:** targeted hardening slice passed (`119 passed`), release-smoke passed end-to-end (`232 passed` in pytest-fast, route/model/version/license gates clean, pip-audit clean, npm advisory allow-list clean).
+
+---
+
+## 9. Shipping cadence — Now / Next / Later (2026-05-17)
+
+Highlights only. Full ledger in `ROADMAP.md` + `.ai/research/2026-05-17/PRIORITIZATION_MATRIX.md`.
+
+**Now (v1.33 — v1.34, ~3–4 weeks):**
+- F138 commit dirty hardening batch
+- F121 Pillow 12.2 (CVE-2026-40192 / 25990)
+- F122 flask-cors 6.x (5 CVEs)
+- F123 pydub replacement / audioop-lts shim (Python 3.13)
+- F126 OpenTimelineIO-Plugins migration (AAF adapter)
+- F127a Transformers v5 / Python 3.10 floor RFC
+- F128 FFmpeg filter regression suite
+- F133 onnxruntime ≥1.25
+- F139 caption translation endpoint (NLLB-200, low-effort high-value)
+- F140 C2PA 2.3 sidecar bump
+- F149 fill K3.5 AI Slate ID (Florence-2 already installed)
+- F162 SAM 2 → SAM 3.1
+- F163 Depth Anything V2 → Depth Anything 3
+- F167 OmniVoice fill of Wave H2.4
+- F176-F178 eval dataset bundle, model cards sweep, eval harness v2
+- F181-F185 bootstrap/cleanup fixes
+
+**Next (v1.35 — v1.42, ~6 months):**
+- **F143–F145** `/agent/chat` conductor + post-turn self-review + Skills SDK + MCP packaging (flagship)
+- **F146** UXP-native MCP transport (survives Sept 2026 CEP EOL)
+- **F158** StreamDiffusionV2 real-time preview (biggest UX leap)
+- **F127b** Transformers v5 implementation + cascades (F124 basicsr replace, F125 audiocraft isolate, F134 pyannote 4, F136 scenedetect 0.7)
+- **F148–F156** DaVinci 21 / Descript parity fills (face age, IntelliScript, CineFocus, eye contact, Overdub, trailer, VidMuse, OpusClip variants)
+- **F164–F174** model upgrades (LTX-2.3, Wan 2.7, daVinci-MagiHuman, IndexTTS2, VoxCPM2, etc.)
+- **F129, F132, F141, F142** infra (FFmpeg 8.1, Vite 8, IMSC 1.3, OCIO 2.5/ACES 2.0)
+- **F160a** WebView UI UXP spike
+
+**Later:**
+- F157 Motion Brush, F160b WebView impl, F173 Mimi codec, F175 MagiCompiler, F179 features.md sweep, F184 docs/ROADMAP mirror resolution.
+
+**Newly explicit rejects (in addition to ROADMAP.md v4.3 rejects):**
+- Mistral Voxtral TTS (CC-BY-NC)
+- MatAnyone 2 in production (NTU S-Lab 1.0 non-commercial; research eval only)
+- HunyuanVideo / 1.5 default-on (Tencent territory carve-outs)
+
+**Adobe gap reports (file, not implement):**
+- F186-F190 — `createCaptionTrack`, `createSubsequence`, `exportAsFinalCutProXML/exportAsProject`, `startDrag`, QE-DOM replacements.
+
+---
+
+## 9.4 Live verification of the governance gates (Pass 3, 2026-05-17)
+
+Pass 3 executed the F-numbered governance gates against the live repo:
+
+| Check | Result |
+|---|---|
+| `python -m opencut.tools.dump_route_manifest --check` | ✅ PASS — 1,359 routes / 101 blueprints, no drift |
+| `python scripts/sync_version.py --check` | ✅ PASS — 19 surfaces at v1.32.0 |
+| `python scripts/bootstrap_check.py` | ✅ PASS — all 6 sub-checks (Python 3.12.10, 25-dep auditable lock, server import) |
+| `python -m pip_audit -r requirements-lock.txt` | ✅ PASS — "No known vulnerabilities found" |
+| `npm audit` in `extension/com.opencut.panel` | ✅ EXPECTED — 1 moderate Vite path-traversal matches the F095 waiver |
+| Cross-platform launchers (Wave I I1.4) | ❌ **GAP** — only 8 Windows scripts; `.command` (macOS) + `.sh` (Linux) **do not exist**. New F261 ships the missing launchers. |
+
+**Side finding from Pass 3 deep walk:** OpenCut's CEP-only JSX surface is **2 of 18 functions (~11%)**, not the 5 features Pass 2's UXP subagent listed. Only `ocAddNativeCaptionTrack` (no UXP `createCaptionTrack()`) and `ocQeReflect` (QE DOM CEP-only) lack UXP equivalents in `@adobe/premierepro@26.3.0-beta.67`. F252 (UXP migration) revised from XL to L; F253 (Hybrid Plugin) revised from XL to L if scoped to caption-track + drag-out only.
+
+**Pass 4 release-smoke result:** `python scripts/release_smoke.py --json` now exits `0`. It covers bootstrap, version sync, route manifest, model cards, license gate, roadmap lint, Ruff (`E,F,I`), pytest-fast (`232 passed`), pip-audit, npm advisory allow-list, and panel-source verification. Ruff initially failed on unused imports/import ordering; Pass 4 applied safe Ruff fixes in `opencut/` and `scripts/`.
+
+---
+
+## 9.5 Two regulatory deadlines on the *Now* tier (Pass 2)
+
+Pass 2 surfaced two deadlines that force scope changes regardless of feature backlog:
+
+1. **F202 — Apple notarisation mandatory for Homebrew Cask 2026-09-01.** OpenCut's macOS PyInstaller bundle is currently unsigned and unnotarised. Shipping to Homebrew Cask (the canonical macOS package channel) requires notarisation by Sept 1, 2026. **Action:** budget Apple Developer ID + notarisation service in v1.33 or v1.34.
+2. **F236 — FCC "readily-accessible" caption display-settings rule effective 2026-08-17.** All covered displays (TVs, STBs, PCs, phones, tablets, MVPD apps) must expose user-overridable caption settings (font, size, colour). OpenCut's caption export must surface these as style tokens, not bake them into burn-ins. **Action:** add style-token export schema before Aug 17, 2026.
+
+Both deadlines fall before the next Wave (~v1.35) is expected to ship. They should ride along with the next dependency-bump release.
+
+---
+
+## 10. The biggest non-obvious gaps
+
+These deserve explicit attention because they are not currently owned by any single document:
+
+1. **Chat-conductor agent (F143)** — Descript Underlord and FireRed-OpenStoryline have proven sidebar-chat + timeline-diff + post-turn self-review is the converging UX. OpenCut has every building block (1,359 routes, MCP sidecar, LLM abstraction) but no conductor. Highest-leverage gap.
+2. **UXP MCP transport (F146)** — every competing PPro MCP server today is CEP-bound and will break Sept 2026. The first UXP-MCP wins post-EOL.
+3. **Real-time editor-loop preview (F158)** — StreamDiffusionV2 + Diffusion Templates (Apr 2026, MIT) unlock real-time on existing LTX-2.3 / Wan backends. CapCut / Runway / Captions charge for this.
+4. **Caption translation standalone (F139)** — every commercial editor ships it; OpenCut has full dubbing but no SRT-in-SRT-out path.
+5. **C2PA 2.3 + IMSC 1.3 (F140 + F141)** — Adobe and the broadcast industry are moving here; OpenCut's local-first provenance + accessibility story is otherwise strong.
+6. **The CEP→UXP 15% parity gap** — workflow builder, full settings panel, plugin UI. Adobe CEP EOL is ~Sept 2026 (≈4 months away).
+7. **The audiocraft `torch==2.1.0` pin** is the single biggest blocker on torch upgrades. Cascades to Transformers v5, pyannote 4.x, scenedetect 0.7, and 20+ model surfaces that increasingly require torch ≥2.6.
+8. **`features.md` (402 features) ↔ F-number reconciliation** is overdue (F179). Currently ~250 of the 402 items live in implicit limbo. Pass 2 sample-walk (40 entries) found ~60% SHIPPED, ~27% UNCLEAR → 5 new F-numbers graduated (F220-F224).
+9. **OpenTimelineIO Marker schema is the right F105 review-bundle interchange anchor** (Pass 2, F225). Premiere/Resolve/Final Cut all import OTIO Markers with color + comment fields. Anchoring on OTIO means every OpenCut review bundle becomes round-trippable into any OTIO-aware NLE for free. This is the leverage move Pass 1's competitor matrix called for but didn't name.
+10. **WebView UI in Bolt UXP (March 2026, MIT) is the correct CEP→UXP migration target for the 7,730-line vanilla JS main.js** (Pass 2, F252). Rewriting to Spectrum widgets is months of work for negligible end-user benefit. Bolt UXP 1.3 also ships a `public-hybrid/` template for the C++ `.uxpaddon` path (F253) that covers the 5 truly CEP-blocked features (file drag-out, QE DOM, FCPXML/OTIO **import**, `createCaptionTrack`, `exportAsProject` sub-selection save).
+11. **The route-readiness state surface is dramatically incomplete** (Pass 2): F100 registry covers **29** of ~1,359 routes; F115 model cards cover 47; OpenAPI typed schemas cover 30; MCP tool array covers 27. The remaining ~1,250 routes have no machine-readable readiness state or typed response. F191 (auto-derive `FeatureRecord`) + F192 (OpenAPI bulk-type) + F195 (12 missing MCP tools) + F209 (consistency test) close most of this.
+12. **`/agent/chat` conductor design is converged** (Pass 3, [AGENT_UX_RFC.md](.ai/research/2026-05-17/AGENT_UX_RFC.md)) — Copilot Workspace editable-plan + Cursor checkpoint+rollback + Underlord post-turn self-review + Aider snapshot-discipline + Claude Code Skills format. **Adopt**, don't invent. F143 (L) + F144 (S) + F145 (M) = ~6-8 weeks at 1 maintainer, ships v1.36 inside the F252 UXP shell. Three patterns deliberately **NOT** copied: Cursor's "accept all" button (render-cost dominates attention), Aider's auto-commit-before-preview (user must see the render first), Claude Code's atomic multi-file apply (even Claude users file per-hunk-accept requests).
+13. **OpenCut has a quantified market-positioning story** (Pass 3, [MARKET_POSITIONING.md](.ai/research/2026-05-17/MARKET_POSITIONING.md)) — replaces ~**$1,400/yr** of competitor subscriptions: ~$720/yr (AutoCut + AutoPod + Submagic bundle) + ~$288/yr (Descript Creator) + ~$299-699/yr (Topaz Video AI new subscription, perpetual killed Oct 3 2025). **Mister Horse Animation Composer ~900k installs proves free-shell + paid-packs is the scale-without-VC model for the Premiere ecosystem.** Three categories to deprioritise (weak WTP): avatar generation, OpusClip-virality-as-pillar, sports-highlights-as-headline.
+
+---
+
+## 11. How to contribute / onboard a new agent
+
+1. Read this file.
+2. Read `CLAUDE.md` (skim the *Gotchas* section in particular).
+3. Skim `ROADMAP.md` § Tier Plan and the v4.3 Phase 2 ledger.
+4. `gh issue list` (after F182 ships) for seeded starter work.
+5. Use `@async_job` for any new long-running route.
+6. New optional AI extra? Always pair: `check_X_available()` in `checks.py` → `FeatureRecord` in `registry.py` → model card in `model_cards.py` → route in the right wave file.
+7. Run `python scripts/release_smoke.py --json` before opening a PR.
+8. Keep CEP and UXP additions in lockstep (or document why one ships first).
+
+---
+
+## 12. Where this consolidation lives
+
+This file is the **canonical project context**. It is intentionally small. The supporting artefacts from the 2026-05-17 research runs (Passes 1-4, same day) live in **`.ai/research/2026-05-17/`**:
+
+**Pass 1 artefacts (10 files):**
+- `STATE_OF_REPO.md` — live repo reconnaissance
+- `MEMORY_CONSOLIDATION.md` — inventory + reconciliation of every roadmap/changelog/instruction file
+- `COMPETITOR_MATRIX.md` — Premiere extension competitors, OSS NLEs, commercial AI tools, agentic editor systems
+- `DATASET_MODEL_INTEGRATION_REVIEW.md` — 2026-Q2 model surfaces with licences + integration recs
+- `SECURITY_AND_DEPENDENCY_REVIEW.md` — CVEs, deprecation pressures, torch cascade, action items
+- `FEATURE_BACKLOG.md` — F121-F190 raw harvest (70 items)
+- `PRIORITIZATION_MATRIX.md` — Now / Next / Later / Under Consideration / Rejected tier placement (Pass-1 sections; Pass-2 added §6.5)
+- `SOURCE_REGISTER.md` — every local + external source cited (Pass-1 R-prefixed IDs; Pass-2 appended)
+- `RESEARCH_LOG.md` — search strategy + saturation + bias notes (Pass-1 sections; Pass-2 appended)
+- `CHANGESET_SUMMARY.md` — every file written / edited by this run (Pass-1 sections; Pass-2 appended)
+
+**Pass 2 artefacts (5 new files + 6 updates):**
+- `ROUTE_READINESS_AUDIT.md` — route manifest deep-dive: F100/F115/MCP coverage gaps; CEP-bound routes; /api/* alias surface
+- `INSTALLER_AUDIT.md` — WPF .NET 9 installer + Inno Setup + PyInstaller + Docker + Windows ARM64; CI pipeline; signing/notarisation deadlines
+- `TEST_COVERAGE_GAPS.md` — 12 specific gaps (OpenAPI validity, MCP consistency, JS unit tests, launcher smoke, WPF installer tests, ML perf benchmarks, fuzz extensions, race conditions, UXP contract, SBOM completeness)
+- `FEATURES_RECONCILIATION.md` — features.md sample walk; 5 UNCLEAR → F-numbers graduated
+- `FEATURE_BACKLOG_ADDENDUM.md` — F191-F260 (+70 items); two regulatory deadlines on Now tier (F202 Apple notarisation, F236 FCC caption tokens)
+
+**Pass 3 artefacts (4 new files + 4 updates):**
+- `LIVE_VERIFICATION.md` — F099/F096/F093/F094/npm-audit live results; cross-platform launcher gap confirmed (F261); side-channel discoveries
+- `CEP_UXP_PARITY_MATRIX.md` — completes F198: all 18 `ocXxx` JSX functions mapped against `@adobe/premierepro@26.3.0-beta.67`; only 2 truly CEP-only; F252/F253 effort revised XL → L
+- `AGENT_UX_RFC.md` — F143-F145 design RFC: adopts Copilot Workspace plan + Cursor checkpoint + Underlord self-review + Aider snapshot + Claude Code Skills; rejects accept-all, auto-commit-before-preview, atomic multi-file apply
+- `MARKET_POSITIONING.md` — OpenCut replaces ~$1,400/yr subscriptions; 3 pitches + 3 deprioritise + Mister Horse free-shell+paid-packs model (F268-F272)
+
+**Pass 4 updates (no new standalone file):**
+- `LIVE_VERIFICATION.md` §8 — full release-smoke first-run failure, Ruff cleanup, final PASS matrix, and targeted `119 passed` validation
+- `SOURCE_REGISTER.md` Pass 4 section — local command evidence and refreshed official web sources
+- `RESEARCH_LOG.md` Pass 4 section — phases, limitations, saturation note
+- `CHANGESET_SUMMARY.md` §9 — Pass 4 file/code/validation summary
+- `CONTINUE_FROM_HERE.md` §10 — Pass 5 entry point
+
+Future research runs should land under `.ai/research/<YYYY-MM-DD>/` and update this file's *§ 9 Shipping cadence* + *§ 9.5 regulatory deadlines* + *§ 10 The biggest non-obvious gaps*. The next planned run is documented in `.ai/research/2026-05-17/CONTINUE_FROM_HERE.md`.

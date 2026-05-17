@@ -237,6 +237,13 @@ def validate_path(path: str, allowed_base: str = None) -> str:
     # Resolve to absolute real path (follows symlinks)
     resolved = os.path.realpath(normed)
 
+    # A symlink could resolve to a UNC / Win32 device path even when the
+    # user-supplied string was a plain absolute path. Recheck the resolved
+    # form so the SSRF / NTLM-hash-leak guard above can't be tunnelled
+    # through a pre-staged symlink.
+    if resolved.startswith("\\\\") or resolved.startswith("//"):
+        raise ValueError("Resolved path points to a UNC/network location")
+
     # Optional base-directory confinement. Windows paths are case-insensitive,
     # so compare under ``normcase`` to avoid false negatives when ``realpath``
     # returns a different case than the caller passed for ``allowed_base``.

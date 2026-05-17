@@ -171,8 +171,8 @@ def _animate_via_diffusers(
     if on_progress:
         on_progress(25, "Preprocessing inputs...")
 
-    from PIL import Image
     import torchaudio  # type: ignore
+    from PIL import Image
 
     image = Image.open(image_path).convert("RGB")
 
