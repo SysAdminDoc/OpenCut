@@ -11,14 +11,15 @@ Steps (in order):
 2. ``version-sync`` — `scripts/sync_version.py --check`
 3. ``route-manifest`` — generated route manifest drift check
 4. ``api-aliases`` — generated /api alias manifest drift check
-5. ``model-cards`` — generated model/license card drift check
-6. ``license-gate`` — model/dependency license allow-list check
-7. ``roadmap-lint`` — roadmap citation sanity check
-8. ``ruff`` — lint the python package
-9. ``pytest-fast`` — focused test ids covering release gates
-10. ``pip-audit`` — Python dependency advisories (skipped if not installed)
-11. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
-12. ``panel-source`` — CEP panel source tree smoke
+5. ``feature-readiness`` — generated route/check readiness drift check
+6. ``model-cards`` — generated model/license card drift check
+7. ``license-gate`` — model/dependency license allow-list check
+8. ``roadmap-lint`` — roadmap citation sanity check
+9. ``ruff`` — lint the python package
+10. ``pytest-fast`` — focused test ids covering release gates
+11. ``pip-audit`` — Python dependency advisories (skipped if not installed)
+12. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
+13. ``panel-source`` — CEP panel source tree smoke
 
 Each step records ``status`` (``ok|fail|skipped``), an exit code, a duration
 in ms, and a short message. The script exits with code 1 if any non-skipped
@@ -159,6 +160,25 @@ def step_api_aliases(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_feature_readiness(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    result = _run(
+        [sys.executable, "-m", "opencut.tools.dump_feature_readiness", "--check"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "feature-readiness",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message="readiness manifest in sync" if status == "ok" else "readiness manifest drift",
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_model_cards(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     result = _run(
@@ -274,6 +294,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_seed_github_issues.py",
     "tests/test_route_manifest.py",
     "tests/test_api_aliases.py",
+    "tests/test_feature_readiness_generator.py",
     "tests/test_feature_registry.py",
     "tests/test_caption_qc.py",
     "tests/test_local_auth.py",
@@ -466,6 +487,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("version-sync", step_version_sync, "Check version surfaces"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
+    StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),
     StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),
     StepDefinition("license-gate", step_license_gate, "Run the license allowlist gate over model cards"),
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),

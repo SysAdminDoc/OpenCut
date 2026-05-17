@@ -1,0 +1,830 @@
+{
+  "version": 1,
+  "generated_at": "2026-05-17T18:11:57Z",
+  "source": "opencut/_generated/route_manifest.json",
+  "total_records": 58,
+  "total_routes": 67,
+  "records": [
+    {
+      "feature_id": "auto.ab-av1",
+      "label": "Ab Av1",
+      "category": "video",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/video/encode/vmaf-target/info"
+      ],
+      "check_name": "check_ab_av1_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.amphion-tts",
+      "label": "Amphion Tts",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/tts/amphion"
+      ],
+      "check_name": "check_amphion_tts",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.audio-reactive-fx",
+      "label": "Audio Reactive Fx",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/audio-reactive"
+      ],
+      "check_name": "check_audio_reactive_fx",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.audio-watermark",
+      "label": "Audio Watermark",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/watermark/info"
+      ],
+      "check_name": "check_audio_watermark",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "editing.auto-editor",
+      "label": "auto-editor",
+      "category": "editing",
+      "state": "available",
+      "install_hint": "pip install auto-editor",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/auto-edit"
+      ],
+      "check_name": "check_auto_editor_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "editing.auto-zoom",
+      "label": "OpenCV / face-tracker auto-zoom",
+      "category": "editing",
+      "state": "available",
+      "install_hint": "pip install opencv-python",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/system/dependencies"
+      ],
+      "check_name": "check_auto_zoom_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.cinefocus",
+      "label": "Cinefocus",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/cinefocus"
+      ],
+      "check_name": "check_cinefocus",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.color-match",
+      "label": "Color Match",
+      "category": "system",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/system/dependencies"
+      ],
+      "check_name": "check_color_match_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.colour-science",
+      "label": "colour-science (CIE / vectorscope math)",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install colour-science",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/scopes/pro/info"
+      ],
+      "check_name": "check_colour_science_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.cosyvoice2",
+      "label": "Cosyvoice2",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/tts/cosyvoice2"
+      ],
+      "check_name": "check_cosyvoice2",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.colorize.ddcolor",
+      "label": "DDColor",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install ddcolor",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/restore/backends"
+      ],
+      "check_name": "check_ddcolor_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.deblur-motion",
+      "label": "Deblur Motion",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/deblur"
+      ],
+      "check_name": "check_deblur_motion",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "audio.demucs",
+      "label": "Demucs (htdemucs / hdemucs)",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "pip install demucs",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/separate"
+      ],
+      "check_name": "check_demucs_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.depth-depthpro",
+      "label": "Depth Depthpro",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/depth/depthpro"
+      ],
+      "check_name": "check_depth_depthpro",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.depth-flow",
+      "label": "Depth Flow",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/depth-flow"
+      ],
+      "check_name": "check_depth_flow",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.diffbir",
+      "label": "Diffbir",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/restore/diffbir"
+      ],
+      "check_name": "check_diffbir",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.echomimic",
+      "label": "Echomimic",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/lipsync/echomimic"
+      ],
+      "check_name": "check_echomimic",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "audio.edge-tts",
+      "label": "Edge TTS (Microsoft cloud voices)",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "pip install edge-tts",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/tts/voices"
+      ],
+      "check_name": "check_edge_tts_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "audio.elevenlabs",
+      "label": "ElevenLabs cloud TTS",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "pip install elevenlabs + ELEVENLABS_API_KEY",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/tts/elevenlabs",
+        "/audio/tts/elevenlabs/info",
+        "/audio/tts/elevenlabs/voices"
+      ],
+      "check_name": "check_elevenlabs_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.face-reshape",
+      "label": "Face reshape / beauty filter",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install mediapipe + opencv-python",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/face/reshape",
+        "/video/face/reshape/info"
+      ],
+      "check_name": "check_face_reshape_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.upscale.flashvsr",
+      "label": "FlashVSR (streaming VSR)",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install flashvsr (stub — roadmap H2.1)",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/upscale/flashvsr",
+        "/video/upscale/flashvsr/info"
+      ],
+      "check_name": "check_flashvsr_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.footage-search",
+      "label": "Footage Search",
+      "category": "system",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/system/dependencies"
+      ],
+      "check_name": "check_footage_search_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.gen-video-ltx",
+      "label": "Gen Video Ltx",
+      "category": "generate",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/generate/ltx/v2"
+      ],
+      "check_name": "check_gen_video_ltx",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.gen-video-opensora",
+      "label": "Gen Video Opensora",
+      "category": "generate",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/generate/opensora"
+      ],
+      "check_name": "check_gen_video_opensora",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.gptsovits",
+      "label": "Gptsovits",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/tts/gptsovits",
+        "/tts/gptsovits/voices"
+      ],
+      "check_name": "check_gptsovits",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.gyroflow",
+      "label": "Gyroflow",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/stabilize/gyroflow"
+      ],
+      "check_name": "check_gyroflow",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.lottie-import",
+      "label": "Lottie Import",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/lottie/render"
+      ],
+      "check_name": "check_lottie_import",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.loudness-match",
+      "label": "Loudness Match",
+      "category": "system",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/system/dependencies"
+      ],
+      "check_name": "check_loudness_match_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.mediapipe",
+      "label": "MediaPipe (face mesh, hands, pose)",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install mediapipe",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/reframe/face"
+      ],
+      "check_name": "check_mediapipe_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.restore.deflicker",
+      "label": "All-In-One-Deflicker",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install all-in-one-deflicker",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/restore/backends"
+      ],
+      "check_name": "check_neural_deflicker_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "llm.ollama",
+      "label": "Ollama backend",
+      "category": "llm",
+      "state": "available",
+      "install_hint": "install Ollama from https://ollama.ai",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/llm/status",
+        "/system/dependencies"
+      ],
+      "check_name": "check_ollama_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "audio.omnivoice",
+      "label": "OmniVoice TTS",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "pip install omnivoice",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/tts/omnivoice"
+      ],
+      "check_name": "check_omnivoice_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.otio",
+      "label": "Otio",
+      "category": "timeline",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/timeline/export-otio"
+      ],
+      "check_name": "check_otio_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.pedalboard",
+      "label": "Pedalboard",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/audio/pro/effects"
+      ],
+      "check_name": "check_pedalboard_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "captions.karaoke-adv",
+      "label": "pyonfx ASS karaoke",
+      "category": "captions",
+      "state": "available",
+      "install_hint": "pip install pyonfx",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/captions/karaoke-adv/presets"
+      ],
+      "check_name": "check_pyonfx_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.quality-metrics",
+      "label": "Quality Metrics",
+      "category": "video",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/video/quality/backends"
+      ],
+      "check_name": "check_quality_metrics_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.style.reezsynth",
+      "label": "ReEzSynth (Ebsynth successor)",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install reezsynth (stub — roadmap H2.5)",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/style/reezsynth"
+      ],
+      "check_name": "check_reezsynth_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "audio.resemble-enhance",
+      "label": "Resemble Enhance",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "pip install resemble-enhance",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/enhance"
+      ],
+      "check_name": "check_resemble_enhance_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.inpaint.rose",
+      "label": "ROSE shadow-aware inpaint",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install rose-inpaint (stub — roadmap H2.2)",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/inpaint/rose"
+      ],
+      "check_name": "check_rose_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.runpod",
+      "label": "Runpod",
+      "category": "cloud",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/cloud/runpod/info"
+      ],
+      "check_name": "check_runpod_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.matte.sammie",
+      "label": "Sammie-Roto-2 (VideoMaMa)",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install sammie-roto (stub — roadmap H2.3)",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/matte/sammie"
+      ],
+      "check_name": "check_sammie_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.searaft",
+      "label": "Searaft",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/flow/searaft"
+      ],
+      "check_name": "check_searaft",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.sfx-audiogen",
+      "label": "Sfx Audiogen",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/sfx/generate"
+      ],
+      "check_name": "check_sfx_audiogen",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.shaka",
+      "label": "Shaka",
+      "category": "delivery",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/delivery/shaka/info"
+      ],
+      "check_name": "check_shaka_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.skin-retouch",
+      "label": "Skin retouch (bilateral / GAN)",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install opencv-python (optional onnx model)",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/face/retouch",
+        "/video/face/retouch/info"
+      ],
+      "check_name": "check_skin_retouch_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.spectral-match",
+      "label": "Spectral Match",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/spectral-match",
+        "/audio/spectral-match/info",
+        "/audio/spectral-match/preview"
+      ],
+      "check_name": "check_spectral_match",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.srt",
+      "label": "Srt",
+      "category": "video",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/video/stream/srt/info"
+      ],
+      "check_name": "check_srt_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.svtav1-psy",
+      "label": "Svtav1 Psy",
+      "category": "video",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/video/encode/svtav1-psy/info"
+      ],
+      "check_name": "check_svtav1_psy_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.tokenflow",
+      "label": "Tokenflow",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/style/tokenflow"
+      ],
+      "check_name": "check_tokenflow",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.track-cutie",
+      "label": "Track Cutie",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/track/cutie"
+      ],
+      "check_name": "check_track_cutie",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.track-deva",
+      "label": "Track Deva",
+      "category": "video",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/track/deva"
+      ],
+      "check_name": "check_track_deva",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.vevo2",
+      "label": "Vevo2",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "see route response for dependency hint",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/singing/vevo2"
+      ],
+      "check_name": "check_vevo2",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "audio.music.vidmuse",
+      "label": "VidMuse video-to-music",
+      "category": "audio",
+      "state": "available",
+      "install_hint": "pip install vidmuse (stub — roadmap H2.6)",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/audio/music/vidmuse"
+      ],
+      "check_name": "check_vidmuse_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.vmaf",
+      "label": "Vmaf",
+      "category": "video",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/video/quality/backends"
+      ],
+      "check_name": "check_vmaf_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.restore.vrt",
+      "label": "VRT / RVRT video restoration",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install vrt-restoration",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/restore/backends"
+      ],
+      "check_name": "check_vrt_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.vvc",
+      "label": "Vvc",
+      "category": "video",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/video/encode/vvc/info"
+      ],
+      "check_name": "check_vvc_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "video.watermark.remove",
+      "label": "LaMa inpainting watermark removal",
+      "category": "video",
+      "state": "available",
+      "install_hint": "pip install simple-lama-inpainting",
+      "docs": "docs/MODELS.md",
+      "routes": [
+        "/video/watermark"
+      ],
+      "check_name": "check_watermark_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    },
+    {
+      "feature_id": "auto.websocket",
+      "label": "Websocket",
+      "category": "ws",
+      "state": "available",
+      "install_hint": "bundled or system dependency; see route response",
+      "docs": "docs/MODELS.md#excluded-infrastructure-checks",
+      "routes": [
+        "/ws/start"
+      ],
+      "check_name": "check_websocket_available",
+      "source": "generated",
+      "notes": "Auto-derived from route functions that call this check probe."
+    }
+  ]
+}

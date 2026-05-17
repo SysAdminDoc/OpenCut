@@ -1,4 +1,4 @@
-"""Feature readiness registry (F100).
+"""Feature readiness registry (F100, F191).
 
 Every optional dependency in OpenCut is gated by a ``check_X_available()``
 function in :mod:`opencut.checks`. Historically the panel only discovered
@@ -27,16 +27,20 @@ Readiness states
     Works but unstable / not yet covered by the standard test gates. UI
     surfaces it with a warning chip.
 
-The registry is intentionally a plain Python list of dataclasses so the
-file is easy to scan and review during PRs. ``available`` rows resolve
-their state by calling the ``probe`` callable; everything else is
-declared up-front so the panel can render the catalogue without
-importing the heavy AI extras.
+The hand-written registry is intentionally a plain Python list of dataclasses
+so the file is easy to scan and review during PRs. F191 adds a generated
+extension: ``opencut/_generated/feature_readiness.json`` maps route functions
+that call known ``check_*`` probes back to feature records. The generated rows
+are merged at import time so ``GET /system/feature-state`` sees both curated
+metadata and directly discoverable dependency gates without scanning source on
+every request.
 """
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, dataclass, field
+from pathlib import Path
 from typing import Callable, Dict, Iterable, List, Optional
 
 from opencut import checks as _checks
@@ -48,11 +52,60 @@ STATE_STUB: ReadinessState = "stub"
 STATE_MISSING_DEPENDENCY: ReadinessState = "missing_dependency"
 STATE_EXPERIMENTAL: ReadinessState = "experimental"
 
+GENERATED_FEATURE_READINESS_PATH = (
+    Path(__file__).resolve().parent / "_generated" / "feature_readiness.json"
+)
+
 STATES: tuple = (
     STATE_AVAILABLE,
     STATE_STUB,
     STATE_MISSING_DEPENDENCY,
     STATE_EXPERIMENTAL,
+)
+
+# Checks that intentionally do not gate a model/AI dependency. This mirrors the
+# F115 model-card allowlist, but lives in the registry so readiness derivation
+# can share the same taxonomy without importing model_cards.
+NON_AI_CHECKS: tuple = (
+    "check_aaf_adapter_available",
+    "check_ab_av1_available",
+    "check_atheris_available",
+    "check_birefnet_available",
+    "check_changelog_feed_available",
+    "check_color_match_available",
+    "check_cursor_zoom_available",
+    "check_declarative_compose_available",
+    "check_demo_bundle_available",
+    "check_deprecation_registry_available",
+    "check_disk_monitor_available",
+    "check_event_moments_available",
+    "check_footage_search_available",
+    "check_gist_sync_available",
+    "check_gpu_semaphore_available",
+    "check_issue_report_available",
+    "check_loudness_match_available",
+    "check_neural_interp_available",
+    "check_obs_bridge_available",
+    "check_onboarding_available",
+    "check_openapi_available",
+    "check_otio_available",
+    "check_otio_diff_available",
+    "check_pedalboard_available",
+    "check_quality_metrics_available",
+    "check_rate_limit_categories_available",
+    "check_request_correlation_available",
+    "check_resolve_available",
+    "check_rife_cli_available",
+    "check_runpod_available",
+    "check_sentry_available",
+    "check_shaka_available",
+    "check_social_post_available",
+    "check_srt_available",
+    "check_svtav1_psy_available",
+    "check_temp_cleanup_available",
+    "check_vmaf_available",
+    "check_vvc_available",
+    "check_websocket_available",
 )
 
 
@@ -68,6 +121,8 @@ class FeatureRecord:
     docs: str = ""
     routes: List[str] = field(default_factory=list)
     probe: Optional[Callable[[], bool]] = None
+    check_name: str = ""
+    source: str = "manual"
     notes: str = ""
 
     def resolved_state(self) -> ReadinessState:
@@ -88,7 +143,7 @@ class FeatureRecord:
 
 
 def _check(name: str) -> Optional[Callable[[], bool]]:
-    """Return ``opencut.checks.check_<name>_available`` if it exists."""
+    """Return a callable from :mod:`opencut.checks` if it exists."""
     fn = getattr(_checks, name, None)
     return fn if callable(fn) else None
 
@@ -103,9 +158,9 @@ def _check(name: str) -> Optional[Callable[[], bool]]:
 # the probe says yes" — the panel still calls ``resolved_state()`` to
 # get the runtime answer.
 #
-# The list is intentionally NOT auto-derived from ``opencut.checks``:
-# we want each registry row to carry an install hint and docs link,
-# and that metadata must be hand-written.
+# This curated list remains hand-written: these rows carry labels, install
+# hints, docs links, and shipped-vs-stub judgement. The generated F191 rows are
+# loaded below and merged with this metadata instead of replacing it.
 
 
 _FEATURES: List[FeatureRecord] = [
@@ -458,6 +513,89 @@ _FEATURES: List[FeatureRecord] = [
 ]
 
 
+def _unique_routes(routes: Iterable[str]) -> List[str]:
+    return sorted({route for route in routes if route})
+
+
+def _probe_name(record: FeatureRecord) -> str:
+    if record.check_name:
+        return record.check_name
+    if record.probe is not None:
+        return getattr(record.probe, "__name__", "")
+    return ""
+
+
+def _record_from_generated(payload: dict) -> FeatureRecord:
+    check_name = str(payload.get("check_name") or "")
+    return FeatureRecord(
+        feature_id=str(payload["feature_id"]),
+        label=str(payload.get("label") or payload["feature_id"]),
+        category=str(payload.get("category") or "generated"),
+        state=str(payload.get("state") or STATE_AVAILABLE),
+        install_hint=str(payload.get("install_hint") or ""),
+        docs=str(payload.get("docs") or ""),
+        routes=_unique_routes(payload.get("routes") or []),
+        probe=_check(check_name),
+        check_name=check_name,
+        source=str(payload.get("source") or "generated"),
+        notes=str(payload.get("notes") or ""),
+    )
+
+
+def load_generated_feature_records(
+    path: Path = GENERATED_FEATURE_READINESS_PATH,
+) -> List[FeatureRecord]:
+    """Load F191 generated feature records from disk.
+
+    Missing files are tolerated so editable installs created before F191 still
+    import cleanly; ``dump_feature_readiness --check`` enforces the committed
+    artifact for releases.
+    """
+    if not path.exists():
+        return []
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    records = payload.get("records") or []
+    out: List[FeatureRecord] = []
+    for record in records:
+        try:
+            out.append(_record_from_generated(record))
+        except (KeyError, TypeError, ValueError):
+            continue
+    return out
+
+
+def _merge_generated_records(
+    manual_records: Iterable[FeatureRecord],
+    generated_records: Iterable[FeatureRecord],
+) -> List[FeatureRecord]:
+    records = list(manual_records)
+    by_probe: Dict[str, FeatureRecord] = {}
+    for record in records:
+        probe_name = _probe_name(record)
+        if probe_name and probe_name not in by_probe:
+            by_probe[probe_name] = record
+
+    existing_ids = {record.feature_id for record in records}
+    for generated in generated_records:
+        probe_name = _probe_name(generated)
+        target = by_probe.get(probe_name)
+        if target is not None:
+            target.routes = _unique_routes([*target.routes, *generated.routes])
+            if target.check_name == "":
+                target.check_name = probe_name
+            continue
+        if generated.feature_id in existing_ids:
+            continue
+        records.append(generated)
+        existing_ids.add(generated.feature_id)
+        if probe_name and probe_name not in by_probe:
+            by_probe[probe_name] = generated
+    return records
+
+
 def _build_index(records: Iterable[FeatureRecord]) -> Dict[str, FeatureRecord]:
     out: Dict[str, FeatureRecord] = {}
     for record in records:
@@ -467,8 +605,13 @@ def _build_index(records: Iterable[FeatureRecord]) -> Dict[str, FeatureRecord]:
     return out
 
 
+_GENERATED_FEATURES = load_generated_feature_records()
+
+
 # Public, immutable view of the catalogue.
-FEATURES: Dict[str, FeatureRecord] = _build_index(_FEATURES)
+FEATURES: Dict[str, FeatureRecord] = _build_index(
+    _merge_generated_records(_FEATURES, _GENERATED_FEATURES)
+)
 
 
 # ---------------------------------------------------------------------------
@@ -500,6 +643,11 @@ def feature_manifest() -> dict:
         "version": 1,
         "states": list(STATES),
         "counts": counts,
+        "generated": {
+            "source": "opencut/_generated/feature_readiness.json",
+            "record_count": len(_GENERATED_FEATURES),
+            "route_count": sum(len(record.routes) for record in _GENERATED_FEATURES),
+        },
         "features": payload,
     }
 

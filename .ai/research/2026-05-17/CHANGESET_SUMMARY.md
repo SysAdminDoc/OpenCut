@@ -415,3 +415,39 @@ Pass 6 closed the remaining Pass-3 Now items.
 | `python -m pytest tests/test_release_smoke.py tests/test_node_advisories.py tests/test_uxp_migration_docs.py -q` | PASS — `20 passed` |
 | `node --check extension/com.opencut.panel/scripts/check-advisories.mjs` | PASS |
 | `python scripts/release_smoke.py --json` | PASS — all 11 release-smoke steps green; pytest-fast reported `232 passed` |
+
+---
+
+## 13. Pass 8 additions (same day, F191/F197 implementation)
+
+Pass 8 closed the generated feature-readiness registry and registry-owned allowlist items.
+
+### Files added or edited in Pass 8
+
+| Path | Change |
+|---|---|
+| `opencut/tools/dump_feature_readiness.py` | Added generator/checker that scans route functions for public `checks.py` probes, joins endpoints to the live route manifest, and emits a deterministic readiness manifest. |
+| `opencut/_generated/feature_readiness.json` | New generated manifest: 58 route-derived records across 67 direct route/check bindings. |
+| `opencut/registry.py` | Loads generated readiness records, merges generated routes into curated records, exposes generated manifest metadata, and owns `NON_AI_CHECKS`. |
+| `opencut/model_cards.py` | Imports `NON_AI_CHECKS` from `registry.py` so F115 and F191 share one allowlist. |
+| `scripts/release_smoke.py` | Added `feature-readiness` drift check and included the generator tests in the release-gate pytest slice. |
+| `tests/test_feature_readiness_generator.py` | Added committed-vs-live generator drift tests and route/probe binding assertions. |
+| `tests/test_feature_registry.py` | Added generated-record merge coverage and shared allowlist assertions. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `ROUTE_READINESS_AUDIT.md`, `CONTINUE_FROM_HERE.md` | Marked F191/F197 closed and updated live counts/remaining gaps. |
+
+### Items closed in Pass 8
+
+| F# | Result |
+|---|---|
+| F191 | Closed — generated route/check readiness manifest loaded into `/system/feature-state`. |
+| F197 | Closed — `NON_AI_CHECKS` now belongs to `registry.py`. |
+
+### Validation after Pass 8
+
+| Command | Result |
+|---|---|
+| `python -m opencut.tools.dump_feature_readiness` | PASS — 58 generated records / 67 route bindings |
+| `python -m py_compile opencut/registry.py opencut/model_cards.py opencut/tools/dump_feature_readiness.py scripts/release_smoke.py` | PASS |
+| `python -m pytest tests/test_feature_registry.py tests/test_feature_readiness_generator.py tests/test_model_cards.py tests/test_release_smoke.py -q` | PASS — `35 passed` |
+| `python scripts/release_smoke.py --only feature-readiness --json` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast reported `241 passed` |

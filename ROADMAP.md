@@ -28,6 +28,33 @@
 > **v4.9 status (2026-05-17, sixth pass)**: closed the remaining Pass-3 Now items: **F264** (`npm-advisory` release-smoke now consumes machine-parseable JSON from `check-advisories.mjs --json`) and **F266** (`docs/UXP_MIGRATION.md` now documents the two CEP-only residuals and the drop-QE plan). The Pass-3 Now list is now fully closed locally.
 >
 > **v4.10 status (2026-05-17, seventh pass)**: closed **F199** with `opencut/_generated/api_aliases.json`, `opencut.tools.dump_api_aliases`, release-smoke drift checking, and tests. Live correction: the app has **233 `/api/*` routes**, but only **15** are true dual-registered aliases with equivalent bare routes; the remaining **218** are canonical `/api` routes.
+>
+> **v4.11 status (2026-05-17, eighth pass)**: closed **F191** and **F197** with `opencut/_generated/feature_readiness.json`, `opencut.tools.dump_feature_readiness`, registry-side generated-record loading/merging, a registry-owned `NON_AI_CHECKS` allowlist shared by model cards, release-smoke drift checking, and tests. The feature-state manifest now exposes **84** records total, including **58** route-derived records across **67** direct route/check bindings.
+
+---
+
+## 2026-05-17 v4.11 Feature Readiness Generation
+
+F191 and F197 are closed locally. The generated readiness policy now lives in `opencut/_generated/feature_readiness.json` and is regenerated with:
+
+```sh
+python -m opencut.tools.dump_feature_readiness
+python -m opencut.tools.dump_feature_readiness --check
+```
+
+The manifest is built by statically scanning `opencut/routes/*.py` for route functions that call public `opencut.checks.check_*` probes, joining those endpoints to the live route manifest, and loading the generated rows into `opencut.registry` at import time. Curated `FeatureRecord` rows keep their stable feature IDs while gaining any generated routes for the same probe.
+
+| Surface | Count | Meaning |
+|---|---:|---|
+| Generated records | 58 | Probe-backed records generated from direct route/check bindings. |
+| Generated route bindings | 67 | Route rules mapped to a check probe. |
+| `/system/feature-state` records | 84 | Curated registry records plus generated records after merge. |
+
+F197 moved the `NON_AI_CHECKS` allowlist from `model_cards.py` into `registry.py`; model cards now import the registry-owned tuple so the model-card and feature-readiness surfaces share one taxonomy.
+
+Validation after the batch: `python -m opencut.tools.dump_feature_readiness --check` passed, F191/F197 focused tests passed (`35 passed`), `python scripts/release_smoke.py --only feature-readiness --json` exited `0`, and full `python scripts/release_smoke.py --json` exited `0` (`241 passed` in pytest-fast).
+
+Limit: the F191 generator covers direct route functions that visibly call public check probes. Routes that hide availability checks deeper inside core helpers still need the F196 "registry as primary" work and F209 MCP/route consistency gate.
 
 ---
 
@@ -65,7 +92,7 @@ This pass closed the remaining Pass-3 Now items:
 
 Validation after the batch: targeted F264/F266 tests passed (`20 passed`) and full `python scripts/release_smoke.py --json` exited `0` (`232 passed` in pytest-fast).
 
-Pass-3 Now items after v4.9: F261, F262, F264, F266, and F270 are all closed locally. Pass 7 later closed F199 (`opencut/_generated/api_aliases.json`). The next candidate is the larger F179 `features.md` reconciliation unless a smaller Now-tier trust item is selected.
+Pass-3 Now items after v4.9: F261, F262, F264, F266, and F270 are all closed locally. Pass 7 later closed F199 (`opencut/_generated/api_aliases.json`), and Pass 8 later closed F191/F197 (`opencut/_generated/feature_readiness.json` + registry-owned `NON_AI_CHECKS`).
 
 ---
 
@@ -244,7 +271,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (19 open + F199 closed locally, including 2 regulatory):** F191 (auto-derive registry), F195 (12 missing MCP tools), F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), **F202 (Apple notarisation, regulatory)**, F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (17 open + F191/F197/F199 closed locally, including 2 regulatory):** [x] F191 (auto-derive registry), F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), **F202 (Apple notarisation, regulatory)**, F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML

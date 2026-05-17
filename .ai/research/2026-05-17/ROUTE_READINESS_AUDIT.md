@@ -1,7 +1,7 @@
 # OpenCut — Route Readiness Audit
 
 **Audit date:** 2026-05-17 (Pass 2)
-**Source of truth:** `opencut/_generated/route_manifest.json` (generated 2026-05-16T20:36:05Z), `opencut/registry.py` (F100 feature catalogue, 514 lines), `opencut/checks.py` (105 functions), `opencut/_generated/model_cards.json` (47 cards), `opencut/openapi.py` (mapping table).
+**Source of truth:** `opencut/_generated/route_manifest.json` (generated 2026-05-16T20:36:05Z), `opencut/registry.py` (F100/F191 feature catalogue), `opencut/_generated/feature_readiness.json` (58 generated records / 67 route bindings), `opencut/checks.py` (117 public `check_*` probes, 86 `check_*_available` gates), `opencut/_generated/model_cards.json` (47 cards), `opencut/openapi.py` (mapping table).
 
 ---
 
@@ -16,13 +16,14 @@
 | PUT routes | 2 |
 | PATCH routes | 1 |
 | Blueprints | **101** |
-| Routes with explicit `FeatureRecord` in `registry.py` (F100) | **29** |
+| Feature readiness records exposed by `registry.py` (F100/F191) | **84** |
+| Generated readiness records / route bindings | **58** / **67** |
 | Routes with explicit response-schema in `openapi.py` | **30** |
-| Optional-dependency `check_X_available()` functions | **105** (in `opencut/checks.py`) |
+| Public `check_*` probes / `check_*_available` gates | **117** / **86** (in `opencut/checks.py`) |
 | Model cards in `model_cards.json` (F115) | **47** |
 | MCP tools in `mcp_server.py` MCP_TOOLS array | **27** |
 
-Coverage gap: 1,359 routes vs 29 in registry vs 30 in OpenAPI schemas vs 27 in MCP. **The vast majority of routes have no machine-readable readiness state and no typed response schema.** This is a structural visibility gap.
+Coverage gap after Pass 8: 1,359 routes vs 84 registry records / 67 generated route bindings vs 30 OpenAPI schemas vs 27 MCP tools. F191 improved the readiness surface for direct route/check bindings, but the vast majority of routes still have no typed response schema and no MCP surface. This remains a structural visibility gap.
 
 ---
 
@@ -66,17 +67,13 @@ Coverage gap: 1,359 routes vs 29 in registry vs 30 in OpenAPI schemas vs 27 in M
 | **Live with optional dep** (gracefully 503 when missing) | ~250-300 | Inferred from 105 check_X_available + wave_a..wave_l blueprints |
 | **Stub 503 `MISSING_DEPENDENCY`** | ~30-50 | Wave K Tier 2 (19) + Wave H Tier 2 (6) + scattered |
 | **Stub 501 `ROUTE_STUBBED`** | ~12-18 | Wave K Tier 3 (8) + Wave H Tier 3 (3) + scattered |
-| **F100-registered with explicit state** | 29 | `opencut/registry.py` |
+| **F100/F191 registered with explicit state** | 84 records / 67 generated route bindings | `opencut/registry.py`, `opencut/_generated/feature_readiness.json` |
 | **OpenAPI-schema-typed** | 30 | `opencut/openapi.py` `_ENDPOINT_SCHEMAS` |
 
-**Critical gap:** there is no single endpoint that returns "for every route, what readiness state does it have?". The closest is `GET /system/feature-state` (F100) which only covers 29 records, and `GET /system/dependencies` which only covers ~30 deps via the dashboard.
+**Pass 8 update:** `GET /system/feature-state` now includes generated F191 records from direct route/check bindings. It still is not a per-route readiness matrix for all 1,359 routes; it is a feature-readiness manifest with generated route lists for probes the scanner can see.
 
 **Recommended fix (new F-number):**
-- **F191** — Auto-derive `FeatureRecord` for every route that maps to a known `check_X_available()`. Today only 29 of ~250-300 dep-gated routes are in the F100 registry. The dispatch should be:
-  1. parse route_manifest.json
-  2. for each route, look up its endpoint's check function via decorator introspection (e.g. `@async_job` could carry a `check=check_demucs_available` kwarg)
-  3. auto-generate `FeatureRecord(state=AVAILABLE, probe=check_X)` entries
-  4. surface in `GET /system/feature-state` so the panel can grey out gated routes even when they're not hand-added to the registry
+- **F191** — **DONE in Pass 8.** `opencut.tools.dump_feature_readiness` statically scans route functions for public `checks.py` probes, joins endpoints to the live route manifest, writes `opencut/_generated/feature_readiness.json`, and `registry.py` loads/merges those generated rows into `GET /system/feature-state`.
 
 ---
 
@@ -145,18 +142,18 @@ Coverage gap: 1,359 routes vs 29 in registry vs 30 in OpenAPI schemas vs 27 in M
 ## 6. The model card vs check function vs registry mismatch
 
 There are three overlapping catalogues:
-- **`checks.py`**: 105 `check_X_available()` functions (covers everything from `demucs` to `cinefocus`)
+- **`checks.py`**: 117 public `check_*` probes, including 86 `check_X_available()` gates (covers everything from `demucs` to `cinefocus`)
 - **`model_cards.py`**: 47 cards with licence + hardware + privacy + install hint
-- **`registry.py`**: 29 `FeatureRecord` entries with readiness state + route list
+- **`registry.py` + `_generated/feature_readiness.json`**: 84 `FeatureRecord` entries with readiness state + route list
 
 The deltas:
-- Functions in `checks.py` without a model card: ~58 (system / orchestration checks like `check_neural_interp_available()` and stdlib-only checks like `check_voice_grammar_available()`).
-- Functions in `checks.py` without a `FeatureRecord`: ~76. Most are wave_a..wave_k optional surfaces.
-- Model cards without a `FeatureRecord`: ~30. The F115 cards are richer than the F100 registry.
+- Functions in `checks.py` without a model card still exist for system / orchestration checks and stdlib-only guards.
+- Functions in `checks.py` without a `FeatureRecord` are reduced but not eliminated; F191 only covers route functions that visibly call the public probe or a core helper aliased by checks.py.
+- Model cards without a curated manual `FeatureRecord` now often surface via generated records, but F196 is still needed if registry becomes the primary catalogue.
 
 **Recommended fix:**
 - **F196** — Make `registry.py` the **primary** catalogue and have `model_cards.py` + `checks.py` derived from it (or at least cross-validated in CI via `release_smoke.py`).
-- **F197** — Add a `NON_AI_CHECKS` allowlist to `registry.py` (mirror of F115's allowlist) for stdlib-only or orchestration-only checks that intentionally have no model card.
+- **F197** — **DONE in Pass 8.** `NON_AI_CHECKS` now lives in `registry.py`; `model_cards.py` imports the registry-owned tuple so F115 and F191 share one allowlist.
 
 ---
 
@@ -190,13 +187,13 @@ The manifest contains **233 routes under `/api/*`**. Pass 7 corrected the origin
 
 | F# | Title | Priority | Effort |
 |---|---|---|---|
-| F191 | Auto-derive `FeatureRecord` from check functions + route manifest | Now | M |
+| F191 | Auto-derive `FeatureRecord` from check functions + route manifest | Done in Pass 8 | M |
 | F192 | Bulk add OpenAPI response schemas for top 50 routes | Next | M |
 | F193 | Replace `_ENDPOINT_SCHEMAS` hand-table with dataclass introspection | Later | M |
 | F194 | Auto-generate "extended" MCP tools from route manifest | Next | L |
 | F195 | Add 12 missing MCP tools for post-Wave-M shipped routes | Now | S |
 | F196 | Make `registry.py` primary; derive `model_cards` / `checks` | Later | L |
-| F197 | Add `NON_AI_CHECKS` allowlist to `registry.py` | Now | S |
+| F197 | Add `NON_AI_CHECKS` allowlist to `registry.py` | Done in Pass 8 | S |
 | F198 | CEP-only route catalogue + UXP replacement plan | Next | M |
 | F199 | Document `/api/*` alias policy + generate alias map | Done in Pass 7 | S |
 
