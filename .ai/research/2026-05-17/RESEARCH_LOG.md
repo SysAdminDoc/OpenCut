@@ -378,3 +378,32 @@ Pass 13 was a local implementation and verification pass. No new external resear
 ### Pass 13 saturation note
 
 F208 is complete for structural OpenAPI validity and route coverage. It does not close F192/F193, which remain the richer typed-schema expansion and introspection work for the ~1,250 mostly generic response schemas.
+
+---
+
+## Pass 14 (2026-05-17 — F209 MCP route consistency gate)
+
+Pass 14 was a local implementation and verification pass. No new external research was needed; the work compared the MCP route table against the live Flask `url_map`.
+
+### Pass 14 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 14.1 | Compared all `_TOOL_ROUTES` entries to live Flask operations. | Found one stale target: `opencut_chat_edit` pointed to planned `/agent/chat` instead of shipped `/chat`. |
+| Pass 14.2 | Corrected the stale MCP route mapping. | `opencut_chat_edit` now dispatches to `POST /chat`. |
+| Pass 14.3 | Added an MCP route-consistency test. | `tests/test_mcp_server.py` now checks all 39 tools, all default route mappings, and special action routes. |
+| Pass 14.4 | Updated roadmap and research state files. | F209 marked closed; next local-verifiable Now items are F218/F219. |
+
+### Pass 14 validation results
+
+| Check | Result |
+|---|---|
+| Focused MCP/release-smoke tests | **PASS** — `18 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for touched Python files | **PASS** |
+| Live route-table probe | **PASS** — 39 MCP tools / 39 route mappings / 0 missing backend routes |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `259 passed` |
+
+### Pass 14 saturation note
+
+F209 is complete for curated MCP route drift. It does not generate new MCP tools from the full route catalogue; that remains F194/T1.5-style extended MCP surface work.
