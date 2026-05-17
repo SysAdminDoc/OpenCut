@@ -256,3 +256,4 @@ Pass 5 closed the three smallest Pass-3 Now items and left the larger research/d
 - F264 and F266 are the remaining open Pass-3 Now items.
 - F179 remains the largest knowledge debt.
 - Cross-platform launcher runtime verification still needs macOS/Linux CI or local runtime coverage (related to F211).
+- Push is blocked by GitHub auth: `git push origin main` failed with `remote: Permission to SysAdminDoc/OpenCut.git denied to MavenImaging.` / HTTP 403. The local commits are valid; pushing needs credentials with write access to `SysAdminDoc/OpenCut`.
