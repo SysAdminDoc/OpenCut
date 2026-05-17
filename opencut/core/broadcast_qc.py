@@ -17,6 +17,7 @@ import time
 from dataclasses import asdict, dataclass, field
 from typing import Callable, List, Optional
 
+from opencut.core.loudness_standards import SOURCE_URLS
 from opencut.helpers import get_ffmpeg_path, get_ffprobe_path, get_video_info
 
 logger = logging.getLogger("opencut")
@@ -88,6 +89,9 @@ BROADCAST_STANDARDS = {
         "loudness_tolerance": 1.0,
         "max_true_peak": -1.0,
         "max_loudness_range": 20.0,
+        "measurement_standard": "ITU-R BS.1770-5",
+        "recommendation_version": "EBU R 128 v5.0",
+        "source_url": SOURCE_URLS["ebu_r128"],
     },
     "atsc_a85": {
         "label": "ATSC A/85 (North America)",
@@ -95,6 +99,7 @@ BROADCAST_STANDARDS = {
         "loudness_tolerance": 2.0,
         "max_true_peak": -2.0,
         "max_loudness_range": 20.0,
+        "measurement_standard": "ITU-R BS.1770",
     },
     "arib_tr_b32": {
         "label": "ARIB TR-B32 (Japan)",
@@ -102,6 +107,7 @@ BROADCAST_STANDARDS = {
         "loudness_tolerance": 2.0,
         "max_true_peak": -1.0,
         "max_loudness_range": 20.0,
+        "measurement_standard": "ITU-R BS.1770",
     },
 }
 

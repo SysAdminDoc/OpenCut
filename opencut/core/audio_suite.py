@@ -21,9 +21,13 @@ import subprocess
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
+from opencut.core import loudness_standards as _loudness_standards
 from opencut.helpers import get_ffmpeg_path
 
 logger = logging.getLogger("opencut")
+
+# Backward-compatible export used by older callers and tests.
+LOUDNESS_PRESETS = _loudness_standards.LOUDNESS_PRESETS
 
 
 # ---------------------------------------------------------------------------
@@ -205,18 +209,6 @@ def isolate_voice(
 # ---------------------------------------------------------------------------
 # Loudness Normalization (EBU R128)
 # ---------------------------------------------------------------------------
-LOUDNESS_PRESETS = {
-    "youtube":    {"i": -14.0, "tp": -1.0, "lra": 11.0},
-    "podcast":    {"i": -16.0, "tp": -1.5, "lra": 8.0},
-    "broadcast":  {"i": -23.0, "tp": -2.0, "lra": 7.0},
-    "streaming":  {"i": -14.0, "tp": -1.0, "lra": 11.0},
-    "tiktok":     {"i": -14.0, "tp": -1.0, "lra": 11.0},
-    "spotify":    {"i": -14.0, "tp": -1.0, "lra": 9.0},
-    "apple_music": {"i": -16.0, "tp": -1.0, "lra": 10.0},
-    "cinema":     {"i": -24.0, "tp": -2.0, "lra": 20.0},
-}
-
-
 def measure_loudness(input_path: str) -> LoudnessInfo:
     """
     Measure audio loudness using FFmpeg loudnorm (EBU R128).
@@ -287,7 +279,7 @@ def normalize_loudness(
         output_path = f"{base}_normalized{ext}"
 
     # Get targets from preset or overrides
-    targets = LOUDNESS_PRESETS.get(preset, LOUDNESS_PRESETS["youtube"]).copy()
+    targets = _loudness_standards.get_loudness_preset(preset)
     if target_lufs is not None:
         targets["i"] = target_lufs
     if target_tp is not None:

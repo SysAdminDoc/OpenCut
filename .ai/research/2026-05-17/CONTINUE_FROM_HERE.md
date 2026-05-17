@@ -1,15 +1,15 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 18)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 19)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (during Pass 17; Passes 1-17 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, and Pass 17 closed F236 FCC caption display-settings tokens. This file documents deferred research/product work for a future Pass 18+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (during Pass 18; Passes 1-18 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, and Pass 18 closed F237 loudness standards metadata. This file documents deferred research/product work for a future Pass 19+, not a broken or incomplete research run.
 
 ---
 
 ## 1. State at hand-off
 
-- **Repo branch:** `main`, expected 40 commits ahead of `origin/main` after the Pass-17 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
+- **Repo branch:** `main`, expected 41 commits ahead of `origin/main` after the Pass-18 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
 - **Live counts:** 1,361 routes / 101 blueprints / 524 core modules / 139 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
@@ -218,7 +218,7 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 ### Pass 13 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Continue the F191-F260 Now queue.** F205 remains open but needs a reliable long-running coverage measurement. F236 is closed; the next local-verifiable implementation items are F237, F240, F241, F243, and F244. F251 and F259 likely need refreshed Adobe/UXP verification before implementation.
+2. **Continue the F191-F260 Now queue.** F205 remains open but needs a reliable long-running coverage measurement. F236 and F237 are closed; the next local-verifiable implementation items are F240, F241, F243, and F244. F251 and F259 likely need refreshed Adobe/UXP verification before implementation.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
@@ -541,8 +541,8 @@ Pass 16 closed the SBOM completeness item.
 ### Remaining immediate work
 
 - F205 remains open and should resume only where a full coverage command can finish.
-- The next local-verifiable Now items are F237, F240, F243, and F244.
-- F236 was closed in Pass 17 after fresh regulatory verification. F251 and F259 likely need fresh Adobe/UXP verification before implementation because their source facts can drift.
+- The next local-verifiable Now items are F240, F241, F243, and F244.
+- F236 was closed in Pass 17 after fresh regulatory verification, and F237 was closed in Pass 18 after fresh ITU/EBU/FFmpeg verification. F251 and F259 likely need fresh Adobe/UXP verification before implementation because their source facts can drift.
 
 ---
 
@@ -571,7 +571,35 @@ Pass 17 closed the FCC caption display-settings token item.
 ### Remaining immediate work
 
 - F205 remains open and should resume only where a full coverage command can finish.
-- The next local-verifiable Now items are F237, F240, F241, F243, and F244.
+- The next local-verifiable Now items are F240, F241, F243, and F244.
+- F251 and F259 likely need fresh Adobe/UXP verification before implementation.
+
+---
+
+## 24. Pass 18 update (same day, F237 loudness standards registry)
+
+Pass 18 closed the loudness standards correction item.
+
+### What Pass 18 closed
+
+| Item | Status |
+|---|---|
+| F237 | **DONE** — `opencut/core/loudness_standards.py` now centralizes ITU BS.1770-5, EBU R128 v5.0, FFmpeg loudnorm, and platform/profile loudness targets. The stale "drop speculative -5" premise was corrected: ITU-R BS.1770-5 is in force and BS.1770-4 is superseded. |
+
+### Validation after Pass 18
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_loudness_standards.py tests/test_release_smoke.py -q` | PASS — `17 passed` |
+| focused compatibility/route pytest slice | PASS — `9 passed` |
+| `ruff check opencut/core/loudness_standards.py opencut/core/audio_suite.py opencut/core/audio_analysis.py opencut/core/broadcast_qc.py opencut/routes/audio.py tests/test_loudness_standards.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -m py_compile opencut/core/loudness_standards.py opencut/core/audio_suite.py opencut/core/audio_analysis.py opencut/core/broadcast_qc.py opencut/routes/audio.py tests/test_loudness_standards.py scripts/release_smoke.py` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 steps green; pytest-fast `278 passed` |
+
+### Remaining immediate work
+
+- F205 remains open and should resume only where a full coverage command can finish.
+- The next local-verifiable Now items are F240, F241, F243, and F244.
 - F251 and F259 likely need fresh Adobe/UXP verification before implementation.
 
 ---

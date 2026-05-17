@@ -505,3 +505,43 @@ Pass 17 combined targeted external regulatory verification with local implementa
 ### Pass 17 saturation note
 
 F236 is complete for the repository-side token contract and burn-in integration. It does not prove end-user UI discoverability in the Premiere panel; that remains downstream UI/persistence polish and should be tested with the eventual UXP/CEP settings surface.
+
+---
+
+## Pass 18 (2026-05-17 — F237 loudness standards registry)
+
+Pass 18 combined targeted standards verification with a local implementation pass. The external lookup was required because the backlog text said to drop a "speculative" BS.1770-5 reference, but official ITU sources now show BS.1770-5 is real and in force.
+
+### Pass 18 external searches
+
+| Query / source | Result |
+|---|---|
+| `site:itu.int BS.1770-5 Algorithms to measure audio programme loudness and true-peak audio level` | Found the official ITU BS.1770-5 page and table of contents. |
+| `site:itu.int R-REC-BS.1770 latest BS.1770-5` | Found the version listing confirming BS.1770-5 is Main/In force and BS.1770-4 is Superseded. |
+| `site:tech.ebu.ch R 128 version 5.0 loudness recommendation PDF` | Found EBU R 128 Version 5.0 (November 2023), target -23 LUFS and maximum true peak descriptor. |
+| FFmpeg loudnorm docs | Confirmed OpenCut's FFmpeg normalization path can target integrated loudness, LRA, and maximum true peak under EBU R128 normalization. |
+| Spotify loudness guidance | Confirmed the source-backed -14 LUFS / -1 dBTP platform profile for Spotify. |
+
+### Pass 18 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 18.1 | Inspected `audio_suite.py`, `audio_analysis.py`, `broadcast_qc.py`, `loudness_match.py`, and `/audio/loudness-presets`. | Found duplicated/scattered targets and one stale generic `broadcast` ambiguity. |
+| Pass 18.2 | Added `opencut/core/loudness_standards.py`. | Central registry now records ITU BS.1770-5, EBU R128 v5.0, FFmpeg loudnorm, platform/profile targets, source URLs, and correction notes. |
+| Pass 18.3 | Wired audio normalization, audio analysis, broadcast QC, and the loudness preset route to the registry. | Existing `LOUDNESS_PRESETS` import compatibility is preserved; `/audio/loudness-presets` now returns standards metadata. |
+| Pass 18.4 | Added `tests/test_loudness_standards.py` and wired it into release smoke. | Tests cover current ITU/EBU facts, preset targets, compatibility export, platform target behavior, and route payload. |
+| Pass 18.5 | Updated roadmap and research state files. | F237 marked closed; next Now items are F240/F241/F243/F244/F251/F259, with F205 still blocked by the coverage timeout. |
+
+### Pass 18 validation results
+
+| Check | Result |
+|---|---|
+| Focused loudness/release-smoke tests | **PASS** — `17 passed` |
+| Focused compatibility/route slice | **PASS** — `9 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for touched Python files | **PASS** |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `278 passed` |
+
+### Pass 18 saturation note
+
+F237 is complete for source-backed standards metadata and preset API correction. It intentionally does not declare generic streaming/podcast targets as universal compliance standards; they remain editable profiles, while EBU R128 and ITU BS.1770 carry the standards metadata.
