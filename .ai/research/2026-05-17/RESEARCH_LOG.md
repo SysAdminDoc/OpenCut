@@ -290,3 +290,32 @@ Pass 10 was an implementation pass with a small official-doc refresh against App
 ### Pass 10 saturation note
 
 Repository-side F202 tooling is complete enough to run on a macOS GitHub Actions release runner once secrets exist. The remaining evidence gap is external and credential-bound: first live Apple notary acceptance with real Developer ID and App Store Connect API credentials.
+
+---
+
+## Pass 11 (2026-05-17 — F204 release SBOM attachment)
+
+Pass 11 was a local release-plumbing implementation pass. No new external research was needed because `scripts/sbom.py` already existed and emitted CycloneDX 1.5 JSON.
+
+### Pass 11 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 11.1 | Inspected `scripts/sbom.py` and the release workflow. | Confirmed F204 was missing only CI generation/upload wiring. |
+| Pass 11.2 | Added Linux release steps to generate/archive/upload the SBOM. | `.github/workflows/build.yml` |
+| Pass 11.3 | Added tests that run the generator and pin release workflow wiring. | `tests/test_release_sbom.py`, `scripts/release_smoke.py` |
+| Pass 11.4 | Updated roadmap/research artifacts and preserved F219 as the deeper completeness test. | `ROADMAP.md`, `.ai/research/2026-05-17/*` |
+
+### Pass 11 validation results
+
+| Check | Result |
+|---|---|
+| Focused SBOM/release-smoke tests | **PASS** — `14 passed` |
+| Ruff on touched Python files | **PASS** |
+| Workflow YAML parse | **PASS** |
+| Direct SBOM generation | **PASS** — generated CycloneDX 1.5 JSON |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `251 passed` |
+
+### Pass 11 saturation note
+
+F204 is complete as release plumbing. F219 remains the right place to enforce SBOM completeness against all declared dependencies and model cards; do not treat the F204 generator smoke test as that deeper coverage.

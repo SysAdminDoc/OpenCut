@@ -1,15 +1,15 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 11)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 12)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (during Pass 10; Passes 1-10 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, and Pass 10 closed the repository-side F202 notarization tooling. This file documents deferred research/product work for a future Pass 11+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (during Pass 11; Passes 1-11 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, and Pass 11 closed F204 release SBOM upload. This file documents deferred research/product work for a future Pass 12+, not a broken or incomplete research run.
 
 ---
 
 ## 1. State at hand-off
 
-- **Repo branch:** `main`, expected 33 commits ahead of `origin/main` after the Pass-10 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
+- **Repo branch:** `main`, expected 34 commits ahead of `origin/main` after the Pass-11 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
 - **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 133 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
@@ -215,10 +215,10 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 | npm advisory state | **PASS** in release-smoke allow-list step; raw `npm audit --json` still shows the known moderate Vite `.map` advisory that F095 documents |
 | `npm view @adobe/premierepro version dist-tags --json` | Confirmed `latest=26.2.0`, `beta=26.3.0-beta.67` |
 
-### Pass 11 entry point
+### Pass 12 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Continue the F191-F260 Now queue.** F204 is the next listed item after F202; it is local-verifiable release plumbing for SBOM upload.
+2. **Continue the F191-F260 Now queue.** F205 is the next listed item after F204, but it may require a reliable coverage measurement strategy; F207/F208/F209/F218/F219 are also local-verifiable.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
@@ -403,3 +403,30 @@ Pass 10 closed the repository-side macOS notarization release path.
 ### Limitation
 
 Apple notarization itself was not executed from this Windows VM. GitHub secrets still need to be configured: `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, and `APPLE_API_PRIVATE_KEY`.
+
+---
+
+## 17. Pass 11 update (same day, F204 release SBOM attachment)
+
+Pass 11 closed the SBOM release attachment item.
+
+### What Pass 11 closed
+
+| Item | Status |
+|---|---|
+| F204 | **DONE** — Linux tagged/manual release builds generate `dist/opencut-sbom.cyclonedx.json`, archive it as `OpenCut-SBOM-CycloneDX`, and upload it to GitHub Releases on tags. |
+
+### Validation after Pass 11
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_release_sbom.py tests/test_release_smoke.py -q` | PASS — `14 passed` |
+| `ruff check tests/test_release_sbom.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `python -c "import pathlib, yaml; yaml.safe_load(pathlib.Path('.github/workflows/build.yml').read_text())"` | PASS |
+| `python scripts/sbom.py --format json --output dist/opencut-sbom.cyclonedx.json` | PASS — generated CycloneDX 1.5 JSON |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `251 passed` |
+
+### Remaining immediate work
+
+- F205 coverage-floor uplift is next in the Now list; it needs an actual coverage measurement before changing `--cov-fail-under`.
+- F219 remains open; F204 attaches the SBOM, but F219 must assert completeness against declared deps and model cards.

@@ -438,3 +438,22 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P10-E03 | https://developer.apple.com/documentation/technotes/tn3147-migrating-to-the-latest-notarization-tool — Apple migration note for the latest notarization tool |
 
 **Source coverage assessment (Pass 10):** Pass 10 claims in `ROADMAP.md` v4.13, `PROJECT_CONTEXT.md`, `INSTALLER_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, and `CONTINUE_FROM_HERE.md` trace to R-P10-L01 through R-P10-L08 plus R-P10-E01 through R-P10-E03.
+
+---
+
+## Pass 11 — F204 release SBOM attachment (2026-05-17 eleventh pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P11-L01 | `scripts/sbom.py` — existing CycloneDX 1.5 SBOM generator |
+| R-P11-L02 | `.github/workflows/build.yml` — release workflow updated to generate/archive/upload `dist/opencut-sbom.cyclonedx.json` |
+| R-P11-L03 | `tests/test_release_sbom.py` — generator and workflow wiring tests |
+| R-P11-L04 | `python -m pytest tests/test_release_sbom.py tests/test_release_smoke.py -q` — PASS, `14 passed` |
+| R-P11-L05 | `ruff check tests/test_release_sbom.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` — PASS |
+| R-P11-L06 | Workflow YAML parse command — PASS |
+| R-P11-L07 | `python scripts/sbom.py --format json --output dist/opencut-sbom.cyclonedx.json` — PASS; generated CycloneDX 1.5 JSON |
+| R-P11-L08 | `python scripts/release_smoke.py --json` — PASS, all 13 steps green; pytest-fast `251 passed` |
+
+**Source coverage assessment (Pass 11):** Pass 11 claims in `ROADMAP.md` v4.14, `PROJECT_CONTEXT.md`, `INSTALLER_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGESET_SUMMARY.md`, and `CONTINUE_FROM_HERE.md` trace to R-P11-L01 through R-P11-L08. No new external source was used.

@@ -80,6 +80,10 @@ jobs:
           python -m pip install pip-audit
           python scripts/release_smoke.py --json --skip ruff --skip pytest-fast
 
+      - name: Generate release SBOM
+        if: runner.os == 'Linux' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        run: python scripts/sbom.py --format json --output dist/opencut-sbom.cyclonedx.json
+
       - name: Smoke test imports
         run: |
           python -c "from opencut.server import create_app; app = create_app(); print('Server OK')"
@@ -144,6 +148,13 @@ jobs:
           name: OpenCut-Setup-Windows
           path: installer/dist/OpenCut-Setup-*.exe
 
+      - name: Archive release SBOM
+        if: runner.os == 'Linux' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenCut-SBOM-CycloneDX
+          path: dist/opencut-sbom.cyclonedx.json
+
       - name: Upload to release
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -163,5 +174,13 @@ jobs:
         shell: bash
         run: |
           gh release upload ${{ github.ref_name }} installer/dist/OpenCut-Setup-*.exe --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload SBOM to release
+        if: runner.os == 'Linux' && startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          gh release upload ${{ github.ref_name }} dist/opencut-sbom.cyclonedx.json --clobber
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
