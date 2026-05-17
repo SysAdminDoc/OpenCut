@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.12
+**Version**: 4.13
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,344 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -32,6 +32,26 @@
 > **v4.11 status (2026-05-17, eighth pass)**: closed **F191** and **F197** with `opencut/_generated/feature_readiness.json`, `opencut.tools.dump_feature_readiness`, registry-side generated-record loading/merging, a registry-owned `NON_AI_CHECKS` allowlist shared by model cards, release-smoke drift checking, and tests. The feature-state manifest now exposes **84** records total, including **58** route-derived records across **67** direct route/check bindings.
 >
 > **v4.12 status (2026-05-17, ninth pass)**: closed **F195** by expanding the curated MCP surface from **27** to **39** tools for the shipped post-Wave-M routes (face reshape, skin retouch, smart upscale, ElevenLabs TTS, caption QC, review bundles, C2PA provenance, marker import, capability probe, Brand Kit, semantic search, and spectral match). `tests/test_mcp_server.py` now pins tool registration, route dispatch, multi-action MCP tools, and the expanded MCP path-validation keys; release smoke includes this MCP gate.
+>
+> **v4.13 status (2026-05-17, tenth pass)**: closed the local tooling portion of **F202** by adding macOS Developer ID signing + notarization release wiring. Tagged/manual macOS release builds now run `scripts/notarize_macos.sh`, sign Mach-O files with hardened runtime, submit `dist/OpenCut-Server-macOS.zip` through `xcrun notarytool`, and upload the notarized ZIP on tag releases. `docs/MACOS_NOTARIZATION.md` documents required GitHub secrets. Full Apple service verification still requires repository secrets and a macOS release runner.
+
+---
+
+## 2026-05-17 v4.13 macOS Notarization Release Path
+
+F202's repository-side implementation is closed locally. The release workflow now has a macOS notarization path for tagged releases and manual release builds:
+
+| Surface | Status |
+|---|---|
+| CI wiring | `macos-latest` PyInstaller builds call `bash scripts/notarize_macos.sh dist/OpenCut-Server dist/OpenCut-Server-macOS.zip`. |
+| Signing | The script imports a Developer ID Application `.p12` into a temporary keychain, signs Mach-O files with `codesign --options runtime --timestamp`, and verifies the main executable. |
+| Notarization | The script submits the ZIP with `xcrun notarytool submit --wait` using App Store Connect API key credentials. |
+| Release artifact | Tagged macOS releases upload `OpenCut-Server-macOS.zip`; Windows/Linux keep their existing `.tar.gz` upload path. |
+| Documentation | `docs/MACOS_NOTARIZATION.md` lists required GitHub secrets and local commands. |
+
+Required secrets: `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, and `APPLE_API_PRIVATE_KEY`. Optional: `MACOS_SIGNING_IDENTITY`, `MACOS_KEYCHAIN_PASSWORD`.
+
+Validation after the batch: `python -m pytest tests\test_macos_notarization.py tests\test_release_smoke.py -q` passed (`15 passed`), Ruff passed for the touched Python files, Git Bash syntax-checking passed for `scripts/notarize_macos.sh`, and full `python scripts\release_smoke.py --json` exited `0` with all 13 steps green (`249 passed` in pytest-fast). Limitation: this Windows VM cannot contact Apple's notary service with real credentials, so the first tagged macOS release with configured secrets remains the live acceptance test.
 
 ---
 
@@ -300,7 +320,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (16 open + F191/F195/F197/F199 closed locally, including 2 regulatory):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), **F202 (Apple notarisation, regulatory)**, F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (15 open + F191/F195/F197/F199/F202 closed locally, including 1 regulatory still open):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift), F207 (bundled FFmpeg version manifest), F208 (OpenAPI validity test), F209 (MCP ↔ route consistency), F218 (import-order stability), F219 (SBOM completeness), **F236 (FCC caption tokens, regulatory)**, F237 (R128 v5.0 correction), F240 (per-target reading-speed profiles), F241 (HarfBuzz CI gate), F243 (UTF-8 no-BOM SRT), F244 (Whisper confidence + low-confidence flag), F251 (beta typings diff tracker), F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML

@@ -262,3 +262,31 @@ Pass 9 was an implementation pass, not a new external research pass. It used loc
 ### Pass 9 saturation note
 
 No new external searching was needed. The next research-heavy gaps are still F179 (features.md reconciliation), F202/F236 regulatory implementation detail, and the Python cross-version install matrix. The next local-verifiable implementation gaps are F208/F209/F218/F219/F204.
+
+---
+
+## Pass 10 (2026-05-17 — F202 macOS notarization tooling)
+
+Pass 10 was an implementation pass with a small official-doc refresh against Apple notarization guidance.
+
+### Pass 10 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 10.1 | Inspected the existing GitHub Actions build workflow and PyInstaller spec. | Confirmed macOS builds produce `dist/OpenCut-Server` but had no signing/notarization step. |
+| Pass 10.2 | Checked Apple Developer docs for current notarization tooling. | Confirmed `notarytool` path and `altool` retirement. |
+| Pass 10.3 | Added macOS signing/notarization script and wired it into tagged/manual macOS release builds. | `scripts/notarize_macos.sh`, `.github/workflows/build.yml` |
+| Pass 10.4 | Added docs and static tests for required secrets, notarytool usage, hardened-runtime signing, and release upload wiring. | `docs/MACOS_NOTARIZATION.md`, `tests/test_macos_notarization.py` |
+
+### Pass 10 validation results
+
+| Check | Result |
+|---|---|
+| Focused notarization/release-smoke tests | **PASS** — `15 passed` |
+| Ruff on touched Python files | **PASS** |
+| Shell syntax check via Git Bash | **PASS** |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `249 passed` |
+
+### Pass 10 saturation note
+
+Repository-side F202 tooling is complete enough to run on a macOS GitHub Actions release runner once secrets exist. The remaining evidence gap is external and credential-bound: first live Apple notary acceptance with real Developer ID and App Store Connect API credentials.
