@@ -545,3 +545,45 @@ Pass 18 combined targeted standards verification with a local implementation pas
 ### Pass 18 saturation note
 
 F237 is complete for source-backed standards metadata and preset API correction. It intentionally does not declare generic streaming/podcast targets as universal compliance standards; they remain editable profiles, while EBU R128 and ITU BS.1770 carry the standards metadata.
+
+---
+
+## Pass 19 (2026-05-17 — F240 caption reading-speed profiles)
+
+Pass 19 combined targeted external standards verification with a local caption-QC implementation pass. The source check was necessary because the backlog shorthand bundled supported and unsupported numeric claims.
+
+### Pass 19 external searches
+
+| Query / source | Result |
+|---|---|
+| `Netflix Timed Text Style Guide English USA reading speed characters per second adult children 17 20` | Found the current Netflix English (USA) guide. It lists adult programs at 20 CPS and children's programs at 17 CPS, correcting the earlier "Netflix 17 cps" shorthand. |
+| `BBC subtitle guidelines 160 180 words per minute reading speed subtitles` | Found an archived official BBC Subtitle Guidelines page, version 1.2.4a, recommending 160-180 WPM. |
+| `DCMP Captioning Key presentation rate words per minute 160 180 captions` | Found DCMP Captioning Key presentation-rate guidance; upper-level educational media should not exceed 160 WPM. |
+| `FCC caption quality best practices reading speed words per minute` + 47 CFR § 79.1 | Found qualitative FCC timing/readability requirements but no hard fixed WPM cap in the official rule text. |
+| `YouTube subtitle guidelines reading speed words per minute 220 official captions` | Found YouTube official caption upload/timing help, but no official hard numeric reading-speed cap. |
+
+### Pass 19 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 19.1 | Inspected `caption_compliance.py`, `caption_qc.py`, `/captions/qc`, and existing caption tests. | Confirmed QC already wraps the compliance checker and can accept a narrow speed-profile overlay without a parallel parser. |
+| Pass 19.2 | Added `opencut/core/caption_reading_profiles.py`. | New registry records Netflix adult/children, BBC editorial, DCMP upper-level, FCC qualitative, and YouTube advisory profiles with source URLs, confidence, enforcement, and max CPS/WPM data. |
+| Pass 19.3 | Wired profile overlays through `caption_compliance` and `caption_qc`. | `check_caption_compliance` now accepts per-call rule overrides; `qc_captions` accepts `reading_profile` and returns profile metadata; advisory mode now downgrades actual violation rule names. |
+| Pass 19.4 | Added API route and tests. | `GET /captions/qc/reading-profiles` exposes the registry; `POST /captions/qc` accepts `reading_profile`, `profile`, and `speed_profile`; `tests/test_caption_reading_profiles.py` pins behavior and source corrections. |
+| Pass 19.5 | Regenerated route manifest and updated roadmap/research state. | Route manifest now reports 1,362 routes / 101 blueprints; F240 marked closed; next local-verifiable Now queue starts with F241/F243/F244 while F205 remains blocked by long coverage runtime. |
+
+### Pass 19 validation results
+
+| Check | Result |
+|---|---|
+| Focused caption profile/QC/compliance tests | **PASS** — `31 passed` |
+| Ruff on touched Python files | **PASS** |
+| Python compile for touched Python files | **PASS** |
+| Route manifest regeneration/check | **PASS** — 1,362 routes / 101 blueprints |
+| API alias drift check | **PASS** — 15 aliases / 218 canonical `/api` routes |
+| Feature-readiness drift check | **PASS** — 58 generated records / 67 route bindings |
+| Full release smoke | **PASS** — all 13 steps green; pytest-fast `284 passed` |
+
+### Pass 19 saturation note
+
+F240 is complete for repository-side source-backed reading-speed profiles and QC API exposure. It intentionally keeps FCC as qualitative and YouTube's 220 WPM profile as a low-confidence advisory because no official numeric cap was found in the checked sources.

@@ -233,6 +233,9 @@ def check_caption_compliance(
     srt_path: str,
     standard: str = "netflix",
     on_progress: Optional[Callable] = None,
+    *,
+    rule_overrides: Optional[dict] = None,
+    standard_label: Optional[str] = None,
 ) -> ComplianceResult:
     """
     Check SRT subtitle file against a compliance standard.
@@ -241,6 +244,9 @@ def check_caption_compliance(
         srt_path: Path to the .srt file.
         standard: Standard name ("netflix", "bbc", "fcc", "youtube").
         on_progress: Progress callback(pct, msg).
+        rule_overrides: Optional per-call rule overrides, used by caption
+            reading-speed profiles.
+        standard_label: Optional display label for the effective rule set.
 
     Returns:
         ComplianceResult with all violations found.
@@ -248,7 +254,23 @@ def check_caption_compliance(
     if standard not in STANDARDS:
         standard = "netflix"
 
-    rules = STANDARDS[standard]
+    rules = dict(STANDARDS[standard])
+    if rule_overrides:
+        allowed_override_keys = {
+            "max_cpl",
+            "min_duration_ms",
+            "max_duration_ms",
+            "max_cps",
+            "max_lines",
+            "min_gap_ms",
+            "max_wpm",
+            "label",
+        }
+        for key, value in rule_overrides.items():
+            if key in allowed_override_keys:
+                rules[key] = value
+    if standard_label:
+        rules["label"] = standard_label
     subtitles = _parse_srt(srt_path)
     violations: List[Violation] = []
     checked_rules: List[str] = []
