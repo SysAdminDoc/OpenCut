@@ -1,15 +1,15 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 10)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 11)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (during Pass 9; Passes 1-9 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, and Pass 9 closed F195. This file documents deferred research/product work for a future Pass 10+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (during Pass 10; Passes 1-10 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, and Pass 10 closed the repository-side F202 notarization tooling. This file documents deferred research/product work for a future Pass 11+, not a broken or incomplete research run.
 
 ---
 
 ## 1. State at hand-off
 
-- **Repo branch:** `main`, expected 32 commits ahead of `origin/main` after the Pass-9 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
+- **Repo branch:** `main`, expected 33 commits ahead of `origin/main` after the Pass-10 checkpoint commit. Push to `SysAdminDoc/OpenCut` is blocked by local GitHub auth (`MavenImaging` lacks permission for `SysAdminDoc/OpenCut`).
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
 - **Live counts:** 1,359 routes / 101 blueprints / 523 core modules / 133 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 MCP tools / 30 OpenAPI-typed endpoints.
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
@@ -215,10 +215,10 @@ Pass 4 closed the biggest remaining verification gap: the full release-smoke run
 | npm advisory state | **PASS** in release-smoke allow-list step; raw `npm audit --json` still shows the known moderate Vite `.map` advisory that F095 documents |
 | `npm view @adobe/premierepro version dist-tags --json` | Confirmed `latest=26.2.0`, `beta=26.3.0-beta.67` |
 
-### Pass 10 entry point
+### Pass 11 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Continue the F191-F260 Now queue.** F202 is the next listed item but likely needs Apple Developer notarisation credentials; if unavailable, prefer a local-verifiable S item such as F208/F209/F218/F219.
+2. **Continue the F191-F260 Now queue.** F204 is the next listed item after F202; it is local-verifiable release plumbing for SBOM upload.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
 
@@ -375,6 +375,31 @@ Pass 9 closed the missing curated MCP tools item.
 
 ### Remaining immediate work
 
-- F202 is still first in the Now list after F195 but likely requires Apple Developer notarisation credentials for full implementation.
-- Local-verifiable next candidates: F208 (OpenAPI validity test), F209 (MCP tool/route consistency test), F218 (blueprint import-order stability), F219 (SBOM completeness test), or F204 (release SBOM attach plumbing).
+- F202 repository-side tooling is closed; the first live Apple acceptance still needs repository secrets and a macOS release runner.
+- Local-verifiable next candidates: F204 (release SBOM attach plumbing), F208 (OpenAPI validity test), F209 (MCP tool/route consistency test), F218 (blueprint import-order stability), or F219 (SBOM completeness test).
 - Push remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
+
+---
+
+## 16. Pass 10 update (same day, F202 macOS notarization tooling)
+
+Pass 10 closed the repository-side macOS notarization release path.
+
+### What Pass 10 closed
+
+| Item | Status |
+|---|---|
+| F202 | **DONE LOCALLY** — added `scripts/notarize_macos.sh`, wired tagged/manual macOS release builds to sign the PyInstaller bundle with Developer ID hardened runtime, submit `OpenCut-Server-macOS.zip` through `xcrun notarytool`, and upload the notarized ZIP on tag releases. |
+
+### Validation after Pass 10
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_macos_notarization.py tests/test_release_smoke.py -q` | PASS — `15 passed` |
+| `ruff check tests/test_macos_notarization.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `C:\Program Files\Git\bin\bash.exe -n scripts/notarize_macos.sh` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast `249 passed` |
+
+### Limitation
+
+Apple notarization itself was not executed from this Windows VM. GitHub secrets still need to be configured: `MACOS_CERTIFICATE_P12_BASE64`, `MACOS_CERTIFICATE_PASSWORD`, `APPLE_API_KEY_ID`, `APPLE_API_ISSUER_ID`, and `APPLE_API_PRIVATE_KEY`.

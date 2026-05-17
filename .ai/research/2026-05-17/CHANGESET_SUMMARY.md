@@ -481,3 +481,35 @@ Pass 9 closed the missing post-Wave-M curated MCP tools item.
 | `python -m pytest tests/test_mcp_server.py tests/test_release_smoke.py -q` | PASS — `17 passed` |
 | `ruff check opencut/mcp_server.py scripts/release_smoke.py tests/test_mcp_server.py --select E,F,I --ignore E501,E402` | PASS |
 | `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast reported `246 passed` |
+
+---
+
+## 15. Pass 10 additions (same day, F202 macOS notarization tooling)
+
+Pass 10 closed the repository-side macOS signing/notarization release path.
+
+### Files added or edited in Pass 10
+
+| Path | Change |
+|---|---|
+| `scripts/notarize_macos.sh` | Added macOS-only Developer ID certificate import, hardened-runtime Mach-O signing, `xcrun notarytool submit --wait`, and notarized ZIP creation. |
+| `.github/workflows/build.yml` | Tagged/manual macOS release builds now call the notarization script and upload `OpenCut-Server-macOS.zip` to GitHub Releases. |
+| `docs/MACOS_NOTARIZATION.md` | Documents required GitHub secrets, local commands, and Apple references. |
+| `tests/test_macos_notarization.py` | Static release-gate coverage for notarytool usage, hardened runtime signing, workflow wiring, and documentation. |
+| `scripts/release_smoke.py` | Added `tests/test_macos_notarization.py` to the release-gate pytest slice. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `INSTALLER_AUDIT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CONTINUE_FROM_HERE.md` | Marked F202 repository-side tooling closed and documented the remaining secret/live-service limitation. |
+
+### Items closed in Pass 10
+
+| F# | Result |
+|---|---|
+| F202 | Closed locally — macOS release builds have Developer ID signing + notarytool submission wiring; live Apple acceptance requires configured secrets. |
+
+### Validation after Pass 10
+
+| Command | Result |
+|---|---|
+| `python -m pytest tests/test_macos_notarization.py tests/test_release_smoke.py -q` | PASS — `15 passed` |
+| `ruff check tests/test_macos_notarization.py scripts/release_smoke.py --select E,F,I --ignore E501,E402` | PASS |
+| `C:\Program Files\Git\bin\bash.exe -n scripts/notarize_macos.sh` | PASS |
+| `python scripts/release_smoke.py --json` | PASS — all 13 release-smoke steps green; pytest-fast reported `249 passed` |
