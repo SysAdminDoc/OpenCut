@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.80
+**Version**: 4.81
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,379 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -168,8 +168,21 @@
 > **v4.79 status (2026-05-18, seventy-sixth pass)**: closed **F220-F222** by turning the previously unclear AI feature trio into primary API surfaces. RVC voice conversion now discovers external RVC CLI/script backends, uses sibling index files when present, and falls back to FFmpeg with valid WAV output; `/ai/auto-grade` now accepts natural-language color `intent` and `intensity` through the existing library/LLM color-intent resolver; `/ai/pacing-analysis` now accepts cut points plus `total_duration` and exposes `/ai/pacing-genres`. The route manifest is regenerated to **1,378 routes**, the opt-in extended MCP catalogue to **1,321 tools**, and focused AI editing/content tests pin the contracts.
 >
 > **v4.80 status (2026-05-18, seventy-seventh pass)**: closed **F224** by reconciling the shipped deepfake detector with the AI command surface and report contract. `/ai/deepfake-detect` now aliases the existing `/video/detect-deepfake` route, detector results include stable evidence tags, face counts, detector version, analysis methods, flagged-segment counts, and review guidance, and authenticity reports carry the same metadata. The route manifest is regenerated to **1,379 routes** and the opt-in extended MCP catalogue to **1,322 tools**.
+>
+> **v4.81 status (2026-05-18, seventy-eighth pass)**: closed **F228-F230** by extending F105 review bundles with explicit voice-note attachments and optional HLS browser-scrubbing renditions. `build_review_bundle()` now accepts validated `voice_notes` entries, writes `voice_notes/index.json` plus copied audio files, and can generate an opt-in `hls/master.m3u8` VOD proxy under `hls/` even when `include_media=false`. Bundle manifests and route responses expose voice-note and HLS counts/paths, `docs/REVIEW_BUNDLES.md` documents both contracts, and the generated route/MCP manifests stay at **1,379 routes** and **1,322 tools**.
 
 ---
+
+## 2026-05-18 v4.81 Review Bundle Voice Notes + HLS Rendition (F228-F230)
+
+Two Later-tier review-bundle items closed in this pass.
+
+| F# | Area | Status |
+|---|---|---|
+| F228 | Voice-note attachments | `POST /review/bundle` and `build_review_bundle()` now accept explicit `voice_notes` entries with validated audio paths and optional comment/timing/author/transcript metadata. Bundles write `voice_notes/index.json` plus copied audio attachments without leaking absolute source paths. |
+| F230 | HLS browser scrubbing | Review bundles can opt into `include_hls=true` to generate `hls/master.m3u8`, segments, and `hls/index.json`; this can pair with `include_media=false` so reviewers can scrub in a browser without downloading the source render. |
+
+Validation after the batch: `python -m py_compile` passed for touched review-bundle route/core/tests, focused review-bundle tests passed (`20 passed`), focused route/MCP generated-surface tests passed (`34 passed`), Ruff passed on touched files, and generated route/MCP/API-alias checks passed.
 
 ## 2026-05-18 v4.80 Deepfake Detection Reconciliation (F224)
 
@@ -1435,7 +1448,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
-- Flagship review-bundle extensions: **[x] F225**, **[x] F226**, **[x] F227**, **[x] F229**, F228 voice notes + F230 HLS rendition remain later
+- Flagship review-bundle extensions: **[x] F225**, **[x] F226**, **[x] F227**, **[x] F228**, **[x] F229**, **[x] F230**
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: [x] F223 RTL/CJK validation suite, [x] F238 PSE hue checker, [x] F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
 - Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + [x] F249 Flatpak primary Linux + [x] F250 Aptabase opt-in telemetry
@@ -1443,7 +1456,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 
-**Later (9 items):** F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76; F210 closed in v4.77; F212 closed in v4.78; F220-F222 closed in v4.79; F224 closed in v4.80.
+**Later (7 items):** F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76; F210 closed in v4.77; F212 closed in v4.78; F220-F222 closed in v4.79; F224 closed in v4.80; F228-F230 closed in v4.81.
 
 **Newly explicit rejects (none in Pass 2)** — all Pass-1 rejects stand; Pass 2 did not propose anything that required new rejection.
 

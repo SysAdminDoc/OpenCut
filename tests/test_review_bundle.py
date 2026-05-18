@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import zipfile
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -20,10 +21,13 @@ def sample_assets(tmp_path: Path):
     captions.write_text("1\n00:00:00,000 --> 00:00:01,000\nhello\n", encoding="utf-8")
     extra = tmp_path / "lut.cube"
     extra.write_text("# LUT placeholder\n", encoding="utf-8")
+    voice = tmp_path / "client_note.wav"
+    voice.write_bytes(b"RIFFdemo voice note")
     return {
         "media": media,
         "captions": captions,
         "extra": extra,
+        "voice": voice,
         "out": tmp_path / "review.zip",
     }
 
@@ -262,6 +266,103 @@ def test_bundle_writes_premiere_marker_csv_and_edl_exports(sample_assets):
     assert edl_roundtrip.markers[0].comment.startswith("Brighten this shot")
 
 
+def test_bundle_writes_voice_note_attachments(sample_assets):
+    bundle = rb.build_review_bundle(
+        output_path=sample_assets["out"],
+        job_label="Voice Note Review",
+        markers_payload={
+            "comments": [
+                {"id": "c1", "text": "Listen to client note", "timestamp_sec": 2.0},
+            ]
+        },
+        voice_notes=[
+            {
+                "id": "vn1",
+                "path": str(sample_assets["voice"]),
+                "comment_id": "c1",
+                "author": "Client",
+                "timestamp_sec": 2.0,
+                "duration_seconds": 3.5,
+                "text": "Needs a softer music cue",
+            }
+        ],
+        framerate=24.0,
+    )
+
+    assert bundle.voice_notes_path == "voice_notes/index.json"
+    assert bundle.voice_note_count == 1
+
+    with zipfile.ZipFile(bundle.output_path) as zf:
+        names = sorted(zf.namelist())
+        index = json.loads(zf.read("voice_notes/index.json").decode("utf-8"))
+        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+
+    assert "voice_notes/001_vn1.wav" in names
+    assert index["schema"] == "opencut.review-voice-notes.v1"
+    assert index["voice_note_count"] == 1
+    note = index["voice_notes"][0]
+    assert note["comment_id"] == "c1"
+    assert note["author"] == "Client"
+    assert note["audio_path"] == "voice_notes/001_vn1.wav"
+    assert note["frame_number"] == 48
+    assert len(note["sha256"]) == 64
+    assert manifest["voice_notes_basename"] == "voice_notes/index.json"
+    assert manifest["voice_note_count"] == 1
+
+
+def test_voice_note_attachments_reject_non_audio(tmp_path):
+    note = tmp_path / "note.txt"
+    note.write_text("not audio", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="audio file"):
+        rb.build_review_bundle(
+            output_path=tmp_path / "review.zip",
+            voice_notes=[{"path": str(note)}],
+        )
+
+
+@patch("opencut.core.review_bundle.run_ffmpeg")
+def test_bundle_writes_hls_rendition(mock_run_ffmpeg, sample_assets):
+    def fake_hls(cmd, timeout=None):
+        playlist = Path(cmd[-1])
+        playlist.write_text(
+            "#EXTM3U\n#EXT-X-VERSION:3\n#EXTINF:4.000,\nsegment_000.ts\n#EXT-X-ENDLIST\n",
+            encoding="utf-8",
+        )
+        (playlist.parent / "segment_000.ts").write_bytes(b"segment bytes")
+
+    mock_run_ffmpeg.side_effect = fake_hls
+
+    bundle = rb.build_review_bundle(
+        output_path=sample_assets["out"],
+        media_path=str(sample_assets["media"]),
+        include_media=False,
+        include_hls=True,
+        hls_segment_seconds=4.0,
+        hls_width=640,
+    )
+
+    assert bundle.hls_index_path == "hls/index.json"
+    assert bundle.hls_playlist_path == "hls/master.m3u8"
+    assert bundle.hls_file_count == 2
+    assert bundle.hls_total_bytes > 0
+    assert mock_run_ffmpeg.called
+
+    with zipfile.ZipFile(bundle.output_path) as zf:
+        names = sorted(zf.namelist())
+        index = json.loads(zf.read("hls/index.json").decode("utf-8"))
+        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+
+    assert "hls/master.m3u8" in names
+    assert "hls/segment_000.ts" in names
+    assert index["schema"] == "opencut.review-hls.v1"
+    assert index["playlist"] == "hls/master.m3u8"
+    assert index["target_width"] == 640
+    assert manifest["hls_index_basename"] == "hls/index.json"
+    assert manifest["hls_playlist_basename"] == "hls/master.m3u8"
+    assert manifest["hls_file_count"] == 2
+
+
 def test_bundle_writes_svg_drawing_annotations(sample_assets):
     bundle = rb.build_review_bundle(
         output_path=sample_assets["out"],
@@ -476,6 +577,67 @@ def test_review_bundle_route_reports_svg_annotations(client, csrf_token, tmp_pat
     payload = resp.get_json()
     assert payload["annotations_path"] == "annotations/index.json"
     assert payload["annotation_count"] == 1
+
+
+def test_review_bundle_route_reports_voice_notes(client, csrf_token, tmp_path):
+    from tests.conftest import csrf_headers
+
+    voice = tmp_path / "note.wav"
+    voice.write_bytes(b"RIFFroute voice note")
+    out_path = tmp_path / "voice-notes.zip"
+    resp = client.post(
+        "/review/bundle",
+        json={
+            "output_path": str(out_path),
+            "voice_notes": [
+                {
+                    "path": str(voice),
+                    "id": "route-note",
+                    "comment_id": "c1",
+                    "timestamp_sec": 1.0,
+                }
+            ],
+        },
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 200, resp.get_json()
+    payload = resp.get_json()
+    assert payload["voice_notes_path"] == "voice_notes/index.json"
+    assert payload["voice_note_count"] == 1
+
+
+@patch("opencut.core.review_bundle.run_ffmpeg")
+def test_review_bundle_route_reports_hls_rendition(mock_run_ffmpeg, client, csrf_token, tmp_path):
+    from tests.conftest import csrf_headers
+
+    def fake_hls(cmd, timeout=None):
+        playlist = Path(cmd[-1])
+        playlist.write_text("#EXTM3U\n#EXTINF:4.000,\nsegment_000.ts\n#EXT-X-ENDLIST\n", encoding="utf-8")
+        (playlist.parent / "segment_000.ts").write_bytes(b"segment bytes")
+
+    mock_run_ffmpeg.side_effect = fake_hls
+    media = tmp_path / "demo.mp4"
+    media.write_bytes(b"media-bytes")
+    out_path = tmp_path / "hls.zip"
+
+    resp = client.post(
+        "/review/bundle",
+        json={
+            "output_path": str(out_path),
+            "media_path": str(media),
+            "include_media": False,
+            "include_hls": True,
+            "hls_width": 640,
+        },
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 200, resp.get_json()
+    payload = resp.get_json()
+    assert payload["hls_index_path"] == "hls/index.json"
+    assert payload["hls_playlist_path"] == "hls/master.m3u8"
+    assert payload["hls_file_count"] == 2
 
 
 def test_review_bundle_route_reports_thread_completion(client, csrf_token, tmp_path):

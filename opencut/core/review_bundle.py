@@ -35,6 +35,7 @@ import json
 import logging
 import os
 import re
+import tempfile
 import time
 import zipfile
 from dataclasses import asdict, dataclass, field
@@ -43,21 +44,38 @@ from typing import Any, Dict, List, Optional, Sequence
 from xml.sax.saxutils import escape
 
 from opencut.core.marker_metadata import denormalise_color, normalise_color
+from opencut.helpers import get_ffmpeg_path, run_ffmpeg
 from opencut.openapi_registry import openapi_response_schema
 
 logger = logging.getLogger("opencut")
 
-BUNDLE_VERSION = 4
+BUNDLE_VERSION = 5
 DEFAULT_OTIO_RATE = 30.0
 OTIO_MARKERS_BASENAME = "markers.otio"
 ANNOTATIONS_INDEX_BASENAME = "annotations/index.json"
 THREADS_BASENAME = "review_threads.json"
 PREMIERE_MARKERS_BASENAME = "premiere_markers.csv"
 EDL_MARKERS_BASENAME = "review_markers.edl"
+VOICE_NOTES_INDEX_BASENAME = "voice_notes/index.json"
+HLS_INDEX_BASENAME = "hls/index.json"
+HLS_PLAYLIST_BASENAME = "hls/master.m3u8"
 DEFAULT_ANNOTATION_WIDTH = 1920
 DEFAULT_ANNOTATION_HEIGHT = 1080
 DRAWING_ANNOTATION_TYPES = frozenset({"drawing_rect", "drawing_circle", "drawing_arrow"})
 CLOSED_REVIEW_STATUSES = frozenset({"resolved", "wontfix"})
+VOICE_NOTE_AUDIO_EXTENSIONS = frozenset({
+    ".aac",
+    ".aif",
+    ".aiff",
+    ".flac",
+    ".m4a",
+    ".mp3",
+    ".ogg",
+    ".opus",
+    ".wav",
+    ".weba",
+    ".webm",
+})
 
 
 @dataclass
@@ -95,6 +113,12 @@ class ReviewBundleResult:
     premiere_markers_path: str = ""
     edl_markers_path: str = ""
     marker_export_count: int = 0
+    voice_notes_path: str = ""
+    voice_note_count: int = 0
+    hls_index_path: str = ""
+    hls_playlist_path: str = ""
+    hls_file_count: int = 0
+    hls_total_bytes: int = 0
     generated_at: float = field(default_factory=time.time)
     job_label: str = ""
 
@@ -116,6 +140,12 @@ class ReviewBundleResult:
             "premiere_markers_path": self.premiere_markers_path,
             "edl_markers_path": self.edl_markers_path,
             "marker_export_count": self.marker_export_count,
+            "voice_notes_path": self.voice_notes_path,
+            "voice_note_count": self.voice_note_count,
+            "hls_index_path": self.hls_index_path,
+            "hls_playlist_path": self.hls_playlist_path,
+            "hls_file_count": self.hls_file_count,
+            "hls_total_bytes": self.hls_total_bytes,
             "generated_at": self.generated_at,
             "job_label": self.job_label,
             "entries": [e.as_dict() for e in self.entries],
@@ -772,6 +802,175 @@ def build_review_threads(markers_payload: Any, *, framerate: float = DEFAULT_OTI
     }
 
 
+def _payload_rows(payload: Any, keys: Sequence[str]) -> List[Dict[str, Any]]:
+    if payload is None:
+        return []
+    if isinstance(payload, list):
+        return [item for item in payload if isinstance(item, dict)]
+    if isinstance(payload, dict):
+        for key in keys:
+            value = payload.get(key)
+            if isinstance(value, list):
+                return [item for item in value if isinstance(item, dict)]
+        return [payload]
+    return []
+
+
+def _voice_note_path(note: Dict[str, Any]) -> str:
+    raw = _first_present(
+        note,
+        ("path", "file_path", "filepath", "audio_path", "voice_note_path", "attachment_path"),
+    )
+    return str(raw or "").strip()
+
+
+def build_review_voice_notes(
+    voice_notes_payload: Any,
+    *,
+    framerate: float = DEFAULT_OTIO_RATE,
+) -> tuple[Dict[str, Any], List[tuple[str, Path, str]]]:
+    """Build the voice-note sidecar and queued attachment files."""
+    rate = max(1.0, _safe_float(framerate, DEFAULT_OTIO_RATE))
+    index: Dict[str, Any] = {
+        "schema": "opencut.review-voice-notes.v1",
+        "bundle_version": BUNDLE_VERSION,
+        "framerate": rate,
+        "voice_notes": [],
+    }
+    queued_files: List[tuple[str, Path, str]] = []
+
+    for idx, note in enumerate(_payload_rows(voice_notes_payload, ("voice_notes", "notes", "attachments"))):
+        raw_path = _voice_note_path(note)
+        if not raw_path:
+            raise ValueError(f"voice_notes[{idx}] path is required")
+        source = Path(raw_path)
+        if not source.exists():
+            raise FileNotFoundError(raw_path)
+        ext = source.suffix.lower()
+        if ext not in VOICE_NOTE_AUDIO_EXTENSIONS:
+            raise ValueError(f"voice_notes[{idx}] must be an audio file")
+
+        note_id = _slug(str(note.get("id") or note.get("voice_note_id") or source.stem), f"voice-note-{idx + 1}")
+        start_seconds = _safe_float(
+            _first_present(note, ("timestamp_sec", "start_seconds", "time", "timestamp")),
+            0.0,
+        )
+        frame_number = _safe_int(note.get("frame_number"), int(round(start_seconds * rate)))
+        arcname = f"voice_notes/{idx + 1:03d}_{note_id}{ext}"
+        stat = source.stat()
+        sha256 = _sha256_of(source)
+        queued_files.append((arcname, source, "voice-note attachment"))
+        index["voice_notes"].append(
+            {
+                "id": note_id,
+                "comment_id": str(_first_present(note, ("comment_id", "marker_id", "parent_id")) or "").strip(),
+                "author": str(note.get("author") or "").strip(),
+                "text": str(_first_present(note, ("text", "transcript", "caption", "notes")) or "").strip(),
+                "timestamp_sec": max(0.0, start_seconds),
+                "frame_number": max(0, frame_number),
+                "duration_seconds": max(0.0, _safe_float(note.get("duration_seconds") or note.get("duration"))),
+                "source_basename": source.name,
+                "audio_path": arcname,
+                "mime_type": str(note.get("mime_type") or "").strip(),
+                "sha256": sha256,
+                "bytes": stat.st_size,
+            }
+        )
+
+    index["voice_note_count"] = len(index["voice_notes"])
+    return index, queued_files
+
+
+def build_hls_rendition(
+    media_path: str | os.PathLike,
+    *,
+    segment_seconds: float = 4.0,
+    width: int = 960,
+    video_bitrate: str = "1400k",
+    audio_bitrate: str = "96k",
+) -> tuple[Dict[str, Any], List[tuple[str, bytes, str]]]:
+    """Build a browser-scrubbable HLS rendition and return in-memory bundle files."""
+    media = Path(media_path)
+    if not media.exists():
+        raise FileNotFoundError(str(media_path))
+
+    segment_time = max(1.0, min(30.0, _safe_float(segment_seconds, 4.0)))
+    target_width = max(160, min(3840, _safe_int(width, 960)))
+    hls_files: List[tuple[str, bytes, str]] = []
+    with tempfile.TemporaryDirectory(prefix="opencut-review-hls-") as tmp:
+        tmpdir = Path(tmp)
+        playlist = tmpdir / "master.m3u8"
+        segment_pattern = tmpdir / "segment_%03d.ts"
+        scale_filter = f"scale=w='min({target_width},iw)':h=-2"
+        cmd = [
+            get_ffmpeg_path(),
+            "-hide_banner",
+            "-loglevel",
+            "error",
+            "-y",
+            "-i",
+            str(media),
+            "-map",
+            "0:v:0",
+            "-map",
+            "0:a:0?",
+            "-c:v",
+            "libx264",
+            "-preset",
+            "veryfast",
+            "-crf",
+            "28",
+            "-vf",
+            scale_filter,
+            "-c:a",
+            "aac",
+            "-b:a",
+            str(audio_bitrate or "96k"),
+            "-f",
+            "hls",
+            "-hls_time",
+            f"{segment_time:.3f}",
+            "-hls_playlist_type",
+            "vod",
+            "-hls_segment_filename",
+            str(segment_pattern),
+            str(playlist),
+        ]
+        run_ffmpeg(cmd, timeout=7200)
+        if not playlist.exists():
+            raise RuntimeError("HLS rendition did not produce master.m3u8")
+
+        generated = sorted(path for path in tmpdir.iterdir() if path.is_file())
+        for path in generated:
+            arcname = f"hls/{path.name}"
+            note = "HLS playlist" if path.suffix.lower() == ".m3u8" else "HLS media segment"
+            hls_files.append((arcname, path.read_bytes(), note))
+
+    index_files = [
+        {
+            "path": arcname,
+            "bytes": len(payload),
+            "sha256": hashlib.sha256(payload).hexdigest(),
+            "role": "playlist" if arcname == HLS_PLAYLIST_BASENAME else "segment",
+        }
+        for arcname, payload, _note in hls_files
+    ]
+    index = {
+        "schema": "opencut.review-hls.v1",
+        "bundle_version": BUNDLE_VERSION,
+        "source_basename": media.name,
+        "playlist": HLS_PLAYLIST_BASENAME,
+        "segment_seconds": segment_time,
+        "target_width": target_width,
+        "video_bitrate": str(video_bitrate or "1400k"),
+        "audio_bitrate": str(audio_bitrate or "96k"),
+        "file_count": len(hls_files),
+        "total_bytes": sum(item["bytes"] for item in index_files),
+        "files": index_files,
+    }
+    return index, hls_files
+
+
 def _render_summary_html(
     *,
     job_label: str,
@@ -788,6 +987,12 @@ def _render_summary_html(
     marker_export_count: int,
     annotations_basename: str,
     annotation_count: int,
+    voice_notes_basename: str,
+    voice_note_count: int,
+    hls_index_basename: str,
+    hls_playlist_basename: str,
+    hls_file_count: int,
+    hls_total_bytes: int,
     entries: Sequence[BundleEntry],
     notes: str,
 ) -> str:
@@ -832,7 +1037,11 @@ def _render_summary_html(
         f"<strong>Premiere markers:</strong> <code>{premiere_markers_basename or '(none)'}</code><br>"
         f"<strong>EDL markers:</strong> <code>{edl_markers_basename or '(none)'}</code> "
         f"({marker_export_count} markers)<br>"
-        f"<strong>Annotations:</strong> <code>{annotations_basename or '(none)'}</code> ({annotation_count})</p>\n"
+        f"<strong>Annotations:</strong> <code>{annotations_basename or '(none)'}</code> ({annotation_count})<br>"
+        f"<strong>Voice notes:</strong> <code>{voice_notes_basename or '(none)'}</code> ({voice_note_count})<br>"
+        f"<strong>HLS rendition:</strong> <code>{hls_playlist_basename or '(none)'}</code> "
+        f"({hls_file_count} files, {hls_total_bytes:,} bytes; index "
+        f"<code>{hls_index_basename or '(none)'}</code>)</p>\n"
         "  <h2>Notes</h2>\n"
         f"  <pre>{notes_block}</pre>\n"
         "  <h2>Contents</h2>\n"
@@ -856,11 +1065,15 @@ def build_review_bundle(
     markers_payload: Optional[dict] = None,
     notes: str = "",
     extra_files: Optional[List[str]] = None,
+    voice_notes: Optional[Any] = None,
     include_media: bool = True,
+    include_hls: bool = False,
     framerate: float = DEFAULT_OTIO_RATE,
     duration_seconds: float = 0.0,
     annotation_width: int = DEFAULT_ANNOTATION_WIDTH,
     annotation_height: int = DEFAULT_ANNOTATION_HEIGHT,
+    hls_segment_seconds: float = 4.0,
+    hls_width: int = 960,
 ) -> ReviewBundleResult:
     """Create the review bundle on disk.
 
@@ -884,8 +1097,15 @@ def build_review_bundle(
     premiere_markers_basename = ""
     edl_markers_basename = ""
     marker_export_count = 0
+    voice_notes_basename = ""
+    voice_note_count = 0
+    hls_index_basename = ""
+    hls_playlist_basename = ""
+    hls_file_count = 0
+    hls_total_bytes = 0
     pre_entries: List[BundleEntry] = []
     queued_files: List[tuple] = []  # (arcname, source_path, note)
+    memory_files: List[tuple[str, bytes, str]] = []
 
     if media_path:
         media = Path(media_path)
@@ -905,6 +1125,21 @@ def build_review_bundle(
                     note="media omitted (include_media=False); hash refers to source file",
                 )
             )
+        if include_hls:
+            hls_index, hls_files = build_hls_rendition(
+                media,
+                segment_seconds=hls_segment_seconds,
+                width=hls_width,
+            )
+            hls_index_text = json.dumps(hls_index, indent=2, sort_keys=True).encode("utf-8")
+            memory_files.append((HLS_INDEX_BASENAME, hls_index_text, "HLS rendition index"))
+            memory_files.extend(hls_files)
+            hls_index_basename = HLS_INDEX_BASENAME
+            hls_playlist_basename = HLS_PLAYLIST_BASENAME
+            hls_file_count = int(hls_index["file_count"])
+            hls_total_bytes = int(hls_index["total_bytes"])
+    elif include_hls:
+        raise ValueError("media_path is required when include_hls=True")
 
     if captions_path:
         captions = Path(captions_path)
@@ -919,6 +1154,15 @@ def build_review_bundle(
             if not p.exists():
                 raise FileNotFoundError(raw)
             queued_files.append((f"extras/{p.name}", p, "additional file"))
+
+    if voice_notes is not None:
+        voice_notes_index, voice_note_files = build_review_voice_notes(voice_notes, framerate=framerate)
+        voice_note_count = int(voice_notes_index["voice_note_count"])
+        if voice_note_count:
+            voice_notes_basename = VOICE_NOTES_INDEX_BASENAME
+            queued_files.extend(voice_note_files)
+            voice_notes_text = json.dumps(voice_notes_index, indent=2, sort_keys=True).encode("utf-8")
+            memory_files.append((VOICE_NOTES_INDEX_BASENAME, voice_notes_text, "voice-note attachment index"))
 
     if markers_payload is not None:
         markers_basename = "markers.json"
@@ -948,6 +1192,16 @@ def build_review_bundle(
                 arcname=arcname,
                 sha256=_sha256_of(src),
                 bytes=src.stat().st_size,
+                note=note,
+            )
+        )
+    memory_files.sort(key=lambda item: item[0])
+    for arcname, payload, note in memory_files:
+        entries.append(
+            BundleEntry(
+                arcname=arcname,
+                sha256=hashlib.sha256(payload).hexdigest(),
+                bytes=len(payload),
                 note=note,
             )
         )
@@ -1058,6 +1312,12 @@ def build_review_bundle(
         marker_export_count=marker_export_count,
         annotations_basename=annotations_basename,
         annotation_count=annotation_count,
+        voice_notes_basename=voice_notes_basename,
+        voice_note_count=voice_note_count,
+        hls_index_basename=hls_index_basename,
+        hls_playlist_basename=hls_playlist_basename,
+        hls_file_count=hls_file_count,
+        hls_total_bytes=hls_total_bytes,
         entries=entries,
         notes=notes,
     ).encode("utf-8")
@@ -1089,6 +1349,12 @@ def build_review_bundle(
         "annotation_count": annotation_count,
         "annotation_width": _annotation_dimension(annotation_width, DEFAULT_ANNOTATION_WIDTH),
         "annotation_height": _annotation_dimension(annotation_height, DEFAULT_ANNOTATION_HEIGHT),
+        "voice_notes_basename": voice_notes_basename,
+        "voice_note_count": voice_note_count,
+        "hls_index_basename": hls_index_basename,
+        "hls_playlist_basename": hls_playlist_basename,
+        "hls_file_count": hls_file_count,
+        "hls_total_bytes": hls_total_bytes,
         "framerate": max(1.0, _safe_float(framerate, DEFAULT_OTIO_RATE)),
         "duration_seconds": max(0.0, _safe_float(duration_seconds)),
         "notes": notes,
@@ -1131,6 +1397,10 @@ def build_review_bundle(
                     zi = zipfile.ZipInfo(filename=arcname, date_time=(2024, 1, 1, 0, 0, 0))
                     zi.compress_type = zipfile.ZIP_DEFLATED
                     zf.writestr(zi, svg_text)
+        for arcname, payload, _note in memory_files:
+            zi = zipfile.ZipInfo(filename=arcname, date_time=(2024, 1, 1, 0, 0, 0))
+            zi.compress_type = zipfile.ZIP_DEFLATED
+            zf.writestr(zi, payload)
         for arcname, src, _note in queue_sorted:
             zi = zipfile.ZipInfo(filename=_sanitise_arcname(arcname), date_time=(2024, 1, 1, 0, 0, 0))
             zi.compress_type = zipfile.ZIP_DEFLATED
@@ -1157,4 +1427,10 @@ def build_review_bundle(
     bundle.premiere_markers_path = premiere_markers_basename
     bundle.edl_markers_path = edl_markers_basename
     bundle.marker_export_count = marker_export_count
+    bundle.voice_notes_path = voice_notes_basename
+    bundle.voice_note_count = voice_note_count
+    bundle.hls_index_path = hls_index_basename
+    bundle.hls_playlist_path = hls_playlist_basename
+    bundle.hls_file_count = hls_file_count
+    bundle.hls_total_bytes = hls_total_bytes
     return bundle

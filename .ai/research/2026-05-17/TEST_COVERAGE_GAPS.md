@@ -77,6 +77,8 @@ Pass 76 closed **F220-F222** with focused unit and route coverage for the previo
 
 Pass 77 closed **F224** with focused deepfake detector coverage. `tests/test_video_vfx.py` now pins segment evidence metadata, authenticity-report metadata, and the `/ai/deepfake-detect` alias used by the command palette.
 
+Pass 78 closed **F228-F230** with focused review-bundle coverage. `tests/test_review_bundle.py` now pins voice-note attachment indexing/copy behavior, audio-extension rejection, optional HLS rendition packaging, and route responses for both new bundle surfaces.
+
 ### 3.7 Performance / regression benchmarks
 
 The F128 FFmpeg filter regression suite is *Now* tier but not yet shipped. Once it lands, it should also cover:
