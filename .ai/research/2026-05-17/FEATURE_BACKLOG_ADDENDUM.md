@@ -68,7 +68,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | [x] F221 | AI Auto-Color Grading (LLM-driven mood→LUT) | Closed in Pass 76 — `/ai/auto-grade` now accepts natural-language `intent` + `intensity` through `ai_color_intent.py` and exposes `/ai/color-intents` | FEATURES_RECONCILIATION §3 | M | Later |
 | [x] F222 | AI Pacing & Rhythm Analysis (genre templates) | Closed in Pass 76 — `/ai/pacing-analysis` now accepts cut points + duration, preserves file-scene analysis, and exposes `/ai/pacing-genres` | FEATURES_RECONCILIATION §3 | M | Later |
 | [x] F223 | RTL / CJK / Bidi caption rendering validation suite | Closed in Pass 46 and extended by Pass 47 — `opencut.tools.caption_unicode_validation --json --check` validates RTL, mixed bidi, Indic, and no-space CJK fixtures across SRT, ASS, and burn-in ASS export paths; F242 now supplies no-space CJK wrapping | FEATURES_RECONCILIATION §3 + niche AI §3 | M | Next |
-| F224 | Deepfake / fake-video detector | features.md #27.3; adjacent to J2.6 SafeVision | FEATURES_RECONCILIATION §3 | L | Later |
+| [x] F224 | Deepfake / fake-video detector | Closed in Pass 77 — `/ai/deepfake-detect` aliases the shipped detector and report output now carries evidence, detector metadata, flagged segments, and review guidance | FEATURES_RECONCILIATION §3 | L | Later |
 
 ## E. Collaboration / review-bundle extensions (Frame.io subagent)
 
@@ -130,7 +130,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
 | **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, [x] F260 | 32 |
-| **Later** | [x] F193, [x] F196, [x] F206, [x] F210, [x] F212, [x] F220, [x] F221, [x] F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 10 open + F193/F196/F206/F210/F212/F220/F221/F222 closed |
+| **Later** | [x] F193, [x] F196, [x] F206, [x] F210, [x] F212, [x] F220, [x] F221, [x] F222, [x] F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 9 open + F193/F196/F206/F210/F212/F220/F221/F222/F224 closed |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
 **Total project F-numbers: 140** (F121-F260 from Pass 1 + Pass 2; plus the pre-existing F001-F120 from v4.3).

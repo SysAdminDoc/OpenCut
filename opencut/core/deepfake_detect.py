@@ -13,12 +13,24 @@ Requires: pip install opencv-python-headless numpy
 import json
 import logging
 import os
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Callable, List, Optional
 
 from opencut.helpers import ensure_package, get_video_info
 
 logger = logging.getLogger("opencut")
+
+DETECTOR_VERSION = "1.0"
+ANALYSIS_METHODS = [
+    "face_temporal_consistency",
+    "face_boundary_blending",
+    "frequency_artifact_scan",
+]
+SIGNAL_WEIGHTS = {
+    "face_inconsistency": 0.5,
+    "blending": 0.25,
+    "frequency": 0.25,
+}
 
 
 # ---------------------------------------------------------------------------
@@ -33,6 +45,8 @@ class DeepfakeResult:
     face_consistency: float = 0.0
     frequency_score: float = 0.0
     blending_score: float = 0.0
+    faces_detected: int = 0
+    evidence: List[str] = field(default_factory=list)
     label: str = "unknown"  # "authentic", "suspicious", "likely_fake"
 
 
@@ -237,9 +251,9 @@ def detect_deepfake(
 
         # Combine signals
         combined = (
-            0.5 * manipulation_conf
-            + 0.25 * seg["edge_sharpness"]
-            + 0.25 * seg["texture_anomaly"]
+            SIGNAL_WEIGHTS["face_inconsistency"] * manipulation_conf
+            + SIGNAL_WEIGHTS["blending"] * seg["edge_sharpness"]
+            + SIGNAL_WEIGHTS["frequency"] * seg["texture_anomaly"]
         )
         combined = min(1.0, combined)
 
@@ -250,6 +264,7 @@ def detect_deepfake(
         else:
             label = "authentic"
 
+        evidence = _build_evidence(seg, manipulation_conf)
         deepfake_results.append(DeepfakeResult(
             start_time=seg["start_time"],
             end_time=seg["end_time"],
@@ -257,6 +272,8 @@ def detect_deepfake(
             face_consistency=round(seg["face_consistency"], 4),
             frequency_score=round(seg["texture_anomaly"], 4),
             blending_score=round(seg["edge_sharpness"], 4),
+            faces_detected=int(seg.get("faces_detected", 0)),
+            evidence=evidence,
             label=label,
         ))
 
@@ -275,12 +292,44 @@ def detect_deepfake(
     else:
         verdict = "likely_authentic"
 
+    flagged_count = sum(
+        1 for r in deepfake_results if r.label in ("suspicious", "likely_fake")
+    )
     return {
+        "detector_version": DETECTOR_VERSION,
+        "analysis_methods": ANALYSIS_METHODS,
+        "threshold": threshold,
+        "segment_duration": segment_duration,
         "results": [asdict(r) for r in deepfake_results],
+        "flagged_segments": flagged_count,
         "overall_score": round(avg_conf, 4),
         "max_score": round(max_conf, 4),
         "verdict": verdict,
+        "review_recommendation": _review_recommendation(verdict, flagged_count),
     }
+
+
+def _build_evidence(seg: dict, manipulation_conf: float) -> List[str]:
+    """Build stable evidence tags from segment-level detector signals."""
+    evidence = []
+    if manipulation_conf >= 0.3:
+        evidence.append("face_temporal_inconsistency")
+    if seg.get("edge_sharpness", 0.0) >= 0.3:
+        evidence.append("face_boundary_blending")
+    if seg.get("texture_anomaly", 0.0) >= 0.3:
+        evidence.append("frequency_artifact_pattern")
+    if int(seg.get("faces_detected", 0)) == 0:
+        evidence.append("no_face_detected")
+    return evidence
+
+
+def _review_recommendation(verdict: str, flagged_segments: int) -> str:
+    """Return concise guidance for editorial review workflows."""
+    if verdict == "likely_fake":
+        return "Block publication until source authenticity is manually verified."
+    if verdict == "suspicious" or flagged_segments:
+        return "Review flagged segments frame-by-frame before publishing."
+    return "No deepfake-specific artifacts exceeded the configured threshold."
 
 
 # ---------------------------------------------------------------------------
@@ -310,9 +359,16 @@ def generate_authenticity_report(
 
     report = {
         "version": "1.0",
+        "detector_version": results.get("detector_version", DETECTOR_VERSION),
+        "analysis_methods": results.get("analysis_methods", ANALYSIS_METHODS),
         "verdict": results.get("verdict", "unknown"),
         "overall_score": results.get("overall_score", 0.0),
         "max_score": results.get("max_score", 0.0),
+        "flagged_segments": results.get("flagged_segments", 0),
+        "review_recommendation": results.get(
+            "review_recommendation",
+            _review_recommendation(results.get("verdict", "unknown"), 0),
+        ),
         "segments": results.get("results", []),
         "summary": _generate_summary(results),
     }

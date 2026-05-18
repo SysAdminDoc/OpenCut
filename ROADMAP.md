@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.79
+**Version**: 4.80
 **Updated**: 2026-05-18
-**Baseline**: v1.32.0 (1,378 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Baseline**: v1.32.0 (1,379 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
 > **⚡ Active work** lives in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
@@ -166,8 +166,24 @@
 > **v4.78 status (2026-05-18, seventy-fifth pass)**: closed **F212** by adding a WPF installer xUnit suite plus quiet install/uninstall smoke wiring for Windows release runners. `installer/src/OpenCut.Installer/CommandLine/` now parses `--install/--uninstall --quiet` and safety flags, `scripts/smoke_wpf_installer.ps1` installs the self-extracting WPF artifact into a temp root with temp user data, and Release Full runs both the xUnit suite and WPF headless smoke. The pass also fixed the installer project icon path so `dotnet build` succeeds from source.
 >
 > **v4.79 status (2026-05-18, seventy-sixth pass)**: closed **F220-F222** by turning the previously unclear AI feature trio into primary API surfaces. RVC voice conversion now discovers external RVC CLI/script backends, uses sibling index files when present, and falls back to FFmpeg with valid WAV output; `/ai/auto-grade` now accepts natural-language color `intent` and `intensity` through the existing library/LLM color-intent resolver; `/ai/pacing-analysis` now accepts cut points plus `total_duration` and exposes `/ai/pacing-genres`. The route manifest is regenerated to **1,378 routes**, the opt-in extended MCP catalogue to **1,321 tools**, and focused AI editing/content tests pin the contracts.
+>
+> **v4.80 status (2026-05-18, seventy-seventh pass)**: closed **F224** by reconciling the shipped deepfake detector with the AI command surface and report contract. `/ai/deepfake-detect` now aliases the existing `/video/detect-deepfake` route, detector results include stable evidence tags, face counts, detector version, analysis methods, flagged-segment counts, and review guidance, and authenticity reports carry the same metadata. The route manifest is regenerated to **1,379 routes** and the opt-in extended MCP catalogue to **1,322 tools**.
 
 ---
+
+## 2026-05-18 v4.80 Deepfake Detection Reconciliation (F224)
+
+One `features.md` UNCLEAR item closed in this pass.
+
+| Area | Status |
+|---|---|
+| AI route surface | Added `/ai/deepfake-detect` as an alias for the shipped detector so the command-palette route is real while preserving `/video/detect-deepfake`. |
+| Detector output | `detect_deepfake()` now returns `detector_version`, `analysis_methods`, `threshold`, `segment_duration`, `flagged_segments`, `review_recommendation`, per-segment `faces_detected`, and stable evidence tags. |
+| Report output | `generate_authenticity_report()` now writes detector version, methods, flagged-segment count, and review recommendation into the JSON authenticity report. |
+| Generated artifacts | Route manifest now reports 1,379 routes / 101 blueprints; opt-in extended MCP catalogue now reports 1,322 tools. |
+| Tests | Focused deepfake tests pin metadata/evidence output and `/ai/deepfake-detect` registration. |
+
+Validation after the batch: `python -m py_compile` passed for touched deepfake route/core/tests, focused deepfake route/core tests passed (`12 passed`), Ruff passed on touched deepfake files, and generated route/MCP checks passed.
 
 ## 2026-05-18 v4.79 AI Feature Reconciliation (F220-F222)
 
@@ -634,7 +650,7 @@ One Next-tier MCP visibility item closed in this pass.
 | Surface | Status |
 |---|---|
 | F194 generator | DONE — `opencut/tools/dump_mcp_extended_tools.py` builds `opencut/_generated/mcp_extended_tools.json` from the canonical route manifest, API-alias manifest, and OpenAPI response-schema table. |
-| Extended catalogue | The committed artifact contains 1,321 generated `opencut_route_*` tools after skipping curated routes, special-action curated routes, static routes, and `/api` aliases. |
+| Extended catalogue | The committed artifact contains 1,322 generated `opencut_route_*` tools after skipping curated routes, special-action curated routes, static routes, and `/api` aliases. |
 | Default MCP contract | The default curated surface remains 39 tools. Extended tools list and dispatch only when `OPENCUT_MCP_EXTENDED_TOOLS=1` or `opencut-mcp-server --extended-tools` is set. |
 | Dispatch contract | Generated tools pass path params as top-level args, GET query args through `query`, and mutating JSON payloads through `body`; route metadata is tagged `generated=true` and `priority=extended`. |
 | Guard tests | `tests/test_mcp_extended_tools.py` pins committed-vs-live generation, opt-in behavior, metadata, disabled-call errors, GET query dispatch, mutating body dispatch, and missing path-param validation. Release smoke includes the new test. |
@@ -1427,7 +1443,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 
-**Later (10 items):** F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76; F210 closed in v4.77; F212 closed in v4.78; F220-F222 closed in v4.79.
+**Later (9 items):** F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76; F210 closed in v4.77; F212 closed in v4.78; F220-F222 closed in v4.79; F224 closed in v4.80.
 
 **Newly explicit rejects (none in Pass 2)** — all Pass-1 rejects stand; Pass 2 did not propose anything that required new rejection.
 
@@ -1457,7 +1473,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 ### Phase 0 — What the v4.3 audit missed or changed since
 
-- **Live route manifest** is now **1,378 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's stale marketing badge is not the source of truth — keep the F099 manifest canonical.
+- **Live route manifest** is now **1,379 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's stale marketing badge is not the source of truth — keep the F099 manifest canonical.
 - **F-numbered Now-tier work shipped quickly** between 2026-05-16 and 2026-05-17: F006, F010, F011, F066, F095, F097, F098, F099, F100, F101, F102, F103, F104, F105, F106, F109, F110, F111, F112, F115, F116, F117, F118, F120 (22 of 27 *Now* items landed). F093 (hermetic bootstrap) is partially shipped — UV trampoline path still fails. F094 lockfile audit is partially shipped — `deep-translator` removed, requires recurring `release_smoke` gate.
 - **Wave M (v1.30.0)** added the MCP sidecar (27 tools) — closes `research.md` §1.1 ("MCP server interface — HIGH priority") which is now stale.
 - **Wave L (v1.29.0)** shipped AI face reshape + skin retouch — closes `research.md` §1.3/§1.4 which are now stale.
@@ -1503,7 +1519,7 @@ Full backlog with effort / risk / fit / source in [`.ai/research/2026-05-17/FEAT
 
 ### Phase 3 — Top three strategic moves the v4.3 audit understated
 
-1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,378 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
+1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,379 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
 2. **UXP MCP transport (F146) is the only path through Sept 2026 CEP EOL.** Every competing PPro MCP server today (ayushozha 1,060 tools, leancoderkavy 269, hetpatel-11 97) is CEP-bound and will break when Adobe enforces the cutoff. First UXP-native MCP wins post-EOL.
 3. **StreamDiffusionV2 (F158) unlocks real-time editor-loop preview** on existing LTX-2.3 / Wan / Open-Sora backends — the single biggest UX leap vs CapCut / Runway / Captions, all of whom charge subscriptions for the real-time path.
 

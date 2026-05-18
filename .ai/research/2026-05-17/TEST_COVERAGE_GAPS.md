@@ -75,6 +75,8 @@ Pass 75 closed **F212 — WPF installer test suite**. `installer/tests/OpenCut.I
 
 Pass 76 closed **F220-F222** with focused unit and route coverage for the previously unclear voice/color/pacing features. `tests/test_ai_editing.py` now pins RVC command construction and external backend invocation; `tests/test_ai_content.py` now pins natural-language auto-color intent grading, pacing genre template exposure, and cut-point pacing route acceptance.
 
+Pass 77 closed **F224** with focused deepfake detector coverage. `tests/test_video_vfx.py` now pins segment evidence metadata, authenticity-report metadata, and the `/ai/deepfake-detect` alias used by the command palette.
+
 ### 3.7 Performance / regression benchmarks
 
 The F128 FFmpeg filter regression suite is *Now* tier but not yet shipped. Once it lands, it should also cover:

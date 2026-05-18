@@ -81,7 +81,7 @@ Sampled 21.x items — most map directly to **Wave R/S/T** in ROADMAP.md (lip-sy
 |---|---|---|
 | 27.1 | C2PA / Content Credentials sidecar | ✅ SHIPPED (F110, upgrade to 2.3 is F140) |
 | 27.2 | AI watermarking on generated audio | ✅ SHIPPED (K1.1 AudioSeal) |
-| 27.3 | Deepfake / fake-video detector | ❓ UNCLEAR — would be a J2.6 SafeVision-adjacent feature. → **F224** |
+| 27.3 | Deepfake / fake-video detector | ✅ SHIPPED — Pass 77 closed **F224** with `/ai/deepfake-detect`, evidence tags, and authenticity-report metadata. |
 
 ### Category 74: Timeline Operations (sampled in raw read earlier)
 
@@ -166,7 +166,7 @@ The high SHIPPED rate validates that OpenCut has executed against its 2026-04 pl
 | [x] F221 | 1.6 | AI Auto-Color Grading (LLM-driven mood map → LUT + adjustments) (closed Pass 76) |
 | [x] F222 | 1.12 | AI Pacing & Rhythm Analysis (genre-template comparison) (closed Pass 76) |
 | F223 | 20.6 | RTL / CJK / Bidi caption rendering validation suite |
-| F224 | 27.3 | Deepfake / fake-video detector (adjacent to J2.6 SafeVision) |
+| [x] F224 | 27.3 | Deepfake / fake-video detector (adjacent to J2.6 SafeVision) (closed Pass 77) |
 
 ---
 

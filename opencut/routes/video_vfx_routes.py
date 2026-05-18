@@ -417,6 +417,7 @@ def extract_highlights_route(job_id, filepath, data):
 # 6. Deepfake Detection
 # ===================================================================
 @video_vfx_bp.route("/video/detect-deepfake", methods=["POST"])
+@video_vfx_bp.route("/ai/deepfake-detect", methods=["POST"])
 @require_csrf
 @async_job("deepfake_detect")
 def detect_deepfake_route(job_id, filepath, data):
