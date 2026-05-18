@@ -73,15 +73,36 @@ class VersionSnapshot:
     notes: List[str] = field(default_factory=list)
 
 
-def _http_get(url: str, *, timeout: float = 15.0) -> dict:
-    """GET a JSON URL via stdlib urllib. Raises ``urllib.error.URLError``
-    on connection failure and ``ValueError`` on non-JSON body."""
+# npm registry responses for @adobe/premierepro are ~50-80 KB today.
+# Cap the body at 10 MB so a malicious DNS redirect (or a registry
+# mirror that ships a different package metadata format) can't pin
+# memory by streaming a huge payload through this tool.
+_MAX_RESPONSE_BYTES = 10 * 1024 * 1024
+
+
+def _http_get(url: str, *, timeout: float = 15.0,
+              max_bytes: int = _MAX_RESPONSE_BYTES) -> dict:
+    """GET a JSON URL via stdlib urllib.
+
+    Raises ``urllib.error.URLError`` on connection failure,
+    ``ValueError`` on non-JSON body, and ``RuntimeError`` when the
+    response exceeds ``max_bytes`` (defence against malicious
+    redirects / mirror compromise).
+    """
     request = urllib.request.Request(
         url, headers={"Accept": "application/json", "User-Agent": "opencut-tools"}
     )
     with urllib.request.urlopen(request, timeout=timeout) as resp:
-        body = resp.read().decode("utf-8")
-    return json.loads(body)
+        # Read at most max_bytes + 1 so we can detect overflow without
+        # buffering the whole oversized response.
+        body = resp.read(max_bytes + 1)
+    if len(body) > max_bytes:
+        raise RuntimeError(
+            f"npm registry response exceeded {max_bytes} bytes "
+            f"({len(body)} read). Refusing to parse — possible mirror"
+            f" compromise or DNS hijack on {url}."
+        )
+    return json.loads(body.decode("utf-8"))
 
 
 def _build_offline_snapshot(reason: str) -> VersionSnapshot:
@@ -104,19 +125,44 @@ def fetch_registry(*, timeout: float = 15.0) -> VersionSnapshot:
         payload = _http_get(REGISTRY_URL, timeout=timeout)
     except (urllib.error.URLError, urllib.error.HTTPError, TimeoutError) as exc:
         return _build_offline_snapshot(f"{type(exc).__name__}: {exc}")
+    except RuntimeError as exc:
+        # Response exceeded the safety cap.
+        return VersionSnapshot(status="parse_error", error=str(exc))
     except (ValueError, json.JSONDecodeError) as exc:
         snap = VersionSnapshot(status="parse_error", error=str(exc))
         return snap
 
+    # Defensive shape check — a hijacked mirror could ship a list or
+    # string where a dict is expected. Don't trust the body type.
+    if not isinstance(payload, dict):
+        return VersionSnapshot(
+            status="parse_error",
+            error=f"npm registry returned {type(payload).__name__}, expected dict",
+        )
+
     dist_tags_raw = payload.get("dist-tags") or {}
+    if not isinstance(dist_tags_raw, dict):
+        dist_tags_raw = {}
     versions_raw = payload.get("versions") or {}
+    if not isinstance(versions_raw, dict):
+        versions_raw = {}
+
     tracked = {
-        tag: dist_tags_raw[tag] for tag in TRACKED_TAGS if tag in dist_tags_raw
+        tag: dist_tags_raw[tag] for tag in TRACKED_TAGS
+        if tag in dist_tags_raw and isinstance(dist_tags_raw[tag], str)
     }
-    all_versions = sorted(versions_raw.keys(), key=_semver_key, reverse=True)
+    all_versions = sorted(
+        (str(v) for v in versions_raw.keys()),
+        key=_semver_key,
+        reverse=True,
+    )
     return VersionSnapshot(
         status="ok",
-        dist_tags=dict(sorted(dist_tags_raw.items())),
+        dist_tags={
+            str(k): str(v)
+            for k, v in sorted(dist_tags_raw.items())
+            if isinstance(v, str)
+        },
         tracked_versions=[tracked[tag] for tag in TRACKED_TAGS if tag in tracked],
         latest_release_versions=all_versions[:10],
         release_count=len(versions_raw),

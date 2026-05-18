@@ -107,8 +107,15 @@ def test_plan_dry_run_flag_defaults_true(tmp_path, monkeypatch):
 
 
 def test_execute_plan_downloads_via_file_url(tmp_path, monkeypatch):
-    """Build a plan, point download_url at a local file:// URL, execute."""
+    """Build a plan, point download_url at a local file:// URL, execute.
+
+    file:// is gated behind OPENCUT_DOWNLOAD_EVAL_ALLOW_FILE_URL=1 in
+    the runner so production refuses to follow non-http(s) URLs even
+    if a registry typo or future supply-chain attack changed
+    ``download_url`` to file://. The test fixture opts in explicitly.
+    """
     monkeypatch.setenv("OPENCUT_DOWNLOAD_EVAL", "1")
+    monkeypatch.setenv("OPENCUT_DOWNLOAD_EVAL_ALLOW_FILE_URL", "1")
 
     # Stage a fake "dataset asset" on disk.
     asset = tmp_path / "fake_asset.bin"
@@ -121,13 +128,100 @@ def test_execute_plan_downloads_via_file_url(tmp_path, monkeypatch):
     plan.download_url = asset_url
 
     finished = runner.execute_plan(plan)
-    assert finished.status == "ok"
+    assert finished.status == "ok", finished.reason
     assert finished.dry_run is False
     assert "downloaded to" in finished.reason
 
-    downloaded_file = Path(plan.target_dir) / asset.name
+    # The runner sanitises filenames to filesystem-safe characters.
+    expected_name = runner._safe_basename(asset_url, fallback="davis_2017.bin")
+    downloaded_file = Path(plan.target_dir) / expected_name
     assert downloaded_file.is_file()
     assert downloaded_file.read_bytes() == asset.read_bytes()
+
+
+def test_execute_plan_refuses_file_url_without_opt_in(tmp_path, monkeypatch):
+    """Production posture — file:// URLs must be blocked unless the
+    explicit test-only env var is set, even if the operator has set
+    OPENCUT_DOWNLOAD_EVAL=1."""
+    monkeypatch.setenv("OPENCUT_DOWNLOAD_EVAL", "1")
+    monkeypatch.delenv("OPENCUT_DOWNLOAD_EVAL_ALLOW_FILE_URL", raising=False)
+    plan = runner.build_plan("davis_2017", target_dir=tmp_path)
+    assert plan.status == "ok"
+    plan.download_url = "file:///tmp/should/never/be/read.bin"
+    finished = runner.execute_plan(plan)
+    assert finished.status == "blocked"
+    assert "non-http(s)" in finished.reason
+
+
+def test_execute_plan_refuses_data_scheme(tmp_path, monkeypatch):
+    monkeypatch.setenv("OPENCUT_DOWNLOAD_EVAL", "1")
+    plan = runner.build_plan("davis_2017", target_dir=tmp_path)
+    assert plan.status == "ok"
+    plan.download_url = "data:text/plain,hello"
+    finished = runner.execute_plan(plan)
+    assert finished.status == "blocked"
+    assert "non-http(s)" in finished.reason
+
+
+def test_execute_plan_enforces_max_size_bound(tmp_path, monkeypatch):
+    """A 1-MB cap blocks the download even though the source asset is
+    larger. Defends against redirect-bomb attacks against a trusted
+    registry URL."""
+    monkeypatch.setenv("OPENCUT_DOWNLOAD_EVAL", "1")
+    monkeypatch.setenv("OPENCUT_DOWNLOAD_EVAL_ALLOW_FILE_URL", "1")
+
+    asset = tmp_path / "big_asset.bin"
+    asset.write_bytes(b"x" * (2 * 1024 * 1024))  # 2 MB
+
+    plan = runner.build_plan("davis_2017", target_dir=tmp_path)
+    plan.download_url = asset.as_uri()
+    finished = runner.execute_plan(plan, max_size_bytes=1024 * 1024)  # 1 MB cap
+    assert finished.status == "blocked"
+    assert "max_size_bytes" in finished.reason
+    # Partial file must be cleaned up.
+    expected_name = runner._safe_basename(plan.download_url, fallback="davis_2017.bin")
+    assert not (Path(plan.target_dir) / (expected_name + ".part")).is_file()
+
+
+def test_safe_basename_strips_query_strings_and_fragments():
+    name = runner._safe_basename(
+        "https://example.com/path/to/asset.tar.gz?download=1#frag",
+        fallback="fallback.bin",
+    )
+    assert "?" not in name
+    assert "#" not in name
+    assert name.endswith(".tar.gz") or name == "asset.tar.gz"
+
+
+def test_safe_basename_drops_path_traversal():
+    name = runner._safe_basename(
+        "https://example.com/path/to/..",
+        fallback="fallback.bin",
+    )
+    assert ".." not in name
+    # Empty after stripping ".." → fallback fires.
+    assert name == "fallback.bin"
+
+
+def test_safe_basename_replaces_unsafe_characters():
+    name = runner._safe_basename(
+        "https://example.com/weird name (with) spaces &chars.bin",
+        fallback="fallback.bin",
+    )
+    # Spaces and shell metachars must be scrubbed to underscores.
+    assert " " not in name
+    assert "(" not in name
+    assert ")" not in name
+    assert "&" not in name
+    assert name.endswith(".bin")
+
+
+def test_safe_basename_caps_length():
+    long_url = "https://example.com/" + ("a" * 500) + ".bin"
+    name = runner._safe_basename(long_url, fallback="fallback.bin")
+    assert len(name) <= 200
+    # Extension survives the trim.
+    assert name.endswith(".bin")
 
 
 def test_execute_plan_skips_when_status_not_ok(tmp_path, monkeypatch):
@@ -143,6 +237,7 @@ def test_execute_plan_skips_when_status_not_ok(tmp_path, monkeypatch):
 def test_execute_plan_records_failure_reason(tmp_path, monkeypatch):
     """A bad URL must surface as status='blocked' with the IO error."""
     monkeypatch.setenv("OPENCUT_DOWNLOAD_EVAL", "1")
+    monkeypatch.setenv("OPENCUT_DOWNLOAD_EVAL_ALLOW_FILE_URL", "1")
     plan = runner.build_plan("davis_2017", target_dir=tmp_path)
     assert plan.status == "ok"
     plan.download_url = "file:///definitely/not/a/real/path/xyz.bin"

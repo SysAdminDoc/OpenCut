@@ -293,24 +293,62 @@ def run_evaluation(
     return result
 
 
+_history_io_lock = threading.Lock()
+
+
+def _load_history(target: Path) -> List[dict]:
+    """Read an eval-history file and return a sanitised list of dicts."""
+    if not target.exists():
+        return []
+    try:
+        raw = json.loads(target.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    if not isinstance(raw, list):
+        return []
+    # Filter out non-dict items so callers can use `.get()` without
+    # AttributeError on a corrupted history file.
+    return [item for item in raw if isinstance(item, dict)]
+
+
 def _append_result(result: EvalResult, *, eval_dir: Optional[Path] = None) -> None:
+    import tempfile  # local import keeps module-import cheap
+
     base = Path(eval_dir) if eval_dir else EVAL_DIR
     base.mkdir(parents=True, exist_ok=True)
     target = base / f"{result.feature_id}.json"
 
-    history: List[dict] = []
-    if target.exists():
+    with _history_io_lock:
+        history = _load_history(target)
+        history.append(result.as_dict())
+        # Cap history to the most recent 200 results so the file doesn't grow
+        # without bound across long-running installs.
+        history = history[-200:]
+        # Atomic write — mkstemp + fsync + os.replace defeats partial-flush
+        # corruption that would otherwise lose every prior result on a
+        # mid-write crash.
+        parent = target.parent
+        fd, tmp_path = tempfile.mkstemp(
+            dir=str(parent),
+            prefix=target.name + ".",
+            suffix=".tmp",
+        )
         try:
-            history = json.loads(target.read_text(encoding="utf-8"))
-            if not isinstance(history, list):
-                history = []
-        except (OSError, json.JSONDecodeError):
-            history = []
-    history.append(result.as_dict())
-    # Cap history to the most recent 200 results so the file doesn't grow
-    # without bound across long-running installs.
-    history = history[-200:]
-    target.write_text(json.dumps(history, indent=2) + "\n", encoding="utf-8")
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(history, f, indent=2)
+                f.write("\n")
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError:
+                    pass
+            os.replace(tmp_path, target)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
 
 def summarise_results(
@@ -324,10 +362,7 @@ def summarise_results(
     if not target.exists():
         return {"feature_id": feature_id, "runs": 0, "history": []}
 
-    try:
-        history = json.loads(target.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        history = []
+    history = _load_history(target)
 
     latencies = [int(r.get("latency_ms", 0) or 0) for r in history if r.get("success")]
     quality = [float(r.get("quality_score", 0.0) or 0.0) for r in history if r.get("success")]
@@ -385,12 +420,7 @@ def compare_backends(
             "best_quality": None,
             "note": "no persisted results",
         }
-    try:
-        history = json.loads(target.read_text(encoding="utf-8"))
-        if not isinstance(history, list):
-            history = []
-    except (OSError, json.JSONDecodeError):
-        history = []
+    history = _load_history(target)
 
     by_backend: Dict[str, List[dict]] = {}
     for entry in history:
