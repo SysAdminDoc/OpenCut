@@ -132,8 +132,24 @@
 > **v4.61 status (2026-05-18, fifty-eighth pass)**: closed **F250** by replacing the speculative Plausible default with disabled-by-default Aptabase telemetry. `opencut/core/telemetry_aptabase.py` now implements the Aptabase `/api/v0/events` batch contract without a new dependency, persists opt-in settings through `user_data.py`, masks app keys in API responses, scrubs media paths/transcripts/prompts/secrets from event props, and exposes `GET /telemetry/aptabase/info`, `GET/POST /telemetry/aptabase/settings`, and `POST /telemetry/aptabase/track`. `docs/TELEMETRY.md` records the privacy boundary and legacy Plausible remains available for older self-hosted deployments. The route manifest now has 1,374 routes; the opt-in extended MCP catalogue now has 1,317 tools.
 >
 > **v4.62 status (2026-05-18, fifty-ninth pass)**: advanced **F252.1** by adding a dormant Bolt UXP WebView scaffold beside the shipped UXP panel. `extension/com.opencut.uxp/bolt-webview/` now carries a Bolt-shaped `uxp.config.ts`, host API wrappers for generic UXP and Premiere Pro calls, WebView-side message bridge files, and a placeholder WebView shell without switching the production manifest away from `index.html`. `docs/UXP_MIGRATION.md` now records the scaffold/cutover boundary and `tests/test_uxp_webview_scaffold.py` pins the scaffold in release smoke. F252 remains open for the live WebView UI cutover and remaining UXP API migrations.
+>
+> **v4.63 status (2026-05-18, sixtieth pass)**: advanced **F252.2** by adding a live UXP host-action dispatcher to `extension/com.opencut.uxp/main.js`. `PProBridge.executeHostAction()` now maps the 14 direct-UXP `ocXxx` actions from `opencut/_generated/cep_uxp_parity.json`, keeps `ocApplySequenceCuts` and `ocEmitPingEvent` explicit, returns CEP-fallback responses for `ocAddNativeCaptionTrack` and `ocQeReflect`, and exposes `window.OpenCutUXPHost` for the upcoming WebView bridge. `tests/test_uxp_host_action_dispatch.py` pins the dispatcher against the parity catalogue and release smoke now includes it. F252 still remains open for in-Premiere UDT validation and live WebView cutover.
 
 ---
+
+## 2026-05-18 v4.63 UXP Host Action Dispatcher (F252.2)
+
+One more F252 migration sub-phase advanced in this pass. F252 is still not fully closed.
+
+| Area | Status |
+|---|---|
+| Direct action map | `UXP_DIRECT_HOST_ACTIONS` now names the 14 `direct_uxp` actions from the CEP/UXP parity manifest. |
+| Dispatcher | `PProBridge.executeHostAction(action, payload)` routes catalogued `ocXxx` actions to UXP-side handlers without `evalScript` or `CSInterface`. |
+| Fallback boundary | `ocAddNativeCaptionTrack` and `ocQeReflect` return explicit `cepFallback` responses; `ocApplySequenceCuts` and `ocEmitPingEvent` remain explicit non-direct actions. |
+| WebView bridge hook | `window.OpenCutUXPHost` exposes `executeHostAction` and `getHostActionStatus` for the upcoming WebView host bridge. |
+| Tests/docs | `tests/test_uxp_host_action_dispatch.py` verifies the dispatcher against `opencut/_generated/cep_uxp_parity.json`, and release smoke includes the new test. |
+
+Validation after the batch: `python -m pytest tests/test_uxp_host_action_dispatch.py -q` passed (`4 passed`), `python -m pytest tests/test_uxp_host_action_dispatch.py tests/test_uxp_webview_scaffold.py tests/test_release_smoke.py -q` passed (`22 passed`), touched Python files compile, focused Ruff passed, `node --check extension\com.opencut.uxp\main.js` passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`627 passed`).
 
 ## 2026-05-18 v4.62 Bolt UXP WebView Scaffold (F252.1)
 

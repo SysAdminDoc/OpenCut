@@ -111,7 +111,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F# | Title | What | Source | Effort | Tier |
 |---|---|---|---|---|---|
 | F251 | Track `@adobe/premierepro@beta` per-week diff via CI | Catch new APIs that close UXP gaps (e.g. `startDrag`, `createCaptionTrack`) the moment they ship | UXP subagent §3 | S | Now |
-| F252 | UXP migration sequence: Bolt UXP scaffold + WebView UI for 3,210-line HTML | Partially advanced in Pass 59: F252.1 added a dormant `extension/com.opencut.uxp/bolt-webview/` scaffold, least-privilege WebView config template, host API wrappers, bridge files, docs, and guardrail tests. F252 remains open for live WebView cutover and UI migration. | UXP subagent §6 + §10 | XL | Next |
+| F252 | UXP migration sequence: Bolt UXP scaffold + WebView UI for 3,210-line HTML | Partially advanced in Passes 59-60: F252.1 added a dormant `extension/com.opencut.uxp/bolt-webview/` scaffold, and F252.2 added a `PProBridge.executeHostAction()` dispatcher for the 14 direct-UXP `ocXxx` actions plus explicit CEP fallback responses. F252 remains open for in-Premiere UDT validation, live WebView cutover, and UI migration. | UXP subagent §6 + §10 | XL | Next |
 | F253 | UXP Hybrid Plugin (.uxpaddon) for file drag-out + QE-equivalent ops | C++ DLL/dylib bundled with mac x64/arm64 + win x64/arm64 (Bolt 1.3.0 has the template) | UXP subagent §4 + §10 | XL | Later |
 | F254 | UXP `createSubsequence` integration (already exposed — correct Pass 1 claim) | Replace any CEP path that used in/out subsequence creation | UXP subagent §2 + §3 | S | Next |
 | F255 | UXP `EncoderManager.launchEncoder` / `startBatchEncode` integration | New beta APIs; useful for AME-bound exports | UXP subagent §3 | M | Next |
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1 done), F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).

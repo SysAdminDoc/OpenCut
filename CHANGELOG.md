@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — UXP Host Action Dispatcher
+
+- Added an F252.2 UXP host-action dispatcher in `extension/com.opencut.uxp/main.js` that maps the 14 direct-UXP `ocXxx` actions from the CEP/UXP parity catalogue to live `PProBridge` handlers, with explicit CEP fallback responses for `ocAddNativeCaptionTrack` and `ocQeReflect`.
+- Exposed `window.OpenCutUXPHost` for the upcoming WebView bridge and added `tests/test_uxp_host_action_dispatch.py` plus release-smoke wiring to keep the dispatcher aligned with `opencut/_generated/cep_uxp_parity.json`.
+
 ### Added — Bolt UXP WebView Scaffold
 
 - Added a dormant F252.1 Bolt/WebView scaffold under `extension/com.opencut.uxp/bolt-webview/`, including a least-privilege UXP config template, host API wrappers, and WebView-side message bridge files.
