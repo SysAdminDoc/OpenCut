@@ -100,8 +100,9 @@ UXP Architecture (target):
 - [x] UXP panel with full feature parity (settings, engine registry, WebSocket, all video features)
 - [x] `csinterface-shim.js` — Drop-in CSInterface replacement for WebView mode
 - [x] Backend communication works natively (fetch in UXP/WebView)
-- [ ] Bolt UXP project skeleton setup (`npx create-bolt-uxp`)
-- [ ] WebView manifest configuration
+- [x] F252.1 Bolt/WebView scaffold setup at `extension/com.opencut.uxp/bolt-webview/`
+- [x] F252.1 WebView manifest/config template in `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`
+- [ ] Live manifest switch to the WebView entrypoint after an in-Premiere UDT smoke pass
 - [ ] Test CSInterface shim with CEP main.js in WebView
 - [ ] Replace `cep_node.require("child_process")` calls with UXP alternatives
 
@@ -117,6 +118,8 @@ UXP Architecture (target):
 - `extension/com.opencut.uxp/csinterface-shim.js` — CSInterface→postMessage bridge for WebView
 - `extension/com.opencut.uxp/main.js` — Native UXP panel (2000+ lines, full feature parity)
 - `extension/com.opencut.uxp/index.html` — UXP panel UI with all tabs including Settings
+- `extension/com.opencut.uxp/bolt-webview/` — F252.1 dormant Bolt/WebView scaffold with host API wrappers, WebView message bridge, and least-privilege config template
+- `tests/test_uxp_webview_scaffold.py` — Static guardrails for the scaffold contract
 
 ## Risk Assessment
 - **Low risk:** Backend communication (fetch works natively in UXP)

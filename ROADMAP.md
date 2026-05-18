@@ -130,8 +130,25 @@
 > **v4.60 status (2026-05-18, fifty-seventh pass)**: closed **F249** by adding Linux Flatpak/AppImage release packaging. The repo now carries the `io.github.sysadmindoc.opencut` Flatpak manifest, desktop file, MetaInfo, Flathub architecture policy, AppImage/Flatpak launchers, `scripts/build_linux_packages.sh`, Linux release workflow upload wiring, and `docs/LINUX_DISTRIBUTION.md` with the Flathub build-from-source boundary documented.
 >
 > **v4.61 status (2026-05-18, fifty-eighth pass)**: closed **F250** by replacing the speculative Plausible default with disabled-by-default Aptabase telemetry. `opencut/core/telemetry_aptabase.py` now implements the Aptabase `/api/v0/events` batch contract without a new dependency, persists opt-in settings through `user_data.py`, masks app keys in API responses, scrubs media paths/transcripts/prompts/secrets from event props, and exposes `GET /telemetry/aptabase/info`, `GET/POST /telemetry/aptabase/settings`, and `POST /telemetry/aptabase/track`. `docs/TELEMETRY.md` records the privacy boundary and legacy Plausible remains available for older self-hosted deployments. The route manifest now has 1,374 routes; the opt-in extended MCP catalogue now has 1,317 tools.
+>
+> **v4.62 status (2026-05-18, fifty-ninth pass)**: advanced **F252.1** by adding a dormant Bolt UXP WebView scaffold beside the shipped UXP panel. `extension/com.opencut.uxp/bolt-webview/` now carries a Bolt-shaped `uxp.config.ts`, host API wrappers for generic UXP and Premiere Pro calls, WebView-side message bridge files, and a placeholder WebView shell without switching the production manifest away from `index.html`. `docs/UXP_MIGRATION.md` now records the scaffold/cutover boundary and `tests/test_uxp_webview_scaffold.py` pins the scaffold in release smoke. F252 remains open for the live WebView UI cutover and remaining UXP API migrations.
 
 ---
+
+## 2026-05-18 v4.62 Bolt UXP WebView Scaffold (F252.1)
+
+One F252 migration sub-phase advanced in this pass. F252 is not fully closed.
+
+| Area | Status |
+|---|---|
+| Scaffold location | Added `extension/com.opencut.uxp/bolt-webview/` as the dormant Bolt/WebView migration tree. |
+| Config template | `bolt-webview/uxp.config.ts` mirrors the live `com.opencut.uxp` identity, keeps Premiere `PPRO` minVersion 25.6, enables WebView UI/message bridge/local rendering, preserves the 5679-5689 loopback range, and avoids `domains: "all"`. |
+| Host APIs | Added generic UXP helpers (`getUXPInfo`, `getColorScheme`, `openURL`) and Premiere host wrappers (`detectBackend`, `getProjectInfo`, `getSequenceInfo`, `addTimelineMarkers`, `applyTimelineCuts`, `importFiles`) that return plain data for the WebView boundary. |
+| WebView bridge | Added `webview-ui/src/webview-setup.ts` and `webview-ui/src/webview-api.ts` with an explicit `window.uxpHost.postMessage` envelope for host calls and host-to-WebView callbacks. |
+| Cutover boundary | The shipped manifest still loads `index.html`; the WebView scaffold is held behind docs/tests until an in-Premiere UDT smoke pass validates the live UI path. |
+| Tests/docs | `tests/test_uxp_webview_scaffold.py` pins the scaffold files, config, API exports, bridge contract, and documentation. Release smoke includes the new test. |
+
+Validation after the batch: `python -m pytest tests/test_uxp_webview_scaffold.py -q` passed (`6 passed`), `python -m pytest tests/test_uxp_webview_scaffold.py tests/test_release_smoke.py -q` passed (`18 passed`), touched Python files compile, focused Ruff passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`623 passed`).
 
 ## 2026-05-18 v4.61 Aptabase Opt-In Telemetry (F250)
 
