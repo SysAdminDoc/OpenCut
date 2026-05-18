@@ -11,6 +11,7 @@
     var POLL_MS = 700;
     var HEALTH_MS = 4000;
     var SSE_OK = typeof EventSource !== "undefined";
+    var PanelUtils = (typeof window !== "undefined" && window.OpenCutPanelUtils) ? window.OpenCutPanelUtils : {};
 
     // ---- Core State ----
     var cs = null;
@@ -658,14 +659,16 @@
     
     // ---- DOM (Lazy Proxy — elements are cached on first access) ----
     var _elCache = {};
-    var el = new Proxy(_elCache, {
-        get: function (target, id) {
-            if (id in target) return target[id];
-            var node = document.getElementById(id);
-            if (node) target[id] = node;
-            return node;
-        }
-    });
+    var el = PanelUtils.createLazyDomProxy
+        ? PanelUtils.createLazyDomProxy(document, _elCache)
+        : new Proxy(_elCache, {
+            get: function (target, id) {
+                if (id in target) return target[id];
+                var node = document.getElementById(id);
+                if (node) target[id] = node;
+                return node;
+            }
+        });
     function $(id) { return document.getElementById(id); }
 
     function initSkipLinkFocus() {
@@ -8749,6 +8752,7 @@
     }
 
     function esc(s) {
+        if (PanelUtils.escapeHtml) return PanelUtils.escapeHtml(s);
         if (s === undefined || s === null) return "";
         return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
     }
@@ -8757,6 +8761,7 @@
     
     // Escape for use inside JSX string arguments (handles Windows paths)
     function escPath(s) {
+        if (PanelUtils.escapeJsxDoubleQuotedString) return PanelUtils.escapeJsxDoubleQuotedString(s);
         if (!s) return "";
         // Escape for safe embedding inside a JS/ExtendScript double-quoted string:
         // backslashes, quotes, and control characters that could break the string
@@ -11890,6 +11895,20 @@
     }
 
     function buildPaletteSections(query) {
+        if (PanelUtils.buildCommandPaletteSections) {
+            return PanelUtils.buildCommandPaletteSections({
+                items: _commandIndex,
+                query: query,
+                activeTab: getActivePaletteTabName(),
+                historyKeys: loadPaletteHistory(),
+                favoriteIds: _favorites,
+                descriptionMap: PALETTE_DESCRIPTION_MAP,
+                getTabLabel: getPaletteTabLabel,
+                getSubLabel: getPaletteSubLabel,
+                getFavoriteId: getPaletteFavoriteId,
+                getItemForFavorite: getPaletteItemForFavorite
+            });
+        }
         var q = normalizePaletteText(query);
         var sections = [];
         var activeTab = getActivePaletteTabName();

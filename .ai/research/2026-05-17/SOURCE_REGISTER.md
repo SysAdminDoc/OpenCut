@@ -156,6 +156,16 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R73-L03 | `C:\Users\--\repos\OpenCut\tests\test_ci_workflow_split.py` and `scripts\release_smoke.py` — F206 guardrail and pytest-fast registration | 2026-05-18 |
 | R73-L04 | `python -m pytest tests/test_ci_workflow_split.py -q` — focused F206 workflow split validation (`4 passed`) | 2026-05-18 |
 
+### Pass 74 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R74-L01 | `C:\Users\--\repos\OpenCut\extension\com.opencut.panel\client\panel-utils.js` — F210 production/test helper for CEP escaping, lazy DOM proxying, and command-palette indexing | 2026-05-18 |
+| R74-L02 | `C:\Users\--\repos\OpenCut\extension\com.opencut.uxp\uxp-utils.js` — F210 UXP escaping and safe DOM-id helper module | 2026-05-18 |
+| R74-L03 | `C:\Users\--\repos\OpenCut\extension\com.opencut.panel\tests\panel-utils.test.mjs`, `tests\uxp-utils.test.mjs`, and `vitest.config.mjs` — Vitest utility suite (`8 passed`) | 2026-05-18 |
+| R74-L04 | `C:\Users\--\repos\OpenCut\scripts\release_smoke.py`, `.github\workflows\pr-fast.yml`, `.github\workflows\build.yml`, and `tests\test_panel_vitest_gate.py` — panel-unit release/CI wiring | 2026-05-18 |
+| R74-L05 | `npm test`, `npm run audit:check`, `python -m pytest tests/test_panel_vitest_gate.py -q`, `python scripts\release_smoke.py --json --only panel-unit`, `npm run build:verify`, `npm run build`, and the PR-fast release-smoke command — focused F210 validation (`pytest-fast` 705 passed + `panel-unit`) | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP

@@ -1192,3 +1192,11 @@ Added `opencut/catalog_contract.py` and `tests/test_catalog_contract.py`, and re
 Pass 73 closed **F206** by splitting pull-request CI from the full release matrix. Added `.github/workflows/pr-fast.yml`, a Linux-only pull-request workflow that installs Python 3.12, FFmpeg, `ruff`, `pytest`, and `opencut[standard]`, then runs the fast release-smoke subset while skipping release-only audit/panel/upstream-drift checks.
 
 Renamed `.github/workflows/build.yml` to **Release Full** and removed its `pull_request` trigger while preserving push, tag, and manual dispatch behavior for the three-OS build/sign/package/SBOM/release path. Added `tests/test_ci_workflow_split.py` and registered it in `pytest-fast`. Validation passed: focused F206 tests (`4 passed`), `py_compile`, and focused Ruff.
+
+---
+
+## Pass 74 addendum (2026-05-18)
+
+Pass 74 closed **F210** by adding Vitest coverage around CEP/UXP panel utility seams. Added `extension/com.opencut.panel/client/panel-utils.js` for production-loaded CEP HTML escaping, ExtendScript path escaping, lazy DOM proxying, and command-palette indexing, then routed `main.js` through those helpers. Added `extension/com.opencut.uxp/uxp-utils.js` for UXP HTML escaping and safe DOM-id normalization.
+
+Added `extension/com.opencut.panel/vitest.config.mjs`, `npm test`, Vitest 4.x, and 8 tests across `extension/com.opencut.panel/tests/panel-utils.test.mjs` and `uxp-utils.test.mjs`. Release smoke now has a `panel-unit` step, Release Full runs `npm test`, PR Fast installs panel dependencies before release smoke, and `tests/test_panel_vitest_gate.py` pins the wiring. Validation passed: `npm test` (`8 passed`), npm advisory check, focused F210 Python guard tests (`3 passed`), `py_compile`, focused Ruff, release-smoke `panel-unit`, `npm run build:verify`, `npm run build`, and the PR-fast release-smoke command (`pytest-fast` 705 passed + `panel-unit`).

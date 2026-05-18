@@ -1,3 +1,5 @@
+import { escapeHtml as escapeHtmlValue, safeDomIdSegment } from "./uxp-utils.js";
+
 /**
  * OpenCut UXP Panel — main.js
  * Requires Premiere Pro 25.6+ (UXP GA)
@@ -173,14 +175,6 @@ async function fetchWithTimeout(url, opts = {}, timeoutMs = 120000) {
   } finally {
     clearTimeout(timer);
   }
-}
-
-function safeDomIdSegment(value) {
-  return String(value ?? "")
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_-]+/g, "-")
-    .replace(/^-+|-+$/g, "") || "item";
 }
 
 async function detectBackend() {
@@ -1650,12 +1644,7 @@ const UIController = (() => {
   }
 
   function escapeHtml(str) {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;")
-      .replace(/'/g, "&#39;");
+    return escapeHtmlValue(str);
   }
 
   return {

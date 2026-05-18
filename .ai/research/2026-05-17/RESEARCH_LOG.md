@@ -1028,3 +1028,24 @@ packaging, signing, SBOM, notarization, and release-upload path.
 
 Validation evidence for the pass: focused F206 workflow tests (`4 passed`),
 touched Python compile, and focused Ruff passed locally.
+
+---
+
+## Pass 74 implementation note (2026-05-18)
+
+F210 was closed by extracting the panel-side utility seams into small
+production-loaded modules that Vitest can import directly. The CEP panel now
+loads `client/panel-utils.js` before `main.js`; `main.js` routes HTML escaping,
+ExtendScript double-quoted string escaping, lazy DOM proxying, and command
+palette section building through that helper. The UXP panel imports
+`uxp-utils.js` for HTML escaping and safe DOM-id normalization.
+
+The pass added `npm test` with Vitest 4.x, 8 unit tests across CEP and UXP
+utilities, release-smoke `panel-unit`, and workflow wiring so PR Fast installs
+panel dependencies and Release Full runs the panel unit suite.
+
+Validation evidence for the pass: `npm test` (`8 passed`), npm advisory
+allow-list check, focused F210 Python guard tests (`3 passed`), touched Python
+compile, focused Ruff, release-smoke `panel-unit`, `npm run build:verify`,
+`npm run build`, and the PR-fast release-smoke command (`pytest-fast` 705
+passed plus `panel-unit`) passed locally.

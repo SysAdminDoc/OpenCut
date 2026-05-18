@@ -19,6 +19,11 @@ jobs:
         with:
           python-version: '3.12'
 
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
       - name: Install ffmpeg
         run: sudo apt-get update && sudo apt-get install -y ffmpeg
 
@@ -27,6 +32,10 @@ jobs:
           python -m pip install --upgrade pip
           pip install ruff pytest
           pip install -e ".[standard]"
+
+      - name: Install CEP panel dependencies
+        working-directory: extension/com.opencut.panel
+        run: npm ci
 
       - name: Run fast release smoke
         run: |
