@@ -7,6 +7,11 @@
 - Added the F180 Wave N-T / F-number governance ledger at `.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md`.
 - Added `tests/test_wave_f_number_ledger.py` so future Wave N-T roadmap rows must stay mapped to an F-number disposition.
 
+### Added — Installer CI Coverage
+
+- Added `scripts/smoke_inno_installer.ps1`, a CI-only Inno Setup install/uninstall smoke that validates the generated installer payload, registry entry, installer manifest, and cleanup path.
+- Wired the Inno smoke into the Windows release workflow immediately after the Inno setup executable is built.
+
 ### Changed — Dependency Security Floor
 
 - Raised source installs to Python 3.11+ so OpenCut can consume current security-fix dependency lines.
