@@ -30,6 +30,12 @@ from opencut.helpers import (
 
 logger = logging.getLogger("opencut")
 
+# Hard caps for responses fetched from user-configurable external APIs. The
+# api_url is operator-supplied so a hostile or misconfigured endpoint could
+# otherwise return arbitrary-sized payloads.
+_MAX_VIDEO_RESPONSE_BYTES = 500 * 1024 * 1024  # 500 MB
+_MAX_IMAGE_RESPONSE_BYTES = 50 * 1024 * 1024   # 50 MB
+
 # ---------------------------------------------------------------------------
 # Video Generation Backends
 # ---------------------------------------------------------------------------
@@ -435,7 +441,11 @@ def _try_video_gen_api(prompt: str, config: BRollGenConfig,
 
         with urllib.request.urlopen(req, timeout=300) as resp:
             if resp.status == 200:
-                video_data = resp.read()
+                video_data = resp.read(_MAX_VIDEO_RESPONSE_BYTES + 1)
+                if len(video_data) > _MAX_VIDEO_RESPONSE_BYTES:
+                    raise RuntimeError(
+                        f"B-roll video response exceeds {_MAX_VIDEO_RESPONSE_BYTES} byte cap"
+                    )
                 with open(out_path, "wb") as f:
                     f.write(video_data)
                 if os.path.isfile(out_path) and os.path.getsize(out_path) > 1000:
@@ -504,7 +514,11 @@ def _try_ai_image_generation(prompt: str, width: int, height: int,
             )
             with urllib.request.urlopen(req, timeout=120) as resp:
                 if resp.status == 200:
-                    img_data = resp.read()
+                    img_data = resp.read(_MAX_IMAGE_RESPONSE_BYTES + 1)
+                    if len(img_data) > _MAX_IMAGE_RESPONSE_BYTES:
+                        raise RuntimeError(
+                            f"B-roll image response exceeds {_MAX_IMAGE_RESPONSE_BYTES} byte cap"
+                        )
                     with open(out_path, "wb") as f:
                         f.write(img_data)
                     if os.path.isfile(out_path) and os.path.getsize(out_path) > 500:

@@ -248,7 +248,11 @@ def run_evaluation(
     payload: dict = {}
     error_str = ""
     try:
-        payload = definition.runner(sample) or {}
+        raw_payload = definition.runner(sample)
+        # Coerce to dict — a runner that returns a list / tuple / None
+        # would otherwise blow up the subsequent .get() calls with
+        # AttributeError.
+        payload = raw_payload if isinstance(raw_payload, dict) else {}
         success = True
     except Exception as exc:
         error_str = repr(exc)

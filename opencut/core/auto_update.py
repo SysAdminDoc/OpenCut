@@ -27,6 +27,10 @@ GITHUB_API_URL = f"https://api.github.com/repos/{GITHUB_REPO}/releases"
 UPDATE_CHECK_TIMEOUT = 15  # seconds
 USER_AGENT = "OpenCut-AutoUpdate/1.0"
 
+# Cap on GitHub Releases responses. A real release payload is ~10-50 KB; this
+# cap is defence-in-depth in case the host header points elsewhere.
+_MAX_GITHUB_RESPONSE_BYTES = 10 * 1024 * 1024  # 10 MB
+
 
 # ---------------------------------------------------------------------------
 # Dataclasses
@@ -125,7 +129,12 @@ def get_latest_release(include_prerelease: bool = False) -> ReleaseInfo:
     })
     try:
         with urlopen(req, timeout=UPDATE_CHECK_TIMEOUT) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+            raw = resp.read(_MAX_GITHUB_RESPONSE_BYTES + 1)
+            if len(raw) > _MAX_GITHUB_RESPONSE_BYTES:
+                raise ConnectionError(
+                    f"GitHub API response exceeds {_MAX_GITHUB_RESPONSE_BYTES} byte cap"
+                )
+            data = json.loads(raw.decode("utf-8"))
     except (URLError, OSError) as exc:
         raise ConnectionError(f"Failed to reach GitHub API: {exc}") from exc
 

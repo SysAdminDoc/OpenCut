@@ -28,6 +28,10 @@ _NODES_FILE = os.path.join(OPENCUT_DIR, "render_nodes.json")
 _nodes_lock = threading.Lock()
 
 MAX_RETRIES = 2
+
+# Cap on render-node response bodies. Node host:port is operator-supplied so a
+# rogue endpoint could otherwise stream gigabytes back into memory.
+_MAX_RESPONSE_BYTES = 20 * 1024 * 1024  # 20 MB
 HEALTH_CHECK_TIMEOUT = 5  # seconds
 JOB_SUBMIT_TIMEOUT = 30
 JOB_POLL_TIMEOUT = 10
@@ -254,14 +258,19 @@ def _http_request(url: str, method: str = "GET", data: Optional[bytes] = None,
     req = urllib.request.Request(url, data=data, headers=hdrs, method=method)
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            body = resp.read().decode("utf-8", errors="replace")
+            raw = resp.read(_MAX_RESPONSE_BYTES + 1)
+            if len(raw) > _MAX_RESPONSE_BYTES:
+                raise RuntimeError(
+                    f"Render-node response exceeds {_MAX_RESPONSE_BYTES} byte cap"
+                )
+            body = raw.decode("utf-8", errors="replace")
             if body.strip():
                 return json.loads(body)
             return {"status": "ok"}
     except urllib.error.HTTPError as e:
         body = ""
         try:
-            body = e.read().decode("utf-8", errors="replace")[:500]
+            body = e.read(500).decode("utf-8", errors="replace")
         except Exception:
             pass
         raise RuntimeError(f"HTTP {e.code} from {url}: {body}") from e
