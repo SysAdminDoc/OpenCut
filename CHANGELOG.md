@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Delivery Transfer Bundles
+
+- Added `GET /delivery/transfer/options` and `POST /delivery/transfer-bundle` for croc/rclone delivery handoff planning from the existing delivery menu surface.
+- Added a stdlib transfer-bundle planner that creates a zip bundle, embeds `delivery_transfer_manifest.json`, writes a sibling `.transfer.json` manifest, and returns ready-to-run croc/rclone command plans without executing external transfer tools.
+
 ### Added — Review Notifications
 
 - Added per-project Atom review feeds through `GET /review/feed.atom`, with optional `project_id`, `review_id`, and `limit` filters over saved review comments/status changes.
@@ -54,7 +59,7 @@
 
 ### Added — Extended MCP Route Tools
 
-- Added opt-in F194 extended MCP route-tool generation: `opencut/_generated/mcp_extended_tools.json` now exposes 1,310 lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response schemas.
+- Added opt-in F194 extended MCP route-tool generation: `opencut/_generated/mcp_extended_tools.json` now exposes 1,312 lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response schemas.
 - Added `opencut-mcp-server --extended-tools` / `OPENCUT_MCP_EXTENDED_TOOLS=1` support while preserving the 39 curated MCP tools as the default surface.
 - Added `tests/test_mcp_extended_tools.py` and release-smoke wiring to pin manifest drift, opt-in listing, generated metadata, and generated-tool dispatch.
 
