@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 27)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 28)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (after Pass 26; Passes 1-26 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, Pass 22 closed F244 Whisper confidence + human-review flags, Pass 23 wrapped up an interrupted F205 coverage reattempt without changing the coverage floor, Pass 24 closed F259/F251/F147/F131 in a single governance + migration quick-win batch, Pass 25 closed F137 MCP SDK pin + F139 caption translation SRT round-trip, and Pass 26 closed F126 OTIO AAF adapter pin + F181 UV trampoline bootstrap fallback + F185 features.md banner. This file documents deferred research/product work for a future Pass 27+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (after Pass 27; Passes 1-27 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, Pass 22 closed F244 Whisper confidence + human-review flags, Pass 23 wrapped up an interrupted F205 coverage reattempt without changing the coverage floor, Pass 24 closed F259/F251/F147/F131 in a single governance + migration quick-win batch, Pass 25 closed F137 MCP SDK pin + F139 caption translation SRT round-trip, Pass 26 closed F126 OTIO AAF adapter pin + F181 UV trampoline bootstrap fallback + F185 features.md banner, and Pass 27 closed F140 C2PA 2.3 alignment + F123 audioop/pydub Python 3.13 compat. This file documents deferred research/product work for a future Pass 28+, not a broken or incomplete research run.
 
 ---
 
@@ -15,12 +15,22 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
-### Pass 27 entry point
+### Pass 28 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine. Pushing remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
-2. **Continue the remaining Now queue.** F126, F137, F139, F147, F181, F185, F251, and F259 are now closed (Passes 24-26). F182 (gh issue seeder run) is blocked on GitHub auth. F183 (log-file cleanup) is structurally closed — `.gitignore` already covers `*.log` and no log files are git-tracked. F205 still needs a runner where coverage can finish. Remaining Pass-1 Now items that are local-effort-feasible: **F123** (pydub replacement / audioop-lts shim, M), **F128** (FFmpeg filter regression suite, M), **F140** (C2PA 2.3 sidecar bump, M). Network-required: F121 (Pillow 12.2), F122 (flask-cors 6.x), F133 (onnxruntime ≥1.25), F135 (whisperx 3.8.5). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (each requires a model install + integration work).
+2. **Continue the remaining Now queue.** F123, F126, F137, F139, F140, F147, F181, F185, F251, and F259 are now closed (Passes 24-27). F182 (gh issue seeder run) is blocked on GitHub auth. F183 (log-file cleanup) is structurally closed. F205 still needs a runner where coverage can finish. Remaining Pass-1 Now items that are local-effort-feasible: **F128** (FFmpeg filter regression suite scaffolding, M). Network-required: F121 (Pillow 12.2), F122 (flask-cors 6.x), F133 (onnxruntime ≥1.25), F135 (whisperx 3.8.5). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (each requires a model install + integration work).
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 27 checkpoint
+
+| Item | Status |
+|---|---|
+| F140 | **DONE** — `opencut/core/c2pa_sidecar.py` now records `c2pa_spec_version="2.3"` and `manifest_spec="0.2-sidecar"` on every emitted manifest. New `C2PA_ACTION_VOCABULARY` tuple covers the C2PA 2.3 documented set (`c2pa.created`, `c2pa.cropped`, `c2pa.captioned`, `c2pa.transcribed`, `c2pa.translated`, `c2pa.dubbed`, `c2pa.published`, etc.). Unknown actions tolerate-but-warn. New optional fields: `cloud_trust_list` (forward-compat URL slot for verifiers), `live` (livestream provenance), `software_agent` (per-action tool identity). `CLAIM_GENERATOR_DEFAULT` advertises `OpenCut/1.32.0 (sidecar; c2pa-spec 2.3)`. 8 new tests in `tests/test_c2pa_sidecar.py`. |
+| F123 | **DONE** — `opencut/core/audioop_shim.py` exposes `install_audioop_shim()` that no-ops on <3.13, detects already-present stdlib audioop on 3.13, aliases `audioop_lts` into `sys.modules["audioop"]` when present, and surfaces `needs_install` otherwise. `pydub>=0.25,<1` removed from `[standard]`, `[audio]`, and `[all]` extras (the OpenCut tree has zero `import pydub` calls). `routes/system.py` keeps the pydub availability probe as informational metadata for UI. `tests/test_audioop_shim.py` (9) covers the shim contract, the pyproject.toml retirement, and an AST guard against new pydub imports. |
+| Focused validation | PASS — `27 passed` across `tests/test_c2pa_sidecar.py` (10 original + 8 F140) and `tests/test_audioop_shim.py` (9). |
+| Release smoke | PASS — all 15 chained gates green; `pytest-fast` reports `52 gate tests passed`. Ruff `opencut/` scope clean. |
+| Files to review | `opencut/core/c2pa_sidecar.py`, `opencut/core/audioop_shim.py` (new), `pyproject.toml` (pydub retired from 3 extras), `scripts/release_smoke.py` (added test_audioop_shim.py), `tests/test_c2pa_sidecar.py`, `tests/test_audioop_shim.py` (new), ROADMAP.md v4.30 section, PROJECT_CONTEXT.md, and this file. |
 
 ### Pass 26 checkpoint
 

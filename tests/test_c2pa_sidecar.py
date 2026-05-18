@@ -150,3 +150,88 @@ def test_provenance_route_requires_asset_path(client, csrf_token):
         headers=csrf_headers(csrf_token),
     )
     assert resp.status_code == 400
+
+
+# ---------------------------------------------------------------------------
+# F140 — C2PA 2.3 alignment
+# ---------------------------------------------------------------------------
+
+
+def test_manifest_records_c2pa_2_3_spec_version(asset):
+    result = c2pa.build_sidecar(asset_path=str(asset))
+    manifest = json.loads(Path(result.sidecar_path).read_text(encoding="utf-8"))
+    assert manifest["c2pa_spec_version"] == "2.3"
+    # Manifest-spec / version fields must both exist so older readers
+    # that scanned for `version` keep working.
+    assert manifest["manifest_spec"]
+    assert manifest["version"] == manifest["manifest_spec"]
+
+
+def test_manifest_records_extended_action_fields(asset):
+    action = c2pa.C2paAction(
+        action="c2pa.captioned",
+        when="2026-05-17T12:00:00Z",
+        parameters={"language": "en"},
+        live=True,
+        software_agent="OpenCut/1.32.0",
+    )
+    result = c2pa.build_sidecar(asset_path=str(asset), actions=[action])
+    manifest = json.loads(Path(result.sidecar_path).read_text(encoding="utf-8"))
+    assert manifest["actions"][0]["live"] is True
+    assert manifest["actions"][0]["software_agent"] == "OpenCut/1.32.0"
+    assert manifest["actions"][0]["action"] == "c2pa.captioned"
+
+
+def test_unknown_action_is_tolerated_but_warned(asset):
+    action = c2pa.C2paAction(
+        action="opencut.invented_action",
+        when="2026-05-17T12:00:00Z",
+    )
+    result = c2pa.build_sidecar(asset_path=str(asset), actions=[action])
+    manifest = json.loads(Path(result.sidecar_path).read_text(encoding="utf-8"))
+    # Serialised (forward-compat) ...
+    assert manifest["actions"][0]["action"] == "opencut.invented_action"
+    # ... and flagged.
+    assert "warnings" in manifest
+    assert any("vocabulary" in w for w in manifest["warnings"])
+
+
+def test_known_actions_do_not_produce_warnings(asset):
+    actions = [
+        c2pa.C2paAction(action="c2pa.created", when="2026-05-17T12:00:00Z"),
+        c2pa.C2paAction(action="c2pa.cropped", when="2026-05-17T12:01:00Z"),
+        c2pa.C2paAction(action="c2pa.captioned", when="2026-05-17T12:02:00Z"),
+    ]
+    result = c2pa.build_sidecar(asset_path=str(asset), actions=actions)
+    manifest = json.loads(Path(result.sidecar_path).read_text(encoding="utf-8"))
+    assert "warnings" not in manifest
+
+
+def test_cloud_trust_list_propagates_when_provided(asset):
+    result = c2pa.build_sidecar(
+        asset_path=str(asset),
+        cloud_trust_list="https://example.invalid/c2pa/trust-list",
+    )
+    manifest = json.loads(Path(result.sidecar_path).read_text(encoding="utf-8"))
+    assert manifest["cloud_trust_list"] == "https://example.invalid/c2pa/trust-list"
+
+
+def test_cloud_trust_list_omitted_when_blank(asset):
+    result = c2pa.build_sidecar(asset_path=str(asset))
+    manifest = json.loads(Path(result.sidecar_path).read_text(encoding="utf-8"))
+    assert "cloud_trust_list" not in manifest
+
+
+def test_claim_generator_documents_c2pa_2_3():
+    """The default claim_generator string must surface the spec version
+    we target so verifiers see it without parsing the manifest."""
+    assert "2.3" in c2pa.CLAIM_GENERATOR_DEFAULT
+
+
+def test_vocabulary_is_immutable_and_sorted():
+    vocab = c2pa.C2PA_ACTION_VOCABULARY
+    assert isinstance(vocab, tuple), "vocabulary must be immutable"
+    assert list(vocab) == sorted(vocab), "vocabulary tuple must stay sorted"
+    # Sanity: the 2.3 working catalogue we promised must be represented.
+    for must_have in ("c2pa.created", "c2pa.captioned", "c2pa.transcribed", "c2pa.translated"):
+        assert must_have in vocab

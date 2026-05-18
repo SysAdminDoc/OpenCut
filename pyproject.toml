@@ -50,7 +50,10 @@ standard = [
     "Pillow>=10.0,<11",
     "numpy>=1.24",
     "librosa>=0.10,<1",
-    "pydub>=0.25,<1",
+    # F123 — pydub dropped (vestigial; not imported by the OpenCut tree;
+    # complicates Python 3.13 because pydub still imports stdlib audioop).
+    # See opencut.core.audioop_shim for the optional 3.13 bridge if a
+    # downstream plugin needs pydub.
     "noisereduce>=3.0,<4",
     "scenedetect[opencv]>=0.6,<1",
 ]
@@ -65,7 +68,7 @@ audio = [
     "demucs>=4.0,<5",
     "pedalboard>=0.9,<1",
     "librosa>=0.10,<1",
-    "pydub>=0.25,<1",
+    # F123 — pydub dropped (see [standard] extra for rationale).
     "noisereduce>=3.0,<4",
     "edge-tts>=6.1,<7",
 ]
@@ -132,7 +135,7 @@ all = [
     "Pillow>=10.0,<11",
     "numpy>=1.24",
     "librosa>=0.10,<1",
-    "pydub>=0.25,<1",
+    # F123 — pydub dropped (see [standard] extra).
     "noisereduce>=3.0,<4",
     "scenedetect[opencv]>=0.6,<1",
     "demucs>=4.0,<5",

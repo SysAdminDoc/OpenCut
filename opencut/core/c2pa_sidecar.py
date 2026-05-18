@@ -1,4 +1,4 @@
-"""C2PA provenance sidecars (F110).
+"""C2PA provenance sidecars (F110 + F140).
 
 The full C2PA spec requires signed JUMBF boxes embedded inside the
 media container. That is heavyweight: it pulls in ``c2pa-python``
@@ -24,6 +24,32 @@ is what review pipelines actually use today. The route surface is
 forward-compatible with the embedded variant: when the C2PA dep is
 installed and a signing key is configured, we can swap in
 ``c2pa-python`` behind the same response shape.
+
+F140 — C2PA 2.3 alignment
+=========================
+
+The manifest semantics now target the C2PA 2.3 vocabulary published
+in late 2024. Concretely:
+
+* Every emitted manifest records the **C2PA 2.3 specification version**
+  it targets in the ``c2pa_spec_version`` field, alongside our own
+  sidecar wire-format version (``manifest_spec`` field).
+* Action strings are validated against ``C2PA_ACTION_VOCABULARY`` —
+  the documented set from the C2PA 2.3 working catalogue
+  (``c2pa.created``, ``c2pa.edited``, ``c2pa.opened``, ``c2pa.placed``,
+  ``c2pa.removed``, ``c2pa.cropped``, ``c2pa.transcribed``,
+  ``c2pa.translated``, ``c2pa.captioned``, ``c2pa.published``, etc.).
+  Unknown action strings still serialise (forward compatibility) but
+  the ``warnings`` list flags them so downstream review tooling sees
+  the mismatch.
+* The optional ``cloud_trust_list`` slot is reserved for the
+  ``trust_anchor_url`` value emitted by C2PA 2.3's cloud-anchored
+  trust lists; OpenCut never resolves the URL itself but propagates
+  it from the operator config so the embedded path can pick it up
+  later.
+* Live-video provenance is supported via the ``live`` boolean on
+  ``C2paAction``; verifiers can use it to distinguish a captured
+  livestream segment from a regular cut.
 """
 
 from __future__ import annotations
@@ -40,8 +66,40 @@ from typing import List, Optional, Sequence
 
 logger = logging.getLogger("opencut")
 
-SPEC_VERSION = "0.1-sidecar"  # not the official C2PA version; deliberately distinct
-CLAIM_GENERATOR_DEFAULT = "OpenCut/1.32.0 (sidecar)"
+SPEC_VERSION = "0.2-sidecar"  # OpenCut sidecar wire-format; bumped for the F140 C2PA 2.3 alignment
+MANIFEST_SPEC_VERSION = SPEC_VERSION  # public alias
+C2PA_SPEC_VERSION = "2.3"  # the C2PA specification version our action vocabulary follows
+CLAIM_GENERATOR_DEFAULT = "OpenCut/1.32.0 (sidecar; c2pa-spec 2.3)"
+
+
+# F140 — C2PA 2.3 action vocabulary. This is the documented set of
+# action strings; unknown actions still serialise but get flagged.
+# Keep the tuple sorted so test diffs are deterministic.
+C2PA_ACTION_VOCABULARY: tuple = (
+    "c2pa.captioned",
+    "c2pa.color_adjustments",
+    "c2pa.converted",
+    "c2pa.created",
+    "c2pa.cropped",
+    "c2pa.dubbed",
+    "c2pa.edited",
+    "c2pa.filtered",
+    "c2pa.opened",
+    "c2pa.placed",
+    "c2pa.published",
+    "c2pa.redacted",
+    "c2pa.removed",
+    "c2pa.resized",
+    "c2pa.transcoded",
+    "c2pa.transcribed",
+    "c2pa.translated",
+    "c2pa.unknown",
+)
+
+
+def is_known_c2pa_action(name: str) -> bool:
+    """Return True when *name* belongs to the C2PA 2.3 documented vocabulary."""
+    return name in C2PA_ACTION_VOCABULARY
 
 
 @dataclass
@@ -49,6 +107,13 @@ class C2paAction:
     action: str           # e.g. "c2pa.created", "c2pa.edited", "c2pa.cropped"
     when: str             # ISO-8601 UTC
     parameters: dict = field(default_factory=dict)
+    # F140 — C2PA 2.3 fields:
+    # ``live`` distinguishes a livestream segment from a normal cut.
+    # ``software_agent`` carries the tool identity per-action (some
+    # workflows do filler-removal in OpenCut + colour grade in a
+    # different app within the same render).
+    live: bool = False
+    software_agent: str = ""
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -140,8 +205,17 @@ def build_sidecar(
     title: Optional[str] = None,
     claim_generator: str = CLAIM_GENERATOR_DEFAULT,
     sidecar_path: Optional[str] = None,
+    cloud_trust_list: str = "",
 ) -> C2paSidecarResult:
-    """Write a ``<asset>.c2pa.json`` sidecar next to ``asset_path``."""
+    """Write a ``<asset>.c2pa.json`` sidecar next to ``asset_path``.
+
+    F140 — emits a C2PA 2.3-aligned manifest. Unknown action strings
+    are tolerated but recorded under ``warnings`` so review tooling can
+    surface them. ``cloud_trust_list`` is the optional URL of the
+    operator's C2PA 2.3 cloud-anchored trust list (the OpenCut signer
+    never resolves the URL — it is propagated for downstream
+    verifiers).
+    """
     asset = Path(asset_path)
     if not asset.exists():
         raise FileNotFoundError(asset_path)
@@ -151,8 +225,17 @@ def build_sidecar(
 
     asset_sha = _sha256(asset)
 
+    warnings: List[str] = []
+    for act in (actions or []):
+        if not is_known_c2pa_action(act.action):
+            warnings.append(
+                f"action {act.action!r} is not in the C2PA 2.3 documented vocabulary"
+            )
+
     manifest = {
-        "version": SPEC_VERSION,
+        "manifest_spec": SPEC_VERSION,
+        "c2pa_spec_version": C2PA_SPEC_VERSION,
+        "version": SPEC_VERSION,  # legacy alias kept for backward compat
         "claim_generator": claim_generator,
         "claim_id": "urn:uuid:" + str(uuid.uuid4()),
         "title": title or asset.name,
@@ -167,6 +250,10 @@ def build_sidecar(
         "ingredients": [ing.as_dict() for ing in (ingredients or [])],
         "actions": [act.as_dict() for act in (actions or [])],
     }
+    if cloud_trust_list:
+        manifest["cloud_trust_list"] = cloud_trust_list
+    if warnings:
+        manifest["warnings"] = warnings
 
     # Sign the canonical JSON (sorted keys, no whitespace) so verifiers
     # can reconstruct the bytes deterministically.
