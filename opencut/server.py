@@ -70,9 +70,8 @@ if _json_formatter:
     _file_handler.setFormatter(_json_formatter)
 else:
     # _JobLogFilter (attached above) injects ``record.job_id`` on every
-    # record, so the format string is always resolvable. Avoid Formatter's
-    # ``defaults=`` kwarg — it's Python 3.10+ only, and ``requires-python``
-    # still accepts 3.9.
+    # record, so the format string is always resolvable without relying on
+    # Formatter defaults.
     _file_handler.setFormatter(logging.Formatter(
         "%(asctime)s [%(levelname)s] [%(job_id)s] %(message)s",
         datefmt="%Y-%m-%d %H:%M:%S",

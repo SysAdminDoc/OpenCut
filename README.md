@@ -3,7 +3,7 @@
 ![Version](https://img.shields.io/badge/version-1.32.0-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
-![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)
+![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
 ![Routes](https://img.shields.io/badge/API%20Routes-1344-orange)
 ![Tests](https://img.shields.io/badge/Tests-7600+-brightgreen)
@@ -22,6 +22,7 @@
 
 - **Adobe Premiere Pro** 2019 or later (CEP panel) / 25.6+ (UXP panel)
 - **Windows 10/11, macOS, or Linux** (installer is Windows-only; source launchers ship for macOS/Linux)
+- **Python 3.11+** for source installs; the Windows installer bundles its own runtime
 
 ### Installation
 
@@ -328,7 +329,7 @@ flask, flask-cors, click, rich
 pip install opencut[standard]
 ```
 
-Adds: `faster-whisper`, `opencv-python-headless`, `Pillow`, `numpy`, `librosa`, `pydub`, `noisereduce`, `scenedetect`
+Adds: `faster-whisper`, `opencv-python-headless`, `Pillow`, `numpy`, `librosa`, `noisereduce`, `scenedetect`
 
 ### Full (everything, ~2-5GB depending on GPU)
 
