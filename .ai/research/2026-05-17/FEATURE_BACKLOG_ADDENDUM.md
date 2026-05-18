@@ -23,7 +23,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F191 | Auto-derive `FeatureRecord` from check functions + route manifest | DONE in Pass 8 — generated catalogue covers 58 direct route/check records and 67 route bindings | ROUTE_READINESS_AUDIT §3 | M | Done |
 | [x] F192 | Bulk OpenAPI response schemas for top 50 routes | Closed in Pass 41 — legacy `/openapi.json` typed schema map now covers 100 routes with reusable response envelopes and contract tests | ROUTE_READINESS_AUDIT §4 | M | Next |
 | F193 | Introspection-based OpenAPI schema (replace hand-table) | Walk `core/*Result` dataclasses to generate schemas | ROUTE_READINESS_AUDIT §4 | M | Later |
-| [x] F194 | Auto-generate extended MCP tools from manifest | Closed in Pass 43 — 1,307 opt-in `opencut_route_*` tools generated from route manifest + OpenAPI schemas while 39 curated tools remain default | ROUTE_READINESS_AUDIT §5 | L | Next |
+| [x] F194 | Auto-generate extended MCP tools from manifest | Closed in Pass 43 — 1,310 opt-in `opencut_route_*` tools generated from route manifest + OpenAPI schemas while 39 curated tools remain default | ROUTE_READINESS_AUDIT §5 | L | Next |
 | F195 | Add 12 missing MCP tools for shipped post-Wave-M routes | DONE in Pass 9 — curated MCP surface is now 39 tools, including face_reshape, skin_retouch, smart_upscale, elevenlabs_tts, caption_qc, review_bundle, c2pa_provenance, marker_import, capability_probe, brand_kit, semantic_search, and spectral_match | ROUTE_READINESS_AUDIT §5 | S | Done |
 | F196 | Make `registry.py` primary; derive `model_cards.py` / `checks.py` from it | Single source of truth | ROUTE_READINESS_AUDIT §6 | L | Later |
 | F197 | `NON_AI_CHECKS` allowlist in `registry.py` | DONE in Pass 8 — registry owns the allowlist; model_cards imports it | ROUTE_READINESS_AUDIT §6 | S | Done |
@@ -82,7 +82,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F230 | HLS rendition in F105 bundles for browser scrubbing | No source download needed | Frame.io subagent §2 | M | Later |
 | [x] F231 | Local-LAN review portal (embedded Caddy + mDNS + HMAC URL) | Closed in Pass 52 — review links now generate HMAC-signed LAN portal URLs plus Caddy reverse-proxy and mDNS descriptors without requiring an account server | Frame.io subagent §5 | M | Next |
 | F232 | Optional Headscale path for cross-site LAN review | Self-hosted Tailscale control plane | Frame.io subagent §5 | M | Later |
-| F233 | Outbound HMAC-signed webhook + per-project Atom feed | Notification surface | Frame.io subagent §6 | M | Next |
+| [x] F233 | Outbound HMAC-signed webhook + per-project Atom feed | Closed in Pass 53 — `GET /review/feed.atom` emits per-project/per-review Atom entries, `/api/webhooks` accepts non-echoed HMAC secrets, and review comment/status routes emit signed-webhook-capable events | Frame.io subagent §6 | M | Next |
 | F234 | croc + rclone bundle in delivery menu | One-shot P2P + cloud-bucket transfer | Frame.io subagent §7 | S | Next |
 
 ## F. Standards / accessibility / packaging (niche-AI / accessibility / standards subagent)
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, F233, F234, F238, F239, [x] F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, F234, F238, F239, [x] F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
