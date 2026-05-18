@@ -10,6 +10,8 @@ Registered webhooks are stored in ``~/.opencut/webhook_triggers.json``.
 import json
 import logging
 import os
+import tempfile
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -22,6 +24,7 @@ logger = logging.getLogger("opencut")
 
 _OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
 _TRIGGERS_FILE = os.path.join(_OPENCUT_DIR, "webhook_triggers.json")
+_TRIGGERS_LOCK = threading.Lock()
 
 
 @dataclass
@@ -60,21 +63,46 @@ class WebhookResult:
 
 def _load_triggers() -> List[WebhookTrigger]:
     """Load registered webhook triggers from disk."""
-    if not os.path.isfile(_TRIGGERS_FILE):
-        return []
-    try:
-        with open(_TRIGGERS_FILE, "r", encoding="utf-8") as f:
-            data = json.load(f)
-        return [WebhookTrigger.from_dict(d) for d in data if isinstance(d, dict)]
-    except (json.JSONDecodeError, OSError):
-        return []
+    with _TRIGGERS_LOCK:
+        if not os.path.isfile(_TRIGGERS_FILE):
+            return []
+        try:
+            with open(_TRIGGERS_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return [WebhookTrigger.from_dict(d) for d in data if isinstance(d, dict)]
+        except (json.JSONDecodeError, OSError):
+            return []
 
 
 def _save_triggers(triggers: List[WebhookTrigger]) -> None:
-    """Persist webhook triggers to disk."""
-    os.makedirs(_OPENCUT_DIR, exist_ok=True)
-    with open(_TRIGGERS_FILE, "w", encoding="utf-8") as f:
-        json.dump([t.to_dict() for t in triggers], f, indent=2)
+    """Persist webhook triggers to disk.
+
+    Uses an atomic ``mkstemp + os.replace`` cycle and a module-level lock
+    so concurrent register/unregister calls cannot interleave their
+    half-written JSON and leave the triggers file truncated on a crash.
+    """
+    with _TRIGGERS_LOCK:
+        os.makedirs(_OPENCUT_DIR, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(
+            dir=_OPENCUT_DIR,
+            prefix=os.path.basename(_TRIGGERS_FILE) + ".",
+            suffix=".tmp",
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump([t.to_dict() for t in triggers], f, indent=2)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError:
+                    pass
+            os.replace(tmp_path, _TRIGGERS_FILE)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
 
 # ---------------------------------------------------------------------------

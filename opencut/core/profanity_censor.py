@@ -62,7 +62,7 @@ def _get_audio_duration(audio_path: str) -> float:
         "-of", "default=noprint_wrappers=1:nokey=1", audio_path,
     ]
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=30)
         return float(result.stdout.strip())
     except Exception:
         return 0.0
@@ -133,10 +133,12 @@ def censor(
         cmd = [ffmpeg, "-y", "-i", audio_path, "-filter_complex", fc, "-map", "[outa]", output]
 
     try:
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, timeout=1800)
     except subprocess.CalledProcessError as e:
         stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
         raise RuntimeError(f"FFmpeg censor failed (exit {e.returncode}): {stderr_msg[:500]}") from e
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"FFmpeg censor timed out after {e.timeout}s") from e
 
     if on_progress:
         on_progress(100, "Done")

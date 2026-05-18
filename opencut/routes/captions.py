@@ -193,7 +193,7 @@ def _segment_namespace_from_dict(seg_data):
         language=seg_data.get("language"),
         language_confidence=seg_data.get("language_confidence", 1.0),
         confidence=seg_data.get("confidence", 1.0),
-        human_review_recommended=bool(seg_data.get("human_review_recommended", False)),
+        human_review_recommended=safe_bool(seg_data.get("human_review_recommended", False), False),
         review_reasons=list(seg_data.get("review_reasons") or []),
     )
 
@@ -227,7 +227,7 @@ def _caption_review_summary(result_or_segments):
     for seg in segments:
         if isinstance(seg, dict):
             reasons = set(seg.get("review_reasons", []) or [])
-            human_review = bool(seg.get("human_review_recommended", False))
+            human_review = safe_bool(seg.get("human_review_recommended", False), False)
             language = seg.get("language")
         else:
             reasons = set(getattr(seg, "review_reasons", []) or [])
