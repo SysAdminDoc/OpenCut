@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 30)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 31)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (after Pass 29; Passes 1-29 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, Pass 22 closed F244 Whisper confidence + human-review flags, Pass 23 wrapped up an interrupted F205 coverage reattempt without changing the coverage floor, Pass 24 closed F259/F251/F147/F131 in a single governance + migration quick-win batch, Pass 25 closed F137 MCP SDK pin + F139 caption translation SRT round-trip, Pass 26 closed F126 OTIO AAF adapter pin + F181 UV trampoline bootstrap fallback + F185 features.md banner, Pass 27 closed F140 C2PA 2.3 alignment + F123 audioop/pydub Python 3.13 compat, Pass 28 closed F128 FFmpeg filter regression suite, and Pass 29 closed F184 docs/ROADMAP mirror resolution + F178 eval harness v2 (VRAM/backend/compare). This file documents deferred research/product work for a future Pass 30+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (after Pass 30; Passes 1-30 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, and Pass 30 closed F177 model_cards.py 2026-Q2 sweep with 6 forward-looking gates. This file documents deferred research/product work for a future Pass 31+, not a broken or incomplete research run.
 
 ---
 
@@ -15,12 +15,22 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
-### Pass 30 entry point
+### Pass 31 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine. Pushing remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
-2. **Continue the remaining Now queue.** F123, F126, F128, F137, F139, F140, F147, F178, F181, F184, F185, F251, F259 are now closed (Passes 24-29). F182 (gh issue seeder run) is blocked on GitHub auth. F183 is structurally closed. F205 still needs a runner where coverage can finish. The next no-network items to consider are **F176** (eval dataset bundle catalogue), **F177** (model_cards.py 2026-Q2 sweep — adding cards for the post-Wave-M model surfaces), **F180** (Wave T-V planning ledger refresh), and **F147 upstream PR** (push the manifest to `modelcontextprotocol/servers` — requires GitHub auth to a third-party repo). Remaining Pass-1 Now items requiring network: F121 (Pillow 12.2), F122 (flask-cors 6.x), F133 (onnxruntime ≥1.25), F135 (whisperx 3.8.5). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (model install + integration).
+2. **Continue the remaining Now queue.** F123, F126, F128, F137, F139, F140, F147, F177, F178, F181, F184, F185, F251, F259 are now closed (Passes 24-30). F182 (gh issue seeder run) and F147 upstream PR are blocked on GitHub auth to third-party / SysAdminDoc repos. F183 is structurally closed. F205 still needs a runner where coverage can finish. The next no-network items to consider: **F176** (eval dataset bundle catalogue — scoped to manifest + checksums + license notes, no actual downloads), **F180** (Wave T-V planning ledger refresh — re-tier the older wave letters through the F-number lens). Remaining Pass-1 Now items requiring network: F121 (Pillow 12.2), F122 (flask-cors 6.x), F133 (onnxruntime ≥1.25), F135 (whisperx 3.8.5). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (model install + integration).
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 30 checkpoint
+
+| Item | Status |
+|---|---|
+| F177 | **DONE** — Existing 47-card coverage was already complete (every `check_*_available` either has a card or is on `NON_AI_CHECKS`), so F177 closed by adding 6 forward-looking sweep gates to `tests/test_model_cards.py` instead of bulk-adding stub cards for unimplemented features. |
+| New gates | (a) Per-category coverage floor: audio/captions/editing/generation/lipsync/llm/video each must keep ≥1 card. (b) License-prefix allowlist: SPDX-friendly + in-house markers; new license families must be deliberately added before merge. (c) Privacy-prefix allowlist: `local-only` / `local + optional cloud` / `cloud`. (d) Hardware-prefix allowlist: `cpu` / `gpu` / `cpu/gpu` / `cloud`. (e) 40-card baseline floor (catches accidental mass deletion). (f) feature_id uniqueness gate. All prefix gates are deliberately permissive (free-text suffix allowed for nuance) but block new uncategorised license families. |
+| Validation | PASS — `python -m pytest tests/test_model_cards.py -q` → `13 passed` (7 original + 6 new F177 sweep gates). |
+| Release smoke | PASS — `python scripts/release_smoke.py --skip pip-audit --skip npm-advisory --skip pytest-fast` → all 15 non-pytest gates green; ruff `opencut/` scope clean. |
+| Files to review | `tests/test_model_cards.py`, ROADMAP.md v4.33 section, PROJECT_CONTEXT.md, this file. |
 
 ### Pass 29 checkpoint
 
