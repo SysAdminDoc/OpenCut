@@ -988,3 +988,26 @@ the local release-smoke `pytest-fast` gate. Pass 63 later closed F256
 Transcript APIs, Pass 64 closed F257 Object Mask detection, and Pass 65 closed
 F258 AAF export. Pass 66 closed the F260 migration risk dashboard that tracks
 the remaining CEP fallback and UDT/hybrid work.
+
+---
+
+## Pass 72 implementation note (2026-05-18)
+
+F196 was closed from local registry/model-card/check evidence. The route scanner
+already covers direct route/check bindings, but 16 model-card surfaces were still
+only represented in `model_cards.py` because their availability gates sit behind
+core helpers or stubs. The pass added curated `FeatureRecord` rows for those
+surfaces, backfilled older manual hardware metadata, and raised
+`/system/feature-state` to 100 records.
+
+The new `opencut.catalog_contract` validator makes the contract explicit:
+every public `check_*_available` must be backed by a model card or the
+registry-owned `NON_AI_CHECKS` allowlist, every model card must map to a
+registry row, and the registry must expose matching hardware/GPU/VRAM metadata.
+`tests/test_catalog_contract.py` is now in `pytest-fast`, so future drift fails
+inside release smoke.
+
+Validation evidence for the pass: focused registry/model-card/catalog tests
+(`32 passed`), touched Python compile, focused Ruff, model-card/readiness sync
+checks, roadmap lint, and release-smoke `pytest-fast` (`698 passed`) passed
+locally.

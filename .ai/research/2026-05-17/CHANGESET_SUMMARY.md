@@ -1176,3 +1176,11 @@ Pass 23 wrapped up an interrupted F205 coverage reattempt. No application code c
 ### Remaining immediate work
 
 F205 should resume only where the full CI-style coverage command can finish. F251 and F259 remain open and need fresh Adobe/UXP verification before implementation.
+
+---
+
+## Pass 72 addendum (2026-05-18)
+
+Pass 72 closed **F196** by making the registry/model-card/check relationship an enforced catalogue contract. `opencut/registry.py` now carries curated rows for all 47 model-card feature IDs, including the 16 surfaces the F191 route scanner could not infer through helper layers, and `/system/feature-state` now exposes 100 records total.
+
+Added `opencut/catalog_contract.py` and `tests/test_catalog_contract.py`, and registered the test in release-smoke `pytest-fast`. The contract verifies public `check_*_available` triage, model-card-to-registry feature IDs, and matching hardware/GPU/VRAM metadata. Updated ROADMAP.md v4.75, CHANGELOG.md, PROJECT_CONTEXT.md, and Pass-2 state files. Validation passed: focused registry/model-card/catalog tests (`32 passed`), `py_compile`, focused Ruff, model-card/readiness sync checks, roadmap lint, and release-smoke `pytest-fast` (`698 passed`).
