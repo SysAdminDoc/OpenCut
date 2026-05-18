@@ -1923,7 +1923,11 @@ def check_for_update():
         url = "https://api.github.com/repos/SysAdminDoc/OpenCut/releases/latest"
         req = urllib.request.Request(url, headers={"Accept": "application/vnd.github.v3+json", "User-Agent": "OpenCut"})
         with urllib.request.urlopen(req, timeout=5) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+            _max_bytes = 10 * 1024 * 1024
+            raw = resp.read(_max_bytes + 1)
+            if len(raw) > _max_bytes:
+                raise ValueError(f"GitHub response exceeds {_max_bytes} byte cap")
+            data = json.loads(raw.decode("utf-8"))
 
         tag = data.get("tag_name", "").lstrip("vV")
         html_url = data.get("html_url", result["release_url"])

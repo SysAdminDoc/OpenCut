@@ -313,11 +313,23 @@ def route_show_notes(job_id, filepath, data):
     if not transcript_text:
         # Try to read transcript from file if filepath points to a text file
         import os
+        _max_transcript_bytes = 16 * 1024 * 1024  # 16 MB
         if filepath and os.path.exists(filepath):
             ext = os.path.splitext(filepath)[1].lower()
             if ext in (".txt", ".srt", ".vtt", ".json"):
+                try:
+                    if os.path.getsize(filepath) > _max_transcript_bytes:
+                        raise ValueError(
+                            f"Transcript file exceeds {_max_transcript_bytes} byte cap"
+                        )
+                except OSError as exc:
+                    raise ValueError(f"Cannot stat transcript file: {exc}") from exc
                 with open(filepath, "r", encoding="utf-8") as f:
-                    transcript_text = f.read()
+                    transcript_text = f.read(_max_transcript_bytes + 1)
+                if len(transcript_text) > _max_transcript_bytes:
+                    raise ValueError(
+                        f"Transcript file exceeds {_max_transcript_bytes} byte cap"
+                    )
 
     if not transcript_text:
         raise ValueError("No transcript text provided. Pass 'transcript_text' in the request body or point to a transcript file.")

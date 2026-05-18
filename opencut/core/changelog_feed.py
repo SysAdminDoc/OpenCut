@@ -33,6 +33,8 @@ _CACHE: Dict[str, Any] = {"releases": None, "expires": 0.0, "fetched_at": 0.0}
 _CACHE_LOCK = threading.Lock()
 _CACHE_TTL = 900.0
 
+_MAX_GITHUB_RESPONSE_BYTES = 10 * 1024 * 1024  # 10 MB
+
 
 def check_changelog_available() -> bool:
     """Always True — stdlib urllib. Fails gracefully on network errors."""
@@ -68,7 +70,12 @@ def fetch_releases(limit: int = 5, timeout: float = 6.0) -> Dict[str, Any]:
     )
     try:
         with urllib.request.urlopen(req, timeout=timeout) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
+            raw = resp.read(_MAX_GITHUB_RESPONSE_BYTES + 1)
+            if len(raw) > _MAX_GITHUB_RESPONSE_BYTES:
+                raise ValueError(
+                    f"GitHub response exceeds {_MAX_GITHUB_RESPONSE_BYTES} byte cap"
+                )
+            payload = json.loads(raw.decode("utf-8"))
     except (urllib.error.URLError, TimeoutError, ValueError, OSError) as exc:
         return {
             "releases": [], "source": "fallback",
