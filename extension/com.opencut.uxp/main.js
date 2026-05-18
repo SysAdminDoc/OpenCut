@@ -745,6 +745,60 @@ const PProBridge = (() => {
     }
   }
 
+  async function _clipProjectItemFromPayload(payload) {
+    const parsed = _parseHostPayload(payload, {});
+    const context = await _projectRoot();
+    if (!context?.root) return null;
+    const tree = await _walkProjectTree(context.root);
+    const target = tree.find(entry =>
+      !entry.isFolder && (
+        (parsed.nodeId && entry.nodeId === parsed.nodeId) ||
+        (parsed.path && (entry.mediaPath === parsed.path || entry.path === parsed.path)) ||
+        (parsed.name && entry.name === parsed.name)
+      )
+    );
+    if (!target?.item) return null;
+    try {
+      return ppro?.ClipProjectItem?.cast ? ppro.ClipProjectItem.cast(target.item) : target.item;
+    } catch (e) {
+      console.warn("[PProBridge] ClipProjectItem.cast failed:", e.message);
+      return target.item;
+    }
+  }
+
+  function querySupportedTranscriptLanguages() {
+    if (!available || !ppro?.Transcript?.querySupportedLanguages) {
+      return { ok: false, reason: "Premiere Transcript APIs are unavailable.", languages: [] };
+    }
+    try {
+      const languages = ppro.Transcript.querySupportedLanguages();
+      return { ok: true, languages: Array.isArray(languages) ? languages : [] };
+    } catch (e) {
+      console.warn("[PProBridge] querySupportedTranscriptLanguages failed:", e.message);
+      return { ok: false, reason: e.message, languages: [] };
+    }
+  }
+
+  async function getTranscriptState(payload) {
+    if (!available || !ppro?.Transcript?.hasTranscript) {
+      return { ok: false, reason: "Premiere Transcript APIs are unavailable.", hasTranscript: false };
+    }
+    const parsed = _parseHostPayload(payload, {});
+    const clipProjectItem = await _clipProjectItemFromPayload(parsed);
+    if (!clipProjectItem) return { ok: false, reason: "Project item not found.", hasTranscript: false };
+    try {
+      const hasTranscript = Boolean(ppro.Transcript.hasTranscript(clipProjectItem));
+      let transcriptJson = null;
+      if (hasTranscript && parsed.includeJson === true && ppro.Transcript.exportToJSON) {
+        transcriptJson = await ppro.Transcript.exportToJSON(clipProjectItem);
+      }
+      return { ok: true, hasTranscript, transcriptJson };
+    } catch (e) {
+      console.warn("[PProBridge] getTranscriptState failed:", e.message);
+      return { ok: false, reason: e.message, hasTranscript: false };
+    }
+  }
+
   async function setSequencePlayhead(payload) {
     const parsed = _parseHostPayload(payload, {});
     const seconds = Number(parsed.seconds ?? parsed.time ?? parsed.value ?? payload ?? NaN);
@@ -934,6 +988,8 @@ const PProBridge = (() => {
     batchRenameProjectItems,
     createSmartBins,
     removeImportedProjectItem,
+    querySupportedTranscriptLanguages,
+    getTranscriptState,
     setSequencePlayhead,
     createSubsequenceFromRange,
     exportSubsequenceWithEncoder,
@@ -946,6 +1002,8 @@ if (typeof window !== "undefined") {
   window.OpenCutUXPHost = Object.freeze({
     executeHostAction: (action, payload) => PProBridge.executeHostAction(action, payload),
     getHostActionStatus: () => PProBridge.hostActionStatus(),
+    querySupportedTranscriptLanguages: () => PProBridge.querySupportedTranscriptLanguages(),
+    getTranscriptState: (payload) => PProBridge.getTranscriptState(payload),
   });
 }
 

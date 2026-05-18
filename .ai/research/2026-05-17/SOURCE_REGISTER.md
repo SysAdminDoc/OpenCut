@@ -50,6 +50,16 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R-L40 | `Z:\repos\OpenCut\scripts\` listing — bootstrap_check.py, release_smoke.py, sbom.py, seed_github_issues.py, sync_version.py | 2026-05-17 |
 | R-L41 | `Z:\repos\OpenCut\.github\` — ISSUE_TEMPLATE/, issue-seeds.yml, labels.yml, copilot-instructions.md, workflows/ | 2026-05-17 |
 
+### Pass 63 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R63-L01 | `C:\Users\--\repos\OpenCut\extension\com.opencut.uxp\main.js` — F256 Transcript API helpers and WebView host bridge exposure | 2026-05-18 |
+| R63-L02 | `C:\Users\--\repos\OpenCut\tests\test_uxp_transcript_api_integration.py` — static F256 guardrails | 2026-05-18 |
+| R63-L03 | `C:\Users\--\repos\OpenCut\scripts\release_smoke.py` — `pytest-fast` registration for the transcript guardrail | 2026-05-18 |
+| R63-L04 | `@adobe/premierepro@26.3.0-beta.67` npm package, unpacked `package/src/premierepro.d.ts` — Transcript and ClipProjectItem typing evidence | 2026-05-18 |
+| R63-L05 | `npm view @adobe/premierepro dist-tags version versions --json` — `latest=26.2.0`, `beta=26.3.0-beta.67` verification | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP

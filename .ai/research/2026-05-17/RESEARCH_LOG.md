@@ -7,6 +7,14 @@
 
 ---
 
+## Pass 63 implementation note (2026-05-18)
+
+F256 was closed from local evidence plus the unpacked `@adobe/premierepro@26.3.0-beta.67` typings. The beta package confirms `Transcript.querySupportedLanguages()`, `Transcript.hasTranscript(clipProjectItem)`, `Transcript.exportToJSON(clipProjectItem)`, and `ClipProjectItem.cast(projectItem)`. Implementation stayed inside `extension/com.opencut.uxp/main.js`, added static guardrails in `tests/test_uxp_transcript_api_integration.py`, and extended release-smoke `pytest-fast`.
+
+Validation evidence for the pass: focused F256 tests (`5 passed`), focused UXP/release-smoke slice (`37 passed`), touched Python compile, focused Ruff, UXP JS syntax check, and release-smoke `pytest-fast` (`642 passed`).
+
+---
+
 ## 1. Phases executed
 
 | Phase | What | Output |
@@ -912,6 +920,6 @@ EncoderManager APIs.
 ### Pass 62 saturation note
 
 F255 is complete for repository-side UXP EncoderManager dispatch and covered by
-the local release-smoke `pytest-fast` gate. The remaining small UXP API
-migration candidates are F256 Transcript APIs, F257 Object Mask detection, and
-F258 AAF export.
+the local release-smoke `pytest-fast` gate. Pass 63 later closed F256
+Transcript APIs; the remaining small UXP API migration candidates are F257
+Object Mask detection and F258 AAF export.

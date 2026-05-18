@@ -4,6 +4,14 @@
 
 ---
 
+## Pass 63 addendum (2026-05-18)
+
+Pass 63 closed **F256** by adding UXP Transcript API host helpers to `extension/com.opencut.uxp/main.js`. The new bridge surface wraps `Transcript.querySupportedLanguages()`, resolves clip project items before `Transcript.hasTranscript()`, optionally calls `Transcript.exportToJSON()`, and exposes both helpers through `window.OpenCutUXPHost` for the WebView cutover.
+
+Added `tests/test_uxp_transcript_api_integration.py` and registered it in release-smoke `pytest-fast`. Updated ROADMAP.md v4.66, CHANGELOG.md, PROJECT_CONTEXT.md, docs/UXP_MIGRATION.md, and the Pass-2 backlog/state files. Validation passed: focused F256 tests (`5 passed`), focused UXP/release-smoke slice (`37 passed`), `py_compile`, focused Ruff, `node --check`, and release-smoke `pytest-fast` (`642 passed`).
+
+---
+
 ## 1. Files created
 
 ### Repo root (1 file)
