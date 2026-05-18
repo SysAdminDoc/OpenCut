@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 28)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 29)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (after Pass 27; Passes 1-27 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, Pass 22 closed F244 Whisper confidence + human-review flags, Pass 23 wrapped up an interrupted F205 coverage reattempt without changing the coverage floor, Pass 24 closed F259/F251/F147/F131 in a single governance + migration quick-win batch, Pass 25 closed F137 MCP SDK pin + F139 caption translation SRT round-trip, Pass 26 closed F126 OTIO AAF adapter pin + F181 UV trampoline bootstrap fallback + F185 features.md banner, and Pass 27 closed F140 C2PA 2.3 alignment + F123 audioop/pydub Python 3.13 compat. This file documents deferred research/product work for a future Pass 28+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (after Pass 28; Passes 1-28 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, Pass 22 closed F244 Whisper confidence + human-review flags, Pass 23 wrapped up an interrupted F205 coverage reattempt without changing the coverage floor, Pass 24 closed F259/F251/F147/F131 in a single governance + migration quick-win batch, Pass 25 closed F137 MCP SDK pin + F139 caption translation SRT round-trip, Pass 26 closed F126 OTIO AAF adapter pin + F181 UV trampoline bootstrap fallback + F185 features.md banner, Pass 27 closed F140 C2PA 2.3 alignment + F123 audioop/pydub Python 3.13 compat, and Pass 28 closed F128 FFmpeg filter regression suite. This file documents deferred research/product work for a future Pass 29+, not a broken or incomplete research run.
 
 ---
 
@@ -15,12 +15,22 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
-### Pass 28 entry point
+### Pass 29 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine. Pushing remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
-2. **Continue the remaining Now queue.** F123, F126, F137, F139, F140, F147, F181, F185, F251, and F259 are now closed (Passes 24-27). F182 (gh issue seeder run) is blocked on GitHub auth. F183 (log-file cleanup) is structurally closed. F205 still needs a runner where coverage can finish. Remaining Pass-1 Now items that are local-effort-feasible: **F128** (FFmpeg filter regression suite scaffolding, M). Network-required: F121 (Pillow 12.2), F122 (flask-cors 6.x), F133 (onnxruntime ≥1.25), F135 (whisperx 3.8.5). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (each requires a model install + integration work).
+2. **Continue the remaining Now queue.** F123, F126, F128, F137, F139, F140, F147, F181, F185, F251, and F259 are now closed (Passes 24-28). F182 (gh issue seeder run) is blocked on GitHub auth. F183 (log-file cleanup) is structurally closed. F205 still needs a runner where coverage can finish. Remaining Pass-1 Now items local-effort-feasible without network: none of the remaining Pass-1 Now items are pure-local-Python-effort — F121/F122/F133/F135 need a pip install to validate against an upgraded dependency, and F149/F162/F163/F167/F169 need a model installed + integration. The next no-network items to consider are **F176-F178** (eval dataset bundle, model cards sweep, eval harness v2) and **F184** (docs/ROADMAP mirror resolution). Also worth considering: **F147 upstream PR** (push the manifest to `modelcontextprotocol/servers` — requires GitHub auth to a third-party repo).
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 28 checkpoint
+
+| Item | Status |
+|---|---|
+| F128 | **DONE** — `tests/test_ffmpeg_filter_regression.py` (41 tests) covers a curated `REQUIRED_FILTERS` tuple of 24 filter names and 13 shipped filter graphs (9 video, 4 audio). Each filter must exist in `ffmpeg -filters` output; each graph is piped through `lavfi color=`/`sine=` with `-f null -` so syntax regressions surface without writing output files. Specialised gates: `silencedetect` emits the `silence_start` line the parsing code reads, `loudnorm` accepts F237 preset shape, FFmpeg version floor ≥4.x. Test auto-discovers the bundled FFmpeg via `OPENCUT_FFMPEG` / `FFMPEG_BINARY` / PATH / repo-bundled `ffmpeg/` dir. |
+| Focused validation | PASS — `41 passed`. |
+| Release smoke | PASS — all 15 chained gates green; `pytest-fast` reports `53 gate tests passed`. Ruff `opencut/` scope clean. |
+| Files to review | `tests/test_ffmpeg_filter_regression.py` (new), `scripts/release_smoke.py` (added the gate to pytest-fast), ROADMAP.md v4.31 section, PROJECT_CONTEXT.md, and this file. |
+| When to lean on this gate | F129 (FFmpeg 8.1 bundled bump) — this is the first gate to flip if 8.1 renames or drops a filter OpenCut emits. Add new filter graphs here when you ship a new core module that uses one. |
 
 ### Pass 27 checkpoint
 
