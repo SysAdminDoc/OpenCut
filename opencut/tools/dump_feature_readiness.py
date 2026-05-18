@@ -20,6 +20,7 @@ import ast
 import inspect
 import json
 import logging
+import re
 from collections import defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -202,6 +203,20 @@ def _route_category(routes: Iterable[str]) -> str:
     return "generated"
 
 
+def _minimum_vram_mb(hardware: str) -> int:
+    """Return the minimum VRAM requirement encoded in a model-card hardware string."""
+    match = re.search(r">=\s*(\d+(?:\.\d+)?)\s*(GB|MB)\s+VRAM", hardware, re.IGNORECASE)
+    if not match:
+        return 0
+    amount = float(match.group(1))
+    unit = match.group(2).lower()
+    return int(amount if unit == "mb" else amount * 1024)
+
+
+def _requires_gpu(hardware: str) -> bool:
+    return hardware.strip().lower().startswith("gpu")
+
+
 def _record_for_probe(probe: str, routes: Iterable[str]) -> dict:
     routes_sorted = sorted(set(routes))
     cards = {card.check_name: card for card in CARDS}
@@ -212,18 +227,21 @@ def _record_for_probe(probe: str, routes: Iterable[str]) -> dict:
         category = card.category
         install_hint = card.install_hint
         docs = "docs/MODELS.md"
+        hardware = card.hardware
     elif probe in NON_AI_CHECKS:
         feature_id = f"auto.{_slug_probe(probe)}"
         label = _label_probe(probe)
         category = _route_category(routes_sorted)
         install_hint = "bundled or system dependency; see route response"
         docs = "docs/MODELS.md#excluded-infrastructure-checks"
+        hardware = ""
     else:
         feature_id = f"auto.{_slug_probe(probe)}"
         label = _label_probe(probe)
         category = _route_category(routes_sorted)
         install_hint = "see route response for dependency hint"
         docs = "docs/MODELS.md"
+        hardware = ""
     return {
         "feature_id": feature_id,
         "label": label,
@@ -235,6 +253,9 @@ def _record_for_probe(probe: str, routes: Iterable[str]) -> dict:
         "check_name": probe,
         "source": "generated",
         "notes": "Auto-derived from route functions that call this check probe.",
+        "hardware": hardware,
+        "requires_gpu": _requires_gpu(hardware),
+        "minimum_vram_mb": _minimum_vram_mb(hardware),
     }
 
 

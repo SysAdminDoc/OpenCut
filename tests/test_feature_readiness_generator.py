@@ -30,6 +30,16 @@ def test_generator_finds_direct_route_probe_bindings():
     assert "/audio/tts/elevenlabs" in records["audio.elevenlabs"]["routes"]
 
 
+def test_generator_carries_model_card_hardware_requirements():
+    payload = dump_feature_readiness.build_manifest()
+    records = {record["feature_id"]: record for record in payload["records"]}
+
+    flashvsr = records["video.upscale.flashvsr"]
+    assert flashvsr["hardware"] == "gpu (>= 12 GB VRAM)"
+    assert flashvsr["requires_gpu"] is True
+    assert flashvsr["minimum_vram_mb"] == 12288
+
+
 def test_dumper_check_mode_passes_against_committed_artifact():
     rc = dump_feature_readiness.cli(["--check"])
     assert rc == 0
