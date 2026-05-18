@@ -108,13 +108,6 @@ jobs:
         shell: pwsh
         run: ./scripts/build_wpf_installer_ci.ps1
 
-      - name: Archive Windows installer (WPF)
-        if: runner.os == 'Windows' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
-        uses: actions/upload-artifact@v4
-        with:
-          name: OpenCut-Setup-WPF-Windows
-          path: installer/dist/wpf/OpenCut-WPF-Setup-*.exe
-
       - name: Notarize macOS bundle
         if: runner.os == 'macOS' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
         shell: bash
@@ -156,12 +149,34 @@ jobs:
           & $iscc OpenCut.iss
           Get-ChildItem installer/dist
 
+      - name: Sign Windows installers
+        if: runner.os == 'Windows' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        shell: pwsh
+        env:
+          WINDOWS_CODESIGN_PFX_BASE64: ${{ secrets.WINDOWS_CODESIGN_PFX_BASE64 }}
+          WINDOWS_CODESIGN_PFX_PASSWORD: ${{ secrets.WINDOWS_CODESIGN_PFX_PASSWORD }}
+          WINDOWS_CODESIGN_TIMESTAMP_URL: ${{ secrets.WINDOWS_CODESIGN_TIMESTAMP_URL }}
+          WINDOWS_CODESIGN_CERT_EXPIRES_AT: ${{ secrets.WINDOWS_CODESIGN_CERT_EXPIRES_AT }}
+        run: |
+          $paths = @(
+            "installer/dist/wpf/OpenCut-WPF-Setup-*.exe"
+            "installer/dist/OpenCut-Setup-*.exe"
+          )
+          ./scripts/sign_windows_artifacts.ps1 -Paths $paths
+
       - name: Smoke test Windows installer (Inno)
         if: runner.os == 'Windows' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
         shell: pwsh
         run: |
           $installer = Get-ChildItem installer/dist/OpenCut-Setup-*.exe | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
           ./scripts/smoke_inno_installer.ps1 -InstallerPath $installer.FullName
+
+      - name: Archive Windows installer (WPF)
+        if: runner.os == 'Windows' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenCut-Setup-WPF-Windows
+          path: installer/dist/wpf/OpenCut-WPF-Setup-*.exe
 
       - name: Archive Windows installer
         if: runner.os == 'Windows' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
