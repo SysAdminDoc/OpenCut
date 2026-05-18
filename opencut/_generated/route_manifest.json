@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T17:37:52Z",
-  "total_routes": 1370,
+  "generated_at": "2026-05-18T18:03:03Z",
+  "total_routes": 1371,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
     "GET": 303,
     "PATCH": 1,
-    "POST": 1052,
+    "POST": 1053,
     "PUT": 2
   },
   "blueprints": {
@@ -91,10 +91,10 @@
       ]
     },
     "audio_adv": {
-      "route_count": 22,
+      "route_count": 23,
       "method_counts": {
         "GET": 3,
-        "POST": 19
+        "POST": 20
       },
       "sample_rules": [
         "/podcast/detect-speakers",
@@ -3924,6 +3924,14 @@
         "POST"
       ],
       "endpoint": "audio_adv.route_audio_description",
+      "blueprint": "audio_adv"
+    },
+    {
+      "rule": "/audio/description/microsoft-draft",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "audio_adv.route_microsoft_audio_description_draft",
       "blueprint": "audio_adv"
     },
     {
