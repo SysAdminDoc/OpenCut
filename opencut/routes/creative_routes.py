@@ -276,7 +276,9 @@ def accessibility_flash_detect(job_id, filepath, data):
     from opencut.core.accessibility import detect_flashing
 
     max_flashes = safe_int(data.get("max_flashes_per_sec", 3), 3, min_val=1, max_val=30)
-    min_change = safe_float(data.get("min_luminance_change", 0.2), 0.2, min_val=0.01, max_val=1.0)
+    min_change = safe_float(data.get("min_luminance_change", 0.1), 0.1, min_val=0.01, max_val=1.0)
+    standard_profile = str(data.get("standard_profile", data.get("profile", "bt1702-3")) or "bt1702-3")
+    screen_area_ratio = safe_float(data.get("screen_area_ratio", data.get("area_ratio", 1.0)), 1.0, min_val=0.0, max_val=1.0)
 
     def _progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -285,6 +287,8 @@ def accessibility_flash_detect(job_id, filepath, data):
         input_path=filepath,
         max_flashes_per_sec=max_flashes,
         min_luminance_change=min_change,
+        standard_profile=standard_profile,
+        screen_area_ratio=screen_area_ratio,
         on_progress=_progress,
     )
 

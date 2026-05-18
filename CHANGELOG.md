@@ -7,6 +7,11 @@
 - Added `GET /delivery/transfer/options` and `POST /delivery/transfer-bundle` for croc/rclone delivery handoff planning from the existing delivery menu surface.
 - Added a stdlib transfer-bundle planner that creates a zip bundle, embeds `delivery_transfer_manifest.json`, writes a sibling `.transfer.json` manifest, and returns ready-to-run croc/rclone command plans without executing external transfer tools.
 
+### Changed — Photosensitive Flash Check
+
+- Upgraded `/accessibility/flash-detect` from raw luminance-jump counting to BT.1702/WCAG-style flash-pair analysis with 50 Hz / 60 Hz safe-gap thresholds, screen-area gating, and saturated-red flash tracking.
+- Added `docs/PHOTOSENSITIVE_FLASH_CHECK.md` and F238 tests for the 360 ms / 334 ms gap rule, isolated-red flash risk, and small-area threshold behavior.
+
 ### Added — Review Notifications
 
 - Added per-project Atom review feeds through `GET /review/feed.atom`, with optional `project_id`, `review_id`, and `limit` filters over saved review comments/status changes.
