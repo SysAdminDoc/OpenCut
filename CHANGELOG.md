@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added — Extended MCP Route Tools
+
+- Added opt-in F194 extended MCP route-tool generation: `opencut/_generated/mcp_extended_tools.json` now exposes 1,307 lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response schemas.
+- Added `opencut-mcp-server --extended-tools` / `OPENCUT_MCP_EXTENDED_TOOLS=1` support while preserving the 39 curated MCP tools as the default surface.
+- Added `tests/test_mcp_extended_tools.py` and release-smoke wiring to pin manifest drift, opt-in listing, generated metadata, and generated-tool dispatch.
+
 ### Added — CEP/UXP Parity Catalogue
 
 - Added `opencut/core/cep_uxp_parity.py` and generated `opencut/_generated/cep_uxp_parity.json` to pin the F198 migration disposition for all 18 `ocXxx` CEP host functions.
