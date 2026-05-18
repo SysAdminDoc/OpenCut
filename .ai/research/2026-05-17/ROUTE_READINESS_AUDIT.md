@@ -23,7 +23,7 @@
 | Model cards in `model_cards.json` (F115) | **47** |
 | MCP tools in `mcp_server.py` MCP_TOOLS array | **39** |
 
-Coverage gap after Pass 71: 1,376 routes vs 84 registry records / 67 generated route bindings vs 110 OpenAPI schemas vs 39 curated MCP tools. F191 improved the readiness surface for direct route/check bindings, F192 expanded the typed response-schema table, F193 made it dataclass-discovered, and F195 added 12 shipped post-Wave-M MCP tools, but most routes still have no typed response schema and no MCP surface. This remains a structural visibility gap.
+Coverage gap after Pass 72: 1,376 routes vs 100 registry records / 67 generated route bindings vs 110 OpenAPI schemas vs 39 curated MCP tools. F191 improved the readiness surface for direct route/check bindings, F196 closed registry/model-card/check drift for model-backed features, F192 expanded the typed response-schema table, F193 made it dataclass-discovered, and F195 added 12 shipped post-Wave-M MCP tools, but most routes still have no typed response schema and no MCP surface. This remains a structural visibility gap.
 
 ---
 
@@ -67,7 +67,7 @@ Coverage gap after Pass 71: 1,376 routes vs 84 registry records / 67 generated r
 | **Live with optional dep** (gracefully 503 when missing) | ~250-300 | Inferred from 105 check_X_available + wave_a..wave_l blueprints |
 | **Stub 503 `MISSING_DEPENDENCY`** | ~30-50 | Wave K Tier 2 (19) + Wave H Tier 2 (6) + scattered |
 | **Stub 501 `ROUTE_STUBBED`** | ~12-18 | Wave K Tier 3 (8) + Wave H Tier 3 (3) + scattered |
-| **F100/F191 registered with explicit state** | 84 records / 67 generated route bindings | `opencut/registry.py`, `opencut/_generated/feature_readiness.json` |
+| **F100/F191/F196 registered with explicit state** | 100 records / 67 generated route bindings | `opencut/registry.py`, `opencut/_generated/feature_readiness.json`, `opencut/catalog_contract.py` |
 | **OpenAPI-schema-typed** | 110 | `opencut/openapi_registry.py` dataclass discovery feeding `opencut/openapi.py` |
 
 **Pass 8 update:** `GET /system/feature-state` now includes generated F191 records from direct route/check bindings. It still is not a per-route readiness matrix for all 1,365 routes; it is a feature-readiness manifest with generated route lists for probes the scanner can see.
@@ -162,15 +162,15 @@ The original 30-endpoint seed covered:
 There are three overlapping catalogues:
 - **`checks.py`**: 117 public `check_*` probes, including 86 `check_X_available()` gates (covers everything from `demucs` to `cinefocus`)
 - **`model_cards.py`**: 47 cards with licence + hardware + privacy + install hint
-- **`registry.py` + `_generated/feature_readiness.json`**: 84 `FeatureRecord` entries with readiness state + route list
+- **`registry.py` + `_generated/feature_readiness.json` + `catalog_contract.py`**: 100 `FeatureRecord` entries with readiness state + route list
 
 The deltas:
 - Functions in `checks.py` without a model card still exist for system / orchestration checks and stdlib-only guards.
 - Functions in `checks.py` without a `FeatureRecord` are reduced but not eliminated; F191 only covers route functions that visibly call the public probe or a core helper aliased by checks.py.
-- Model cards without a curated manual `FeatureRecord` now often surface via generated records, but F196 is still needed if registry becomes the primary catalogue.
+- Model cards without route-visible checks are now covered by curated registry rows, and F196 enforces this as a release-smoke contract.
 
 **Recommended fix:**
-- **F196** — Make `registry.py` the **primary** catalogue and have `model_cards.py` + `checks.py` derived from it (or at least cross-validated in CI via `release_smoke.py`).
+- **F196** — **DONE in Pass 72.** `registry.py` is now the enforced catalogue boundary: every model card must map to a registry row with matching public check and hardware metadata, and the contract is in release smoke.
 - **F197** — **DONE in Pass 8.** `NON_AI_CHECKS` now lives in `registry.py`; `model_cards.py` imports the registry-owned tuple so F115 and F191 share one allowlist.
 
 ---
@@ -210,7 +210,7 @@ The manifest contains **233 routes under `/api/*`**. Pass 7 corrected the origin
 | F193 | Replace `_ENDPOINT_SCHEMAS` hand-table with dataclass introspection | Done in Pass 71 | M |
 | F194 | Auto-generate "extended" MCP tools from route manifest | Done in Pass 43 | L |
 | F195 | Add 12 missing MCP tools for post-Wave-M shipped routes | Done in Pass 9 | S |
-| F196 | Make `registry.py` primary; derive `model_cards` / `checks` | Later | L |
+| F196 | Make `registry.py` primary; derive `model_cards` / `checks` | Done in Pass 72 | L |
 | F197 | Add `NON_AI_CHECKS` allowlist to `registry.py` | Done in Pass 8 | S |
 | F198 | CEP-only route catalogue + UXP replacement plan | Done in Pass 42 | M |
 | F199 | Document `/api/*` alias policy + generate alias map | Done in Pass 7 | S |

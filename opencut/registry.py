@@ -204,6 +204,20 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="pip install audiocraft",
         routes=["/audio/music/audiocraft"],
         probe=_check("check_audiocraft_available"),
+        hardware="gpu (>= 8 GB VRAM)",
+        requires_gpu=True,
+        minimum_vram_mb=8192,
+    ),
+    FeatureRecord(
+        feature_id="audio.beatnet",
+        label="BeatNet beat/downbeat tracker",
+        category="audio",
+        state=STATE_AVAILABLE,
+        install_hint="pip install BeatNet",
+        docs="docs/MODELS.md#beatnet-beatdownbeat-tracker",
+        routes=["/audio/beats/beatnet"],
+        probe=_check("check_beatnet_available"),
+        hardware="cpu",
     ),
     FeatureRecord(
         feature_id="audio.edge-tts",
@@ -215,6 +229,19 @@ _FEATURES: List[FeatureRecord] = [
         probe=_check("check_edge_tts_available"),
     ),
     FeatureRecord(
+        feature_id="audio.f5-tts",
+        label="F5-TTS zero-shot voice clone",
+        category="audio",
+        state=STATE_AVAILABLE,
+        install_hint="pip install f5-tts",
+        docs="docs/MODELS.md#f5-tts-zero-shot-voice-clone",
+        routes=["/audio/tts/f5", "/audio/tts/f5/models"],
+        probe=_check("check_f5_tts_available"),
+        hardware="gpu (>= 6 GB VRAM)",
+        requires_gpu=True,
+        minimum_vram_mb=6144,
+    ),
+    FeatureRecord(
         feature_id="audio.loudness-match",
         label="EBU R128 two-pass loudness match",
         category="audio",
@@ -222,6 +249,17 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="bundled FFmpeg",
         routes=["/audio/loudness-match"],
         probe=_check("check_loudness_match_available"),
+    ),
+    FeatureRecord(
+        feature_id="audio.voice-grammar",
+        label="Voice-command grammar",
+        category="audio",
+        state=STATE_AVAILABLE,
+        install_hint="pip install whisperx + faster-whisper",
+        docs="docs/MODELS.md#whisperx-voice-command-grammar",
+        routes=["/voice/grammar/catalogue", "/voice/grammar/parse"],
+        probe=_check("check_voice_grammar_available"),
+        hardware="cpu/gpu",
     ),
     # ---- Video --------------------------------------------------------
     FeatureRecord(
@@ -232,6 +270,8 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="pip install realesrgan",
         routes=["/video/upscale/realesrgan"],
         probe=_check("check_upscale_available"),
+        hardware="gpu",
+        requires_gpu=True,
     ),
     FeatureRecord(
         feature_id="video.matte.rvm",
@@ -241,6 +281,8 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="pip install robust-video-matting",
         routes=["/video/matte/rvm"],
         probe=_check("check_rvm_available"),
+        hardware="gpu",
+        requires_gpu=True,
     ),
     FeatureRecord(
         feature_id="video.depth",
@@ -250,6 +292,8 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="pip install transformers torch",
         routes=["/video/depth"],
         probe=_check("check_depth_available"),
+        hardware="gpu",
+        requires_gpu=True,
     ),
     FeatureRecord(
         feature_id="video.scenes.detect",
@@ -259,6 +303,19 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="pip install scenedetect",
         routes=["/video/scenes/detect", "/video/scenes/auto"],
         probe=_check("check_scenedetect_available"),
+        hardware="cpu",
+    ),
+    FeatureRecord(
+        feature_id="video.scenes.transnetv2",
+        label="TransNetV2 shot-boundary detection",
+        category="video",
+        state=STATE_AVAILABLE,
+        install_hint="pip install transnetv2-pytorch",
+        docs="docs/MODELS.md#transnetv2-shot-boundary",
+        routes=["/video/scenes/auto"],
+        probe=_check("check_transnetv2_available"),
+        hardware="gpu",
+        requires_gpu=True,
     ),
     FeatureRecord(
         feature_id="video.propainter",
@@ -268,6 +325,36 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="pip install propainter (heavy GPU model)",
         routes=["/video/inpaint/propainter"],
         probe=_check("check_propainter_available"),
+        hardware="gpu (>= 12 GB VRAM)",
+        requires_gpu=True,
+        minimum_vram_mb=12288,
+    ),
+    FeatureRecord(
+        feature_id="video.sam2",
+        label="Segment Anything 2 object masks",
+        category="video",
+        state=STATE_AVAILABLE,
+        install_hint="pip install sam2",
+        docs="docs/MODELS.md#segment-anything-2-sam2",
+        routes=[
+            "/object-effects/generate-mask",
+            "/video/physics-remove",
+            "/video/text-segment",
+        ],
+        probe=_check("check_sam2_available"),
+        hardware="gpu",
+        requires_gpu=True,
+    ),
+    FeatureRecord(
+        feature_id="video.rembg",
+        label="rembg background removal",
+        category="video",
+        state=STATE_AVAILABLE,
+        install_hint="pip install rembg",
+        docs="docs/MODELS.md#rembg-u2-net-family",
+        routes=["/video/ai/rembg"],
+        probe=_check("check_rembg_available"),
+        hardware="cpu/gpu",
     ),
     FeatureRecord(
         feature_id="video.watermark.remove",
@@ -277,6 +364,52 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="pip install simple-lama-inpainting",
         routes=["/video/watermark/remove"],
         probe=_check("check_watermark_available"),
+    ),
+    FeatureRecord(
+        feature_id="video.quality.clip-iqa",
+        label="CLIP-IQA+ quality scoring",
+        category="video",
+        state=STATE_AVAILABLE,
+        install_hint="pip install pyiqa",
+        docs="docs/MODELS.md#clip-iqa",
+        routes=["/video/quality/rank", "/video/quality/score"],
+        probe=_check("check_clip_iqa_available"),
+        hardware="gpu",
+        requires_gpu=True,
+    ),
+    FeatureRecord(
+        feature_id="video.emotion-arc",
+        label="HSEmotion emotion timeline",
+        category="video",
+        state=STATE_AVAILABLE,
+        install_hint="pip install hsemotion",
+        docs="docs/MODELS.md#hsemotion",
+        routes=["/video/emotion/arc"],
+        probe=_check("check_hsemotion_available"),
+        hardware="cpu/gpu",
+    ),
+    FeatureRecord(
+        feature_id="video.deepface",
+        label="DeepFace emotion analysis",
+        category="video",
+        state=STATE_AVAILABLE,
+        install_hint="pip install deepface",
+        docs="docs/MODELS.md#deepface",
+        routes=["/video/emotion-highlights", "/video/emotion/arc"],
+        probe=_check("check_deepface_available"),
+        hardware="cpu/gpu",
+    ),
+    FeatureRecord(
+        feature_id="video.upscale.hub",
+        label="HF smart upscaling hub",
+        category="video",
+        state=STATE_AVAILABLE,
+        install_hint="pip install diffusers transformers",
+        docs="docs/MODELS.md#hf-upscale-model-hub",
+        routes=["/video/upscale/smart", "/video/upscale/smart/info"],
+        probe=_check("check_upscale_hub_available"),
+        hardware="gpu",
+        requires_gpu=True,
     ),
     # ---- Captions / Transcripts ---------------------------------------
     FeatureRecord(
@@ -296,6 +429,7 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="pip install silero-vad",
         routes=["/captions/vad"],
         probe=_check("check_silero_vad_available"),
+        hardware="cpu",
     ),
     FeatureRecord(
         feature_id="captions.crisper-whisper",
@@ -305,6 +439,20 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="pip install ctranslate2 + crisper-whisper",
         routes=["/captions/crisper"],
         probe=_check("check_crisper_whisper_available"),
+        hardware="gpu",
+        requires_gpu=True,
+    ),
+    FeatureRecord(
+        feature_id="captions.multimodal-diarise",
+        label="Multimodal diarisation pipeline",
+        category="captions",
+        state=STATE_AVAILABLE,
+        install_hint="pip install whisperx + pyannote.audio",
+        docs="docs/MODELS.md#multimodal-diarisation-pipeline",
+        routes=["/video/multimodal-diarize"],
+        probe=_check("check_multimodal_diarize_available"),
+        hardware="gpu",
+        requires_gpu=True,
     ),
     # ---- Editing / Automation -----------------------------------------
     FeatureRecord(
@@ -334,6 +482,21 @@ _FEATURES: List[FeatureRecord] = [
         routes=["/video/auto-zoom"],
         probe=_check("check_auto_zoom_available"),
     ),
+    FeatureRecord(
+        feature_id="editing.broll-generate",
+        label="AI B-roll generation",
+        category="editing",
+        state=STATE_AVAILABLE,
+        install_hint="pip install transformers torch",
+        docs="docs/MODELS.md#b-roll-suggestion-pipeline",
+        routes=[
+            "/ai/generate-broll",
+            "/ai/generate-broll/batch",
+            "/video/broll-generate",
+        ],
+        probe=_check("check_broll_generate_available"),
+        hardware="cpu/gpu",
+    ),
     # ---- Interchange / Export ----------------------------------------
     FeatureRecord(
         feature_id="export.otio",
@@ -362,6 +525,8 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="install Ollama or set OPENAI_API_KEY",
         routes=["/llm/chat"],
         probe=_check("check_llm_available"),
+        hardware="gpu (recommended)",
+        requires_gpu=True,
     ),
     FeatureRecord(
         feature_id="llm.ollama",
@@ -371,6 +536,17 @@ _FEATURES: List[FeatureRecord] = [
         install_hint="install Ollama from ollama.ai",
         routes=["/llm/ollama"],
         probe=_check("check_ollama_available"),
+    ),
+    FeatureRecord(
+        feature_id="analyze.virality",
+        label="Virality / hook scorer",
+        category="llm",
+        state=STATE_AVAILABLE,
+        install_hint="ships with core; optional LLM dependency",
+        docs="docs/MODELS.md#virality--hook-scorer",
+        routes=["/analyze/virality", "/analyze/virality/rank"],
+        probe=_check("check_virality_score_available"),
+        hardware="cpu",
     ),
     # ---- Stubs (still on the roadmap) ---------------------------------
     FeatureRecord(
@@ -481,6 +657,23 @@ _FEATURES: List[FeatureRecord] = [
         routes=["/lipsync/musetalk"],
     ),
     FeatureRecord(
+        feature_id="lipsync.advanced",
+        label="GaussianHeadTalk / FantasyTalking2 lip-sync",
+        category="lipsync",
+        state=STATE_STUB,
+        install_hint="pip install gaussian-head-talk + fantasytalking2",
+        docs="docs/MODELS.md#gaussianheadtalk--fantasytalking2",
+        routes=[
+            "/lipsync/advanced/backends",
+            "/lipsync/fantasy2",
+            "/lipsync/gaussian",
+        ],
+        probe=_check("check_lipsync_advanced_available"),
+        hardware="gpu (>= 12 GB VRAM)",
+        requires_gpu=True,
+        minimum_vram_mb=12288,
+    ),
+    FeatureRecord(
         feature_id="video.upscale.flashvsr",
         label="FlashVSR streaming VSR",
         category="ai",
@@ -495,6 +688,32 @@ _FEATURES: List[FeatureRecord] = [
         state=STATE_STUB,
         docs="ROADMAP-NEXT.md#H2.2",
         routes=["/video/inpaint/rose"],
+    ),
+    FeatureRecord(
+        feature_id="ai.video-agent",
+        label="VideoAgent / ViMax agentic search",
+        category="llm",
+        state=STATE_STUB,
+        install_hint="pip install videoagent",
+        docs="docs/MODELS.md#videoagent--vimax-agentic-search",
+        routes=["/agent/search-footage", "/agent/storyboard"],
+        probe=_check("check_video_agent_available"),
+        hardware="cpu/gpu",
+    ),
+    FeatureRecord(
+        feature_id="ai.video.cloud",
+        label="Cloud gen-video",
+        category="generation",
+        state=STATE_STUB,
+        install_hint="API key required - opt-in only",
+        docs="docs/MODELS.md#cloud-gen-video-hailuo--seedance",
+        routes=[
+            "/generate/cloud/backends",
+            "/generate/cloud/status/<eid>",
+            "/generate/cloud/submit",
+        ],
+        probe=_check("check_gen_video_cloud_available"),
+        hardware="cpu (client)",
     ),
     # ---- Experimental -------------------------------------------------
     FeatureRecord(
@@ -526,6 +745,24 @@ def _probe_name(record: FeatureRecord) -> str:
     if record.probe is not None:
         return getattr(record.probe, "__name__", "")
     return ""
+
+
+def feature_check_name(record: FeatureRecord) -> str:
+    """Return the public check/probe name attached to a feature record."""
+    return _probe_name(record)
+
+
+def features_by_check_name(
+    records: Iterable[FeatureRecord] = (),
+) -> Dict[str, FeatureRecord]:
+    """Return feature records keyed by their public check/probe name."""
+    sample = list(records) or list(FEATURES.values())
+    out: Dict[str, FeatureRecord] = {}
+    for record in sample:
+        check_name = _probe_name(record)
+        if check_name:
+            out.setdefault(check_name, record)
+    return out
 
 
 def _record_from_generated(payload: dict) -> FeatureRecord:

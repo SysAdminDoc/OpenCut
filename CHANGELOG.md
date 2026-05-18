@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Registry Catalog Contract
+
+- Added the F196 `opencut.catalog_contract` validator so registry records, model cards, and public `check_*_available` probes are cross-validated in release smoke.
+- Added curated registry records for 16 model-card surfaces that route scanning could not infer, raising `/system/feature-state` to 100 records and keeping hardware/VRAM metadata aligned with model cards.
+
 ### Added — OpenAPI Schema Introspection
 
 - Added the F193 dataclass-backed OpenAPI response-schema registry so `/openapi.json` schema bindings are discovered from registered dataclasses instead of a hand-maintained endpoint table.

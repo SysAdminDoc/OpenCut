@@ -137,6 +137,16 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R71-L04 | `C:\Users\--\repos\OpenCut\opencut\mcp_extended_tools.py` and `opencut\_generated\mcp_extended_tools.json` — extended MCP response-schema metadata now sourced from the OpenAPI registry | 2026-05-18 |
 | R71-L05 | `C:\Users\--\repos\OpenCut\tests\test_openapi_contract.py` and `tests\test_mcp_extended_tools.py` — F193 dataclass discovery, nested schema, and MCP metadata guardrails | 2026-05-18 |
 
+### Pass 72 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R72-L01 | `C:\Users\--\repos\OpenCut\opencut\registry.py` — F196 curated registry rows for all model-card-backed feature IDs and older hardware metadata backfill | 2026-05-18 |
+| R72-L02 | `C:\Users\--\repos\OpenCut\opencut\catalog_contract.py` — registry/model-card/check contract validator | 2026-05-18 |
+| R72-L03 | `C:\Users\--\repos\OpenCut\tests\test_catalog_contract.py` and `scripts\release_smoke.py` — F196 release-smoke guardrails | 2026-05-18 |
+| R72-L04 | `python -m pytest tests/test_catalog_contract.py tests/test_feature_registry.py tests/test_model_cards.py -q` — focused contract validation (`32 passed`) | 2026-05-18 |
+| R72-L05 | `python scripts\release_smoke.py --json --only pytest-fast` — release-smoke gate including catalog contract (`698 passed`) | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP

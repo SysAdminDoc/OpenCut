@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.74
+**Version**: 4.75
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,376 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -156,8 +156,23 @@
 > **v4.73 status (2026-05-18, seventieth pass)**: closed **F272** by adding the first concrete built-in agent skill package: `wedding-cinematic-reel`. The skill ships with a `SKILL.md` front-matter manifest plus structured `plan.json` that chains color match, music beat markers, highlight extraction, beat-synced assembly, and a four-minute review-master export plan. `GET /agent/skills` and `GET /agent/skills/<id>` expose the catalogue, and the route manifest / extended MCP catalogue now report 1,376 routes and 1,319 opt-in route tools.
 >
 > **v4.74 status (2026-05-18, seventy-first pass)**: closed **F193** by replacing the legacy `/openapi.json` endpoint hand-table with dataclass-discovered response schema bindings. `opencut.openapi_registry` now discovers registered dataclasses from `opencut.schemas` plus safe core result modules, `/openapi.json` exposes **110** typed response entries with nested dataclass properties, and the extended MCP manifest now marks **100** route tools with response-schema metadata.
+>
+> **v4.75 status (2026-05-18, seventy-second pass)**: closed **F196** by making the feature registry the enforced catalogue boundary for model cards and public dependency checks. `opencut.registry` now carries curated rows for the 16 model-card surfaces that route scanning could not infer through helper layers, `/system/feature-state` exposes **100** records total, and `opencut.catalog_contract` plus `tests/test_catalog_contract.py` keep `registry.py`, `model_cards.py`, and `checks.py` cross-validated inside `pytest-fast`.
 
 ---
+
+## 2026-05-18 v4.75 Registry Catalog Contract (F196)
+
+One route-readiness governance item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Curated registry coverage | Added registry-owned `FeatureRecord` rows for the 16 model-card-only surfaces the route scanner could not discover directly, including F5-TTS, BeatNet, multimodal diarisation, SAM2, rembg, TransNetV2, CLIP-IQA, emotion analysis, B-roll generation, cloud video stubs, advanced lipsync stubs, smart upscale, virality scoring, and video-agent stubs. |
+| Hardware propagation | Backfilled hardware, GPU, and minimum-VRAM metadata on older manual registry rows so every model card now has matching `/system/feature-state` hardware metadata. |
+| Contract module | Added `opencut.catalog_contract` to validate that each public `check_*_available` gate is either model-card backed or in `NON_AI_CHECKS`, and that every model card points to a registry row with matching check and hardware metadata. |
+| Release gate | Added `tests/test_catalog_contract.py` to the `pytest-fast` release-smoke set, making the registry/model-card/check contract fail closed in CI. |
+
+Validation after the batch: focused registry/model-card/catalog tests passed (`32 passed`), touched Python files compile, focused Ruff passed, feature-readiness/model-card sync checks passed, roadmap lint passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`698 passed`).
 
 ## 2026-05-18 v4.74 OpenAPI Schema Introspection (F193)
 
@@ -1122,7 +1137,7 @@ F197 moved the `NON_AI_CHECKS` allowlist from `model_cards.py` into `registry.py
 
 Validation after the batch: `python -m opencut.tools.dump_feature_readiness --check` passed, F191/F197 focused tests passed (`35 passed`), `python scripts/release_smoke.py --only feature-readiness --json` exited `0`, and full `python scripts/release_smoke.py --json` exited `0` (`241 passed` in pytest-fast).
 
-Limit: the F191 generator covers direct route functions that visibly call public check probes. Routes that hide availability checks deeper inside core helpers still need the F196 "registry as primary" work and F209 MCP/route consistency gate.
+Limit: the F191 generator covers direct route functions that visibly call public check probes. F196 now closes the model-card/check catalogue drift with a registry-primary contract, but routes that hide availability checks deeper inside core helpers can still need explicit curated registry rows.
 
 ---
 
@@ -1308,7 +1323,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 ### Phase 0 — What Pass 1 (v4.4) missed or what surfaced on deeper inspection
 
-1. **Route readiness coverage gap is larger than reported.** F100/F191 registry coverage exposes **84** feature-readiness records with **67** direct route/check bindings; F115 model cards cover 47 model surfaces; F192/F193 raise legacy OpenAPI typed response schemas to **110** dataclass-discovered route entries; MCP tool coverage is **39** curated tools after F195. The remaining ~1,200+ routes still have no machine-readable readiness state or typed response. This drives the remaining **F196** registry-primary and related coverage uplift.
+1. **Route readiness coverage gap is larger than reported.** F100/F191/F196 registry coverage exposes **100** feature-readiness records with **58** generated route/check records and **67** generated route bindings; F115 model cards cover 47 model surfaces and now cross-validate against registry/check metadata; F192/F193 raise legacy OpenAPI typed response schemas to **110** dataclass-discovered route entries; MCP tool coverage is **39** curated tools after F195. The remaining ~1,200+ routes still have no machine-readable readiness state or typed response, so future coverage uplift should focus on route-level schemas/tooling rather than model-card drift.
 2. **`createSubsequence` is exposed in UXP** — Pass 1's UXP-API-gap list inferred it was missing. The deeper `@adobe/premierepro@26.3.0-beta.67` walk in Pass 2 confirmed it ships with an `ignoreTrackTargeting?` parameter. **F254** uses it.
 3. **`ProjectConverter.importFromFinalCutProXML` and `importFromOpenTimelineIO` were REMOVED in the 26.3.0-beta typings.** Export still works; round-trip import via UXP is currently impossible. This is a **new** Adobe gap report — **F261** (replacement for F186-F190 set).
 4. **UXP Hybrid Plugins** (.uxpaddon, C++ bundled per-platform) are the **only** path for some CEP-blocked features post-Sept 2026. Bolt UXP 1.3.0 (May 2026) added a win-arm64 hybrid template. **F253** is the implementation; **F251** is the per-week `@adobe/premierepro@beta` diff tracker that catches new APIs the moment Adobe ships them.
@@ -1351,7 +1366,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 
-**Later (17 items):** F196 (registry as primary), F206 (PR-fast/release-full CI split), F210 (Vitest CEP/UXP utilities), F212 (WPF installer xUnit), F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops).
+**Later (16 items):** F206 (PR-fast/release-full CI split), F210 (Vitest CEP/UXP utilities), F212 (WPF installer xUnit), F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75.
 
 **Newly explicit rejects (none in Pass 2)** — all Pass-1 rejects stand; Pass 2 did not propose anything that required new rejection.
 
