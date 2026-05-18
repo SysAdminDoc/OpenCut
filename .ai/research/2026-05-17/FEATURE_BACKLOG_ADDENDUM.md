@@ -93,7 +93,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F236 | FCC user-overridable caption style tokens | DONE in Pass 17 — canonical font/size/color/opacity/background/edge/window token schema, preview route, and burn-in integration | Niche AI §2 + R-P17-E01/R-P17-E02 | S | Done |
 | F237 | EBU R128 v5.0 + BS.1770-5 correction | DONE in Pass 18 — source-backed loudness registry; ITU BS.1770-5 is in force, BS.1770-4 is superseded, EBU R128 v5.0 broadcast target is -23 LUFS / -1 dBTP | Niche AI §2 + R-P18-E01/R-P18-E04 | S | Done |
 | [x] F238 | ITU-R BT.1702 PSE checker with 360ms/334ms gap rule + Japan red-flash threshold | Closed in Pass 55 — `/accessibility/flash-detect` now counts opposing flash pairs, applies BT.1702 360 ms / 334 ms safe gaps, gates by 25% area, and tracks saturated-red/Japan isolated-red risk | Niche AI §2 | M | Next |
-| F239 | Microsoft `ai-audio-descriptions` integration | Per-scene description + dialogue transcript; pair with IndexTTS2 (F168) | Niche AI §2 | M | Next |
+| [x] F239 | Microsoft `ai-audio-descriptions` integration | Closed in Pass 56 — `/audio/description/microsoft-draft` emits reviewable AD cues from per-scene descriptions, dialogue transcript timing, and silence gaps with IndexTTS2-ready TTS hints | Niche AI §2 | M | Next |
 | F240 | Per-target reading-speed profile | DONE in Pass 19 — source-backed QC profiles for Netflix adult 20 cps, Netflix children 17 cps, BBC 160-180 wpm, DCMP upper-level 160 wpm, FCC qualitative timing, and YouTube advisory 220 wpm with unsupported official numeric caps called out | Niche AI §2 + R-P19-E01/R-P19-E05 | S | Done |
 | F241 | HarfBuzz-mandatory CI gate (libass + Pillow + Skia) | DONE in Pass 20 — `opencut.tools.text_shaping_gate` hard-fails missing FFmpeg/libass HarfBuzz/FriBidi/ASS/subtitles support, reports Pillow RAQM and optional Skia shaping status, and is wired into release smoke plus CI | Niche AI §3 + F223 + R-P20-L01/R-P20-L10 | S | Done |
 | [x] F242 | ICU4X-based CJK line breaking | Closed in Pass 47 — shared ICU4X/UAX14-compatible CJK breaker now drives SRT/VTT export, no-word timestamp cue splitting, styled-caption layout tokens, and shot-aware subtitle wrapping without a mandatory binary ICU dependency | Niche AI §3 | M | Next |
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, F239, [x] F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).

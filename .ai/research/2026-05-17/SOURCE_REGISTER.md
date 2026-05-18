@@ -342,7 +342,7 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-N11 | https://www.fcc.gov/consumer-governmental-affairs/commission-announces-effective-date-closed-captioning-display-settings-rule — Aug 17 2026 effective date |
 | R-N12 | https://www.itu.int/rec/R-REC-BT.1702-3-202311-I — ITU-R BT.1702-3 PSE guidance (approved 2023-11-22; in force) |
 | R-N13 | https://dl.acm.org/doi/10.1145/3663547.3759422 — SignStreamNet ACM ASSETS 2025 |
-| R-N14 | https://github.com/microsoft/ai-audio-descriptions — Microsoft AI Audio Descriptions |
+| R-N14 | https://github.com/microsoft/ai-audio-descriptions — Microsoft AI Audio Descriptions; scene descriptions + dialogue transcript + silence-gap review workflow with final TTS insertion |
 | R-N15 | https://broadcastwriter.com/2024/12/12/bbc-subtitle-style-guide-2024/ — BBC subtitle style guide (160-180 wpm) |
 | R-N16 | https://github.com/Shopify/react-native-skia/issues/643 — RTL rendering broken in Skia default |
 | R-N17 | https://artificialanalysis.ai/speech-to-text/models/whisper — Whisper Hindi/Arabic accuracy data |

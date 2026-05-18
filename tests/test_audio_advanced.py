@@ -571,6 +571,67 @@ class TestAudioDescription(unittest.TestCase):
         self.assertIn("voice", sig.parameters)
         self.assertIn("on_progress", sig.parameters)
 
+    def test_microsoft_audio_description_draft_contract(self):
+        from opencut.core.audio_description import build_microsoft_audio_description_draft
+
+        transcript = [
+            {"speaker": "Host", "text": "Welcome to the lobby.", "start": 0.0, "end": 1.0},
+            {"speaker": "Guest", "text": "It looks busy today.", "start": 5.0, "end": 6.0},
+        ]
+        scenes = [
+            {
+                "timestamp": 1.2,
+                "description": "A host steps through a bright lobby while people cross behind her.",
+                "importance": "high",
+            },
+            {
+                "timestamp": 6.2,
+                "description": "The guest points to a large direction sign near the elevator.",
+            },
+        ]
+
+        draft = build_microsoft_audio_description_draft(
+            scene_descriptions=scenes,
+            transcript=transcript,
+            tts_backend_hint="IndexTTS2",
+        )
+        body = draft.to_dict()
+
+        self.assertEqual(body["source"], "microsoft/ai-audio-descriptions")
+        self.assertEqual(body["tts_backend_hint"], "indextts2")
+        self.assertEqual(body["cue_count"], 2)
+        self.assertEqual(body["gap_count"], 1)
+        self.assertTrue(body["review_required"])
+        self.assertIn("dialogue transcript alignment", body["workflow"])
+        self.assertEqual(body["cues"][0]["target_start"], 1.0)
+        self.assertIn("Welcome to the lobby", body["cues"][0]["dialogue_context"])
+        self.assertTrue(body["cues"][0]["fits_gap"])
+
+    def test_microsoft_audio_description_draft_trims_to_gap(self):
+        from opencut.core.audio_description import build_microsoft_audio_description_draft
+
+        draft = build_microsoft_audio_description_draft(
+            scene_descriptions=[{
+                "timestamp": 2.0,
+                "description": (
+                    "A courier runs across a crowded platform, dodges a suitcase, "
+                    "and waves urgently toward a departing train."
+                ),
+            }],
+            gaps=[{"start": 2.5, "end": 3.5, "duration": 1.0}],
+            words_per_second=2.0,
+        )
+        cue = draft.to_dict()["cues"][0]
+
+        self.assertLessEqual(len(cue["script"].split()), cue["max_words"])
+        self.assertTrue(cue["fits_gap"])
+        self.assertNotEqual(cue["script"], cue["source_description"])
+
+    def test_microsoft_audio_description_route_exists(self):
+        from opencut.routes.audio_advanced_routes import route_microsoft_audio_description_draft
+
+        self.assertTrue(callable(route_microsoft_audio_description_draft))
+
     @patch("opencut.core.audio_description.run_ffmpeg")
     @patch("opencut.core.audio_description.get_ffmpeg_path", return_value="/usr/bin/ffmpeg")
     def test_synthesize_description_fallback(self, mock_ffmpeg, mock_run):

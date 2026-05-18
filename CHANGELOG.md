@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Audio Description Review Drafts
+
+- Added `POST /audio/description/microsoft-draft` for Microsoft `ai-audio-descriptions` compatible AD draft planning from scene descriptions, transcript timing, and dialogue gaps.
+- Added `docs/AUDIO_DESCRIPTIONS.md` and tests covering review-cue generation, word-budget trimming, dialogue context, and the IndexTTS2-ready TTS hint.
+
 ### Added — Delivery Transfer Bundles
 
 - Added `GET /delivery/transfer/options` and `POST /delivery/transfer-bundle` for croc/rclone delivery handoff planning from the existing delivery menu surface.
@@ -64,7 +69,7 @@
 
 ### Added — Extended MCP Route Tools
 
-- Added opt-in F194 extended MCP route-tool generation: `opencut/_generated/mcp_extended_tools.json` now exposes 1,312 lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response schemas.
+- Added opt-in F194 extended MCP route-tool generation: `opencut/_generated/mcp_extended_tools.json` now exposes 1,313 lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response schemas.
 - Added `opencut-mcp-server --extended-tools` / `OPENCUT_MCP_EXTENDED_TOOLS=1` support while preserving the 39 curated MCP tools as the default surface.
 - Added `tests/test_mcp_extended_tools.py` and release-smoke wiring to pin manifest drift, opt-in listing, generated metadata, and generated-tool dispatch.
 
