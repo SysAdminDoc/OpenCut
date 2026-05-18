@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.55
+**Version**: 4.56
 **Updated**: 2026-05-18
-**Baseline**: v1.32.0 (1,367 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Baseline**: v1.32.0 (1,368 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
 > **⚡ Active work** lives in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
@@ -99,7 +99,7 @@
 >
 > **v4.45 status (2026-05-18, forty-second pass)**: closed **F198** by promoting the CEP↔UXP parity matrix into a code-owned catalogue and generated artifact. `opencut/core/cep_uxp_parity.py` now records all **18** `ocXxx` JSX host functions, their UXP path, migration risk, F-number ownership, and replacement plan; `opencut/_generated/cep_uxp_parity.json` provides the machine-readable artifact for F260; and `tests/test_cep_uxp_parity_catalogue.py` fails if `host/index.jsx` gains a new CEP host function without an explicit migration disposition. The pinned CEP-only surface remains **2 functions**: `ocAddNativeCaptionTrack` and `ocQeReflect`.
 >
-> **v4.46 status (2026-05-18, forty-third pass)**: closed **F194** by adding an opt-in generated extended MCP route-tool catalogue. The curated MCP surface remains **39** default tools, while `opencut/_generated/mcp_extended_tools.json` now exposes **1,309** lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response-schema map. `opencut-mcp-server --extended-tools` or `OPENCUT_MCP_EXTENDED_TOOLS=1` enables the generated tools for clients that deliberately want full route-level coverage, and `tests/test_mcp_extended_tools.py` pins manifest drift, opt-in behavior, generated metadata, and dispatch for GET query/body/path-parameter routes.
+> **v4.46 status (2026-05-18, forty-third pass)**: closed **F194** by adding an opt-in generated extended MCP route-tool catalogue. The curated MCP surface remains **39** default tools, while `opencut/_generated/mcp_extended_tools.json` now exposes **1,310** lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response-schema map. `opencut-mcp-server --extended-tools` or `OPENCUT_MCP_EXTENDED_TOOLS=1` enables the generated tools for clients that deliberately want full route-level coverage, and `tests/test_mcp_extended_tools.py` pins manifest drift, opt-in behavior, generated metadata, and dispatch for GET query/body/path-parameter routes.
 >
 > **v4.47 status (2026-05-18, forty-fourth pass)**: closed **F201** by building the recommended WPF installer on Windows tag/manual CI. `.github/workflows/build.yml` now runs `scripts/build_wpf_installer_ci.ps1` after PyInstaller and before the Inno fallback, copies FFmpeg/ffprobe from PATH into the payload folder, invokes `installer/InstallerBuilder.ps1`, and archives the WPF output separately as `OpenCut-WPF-Setup-X.Y.Z.exe` so the later Inno build cannot overwrite it. `tests/test_wpf_installer_ci.py` pins the workflow ordering, artifact path, payload prerequisites, and policy-doc status.
 >
@@ -118,8 +118,25 @@
 > **v4.54 status (2026-05-18, fifty-first pass)**: closed **F229** by adding Premiere-importable marker exports to F105 review bundles. Bundles now emit `premiere_markers.csv` and `review_markers.edl` alongside the F225 `markers.otio` sidecar, all generated from the same normalized review-comment list. Manifests and route responses expose `premiere_markers_path`, `edl_markers_path`, and `marker_export_count`, while `tests/test_review_bundle.py` round-trips the CSV/EDL exports through the existing F102 marker parser.
 >
 > **v4.55 status (2026-05-18, fifty-second pass)**: closed **F231** by adding local-LAN review portal share links. `opencut/core/review_portal.py` signs `/review/portal/<review_id>` URLs with HMAC-SHA256 using the existing review token as the server-side secret, rejects expired/bad signatures, and emits deterministic Caddy reverse-proxy plus mDNS service descriptors for installer-managed sidecars. `POST /review/portal/share` creates the signed URL, `GET /review/portal/<review_id>` serves JSON or a simple browser page, the route manifest now has 1,367 routes, and the opt-in extended MCP catalogue has 1,309 tools.
+>
+> **v4.56 status (2026-05-18, fifty-third pass)**: closed **F233** by adding review notification feeds and signed webhook delivery. `GET /review/feed.atom` exposes per-project/per-review Atom entries from saved review links, `/api/webhooks` can now persist an optional non-echoed HMAC secret, outbound webhook deliveries include `X-OpenCut-Signature` when a secret is configured, and review comment/status routes emit best-effort `review.comment_added` / `review.status_changed` events. The route manifest now has 1,368 routes, and the opt-in extended MCP catalogue has 1,310 tools.
 
 ---
+
+## 2026-05-18 v4.56 Review Notifications (F233)
+
+One Next-tier collaboration item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F233 review notifications | DONE — saved review activity now has an Atom feed and HMAC-signed outbound webhook path. |
+| Atom feed | `GET /review/feed.atom` emits status/comment entries with `project_id`, `review_id`, and `limit` filters; reviews without a project are grouped under `default`. |
+| Signed webhooks | `POST /api/webhooks` accepts optional `secret`; deliveries include `X-OpenCut-Signature: sha256=<hex>` and never echo the secret from list/register responses. |
+| Review events | `/review/comment` and `/review/status` emit best-effort `review.comment_added` and `review.status_changed` events through the existing webhook system without blocking the review action. |
+| Generated artifacts | Route manifest regenerated to 1,368 routes / 101 blueprints; opt-in extended MCP catalogue regenerated to 1,310 tools. |
+| Documentation | `docs/REVIEW_NOTIFICATIONS.md` documents Atom feed filters, signed webhook headers, and review event names. |
+| Guard tests | `tests/test_review_notifications.py` pins feed filtering, route output, and review event dispatch; `tests/test_dev_scripting.py` pins HMAC headers, secret persistence, and secret redaction. |
+| Validation | `python -m pytest tests/test_review_notifications.py tests/test_dev_scripting.py::TestWebhookSystemCore tests/test_dev_scripting.py::TestWebhookRoutes tests/test_review_portal.py tests/test_platform_infra.py -q` -> `182 passed`; focused Ruff, `py_compile`, and reduced release smoke -> clean. |
 
 ## 2026-05-18 v4.55 Local-LAN Review Portal (F231)
 
@@ -251,7 +268,7 @@ One Next-tier MCP visibility item closed in this pass.
 | Surface | Status |
 |---|---|
 | F194 generator | DONE — `opencut/tools/dump_mcp_extended_tools.py` builds `opencut/_generated/mcp_extended_tools.json` from the canonical route manifest, API-alias manifest, and OpenAPI response-schema table. |
-| Extended catalogue | The committed artifact contains 1,309 generated `opencut_route_*` tools after skipping curated routes, special-action curated routes, static routes, and `/api` aliases. |
+| Extended catalogue | The committed artifact contains 1,310 generated `opencut_route_*` tools after skipping curated routes, special-action curated routes, static routes, and `/api` aliases. |
 | Default MCP contract | The default curated surface remains 39 tools. Extended tools list and dispatch only when `OPENCUT_MCP_EXTENDED_TOOLS=1` or `opencut-mcp-server --extended-tools` is set. |
 | Dispatch contract | Generated tools pass path params as top-level args, GET query args through `query`, and mutating JSON payloads through `body`; route metadata is tagged `generated=true` and `priority=extended`. |
 | Guard tests | `tests/test_mcp_extended_tools.py` pins committed-vs-live generation, opt-in behavior, metadata, disabled-call errors, GET query dispatch, mutating body dispatch, and missing path-param validation. Release smoke includes the new test. |
@@ -1041,7 +1058,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Caption / accessibility: [x] F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
 - Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
 - Tests: [x] F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + [x] F217 UXP contract test
-- Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + F233 Atom feed + webhook + F234 croc/rclone delivery
+- Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 
 **Later (18 items):** F193 (OpenAPI introspection), F196 (registry as primary), F206 (PR-fast/release-full CI split), F210 (Vitest CEP/UXP utilities), F212 (WPF installer xUnit), F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops).
@@ -1074,7 +1091,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 ### Phase 0 — What the v4.3 audit missed or changed since
 
-- **Live route manifest** is now **1,367 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's "1,344" badge is stale — keep the F099 manifest as canonical truth.
+- **Live route manifest** is now **1,368 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's "1,344" badge is stale — keep the F099 manifest as canonical truth.
 - **F-numbered Now-tier work shipped quickly** between 2026-05-16 and 2026-05-17: F006, F010, F011, F066, F095, F097, F098, F099, F100, F101, F102, F103, F104, F105, F106, F109, F110, F111, F112, F115, F116, F117, F118, F120 (22 of 27 *Now* items landed). F093 (hermetic bootstrap) is partially shipped — UV trampoline path still fails. F094 lockfile audit is partially shipped — `deep-translator` removed, requires recurring `release_smoke` gate.
 - **Wave M (v1.30.0)** added the MCP sidecar (27 tools) — closes `research.md` §1.1 ("MCP server interface — HIGH priority") which is now stale.
 - **Wave L (v1.29.0)** shipped AI face reshape + skin retouch — closes `research.md` §1.3/§1.4 which are now stale.
@@ -1120,7 +1137,7 @@ Full backlog with effort / risk / fit / source in [`.ai/research/2026-05-17/FEAT
 
 ### Phase 3 — Top three strategic moves the v4.3 audit understated
 
-1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,367 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
+1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,368 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
 2. **UXP MCP transport (F146) is the only path through Sept 2026 CEP EOL.** Every competing PPro MCP server today (ayushozha 1,060 tools, leancoderkavy 269, hetpatel-11 97) is CEP-bound and will break when Adobe enforces the cutoff. First UXP-native MCP wins post-EOL.
 3. **StreamDiffusionV2 (F158) unlocks real-time editor-loop preview** on existing LTX-2.3 / Wan / Open-Sora backends — the single biggest UX leap vs CapCut / Runway / Captions, all of whom charge subscriptions for the real-time path.
 

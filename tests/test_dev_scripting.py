@@ -22,7 +22,6 @@ import pytest
 
 from tests.conftest import csrf_headers
 
-
 # ============================================================================
 # Fixtures
 # ============================================================================
@@ -819,6 +818,22 @@ class TestWebhookSystemCore:
         assert wh.events == ["job_complete"]
         assert wh.id
 
+    def test_register_review_webhook_with_secret(self, tmp_opencut_dir):
+        from opencut.core.webhook_system import get_webhook, list_webhooks, register_webhook
+
+        wh = register_webhook(
+            "https://example.com/hook",
+            events=["review.comment_added"],
+            secret="top-secret",
+        )
+
+        found = get_webhook(wh.id)
+        assert found is not None
+        assert found.secret == "top-secret"
+        listed = [item for item in list_webhooks() if item["id"] == wh.id][0]
+        assert listed["has_secret"] is True
+        assert "secret" not in listed
+
     def test_register_webhook_no_url_raises(self, tmp_opencut_dir):
         from opencut.core.webhook_system import register_webhook
         with pytest.raises(ValueError, match="URL is required"):
@@ -885,6 +900,48 @@ class TestWebhookSystemCore:
         status, ok, error = _send_payload(
             "http://127.0.0.1:1/nope", "test", {}, timeout=1)
         assert ok is False
+
+    def test_send_payload_adds_hmac_signature_header(self, monkeypatch):
+        from opencut.core.webhook_signature import verify_webhook_signature
+        from opencut.core.webhook_system import _send_payload
+
+        captured = {}
+
+        class FakeResponse:
+            status = 202
+
+            def __enter__(self):
+                return self
+
+            def __exit__(self, exc_type, exc, tb):
+                return False
+
+        def fake_urlopen(req, timeout):
+            captured["body"] = req.data
+            captured["headers"] = dict(req.headers)
+            captured["timeout"] = timeout
+            return FakeResponse()
+
+        monkeypatch.setattr("urllib.request.urlopen", fake_urlopen)
+
+        status, ok, error = _send_payload(
+            "https://example.com/hook",
+            "review.comment_added",
+            {"review_id": "r1"},
+            timeout=3,
+            secret="top-secret",
+        )
+
+        headers = {key.lower(): value for key, value in captured["headers"].items()}
+        assert status == 202
+        assert ok is True
+        assert error == ""
+        assert headers["x-opencut-signature-algorithm"] == "HMAC-SHA256"
+        assert verify_webhook_signature(
+            "top-secret",
+            captured["body"],
+            headers["x-opencut-signature"],
+        )
 
     def test_fire_event_no_targets(self, tmp_opencut_dir):
         from opencut.core.webhook_system import fire_event
@@ -1356,6 +1413,18 @@ class TestWebhookRoutes:
         data = resp.get_json()
         assert data["success"] is True
         assert data["webhook"]["url"] == "https://test.com/hook"
+
+    def test_register_route_accepts_secret_without_echoing_it(self, client, csrf_token, tmp_opencut_dir):
+        resp = client.post("/api/webhooks",
+                           headers=csrf_headers(csrf_token),
+                           json={"url": "https://test.com/hook",
+                                 "events": ["review.status_changed"],
+                                 "secret": "top-secret"})
+        assert resp.status_code == 200
+        data = resp.get_json()
+        assert data["success"] is True
+        assert data["webhook"]["has_secret"] is True
+        assert "secret" not in data["webhook"]
 
     def test_register_route_no_url(self, client, csrf_token):
         resp = client.post("/api/webhooks",

@@ -387,6 +387,7 @@ def webhook_register():
             "url": "https://example.com/hook",
             "events": ["job_complete", "job_failed"],
             "description": "My webhook",
+            "secret": "optional HMAC signing secret",
             "id": "optional-existing-id"
         }
     """
@@ -399,6 +400,7 @@ def webhook_register():
     try:
         url = _clean_string(data.get("url", ""), "url", allow_empty=False)
         description = _clean_string(data.get("description", ""), "description")
+        secret = _clean_string(data.get("secret", ""), "secret") if "secret" in data else None
         webhook_id = _clean_string(data.get("id", ""), "id", default="") or None
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
@@ -415,6 +417,7 @@ def webhook_register():
             events=events,
             description=description,
             webhook_id=webhook_id,
+            secret=secret,
         )
         return jsonify({
             "success": True,
