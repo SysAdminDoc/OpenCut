@@ -740,3 +740,34 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P23-L06 | `.ai/research/2026-05-17/F205_INTERRUPTED_COVERAGE_NOTE.md` — durable summary of the interrupted run and why F205 remains open |
 
 **Source coverage assessment (Pass 23):** Pass 23 claims in `ROADMAP.md` v4.26, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `TEST_COVERAGE_GAPS.md`, `INSTALLER_AUDIT.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md`, and `F205_INTERRUPTED_COVERAGE_NOTE.md` trace to R-P23-L01 through R-P23-L06. No new external source was used.
+
+---
+
+## Pass 57 — F249 Flatpak/AppImage Linux distribution packaging (2026-05-18 fifty-seventh pass)
+
+### External source evidence
+
+| ID | Source |
+|---|---|
+| R-P57-E01 | Flatpak first-build tutorial — https://docs.flatpak.org/en/latest/first-build.html — current tutorial uses `org.freedesktop.Platform` / `org.freedesktop.Sdk` runtime version `25.08` and shows `flatpak-builder` plus `flatpak build-bundle` for single-file bundles |
+| R-P57-E02 | Flatpak requirements and conventions — https://docs.flatpak.org/en/latest/conventions.html — documents reverse-DNS app IDs, GitHub `io.github` naming, MetaInfo filename/location, icon filename/location, desktop file naming, and XDG sandbox data paths |
+| R-P57-E03 | Flathub requirements — https://docs.flathub.org/docs/for-app-authors/requirements — requires latest hosted runtime at submission time, no network during build, source/build dependency declarations, correctly declared license, and top-level manifest/flathub.json in the Flathub submission repository |
+| R-P57-E04 | Flathub linter docs — https://docs.flathub.org/docs/for-app-authors/linter — documents manifest/app-id filename mismatch, app-id/code-hosting checks, desktop-file installation checks, and AppStream validation as release blockers for Flathub review |
+| R-P57-E05 | AppImage AppDir specification — https://docs.appimage.org/reference/appdir.html — defines AppDir as the source of AppImages and requires root `AppRun`, desktop file, icon, and recommends the `usr/` layout |
+| R-P57-E06 | AppImage appimagetool — https://github.com/AppImage/appimagetool — low-level tool to generate an AppImage from an existing AppDir and supports `ARCH`, `VERSION`, and `APPIMAGETOOL_APP_NAME` environment variables |
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P57-L01 | `io.github.sysadmindoc.opencut.yml` — new Flatpak manifest using `org.freedesktop.Platform` / `org.freedesktop.Sdk` 25.08, command `opencut-server`, explicit loopback env defaults, user-media filesystem permissions, and PyInstaller bundle source |
+| R-P57-L02 | `flathub.json` — records the current x86_64-only binary release architecture policy for the Flatpak bundle path |
+| R-P57-L03 | `packaging/linux/io.github.sysadmindoc.opencut.desktop` and `packaging/linux/io.github.sysadmindoc.opencut.metainfo.xml` — Linux desktop metadata aligned to the Flatpak app ID |
+| R-P57-L04 | `packaging/linux/flatpak/opencut-server` and `packaging/linux/appimage/AppRun` — Flatpak/AppImage launchers preserving loopback defaults, OPENCUT_HOME, and server bundle execution |
+| R-P57-L05 | `scripts/build_linux_packages.sh` — package builder stages AppDir, optionally runs appimagetool, optionally runs flatpak-builder/build-bundle, and validates desktop/AppStream metadata when tools are present |
+| R-P57-L06 | `.github/workflows/build.yml` — Linux tag/manual release jobs install Flatpak/AppImage tooling, build packages, archive `OpenCut-Linux-Desktop-Packages`, and upload `.flatpak` / `.AppImage` assets to GitHub Releases |
+| R-P57-L07 | `docs/LINUX_DISTRIBUTION.md` — records the Flatpak-first/AppImage-fallback release path and the Flathub hosted-submission build-from-source/no-network boundary |
+| R-P57-L08 | `tests/test_linux_distribution_packaging.py` and `scripts/release_smoke.py` — new release-smoke gate covering manifest, metadata, launchers, build script, workflow wiring, docs, and executable bit |
+| R-P57-L09 | Validation commands — focused packaging tests, Bash syntax check, focused Ruff, `py_compile`, and reduced release smoke passed locally |
+
+**Source coverage assessment (Pass 57):** Pass 57 claims in `ROADMAP.md` v4.60, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `README.md`, `docs/LINUX_DISTRIBUTION.md`, and `CONTINUE_FROM_HERE.md` trace to R-P57-E01 through R-P57-E06 and R-P57-L01 through R-P57-L09.

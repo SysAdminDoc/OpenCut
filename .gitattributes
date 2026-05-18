@@ -1,2 +1,4 @@
 *.command text eol=lf
 *.sh text eol=lf
+packaging/linux/appimage/AppRun text eol=lf
+packaging/linux/flatpak/opencut-server text eol=lf

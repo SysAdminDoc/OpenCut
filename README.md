@@ -21,7 +21,7 @@
 ### Prerequisites
 
 - **Adobe Premiere Pro** 2019 or later (CEP panel) / 25.6+ (UXP panel)
-- **Windows 10/11, macOS, or Linux** (installer is Windows-only; source launchers ship for macOS/Linux)
+- **Windows 10/11, macOS, or Linux** (Windows installer, macOS/Linux source launchers, and Linux Flatpak/AppImage release packaging)
 - **Python 3.11+** for source installs; the Windows installer bundles its own runtime
 
 ### Installation
@@ -51,6 +51,10 @@ Clone the repo and run `Install.bat` as Administrator. Handles FFmpeg check, Pyt
 docker-compose up          # CPU only
 docker-compose -f docker-compose.gpu.yml up  # With GPU
 ```
+
+**Option E -- Linux desktop package:**
+
+Tagged Linux releases build Flatpak and AppImage artifacts from the PyInstaller server bundle. See `docs/LINUX_DISTRIBUTION.md` for the `io.github.sysadmindoc.opencut` Flatpak/AppImage contract and local package-build command.
 
 ### Launch
 
