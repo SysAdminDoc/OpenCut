@@ -47,6 +47,14 @@ The panel-side `udt-smoke.js` exposes `window.OpenCutUXPUdtHarness`, defaulting 
 
 ---
 
+## Pass 68 implementation note (2026-05-18)
+
+F263 was closed from live dependency-resolution evidence. `requirements.txt` still audits clean, while the previous `pyproject[all]` gap exposed stale optional pins and Torch-stack conflicts. The pass added `opencut.tools.pip_audit_extras` so release smoke now audits `requirements.txt` and `pyproject[all]` through structured per-target JSON with isolated pip caches.
+
+Implementation refreshed the `[all]` dependency set (`transnetv2-pytorch`, `auto-editor>=29.3`, `otio-aaf-adapter>=2.0`, `pyannote.audio>=4.0`) and kept AudioCraft/MusicGen plus Resemble Enhance as explicit Python 3.11-only extras because their published packages hard-pin older Torch stacks. `docs/PYTHON_ADVISORIES.md` records the two currently allowed live findings: BasicSR `CVE-2024-27763` and Transformers `CVE-2026-1839`. Validation evidence for the pass: focused F263 tests (`34 passed`), touched Python compile, focused Ruff, model-card/readiness sync checks, live `pip_audit_extras --json --extra all`, and release-smoke `--only pip-audit`.
+
+---
+
 ## 1. Phases executed
 
 | Phase | What | Output |

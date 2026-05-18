@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T03:36:38Z",
+  "generated_at": "2026-05-18T20:47:42Z",
   "source": "opencut/_generated/route_manifest.json",
   "total_records": 58,
   "total_routes": 67,
@@ -534,7 +534,7 @@
       "label": "Resemble Enhance",
       "category": "audio",
       "state": "available",
-      "install_hint": "pip install resemble-enhance",
+      "install_hint": "pip install \"opencut[enhance]\" (Python 3.11; Torch 2.1 stack)",
       "docs": "docs/MODELS.md",
       "routes": [
         "/audio/enhance"

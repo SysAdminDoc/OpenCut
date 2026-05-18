@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.70
+**Version**: 4.71
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,371 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -148,8 +148,25 @@
 > **v4.69 status (2026-05-18, sixty-sixth pass)**: closed **F260** by generating a UXP migration risk dashboard from the F198 CEP/UXP parity catalogue. `opencut.core.cep_uxp_parity.build_dashboard_manifest()` now derives summary counts, risk counts, hybrid candidates, priority rows, and per-host-action rows; `opencut.tools.dump_uxp_migration_dashboard` writes both the repository artifact and the bundled UXP panel JSON; the Settings tab loads `uxp-migration-dashboard.json` and renders direct UXP, CEP fallback, high-risk, and per-action replacement-plan status.
 >
 > **v4.70 status (2026-05-18, sixty-seventh pass)**: closed **F267** by adding a generated UXP Developer Tool smoke harness for the 14 direct-UXP `ocXxx` host actions. `opencut.core.uxp_udt_harness.build_udt_harness_manifest()` derives scenario payloads and safety boundaries from the F198 parity catalogue, `opencut.tools.dump_uxp_udt_harness` writes both repository and bundled panel artifacts, and `extension/com.opencut.uxp/udt-smoke.js` exposes `window.OpenCutUXPUdtHarness` so UDT can run read-only scenarios by default or explicit mutating/file-writing scenarios inside a disposable Premiere project.
+>
+> **v4.71 status (2026-05-18, sixty-eighth pass)**: closed **F263** by expanding the Python dependency advisory gate from `requirements.txt` only to `requirements.txt` plus `pyproject[all]`. `opencut.tools.pip_audit_extras` now builds structured audit targets, isolates pip/pip-audit caches, reports allowed vs unallowed vulnerabilities, and release smoke fails only on unlisted Python advisories. The pass also refreshed the full optional dependency set so `[all]` resolves: `transnetv2-pytorch`, `auto-editor>=29.3`, `otio-aaf-adapter>=2.0`, and `pyannote.audio>=4.0`; AudioCraft/MusicGen and Resemble Enhance remain explicit Python 3.11 extras because they hard-pin older Torch stacks.
 
 ---
+
+## 2026-05-18 v4.71 Pip-Audit Full Extras (F263)
+
+One dependency-governance item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Audit scope | `opencut.tools.pip_audit_extras` audits both `requirements.txt` and temporary requirements built from `pyproject.toml` optional extras, defaulting to `[all]`. |
+| Resolver hygiene | Each target uses an isolated temporary requirements file, `PIP_CACHE_DIR`, and `pip-audit --cache-dir` so local user-cache permission issues do not break the gate. |
+| Optional dependency refresh | `[all]` now resolves with `transnetv2-pytorch>=1.0.5,<2`, `auto-editor>=29.3,<30`, `otio-aaf-adapter>=2.0,<3` plus `opentimelineio>=0.17,<1`, and `pyannote.audio>=4.0,<5`. |
+| Torch-stack isolation | AudioCraft/MusicGen and Resemble Enhance stay as explicit Python 3.11-only extras (`opencut[music]` / `opencut[enhance]`) because their published packages hard-pin older Torch stacks that conflict with WhisperX/pyannote. |
+| Advisory policy | `docs/PYTHON_ADVISORIES.md` documents the two current `[all]` advisories: BasicSR `CVE-2024-27763` / `GHSA-86w8-vhw6-q9qq` and Transformers `CVE-2026-1839` / `GHSA-69w3-r845-3855`. Any unlisted advisory fails the release gate. |
+| Tests/docs | `tests/test_pip_audit_extras.py`, `tests/test_transnetv2_dependency.py`, `tests/test_otio_aaf_adapter_pin.py`, and `tests/test_release_smoke.py` pin the wrapper, dependency ranges, fallback import behavior, docs parity, and release-smoke integration. |
+
+Validation after the batch: `python -m pytest tests/test_pip_audit_extras.py tests/test_release_smoke.py tests/test_transnetv2_dependency.py tests/test_otio_aaf_adapter_pin.py -q` passed (`34 passed`), touched Python files compile, focused Ruff passed, `python -m opencut.tools.dump_model_cards --check` passed, `python -m opencut.tools.dump_feature_readiness --check` passed, `python -m opencut.tools.pip_audit_extras --json --extra all` passed (`requirements.txt=0`, `pyproject[all]=2 allowed / 0 unallowed`), and `python scripts\release_smoke.py --json --only pip-audit` passed.
 
 ## 2026-05-18 v4.70 UXP UDT Smoke Harness (F267)
 
@@ -723,7 +740,7 @@ Three small cleanup items closed in one batch.
 
 | Surface | Status |
 |---|---|
-| F126 OTIO adapter pin | DONE — `pyproject.toml` `otio` and `all` extras now pin `otio-aaf-adapter>=0.6,<1` so the existing `opencut.export.otio_export.export_aaf` path keeps working after the OpenTimelineIO 0.15+ adapter split. `tests/test_otio_aaf_adapter_pin.py` (5 tests) pins the extras shape, the version range, and the existing `check_aaf_available` two-tier probe (direct `otio_aaf_adapter` import → OTIO registry fallback). |
+| F126 OTIO adapter pin | DONE — `pyproject.toml` `otio` and `all` extras now pin `otio-aaf-adapter>=2.0,<3` with `opentimelineio>=0.17,<1` so the existing `opencut.export.otio_export.export_aaf` path keeps working after the OpenTimelineIO adapter split. `tests/test_otio_aaf_adapter_pin.py` pins the extras shape, the current version range, and the existing `check_aaf_available` two-tier probe (direct `otio_aaf_adapter` import → OTIO registry fallback). |
 | F181 UV trampoline fallback | DONE — `scripts/bootstrap_check.py` now has a `_resolve_python_for_subprocess()` helper that probes `sys.executable` first, then falls back to `shutil.which("python")`/`python3`/`py` if the probe fails (`OSError`/`FileNotFoundError`/`TimeoutExpired`). `check_version_sync` honours the helper and translates spawn failures into an actionable remediation hint that points at recreating the broken venv. 4 new tests in `tests/test_bootstrap_check.py` pin the happy path, the fallback path, the trampoline-hint path, and the timeout path. |
 | F185 features.md banner | DONE — `features.md` now opens with a clear "Aspirational catalogue — not a ship promise" banner that cross-links ROADMAP.md and FEATURES_RECONCILIATION.md and codifies the "ROADMAP.md wins / the code wins" precedence rule. `tests/test_features_md_banner.py` (4 tests) pins the banner text, the cross-links, the F185/status line, and the precedence rule. |
 | Test coverage | 13 new tests; all wired into release-smoke `pytest-fast` via `tests/test_otio_aaf_adapter_pin.py`, the extended `tests/test_bootstrap_check.py`, and `tests/test_features_md_banner.py`. |
@@ -1213,7 +1230,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 **Now (5 closed locally by v4.9):** [x] F261 (ship missing macOS `.command` + Linux `.sh` launchers — closes Wave I I1.4 ledger discrepancy), [x] F262 (fix uxp-api-notes URL typo), [x] F264 (CI npm-audit machine-parseable assertion), [x] F266 (document 2-function CEP residual + drop-QE plan), [x] F270 (README "$1,400/yr" marketing copy refresh).
 
-**Next (5 items):** F263 (pip-audit full `[all]` extras), [x] F267 (UDT test harness for 14 low-risk JSX→UXP ports), F268 (Adobe Exchange storefront listing), F271 (per-feature VRAM requirement UI), F272 (wedding-specific Skill).
+**Next (5 items):** [x] F263 (pip-audit full `[all]` extras), [x] F267 (UDT test harness for 14 low-risk JSX→UXP ports), F268 (Adobe Exchange storefront listing), F271 (per-feature VRAM requirement UI), F272 (wedding-specific Skill).
 
 **Later (2 items):** F265 (UDT harness for all 18 JSX functions), F269 (premium model-pack bundling format).
 

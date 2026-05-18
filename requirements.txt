@@ -32,11 +32,11 @@ scenedetect[opencv]>=0.6
 # gfpgan>=1.3              # Face enhancement (~330MB model)
 # insightface>=0.7         # Face detection/swap
 # onnxruntime-gpu>=1.25    # GPU inference for InsightFace
-# audiocraft>=1.0          # MusicGen AI music (1.2-13GB models)
+# audiocraft>=1.3          # MusicGen AI music (Python 3.11; Torch 2.1 stack)
 
 # === ADVANCED (optional) ===
 # whisperx>=3.8.5          # Word-level timestamps + alignment
-# pyannote.audio>=3.1      # Speaker diarization (needs HuggingFace token)
+# pyannote.audio>=4.0      # Speaker diarization (needs HuggingFace token)
 
 # === POST-PRODUCTION FEATURES (optional) ===
 # Color matching & auto-zoom use opencv-python-headless + numpy (already listed above)
