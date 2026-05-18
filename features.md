@@ -1,8 +1,29 @@
 # OpenCut — Feature Expansion Plan
 
+> **⚠ Aspirational catalogue — not a ship promise.**
+>
+> This file is a **brainstorm + scope-defining wish list** captured in
+> April 2026. It is **not** the authoritative roadmap. Live shipping
+> decisions, F-numbered governance items, and Wave letter
+> sequencing all live in [`ROADMAP.md`](ROADMAP.md) and the
+> per-pass research artefacts under
+> [`.ai/research/2026-05-17/`](.ai/research/2026-05-17/).
+>
+> Treat each entry below as "considered" until it gets an F-number or
+> a Wave assignment. A small fraction of these items have already
+> shipped under different names; many have been explicitly rejected
+> on licence, scope, or strategic grounds. The
+> [`FEATURES_RECONCILIATION.md`](.ai/research/2026-05-17/FEATURES_RECONCILIATION.md)
+> pass walks samples of this file against shipped state — F179 will
+> complete the reconciliation eventually.
+>
+> When ROADMAP.md and this file disagree, **ROADMAP.md wins**.
+> When ROADMAP.md and the live code disagree, **the code wins**.
+
 **Baseline**: v1.10.4 (254 routes, 68 core modules, 8 panel tabs, 867 tests)
 **Created**: 2026-04-12
 **Scope**: New features, expansion features, and improvements not yet in the codebase or ROADMAP.md
+**Status (2026-05-17)**: Aspirational; superseded as the authoritative plan by ROADMAP.md v4.3+. See F185 in the v4.5 backlog addendum.
 
 Items already completed or tracked in ROADMAP.md are excluded. This document focuses exclusively on what's **not yet planned or implemented**.
 

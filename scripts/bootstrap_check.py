@@ -31,6 +31,59 @@ from typing import Dict, Iterable, List, Optional, Sequence
 REPO_ROOT = Path(__file__).resolve().parents[1]
 MIN_PYTHON = (3, 9)
 
+
+def _resolve_python_for_subprocess() -> str:
+    """Return a Python executable that can actually spawn a child process.
+
+    F181 — `sys.executable` is normally the right answer, but UV-style
+    trampolines (and some Windows redirected installs) point at a
+    binary whose target was removed without the venv being cleaned up.
+    Spawning the trampoline raises ``FileNotFoundError`` /
+    ``OSError(errno=2)``. Detect that case once at bootstrap time and
+    fall back to ``shutil.which("python")`` / ``python3`` / ``py``.
+
+    Returns ``sys.executable`` on the happy path so non-trampoline runs
+    keep their existing behaviour.
+    """
+    import shutil
+
+    # Probe sys.executable with a no-op so we fail fast on broken
+    # trampolines instead of failing inside the real check.
+    try:
+        probe = subprocess.run(
+            [sys.executable, "-c", "import sys; sys.exit(0)"],
+            capture_output=True,
+            text=True,
+            timeout=10,
+        )
+        if probe.returncode == 0:
+            return sys.executable
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+
+    # Fallback hunt — same order as opencut.security._find_system_python.
+    for name in ("python", "python3", "py"):
+        candidate = shutil.which(name)
+        if not candidate:
+            continue
+        if Path(candidate).resolve() == Path(sys.executable).resolve():
+            # Same broken trampoline; skip.
+            continue
+        try:
+            probe = subprocess.run(
+                [candidate, "-c", "import sys; sys.exit(0)"],
+                capture_output=True,
+                text=True,
+                timeout=10,
+            )
+            if probe.returncode == 0:
+                return candidate
+        except (OSError, subprocess.TimeoutExpired):
+            continue
+    # Last resort — return sys.executable anyway. Callers will see the
+    # actual error from the failed subprocess.run.
+    return sys.executable
+
 RUNTIME_IMPORTS: Dict[str, str] = {
     "click": "click",
     "rich": "rich",
@@ -164,12 +217,37 @@ def check_version_sync(repo_root: Path = REPO_ROOT) -> CheckResult:
     if not script.exists():
         return _fail("version-sync", "scripts/sync_version.py is missing")
 
-    completed = subprocess.run(
-        [sys.executable, str(script), "--check"],
-        cwd=str(repo_root),
-        capture_output=True,
-        text=True,
-    )
+    python = _resolve_python_for_subprocess()
+    try:
+        completed = subprocess.run(
+            [python, str(script), "--check"],
+            cwd=str(repo_root),
+            capture_output=True,
+            text=True,
+            timeout=60,
+        )
+    except FileNotFoundError as exc:
+        # F181 — UV / Windows trampoline whose target Python is missing.
+        return _fail(
+            "version-sync",
+            f"Could not spawn Python to run sync_version.py: {exc}",
+            "Your venv looks like a UV trampoline pointing at a missing "
+            "interpreter. Recreate the venv (`uv venv` or `python -m venv .venv`) "
+            "or run the script through a system Python.",
+        )
+    except OSError as exc:
+        return _fail(
+            "version-sync",
+            f"Could not run sync_version.py: {exc}",
+            "Check that the Python interpreter is functional and the script is "
+            "readable.",
+        )
+    except subprocess.TimeoutExpired:
+        return _fail(
+            "version-sync",
+            "sync_version.py timed out after 60 seconds",
+            "Investigate any process blocking sync_version.py and rerun.",
+        )
     if completed.returncode == 0:
         return _pass("version-sync", "Version targets are in sync")
 

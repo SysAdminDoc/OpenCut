@@ -111,6 +111,10 @@ mcp = [
 ]
 otio = [
     "opentimelineio>=0.15,<1",
+    # F126 — adapters split out of core OTIO after 0.15; pin the AAF
+    # adapter here so `opencut[otio]` keeps an Avid-compatible export
+    # path without the user installing a second extra by hand.
+    "otio-aaf-adapter>=0.6,<1",
 ]
 tts = [
     "edge-tts>=6.1,<7",
@@ -145,6 +149,7 @@ all = [
     "transnetv2>=1.0,<2",
     "resemble-enhance>=0.0.1,<1",
     "opentimelineio>=0.15,<1",
+    "otio-aaf-adapter>=0.6,<1",
 ]
 dev = [
     "pytest>=7.0,<10",
