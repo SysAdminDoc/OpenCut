@@ -824,3 +824,34 @@ F252.1 is complete as a repository-side scaffold and is covered by the local
 release-smoke `pytest-fast` gate. F252 remains open until the live manifest is
 switched after an in-Premiere UDT smoke pass and the UI/API migration is
 validated against the real host.
+
+---
+
+## Pass 60 (2026-05-18 — F252.2 UXP host-action dispatcher)
+
+Pass 60 advanced the next F252 slice by turning the parity catalogue into a
+live UXP dispatcher surface that the current panel and the future WebView host
+bridge can share.
+
+### Pass 60 local checks
+
+| Probe | Result |
+|---|---|
+| Parity catalogue | The dispatcher direct-action map matches the 14 `direct_uxp` entries in `opencut/_generated/cep_uxp_parity.json`. |
+| CEP fallback boundary | `ocAddNativeCaptionTrack` and `ocQeReflect` remain explicit fallback responses instead of being silently marked as native UXP operations. |
+| WebView bridge readiness | `window.OpenCutUXPHost` exposes `executeHostAction` and `getHostActionStatus` for the dormant WebView bridge. |
+
+### Pass 60 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 60.1 | Converted the parity manifest into a UXP dispatcher contract. | Added `UXP_DIRECT_HOST_ACTIONS`, `CEP_FALLBACK_HOST_ACTIONS`, and `PProBridge.executeHostAction()`. |
+| Pass 60.2 | Added live bridge helpers. | Added marker read/remove, project-bin enumeration, rename/bin/delete helpers, playhead dispatch, and guarded pending responses for UDT/F255-gated actions. |
+| Pass 60.3 | Wired docs and release guardrails. | Added `tests/test_uxp_host_action_dispatch.py`, release-smoke registration, roadmap/state updates, focused test/Ruff/compile checks, `node --check`, and release-smoke `pytest-fast` validation (`627 passed`). |
+
+### Pass 60 saturation note
+
+F252.2 now has a stable dispatcher surface covered by the local release-smoke
+`pytest-fast` gate, but F252 remains open. The next UXP work should either add
+UDT coverage for these host actions or move into the explicit F254-F258 API
+migrations.
