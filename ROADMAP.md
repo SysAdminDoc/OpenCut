@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.60
+**Version**: 4.66
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,371 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -138,8 +138,24 @@
 > **v4.64 status (2026-05-18, sixty-first pass)**: closed **F254** by wiring UXP `Sequence.createSubsequence(ignoreTrackTargeting?)` into the export-range dispatcher. `PProBridge.createSubsequenceFromRange()` now builds `TickTime` values from seconds, sets sequence in/out points through `createSetInPointAction` / `createSetOutPointAction` inside `Project.executeTransaction`, calls `createSubsequence`, restores the previous range in `finally`, and returns the subsequence metadata for the still-open **F255** encoder handoff. `tests/test_uxp_create_subsequence_integration.py` pins the beta package assumption and release smoke includes it.
 >
 > **v4.65 status (2026-05-18, sixty-second pass)**: closed **F255** by completing the UXP encoder handoff for export-range subsequences. `PProBridge.exportSubsequenceWithEncoder()` now validates an output path, checks AME availability for queued exports, optionally calls `EncoderManager.launchEncoder()`, selects `Constants.ExportType.QUEUE_TO_AME` or `IMMEDIATELY`, calls `EncoderManager.exportSequence(...)`, and optionally starts the queue with `startBatchEncode()`. `tests/test_uxp_encoder_manager_integration.py` pins the beta API assumptions and release smoke includes it.
+>
+> **v4.66 status (2026-05-18, sixty-third pass)**: closed **F256** by adding UXP Transcript API helpers for caption-QC context. `PProBridge.querySupportedTranscriptLanguages()` wraps `Transcript.querySupportedLanguages()`, `PProBridge.getTranscriptState()` resolves a clip project item from node ID/path/name, casts it through `ClipProjectItem.cast()`, calls `Transcript.hasTranscript()`, and can include `Transcript.exportToJSON()` output when requested. `tests/test_uxp_transcript_api_integration.py` pins the beta API assumptions and release smoke includes it.
 
 ---
+
+## 2026-05-18 v4.66 UXP Transcript API Helpers (F256)
+
+One UXP API migration item closed in this pass.
+
+| Area | Status |
+|---|---|
+| API verification | The unpacked `@adobe/premierepro@26.3.0-beta.67` typings expose `Transcript.querySupportedLanguages()`, `Transcript.hasTranscript(clipProjectItem)`, `Transcript.exportToJSON(clipProjectItem)`, and `ClipProjectItem.cast(projectItem)`. |
+| Language inventory | `PProBridge.querySupportedTranscriptLanguages()` returns Premiere-supported transcript languages without requiring backend caption-model probing. |
+| Clip transcript state | `PProBridge.getTranscriptState(payload)` resolves project items by `nodeId`, media path, tree path, or name, casts to `ClipProjectItem`, checks transcript availability, and optionally returns Premiere transcript JSON. |
+| WebView bridge hook | `window.OpenCutUXPHost` exposes the transcript helpers for the upcoming WebView UI cutover. |
+| Tests/docs | `tests/test_uxp_transcript_api_integration.py` pins the F256 contract and release smoke includes it. |
+
+Validation after the batch: `python -m pytest tests/test_uxp_transcript_api_integration.py -q` passed (`5 passed`), `python -m pytest tests/test_uxp_transcript_api_integration.py tests/test_uxp_encoder_manager_integration.py tests/test_uxp_create_subsequence_integration.py tests/test_uxp_host_action_dispatch.py tests/test_uxp_webview_scaffold.py tests/test_release_smoke.py -q` passed (`37 passed`), touched Python files compile, focused Ruff passed, `node --check extension\com.opencut.uxp\main.js` passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`642 passed`).
 
 ## 2026-05-18 v4.65 UXP EncoderManager Export Handoff (F255)
 

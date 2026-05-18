@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — UXP Transcript API Helpers
+
+- Added F256 UXP Transcript API helpers: `querySupportedTranscriptLanguages()` wraps `Transcript.querySupportedLanguages()`, and `getTranscriptState()` resolves clip project items before calling `Transcript.hasTranscript()` with optional JSON export.
+- Added `tests/test_uxp_transcript_api_integration.py` and release-smoke registration to pin the `@adobe/premierepro@26.3.0-beta.67` transcript API assumptions and WebView host bridge exposure.
+
 ### Added — UXP EncoderManager Export Handoff
 
 - Added F255 UXP `EncoderManager` export wiring for range subsequences: queued exports now use `EncoderManager.getManager()`, optional `launchEncoder()`, `exportSequence(...)`, and optional `startBatchEncode()`.
