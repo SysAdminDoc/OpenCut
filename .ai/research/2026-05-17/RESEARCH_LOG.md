@@ -71,6 +71,14 @@ Implementation details: `opencut.core.agent_skills` provides the built-in skill 
 
 ---
 
+## Pass 71 implementation note (2026-05-18)
+
+F193 was closed by making OpenAPI response schemas dataclass-discovered rather than table-maintained inside `opencut.openapi`. The new `opencut.openapi_registry` carries the route metadata contract, while `opencut.schemas` and selected safe core result modules register their dataclasses for discovery.
+
+Implementation details: the legacy `_ENDPOINT_SCHEMAS` compatibility map is now generated from registry discovery, `opencut.openapi` resolves nested dataclass fields and computed properties, and `mcp_extended_tools` reads the same registry map for response-schema annotations. Validation evidence for the pass: focused OpenAPI tests (`6 passed`), focused OpenAPI+MCP tests (`15 passed`), touched Python compile, focused Ruff (`E,F,I`), roadmap lint, extended MCP manifest sync check, and release-smoke `pytest-fast` (`693 passed`).
+
+---
+
 ## 1. Phases executed
 
 | Phase | What | Output |

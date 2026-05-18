@@ -22,7 +22,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|---|---|---|
 | F191 | Auto-derive `FeatureRecord` from check functions + route manifest | DONE in Pass 8 — generated catalogue covers 58 direct route/check records and 67 route bindings | ROUTE_READINESS_AUDIT §3 | M | Done |
 | [x] F192 | Bulk OpenAPI response schemas for top 50 routes | Closed in Pass 41 — legacy `/openapi.json` typed schema map now covers 100 routes with reusable response envelopes and contract tests | ROUTE_READINESS_AUDIT §4 | M | Next |
-| F193 | Introspection-based OpenAPI schema (replace hand-table) | Walk `core/*Result` dataclasses to generate schemas | ROUTE_READINESS_AUDIT §4 | M | Later |
+| [x] F193 | Introspection-based OpenAPI schema (replace hand-table) | Closed in Pass 71 — `/openapi.json` response schema bindings are now discovered from registered dataclasses, including selected `core/*Result` route payloads | ROUTE_READINESS_AUDIT §4 | M | Later |
 | [x] F194 | Auto-generate extended MCP tools from manifest | Closed in Pass 43 — 1,312 opt-in `opencut_route_*` tools generated from route manifest + OpenAPI schemas while 39 curated tools remain default | ROUTE_READINESS_AUDIT §5 | L | Next |
 | F195 | Add 12 missing MCP tools for shipped post-Wave-M routes | DONE in Pass 9 — curated MCP surface is now 39 tools, including face_reshape, skin_retouch, smart_upscale, elevenlabs_tts, caption_qc, review_bundle, c2pa_provenance, marker_import, capability_probe, brand_kit, semantic_search, and spectral_match | ROUTE_READINESS_AUDIT §5 | S | Done |
 | F196 | Make `registry.py` primary; derive `model_cards.py` / `checks.py` from it | Single source of truth | ROUTE_READINESS_AUDIT §6 | L | Later |
@@ -130,7 +130,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
 | **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, [x] F260 | 32 |
-| **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
+| **Later** | [x] F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 17 open + F193 closed |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
 **Total project F-numbers: 140** (F121-F260 from Pass 1 + Pass 2; plus the pre-existing F001-F120 from v4.3).

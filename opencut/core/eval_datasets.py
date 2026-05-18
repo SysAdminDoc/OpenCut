@@ -30,6 +30,8 @@ import os
 from dataclasses import asdict, dataclass
 from typing import Iterable, List, Optional, Tuple
 
+from opencut.openapi_registry import openapi_response_schema
+
 # Modality tags — used by the panel to filter the list.
 MODALITIES: Tuple[str, ...] = (
     "video",
@@ -44,6 +46,7 @@ MODALITIES: Tuple[str, ...] = (
 
 
 @dataclass(frozen=True)
+@openapi_response_schema("/system/eval-datasets/<dataset_id>")
 class EvalDataset:
     """One public eval dataset OpenCut benchmarks against."""
 

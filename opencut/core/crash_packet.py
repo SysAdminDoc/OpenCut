@@ -37,6 +37,7 @@ from pathlib import Path
 from typing import List, Optional
 
 from opencut.core.issue_report import _scrub_paths, _tail_file, _tail_lines
+from opencut.openapi_registry import openapi_response_schema
 
 logger = logging.getLogger("opencut")
 
@@ -56,6 +57,10 @@ class PacketEntry:
 
 
 @dataclass
+@openapi_response_schema(
+    "/system/crash-packet",
+    extra_properties={"version": {"type": "integer"}},
+)
 class CrashPacketResult:
     output_path: str
     bundle_sha256: str

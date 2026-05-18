@@ -77,10 +77,13 @@ def load_api_alias_manifest(path: Path = API_ALIAS_MANIFEST_PATH) -> dict:
 
 def _response_schema_lookup() -> dict[str, str]:
     try:
-        from opencut.openapi import _ENDPOINT_SCHEMAS
+        from opencut.openapi_registry import build_endpoint_schema_map
     except Exception:
         return {}
-    return {rule: schema.__name__ for rule, schema in _ENDPOINT_SCHEMAS.items()}
+    return {
+        rule: schema.__name__
+        for rule, schema in build_endpoint_schema_map().items()
+    }
 
 
 def _alias_rules_to_skip(api_alias_manifest: Mapping[str, object]) -> set[str]:

@@ -33,6 +33,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Iterable, List, Optional, Sequence
 
+from opencut.openapi_registry import openapi_response_schema
+
 logger = logging.getLogger("opencut")
 
 _MEDIA_EXTS = {
@@ -57,6 +59,7 @@ class HealthCheck:
 
 
 @dataclass
+@openapi_response_schema("/system/project-health")
 class HealthReport:
     project_root: str
     media_count: int = 0

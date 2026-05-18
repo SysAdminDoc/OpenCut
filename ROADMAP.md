@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.73
+**Version**: 4.74
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,376 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -154,8 +154,24 @@
 > **v4.72 status (2026-05-18, sixty-ninth pass)**: closed **F271** by carrying per-feature hardware and minimum-VRAM metadata from model cards into the generated feature-readiness manifest and `/system/feature-state`. The CEP panel feature-state helper now annotates `data-feature-id` controls with `data-feature-hardware`, `data-feature-min-vram-mb`, and tooltip hardware summaries, so model-heavy features can show requirements before a user starts a job.
 >
 > **v4.73 status (2026-05-18, seventieth pass)**: closed **F272** by adding the first concrete built-in agent skill package: `wedding-cinematic-reel`. The skill ships with a `SKILL.md` front-matter manifest plus structured `plan.json` that chains color match, music beat markers, highlight extraction, beat-synced assembly, and a four-minute review-master export plan. `GET /agent/skills` and `GET /agent/skills/<id>` expose the catalogue, and the route manifest / extended MCP catalogue now report 1,376 routes and 1,319 opt-in route tools.
+>
+> **v4.74 status (2026-05-18, seventy-first pass)**: closed **F193** by replacing the legacy `/openapi.json` endpoint hand-table with dataclass-discovered response schema bindings. `opencut.openapi_registry` now discovers registered dataclasses from `opencut.schemas` plus safe core result modules, `/openapi.json` exposes **110** typed response entries with nested dataclass properties, and the extended MCP manifest now marks **100** route tools with response-schema metadata.
 
 ---
+
+## 2026-05-18 v4.74 OpenAPI Schema Introspection (F193)
+
+One route-readiness item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Schema registry | Added `opencut.openapi_registry` so response schema dataclasses carry route metadata and `opencut.openapi` builds `_ENDPOINT_SCHEMAS` from discovery instead of a hand-maintained endpoint table. |
+| Core result coverage | Added typed bindings for core dataclass results including `AudioDescriptionReviewDraft`, `TransferBundleResult`, `MarkerImportResult`, `EvalDataset`, `CrashPacketResult`, `HealthReport`, `OcioValidation`, `ReviewBundleResult`, and `C2paSidecarResult`. |
+| Nested schemas | The OpenAPI generator now resolves `get_type_hints()`, `Optional`/union, lists/tuples, nested dataclasses, `Path`, and custom computed response properties such as `cue_count`, `count`, and `version`. |
+| MCP metadata | `opencut.mcp_extended_tools` now reads the dataclass-discovered schema map directly; the committed extended catalogue remains at 1,319 tools and now has 100 response-schema annotations. |
+| Guard tests | `tests/test_openapi_contract.py` pins dataclass discovery, 105+ typed route coverage, representative core route properties, and nested transfer-command properties. `tests/test_mcp_extended_tools.py` pins the increased response-schema count and TransferBundleResult metadata. |
+
+Validation after the batch: `python -m pytest tests/test_openapi_contract.py -q` passed (`6 passed`), `python -m pytest tests/test_openapi_contract.py tests/test_mcp_extended_tools.py -q` passed (`15 passed`), touched Python files compile, focused Ruff (`E,F,I`) passed, `python -m opencut.tools.dump_mcp_extended_tools --check` passed, roadmap lint passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`693 passed`).
 
 ## 2026-05-18 v4.73 Wedding Cinematic Reel Skill (F272)
 
@@ -542,7 +558,7 @@ One Next-tier MCP visibility item closed in this pass.
 | Surface | Status |
 |---|---|
 | F194 generator | DONE — `opencut/tools/dump_mcp_extended_tools.py` builds `opencut/_generated/mcp_extended_tools.json` from the canonical route manifest, API-alias manifest, and OpenAPI response-schema table. |
-| Extended catalogue | The committed artifact contains 1,313 generated `opencut_route_*` tools after skipping curated routes, special-action curated routes, static routes, and `/api` aliases. |
+| Extended catalogue | The committed artifact contains 1,319 generated `opencut_route_*` tools after skipping curated routes, special-action curated routes, static routes, and `/api` aliases. |
 | Default MCP contract | The default curated surface remains 39 tools. Extended tools list and dispatch only when `OPENCUT_MCP_EXTENDED_TOOLS=1` or `opencut-mcp-server --extended-tools` is set. |
 | Dispatch contract | Generated tools pass path params as top-level args, GET query args through `query`, and mutating JSON payloads through `body`; route metadata is tagged `generated=true` and `priority=extended`. |
 | Guard tests | `tests/test_mcp_extended_tools.py` pins committed-vs-live generation, opt-in behavior, metadata, disabled-call errors, GET query dispatch, mutating body dispatch, and missing path-param validation. Release smoke includes the new test. |
@@ -1292,7 +1308,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 ### Phase 0 — What Pass 1 (v4.4) missed or what surfaced on deeper inspection
 
-1. **Route readiness coverage gap is larger than reported.** F100/F191 registry coverage exposes **84** feature-readiness records with **67** direct route/check bindings; F115 model cards cover 47 model surfaces; F192 raises legacy OpenAPI typed response schemas to **100** route entries; MCP tool coverage is **39** curated tools after F195. The remaining ~1,200+ routes still have no machine-readable readiness state or typed response. This drives the remaining **F193-F197** OpenAPI / MCP / model-card coverage uplift.
+1. **Route readiness coverage gap is larger than reported.** F100/F191 registry coverage exposes **84** feature-readiness records with **67** direct route/check bindings; F115 model cards cover 47 model surfaces; F192/F193 raise legacy OpenAPI typed response schemas to **110** dataclass-discovered route entries; MCP tool coverage is **39** curated tools after F195. The remaining ~1,200+ routes still have no machine-readable readiness state or typed response. This drives the remaining **F196** registry-primary and related coverage uplift.
 2. **`createSubsequence` is exposed in UXP** — Pass 1's UXP-API-gap list inferred it was missing. The deeper `@adobe/premierepro@26.3.0-beta.67` walk in Pass 2 confirmed it ships with an `ignoreTrackTargeting?` parameter. **F254** uses it.
 3. **`ProjectConverter.importFromFinalCutProXML` and `importFromOpenTimelineIO` were REMOVED in the 26.3.0-beta typings.** Export still works; round-trip import via UXP is currently impossible. This is a **new** Adobe gap report — **F261** (replacement for F186-F190 set).
 4. **UXP Hybrid Plugins** (.uxpaddon, C++ bundled per-platform) are the **only** path for some CEP-blocked features post-Sept 2026. Bolt UXP 1.3.0 (May 2026) added a win-arm64 hybrid template. **F253** is the implementation; **F251** is the per-week `@adobe/premierepro@beta` diff tracker that catches new APIs the moment Adobe ships them.
@@ -1335,7 +1351,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 
-**Later (18 items):** F193 (OpenAPI introspection), F196 (registry as primary), F206 (PR-fast/release-full CI split), F210 (Vitest CEP/UXP utilities), F212 (WPF installer xUnit), F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops).
+**Later (17 items):** F196 (registry as primary), F206 (PR-fast/release-full CI split), F210 (Vitest CEP/UXP utilities), F212 (WPF installer xUnit), F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops).
 
 **Newly explicit rejects (none in Pass 2)** — all Pass-1 rejects stand; Pass 2 did not propose anything that required new rejection.
 
