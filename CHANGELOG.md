@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Windows Code Signing
+
+- Added `scripts/sign_windows_artifacts.ps1` and Windows release workflow wiring to Authenticode-sign WPF and Inno installer artifacts when `WINDOWS_CODESIGN_*` secrets are configured.
+- Added `docs/WINDOWS_CODESIGNING.md` and `tests/test_windows_codesigning.py` to pin signing secrets, timestamping, verification, renewal warnings, and workflow ordering.
+
 ### Added — WPF Installer CI
 
 - Added `scripts/build_wpf_installer_ci.ps1` and Windows release workflow wiring so the recommended WPF installer is built in CI before the Inno fallback.

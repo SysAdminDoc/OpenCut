@@ -37,7 +37,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | [x] F200 | Document WPF-vs-Inno installer policy (retire one or formalise both) | Closed in Pass 33 — WPF recommended, Inno deprecated-but-supported, lockstep tests added | INSTALLER_AUDIT §3 | S | Next |
 | [x] F201 | Automate WPF installer build in CI | Closed in Pass 44 — Windows tag/manual CI builds and archives the recommended WPF installer before the Inno fallback | INSTALLER_AUDIT §7 | M | Next |
 | F202 | Apple notarisation for macOS PyInstaller bundle | DONE in Pass 10 — macOS release workflow signs with Developer ID, submits `OpenCut-Server-macOS.zip` through `xcrun notarytool`, and documents required secrets; first live acceptance still needs configured GitHub secrets | INSTALLER_AUDIT §7 + niche AI §5 | M | Done |
-| F203 | Authenticode code-signing for Windows installer + signing-cert renewal policy | Cert validity drops to 458 days March 2026; EV bypass for SmartScreen no longer auto-trusted | INSTALLER_AUDIT §7 + niche AI §5 | M | Next |
+| [x] F203 | Authenticode code-signing for Windows installer + signing-cert renewal policy | Closed in Pass 45 — Windows signing helper, workflow step, secrets docs, verification, and renewal-warning policy added; first live signed release needs configured secrets | INSTALLER_AUDIT §7 + niche AI §5 | M | Next |
 | F204 | Auto-attach SBOM (CycloneDX 1.5) to GitHub release | DONE in Pass 11 — Linux release job generates, archives, and uploads `dist/opencut-sbom.cyclonedx.json` | INSTALLER_AUDIT §7 | S | Done |
 | F205 | Raise CI coverage floor from 50% to current actual | Still open — Pass 12 timed out after 20 minutes without output; Pass 23 reattempt was interrupted after 36m46s and produced only partial ignored coverage JSON (52.12%), which is invalid for setting a floor. Do not raise the floor until a complete measurement exists | INSTALLER_AUDIT §7 + TEST_COVERAGE §4 + F205_INTERRUPTED_COVERAGE_NOTE | S | Now |
 | F206 | Split CI into PR-fast and release-full workflows | Every PR currently runs full 3-OS matrix | INSTALLER_AUDIT §7 | M | Later |
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
