@@ -1011,3 +1011,20 @@ Validation evidence for the pass: focused registry/model-card/catalog tests
 (`32 passed`), touched Python compile, focused Ruff, model-card/readiness sync
 checks, roadmap lint, and release-smoke `pytest-fast` (`698 passed`) passed
 locally.
+
+---
+
+## Pass 73 implementation note (2026-05-18)
+
+F206 was closed by splitting the GitHub Actions paths. Pull requests now run a
+new `.github/workflows/pr-fast.yml` workflow on Linux only, installing the
+standard Python surface and running the fast release-smoke subset while skipping
+release-only audit, panel, and upstream-version drift checks.
+
+The previous `.github/workflows/build.yml` matrix is renamed Release Full and no
+longer triggers on pull requests. It still runs the Windows, Linux, and macOS
+matrix on pushes to `main`, version tags, and manual dispatch, preserving the
+packaging, signing, SBOM, notarization, and release-upload path.
+
+Validation evidence for the pass: focused F206 workflow tests (`4 passed`),
+touched Python compile, and focused Ruff passed locally.

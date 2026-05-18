@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.75
+**Version**: 4.76
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,376 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -158,8 +158,23 @@
 > **v4.74 status (2026-05-18, seventy-first pass)**: closed **F193** by replacing the legacy `/openapi.json` endpoint hand-table with dataclass-discovered response schema bindings. `opencut.openapi_registry` now discovers registered dataclasses from `opencut.schemas` plus safe core result modules, `/openapi.json` exposes **110** typed response entries with nested dataclass properties, and the extended MCP manifest now marks **100** route tools with response-schema metadata.
 >
 > **v4.75 status (2026-05-18, seventy-second pass)**: closed **F196** by making the feature registry the enforced catalogue boundary for model cards and public dependency checks. `opencut.registry` now carries curated rows for the 16 model-card surfaces that route scanning could not infer through helper layers, `/system/feature-state` exposes **100** records total, and `opencut.catalog_contract` plus `tests/test_catalog_contract.py` keep `registry.py`, `model_cards.py`, and `checks.py` cross-validated inside `pytest-fast`.
+>
+> **v4.76 status (2026-05-18, seventy-third pass)**: closed **F206** by splitting pull-request CI away from the full three-OS release build. `.github/workflows/pr-fast.yml` now runs a Linux-only fast release-smoke subset on PRs, while `.github/workflows/build.yml` is renamed **Release Full** and stays on pushes, tags, and manual dispatch for the expensive cross-platform build/release path. `tests/test_ci_workflow_split.py` pins the split and is part of `pytest-fast`.
 
 ---
+
+## 2026-05-18 v4.76 PR-Fast / Release-Full CI Split (F206)
+
+One installer/CI governance item closed in this pass.
+
+| Area | Status |
+|---|---|
+| PR workflow | Added `.github/workflows/pr-fast.yml`, scoped to `pull_request` on `main`, running on `ubuntu-latest` only. It installs Python 3.12, FFmpeg, `ruff`, `pytest`, and `opencut[standard]`, then runs the fast release-smoke subset. |
+| Release workflow | Renamed the existing workflow to **Release Full** and removed the `pull_request` trigger. It still runs the three-OS matrix on pushes to `main`, version tags, and manual `workflow_dispatch`, preserving release artifact, signing, packaging, SBOM, and upload behavior. |
+| Fast-gate boundary | PR Fast runs `scripts/release_smoke.py --json` while skipping heavyweight or drift-prone release-only checks: `pip-audit`, `npm-advisory`, `esbuild-pin`, `panel-source`, and `adobe-premierepro-versions`. |
+| Guard tests | Added `tests/test_ci_workflow_split.py` and registered it in `pytest-fast` so the PR-fast/release-full split stays pinned. |
+
+Validation after the batch: `python -m pytest tests/test_ci_workflow_split.py -q` passed (`4 passed`), touched Python files compile, and focused Ruff passed.
 
 ## 2026-05-18 v4.75 Registry Catalog Contract (F196)
 
@@ -1366,7 +1381,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 
-**Later (16 items):** F206 (PR-fast/release-full CI split), F210 (Vitest CEP/UXP utilities), F212 (WPF installer xUnit), F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75.
+**Later (15 items):** F210 (Vitest CEP/UXP utilities), F212 (WPF installer xUnit), F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76.
 
 **Newly explicit rejects (none in Pass 2)** — all Pass-1 rejects stand; Pass 2 did not propose anything that required new rejection.
 

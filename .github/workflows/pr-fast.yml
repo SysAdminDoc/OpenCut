@@ -1,0 +1,38 @@
+name: PR Fast
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  pr-fast:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest
+          pip install -e ".[standard]"
+
+      - name: Run fast release smoke
+        run: |
+          python scripts/release_smoke.py --json \
+            --skip pip-audit \
+            --skip npm-advisory \
+            --skip esbuild-pin \
+            --skip panel-source \
+            --skip adobe-premierepro-versions

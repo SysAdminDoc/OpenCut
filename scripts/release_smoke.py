@@ -608,6 +608,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_eval_datasets.py",
     "tests/test_download_eval_dataset.py",
     "tests/test_installer_policy.py",
+    "tests/test_ci_workflow_split.py",
     "tests/test_inno_installer_smoke.py",
     "tests/test_wpf_installer_ci.py",
     "tests/test_windows_codesigning.py",

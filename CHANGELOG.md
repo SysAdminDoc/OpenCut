@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed — CI Workflow Split
+
+- Split F206 pull-request validation into a new Linux-only `.github/workflows/pr-fast.yml` workflow that runs the fast release-smoke subset.
+- Renamed the existing three-OS workflow to Release Full and kept it on pushes, tags, and manual dispatch for release packaging/signing paths.
+
 ### Added — Registry Catalog Contract
 
 - Added the F196 `opencut.catalog_contract` validator so registry records, model cards, and public `check_*_available` probes are cross-validated in release smoke.

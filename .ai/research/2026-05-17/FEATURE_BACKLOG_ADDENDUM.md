@@ -40,7 +40,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | [x] F203 | Authenticode code-signing for Windows installer + signing-cert renewal policy | Closed in Pass 45 — Windows signing helper, workflow step, secrets docs, verification, and renewal-warning policy added; first live signed release needs configured secrets | INSTALLER_AUDIT §7 + niche AI §5 | M | Next |
 | F204 | Auto-attach SBOM (CycloneDX 1.5) to GitHub release | DONE in Pass 11 — Linux release job generates, archives, and uploads `dist/opencut-sbom.cyclonedx.json` | INSTALLER_AUDIT §7 | S | Done |
 | F205 | Raise CI coverage floor from 50% to current actual | Still open — Pass 12 timed out after 20 minutes without output; Pass 23 reattempt was interrupted after 36m46s and produced only partial ignored coverage JSON (52.12%), which is invalid for setting a floor. Do not raise the floor until a complete measurement exists | INSTALLER_AUDIT §7 + TEST_COVERAGE §4 + F205_INTERRUPTED_COVERAGE_NOTE | S | Now |
-| F206 | Split CI into PR-fast and release-full workflows | Every PR currently runs full 3-OS matrix | INSTALLER_AUDIT §7 | M | Later |
+| [x] F206 | Split CI into PR-fast and release-full workflows | Closed in Pass 73 — PRs now run `.github/workflows/pr-fast.yml` on Linux only, while `.github/workflows/build.yml` remains the Release Full push/tag/manual three-OS matrix | INSTALLER_AUDIT §7 | M | Later |
 | F207 | Embed bundled FFmpeg version in `AppConstants.cs` + installer manifest | DONE in Pass 12 — current bundled build `8.0.1-essentials_build-www.gyan.dev` is in `AppConstants.cs` and WPF/Inno `~/.opencut/installer.json` manifests | INSTALLER_AUDIT §9 | S | Done |
 
 ## C. Testing (Pass-2 test gaps)
@@ -130,7 +130,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
 | **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, [x] F260 | 32 |
-| **Later** | [x] F193, [x] F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 16 open + F193/F196 closed |
+| **Later** | [x] F193, [x] F196, [x] F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 15 open + F193/F196/F206 closed |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
 **Total project F-numbers: 140** (F121-F260 from Pass 1 + Pass 2; plus the pre-existing F001-F120 from v4.3).
