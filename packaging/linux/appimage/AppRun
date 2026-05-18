@@ -1,0 +1,12 @@
+#!/bin/sh
+set -eu
+
+APPDIR="${APPDIR:-$(CDPATH= cd "$(dirname "$0")" && pwd)}"
+
+export OPENCUT_APPIMAGE=1
+export OPENCUT_HOST="${OPENCUT_HOST:-127.0.0.1}"
+export OPENCUT_PORT="${OPENCUT_PORT:-5679}"
+export OPENCUT_HOME="${OPENCUT_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/opencut}"
+
+mkdir -p "$OPENCUT_HOME"
+exec "$APPDIR/usr/lib/opencut/OpenCut-Server/OpenCut-Server" "$@"

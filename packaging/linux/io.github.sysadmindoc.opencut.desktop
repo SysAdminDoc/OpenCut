@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=OpenCut
+Comment=Local-first video automation backend for Premiere Pro
+Exec=opencut-server
+Icon=io.github.sysadmindoc.opencut
+Terminal=true
+Categories=AudioVideo;Video;Utility;
+Keywords=video;editing;Premiere;FFmpeg;captions;automation;
+StartupNotify=false

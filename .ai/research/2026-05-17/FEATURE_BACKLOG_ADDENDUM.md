@@ -103,7 +103,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F246 | DPP IMF (BBC / ARD / EBU) preset | Public-broadcaster delivery | Niche AI §4 | L | Later |
 | F247 | Dolby Vision Profile 5/8.1 OSS pipeline (dovi_tool + Shaka) | Profile 7 still painful; document constraints | Niche AI §4 | L | Later |
 | F248 | ADM BWF (Audio Definition Model in BW64) Atmos master | EBU TR 045 — fully OSS up to final encode; .ec3 needs DEE (commercial) | Niche AI §4 | L | Later |
-| F249 | Flatpak (Flathub) primary Linux distribution + AppImage fallback | Linux 2026 packaging winner | Niche AI §5 | M | Next |
+| [x] F249 | Flatpak (Flathub) primary Linux distribution + AppImage fallback | Closed in Pass 57 — Linux releases now carry Flatpak/AppImage metadata, `io.github.sysadmindoc.opencut` manifest, AppImage/Flatpak launchers, package-build script, release workflow upload wiring, and Flathub boundary docs | Niche AI §5 | M | Next |
 | F250 | Aptabase as default opt-in telemetry (privacy-first desktop) | Replaces speculative Plausible default (F067 was Under Consideration) | Niche AI §6 | M | Next |
 
 ## G. UXP / Hybrid Plugins / Premiere 26.3+ (UXP subagent)
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).

@@ -1,0 +1,51 @@
+app-id: io.github.sysadmindoc.opencut
+runtime: org.freedesktop.Platform
+runtime-version: '25.08'
+sdk: org.freedesktop.Sdk
+command: opencut-server
+
+finish-args:
+  - --share=network
+  - --device=dri
+  - --filesystem=home
+  - --filesystem=xdg-videos
+  - --filesystem=xdg-download
+  - --filesystem=xdg-music
+  - --filesystem=/media
+  - --filesystem=/mnt
+  - --filesystem=/run/media
+  - --env=OPENCUT_FLATPAK=1
+  - --env=OPENCUT_HOST=127.0.0.1
+  - --env=OPENCUT_PORT=5679
+
+cleanup:
+  - /include
+  - /share/man
+  - /share/doc
+
+modules:
+  - name: opencut-server-bundle
+    buildsystem: simple
+    build-commands:
+      - install -d /app/lib/opencut/OpenCut-Server /app/bin /app/share/applications /app/share/metainfo /app/share/icons/hicolor/256x256/apps
+      - cp -a OpenCut-Server/. /app/lib/opencut/OpenCut-Server/
+      - install -Dm755 packaging/linux/flatpak/opencut-server /app/bin/opencut-server
+      - install -Dm644 packaging/linux/io.github.sysadmindoc.opencut.desktop /app/share/applications/io.github.sysadmindoc.opencut.desktop
+      - install -Dm644 packaging/linux/io.github.sysadmindoc.opencut.metainfo.xml /app/share/metainfo/io.github.sysadmindoc.opencut.metainfo.xml
+      - install -Dm644 img/icon.png /app/share/icons/hicolor/256x256/apps/io.github.sysadmindoc.opencut.png
+    sources:
+      - type: dir
+        path: dist/OpenCut-Server
+        dest: OpenCut-Server
+      - type: file
+        path: packaging/linux/flatpak/opencut-server
+        dest: packaging/linux/flatpak
+      - type: file
+        path: packaging/linux/io.github.sysadmindoc.opencut.desktop
+        dest: packaging/linux
+      - type: file
+        path: packaging/linux/io.github.sysadmindoc.opencut.metainfo.xml
+        dest: packaging/linux
+      - type: file
+        path: img/icon.png
+        dest: img
