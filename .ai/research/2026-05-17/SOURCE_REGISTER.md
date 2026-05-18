@@ -827,3 +827,20 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P59-L07 | Validation commands — focused F252.1 scaffold tests, focused release-smoke unit coverage, focused Ruff, `py_compile`, and release-smoke `pytest-fast` (`623 passed`) passed locally. |
 
 **Source coverage assessment (Pass 59):** Pass 59 claims in `ROADMAP.md` v4.62, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `docs/UXP_MIGRATION.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P59-E01 through R-P59-E03 and R-P59-L01 through R-P59-L07.
+
+---
+
+## Pass 60 — F252.2 UXP host-action dispatcher (2026-05-18 sixtieth pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P60-L01 | `opencut/_generated/cep_uxp_parity.json` — canonical list of 18 CEP host functions, 14 `direct_uxp` actions, one partial UXP action, one different-mechanism action, and two CEP-only actions. |
+| R-P60-L02 | `extension/com.opencut.uxp/main.js` — new `UXP_DIRECT_HOST_ACTIONS`, `CEP_FALLBACK_HOST_ACTIONS`, `PProBridge.executeHostAction()`, `PProBridge.hostActionStatus()`, and `window.OpenCutUXPHost` dispatcher surface. |
+| R-P60-L03 | `tests/test_uxp_host_action_dispatch.py` — focused guardrails keeping the dispatcher aligned with the parity manifest and off the old CEP `evalScript`/`CSInterface` path. |
+| R-P60-L04 | `scripts/release_smoke.py` — adds the F252.2 dispatcher test to the release gate. |
+| R-P60-L05 | `docs/UXP_MIGRATION.md`, `CHANGELOG.md`, and `ROADMAP.md` — migration docs, release notes, and roadmap status synchronized for the dispatcher slice. |
+| R-P60-L06 | Validation commands — focused dispatcher tests, focused release-smoke unit coverage, `py_compile`, focused Ruff, `node --check extension\com.opencut.uxp\main.js`, and release-smoke `pytest-fast` (`627 passed`) passed locally. |
+
+**Source coverage assessment (Pass 60):** Pass 60 claims in `ROADMAP.md` v4.63, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `docs/UXP_MIGRATION.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P60-L01 through R-P60-L06.

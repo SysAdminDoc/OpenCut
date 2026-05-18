@@ -102,6 +102,7 @@ UXP Architecture (target):
 - [x] Backend communication works natively (fetch in UXP/WebView)
 - [x] F252.1 Bolt/WebView scaffold setup at `extension/com.opencut.uxp/bolt-webview/`
 - [x] F252.1 WebView manifest/config template in `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`
+- [x] F252.2 UXP host-action dispatcher maps the 14 direct-UXP `ocXxx` actions into `PProBridge.executeHostAction`
 - [ ] Live manifest switch to the WebView entrypoint after an in-Premiere UDT smoke pass
 - [ ] Test CSInterface shim with CEP main.js in WebView
 - [ ] Replace `cep_node.require("child_process")` calls with UXP alternatives
@@ -120,6 +121,7 @@ UXP Architecture (target):
 - `extension/com.opencut.uxp/index.html` — UXP panel UI with all tabs including Settings
 - `extension/com.opencut.uxp/bolt-webview/` — F252.1 dormant Bolt/WebView scaffold with host API wrappers, WebView message bridge, and least-privilege config template
 - `tests/test_uxp_webview_scaffold.py` — Static guardrails for the scaffold contract
+- `tests/test_uxp_host_action_dispatch.py` — Static guardrails that keep the F252.2 host-action dispatcher aligned with the CEP/UXP parity catalogue
 
 ## Risk Assessment
 - **Low risk:** Backend communication (fetch works natively in UXP)

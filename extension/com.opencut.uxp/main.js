@@ -229,6 +229,26 @@ const PPRO_CACHE_TTL = 8000; // 8 seconds
 const PProBridge = (() => {
   let ppro = null;
   let available = false;
+  const UXP_DIRECT_HOST_ACTIONS = Object.freeze({
+    ocPing: "ping",
+    ocGetSequenceInfo: "getSequenceInfo",
+    ocAddSequenceMarkers: "addMarkers",
+    ocGetSequenceMarkers: "getSequenceMarkers",
+    ocApplyClipKeyframes: "applyClipKeyframes",
+    ocBatchRenameProjectItems: "batchRenameProjectItems",
+    ocCreateSmartBins: "createSmartBins",
+    ocGetProjectBins: "getProjectBins",
+    ocExportSequenceRange: "exportSequenceRange",
+    ocRemoveSequenceMarkers: "removeSequenceMarkers",
+    ocUnrenameItems: "batchRenameProjectItems",
+    ocRemoveImportedSequence: "removeImportedProjectItem",
+    ocSetSequencePlayhead: "setSequencePlayhead",
+    ocRemoveImportedItem: "removeImportedProjectItem",
+  });
+  const CEP_FALLBACK_HOST_ACTIONS = Object.freeze({
+    ocAddNativeCaptionTrack: "No UXP caption-track creation API is available in the pinned parity catalogue.",
+    ocQeReflect: "QE reflection is CEP-only and should be retired or replaced by documented APIs.",
+  });
 
   async function init() {
     try {
@@ -298,6 +318,35 @@ const PProBridge = (() => {
     _pproCache.seq = null;
   }
 
+  function ping() {
+    return { ok: true, result: "pong", source: "uxp" };
+  }
+
+  function _parseHostPayload(payload, fallback = {}) {
+    if (payload == null) return fallback;
+    if (typeof payload === "string") {
+      const trimmed = payload.trim();
+      if (!trimmed) return fallback;
+      try {
+        return JSON.parse(trimmed);
+      } catch (e) {
+        return { value: payload, parseError: e.message };
+      }
+    }
+    return payload;
+  }
+
+  function _arrayPayload(payload, key) {
+    const parsed = _parseHostPayload(payload, []);
+    if (Array.isArray(parsed)) return parsed;
+    if (key && Array.isArray(parsed?.[key])) return parsed[key];
+    return [];
+  }
+
+  function _secondsToTicks(seconds) {
+    return Math.round(Number(seconds || 0) * 254016000000);
+  }
+
   /**
    * Adds an array of sequence markers.
    * @param {Array<{time: number, label: string, color: string}>} markers
@@ -325,6 +374,87 @@ const PProBridge = (() => {
       console.warn("[PProBridge] addMarkers failed:", e.message);
       return { ok: false, reason: e.message };
     }
+  }
+
+  async function _markerInfo(marker) {
+    const timeValue = await marker.getTime?.() ?? await marker.getStartTime?.() ?? marker.time ?? marker.start ?? 0;
+    const nameValue = await marker.getName?.() ?? marker.name ?? "";
+    const commentValue = await marker.getComment?.() ?? marker.comment ?? "";
+    const colorValue = await marker.getColorIndex?.() ?? marker.colorIndex ?? null;
+    const time = typeof timeValue === "object" && timeValue !== null
+      ? Number(timeValue.seconds ?? (timeValue.ticks != null ? timeValue.ticks / 254016000000 : 0))
+      : Number(timeValue || 0);
+    return {
+      time,
+      ticks: _secondsToTicks(time),
+      name: String(nameValue || ""),
+      comment: String(commentValue || ""),
+      colorIndex: colorValue,
+    };
+  }
+
+  async function _sequenceMarkerObjects() {
+    const seq = await getActiveSequence();
+    if (!seq) return { ok: false, reason: "No active sequence or UXP API unavailable.", markers: [] };
+    const markerList = await seq.getMarkerList?.();
+    if (!markerList) return { ok: false, reason: "Active sequence does not expose marker APIs.", markers: [] };
+    const markers = [];
+    try {
+      const rawMarkers = await markerList.getMarkers?.();
+      if (rawMarkers && typeof rawMarkers[Symbol.iterator] === "function") {
+        for (const marker of rawMarkers) {
+          markers.push({ marker, info: await _markerInfo(marker) });
+        }
+      } else {
+        let marker = await markerList.getFirstMarker?.();
+        let guard = 0;
+        while (marker && guard < 1000) {
+          markers.push({ marker, info: await _markerInfo(marker) });
+          marker = await markerList.getNextMarker?.(marker);
+          guard += 1;
+        }
+      }
+      return { ok: true, markerList, markers };
+    } catch (e) {
+      return { ok: false, reason: e.message, markers: [] };
+    }
+  }
+
+  async function getSequenceMarkers() {
+    const result = await _sequenceMarkerObjects();
+    if (!result.ok) return result;
+    return { ok: true, markers: result.markers.map(item => item.info), count: result.markers.length };
+  }
+
+  function _markerMatches(info, fingerprint) {
+    if (!fingerprint) return false;
+    const expectedTime = Number(fingerprint.time ?? fingerprint.start ?? fingerprint.seconds ?? NaN);
+    if (Number.isFinite(expectedTime) && Math.abs(info.time - expectedTime) > 0.01) return false;
+    const expectedName = fingerprint.name ?? fingerprint.label;
+    if (expectedName != null && String(expectedName) !== info.name) return false;
+    if (fingerprint.comment != null && String(fingerprint.comment) !== info.comment) return false;
+    return Number.isFinite(expectedTime) || expectedName != null || fingerprint.comment != null;
+  }
+
+  async function removeSequenceMarkers(payload) {
+    const fingerprints = _arrayPayload(payload, "fingerprints");
+    if (!fingerprints.length) return { ok: false, reason: "No marker fingerprints supplied.", removed: 0 };
+    const result = await _sequenceMarkerObjects();
+    if (!result.ok) return result;
+    let removed = 0;
+    for (const item of result.markers) {
+      if (!fingerprints.some(fp => _markerMatches(item.info, fp))) continue;
+      try {
+        if (result.markerList?.removeMarker) await result.markerList.removeMarker(item.marker);
+        else if (item.marker?.delete) await item.marker.delete();
+        else if (item.marker?.remove) await item.marker.remove();
+        else continue;
+        removed += 1;
+      } catch (e) {
+        console.warn("[PProBridge] removeSequenceMarkers skipped marker:", e.message);
+      }
+    }
+    return { ok: true, removed };
   }
 
   /**
@@ -409,6 +539,38 @@ const PProBridge = (() => {
     return items;
   }
 
+  async function _walkProjectTree(parent, depth = 0, path = "") {
+    if (!parent || depth > 20) return [];
+    const items = [];
+    try {
+      const children = await parent.getItems?.();
+      if (!children) return items;
+      for (const child of children) {
+        try {
+          const name = await child.getName?.() ?? child.name ?? "";
+          const childPath = path ? `${path}/${name}` : name;
+          const isFolder = await child.isFolder?.() ?? false;
+          const mediaPath = await child.getMediaPath?.() ?? "";
+          const nodeId = await child.getNodeId?.() ?? child.nodeId ?? "";
+          items.push({ item: child, name, path: childPath, mediaPath, nodeId, isFolder });
+          if (isFolder) {
+            items.push(...await _walkProjectTree(child, depth + 1, childPath));
+          }
+        } catch (_) { /* skip inaccessible project item */ }
+      }
+    } catch (_) { /* parent has no children */ }
+    return items;
+  }
+
+  async function _projectRoot() {
+    if (!available || !ppro) return null;
+    const projList = await ppro.app.getProjectList();
+    if (!projList || projList.length === 0) return null;
+    const proj = projList[0];
+    const root = await proj.getRootItem?.();
+    return { proj, root };
+  }
+
   /**
    * Returns the selected clips in the active sequence.
    * @returns {Promise<Array<{name: string, start: number, end: number, trackIndex: number}>>}
@@ -476,8 +638,202 @@ const PProBridge = (() => {
     }
   }
 
-  return { init, available: () => available, getActiveSequence, getSequenceInfo, addMarkers, applyCuts, invalidateCache, getProjectItems, getSelectedClips, importFiles };
+  async function getProjectBins() {
+    try {
+      const context = await _projectRoot();
+      if (!context?.root) return { ok: false, reason: "No open project", bins: [] };
+      const tree = await _walkProjectTree(context.root);
+      const bins = tree
+        .filter(entry => entry.isFolder)
+        .map(entry => ({ name: entry.name, path: entry.path, nodeId: entry.nodeId }));
+      return { ok: true, bins, count: bins.length };
+    } catch (e) {
+      console.warn("[PProBridge] getProjectBins failed:", e.message);
+      return { ok: false, reason: e.message, bins: [] };
+    }
+  }
+
+  async function batchRenameProjectItems(payload) {
+    const renames = _arrayPayload(payload, "renames");
+    if (!renames.length) return { ok: false, reason: "No rename entries supplied.", renamed: 0 };
+    try {
+      const context = await _projectRoot();
+      if (!context?.root) return { ok: false, reason: "No open project", renamed: 0 };
+      const tree = await _walkProjectTree(context.root);
+      let renamed = 0;
+      for (const rename of renames) {
+        const newName = rename.newName ?? rename.name ?? rename.to;
+        if (!newName) continue;
+        const target = tree.find(entry =>
+          (rename.nodeId && entry.nodeId === rename.nodeId) ||
+          (rename.path && (entry.mediaPath === rename.path || entry.path === rename.path)) ||
+          (rename.oldName && entry.name === rename.oldName)
+        );
+        if (!target?.item?.setName) continue;
+        await target.item.setName(String(newName));
+        renamed += 1;
+      }
+      return { ok: true, renamed };
+    } catch (e) {
+      console.warn("[PProBridge] batchRenameProjectItems failed:", e.message);
+      return { ok: false, reason: e.message, renamed: 0 };
+    }
+  }
+
+  async function createSmartBins(payload) {
+    const parsed = _parseHostPayload(payload, {});
+    const bins = Array.isArray(parsed) ? parsed : (parsed.bins ?? parsed.rules ?? []);
+    if (!Array.isArray(bins) || !bins.length) return { ok: false, reason: "No bin rules supplied.", created: 0 };
+    try {
+      const context = await _projectRoot();
+      if (!context?.root) return { ok: false, reason: "No open project", created: 0 };
+      let created = 0;
+      for (const rule of bins) {
+        const name = String(rule.name ?? rule.bin ?? rule.label ?? "").trim();
+        if (!name) continue;
+        if (context.root.createBin) await context.root.createBin(name);
+        else if (context.proj.createBin) await context.proj.createBin(name);
+        else return { ok: false, reason: "Project does not expose bin creation.", created };
+        created += 1;
+      }
+      return { ok: true, created };
+    } catch (e) {
+      console.warn("[PProBridge] createSmartBins failed:", e.message);
+      return { ok: false, reason: e.message, created: 0 };
+    }
+  }
+
+  async function removeImportedProjectItem(payload) {
+    const parsed = _parseHostPayload(payload, {});
+    try {
+      const context = await _projectRoot();
+      if (!context?.root) return { ok: false, reason: "No open project", removed: 0 };
+      const tree = await _walkProjectTree(context.root);
+      const target = tree.find(entry =>
+        (parsed.nodeId && entry.nodeId === parsed.nodeId) ||
+        (parsed.path && (entry.mediaPath === parsed.path || entry.path === parsed.path)) ||
+        (parsed.name && entry.name === parsed.name)
+      );
+      if (!target?.item) return { ok: false, reason: "Project item not found.", removed: 0 };
+      if (target.item.delete) await target.item.delete();
+      else if (target.item.remove) await target.item.remove();
+      else if (context.proj.deleteItem) await context.proj.deleteItem(target.item);
+      else return { ok: false, reason: "Project item does not expose delete/remove.", removed: 0 };
+      return { ok: true, removed: 1 };
+    } catch (e) {
+      console.warn("[PProBridge] removeImportedProjectItem failed:", e.message);
+      return { ok: false, reason: e.message, removed: 0 };
+    }
+  }
+
+  async function setSequencePlayhead(payload) {
+    const parsed = _parseHostPayload(payload, {});
+    const seconds = Number(parsed.seconds ?? parsed.time ?? parsed.value ?? payload ?? NaN);
+    if (!Number.isFinite(seconds)) return { ok: false, reason: "A numeric time in seconds is required." };
+    const seq = await getActiveSequence();
+    if (!seq) return { ok: false, reason: "No active sequence or UXP API unavailable." };
+    try {
+      if (seq.setPlayerPosition) await seq.setPlayerPosition(_secondsToTicks(seconds));
+      else if (seq.setPlayheadPosition) await seq.setPlayheadPosition(_secondsToTicks(seconds));
+      else if (ppro?.SourceMonitor?.setPosition) await ppro.SourceMonitor.setPosition(seconds);
+      else return { ok: false, reason: "No supported playhead positioning API is available." };
+      return { ok: true, seconds };
+    } catch (e) {
+      console.warn("[PProBridge] setSequencePlayhead failed:", e.message);
+      return { ok: false, reason: e.message };
+    }
+  }
+
+  async function applyClipKeyframes() {
+    return {
+      ok: false,
+      reason: "UXP keyframe dispatch is registered, but clip-property targeting remains gated on F267 UDT coverage.",
+      requiresUdt: true,
+    };
+  }
+
+  async function exportSequenceRange(payload) {
+    const parsed = _parseHostPayload(payload, {});
+    const seq = await getActiveSequence();
+    if (!seq) return { ok: false, reason: "No active sequence or UXP API unavailable." };
+    if (!seq.createSubsequence) {
+      return { ok: false, reason: "Sequence.createSubsequence is unavailable in this Premiere UXP runtime." };
+    }
+    return {
+      ok: false,
+      reason: "Sequence range dispatch is registered; encoder handoff remains F255.",
+      outputPath: parsed.outputPath ?? parsed.path ?? "",
+      range: { start: parsed.startSeconds ?? parsed.start, end: parsed.endSeconds ?? parsed.end },
+      requiresF255: true,
+    };
+  }
+
+  function hostActionStatus() {
+    return {
+      direct: Object.keys(UXP_DIRECT_HOST_ACTIONS),
+      partial: ["ocApplySequenceCuts"],
+      differentMechanism: ["ocEmitPingEvent"],
+      cepFallback: Object.keys(CEP_FALLBACK_HOST_ACTIONS),
+      directCount: Object.keys(UXP_DIRECT_HOST_ACTIONS).length,
+      cepFallbackCount: Object.keys(CEP_FALLBACK_HOST_ACTIONS).length,
+    };
+  }
+
+  async function executeHostAction(action, payload = {}) {
+    switch (action) {
+      case "ocPing": return ping();
+      case "ocGetSequenceInfo": return { ok: true, data: await getSequenceInfo() };
+      case "ocAddSequenceMarkers": return addMarkers(_arrayPayload(payload, "markers"));
+      case "ocGetSequenceMarkers": return getSequenceMarkers();
+      case "ocApplySequenceCuts": return applyCuts(_arrayPayload(payload, "cuts"));
+      case "ocApplyClipKeyframes": return applyClipKeyframes(payload);
+      case "ocBatchRenameProjectItems": return batchRenameProjectItems(payload);
+      case "ocCreateSmartBins": return createSmartBins(payload);
+      case "ocGetProjectBins": return getProjectBins();
+      case "ocExportSequenceRange": return exportSequenceRange(payload);
+      case "ocRemoveSequenceMarkers": return removeSequenceMarkers(payload);
+      case "ocUnrenameItems": return batchRenameProjectItems(payload);
+      case "ocRemoveImportedSequence": return removeImportedProjectItem(payload);
+      case "ocSetSequencePlayhead": return setSequencePlayhead(payload);
+      case "ocRemoveImportedItem": return removeImportedProjectItem(payload);
+      case "ocEmitPingEvent": return { ok: true, emitted: true, tag: _parseHostPayload(payload, {}).tag ?? "" };
+      case "ocAddNativeCaptionTrack":
+      case "ocQeReflect":
+        return { ok: false, cepFallback: true, reason: CEP_FALLBACK_HOST_ACTIONS[action] };
+      default:
+        return { ok: false, reason: `Unknown host action: ${action}` };
+    }
+  }
+
+  return {
+    init,
+    available: () => available,
+    getActiveSequence,
+    getSequenceInfo,
+    addMarkers,
+    getSequenceMarkers,
+    removeSequenceMarkers,
+    applyCuts,
+    invalidateCache,
+    getProjectItems,
+    getProjectBins,
+    getSelectedClips,
+    importFiles,
+    batchRenameProjectItems,
+    createSmartBins,
+    removeImportedProjectItem,
+    setSequencePlayhead,
+    executeHostAction,
+    hostActionStatus,
+  };
 })();
+
+if (typeof window !== "undefined") {
+  window.OpenCutUXPHost = Object.freeze({
+    executeHostAction: (action, payload) => PProBridge.executeHostAction(action, payload),
+    getHostActionStatus: () => PProBridge.hostActionStatus(),
+  });
+}
 
 // ─────────────────────────────────────────────────────────────
 // BackendClient — all HTTP communication with Python server
