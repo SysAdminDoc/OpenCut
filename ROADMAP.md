@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.36
+**Version**: 4.37
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -80,6 +80,21 @@
 > **v4.35 status (2026-05-17, thirty-second pass)**: added the **F176 follow-up download runner** at `opencut/tools/download_eval_dataset.py`. The runner is a **dry-run by default** planner that builds a `DownloadPlan` without touching the network, and refuses execution unless three gates all hold: (1) the dataset is in the F176 registry, (2) `OPENCUT_DOWNLOAD_EVAL=1` is set (or `--force` overrides for CI), and (3) the dataset declares `commercial_use_ok=True` OR the operator passes `--accept-noncommercial-license`. CLI exit codes: `0` = ok, `2` = blocked, `3` = unknown id. Three CLI sub-modes: `--list` (catalogue), `--json` (machine-readable plan), `--execute` (actually fetch). Stdlib urllib + `file://` URL test fixture means no network needed in CI. 19 new tests in `tests/test_download_eval_dataset.py` cover planner gates, execution success/failure paths, all five CLI sub-modes, and the `accept-noncommercial-license` override. Release smoke green (16 chained gates, lint clean).
 >
 > **v4.36 status (2026-05-17, thirty-third pass)**: closed **F200** (Windows installer policy + lockstep tests) and **F211** (cross-platform launcher smoke tests). F200 ships `docs/INSTALLER_POLICY.md` designating the WPF / .NET 9 installer as the recommended path and the Inno Setup script as a deprecated-but-supported fallback, with a milestone-gated retirement plan keyed to F201 / F212 / F213 (no calendar date). `tests/test_installer_policy.py` pins the policy doc presence + 4 lockstep invariants (bundled FFmpeg version string, install root, display name, CEP extension folder) so both installers can't drift on user-visible state. F211 ships `tests/test_launcher_scripts.py` covering all 5 launcher entry points (`.bat`, two `.vbs`, `.command`, `.sh`) — existence, shebang shape, LF line endings on POSIX, `python -m opencut(.server)` entry, path-quoting that survives `Program Files`, the `OPENCUT_HOME` + bundled-FFmpeg env propagation contract, and the 100755 git-index executable bit (with VMware shared-folder fallback via `git ls-files --stage`). 23 new tests; release smoke green (16 chained gates, lint clean).
+>
+> **v4.37 status (2026-05-17, thirty-fourth pass)**: closed **F217** (UXP BackendClient HTTP-shape contract test). New `tests/test_uxp_backend_client_contract.py` (15 tests) pins both sides of the contract: (a) the JS-side BackendClient module in `extension/com.opencut.uxp/main.js` must export `call`/`get`/`post`/`del`/`checkHealth`/`fetchCsrf`, must send `X-OpenCut-Token`, must carry a 120-second fetch timeout, must refresh CSRF from response headers, must return `{ok, data, error, status}` objects, must surface timeouts as a normal `{ok: false}` result (not an unhandled rejection), must poll `/status/<job_id>` for terminal statuses `complete`/`error`/`cancelled`, and must accept either `job_id` or legacy `id` as the job identifier; (b) the server-side must keep `GET /health` returning a `csrf_token` field for panel bootstrap, must keep `/status/<id>` returning JSON for unknown jobs, must require CSRF on mutating routes (so the wrapper's 403-refresh path fires), and must keep `capabilities` as a dict if present. Release smoke green (16 chained gates, lint clean).
+
+---
+
+## 2026-05-17 v4.37 UXP BackendClient HTTP-Shape Contract (F217)
+
+One Next-tier item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F217 BackendClient contract | DONE — `tests/test_uxp_backend_client_contract.py` (15 tests) pins the bilateral HTTP-shape contract between the UXP panel's `BackendClient` and the Flask backend. |
+| JS-side static gates | (a) Module presence + exported verb list (`call`/`get`/`post`/`del`/`checkHealth`/`fetchCsrf`). (b) `X-OpenCut-Token` CSRF header. (c) 403-refresh-retry path. (d) 120-second fetch timeout. (e) Response-header CSRF refresh. (f) `{ok, data, error, status}` return shape. (g) Timeout surfacing as `{ok: false}` plus the "OpenCut Server is still running" operator hint. (h) `/status/<job_id>` polling. (i) `job_id` / legacy `id` field acceptance. (j) Terminal statuses `complete`/`error`/`cancelled`. |
+| Server-side runtime gates | (k) `GET /health` returns a `csrf_token` field for panel bootstrap. (l) `/status/<unknown-id>` returns JSON. (m) Mutating routes require CSRF (rejecting with 401/403). (n) `GET /health` itself does not require CSRF. (o) `capabilities` (when present) is a dict so the panel's `_updateCapabilityHints` lookups work. |
+| Validation | `python -m pytest tests/test_uxp_backend_client_contract.py -q` → `15 passed`. Release smoke (skipping pip-audit / npm-advisory / pytest-fast) → all 15 chained gates `PASS`. Ruff `opencut/` scope clean. |
 
 ---
 
