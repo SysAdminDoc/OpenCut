@@ -8,14 +8,14 @@ Total optional AI/model surfaces: **47**. Each row carries license, hardware, in
 
 | Backend | License | Hardware | Privacy | Install |
 |---|---|---|---|---|
-| [AudioCraft / MusicGen](https://github.com/facebookresearch/audiocraft) | MIT | gpu (>= 8 GB VRAM) | local-only | `pip install audiocraft` |
+| [AudioCraft / MusicGen](https://github.com/facebookresearch/audiocraft) | MIT | gpu (>= 8 GB VRAM) | local-only | `pip install "opencut[music]" (Python 3.11; Torch 2.1 stack)` |
 | [BeatNet beat/downbeat tracker](https://github.com/mjhydri/BeatNet) | MIT | cpu | local-only | `pip install BeatNet` |
 | [Demucs (htdemucs / hdemucs)](https://github.com/facebookresearch/demucs) | MIT | cpu/gpu | local-only | `pip install demucs` |
 | [Edge TTS (Microsoft cloud voices)](https://github.com/rany2/edge-tts) | MIT (client) | cpu | cloud — text is sent to Microsoft's Speech API | `pip install edge-tts` |
 | [ElevenLabs cloud TTS](https://github.com/elevenlabs/elevenlabs-python) | proprietary client SDK; cloud service | cpu (client) | cloud — text is sent to ElevenLabs | `pip install elevenlabs + ELEVENLABS_API_KEY` |
 | [F5-TTS (zero-shot voice clone)](https://github.com/SWivid/F5-TTS) | MIT | gpu (>= 6 GB VRAM) | local-only | `pip install f5-tts` |
 | [OmniVoice TTS](https://github.com/k2-fsa/OmniVoice) | Apache-2.0 | gpu | local-only | `pip install omnivoice` |
-| [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | MIT | gpu | local-only | `pip install resemble-enhance` |
+| [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | MIT | gpu | local-only | `pip install "opencut[enhance]" (Python 3.11; Torch 2.1 stack)` |
 | [Silero VAD](https://github.com/snakers4/silero-vad) | MIT | cpu | local-only | `pip install silero-vad` |
 | [VidMuse video-to-music](https://vidmuse.github.io/) | Apache-2.0 | gpu | local-only | `pip install vidmuse (stub — roadmap H2.6)` |
 | [WhisperX voice-command grammar](https://github.com/linto-ai/whisper-timestamped) | MIT | cpu/gpu | local-only | `pip install whisperx + faster-whisper` |
@@ -103,7 +103,7 @@ Total optional AI/model surfaces: **47**. Each row carries license, hardware, in
 | [Sammie-Roto-2 (VideoMaMa)](https://github.com/Zarxrax/Sammie-Roto-2) | MIT | gpu | local-only | `pip install sammie-roto (stub — roadmap H2.3)` |
 | [Segment Anything 2 (SAM2)](https://github.com/facebookresearch/sam2) | Apache-2.0 | gpu | local-only | `pip install sam2` |
 | [Skin retouch (bilateral / GAN)](https://github.com/opencv/opencv-python) | MIT | cpu/gpu | local-only | `pip install opencv-python (optional onnx model)` |
-| [TransNetV2 shot-boundary](https://github.com/soCzech/TransNetV2) | MIT | gpu | local-only | `pip install transnetv2` |
+| [TransNetV2 shot-boundary](https://github.com/allenday/transnetv2_pytorch) | MIT | gpu | local-only | `pip install transnetv2-pytorch` |
 | [VRT / RVRT video restoration](https://github.com/JingyunLiang/VRT) | Apache-2.0 | gpu (>= 16 GB VRAM for VRT) | local-only | `pip install vrt-restoration` |
 
 **Advisory notes**:

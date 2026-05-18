@@ -44,6 +44,14 @@ The UXP panel now loads `udt-smoke.js`, exposing `window.OpenCutUXPUdtHarness.ru
 
 ---
 
+## Pass 68 addendum (2026-05-18)
+
+Pass 68 closed **F263** by adding `opencut.tools.pip_audit_extras`, a structured Python dependency audit wrapper that covers both `requirements.txt` and `pyproject[all]`. The wrapper builds temporary requirements files, isolates pip/pip-audit cache directories, emits per-target JSON, and reports allowed vs unallowed vulnerabilities so release smoke can fail only on undocumented advisories.
+
+The pass also refreshed stale optional dependency pins so `[all]` resolves: `transnetv2-pytorch>=1.0.5,<2`, `auto-editor>=29.3,<30`, `opentimelineio>=0.17,<1`, `otio-aaf-adapter>=2.0,<3`, and `pyannote.audio>=4.0,<5`. AudioCraft/MusicGen and Resemble Enhance remain explicit Python 3.11 extras outside `[all]` because their published packages hard-pin older Torch stacks. Added `docs/PYTHON_ADVISORIES.md` for the BasicSR and Transformers advisories currently reported by `pyproject[all]`. Validation passed: focused F263 tests (`34 passed`), focused Ruff, `py_compile`, model-card/readiness checks, live `pip_audit_extras --json --extra all`, and release-smoke `--only pip-audit`.
+
+---
+
 ## 1. Files created
 
 ### Repo root (1 file)
@@ -377,7 +385,7 @@ Pass 3 added 4 new artefacts + updated PROJECT_CONTEXT.md (§9.4 live verificati
 |---|---|---|
 | F261 | Ship missing `OpenCut-Server.command` + `.sh` launchers (closes Wave I I1.4 ledger discrepancy) | **Now** |
 | F262 | Fix uxp-api-notes.md sample-repo URL typo | Now |
-| F263 | Re-run pip-audit on full `[all]` extras | Next |
+| F263 | Re-run pip-audit on full `[all]` extras | Done in Pass 68 |
 | F264 | Add `npm audit --json` machine-parseable CI assertion | Now |
 | F265 | UDT test harness for all 18 `ocXxx` JSX functions | Later |
 | F266 | Document 2-function CEP residual + drop-QE plan | Now |

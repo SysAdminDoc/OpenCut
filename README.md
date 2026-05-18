@@ -341,7 +341,7 @@ Adds: `faster-whisper`, `opencv-python-headless`, `Pillow`, `numpy`, `librosa`, 
 pip install opencut[all]
 ```
 
-Adds all standard deps plus: `whisperx`, `demucs`, `pyannote.audio`, `pedalboard`, `edge-tts`, `realesrgan`, `rembg`, `gfpgan`, `insightface`, `audiocraft`, `simple-lama-inpainting`, `opentimelineio`, `deepface`, `kokoro`, `chatterbox-tts`, `diffusers`, `websockets`
+Adds all standard deps plus: `whisperx`, `demucs`, `pyannote.audio`, `pedalboard`, `edge-tts`, `realesrgan`, `rembg`, `gfpgan`, `insightface`, `transnetv2-pytorch`, `opentimelineio`, and `otio-aaf-adapter`. AudioCraft/MusicGen and Resemble Enhance remain separate Python 3.11 installs (`opencut[music]`, `opencut[enhance]`) because they hard-pin older Torch stacks.
 
 ### GPU Acceleration
 

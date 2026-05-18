@@ -8,6 +8,22 @@
 
 ---
 
+## 2026-05-18 F263 update
+
+The full optional dependency audit is now code-owned. `python -m opencut.tools.pip_audit_extras --json --extra all` audits `requirements.txt` plus `pyproject[all]`, with per-target allowed/unallowed advisory counts and an explicit Python advisory allow-list in `docs/PYTHON_ADVISORIES.md`.
+
+F263 changed the live dependency decisions from this earlier research note:
+
+- `transnetv2` was replaced with `transnetv2-pytorch>=1.0.5,<2`.
+- `auto-editor` was refreshed to `>=29.3,<30`.
+- OTIO/AAF is now `opentimelineio>=0.17,<1` plus `otio-aaf-adapter>=2.0,<3`.
+- `pyannote.audio` was refreshed to `>=4.0,<5` to match WhisperX 3.8.5.
+- AudioCraft/MusicGen and Resemble Enhance remain outside `[all]` as Python 3.11-only explicit extras because their published packages hard-pin older Torch stacks.
+
+The live F263 audit currently reports zero unallowed advisories. The two allowed `[all]` findings are BasicSR `CVE-2024-27763` and Transformers `CVE-2026-1839`; both are documented in `docs/PYTHON_ADVISORIES.md`.
+
+---
+
 ## 1. TL;DR
 
 OpenCut's pinned versions are conservative — which kept it shielded from recent breaking releases but now leaves measurable security debt. Highest-priority actions:

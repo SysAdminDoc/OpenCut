@@ -10,8 +10,8 @@ These tests pin three invariants without needing the adapter actually
 installed on this VM:
 
 1. Both the `otio` extra and the `all` extra declare a pinned
-   `otio-aaf-adapter>=0.6,<1` constraint.
-2. The version range is sane (matches the F126 baseline).
+   `otio-aaf-adapter>=2.0,<3` constraint.
+2. The version range is sane (matches the current F263 refresh).
 3. The shipped `check_aaf_available()` honour the package name when
    the adapter is present, and degrades gracefully when it isn't.
 """
@@ -64,18 +64,26 @@ def test_all_extra_pins_aaf_adapter():
     )
 
 
-def test_aaf_adapter_spec_caps_below_1_and_floors_above_0_6():
+def test_aaf_adapter_spec_caps_below_3_and_floors_at_2():
     body = _extras_block("otio")
     spec = _adapter_spec(body) or ""
     # Spec includes commas, quotes, etc. Strip to the version range.
     m = re.search(r'>=\s*(\d+)\.(\d+).*<\s*(\d+)', spec)
     assert m, f"could not parse the otio-aaf-adapter spec: {spec!r}"
     major_min, minor_min, major_cap = int(m.group(1)), int(m.group(2)), int(m.group(3))
-    assert (major_min, minor_min) >= (0, 6), (
-        f"F126 baseline minimum is otio-aaf-adapter>=0.6; got {major_min}.{minor_min}"
+    assert (major_min, minor_min) >= (2, 0), (
+        f"F263 refreshed minimum is otio-aaf-adapter>=2.0; got {major_min}.{minor_min}"
     )
-    assert major_cap <= 1, (
-        f"otio-aaf-adapter is pinned <1 to keep within the 0.x line; got <{major_cap}"
+    assert major_cap <= 3, (
+        f"otio-aaf-adapter is pinned <3 to keep within the current major line; got <{major_cap}"
+    )
+
+
+def test_otio_extra_floors_opentimelineio_for_current_aaf_adapter():
+    body = _extras_block("otio")
+    assert "opentimelineio>=0.17,<1" in body, (
+        "otio-aaf-adapter 2.x requires OpenTimelineIO >=0.17; keep the "
+        "`opencut[otio]` floor aligned so pip can resolve the extra."
     )
 
 
