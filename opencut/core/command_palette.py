@@ -48,6 +48,9 @@ _index_lock = threading.Lock()
 
 _RECENTS_FILE = os.path.join(OPENCUT_DIR, "feature_recents.json")
 _MAX_RECENTS = 50
+# RLock so a single call site can safely call list_recent_features
+# inside record_feature_use without deadlocking.
+_recents_lock = threading.RLock()
 
 
 def _trigrams(s: str) -> set:
@@ -509,70 +512,99 @@ def record_feature_use(
 
     _ensure_opencut_dir()
 
-    # Load or init recents
-    recents: List[dict] = []
-    try:
-        if os.path.isfile(_RECENTS_FILE):
-            with open(_RECENTS_FILE, "r", encoding="utf-8") as f:
-                recents = json.load(f)
-            if not isinstance(recents, list):
-                recents = []
-    except (json.JSONDecodeError, OSError):
-        recents = []
+    # Hold the lock across the read-modify-write sequence so two
+    # concurrent record_feature_use() calls can't race and lose an
+    # entry. Atomic mkstemp+replace below also defends against
+    # partial writes if the process is interrupted mid-flush.
+    import tempfile  # local import keeps module-import cheap
 
-    if on_progress:
-        on_progress(50, "Updating usage record...")
-
-    # Use a monotonically increasing timestamp so two consecutive calls
-    # get distinct values even when the wall clock has low resolution
-    # (Windows `time.time()` advances in ~15.6ms steps and would tie
-    # records logged within the same tick, breaking sort-by-recency).
-    now = time.time()
-    if recents:
+    with _recents_lock:
+        recents: List[dict] = []
         try:
-            max_existing = max(float(r.get("timestamp", 0) or 0) for r in recents)
-        except (TypeError, ValueError):
-            max_existing = 0.0
-        if now <= max_existing:
-            now = max_existing + 1e-6
+            if os.path.isfile(_RECENTS_FILE):
+                with open(_RECENTS_FILE, "r", encoding="utf-8") as f:
+                    recents = json.load(f)
+                if not isinstance(recents, list):
+                    recents = []
+        except (json.JSONDecodeError, OSError):
+            recents = []
 
-    # Look up the feature name from the index
-    index = build_feature_index()
-    name = feature_id
-    for feat in index:
-        if feat["id"] == feature_id:
-            name = feat["name"]
-            break
+        if on_progress:
+            on_progress(50, "Updating usage record...")
 
-    # Find existing entry or create new
-    existing = None
-    for entry in recents:
-        if entry.get("feature_id") == feature_id:
-            existing = entry
-            break
+        # Use a monotonically increasing timestamp so two consecutive
+        # calls get distinct values even when the wall clock has low
+        # resolution (Windows `time.time()` advances in ~15.6ms steps
+        # and would tie records logged within the same tick, breaking
+        # sort-by-recency).
+        now = time.time()
+        if recents:
+            try:
+                max_existing = max(
+                    float(r.get("timestamp", 0) or 0) for r in recents
+                )
+            except (TypeError, ValueError):
+                max_existing = 0.0
+            if now <= max_existing:
+                now = max_existing + 1e-6
 
-    if existing:
-        existing["use_count"] = existing.get("use_count", 0) + 1
-        existing["timestamp"] = now
-        existing["name"] = name
-    else:
-        recents.append({
-            "feature_id": feature_id,
-            "name": name,
-            "use_count": 1,
-            "timestamp": now,
-        })
+        # Look up the feature name from the index
+        index = build_feature_index()
+        name = feature_id
+        for feat in index:
+            if feat["id"] == feature_id:
+                name = feat["name"]
+                break
 
-    # Trim to max
-    recents.sort(key=lambda x: x.get("timestamp", 0), reverse=True)
-    recents = recents[:_MAX_RECENTS]
+        # Find existing entry or create new
+        existing = None
+        for entry in recents:
+            if entry.get("feature_id") == feature_id:
+                existing = entry
+                break
 
-    # Write back
-    try:
-        with open(_RECENTS_FILE, "w", encoding="utf-8") as f:
-            json.dump(recents, f, indent=2)
-    except OSError as exc:
-        logger.warning("Failed to save recent features: %s", exc)
+        if existing:
+            existing["use_count"] = existing.get("use_count", 0) + 1
+            existing["timestamp"] = now
+            existing["name"] = name
+        else:
+            recents.append({
+                "feature_id": feature_id,
+                "name": name,
+                "use_count": 1,
+                "timestamp": now,
+            })
+
+        # Trim to max
+        recents.sort(key=lambda x: x.get("timestamp", 0), reverse=True)
+        recents = recents[:_MAX_RECENTS]
+
+        # Atomic write — mkstemp + os.replace defeats partial-flush
+        # corruption on a crash and crash-during-write data loss.
+        try:
+            parent = os.path.dirname(_RECENTS_FILE) or OPENCUT_DIR
+            fd, tmp_path = tempfile.mkstemp(
+                dir=parent,
+                prefix=os.path.basename(_RECENTS_FILE) + ".",
+                suffix=".tmp",
+            )
+            try:
+                with os.fdopen(fd, "w", encoding="utf-8") as f:
+                    json.dump(recents, f, indent=2)
+                    f.flush()
+                    try:
+                        os.fsync(f.fileno())
+                    except OSError:
+                        pass
+                os.replace(tmp_path, _RECENTS_FILE)
+            except BaseException:
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+                raise
+        except OSError as exc:
+            logger.warning("Failed to save recent features: %s", exc)
 
     result_entry = existing if existing else recents[-1]
 

@@ -37,6 +37,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 from dataclasses import asdict, dataclass
 from pathlib import Path
@@ -159,17 +160,82 @@ def build_plan(
 # ---------------------------------------------------------------------------
 
 
+_SAFE_FILENAME_RE = re.compile(r"[^A-Za-z0-9._-]+")
+_MAX_FILENAME_LEN = 200
+# Allow file:// only for the test fixture (env-gated). Production always
+# refuses non-http(s) schemes so a registry typo or future supply-chain
+# attack on `eval_datasets.py` can't read arbitrary local files.
+_PROD_URL_SCHEMES = ("https://", "http://")
+_TEST_URL_SCHEMES = _PROD_URL_SCHEMES + ("file://",)
+
+
+def _resolved_url_schemes() -> tuple:
+    """Return the URL-scheme allowlist for the current process.
+
+    The `OPENCUT_DOWNLOAD_EVAL_ALLOW_FILE_URL` env var is the explicit
+    opt-in for the test fixture. We deliberately key the test fixture
+    on a separate env var (not `OPENCUT_DOWNLOAD_EVAL`) so the
+    operator-facing opt-in cannot accidentally unlock file://.
+    """
+    if os.environ.get("OPENCUT_DOWNLOAD_EVAL_ALLOW_FILE_URL", "").strip().lower() in (
+        "1", "true", "yes", "on",
+    ):
+        return _TEST_URL_SCHEMES
+    return _PROD_URL_SCHEMES
+
+
+def _safe_basename(url: str, *, fallback: str) -> str:
+    """Extract a safe basename from *url* for on-disk landing.
+
+    Strips query strings and fragments, scrubs filesystem-unsafe
+    characters, caps length, and falls back to *fallback* when the
+    URL has no usable filename (e.g. ends with ``/``).
+    """
+    # Drop query string + fragment so `name?download=bar.zip` doesn't
+    # land as a Windows-invalid filename.
+    cleaned = url.split("?", 1)[0].split("#", 1)[0]
+    raw = cleaned.rsplit("/", 1)[-1]
+    # Strip percent-encoded path traversal markers and any literal
+    # parent-dir refs that survived the split.
+    raw = raw.replace("..", "").strip()
+    if not raw:
+        return fallback
+    safe = _SAFE_FILENAME_RE.sub("_", raw)
+    safe = safe.strip("._-") or fallback
+    if len(safe) > _MAX_FILENAME_LEN:
+        # Keep extension recognisable by trimming the head.
+        head, sep, ext = safe.rpartition(".")
+        if sep and len(ext) <= 16:
+            safe = (head[: _MAX_FILENAME_LEN - len(ext) - 1] + sep + ext)
+        else:
+            safe = safe[:_MAX_FILENAME_LEN]
+    return safe
+
+
 def execute_plan(
     plan: DownloadPlan,
     *,
     chunk_size: int = 1024 * 1024,
     on_progress=None,
+    max_size_bytes: Optional[int] = None,
 ) -> DownloadPlan:
     """Carry out the download described by ``plan``.
 
     The actual HTTP fetch uses stdlib ``urllib.request`` so the
     runner stays dep-free. ``on_progress(bytes_done, total_bytes)``
     is invoked once per chunk when supplied.
+
+    Hardening notes:
+
+    * Refuses URL schemes outside an allowlist (https / http only by
+      default; `file://` enabled for tests via
+      ``OPENCUT_DOWNLOAD_EVAL_ALLOW_FILE_URL=1``).
+    * Sanitises the on-disk filename to filesystem-safe characters.
+    * Caps the total written bytes at ``max_size_bytes`` (defaults to
+      max(50 MB, 10 × registry size_gb) so a redirect-bomb can't fill
+      the disk).
+    * Streams in 1 MB chunks via a ``.part`` temp file and atomically
+      ``os.replace`` into place; cleans up the partial on any failure.
 
     Returns an updated plan with ``dry_run=False`` and either
     ``status="ok"`` (download succeeded) or ``status="blocked"``
@@ -182,6 +248,15 @@ def execute_plan(
     import urllib.error
     import urllib.request
 
+    # URL-scheme allowlist.
+    schemes = _resolved_url_schemes()
+    if not plan.download_url.lower().startswith(schemes):
+        plan.status = "blocked"
+        plan.reason = (
+            f"refusing to download from non-http(s) URL: {plan.download_url}"
+        )
+        return plan
+
     target_dir = Path(plan.target_dir)
     try:
         target_dir.mkdir(parents=True, exist_ok=True)
@@ -190,9 +265,19 @@ def execute_plan(
         plan.reason = f"could not create target dir {target_dir}: {exc}"
         return plan
 
-    name = plan.download_url.rsplit("/", 1)[-1] or f"{plan.dataset_id}.bin"
+    fallback_name = f"{plan.dataset_id}.bin"
+    name = _safe_basename(plan.download_url, fallback=fallback_name)
     target_file = target_dir / name
     tmp_file = target_dir / (name + ".part")
+
+    # Cap the total bytes we'll write so a redirect-bomb can't fill the disk.
+    if max_size_bytes is None:
+        # Allow up to 10x the registry's size_gb (defaults to 50 MB
+        # if the entry didn't carry a size hint).
+        if plan.size_gb and plan.size_gb > 0:
+            max_size_bytes = int(plan.size_gb * 1024 * 1024 * 1024 * 10)
+        else:
+            max_size_bytes = 50 * 1024 * 1024
 
     try:
         request = urllib.request.Request(
@@ -200,7 +285,21 @@ def execute_plan(
             headers={"User-Agent": "opencut-eval-downloader"},
         )
         with urllib.request.urlopen(request, timeout=60) as resp:
-            total = int(resp.headers.get("Content-Length") or 0)
+            # Re-check the post-redirect URL — urllib follows redirects
+            # silently, so a trusted https URL could land on file:// in
+            # principle. (In practice stdlib urllib doesn't follow
+            # cross-scheme redirects but defence in depth is cheap.)
+            final_url = getattr(resp, "url", plan.download_url) or plan.download_url
+            if not final_url.lower().startswith(schemes):
+                plan.status = "blocked"
+                plan.reason = (
+                    f"redirect landed on non-http(s) URL: {final_url}"
+                )
+                return plan
+            try:
+                total = int(resp.headers.get("Content-Length") or 0)
+            except (TypeError, ValueError):
+                total = 0
             done = 0
             with tmp_file.open("wb") as out:
                 while True:
@@ -209,6 +308,21 @@ def execute_plan(
                         break
                     out.write(block)
                     done += len(block)
+                    if done > max_size_bytes:
+                        plan.status = "blocked"
+                        plan.reason = (
+                            f"download exceeded max_size_bytes={max_size_bytes} "
+                            f"(stopped at {done} bytes). Possible redirect bomb."
+                        )
+                        try:
+                            out.close()
+                        except OSError:
+                            pass
+                        try:
+                            tmp_file.unlink(missing_ok=True)
+                        except (AttributeError, TypeError, OSError):
+                            pass
+                        return plan
                     if on_progress is not None:
                         try:
                             on_progress(done, total)

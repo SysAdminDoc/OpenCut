@@ -1445,8 +1445,26 @@ def captions_translate(job_id, filepath, data):
     if not segments:
         if srt_path:
             srt_path = validate_filepath(srt_path)
+            # SRT files are line-oriented timecodes + plain text. A real
+            # caption file rarely exceeds a few hundred KB; cap the read
+            # at 16 MB so a crafted multi-GB blob can't OOM the worker.
+            _max_srt_bytes = 16 * 1024 * 1024
+            try:
+                size = os.path.getsize(srt_path)
+            except OSError as exc:
+                raise ValueError(f"could not stat srt_path: {exc}") from exc
+            if size > _max_srt_bytes:
+                raise ValueError(
+                    f"srt_path is {size} bytes (>{_max_srt_bytes}); "
+                    "refusing to read. Pre-trim the file or chunk it."
+                )
             with open(srt_path, "rb") as f:
-                raw_bytes = f.read()
+                raw_bytes = f.read(_max_srt_bytes + 1)
+            if len(raw_bytes) > _max_srt_bytes:
+                raise ValueError(
+                    "srt_path grew past size cap during read; "
+                    "refusing to parse a truncated SRT."
+                )
             # Tolerate UTF-8 with or without BOM (F243 legacy path).
             srt_content = raw_bytes.decode("utf-8-sig", errors="replace")
             srt_input_used = True
