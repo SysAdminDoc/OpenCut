@@ -74,4 +74,4 @@ def test_direct_dispatch_stays_off_ceps_evalscript_path():
     assert "CSInterface" not in bridge_block
     assert "import(\"premierepro\")" in bridge_block
     assert "Sequence.createSubsequence is unavailable" in bridge_block
-    assert "encoder handoff remains F255" in bridge_block
+    assert "exportSubsequenceWithEncoder" in bridge_block

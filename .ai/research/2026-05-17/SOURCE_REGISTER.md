@@ -867,3 +867,26 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P61-L05 | Validation commands — focused F254 tests, focused UXP/release-smoke unit coverage, `py_compile`, focused Ruff, `node --check extension\com.opencut.uxp\main.js`, and release-smoke `pytest-fast` (`632 passed`) passed locally. |
 
 **Source coverage assessment (Pass 61):** Pass 61 claims in `ROADMAP.md` v4.64, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `docs/UXP_MIGRATION.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P61-E01 through R-P61-E02 and R-P61-L01 through R-P61-L05.
+
+---
+
+## Pass 62 — F255 UXP EncoderManager handoff (2026-05-18 sixty-second pass)
+
+### External/package source evidence
+
+| ID | Source |
+|---|---|
+| R-P62-E01 | `@adobe/premierepro@26.3.0-beta.67` package typings from npm pack — `package/src/premierepro.d.ts` exposes `EncoderManager.getManager()`, `launchEncoder()`, `exportSequence(...)`, `startBatchEncode()`, `isAMEInstalled`, and `Constants.ExportType`. |
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P62-L01 | `extension/com.opencut.uxp/main.js` — new EncoderManager lookup, export type selection, AME availability guard, AME launch, sequence export, optional batch start, and completed `exportSequenceRange()` handoff. |
+| R-P62-L02 | `tests/test_uxp_encoder_manager_integration.py` — focused guardrails for F255 beta assumptions, EncoderManager API calls, AME/immediate export selection, output-path validation, and release-smoke registration. |
+| R-P62-L03 | `tests/test_uxp_create_subsequence_integration.py` — updated F254 guardrail confirming the subsequence now flows into F255. |
+| R-P62-L04 | `scripts/release_smoke.py` — adds the F255 test to the release gate. |
+| R-P62-L05 | `docs/UXP_MIGRATION.md`, `CHANGELOG.md`, and `ROADMAP.md` — migration docs, release notes, and roadmap status synchronized for F255. |
+| R-P62-L06 | Validation commands — focused F255/F254 tests, focused UXP/release-smoke unit coverage, `py_compile`, focused Ruff, `node --check extension\com.opencut.uxp\main.js`, and release-smoke `pytest-fast` (`637 passed`) passed locally. |
+
+**Source coverage assessment (Pass 62):** Pass 62 claims in `ROADMAP.md` v4.65, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `docs/UXP_MIGRATION.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P62-E01 and R-P62-L01 through R-P62-L06.

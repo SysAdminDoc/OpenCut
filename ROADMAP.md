@@ -136,8 +136,23 @@
 > **v4.63 status (2026-05-18, sixtieth pass)**: advanced **F252.2** by adding a live UXP host-action dispatcher to `extension/com.opencut.uxp/main.js`. `PProBridge.executeHostAction()` now maps the 14 direct-UXP `ocXxx` actions from `opencut/_generated/cep_uxp_parity.json`, keeps `ocApplySequenceCuts` and `ocEmitPingEvent` explicit, returns CEP-fallback responses for `ocAddNativeCaptionTrack` and `ocQeReflect`, and exposes `window.OpenCutUXPHost` for the upcoming WebView bridge. `tests/test_uxp_host_action_dispatch.py` pins the dispatcher against the parity catalogue and release smoke now includes it. F252 still remains open for in-Premiere UDT validation and live WebView cutover.
 >
 > **v4.64 status (2026-05-18, sixty-first pass)**: closed **F254** by wiring UXP `Sequence.createSubsequence(ignoreTrackTargeting?)` into the export-range dispatcher. `PProBridge.createSubsequenceFromRange()` now builds `TickTime` values from seconds, sets sequence in/out points through `createSetInPointAction` / `createSetOutPointAction` inside `Project.executeTransaction`, calls `createSubsequence`, restores the previous range in `finally`, and returns the subsequence metadata for the still-open **F255** encoder handoff. `tests/test_uxp_create_subsequence_integration.py` pins the beta package assumption and release smoke includes it.
+>
+> **v4.65 status (2026-05-18, sixty-second pass)**: closed **F255** by completing the UXP encoder handoff for export-range subsequences. `PProBridge.exportSubsequenceWithEncoder()` now validates an output path, checks AME availability for queued exports, optionally calls `EncoderManager.launchEncoder()`, selects `Constants.ExportType.QUEUE_TO_AME` or `IMMEDIATELY`, calls `EncoderManager.exportSequence(...)`, and optionally starts the queue with `startBatchEncode()`. `tests/test_uxp_encoder_manager_integration.py` pins the beta API assumptions and release smoke includes it.
 
 ---
+
+## 2026-05-18 v4.65 UXP EncoderManager Export Handoff (F255)
+
+One UXP API migration item closed in this pass.
+
+| Area | Status |
+|---|---|
+| API verification | The unpacked `@adobe/premierepro@26.3.0-beta.67` typings expose `EncoderManager.getManager()`, `launchEncoder()`, `exportSequence(...)`, `startBatchEncode()`, `isAMEInstalled`, and `Constants.ExportType`. |
+| Encoder handoff | `PProBridge.exportSubsequenceWithEncoder()` now consumes the F254 subsequence and routes it through EncoderManager. |
+| Queue behavior | Queued exports call `launchEncoder()` when available, reject missing AME, and call `startBatchEncode()` unless `startBatch=false`. Immediate exports select `Constants.ExportType.IMMEDIATELY`. |
+| Tests/docs | `tests/test_uxp_encoder_manager_integration.py` pins the F255 contract and release smoke includes it. |
+
+Validation after the batch: `python -m pytest tests/test_uxp_encoder_manager_integration.py tests/test_uxp_create_subsequence_integration.py -q` passed (`10 passed`), `python -m pytest tests/test_uxp_encoder_manager_integration.py tests/test_uxp_create_subsequence_integration.py tests/test_uxp_host_action_dispatch.py tests/test_uxp_webview_scaffold.py tests/test_release_smoke.py -q` passed (`32 passed`), touched Python files compile, focused Ruff passed, `node --check extension\com.opencut.uxp\main.js` passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`637 passed`).
 
 ## 2026-05-18 v4.64 UXP Subsequence Range Integration (F254)
 
