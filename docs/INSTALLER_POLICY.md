@@ -13,9 +13,14 @@
 > built on Windows tag/manual CI via `scripts/build_wpf_installer_ci.ps1`
 > and archived separately from the Inno fallback.
 >
+> **F203 status (2026-05-18):** Windows release workflows now call
+> `scripts/sign_windows_artifacts.ps1` to Authenticode-sign WPF and
+> Inno installer outputs when signing secrets are configured. See
+> `docs/WINDOWS_CODESIGNING.md`.
+>
 > **Tracking F-number:** F200 (Now-tier doc deliverable).
 > Related F-numbers: **F201** (CI for the recommended path, DONE),
-> **F203** (Authenticode code-signing renewal), **F207** (bundled
+> **F203** (Authenticode code-signing renewal, DONE tooling), **F207** (bundled
 > FFmpeg version embedded in installer manifest, DONE Pass 12),
 > **F212** (WPF installer xUnit test suite, deferred to Later).
 
@@ -47,7 +52,7 @@ repo for two specific use cases:
    F201 now closes the official CI build gap; the Inno path remains
    a local fallback for contributors without the .NET SDK.
 2. **Emergency hot-fix releases.** If an issue blocks the WPF path
-   (e.g. signing cert expiry, F203 not renewed yet), the Inno path
+   (e.g. signing cert expiry or missing F203 secrets), the Inno path
    can still produce a self-signed installer for users who already
    trust the OpenCut publisher fingerprint.
 
@@ -112,11 +117,10 @@ When you add a fifth invariant, document it here and add a test in
 
 Two risks force keeping the fallback for now:
 
-1. **Authenticode renewal cliff** — F203 flags that the OpenCut
-   signing cert validity drops to 458 days starting March 2026,
-   and SmartScreen no longer auto-trusts new certs. A botched
-   renewal would block WPF releases; the Inno path stays as a
-   self-signed fallback.
+1. **Operational signing credentials** — F203 tooling is wired, but
+   production releases still require valid `WINDOWS_CODESIGN_*`
+   GitHub secrets and timely certificate renewal. A botched renewal
+   would block signed WPF releases; the Inno path stays as a fallback.
 2. **No WPF tests yet** — F212 (WPF xUnit suite) is Later-tier.
    Inno's behaviour is now covered by the F213 install/uninstall
    smoke on disposable Windows CI workers, while WPF still relies on
@@ -158,6 +162,9 @@ schedule in §2.
 * `scripts/build_wpf_installer_ci.ps1` — F201 CI wrapper that prepares
   the PyInstaller + FFmpeg payload and archives the WPF output before
   the Inno fallback can overwrite the legacy filename.
+* `scripts/sign_windows_artifacts.ps1` — F203 Authenticode signing
+  helper for WPF and Inno installer outputs.
+* `docs/WINDOWS_CODESIGNING.md` — required secrets and renewal policy.
 * `installer/src/OpenCut.Installer/AppConstants.cs` — WPF constants;
   shipped FFmpeg version (F207) lives here.
 * `OpenCut.iss` — Inno Setup script.
