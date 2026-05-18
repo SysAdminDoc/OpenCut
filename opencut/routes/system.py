@@ -2683,6 +2683,83 @@ def system_ai_eval_list():
         return safe_error(exc, "system_ai_eval_list")
 
 
+@system_bp.route("/system/eval-datasets", methods=["GET"])
+def system_eval_datasets():
+    """Return the F176 public eval-dataset registry.
+
+    Query params:
+
+    * ``modality`` — filter by one of MODALITIES (``video``, ``audio``,
+      ``music``, ``speech``, ``captions``, ``interchange``, ``provenance``).
+    * ``target`` — filter by a benchmark target tag (``t2v``, ``vsr``,
+      ``lip_sync``, etc.).
+    * ``commercial_only=true`` — return only datasets whose license
+      allows commercial eval use.
+    * ``compact=true`` — strip verbose fields (citation, sha256, size)
+      for panel rendering.
+
+    Downloads are gated separately by the ``OPENCUT_DOWNLOAD_EVAL=1``
+    environment variable; this route is purely informational.
+    """
+    try:
+        from opencut.core import eval_datasets
+
+        modality = (request.args.get("modality") or "").strip().lower()
+        target = (request.args.get("target") or "").strip()
+        commercial_only = (request.args.get("commercial_only") or "").strip().lower() in (
+            "1", "true", "yes", "on",
+        )
+        compact = (request.args.get("compact") or "").strip().lower() in (
+            "1", "true", "yes", "on",
+        )
+
+        payload = eval_datasets.manifest(include_metadata=not compact)
+        datasets = payload["datasets"]
+        if modality:
+            datasets = [d for d in datasets if d.get("modality") == modality]
+        if target:
+            datasets = [
+                d for d in datasets
+                if target in (d.get("benchmark_targets") or ())
+            ]
+        if commercial_only:
+            datasets = [d for d in datasets if d.get("commercial_use_ok")]
+
+        return jsonify({
+            "version": payload["version"],
+            "modalities": payload["modalities"],
+            "count": len(datasets),
+            "auto_download_count": sum(
+                1 for d in datasets if d.get("acquisition") == "auto"
+            ),
+            "commercial_safe_count": sum(
+                1 for d in datasets if d.get("commercial_use_ok")
+            ),
+            "download_opt_in": eval_datasets.download_opt_in(),
+            "datasets": datasets,
+        })
+    except Exception as exc:
+        return safe_error(exc, "system_eval_datasets")
+
+
+@system_bp.route("/system/eval-datasets/<dataset_id>", methods=["GET"])
+def system_eval_dataset_detail(dataset_id: str):
+    """Return one F176 eval-dataset entry by id, or 404 if unknown."""
+    try:
+        from opencut.core import eval_datasets
+
+        entry = eval_datasets.get_dataset(dataset_id)
+        if entry is None:
+            return jsonify({
+                "error": f"Unknown eval dataset: {dataset_id}",
+                "code": "EVAL_DATASET_NOT_FOUND",
+                "suggestion": "Call GET /system/eval-datasets for the full list of supported IDs.",
+            }), 404
+        return jsonify(entry.as_dict())
+    except Exception as exc:
+        return safe_error(exc, "system_eval_dataset_detail")
+
+
 @system_bp.route("/system/ai-eval/<feature_id>/compare-backends", methods=["GET"])
 def system_ai_eval_compare_backends(feature_id: str):
     """Cross-backend comparison summary for ``feature_id`` (F178).

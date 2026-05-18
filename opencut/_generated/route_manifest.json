@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T03:18:58Z",
-  "total_routes": 1363,
+  "generated_at": "2026-05-18T03:36:35Z",
+  "total_routes": 1365,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 298,
+    "GET": 300,
     "PATCH": 1,
     "POST": 1050,
     "PUT": 2
@@ -822,9 +822,9 @@
       ]
     },
     "system": {
-      "route_count": 61,
+      "route_count": 63,
       "method_counts": {
-        "GET": 29,
+        "GET": 31,
         "POST": 33
       },
       "sample_rules": [
@@ -9124,6 +9124,22 @@
       ],
       "endpoint": "settings.estimate_job_time",
       "blueprint": "settings"
+    },
+    {
+      "rule": "/system/eval-datasets",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.system_eval_datasets",
+      "blueprint": "system"
+    },
+    {
+      "rule": "/system/eval-datasets/<dataset_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.system_eval_dataset_detail",
+      "blueprint": "system"
     },
     {
       "rule": "/system/feature-state",

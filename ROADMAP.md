@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.33
+**Version**: 4.34
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -74,6 +74,25 @@
 > **v4.32 status (2026-05-17, twenty-ninth pass)**: closed **F184** (collapsed `docs/ROADMAP.md` and `docs/ROADMAP-COMPLETED.md` into ~25-line pointer stubs that redirect to the canonical files; release smoke gains a `roadmap-mirror` step that fails closed when either stub grows past 60 lines or loses the "Moved"/canonical-path language; `tests/test_roadmap_mirror.py` pins the contract) and **F178** (AI eval harness v2 — `EvalResult` carries `vram_peak_mb` / `reference_score` / `backend` / `backend_choice_reason`; `run_evaluation` auto-resets the torch CUDA peak counter, picks up runner-supplied VRAM if provided, and falls back to the gpu-module device; new `compare_backends()` aggregator groups persisted runs by backend and emits latency p50/p95, quality mean vs reference ratio (capped at 1.5), peak/mean VRAM, and "best for latency / best for quality" hints; new `GET /system/ai-eval/<feature_id>/compare-backends` route). Route manifest bumped to 1,363 routes / 101 blueprints. 13 new tests: 8 extending `tests/test_ai_eval_harness.py` for the F178 fields + the comparison aggregator, 5 in `tests/test_roadmap_mirror.py`. Release smoke green (16 chained gates including the new `roadmap-mirror` step, `54 gate tests passed`).
 >
 > **v4.33 status (2026-05-17, thirtieth pass)**: closed **F177** (model_cards.py 2026-Q2 sweep). Existing model-card coverage was already complete (47 cards, every `check_*_available` covered or on `NON_AI_CHECKS`), so F177 closed by adding **6 forward-looking sweep gates** to `tests/test_model_cards.py`: per-category coverage floor (every documented category must keep at least one card), license-prefix allowlist (catches typos and new license families before they merge), privacy-prefix allowlist (`local-only` / `local + optional cloud` / `cloud`), hardware-prefix allowlist (`cpu` / `gpu` / `cpu/gpu` / `cloud`), 40-card baseline floor (catches accidental mass deletion), and feature_id uniqueness gate. The allowlist prefixes are deliberately permissive (allow free-text suffix for nuance) but block new uncategorised license families from sneaking in via a docstring change. All 13 model_cards tests pass; release smoke green (16 chained gates, lint clean).
+>
+> **v4.34 status (2026-05-17, thirty-first pass)**: closed **F176** (public eval dataset bundle catalogue). New `opencut/core/eval_datasets.py` registers 13 public datasets across 6 modalities (video / speech / music / audio / captions / provenance) with license, citation, size, commercial-use flag, and auto-vs-manual acquisition. Critically, the auto-download runner is gated by `OPENCUT_DOWNLOAD_EVAL=1` AND the dataset's `commercial_use_ok=True` — non-commercial corpora are never auto-fetched. Two new routes: `GET /system/eval-datasets` (with `modality`, `target`, `commercial_only`, `compact` filters) and `GET /system/eval-datasets/<id>` (404 on unknown). 26 new tests in `tests/test_eval_datasets.py` cover schema invariants (unique IDs, http(s) upstreams, known modalities), helper functions (`datasets_for_target`, `datasets_for_modality`, `commercial_safe_datasets`), the `OPENCUT_DOWNLOAD_EVAL` opt-in gate, and all five route paths. Route manifest bumped to 1,365 routes / 101 blueprints (+2 from new routes). Release smoke green (16 chained gates, lint clean).
+
+---
+
+## 2026-05-17 v4.34 Public Eval-Dataset Catalogue (F176)
+
+One Now-tier item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F176 eval dataset bundle | DONE — `opencut/core/eval_datasets.py` registers 13 public datasets with full metadata. |
+| Datasets covered | **Video**: DAVIS 2017, REDS, Spring 2024, VBench, VFI-2024. **Speech**: LibriTTS, LRS3, VoxCeleb 2. **Music**: MUSDB18-HQ. **Audio**: EBU SQAM. **Video / encoding**: Netflix Open Content. **Captions**: W3C IMSC reference test suite. **Provenance**: C2PA test vectors. |
+| Schema | `EvalDataset` dataclass with `dataset_id`, `modality`, `benchmark_targets`, `upstream`, `download_url`, `license`, `size_gb`, `commercial_use_ok`, and `acquisition` ("auto" or "manual"). NC-licensed corpora are pinned to `commercial_use_ok=False` + `acquisition="manual"`. |
+| Download gate | The future auto-download runner is gated by **two** conditions: operator opt-in (`OPENCUT_DOWNLOAD_EVAL=1`) AND `commercial_use_ok=True`. The catalogue itself never downloads anything — it is informational metadata. |
+| Routes | `GET /system/eval-datasets` (with `modality`, `target`, `commercial_only`, `compact` query filters) + `GET /system/eval-datasets/<dataset_id>` (404 with `EVAL_DATASET_NOT_FOUND` on unknown). |
+| Test coverage | 26 tests in `tests/test_eval_datasets.py` cover schema invariants, helper queries, the `OPENCUT_DOWNLOAD_EVAL` opt-in gate, all 5 route paths, and three negative-schema assertions (duplicate ID, bad modality, non-http upstream). |
+| Manifest regen | Route manifest bumped to 1,365 routes / 101 blueprints (+2). |
+| Validation | `python -m pytest tests/test_eval_datasets.py -q` → `26 passed`. Release smoke (skipping pip-audit/npm-advisory/pytest-fast) → all 15 chained gates `PASS`. Ruff `opencut/` scope clean. |
 
 ---
 
