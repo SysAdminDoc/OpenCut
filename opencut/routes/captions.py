@@ -1352,22 +1352,132 @@ def _validate_segments(data, *, max_segments=10000):
     return None
 
 
+def _validate_translate_input(data, *, max_segments=10000):
+    """Translate-specific validator: accept segments OR SRT (path/content)."""
+    segs = data.get("segments")
+    srt_path = (data.get("srt_path") or "").strip()
+    srt_content = data.get("srt_content")
+    if isinstance(srt_content, str):
+        srt_content = srt_content.strip()
+    if segs:
+        if not isinstance(segs, list):
+            return "segments must be a list"
+        if len(segs) > max_segments:
+            return f"Too many segments (max {max_segments})"
+        return None
+    if srt_path or srt_content:
+        return None
+    return "Provide `segments`, `srt_path`, or `srt_content`."
+
+
+def _srt_to_translate_segments(srt_text: str, *, max_segments: int = 10000):
+    """Parse an SRT blob into the {start, end, text} segments shape."""
+    from opencut.core.multilang_subtitle import _parse_srt_content
+
+    parsed = _parse_srt_content(srt_text or "")
+    if not parsed:
+        raise ValueError("No SRT cues found")
+    if len(parsed) > max_segments:
+        raise ValueError(f"Too many SRT cues (max {max_segments})")
+    return parsed
+
+
+def _segments_to_srt_text(segments) -> str:
+    """Render translated segments back as SRT text. Self-contained so we
+    don't have to instantiate a full TranscriptionResult / CaptionSegment
+    chain for the translate path."""
+    from opencut.export.srt import _format_srt_time
+
+    lines = []
+    for i, seg in enumerate(segments, 1):
+        if not isinstance(seg, dict):
+            continue
+        start = seg.get("start", 0.0) or 0.0
+        end = seg.get("end", 0.0) or 0.0
+        text = (seg.get("text") or "").strip()
+        if not text:
+            # Preserve cue index spacing even for empty cues so timing stays sane.
+            text = ""
+        lines.append(f"{i}")
+        lines.append(f"{_format_srt_time(start)} --> {_format_srt_time(end)}")
+        lines.append(text)
+        lines.append("")
+    return "\n".join(lines)
+
+
 @captions_bp.route("/captions/translate", methods=["POST"])
 @require_csrf
-@async_job("translate", filepath_required=False, pre_validate=_validate_segments)
+@async_job(
+    "translate",
+    filepath_required=False,
+    pre_validate=_validate_translate_input,
+)
 def captions_translate(job_id, filepath, data):
-    """Translate caption segments. Backend: auto (SeamlessM4T > NLLB), seamless, or nllb."""
-    segments = data.get("segments", [])
+    """Translate caption segments. Backend: auto (SeamlessM4T > NLLB), seamless, or nllb.
+
+    Input accepted (F139):
+
+    * ``segments``: list of ``{start, end, text}`` dicts (legacy path).
+    * ``srt_path``: absolute path to an SRT file on disk; parsed into
+      segments before translation. Useful for "SRT in / SRT out"
+      workflows.
+    * ``srt_content``: raw SRT text. Useful when the panel already
+      holds the SRT blob in memory.
+
+    Output options:
+
+    * ``output_srt=true`` to also receive the translated SRT text in
+      the response.
+    * ``srt_output_path`` (absolute) to also write the translated SRT
+      to disk; the resolved path is echoed back in ``srt_output_path``.
+    * ``srt_legacy_bom``/``legacy_bom``/``windows_legacy_bom``: opt
+      into the legacy Windows BOM (F243 toggle) on the written SRT.
+    """
+    segments = data.get("segments") or []
+    srt_path = (data.get("srt_path") or "").strip()
+    srt_content = data.get("srt_content")
+    if isinstance(srt_content, str):
+        srt_content = srt_content.strip()
+    else:
+        srt_content = None
+
+    srt_input_used = False
+    if not segments:
+        if srt_path:
+            srt_path = validate_filepath(srt_path)
+            with open(srt_path, "rb") as f:
+                raw_bytes = f.read()
+            # Tolerate UTF-8 with or without BOM (F243 legacy path).
+            srt_content = raw_bytes.decode("utf-8-sig", errors="replace")
+            srt_input_used = True
+        if srt_content:
+            segments = _srt_to_translate_segments(srt_content)
+            srt_input_used = True
+
+    if not segments:
+        raise ValueError("No segments provided")
+    if len(segments) > 10000:
+        raise ValueError("Too many segments (max 10000)")
+
     source_lang = data.get("source_lang", "en")
     target_lang = data.get("target_lang", "es")
     backend = data.get("backend", "auto")
     if backend not in ("nllb", "seamless", "auto"):
         backend = "auto"
 
-    if not segments:
-        raise ValueError("No segments provided")
-    if len(segments) > 10000:
-        raise ValueError("Too many segments (max 10000)")
+    output_srt = safe_bool(data.get("output_srt", False), False)
+    if srt_input_used:
+        # If the caller fed us SRT, default to also emitting SRT.
+        output_srt = output_srt or True
+    srt_output_path = (data.get("srt_output_path") or "").strip()
+    if srt_output_path:
+        srt_output_path = validate_path(srt_output_path)
+        output_srt = True
+    legacy_bom = (
+        safe_bool(data.get("srt_legacy_bom", False), False)
+        or safe_bool(data.get("legacy_bom", False), False)
+        or safe_bool(data.get("windows_legacy_bom", False), False)
+    )
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
@@ -1419,7 +1529,26 @@ def captions_translate(job_id, filepath, data):
             target_lang=target_lang, on_progress=_on_progress,
         )
 
-    return {"segments": translated, "target_lang": target_lang}
+    result = {
+        "segments": translated,
+        "target_lang": target_lang,
+        "source_lang": source_lang,
+        "backend": backend,
+        "count": len(translated),
+        "input_format": "srt" if srt_input_used else "segments",
+    }
+    if output_srt:
+        srt_text = _segments_to_srt_text(translated)
+        result["srt"] = srt_text
+        result["srt_encoding"] = "utf-8-sig" if legacy_bom else "utf-8"
+        if srt_output_path:
+            from opencut.export.srt import write_srt_text
+
+            write_srt_text(
+                srt_output_path, srt_text, legacy_windows_bom=legacy_bom
+            )
+            result["srt_output_path"] = srt_output_path
+    return result
 
 
 @captions_bp.route("/captions/karaoke", methods=["POST"])
