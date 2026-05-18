@@ -286,18 +286,26 @@ def verify_sidecar(sidecar_path: str) -> dict:
         raise FileNotFoundError(sidecar_path)
 
     manifest = json.loads(sidecar.read_text(encoding="utf-8"))
+    if not isinstance(manifest, dict):
+        raise ValueError("C2PA sidecar manifest must be a JSON object")
     warnings: List[str] = []
     asset_match = False
 
     asset_meta = manifest.get("asset") or {}
-    asset_title = asset_meta.get("title") or ""
-    asset_sha = asset_meta.get("sha256") or ""
+    if not isinstance(asset_meta, dict):
+        asset_meta = {}
+        warnings.append("manifest asset metadata is not an object")
+    asset_title = str(asset_meta.get("title") or "")
+    asset_sha = str(asset_meta.get("sha256") or "")
 
     # The sidecar lives next to the asset by default; the manifest doesn't
     # carry an absolute path. Walk the same directory for a file matching
     # the recorded basename.
-    candidate = sidecar.parent / asset_title
-    if candidate.exists():
+    asset_name = Path(asset_title).name
+    if asset_name != asset_title:
+        warnings.append("asset title path components were ignored during verification")
+    candidate = sidecar.parent / asset_name
+    if asset_name and candidate.is_file():
         actual_sha = _sha256(candidate)
         asset_match = actual_sha == asset_sha
         if not asset_match:
@@ -310,6 +318,9 @@ def verify_sidecar(sidecar_path: str) -> dict:
     sig = manifest.get("signature")
     signature_match = False
     if sig:
+        if not isinstance(sig, dict):
+            warnings.append("signature metadata is not an object")
+            sig = {}
         signed_hash = sig.get("signed_bytes_sha256") or ""
         # Reconstruct the canonical bytes the way build_sidecar wrote them.
         # We must drop the signature field before hashing.

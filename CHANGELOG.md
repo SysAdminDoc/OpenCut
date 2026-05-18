@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+### Added — Fuzz Harness Coverage
+
+- Extended the Atheris fuzz harness from 5 to 13 targets, adding coverage for path validation, OTIO parsing, FCPXML parsing, marker import, C2PA sidecars, plugin manifests, webhook HMAC signatures, and `safe_pip_install` package-spec validation.
+- Added `tests/test_fuzz_harness_targets.py` to pin the fuzz target inventory in normal CI and wired it into release smoke.
+- Added pure webhook HMAC signature helpers in `opencut/core/webhook_signature.py`.
+
+### Changed — Parser Hardening
+
+- Hardened C2PA sidecar verification and plugin manifest validation against non-object JSON payloads.
+- Promoted the CUBE LUT parser used by LUT blending to a module-level helper so fuzzing exercises the real user-supplied LUT parser.
+
 ### Added — Roadmap Governance
 
 - Added the F180 Wave N-T / F-number governance ledger at `.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md`.
