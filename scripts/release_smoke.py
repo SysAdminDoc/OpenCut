@@ -613,6 +613,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_panel_vitest_gate.py",
     "tests/test_inno_installer_smoke.py",
     "tests/test_wpf_installer_ci.py",
+    "tests/test_wpf_installer_test_suite.py",
     "tests/test_windows_codesigning.py",
     "tests/test_linux_distribution_packaging.py",
     "tests/test_telemetry_aptabase.py",

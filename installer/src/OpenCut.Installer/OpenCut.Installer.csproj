@@ -6,7 +6,7 @@
     <UseWPF>true</UseWPF>
     <RootNamespace>OpenCut.Installer</RootNamespace>
     <AssemblyName>OpenCut-Setup</AssemblyName>
-    <ApplicationIcon>..\..\..\icon.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\logo.ico</ApplicationIcon>
     <Version>1.32.0</Version>
     <FileVersion>1.32.0.0</FileVersion>
     <AssemblyVersion>1.19.0.0</AssemblyVersion>
