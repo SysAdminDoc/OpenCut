@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.35
+**Version**: 4.36
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -78,6 +78,23 @@
 > **v4.34 status (2026-05-17, thirty-first pass)**: closed **F176** (public eval dataset bundle catalogue). New `opencut/core/eval_datasets.py` registers 13 public datasets across 6 modalities (video / speech / music / audio / captions / provenance) with license, citation, size, commercial-use flag, and auto-vs-manual acquisition. Critically, the auto-download runner is gated by `OPENCUT_DOWNLOAD_EVAL=1` AND the dataset's `commercial_use_ok=True` — non-commercial corpora are never auto-fetched. Two new routes: `GET /system/eval-datasets` (with `modality`, `target`, `commercial_only`, `compact` filters) and `GET /system/eval-datasets/<id>` (404 on unknown). 26 new tests in `tests/test_eval_datasets.py` cover schema invariants (unique IDs, http(s) upstreams, known modalities), helper functions (`datasets_for_target`, `datasets_for_modality`, `commercial_safe_datasets`), the `OPENCUT_DOWNLOAD_EVAL` opt-in gate, and all five route paths. Route manifest bumped to 1,365 routes / 101 blueprints (+2 from new routes). Release smoke green (16 chained gates, lint clean).
 >
 > **v4.35 status (2026-05-17, thirty-second pass)**: added the **F176 follow-up download runner** at `opencut/tools/download_eval_dataset.py`. The runner is a **dry-run by default** planner that builds a `DownloadPlan` without touching the network, and refuses execution unless three gates all hold: (1) the dataset is in the F176 registry, (2) `OPENCUT_DOWNLOAD_EVAL=1` is set (or `--force` overrides for CI), and (3) the dataset declares `commercial_use_ok=True` OR the operator passes `--accept-noncommercial-license`. CLI exit codes: `0` = ok, `2` = blocked, `3` = unknown id. Three CLI sub-modes: `--list` (catalogue), `--json` (machine-readable plan), `--execute` (actually fetch). Stdlib urllib + `file://` URL test fixture means no network needed in CI. 19 new tests in `tests/test_download_eval_dataset.py` cover planner gates, execution success/failure paths, all five CLI sub-modes, and the `accept-noncommercial-license` override. Release smoke green (16 chained gates, lint clean).
+>
+> **v4.36 status (2026-05-17, thirty-third pass)**: closed **F200** (Windows installer policy + lockstep tests) and **F211** (cross-platform launcher smoke tests). F200 ships `docs/INSTALLER_POLICY.md` designating the WPF / .NET 9 installer as the recommended path and the Inno Setup script as a deprecated-but-supported fallback, with a milestone-gated retirement plan keyed to F201 / F212 / F213 (no calendar date). `tests/test_installer_policy.py` pins the policy doc presence + 4 lockstep invariants (bundled FFmpeg version string, install root, display name, CEP extension folder) so both installers can't drift on user-visible state. F211 ships `tests/test_launcher_scripts.py` covering all 5 launcher entry points (`.bat`, two `.vbs`, `.command`, `.sh`) — existence, shebang shape, LF line endings on POSIX, `python -m opencut(.server)` entry, path-quoting that survives `Program Files`, the `OPENCUT_HOME` + bundled-FFmpeg env propagation contract, and the 100755 git-index executable bit (with VMware shared-folder fallback via `git ls-files --stage`). 23 new tests; release smoke green (16 chained gates, lint clean).
+
+---
+
+## 2026-05-17 v4.36 Windows Installer Policy + Cross-Platform Launcher Smoke Tests (F200, F211)
+
+Two more items closed in one batch.
+
+| Surface | Status |
+|---|---|
+| F200 installer policy | DONE — `docs/INSTALLER_POLICY.md` designates the WPF / .NET 9 installer (`installer/`) as the **recommended** path and `OpenCut.iss` as a **deprecated-but-supported** fallback. The retirement gate is milestone-keyed (F201 → F213 → F212), **not** a calendar date. |
+| Lockstep invariants | The two installers must agree on: (1) bundled FFmpeg version (F207), (2) `C:\Program Files\OpenCut` default install root, (3) display name, (4) `%APPDATA%\Adobe\CEP\extensions\com.opencut.panel` CEP layout. `tests/test_installer_policy.py` (7 tests) extracts the WPF `public const string BundledFfmpegVersion` and the Inno `#define BundledFfmpegVersion` and asserts they match. |
+| F211 launcher smoke | DONE — `tests/test_launcher_scripts.py` (16 tests) covers all 5 launcher entry points: `OpenCut-Server.bat` (Windows console), two `.vbs` files (Windows hidden launchers), `OpenCut-Server.command` (macOS double-click; thin wrapper that exec's the .sh), and `OpenCut-Server.sh` (Linux). |
+| Launcher contract | Existence; shebang on POSIX; **LF line endings** on POSIX (CRLF breaks the shebang); `python -m opencut(.server)` entry-point invocation; quoting that survives `Program Files`; the `OPENCUT_HOME` + bundled-FFmpeg env-propagation contract via either `PATH` munging or `OPENCUT_FFMPEG`; and the 100755 git-index executable bit with VMware shared-folder fallback (the host POSIX bit can be unreadable on the dev VM, so the test falls back to `git ls-files --stage` for the authoritative answer). |
+| Test count | 23 new tests (7 + 16). Both files wired into release-smoke pytest-fast. |
+| Validation | `python -m pytest tests/test_installer_policy.py tests/test_launcher_scripts.py -q` → `23 passed`. Release smoke (skipping pip-audit / npm-advisory / pytest-fast) → all 15 chained gates `PASS`. Ruff `opencut/` scope clean. |
 
 ---
 

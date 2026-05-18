@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 33)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 34)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (after Pass 32; Passes 1-32 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards.py 2026-Q2 sweep with 6 forward-looking gates, Pass 31 closed F176 public eval-dataset catalogue (13 datasets across 6 modalities, opt-in download gate, 2 new routes), and Pass 32 added the F176 follow-up download runner (dry-run default, triple-gate safety, stdlib urllib transport with `file://` test fixture, 19 new tests). This file documents deferred research/product work for a future Pass 33+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (after Pass 33; Passes 1-33 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, and Pass 33 closed F200 (Windows installer policy + lockstep tests) and F211 (cross-platform launcher smoke tests, 5 entry points). This file documents deferred research/product work for a future Pass 34+, not a broken or incomplete research run.
 
 ---
 
@@ -15,12 +15,24 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
-### Pass 33 entry point
+### Pass 34 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine. Pushing remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
-2. **Continue the remaining Now queue.** F123, F126, F128, F137, F139, F140, F147, F176, F177, F178, F181, F184, F185, F251, F259 are closed (Passes 24-31). Pass 32 closed the F176 follow-up download runner. F182 (gh issue seeder run) and F147 upstream PR are blocked on GitHub auth to third-party / SysAdminDoc repos. F183 is structurally closed. F205 still needs a runner where coverage can finish. The next no-network items to consider: **F180** (Wave T-V planning ledger refresh — re-tier the older wave letters through the F-number lens), or an **F198 CEP-only routes catalogue** (Pass 3 produced `CEP_UXP_PARITY_MATRIX.md` but the per-route inventory is still informal). Remaining Pass-1 Now items requiring network: F121 (Pillow 12.2), F122 (flask-cors 6.x), F133 (onnxruntime ≥1.25), F135 (whisperx 3.8.5). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (model install + integration).
+2. **Continue the remaining Now queue.** F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F181, F184, F185, F200, F211, F251, F259 are closed. F182 / F147 upstream PR remain blocked on GitHub auth. F205 still needs a runner where coverage can finish. The next no-network items to consider: **F180** (Wave T-V planning ledger refresh — re-tier the older wave letters through the F-number lens), **F198** CEP-only routes catalogue formalisation, **F213** Inno install/uninstall smoke in CI (M-effort), **F217** UXP backend-client contract test (S-effort). Remaining Pass-1 Now items requiring network: F121/F122/F133/F135 (dep upgrades). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (model install + integration).
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 33 checkpoint
+
+| Item | Status |
+|---|---|
+| F200 | **DONE** — `docs/INSTALLER_POLICY.md` designates the WPF / .NET 9 installer (`installer/`) as the **recommended** path and `OpenCut.iss` as a **deprecated-but-supported** fallback. Retirement gate is milestone-keyed (F201 → F213 → F212), not a calendar date. |
+| F200 lockstep tests | `tests/test_installer_policy.py` (7 tests) reads the WPF C# constants (`AppConstants.cs`) and the Inno `#define` directives, asserting they match on: (1) bundled FFmpeg version, (2) install root, (3) display name, (4) CEP extension folder layout. Doc-presence tests cross-check the F-number chain (F201/F203/F207). |
+| F211 | **DONE** — `tests/test_launcher_scripts.py` (16 tests) covers all 5 launcher entry points: `OpenCut-Server.bat`, `OpenCut-Server.vbs`, `OpenCut-Launcher.vbs`, `OpenCut-Server.command` (macOS, thin exec-delegate to .sh), `OpenCut-Server.sh` (Linux). |
+| F211 contract | Existence, POSIX shebang, **LF line endings** on POSIX, `python -m opencut(.server)` entry-point invocation, path-quoting that survives Program Files, `OPENCUT_HOME` + bundled-FFmpeg env-propagation contract, and the 100755 git-index executable bit (with VMware shared-folder fallback via `git ls-files --stage`). |
+| Focused validation | PASS — `23 passed` across F200 + F211 tests. |
+| Release smoke | PASS — all 15 non-pytest gates green. Ruff `opencut/` scope clean. |
+| Files to review | `docs/INSTALLER_POLICY.md` (new), `tests/test_installer_policy.py` (new), `tests/test_launcher_scripts.py` (new), `scripts/release_smoke.py` (wired 2 new test files), ROADMAP.md v4.36, PROJECT_CONTEXT.md, this file. |
 
 ### Pass 32 checkpoint
 
