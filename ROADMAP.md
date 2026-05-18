@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.66
+**Version**: 4.67
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,371 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -140,8 +140,24 @@
 > **v4.65 status (2026-05-18, sixty-second pass)**: closed **F255** by completing the UXP encoder handoff for export-range subsequences. `PProBridge.exportSubsequenceWithEncoder()` now validates an output path, checks AME availability for queued exports, optionally calls `EncoderManager.launchEncoder()`, selects `Constants.ExportType.QUEUE_TO_AME` or `IMMEDIATELY`, calls `EncoderManager.exportSequence(...)`, and optionally starts the queue with `startBatchEncode()`. `tests/test_uxp_encoder_manager_integration.py` pins the beta API assumptions and release smoke includes it.
 >
 > **v4.66 status (2026-05-18, sixty-third pass)**: closed **F256** by adding UXP Transcript API helpers for caption-QC context. `PProBridge.querySupportedTranscriptLanguages()` wraps `Transcript.querySupportedLanguages()`, `PProBridge.getTranscriptState()` resolves a clip project item from node ID/path/name, casts it through `ClipProjectItem.cast()`, calls `Transcript.hasTranscript()`, and can include `Transcript.exportToJSON()` output when requested. `tests/test_uxp_transcript_api_integration.py` pins the beta API assumptions and release smoke includes it.
+>
+> **v4.67 status (2026-05-18, sixty-fourth pass)**: closed **F257** by adding UXP Object Mask state helpers. `PProBridge.getObjectMaskState()` wraps `ObjectMaskUtils.hasObjectMask(projectOrSequence)`, supports active-sequence and project scopes, returns explicit unavailable/no-target responses, and exposes the helper through `window.OpenCutUXPHost`. `tests/test_uxp_object_mask_api_integration.py` pins the beta API assumptions and release smoke includes it.
 
 ---
+
+## 2026-05-18 v4.67 UXP Object Mask State Helpers (F257)
+
+One UXP API migration item closed in this pass.
+
+| Area | Status |
+|---|---|
+| API verification | The unpacked `@adobe/premierepro@26.3.0-beta.67` typings expose `ObjectMaskUtils.hasObjectMask(projectOrSequence: Project | Sequence): boolean`. |
+| Scope selection | `PProBridge.getObjectMaskState(payload)` accepts `target` or `scope`, defaults to the active sequence, and supports project-level checks. |
+| Detection behavior | Missing APIs and missing project/sequence targets return explicit structured responses; successful checks return `hasObjectMask`. |
+| WebView bridge hook | `window.OpenCutUXPHost.getObjectMaskState(payload)` exposes Object Mask detection for the upcoming WebView UI cutover. |
+| Tests/docs | `tests/test_uxp_object_mask_api_integration.py` pins the F257 contract and release smoke includes it. |
+
+Validation after the batch: `python -m pytest tests/test_uxp_object_mask_api_integration.py -q` passed (`5 passed`), `python -m pytest tests/test_uxp_object_mask_api_integration.py tests/test_uxp_transcript_api_integration.py tests/test_uxp_encoder_manager_integration.py tests/test_uxp_create_subsequence_integration.py tests/test_uxp_host_action_dispatch.py tests/test_uxp_webview_scaffold.py tests/test_release_smoke.py -q` passed (`42 passed`), touched Python files compile, focused Ruff passed, `node --check extension\com.opencut.uxp\main.js` passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`647 passed`).
 
 ## 2026-05-18 v4.66 UXP Transcript API Helpers (F256)
 
