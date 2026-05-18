@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T17:26:29Z",
-  "total_routes": 1368,
+  "generated_at": "2026-05-18T17:37:52Z",
+  "total_routes": 1370,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 302,
+    "GET": 303,
     "PATCH": 1,
-    "POST": 1051,
+    "POST": 1052,
     "PUT": 2
   },
   "blueprints": {
@@ -280,14 +280,15 @@
       ]
     },
     "delivery": {
-      "route_count": 14,
+      "route_count": 16,
       "method_counts": {
-        "POST": 14
+        "GET": 1,
+        "POST": 15
       },
       "sample_rules": [
         "/delivery/broadcast-qc",
-        "/delivery/broadcast-qc/audio",
-        "/delivery/broadcast-qc/report"
+        "/delivery/transfer-bundle",
+        "/delivery/transfer/options"
       ]
     },
     "delivery_master": {
@@ -5723,6 +5724,22 @@
         "POST"
       ],
       "endpoint": "delivery.thumbnail_ab_route",
+      "blueprint": "delivery"
+    },
+    {
+      "rule": "/delivery/transfer-bundle",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "delivery.transfer_bundle_route",
+      "blueprint": "delivery"
+    },
+    {
+      "rule": "/delivery/transfer/options",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "delivery.transfer_options_route",
       "blueprint": "delivery"
     },
     {
