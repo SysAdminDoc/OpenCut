@@ -105,7 +105,9 @@ enhance = [
     "resemble-enhance>=0.0.1,<1",
 ]
 mcp = [
-    "mcp>=1.0",
+    # F137 — pin to the stable 1.x line. MCP 2.x is a pre-alpha
+    # rewrite (FastMCP → McpServer) and breaks our JSON-RPC server.
+    "mcp>=1.26,<2",
 ]
 otio = [
     "opentimelineio>=0.15,<1",
