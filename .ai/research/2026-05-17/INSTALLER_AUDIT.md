@@ -134,7 +134,7 @@ Evaluated in `docs/WINDOWS_ARM64_PACKAGING.md` with the F101 commit (`706c1c3`):
 - **Windows SmartScreen/Authenticode signing** — **DONE in Pass 45 for repository tooling.** `scripts/sign_windows_artifacts.ps1` signs WPF/Inno installer outputs when `WINDOWS_CODESIGN_*` secrets are configured, verifies with SignTool, and warns inside the certificate-renewal window.
 - **SBOM upload added in Pass 11** — Linux tagged/manual release builds now run `scripts/sbom.py`, archive `OpenCut-SBOM-CycloneDX`, and upload `dist/opencut-sbom.cyclonedx.json` to tagged GitHub Releases. **F204 is done; Pass 16 later closed F219's deeper completeness test.**
 - **50% coverage floor is the minimum** — actual coverage still needs a complete measurement before policy changes. **F205 — raise CI coverage floor to current actual level once measured**. Pass 12 timed out before producing JSON; Pass 23 wrote partial ignored JSON at 52.12% after an interrupted 36m46s run, so neither attempt is valid for setting a new floor.
-- **No PR-only quick CI** — every PR runs the full matrix (3 OS × full pytest + PyInstaller). Could add a lighter `pull_request_target` workflow. **F206 — split CI into PR-fast and release-full workflows**.
+- **PR-only quick CI now exists** — Pass 73 closed F206 with `.github/workflows/pr-fast.yml` for Linux-only pull-request checks and left `.github/workflows/build.yml` as the Release Full push/tag/manual matrix.
 
 ---
 
@@ -171,5 +171,5 @@ Per the wave I I1.4 plan (shipped in v1.26.0):
 | F203 | Authenticode code-signing for Windows installer | Done in Pass 45 | M |
 | F204 | Auto-attach SBOM (from `scripts/sbom.py`) to GitHub releases | Done in Pass 11 | S |
 | F205 | Raise CI coverage floor from 50% to current actual (~75-80% est.) | Now | S |
-| F206 | Split CI into PR-fast and release-full workflows | Later | M |
+| F206 | Split CI into PR-fast and release-full workflows | Done in Pass 73 | M |
 | F207 | Embed bundled FFmpeg version in `AppConstants.cs` + installer manifest | Done in Pass 12 | S |
