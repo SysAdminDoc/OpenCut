@@ -71,8 +71,33 @@ def test_manifest_includes_required_fields():
     manifest = registry.feature_manifest()
     sample = manifest["features"][0]
 
-    for field in ("feature_id", "label", "category", "state", "routes", "source"):
+    for field in (
+        "feature_id",
+        "label",
+        "category",
+        "state",
+        "routes",
+        "source",
+        "hardware",
+        "requires_gpu",
+        "minimum_vram_mb",
+    ):
         assert field in sample, f"manifest entry missing field {field!r}"
+
+
+def test_model_card_hardware_metadata_flows_to_feature_manifest():
+    manifest = registry.feature_manifest()
+    by_id = {record["feature_id"]: record for record in manifest["features"]}
+
+    flashvsr = by_id["video.upscale.flashvsr"]
+    assert flashvsr["hardware"] == "gpu (>= 12 GB VRAM)"
+    assert flashvsr["requires_gpu"] is True
+    assert flashvsr["minimum_vram_mb"] == 12288
+
+    edge_tts = by_id["audio.edge-tts"]
+    assert edge_tts["hardware"] == "cpu"
+    assert edge_tts["requires_gpu"] is False
+    assert edge_tts["minimum_vram_mb"] == 0
 
 
 def test_generated_readiness_records_are_merged_into_manifest():

@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.71
+**Version**: 4.72
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,371 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -150,8 +150,24 @@
 > **v4.70 status (2026-05-18, sixty-seventh pass)**: closed **F267** by adding a generated UXP Developer Tool smoke harness for the 14 direct-UXP `ocXxx` host actions. `opencut.core.uxp_udt_harness.build_udt_harness_manifest()` derives scenario payloads and safety boundaries from the F198 parity catalogue, `opencut.tools.dump_uxp_udt_harness` writes both repository and bundled panel artifacts, and `extension/com.opencut.uxp/udt-smoke.js` exposes `window.OpenCutUXPUdtHarness` so UDT can run read-only scenarios by default or explicit mutating/file-writing scenarios inside a disposable Premiere project.
 >
 > **v4.71 status (2026-05-18, sixty-eighth pass)**: closed **F263** by expanding the Python dependency advisory gate from `requirements.txt` only to `requirements.txt` plus `pyproject[all]`. `opencut.tools.pip_audit_extras` now builds structured audit targets, isolates pip/pip-audit caches, reports allowed vs unallowed vulnerabilities, and release smoke fails only on unlisted Python advisories. The pass also refreshed the full optional dependency set so `[all]` resolves: `transnetv2-pytorch`, `auto-editor>=29.3`, `otio-aaf-adapter>=2.0`, and `pyannote.audio>=4.0`; AudioCraft/MusicGen and Resemble Enhance remain explicit Python 3.11 extras because they hard-pin older Torch stacks.
+>
+> **v4.72 status (2026-05-18, sixty-ninth pass)**: closed **F271** by carrying per-feature hardware and minimum-VRAM metadata from model cards into the generated feature-readiness manifest and `/system/feature-state`. The CEP panel feature-state helper now annotates `data-feature-id` controls with `data-feature-hardware`, `data-feature-min-vram-mb`, and tooltip hardware summaries, so model-heavy features can show requirements before a user starts a job.
 
 ---
+
+## 2026-05-18 v4.72 Per-Feature VRAM UI Surface (F271)
+
+One feature-readiness UI item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Manifest schema | `FeatureRecord` now carries `hardware`, `requires_gpu`, and `minimum_vram_mb` fields, preserved in `/system/feature-state`. |
+| Generated metadata | `opencut.tools.dump_feature_readiness` copies model-card hardware strings into generated records and parses `>= N GB/MB VRAM` into structured megabytes. |
+| Merge behavior | Route-derived generated records now enrich existing hand-written feature records by matching either check probe or `feature_id`, so older stub rows can still inherit hardware metadata. |
+| Panel helper | `extension/com.opencut.panel/client/feature-state.js` exposes `hardwareFor(featureId)` and annotates feature controls with hardware/min-VRAM data attributes plus tooltip text. |
+| Release gate | `tests/test_feature_state_panel_helper.py` is now part of the focused release-smoke pytest gate. |
+
+Validation after the batch: `python -m pytest tests/test_feature_registry.py tests/test_feature_readiness_generator.py tests/test_feature_state_panel_helper.py tests/test_release_smoke.py -q` passed (`34 passed`), touched Python files compile, focused Ruff passed, `node --check extension\com.opencut.panel\client\feature-state.js` passed, and `python -m opencut.tools.dump_feature_readiness --check` passed.
 
 ## 2026-05-18 v4.71 Pip-Audit Full Extras (F263)
 
@@ -1230,7 +1246,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 **Now (5 closed locally by v4.9):** [x] F261 (ship missing macOS `.command` + Linux `.sh` launchers — closes Wave I I1.4 ledger discrepancy), [x] F262 (fix uxp-api-notes URL typo), [x] F264 (CI npm-audit machine-parseable assertion), [x] F266 (document 2-function CEP residual + drop-QE plan), [x] F270 (README "$1,400/yr" marketing copy refresh).
 
-**Next (5 items):** [x] F263 (pip-audit full `[all]` extras), [x] F267 (UDT test harness for 14 low-risk JSX→UXP ports), F268 (Adobe Exchange storefront listing), F271 (per-feature VRAM requirement UI), F272 (wedding-specific Skill).
+**Next (5 items):** [x] F263 (pip-audit full `[all]` extras), [x] F267 (UDT test harness for 14 low-risk JSX→UXP ports), F268 (Adobe Exchange storefront listing), [x] F271 (per-feature VRAM requirement UI), F272 (wedding-specific Skill).
 
 **Later (2 items):** F265 (UDT harness for all 18 JSX functions), F269 (premium model-pack bundling format).
 
