@@ -98,6 +98,16 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R67-L04 | `C:\Users\--\repos\OpenCut\extension\com.opencut.uxp\udt-smoke.js` and `index.html` — bundled UDT runner exposed as `window.OpenCutUXPUdtHarness` | 2026-05-18 |
 | R67-L05 | `C:\Users\--\repos\OpenCut\tests\test_uxp_udt_harness.py` — static and CLI F267 guardrails | 2026-05-18 |
 
+### Pass 68 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R68-L01 | `C:\Users\--\repos\OpenCut\opencut\tools\pip_audit_extras.py` — F263 structured pip-audit wrapper for `requirements.txt` and pyproject extras | 2026-05-18 |
+| R68-L02 | `C:\Users\--\repos\OpenCut\pyproject.toml` and `requirements.txt` — optional dependency refresh and Torch-stack split decisions | 2026-05-18 |
+| R68-L03 | `C:\Users\--\repos\OpenCut\docs\PYTHON_ADVISORIES.md` — documented Python advisory allow-list | 2026-05-18 |
+| R68-L04 | `C:\Users\--\repos\OpenCut\tests\test_pip_audit_extras.py`, `tests\test_release_smoke.py`, `tests\test_transnetv2_dependency.py`, `tests\test_otio_aaf_adapter_pin.py` — F263 static and unit guardrails | 2026-05-18 |
+| R68-L05 | `python -m opencut.tools.pip_audit_extras --json --extra all` — live dependency audit: `requirements.txt` zero findings, `pyproject[all]` two allowed / zero unallowed advisories | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP

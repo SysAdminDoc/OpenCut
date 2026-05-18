@@ -62,7 +62,7 @@ def check_auto_editor_available():
 
 def check_transnetv2_available():
     """Check if TransNetV2 (ML scene detection) is installed."""
-    return _try_import("transnetv2") is not None
+    return _try_import("transnetv2") is not None or _try_import("transnetv2_pytorch") is not None
 
 
 def check_resemble_enhance_available():

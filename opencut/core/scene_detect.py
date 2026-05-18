@@ -7,6 +7,7 @@ Also provides chapter marker generation for YouTube descriptions.
 Uses FFmpeg only - no additional dependencies required.
 """
 
+import importlib
 import json
 import logging
 import re
@@ -17,6 +18,19 @@ from typing import Callable, Dict, List, Optional
 from opencut.helpers import get_ffmpeg_path, get_ffprobe_path
 
 logger = logging.getLogger("opencut")
+
+
+def _load_transnetv2_class():
+    """Return a TransNetV2 class from the legacy or PyPI-compatible package."""
+    for module_name in ("transnetv2", "transnetv2_pytorch"):
+        try:
+            module = importlib.import_module(module_name)
+        except ImportError:
+            continue
+        model_cls = getattr(module, "TransNetV2", None)
+        if model_cls is not None:
+            return model_cls
+    raise ImportError("TransNetV2 not installed. Install with: pip install transnetv2-pytorch")
 
 
 @dataclass
@@ -324,13 +338,13 @@ def detect_scenes_ml(
     Returns:
         SceneInfo with detected boundaries.
 
-    Requires: pip install transnetv2
+    Requires: pip install transnetv2-pytorch
     """
     try:
-        from transnetv2 import TransNetV2
+        TransNetV2 = _load_transnetv2_class()
     except ImportError:
         raise RuntimeError(
-            "TransNetV2 not installed. Install with: pip install transnetv2"
+            "TransNetV2 not installed. Install with: pip install transnetv2-pytorch"
         )
 
     try:
@@ -578,7 +592,7 @@ def detect_scenes_hybrid(
     # ------ Stage 2: TransNetV2 refinement — progress 40-80% ------
     ml_boundaries = []
     try:
-        from transnetv2 import TransNetV2  # noqa: F401
+        _load_transnetv2_class()
 
         if on_progress:
             on_progress(40, "Stage 2: TransNetV2 refinement...")
@@ -664,7 +678,7 @@ def detect_scenes_auto(
     """
     # Tier 1 — TransNetV2 (ML SOTA)
     try:
-        from transnetv2 import TransNetV2  # noqa: F401
+        _load_transnetv2_class()
         logger.debug("detect_scenes_auto: using TransNetV2")
         return detect_scenes_ml(
             filepath,

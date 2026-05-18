@@ -7,9 +7,7 @@ import importlib.util
 import json
 import subprocess
 import sys
-from dataclasses import dataclass
 from pathlib import Path
-from types import SimpleNamespace
 from typing import List
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -85,6 +83,7 @@ def test_step_pip_audit_skips_when_module_missing(monkeypatch):
     module = load_module()
 
     def _missing_module(cmd, *args, **kwargs):  # noqa: ANN001
+        assert "opencut.tools.pip_audit_extras" in cmd
         return subprocess.CompletedProcess(cmd, 1, "", "No module named pip_audit")
 
     monkeypatch.setattr(module, "_run", _missing_module)
@@ -93,6 +92,41 @@ def test_step_pip_audit_skips_when_module_missing(monkeypatch):
 
     assert result.status == "skipped"
     assert "pip-audit" in result.skipped_reason
+
+
+def test_step_pip_audit_runs_pyproject_all_wrapper(monkeypatch):
+    module = load_module()
+
+    def _fake_run(cmd, cwd=None, env=None):  # noqa: ANN001
+        assert cmd[:3] == [sys.executable, "-m", "opencut.tools.pip_audit_extras"]
+        assert "--extra" in cmd
+        assert "all" in cmd
+        payload = {
+            "status": "ok",
+            "message": "no unallowed advisories",
+            "targets": [
+                {
+                    "name": "requirements.txt",
+                    "vulnerability_count": 0,
+                    "allowed_vulnerability_count": 0,
+                    "unallowed_vulnerability_count": 0,
+                },
+                {
+                    "name": "pyproject[all]",
+                    "vulnerability_count": 2,
+                    "allowed_vulnerability_count": 2,
+                    "unallowed_vulnerability_count": 0,
+                },
+            ],
+        }
+        return subprocess.CompletedProcess(cmd, 0, json.dumps(payload), "")
+
+    monkeypatch.setattr(module, "_run", _fake_run)
+
+    result = module.step_pip_audit(argparse.Namespace())
+
+    assert result.status == "ok"
+    assert "pyproject[all]=0 unallowed/2 allowed" in result.message
 
 
 def test_step_npm_advisory_requires_machine_parseable_json(monkeypatch, tmp_path):

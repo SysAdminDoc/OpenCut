@@ -19,7 +19,7 @@ Steps (in order):
 10. ``caption-unicode`` — RTL/CJK/bidi caption export-preservation gate
 11. ``ruff`` — lint the python package
 12. ``pytest-fast`` — focused test ids covering release gates
-13. ``pip-audit`` — Python dependency advisories (skipped if not installed)
+13. ``pip-audit`` — Python dependency advisories for requirements + ``pyproject[all]``
 14. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
 15. ``panel-source`` — CEP panel source tree smoke
 
@@ -596,6 +596,8 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_adobe_premierepro_versions.py",
     "tests/test_mcp_registry_manifest.py",
     "tests/test_mcp_sdk_pin.py",
+    "tests/test_pip_audit_extras.py",
+    "tests/test_transnetv2_dependency.py",
     "tests/test_otio_aaf_adapter_pin.py",
     "tests/test_audioop_shim.py",
     "tests/test_ffmpeg_filter_regression.py",
@@ -686,8 +688,14 @@ def step_pytest_fast(args: argparse.Namespace) -> StepResult:
 
 def step_pip_audit(_args: argparse.Namespace) -> StepResult:
     start = time.time()
-    # Prefer the module entrypoint so we don't depend on PATH ordering.
-    cmd = [sys.executable, "-m", "pip_audit", "-r", "requirements.txt", "--format", "json"]
+    cmd = [
+        sys.executable,
+        "-m",
+        "opencut.tools.pip_audit_extras",
+        "--json",
+        "--extra",
+        "all",
+    ]
     result = _run(cmd, cwd=REPO_ROOT)
     duration = int((time.time() - start) * 1000)
     if "No module named" in (result.stderr or ""):
@@ -697,13 +705,37 @@ def step_pip_audit(_args: argparse.Namespace) -> StepResult:
             skipped_reason="pip-audit not installed",
             duration_ms=duration,
         )
-    status = "ok" if result.returncode == 0 else "fail"
+    payload = {}
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError:
+        pass
+    if payload.get("status") == "skipped":
+        return StepResult(
+            "pip-audit",
+            "skipped",
+            skipped_reason=payload.get("message", "pip-audit skipped"),
+            duration_ms=duration,
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
+    status = "ok" if result.returncode == 0 and payload.get("status") == "ok" else "fail"
+    targets = payload.get("targets", [])
+    target_summary = ", ".join(
+        f"{target.get('name')}={target.get('unallowed_vulnerability_count', 0)} unallowed/"
+        f"{target.get('allowed_vulnerability_count', 0)} allowed"
+        for target in targets
+    )
     return StepResult(
         "pip-audit",
         status,
         exit_code=result.returncode,
         duration_ms=duration,
-        message="no advisories" if status == "ok" else "pip-audit reported advisories",
+        message=(
+            f"no unallowed advisories ({target_summary})"
+            if status == "ok" and target_summary
+            else "pip-audit reported unallowed advisories or collection errors"
+        ),
         stdout_tail=_tail(result.stdout),
         stderr_tail=_tail(result.stderr),
     )
@@ -828,7 +860,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("caption-unicode", step_caption_unicode, "Verify RTL/CJK/bidi caption text export preservation"),
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
-    StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt"),
+    StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt and pyproject[all]"),
     StepDefinition("npm-advisory", step_npm_advisory, "Run npm advisory allow-list gate"),
     StepDefinition("esbuild-pin", step_esbuild_pin, "Verify resolved esbuild >= 0.25 (F131)"),
     StepDefinition("panel-source", step_panel_source, "Smoke the CEP panel source tree"),

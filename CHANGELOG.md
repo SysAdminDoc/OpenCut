@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added — Python Optional Dependency Audit
+
+- Added the F263 `opencut.tools.pip_audit_extras` wrapper so release smoke audits both `requirements.txt` and `pyproject[all]`, reporting allowed and unallowed Python advisories per target.
+- Added `docs/PYTHON_ADVISORIES.md` and release-smoke handling for documented Python advisory waivers.
+
+### Changed — Optional Dependency Resolution
+
+- Refreshed `[all]` optional dependency pins for `transnetv2-pytorch`, `auto-editor`, `otio-aaf-adapter`, and `pyannote.audio`.
+- Kept AudioCraft/MusicGen and Resemble Enhance as explicit Python 3.11 extras because their published packages hard-pin older Torch stacks.
+
 ### Added — UXP UDT Smoke Harness
 
 - Added F267 generated UXP Developer Tool smoke-harness artifacts for the 14 direct-UXP `ocXxx` host actions from the F198 CEP/UXP parity catalogue.
