@@ -579,8 +579,9 @@ def review_bundle():
 
     Returns the manifest of the produced bundle (sha-256, byte count,
     contained entries). When markers are supplied, the zip also includes
-    ``markers.otio`` with an OpenTimelineIO Marker timeline and, when
-    drawing annotations exist, SVG overlays under ``annotations/``.
+    ``markers.otio`` with an OpenTimelineIO Marker timeline,
+    ``review_threads.json`` with threaded comments plus completion state,
+    and, when drawing annotations exist, SVG overlays under ``annotations/``.
     """
     from opencut.core.review_bundle import build_review_bundle
 

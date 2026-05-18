@@ -45,6 +45,7 @@ def test_bundle_contains_expected_files(sample_assets):
     assert "summary.html" in names
     assert "markers.json" in names
     assert "markers.otio" in names
+    assert "review_threads.json" in names
     assert "captions/captions.srt" in names
     assert "media/render.mp4" in names
     assert "extras/lut.cube" in names
@@ -68,10 +69,12 @@ def test_bundle_manifest_records_per_file_hashes(sample_assets):
     assert "summary.html" in arcnames
     assert "markers.json" in arcnames
     assert "markers.otio" in arcnames
+    assert "review_threads.json" in arcnames
     assert "media/render.mp4" in arcnames
     assert "captions/captions.srt" in arcnames
     assert all(len(entry["sha256"]) == 64 for entry in payload["entries"])
     assert payload["otio_markers_basename"] == "markers.otio"
+    assert payload["threads_basename"] == "review_threads.json"
 
 
 def test_bundle_writes_otio_marker_timeline(sample_assets):
@@ -114,6 +117,80 @@ def test_bundle_writes_otio_marker_timeline(sample_assets):
     assert marker["marked_range"]["duration"]["value"] == 12
     assert marker["metadata"]["opencut"]["status"] == "open"
     assert marker["metadata"]["opencut"]["comment"] == "Brighten this shot"
+
+
+def test_bundle_writes_threaded_comments_and_completion_status(sample_assets):
+    bundle = rb.build_review_bundle(
+        output_path=sample_assets["out"],
+        job_label="Threaded Review",
+        markers_payload={
+            "comments": [
+                {
+                    "id": "root-open",
+                    "text": "Please revise the color",
+                    "author": "Client",
+                    "timestamp_sec": 4.0,
+                    "status": "open",
+                    "tags": ["color"],
+                },
+                {
+                    "id": "reply-1",
+                    "parent_id": "root-open",
+                    "text": "On it",
+                    "author": "Editor",
+                    "timestamp_sec": 4.1,
+                    "status": "resolved",
+                    "created_at": 2,
+                },
+                {
+                    "id": "root-done",
+                    "text": "Title card approved",
+                    "author": "Producer",
+                    "frame_number": 120,
+                    "completed": True,
+                    "created_at": 1,
+                },
+                {
+                    "id": "orphan",
+                    "parent_id": "missing-parent",
+                    "text": "Promote orphaned replies",
+                    "status": "wontfix",
+                    "timestamp_sec": 5.0,
+                },
+            ]
+        },
+        framerate=24.0,
+    )
+
+    assert bundle.threads_path == "review_threads.json"
+    assert bundle.thread_count == 3
+    assert bundle.open_thread_count == 1
+    assert bundle.completion_status == "changes_requested"
+
+    with zipfile.ZipFile(bundle.output_path) as zf:
+        threads = json.loads(zf.read("review_threads.json").decode("utf-8"))
+        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+
+    assert threads["schema"] == "opencut.review-threads.v1"
+    assert threads["completion_status"] == "changes_requested"
+    assert threads["comment_count"] == 4
+    assert threads["thread_count"] == 3
+    assert threads["open_thread_count"] == 1
+    assert threads["completed_thread_count"] == 2
+    assert threads["status_counts"] == {"open": 1, "resolved": 2, "wontfix": 1}
+    open_thread = next(thread for thread in threads["threads"] if thread["id"] == "root-open")
+    assert open_thread["completion_status"] == "changes_requested"
+    assert open_thread["reply_count"] == 1
+    assert open_thread["replies"][0]["id"] == "reply-1"
+    done_thread = next(thread for thread in threads["threads"] if thread["id"] == "root-done")
+    assert done_thread["status"] == "resolved"
+    assert done_thread["completion_status"] == "complete"
+    orphan = next(thread for thread in threads["threads"] if thread["id"] == "orphan")
+    assert orphan["orphaned_parent_id"] == "missing-parent"
+    assert manifest["threads_basename"] == "review_threads.json"
+    assert manifest["thread_count"] == 3
+    assert manifest["open_thread_count"] == 1
+    assert manifest["completion_status"] == "changes_requested"
 
 
 def test_bundle_writes_svg_drawing_annotations(sample_assets):
@@ -328,6 +405,32 @@ def test_review_bundle_route_reports_svg_annotations(client, csrf_token, tmp_pat
     payload = resp.get_json()
     assert payload["annotations_path"] == "annotations/index.json"
     assert payload["annotation_count"] == 1
+
+
+def test_review_bundle_route_reports_thread_completion(client, csrf_token, tmp_path):
+    from tests.conftest import csrf_headers
+
+    out_path = tmp_path / "threads.zip"
+    resp = client.post(
+        "/review/bundle",
+        json={
+            "output_path": str(out_path),
+            "markers_payload": {
+                "comments": [
+                    {"id": "root", "text": "Needs work", "timestamp_sec": 1.0, "status": "open"},
+                    {"id": "reply", "parent_id": "root", "text": "Acknowledged", "status": "resolved"},
+                ]
+            },
+        },
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 200, resp.get_json()
+    payload = resp.get_json()
+    assert payload["threads_path"] == "review_threads.json"
+    assert payload["thread_count"] == 1
+    assert payload["open_thread_count"] == 1
+    assert payload["completion_status"] == "changes_requested"
 
 
 def test_review_bundle_route_requires_output_path(client, csrf_token):

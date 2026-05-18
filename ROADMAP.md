@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.52
+**Version**: 4.53
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,365 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -112,8 +112,24 @@
 > **v4.51 status (2026-05-18, forty-eighth pass)**: closed **F225** by anchoring F105 review bundles on OpenTimelineIO Marker schema. `build_review_bundle()` now emits `markers.otio` next to the legacy `markers.json` whenever marker/comment payloads are bundled. The OTIO sidecar is a `Timeline.1` with `Marker.2` objects carrying `marked_range`, canonical OTIO colors, and an `opencut` metadata namespace for comment/thread/status data. `docs/REVIEW_BUNDLES.md` records the schema contract and older-OTIO compatibility decision; `tests/test_review_bundle.py` pins the zip, manifest, route, and marker-timing behavior.
 >
 > **v4.52 status (2026-05-18, forty-ninth pass)**: closed **F226** by adding SVG drawing annotation overlays to F105 review bundles. `build_review_bundle()` now emits `annotations/index.json` plus deterministic `annotations/*.svg` files for `drawing_rect`, `drawing_circle`, and `drawing_arrow` review comments. The route accepts annotation canvas dimensions, bundle responses expose `annotations_path` and `annotation_count`, and `tests/test_review_bundle.py` pins SVG geometry, color mapping, index metadata, route response behavior, and manifest entries.
+>
+> **v4.53 status (2026-05-18, fiftieth pass)**: closed **F227** by adding a threaded-comment trust sidecar to F105 review bundles. `build_review_bundle()` now emits `review_threads.json` whenever marker/comment payloads are bundled, grouping root comments and replies while recording per-thread `completion_status`, aggregate status counts, open-thread counts, and overall review completion state. Bundle manifests and route responses expose the thread path/count/status fields, and `tests/test_review_bundle.py` pins the sidecar, manifest, route, orphan-reply, and completed-comment behavior.
 
 ---
+
+## 2026-05-18 v4.53 Review Bundle Thread Status (F227)
+
+One Next-tier review-bundle item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F227 threaded comments | DONE — F105 review bundles now include `review_threads.json`, a deterministic sidecar that groups root comments, replies, orphaned replies, and status metadata. |
+| Completion status | The sidecar exposes per-thread `completion_status`, aggregate `completion_status`, `open_thread_count`, `completed_thread_count`, `comment_count`, `reply_count`, and normalized open/resolved/wontfix counts. |
+| Route integration | `POST /review/bundle` responses now include `threads_path`, `thread_count`, `open_thread_count`, and `completion_status`. |
+| Manifest integration | `manifest.json` records `threads_basename`, thread counts, and completion status alongside the F225 OTIO and F226 SVG sidecars. |
+| Documentation | `docs/REVIEW_BUNDLES.md` documents the thread sidecar as the local review trust surface. |
+| Guard tests | `tests/test_review_bundle.py` pins threaded roots/replies, completed boolean normalization, orphan reply promotion, manifest fields, and route response metadata. |
+| Validation | `python -m pytest tests/test_review_bundle.py tests/test_marker_metadata.py tests/test_marker_import.py tests/test_otio_aaf_adapter_pin.py -q` -> `49 passed`; focused Ruff, `py_compile`, and reduced release smoke -> clean. |
 
 ## 2026-05-18 v4.52 Review Bundle SVG Annotations (F226)
 
@@ -988,7 +1004,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
-- Flagship review-bundle extensions: **[x] F225**, **[x] F226**, F227-F229 OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
+- Flagship review-bundle extensions: **[x] F225**, **[x] F226**, **[x] F227**, F228-F229 OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: [x] F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
 - Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
@@ -1002,7 +1018,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 ### Phase 3 — Top three strategic moves Pass 1 understated
 
-1. **OTIO Marker schema is now the review-bundle interchange anchor** (F225). Pass 48 added a `markers.otio` sidecar to F105 bundles while preserving `markers.json`, giving downstream OTIO-aware tools a standard `Marker.2` timing/color surface for review notes.
+1. **OTIO Marker schema is now the review-bundle interchange anchor** (F225, extended by F226/F227). Pass 48 added a `markers.otio` sidecar to F105 bundles while preserving `markers.json`, Pass 49 added deterministic SVG overlays, and Pass 50 added `review_threads.json` completion status, giving downstream tools a standard timing/color surface plus a local trust surface for review readiness.
 2. **WebView UI in Bolt UXP (March 2026) is the correct CEP→UXP migration target for OpenCut's 8,500-line vanilla JS panel** (F252). The alternative — rewriting to Spectrum UXP widgets — is months of work for negligible end-user benefit. Pass 1 proposed F160a as a spike; Pass 2 promotes it to the canonical migration plan.
 3. **Hybrid Plugins (.uxpaddon, C++) are the only path for 5 CEP-blocked features** (drag-out, QE DOM, FCPXML/OTIO **import**, createCaptionTrack, exportAsProject sub-selection). For end-of-2026 CEP-retirement viability, OpenCut needs **F253** even if it's XL effort. The Bolt UXP `public-hybrid/` template (Hyper Brew, MIT) cuts the work substantially.
 

@@ -2,12 +2,14 @@
 
 OpenCut review bundles are local-first zip archives built by
 `POST /review/bundle` and `opencut.core.review_bundle.build_review_bundle`.
-They now carry two marker surfaces:
+They now carry three review metadata surfaces:
 
 - `markers.json` preserves the original OpenCut marker/comment payload for
   backward compatibility with existing automation.
 - `markers.otio` is an OpenTimelineIO `Timeline.1` sidecar whose review notes
   are serialized as `Marker.2` objects on a timeline gap.
+- `review_threads.json` normalizes root comments and replies into a stable
+  thread tree with per-thread and aggregate review completion status.
 - `annotations/index.json` and `annotations/*.svg` carry frame-accurate drawing
   overlays for `drawing_rect`, `drawing_circle`, and `drawing_arrow` comments.
 
@@ -17,6 +19,14 @@ without understanding the legacy OpenCut JSON shape. Comments remain in
 metadata instead of the top-level marker `comment` property so the file stays
 compatible with the older `opentimelineio>=0.15` floor supported by the
 `opencut[otio]` extra.
+
+The thread sidecar is the trust surface for local review handoff. Each root
+comment carries direct replies, status, tags, author, timestamp/frame anchors,
+and a `completion_status` of `complete` or `changes_requested`. The file-level
+summary exposes `thread_count`, `open_thread_count`, `completed_thread_count`,
+`comment_count`, `reply_count`, and `status_counts`, so recipients can tell
+whether a bundle is ready or still has open changes without parsing the legacy
+payload shape.
 
 SVG annotation overlays are deterministic bundle assets. Filenames start with
 the target frame number, for example `annotations/00000030_rect-1.svg`, and the
