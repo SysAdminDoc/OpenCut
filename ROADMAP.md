@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.57
+**Version**: 4.58
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,370 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -122,6 +122,24 @@
 > **v4.56 status (2026-05-18, fifty-third pass)**: closed **F233** by adding review notification feeds and signed webhook delivery. `GET /review/feed.atom` exposes per-project/per-review Atom entries from saved review links, `/api/webhooks` can now persist an optional non-echoed HMAC secret, outbound webhook deliveries include `X-OpenCut-Signature` when a secret is configured, and review comment/status routes emit best-effort `review.comment_added` / `review.status_changed` events. The route manifest now has 1,368 routes, and the opt-in extended MCP catalogue has 1,310 tools.
 
 > **v4.57 status (2026-05-18, fifty-fourth pass)**: closed **F234** by adding croc/rclone delivery transfer bundles. `GET /delivery/transfer/options` reports transfer-tool availability, `POST /delivery/transfer-bundle` builds a local zip with embedded and sibling JSON manifests, and responses include ready-to-run croc/rclone command plans while leaving external transfer execution and credentials under user control. The route manifest now has 1,370 routes, and the opt-in extended MCP catalogue has 1,312 tools.
+
+> **v4.58 status (2026-05-18, fifty-fifth pass)**: closed **F238** by upgrading the photosensitive flash checker to standards-oriented PSE preflight. `/accessibility/flash-detect` now counts pairs of opposing transitions, applies the ITU-R BT.1702-3 360 ms / 334 ms safe-gap clarification, gates failures by the 25% screen-area threshold, and separately tracks saturated-red flash pairs for WCAG/PEAT/Japan animation guidance while documenting that formal delivery still needs certified analyzer sign-off.
+
+---
+
+## 2026-05-18 v4.58 Photosensitive Flash Checker (F238)
+
+One standards/accessibility item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F238 PSE checker | DONE — the existing `/accessibility/flash-detect` route now performs standards-oriented flash-pair analysis instead of raw frame-difference counting. |
+| BT.1702 gap rule | The checker applies 360 ms safe gaps for 50 Hz material and 334 ms safe gaps for 60 Hz material, matching ITU-R BT.1702-3's clarification for successive flash leading edges. |
+| Red flash | Saturated-red flash pairs are counted separately using the WCAG/PEAT working red definition and the Japan animation "isolated red" caution. |
+| Area threshold | `screen_area_ratio` lets callers keep small flashing regions below the 25% BT.1702/WCAG area failure threshold while still reporting flash counts. |
+| Documentation | `docs/PHOTOSENSITIVE_FLASH_CHECK.md` records the standards basis, route parameters, response additions, and certification boundary. |
+| Guard tests | `tests/test_photosensitive_flash_checker.py` pins fast-flash failures, 60 Hz safe-gap passes, saturated-red detection, small-area behavior, and profile validation. |
+| Validation | `python -m pytest tests/test_photosensitive_flash_checker.py tests/test_creative.py::TestFlashDetection tests/test_creative.py::TestCreativeRoutes -q` -> `23 passed`; focused Ruff, `py_compile`, generated manifest checks, and reduced release smoke -> clean. |
 
 ---
 
@@ -1073,7 +1091,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
 - Flagship review-bundle extensions: **[x] F225**, **[x] F226**, **[x] F227**, **[x] F229**, F228 voice notes + F230 HLS rendition remain later
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
-- Caption / accessibility: [x] F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
+- Caption / accessibility: [x] F223 RTL/CJK validation suite, [x] F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
 - Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
 - Tests: [x] F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + [x] F217 UXP contract test
 - Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery

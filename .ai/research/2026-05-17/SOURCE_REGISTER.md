@@ -340,7 +340,7 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-N09 | https://www.phoronix.com/news/AOMedia-OAC-Open-Audio-Codec — AOM AOC successor to Opus |
 | R-N10 | https://w3c.github.io/wcag3/guidelines/ — WCAG 3.0 draft (extended AD + descriptive transcript) |
 | R-N11 | https://www.fcc.gov/consumer-governmental-affairs/commission-announces-effective-date-closed-captioning-display-settings-rule — Aug 17 2026 effective date |
-| R-N12 | https://www.itu.int/rec/R-REC-BT.1702/ — ITU-R BT.1702 PSE (2023 latest) |
+| R-N12 | https://www.itu.int/rec/R-REC-BT.1702-3-202311-I — ITU-R BT.1702-3 PSE guidance (approved 2023-11-22; in force) |
 | R-N13 | https://dl.acm.org/doi/10.1145/3663547.3759422 — SignStreamNet ACM ASSETS 2025 |
 | R-N14 | https://github.com/microsoft/ai-audio-descriptions — Microsoft AI Audio Descriptions |
 | R-N15 | https://broadcastwriter.com/2024/12/12/bbc-subtitle-style-guide-2024/ — BBC subtitle style guide (160-180 wpm) |
@@ -356,10 +356,14 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-N25 | https://openobserve.ai — single-binary observability |
 | R-N26 | https://signoz.io — OSS Datadog alternative |
 | R-N27 | https://github.com/posthog/posthog — autocapture-default complaint surface |
+| R-N28 | https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold — WCAG 2.2 general/red flash threshold |
+| R-N29 | https://trace.umd.edu/photosensitive-epilepsy-analysis-tool-peat-user-guide/ — PEAT working red-flash definition |
+| R-N30 | https://www.tv-tokyo.co.jp/kouhou/guideenglish.htm — Japan animation image-effect guideline, one flash per one-third second and isolated-red caution |
+| R-N31 | https://www.ofcom.org.uk/tv-radio-and-on-demand/broadcast-standards/section-two-harm-offence/ — Ofcom Rule 2.12 photosensitive-epilepsy precautions |
 
 **Source coverage assessment (Pass 2 cumulative):** every Pass-2 claim in `ROUTE_READINESS_AUDIT.md`, `INSTALLER_AUDIT.md`, `TEST_COVERAGE_GAPS.md`, `FEATURES_RECONCILIATION.md`, `FEATURE_BACKLOG_ADDENDUM.md`, and the PRIORITIZATION_MATRIX §6.5 update traces to a Pass-1 or Pass-2 R-prefixed ID.
 
-**Total source count this run:** 41 local (R-L01-55, gaps where I sampled) + 60 external dependencies (R-D01-60) + 30 Premiere/UXP (R-P01-33) + 30 Frame.io (R-F01-30) + 27 AI models / standards (R-A01-27 + R-N01-27) + 27 niche AI / accessibility (R-N01-27) + 15 MCP/agents (R-M01-15) + 19 commercial products (R-C01-19) + 8 community signal (R-S01-08) ≈ **~250 unique sources**.
+**Total source count this run:** 41 local (R-L01-55, gaps where I sampled) + 60 external dependencies (R-D01-60) + 30 Premiere/UXP (R-P01-33) + 30 Frame.io (R-F01-30) + 31 AI models / standards (R-A01-27 + R-N01-31) + 31 niche AI / accessibility (R-N01-31) + 15 MCP/agents (R-M01-15) + 19 commercial products (R-C01-19) + 8 community signal (R-S01-08) ≈ **~255 unique sources**.
 
 ---
 
