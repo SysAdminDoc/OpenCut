@@ -62,6 +62,7 @@ def test_helper_exposes_expected_api(node_bin):
         console.log(JSON.stringify({
             hasFetch: typeof api.fetchManifest === 'function',
             hasIsAvailable: typeof api.isAvailable === 'function',
+            hasHardwareFor: typeof api.hardwareFor === 'function',
             hasApplyGating: typeof api.applyGating === 'function',
             badges: Object.keys(api.STATE_BADGES).sort(),
         }));
@@ -70,6 +71,7 @@ def test_helper_exposes_expected_api(node_bin):
 
     assert payload["hasFetch"] is True
     assert payload["hasIsAvailable"] is True
+    assert payload["hasHardwareFor"] is True
     assert payload["hasApplyGating"] is True
     assert payload["badges"] == sorted(["stub", "missing_dependency", "experimental"])
 
@@ -101,3 +103,48 @@ def test_absorb_manifest_marks_unavailable_features(node_bin):
     # Unknown ids stay enabled (optimistic) so old features don't regress.
     assert payload["unknown"] is True
     assert payload["qcBadge"]["chip"] == "Coming soon"
+
+
+def test_apply_gating_adds_hardware_vram_metadata(node_bin):
+    payload = _run_node(
+        node_bin,
+        """
+        api._absorbManifest({
+            features: [
+                {
+                    feature_id: 'audio.audiocraft',
+                    state: 'available',
+                    hardware: 'gpu (>= 8 GB VRAM)',
+                    requires_gpu: true,
+                    minimum_vram_mb: 8192,
+                },
+            ],
+        });
+        const button = {
+            tagName: 'BUTTON',
+            title: '',
+            disabled: false,
+            attrs: { 'data-feature-id': 'audio.audiocraft' },
+            classList: { add: function () {} },
+            getAttribute: function (key) { return this.attrs[key]; },
+            setAttribute: function (key, value) { this.attrs[key] = value; },
+        };
+        const root = { querySelectorAll: function () { return [button]; } };
+        const gated = api.applyGating(root);
+        console.log(JSON.stringify({
+            gated,
+            hardware: api.hardwareFor('audio.audiocraft'),
+            attrs: button.attrs,
+            title: button.title,
+            disabled: button.disabled,
+        }));
+        """,
+    )
+
+    assert payload["gated"] == 0
+    assert payload["hardware"]["minimumVramMb"] == 8192
+    assert payload["hardware"]["requiresGpu"] is True
+    assert payload["attrs"]["data-feature-min-vram-mb"] == "8192"
+    assert payload["attrs"]["data-feature-requires-gpu"] == "true"
+    assert "Hardware: gpu (>= 8 GB VRAM); minimum 8 GB VRAM" in payload["title"]
+    assert payload["disabled"] is False

@@ -52,6 +52,14 @@ The pass also refreshed stale optional dependency pins so `[all]` resolves: `tra
 
 ---
 
+## Pass 69 addendum (2026-05-18)
+
+Pass 69 closed **F271** by extending the F100/F191 feature-readiness contract with per-feature hardware and minimum-VRAM metadata. `FeatureRecord` and `/system/feature-state` now include `hardware`, `requires_gpu`, and `minimum_vram_mb`; `dump_feature_readiness` copies model-card hardware strings and parses `>= N GB/MB VRAM` into structured megabytes.
+
+The CEP panel helper now exposes `hardwareFor(featureId)` and annotates `data-feature-id` controls with `data-feature-hardware`, `data-feature-min-vram-mb`, and tooltip hardware summaries. The merge path also enriches hand-written stub records by `feature_id`, so roadmap/stub rows inherit generated model-card hardware metadata when available. Validation passed: focused F271 tests (`34 passed`), focused Ruff, `py_compile`, `node --check`, and feature-readiness sync check.
+
+---
+
 ## 1. Files created
 
 ### Repo root (1 file)
@@ -393,7 +401,7 @@ Pass 3 added 4 new artefacts + updated PROJECT_CONTEXT.md (§9.4 live verificati
 | F268 | Adobe Exchange storefront listing | Next |
 | F269 | Premium model-pack bundling format | Later |
 | F270 | README "$1,400/yr" marketing copy refresh | Now |
-| F271 | Per-feature VRAM requirement UI surface | Next |
+| F271 | Per-feature VRAM requirement UI surface | Done in Pass 69 |
 | F272 | Wedding-specific Skill (color match + beat sync + 4-min reel) | Next |
 
 ### Cumulative impact (Pass 1 + Pass 2 + Pass 3)

@@ -124,6 +124,9 @@ class FeatureRecord:
     check_name: str = ""
     source: str = "manual"
     notes: str = ""
+    hardware: str = ""
+    requires_gpu: bool = False
+    minimum_vram_mb: int = 0
 
     def resolved_state(self) -> ReadinessState:
         """Return the readiness state after probing optional dependencies."""
@@ -539,6 +542,9 @@ def _record_from_generated(payload: dict) -> FeatureRecord:
         check_name=check_name,
         source=str(payload.get("source") or "generated"),
         notes=str(payload.get("notes") or ""),
+        hardware=str(payload.get("hardware") or ""),
+        requires_gpu=bool(payload.get("requires_gpu") or False),
+        minimum_vram_mb=max(0, int(payload.get("minimum_vram_mb") or 0)),
     )
 
 
@@ -578,19 +584,27 @@ def _merge_generated_records(
         if probe_name and probe_name not in by_probe:
             by_probe[probe_name] = record
 
-    existing_ids = {record.feature_id for record in records}
+    by_id = {record.feature_id: record for record in records}
+    existing_ids = set(by_id)
     for generated in generated_records:
         probe_name = _probe_name(generated)
-        target = by_probe.get(probe_name)
+        target = by_probe.get(probe_name) or by_id.get(generated.feature_id)
         if target is not None:
             target.routes = _unique_routes([*target.routes, *generated.routes])
             if target.check_name == "":
                 target.check_name = probe_name
+            if not target.hardware and generated.hardware:
+                target.hardware = generated.hardware
+            if not target.requires_gpu and generated.requires_gpu:
+                target.requires_gpu = generated.requires_gpu
+            if not target.minimum_vram_mb and generated.minimum_vram_mb:
+                target.minimum_vram_mb = generated.minimum_vram_mb
             continue
         if generated.feature_id in existing_ids:
             continue
         records.append(generated)
         existing_ids.add(generated.feature_id)
+        by_id[generated.feature_id] = generated
         if probe_name and probe_name not in by_probe:
             by_probe[probe_name] = generated
     return records

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Per-Feature VRAM UI Surface
+
+- Added F271 hardware metadata to feature readiness records: `/system/feature-state` now carries `hardware`, `requires_gpu`, and `minimum_vram_mb` for model-backed features.
+- Extended the CEP panel feature-state helper with `hardwareFor()` and hardware/min-VRAM data attributes on `data-feature-id` controls.
+
 ### Added — Python Optional Dependency Audit
 
 - Added the F263 `opencut.tools.pip_audit_extras` wrapper so release smoke audits both `requirements.txt` and `pyproject[all]`, reporting allowed and unallowed Python advisories per target.

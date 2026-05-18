@@ -55,6 +55,14 @@ Implementation refreshed the `[all]` dependency set (`transnetv2-pytorch`, `auto
 
 ---
 
+## Pass 69 implementation note (2026-05-18)
+
+F271 was closed by extending the existing feature-readiness surface rather than creating a separate VRAM registry. The generated readiness manifest already joins route probes to model cards, so the pass added hardware/minimum-VRAM fields there and lets `/system/feature-state` carry the metadata to panel controls.
+
+Implementation details: `dump_feature_readiness` parses model-card hardware strings such as `gpu (>= 12 GB VRAM)`, `registry._merge_generated_records()` now enriches hand-written records by `feature_id` as well as check probe, and `feature-state.js` adds `hardwareFor(featureId)` plus hardware/min-VRAM data attributes and tooltips. Validation evidence for the pass: focused F271 tests (`34 passed`), touched Python compile, focused Ruff, feature-readiness sync check, and CEP helper syntax check.
+
+---
+
 ## 1. Phases executed
 
 | Phase | What | Output |

@@ -108,6 +108,15 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R68-L04 | `C:\Users\--\repos\OpenCut\tests\test_pip_audit_extras.py`, `tests\test_release_smoke.py`, `tests\test_transnetv2_dependency.py`, `tests\test_otio_aaf_adapter_pin.py` — F263 static and unit guardrails | 2026-05-18 |
 | R68-L05 | `python -m opencut.tools.pip_audit_extras --json --extra all` — live dependency audit: `requirements.txt` zero findings, `pyproject[all]` two allowed / zero unallowed advisories | 2026-05-18 |
 
+### Pass 69 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R69-L01 | `C:\Users\--\repos\OpenCut\opencut\registry.py` — F271 FeatureRecord hardware/minimum-VRAM schema and generated-record merge enrichment | 2026-05-18 |
+| R69-L02 | `C:\Users\--\repos\OpenCut\opencut\tools\dump_feature_readiness.py` and `opencut\_generated\feature_readiness.json` — generated hardware/VRAM metadata carried from model cards | 2026-05-18 |
+| R69-L03 | `C:\Users\--\repos\OpenCut\extension\com.opencut.panel\client\feature-state.js` — CEP helper `hardwareFor()` API and per-control hardware annotations | 2026-05-18 |
+| R69-L04 | `C:\Users\--\repos\OpenCut\tests\test_feature_registry.py`, `tests\test_feature_readiness_generator.py`, `tests\test_feature_state_panel_helper.py` — registry/generator/panel guardrails for F271 | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP

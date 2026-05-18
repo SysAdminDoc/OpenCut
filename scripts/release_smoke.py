@@ -580,6 +580,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_api_aliases.py",
     "tests/test_feature_readiness_generator.py",
     "tests/test_feature_registry.py",
+    "tests/test_feature_state_panel_helper.py",
     "tests/test_mcp_server.py",
     "tests/test_mcp_extended_tools.py",
     "tests/test_macos_notarization.py",

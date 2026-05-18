@@ -97,12 +97,52 @@
         return rec.state === "available";
     }
 
+    function hardwareFor(featureId) {
+        var rec = getFeature(featureId);
+        if (!rec) return null;
+        return {
+            hardware: rec.hardware || "",
+            requiresGpu: !!rec.requires_gpu,
+            minimumVramMb: Number(rec.minimum_vram_mb || 0),
+        };
+    }
+
+    function _hardwareSummary(record) {
+        if (!record) return "";
+        var parts = [];
+        if (record.hardware) {
+            parts.push(record.hardware);
+        }
+        var minVram = Number(record.minimum_vram_mb || 0);
+        if (minVram > 0) {
+            parts.push("minimum " + Math.round(minVram / 1024) + " GB VRAM");
+        }
+        return parts.join("; ");
+    }
+
     function badgeFor(featureId) {
         var rec = getFeature(featureId);
         if (!rec || rec.state === "available") return null;
         var badge = STATE_BADGES[rec.state] || null;
         if (!badge) return null;
         return Object.assign({}, badge, { record: rec });
+    }
+
+    function _annotateHardware(el, record) {
+        if (!el || !record) return;
+        var summary = _hardwareSummary(record);
+        if (!summary) return;
+        el.setAttribute("data-feature-hardware", record.hardware || "");
+        if (record.minimum_vram_mb) {
+            el.setAttribute("data-feature-min-vram-mb", String(record.minimum_vram_mb));
+        }
+        if (record.requires_gpu) {
+            el.setAttribute("data-feature-requires-gpu", "true");
+        }
+        var title = el.title || "";
+        if (title.indexOf("Hardware:") === -1) {
+            el.title = title ? title + "\nHardware: " + summary : "Hardware: " + summary;
+        }
     }
 
     function _styleElement(el, badge) {
@@ -121,6 +161,10 @@
         if (badge.record.docs) {
             hint += "\nDocs: " + badge.record.docs;
         }
+        var hardware = _hardwareSummary(badge.record);
+        if (hardware) {
+            hint += "\nHardware: " + hardware;
+        }
         el.title = hint;
         el.setAttribute("data-feature-state", badge.record.state);
         el.setAttribute("data-feature-chip", badge.chip);
@@ -136,6 +180,10 @@
         for (var i = 0; i < nodes.length; i++) {
             var el = nodes[i];
             var featureId = el.getAttribute("data-feature-id");
+            var record = getFeature(featureId);
+            if (record) {
+                _annotateHardware(el, record);
+            }
             var badge = badgeFor(featureId);
             if (!badge) continue;
             _styleElement(el, badge);
@@ -149,6 +197,7 @@
         fetchManifest: fetchManifest,
         getFeature: getFeature,
         isAvailable: isAvailable,
+        hardwareFor: hardwareFor,
         badgeFor: badgeFor,
         applyGating: applyGating,
         // Test helpers — never call from production code.
