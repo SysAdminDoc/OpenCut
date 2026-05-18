@@ -17,6 +17,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from opencut.helpers import get_ffmpeg_path, output_path, run_ffmpeg
+from opencut.openapi_registry import openapi_response_schema
 
 logger = logging.getLogger("opencut")
 
@@ -44,6 +45,7 @@ class VisualDescription:
 
 
 @dataclass
+@openapi_response_schema("/audio/description/generate")
 class ADResult:
     """Result from audio description generation."""
     output_path: str = ""
@@ -78,6 +80,15 @@ class AudioDescriptionCue:
 
 
 @dataclass
+@openapi_response_schema(
+    "/audio/description/microsoft-draft",
+    extra_properties={
+        "cue_count": {"type": "integer"},
+        "transcript_segment_count": {"type": "integer"},
+        "gap_count": {"type": "integer"},
+        "workflow": {"type": "array", "items": {"type": "string"}},
+    },
+)
 class AudioDescriptionReviewDraft:
     """Draft AD package for review before TTS insertion/rendering."""
 

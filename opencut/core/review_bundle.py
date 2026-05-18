@@ -43,6 +43,7 @@ from typing import Any, Dict, List, Optional, Sequence
 from xml.sax.saxutils import escape
 
 from opencut.core.marker_metadata import denormalise_color, normalise_color
+from opencut.openapi_registry import openapi_response_schema
 
 logger = logging.getLogger("opencut")
 
@@ -73,6 +74,10 @@ class BundleEntry:
 
 
 @dataclass
+@openapi_response_schema(
+    "/review/bundle",
+    extra_properties={"version": {"type": "integer"}},
+)
 class ReviewBundleResult:
     output_path: str
     bundle_sha256: str

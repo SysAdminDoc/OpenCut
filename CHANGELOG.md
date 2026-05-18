@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — OpenAPI Schema Introspection
+
+- Added the F193 dataclass-backed OpenAPI response-schema registry so `/openapi.json` schema bindings are discovered from registered dataclasses instead of a hand-maintained endpoint table.
+- Added typed core-result schema coverage for audio-description drafts, delivery transfer bundles, marker imports, eval dataset details, crash packets, project health, OCIO validation, review bundles, and C2PA sidecars; the extended MCP manifest now carries 100 response-schema annotations.
+
 ### Added — Wedding Cinematic Reel Skill
 
 - Added the F272 built-in `wedding-cinematic-reel` agent skill package with SKILL.md metadata and a structured 240-second color-match, beat-sync, highlight, assembly, and review-master plan.

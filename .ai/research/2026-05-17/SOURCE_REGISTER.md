@@ -127,6 +127,16 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R70-L04 | `C:\Users\--\repos\OpenCut\tests\test_agent_skills.py` and `scripts\release_smoke.py` — F272 route/plan guardrails and release-smoke registration | 2026-05-18 |
 | R70-L05 | `C:\Users\--\repos\OpenCut\opencut\_generated\route_manifest.json` and `opencut\_generated\mcp_extended_tools.json` — regenerated 1,376-route / 1,319-tool artifacts | 2026-05-18 |
 
+### Pass 71 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R71-L01 | `C:\Users\--\repos\OpenCut\opencut\openapi_registry.py` — F193 dataclass-backed OpenAPI response schema discovery contract | 2026-05-18 |
+| R71-L02 | `C:\Users\--\repos\OpenCut\opencut\openapi.py` and `opencut\schemas.py` — discovered `_ENDPOINT_SCHEMAS` map and registered legacy schema envelopes | 2026-05-18 |
+| R71-L03 | `C:\Users\--\repos\OpenCut\opencut\core\audio_description.py`, `delivery_transfer.py`, `marker_import.py`, `crash_packet.py`, `project_health.py`, `ocio_validate.py`, `review_bundle.py`, `c2pa_sidecar.py`, `eval_datasets.py` — core result dataclass route bindings | 2026-05-18 |
+| R71-L04 | `C:\Users\--\repos\OpenCut\opencut\mcp_extended_tools.py` and `opencut\_generated\mcp_extended_tools.json` — extended MCP response-schema metadata now sourced from the OpenAPI registry | 2026-05-18 |
+| R71-L05 | `C:\Users\--\repos\OpenCut\tests\test_openapi_contract.py` and `tests\test_mcp_extended_tools.py` — F193 dataclass discovery, nested schema, and MCP metadata guardrails | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP

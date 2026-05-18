@@ -29,6 +29,8 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import List
 
+from opencut.openapi_registry import openapi_response_schema
+
 logger = logging.getLogger("opencut")
 
 
@@ -43,6 +45,7 @@ class OcioCheck:
 
 
 @dataclass
+@openapi_response_schema("/system/ocio")
 class OcioValidation:
     available: bool
     version: str = ""

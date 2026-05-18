@@ -64,6 +64,8 @@ from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import List, Optional, Sequence
 
+from opencut.openapi_registry import openapi_response_schema
+
 logger = logging.getLogger("opencut")
 
 SPEC_VERSION = "0.2-sidecar"  # OpenCut sidecar wire-format; bumped for the F140 C2PA 2.3 alignment
@@ -133,6 +135,7 @@ class C2paIngredient:
 
 
 @dataclass
+@openapi_response_schema("/provenance/c2pa")
 class C2paSidecarResult:
     sidecar_path: str
     asset_sha256: str

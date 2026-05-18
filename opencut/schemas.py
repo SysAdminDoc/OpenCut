@@ -16,6 +16,8 @@ Usage in routes::
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List, Optional
 
+from opencut.openapi_registry import register_response_schema
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
@@ -556,3 +558,150 @@ class UpdateCheckResult:
 
     def to_dict(self) -> dict:
         return _strip_none(asdict(self))
+
+
+# ---------------------------------------------------------------------------
+# OpenAPI response schema route bindings
+# ---------------------------------------------------------------------------
+
+_OPENAPI_SCHEMA_ROUTES = (
+    (ActionResult, (
+        "/annotations/add",
+        "/api/gpu/unload",
+        "/api/mcp/compound",
+        "/models/delete",
+        "/settings/import",
+        "/whisper/clear-cache",
+    )),
+    (AnalyticsResult, (
+        "/analytics/feature/<path:endpoint>",
+        "/analytics/report",
+        "/analytics/usage",
+    )),
+    (AutoZoomResult, ("/video/auto-zoom",)),
+    (BeatMarkersResult, ("/audio/beat-markers",)),
+    (BrollPlanResult, ("/video/broll-plan",)),
+    (CapabilityResult, (
+        "/audio/tts/elevenlabs/info",
+        "/captions/enhanced/capabilities",
+        "/settings/gist/info",
+    )),
+    (CaptionPreviewResult, (
+        "/captions/display-settings/preview",
+        "/captions/style/preview",
+        "/settings/brand-kit/preview",
+    )),
+    (CaptionProfilesResult, (
+        "/captions/display-settings/tokens",
+        "/captions/qc/reading-profiles",
+    )),
+    (CaptionQcResult, ("/captions/qc",)),
+    (CaptionTranslationResult, ("/captions/translate",)),
+    (ChaptersResult, ("/captions/chapters",)),
+    (ColorMatchResult, ("/video/color-match",)),
+    (ContextAnalysisResult, ("/context/analyze",)),
+    (DeliverableResult, (
+        "/deliverables/adr-list",
+        "/deliverables/asset-list",
+        "/deliverables/music-cue-sheet",
+        "/deliverables/vfx-sheet",
+    )),
+    (DepthMapResult, (
+        "/video/depth/bokeh",
+        "/video/depth/map",
+        "/video/depth/parallax",
+    )),
+    (ExportMarkersResult, ("/timeline/export-from-markers",)),
+    (FileOutputResult, (
+        "/annotations/export",
+        "/captions/animated/render",
+        "/captions/burnin/file",
+        "/captions/burnin/segments",
+        "/captions/convert",
+        "/captions/karaoke",
+        "/captions/style/apply",
+    )),
+    (GpuStatusResult, ("/api/gpu/status",)),
+    (HealthResult, ("/health",)),
+    (IndexResult, ("/search/index",)),
+    (JobListResult, (
+        "/jobs",
+        "/jobs/history",
+        "/jobs/interrupted",
+    )),
+    (JobResponse, (
+        "/api/models/download",
+        "/api/models/quantize",
+        "/audio/tts/elevenlabs",
+        "/audio/tts/f5",
+        "/audio/tts/generate",
+        "/audio/tts/install",
+        "/audio/tts/omnivoice",
+        "/audio/tts/subtitled",
+    )),
+    (JobStatsResult, ("/jobs/stats",)),
+    (JobStatusResult, (
+        "/agent/plan/<plan_id>",
+        "/jobs/<job_id>/diagnostics",
+        "/status/<job_id>",
+    )),
+    (ListEnvelopeResult, (
+        "/ai/mood-presets",
+        "/ai/voice-avatar/styles",
+        "/annotations/list",
+        "/captions/animated/presets",
+        "/captions/burnin/styles",
+        "/captions/emoji-map",
+        "/captions/styles",
+    )),
+    (LoudnessMatchResult, ("/audio/loudness-match",)),
+    (ModelListResult, (
+        "/ai/voice-models",
+        "/api/gpu/models",
+        "/api/models/installed",
+        "/api/models/quantization",
+        "/audio/tts/f5/models",
+        "/audio/tts/omnivoice/models",
+        "/models/list",
+    )),
+    (ModelProgressResult, ("/api/models/progress",)),
+    (MulticamResult, ("/video/multicam-cuts",)),
+    (PluginListResult, ("/plugins/list",)),
+    (RepeatDetectResult, ("/captions/repeat-detect",)),
+    (SearchResult, ("/search/footage",)),
+    (SettingsResult, (
+        "/settings/auto-zoom",
+        "/settings/brand-kit",
+        "/settings/chapters",
+        "/settings/export",
+        "/settings/footage-index",
+        "/settings/llm",
+        "/settings/loudness-target",
+        "/settings/multicam",
+        "/settings/onboarding",
+        "/whisper/settings",
+    )),
+    (ShortsPipelineResult, ("/video/shorts-pipeline",)),
+    (SilenceResult, ("/silence",)),
+    (ToolListResult, (
+        "/agent/tools",
+        "/api/mcp/tools",
+    )),
+    (UpdateCheckResult, ("/system/update-check",)),
+    (VideoAIResult, (
+        "/video/ai/denoise",
+        "/video/ai/interpolate",
+        "/video/ai/rembg",
+        "/video/ai/upscale",
+    )),
+    (VoiceListResult, (
+        "/audio/tts/elevenlabs/voices",
+        "/audio/tts/voices",
+    )),
+    (WorkflowResult, ("/workflow/run",)),
+)
+
+for _schema_class, _routes in _OPENAPI_SCHEMA_ROUTES:
+    register_response_schema(_schema_class, *_routes)
+
+del _schema_class, _routes

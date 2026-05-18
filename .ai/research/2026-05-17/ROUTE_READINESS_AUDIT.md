@@ -1,7 +1,7 @@
 # OpenCut — Route Readiness Audit
 
 **Audit date:** 2026-05-17 (Pass 2)
-**Source of truth:** `opencut/_generated/route_manifest.json` (generated 2026-05-16T20:36:05Z), `opencut/registry.py` (F100/F191 feature catalogue), `opencut/_generated/feature_readiness.json` (58 generated records / 67 route bindings), `opencut/checks.py` (117 public `check_*` probes, 86 `check_*_available` gates), `opencut/_generated/model_cards.json` (47 cards), `opencut/openapi.py` (100-entry mapping table after F192), `opencut/mcp_server.py` (39 curated tools after F195).
+**Source of truth:** `opencut/_generated/route_manifest.json`, `opencut/registry.py` (F100/F191 feature catalogue), `opencut/_generated/feature_readiness.json` (58 generated records / 67 route bindings), `opencut/checks.py` (118 public `check_*` probes, 86 `check_*_available` gates), `opencut/_generated/model_cards.json` (47 cards), `opencut/openapi_registry.py` + `opencut/openapi.py` (110 discovered response-schema bindings after F193), `opencut/mcp_server.py` (39 curated tools after F195).
 
 ---
 
@@ -9,7 +9,7 @@
 
 | Metric | Count |
 |---|---|
-| Total HTTP routes | **1,365** |
+| Total HTTP routes | **1,376** |
 | GET routes | 300 |
 | POST routes | 1,050 |
 | DELETE routes | 13 |
@@ -18,12 +18,12 @@
 | Blueprints | **101** |
 | Feature readiness records exposed by `registry.py` (F100/F191) | **84** |
 | Generated readiness records / route bindings | **58** / **67** |
-| Routes with explicit response-schema in `openapi.py` | **100** |
-| Public `check_*` probes / `check_*_available` gates | **117** / **86** (in `opencut/checks.py`) |
+| Routes with explicit response-schema in `openapi.py` | **110** |
+| Public `check_*` probes / `check_*_available` gates | **118** / **86** (in `opencut/checks.py`) |
 | Model cards in `model_cards.json` (F115) | **47** |
 | MCP tools in `mcp_server.py` MCP_TOOLS array | **39** |
 
-Coverage gap after Pass 41: 1,365 routes vs 84 registry records / 67 generated route bindings vs 100 OpenAPI schemas vs 39 curated MCP tools. F191 improved the readiness surface for direct route/check bindings, F192 expanded the typed response-schema table, and F195 added 12 shipped post-Wave-M MCP tools, but most routes still have no typed response schema and no MCP surface. This remains a structural visibility gap.
+Coverage gap after Pass 71: 1,376 routes vs 84 registry records / 67 generated route bindings vs 110 OpenAPI schemas vs 39 curated MCP tools. F191 improved the readiness surface for direct route/check bindings, F192 expanded the typed response-schema table, F193 made it dataclass-discovered, and F195 added 12 shipped post-Wave-M MCP tools, but most routes still have no typed response schema and no MCP surface. This remains a structural visibility gap.
 
 ---
 
@@ -68,7 +68,7 @@ Coverage gap after Pass 41: 1,365 routes vs 84 registry records / 67 generated r
 | **Stub 503 `MISSING_DEPENDENCY`** | ~30-50 | Wave K Tier 2 (19) + Wave H Tier 2 (6) + scattered |
 | **Stub 501 `ROUTE_STUBBED`** | ~12-18 | Wave K Tier 3 (8) + Wave H Tier 3 (3) + scattered |
 | **F100/F191 registered with explicit state** | 84 records / 67 generated route bindings | `opencut/registry.py`, `opencut/_generated/feature_readiness.json` |
-| **OpenAPI-schema-typed** | 100 | `opencut/openapi.py` `_ENDPOINT_SCHEMAS` |
+| **OpenAPI-schema-typed** | 110 | `opencut/openapi_registry.py` dataclass discovery feeding `opencut/openapi.py` |
 
 **Pass 8 update:** `GET /system/feature-state` now includes generated F191 records from direct route/check bindings. It still is not a per-route readiness matrix for all 1,365 routes; it is a feature-readiness manifest with generated route lists for probes the scanner can see.
 
@@ -79,9 +79,11 @@ Coverage gap after Pass 41: 1,365 routes vs 84 registry records / 67 generated r
 
 ## 4. OpenAPI coverage gap
 
-`opencut/openapi.py` `_ENDPOINT_SCHEMAS` maps **100 endpoints** to typed dataclasses.
+`opencut.openapi_registry` now discovers registered response dataclasses and feeds `opencut/openapi.py` `_ENDPOINT_SCHEMAS`, which maps **110 endpoints** to typed dataclasses.
 
 **Pass 41 update:** F192 closed the first bulk expansion by adding reusable response envelopes in `opencut/schemas.py` and mapping the next high-traffic jobs/system/model/GPU/MCP/analytics/annotations/captions/audio/TTS/settings/AI-catalogue route batch. `tests/test_openapi_contract.py` pins a floor of 80 typed paths and checks representative generated response properties.
+
+**Pass 71 update:** F193 replaced the legacy endpoint hand-table with dataclass-discovered route metadata and added selected `core/*Result` payloads such as audio-description drafts, transfer bundles, marker imports, eval dataset details, crash packets, project health, OCIO validation, review bundles, and C2PA sidecars. The OpenAPI contract now pins a floor of 105 typed paths plus nested dataclass properties.
 
 The original 30-endpoint seed covered:
 - `/health`, `/system/update-check`
@@ -96,11 +98,11 @@ The original 30-endpoint seed covered:
 
 `_JOB_ENDPOINTS` set (35 endpoints) returns `JobResponse` schema for async POSTs that are not explicitly mapped.
 
-**The other ~1,260 routes get `{type: "object"}` (essentially untyped) in the OpenAPI spec.** Documentation tools (Swagger UI, Insomnia, Postman) will show the bare endpoint with no field info.
+**The other ~1,250 routes get `{type: "object"}` (essentially untyped) in the OpenAPI spec.** Documentation tools (Swagger UI, Insomnia, Postman) will show the bare endpoint with no field info.
 
 **Recommended fix:**
 - **F192** — **DONE in Pass 41.** Bulk-added typed response dataclasses for the first high-traffic route batch; legacy `/openapi.json` now has 100 typed endpoints.
-- **F193** — Replace `_ENDPOINT_SCHEMAS` hand-table with introspection over `core/*Result` dataclasses (most modules already return subscriptable dataclasses per CLAUDE.md convention).
+- **F193** — **DONE in Pass 71.** Replaced the `_ENDPOINT_SCHEMAS` hand-table with dataclass discovery over registered schema/core result classes.
 
 ---
 
@@ -205,7 +207,7 @@ The manifest contains **233 routes under `/api/*`**. Pass 7 corrected the origin
 |---|---|---|---|
 | F191 | Auto-derive `FeatureRecord` from check functions + route manifest | Done in Pass 8 | M |
 | F192 | Bulk add OpenAPI response schemas for top 50 routes | Done in Pass 41 | M |
-| F193 | Replace `_ENDPOINT_SCHEMAS` hand-table with dataclass introspection | Later | M |
+| F193 | Replace `_ENDPOINT_SCHEMAS` hand-table with dataclass introspection | Done in Pass 71 | M |
 | F194 | Auto-generate "extended" MCP tools from route manifest | Done in Pass 43 | L |
 | F195 | Add 12 missing MCP tools for post-Wave-M shipped routes | Done in Pass 9 | S |
 | F196 | Make `registry.py` primary; derive `model_cards` / `checks` | Later | L |
