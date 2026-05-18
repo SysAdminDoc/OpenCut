@@ -21,7 +21,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F# | Title | What | Source | Effort | Tier |
 |---|---|---|---|---|---|
 | F191 | Auto-derive `FeatureRecord` from check functions + route manifest | DONE in Pass 8 — generated catalogue covers 58 direct route/check records and 67 route bindings | ROUTE_READINESS_AUDIT §3 | M | Done |
-| F192 | Bulk OpenAPI response schemas for top 50 routes | Move from 30 typed + 1300 untyped to ~80 typed | ROUTE_READINESS_AUDIT §4 | M | Next |
+| [x] F192 | Bulk OpenAPI response schemas for top 50 routes | Closed in Pass 41 — legacy `/openapi.json` typed schema map now covers 100 routes with reusable response envelopes and contract tests | ROUTE_READINESS_AUDIT §4 | M | Next |
 | F193 | Introspection-based OpenAPI schema (replace hand-table) | Walk `core/*Result` dataclasses to generate schemas | ROUTE_READINESS_AUDIT §4 | M | Later |
 | F194 | Auto-generate extended MCP tools from manifest | 27 → ~300 tools (tagged auto vs curated) | ROUTE_READINESS_AUDIT §5 | L | Next |
 | F195 | Add 12 missing MCP tools for shipped post-Wave-M routes | DONE in Pass 9 — curated MCP surface is now 39 tools, including face_reshape, skin_retouch, smart_upscale, elevenlabs_tts, caption_qc, review_bundle, c2pa_provenance, marker_import, capability_probe, brand_kit, semantic_search, and spectral_match | ROUTE_READINESS_AUDIT §5 | S | Done |
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | F192, F194, F198, F200, F201, F203, F211, [x] F213, [x] F214, [x] F215, [x] F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, F194, F198, F200, F201, F203, F211, [x] F213, [x] F214, [x] F215, [x] F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
