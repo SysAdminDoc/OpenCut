@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.67
+**Version**: 4.68
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,371 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -142,8 +142,24 @@
 > **v4.66 status (2026-05-18, sixty-third pass)**: closed **F256** by adding UXP Transcript API helpers for caption-QC context. `PProBridge.querySupportedTranscriptLanguages()` wraps `Transcript.querySupportedLanguages()`, `PProBridge.getTranscriptState()` resolves a clip project item from node ID/path/name, casts it through `ClipProjectItem.cast()`, calls `Transcript.hasTranscript()`, and can include `Transcript.exportToJSON()` output when requested. `tests/test_uxp_transcript_api_integration.py` pins the beta API assumptions and release smoke includes it.
 >
 > **v4.67 status (2026-05-18, sixty-fourth pass)**: closed **F257** by adding UXP Object Mask state helpers. `PProBridge.getObjectMaskState()` wraps `ObjectMaskUtils.hasObjectMask(projectOrSequence)`, supports active-sequence and project scopes, returns explicit unavailable/no-target responses, and exposes the helper through `window.OpenCutUXPHost`. `tests/test_uxp_object_mask_api_integration.py` pins the beta API assumptions and release smoke includes it.
+>
+> **v4.68 status (2026-05-18, sixty-fifth pass)**: closed **F258** by adding a UXP AAF export helper. `PProBridge.exportAafSequence()` exports the active sequence through `ProjectConverter.exportAAF()`, accepts `outputPath` / `path` / `filePath`, builds optional `AAFExportOptions` for mixdown, audio, trim, handle, and preset settings, and exposes the helper through `window.OpenCutUXPHost`. `tests/test_uxp_aaf_export_integration.py` pins the beta API assumptions and release smoke includes it.
 
 ---
+
+## 2026-05-18 v4.68 UXP AAF Export Helper (F258)
+
+One UXP API migration item closed in this pass.
+
+| Area | Status |
+|---|---|
+| API verification | The unpacked `@adobe/premierepro@26.3.0-beta.67` typings expose `ProjectConverter.exportAAF(sequence, filePath, aafExportOptions?)`, `AAFExportOptions`, and `Constants.AAFExportAudioFormat`. |
+| Active-sequence export | `PProBridge.exportAafSequence(payload)` validates an output path, resolves the active sequence, and calls `ProjectConverter.exportAAF(...)`. |
+| AAF options | Optional payload settings map to `setMixdownVideo`, `setExplodeToMono`, `setSampleRate`, `setBitsPerSample`, `setEmbedAudio`, `setAudioFileFormat`, `setTrimSources`, `setHandleFrames`, `setVideoMixdownPresetPath`, `setRenderAudioEffects`, `setInterleaveWithoutEffects`, and `setPreserveParentFolder`. |
+| WebView bridge hook | `window.OpenCutUXPHost.exportAafSequence(payload)` exposes AAF export for the upcoming WebView UI cutover without changing the backend OTIO AAF route. |
+| Tests/docs | `tests/test_uxp_aaf_export_integration.py` pins the F258 contract and release smoke includes it. |
+
+Validation after the batch: `python -m pytest tests/test_uxp_aaf_export_integration.py -q` passed (`6 passed`), `python -m pytest tests/test_uxp_aaf_export_integration.py tests/test_uxp_object_mask_api_integration.py tests/test_uxp_transcript_api_integration.py tests/test_uxp_encoder_manager_integration.py tests/test_uxp_create_subsequence_integration.py tests/test_uxp_host_action_dispatch.py tests/test_uxp_webview_scaffold.py tests/test_release_smoke.py -q` passed (`48 passed`), touched Python files compile, focused Ruff passed, `node --check extension\com.opencut.uxp\main.js` passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`653 passed`).
 
 ## 2026-05-18 v4.67 UXP Object Mask State Helpers (F257)
 

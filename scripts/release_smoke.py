@@ -620,6 +620,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_uxp_encoder_manager_integration.py",
     "tests/test_uxp_transcript_api_integration.py",
     "tests/test_uxp_object_mask_api_integration.py",
+    "tests/test_uxp_aaf_export_integration.py",
     "tests/test_esbuild_pin.py",
     "tests/test_caption_qc.py",
     "tests/test_caption_reading_profiles.py",

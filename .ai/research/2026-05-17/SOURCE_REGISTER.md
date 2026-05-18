@@ -69,6 +69,15 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R64-L03 | `C:\Users\--\repos\OpenCut\scripts\release_smoke.py` — `pytest-fast` registration for the object-mask guardrail | 2026-05-18 |
 | R64-L04 | `@adobe/premierepro@26.3.0-beta.67` npm package, unpacked `package/src/premierepro.d.ts` — `ObjectMaskUtils.hasObjectMask(projectOrSequence)` typing evidence | 2026-05-18 |
 
+### Pass 65 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R65-L01 | `C:\Users\--\repos\OpenCut\extension\com.opencut.uxp\main.js` — F258 ProjectConverter AAF export helper and WebView host bridge exposure | 2026-05-18 |
+| R65-L02 | `C:\Users\--\repos\OpenCut\tests\test_uxp_aaf_export_integration.py` — static F258 guardrails | 2026-05-18 |
+| R65-L03 | `C:\Users\--\repos\OpenCut\scripts\release_smoke.py` — `pytest-fast` registration for the AAF export guardrail | 2026-05-18 |
+| R65-L04 | `@adobe/premierepro@26.3.0-beta.67` npm package, unpacked `package/src/premierepro.d.ts` — `ProjectConverter.exportAAF`, `AAFExportOptions`, and `Constants.AAFExportAudioFormat` typing evidence | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP
