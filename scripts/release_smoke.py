@@ -480,6 +480,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_adobe_premierepro_versions.py",
     "tests/test_mcp_registry_manifest.py",
     "tests/test_mcp_sdk_pin.py",
+    "tests/test_otio_aaf_adapter_pin.py",
     "tests/test_esbuild_pin.py",
     "tests/test_caption_qc.py",
     "tests/test_caption_reading_profiles.py",
