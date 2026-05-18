@@ -116,7 +116,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | [x] F254 | UXP `createSubsequence` integration (already exposed — correct Pass 1 claim) | Closed in Pass 61 — `PProBridge.createSubsequenceFromRange()` now sets sequence in/out points with UXP actions, calls `Sequence.createSubsequence(ignoreTrackTargeting?)`, restores the prior range, and hands the subsequence to F255 encoder export | UXP subagent §2 + §3 | S | Next |
 | [x] F255 | UXP `EncoderManager.launchEncoder` / `startBatchEncode` integration | Closed in Pass 62 — `PProBridge.exportSubsequenceWithEncoder()` now validates output paths, checks AME availability for queued exports, calls `launchEncoder`, `exportSequence`, and `startBatchEncode`, and supports immediate export type selection | UXP subagent §3 | M | Next |
 | [x] F256 | UXP `Transcript.hasTranscript` / `querySupportedLanguages` integration | Closed in Pass 63 — UXP host helpers now query supported transcript languages, resolve clip project items, check transcript availability, and optionally export transcript JSON | UXP subagent §3 | S | Next |
-| F257 | UXP `ObjectMaskUtils.hasObjectMask` integration | Premiere 26 AI Object Mask detection | UXP subagent §3 | S | Next |
+| [x] F257 | UXP `ObjectMaskUtils.hasObjectMask` integration | Closed in Pass 64 — UXP host helpers now check AI Object Mask availability for active sequences or whole projects | UXP subagent §3 | S | Next |
 | F258 | UXP `ProjectConverter.exportAAF` migration (replaces CEP+ExtendScript path) | Maps to F104 (already shipped via FCP XML) but for AAF | UXP subagent §3 | M | Next |
 | F259 | UXP HTTP-on-macOS workaround documentation + auto-HTTPS sidecar | Known 25.6.3 bug; affects MCP sidecar (F146) on Mac | UXP subagent §5 | S | Now |
 | F260 | UXP migration risk dashboard: per-route CEP-vs-UXP-vs-Hybrid status | Generates from F198 catalogue; surfaces in panel Settings | UXP subagent §10 | M | Next |
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), [x] F254, [x] F255, [x] F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), [x] F254, [x] F255, [x] F256, [x] F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).

@@ -60,6 +60,15 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R63-L04 | `@adobe/premierepro@26.3.0-beta.67` npm package, unpacked `package/src/premierepro.d.ts` — Transcript and ClipProjectItem typing evidence | 2026-05-18 |
 | R63-L05 | `npm view @adobe/premierepro dist-tags version versions --json` — `latest=26.2.0`, `beta=26.3.0-beta.67` verification | 2026-05-18 |
 
+### Pass 64 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R64-L01 | `C:\Users\--\repos\OpenCut\extension\com.opencut.uxp\main.js` — F257 ObjectMaskUtils helper and WebView host bridge exposure | 2026-05-18 |
+| R64-L02 | `C:\Users\--\repos\OpenCut\tests\test_uxp_object_mask_api_integration.py` — static F257 guardrails | 2026-05-18 |
+| R64-L03 | `C:\Users\--\repos\OpenCut\scripts\release_smoke.py` — `pytest-fast` registration for the object-mask guardrail | 2026-05-18 |
+| R64-L04 | `@adobe/premierepro@26.3.0-beta.67` npm package, unpacked `package/src/premierepro.d.ts` — `ObjectMaskUtils.hasObjectMask(projectOrSequence)` typing evidence | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — UXP Object Mask State Helpers
+
+- Added F257 UXP `ObjectMaskUtils.hasObjectMask()` wiring for active-sequence or project-level AI Object Mask detection.
+- Exposed `getObjectMaskState()` through `window.OpenCutUXPHost` and added `tests/test_uxp_object_mask_api_integration.py` plus release-smoke registration to pin the beta API assumption.
+
 ### Added — UXP Transcript API Helpers
 
 - Added F256 UXP Transcript API helpers: `querySupportedTranscriptLanguages()` wraps `Transcript.querySupportedLanguages()`, and `getTranscriptState()` resolves clip project items before calling `Transcript.hasTranscript()` with optional JSON export.
