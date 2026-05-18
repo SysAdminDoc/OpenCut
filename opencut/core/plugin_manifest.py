@@ -131,6 +131,10 @@ def _allow_unsigned() -> bool:
 def validate_manifest_schema(manifest: dict) -> ManifestValidationResult:
     """Validate the v1 manifest schema (without touching the filesystem)."""
     result = ManifestValidationResult(valid=True)
+    if not isinstance(manifest, dict):
+        result.valid = False
+        result.errors.append("manifest: must be a JSON object")
+        return result
 
     name = manifest.get("name") or ""
     if not isinstance(name, str) or not name or not all(c.isalnum() or c in "-_" for c in name):
@@ -203,8 +207,16 @@ def verify_plugin_lock(plugin_dir: str | os.PathLike) -> ManifestValidationResul
         result.valid = False
         result.errors.append(f"plugin.lock.json unreadable: {exc}")
         return result
+    if not isinstance(expected, dict):
+        result.valid = False
+        result.errors.append("plugin.lock.json must be a JSON object")
+        return result
 
     expected_files = expected.get("files") or {}
+    if not isinstance(expected_files, dict):
+        result.valid = False
+        result.errors.append("plugin.lock.json files must be an object")
+        return result
     if expected.get("version") != MANIFEST_VERSION:
         result.warnings.append(
             f"lock file version {expected.get('version')} differs from plugin loader (expected {MANIFEST_VERSION})"

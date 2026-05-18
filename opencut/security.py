@@ -277,6 +277,23 @@ def _find_system_python() -> Optional[str]:
 _SAFE_PACKAGE_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?(\[.+\])?(==.+|>=.+|<=.+|~=.+|!=.+)?$")
 
 
+def validate_safe_pip_package(package: str) -> str:
+    """Validate a package spec before passing it to ``pip install``.
+
+    The installer uses subprocess argument lists instead of a shell, but keeping
+    the accepted shape narrow avoids URL/path installs, control characters, and
+    ambiguous whitespace in runtime dependency requests.
+    """
+    if not isinstance(package, str):
+        raise ValueError(f"Invalid package name: {package!r}")
+    normalized = package.strip()
+    if not normalized or "\x00" in normalized or any(ch.isspace() for ch in normalized):
+        raise ValueError(f"Invalid package name: {package!r}")
+    if not _SAFE_PACKAGE_RE.fullmatch(normalized):
+        raise ValueError(f"Invalid package name: {package!r}")
+    return normalized
+
+
 def _verify_package_importable(python: str, package: str, target_dir: str = None) -> bool:
     """Check if a package is importable by running a quick subprocess check.
 
@@ -316,8 +333,7 @@ def safe_pip_install(package: str, timeout: int = 600) -> subprocess.CompletedPr
     Returns the ``CompletedProcess`` on success.
     Raises ``RuntimeError`` if all strategies fail.
     """
-    if not package or not _SAFE_PACKAGE_RE.match(package):
-        raise ValueError(f"Invalid package name: {package!r}")
+    package = validate_safe_pip_package(package)
 
     # Frozen builds can't use sys.executable for pip — find system Python
     if getattr(sys, "frozen", False):
