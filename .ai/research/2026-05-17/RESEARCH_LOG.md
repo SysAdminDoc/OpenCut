@@ -885,3 +885,33 @@ F254 is complete for repository-side UXP range-subsequence creation and is
 covered by the local release-smoke `pytest-fast` gate. F255 is the immediate
 follow-up for `EncoderManager.launchEncoder` / `startBatchEncode` and export
 execution.
+
+---
+
+## Pass 62 (2026-05-18 — F255 UXP EncoderManager handoff)
+
+Pass 62 closed F255 by routing F254 range subsequences through Premiere's UXP
+EncoderManager APIs.
+
+### Pass 62 package checks
+
+| Probe | Result |
+|---|---|
+| Beta typings | `premierepro.d.ts` exposes `EncoderManager.getManager()`, `exportSequence(...)`, `launchEncoder()`, `startBatchEncode()`, `isAMEInstalled`, and `Constants.ExportType`. |
+| Export boundary | `ocExportSequenceRange` now reaches encoder queue/immediate export wiring instead of stopping at an F255 pending response. |
+| AME posture | Queued exports require AME when `isAMEInstalled` is false; immediate exports remain available through `Constants.ExportType.IMMEDIATELY`. |
+
+### Pass 62 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 62.1 | Confirmed EncoderManager API names from beta typings. | Verified the `launchEncoder`, `exportSequence`, and `startBatchEncode` signatures before coding. |
+| Pass 62.2 | Implemented the encoder handoff. | Added manager lookup, export type selection, AME availability guard, AME launch, sequence export, and optional batch start. |
+| Pass 62.3 | Wired docs and release guardrails. | Added `tests/test_uxp_encoder_manager_integration.py`, updated the F254 test, registered release smoke, and ran focused test/Ruff/compile/Node plus release-smoke `pytest-fast` validation (`637 passed`). |
+
+### Pass 62 saturation note
+
+F255 is complete for repository-side UXP EncoderManager dispatch and covered by
+the local release-smoke `pytest-fast` gate. The remaining small UXP API
+migration candidates are F256 Transcript APIs, F257 Object Mask detection, and
+F258 AAF export.

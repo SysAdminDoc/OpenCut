@@ -230,6 +230,26 @@ and release-smoke `pytest-fast` (`632 passed`) passed locally.
 
 ---
 
+## 2026-05-18 Pass 62 Addendum — F255 UXP EncoderManager Export Handoff
+
+**Functional changes:** Closed F255 by completing the UXP encoder handoff for
+range subsequences created by F254.
+
+| Path | Change |
+|---|---|
+| `extension/com.opencut.uxp/main.js` | Adds `_encoderManager()`, `_encoderExportType()`, and `PProBridge.exportSubsequenceWithEncoder()`; `exportSequenceRange()` now calls EncoderManager instead of returning a pending F255 response. |
+| `tests/test_uxp_encoder_manager_integration.py` | Pins the beta package assumption, EncoderManager API wiring, AME/immediate export type selection, output-path validation, and release-smoke registration. |
+| `tests/test_uxp_create_subsequence_integration.py` | Updates the F254 handoff guardrail to expect the F255 encoder call. |
+| `scripts/release_smoke.py` | Adds the F255 guardrail test to the focused release gate. |
+| `docs/UXP_MIGRATION.md`, `CHANGELOG.md`, `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CONTINUE_FROM_HERE.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md` | Synced roadmap/state/docs for F255 closure and F256 continuation. |
+
+**Validation:** focused F255/F254 tests, focused UXP/release-smoke unit
+coverage, `py_compile`, focused Ruff, `node --check
+extension\com.opencut.uxp\main.js`, and release-smoke `pytest-fast`
+(`637 passed`) passed locally.
+
+---
+
 ## 7.5 Pass 2 additions (same day, second autonomous research run)
 
 Pass 2 added 5 new artefacts + extended 6 existing ones + appended ROADMAP.md v4.5 section + updated PROJECT_CONTEXT.md + wrote CONTINUE_FROM_HERE.md.

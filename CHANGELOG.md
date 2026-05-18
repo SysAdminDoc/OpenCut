@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — UXP EncoderManager Export Handoff
+
+- Added F255 UXP `EncoderManager` export wiring for range subsequences: queued exports now use `EncoderManager.getManager()`, optional `launchEncoder()`, `exportSequence(...)`, and optional `startBatchEncode()`.
+- Added `tests/test_uxp_encoder_manager_integration.py` and release-smoke registration to pin AME queue/immediate export type selection, output-path validation, and the F254-to-F255 handoff.
+
 ### Added — UXP Subsequence Range Integration
 
 - Added F254 UXP `createSubsequence` range wiring in `PProBridge`: OpenCut now sets sequence in/out points through Premiere UXP actions, calls `Sequence.createSubsequence(ignoreTrackTargeting)`, restores the previous range, and passes the created subsequence forward to the F255 encoder handoff.
