@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.38
+**Version**: 4.39
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -84,8 +84,22 @@
 > **v4.37 status (2026-05-17, thirty-fourth pass)**: closed **F217** (UXP BackendClient HTTP-shape contract test). New `tests/test_uxp_backend_client_contract.py` (15 tests) pins both sides of the contract: (a) the JS-side BackendClient module in `extension/com.opencut.uxp/main.js` must export `call`/`get`/`post`/`del`/`checkHealth`/`fetchCsrf`, must send `X-OpenCut-Token`, must carry a 120-second fetch timeout, must refresh CSRF from response headers, must return `{ok, data, error, status}` objects, must surface timeouts as a normal `{ok: false}` result (not an unhandled rejection), must poll `/status/<job_id>` for terminal statuses `complete`/`error`/`cancelled`, and must accept either `job_id` or legacy `id` as the job identifier; (b) the server-side must keep `GET /health` returning a `csrf_token` field for panel bootstrap, must keep `/status/<id>` returning JSON for unknown jobs, must require CSRF on mutating routes (so the wrapper's 403-refresh path fires), and must keep `capabilities` as a dict if present. Release smoke green (16 chained gates, lint clean).
 >
 > **v4.38 status (2026-05-18, thirty-fifth pass)**: closed the low-risk dependency-security batch **F121/F122/F127a/F130/F133/F135**. PyPI metadata forced the runtime decision: Pillow 12.2 and WhisperX 3.8.5 require Python >=3.10, while onnxruntime 1.25+ requires Python >=3.11, so OpenCut source installs now advertise **Python 3.11+**. `pyproject.toml` and `requirements.txt` now pin `flask-cors>=6,<7`, `opencv-python-headless>=4.13,<5`, `Pillow>=12.2,<13`, `onnxruntime>=1.25,<2`, `onnxruntime-gpu>=1.25,<2`, and `whisperx>=3.8.5,<4`; the F123 pydub retirement is also reflected in `requirements.txt`. Guard tests in `tests/test_dependency_surface.py`, `tests/test_bootstrap_check.py`, and `tests/test_mcp_registry_manifest.py` pin the dependency floor and generated MCP metadata.
+>
+> **v4.39 status (2026-05-18, thirty-sixth pass)**: closed **F180** by adding the canonical Wave N-T / F-number governance bridge at [`.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md`](.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md). The ledger walks every Wave N, O, P, Q, R, S, and T row, assigns it to an existing F-number where one already owns the governance surface, keeps pure model-route work wave-only, and calls out the shared model-card/eval/license/UXP gates that future wave implementations must satisfy. `tests/test_wave_f_number_ledger.py` now extracts Wave N-T rows from this roadmap and fails if the ledger drifts.
 
 ---
+
+## 2026-05-18 v4.39 Wave N-T F-Number Governance Ledger (F180)
+
+One Next-tier cleanup item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F180 wave N-T re-tier | DONE — [`.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md`](.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md) is now the canonical bridge between the Wave N-T model-surface backlog and the F-number governance backlog. |
+| Existing F-number reuse | The ledger folds wave rows into existing F-numbers where appropriate, including `F143`-`F146`, `F148`, `F151`, `F162`-`F164`, `F167`, `F169`, `F170`, `F174`, `F252`, and `F260`, rather than creating duplicate checklist items. |
+| Wave-only rows | Pure model-route work remains keyed by wave ID, but must still satisfy the shared model-card, eval, license/consent, optional-download, UXP, and release-smoke gates before being marked shipped. |
+| Guard tests | `tests/test_wave_f_number_ledger.py` extracts every `N*` through `T*` feature-table row from this roadmap and asserts the F180 ledger covers exactly the same ID set. |
+| Validation | `python -m pytest tests/test_wave_f_number_ledger.py -q` -> `2 passed`; focused Ruff -> clean; `python scripts/release_smoke.py --skip pip-audit --skip npm-advisory --skip pytest-fast --json` -> OK. |
 
 ## 2026-05-18 v4.38 Dependency Security Floor (F121, F122, F127a, F130, F133, F135)
 
@@ -850,7 +864,7 @@ Full backlog with effort / risk / fit / source in [`.ai/research/2026-05-17/FEAT
 - Model upgrades: F164 LTX-2.3, F165 Wan 2.7 (gate on weights), F166 daVinci-MagiHuman 15B backend, F168 IndexTTS2, F170 VoxCPM2, F171 Fish Speech S2 (licence gate), F172 HunyuanVideo-Foley (licence gate), F174 SeedVR2.5.
 - Standards: F141 IMSC 1.3, F142 OCIO 2.5 / ACES 2.0.
 - Spike: F160a WebView UI UXP migration spike.
-- Cleanup: F180 wave N-T re-tier through the F-number lens.
+- Cleanup: [x] F180 wave N-T re-tier through the F-number lens.
 
 **Later:** F157 Motion Brush, F160b WebView UI full implementation, F173 Mimi codec audio I/O tier, F175 MagiCompiler, F179 features.md ↔ F-number reconciliation pass, F184 docs/ROADMAP.md mirror resolution.
 
