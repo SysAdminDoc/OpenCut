@@ -116,6 +116,73 @@ def test_bundle_writes_otio_marker_timeline(sample_assets):
     assert marker["metadata"]["opencut"]["comment"] == "Brighten this shot"
 
 
+def test_bundle_writes_svg_drawing_annotations(sample_assets):
+    bundle = rb.build_review_bundle(
+        output_path=sample_assets["out"],
+        job_label="Annotated Review",
+        markers_payload={
+            "comments": [
+                {
+                    "id": "rect-1",
+                    "text": "Box the logo",
+                    "timestamp_sec": 1.0,
+                    "annotation_type": "drawing_rect",
+                    "annotation_data": {
+                        "x": 0.1,
+                        "y": 0.2,
+                        "w": 0.3,
+                        "h": 0.4,
+                        "normalized": True,
+                        "stroke": "#ff0000",
+                        "stroke_width": 6,
+                    },
+                },
+                {
+                    "id": "circle-1",
+                    "text": "Circle the face",
+                    "timestamp_sec": 2.0,
+                    "annotation_type": "drawing_circle",
+                    "annotation_data": {"cx": 320, "cy": 180, "r": 40, "color": "blue"},
+                },
+                {
+                    "id": "arrow-1",
+                    "text": "Point at lower third",
+                    "timestamp_sec": 3.0,
+                    "annotation_type": "drawing_arrow",
+                    "annotation_data": {"x1": 10, "y1": 20, "x2": 300, "y2": 120, "color": "yellow"},
+                },
+            ]
+        },
+        framerate=30.0,
+        annotation_width=1000,
+        annotation_height=500,
+    )
+
+    assert bundle.annotations_path == "annotations/index.json"
+    assert bundle.annotation_count == 3
+    with zipfile.ZipFile(bundle.output_path) as zf:
+        names = sorted(zf.namelist())
+        index = json.loads(zf.read("annotations/index.json").decode("utf-8"))
+        rect_svg = zf.read("annotations/00000030_rect-1.svg").decode("utf-8")
+        circle_svg = zf.read("annotations/00000060_circle-1.svg").decode("utf-8")
+        arrow_svg = zf.read("annotations/00000090_arrow-1.svg").decode("utf-8")
+        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+
+    assert "annotations/index.json" in names
+    assert index["schema"] == "opencut.review-annotations.v1"
+    assert index["width"] == 1000
+    assert index["height"] == 500
+    assert [ann["frame_number"] for ann in index["annotations"]] == [30, 60, 90]
+    assert '<rect x="100.00" y="100.00" width="300.00" height="200.00"' in rect_svg
+    assert 'stroke="#ff0000"' in rect_svg
+    assert "<circle" in circle_svg
+    assert 'stroke="#2563eb"' in circle_svg
+    assert "<line" in arrow_svg
+    assert "marker-end=" in arrow_svg
+    assert manifest["annotations_basename"] == "annotations/index.json"
+    assert manifest["annotation_count"] == 3
+
+
 def test_normalise_review_markers_accepts_single_marker_payload():
     markers = rb.normalise_review_markers(
         {"name": "Hook", "frame_number": 48, "comment": "Check title", "color": "Yellow"},
@@ -230,6 +297,37 @@ def test_review_bundle_route(client, csrf_token, tmp_path):
     assert payload["bundle_sha256"]
     assert payload["otio_markers_path"] == "markers.otio"
     assert Path(payload["output_path"]).exists()
+
+
+def test_review_bundle_route_reports_svg_annotations(client, csrf_token, tmp_path):
+    from tests.conftest import csrf_headers
+
+    out_path = tmp_path / "annotated.zip"
+    resp = client.post(
+        "/review/bundle",
+        json={
+            "output_path": str(out_path),
+            "markers_payload": {
+                "comments": [
+                    {
+                        "id": "a1",
+                        "text": "Mark region",
+                        "timestamp_sec": 1.0,
+                        "annotation_type": "drawing_rect",
+                        "annotation_data": {"x": 1, "y": 2, "w": 3, "h": 4},
+                    }
+                ]
+            },
+            "annotation_width": 640,
+            "annotation_height": 360,
+        },
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 200, resp.get_json()
+    payload = resp.get_json()
+    assert payload["annotations_path"] == "annotations/index.json"
+    assert payload["annotation_count"] == 1
 
 
 def test_review_bundle_route_requires_output_path(client, csrf_token):
