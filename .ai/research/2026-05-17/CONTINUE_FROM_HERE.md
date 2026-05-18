@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 25)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 26)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (after Pass 24; Passes 1-24 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, Pass 22 closed F244 Whisper confidence + human-review flags, Pass 23 wrapped up an interrupted F205 coverage reattempt without changing the coverage floor, and Pass 24 closed F259/F251/F147/F131 in a single governance + migration quick-win batch. This file documents deferred research/product work for a future Pass 25+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (after Pass 25; Passes 1-25 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, Pass 22 closed F244 Whisper confidence + human-review flags, Pass 23 wrapped up an interrupted F205 coverage reattempt without changing the coverage floor, Pass 24 closed F259/F251/F147/F131 in a single governance + migration quick-win batch, and Pass 25 closed F137 MCP SDK pin + F139 caption translation SRT round-trip. This file documents deferred research/product work for a future Pass 26+, not a broken or incomplete research run.
 
 ---
 
@@ -15,12 +15,22 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
-### Pass 25 entry point
+### Pass 26 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine. Pushing remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
-2. **Continue the remaining Now queue.** F205 remains open and needs a runner where the full coverage command can finish. F147, F251, and F259 are now closed; remaining Pass-1 Now items include F121 (Pillow 12.2 bump), F122 (flask-cors 6.x), F123 (pydub / audioop-lts), F126 (OpenTimelineIO-Plugins), F128 (FFmpeg filter regression suite), F133 (onnxruntime ≥1.25), F135 (whisperx 3.8.5), F137 (MCP SDK pin), F139 (caption translation endpoint), F140 (C2PA 2.3), F149 (Florence-2 AI Slate ID), F162 (SAM 2 → SAM 3.1), F163 (Depth Anything V2 → V3), F167 (OmniVoice), and F169 (Qwen3-TTS).
+2. **Continue the remaining Now queue.** F137, F139, F147, F251, and F259 are now closed. F205 remains open and needs a runner where the full coverage command can finish. Remaining Pass-1 Now items include F121 (Pillow 12.2 bump — network), F122 (flask-cors 6.x — network), F123 (pydub / audioop-lts — code), F126 (OpenTimelineIO-Plugins migration — code), F128 (FFmpeg filter regression suite — test infra), F133 (onnxruntime ≥1.25 — network), F135 (whisperx 3.8.5 — network), F140 (C2PA 2.3 — code), F149 (Florence-2 AI Slate ID — large), F162 (SAM 2 → SAM 3.1 — large), F163 (Depth Anything V2 → V3 — large), F167 (OmniVoice — large), and F169 (Qwen3-TTS — large). The next no-network local-effort candidates are **F126** (OTIO adapter pin), **F128** (FFmpeg filter regression suite scaffolding), **F140** (C2PA 2.3 sidecar), and **F181-F185** (bootstrap/cleanup fixes).
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 25 checkpoint
+
+| Item | Status |
+|---|---|
+| F137 | **DONE** — `pyproject.toml` now pins `mcp>=1.26,<2`. MCP 2.x is a pre-alpha FastMCP → McpServer rewrite that would break `opencut.mcp_server.MCP_TOOLS`. `tests/test_mcp_sdk_pin.py` (3 tests) blocks any future loosening below 1.26 or above the 1.x line. |
+| F139 (SRT round-trip) | **DONE** — `POST /captions/translate` now accepts `srt_path` (file on disk) or `srt_content` (raw SRT text) in addition to the legacy `segments` list. SRT input is parsed with the existing `_parse_srt_content` helper, translated through the same auto / NLLB / SeamlessM4T backends, and written back as SRT when the caller passes `srt_path`, `output_srt=true`, or `srt_output_path`. The F243 `srt_legacy_bom` toggle is honoured on the written file. `tests/test_captions_translate_srt.py` (16 tests) covers validator, helper round-trip, segments path, SRT-content path, SRT-path read with legacy BOM round-trip, and the empty-input 400. |
+| Focused validation | PASS — `19 passed` across `tests/test_mcp_sdk_pin.py` + `tests/test_captions_translate_srt.py`. |
+| Release smoke | PASS — all 15 chained gates green; `pytest-fast` reports `50 gate tests passed`. Ruff clean. |
+| Files to review | `pyproject.toml`, `opencut/routes/captions.py`, `scripts/release_smoke.py`, `tests/test_mcp_sdk_pin.py`, `tests/test_captions_translate_srt.py`, plus roadmap/research docs. |
 
 ### Pass 24 checkpoint
 

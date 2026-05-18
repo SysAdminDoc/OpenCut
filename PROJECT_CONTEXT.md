@@ -190,6 +190,8 @@ Highlights only. Full ledger in `ROADMAP.md` + `.ai/research/2026-05-17/PRIORITI
 - [x] F251 `@adobe/premierepro` weekly npm registry tracker (CI + drift JSON)
 - [x] F147 `opencut-mcp-server` upstream registry manifest + install doc
 - [x] F131 esbuild ≥0.25 resolved-tree CI assertion (`npm run audit:esbuild`)
+- [x] F137 `mcp` SDK pin `>=1.26,<2` (block pre-alpha 2.x rewrite)
+- [x] F139 `POST /captions/translate` SRT-in / SRT-out round-trip path
 
 **Next (v1.35 — v1.42, ~6 months):**
 - **F143–F145** `/agent/chat` conductor + post-turn self-review + Skills SDK + MCP packaging (flagship)
@@ -360,5 +362,6 @@ This file is the **canonical project context**. It is intentionally small. The s
 - Pass 22 closed F244 by adding segment ASR confidence, language confidence, Hindi/Arabic review flags, and low-confidence review reason codes to Whisper transcription outputs, transcript cache/state, JSON export, caption/transcript routes, and CLI output; full release smoke PASS (`300 passed` in pytest-fast).
 - Pass 23 reattempted F205 coverage measurement and wrote `.ai/research/2026-05-17/F205_INTERRUPTED_COVERAGE_NOTE.md`; pytest was interrupted after 2,206.6 seconds, the partial ignored JSON reported 52.12% coverage, and no CI floor change was made.
 - Pass 24 closed **F259** (UXP macOS HTTP workaround doc + manifest port-allowlist test), **F251** (Adobe `@adobe/premierepro` npm registry tracker + weekly GitHub Action + release-smoke `warn`-tier drift gate), **F147** (committed `opencut-mcp-server` registry manifest + `docs/MCP_SERVER.md` + drift-check release-smoke step), and **F131** (`check-esbuild-pin.mjs` + `npm run audit:esbuild` + release-smoke `esbuild-pin` step). 41 new tests across four files added to `pytest-fast`. Release smoke green excluding pytest-fast/pip-audit/npm-advisory/panel-source. `StepResult.status` taxonomy now includes a `warn` tier for informational drift signals that should not block a release.
+- Pass 25 closed **F137** (pinned `mcp>=1.26,<2` in `pyproject.toml` so the pre-alpha MCP 2.x rewrite cannot be pulled in by transitive resolution) and the SRT-in / SRT-out completion of **F139** (`POST /captions/translate` accepts `srt_path` / `srt_content` and emits translated SRT when requested, honouring the F243 legacy-BOM toggle). 19 new tests across `tests/test_mcp_sdk_pin.py` (3) and `tests/test_captions_translate_srt.py` (16); both wired into `pytest-fast`. Full release smoke green (15 chained gates, 50 gate test files, 341 individual tests).
 
 Future research runs should land under `.ai/research/<YYYY-MM-DD>/` and update this file's *§ 9 Shipping cadence* + *§ 9.5 regulatory deadlines* + *§ 10 The biggest non-obvious gaps*. The next planned run is documented in `.ai/research/2026-05-17/CONTINUE_FROM_HERE.md`.
