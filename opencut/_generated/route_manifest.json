@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T21:33:02Z",
-  "total_routes": 1376,
+  "generated_at": "2026-05-18T23:21:02Z",
+  "total_routes": 1378,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 307,
+    "GET": 309,
     "PATCH": 1,
     "POST": 1055,
     "PUT": 2
@@ -21,14 +21,14 @@
       ]
     },
     "ai_content": {
-      "route_count": 8,
+      "route_count": 10,
       "method_counts": {
-        "GET": 1,
+        "GET": 3,
         "POST": 7
       },
       "sample_rules": [
         "/ai/auto-grade",
-        "/ai/content-scan",
+        "/ai/color-intents",
         "/ai/mood-presets"
       ]
     },
@@ -1439,6 +1439,14 @@
       "blueprint": "motion_gen"
     },
     {
+      "rule": "/ai/color-intents",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "ai_content.ai_color_intents",
+      "blueprint": "ai_content"
+    },
+    {
       "rule": "/ai/color-match",
       "methods": [
         "POST"
@@ -1596,6 +1604,14 @@
         "POST"
       ],
       "endpoint": "ai_content.ai_pacing_analysis",
+      "blueprint": "ai_content"
+    },
+    {
+      "rule": "/ai/pacing-genres",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "ai_content.ai_pacing_genres",
       "blueprint": "ai_content"
     },
     {

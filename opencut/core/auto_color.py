@@ -102,6 +102,8 @@ def list_mood_presets() -> List[str]:
 def auto_grade(
     input_path: str,
     mood: Optional[str] = None,
+    intent: Optional[str] = None,
+    intensity: float = 1.0,
     reference_image: Optional[str] = None,
     lut_name: Optional[str] = None,
     output_path: Optional[str] = None,
@@ -110,14 +112,17 @@ def auto_grade(
     """
     Apply AI auto-color grading to a video.
 
-    Supports three modes (in priority order):
+    Supports four modes (in priority order):
     1. mood: Apply a predefined mood color grade
-    2. reference_image: Match colors to a reference image
-    3. lut_name: Apply a LUT from the library
+    2. intent: Resolve a natural-language color intent via library/LLM
+    3. reference_image: Match colors to a reference image
+    4. lut_name: Apply a LUT from the library
 
     Args:
         input_path: Source video file.
         mood: Mood preset name (e.g. "warm sunset", "noir").
+        intent: Free-form color intent (e.g. "cold corporate interview").
+        intensity: Intent strength multiplier (0.0-2.0).
         reference_image: Path to reference image for color matching.
         lut_name: Name of LUT from lut_library to apply.
         output_path: Explicit output path. Auto-generated if None.
@@ -129,12 +134,16 @@ def auto_grade(
     if not os.path.isfile(input_path):
         raise FileNotFoundError(f"Input file not found: {input_path}")
 
-    if not mood and not reference_image and not lut_name:
-        raise ValueError("At least one of mood, reference_image, or lut_name is required")
+    if not mood and not intent and not reference_image and not lut_name:
+        raise ValueError(
+            "At least one of mood, intent, reference_image, or lut_name is required"
+        )
 
     # Determine grading method
     if mood:
         return _grade_by_mood(input_path, mood, output_path, on_progress)
+    elif intent:
+        return _grade_by_intent(input_path, intent, intensity, output_path, on_progress)
     elif reference_image:
         return _grade_by_reference(input_path, reference_image, output_path, on_progress)
     else:
@@ -185,6 +194,61 @@ def _grade_by_mood(
         "grading_method": "mood",
         "mood": mood_lower,
         "description": preset["description"],
+    }
+
+
+def _grade_by_intent(
+    input_path: str,
+    intent: str,
+    intensity: float,
+    out_path: Optional[str],
+    on_progress: Optional[Callable],
+) -> dict:
+    """Apply a natural-language color intent via FFmpeg filter chain."""
+    from opencut.core.ai_color_intent import resolve_color_intent
+
+    if not isinstance(intent, str) or not intent.strip():
+        raise ValueError("intent must be a non-empty string")
+
+    intent = intent.strip()
+    intensity = max(0.0, min(2.0, float(intensity)))
+    color_intent = resolve_color_intent(intent, intensity)
+
+    if on_progress:
+        on_progress(10, f"Applying color intent: {color_intent.resolved_name}")
+
+    if out_path is None:
+        safe_name = re.sub(r"[^a-z0-9]+", "_", intent.lower()).strip("_")[:30] or "intent"
+        out_path = _output_path(input_path, f"grade_intent_{safe_name}")
+
+    cmd = (
+        FFmpegCmd()
+        .input(input_path)
+        .video_filter(color_intent.filters)
+        .video_codec("libx264", crf=18, preset="fast")
+        .audio_codec("copy")
+        .faststart()
+        .output(out_path)
+        .build()
+    )
+
+    if on_progress:
+        on_progress(30, "Rendering intent-based color grade...")
+
+    run_ffmpeg(cmd, timeout=3600)
+
+    if on_progress:
+        on_progress(100, f"Color intent complete: {color_intent.resolved_name}")
+
+    return {
+        "output_path": out_path,
+        "grading_method": "intent",
+        "intent": intent,
+        "resolved_name": color_intent.resolved_name,
+        "intent_source": color_intent.source,
+        "category": color_intent.category,
+        "description": color_intent.description,
+        "applied_filters": color_intent.filters,
     }
 
 

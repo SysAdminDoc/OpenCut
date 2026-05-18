@@ -15,7 +15,12 @@ import logging
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, validate_output_path
+from opencut.security import (
+    require_csrf,
+    safe_float,
+    validate_filepath,
+    validate_output_path,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -33,6 +38,8 @@ def ai_auto_grade(job_id, filepath, data):
     from opencut.core.auto_color import auto_grade
 
     mood = data.get("mood", "").strip() or None
+    intent = data.get("intent", "").strip() or None
+    intensity = safe_float(data.get("intensity"), 1.0, 0.0, 2.0)
     reference_image = data.get("reference_image", "").strip() or None
     lut_name = data.get("lut_name", "").strip() or None
     out_path = data.get("output_path", "").strip() or None
@@ -50,6 +57,8 @@ def ai_auto_grade(job_id, filepath, data):
     result = auto_grade(
         input_path=filepath,
         mood=mood,
+        intent=intent,
+        intensity=intensity,
         reference_image=reference_image,
         lut_name=lut_name,
         output_path=out_path,
@@ -76,6 +85,32 @@ def ai_mood_presets():
         })
 
     return jsonify({"presets": presets, "count": len(presets)})
+
+
+# ---------------------------------------------------------------------------
+# GET /ai/color-intents
+# ---------------------------------------------------------------------------
+@ai_content_bp.route("/ai/color-intents", methods=["GET"])
+def ai_color_intents():
+    """Return available natural-language color intent presets."""
+    from opencut.core.ai_color_intent import COLOR_INTENTS
+
+    intents = [
+        {
+            "name": name,
+            "description": data.get("description", ""),
+            "category": data.get("category", ""),
+        }
+        for name, data in sorted(COLOR_INTENTS.items())
+    ]
+    categories = {}
+    for item in intents:
+        categories.setdefault(item["category"], []).append(item)
+    return jsonify({
+        "intents": intents,
+        "categories": categories,
+        "count": len(intents),
+    })
 
 
 # ---------------------------------------------------------------------------
@@ -112,19 +147,53 @@ def ai_content_scan(job_id, filepath, data):
 # ---------------------------------------------------------------------------
 # POST /ai/pacing-analysis
 # ---------------------------------------------------------------------------
+def _validate_pacing_request(data):
+    """Fail fast unless file-based or cut-point pacing input is present."""
+    if data.get("cut_points") is not None:
+        total_duration = safe_float(data.get("total_duration"), 0.0, 0.0)
+        if total_duration > 0:
+            return None
+    filepath = data.get("filepath", "")
+    if isinstance(filepath, str) and filepath.strip():
+        return None
+    return "Either 'filepath' or 'cut_points' + 'total_duration' is required"
+
+
 @ai_content_bp.route("/ai/pacing-analysis", methods=["POST"])
 @require_csrf
-@async_job("pacing_analysis")
+@async_job(
+    "pacing_analysis",
+    filepath_required=False,
+    pre_validate=_validate_pacing_request,
+)
 def ai_pacing_analysis(job_id, filepath, data):
     """Analyze video edit pacing and rhythm."""
-    from opencut.core.pacing_analysis import analyze_pacing
-
     genre = data.get("genre", "general").strip()
-    threshold = safe_float(data.get("threshold"), 0.3, 0.05, 0.95)
 
     def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=msg)
 
+    cut_points = data.get("cut_points")
+    total_duration = safe_float(data.get("total_duration"), 0.0, 0.0)
+    if cut_points is not None and total_duration > 0:
+        from opencut.core.pacing_analysis import analyze_pacing_from_cuts
+
+        anomaly_threshold = safe_float(data.get("anomaly_threshold"), 2.0, 1.0, 5.0)
+        return analyze_pacing_from_cuts(
+            cut_points=cut_points,
+            total_duration=total_duration,
+            genre=genre,
+            anomaly_threshold=anomaly_threshold,
+            on_progress=_on_progress,
+        )
+
+    from opencut.core.pacing_analysis import analyze_pacing
+
+    if not filepath:
+        raise ValueError("Either 'filepath' or 'cut_points' + 'total_duration' is required")
+
+    filepath = validate_filepath(filepath)
+    threshold = safe_float(data.get("threshold"), 0.3, 0.05, 0.95)
     result = analyze_pacing(
         input_path=filepath,
         genre=genre,
@@ -133,6 +202,21 @@ def ai_pacing_analysis(job_id, filepath, data):
     )
 
     return result
+
+
+# ---------------------------------------------------------------------------
+# GET /ai/pacing-genres
+# ---------------------------------------------------------------------------
+@ai_content_bp.route("/ai/pacing-genres", methods=["GET"])
+def ai_pacing_genres():
+    """Return available pacing genre templates."""
+    from opencut.core.pacing_analysis import list_pacing_genres
+
+    genres = list_pacing_genres()
+    return jsonify({
+        "genres": genres,
+        "count": len(genres),
+    })
 
 
 # ---------------------------------------------------------------------------
