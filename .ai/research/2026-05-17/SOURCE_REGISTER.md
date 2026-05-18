@@ -771,3 +771,33 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P57-L09 | Validation commands — focused packaging tests, Bash syntax check, focused Ruff, `py_compile`, and reduced release smoke passed locally |
 
 **Source coverage assessment (Pass 57):** Pass 57 claims in `ROADMAP.md` v4.60, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `README.md`, `docs/LINUX_DISTRIBUTION.md`, and `CONTINUE_FROM_HERE.md` trace to R-P57-E01 through R-P57-E06 and R-P57-L01 through R-P57-L09.
+
+---
+
+## Pass 58 — F250 Aptabase opt-in telemetry (2026-05-18 fifty-eighth pass)
+
+### External source evidence
+
+| ID | Source |
+|---|---|
+| R-P58-E01 | Aptabase SDK contract — https://github.com/aptabase/aptabase/wiki/How-to-build-your-own-SDK — documents `POST /api/v0/events`, `App-Key`, max-25 batches, event payload shape, app-key host routing, offline queueing, and fail-silent behavior. |
+| R-P58-E02 | Aptabase Python SDK repository — https://github.com/aptabase/aptabase-python — source reference for the official Python client package. |
+| R-P58-E03 | Aptabase Python SDK client source — https://raw.githubusercontent.com/aptabase/aptabase-python/main/src/aptabase/client.py — confirms host resolution, event batching, request headers, worker behavior, and flush/shutdown semantics. |
+| R-P58-E04 | Aptabase Python SDK models source — https://raw.githubusercontent.com/aptabase/aptabase-python/main/src/aptabase/models.py — confirms event/system-prop field names and the SDK payload model. |
+| R-P58-E05 | Aptabase product/privacy page — https://aptabase.com — positions Aptabase as privacy-first app analytics without cookies or long-term user-identifying IDs. |
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P58-L01 | `opencut/core/telemetry_aptabase.py` — new disabled-by-default Aptabase client implementing the `/api/v0/events` contract, region/self-host resolution, bounded queueing, app-key masking, session IDs, system props, and sensitive-prop scrubbing. |
+| R-P58-L02 | `opencut/user_data.py` — new `load_telemetry_settings` / `save_telemetry_settings` helpers for `~/.opencut/telemetry_settings.json`. |
+| R-P58-L03 | `opencut/routes/wave_e_routes.py` — new `/telemetry/aptabase/info`, `/telemetry/aptabase/settings`, and `/telemetry/aptabase/track` routes with mutating CSRF protection. |
+| R-P58-L04 | `opencut/checks.py` — new `check_aptabase_configured` probe. |
+| R-P58-L05 | `tests/test_telemetry_aptabase.py` — focused F250 coverage for disabled defaults, persisted settings, masking, self-host URL validation, prop scrubbing, POST shape, and route CSRF behavior. |
+| R-P58-L06 | `docs/TELEMETRY.md`, `README.md`, `CHANGELOG.md`, and `ROADMAP.md` — user-facing telemetry posture, release notes, and roadmap status synchronized for F250. |
+| R-P58-L07 | `scripts/release_smoke.py` — adds the F250 test file to the release gate. |
+| R-P58-L08 | Generated artifacts — `opencut/_generated/route_manifest.json` now records 1,374 routes / 101 blueprints and `opencut/_generated/mcp_extended_tools.json` now records 1,317 opt-in route tools. |
+| R-P58-L09 | Validation commands — focused Aptabase tests, focused Ruff, `py_compile`, route/MCP/API-alias/feature-readiness drift checks, and reduced release smoke passed locally. |
+
+**Source coverage assessment (Pass 58):** Pass 58 claims in `ROADMAP.md` v4.61, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `README.md`, `docs/TELEMETRY.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P58-E01 through R-P58-E05 and R-P58-L01 through R-P58-L09.
