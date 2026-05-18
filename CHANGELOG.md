@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — WPF Installer CI
+
+- Added `scripts/build_wpf_installer_ci.ps1` and Windows release workflow wiring so the recommended WPF installer is built in CI before the Inno fallback.
+- Added a separate `OpenCut-Setup-WPF-Windows` artifact path and `tests/test_wpf_installer_ci.py` to pin the F201 workflow contract.
+
 ### Added — Extended MCP Route Tools
 
 - Added opt-in F194 extended MCP route-tool generation: `opencut/_generated/mcp_extended_tools.json` now exposes 1,307 lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response schemas.
