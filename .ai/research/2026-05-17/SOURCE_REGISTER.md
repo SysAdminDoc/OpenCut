@@ -147,6 +147,15 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R72-L04 | `python -m pytest tests/test_catalog_contract.py tests/test_feature_registry.py tests/test_model_cards.py -q` — focused contract validation (`32 passed`) | 2026-05-18 |
 | R72-L05 | `python scripts\release_smoke.py --json --only pytest-fast` — release-smoke gate including catalog contract (`698 passed`) | 2026-05-18 |
 
+### Pass 73 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R73-L01 | `C:\Users\--\repos\OpenCut\.github\workflows\pr-fast.yml` — F206 Linux-only pull-request fast gate | 2026-05-18 |
+| R73-L02 | `C:\Users\--\repos\OpenCut\.github\workflows\build.yml` — Release Full push/tag/manual workflow without pull-request trigger | 2026-05-18 |
+| R73-L03 | `C:\Users\--\repos\OpenCut\tests\test_ci_workflow_split.py` and `scripts\release_smoke.py` — F206 guardrail and pytest-fast registration | 2026-05-18 |
+| R73-L04 | `python -m pytest tests/test_ci_workflow_split.py -q` — focused F206 workflow split validation (`4 passed`) | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP
