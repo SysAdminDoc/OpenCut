@@ -86,7 +86,7 @@ These build on the Now-tier substrate and deliver the user-visible features that
 | **F171** | Fish Speech S2 Pro backend (gate on licence verify) | 3 | 3 | 2 | < 150 ms latency. |
 | **F172** | HunyuanVideo-Foley backend (gate on licence) | 3 | 3 | 3 | Frame-accurate foley; no OpenCut equivalent. |
 | **F174** | SeedVR / SeedVR2.5 backend in `upscale_hub.py` | 3 | 3 | 2 | Pair with FlashVSR. |
-| **F180** | Wave N-T planning ledger refresh through F-number lens | 3 | 3 | 1 | Bring wave-letter plan in sync with v4.3 audit. |
+| [x] **F180** | Wave N-T planning ledger refresh through F-number lens | 3 | 3 | 1 | Closed in Pass 36 with `WAVE_N_T_F_NUMBER_LEDGER.md` and a roadmap/ledger drift test. |
 
 **Next-tier total:** ~28 items. Estimated effort: ~6 months sequenced; 3 months parallelised across 3 maintainers.
 
@@ -231,7 +231,7 @@ v1.39-v1.42 (Next breadth, ~3 months parallel)
              F125 audiocraft isolate, F129 FFmpeg 8.1, F132 Vite 8,
              F134 pyannote 4, F136 scenedetect 0.7
   Standards: F141 IMSC 1.3, F142 OCIO 2.5/ACES 2.0
-  Wave:      F180 Wave N-T re-tier
+  Wave:      [x] F180 Wave N-T re-tier
 
 v1.43+ (Later)
   F157 Motion Brush, F160b WebView impl, F173 Mimi codec,
