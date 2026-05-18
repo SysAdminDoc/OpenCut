@@ -1,0 +1,10 @@
+#!/bin/sh
+set -eu
+
+export OPENCUT_FLATPAK=1
+export OPENCUT_HOST="${OPENCUT_HOST:-127.0.0.1}"
+export OPENCUT_PORT="${OPENCUT_PORT:-5679}"
+export OPENCUT_HOME="${OPENCUT_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/opencut}"
+
+mkdir -p "$OPENCUT_HOME"
+exec /app/lib/opencut/OpenCut-Server/OpenCut-Server "$@"
