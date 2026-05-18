@@ -80,7 +80,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F228 | Add voice-note attachments to F105 bundles | Match Clapshot / Vimeo Review | Frame.io subagent §2 | S | Later |
 | [x] F229 | EDL/OTIO export of review comments → Premiere markers | Closed in Pass 51 — F105 review bundles now include Premiere marker CSV and marker-only EDL sidecars that round-trip through the F102 marker importer while preserving the F225 OTIO sidecar | Frame.io subagent §2 | M | Next |
 | F230 | HLS rendition in F105 bundles for browser scrubbing | No source download needed | Frame.io subagent §2 | M | Later |
-| F231 | Local-LAN review portal (embedded Caddy + mDNS + HMAC URL) | No account server; share-link bearer | Frame.io subagent §5 | M | Next |
+| [x] F231 | Local-LAN review portal (embedded Caddy + mDNS + HMAC URL) | Closed in Pass 52 — review links now generate HMAC-signed LAN portal URLs plus Caddy reverse-proxy and mDNS descriptors without requiring an account server | Frame.io subagent §5 | M | Next |
 | F232 | Optional Headscale path for cross-site LAN review | Self-hosted Tailscale control plane | Frame.io subagent §5 | M | Later |
 | F233 | Outbound HMAC-signed webhook + per-project Atom feed | Notification surface | Frame.io subagent §6 | M | Next |
 | F234 | croc + rclone bundle in delivery menu | One-shot P2P + cloud-bucket transfer | Frame.io subagent §7 | S | Next |
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, F231, F233, F234, F238, F239, [x] F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, F233, F234, F238, F239, [x] F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
