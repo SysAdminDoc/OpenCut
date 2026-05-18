@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added — AI Feature Reconciliation
+
+- Closed F220-F222 by wiring the previously unclear AI voice/color/pacing features into primary APIs.
+- Added external RVC backend discovery for voice conversion, with FFmpeg fallback and valid WAV output handling.
+- Added natural-language color-intent grading to `/ai/auto-grade`, plus `/ai/color-intents`, cut-point pacing analysis on `/ai/pacing-analysis`, and `/ai/pacing-genres`.
+
 ### Added — WPF Installer Test Suite
 
 - Added F212 xUnit coverage for WPF installer command-line parsing, install path derivation, file-copy behavior, progress math, and payload substream reads.

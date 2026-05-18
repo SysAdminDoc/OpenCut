@@ -12,13 +12,15 @@ Supports .pth voice model files in ~/.opencut/models/rvc/
 
 import logging
 import os
+import shutil
+import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
-    ensure_package,
     get_video_info,
     run_ffmpeg,
 )
@@ -27,6 +29,9 @@ logger = logging.getLogger("opencut")
 
 # Default model directory
 RVC_MODELS_DIR = os.path.join(os.path.expanduser("~"), ".opencut", "models", "rvc")
+RVC_MODEL_EXTENSIONS = (".pth",)
+RVC_INDEX_EXTENSIONS = (".index",)
+DEFAULT_RVC_TIMEOUT = 600
 
 
 # ---------------------------------------------------------------------------
@@ -69,7 +74,7 @@ def list_voice_models() -> List[Dict]:
     os.makedirs(RVC_MODELS_DIR, exist_ok=True)
 
     for entry in os.listdir(RVC_MODELS_DIR):
-        if entry.endswith(".pth"):
+        if entry.endswith(RVC_MODEL_EXTENSIONS):
             full_path = os.path.join(RVC_MODELS_DIR, entry)
             size_mb = os.path.getsize(full_path) / (1024 * 1024)
             name = os.path.splitext(entry)[0]
@@ -82,7 +87,7 @@ def list_voice_models() -> List[Dict]:
     # Also scan for index files (.index)
     index_files = {
         os.path.splitext(f)[0]: os.path.join(RVC_MODELS_DIR, f)
-        for f in os.listdir(RVC_MODELS_DIR) if f.endswith(".index")
+        for f in os.listdir(RVC_MODELS_DIR) if f.endswith(RVC_INDEX_EXTENSIONS)
     }
 
     for model in models:
@@ -96,12 +101,28 @@ def list_voice_models() -> List[Dict]:
 
 def _find_model(model_path: str) -> str:
     """Resolve a model path or name to a full path."""
-    if os.path.isfile(model_path):
-        return model_path
+    if not isinstance(model_path, str) or not model_path.strip():
+        raise FileNotFoundError("Voice model not found: empty model path")
+
+    model_path = model_path.strip()
+    looks_like_path = (
+        os.path.isabs(model_path)
+        or os.path.sep in model_path
+        or (os.path.altsep and os.path.altsep in model_path)
+    )
+
+    if looks_like_path:
+        resolved = os.path.realpath(os.path.normpath(model_path))
+        if os.path.isfile(resolved) and resolved.lower().endswith(RVC_MODEL_EXTENSIONS):
+            return resolved
+        raise FileNotFoundError(f"Voice model not found: {model_path}")
+
+    if ".." in model_path.replace("\\", "/").split("/"):
+        raise FileNotFoundError(f"Voice model not found: {model_path}")
 
     # Try as a name in the models directory
     candidate = os.path.join(RVC_MODELS_DIR, model_path)
-    if os.path.isfile(candidate):
+    if os.path.isfile(candidate) and candidate.lower().endswith(RVC_MODEL_EXTENSIONS):
         return candidate
 
     if not model_path.endswith(".pth"):
@@ -113,6 +134,129 @@ def _find_model(model_path: str) -> str:
         f"Voice model not found: {model_path}. "
         f"Place .pth models in {RVC_MODELS_DIR}"
     )
+
+
+def _find_index_for_model(model_path: str) -> str:
+    """Return the sibling RVC index path for a model if one exists."""
+    base, _ext = os.path.splitext(model_path)
+    for ext in RVC_INDEX_EXTENSIONS:
+        candidate = f"{base}{ext}"
+        if os.path.isfile(candidate):
+            return candidate
+    return ""
+
+
+def _discover_rvc_backend() -> str:
+    """Find an external RVC inference executable or script."""
+    env_candidates = [
+        os.environ.get("OPENCUT_RVC_CLI", ""),
+        os.environ.get("OPENCUT_RVC_INFER_CLI", ""),
+    ]
+    for candidate in env_candidates:
+        if candidate and os.path.isfile(candidate):
+            return os.path.realpath(candidate)
+
+    for exe_name in ("rvc_cli", "rvc"):
+        resolved = shutil.which(exe_name)
+        if resolved:
+            return resolved
+
+    script_candidates = [
+        os.path.join(RVC_MODELS_DIR, "RVC", "infer_cli.py"),
+        os.path.expanduser("~/.opencut/models/RVC/infer_cli.py"),
+        os.path.expanduser("~/RVC/infer_cli.py"),
+        os.path.expanduser("~/Retrieval-based-Voice-Conversion-WebUI/infer_cli.py"),
+    ]
+    for candidate in script_candidates:
+        if os.path.isfile(candidate):
+            return os.path.realpath(candidate)
+    return ""
+
+
+def _build_rvc_command(
+    backend_path: str,
+    input_audio: str,
+    model_path: str,
+    output_audio: str,
+    config: VoiceConversionConfig,
+    index_path: str = "",
+) -> List[str]:
+    """Build a best-effort RVC inference command for common CLI variants."""
+    if backend_path.lower().endswith(".py"):
+        python_exe = os.environ.get("OPENCUT_RVC_PYTHON", sys.executable)
+        cmd = [
+            python_exe,
+            backend_path,
+            "--input_path", input_audio,
+            "--output_path", output_audio,
+            "--model_path", model_path,
+            "--f0_method", config.f0_method,
+            "--transpose", str(config.pitch_shift),
+            "--index_rate", f"{config.index_rate:.3f}",
+            "--filter_radius", str(config.filter_radius),
+            "--rms_mix_rate", f"{config.rms_mix_rate:.3f}",
+            "--protect", f"{config.protect:.3f}",
+        ]
+        if index_path:
+            cmd.extend(["--index_path", index_path])
+        return cmd
+
+    cmd = [
+        backend_path,
+        "infer",
+        "--input", input_audio,
+        "--output", output_audio,
+        "--model", model_path,
+        "--f0-method", config.f0_method,
+        "--transpose", str(config.pitch_shift),
+        "--index-rate", f"{config.index_rate:.3f}",
+        "--filter-radius", str(config.filter_radius),
+        "--rms-mix-rate", f"{config.rms_mix_rate:.3f}",
+        "--protect", f"{config.protect:.3f}",
+    ]
+    if index_path:
+        cmd.extend(["--index", index_path])
+    return cmd
+
+
+def _run_rvc_conversion(
+    input_audio: str,
+    model_path: str,
+    output_audio: str,
+    config: VoiceConversionConfig,
+    on_progress: Optional[Callable] = None,
+) -> str:
+    """Run an external RVC backend and return the converted audio path."""
+    backend = _discover_rvc_backend()
+    if not backend:
+        raise RuntimeError(
+            "RVC backend not found. Set OPENCUT_RVC_CLI/OPENCUT_RVC_INFER_CLI "
+            "or install rvc_cli."
+        )
+
+    if on_progress:
+        on_progress(35, "Running RVC voice conversion...")
+
+    index_path = _find_index_for_model(model_path)
+    cmd = _build_rvc_command(
+        backend_path=backend,
+        input_audio=input_audio,
+        model_path=model_path,
+        output_audio=output_audio,
+        config=config,
+        index_path=index_path,
+    )
+    timeout = int(os.environ.get("OPENCUT_RVC_TIMEOUT", DEFAULT_RVC_TIMEOUT))
+    result = subprocess.run(cmd, capture_output=True, timeout=timeout)
+    if result.returncode != 0:
+        stderr = result.stderr.decode(errors="replace")[-800:]
+        raise RuntimeError(f"RVC conversion failed: {stderr}")
+    if not os.path.isfile(output_audio):
+        raise RuntimeError("RVC conversion finished without creating output audio")
+
+    if on_progress:
+        on_progress(75, "RVC voice conversion complete")
+    return output_audio
 
 
 # ---------------------------------------------------------------------------
@@ -162,11 +306,13 @@ def _convert_voice_ffmpeg(
     # Add subtle reverb/EQ for more natural sound
     af_chain += ",equalizer=f=200:t=q:w=1:g=2,equalizer=f=3000:t=q:w=1:g=-1"
 
+    output_ext = os.path.splitext(output_path)[1].lower()
+    audio_codec = "pcm_s16le" if output_ext == ".wav" else "aac"
     cmd = (
         FFmpegCmd()
         .input(audio_path)
         .audio_filter(af_chain)
-        .audio_codec("aac", bitrate="192k")
+        .audio_codec(audio_codec, bitrate=None if audio_codec == "pcm_s16le" else "192k")
         .option("-ar", str(original_rate))
         .output(output_path)
     )
@@ -265,27 +411,23 @@ def convert_voice(
                 if on_progress:
                     on_progress(20, "Attempting RVC voice conversion...")
 
-                # Try importing RVC pipeline
-                ensure_package("torch", "torch", on_progress)
-                ensure_package("fairseq", "fairseq", on_progress)
-
                 _ntf2 = tempfile.NamedTemporaryFile(suffix=".wav", delete=False)
                 converted_audio = _ntf2.name
                 _ntf2.close()
                 tmp_files.append(converted_audio)
 
-                # RVC inference would go here with the actual library
-                # For now, this attempts the import chain that real RVC uses
-                import torch  # noqa: F401
-                logger.info("RVC model loaded: %s", resolved_model)
+                _run_rvc_conversion(
+                    input_audio=src_audio,
+                    model_path=resolved_model,
+                    output_audio=converted_audio,
+                    config=config,
+                    on_progress=on_progress,
+                )
+                result.method = "rvc"
+                rvc_success = True
 
-                # Placeholder: real RVC would do:
-                # from rvc.infer import vc_single
-                # vc_single(src_audio, resolved_model, converted_audio, ...)
-                raise ImportError("RVC pipeline not fully installed")
-
-            except (ImportError, Exception) as e:
-                logger.info("RVC not available (%s), using FFmpeg fallback", e)
+            except Exception as e:
+                logger.info("RVC conversion unavailable (%s), using FFmpeg fallback", e)
                 rvc_success = False
 
         # Fallback to FFmpeg conversion
@@ -312,12 +454,21 @@ def convert_voice(
             ], timeout=600)
         else:
             # Just encode the converted audio
-            run_ffmpeg([
-                "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
-                "-i", converted_audio,
-                "-acodec", "aac", "-b:a", "192k",
-                output_path,
-            ], timeout=120)
+            output_ext = os.path.splitext(output_path)[1].lower()
+            if output_ext == ".wav":
+                run_ffmpeg([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-i", converted_audio,
+                    "-acodec", "pcm_s16le", "-ar", str(config.sample_rate),
+                    output_path,
+                ], timeout=120)
+            else:
+                run_ffmpeg([
+                    "ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
+                    "-i", converted_audio,
+                    "-acodec", "aac", "-b:a", "192k",
+                    output_path,
+                ], timeout=120)
 
         result.output_path = output_path
 

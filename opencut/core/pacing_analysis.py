@@ -86,6 +86,21 @@ GENRE_PROFILES: Dict[str, Dict] = {
 }
 
 
+def list_pacing_genres() -> List[Dict]:
+    """Return available pacing genre templates in a route-friendly shape."""
+    return [
+        {
+            "name": name,
+            "description": profile["description"],
+            "target_cpm": profile["target_cpm"],
+            "target_avg": profile["target_avg"],
+            "min_avg": profile["min_avg"],
+            "max_avg": profile["max_avg"],
+        }
+        for name, profile in sorted(GENRE_PROFILES.items())
+    ]
+
+
 @dataclass
 class ShotInfo:
     """A single detected shot with timing."""

@@ -71,6 +71,10 @@ The WPF .NET 9 installer now has a focused xUnit suite plus CI-only headless ins
 
 Pass 75 closed **F212 — WPF installer test suite**. `installer/tests/OpenCut.Installer.Tests/` covers command-line parsing, path derivation, file copy behavior, progress math, and payload substream reads. `scripts/smoke_wpf_installer.ps1` runs the built WPF installer in quiet mode on Windows runners, installs to a temp root with temp user data, verifies payload/manifest/registry state, and runs quiet uninstall cleanup. Pass 37 closed **F213 — Inno Setup install/uninstall smoke**.
 
+### 3.6.5 AI feature reconciliation
+
+Pass 76 closed **F220-F222** with focused unit and route coverage for the previously unclear voice/color/pacing features. `tests/test_ai_editing.py` now pins RVC command construction and external backend invocation; `tests/test_ai_content.py` now pins natural-language auto-color intent grading, pacing genre template exposure, and cut-point pacing route acceptance.
+
 ### 3.7 Performance / regression benchmarks
 
 The F128 FFmpeg filter regression suite is *Now* tier but not yet shipped. Once it lands, it should also cover:

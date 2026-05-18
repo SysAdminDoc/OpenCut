@@ -15,7 +15,7 @@ Covers:
 
 import os
 import tempfile
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -275,6 +275,69 @@ class TestFindModel:
         from opencut.core.voice_conversion import _find_model
         with pytest.raises(FileNotFoundError):
             _find_model("nonexistent_model_xyz")
+
+
+class TestRvcBackend:
+    def test_build_rvc_command_for_python_backend(self):
+        from opencut.core.voice_conversion import VoiceConversionConfig, _build_rvc_command
+        cmd = _build_rvc_command(
+            backend_path="C:\\RVC\\infer_cli.py",
+            input_audio="in.wav",
+            model_path="voice.pth",
+            output_audio="out.wav",
+            config=VoiceConversionConfig(pitch_shift=2, f0_method="rmvpe"),
+            index_path="voice.index",
+        )
+        assert "C:\\RVC\\infer_cli.py" in cmd
+        assert "--input_path" in cmd
+        assert "in.wav" in cmd
+        assert "--model_path" in cmd
+        assert "voice.pth" in cmd
+        assert "--index_path" in cmd
+        assert "voice.index" in cmd
+
+    def test_build_rvc_command_for_cli_backend(self):
+        from opencut.core.voice_conversion import VoiceConversionConfig, _build_rvc_command
+        cmd = _build_rvc_command(
+            backend_path="rvc_cli",
+            input_audio="in.wav",
+            model_path="voice.pth",
+            output_audio="out.wav",
+            config=VoiceConversionConfig(),
+        )
+        assert cmd[:2] == ["rvc_cli", "infer"]
+        assert "--input" in cmd
+        assert "--model" in cmd
+
+    @patch("opencut.core.voice_conversion.subprocess.run")
+    @patch("opencut.core.voice_conversion._discover_rvc_backend", return_value="rvc_cli")
+    def test_run_rvc_conversion_uses_external_backend(self, _backend, mock_run):
+        from opencut.core.voice_conversion import VoiceConversionConfig, _run_rvc_conversion
+
+        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as out:
+            out_path = out.name
+        os.unlink(out_path)
+
+        def _fake_run(cmd, capture_output, timeout):
+            assert cmd[:2] == ["rvc_cli", "infer"]
+            assert capture_output is True
+            assert timeout > 0
+            with open(out_path, "wb") as f:
+                f.write(b"audio")
+            return MagicMock(returncode=0, stderr=b"")
+
+        mock_run.side_effect = _fake_run
+        try:
+            result = _run_rvc_conversion(
+                input_audio="in.wav",
+                model_path="voice.pth",
+                output_audio=out_path,
+                config=VoiceConversionConfig(),
+            )
+            assert result == out_path
+        finally:
+            if os.path.exists(out_path):
+                os.unlink(out_path)
 
 
 class TestVoiceConversionFfmpeg:

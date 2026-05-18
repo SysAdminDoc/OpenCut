@@ -413,12 +413,20 @@ def _run_rvc(
         on_progress(20)
 
     import sys
-    cmd = [
-        sys.executable, rvc_path,
-        "--input", input_audio,
-        "--output", output_audio,
-        "--model", target_profile.source_path,
-    ]
+    if rvc_path.lower().endswith(".py"):
+        cmd = [
+            sys.executable, rvc_path,
+            "--input", input_audio,
+            "--output", output_audio,
+            "--model", target_profile.source_path,
+        ]
+    else:
+        cmd = [
+            rvc_path, "infer",
+            "--input", input_audio,
+            "--output", output_audio,
+            "--model", target_profile.source_path,
+        ]
 
     result = subprocess.run(cmd, capture_output=True, timeout=600)
     if result.returncode != 0:
