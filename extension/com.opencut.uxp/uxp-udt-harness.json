@@ -1,0 +1,438 @@
+{
+  "actions": [
+    "ocPing",
+    "ocGetSequenceInfo",
+    "ocAddSequenceMarkers",
+    "ocGetSequenceMarkers",
+    "ocApplyClipKeyframes",
+    "ocBatchRenameProjectItems",
+    "ocCreateSmartBins",
+    "ocGetProjectBins",
+    "ocExportSequenceRange",
+    "ocRemoveSequenceMarkers",
+    "ocUnrenameItems",
+    "ocRemoveImportedSequence",
+    "ocSetSequencePlayhead",
+    "ocRemoveImportedItem"
+  ],
+  "f_number": "F267",
+  "file_write_count": 1,
+  "harness_version": 1,
+  "mutating_count": 8,
+  "panel_manifest": "extension/com.opencut.uxp/uxp-udt-harness.json",
+  "read_only_command": "await window.OpenCutUXPUdtHarness.run()",
+  "run_command": "await window.OpenCutUXPUdtHarness.run({ includeMutating: true })",
+  "safe_default_count": 5,
+  "scenario_count": 14,
+  "scenarios": [
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocPing",
+      "expected_result_keys": [
+        "ok",
+        "result",
+        "source"
+      ],
+      "fixture": "none",
+      "id": "f267-01-ocPing",
+      "mutates_project": false,
+      "payload": {},
+      "risk": "low",
+      "role": "Synchronous health probe for the CEP host bridge.",
+      "safe_by_default": true,
+      "status": "direct_uxp",
+      "uxp_path": "Return a direct health response from the UXP host module.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocGetSequenceInfo",
+      "expected_result_keys": [
+        "ok",
+        "data"
+      ],
+      "fixture": "active_sequence",
+      "id": "f267-02-ocGetSequenceInfo",
+      "mutates_project": false,
+      "payload": {},
+      "risk": "low",
+      "role": "Read the active sequence identity, dimensions, frame rate, and duration.",
+      "safe_by_default": true,
+      "status": "direct_uxp",
+      "uxp_path": "PProBridge.getSequenceInfo() via Sequence settings and active project state.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocAddSequenceMarkers",
+      "expected_result_keys": [
+        "ok",
+        "added"
+      ],
+      "fixture": "active_sequence",
+      "id": "f267-03-ocAddSequenceMarkers",
+      "mutates_project": true,
+      "payload": {
+        "markers": [
+          {
+            "color": "green",
+            "comment": "F267 smoke marker",
+            "label": "OpenCut UDT Marker",
+            "time": 0
+          }
+        ]
+      },
+      "risk": "low",
+      "role": "Create timeline markers from backend-generated marker payloads.",
+      "safe_by_default": false,
+      "status": "direct_uxp",
+      "uxp_path": "PProBridge.addMarkers() / Sequence marker list APIs.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocGetSequenceMarkers",
+      "expected_result_keys": [
+        "ok",
+        "markers",
+        "count"
+      ],
+      "fixture": "active_sequence",
+      "id": "f267-04-ocGetSequenceMarkers",
+      "mutates_project": false,
+      "payload": {},
+      "risk": "low",
+      "role": "Read active-sequence markers for round-trip metadata workflows.",
+      "safe_by_default": true,
+      "status": "direct_uxp",
+      "uxp_path": "Sequence.getMarkerList() and marker object traversal.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocApplyClipKeyframes",
+      "expected_result_keys": [
+        "ok",
+        "applied"
+      ],
+      "fixture": "selected_video_clip",
+      "id": "f267-05-ocApplyClipKeyframes",
+      "mutates_project": true,
+      "payload": {
+        "clipStartTime": 0,
+        "keyframes": [
+          {
+            "scale": 100,
+            "time": 0,
+            "x": 0,
+            "y": 0
+          },
+          {
+            "scale": 104,
+            "time": 0.5,
+            "x": 0,
+            "y": 0
+          }
+        ],
+        "trackIndex": 0
+      },
+      "risk": "low",
+      "role": "Apply opacity, scale, position, or other keyframe payloads to clips.",
+      "safe_by_default": false,
+      "status": "direct_uxp",
+      "uxp_path": "Component and property keyframe APIs on UXP clip items.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocBatchRenameProjectItems",
+      "expected_result_keys": [
+        "ok",
+        "renamed"
+      ],
+      "fixture": "project_item_named_open_cut_udt_fixture",
+      "id": "f267-06-ocBatchRenameProjectItems",
+      "mutates_project": true,
+      "payload": {
+        "renames": [
+          {
+            "newName": "OpenCut UDT Fixture Renamed",
+            "oldName": "OpenCut UDT Fixture"
+          }
+        ]
+      },
+      "risk": "low",
+      "role": "Rename selected project items in bulk.",
+      "safe_by_default": false,
+      "status": "direct_uxp",
+      "uxp_path": "Project item rename APIs.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocCreateSmartBins",
+      "expected_result_keys": [
+        "ok",
+        "created"
+      ],
+      "fixture": "open_project",
+      "id": "f267-07-ocCreateSmartBins",
+      "mutates_project": true,
+      "payload": {
+        "bins": [
+          {
+            "name": "OpenCut UDT Smoke"
+          }
+        ]
+      },
+      "risk": "low",
+      "role": "Create bins for organized project-item workflows.",
+      "safe_by_default": false,
+      "status": "direct_uxp",
+      "uxp_path": "Project root item and bin creation APIs.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocGetProjectBins",
+      "expected_result_keys": [
+        "ok",
+        "bins",
+        "count"
+      ],
+      "fixture": "open_project",
+      "id": "f267-08-ocGetProjectBins",
+      "mutates_project": false,
+      "payload": {},
+      "risk": "low",
+      "role": "List project bins for import and organization workflows.",
+      "safe_by_default": true,
+      "status": "direct_uxp",
+      "uxp_path": "Project.getRootItem() traversal.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocExportSequenceRange",
+      "expected_result_keys": [
+        "ok",
+        "outputPath"
+      ],
+      "fixture": "active_sequence_and_writable_temp_path",
+      "id": "f267-09-ocExportSequenceRange",
+      "mutates_project": false,
+      "payload": {
+        "endSeconds": 1,
+        "exportType": "immediate",
+        "outputPath": "__OPENCUT_UDT_TEMP__/opencut-udt-export.mp4",
+        "queueToAme": false,
+        "startBatch": false,
+        "startSeconds": 0
+      },
+      "risk": "low",
+      "role": "Export a selected active-sequence range.",
+      "safe_by_default": false,
+      "status": "direct_uxp",
+      "uxp_path": "EncoderManager / export APIs where available.",
+      "writes_files": true
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocRemoveSequenceMarkers",
+      "expected_result_keys": [
+        "ok",
+        "removed"
+      ],
+      "fixture": "marker_created_by_ocAddSequenceMarkers",
+      "id": "f267-10-ocRemoveSequenceMarkers",
+      "mutates_project": true,
+      "payload": {
+        "fingerprints": [
+          {
+            "comment": "F267 smoke marker",
+            "name": "OpenCut UDT Marker",
+            "time": 0
+          }
+        ]
+      },
+      "risk": "low",
+      "role": "Remove OpenCut-created sequence markers.",
+      "safe_by_default": false,
+      "status": "direct_uxp",
+      "uxp_path": "Sequence marker list APIs.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocUnrenameItems",
+      "expected_result_keys": [
+        "ok",
+        "renamed"
+      ],
+      "fixture": "renamed_project_item",
+      "id": "f267-11-ocUnrenameItems",
+      "mutates_project": true,
+      "payload": {
+        "renames": [
+          {
+            "newName": "OpenCut UDT Fixture",
+            "oldName": "OpenCut UDT Fixture Renamed"
+          }
+        ]
+      },
+      "risk": "low",
+      "role": "Undo project-item batch rename payloads.",
+      "safe_by_default": false,
+      "status": "direct_uxp",
+      "uxp_path": "Project item rename APIs.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocRemoveImportedSequence",
+      "expected_result_keys": [
+        "ok",
+        "removed"
+      ],
+      "fixture": "imported_test_sequence",
+      "id": "f267-12-ocRemoveImportedSequence",
+      "mutates_project": true,
+      "payload": {
+        "name": "OpenCut UDT Imported Sequence"
+      },
+      "risk": "low",
+      "role": "Remove a sequence imported for preview or interchange workflows.",
+      "safe_by_default": false,
+      "status": "direct_uxp",
+      "uxp_path": "Project item delete/remove APIs.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocSetSequencePlayhead",
+      "expected_result_keys": [
+        "ok",
+        "seconds"
+      ],
+      "fixture": "active_sequence",
+      "id": "f267-13-ocSetSequencePlayhead",
+      "mutates_project": false,
+      "payload": {
+        "seconds": 0
+      },
+      "risk": "low",
+      "role": "Move the active sequence playhead to a target time.",
+      "safe_by_default": true,
+      "status": "direct_uxp",
+      "uxp_path": "Active sequence playhead/time APIs.",
+      "writes_files": false
+    },
+    {
+      "acceptable_blockers": [
+        "No open project",
+        "No active sequence",
+        "UXP API unavailable",
+        "Premiere EncoderManager is unavailable",
+        "Project item not found"
+      ],
+      "action": "ocRemoveImportedItem",
+      "expected_result_keys": [
+        "ok",
+        "removed"
+      ],
+      "fixture": "imported_test_media_item",
+      "id": "f267-14-ocRemoveImportedItem",
+      "mutates_project": true,
+      "payload": {
+        "name": "OpenCut UDT Imported Item"
+      },
+      "risk": "low",
+      "role": "Remove an imported project item by identity.",
+      "safe_by_default": false,
+      "status": "direct_uxp",
+      "uxp_path": "Project item delete/remove APIs.",
+      "writes_files": false
+    }
+  ],
+  "source": "opencut/_generated/cep_uxp_parity.json",
+  "source_catalogue_version": 1,
+  "uxp_typings": "@adobe/premierepro@26.3.0-beta.67"
+}

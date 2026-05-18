@@ -36,6 +36,14 @@ The UXP Settings tab now loads `uxp-migration-dashboard.json`, summarizes direct
 
 ---
 
+## Pass 67 addendum (2026-05-18)
+
+Pass 67 closed **F267** by adding a generated UXP Developer Tool smoke harness for the 14 direct-UXP host actions. `build_udt_harness_manifest()` derives action coverage from the F198 parity catalogue and attaches scenario payloads, fixture requirements, safety flags, expected result keys, and acceptable environment blockers. `dump_uxp_udt_harness` writes both the repository generated artifact and bundled panel JSON.
+
+The UXP panel now loads `udt-smoke.js`, exposing `window.OpenCutUXPUdtHarness.run()` for safe-by-default UDT runs and `run({ includeMutating: true })` for disposable-project mutation/file-write coverage. Added `tests/test_uxp_udt_harness.py` and release-smoke registration. Validation passed: focused F267 tests (`6 passed`), focused UXP/release-smoke slice (`61 passed`), `py_compile`, focused Ruff, harness sync check, `node --check`, and release-smoke `pytest-fast` (`666 passed`).
+
+---
+
 ## 1. Files created
 
 ### Repo root (1 file)
@@ -373,7 +381,7 @@ Pass 3 added 4 new artefacts + updated PROJECT_CONTEXT.md (§9.4 live verificati
 | F264 | Add `npm audit --json` machine-parseable CI assertion | Now |
 | F265 | UDT test harness for all 18 `ocXxx` JSX functions | Later |
 | F266 | Document 2-function CEP residual + drop-QE plan | Now |
-| F267 | UDT test harness for 14 low-risk JSX→UXP ports | Next |
+| F267 | UDT test harness for 14 low-risk JSX→UXP ports | Done locally in Pass 67 |
 | F268 | Adobe Exchange storefront listing | Next |
 | F269 | Premium model-pack bundling format | Later |
 | F270 | README "$1,400/yr" marketing copy refresh | Now |
