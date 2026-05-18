@@ -4,6 +4,7 @@
 > **Current state:** Dual CEP + UXP panels. Pass-3 audit found 16/18 JSX host functions have a UXP path; 2 remain CEP-only.
 > **Last updated:** 2026-05-18
 > **Machine-readable catalogue:** `opencut/_generated/cep_uxp_parity.json` (generated from `opencut/core/cep_uxp_parity.py`)
+> **UDT smoke harness:** `opencut/_generated/uxp_udt_harness.json` and bundled panel copy `extension/com.opencut.uxp/uxp-udt-harness.json`
 
 ## Migration Strategy
 
@@ -109,7 +110,8 @@ UXP Architecture (target):
 - [x] F257 `ObjectMaskUtils.hasObjectMask` helpers for active-sequence and project-level mask detection
 - [x] F258 `ProjectConverter.exportAAF` active-sequence export helper with `AAFExportOptions`
 - [x] F260 generated UXP migration risk dashboard in Settings, sourced from the F198 CEP/UXP parity catalogue
-- [ ] Live manifest switch to the WebView entrypoint after an in-Premiere UDT smoke pass
+- [x] F267 UDT smoke harness for the 14 direct-UXP `ocXxx` actions, exposed as `window.OpenCutUXPUdtHarness`
+- [ ] Live manifest switch to the WebView entrypoint after an in-Premiere UDT smoke run is captured from the harness
 - [ ] Test CSInterface shim with CEP main.js in WebView
 - [ ] Replace `cep_node.require("child_process")` calls with UXP alternatives
 
@@ -117,7 +119,8 @@ UXP Architecture (target):
 - [x] `PProBridge` wraps UXP Premiere API (project items, markers, sequence info, cuts, selected clips, import)
 - [x] `getSelectedClips()` — selection via `Sequence.getSelection()`
 - [x] `importFiles()` — import via `Project.importFiles()` with optional bin
-- [ ] Remaining UXP ports: `ocBatchRenameProjectItems()`, `ocCreateSmartBins()` (low priority, UI-only convenience)
+- [x] Generated UDT smoke coverage for direct UXP host actions (`ocBatchRenameProjectItems()`, `ocCreateSmartBins()`, marker operations, range export, playhead, and import cleanup)
+- [ ] Capture the F267 harness results in Premiere UDT before treating the direct-action set as live-verified
 - [ ] Residual CEP-only paths: native caption-track creation and QE reflection (documented in F266 above)
 - [ ] Full timeline write-back without ExtendScript for advanced trim edge cases (blocked on UXP API maturity)
 
@@ -135,6 +138,9 @@ UXP Architecture (target):
 - `tests/test_uxp_aaf_export_integration.py` — Static guardrails for the F258 ProjectConverter AAF export contract
 - `opencut/_generated/uxp_migration_dashboard.json` and `extension/com.opencut.uxp/uxp-migration-dashboard.json` — F260 generated migration dashboard artifacts
 - `tests/test_uxp_migration_dashboard.py` — Static guardrails for the F260 dashboard generator, bundled panel JSON, and Settings UI surface
+- `opencut/_generated/uxp_udt_harness.json` and `extension/com.opencut.uxp/uxp-udt-harness.json` — F267 generated UDT smoke harness artifacts for the 14 direct-UXP actions
+- `extension/com.opencut.uxp/udt-smoke.js` — Panel-side UDT runner exposed as `window.OpenCutUXPUdtHarness`; read-only actions run by default, project-changing cases require `includeMutating: true`
+- `tests/test_uxp_udt_harness.py` — Static guardrails for the F267 generator, bundled JSON, panel runner, and release-smoke wiring
 
 ## Risk Assessment
 - **Low risk:** Backend communication (fetch works natively in UXP)

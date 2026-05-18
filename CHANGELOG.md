@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — UXP UDT Smoke Harness
+
+- Added F267 generated UXP Developer Tool smoke-harness artifacts for the 14 direct-UXP `ocXxx` host actions from the F198 CEP/UXP parity catalogue.
+- Added a bundled panel-side `window.OpenCutUXPUdtHarness` runner; read-only actions run by default, while project-changing and file-writing scenarios require `includeMutating: true`.
+
 ### Added — UXP Migration Risk Dashboard
 
 - Added F260 generated UXP migration risk dashboard artifacts from the F198 CEP/UXP parity catalogue, including a bundled panel JSON snapshot.
