@@ -59,7 +59,7 @@ Pass 14 closed **F209 — MCP tool ↔ route consistency test**. `tests/test_mcp
 
 The CEP `main.js` is ~7,730 lines of vanilla JS. The UXP `main.js` is ~1,500 lines of ES module. The only JS test is `tests/jsx_mock.js` covering the **ExtendScript host (`host/index.jsx`)** — not `main.js`. There is no JS unit-test suite for the panel-side controllers.
 
-Adding Jest / Vitest tests for `main.js` is heavy lift (Bolt CEP doesn't have it either). But discrete utilities (`esc()`, `escPath()`, command-palette indexer, lazy DOM proxy) could be tested in isolation. **F210 — Vitest unit tests for CEP/UXP utility functions** (M effort).
+Pass 74 closed **F210 — Vitest unit tests for CEP/UXP utility functions**. `client/panel-utils.js` now exposes the CEP `esc()`, `escPath()`, command-palette indexer, and lazy DOM proxy seams for production use and test import; `extension/com.opencut.uxp/uxp-utils.js` exposes UXP escaping and safe DOM-id normalization; `npm test` runs 8 Vitest specs, and release smoke includes the `panel-unit` step.
 
 ### 3.5 Cross-platform launchers
 
@@ -133,7 +133,7 @@ This is a single F number: **F205**, already on the Now tier.
 |---|---|---|---|
 | F208 | OpenAPI spec validity test (per-endpoint 200/400/403) | Done in Pass 13 | S |
 | F209 | MCP tool ↔ route consistency test | Done in Pass 14 | S |
-| F210 | Vitest unit tests for CEP/UXP utility functions | Later | M |
+| [x] F210 | Vitest unit tests for CEP/UXP utility functions | Closed Pass 74 | M |
 | F211 | Cross-platform launcher script smoke tests in CI | Next | S |
 | F212 | WPF installer test suite (xUnit + headless install) | Later | XL |
 | [x] F213 | Inno Setup install/uninstall smoke in CI | Closed Pass 37 | M |

@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint client/main.js",
+    "test": "vitest run --config vitest.config.mjs",
     "audit:check": "node scripts/check-advisories.mjs",
     "audit:esbuild": "node scripts/check-esbuild-pin.mjs",
     "build:verify": "node scripts/verify-build.mjs"
@@ -15,7 +16,8 @@
   "devDependencies": {
     "eslint": "^8.0.0",
     "terser": "^5.47.1",
-    "vite": "^5.4.21"
+    "vite": "^5.4.21",
+    "vitest": "^4.1.6"
   },
   "overrides": {
     "esbuild": "^0.25.0"

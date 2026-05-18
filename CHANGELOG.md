@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — CEP/UXP Vitest Utility Coverage
+
+- Added F210 Vitest coverage for CEP HTML/ExtendScript escaping, lazy DOM proxy behavior, and command-palette indexing, plus UXP HTML escaping and safe DOM-id normalization.
+- Wired the panel unit suite into `npm test`, release-smoke `panel-unit`, PR Fast, and Release Full.
+
 ### Changed — CI Workflow Split
 
 - Split F206 pull-request validation into a new Linux-only `.github/workflows/pr-fast.yml` workflow that runs the fast release-smoke subset.

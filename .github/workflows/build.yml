@@ -70,8 +70,9 @@ jobs:
         if: runner.os == 'Linux'
         working-directory: extension/com.opencut.panel
         run: |
-          npm ci --omit=optional
+          npm ci
           npm run audit:check
+          npm test
           npm run build:verify
           npm run build
 
