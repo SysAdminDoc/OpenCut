@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>io.github.sysadmindoc.opencut</id>
+  <metadata_license>CC0-1.0</metadata_license>
+  <project_license>MIT</project_license>
+  <name>OpenCut</name>
+  <summary>Local-first video automation backend for Premiere Pro</summary>
+  <description>
+    <p>
+      OpenCut runs a local Flask backend for video editing automation,
+      captioning, delivery checks, review bundles, and optional AI-assisted
+      post-production workflows.
+    </p>
+    <p>
+      The Linux package starts the OpenCut server on localhost so Premiere
+      panels, MCP clients, and command-line workflows can connect without a
+      cloud account.
+    </p>
+  </description>
+  <developer id="io.github.sysadmindoc">
+    <name>SysAdminDoc</name>
+  </developer>
+  <launchable type="desktop-id">io.github.sysadmindoc.opencut.desktop</launchable>
+  <url type="homepage">https://github.com/SysAdminDoc/OpenCut</url>
+  <url type="bugtracker">https://github.com/SysAdminDoc/OpenCut/issues</url>
+  <url type="vcs-browser">https://github.com/SysAdminDoc/OpenCut</url>
+  <categories>
+    <category>AudioVideo</category>
+    <category>Video</category>
+    <category>Utility</category>
+  </categories>
+  <keywords>
+    <keyword>video</keyword>
+    <keyword>editing</keyword>
+    <keyword>Premiere</keyword>
+    <keyword>FFmpeg</keyword>
+  </keywords>
+  <content_rating type="oars-1.1" />
+  <releases>
+    <release version="1.32.0" date="2026-05-09">
+      <description>
+        <p>Light theme, appearance toggle, and premium UX baseline release.</p>
+      </description>
+    </release>
+  </releases>
+</component>

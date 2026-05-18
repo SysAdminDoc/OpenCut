@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Linux Distribution Packaging
+
+- Added Flatpak/AppImage Linux packaging assets for `io.github.sysadmindoc.opencut`, including desktop metadata, AppStream MetaInfo, `flathub.json`, Flatpak/AppImage launchers, and `docs/LINUX_DISTRIBUTION.md`.
+- Added `scripts/build_linux_packages.sh` plus tagged/manual Linux release workflow wiring to build and upload `.flatpak` and `.AppImage` artifacts from the PyInstaller server bundle.
+
 ### Added — Audio Description Review Drafts
 
 - Added `POST /audio/description/microsoft-draft` for Microsoft `ai-audio-descriptions` compatible AD draft planning from scene descriptions, transcript timing, and dialogue gaps.

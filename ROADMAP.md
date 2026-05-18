@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.59
+**Version**: 4.60
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,371 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -127,7 +127,21 @@
 
 > **v4.59 status (2026-05-18, fifty-sixth pass)**: closed **F239** by adding a Microsoft `ai-audio-descriptions` compatible review-draft route. `POST /audio/description/microsoft-draft` now builds human-reviewable AD cues from per-scene descriptions, transcript timing, and dialogue/silence gaps, carries dialogue context and fit/word-budget metadata, and emits an IndexTTS2-ready TTS backend hint without forcing Azure credentials or TTS rendering into the draft path. The route manifest now has 1,371 routes; the opt-in extended MCP catalogue now has 1,313 tools.
 
+> **v4.60 status (2026-05-18, fifty-seventh pass)**: closed **F249** by adding Linux Flatpak/AppImage release packaging. The repo now carries the `io.github.sysadmindoc.opencut` Flatpak manifest, desktop file, MetaInfo, Flathub architecture policy, AppImage/Flatpak launchers, `scripts/build_linux_packages.sh`, Linux release workflow upload wiring, and `docs/LINUX_DISTRIBUTION.md` with the Flathub build-from-source boundary documented.
+
 ---
+
+## 2026-05-18 v4.60 Linux Distribution Packaging (F249)
+
+One Next-tier packaging item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Flatpak identity | DONE — `io.github.sysadmindoc.opencut.yml`, `flathub.json`, desktop metadata, AppStream MetaInfo, and icon install paths use the same lowercase reverse-DNS ID. |
+| AppImage fallback | DONE — `packaging/linux/appimage/AppRun` stages the PyInstaller one-folder server bundle into an AppDir and preserves loopback/user-data defaults. |
+| Build script | DONE — `scripts/build_linux_packages.sh` validates Linux desktop metadata when tools are installed, builds an AppDir, emits an AppImage when `appimagetool` is present, and emits a single-file Flatpak bundle when `flatpak-builder`/`flatpak` are present. |
+| CI/release wiring | DONE — tagged/manual Linux release jobs install Flatpak/AppImage tooling, build Linux desktop packages, archive them, and upload `.flatpak` / `.AppImage` assets to GitHub Releases. |
+| Docs/tests | DONE — `docs/LINUX_DISTRIBUTION.md` records the Flathub-vs-release-bundle boundary and `tests/test_linux_distribution_packaging.py` pins the manifest, metadata, script, release workflow, and release-smoke wiring. |
 
 ## 2026-05-18 v4.59 Audio Description Review Drafts (F239)
 
@@ -1105,7 +1119,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Flagship review-bundle extensions: **[x] F225**, **[x] F226**, **[x] F227**, **[x] F229**, F228 voice notes + F230 HLS rendition remain later
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: [x] F223 RTL/CJK validation suite, [x] F238 PSE hue checker, [x] F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
-- Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
+- Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + [x] F249 Flatpak primary Linux + Aptabase opt-in telemetry
 - Tests: [x] F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + [x] F217 UXP contract test
 - Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)

@@ -730,3 +730,35 @@ Pass 23 was a wrap-up pass after the autonomous development loop started a secon
 ### Pass 23 saturation note
 
 The partial 52.12% number is intentionally treated as unusable for policy. A complete F205 run still needs a runner where the CI-style pytest+coverage command exits cleanly; only then should `.github/workflows/build.yml` move above `--cov-fail-under=50`.
+
+---
+
+## Pass 57 (2026-05-18 — F249 Linux distribution packaging)
+
+Pass 57 closed the Next-tier Linux packaging item after fresh official-source
+verification against Flatpak, Flathub, and AppImage documentation.
+
+### Pass 57 external checks
+
+| Probe | Result |
+|---|---|
+| Flatpak current runtime tutorial | Freedesktop Platform/Sdk 25.08 is the current tutorial baseline. |
+| Flatpak conventions | App ID, desktop file, MetaInfo, and icon names must align; GitHub-hosted IDs use `io.github`. |
+| Flathub requirements | Hosted submissions need current hosted runtimes, no network during build, source/dependency manifests, and top-level manifest/flathub.json in the Flathub repo. |
+| AppImage AppDir spec | AppDir requires root `AppRun`, desktop file, icon, and normally uses a `usr/` payload layout. |
+
+### Pass 57 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 57.1 | Audited existing Linux release path. | Found PyInstaller Linux tarball release only; no Flatpak/AppImage metadata or workflow artifact. |
+| Pass 57.2 | Added Linux desktop metadata and package builder. | Added `io.github.sysadmindoc.opencut` manifest, desktop/MetaInfo files, `flathub.json`, Flatpak/AppImage launchers, and `scripts/build_linux_packages.sh`. |
+| Pass 57.3 | Wired CI/release and tests. | Linux tag/manual jobs build/archive/upload `.flatpak` and `.AppImage`; release smoke now includes `tests/test_linux_distribution_packaging.py`. |
+| Pass 57.4 | Synced roadmap/state docs. | Marked F249 closed in ROADMAP/addendum/matrix/context/continue docs and added `docs/LINUX_DISTRIBUTION.md`. |
+
+### Pass 57 saturation note
+
+The repo now produces Flatpak release bundles from the PyInstaller output.
+The Flathub hosted submission still needs a source-build manifest and generated
+Python dependency manifests before it should be submitted to Flathub; this is
+documented as a boundary, not silently claimed as complete hosted publication.

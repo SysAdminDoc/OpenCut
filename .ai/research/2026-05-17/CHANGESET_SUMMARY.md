@@ -118,6 +118,27 @@ cd Z:/repos/OpenCut && git status --short
 
 1. There is a single `PROJECT_CONTEXT.md` at the repo root that an agent or contributor can open first and route from.
 2. The wave-letter vs F-number distinction is named.
+
+---
+
+## 2026-05-18 Pass 57 Addendum — F249 Linux Distribution Packaging
+
+**Functional changes:** Added Flatpak/AppImage Linux release packaging for
+`io.github.sysadmindoc.opencut`.
+
+| Path | Change |
+|---|---|
+| `io.github.sysadmindoc.opencut.yml` | Flatpak manifest using Freedesktop Platform/Sdk 25.08 and the PyInstaller server bundle source. |
+| `flathub.json` | x86_64-only architecture policy for the current binary release bundle path. |
+| `packaging/linux/` | Desktop file, MetaInfo, Flatpak launcher, and AppImage `AppRun`. |
+| `scripts/build_linux_packages.sh` | Builds AppDir/AppImage/Flatpak artifacts from `dist/OpenCut-Server`. |
+| `.github/workflows/build.yml` | Installs Linux packaging tools, builds, archives, and uploads `.flatpak` / `.AppImage` artifacts on tag/manual release jobs. |
+| `tests/test_linux_distribution_packaging.py` | Static contract tests for manifest, metadata, launcher, script, workflow, docs, and release-smoke wiring. |
+| `docs/LINUX_DISTRIBUTION.md` | Documents Flatpak-first/AppImage-fallback packaging and the Flathub hosted-submission boundary. |
+| `README.md`, `CHANGELOG.md`, `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CONTINUE_FROM_HERE.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md` | Synced roadmap/state/docs for F249 closure. |
+
+**Validation:** focused packaging tests, Bash syntax check, focused Ruff,
+`py_compile`, and reduced release smoke passed locally.
 3. The dirty working tree is documented as a coherent security batch (F138), not random in-flight noise.
 4. Post-2026-05-16 model surfaces (daVinci-MagiHuman, LTX-2.3, etc.), standards (C2PA 2.3, IMSC 1.3, OCIO 2.5), and dependency exposures (Pillow CVEs, audiocraft cascade) are tracked.
 5. The Now-tier security debt is explicit: Pillow 12.2, flask-cors 6.x, pydub-on-3.13, OpenTimelineIO-Plugins migration.
