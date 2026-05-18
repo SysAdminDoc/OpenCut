@@ -79,7 +79,7 @@ The F128 FFmpeg filter regression suite is *Now* tier but not yet shipped. Once 
 - **Compose / declarative_compose** wall-clock per 30s clip
 - **TTS** wall-clock per second of synthesised audio per backend
 
-These guard against silent perf regressions that the 50% coverage floor cannot catch. **F214 — extend F128 to cover ML + TTS perf benchmarks** (M).
+These guard against silent perf regressions that the 50% coverage floor cannot catch. Pass 40 closed **F214 — extend F128 to cover ML + TTS perf benchmarks** (M) with `opencut/core/performance_benchmarks.py`, a release-smoke registry gate, and an explicit `OPENCUT_RUN_PERF_BENCHMARKS=1` opt-in for heavyweight model/cloud runs.
 
 ### 3.8 Fuzz coverage
 
@@ -137,7 +137,7 @@ This is a single F number: **F205**, already on the Now tier.
 | F211 | Cross-platform launcher script smoke tests in CI | Next | S |
 | F212 | WPF installer test suite (xUnit + headless install) | Later | XL |
 | [x] F213 | Inno Setup install/uninstall smoke in CI | Closed Pass 37 | M |
-| F214 | Extend F128 with ML + TTS perf benchmarks | Next | M |
+| [x] F214 | Extend F128 with ML + TTS perf benchmarks | Closed Pass 40 | M |
 | [x] F215 | Extend fuzz harness with 8 additional targets | Closed Pass 38 | M |
 | [x] F216 | Concurrent job-cancellation race test | Closed Pass 39 | M |
 | F217 | UXP backend-client contract test | Next | S |

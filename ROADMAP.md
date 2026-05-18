@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.42
+**Version**: 4.43
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -92,8 +92,23 @@
 > **v4.41 status (2026-05-18, thirty-eighth pass)**: closed **F215** by extending `tests/fuzz/test_parser_fuzz.py` from 5 to 13 targets: SRT time/file, CUBE LUT, voice grammar, event-moment spikes, `validate_path`/`validate_filepath`, OTIO JSON/adapter parsing, FCPXML parsing, marker CSV/Premiere CSV/EDL import, C2PA sidecar verification, plugin manifest validation, webhook HMAC signature verification, and `safe_pip_install` package-spec validation. `tests/test_fuzz_harness_targets.py` now pins the target inventory in ordinary CI, `RUN_FUZZ=1` deterministic smoke runs every target, and the pass also hardened non-object C2PA/plugin manifests plus surfaced the CUBE parser as a module-level helper.
 >
 > **v4.42 status (2026-05-18, thirty-ninth pass)**: closed **F216** by adding a live concurrent job-cancellation regression test for the FFmpeg progress path. `_cancel_job()` now terminates the registered child process immediately, closes parent pipe handles so worker reads unblock, and still unregisters the process through the existing `finally` path. `tests/test_job_cancellation_race.py` launches a long-running subprocess through `_run_ffmpeg_with_progress()`, cancels the job while the process is registered, and asserts the child exits, the worker thread returns, and `_job_processes` is clean. Release smoke now includes this race test.
+>
+> **v4.43 status (2026-05-18, fortieth pass)**: closed **F214** with a deterministic performance-benchmark contract for the ML / compose / TTS surfaces that F128 could not cover. `opencut/core/performance_benchmarks.py` now pins throughput specs for Whisper-family ASR, Real-ESRGAN / FlashVSR / SeedVR upscalers, declarative compose, and TTS backends, all normalized to wall-clock seconds per source or synthesised unit. `tests/test_performance_benchmark_registry.py` pins the benchmark inventory, backend matrix, opt-in env gate, validation rules, and measurement primitive; release smoke includes the registry gate while heavyweight model execution remains explicitly opt-in through `OPENCUT_RUN_PERF_BENCHMARKS=1`.
 
 ---
+
+## 2026-05-18 v4.43 ML/TTS Performance Benchmark Contract (F214)
+
+One Next-tier performance coverage item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F214 benchmark registry | DONE — `opencut/core/performance_benchmarks.py` registers four benchmark specs: `asr_transcription`, `ai_upscale`, `declarative_compose`, and `tts_synthesis`. |
+| Backend matrix | ASR pins `openai-whisper`, `faster-whisper`, and `whisperx`; upscaling pins `realesrgan`, `flashvsr`, and `seedvr`; compose pins `ffmpeg-compose`; TTS pins `edge-tts`, `kokoro`, `chatterbox`, `f5-tts`, and `elevenlabs`. |
+| Throughput metric | Every spec uses a `wall_clock_seconds_per_*` metric with sample units, advisory budgets, timeout ceilings, and sample descriptions tied to the F176 eval catalogue where applicable. |
+| CI contract | `tests/test_performance_benchmark_registry.py` pins the inventory, backend matrix, env opt-in, registry validation, and `measure_backend()` normalization/failure behavior. The test is wired into release smoke. |
+| Runtime posture | Heavy model/cloud runs remain opt-in via `OPENCUT_RUN_PERF_BENCHMARKS=1`; normal CI validates the contract without downloading weights or contacting cloud TTS providers. |
+| Validation | `python -m pytest tests/test_performance_benchmark_registry.py -q` -> `8 passed`; focused Ruff -> clean. |
 
 ## 2026-05-18 v4.42 Job Cancellation Race Coverage (F216)
 
@@ -841,7 +856,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, F242 ICU4X CJK line breaking
 - Packaging: F200-F213 installer rationalisation + macOS notarisation tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
-- Tests: F211 launcher smoke + [x] F213 Inno smoke + F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + F217 UXP contract test
+- Tests: F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + F217 UXP contract test
 - Local LAN review: F231 mDNS+Caddy+HMAC portal + F232 Headscale + F233 Atom feed + webhook + F234 croc/rclone delivery
 - Docs: F198 CEP-only route catalogue + F260 UXP migration risk dashboard
 

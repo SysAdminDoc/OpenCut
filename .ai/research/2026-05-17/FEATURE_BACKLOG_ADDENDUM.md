@@ -53,7 +53,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F211 | Cross-platform launcher script smoke tests in CI | `.bat`, `.vbs`, `.command`, `.sh` | TEST_COVERAGE §3.5 | S | Next |
 | F212 | WPF installer xUnit test suite + headless install in Windows runner | Largest single coverage gap | TEST_COVERAGE §3.6 | XL | Later |
 | [x] F213 | Inno Setup install/uninstall smoke in CI | Closed in Pass 37 with CI-only install/uninstall smoke script + workflow wiring + static guard tests | TEST_COVERAGE §3.6 | M | Next |
-| F214 | Extend F128 with ML + TTS perf benchmarks | Whisper/Real-ESRGAN/FlashVSR/compose/TTS wall-clock per source-second | TEST_COVERAGE §3.7 | M | Next |
+| [x] F214 | Extend F128 with ML + TTS perf benchmarks | Closed in Pass 40 — performance benchmark registry pins ASR/upscaler/compose/TTS throughput specs, backend matrix, opt-in execution gate, and wall-clock normalization primitive | TEST_COVERAGE §3.7 | M | Next |
 | [x] F215 | Extend fuzz harness with 8 targets | Closed in Pass 38 — 13 total fuzz targets now cover path validation, OTIO parse, FCPXML parse, marker import, C2PA sidecars, plugin manifests, webhook HMAC signatures, and `safe_pip_install` package validation | TEST_COVERAGE §3.8 | M | Next |
 | [x] F216 | Concurrent job-cancellation race test | Closed in Pass 39 — `_cancel_job()` terminates registered child processes and `tests/test_job_cancellation_race.py` covers the FFmpeg progress cancellation race | TEST_COVERAGE §3.9 | M | Next |
 | F217 | UXP backend-client contract test | Pin BackendClient HTTP shape | TEST_COVERAGE §3.10 | S | Next |
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | F192, F194, F198, F200, F201, F203, F211, [x] F213, F214, [x] F215, [x] F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | F192, F194, F198, F200, F201, F203, F211, [x] F213, [x] F214, [x] F215, [x] F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).

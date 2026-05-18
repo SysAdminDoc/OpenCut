@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 40)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 41)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-18 (after Pass 39; Passes 1-34 all ran on 2026-05-17)
-**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, Pass 33 closed F200 + F211, Pass 34 closed F217 (UXP BackendClient HTTP-shape contract), Pass 35 closed F121/F122/F127a/F130/F133/F135 (dependency security floor + Python 3.11 source-install floor), Pass 36 closed F180 (Wave N-T / F-number governance ledger), Pass 37 closed F213 (Inno install/uninstall smoke in CI), Pass 38 closed F215 (fuzz harness expansion + parser hardening), and Pass 39 closed F216 (concurrent job-cancellation race coverage + process termination fix). This file documents deferred research/product work for a future Pass 40+, not a broken or incomplete research run.
+**Last update:** 2026-05-18 (after Pass 40; Passes 1-34 all ran on 2026-05-17)
+**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, Pass 33 closed F200 + F211, Pass 34 closed F217 (UXP BackendClient HTTP-shape contract), Pass 35 closed F121/F122/F127a/F130/F133/F135 (dependency security floor + Python 3.11 source-install floor), Pass 36 closed F180 (Wave N-T / F-number governance ledger), Pass 37 closed F213 (Inno install/uninstall smoke in CI), Pass 38 closed F215 (fuzz harness expansion + parser hardening), Pass 39 closed F216 (concurrent job-cancellation race coverage + process termination fix), and Pass 40 closed F214 (ML / compose / TTS performance benchmark contract). This file documents deferred research/product work for a future Pass 41+, not a broken or incomplete research run.
 
 ---
 
@@ -15,12 +15,24 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md and now F-number-tiered by `.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md` (F180).
 
-### Pass 40 entry point
+### Pass 41 entry point
 
-1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F200, F211, F213, F215, F216, F217, F251, F259 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. The next no-network item to consider is **F214** ML/TTS performance benchmarks (M-effort), unless the session chooses a broader flagship item. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
+1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F200, F211, F213, F214, F215, F216, F217, F251, F259 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. The next small no-network item to consider is **F192** OpenAPI response-schema coverage or **F198** CEP-only route catalogue, unless the session chooses a broader flagship item. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
 2. **F198 is already effectively closed by Pass 3 artefacts.** `CEP_UXP_PARITY_MATRIX.md` maps all 18 `ocXxx` JSX functions and identifies only two truly CEP-only calls; avoid redoing that pass unless Adobe typings changed.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.11/3.12/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 40 checkpoint
+
+| Item | Status |
+|---|---|
+| F214 | **DONE** — `opencut/core/performance_benchmarks.py` defines the ML / compose / TTS performance-benchmark contract without downloading weights during normal CI. |
+| Benchmark matrix | Specs cover Whisper-family ASR (`openai-whisper`, `faster-whisper`, `whisperx`), AI upscaling (`realesrgan`, `flashvsr`, `seedvr`), `ffmpeg-compose`, and TTS (`edge-tts`, `kokoro`, `chatterbox`, `f5-tts`, `elevenlabs`). |
+| Metrics | Every benchmark normalizes to `wall_clock_seconds_per_*` with source/synthesised units, advisory budgets, timeout ceilings, and sample descriptions tied to the F176 eval catalogue where applicable. |
+| Guard tests | `tests/test_performance_benchmark_registry.py` pins the inventory, backend matrix, env opt-in (`OPENCUT_RUN_PERF_BENCHMARKS=1`), registry validation, and `measure_backend()` normalization/failure behavior. |
+| Release smoke | `scripts/release_smoke.py` includes the F214 registry gate. Heavy model/cloud execution remains opt-in outside ordinary CI. |
+| Validation | PASS — `python -m pytest tests/test_performance_benchmark_registry.py -q`; focused Ruff clean. |
+| Files to review | `opencut/core/performance_benchmarks.py`, `tests/test_performance_benchmark_registry.py`, `scripts/release_smoke.py`, ROADMAP.md v4.43, PROJECT_CONTEXT.md, CHANGELOG.md, and this file. |
 
 ### Pass 39 checkpoint
 
