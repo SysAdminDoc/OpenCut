@@ -479,12 +479,16 @@ def test_validate_output_path_rejects_directory_target(tmp_path):
 def test_uxp_engine_registry_escapes_dynamic_attribute_values():
     from pathlib import Path
 
-    source = (Path(__file__).resolve().parents[1] / "extension/com.opencut.uxp/main.js").read_text(encoding="utf-8")
+    repo_root = Path(__file__).resolve().parents[1]
+    source = (repo_root / "extension/com.opencut.uxp/main.js").read_text(encoding="utf-8")
+    utils_source = (repo_root / "extension/com.opencut.uxp/uxp-utils.js").read_text(encoding="utf-8")
 
     assert 'data-domain="${UIController.escapeHtml(domain)}"' in source
     assert 'value="${UIController.escapeHtml(eng.name)}"' in source
     assert 'for="${UIController.escapeHtml(domainId)}"' in source
-    assert ".replace(/'/g, \"&#39;\")" in source
+    assert 'import { escapeHtml as escapeHtmlValue, safeDomIdSegment } from "./uxp-utils.js";' in source
+    assert "return escapeHtmlValue(str);" in source
+    assert ".replace(/'/g, \"&#39;\")" in utils_source
 
 
 def test_uxp_fetch_wrapper_clears_backend_timeout_timers():

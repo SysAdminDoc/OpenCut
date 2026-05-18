@@ -20,8 +20,9 @@ Steps (in order):
 11. ``ruff`` — lint the python package
 12. ``pytest-fast`` — focused test ids covering release gates
 13. ``pip-audit`` — Python dependency advisories for requirements + ``pyproject[all]``
-14. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
-15. ``panel-source`` — CEP panel source tree smoke
+14. ``panel-unit`` — CEP/UXP panel Vitest utility tests
+15. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
+16. ``panel-source`` — CEP panel source tree smoke
 
 Each step records ``status`` (``ok|fail|skipped``), an exit code, a duration
 in ms, and a short message. The script exits with code 1 if any non-skipped
@@ -609,6 +610,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_download_eval_dataset.py",
     "tests/test_installer_policy.py",
     "tests/test_ci_workflow_split.py",
+    "tests/test_panel_vitest_gate.py",
     "tests/test_inno_installer_smoke.py",
     "tests/test_wpf_installer_ci.py",
     "tests/test_windows_codesigning.py",
@@ -770,6 +772,54 @@ def _node_command(*node_args: str, cwd: Path) -> StepResult:
     )
 
 
+def _npm_command(*npm_args: str, cwd: Path) -> StepResult:
+    start = time.time()
+    candidates = ["npm", "npm.cmd"]
+    npm_bin = next((shutil.which(name) for name in candidates if shutil.which(name)), None)
+    if not npm_bin:
+        return StepResult(
+            "panel-script",
+            "skipped",
+            skipped_reason="npm not on PATH",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    result = _run([npm_bin, *npm_args], cwd=cwd)
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "panel-script",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message="ok" if status == "ok" else "npm script failed",
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
+def step_panel_unit(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    if not (PANEL_DIR / "package.json").exists():
+        return StepResult(
+            "panel-unit",
+            "skipped",
+            skipped_reason="panel package.json missing",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    if not (PANEL_DIR / "node_modules").exists():
+        return StepResult(
+            "panel-unit",
+            "skipped",
+            skipped_reason="node_modules absent; run `npm ci` first",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    res = _npm_command("test", cwd=PANEL_DIR)
+    res.name = "panel-unit"
+    if res.status == "ok":
+        res.message = "CEP/UXP utility Vitest suite passed"
+    return res
+
+
 def step_npm_advisory(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     script = PANEL_DIR / "scripts" / "check-advisories.mjs"
@@ -865,6 +915,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt and pyproject[all]"),
+    StepDefinition("panel-unit", step_panel_unit, "Run CEP/UXP panel Vitest utility tests"),
     StepDefinition("npm-advisory", step_npm_advisory, "Run npm advisory allow-list gate"),
     StepDefinition("esbuild-pin", step_esbuild_pin, "Verify resolved esbuild >= 0.25 (F131)"),
     StepDefinition("panel-source", step_panel_source, "Smoke the CEP panel source tree"),
