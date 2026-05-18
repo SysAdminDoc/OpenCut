@@ -6,7 +6,7 @@ import re
 from collections import Counter
 from typing import Any
 
-from opencut.openapi import _flask_rule_to_openapi_path
+from opencut.openapi import _ENDPOINT_SCHEMAS, _flask_rule_to_openapi_path
 
 HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 MUTATING_METHODS = {"post", "put", "patch", "delete"}
@@ -155,6 +155,32 @@ def test_root_openapi_operations_have_valid_ids_and_responses(client):
     counts = Counter(operation_ids)
     duplicates = sorted(item for item, count in counts.items() if count > 1)
     assert not duplicates
+
+
+def test_f192_bulk_response_schema_mapping_covers_top_routes(client):
+    """F192 keeps the typed response-schema map above the top-route threshold."""
+    typed_paths = {
+        path for path, schema_cls in _ENDPOINT_SCHEMAS.items()
+        if schema_cls is not None
+    }
+    assert len(typed_paths) >= 80
+
+    spec = client.get("/openapi.json").get_json()
+    examples = {
+        ("/health", "get"): {"status", "version", "csrf_token"},
+        ("/jobs", "get"): {"jobs", "total"},
+        ("/api/gpu/status", "get"): {"available", "device", "models"},
+        ("/captions/qc/reading-profiles", "get"): {"profiles", "tokens", "defaults"},
+        ("/audio/tts/voices", "get"): {"voices", "backends", "total"},
+        ("/settings/llm", "get"): {"settings", "ok", "message"},
+        ("/ai/mood-presets", "get"): {"items", "total"},
+    }
+    for (path, method), expected_properties in examples.items():
+        schema = spec["paths"][path][method]["responses"]["200"]["content"][
+            "application/json"
+        ]["schema"]
+        assert schema["type"] == "object", path
+        assert expected_properties <= set(schema["properties"]), path
 
 
 def test_api_openapi_catalogue_uses_openapi_path_parameters(client):
