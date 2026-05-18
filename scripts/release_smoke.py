@@ -544,6 +544,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_job_cancellation_race.py",
     "tests/test_launcher_scripts.py",
     "tests/test_uxp_backend_client_contract.py",
+    "tests/test_cep_uxp_parity_catalogue.py",
     "tests/test_esbuild_pin.py",
     "tests/test_caption_qc.py",
     "tests/test_caption_reading_profiles.py",

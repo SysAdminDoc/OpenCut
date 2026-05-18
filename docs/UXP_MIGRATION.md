@@ -2,7 +2,8 @@
 
 > **Deadline:** CEP support removed from Premiere Pro ~September 2026
 > **Current state:** Dual CEP + UXP panels. Pass-3 audit found 16/18 JSX host functions have a UXP path; 2 remain CEP-only.
-> **Last updated:** 2026-05-17
+> **Last updated:** 2026-05-18
+> **Machine-readable catalogue:** `opencut/_generated/cep_uxp_parity.json` (generated from `opencut/core/cep_uxp_parity.py`)
 
 ## Migration Strategy
 

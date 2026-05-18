@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — CEP/UXP Parity Catalogue
+
+- Added `opencut/core/cep_uxp_parity.py` and generated `opencut/_generated/cep_uxp_parity.json` to pin the F198 migration disposition for all 18 `ocXxx` CEP host functions.
+- Added `tests/test_cep_uxp_parity_catalogue.py` and release-smoke wiring so new CEP host functions must declare their UXP path, replacement plan, and CEP-only status.
+
 ### Added — OpenAPI Schemas
 
 - Expanded the legacy `/openapi.json` typed response-schema map to 100 entries, covering high-traffic system, jobs, captions, audio/TTS, settings, analytics, annotation, model/GPU, and tool-catalogue routes.

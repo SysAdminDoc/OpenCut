@@ -186,7 +186,7 @@ A quick grep through the manifest for endpoints that obviously depend on ExtendS
 | `/system/qe-reflect` (F H2.8) | 1 | **HIGH** — QE DOM is CEP-only |
 
 **Action:** F146 (UXP-native MCP transport) and F160 (WebView UXP migration) need to cover these surfaces. Recommend an explicit **"CEP-only route catalogue"** doc — new F:
-- **F198** — Catalogue every route that requires ExtendScript/CEP and provide a UXP-replacement plan (or explicit "blocked by Adobe UXP API gap" note pointing to F186-F190).
+- **F198** — **DONE in Pass 42.** `opencut/core/cep_uxp_parity.py` and `opencut/_generated/cep_uxp_parity.json` catalogue all 18 `ocXxx` CEP host functions and pin the two true CEP-only calls (`ocAddNativeCaptionTrack`, `ocQeReflect`) with replacement plans.
 
 ---
 
@@ -210,7 +210,7 @@ The manifest contains **233 routes under `/api/*`**. Pass 7 corrected the origin
 | F195 | Add 12 missing MCP tools for post-Wave-M shipped routes | Done in Pass 9 | S |
 | F196 | Make `registry.py` primary; derive `model_cards` / `checks` | Later | L |
 | F197 | Add `NON_AI_CHECKS` allowlist to `registry.py` | Done in Pass 8 | S |
-| F198 | CEP-only route catalogue + UXP replacement plan | Next | M |
+| F198 | CEP-only route catalogue + UXP replacement plan | Done in Pass 42 | M |
 | F199 | Document `/api/*` alias policy + generate alias map | Done in Pass 7 | S |
 
 All flow into Pass-2 updates to `FEATURE_BACKLOG.md`, `PRIORITIZATION_MATRIX.md`, and ROADMAP v4.5.
