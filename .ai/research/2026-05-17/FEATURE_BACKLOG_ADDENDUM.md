@@ -74,7 +74,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | F# | Title | What | Source | Effort | Tier |
 |---|---|---|---|---|---|
-| F225 | Anchor F105 review bundles on OpenTimelineIO Marker schema | Apache-2 interchange; Premiere/Resolve/Final Cut round-trip free | Frame.io subagent §3 | M | Next |
+| [x] F225 | Anchor F105 review bundles on OpenTimelineIO Marker schema | Closed in Pass 48 — F105 review bundles now include a stdlib-built `markers.otio` OpenTimelineIO `Timeline.1` sidecar with review comments serialized as `Marker.2` entries while preserving legacy `markers.json` | Frame.io subagent §3 | M | Next |
 | F226 | Add SVG drawing annotations to F105 bundles | Frame-accurate overlay per frame | Frame.io subagent §2 | M | Next |
 | F227 | Add threaded comments + completion status to F105 bundles | Underlord-style review trust pattern | Frame.io subagent §2 | M | Next |
 | F228 | Add voice-note attachments to F105 bundles | Match Clapshot / Vimeo Review | Frame.io subagent §2 | S | Later |
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, [x] F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, F226, F227, F229, F231, F233, F234, F238, F239, [x] F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
