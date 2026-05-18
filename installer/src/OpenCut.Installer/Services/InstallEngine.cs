@@ -98,7 +98,10 @@ public class InstallEngine
 
             // Step 8: Add FFmpeg to PATH
             step = 8;
-            _registryManager.AddToPath(_config.FfmpegPath, progress, step, totalSteps);
+            if (_config.UpdatePath)
+                _registryManager.AddToPath(_config.FfmpegPath, progress, step, totalSteps);
+            else
+                Report(progress, step, totalSteps, "Updating PATH", "Skipped (not selected).", LogLevel.Debug);
 
             // Step 9: Set PlayerDebugMode
             step = 9;
@@ -136,7 +139,10 @@ public class InstallEngine
 
             // Step 14: Register in Add/Remove Programs
             step = 14;
-            _registryManager.RegisterUninstall(_config, progress, step, totalSteps);
+            if (_config.RegisterUninstaller)
+                _registryManager.RegisterUninstall(_config, progress, step, totalSteps);
+            else
+                Report(progress, step, totalSteps, "Registering uninstaller", "Skipped (not selected).", LogLevel.Debug);
 
             // Step 15: Write machine-readable install manifest
             step = 15;

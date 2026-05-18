@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added — WPF Installer Test Suite
+
+- Added F212 xUnit coverage for WPF installer command-line parsing, install path derivation, file-copy behavior, progress math, and payload substream reads.
+- Added guarded WPF quiet install/uninstall smoke wiring for Windows release runners, with temp profile support and side-effect suppression flags for CEP, shortcuts, PATH, and HKLM registration.
+- Fixed the WPF installer project icon path so the .NET project builds from source with the tracked installer icon.
+
 ### Added — CEP/UXP Vitest Utility Coverage
 
 - Added F210 Vitest coverage for CEP HTML/ExtendScript escaping, lazy DOM proxy behavior, and command-palette indexing, plus UXP HTML escaping and safe DOM-id normalization.

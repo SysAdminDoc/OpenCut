@@ -37,29 +37,49 @@ public class UninstallEngine
         // Step 2: Remove CEP extension from Adobe folder
         step = 2;
         Report(progress, step, totalSteps, "Removing CEP extension", "Removing Adobe extension...");
-        _cepInstaller.RemoveExtension(_config.InstallPath);
-        Report(progress, step, totalSteps, "Removing CEP extension",
-            "CEP extension removed.", LogLevel.Success);
+        if (_config.InstallCepExtension)
+        {
+            _cepInstaller.RemoveExtension(_config.InstallPath);
+            Report(progress, step, totalSteps, "Removing CEP extension",
+                "CEP extension removed.", LogLevel.Success);
+        }
+        else
+        {
+            Report(progress, step, totalSteps, "Removing CEP extension", "Skipped (not selected).", LogLevel.Debug);
+        }
 
         // Step 3: Remove FFmpeg from PATH
         step = 3;
         Report(progress, step, totalSteps, "Cleaning PATH", "Removing FFmpeg from user PATH...");
-        _registryManager.RemoveFromPath(_config.FfmpegPath);
-        Report(progress, step, totalSteps, "Cleaning PATH",
-            "FFmpeg removed from PATH.", LogLevel.Success);
+        if (_config.UpdatePath)
+        {
+            _registryManager.RemoveFromPath(_config.FfmpegPath);
+            Report(progress, step, totalSteps, "Cleaning PATH",
+                "FFmpeg removed from PATH.", LogLevel.Success);
+        }
+        else
+        {
+            Report(progress, step, totalSteps, "Cleaning PATH", "Skipped (not selected).", LogLevel.Debug);
+        }
 
         // Step 4: Remove shortcuts
         step = 4;
         Report(progress, step, totalSteps, "Removing shortcuts", "Removing shortcuts...");
-        _shortcutCreator.RemoveShortcuts();
-        Report(progress, step, totalSteps, "Removing shortcuts",
-            "All shortcuts removed.", LogLevel.Success);
+        if (_config.CreateDesktopShortcut || _config.CreateStartMenuShortcut || _config.CreateStartupShortcut)
+        {
+            _shortcutCreator.RemoveShortcuts();
+            Report(progress, step, totalSteps, "Removing shortcuts",
+                "All shortcuts removed.", LogLevel.Success);
+        }
+        else
+        {
+            Report(progress, step, totalSteps, "Removing shortcuts", "Skipped (not selected).", LogLevel.Debug);
+        }
 
         // Step 5: Remove config directory (~/.opencut)
         step = 5;
         Report(progress, step, totalSteps, "Removing config", "Removing user config...");
-        var configDir = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".opencut");
+        var configDir = _config.UserDataPath;
         if (Directory.Exists(configDir))
         {
             try
@@ -84,7 +104,8 @@ public class UninstallEngine
         step = 6;
         Report(progress, step, totalSteps, "Cleaning registry", "Removing registry entries...");
         _registryManager.RemoveInstallKey();
-        _registryManager.RemoveUninstallEntry();
+        if (_config.RegisterUninstaller)
+            _registryManager.RemoveUninstallEntry();
         Report(progress, step, totalSteps, "Cleaning registry",
             "Registry entries removed.", LogLevel.Success);
 

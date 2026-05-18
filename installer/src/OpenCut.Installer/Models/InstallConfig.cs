@@ -8,20 +8,22 @@ public class InstallConfig
     public bool CreateStartupShortcut { get; set; }
     public bool InstallCepExtension { get; set; } = true;
     public bool SetPlayerDebugMode { get; set; } = true;
+    public bool UpdatePath { get; set; } = true;
+    public bool RegisterUninstaller { get; set; } = true;
     public bool DownloadWhisperModel { get; set; }
     public string WhisperModel { get; set; } = "turbo";
     public bool InstallOptionalDeps { get; set; }
     public List<string> SelectedDeps { get; set; } = [];
+    public string UserDataPath { get; set; } = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
+        ".opencut");
 
     public string ServerPath => Path.Combine(InstallPath, "server");
     public string FfmpegPath => Path.Combine(InstallPath, "ffmpeg");
     public string ExtensionPath => Path.Combine(InstallPath, "extension", AppConstants.CepExtensionId);
     public string LogsPath => Path.Combine(InstallPath, "logs");
     public string UninstallExePath => Path.Combine(InstallPath, "OpenCut-Uninstall.exe");
-    public string InstallerManifestPath => Path.Combine(
-        Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-        ".opencut",
-        AppConstants.InstallerManifestFile);
+    public string InstallerManifestPath => Path.Combine(UserDataPath, AppConstants.InstallerManifestFile);
 
     public string CepTargetPath => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),

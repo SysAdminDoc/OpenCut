@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.77
+**Version**: 4.78
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,376 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -162,8 +162,25 @@
 > **v4.76 status (2026-05-18, seventy-third pass)**: closed **F206** by splitting pull-request CI away from the full three-OS release build. `.github/workflows/pr-fast.yml` now runs a Linux-only fast release-smoke subset on PRs, while `.github/workflows/build.yml` is renamed **Release Full** and stays on pushes, tags, and manual dispatch for the expensive cross-platform build/release path. `tests/test_ci_workflow_split.py` pins the split and is part of `pytest-fast`.
 >
 > **v4.77 status (2026-05-18, seventy-fourth pass)**: closed **F210** by adding Vitest coverage for CEP/UXP utility seams instead of executing the full panel controllers. `extension/com.opencut.panel/client/panel-utils.js` now owns the tested CEP `esc()`, `escPath()`, lazy DOM proxy, and command-palette indexer helpers; `extension/com.opencut.uxp/uxp-utils.js` owns UXP HTML escaping and safe DOM-id normalization. `npm test`, release-smoke `panel-unit`, PR Fast, and Release Full all run or enforce the new suite.
+>
+> **v4.78 status (2026-05-18, seventy-fifth pass)**: closed **F212** by adding a WPF installer xUnit suite plus quiet install/uninstall smoke wiring for Windows release runners. `installer/src/OpenCut.Installer/CommandLine/` now parses `--install/--uninstall --quiet` and safety flags, `scripts/smoke_wpf_installer.ps1` installs the self-extracting WPF artifact into a temp root with temp user data, and Release Full runs both the xUnit suite and WPF headless smoke. The pass also fixed the installer project icon path so `dotnet build` succeeds from source.
 
 ---
+
+## 2026-05-18 v4.78 WPF Installer Test Suite (F212)
+
+One installer coverage item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Quiet installer entrypoint | Added `InstallerCommandLineOptions` and `HeadlessInstallerRunner` so the WPF installer can run `--install --quiet` and `--uninstall --quiet` without showing the GUI. The normal interactive install/uninstall path is unchanged. |
+| Side-effect controls | Added config flags for temp user data, shortcut creation, CEP extension install/removal, PATH updates, and HKLM uninstaller registration so CI smoke runs can avoid touching a developer profile. |
+| xUnit suite | Added `installer/tests/OpenCut.Installer.Tests/` covering command-line parsing, derived install paths, installer manifest path override, file copy behavior, progress math, and `SubStream` payload-window reads. |
+| Windows runner smoke | Added `scripts/smoke_wpf_installer.ps1` for CI-only WPF quiet install/uninstall validation against `installer/dist/wpf/OpenCut-WPF-Setup-*.exe`; it verifies payload files, `installer_kind=wpf`, registry install path, and cleanup. |
+| CI and release gates | Release Full now runs `scripts/test_wpf_installer.ps1` on Windows and the WPF smoke after the WPF installer build. `tests/test_wpf_installer_test_suite.py` and release smoke pin the wiring. |
+| Build fix | Updated `OpenCut.Installer.csproj` to use the tracked `Assets/logo.ico` instead of a missing repo-root `icon.ico`, restoring source builds. |
+
+Validation after the batch: `scripts/test_wpf_installer.ps1` passed (`13 passed`), focused WPF installer Python guard tests passed (`15 passed`), and `dotnet build installer\src\OpenCut.Installer\OpenCut.Installer.csproj -c Release --nologo` passed with 0 warnings / 0 errors. The full WPF install/uninstall smoke is intentionally CI-guarded and will execute on Windows tag/manual Release Full builds after the self-extracting WPF artifact exists.
 
 ## 2026-05-18 v4.77 CEP/UXP Vitest Utility Coverage (F210)
 
@@ -1396,7 +1413,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 
-**Later (14 items):** F212 (WPF installer xUnit), F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76; F210 closed in v4.77.
+**Later (13 items):** F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76; F210 closed in v4.77; F212 closed in v4.78.
 
 **Newly explicit rejects (none in Pass 2)** — all Pass-1 rejects stand; Pass 2 did not propose anything that required new rejection.
 
