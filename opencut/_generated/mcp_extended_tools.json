@@ -9,7 +9,7 @@
     "POST": 1006,
     "PUT": 2
   },
-  "response_schema_count": 93,
+  "response_schema_count": 100,
   "source": "opencut/_generated/route_manifest.json",
   "tool_count": 1319,
   "tool_prefix": "opencut_route_",
@@ -7376,7 +7376,7 @@
         "readOnlyHint": true,
         "title": "GET /system/eval-datasets/<dataset_id>"
       },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /system/eval-datasets/<dataset_id>.",
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /system/eval-datasets/<dataset_id>. Response schema: EvalDataset.",
       "inputSchema": {
         "properties": {
           "dataset_id": {
@@ -7407,7 +7407,7 @@
           }
         ],
         "priority": "extended",
-        "response_schema": ""
+        "response_schema": "EvalDataset"
       },
       "name": "opencut_route_get_system_eval_datasets_by_dataset_id"
     },
@@ -7567,7 +7567,7 @@
         "readOnlyHint": true,
         "title": "GET /system/ocio"
       },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /system/ocio.",
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /system/ocio. Response schema: OcioValidation.",
       "inputSchema": {
         "properties": {
           "query": {
@@ -7587,7 +7587,7 @@
         "path": "/system/ocio",
         "path_params": [],
         "priority": "extended",
-        "response_schema": ""
+        "response_schema": "OcioValidation"
       },
       "name": "opencut_route_get_system_ocio"
     },
@@ -16848,7 +16848,7 @@
         "readOnlyHint": false,
         "title": "POST /audio/description/generate"
       },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/description/generate.",
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/description/generate. Response schema: ADResult.",
       "inputSchema": {
         "properties": {
           "body": {
@@ -16868,7 +16868,7 @@
         "path": "/audio/description/generate",
         "path_params": [],
         "priority": "extended",
-        "response_schema": ""
+        "response_schema": "ADResult"
       },
       "name": "opencut_route_post_audio_description_generate"
     },
@@ -16878,7 +16878,7 @@
         "readOnlyHint": false,
         "title": "POST /audio/description/microsoft-draft"
       },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/description/microsoft-draft.",
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/description/microsoft-draft. Response schema: AudioDescriptionReviewDraft.",
       "inputSchema": {
         "properties": {
           "body": {
@@ -16898,7 +16898,7 @@
         "path": "/audio/description/microsoft-draft",
         "path_params": [],
         "priority": "extended",
-        "response_schema": ""
+        "response_schema": "AudioDescriptionReviewDraft"
       },
       "name": "opencut_route_post_audio_description_microsoft_draft"
     },
@@ -21940,7 +21940,7 @@
         "readOnlyHint": false,
         "title": "POST /delivery/transfer-bundle"
       },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /delivery/transfer-bundle.",
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /delivery/transfer-bundle. Response schema: TransferBundleResult.",
       "inputSchema": {
         "properties": {
           "body": {
@@ -21960,7 +21960,7 @@
         "path": "/delivery/transfer-bundle",
         "path_params": [],
         "priority": "extended",
-        "response_schema": ""
+        "response_schema": "TransferBundleResult"
       },
       "name": "opencut_route_post_delivery_transfer_bundle"
     },
@@ -31194,7 +31194,7 @@
         "readOnlyHint": false,
         "title": "POST /system/crash-packet"
       },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /system/crash-packet.",
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /system/crash-packet. Response schema: CrashPacketResult.",
       "inputSchema": {
         "properties": {
           "body": {
@@ -31214,7 +31214,7 @@
         "path": "/system/crash-packet",
         "path_params": [],
         "priority": "extended",
-        "response_schema": ""
+        "response_schema": "CrashPacketResult"
       },
       "name": "opencut_route_post_system_crash_packet"
     },
@@ -31404,7 +31404,7 @@
         "readOnlyHint": false,
         "title": "POST /system/project-health"
       },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /system/project-health.",
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /system/project-health. Response schema: HealthReport.",
       "inputSchema": {
         "properties": {
           "body": {
@@ -31424,7 +31424,7 @@
         "path": "/system/project-health",
         "path_params": [],
         "priority": "extended",
-        "response_schema": ""
+        "response_schema": "HealthReport"
       },
       "name": "opencut_route_post_system_project_health"
     },

@@ -30,7 +30,7 @@ def test_committed_extended_manifest_matches_live_generator():
 
     assert committed == live
     assert committed["tool_count"] >= 1000
-    assert committed["response_schema_count"] >= 70
+    assert committed["response_schema_count"] >= 100
     assert committed["tool_prefix"] == "opencut_route_"
     assert "POST" in committed["method_counts"]
     assert "GET" in committed["method_counts"]
@@ -60,6 +60,13 @@ def test_extended_tool_names_are_unique_and_tagged_lower_priority():
         assert mcp_tool["metadata"]["generated"] is True
         assert mcp_tool["metadata"]["priority"] == "extended"
         assert "lower-priority" in mcp_tool["description"]
+
+
+def test_extended_tools_include_introspected_core_response_schema():
+    mcp_tool = _tool_for("POST", "/delivery/transfer-bundle")
+
+    assert mcp_tool["metadata"]["response_schema"] == "TransferBundleResult"
+    assert "Response schema: TransferBundleResult." in mcp_tool["description"]
 
 
 def test_extended_dispatch_is_disabled_unless_opted_in(monkeypatch):

@@ -68,6 +68,14 @@ Pass 70 closed **F272** by adding the first concrete built-in agent skill packag
 
 ---
 
+## Pass 71 addendum (2026-05-18)
+
+Pass 71 closed **F193** by replacing the legacy OpenAPI endpoint hand-table with dataclass-discovered response schema bindings. `opencut.openapi_registry` now discovers schema/core dataclasses with route metadata and feeds `opencut.openapi._ENDPOINT_SCHEMAS`; `opencut.openapi` resolves nested dataclasses, optional/union types, list/tuple payloads, `Path`, and computed response properties.
+
+The pass added typed core-result coverage for audio-description drafts, audio-description generation, delivery transfer bundles, marker imports, eval dataset details, crash packets, project health, OCIO validation, review bundles, and C2PA sidecars. The extended MCP manifest still contains 1,319 tools and now reports 100 response-schema annotations. Validation passed: focused OpenAPI tests (`6 passed`), focused OpenAPI+MCP tests (`15 passed`), focused Ruff (`E,F,I`), `py_compile`, roadmap lint, extended MCP sync check, and release-smoke `pytest-fast` (`693 passed`).
+
+---
+
 ## 1. Files created
 
 ### Repo root (1 file)

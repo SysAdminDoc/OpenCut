@@ -34,6 +34,8 @@ import re
 from dataclasses import asdict, dataclass, field
 from typing import List, Optional, Sequence
 
+from opencut.openapi_registry import openapi_response_schema
+
 logger = logging.getLogger("opencut")
 
 
@@ -73,6 +75,10 @@ class Marker:
 
 
 @dataclass
+@openapi_response_schema(
+    "/markers/import",
+    extra_properties={"count": {"type": "integer"}},
+)
 class MarkerImportResult:
     """Result of parsing a marker file."""
 

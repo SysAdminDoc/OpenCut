@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import re
 from collections import Counter
+from dataclasses import is_dataclass
 from typing import Any
 
 from opencut.openapi import _ENDPOINT_SCHEMAS, _flask_rule_to_openapi_path
+from opencut.openapi_registry import discover_response_schemas
 
 HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 MUTATING_METHODS = {"post", "put", "patch", "delete"}
@@ -56,6 +58,10 @@ def _schema_nodes(schema: dict[str, Any]):
     items = schema.get("items")
     if isinstance(items, dict):
         yield from _schema_nodes(items)
+    for key in ("oneOf", "anyOf", "allOf"):
+        for item in schema.get(key, []):
+            if isinstance(item, dict):
+                yield from _schema_nodes(item)
 
 
 def _assert_response_schema(response: dict[str, Any], pointer: str) -> None:
@@ -157,13 +163,33 @@ def test_root_openapi_operations_have_valid_ids_and_responses(client):
     assert not duplicates
 
 
-def test_f192_bulk_response_schema_mapping_covers_top_routes(client):
-    """F192 keeps the typed response-schema map above the top-route threshold."""
+def test_f193_response_schema_mapping_is_dataclass_discovered():
+    """F193 derives response-schema bindings from registered dataclasses."""
+    records = discover_response_schemas()
+    routes = {record.route: record for record in records}
+
+    assert len(routes) >= 105
+    assert len(routes) == len(records)
+    assert all(is_dataclass(record.schema_class) for record in records)
+    assert _ENDPOINT_SCHEMAS == {
+        record.route: record.schema_class for record in records
+    }
+    assert routes["/audio/description/microsoft-draft"].module == (
+        "opencut.core.audio_description"
+    )
+    assert routes["/delivery/transfer-bundle"].schema_class.__name__ == (
+        "TransferBundleResult"
+    )
+    assert routes["/markers/import"].schema_class.__name__ == "MarkerImportResult"
+
+
+def test_f193_bulk_response_schema_mapping_covers_top_routes(client):
+    """F193 keeps typed response-schema coverage above the old F192 threshold."""
     typed_paths = {
         path for path, schema_cls in _ENDPOINT_SCHEMAS.items()
         if schema_cls is not None
     }
-    assert len(typed_paths) >= 80
+    assert len(typed_paths) >= 105
 
     spec = client.get("/openapi.json").get_json()
     examples = {
@@ -174,6 +200,33 @@ def test_f192_bulk_response_schema_mapping_covers_top_routes(client):
         ("/audio/tts/voices", "get"): {"voices", "backends", "total"},
         ("/settings/llm", "get"): {"settings", "ok", "message"},
         ("/ai/mood-presets", "get"): {"items", "total"},
+        ("/audio/description/microsoft-draft", "post"): {
+            "draft_format",
+            "cue_count",
+            "cues",
+            "review_required",
+            "workflow",
+        },
+        ("/delivery/transfer-bundle", "post"): {
+            "bundle_path",
+            "manifest_path",
+            "commands",
+            "source_count",
+        },
+        ("/markers/import", "post"): {
+            "format",
+            "count",
+            "markers",
+            "warnings",
+            "rejected",
+        },
+        ("/system/crash-packet", "post"): {
+            "version",
+            "output_path",
+            "bundle_sha256",
+            "entries",
+        },
+        ("/system/ocio", "get"): {"available", "version", "roles", "findings"},
     }
     for (path, method), expected_properties in examples.items():
         schema = spec["paths"][path][method]["responses"]["200"]["content"][
@@ -181,6 +234,12 @@ def test_f192_bulk_response_schema_mapping_covers_top_routes(client):
         ]["schema"]
         assert schema["type"] == "object", path
         assert expected_properties <= set(schema["properties"]), path
+
+    transfer_schema = spec["paths"]["/delivery/transfer-bundle"]["post"][
+        "responses"
+    ]["200"]["content"]["application/json"]["schema"]
+    command_items = transfer_schema["properties"]["commands"]["items"]
+    assert {"method", "available", "argv"} <= set(command_items["properties"])
 
 
 def test_api_openapi_catalogue_uses_openapi_path_parameters(client):

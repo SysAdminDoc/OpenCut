@@ -2,163 +2,28 @@
 OpenCut OpenAPI Spec Generator
 
 Introspects the Flask app's url_map to produce an OpenAPI 3.0.x JSON spec.
-Schema classes from opencut.schemas are mapped to known endpoints for
-response definitions.
+Response schemas are discovered from dataclasses registered through
+``opencut.openapi_registry``.
 """
 
 import re
+import types
 from dataclasses import fields as dc_fields
-from typing import Any, Dict, List, Optional, get_args, get_origin
+from dataclasses import is_dataclass
+from pathlib import Path
+from typing import Any, Dict, List, Union, get_args, get_origin, get_type_hints
 
 from opencut import __version__
-from opencut.schemas import (
-    ActionResult,
-    AnalyticsResult,
-    AutoZoomResult,
-    BeatMarkersResult,
-    BrollPlanResult,
-    CapabilityResult,
-    CaptionPreviewResult,
-    CaptionProfilesResult,
-    CaptionQcResult,
-    CaptionTranslationResult,
-    ChaptersResult,
-    ColorMatchResult,
-    ContextAnalysisResult,
-    DeliverableResult,
-    DepthMapResult,
-    ExportMarkersResult,
-    FileOutputResult,
-    GpuStatusResult,
-    HealthResult,
-    IndexResult,
-    JobListResult,
-    JobResponse,
-    JobStatsResult,
-    JobStatusResult,
-    ListEnvelopeResult,
-    LoudnessMatchResult,
-    ModelListResult,
-    ModelProgressResult,
-    MulticamResult,
-    PluginListResult,
-    RepeatDetectResult,
-    SearchResult,
-    SettingsResult,
-    ShortsPipelineResult,
-    SilenceResult,
-    ToolListResult,
-    UpdateCheckResult,
-    VideoAIResult,
-    VoiceListResult,
-    WorkflowResult,
+from opencut.openapi_registry import (
+    build_endpoint_schema_map,
+    schema_extra_properties,
 )
+from opencut.schemas import JobResponse
 
 # ---------------------------------------------------------------------------
-# Endpoint -> schema mapping (known response schemas)
+# Endpoint -> schema mapping (discovered dataclass response schemas)
 # ---------------------------------------------------------------------------
-_ENDPOINT_SCHEMAS: Dict[str, type] = {
-    "/health": HealthResult,
-    "/status/<job_id>": JobStatusResult,
-    "/jobs": JobListResult,
-    "/jobs/history": JobListResult,
-    "/jobs/stats": JobStatsResult,
-    "/jobs/interrupted": JobListResult,
-    "/jobs/<job_id>/diagnostics": JobStatusResult,
-    "/system/update-check": UpdateCheckResult,
-    "/whisper/settings": SettingsResult,
-    "/whisper/clear-cache": ActionResult,
-    "/models/list": ModelListResult,
-    "/models/delete": ActionResult,
-    "/api/models/installed": ModelListResult,
-    "/api/models/progress": ModelProgressResult,
-    "/api/models/quantization": ModelListResult,
-    "/api/models/quantize": JobResponse,
-    "/api/models/download": JobResponse,
-    "/api/gpu/status": GpuStatusResult,
-    "/api/gpu/models": ModelListResult,
-    "/api/gpu/unload": ActionResult,
-    "/api/mcp/tools": ToolListResult,
-    "/api/mcp/compound": ActionResult,
-    "/agent/tools": ToolListResult,
-    "/agent/plan/<plan_id>": JobStatusResult,
-    "/search/footage": SearchResult,
-    "/search/index": IndexResult,
-    "/analytics/usage": AnalyticsResult,
-    "/analytics/feature/<path:endpoint>": AnalyticsResult,
-    "/analytics/report": AnalyticsResult,
-    "/annotations/list": ListEnvelopeResult,
-    "/annotations/add": ActionResult,
-    "/annotations/export": FileOutputResult,
-    "/deliverables/vfx-sheet": DeliverableResult,
-    "/deliverables/adr-list": DeliverableResult,
-    "/deliverables/music-cue-sheet": DeliverableResult,
-    "/deliverables/asset-list": DeliverableResult,
-    "/timeline/export-from-markers": ExportMarkersResult,
-    "/silence": SilenceResult,
-    "/audio/loudness-match": LoudnessMatchResult,
-    "/audio/beat-markers": BeatMarkersResult,
-    "/video/color-match": ColorMatchResult,
-    "/video/auto-zoom": AutoZoomResult,
-    "/video/multicam-cuts": MulticamResult,
-    "/captions/chapters": ChaptersResult,
-    "/captions/repeat-detect": RepeatDetectResult,
-    "/captions/display-settings/tokens": CaptionProfilesResult,
-    "/captions/display-settings/preview": CaptionPreviewResult,
-    "/captions/emoji-map": ListEnvelopeResult,
-    "/captions/enhanced/capabilities": CapabilityResult,
-    "/captions/translate": CaptionTranslationResult,
-    "/captions/karaoke": FileOutputResult,
-    "/captions/convert": FileOutputResult,
-    "/captions/burnin/styles": ListEnvelopeResult,
-    "/captions/burnin/file": FileOutputResult,
-    "/captions/burnin/segments": FileOutputResult,
-    "/captions/animated/presets": ListEnvelopeResult,
-    "/captions/animated/render": FileOutputResult,
-    "/captions/qc": CaptionQcResult,
-    "/captions/qc/reading-profiles": CaptionProfilesResult,
-    "/captions/styles": ListEnvelopeResult,
-    "/captions/style/preview": CaptionPreviewResult,
-    "/captions/style/apply": FileOutputResult,
-    "/context/analyze": ContextAnalysisResult,
-    "/workflow/run": WorkflowResult,
-    "/video/ai/upscale": VideoAIResult,
-    "/video/ai/rembg": VideoAIResult,
-    "/video/ai/interpolate": VideoAIResult,
-    "/video/ai/denoise": VideoAIResult,
-    "/video/shorts-pipeline": ShortsPipelineResult,
-    "/video/depth/map": DepthMapResult,
-    "/video/depth/bokeh": DepthMapResult,
-    "/video/depth/parallax": DepthMapResult,
-    "/video/broll-plan": BrollPlanResult,
-    "/plugins/list": PluginListResult,
-    "/audio/tts/voices": VoiceListResult,
-    "/audio/tts/generate": JobResponse,
-    "/audio/tts/subtitled": JobResponse,
-    "/audio/tts/install": JobResponse,
-    "/audio/tts/f5": JobResponse,
-    "/audio/tts/f5/models": ModelListResult,
-    "/audio/tts/elevenlabs": JobResponse,
-    "/audio/tts/elevenlabs/voices": VoiceListResult,
-    "/audio/tts/elevenlabs/info": CapabilityResult,
-    "/audio/tts/omnivoice": JobResponse,
-    "/audio/tts/omnivoice/models": ModelListResult,
-    "/settings/export": SettingsResult,
-    "/settings/import": ActionResult,
-    "/settings/llm": SettingsResult,
-    "/settings/footage-index": SettingsResult,
-    "/settings/loudness-target": SettingsResult,
-    "/settings/multicam": SettingsResult,
-    "/settings/auto-zoom": SettingsResult,
-    "/settings/chapters": SettingsResult,
-    "/settings/brand-kit": SettingsResult,
-    "/settings/brand-kit/preview": CaptionPreviewResult,
-    "/settings/onboarding": SettingsResult,
-    "/settings/gist/info": CapabilityResult,
-    "/ai/mood-presets": ListEnvelopeResult,
-    "/ai/voice-models": ModelListResult,
-    "/ai/voice-avatar/styles": ListEnvelopeResult,
-}
+_ENDPOINT_SCHEMAS: Dict[str, type] = build_endpoint_schema_map()
 
 # Endpoints that return a JobResponse (async job-based routes)
 _JOB_ENDPOINTS = {
@@ -226,11 +91,15 @@ def _operation_id(endpoint: str, method: str, openapi_path: str) -> str:
     return re.sub(r"_+", "_", safe).strip("_")
 
 
-def _python_type_to_json(tp) -> dict:
+def _python_type_to_json(tp, _seen: set[type] | None = None) -> dict:
     """Convert a Python type annotation to a JSON Schema fragment."""
     origin = get_origin(tp)
+    args = get_args(tp)
+    seen = _seen or set()
 
-    if tp is str or tp is Optional[str]:
+    if tp is Any:
+        return {"type": "object", "additionalProperties": True}
+    if tp is str or tp is Path:
         return {"type": "string"}
     if tp is int:
         return {"type": "integer"}
@@ -238,32 +107,46 @@ def _python_type_to_json(tp) -> dict:
         return {"type": "number"}
     if tp is bool:
         return {"type": "boolean"}
+    if tp is type(None):
+        return {"type": "string", "nullable": True}
+    if is_dataclass(tp):
+        return _dataclass_to_schema(tp, seen)
+    if origin in (Union, types.UnionType):
+        non_none_args = [arg for arg in args if arg is not type(None)]
+        if len(non_none_args) == 1 and len(non_none_args) != len(args):
+            schema = dict(_python_type_to_json(non_none_args[0], seen))
+            schema["nullable"] = True
+            return schema
+        if non_none_args:
+            return {
+                "oneOf": [_python_type_to_json(arg, seen) for arg in non_none_args],
+            }
     if tp is dict or tp is Dict or origin is dict:
         return {"type": "object"}
-    if origin is list or origin is List:
-        args = get_args(tp)
-        if args:
-            return {"type": "array", "items": _python_type_to_json(args[0])}
+    if origin in (list, List, tuple):
+        if args and args[0] is not Ellipsis:
+            return {"type": "array", "items": _python_type_to_json(args[0], seen)}
         return {"type": "array", "items": {}}
     if tp is list:
         return {"type": "array", "items": {}}
-    if tp is type(None):
-        return {"type": "string", "nullable": True}
-    # Optional[X] -> X with nullable
-    if origin is type(None) or str(tp).startswith("typing.Optional"):
-        args = get_args(tp)
-        if args:
-            schema = _python_type_to_json(args[0])
-            schema["nullable"] = True
-            return schema
     return {"type": "string"}
 
 
-def _dataclass_to_schema(cls) -> dict:
+def _dataclass_to_schema(cls, _seen: set[type] | None = None) -> dict:
     """Convert a dataclass to an OpenAPI schema object."""
+    seen = set(_seen or set())
+    if cls in seen:
+        return {"type": "object"}
+    seen.add(cls)
+
     props = {}
+    try:
+        type_hints = get_type_hints(cls)
+    except Exception:
+        type_hints = {}
     for f in dc_fields(cls):
-        props[f.name] = _python_type_to_json(f.type)
+        props[f.name] = _python_type_to_json(type_hints.get(f.name, f.type), seen)
+    props.update(schema_extra_properties(cls))
     return {
         "type": "object",
         "properties": props,

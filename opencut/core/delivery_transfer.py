@@ -11,6 +11,7 @@ import zipfile
 from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, Iterable, List
 
+from opencut.openapi_registry import openapi_response_schema
 from opencut.security import validate_output_path, validate_path
 
 TRANSFER_METHODS: Dict[str, Dict[str, str]] = {
@@ -41,6 +42,7 @@ class TransferCommand:
 
 
 @dataclass
+@openapi_response_schema("/delivery/transfer-bundle")
 class TransferBundleResult:
     bundle_path: str
     manifest_path: str
