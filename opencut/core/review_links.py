@@ -39,7 +39,9 @@ class ReviewLink:
     token: str
     status: str = "pending"          # pending | approved | rejected | revision_requested
     title: str = ""
+    project_id: str = ""
     created_at: float = field(default_factory=time.time)
+    status_updated_at: Optional[float] = None
     expires_at: Optional[float] = None
     comments: List[ReviewComment] = field(default_factory=list)
 
@@ -83,6 +85,7 @@ def _generate_id(video_path: str) -> str:
 def create_review_link(
     video_path: str,
     title: str = "",
+    project_id: str = "",
     expires_hours: Optional[float] = None,
     on_progress: Optional[Callable] = None,
 ) -> ReviewLink:
@@ -114,6 +117,7 @@ def create_review_link(
         video_path=video_path,
         token=token,
         title=title or os.path.basename(video_path),
+        project_id=str(project_id or "").strip(),
         expires_at=expires_at,
     )
 
@@ -222,6 +226,7 @@ def update_review_status(
         raise KeyError(f"Review not found: {review_id}")
 
     reviews[review_id]["status"] = status
+    reviews[review_id]["status_updated_at"] = time.time()
     _save_reviews(reviews)
 
     data = reviews[review_id]

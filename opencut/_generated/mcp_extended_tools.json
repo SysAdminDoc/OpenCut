@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 12,
-    "GET": 292,
+    "GET": 293,
     "PATCH": 1,
     "POST": 1002,
     "PUT": 2
   },
   "response_schema_count": 93,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1309,
+  "tool_count": 1310,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -6253,6 +6253,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_resolve_timeline_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /review/feed.atom"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /review/feed.atom.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "platform_infra",
+        "endpoint": "platform_infra.review_feed_atom",
+        "generated": true,
+        "method": "GET",
+        "path": "/review/feed.atom",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_review_feed_atom"
     },
     {
       "annotations": {

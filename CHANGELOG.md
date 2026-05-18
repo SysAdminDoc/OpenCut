@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Review Notifications
+
+- Added per-project Atom review feeds through `GET /review/feed.atom`, with optional `project_id`, `review_id`, and `limit` filters over saved review comments/status changes.
+- Added optional HMAC-SHA256 signatures for outbound webhook deliveries, review comment/status webhook event types, and best-effort review notification dispatch from the existing review routes.
+
 ### Added — LAN Review Portal
 
 - Added HMAC-signed local review portal share links through `POST /review/portal/share` and signed browser access through `GET /review/portal/<review_id>`.
@@ -49,7 +54,7 @@
 
 ### Added — Extended MCP Route Tools
 
-- Added opt-in F194 extended MCP route-tool generation: `opencut/_generated/mcp_extended_tools.json` now exposes 1,309 lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response schemas.
+- Added opt-in F194 extended MCP route-tool generation: `opencut/_generated/mcp_extended_tools.json` now exposes 1,310 lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response schemas.
 - Added `opencut-mcp-server --extended-tools` / `OPENCUT_MCP_EXTENDED_TOOLS=1` support while preserving the 39 curated MCP tools as the default surface.
 - Added `tests/test_mcp_extended_tools.py` and release-smoke wiring to pin manifest drift, opt-in listing, generated metadata, and generated-tool dispatch.
 

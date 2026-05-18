@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T17:13:59Z",
-  "total_routes": 1367,
+  "generated_at": "2026-05-18T17:26:29Z",
+  "total_routes": 1368,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 301,
+    "GET": 302,
     "PATCH": 1,
     "POST": 1051,
     "PUT": 2
@@ -609,9 +609,9 @@
       ]
     },
     "platform_infra": {
-      "route_count": 55,
+      "route_count": 56,
       "method_counts": {
-        "GET": 17,
+        "GET": 18,
         "POST": 38
       },
       "sample_rules": [
@@ -8115,6 +8115,14 @@
         "POST"
       ],
       "endpoint": "platform_infra.review_create",
+      "blueprint": "platform_infra"
+    },
+    {
+      "rule": "/review/feed.atom",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "platform_infra.review_feed_atom",
       "blueprint": "platform_infra"
     },
     {

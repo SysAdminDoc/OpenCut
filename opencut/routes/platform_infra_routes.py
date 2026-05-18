@@ -40,6 +40,7 @@ platform_infra_bp = Blueprint("platform_infra", __name__)
 def review_create(job_id, filepath, data):
     """Create a shareable review link for a video."""
     title = data.get("title", "")
+    project_id = str(data.get("project_id") or "").strip()
     expires_hours = safe_float(data.get("expires_hours"), default=0)
 
     def _on_progress(pct, msg=""):
@@ -49,6 +50,7 @@ def review_create(job_id, filepath, data):
     result = create_review_link(
         video_path=filepath,
         title=title,
+        project_id=project_id,
         expires_hours=expires_hours if expires_hours > 0 else None,
         on_progress=_on_progress,
     )
@@ -57,7 +59,25 @@ def review_create(job_id, filepath, data):
         "token": result.token,
         "status": result.status,
         "title": result.title,
+        "project_id": result.project_id,
     }
+
+
+def _fire_review_notification(event_type, review_id, *, comment=None, status=""):
+    """Best-effort review webhook dispatch; never fail the user action."""
+    try:
+        from opencut.core.review_notifications import build_review_webhook_details
+        from opencut.core.webhook_system import fire_event
+
+        details = build_review_webhook_details(
+            review_id=review_id,
+            event_type=event_type,
+            comment=comment,
+            status=status,
+        )
+        fire_event(event_type, details, job_id=review_id)
+    except Exception as exc:
+        logger.warning("Review notification dispatch skipped for %s: %s", review_id, exc)
 
 
 @platform_infra_bp.route("/review/comment", methods=["POST"])
@@ -73,6 +93,18 @@ def review_add_comment():
 
         from opencut.core.review_links import add_review_comment
         comment = add_review_comment(review_id, timestamp, text, author)
+        comment_payload = {
+            "comment_id": comment.comment_id,
+            "timestamp": comment.timestamp,
+            "text": comment.text,
+            "author": comment.author,
+            "created_at": comment.created_at,
+        }
+        _fire_review_notification(
+            "review.comment_added",
+            review_id,
+            comment=comment_payload,
+        )
         return jsonify({
             "comment_id": comment.comment_id,
             "review_id": comment.review_id,
@@ -122,6 +154,11 @@ def review_update_status():
 
         from opencut.core.review_links import update_review_status
         result = update_review_status(review_id, status)
+        _fire_review_notification(
+            "review.status_changed",
+            review_id,
+            status=result.status,
+        )
         return jsonify({
             "review_id": result.review_id,
             "status": result.status,
@@ -184,6 +221,26 @@ def review_portal_view(review_id):
         return jsonify({"error": str(exc)}), 400
     except Exception as exc:
         return safe_error(exc, "review_portal_view")
+
+
+@platform_infra_bp.route("/review/feed.atom", methods=["GET"])
+def review_feed_atom():
+    """Serve per-project or per-review Atom notification feeds."""
+    try:
+        project_id = str(request.args.get("project_id") or "").strip()
+        review_id = str(request.args.get("review_id") or "").strip()
+        limit = safe_int(request.args.get("limit"), default=100, min_val=1, max_val=500)
+        from opencut.core.review_notifications import build_review_atom_feed
+
+        feed = build_review_atom_feed(
+            project_id=project_id,
+            review_id=review_id,
+            base_url=request.url_root.rstrip("/"),
+            limit=limit,
+        )
+        return Response(feed, content_type="application/atom+xml; charset=utf-8")
+    except Exception as exc:
+        return safe_error(exc, "review_feed")
 
 
 # ===================================================================
