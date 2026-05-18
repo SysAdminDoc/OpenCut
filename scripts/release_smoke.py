@@ -49,7 +49,7 @@ PANEL_DIR = REPO_ROOT / "extension" / "com.opencut.panel"
 @dataclass
 class StepResult:
     name: str
-    status: str  # ok | fail | skipped
+    status: str  # ok | fail | skipped | warn
     exit_code: int = 0
     duration_ms: int = 0
     message: str = ""
@@ -58,7 +58,12 @@ class StepResult:
     stderr_tail: str = ""
 
     def as_line(self) -> str:
-        symbol = {"ok": "PASS", "fail": "FAIL", "skipped": "SKIP"}.get(self.status, "????")
+        symbol = {
+            "ok": "PASS",
+            "fail": "FAIL",
+            "skipped": "SKIP",
+            "warn": "WARN",
+        }.get(self.status, "????")
         return f"[{symbol}] {self.name} ({self.duration_ms} ms) — {self.message or self.skipped_reason}"
 
 
@@ -175,6 +180,129 @@ def step_feature_readiness(_args: argparse.Namespace) -> StepResult:
         exit_code=result.returncode,
         duration_ms=duration,
         message="readiness manifest in sync" if status == "ok" else "readiness manifest drift",
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
+def step_esbuild_pin(_args: argparse.Namespace) -> StepResult:
+    """F131 — every resolved esbuild instance must be >=0.25.0.
+
+    Skips gracefully if Node or the panel's `node_modules` tree is not
+    present (the dev VM and many CI matrix legs don't run npm).
+    """
+    start = time.time()
+    node = shutil.which("node")
+    panel_root = REPO_ROOT / "extension" / "com.opencut.panel"
+    script = panel_root / "scripts" / "check-esbuild-pin.mjs"
+    node_modules = panel_root / "node_modules"
+    if node is None:
+        return StepResult(
+            "esbuild-pin",
+            "skipped",
+            skipped_reason="node executable not on PATH",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    if not script.is_file():
+        return StepResult(
+            "esbuild-pin",
+            "skipped",
+            skipped_reason="check-esbuild-pin.mjs missing",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    if not node_modules.is_dir():
+        return StepResult(
+            "esbuild-pin",
+            "skipped",
+            skipped_reason="panel node_modules not installed",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    result = _run([node, str(script), "--json"], cwd=panel_root)
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "esbuild-pin",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "esbuild >=0.25 across the resolved tree"
+            if status == "ok"
+            else "esbuild below 0.25 in the resolved tree (F131)"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
+def step_mcp_registry(_args: argparse.Namespace) -> StepResult:
+    """F147 — committed MCP registry manifest must match live tool catalogue."""
+    start = time.time()
+    result = _run(
+        [
+            sys.executable,
+            "-m",
+            "opencut.tools.dump_mcp_registry_manifest",
+            "--check",
+        ],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "mcp-registry",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "MCP registry manifest in sync"
+            if status == "ok"
+            else "MCP registry manifest drift"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
+def step_adobe_premierepro_versions(_args: argparse.Namespace) -> StepResult:
+    """F251 — surface @adobe/premierepro npm drift as a notification.
+
+    Drift is *informational* — Adobe shipping a new beta is a signal
+    to file F-numbers, not a release blocker. We translate the tool's
+    exit code (2 = drift, 0 = sync) into an ``ok``/``warn`` status the
+    release-smoke runner reports without failing closed.
+
+    Offline runs (no network on this host) also surface as ``warn``
+    rather than ``fail`` so the release gate stays green when there
+    is no internet, which is the dev VM's default state.
+    """
+    start = time.time()
+    result = _run(
+        [
+            sys.executable,
+            "-m",
+            "opencut.tools.adobe_premierepro_versions",
+            "--check",
+            "--json",
+        ],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    if result.returncode == 0:
+        status = "ok"
+        message = "no drift"
+    elif result.returncode == 2:
+        status = "warn"
+        message = "drift detected (informational; file F-numbers if Adobe shipped APIs)"
+    else:
+        status = "warn"
+        message = f"could not probe registry (exit {result.returncode})"
+    return StepResult(
+        "adobe-premierepro-versions",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=message,
         stdout_tail=_tail(result.stdout),
         stderr_tail=_tail(result.stderr),
     )
@@ -347,6 +475,10 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_text_shaping_gate.py",
     "tests/test_srt_encoding.py",
     "tests/test_caption_language_confidence.py",
+    "tests/test_uxp_macos_http.py",
+    "tests/test_adobe_premierepro_versions.py",
+    "tests/test_mcp_registry_manifest.py",
+    "tests/test_esbuild_pin.py",
     "tests/test_caption_qc.py",
     "tests/test_caption_reading_profiles.py",
     "tests/test_caption_display_settings.py",
@@ -542,6 +674,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
     StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),
+    StepDefinition("mcp-registry", step_mcp_registry, "Check MCP server registry manifest is in sync (F147)"),
     StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),
     StepDefinition("license-gate", step_license_gate, "Run the license allowlist gate over model cards"),
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),
@@ -550,7 +683,13 @@ STEPS: List[StepDefinition] = [
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt"),
     StepDefinition("npm-advisory", step_npm_advisory, "Run npm advisory allow-list gate"),
+    StepDefinition("esbuild-pin", step_esbuild_pin, "Verify resolved esbuild >= 0.25 (F131)"),
     StepDefinition("panel-source", step_panel_source, "Smoke the CEP panel source tree"),
+    StepDefinition(
+        "adobe-premierepro-versions",
+        step_adobe_premierepro_versions,
+        "Notify on @adobe/premierepro npm registry drift (informational, F251)",
+    ),
 ]
 
 

@@ -1,0 +1,105 @@
+name: Adobe premierepro typings tracker
+
+# F251 — weekly poll of the public npm registry for @adobe/premierepro.
+# We deliberately fail open: drift is a notification, not a blocker.
+# When this workflow detects a new beta build it opens (or updates) a
+# tracking issue so the team sees the API delta the same week Adobe
+# ships it. See docs/UXP_MIGRATION.md and
+# opencut/_generated/adobe_premierepro_versions.json for the policy.
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Mondays at 06:00 UTC. Adobe historically promotes betas mid-week,
+    # so a Monday run catches the previous week's deltas.
+    - cron: "0 6 * * 1"
+
+jobs:
+  premierepro-versions:
+    name: Poll @adobe/premierepro
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Probe registry (drift check)
+        id: probe
+        continue-on-error: true
+        run: |
+          python -m opencut.tools.adobe_premierepro_versions --check --json \
+            > premierepro-drift.json
+          echo "exit_code=$?" >> $GITHUB_OUTPUT
+        shell: bash
+
+      - name: Print drift summary
+        if: always()
+        run: |
+          python -m opencut.tools.adobe_premierepro_versions --check || true
+        shell: bash
+
+      - name: Upload drift report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: premierepro-drift
+          path: premierepro-drift.json
+          retention-days: 90
+
+      - name: Notify on drift
+        if: steps.probe.outputs.exit_code != '0'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const drift = JSON.parse(fs.readFileSync('premierepro-drift.json', 'utf8'));
+            if (!drift.drift || !drift.drift.changed) return;
+
+            const title = 'F251: @adobe/premierepro drift detected';
+            const body = [
+              'The weekly registry poll found drift between the committed ',
+              '`opencut/_generated/adobe_premierepro_versions.json` snapshot ',
+              'and the live npm registry.',
+              '',
+              '**Action:** review the new API surface, file F-numbers for any ',
+              'newly-shipped UXP APIs that close CEP-only gaps (e.g. ',
+              '`createCaptionTrack`, `startDrag`), then regenerate the ',
+              'snapshot with `python -m opencut.tools.adobe_premierepro_versions`.',
+              '',
+              '```json',
+              JSON.stringify(drift.drift, null, 2),
+              '```',
+              '',
+              'Live snapshot:',
+              '',
+              '```json',
+              JSON.stringify(drift.live, null, 2),
+              '```',
+            ].join('\n');
+
+            // Find an open issue with the same title to avoid spam.
+            const owner = context.repo.owner;
+            const repo  = context.repo.repo;
+            const open  = await github.rest.issues.listForRepo({
+              owner, repo, state: 'open', labels: 'f251',
+              per_page: 100,
+            });
+            const existing = open.data.find(i => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner, repo, issue_number: existing.number, body,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner, repo, title, body,
+                labels: ['f251', 'uxp', 'tracking'],
+              });
+            }

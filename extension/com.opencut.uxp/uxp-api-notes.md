@@ -68,6 +68,15 @@ access:
 | Min Premiere | 13.0 (CC 2019) | 25.6 |
 | Theme sync | Reads `__adobe_cep__` host data | CSS variables only |
 
+## macOS HTTP behaviour
+
+UXP on Premiere Pro 25.6.x has known first-fetch stalls and WebSocket
+retry-on-first-failure behaviour against `http://127.0.0.1:5679`. The
+panel already handles this in `main.js` (port autodiscovery,
+`fetchWithTimeout`, exponential health-check backoff, WS reconnect).
+See [`docs/UXP_MACOS_HTTP.md`](../../docs/UXP_MACOS_HTTP.md) for the
+full workaround set and the planned auto-HTTPS sidecar (F259).
+
 ## References
 
 - Adobe UXP Developer Docs: https://developer.adobe.com/premiere-pro/uxp/

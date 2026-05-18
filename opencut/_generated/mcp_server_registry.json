@@ -1,0 +1,212 @@
+{
+  "category": "video-editing",
+  "client_examples": {
+    "claude_code": {
+      "mcpServers": {
+        "opencut": {
+          "args": [],
+          "command": "opencut-mcp-server"
+        }
+      }
+    },
+    "cursor": {
+      "mcp.servers": {
+        "opencut": {
+          "args": [],
+          "command": "opencut-mcp-server"
+        }
+      }
+    }
+  },
+  "generated_at": "2026-05-18T01:28:19Z",
+  "homepage": "https://github.com/SysAdminDoc/OpenCut",
+  "install": {
+    "command": "pip install \"opencut[mcp]\"",
+    "executable": "opencut-mcp-server",
+    "language": "python",
+    "python_min": "3.9"
+  },
+  "license": "MIT",
+  "manifest_version": 1,
+  "name": "opencut-mcp-server",
+  "repository": "https://github.com/SysAdminDoc/OpenCut",
+  "run": {
+    "http": "opencut-mcp-server --http",
+    "list_tools": "opencut-mcp-server --list-tools",
+    "stdio": "opencut-mcp-server"
+  },
+  "summary": "OpenCut exposes its 1,300+ video-editing routes (silence/filler removal, captions, AI dubbing, scene detection, exports, review bundles, brand kit, etc.) over the Model Context Protocol so AI clients can drive Adobe Premiere Pro pipelines locally and without cloud APIs.",
+  "tags": [
+    "video",
+    "editor",
+    "premiere-pro",
+    "ffmpeg",
+    "whisper",
+    "captions",
+    "ai"
+  ],
+  "tool_count": 39,
+  "tools": [
+    {
+      "description": "Generate face-detected zoom keyframes for a push-in zoom effect on talking-head clips.",
+      "name": "opencut_auto_zoom"
+    },
+    {
+      "description": "Get, save, delete, or preview the local Brand Kit settings.",
+      "name": "opencut_brand_kit"
+    },
+    {
+      "description": "Write a lightweight C2PA provenance sidecar next to a rendered asset.",
+      "name": "opencut_c2pa_provenance"
+    },
+    {
+      "description": "Return OpenCut's FFmpeg, ffprobe, GPU, disk, and Python capability profile.",
+      "name": "opencut_capability_probe"
+    },
+    {
+      "description": "Run the caption QC gate over SRT text or an SRT file.",
+      "name": "opencut_caption_qc"
+    },
+    {
+      "description": "Generate YouTube chapter timestamps from a video transcript using LLM analysis.",
+      "name": "opencut_chapters"
+    },
+    {
+      "description": "Send a natural-language editing instruction to the OpenCut AI agent. The agent interprets the prompt and returns structured edit actions.",
+      "name": "opencut_chat_edit"
+    },
+    {
+      "description": "Match the color profile of a source video clip to a reference clip using histogram matching.",
+      "name": "opencut_color_match"
+    },
+    {
+      "description": "Reduce noise from audio/video using FFmpeg filters (afftdn, highpass, gate)",
+      "name": "opencut_denoise_audio"
+    },
+    {
+      "description": "Generate a depth map video using Depth Anything V2",
+      "name": "opencut_depth_map"
+    },
+    {
+      "description": "Automatically dub a video into a target language. Transcribes speech with Whisper, translates, synthesises dubbed voices (with optional voice cloning), and can apply lip-sync.",
+      "name": "opencut_dub_video"
+    },
+    {
+      "description": "Generate speech through the optional ElevenLabs cloud TTS integration.",
+      "name": "opencut_elevenlabs_tts"
+    },
+    {
+      "description": "Export/render video with specified codec and quality settings",
+      "name": "opencut_export_video"
+    },
+    {
+      "description": "Enhance/restore faces in video using GFPGAN or CodeFormer",
+      "name": "opencut_face_enhance"
+    },
+    {
+      "description": "Apply AI face reshaping operations such as slim face, enlarge eyes, or smooth jaw.",
+      "name": "opencut_face_reshape"
+    },
+    {
+      "description": "Search indexed media library by spoken content. Returns matching clips with timestamps.",
+      "name": "opencut_footage_search"
+    },
+    {
+      "description": "Generate music with AI (MusicGen instrumental or ACE-Step with vocals+lyrics)",
+      "name": "opencut_generate_music"
+    },
+    {
+      "description": "Extract highlight/viral clips using LLM analysis of transcript",
+      "name": "opencut_highlights"
+    },
+    {
+      "description": "Index media files for footage search by transcribing their spoken content.",
+      "name": "opencut_index_footage"
+    },
+    {
+      "description": "Check the status of a running OpenCut job",
+      "name": "opencut_job_status"
+    },
+    {
+      "description": "Animate a portrait image or video to match spoken audio using EchoMimic diffusion-based lip-sync.",
+      "name": "opencut_lipsync_echomimic"
+    },
+    {
+      "description": "Normalize audio loudness (LUFS) across multiple clips to a target level.",
+      "name": "opencut_loudness_match"
+    },
+    {
+      "description": "Parse CSV, Premiere CSV, or EDL markers into OpenCut's normalized marker format.",
+      "name": "opencut_marker_import"
+    },
+    {
+      "description": "Generate multicam cut decisions from speaker diarization \u2014 cuts to the camera angle assigned to whoever is speaking.",
+      "name": "opencut_multicam_cuts"
+    },
+    {
+      "description": "Detect and identify repeated/fumbled takes in a video or audio file using transcript similarity analysis.",
+      "name": "opencut_repeat_detect"
+    },
+    {
+      "description": "Build a portable review bundle zip with media, captions, markers, notes, and extra files.",
+      "name": "opencut_review_bundle"
+    },
+    {
+      "description": "Detect scene boundaries/cuts in a video file",
+      "name": "opencut_scene_detect"
+    },
+    {
+      "description": "Search media paths by semantic text query or index media for semantic search.",
+      "name": "opencut_semantic_search"
+    },
+    {
+      "description": "Separate audio into stems (vocals, drums, bass, etc.) using AI",
+      "name": "opencut_separate_audio"
+    },
+    {
+      "description": "One-click pipeline: transcribe + highlight + face-reframe + captions + export short-form clips",
+      "name": "opencut_shorts_pipeline"
+    },
+    {
+      "description": "Detect and remove silent segments from video/audio",
+      "name": "opencut_silence_remove"
+    },
+    {
+      "description": "Retouch skin and blemishes in video using bilateral or GFPGAN-backed processing.",
+      "name": "opencut_skin_retouch"
+    },
+    {
+      "description": "Upscale video through OpenCut's smart backend selector with Lanczos fallback.",
+      "name": "opencut_smart_upscale"
+    },
+    {
+      "description": "Match a clip's spectral profile to a reference audio or video file.",
+      "name": "opencut_spectral_match"
+    },
+    {
+      "description": "Detect and extract highlight moments from sports or action video using optical-flow motion analysis combined with audio energy scoring.",
+      "name": "opencut_sports_highlights"
+    },
+    {
+      "description": "Apply style transfer to video (preset styles or arbitrary reference image)",
+      "name": "opencut_style_transfer"
+    },
+    {
+      "description": "Transcribe video/audio to text with timestamps using Whisper AI",
+      "name": "opencut_transcribe"
+    },
+    {
+      "description": "Generate speech from text (edge-tts, Kokoro, or Chatterbox with voice cloning)",
+      "name": "opencut_tts"
+    },
+    {
+      "description": "AI upscale video using Real-ESRGAN (2x or 4x resolution)",
+      "name": "opencut_upscale"
+    }
+  ],
+  "transports": [
+    "stdio",
+    "http"
+  ],
+  "version": "1.32.0"
+}

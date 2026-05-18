@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 24)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 25)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (after Pass 23 wrap-up; Passes 1-23 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, Pass 22 closed F244 Whisper confidence + human-review flags, and Pass 23 wrapped up an interrupted F205 coverage reattempt without changing the coverage floor. This file documents deferred research/product work for a future Pass 24+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (after Pass 24; Passes 1-24 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Pass 4 ran full release-smoke successfully, Pass 5 closed F261/F262/F270, Pass 6 closed F264/F266, Pass 7 closed F199, Pass 8 closed F191/F197, Pass 9 closed F195, Pass 10 closed the repository-side F202 notarization tooling, Pass 11 closed F204 release SBOM upload, Pass 12 closed F207 installer FFmpeg manifest after an F205 coverage-measurement timeout, Pass 13 closed F208 OpenAPI contract validation, Pass 14 closed F209 MCP route consistency, Pass 15 closed F218 blueprint import-order stability, Pass 16 closed F219 SBOM completeness, Pass 17 closed F236 FCC caption display-settings tokens, Pass 18 closed F237 loudness standards metadata, Pass 19 closed F240 caption reading-speed profiles, Pass 20 closed F241 text-shaping CI/release gating, Pass 21 closed F243 UTF-8 no-BOM SRT policy, Pass 22 closed F244 Whisper confidence + human-review flags, Pass 23 wrapped up an interrupted F205 coverage reattempt without changing the coverage floor, and Pass 24 closed F259/F251/F147/F131 in a single governance + migration quick-win batch. This file documents deferred research/product work for a future Pass 25+, not a broken or incomplete research run.
 
 ---
 
@@ -15,12 +15,26 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
-### Pass 24 entry point
+### Pass 25 entry point
 
-1. **Push checkpoint commits** once GitHub auth is available on this machine.
-2. **Continue the remaining Now queue.** F205 remains open but should only resume where a full coverage command can finish; the Pass 23 partial 52.12% JSON is not a floor-setting measurement. F251 and F259 need fresh Adobe/UXP verification before implementation because beta typings and the macOS HTTP bug status can drift.
+1. **Push checkpoint commits** once GitHub auth is available on this machine. Pushing remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
+2. **Continue the remaining Now queue.** F205 remains open and needs a runner where the full coverage command can finish. F147, F251, and F259 are now closed; remaining Pass-1 Now items include F121 (Pillow 12.2 bump), F122 (flask-cors 6.x), F123 (pydub / audioop-lts), F126 (OpenTimelineIO-Plugins), F128 (FFmpeg filter regression suite), F133 (onnxruntime ≥1.25), F135 (whisperx 3.8.5), F137 (MCP SDK pin), F139 (caption translation endpoint), F140 (C2PA 2.3), F149 (Florence-2 AI Slate ID), F162 (SAM 2 → SAM 3.1), F163 (Depth Anything V2 → V3), F167 (OmniVoice), and F169 (Qwen3-TTS).
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 24 checkpoint
+
+| Item | Status |
+|---|---|
+| F259 | **DONE** — `docs/UXP_MACOS_HTTP.md` documents the four shipped workarounds (port autodiscovery, fetchWithTimeout, exponential backoff, WS retry) and the deferred auto-HTTPS sidecar plan (sequenced with F146/F252). `extension/com.opencut.uxp/uxp-api-notes.md` cross-links the new doc. `tests/test_uxp_macos_http.py` pins manifest port allowlist + doc invariants. |
+| F251 | **DONE** — `opencut/tools/adobe_premierepro_versions.py` fetches `@adobe/premierepro` from `registry.npmjs.org` via stdlib urllib, snapshots dist-tags + last 10 releases. `opencut/_generated/adobe_premierepro_versions.json` committed as the drift reference (current: `latest=26.2.0`, `beta=26.3.0-beta.67`). `.github/workflows/adobe-premierepro-versions.yml` runs Mondays at 06:00 UTC and opens/updates a labelled tracking issue on drift. Release smoke `adobe-premierepro-versions` step surfaces drift as a `warn`, not a `fail`. |
+| F147 | **DONE** locally — `opencut/_generated/mcp_server_registry.json` is generated from the live 39-tool `MCP_TOOLS` catalogue via `opencut.tools.dump_mcp_registry_manifest`. `docs/MCP_SERVER.md` documents transports, install snippets, and the upstream `modelcontextprotocol/servers` PR procedure. Release smoke `mcp-registry` step asserts no drift. The actual upstream PR remains as a credentialed external action. |
+| F251/F147 release-smoke wiring | `StepResult.status` now supports `warn` (info-only); the new `adobe-premierepro-versions` step uses it so registry drift is visible without blocking releases. |
+| F131 | **DONE** — `extension/com.opencut.panel/scripts/check-esbuild-pin.mjs` parses `npm ls esbuild --all --json`, asserts every resolved instance is `>=0.25.0`, exits non-zero on violation, exposes a `--json` mode. `npm run audit:esbuild` is the panel entry point. Release smoke `esbuild-pin` gracefully skips when Node or `node_modules` is absent. |
+| Focused validation | PASS — `41 passed` across `tests/test_uxp_macos_http.py` (9), `tests/test_adobe_premierepro_versions.py` (14), `tests/test_mcp_registry_manifest.py` (11), and `tests/test_esbuild_pin.py` (7). |
+| Release smoke (without pytest-fast, pip-audit, npm-advisory, panel-source) | PASS — all 13 chained gates green. |
+| Ruff | PASS — `python -m ruff check opencut/ --select E,F,I --ignore E501,E402` clean. |
+| Files to review | `docs/UXP_MACOS_HTTP.md`, `docs/MCP_SERVER.md`, `opencut/tools/adobe_premierepro_versions.py`, `opencut/tools/dump_mcp_registry_manifest.py`, `opencut/_generated/adobe_premierepro_versions.json`, `opencut/_generated/mcp_server_registry.json`, `.github/workflows/adobe-premierepro-versions.yml`, `extension/com.opencut.panel/scripts/check-esbuild-pin.mjs`, `extension/com.opencut.panel/package.json`, `extension/com.opencut.uxp/uxp-api-notes.md`, `scripts/release_smoke.py` (3 new steps + warn tier), `tests/test_uxp_macos_http.py`, `tests/test_adobe_premierepro_versions.py`, `tests/test_mcp_registry_manifest.py`, `tests/test_esbuild_pin.py`, `ROADMAP.md` (v4.27 section), `PROJECT_CONTEXT.md`, and this file. |
 
 ### Pass 23 checkpoint
 

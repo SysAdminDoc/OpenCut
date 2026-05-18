@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "lint": "eslint client/main.js",
     "audit:check": "node scripts/check-advisories.mjs",
+    "audit:esbuild": "node scripts/check-esbuild-pin.mjs",
     "build:verify": "node scripts/verify-build.mjs"
   },
   "devDependencies": {
