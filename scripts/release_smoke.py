@@ -16,11 +16,12 @@ Steps (in order):
 7. ``license-gate`` — model/dependency license allow-list check
 8. ``roadmap-lint`` — roadmap citation sanity check
 9. ``text-shaping`` — FFmpeg/libass HarfBuzz/FriBidi + renderer capability gate
-10. ``ruff`` — lint the python package
-11. ``pytest-fast`` — focused test ids covering release gates
-12. ``pip-audit`` — Python dependency advisories (skipped if not installed)
-13. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
-14. ``panel-source`` — CEP panel source tree smoke
+10. ``caption-unicode`` — RTL/CJK/bidi caption export-preservation gate
+11. ``ruff`` — lint the python package
+12. ``pytest-fast`` — focused test ids covering release gates
+13. ``pip-audit`` — Python dependency advisories (skipped if not installed)
+14. ``npm-advisory`` — CEP panel allow-list check with machine-readable JSON assertion
+15. ``panel-source`` — CEP panel source tree smoke
 
 Each step records ``status`` (``ok|fail|skipped``), an exit code, a duration
 in ms, and a short message. The script exits with code 1 if any non-skipped
@@ -480,6 +481,67 @@ def step_text_shaping(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_caption_unicode(_args: argparse.Namespace) -> StepResult:
+    """F223 — complex-script captions must survive every text export path."""
+    start = time.time()
+    result = _run(
+        [
+            sys.executable,
+            "-m",
+            "opencut.tools.caption_unicode_validation",
+            "--json",
+            "--check",
+        ],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    if result.returncode != 0:
+        return StepResult(
+            "caption-unicode",
+            "fail",
+            exit_code=result.returncode,
+            duration_ms=duration,
+            message="RTL/CJK/bidi caption validation failed",
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
+    try:
+        payload = json.loads(result.stdout or "{}")
+        summary = payload.get("summary", {})
+    except json.JSONDecodeError:
+        return StepResult(
+            "caption-unicode",
+            "fail",
+            exit_code=result.returncode,
+            duration_ms=duration,
+            message="caption Unicode gate returned invalid JSON",
+            stdout_tail=_tail(result.stdout),
+            stderr_tail=_tail(result.stderr),
+        )
+
+    case_count = int(summary.get("case_count", 0))
+    warnings = int(summary.get("warnings", 0))
+    failures = int(summary.get("failures", 0))
+    if failures:
+        status = "fail"
+        message = f"{failures} complex-script caption fixture failures"
+    else:
+        status = "ok"
+        message = (
+            f"{case_count} complex-script fixtures preserved "
+            f"({warnings} advisory warnings)"
+        )
+    return StepResult(
+        "caption-unicode",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=message,
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_ruff(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     if shutil.which("ruff") is None:
@@ -525,6 +587,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_sbom_completeness.py",
     "tests/test_ffmpeg_installer_manifest.py",
     "tests/test_text_shaping_gate.py",
+    "tests/test_caption_unicode_validation.py",
     "tests/test_srt_encoding.py",
     "tests/test_caption_language_confidence.py",
     "tests/test_captions_translate_srt.py",
@@ -750,6 +813,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),
     StepDefinition("roadmap-mirror", step_roadmap_mirror, "Verify docs/ROADMAP*.md stay F184 pointer stubs"),
     StepDefinition("text-shaping", step_text_shaping, "Check FFmpeg/libass and renderer text shaping support"),
+    StepDefinition("caption-unicode", step_caption_unicode, "Verify RTL/CJK/bidi caption text export preservation"),
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),
     StepDefinition("pip-audit", step_pip_audit, "Audit requirements.txt"),

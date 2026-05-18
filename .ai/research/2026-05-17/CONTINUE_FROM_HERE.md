@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 46)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 47)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-18 (after Pass 45; Passes 1-34 all ran on 2026-05-17)
-**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, Pass 33 closed F200 + F211, Pass 34 closed F217 (UXP BackendClient HTTP-shape contract), Pass 35 closed F121/F122/F127a/F130/F133/F135 (dependency security floor + Python 3.11 source-install floor), Pass 36 closed F180 (Wave N-T / F-number governance ledger), Pass 37 closed F213 (Inno install/uninstall smoke in CI), Pass 38 closed F215 (fuzz harness expansion + parser hardening), Pass 39 closed F216 (concurrent job-cancellation race coverage + process termination fix), Pass 40 closed F214 (ML / compose / TTS performance benchmark contract), Pass 41 closed F192 (legacy OpenAPI typed response schemas expanded to 100 routes), Pass 42 closed F198 (code-owned CEP↔UXP parity catalogue + generated JSON artifact), Pass 43 closed F194 (opt-in generated extended MCP route-tool catalogue), Pass 44 closed F201 (WPF installer build in Windows tag/manual CI), and Pass 45 closed F203 (Windows Authenticode signing workflow/tooling + renewal docs). This file documents deferred research/product work for a future Pass 46+, not a broken or incomplete research run.
+**Last update:** 2026-05-18 (after Pass 46; Passes 1-34 all ran on 2026-05-17)
+**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, Pass 33 closed F200 + F211, Pass 34 closed F217 (UXP BackendClient HTTP-shape contract), Pass 35 closed F121/F122/F127a/F130/F133/F135 (dependency security floor + Python 3.11 source-install floor), Pass 36 closed F180 (Wave N-T / F-number governance ledger), Pass 37 closed F213 (Inno install/uninstall smoke in CI), Pass 38 closed F215 (fuzz harness expansion + parser hardening), Pass 39 closed F216 (concurrent job-cancellation race coverage + process termination fix), Pass 40 closed F214 (ML / compose / TTS performance benchmark contract), Pass 41 closed F192 (legacy OpenAPI typed response schemas expanded to 100 routes), Pass 42 closed F198 (code-owned CEP↔UXP parity catalogue + generated JSON artifact), Pass 43 closed F194 (opt-in generated extended MCP route-tool catalogue), Pass 44 closed F201 (WPF installer build in Windows tag/manual CI), Pass 45 closed F203 (Windows Authenticode signing workflow/tooling + renewal docs), and Pass 46 closed F223 (RTL/CJK/bidi caption Unicode validation gate). This file documents deferred research/product work for a future Pass 47+, not a broken or incomplete research run.
 
 ---
 
@@ -17,10 +17,21 @@
 
 ### Pass 46 entry point
 
-1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F192, F194, F198, F200, F201, F203, F211, F213, F214, F215, F216, F217, F251, F259 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. The next small no-network Next-tier candidates are F223/F242/F238/F249/F250 depending on whether fresh standards or packaging research is required. F193 remains the larger schema-introspection follow-up to F192/F194. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
+1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F192, F194, F198, F200, F201, F203, F211, F213, F214, F215, F216, F217, F223, F251, F259 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. The next small no-network Next-tier candidates are F242/F238/F249/F250 depending on whether fresh standards or packaging research is required. F193 remains the larger schema-introspection follow-up to F192/F194. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
 2. **F198 is now enforced, not only documented.** `CEP_UXP_PARITY_MATRIX.md` maps all 18 `ocXxx` JSX functions and identifies only two truly CEP-only calls; `opencut/_generated/cep_uxp_parity.json` plus `tests/test_cep_uxp_parity_catalogue.py` keep that claim in sync with `host/index.jsx`.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.11/3.12/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 46 checkpoint
+
+| Item | Status |
+|---|---|
+| F223 | **DONE** — `opencut.core.caption_unicode_validation` validates complex-script caption preservation for Arabic RTL, Hebrew/Latin mixed bidi, Hindi Devanagari, Japanese no-space CJK, and Chinese no-space CJK. |
+| CLI gate | `python -m opencut.tools.caption_unicode_validation --json --check` emits a machine-readable report and returns non-zero only for export-preservation failures. |
+| Release smoke | `scripts/release_smoke.py` now includes the `caption-unicode` step and `tests/test_caption_unicode_validation.py` in `RELEASE_GATE_TESTS`. |
+| Known follow-up | No-space CJK fixtures warn, not fail, because F242 owns real line breaking beyond the F223 text-preservation gate. |
+| Validation | PASS — `python -m pytest tests/test_caption_unicode_validation.py tests/test_text_shaping_gate.py -q`; focused Ruff clean; CLI JSON/check OK. |
+| Files to review | `opencut/core/caption_unicode_validation.py`, `opencut/tools/caption_unicode_validation.py`, `tests/test_caption_unicode_validation.py`, `scripts/release_smoke.py`, ROADMAP.md v4.49, PROJECT_CONTEXT.md, CHANGELOG.md, and this file. |
 
 ### Pass 45 checkpoint
 

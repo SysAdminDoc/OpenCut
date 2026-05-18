@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.48
+**Version**: 4.49
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -104,8 +104,23 @@
 > **v4.47 status (2026-05-18, forty-fourth pass)**: closed **F201** by building the recommended WPF installer on Windows tag/manual CI. `.github/workflows/build.yml` now runs `scripts/build_wpf_installer_ci.ps1` after PyInstaller and before the Inno fallback, copies FFmpeg/ffprobe from PATH into the payload folder, invokes `installer/InstallerBuilder.ps1`, and archives the WPF output separately as `OpenCut-WPF-Setup-X.Y.Z.exe` so the later Inno build cannot overwrite it. `tests/test_wpf_installer_ci.py` pins the workflow ordering, artifact path, payload prerequisites, and policy-doc status.
 >
 > **v4.48 status (2026-05-18, forty-fifth pass)**: closed the repository-tooling portion of **F203** by adding Windows Authenticode signing to the release workflow. `scripts/sign_windows_artifacts.ps1` signs WPF and Inno installer artifacts with a secret-backed `.pfx`, timestamps with RFC3161, verifies with `signtool verify /pa /v`, and warns inside a 90-day renewal window when `WINDOWS_CODESIGN_CERT_EXPIRES_AT` is configured. `.github/workflows/build.yml` now runs signing after both Windows installers are built and before artifacts are archived. `docs/WINDOWS_CODESIGNING.md` documents the required secrets and renewal policy; live signed-release validation still requires configured repository secrets.
+>
+> **v4.49 status (2026-05-18, forty-sixth pass)**: closed **F223** with a deterministic caption Unicode validation gate. `opencut/core/caption_unicode_validation.py` now validates Arabic RTL, Hebrew/Latin mixed bidi, Hindi Devanagari, Japanese no-space CJK, and Chinese no-space CJK fixtures across SRT, ASS, and burn-in ASS export paths. `opencut.tools.caption_unicode_validation --json --check` is wired into release smoke as `caption-unicode`, and `tests/test_caption_unicode_validation.py` pins script classification, UTF-8/no-BOM preservation, and the explicit F242 follow-up for CJK line breaking.
 
 ---
+
+## 2026-05-18 v4.49 Caption Unicode Validation (F223)
+
+One Next-tier caption/accessibility validation item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F223 validation module | DONE — `opencut/core/caption_unicode_validation.py` owns five complex-script fixtures covering Arabic RTL, Hebrew/Latin mixed bidi, Hindi Devanagari, Japanese no-space CJK, and Chinese no-space CJK. |
+| Export coverage | The gate proves fixture text survives `export_srt`, `export_ass`, and the temporary ASS writer used by burn-in before FFmpeg/libass rendering. |
+| Encoding policy | SRT round-trips are checked for UTF-8 without BOM, preserving the F243 default. |
+| Release gate | `opencut.tools.caption_unicode_validation --json --check` is wired into `scripts/release_smoke.py` as `caption-unicode`; `tests/test_caption_unicode_validation.py` is part of `RELEASE_GATE_TESTS`. |
+| Known follow-up | No-space Japanese/Chinese fixtures warn, not fail, because F242 owns real CJK line breaking beyond text-preservation validation. |
+| Validation | `python -m pytest tests/test_caption_unicode_validation.py tests/test_text_shaping_gate.py -q` -> `10 passed`; focused Ruff -> clean; CLI JSON/check -> OK. |
 
 ## 2026-05-18 v4.48 Windows Authenticode Signing (F203)
 
@@ -927,7 +942,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
 - Flagship review-bundle extensions: **F225-F229** OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
-- Caption / accessibility: F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, F242 ICU4X CJK line breaking
+- Caption / accessibility: [x] F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, F242 ICU4X CJK line breaking
 - Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
 - Tests: [x] F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + [x] F217 UXP contract test
 - Local LAN review: F231 mDNS+Caddy+HMAC portal + F232 Headscale + F233 Atom feed + webhook + F234 croc/rclone delivery

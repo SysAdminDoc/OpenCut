@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Caption Unicode Validation
+
+- Added `opencut/core/caption_unicode_validation.py` and `opencut.tools.caption_unicode_validation` to validate RTL, mixed bidi, Indic, Japanese, and Chinese caption fixtures across SRT, ASS, and burn-in ASS export paths.
+- Wired the F223 caption Unicode gate into release smoke via `tests/test_caption_unicode_validation.py`; no-space CJK fixtures now surface F242 as an explicit line-breaking follow-up without failing text preservation.
+
 ### Added — Windows Code Signing
 
 - Added `scripts/sign_windows_artifacts.ps1` and Windows release workflow wiring to Authenticode-sign WPF and Inno installer artifacts when `WINDOWS_CODESIGN_*` secrets are configured.

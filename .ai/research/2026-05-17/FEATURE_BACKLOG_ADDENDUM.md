@@ -67,7 +67,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F220 | AI Voice Conversion / RVC backend | features.md #1.5 / #78.5; not in F-ledger; RVC popularity explosion | FEATURES_RECONCILIATION §3 | M | Later |
 | F221 | AI Auto-Color Grading (LLM-driven mood→LUT) | features.md #1.6; extends `color_match.py` + `lut_library.py` | FEATURES_RECONCILIATION §3 | M | Later |
 | F222 | AI Pacing & Rhythm Analysis (genre templates) | features.md #1.12; cuts-per-minute, shot-duration distribution | FEATURES_RECONCILIATION §3 | M | Later |
-| F223 | RTL / CJK / Bidi caption rendering validation suite | features.md #20.6; cf. niche AI §3 — HarfBuzz must be linked; libass issue #295 / #694 | FEATURES_RECONCILIATION §3 + niche AI §3 | M | Next |
+| [x] F223 | RTL / CJK / Bidi caption rendering validation suite | Closed in Pass 46 — `opencut.tools.caption_unicode_validation --json --check` validates RTL, mixed bidi, Indic, and no-space CJK fixtures across SRT, ASS, and burn-in ASS export paths; F242 remains the line-breaking follow-up | FEATURES_RECONCILIATION §3 + niche AI §3 | M | Next |
 | F224 | Deepfake / fake-video detector | features.md #27.3; adjacent to J2.6 SafeVision | FEATURES_RECONCILIATION §3 | L | Later |
 
 ## E. Collaboration / review-bundle extensions (Frame.io subagent)
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
