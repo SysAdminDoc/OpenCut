@@ -534,6 +534,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_otio_aaf_adapter_pin.py",
     "tests/test_audioop_shim.py",
     "tests/test_ffmpeg_filter_regression.py",
+    "tests/test_performance_benchmark_registry.py",
     "tests/test_roadmap_mirror.py",
     "tests/test_eval_datasets.py",
     "tests/test_download_eval_dataset.py",

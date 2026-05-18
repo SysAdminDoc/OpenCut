@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Performance Benchmark Contract
+
+- Added `opencut/core/performance_benchmarks.py` with F214 throughput specs for Whisper-family ASR, AI upscalers, declarative compose, and TTS backends.
+- Added `tests/test_performance_benchmark_registry.py` and wired it into release smoke so CI pins the benchmark inventory, backend matrix, opt-in gate, and wall-clock normalization primitive.
+
 ### Fixed — Job Cancellation
 
 - `_cancel_job()` now terminates a registered child process immediately and closes parent pipe handles so blocked FFmpeg progress readers unblock during cancellation.
