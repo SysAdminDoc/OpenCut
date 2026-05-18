@@ -363,3 +363,43 @@ def load_chapter_defaults() -> dict:
 def save_chapter_defaults(defaults: dict) -> None:
     """Save chapter generation defaults."""
     write_user_file("chapter_defaults.json", defaults)
+
+
+# ---------------------------------------------------------------------------
+# Optional Telemetry Settings
+# ---------------------------------------------------------------------------
+
+_TELEMETRY_DEFAULTS = {
+    "provider": "aptabase",
+    "enabled": False,
+    "app_key": "",
+    "base_url": "",
+    "include_diagnostics": False,
+}
+
+
+def load_telemetry_settings() -> dict:
+    """Load opt-in telemetry settings.
+
+    Telemetry is disabled by default.  The app key is intentionally stored in
+    the same local user-data area as other user-provided provider keys; route
+    responses must mask it before returning settings to clients.
+    """
+    saved = read_user_file("telemetry_settings.json", default={})
+    result = dict(_TELEMETRY_DEFAULTS)
+    if isinstance(saved, dict):
+        result.update({k: saved.get(k, v) for k, v in _TELEMETRY_DEFAULTS.items()})
+    return result
+
+
+def save_telemetry_settings(settings: dict) -> None:
+    """Save opt-in telemetry settings."""
+    current = load_telemetry_settings()
+    if isinstance(settings, dict):
+        current.update({k: settings.get(k, current[k]) for k in _TELEMETRY_DEFAULTS})
+    current["provider"] = "aptabase"
+    current["enabled"] = bool(current.get("enabled"))
+    current["include_diagnostics"] = bool(current.get("include_diagnostics"))
+    current["app_key"] = str(current.get("app_key") or "").strip()[:200]
+    current["base_url"] = str(current.get("base_url") or "").strip().rstrip("/")[:500]
+    write_user_file("telemetry_settings.json", current)
