@@ -88,6 +88,16 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R66-L04 | `C:\Users\--\repos\OpenCut\extension\com.opencut.uxp\index.html` and `main.js` — Settings-tab dashboard surface | 2026-05-18 |
 | R66-L05 | `C:\Users\--\repos\OpenCut\tests\test_uxp_migration_dashboard.py` — static and CLI F260 guardrails | 2026-05-18 |
 
+### Pass 67 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R67-L01 | `C:\Users\--\repos\OpenCut\opencut\core\uxp_udt_harness.py` — F267 UDT harness builder derived from the F198 parity catalogue | 2026-05-18 |
+| R67-L02 | `C:\Users\--\repos\OpenCut\opencut\tools\dump_uxp_udt_harness.py` — generator and sync-check CLI | 2026-05-18 |
+| R67-L03 | `C:\Users\--\repos\OpenCut\opencut\_generated\uxp_udt_harness.json` and `C:\Users\--\repos\OpenCut\extension\com.opencut.uxp\uxp-udt-harness.json` — generated UDT harness artifacts | 2026-05-18 |
+| R67-L04 | `C:\Users\--\repos\OpenCut\extension\com.opencut.uxp\udt-smoke.js` and `index.html` — bundled UDT runner exposed as `window.OpenCutUXPUdtHarness` | 2026-05-18 |
+| R67-L05 | `C:\Users\--\repos\OpenCut\tests\test_uxp_udt_harness.py` — static and CLI F267 guardrails | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP

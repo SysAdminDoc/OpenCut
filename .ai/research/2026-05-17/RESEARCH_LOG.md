@@ -39,6 +39,14 @@ Validation evidence for the pass: focused F260 tests (`7 passed`), focused UXP/r
 
 ---
 
+## Pass 67 implementation note (2026-05-18)
+
+F267 was closed from the local F198 parity catalogue and the already shipped F252.2 UXP dispatcher surface. The new `build_udt_harness_manifest()` emits one UDT scenario per direct-UXP host action, with payloads, fixture needs, mutation/file-write safety flags, expected result keys, and acceptable environment blockers. The generated JSON is committed both under `opencut/_generated/` and beside the UXP panel.
+
+The panel-side `udt-smoke.js` exposes `window.OpenCutUXPUdtHarness`, defaulting to safe-by-default scenarios and requiring `includeMutating: true` for destructive/file-writing runs in a disposable Premiere project. Validation evidence for the pass: focused F267 tests (`6 passed`), focused UXP/release-smoke slice (`61 passed`), touched Python compile, focused Ruff, harness sync check, UXP JS syntax check, and release-smoke `pytest-fast` (`666 passed`).
+
+---
+
 ## 1. Phases executed
 
 | Phase | What | Output |
