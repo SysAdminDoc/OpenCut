@@ -1,7 +1,7 @@
 # Development Guide
 
 ## Prerequisites
-- Python 3.9+
+- Python 3.11+
 - FFmpeg (must be on PATH)
 - Adobe Premiere Pro (for CEP panel testing)
 
@@ -124,10 +124,10 @@ pip install anthropic>=0.20.0      # for Anthropic provider
 # Ollama: install from https://ollama.ai (no pip needed)
 
 # Color matching (OpenCV required)
-pip install opencv-python-headless>=4.8.0
+pip install opencv-python-headless>=4.13.0
 
 # Auto-zoom face detection (OpenCV required)
-pip install opencv-python-headless>=4.8.0
+pip install opencv-python-headless>=4.13.0
 
 # Footage search (stdlib only — no pip required)
 
