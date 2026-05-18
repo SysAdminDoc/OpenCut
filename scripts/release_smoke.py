@@ -235,6 +235,57 @@ def step_esbuild_pin(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_roadmap_mirror(_args: argparse.Namespace) -> StepResult:
+    """F184 — `docs/ROADMAP*.md` must stay short pointer stubs.
+
+    The canonical roadmap is at the repo root. The `docs/` copies used
+    to be parallel files that drifted (different content, different
+    F-number coverage, stale March-2026 timestamps). F184 collapsed
+    them to pointer stubs; this step asserts they never grow back.
+
+    Thresholds: pointer stubs are < 60 lines and must mention the
+    canonical ROADMAP path. A grown-back parallel ledger trips here.
+    """
+    start = time.time()
+    docs_dir = REPO_ROOT / "docs"
+    stubs = [
+        docs_dir / "ROADMAP.md",
+        docs_dir / "ROADMAP-COMPLETED.md",
+    ]
+    violations: List[str] = []
+    for stub in stubs:
+        if not stub.is_file():
+            # Missing stub is fine — the docs/ copy is optional.
+            continue
+        text = stub.read_text(encoding="utf-8", errors="replace")
+        line_count = text.count("\n") + 1
+        if line_count > 60:
+            violations.append(
+                f"{stub.relative_to(REPO_ROOT)} grew to {line_count} lines "
+                f"(F184 limit: 60)"
+            )
+        if "ROADMAP.md" not in text or "Moved" not in text:
+            violations.append(
+                f"{stub.relative_to(REPO_ROOT)} is missing the F184 pointer "
+                f"language (requires both 'Moved' and 'ROADMAP.md')"
+            )
+    duration = int((time.time() - start) * 1000)
+    if violations:
+        return StepResult(
+            "roadmap-mirror",
+            "fail",
+            duration_ms=duration,
+            message="docs/ROADMAP*.md drifted from F184 pointer-stub shape",
+            stderr_tail="\n".join(violations)[-1000:],
+        )
+    return StepResult(
+        "roadmap-mirror",
+        "ok",
+        duration_ms=duration,
+        message="docs/ROADMAP*.md stay short F184 pointer stubs",
+    )
+
+
 def step_mcp_registry(_args: argparse.Namespace) -> StepResult:
     """F147 — committed MCP registry manifest must match live tool catalogue."""
     start = time.time()
@@ -483,6 +534,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_otio_aaf_adapter_pin.py",
     "tests/test_audioop_shim.py",
     "tests/test_ffmpeg_filter_regression.py",
+    "tests/test_roadmap_mirror.py",
     "tests/test_esbuild_pin.py",
     "tests/test_caption_qc.py",
     "tests/test_caption_reading_profiles.py",
@@ -683,6 +735,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("model-cards", step_model_cards, "Check generated model cards in sync"),
     StepDefinition("license-gate", step_license_gate, "Run the license allowlist gate over model cards"),
     StepDefinition("roadmap-lint", step_roadmap_lint, "Lint ROADMAP source appendix"),
+    StepDefinition("roadmap-mirror", step_roadmap_mirror, "Verify docs/ROADMAP*.md stay F184 pointer stubs"),
     StepDefinition("text-shaping", step_text_shaping, "Check FFmpeg/libass and renderer text shaping support"),
     StepDefinition("ruff", step_ruff, "Lint the Python package"),
     StepDefinition("pytest-fast", step_pytest_fast, "Run release-gate pytest ids"),

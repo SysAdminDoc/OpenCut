@@ -2683,6 +2683,24 @@ def system_ai_eval_list():
         return safe_error(exc, "system_ai_eval_list")
 
 
+@system_bp.route("/system/ai-eval/<feature_id>/compare-backends", methods=["GET"])
+def system_ai_eval_compare_backends(feature_id: str):
+    """Cross-backend comparison summary for ``feature_id`` (F178).
+
+    Groups persisted evaluation runs by backend (``cpu`` / ``cuda`` /
+    ``mps`` / ``rocm`` / ``directml`` / ``unknown``) and emits relative
+    quality + latency + VRAM stats. The route never picks a winner —
+    it returns the data so the panel can render the comparison and
+    let the user choose between "fastest" and "highest quality".
+    """
+    try:
+        from opencut.core.ai_eval_harness import compare_backends
+
+        return jsonify(compare_backends(feature_id))
+    except Exception as exc:
+        return safe_error(exc, "system_ai_eval_compare_backends")
+
+
 @system_bp.route("/system/crash-packet", methods=["POST"])
 @require_csrf
 def system_crash_packet():

@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.31
+**Version**: 4.32
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -70,6 +70,21 @@
 > **v4.30 status (2026-05-17, twenty-seventh pass)**: closed two more Now-tier items: **F140** (C2PA 2.3 alignment — sidecar manifests now record `c2pa_spec_version="2.3"`, the action vocabulary tuple covers the C2PA 2.3 documented set, unknown actions tolerate-but-warn, optional `cloud_trust_list` and `live`/`software_agent` fields ship, default `CLAIM_GENERATOR_DEFAULT` advertises the spec version) and **F123** (audioop / pydub Python 3.13 compat — `opencut.core.audioop_shim.install_audioop_shim()` returns a structured status and aliases `audioop_lts` into `sys.modules["audioop"]` when needed; pydub dropped from `[standard]`/`[audio]`/`[all]` extras because the OpenCut tree has zero pydub imports). 17 new/extended tests across `tests/test_c2pa_sidecar.py` (+8) and `tests/test_audioop_shim.py` (9). Release smoke green (15 chained gates, `52 gate tests passed`).
 >
 > **v4.31 status (2026-05-17, twenty-eighth pass)**: closed **F128** (FFmpeg filter-graph regression suite). `tests/test_ffmpeg_filter_regression.py` (41 tests) covers a curated `REQUIRED_FILTERS` tuple of 24 filter names OpenCut emits and 13 representative filter graphs (9 video, 4 audio). Each filter must exist in `ffmpeg -filters` output; each graph is piped through a synthetic `lavfi color=`/`sine=` source with `-f null -` so syntax regressions surface without needing real media. The test auto-discovers the bundled FFmpeg via `OPENCUT_FFMPEG` / PATH / bundled `ffmpeg/` dir (same precedence as `opencut.server._setup_ffmpeg_path`). When F129 lands and the bundled FFmpeg bumps to 8.1, this is the first gate to flip. Release smoke green (15 chained gates, `53 gate tests passed`).
+>
+> **v4.32 status (2026-05-17, twenty-ninth pass)**: closed **F184** (collapsed `docs/ROADMAP.md` and `docs/ROADMAP-COMPLETED.md` into ~25-line pointer stubs that redirect to the canonical files; release smoke gains a `roadmap-mirror` step that fails closed when either stub grows past 60 lines or loses the "Moved"/canonical-path language; `tests/test_roadmap_mirror.py` pins the contract) and **F178** (AI eval harness v2 — `EvalResult` carries `vram_peak_mb` / `reference_score` / `backend` / `backend_choice_reason`; `run_evaluation` auto-resets the torch CUDA peak counter, picks up runner-supplied VRAM if provided, and falls back to the gpu-module device; new `compare_backends()` aggregator groups persisted runs by backend and emits latency p50/p95, quality mean vs reference ratio (capped at 1.5), peak/mean VRAM, and "best for latency / best for quality" hints; new `GET /system/ai-eval/<feature_id>/compare-backends` route). Route manifest bumped to 1,363 routes / 101 blueprints. 13 new tests: 8 extending `tests/test_ai_eval_harness.py` for the F178 fields + the comparison aggregator, 5 in `tests/test_roadmap_mirror.py`. Release smoke green (16 chained gates including the new `roadmap-mirror` step, `54 gate tests passed`).
+
+---
+
+## 2026-05-17 v4.32 docs/ROADMAP Mirror Resolution + Eval Harness v2 (F184, F178)
+
+Two more items closed in one batch.
+
+| Surface | Status |
+|---|---|
+| F184 mirror resolution | DONE — `docs/ROADMAP.md` and `docs/ROADMAP-COMPLETED.md` collapsed into short pointer stubs that redirect to the canonical files at the repo root. Both stubs reference the canonical path, carry a "Moved" banner, and refuse to re-grow phase-table headings. `scripts/release_smoke.py` gains a `roadmap-mirror` step (cap: 60 lines per stub) so a future commit that re-populates either file flips the gate. `tests/test_roadmap_mirror.py` (5 tests) pins the line cap, the pointer language, the no-phase-headings rule, and the release-smoke wiring. |
+| F178 eval harness v2 | DONE — `opencut/core/ai_eval_harness.py::EvalResult` gains four fields: `vram_peak_mb`, `reference_score`, `backend`, `backend_choice_reason`. `run_evaluation()` resets the torch CUDA peak-memory counter on entry, picks up runner-supplied VRAM if provided (else auto-probes via `torch.cuda.max_memory_allocated`), and falls back to the `gpu` module's device name when the runner doesn't report a backend. New `compare_backends()` aggregator groups persisted runs by backend (`cpu` / `cuda` / `mps` / `rocm` / `directml` / `unknown`) and emits latency p50/p95, quality mean, normalised `quality_vs_reference` ratio (capped at 1.5), peak/mean VRAM, and "best for latency / best for quality" hints — but deliberately never picks a single winner because the user decides whether latency or quality wins. New `GET /system/ai-eval/<feature_id>/compare-backends` route surfaces the comparison. 8 new tests extend `tests/test_ai_eval_harness.py`. |
+| Manifest regen | 1,363 routes / 101 blueprints (was 1,362; +1 from `compare-backends`). |
+| Validation | `python -m pytest tests/test_ai_eval_harness.py tests/test_roadmap_mirror.py -q` → `20 passed`. `python scripts/release_smoke.py --skip pip-audit --skip npm-advisory` → all 16 chained gates `PASS`, `54 gate tests passed`. Ruff `opencut/` scope clean. |
 
 ---
 
