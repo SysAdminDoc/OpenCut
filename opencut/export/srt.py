@@ -7,6 +7,7 @@ legacy Windows players that require a UTF-8 signature.
 
 from typing import List, Optional
 
+from ..core.caption_line_breaks import split_caption_text_chunks, wrap_caption_text
 from ..core.captions import CaptionSegment, TranscriptionResult, caption_segment_to_dict
 
 UTF8_NO_BOM = "utf-8"
@@ -388,48 +389,26 @@ def _split_segments(
                     review_reasons=list(getattr(seg, "review_reasons", []) or []),
                 ))
         else:
-            # No word timestamps — split by character count with proportional timing
-            words = text.split()
+            # No word timestamps — split by Unicode-aware caption breakpoints
+            # with proportional timing. This handles no-space CJK text instead
+            # of treating the whole cue as one unbreakable word.
             total_chars = len(text)
             if total_chars == 0:
                 result.append(seg)
                 continue
             chunk_size = max_line_length * max_lines
-
-            current_chunk = ""
             chunk_start_ratio = 0.0
-
-            for word in words:
-                test = (current_chunk + " " + word).strip()
-                if len(test) > chunk_size and current_chunk:
-                    # Calculate proportional timing
-                    end_ratio = len(current_chunk) / total_chars
-                    t_start = seg.start + (seg.duration * chunk_start_ratio)
-                    t_end = seg.start + (seg.duration * end_ratio)
-
-                    result.append(CaptionSegment(
-                        text=current_chunk.strip(),
-                        start=t_start,
-                        end=t_end,
-                        speaker=getattr(seg, "speaker", None),
-                        language=getattr(seg, "language", None),
-                        language_confidence=getattr(seg, "language_confidence", 1.0),
-                        confidence=getattr(seg, "confidence", 1.0),
-                        human_review_recommended=getattr(seg, "human_review_recommended", False),
-                        review_reasons=list(getattr(seg, "review_reasons", []) or []),
-                    ))
-
-                    chunk_start_ratio = end_ratio
-                    current_chunk = word
-                else:
-                    current_chunk = test
-
-            if current_chunk:
+            consumed_chars = 0
+            chunks = split_caption_text_chunks(text, chunk_size)
+            for index, chunk in enumerate(chunks):
+                consumed_chars += len(chunk)
+                end_ratio = min(1.0, consumed_chars / total_chars)
                 t_start = seg.start + (seg.duration * chunk_start_ratio)
+                t_end = seg.end if index == len(chunks) - 1 else seg.start + (seg.duration * end_ratio)
                 result.append(CaptionSegment(
-                    text=current_chunk.strip(),
+                    text=chunk.strip(),
                     start=t_start,
-                    end=seg.end,
+                    end=t_end,
                     speaker=getattr(seg, "speaker", None),
                     language=getattr(seg, "language", None),
                     language_confidence=getattr(seg, "language_confidence", 1.0),
@@ -437,6 +416,7 @@ def _split_segments(
                     human_review_recommended=getattr(seg, "human_review_recommended", False),
                     review_reasons=list(getattr(seg, "review_reasons", []) or []),
                 ))
+                chunk_start_ratio = end_ratio
 
     return result
 
@@ -451,36 +431,4 @@ def _wrap_text(text: str, max_line_length: int, max_lines: int) -> str:
     defensive footprint for unusual inputs (e.g. a single unbreakable
     token longer than the line limit).
     """
-    if len(text) <= max_line_length:
-        return text
-
-    words = text.split()
-    lines = []
-    current_line = ""
-    truncated = False
-
-    for word in words:
-        test = (current_line + " " + word).strip()
-        if len(test) > max_line_length and current_line:
-            lines.append(current_line)
-            current_line = word
-            if len(lines) >= max_lines:
-                # There's still text we haven't emitted — flag it.
-                truncated = True
-                current_line = ""
-                break
-        else:
-            current_line = test
-
-    if current_line and len(lines) < max_lines:
-        lines.append(current_line)
-
-    if truncated and lines:
-        last = lines[-1]
-        if not last.endswith("…"):
-            # Trim room for the ellipsis if appending would overflow.
-            if len(last) + 1 > max_line_length:
-                last = last[: max_line_length - 1].rstrip()
-            lines[-1] = last + "…"
-
-    return "\n".join(lines)
+    return wrap_caption_text(text, max_line_length, max_lines)
