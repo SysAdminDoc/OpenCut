@@ -28,6 +28,14 @@ Added `tests/test_uxp_aaf_export_integration.py` and registered it in release-sm
 
 ---
 
+## Pass 66 addendum (2026-05-18)
+
+Pass 66 closed **F260** by adding a generated UXP migration risk dashboard. `build_dashboard_manifest()` derives summary counts, risk counts, hybrid candidates, priority rows, and per-host-action rows from the F198 parity catalogue. `dump_uxp_migration_dashboard` writes both the repository generated artifact and bundled panel JSON.
+
+The UXP Settings tab now loads `uxp-migration-dashboard.json`, summarizes direct UXP coverage, CEP fallbacks, and high-risk actions, and renders per-action status and replacement plans. Added `tests/test_uxp_migration_dashboard.py` and release-smoke registration. Validation passed: focused F260 tests (`7 passed`), focused UXP/release-smoke slice (`55 passed`), `py_compile`, focused Ruff, dashboard sync check, `node --check`, and release-smoke `pytest-fast` (`660 passed`).
+
+---
+
 ## 1. Files created
 
 ### Repo root (1 file)

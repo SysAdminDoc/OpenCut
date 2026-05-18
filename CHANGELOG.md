@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — UXP Migration Risk Dashboard
+
+- Added F260 generated UXP migration risk dashboard artifacts from the F198 CEP/UXP parity catalogue, including a bundled panel JSON snapshot.
+- Added a Settings-tab migration risk panel that summarizes direct UXP coverage, CEP fallbacks, high-risk host actions, and per-action replacement plans.
+
 ### Added — UXP AAF Export Helper
 
 - Added F258 UXP `ProjectConverter.exportAAF()` wiring for active-sequence AAF export with optional `AAFExportOptions`.

@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.68
+**Version**: 4.69
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,371 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -144,8 +144,24 @@
 > **v4.67 status (2026-05-18, sixty-fourth pass)**: closed **F257** by adding UXP Object Mask state helpers. `PProBridge.getObjectMaskState()` wraps `ObjectMaskUtils.hasObjectMask(projectOrSequence)`, supports active-sequence and project scopes, returns explicit unavailable/no-target responses, and exposes the helper through `window.OpenCutUXPHost`. `tests/test_uxp_object_mask_api_integration.py` pins the beta API assumptions and release smoke includes it.
 >
 > **v4.68 status (2026-05-18, sixty-fifth pass)**: closed **F258** by adding a UXP AAF export helper. `PProBridge.exportAafSequence()` exports the active sequence through `ProjectConverter.exportAAF()`, accepts `outputPath` / `path` / `filePath`, builds optional `AAFExportOptions` for mixdown, audio, trim, handle, and preset settings, and exposes the helper through `window.OpenCutUXPHost`. `tests/test_uxp_aaf_export_integration.py` pins the beta API assumptions and release smoke includes it.
+>
+> **v4.69 status (2026-05-18, sixty-sixth pass)**: closed **F260** by generating a UXP migration risk dashboard from the F198 CEP/UXP parity catalogue. `opencut.core.cep_uxp_parity.build_dashboard_manifest()` now derives summary counts, risk counts, hybrid candidates, priority rows, and per-host-action rows; `opencut.tools.dump_uxp_migration_dashboard` writes both the repository artifact and the bundled UXP panel JSON; the Settings tab loads `uxp-migration-dashboard.json` and renders direct UXP, CEP fallback, high-risk, and per-action replacement-plan status.
 
 ---
+
+## 2026-05-18 v4.69 UXP Migration Risk Dashboard (F260)
+
+One UXP migration dashboard item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Generated source | `build_dashboard_manifest()` derives the dashboard from the F198 CEP/UXP parity catalogue, preserving host-action order and source catalogue metadata. |
+| Artifacts | `python -m opencut.tools.dump_uxp_migration_dashboard` writes `opencut/_generated/uxp_migration_dashboard.json` and the bundled `extension/com.opencut.uxp/uxp-migration-dashboard.json`. |
+| Dashboard content | The artifact reports direct UXP, partial UXP, different-mechanism, CEP-only, hybrid-candidate, high/medium/low-risk, priority, and per-host-action rows. |
+| Settings UI | The UXP Settings tab now loads the bundled JSON, summarizes direct UXP coverage / CEP fallbacks / high-risk actions, and renders per-action status and replacement plans. |
+| Tests/docs | `tests/test_uxp_migration_dashboard.py` pins the generator, CLI sync check, bundled JSON, Settings UI, and release-smoke registration. |
+
+Validation after the batch: `python -m pytest tests/test_uxp_migration_dashboard.py -q` passed (`7 passed`), `python -m pytest tests/test_uxp_migration_dashboard.py tests/test_uxp_aaf_export_integration.py tests/test_uxp_object_mask_api_integration.py tests/test_uxp_transcript_api_integration.py tests/test_uxp_encoder_manager_integration.py tests/test_uxp_create_subsequence_integration.py tests/test_uxp_host_action_dispatch.py tests/test_uxp_webview_scaffold.py tests/test_release_smoke.py -q` passed (`55 passed`), touched Python files compile, focused Ruff passed, `node --check extension\com.opencut.uxp\main.js` passed, `python -m opencut.tools.dump_uxp_migration_dashboard --check` passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`660 passed`).
 
 ## 2026-05-18 v4.68 UXP AAF Export Helper (F258)
 
