@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.34
+**Version**: 4.35
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -76,6 +76,24 @@
 > **v4.33 status (2026-05-17, thirtieth pass)**: closed **F177** (model_cards.py 2026-Q2 sweep). Existing model-card coverage was already complete (47 cards, every `check_*_available` covered or on `NON_AI_CHECKS`), so F177 closed by adding **6 forward-looking sweep gates** to `tests/test_model_cards.py`: per-category coverage floor (every documented category must keep at least one card), license-prefix allowlist (catches typos and new license families before they merge), privacy-prefix allowlist (`local-only` / `local + optional cloud` / `cloud`), hardware-prefix allowlist (`cpu` / `gpu` / `cpu/gpu` / `cloud`), 40-card baseline floor (catches accidental mass deletion), and feature_id uniqueness gate. The allowlist prefixes are deliberately permissive (allow free-text suffix for nuance) but block new uncategorised license families from sneaking in via a docstring change. All 13 model_cards tests pass; release smoke green (16 chained gates, lint clean).
 >
 > **v4.34 status (2026-05-17, thirty-first pass)**: closed **F176** (public eval dataset bundle catalogue). New `opencut/core/eval_datasets.py` registers 13 public datasets across 6 modalities (video / speech / music / audio / captions / provenance) with license, citation, size, commercial-use flag, and auto-vs-manual acquisition. Critically, the auto-download runner is gated by `OPENCUT_DOWNLOAD_EVAL=1` AND the dataset's `commercial_use_ok=True` — non-commercial corpora are never auto-fetched. Two new routes: `GET /system/eval-datasets` (with `modality`, `target`, `commercial_only`, `compact` filters) and `GET /system/eval-datasets/<id>` (404 on unknown). 26 new tests in `tests/test_eval_datasets.py` cover schema invariants (unique IDs, http(s) upstreams, known modalities), helper functions (`datasets_for_target`, `datasets_for_modality`, `commercial_safe_datasets`), the `OPENCUT_DOWNLOAD_EVAL` opt-in gate, and all five route paths. Route manifest bumped to 1,365 routes / 101 blueprints (+2 from new routes). Release smoke green (16 chained gates, lint clean).
+>
+> **v4.35 status (2026-05-17, thirty-second pass)**: added the **F176 follow-up download runner** at `opencut/tools/download_eval_dataset.py`. The runner is a **dry-run by default** planner that builds a `DownloadPlan` without touching the network, and refuses execution unless three gates all hold: (1) the dataset is in the F176 registry, (2) `OPENCUT_DOWNLOAD_EVAL=1` is set (or `--force` overrides for CI), and (3) the dataset declares `commercial_use_ok=True` OR the operator passes `--accept-noncommercial-license`. CLI exit codes: `0` = ok, `2` = blocked, `3` = unknown id. Three CLI sub-modes: `--list` (catalogue), `--json` (machine-readable plan), `--execute` (actually fetch). Stdlib urllib + `file://` URL test fixture means no network needed in CI. 19 new tests in `tests/test_download_eval_dataset.py` cover planner gates, execution success/failure paths, all five CLI sub-modes, and the `accept-noncommercial-license` override. Release smoke green (16 chained gates, lint clean).
+
+---
+
+## 2026-05-17 v4.35 Eval-Dataset Download Runner (F176 follow-up)
+
+The F176 follow-up makes the catalogue actionable while preserving the safety posture: nothing is downloaded unless the operator explicitly opts in twice (env var + acquisition gate).
+
+| Surface | Status |
+|---|---|
+| Runner module | `opencut/tools/download_eval_dataset.py` — dry-run by default. `build_plan()` is a pure function that returns a `DownloadPlan` dataclass; `execute_plan()` carries out the actual fetch only when `dry_run=False` and `status=='ok'`. |
+| Triple-gate safety | (1) Dataset must exist in the F176 registry. (2) `OPENCUT_DOWNLOAD_EVAL=1` env-var must be set (or `--force` for CI fixtures). (3) Either `commercial_use_ok=True` or operator passes `--accept-noncommercial-license`. Plans surface a `reason` string explaining which gate blocked. |
+| CLI exit codes | `0` = ok / would download, `2` = blocked (gate refused), `3` = unknown dataset id. Sub-modes: `--list` (enumerate catalogue), `--json` (machine-readable plan), `--execute` (perform fetch), `--target-dir` (override the default `~/.opencut/eval-datasets/` root). |
+| Network transport | Stdlib `urllib.request` — zero new pip deps. The execute path streams in 1 MB chunks via a `.part` temp file + `os.replace` for atomic landing. Failures cleanly unlink the partial file and propagate the IO error into `plan.reason`. |
+| Test fixture trick | The execution test stages a fake asset on disk and points `download_url` at the local `file://` URL. The runner's stdlib transport handles both `https://` and `file://`, so we exercise the full code path in CI without a real network round-trip. |
+| Test coverage | 19 tests in `tests/test_download_eval_dataset.py` cover: planner gates (unknown / opt-in / manual / accept-license / no-url), target-dir resolution, default `~/.opencut/eval-datasets/` location, execute success via `file://`, execute skip on blocked, execute failure reason capture, and all five CLI sub-modes. |
+| Validation | `python -m pytest tests/test_download_eval_dataset.py -q` → `19 passed`. Release smoke (skipping pip-audit / npm-advisory / pytest-fast) → all 15 chained gates `PASS`. Ruff `opencut/` scope clean. |
 
 ---
 
