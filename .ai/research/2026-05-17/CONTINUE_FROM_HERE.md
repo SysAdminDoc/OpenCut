@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 34)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 35)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (after Pass 33; Passes 1-33 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, and Pass 33 closed F200 (Windows installer policy + lockstep tests) and F211 (cross-platform launcher smoke tests, 5 entry points). This file documents deferred research/product work for a future Pass 34+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (after Pass 34; Passes 1-34 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, Pass 33 closed F200 + F211, and Pass 34 closed F217 (UXP BackendClient HTTP-shape contract). This file documents deferred research/product work for a future Pass 35+, not a broken or incomplete research run.
 
 ---
 
@@ -15,12 +15,22 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
-### Pass 34 entry point
+### Pass 35 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine. Pushing remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
-2. **Continue the remaining Now queue.** F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F181, F184, F185, F200, F211, F251, F259 are closed. F182 / F147 upstream PR remain blocked on GitHub auth. F205 still needs a runner where coverage can finish. The next no-network items to consider: **F180** (Wave T-V planning ledger refresh — re-tier the older wave letters through the F-number lens), **F198** CEP-only routes catalogue formalisation, **F213** Inno install/uninstall smoke in CI (M-effort), **F217** UXP backend-client contract test (S-effort). Remaining Pass-1 Now items requiring network: F121/F122/F133/F135 (dep upgrades). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (model install + integration).
+2. **Continue the remaining Now queue.** F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F181, F184, F185, F200, F211, F217, F251, F259 are closed. F182 / F147 upstream PR remain blocked on GitHub auth. F205 still needs a runner where coverage can finish. The next no-network items to consider: **F180** (Wave T-V planning ledger refresh — re-tier the older wave letters through the F-number lens), **F198** CEP-only routes catalogue formalisation, **F213** Inno install/uninstall smoke in CI (M-effort), **F215** fuzz harness extensions (M-effort, 8 documented targets including `validate_path`, OTIO parse, FCP XML, marker import, C2PA sidecar, plugin manifest, webhook sig, `safe_pip_install`), **F216** concurrent job-cancellation race test (M-effort). Remaining Pass-1 Now items requiring network: F121/F122/F133/F135 (dep upgrades). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (model install + integration).
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 34 checkpoint
+
+| Item | Status |
+|---|---|
+| F217 | **DONE** — `tests/test_uxp_backend_client_contract.py` (15 tests) pins the bilateral HTTP-shape contract between the UXP panel's `BackendClient` IIFE and the Flask backend. |
+| JS-side gates | (a) BackendClient module presence + exported verb list (`call`/`get`/`post`/`del`/`checkHealth`/`fetchCsrf`). (b) `X-OpenCut-Token` CSRF header. (c) 403-refresh-and-retry path. (d) 120-second fetch timeout. (e) Response-header CSRF refresh. (f) `{ok, data, error, status}` return shape. (g) Timeout surfacing as `{ok: false}` plus actionable "OpenCut Server is still running" message. (h) `/status/<job_id>` polling. (i) `job_id`/`id` field acceptance. (j) Terminal statuses `complete`/`error`/`cancelled`. |
+| Server-side gates | (k) `GET /health` returns a `csrf_token` field. (l) `/status/<unknown>` returns JSON. (m) Mutating routes require CSRF (401/403). (n) `GET /health` does not require CSRF. (o) `capabilities` (when present) is a dict. |
+| Validation | PASS — `15 passed`. Release smoke (skipping pip-audit / npm-advisory / pytest-fast) → all 15 chained gates `PASS`. Ruff `opencut/` scope clean. |
+| Files to review | `tests/test_uxp_backend_client_contract.py` (new), `scripts/release_smoke.py` (wired the new test file), ROADMAP.md v4.37, PROJECT_CONTEXT.md, this file. |
 
 ### Pass 33 checkpoint
 
