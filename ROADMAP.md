@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.45
+**Version**: 4.46
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -98,8 +98,23 @@
 > **v4.44 status (2026-05-18, forty-first pass)**: closed **F192** by expanding the legacy `/openapi.json` typed response-schema map from 30 to **100** entries. `opencut/schemas.py` now provides reusable envelopes for jobs, settings, lists, capabilities, files, model/GPU state, tool catalogues, caption previews/profiles/QC/translation, TTS voices, and analytics. `opencut/openapi.py` maps the next high-traffic system/jobs/captions/audio/settings/analytics/tool routes onto those schemas, and `tests/test_openapi_contract.py` now pins the F192 threshold plus representative property sets in the generated OpenAPI 3.0.3 spec.
 >
 > **v4.45 status (2026-05-18, forty-second pass)**: closed **F198** by promoting the CEP↔UXP parity matrix into a code-owned catalogue and generated artifact. `opencut/core/cep_uxp_parity.py` now records all **18** `ocXxx` JSX host functions, their UXP path, migration risk, F-number ownership, and replacement plan; `opencut/_generated/cep_uxp_parity.json` provides the machine-readable artifact for F260; and `tests/test_cep_uxp_parity_catalogue.py` fails if `host/index.jsx` gains a new CEP host function without an explicit migration disposition. The pinned CEP-only surface remains **2 functions**: `ocAddNativeCaptionTrack` and `ocQeReflect`.
+>
+> **v4.46 status (2026-05-18, forty-third pass)**: closed **F194** by adding an opt-in generated extended MCP route-tool catalogue. The curated MCP surface remains **39** default tools, while `opencut/_generated/mcp_extended_tools.json` now exposes **1,307** lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response-schema map. `opencut-mcp-server --extended-tools` or `OPENCUT_MCP_EXTENDED_TOOLS=1` enables the generated tools for clients that deliberately want full route-level coverage, and `tests/test_mcp_extended_tools.py` pins manifest drift, opt-in behavior, generated metadata, and dispatch for GET query/body/path-parameter routes.
 
 ---
+
+## 2026-05-18 v4.46 Extended MCP Route Tools (F194)
+
+One Next-tier MCP visibility item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F194 generator | DONE — `opencut/tools/dump_mcp_extended_tools.py` builds `opencut/_generated/mcp_extended_tools.json` from the canonical route manifest, API-alias manifest, and OpenAPI response-schema table. |
+| Extended catalogue | The committed artifact contains 1,307 generated `opencut_route_*` tools after skipping curated routes, special-action curated routes, static routes, and `/api` aliases. |
+| Default MCP contract | The default curated surface remains 39 tools. Extended tools list and dispatch only when `OPENCUT_MCP_EXTENDED_TOOLS=1` or `opencut-mcp-server --extended-tools` is set. |
+| Dispatch contract | Generated tools pass path params as top-level args, GET query args through `query`, and mutating JSON payloads through `body`; route metadata is tagged `generated=true` and `priority=extended`. |
+| Guard tests | `tests/test_mcp_extended_tools.py` pins committed-vs-live generation, opt-in behavior, metadata, disabled-call errors, GET query dispatch, mutating body dispatch, and missing path-param validation. Release smoke includes the new test. |
+| Validation | `python -m pytest tests/test_mcp_extended_tools.py tests/test_mcp_server.py tests/test_mcp_registry_manifest.py -q` -> `25 passed`; focused Ruff -> clean; `python -m opencut.tools.dump_mcp_extended_tools --check` -> in sync. |
 
 ## 2026-05-18 v4.45 CEP/UXP Parity Catalogue (F198)
 

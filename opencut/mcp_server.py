@@ -22,6 +22,7 @@ Supports: initialize, tools/list, tools/call, resources/list, prompts/list.
 import argparse
 import json
 import logging
+import os
 import re
 import sys
 import time
@@ -29,7 +30,7 @@ import urllib.error
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from opencut import __version__
+from opencut import __version__, mcp_extended_tools
 
 logger = logging.getLogger("opencut.mcp")
 
@@ -704,6 +705,16 @@ _TOOL_ROUTES = {
 }
 
 
+def get_mcp_tools(include_extended=None):
+    """Return curated MCP tools, optionally with generated route-level tools."""
+    if include_extended is None:
+        include_extended = mcp_extended_tools.extended_tools_enabled()
+    tools = list(MCP_TOOLS)
+    if include_extended:
+        tools.extend(mcp_extended_tools.get_extended_tools())
+    return tools
+
+
 _WIN_RESERVED_STEMS = frozenset({"CON", "PRN", "AUX", "NUL"})
 _WIN_RESERVED_RE = re.compile(r"^(COM|LPT)\d$")
 
@@ -755,6 +766,17 @@ def _validate_mcp_filepath(args, key="filepath", *, allow_empty=False):
 
 def handle_tool_call(tool_name, arguments):
     """Execute an MCP tool call by proxying to the Flask backend."""
+    if mcp_extended_tools.is_extended_tool(tool_name):
+        if not mcp_extended_tools.extended_tools_enabled():
+            return {
+                "error": (
+                    "Extended MCP tools are disabled. Set "
+                    f"{mcp_extended_tools.EXTENDED_MCP_ENV}=1 or start "
+                    "opencut-mcp-server with --extended-tools."
+                )
+            }
+        return mcp_extended_tools.invoke_extended_tool(tool_name, arguments, _api)
+
     if tool_name not in _TOOL_ROUTES:
         return {"error": f"Unknown tool: {tool_name}"}
     # Defensive: the HTTP transport passes ``arguments`` through without
@@ -926,7 +948,7 @@ def run_mcp_stdio():
             response = {
                 "jsonrpc": "2.0",
                 "id": msg_id,
-                "result": {"tools": MCP_TOOLS},
+                "result": {"tools": get_mcp_tools()},
             }
         elif method == "tools/call":
             tool_name = params.get("name", "")
@@ -1015,9 +1037,9 @@ def run_http_server(
         def do_GET(self):
             if self.path in ("/health", "/"):
                 self._send_json({"status": "ok", "server": "opencut-mcp",
-                                  "version": __version__, "tools": len(MCP_TOOLS)})
+                                  "version": __version__, "tools": len(get_mcp_tools())})
             elif self.path == "/tools":
-                self._send_json({"tools": MCP_TOOLS})
+                self._send_json({"tools": get_mcp_tools()})
             else:
                 self._send_json({"error": "Not found"}, status=404)
 
@@ -1040,7 +1062,7 @@ def run_http_server(
                 }})
             elif method == "tools/list":
                 self._send_json({"jsonrpc": "2.0", "id": rpc_id,
-                                  "result": {"tools": MCP_TOOLS}})
+                                  "result": {"tools": get_mcp_tools()}})
             elif method == "tools/call":
                 name = params.get("name", "")
                 arguments = params.get("arguments") or {}
@@ -1066,7 +1088,7 @@ def run_http_server(
             file=sys.stderr,
         )
     print(f"Proxying to OpenCut backend at {backend_url}", file=sys.stderr)
-    print(f"Tools registered: {len(MCP_TOOLS)}", file=sys.stderr)
+    print(f"Tools registered: {len(get_mcp_tools())}", file=sys.stderr)
     try:
         httpd.serve_forever()
     except KeyboardInterrupt:
@@ -1114,6 +1136,14 @@ def main() -> None:
         help="Print all registered MCP tools and exit",
     )
     parser.add_argument(
+        "--extended-tools",
+        action="store_true",
+        help=(
+            "Expose the auto-generated lower-priority route-level MCP tools "
+            f"(equivalent to {mcp_extended_tools.EXTENDED_MCP_ENV}=1)."
+        ),
+    )
+    parser.add_argument(
         "--log-level",
         default="WARNING",
         choices=["DEBUG", "INFO", "WARNING", "ERROR"],
@@ -1129,9 +1159,12 @@ def main() -> None:
     # Override global backend URL from --port
     global BACKEND_URL
     BACKEND_URL = f"http://127.0.0.1:{args.port}"
+    if args.extended_tools:
+        os.environ[mcp_extended_tools.EXTENDED_MCP_ENV] = "1"
 
     if args.list_tools:
-        for t in MCP_TOOLS:
+        tools = get_mcp_tools()
+        for t in tools:
             schema = t.get("inputSchema", {})
             props = schema.get("properties", {})
             req = set(schema.get("required", []))
@@ -1139,7 +1172,7 @@ def main() -> None:
                 f"{k}{'*' if k in req else ''}" for k in props
             )
             print(f"  {t['name']:<40}  ({param_str})")
-        print(f"\n{len(MCP_TOOLS)} tools total.")
+        print(f"\n{len(tools)} tools total.")
         return
 
     if args.http:

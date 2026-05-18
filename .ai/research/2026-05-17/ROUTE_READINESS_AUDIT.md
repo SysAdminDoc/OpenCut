@@ -150,7 +150,7 @@ The original 30-endpoint seed covered:
 **Coverage: 39 of 1,359 routes (~3%).** The competing AdobePremiereProMCP server exposes 1,060 tools (mostly auto-generated boilerplate over Premiere CEP calls). OpenCut's choice to hand-curate ergonomic tools is the right one **for now** — but the maintainer should at least consider auto-generation for tier-2 surfaces.
 
 **Recommended fix:**
-- **F194** — Auto-generate a `tools/extended/` set of MCP tools from the route manifest + OpenAPI schema. Tag them clearly as "auto-generated, lower priority" so MCP clients (Claude Code, Cursor) can opt in/out. This pairs with F192 (typed schemas).
+- **F194** — **DONE in Pass 43.** `opencut/_generated/mcp_extended_tools.json` now contains 1,307 opt-in `opencut_route_*` tools generated from the route manifest + OpenAPI schema map; default MCP remains the 39 curated tools unless `OPENCUT_MCP_EXTENDED_TOOLS=1` or `--extended-tools` is set.
 - **F195** — **DONE in Pass 9.** `opencut/mcp_server.py` now exposes `opencut_face_reshape`, `opencut_skin_retouch`, `opencut_smart_upscale`, `opencut_elevenlabs_tts`, `opencut_caption_qc`, `opencut_review_bundle`, `opencut_c2pa_provenance`, `opencut_marker_import`, `opencut_capability_probe`, `opencut_brand_kit`, `opencut_semantic_search`, and `opencut_spectral_match`; `tests/test_mcp_server.py` pins registration, dispatch, special actions, and path validation.
 
 ---
@@ -206,7 +206,7 @@ The manifest contains **233 routes under `/api/*`**. Pass 7 corrected the origin
 | F191 | Auto-derive `FeatureRecord` from check functions + route manifest | Done in Pass 8 | M |
 | F192 | Bulk add OpenAPI response schemas for top 50 routes | Done in Pass 41 | M |
 | F193 | Replace `_ENDPOINT_SCHEMAS` hand-table with dataclass introspection | Later | M |
-| F194 | Auto-generate "extended" MCP tools from route manifest | Next | L |
+| F194 | Auto-generate "extended" MCP tools from route manifest | Done in Pass 43 | L |
 | F195 | Add 12 missing MCP tools for post-Wave-M shipped routes | Done in Pass 9 | S |
 | F196 | Make `registry.py` primary; derive `model_cards` / `checks` | Later | L |
 | F197 | Add `NON_AI_CHECKS` allowlist to `registry.py` | Done in Pass 8 | S |
