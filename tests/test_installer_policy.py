@@ -43,9 +43,9 @@ def test_policy_doc_exists_and_mentions_both_installers():
     assert "WPF" in text, "policy doc must reference the WPF installer path"
     assert "Inno" in text, "policy doc must reference the Inno Setup fallback"
     assert "recommended" in text.lower()
-    # The policy doc must name F201 / F203 / F207 so the F-number chain
+    # The policy doc must name F201 / F203 / F207 / F213 so the F-number chain
     # stays discoverable.
-    for fid in ("F201", "F203", "F207"):
+    for fid in ("F201", "F203", "F207", "F213"):
         assert fid in text, f"policy doc must reference {fid}"
 
 

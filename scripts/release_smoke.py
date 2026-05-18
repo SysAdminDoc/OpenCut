@@ -538,6 +538,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_eval_datasets.py",
     "tests/test_download_eval_dataset.py",
     "tests/test_installer_policy.py",
+    "tests/test_inno_installer_smoke.py",
     "tests/test_launcher_scripts.py",
     "tests/test_uxp_backend_client_contract.py",
     "tests/test_esbuild_pin.py",

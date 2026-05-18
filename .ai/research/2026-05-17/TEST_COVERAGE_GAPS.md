@@ -136,7 +136,7 @@ This is a single F number: **F205**, already on the Now tier.
 | F210 | Vitest unit tests for CEP/UXP utility functions | Later | M |
 | F211 | Cross-platform launcher script smoke tests in CI | Next | S |
 | F212 | WPF installer test suite (xUnit + headless install) | Later | XL |
-| F213 | Inno Setup install/uninstall smoke in CI | Next | M |
+| [x] F213 | Inno Setup install/uninstall smoke in CI | Closed Pass 37 | M |
 | F214 | Extend F128 with ML + TTS perf benchmarks | Next | M |
 | F215 | Extend fuzz harness with 8 additional targets | Next | M |
 | F216 | Concurrent job-cancellation race test | Next | M |
