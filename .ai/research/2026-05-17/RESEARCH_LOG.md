@@ -762,3 +762,34 @@ The repo now produces Flatpak release bundles from the PyInstaller output.
 The Flathub hosted submission still needs a source-build manifest and generated
 Python dependency manifests before it should be submitted to Flathub; this is
 documented as a boundary, not silently claimed as complete hosted publication.
+
+---
+
+## Pass 58 (2026-05-18 — F250 Aptabase opt-in telemetry)
+
+Pass 58 closed the Next-tier telemetry item after fresh verification against
+Aptabase's SDK contract, Python client source, and privacy/product materials.
+
+### Pass 58 external checks
+
+| Probe | Result |
+|---|---|
+| Aptabase SDK contract | Events are POSTed as JSON batches to `/api/v0/events` with an `App-Key` header; batches are capped at 25 events and include timestamp, session ID, event name, system props, and props. |
+| App-key host routing | `A-EU-*` maps to `https://eu.aptabase.com`, `A-US-*` maps to `https://us.aptabase.com`, and self-hosted `A-SH-*` requires a custom host. |
+| Failure semantics | SDK guidance says clients should queue while offline and not crash an app because telemetry delivery failed. |
+| Privacy positioning | Aptabase positions itself as privacy-first app analytics with no cookies and no long-term user-identifying IDs. |
+
+### Pass 58 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 58.1 | Verified the telemetry contract and current provider assumptions. | Used Aptabase primary sources instead of extending the older Plausible default assumption. |
+| Pass 58.2 | Added the local Aptabase client and settings storage. | Implemented stdlib-only background batching, opt-in settings, env overrides, region/self-host validation, masking, and sensitive-prop scrubbing. |
+| Pass 58.3 | Wired routes, checks, docs, and release-smoke coverage. | Added `/telemetry/aptabase/*`, `check_aptabase_configured`, `docs/TELEMETRY.md`, README/CHANGELOG/ROADMAP updates, and `tests/test_telemetry_aptabase.py`. |
+| Pass 58.4 | Regenerated generated artifacts and synced state files. | Route manifest now has 1,374 routes; opt-in extended MCP catalogue now has 1,317 route tools. |
+
+### Pass 58 saturation note
+
+F250 is complete for repository-side, disabled-by-default Aptabase telemetry.
+It intentionally does not add UI controls yet; the route/settings contract and
+docs give the UXP/CEP settings surfaces a stable integration target.
