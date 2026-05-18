@@ -943,6 +943,81 @@ const PProBridge = (() => {
     };
   }
 
+  function _hasOwn(obj, key) {
+    return Object.prototype.hasOwnProperty.call(obj ?? {}, key);
+  }
+
+  function _aafAudioFormat(value) {
+    const normalized = String(value ?? "wav").toLowerCase();
+    if (normalized === "aiff") {
+      return ppro?.Constants?.AAFExportAudioFormat?.AIFF ?? ppro?.ProjectConverter?.AAF_EXPORT_AUDIO_FORMAT_AIFF ?? 0;
+    }
+    return ppro?.Constants?.AAFExportAudioFormat?.WAV ?? ppro?.ProjectConverter?.AAF_EXPORT_AUDIO_FORMAT_WAV ?? 1;
+  }
+
+  function _createAafExportOptions(settings = {}) {
+    const factory = ppro?.AAFExportOptions;
+    if (!factory) return null;
+    let options = null;
+    try {
+      options = new factory();
+    } catch (_) {
+      try { options = factory(); } catch (_) { options = null; }
+    }
+    if (!options) return null;
+
+    const booleanSetters = [
+      ["mixdownVideo", "setMixdownVideo"],
+      ["explodeToMono", "setExplodeToMono"],
+      ["embedAudio", "setEmbedAudio"],
+      ["trimSources", "setTrimSources"],
+      ["renderAudioEffects", "setRenderAudioEffects"],
+      ["interleaveWithoutEffects", "setInterleaveWithoutEffects"],
+      ["preserveParentFolder", "setPreserveParentFolder"],
+    ];
+    for (const [key, setter] of booleanSetters) {
+      if (_hasOwn(settings, key) && options[setter]) options[setter](Boolean(settings[key]));
+    }
+
+    const numericSetters = [
+      ["sampleRate", "setSampleRate"],
+      ["bitsPerSample", "setBitsPerSample"],
+      ["handleFrames", "setHandleFrames"],
+    ];
+    for (const [key, setter] of numericSetters) {
+      const value = Number(settings[key]);
+      if (_hasOwn(settings, key) && Number.isFinite(value) && options[setter]) options[setter](value);
+    }
+
+    if (_hasOwn(settings, "audioFileFormat") && options.setAudioFileFormat) {
+      options.setAudioFileFormat(_aafAudioFormat(settings.audioFileFormat));
+    }
+    const presetPath = String(settings.videoMixdownPresetPath ?? settings.videoPresetPath ?? "").trim();
+    if (presetPath && options.setVideoMixdownPresetPath) options.setVideoMixdownPresetPath(presetPath);
+    return options;
+  }
+
+  async function exportAafSequence(payload) {
+    if (!available || !ppro?.ProjectConverter?.exportAAF) {
+      return { ok: false, reason: "Premiere ProjectConverter.exportAAF is unavailable in this UXP runtime." };
+    }
+    const parsed = _parseHostPayload(payload, {});
+    const outputPath = String(parsed.outputPath ?? parsed.path ?? parsed.filePath ?? "").trim();
+    if (!outputPath) return { ok: false, reason: "An output path is required for UXP AAF export." };
+    const seq = await getActiveSequence();
+    if (!seq) return { ok: false, reason: "No active sequence or UXP API unavailable." };
+    try {
+      const optionSettings = parsed.aafOptions ?? parsed.options ?? parsed;
+      const aafOptions = _createAafExportOptions(optionSettings);
+      const exported = await ppro.ProjectConverter.exportAAF(seq, outputPath, aafOptions || undefined);
+      const sequenceName = await seq.getName?.() ?? seq.name ?? "";
+      return { ok: Boolean(exported), outputPath, sequenceName, optionsApplied: Boolean(aafOptions) };
+    } catch (e) {
+      console.warn("[PProBridge] exportAafSequence failed:", e.message);
+      return { ok: false, reason: e.message, outputPath };
+    }
+  }
+
   async function exportSequenceRange(payload) {
     const parsed = _parseHostPayload(payload, {});
     const subsequence = await createSubsequenceFromRange(parsed);
@@ -1018,6 +1093,7 @@ const PProBridge = (() => {
     setSequencePlayhead,
     createSubsequenceFromRange,
     exportSubsequenceWithEncoder,
+    exportAafSequence,
     executeHostAction,
     hostActionStatus,
   };
@@ -1030,6 +1106,7 @@ if (typeof window !== "undefined") {
     querySupportedTranscriptLanguages: () => PProBridge.querySupportedTranscriptLanguages(),
     getTranscriptState: (payload) => PProBridge.getTranscriptState(payload),
     getObjectMaskState: (payload) => PProBridge.getObjectMaskState(payload),
+    exportAafSequence: (payload) => PProBridge.exportAafSequence(payload),
   });
 }
 

@@ -20,6 +20,14 @@ Added `tests/test_uxp_object_mask_api_integration.py` and registered it in relea
 
 ---
 
+## Pass 65 addendum (2026-05-18)
+
+Pass 65 closed **F258** by adding UXP AAF export helpers to `extension/com.opencut.uxp/main.js`. The bridge wraps `ProjectConverter.exportAAF(sequence, filePath, aafExportOptions?)`, builds optional `AAFExportOptions` from payload settings, maps AIFF/WAV constants, validates output paths, and exposes `exportAafSequence(payload)` through `window.OpenCutUXPHost`.
+
+Added `tests/test_uxp_aaf_export_integration.py` and registered it in release-smoke `pytest-fast`. Updated ROADMAP.md v4.68, CHANGELOG.md, PROJECT_CONTEXT.md, docs/UXP_MIGRATION.md, and the Pass-2 backlog/state files. Validation passed: focused F258 tests (`6 passed`), focused UXP/release-smoke slice (`48 passed`), `py_compile`, focused Ruff, `node --check`, and release-smoke `pytest-fast` (`653 passed`).
+
+---
+
 ## 1. Files created
 
 ### Repo root (1 file)

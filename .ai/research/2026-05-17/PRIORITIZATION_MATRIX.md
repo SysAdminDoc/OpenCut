@@ -181,7 +181,7 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 | F251 | Track `@adobe/premierepro@beta` per-week diff in CI | Catch UXP-gap-closing APIs early |
 | F259 | UXP HTTP-on-macOS workaround documentation | Known 25.6.3 bug affects MCP sidecar |
 
-**Next (32 items):** [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1 scaffold and F252.2 dispatcher done; UDT/live WebView cutover remains), [x] F254, [x] F255, [x] F256, [x] F257, F258, F260. Includes the **F143 conductor + F252 UXP/WebView migration + F225-F229/F231/F233/F234 collaboration extensions** as parallel flagship tracks.
+**Next (32 items):** [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1 scaffold and F252.2 dispatcher done; UDT/live WebView cutover remains), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, F260. Includes the **F143 conductor + F252 UXP/WebView migration + F225-F229/F231/F233/F234 collaboration extensions** as parallel flagship tracks.
 
 **Later (18 items):** F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253. Includes deferred OSS-quality items (Dolby Vision pipeline, ADM BWF Atmos, IMF builders) that wait on F215 fuzz + F218 import-order regression coverage.
 
