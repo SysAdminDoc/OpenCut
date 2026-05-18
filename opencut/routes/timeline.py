@@ -23,6 +23,7 @@ from opencut.security import (
     require_csrf,
     safe_bool,
     safe_float,
+    safe_int,
     validate_filepath,
     validate_path,
 )
@@ -571,12 +572,15 @@ def review_bundle():
             "extra_files": ["/abs/path/to/lut.cube"],
             "include_media": true,
             "framerate": 30.0,
-            "duration_seconds": 90.0
+            "duration_seconds": 90.0,
+            "annotation_width": 1920,
+            "annotation_height": 1080
         }
 
     Returns the manifest of the produced bundle (sha-256, byte count,
     contained entries). When markers are supplied, the zip also includes
-    ``markers.otio`` with an OpenTimelineIO Marker timeline.
+    ``markers.otio`` with an OpenTimelineIO Marker timeline and, when
+    drawing annotations exist, SVG overlays under ``annotations/``.
     """
     from opencut.core.review_bundle import build_review_bundle
 
@@ -620,6 +624,8 @@ def review_bundle():
             include_media=safe_bool(data.get("include_media"), default=True),
             framerate=safe_float(data.get("framerate"), default=30.0, min_val=1.0, max_val=240.0),
             duration_seconds=safe_float(data.get("duration_seconds"), default=0.0, min_val=0.0),
+            annotation_width=safe_int(data.get("annotation_width"), default=1920, min_val=1, max_val=16384),
+            annotation_height=safe_int(data.get("annotation_height"), default=1080, min_val=1, max_val=16384),
         )
         return jsonify(bundle.as_dict())
     except FileNotFoundError as exc:

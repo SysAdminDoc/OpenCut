@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Review Bundle SVG Annotations
+
+- Added deterministic SVG drawing overlays to F105 review bundles for `drawing_rect`, `drawing_circle`, and `drawing_arrow` review comments, plus an `annotations/index.json` manifest.
+- Extended `POST /review/bundle` with annotation canvas sizing options and pinned route/zip/index/SVG behavior in `tests/test_review_bundle.py`.
+
 ### Added — Review Bundle OTIO Markers
 
 - Anchored F105 review bundles on OpenTimelineIO Marker schema by adding a `markers.otio` sidecar timeline whenever marker/comment payloads are bundled.

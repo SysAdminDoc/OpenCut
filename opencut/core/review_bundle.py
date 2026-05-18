@@ -32,11 +32,13 @@ import hashlib
 import json
 import logging
 import os
+import re
 import time
 import zipfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Sequence
+from xml.sax.saxutils import escape
 
 from opencut.core.marker_metadata import denormalise_color, normalise_color
 
@@ -45,6 +47,10 @@ logger = logging.getLogger("opencut")
 BUNDLE_VERSION = 2
 DEFAULT_OTIO_RATE = 30.0
 OTIO_MARKERS_BASENAME = "markers.otio"
+ANNOTATIONS_INDEX_BASENAME = "annotations/index.json"
+DEFAULT_ANNOTATION_WIDTH = 1920
+DEFAULT_ANNOTATION_HEIGHT = 1080
+DRAWING_ANNOTATION_TYPES = frozenset({"drawing_rect", "drawing_circle", "drawing_arrow"})
 
 
 @dataclass
@@ -69,6 +75,8 @@ class ReviewBundleResult:
     manifest_path: str = "manifest.json"
     summary_path: str = "summary.html"
     otio_markers_path: str = ""
+    annotations_path: str = ""
+    annotation_count: int = 0
     generated_at: float = field(default_factory=time.time)
     job_label: str = ""
 
@@ -81,6 +89,8 @@ class ReviewBundleResult:
             "manifest_path": self.manifest_path,
             "summary_path": self.summary_path,
             "otio_markers_path": self.otio_markers_path,
+            "annotations_path": self.annotations_path,
+            "annotation_count": self.annotation_count,
             "generated_at": self.generated_at,
             "job_label": self.job_label,
             "entries": [e.as_dict() for e in self.entries],
@@ -303,6 +313,196 @@ def build_review_markers_otio(
     }
 
 
+def _safe_int(value: Any, default: int = 0) -> int:
+    try:
+        return int(round(_safe_float(value, float(default))))
+    except (TypeError, ValueError, OverflowError):
+        return default
+
+
+def _slug(value: str, default: str = "annotation") -> str:
+    slug = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(value or "").strip()).strip("-._")
+    return slug[:48] or default
+
+
+def _svg_escape(value: Any) -> str:
+    return escape(str(value or ""), {"\"": "&quot;"})
+
+
+def _annotation_dimension(value: Any, default: int) -> int:
+    return max(1, min(16384, _safe_int(value, default)))
+
+
+def _annotation_color(value: Any, fallback: str = "green") -> str:
+    raw = str(value or "").strip()
+    if re.fullmatch(r"#[0-9A-Fa-f]{6}", raw):
+        return raw.lower()
+    palette = {
+        "black": "#111827",
+        "blue": "#2563eb",
+        "cyan": "#0891b2",
+        "green": "#16a34a",
+        "magenta": "#c026d3",
+        "orange": "#ea580c",
+        "pink": "#db2777",
+        "purple": "#7c3aed",
+        "red": "#dc2626",
+        "rose": "#e11d48",
+        "white": "#f8fafc",
+        "yellow": "#ca8a04",
+    }
+    canonical = normalise_color(raw or fallback)
+    return palette.get(canonical, palette["green"])
+
+
+def _annotation_stroke_width(data: Dict[str, Any]) -> float:
+    width = _safe_float(_first_present(data, ("stroke_width", "strokeWidth", "width_px")), 4.0)
+    return max(1.0, min(64.0, width))
+
+
+def _annotation_value(data: Dict[str, Any], keys: Sequence[str], default: float = 0.0) -> float:
+    raw = _first_present(data, keys)
+    return _safe_float(raw, default)
+
+
+def _annotation_coord(data: Dict[str, Any], keys: Sequence[str], limit: int, default: float = 0.0) -> float:
+    value = _annotation_value(data, keys, default)
+    normalized = data.get("normalized") is True or str(data.get("coordinate_space", "")).lower() == "normalized"
+    if normalized:
+        value *= limit
+    return max(0.0, min(float(limit), value))
+
+
+def _annotation_label(marker: Dict[str, Any]) -> str:
+    return str(_first_present(marker, ("text", "comment", "notes", "name", "title", "label")) or "").strip()
+
+
+def _svg_doc(*, width: int, height: int, annotation_id: str, title: str, body: str) -> bytes:
+    svg = (
+        f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}" role="img" aria-labelledby="title-{annotation_id} desc-{annotation_id}">\n'
+        f'  <title id="title-{annotation_id}">{_svg_escape(title)}</title>\n'
+        f'  <desc id="desc-{annotation_id}">OpenCut review drawing annotation</desc>\n'
+        f"{body}\n"
+        "</svg>\n"
+    )
+    return svg.encode("utf-8")
+
+
+def _rect_svg(marker: Dict[str, Any], width: int, height: int, annotation_id: str) -> bytes:
+    data = marker.get("annotation_data") if isinstance(marker.get("annotation_data"), dict) else {}
+    x = _annotation_coord(data, ("x", "left"), width)
+    y = _annotation_coord(data, ("y", "top"), height)
+    w = _annotation_value(data, ("w", "width"), 0.0)
+    h = _annotation_value(data, ("h", "height"), 0.0)
+    if not w and "right" in data:
+        w = _annotation_coord(data, ("right",), width) - x
+    if not h and "bottom" in data:
+        h = _annotation_coord(data, ("bottom",), height) - y
+    if data.get("normalized") is True or str(data.get("coordinate_space", "")).lower() == "normalized":
+        w *= width
+        h *= height
+    w = max(1.0, min(float(width) - x, w))
+    h = max(1.0, min(float(height) - y, h))
+    stroke = _annotation_color(data.get("stroke") or data.get("color") or marker.get("color"))
+    stroke_width = _annotation_stroke_width(data)
+    body = (
+        f'  <rect x="{x:.2f}" y="{y:.2f}" width="{w:.2f}" height="{h:.2f}" '
+        f'fill="none" stroke="{stroke}" stroke-width="{stroke_width:.2f}" />'
+    )
+    return _svg_doc(width=width, height=height, annotation_id=annotation_id, title=_annotation_label(marker), body=body)
+
+
+def _circle_svg(marker: Dict[str, Any], width: int, height: int, annotation_id: str) -> bytes:
+    data = marker.get("annotation_data") if isinstance(marker.get("annotation_data"), dict) else {}
+    cx = _annotation_coord(data, ("cx", "x"), width, width / 2)
+    cy = _annotation_coord(data, ("cy", "y"), height, height / 2)
+    r = _annotation_value(data, ("r", "radius"), 48.0)
+    if data.get("normalized") is True or str(data.get("coordinate_space", "")).lower() == "normalized":
+        r *= min(width, height)
+    r = max(1.0, min(r, cx, cy, width - cx, height - cy))
+    stroke = _annotation_color(data.get("stroke") or data.get("color") or marker.get("color"))
+    stroke_width = _annotation_stroke_width(data)
+    body = (
+        f'  <circle cx="{cx:.2f}" cy="{cy:.2f}" r="{r:.2f}" '
+        f'fill="none" stroke="{stroke}" stroke-width="{stroke_width:.2f}" />'
+    )
+    return _svg_doc(width=width, height=height, annotation_id=annotation_id, title=_annotation_label(marker), body=body)
+
+
+def _arrow_svg(marker: Dict[str, Any], width: int, height: int, annotation_id: str) -> bytes:
+    data = marker.get("annotation_data") if isinstance(marker.get("annotation_data"), dict) else {}
+    x1 = _annotation_coord(data, ("x1", "start_x", "from_x"), width)
+    y1 = _annotation_coord(data, ("y1", "start_y", "from_y"), height)
+    x2 = _annotation_coord(data, ("x2", "end_x", "to_x"), width, width / 2)
+    y2 = _annotation_coord(data, ("y2", "end_y", "to_y"), height, height / 2)
+    stroke = _annotation_color(data.get("stroke") or data.get("color") or marker.get("color"))
+    stroke_width = _annotation_stroke_width(data)
+    body = (
+        "  <defs>\n"
+        f'    <marker id="arrow-{annotation_id}" markerWidth="10" markerHeight="10" refX="8" refY="3" '
+        'orient="auto" markerUnits="strokeWidth">\n'
+        f'      <path d="M0,0 L0,6 L9,3 z" fill="{stroke}" />\n'
+        "    </marker>\n"
+        "  </defs>\n"
+        f'  <line x1="{x1:.2f}" y1="{y1:.2f}" x2="{x2:.2f}" y2="{y2:.2f}" '
+        f'stroke="{stroke}" stroke-width="{stroke_width:.2f}" stroke-linecap="round" '
+        f'marker-end="url(#arrow-{annotation_id})" />'
+    )
+    return _svg_doc(width=width, height=height, annotation_id=annotation_id, title=_annotation_label(marker), body=body)
+
+
+def build_review_annotation_svgs(
+    markers_payload: Any,
+    *,
+    framerate: float = DEFAULT_OTIO_RATE,
+    width: int = DEFAULT_ANNOTATION_WIDTH,
+    height: int = DEFAULT_ANNOTATION_HEIGHT,
+) -> tuple[Dict[str, Any], List[tuple[str, bytes]]]:
+    """Build SVG overlay files for drawing annotations in a marker payload."""
+    rate = max(1.0, _safe_float(framerate, DEFAULT_OTIO_RATE))
+    canvas_width = _annotation_dimension(width, DEFAULT_ANNOTATION_WIDTH)
+    canvas_height = _annotation_dimension(height, DEFAULT_ANNOTATION_HEIGHT)
+    index: Dict[str, Any] = {
+        "schema": "opencut.review-annotations.v1",
+        "framerate": rate,
+        "width": canvas_width,
+        "height": canvas_height,
+        "annotations": [],
+    }
+    files: List[tuple[str, bytes]] = []
+    renderers = {
+        "drawing_rect": _rect_svg,
+        "drawing_circle": _circle_svg,
+        "drawing_arrow": _arrow_svg,
+    }
+
+    for idx, marker in enumerate(_marker_rows(markers_payload)):
+        annotation_type = str(marker.get("annotation_type") or marker.get("type") or "").strip()
+        if annotation_type not in DRAWING_ANNOTATION_TYPES:
+            continue
+        start_seconds = _marker_start_seconds(marker, rate)
+        frame_number = _safe_int(marker.get("frame_number"), int(round(start_seconds * rate)))
+        annotation_id = _slug(str(marker.get("id") or f"{annotation_type}-{idx + 1}"), f"annotation-{idx + 1}")
+        arcname = f"annotations/{frame_number:08d}_{annotation_id}.svg"
+        svg = renderers[annotation_type](marker, canvas_width, canvas_height, annotation_id)
+        files.append((arcname, svg))
+        index["annotations"].append(
+            {
+                "id": str(marker.get("id") or annotation_id),
+                "annotation_type": annotation_type,
+                "timestamp_sec": start_seconds,
+                "frame_number": frame_number,
+                "duration_seconds": _marker_duration_seconds(marker, start_seconds),
+                "svg": arcname,
+                "text": _annotation_label(marker),
+                "status": str(marker.get("status") or "open"),
+            }
+        )
+
+    return index, files
+
+
 def _render_summary_html(
     *,
     job_label: str,
@@ -310,6 +510,8 @@ def _render_summary_html(
     captions_basename: str,
     markers_basename: str,
     otio_markers_basename: str,
+    annotations_basename: str,
+    annotation_count: int,
     entries: Sequence[BundleEntry],
     notes: str,
 ) -> str:
@@ -348,7 +550,8 @@ def _render_summary_html(
         f"<strong>Media:</strong> <code>{media_basename or '(none)'}</code><br>"
         f"<strong>Captions:</strong> <code>{captions_basename or '(none)'}</code><br>"
         f"<strong>Markers:</strong> <code>{markers_basename or '(none)'}</code><br>"
-        f"<strong>OTIO markers:</strong> <code>{otio_markers_basename or '(none)'}</code></p>\n"
+        f"<strong>OTIO markers:</strong> <code>{otio_markers_basename or '(none)'}</code><br>"
+        f"<strong>Annotations:</strong> <code>{annotations_basename or '(none)'}</code> ({annotation_count})</p>\n"
         "  <h2>Notes</h2>\n"
         f"  <pre>{notes_block}</pre>\n"
         "  <h2>Contents</h2>\n"
@@ -375,6 +578,8 @@ def build_review_bundle(
     include_media: bool = True,
     framerate: float = DEFAULT_OTIO_RATE,
     duration_seconds: float = 0.0,
+    annotation_width: int = DEFAULT_ANNOTATION_WIDTH,
+    annotation_height: int = DEFAULT_ANNOTATION_HEIGHT,
 ) -> ReviewBundleResult:
     """Create the review bundle on disk.
 
@@ -389,6 +594,8 @@ def build_review_bundle(
     captions_basename = ""
     markers_basename = ""
     otio_markers_basename = ""
+    annotations_basename = ""
+    annotation_count = 0
     pre_entries: List[BundleEntry] = []
     queued_files: List[tuple] = []  # (arcname, source_path, note)
 
@@ -428,6 +635,7 @@ def build_review_bundle(
     if markers_payload is not None:
         markers_basename = "markers.json"
         otio_markers_basename = OTIO_MARKERS_BASENAME
+        annotations_basename = ANNOTATIONS_INDEX_BASENAME
 
     # Deterministic ordering — alphabetical by arcname.
     queued_files.sort(key=lambda item: item[0])
@@ -463,6 +671,16 @@ def build_review_bundle(
             duration_seconds=duration_seconds,
         )
         otio_markers_text = json.dumps(otio_payload, indent=2, sort_keys=True).encode("utf-8")
+        annotations_index, annotation_files = build_review_annotation_svgs(
+            markers_payload,
+            framerate=framerate,
+            width=annotation_width,
+            height=annotation_height,
+        )
+        annotation_count = len(annotation_files)
+        if not annotation_count:
+            annotations_basename = ""
+        annotations_index_text = json.dumps(annotations_index, indent=2, sort_keys=True).encode("utf-8")
         entries.append(
             BundleEntry(
                 arcname="markers.json",
@@ -479,6 +697,24 @@ def build_review_bundle(
                 note="OpenTimelineIO marker timeline",
             )
         )
+        if annotation_count:
+            entries.append(
+                BundleEntry(
+                    arcname=ANNOTATIONS_INDEX_BASENAME,
+                    sha256=hashlib.sha256(annotations_index_text).hexdigest(),
+                    bytes=len(annotations_index_text),
+                    note="SVG drawing annotation index",
+                )
+            )
+            for arcname, svg_text in annotation_files:
+                entries.append(
+                    BundleEntry(
+                        arcname=arcname,
+                        sha256=hashlib.sha256(svg_text).hexdigest(),
+                        bytes=len(svg_text),
+                        note="SVG drawing annotation",
+                    )
+                )
 
     summary_html = _render_summary_html(
         job_label=job_label,
@@ -486,6 +722,8 @@ def build_review_bundle(
         captions_basename=captions_basename,
         markers_basename=markers_basename,
         otio_markers_basename=otio_markers_basename,
+        annotations_basename=annotations_basename,
+        annotation_count=annotation_count,
         entries=entries,
         notes=notes,
     ).encode("utf-8")
@@ -506,6 +744,10 @@ def build_review_bundle(
         "captions_basename": captions_basename,
         "markers_basename": markers_basename,
         "otio_markers_basename": otio_markers_basename,
+        "annotations_basename": annotations_basename,
+        "annotation_count": annotation_count,
+        "annotation_width": _annotation_dimension(annotation_width, DEFAULT_ANNOTATION_WIDTH),
+        "annotation_height": _annotation_dimension(annotation_height, DEFAULT_ANNOTATION_HEIGHT),
         "framerate": max(1.0, _safe_float(framerate, DEFAULT_OTIO_RATE)),
         "duration_seconds": max(0.0, _safe_float(duration_seconds)),
         "notes": notes,
@@ -531,6 +773,14 @@ def build_review_bundle(
             zi = zipfile.ZipInfo(filename=OTIO_MARKERS_BASENAME, date_time=(2024, 1, 1, 0, 0, 0))
             zi.compress_type = zipfile.ZIP_DEFLATED
             zf.writestr(zi, otio_markers_text)
+            if annotation_count:
+                zi = zipfile.ZipInfo(filename=ANNOTATIONS_INDEX_BASENAME, date_time=(2024, 1, 1, 0, 0, 0))
+                zi.compress_type = zipfile.ZIP_DEFLATED
+                zf.writestr(zi, annotations_index_text)
+                for arcname, svg_text in annotation_files:
+                    zi = zipfile.ZipInfo(filename=arcname, date_time=(2024, 1, 1, 0, 0, 0))
+                    zi.compress_type = zipfile.ZIP_DEFLATED
+                    zf.writestr(zi, svg_text)
         for arcname, src, _note in queue_sorted:
             zi = zipfile.ZipInfo(filename=_sanitise_arcname(arcname), date_time=(2024, 1, 1, 0, 0, 0))
             zi.compress_type = zipfile.ZIP_DEFLATED
@@ -548,4 +798,6 @@ def build_review_bundle(
     bundle.total_bytes = out.stat().st_size
     bundle.entries = entries
     bundle.otio_markers_path = otio_markers_basename
+    bundle.annotations_path = annotations_basename
+    bundle.annotation_count = annotation_count
     return bundle
