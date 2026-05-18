@@ -17,6 +17,8 @@ Routes:
   POST /delivery/caption/ttml       -> async TTML/IMSC1 caption export
   POST /delivery/caption/embed-cc   -> async CEA-608 caption embedding
   POST /delivery/fcpxml             -> async FCPXML 1.11 export
+  GET  /delivery/transfer/options   -> croc/rclone availability for delivery menu
+  POST /delivery/transfer-bundle    -> async croc/rclone transfer bundle prep
 """
 
 import logging
@@ -37,6 +39,73 @@ from opencut.security import (
 logger = logging.getLogger("opencut")
 
 delivery_bp = Blueprint("delivery", __name__)
+
+
+def _transfer_bundle_pre_validate(data):
+    paths = data.get("paths", data.get("files", []))
+    if isinstance(paths, str):
+        paths = [paths]
+    if data.get("filepath"):
+        paths = [data.get("filepath")] + list(paths or [])
+    if not paths:
+        return "paths or filepath is required"
+    methods = data.get("methods", data.get("method", "croc"))
+    raw_methods = methods if isinstance(methods, list) else str(methods).split(",")
+    normalized = {str(item).strip().lower() for item in raw_methods if str(item).strip()}
+    if "both" in normalized:
+        normalized.update({"croc", "rclone"})
+    if "rclone" in normalized and not str(data.get("rclone_remote", "")).strip():
+        return "rclone_remote is required when method includes rclone"
+    return None
+
+
+# ---------------------------------------------------------------------------
+# GET /delivery/transfer/options
+# ---------------------------------------------------------------------------
+@delivery_bp.route("/delivery/transfer/options", methods=["GET"])
+def transfer_options_route():
+    """Return croc/rclone delivery transfer menu options."""
+    from opencut.core.delivery_transfer import list_transfer_methods
+
+    methods = list_transfer_methods()
+    return jsonify({"methods": methods, "count": len(methods)})
+
+
+# ---------------------------------------------------------------------------
+# POST /delivery/transfer-bundle
+# ---------------------------------------------------------------------------
+@delivery_bp.route("/delivery/transfer-bundle", methods=["POST"])
+@require_csrf
+@async_job("delivery_transfer_bundle", filepath_required=False, pre_validate=_transfer_bundle_pre_validate)
+def transfer_bundle_route(job_id, filepath, data):
+    """Create a zip delivery bundle and croc/rclone command plans."""
+    from opencut.core.delivery_transfer import prepare_transfer_bundle
+
+    paths = data.get("paths", data.get("files", []))
+    if isinstance(paths, str):
+        paths = [paths]
+    else:
+        paths = list(paths or [])
+    if filepath and filepath not in paths:
+        paths.insert(0, filepath)
+
+    def _progress(pct, msg=""):
+        _update_job(job_id, progress=pct, message=msg)
+
+    _progress(10, "Preparing delivery transfer bundle...")
+    result = prepare_transfer_bundle(
+        paths=paths,
+        output_path=str(data.get("output_path", "") or ""),
+        output_dir=str(data.get("output_dir", "") or ""),
+        bundle_name=str(data.get("bundle_name", "") or ""),
+        method=data.get("methods", data.get("method", "croc")),
+        croc_code=str(data.get("croc_code", "") or ""),
+        croc_relay=str(data.get("croc_relay", "") or ""),
+        rclone_remote=str(data.get("rclone_remote", "") or ""),
+        rclone_path=str(data.get("rclone_path", "") or ""),
+    )
+    _progress(100, "Delivery transfer bundle ready.")
+    return result.to_dict()
 
 
 # ---------------------------------------------------------------------------

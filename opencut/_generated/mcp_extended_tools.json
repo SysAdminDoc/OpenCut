@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 12,
-    "GET": 293,
+    "GET": 294,
     "PATCH": 1,
-    "POST": 1002,
+    "POST": 1003,
     "PUT": 2
   },
   "response_schema_count": 93,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1310,
+  "tool_count": 1312,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -4155,6 +4155,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_delivery_specs_by_name"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /delivery/transfer/options"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /delivery/transfer/options.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "delivery",
+        "endpoint": "delivery.transfer_options_route",
+        "generated": true,
+        "method": "GET",
+        "path": "/delivery/transfer/options",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_delivery_transfer_options"
     },
     {
       "annotations": {
@@ -21742,6 +21772,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_delivery_thumbnail_ab"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /delivery/transfer-bundle"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /delivery/transfer-bundle.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "delivery",
+        "endpoint": "delivery.transfer_bundle_route",
+        "generated": true,
+        "method": "POST",
+        "path": "/delivery/transfer-bundle",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_delivery_transfer_bundle"
     },
     {
       "annotations": {
