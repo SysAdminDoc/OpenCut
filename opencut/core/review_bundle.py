@@ -36,11 +36,15 @@ import time
 import zipfile
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
-from typing import List, Optional, Sequence
+from typing import Any, Dict, List, Optional, Sequence
+
+from opencut.core.marker_metadata import denormalise_color, normalise_color
 
 logger = logging.getLogger("opencut")
 
-BUNDLE_VERSION = 1
+BUNDLE_VERSION = 2
+DEFAULT_OTIO_RATE = 30.0
+OTIO_MARKERS_BASENAME = "markers.otio"
 
 
 @dataclass
@@ -64,6 +68,7 @@ class ReviewBundleResult:
     entries: List[BundleEntry] = field(default_factory=list)
     manifest_path: str = "manifest.json"
     summary_path: str = "summary.html"
+    otio_markers_path: str = ""
     generated_at: float = field(default_factory=time.time)
     job_label: str = ""
 
@@ -75,6 +80,7 @@ class ReviewBundleResult:
             "total_bytes": self.total_bytes,
             "manifest_path": self.manifest_path,
             "summary_path": self.summary_path,
+            "otio_markers_path": self.otio_markers_path,
             "generated_at": self.generated_at,
             "job_label": self.job_label,
             "entries": [e.as_dict() for e in self.entries],
@@ -99,12 +105,211 @@ def _sanitise_arcname(name: str) -> str:
     return "/".join(parts) or "asset.bin"
 
 
+def _safe_float(value: Any, default: float = 0.0) -> float:
+    try:
+        result = float(value)
+    except (TypeError, ValueError, OverflowError):
+        return default
+    if result != result or result in (float("inf"), float("-inf")):
+        return default
+    return result
+
+
+def _first_present(payload: Dict[str, Any], keys: Sequence[str]) -> Any:
+    for key in keys:
+        if key in payload and payload[key] not in (None, ""):
+            return payload[key]
+    return None
+
+
+def _marker_rows(markers_payload: Any) -> List[Dict[str, Any]]:
+    """Return marker/comment rows from the common payload shapes."""
+    if markers_payload is None:
+        return []
+    if isinstance(markers_payload, list):
+        return [m for m in markers_payload if isinstance(m, dict)]
+    if not isinstance(markers_payload, dict):
+        return []
+    for key in ("markers", "comments", "items"):
+        value = markers_payload.get(key)
+        if isinstance(value, list):
+            return [m for m in value if isinstance(m, dict)]
+    if any(key in markers_payload for key in ("time", "timestamp", "timestamp_sec", "start_seconds", "text", "name")):
+        return [markers_payload]
+    return []
+
+
+def _marker_start_seconds(marker: Dict[str, Any], framerate: float) -> float:
+    raw = _first_present(marker, ("start_seconds", "timestamp_sec", "time", "timestamp", "start", "in_seconds", "in"))
+    if raw is not None:
+        return max(0.0, _safe_float(raw))
+    frame = _first_present(marker, ("frame_number", "frame"))
+    if frame is not None and framerate > 0:
+        return max(0.0, _safe_float(frame) / framerate)
+    return 0.0
+
+
+def _marker_duration_seconds(marker: Dict[str, Any], start_seconds: float) -> float:
+    raw = _first_present(marker, ("duration_seconds", "duration", "length_seconds", "length"))
+    if raw is not None:
+        return max(0.0, _safe_float(raw))
+    end_raw = _first_present(marker, ("end_seconds", "end", "out_seconds", "out"))
+    if end_raw is not None:
+        return max(0.0, _safe_float(end_raw) - start_seconds)
+    return 0.0
+
+
+def _marker_name(marker: Dict[str, Any], idx: int) -> str:
+    raw = _first_present(marker, ("name", "title", "label"))
+    if raw is None:
+        raw = _first_present(marker, ("text", "comment", "notes"))
+    name = str(raw or "").strip()
+    if not name:
+        return f"Marker {idx + 1}"
+    return name[:96]
+
+
+def _marker_comment(marker: Dict[str, Any]) -> str:
+    raw = _first_present(marker, ("comment", "notes", "text", "description"))
+    return str(raw or "").strip()
+
+
+def _marker_metadata(marker: Dict[str, Any]) -> Dict[str, Any]:
+    metadata: Dict[str, Any] = {}
+    for key in (
+        "id",
+        "parent_id",
+        "status",
+        "author",
+        "annotation_type",
+        "tags",
+        "chapter",
+        "frame_number",
+        "source",
+        "type",
+    ):
+        value = marker.get(key)
+        if value not in (None, ""):
+            metadata[key] = value
+    annotation_data = marker.get("annotation_data")
+    if isinstance(annotation_data, dict) and annotation_data:
+        metadata["annotation_data"] = annotation_data
+    return metadata
+
+
+def normalise_review_markers(markers_payload: Any, *, framerate: float = DEFAULT_OTIO_RATE) -> List[Dict[str, Any]]:
+    """Normalize review marker/comment payloads into the OpenCut canonical shape."""
+    rate = max(1.0, _safe_float(framerate, DEFAULT_OTIO_RATE))
+    normalised: List[Dict[str, Any]] = []
+    for idx, marker in enumerate(_marker_rows(markers_payload)):
+        start_seconds = _marker_start_seconds(marker, rate)
+        duration_seconds = _marker_duration_seconds(marker, start_seconds)
+        color = normalise_color(str(marker.get("color") or "green"), host=str(marker.get("source") or "premiere"))
+        normalised.append(
+            {
+                "name": _marker_name(marker, idx),
+                "start_seconds": start_seconds,
+                "duration_seconds": duration_seconds,
+                "color": color,
+                "comment": _marker_comment(marker),
+                "metadata": _marker_metadata(marker),
+            }
+        )
+    return sorted(normalised, key=lambda item: (item["start_seconds"], item["name"]))
+
+
+def _otio_rational(seconds: float, framerate: float) -> Dict[str, Any]:
+    return {
+        "OTIO_SCHEMA": "RationalTime.1",
+        "rate": framerate,
+        "value": int(round(max(0.0, seconds) * framerate)),
+    }
+
+
+def _otio_time_range(start_seconds: float, duration_seconds: float, framerate: float) -> Dict[str, Any]:
+    return {
+        "OTIO_SCHEMA": "TimeRange.1",
+        "start_time": _otio_rational(start_seconds, framerate),
+        "duration": _otio_rational(duration_seconds, framerate),
+    }
+
+
+def _otio_marker(marker: Dict[str, Any], framerate: float) -> Dict[str, Any]:
+    opencut_metadata = {
+        "schema": "review-marker.v1",
+        "start_seconds": marker["start_seconds"],
+        "duration_seconds": marker["duration_seconds"],
+        "comment": marker["comment"],
+        **marker["metadata"],
+    }
+    return {
+        "OTIO_SCHEMA": "Marker.2",
+        "name": marker["name"],
+        "marked_range": _otio_time_range(
+            marker["start_seconds"],
+            marker["duration_seconds"],
+            framerate,
+        ),
+        "color": denormalise_color(marker["color"], "otio"),
+        "metadata": {"opencut": opencut_metadata},
+    }
+
+
+def build_review_markers_otio(
+    markers_payload: Any,
+    *,
+    job_label: str = "",
+    media_basename: str = "",
+    framerate: float = DEFAULT_OTIO_RATE,
+    duration_seconds: float = 0.0,
+) -> Dict[str, Any]:
+    """Build a minimal OTIO timeline carrying review comments as Marker objects."""
+    rate = max(1.0, _safe_float(framerate, DEFAULT_OTIO_RATE))
+    markers = normalise_review_markers(markers_payload, framerate=rate)
+    marker_end = max((m["start_seconds"] + m["duration_seconds"] for m in markers), default=0.0)
+    timeline_duration = max(_safe_float(duration_seconds), marker_end + (1.0 / rate), 1.0 / rate)
+    otio_markers = [_otio_marker(marker, rate) for marker in markers]
+    return {
+        "OTIO_SCHEMA": "Timeline.1",
+        "name": job_label or "OpenCut Review Markers",
+        "metadata": {
+            "opencut": {
+                "schema": "review-bundle-markers.v1",
+                "bundle_version": BUNDLE_VERSION,
+                "marker_count": len(markers),
+                "media_basename": media_basename,
+            }
+        },
+        "global_start_time": _otio_rational(0.0, rate),
+        "tracks": {
+            "OTIO_SCHEMA": "Stack.1",
+            "name": "tracks",
+            "children": [
+                {
+                    "OTIO_SCHEMA": "Track.1",
+                    "name": "Review Markers",
+                    "kind": "Video",
+                    "children": [
+                        {
+                            "OTIO_SCHEMA": "Gap.1",
+                            "name": "Review marker range",
+                            "source_range": _otio_time_range(0.0, timeline_duration, rate),
+                            "markers": otio_markers,
+                        }
+                    ],
+                }
+            ],
+        },
+    }
+
+
 def _render_summary_html(
     *,
     job_label: str,
     media_basename: str,
     captions_basename: str,
     markers_basename: str,
+    otio_markers_basename: str,
     entries: Sequence[BundleEntry],
     notes: str,
 ) -> str:
@@ -142,7 +347,8 @@ def _render_summary_html(
         f"  <p><strong>Job:</strong> {job_label or '(unspecified)'}<br>"
         f"<strong>Media:</strong> <code>{media_basename or '(none)'}</code><br>"
         f"<strong>Captions:</strong> <code>{captions_basename or '(none)'}</code><br>"
-        f"<strong>Markers:</strong> <code>{markers_basename or '(none)'}</code></p>\n"
+        f"<strong>Markers:</strong> <code>{markers_basename or '(none)'}</code><br>"
+        f"<strong>OTIO markers:</strong> <code>{otio_markers_basename or '(none)'}</code></p>\n"
         "  <h2>Notes</h2>\n"
         f"  <pre>{notes_block}</pre>\n"
         "  <h2>Contents</h2>\n"
@@ -167,6 +373,8 @@ def build_review_bundle(
     notes: str = "",
     extra_files: Optional[List[str]] = None,
     include_media: bool = True,
+    framerate: float = DEFAULT_OTIO_RATE,
+    duration_seconds: float = 0.0,
 ) -> ReviewBundleResult:
     """Create the review bundle on disk.
 
@@ -180,6 +388,7 @@ def build_review_bundle(
     media_basename = ""
     captions_basename = ""
     markers_basename = ""
+    otio_markers_basename = ""
     pre_entries: List[BundleEntry] = []
     queued_files: List[tuple] = []  # (arcname, source_path, note)
 
@@ -218,6 +427,7 @@ def build_review_bundle(
 
     if markers_payload is not None:
         markers_basename = "markers.json"
+        otio_markers_basename = OTIO_MARKERS_BASENAME
 
     # Deterministic ordering — alphabetical by arcname.
     queued_files.sort(key=lambda item: item[0])
@@ -245,6 +455,14 @@ def build_review_bundle(
 
     if markers_payload is not None:
         markers_text = json.dumps(markers_payload, indent=2, sort_keys=True).encode("utf-8")
+        otio_payload = build_review_markers_otio(
+            markers_payload,
+            job_label=job_label,
+            media_basename=media_basename,
+            framerate=framerate,
+            duration_seconds=duration_seconds,
+        )
+        otio_markers_text = json.dumps(otio_payload, indent=2, sort_keys=True).encode("utf-8")
         entries.append(
             BundleEntry(
                 arcname="markers.json",
@@ -253,12 +471,21 @@ def build_review_bundle(
                 note="marker list",
             )
         )
+        entries.append(
+            BundleEntry(
+                arcname=OTIO_MARKERS_BASENAME,
+                sha256=hashlib.sha256(otio_markers_text).hexdigest(),
+                bytes=len(otio_markers_text),
+                note="OpenTimelineIO marker timeline",
+            )
+        )
 
     summary_html = _render_summary_html(
         job_label=job_label,
         media_basename=media_basename,
         captions_basename=captions_basename,
         markers_basename=markers_basename,
+        otio_markers_basename=otio_markers_basename,
         entries=entries,
         notes=notes,
     ).encode("utf-8")
@@ -278,6 +505,9 @@ def build_review_bundle(
         "media_basename": media_basename,
         "captions_basename": captions_basename,
         "markers_basename": markers_basename,
+        "otio_markers_basename": otio_markers_basename,
+        "framerate": max(1.0, _safe_float(framerate, DEFAULT_OTIO_RATE)),
+        "duration_seconds": max(0.0, _safe_float(duration_seconds)),
         "notes": notes,
         "entries": [e.as_dict() for e in entries],
     }
@@ -298,6 +528,9 @@ def build_review_bundle(
             zi = zipfile.ZipInfo(filename="markers.json", date_time=(2024, 1, 1, 0, 0, 0))
             zi.compress_type = zipfile.ZIP_DEFLATED
             zf.writestr(zi, markers_text)
+            zi = zipfile.ZipInfo(filename=OTIO_MARKERS_BASENAME, date_time=(2024, 1, 1, 0, 0, 0))
+            zi.compress_type = zipfile.ZIP_DEFLATED
+            zf.writestr(zi, otio_markers_text)
         for arcname, src, _note in queue_sorted:
             zi = zipfile.ZipInfo(filename=_sanitise_arcname(arcname), date_time=(2024, 1, 1, 0, 0, 0))
             zi.compress_type = zipfile.ZIP_DEFLATED
@@ -314,4 +547,5 @@ def build_review_bundle(
     bundle.bundle_sha256 = _sha256_of(out)
     bundle.total_bytes = out.stat().st_size
     bundle.entries = entries
+    bundle.otio_markers_path = otio_markers_basename
     return bundle
