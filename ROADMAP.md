@@ -134,8 +134,24 @@
 > **v4.62 status (2026-05-18, fifty-ninth pass)**: advanced **F252.1** by adding a dormant Bolt UXP WebView scaffold beside the shipped UXP panel. `extension/com.opencut.uxp/bolt-webview/` now carries a Bolt-shaped `uxp.config.ts`, host API wrappers for generic UXP and Premiere Pro calls, WebView-side message bridge files, and a placeholder WebView shell without switching the production manifest away from `index.html`. `docs/UXP_MIGRATION.md` now records the scaffold/cutover boundary and `tests/test_uxp_webview_scaffold.py` pins the scaffold in release smoke. F252 remains open for the live WebView UI cutover and remaining UXP API migrations.
 >
 > **v4.63 status (2026-05-18, sixtieth pass)**: advanced **F252.2** by adding a live UXP host-action dispatcher to `extension/com.opencut.uxp/main.js`. `PProBridge.executeHostAction()` now maps the 14 direct-UXP `ocXxx` actions from `opencut/_generated/cep_uxp_parity.json`, keeps `ocApplySequenceCuts` and `ocEmitPingEvent` explicit, returns CEP-fallback responses for `ocAddNativeCaptionTrack` and `ocQeReflect`, and exposes `window.OpenCutUXPHost` for the upcoming WebView bridge. `tests/test_uxp_host_action_dispatch.py` pins the dispatcher against the parity catalogue and release smoke now includes it. F252 still remains open for in-Premiere UDT validation and live WebView cutover.
+>
+> **v4.64 status (2026-05-18, sixty-first pass)**: closed **F254** by wiring UXP `Sequence.createSubsequence(ignoreTrackTargeting?)` into the export-range dispatcher. `PProBridge.createSubsequenceFromRange()` now builds `TickTime` values from seconds, sets sequence in/out points through `createSetInPointAction` / `createSetOutPointAction` inside `Project.executeTransaction`, calls `createSubsequence`, restores the previous range in `finally`, and returns the subsequence metadata for the still-open **F255** encoder handoff. `tests/test_uxp_create_subsequence_integration.py` pins the beta package assumption and release smoke includes it.
 
 ---
+
+## 2026-05-18 v4.64 UXP Subsequence Range Integration (F254)
+
+One UXP API migration item closed in this pass.
+
+| Area | Status |
+|---|---|
+| API verification | Refreshed npm metadata for `@adobe/premierepro`: `latest` remains 26.2.0 and `beta` remains 26.3.0-beta.67; the beta typings expose `Sequence.createSubsequence(ignoreTrackTargeting?)`. |
+| Range setup | `PProBridge.createSubsequenceFromRange(payload)` converts seconds into `TickTime`, sets sequence in/out points through UXP actions, and executes them inside a project transaction. |
+| Subsequence handoff | `exportSequenceRange` now creates the subsequence and returns it to the F255 encoder handoff instead of stopping at an API-availability check. |
+| Range restore | Previous in/out points are restored in a `finally` block after subsequence creation. |
+| Tests/docs | `tests/test_uxp_create_subsequence_integration.py` pins the F254 contract and release smoke includes it. |
+
+Validation after the batch: `python -m pytest tests/test_uxp_create_subsequence_integration.py -q` passed (`5 passed`), `python -m pytest tests/test_uxp_create_subsequence_integration.py tests/test_uxp_host_action_dispatch.py tests/test_uxp_webview_scaffold.py tests/test_release_smoke.py -q` passed (`27 passed`), touched Python files compile, focused Ruff passed, `node --check extension\com.opencut.uxp\main.js` passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`632 passed`).
 
 ## 2026-05-18 v4.63 UXP Host Action Dispatcher (F252.2)
 

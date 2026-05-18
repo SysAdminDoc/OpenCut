@@ -211,6 +211,25 @@ and release-smoke `pytest-fast` (`627 passed`) passed locally.
 
 ---
 
+## 2026-05-18 Pass 61 Addendum — F254 UXP Subsequence Range Integration
+
+**Functional changes:** Closed F254 by replacing the placeholder export-range
+API check with a UXP `Sequence.createSubsequence(ignoreTrackTargeting?)`
+handoff.
+
+| Path | Change |
+|---|---|
+| `extension/com.opencut.uxp/main.js` | Adds `_tickTimeFromSeconds()`, `_executeProjectActions()`, and `PProBridge.createSubsequenceFromRange()`; `exportSequenceRange()` now creates a subsequence before handing off to F255. |
+| `tests/test_uxp_create_subsequence_integration.py` | Pins the beta package assumption, range action wiring, project transaction use, restore behavior, F255 encoder boundary, and release-smoke registration. |
+| `scripts/release_smoke.py` | Adds the F254 guardrail test to the focused release gate. |
+| `docs/UXP_MIGRATION.md`, `CHANGELOG.md`, `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CONTINUE_FROM_HERE.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md` | Synced roadmap/state/docs for F254 closure and F255 continuation. |
+
+**Validation:** focused F254 tests, focused UXP/release-smoke unit coverage,
+`py_compile`, focused Ruff, `node --check extension\com.opencut.uxp\main.js`,
+and release-smoke `pytest-fast` (`632 passed`) passed locally.
+
+---
+
 ## 7.5 Pass 2 additions (same day, second autonomous research run)
 
 Pass 2 added 5 new artefacts + extended 6 existing ones + appended ROADMAP.md v4.5 section + updated PROJECT_CONTEXT.md + wrote CONTINUE_FROM_HERE.md.

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — UXP Subsequence Range Integration
+
+- Added F254 UXP `createSubsequence` range wiring in `PProBridge`: OpenCut now sets sequence in/out points through Premiere UXP actions, calls `Sequence.createSubsequence(ignoreTrackTargeting)`, restores the previous range, and passes the created subsequence forward to the F255 encoder handoff.
+- Added `tests/test_uxp_create_subsequence_integration.py` and release-smoke registration to pin the `@adobe/premierepro@26.3.0-beta.67` API assumptions and the F254/F255 boundary.
+
 ### Added — UXP Host Action Dispatcher
 
 - Added an F252.2 UXP host-action dispatcher in `extension/com.opencut.uxp/main.js` that maps the 14 direct-UXP `ocXxx` actions from the CEP/UXP parity catalogue to live `PProBridge` handlers, with explicit CEP fallback responses for `ocAddNativeCaptionTrack` and `ocQeReflect`.

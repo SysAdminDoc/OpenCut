@@ -855,3 +855,33 @@ F252.2 now has a stable dispatcher surface covered by the local release-smoke
 `pytest-fast` gate, but F252 remains open. The next UXP work should either add
 UDT coverage for these host actions or move into the explicit F254-F258 API
 migrations.
+
+---
+
+## Pass 61 (2026-05-18 — F254 UXP createSubsequence integration)
+
+Pass 61 closed F254 by wiring the verified beta `Sequence.createSubsequence`
+API behind the export-range dispatcher.
+
+### Pass 61 package checks
+
+| Probe | Result |
+|---|---|
+| npm metadata | `@adobe/premierepro` still reports `latest=26.2.0` and `beta=26.3.0-beta.67`. |
+| Beta typings | `premierepro.d.ts` exposes `Sequence.createSubsequence(ignoreTrackTargeting?)`, `TickTime.createWithSeconds`, `Sequence.createSetInPointAction`, `Sequence.createSetOutPointAction`, and `Project.executeTransaction`. |
+| Boundary | The subsequence is now created in UXP; AME/export execution remains sequenced as F255. |
+
+### Pass 61 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 61.1 | Refreshed the beta API assumptions. | Used npm metadata and unpacked typings to confirm F254 inputs before coding. |
+| Pass 61.2 | Implemented the subsequence range handoff. | Added `createSubsequenceFromRange()`, TickTime conversion, project transaction helpers, range restoration, and F255 handoff metadata. |
+| Pass 61.3 | Wired docs and release guardrails. | Added `tests/test_uxp_create_subsequence_integration.py`, release-smoke registration, roadmap/state updates, focused test/Ruff/compile checks, `node --check`, and release-smoke `pytest-fast` validation (`632 passed`). |
+
+### Pass 61 saturation note
+
+F254 is complete for repository-side UXP range-subsequence creation and is
+covered by the local release-smoke `pytest-fast` gate. F255 is the immediate
+follow-up for `EncoderManager.launchEncoder` / `startBatchEncode` and export
+execution.
