@@ -581,7 +581,8 @@ def review_bundle():
     contained entries). When markers are supplied, the zip also includes
     ``markers.otio`` with an OpenTimelineIO Marker timeline,
     ``review_threads.json`` with threaded comments plus completion state,
-    and, when drawing annotations exist, SVG overlays under ``annotations/``.
+    Premiere/EDL marker export sidecars, and, when drawing annotations exist,
+    SVG overlays under ``annotations/``.
     """
     from opencut.core.review_bundle import build_review_bundle
 
