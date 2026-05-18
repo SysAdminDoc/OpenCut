@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 31)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 32)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-17 (after Pass 30; Passes 1-30 all ran on the same calendar day)
-**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, and Pass 30 closed F177 model_cards.py 2026-Q2 sweep with 6 forward-looking gates. This file documents deferred research/product work for a future Pass 31+, not a broken or incomplete research run.
+**Last update:** 2026-05-17 (after Pass 31; Passes 1-31 all ran on the same calendar day)
+**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards.py 2026-Q2 sweep with 6 forward-looking gates, and Pass 31 closed F176 public eval-dataset catalogue (13 datasets across 6 modalities, opt-in download gate, 2 new routes). This file documents deferred research/product work for a future Pass 32+, not a broken or incomplete research run.
 
 ---
 
@@ -15,12 +15,24 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md but not yet F-number-tiered (covered by F180).
 
-### Pass 31 entry point
+### Pass 32 entry point
 
 1. **Push checkpoint commits** once GitHub auth is available on this machine. Pushing remains blocked by the `SysAdminDoc/OpenCut` vs `MavenImaging` credential mismatch.
-2. **Continue the remaining Now queue.** F123, F126, F128, F137, F139, F140, F147, F177, F178, F181, F184, F185, F251, F259 are now closed (Passes 24-30). F182 (gh issue seeder run) and F147 upstream PR are blocked on GitHub auth to third-party / SysAdminDoc repos. F183 is structurally closed. F205 still needs a runner where coverage can finish. The next no-network items to consider: **F176** (eval dataset bundle catalogue — scoped to manifest + checksums + license notes, no actual downloads), **F180** (Wave T-V planning ledger refresh — re-tier the older wave letters through the F-number lens). Remaining Pass-1 Now items requiring network: F121 (Pillow 12.2), F122 (flask-cors 6.x), F133 (onnxruntime ≥1.25), F135 (whisperx 3.8.5). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (model install + integration).
+2. **Continue the remaining Now queue.** F123, F126, F128, F137, F139, F140, F147, F176, F177, F178, F181, F184, F185, F251, F259 are now closed (Passes 24-31). F182 (gh issue seeder run) and F147 upstream PR are blocked on GitHub auth to third-party / SysAdminDoc repos. F183 is structurally closed. F205 still needs a runner where coverage can finish. The next no-network items to consider: **F180** (Wave T-V planning ledger refresh — re-tier the older wave letters through the F-number lens), and the **eval-dataset download runner** that follows F176 (CLI tool that honours `OPENCUT_DOWNLOAD_EVAL=1` + `commercial_use_ok` and fetches the dataset's `download_url`). Remaining Pass-1 Now items requiring network: F121 (Pillow 12.2), F122 (flask-cors 6.x), F133 (onnxruntime ≥1.25), F135 (whisperx 3.8.5). Larger Pass-1 Now items: F149/F162/F163/F167/F169 (model install + integration).
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.10/3.11/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 31 checkpoint
+
+| Item | Status |
+|---|---|
+| F176 | **DONE** — New `opencut/core/eval_datasets.py` registers 13 public datasets: DAVIS 2017, REDS, Spring 2024, VBench, VFI-2024, LibriTTS, LRS3, VoxCeleb 2, MUSDB18-HQ, EBU SQAM, Netflix Open Content, W3C IMSC reference, C2PA test vectors. Each entry carries license, citation, size, `commercial_use_ok` flag, and `auto`/`manual` acquisition mode. |
+| Download safety | The future auto-download runner is gated by **two** independent conditions: operator opt-in via `OPENCUT_DOWNLOAD_EVAL=1` AND the dataset's `commercial_use_ok=True`. Non-commercial corpora (Spring 2024, MUSDB18-HQ, LRS3, VoxCeleb 2, Netflix Open Content) are pinned to `acquisition="manual"` so they can never be auto-fetched. Test `test_non_commercial_datasets_never_auto_download` is the regression guard. |
+| Routes | `GET /system/eval-datasets` (filter by `modality` / `target` / `commercial_only`; toggle `compact`) and `GET /system/eval-datasets/<dataset_id>` (404 with `EVAL_DATASET_NOT_FOUND` on unknown). |
+| Test coverage | 26 tests in `tests/test_eval_datasets.py`: registry schema invariants, helper queries, the env-var opt-in gate, all 5 route paths, three negative-schema assertions. |
+| Manifest regen | 1,365 routes / 101 blueprints (+2 from new routes). |
+| Release smoke | PASS — all 15 chained gates green (pip-audit / npm-advisory / pytest-fast deferred to CI). Ruff clean. |
+| Files to review | `opencut/core/eval_datasets.py` (new), `opencut/routes/system.py` (+2 routes), `tests/test_eval_datasets.py` (new), `scripts/release_smoke.py` (wired new test file), regenerated manifests, ROADMAP.md v4.34 section, PROJECT_CONTEXT.md, this file. |
 
 ### Pass 30 checkpoint
 
