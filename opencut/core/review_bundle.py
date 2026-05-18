@@ -28,7 +28,9 @@ parsing the zip back out.
 
 from __future__ import annotations
 
+import csv
 import hashlib
+import io
 import json
 import logging
 import os
@@ -44,11 +46,13 @@ from opencut.core.marker_metadata import denormalise_color, normalise_color
 
 logger = logging.getLogger("opencut")
 
-BUNDLE_VERSION = 3
+BUNDLE_VERSION = 4
 DEFAULT_OTIO_RATE = 30.0
 OTIO_MARKERS_BASENAME = "markers.otio"
 ANNOTATIONS_INDEX_BASENAME = "annotations/index.json"
 THREADS_BASENAME = "review_threads.json"
+PREMIERE_MARKERS_BASENAME = "premiere_markers.csv"
+EDL_MARKERS_BASENAME = "review_markers.edl"
 DEFAULT_ANNOTATION_WIDTH = 1920
 DEFAULT_ANNOTATION_HEIGHT = 1080
 DRAWING_ANNOTATION_TYPES = frozenset({"drawing_rect", "drawing_circle", "drawing_arrow"})
@@ -83,6 +87,9 @@ class ReviewBundleResult:
     thread_count: int = 0
     open_thread_count: int = 0
     completion_status: str = ""
+    premiere_markers_path: str = ""
+    edl_markers_path: str = ""
+    marker_export_count: int = 0
     generated_at: float = field(default_factory=time.time)
     job_label: str = ""
 
@@ -101,6 +108,9 @@ class ReviewBundleResult:
             "thread_count": self.thread_count,
             "open_thread_count": self.open_thread_count,
             "completion_status": self.completion_status,
+            "premiere_markers_path": self.premiere_markers_path,
+            "edl_markers_path": self.edl_markers_path,
+            "marker_export_count": self.marker_export_count,
             "generated_at": self.generated_at,
             "job_label": self.job_label,
             "entries": [e.as_dict() for e in self.entries],
@@ -358,6 +368,84 @@ def build_review_markers_otio(
             ],
         },
     }
+
+
+def _seconds_to_timecode(seconds: float, framerate: float) -> str:
+    fps = max(1, int(round(_safe_float(framerate, DEFAULT_OTIO_RATE))))
+    total_frames = max(0, int(round(_safe_float(seconds) * fps)))
+    frames = total_frames % fps
+    total_seconds = total_frames // fps
+    secs = total_seconds % 60
+    mins = (total_seconds // 60) % 60
+    hours = total_seconds // 3600
+    return f"{hours:02d}:{mins:02d}:{secs:02d}:{frames:02d}"
+
+
+def _single_line(value: Any) -> str:
+    return re.sub(r"\s+", " ", str(value or "")).strip()
+
+
+def _review_marker_description(marker: Dict[str, Any], *, multiline: bool = True) -> str:
+    metadata = marker.get("metadata") if isinstance(marker.get("metadata"), dict) else {}
+    parts: List[str] = []
+    comment = str(marker.get("comment") or "").strip()
+    if comment:
+        parts.append(comment)
+    for key, label in (
+        ("status", "Status"),
+        ("author", "Author"),
+        ("id", "Comment ID"),
+        ("parent_id", "Parent ID"),
+        ("annotation_type", "Annotation"),
+    ):
+        value = metadata.get(key)
+        if value not in (None, ""):
+            parts.append(f"{label}: {value}")
+    if not parts:
+        return ""
+    separator = "\n" if multiline else " | "
+    return separator.join(_single_line(part) for part in parts if _single_line(part))
+
+
+def build_premiere_marker_csv(markers_payload: Any, *, framerate: float = DEFAULT_OTIO_RATE) -> str:
+    """Export review comments as Premiere-importable marker CSV text."""
+    rate = max(1.0, _safe_float(framerate, DEFAULT_OTIO_RATE))
+    output = io.StringIO()
+    writer = csv.writer(output, lineterminator="\n")
+    writer.writerow(["Marker Name", "Description", "In", "Out", "Duration", "Marker Color"])
+    for marker in normalise_review_markers(markers_payload, framerate=rate):
+        start = marker["start_seconds"]
+        duration = marker["duration_seconds"]
+        writer.writerow(
+            [
+                marker["name"],
+                _review_marker_description(marker, multiline=True),
+                _seconds_to_timecode(start, rate),
+                _seconds_to_timecode(start + duration, rate),
+                _seconds_to_timecode(duration, rate),
+                denormalise_color(marker["color"], "premiere"),
+            ]
+        )
+    return output.getvalue()
+
+
+def build_review_markers_edl(
+    markers_payload: Any,
+    *,
+    job_label: str = "",
+    framerate: float = DEFAULT_OTIO_RATE,
+) -> str:
+    """Export review comments as a CMX3600 marker-only EDL subset."""
+    rate = max(1.0, _safe_float(framerate, DEFAULT_OTIO_RATE))
+    title = _single_line(job_label) or "OpenCut Review Markers"
+    lines = [f"TITLE: {title}", "FCM: NON-DROP FRAME", ""]
+    for marker in normalise_review_markers(markers_payload, framerate=rate):
+        description = _review_marker_description(marker, multiline=False)
+        if description:
+            lines.append(f"* LOC: {description}")
+        color = denormalise_color(marker["color"], "premiere").upper()
+        lines.append(f"M: AX     {color:<8} {_seconds_to_timecode(marker['start_seconds'], rate)} {marker['name']}")
+    return "\n".join(lines).rstrip() + "\n"
 
 
 def _safe_int(value: Any, default: int = 0) -> int:
@@ -690,6 +778,9 @@ def _render_summary_html(
     thread_count: int,
     open_thread_count: int,
     completion_status: str,
+    premiere_markers_basename: str,
+    edl_markers_basename: str,
+    marker_export_count: int,
     annotations_basename: str,
     annotation_count: int,
     entries: Sequence[BundleEntry],
@@ -733,6 +824,9 @@ def _render_summary_html(
         f"<strong>OTIO markers:</strong> <code>{otio_markers_basename or '(none)'}</code><br>"
         f"<strong>Threads:</strong> <code>{threads_basename or '(none)'}</code> "
         f"({thread_count} threads, {open_thread_count} open, {completion_status or 'n/a'})<br>"
+        f"<strong>Premiere markers:</strong> <code>{premiere_markers_basename or '(none)'}</code><br>"
+        f"<strong>EDL markers:</strong> <code>{edl_markers_basename or '(none)'}</code> "
+        f"({marker_export_count} markers)<br>"
         f"<strong>Annotations:</strong> <code>{annotations_basename or '(none)'}</code> ({annotation_count})</p>\n"
         "  <h2>Notes</h2>\n"
         f"  <pre>{notes_block}</pre>\n"
@@ -782,6 +876,9 @@ def build_review_bundle(
     thread_count = 0
     open_thread_count = 0
     completion_status = ""
+    premiere_markers_basename = ""
+    edl_markers_basename = ""
+    marker_export_count = 0
     pre_entries: List[BundleEntry] = []
     queued_files: List[tuple] = []  # (arcname, source_path, note)
 
@@ -822,6 +919,8 @@ def build_review_bundle(
         markers_basename = "markers.json"
         otio_markers_basename = OTIO_MARKERS_BASENAME
         threads_basename = THREADS_BASENAME
+        premiere_markers_basename = PREMIERE_MARKERS_BASENAME
+        edl_markers_basename = EDL_MARKERS_BASENAME
         annotations_basename = ANNOTATIONS_INDEX_BASENAME
 
     # Deterministic ordering — alphabetical by arcname.
@@ -863,6 +962,13 @@ def build_review_bundle(
         open_thread_count = int(threads_payload["open_thread_count"])
         completion_status = str(threads_payload["completion_status"])
         threads_text = json.dumps(threads_payload, indent=2, sort_keys=True).encode("utf-8")
+        marker_export_count = len(normalise_review_markers(markers_payload, framerate=framerate))
+        premiere_markers_text = build_premiere_marker_csv(markers_payload, framerate=framerate).encode("utf-8")
+        edl_markers_text = build_review_markers_edl(
+            markers_payload,
+            job_label=job_label,
+            framerate=framerate,
+        ).encode("utf-8")
         annotations_index, annotation_files = build_review_annotation_svgs(
             markers_payload,
             framerate=framerate,
@@ -897,6 +1003,22 @@ def build_review_bundle(
                 note="threaded comments and review completion status",
             )
         )
+        entries.append(
+            BundleEntry(
+                arcname=PREMIERE_MARKERS_BASENAME,
+                sha256=hashlib.sha256(premiere_markers_text).hexdigest(),
+                bytes=len(premiere_markers_text),
+                note="Premiere marker CSV export",
+            )
+        )
+        entries.append(
+            BundleEntry(
+                arcname=EDL_MARKERS_BASENAME,
+                sha256=hashlib.sha256(edl_markers_text).hexdigest(),
+                bytes=len(edl_markers_text),
+                note="CMX3600 marker EDL export",
+            )
+        )
         if annotation_count:
             entries.append(
                 BundleEntry(
@@ -926,6 +1048,9 @@ def build_review_bundle(
         thread_count=thread_count,
         open_thread_count=open_thread_count,
         completion_status=completion_status,
+        premiere_markers_basename=premiere_markers_basename,
+        edl_markers_basename=edl_markers_basename,
+        marker_export_count=marker_export_count,
         annotations_basename=annotations_basename,
         annotation_count=annotation_count,
         entries=entries,
@@ -952,6 +1077,9 @@ def build_review_bundle(
         "thread_count": thread_count,
         "open_thread_count": open_thread_count,
         "completion_status": completion_status,
+        "premiere_markers_basename": premiere_markers_basename,
+        "edl_markers_basename": edl_markers_basename,
+        "marker_export_count": marker_export_count,
         "annotations_basename": annotations_basename,
         "annotation_count": annotation_count,
         "annotation_width": _annotation_dimension(annotation_width, DEFAULT_ANNOTATION_WIDTH),
@@ -984,6 +1112,12 @@ def build_review_bundle(
             zi = zipfile.ZipInfo(filename=THREADS_BASENAME, date_time=(2024, 1, 1, 0, 0, 0))
             zi.compress_type = zipfile.ZIP_DEFLATED
             zf.writestr(zi, threads_text)
+            zi = zipfile.ZipInfo(filename=PREMIERE_MARKERS_BASENAME, date_time=(2024, 1, 1, 0, 0, 0))
+            zi.compress_type = zipfile.ZIP_DEFLATED
+            zf.writestr(zi, premiere_markers_text)
+            zi = zipfile.ZipInfo(filename=EDL_MARKERS_BASENAME, date_time=(2024, 1, 1, 0, 0, 0))
+            zi.compress_type = zipfile.ZIP_DEFLATED
+            zf.writestr(zi, edl_markers_text)
             if annotation_count:
                 zi = zipfile.ZipInfo(filename=ANNOTATIONS_INDEX_BASENAME, date_time=(2024, 1, 1, 0, 0, 0))
                 zi.compress_type = zipfile.ZIP_DEFLATED
@@ -1015,4 +1149,7 @@ def build_review_bundle(
     bundle.thread_count = thread_count
     bundle.open_thread_count = open_thread_count
     bundle.completion_status = completion_status
+    bundle.premiere_markers_path = premiere_markers_basename
+    bundle.edl_markers_path = edl_markers_basename
+    bundle.marker_export_count = marker_export_count
     return bundle
