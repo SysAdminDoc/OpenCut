@@ -34,8 +34,8 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | F# | Title | What | Source | Effort | Tier |
 |---|---|---|---|---|---|
-| F200 | Document WPF-vs-Inno installer policy (retire one or formalise both) | Two installer paths today; users see only "Setup.exe" | INSTALLER_AUDIT §3 | S | Next |
-| F201 | Automate WPF installer build in CI | Currently manual via `InstallerBuilder.ps1` | INSTALLER_AUDIT §7 | M | Next |
+| [x] F200 | Document WPF-vs-Inno installer policy (retire one or formalise both) | Closed in Pass 33 — WPF recommended, Inno deprecated-but-supported, lockstep tests added | INSTALLER_AUDIT §3 | S | Next |
+| [x] F201 | Automate WPF installer build in CI | Closed in Pass 44 — Windows tag/manual CI builds and archives the recommended WPF installer before the Inno fallback | INSTALLER_AUDIT §7 | M | Next |
 | F202 | Apple notarisation for macOS PyInstaller bundle | DONE in Pass 10 — macOS release workflow signs with Developer ID, submits `OpenCut-Server-macOS.zip` through `xcrun notarytool`, and documents required secrets; first live acceptance still needs configured GitHub secrets | INSTALLER_AUDIT §7 + niche AI §5 | M | Done |
 | F203 | Authenticode code-signing for Windows installer + signing-cert renewal policy | Cert validity drops to 458 days March 2026; EV bypass for SmartScreen no longer auto-trusted | INSTALLER_AUDIT §7 + niche AI §5 | M | Next |
 | F204 | Auto-attach SBOM (CycloneDX 1.5) to GitHub release | DONE in Pass 11 — Linux release job generates, archives, and uploads `dist/opencut-sbom.cyclonedx.json` | INSTALLER_AUDIT §7 | S | Done |
@@ -50,13 +50,13 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F208 | OpenAPI spec validity test (per-endpoint 200/400/403) | DONE in Pass 13 — `/openapi.json` now emits OpenAPI path params, unique operation IDs, mutating-method 400/403 responses, and a release-gate contract test | TEST_COVERAGE §3.2 | S | Done |
 | F209 | MCP tool ↔ route consistency test | DONE in Pass 14 — fixed `opencut_chat_edit` to shipped `POST /chat` and added a live Flask route-consistency gate for all MCP default and special action routes | TEST_COVERAGE §3.3 | S | Done |
 | F210 | Vitest unit tests for CEP/UXP utility functions | `esc()`, `escPath()`, command-palette indexer, lazy DOM proxy | TEST_COVERAGE §3.4 | M | Later |
-| F211 | Cross-platform launcher script smoke tests in CI | `.bat`, `.vbs`, `.command`, `.sh` | TEST_COVERAGE §3.5 | S | Next |
+| [x] F211 | Cross-platform launcher script smoke tests in CI | Closed in Pass 33 — 5 launcher entry points covered and wired into release smoke | TEST_COVERAGE §3.5 | S | Next |
 | F212 | WPF installer xUnit test suite + headless install in Windows runner | Largest single coverage gap | TEST_COVERAGE §3.6 | XL | Later |
 | [x] F213 | Inno Setup install/uninstall smoke in CI | Closed in Pass 37 with CI-only install/uninstall smoke script + workflow wiring + static guard tests | TEST_COVERAGE §3.6 | M | Next |
 | [x] F214 | Extend F128 with ML + TTS perf benchmarks | Closed in Pass 40 — performance benchmark registry pins ASR/upscaler/compose/TTS throughput specs, backend matrix, opt-in execution gate, and wall-clock normalization primitive | TEST_COVERAGE §3.7 | M | Next |
 | [x] F215 | Extend fuzz harness with 8 targets | Closed in Pass 38 — 13 total fuzz targets now cover path validation, OTIO parse, FCPXML parse, marker import, C2PA sidecars, plugin manifests, webhook HMAC signatures, and `safe_pip_install` package validation | TEST_COVERAGE §3.8 | M | Next |
 | [x] F216 | Concurrent job-cancellation race test | Closed in Pass 39 — `_cancel_job()` terminates registered child processes and `tests/test_job_cancellation_race.py` covers the FFmpeg progress cancellation race | TEST_COVERAGE §3.9 | M | Next |
-| F217 | UXP backend-client contract test | Pin BackendClient HTTP shape | TEST_COVERAGE §3.10 | S | Next |
+| [x] F217 | UXP backend-client contract test | Closed in Pass 34 — JS-side BackendClient static contract plus Flask health/status/CSRF runtime gates | TEST_COVERAGE §3.10 | S | Next |
 | F218 | Import-order stability test for blueprint registration | DONE in Pass 15 — pins the 99-blueprint core order and final `motion_design_api` alias registration in release smoke | TEST_COVERAGE §3.11 | S | Done |
 | F219 | SBOM completeness test | DONE in Pass 16 — CycloneDX now covers declared Python deps, 47 model cards, and a non-empty dependency graph in release smoke | TEST_COVERAGE §3.12 | S | Done |
 
@@ -129,7 +129,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 |---|---|---|
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
-| **Next** | [x] F192, [x] F194, [x] F198, F200, F201, F203, F211, [x] F213, [x] F214, [x] F215, [x] F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
+| **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F252, F254, F255, F256, F257, F258, F260 | 32 |
 | **Later** | F193, F196, F206, F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 18 |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).

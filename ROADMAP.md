@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.46
+**Version**: 4.47
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -100,8 +100,23 @@
 > **v4.45 status (2026-05-18, forty-second pass)**: closed **F198** by promoting the CEP↔UXP parity matrix into a code-owned catalogue and generated artifact. `opencut/core/cep_uxp_parity.py` now records all **18** `ocXxx` JSX host functions, their UXP path, migration risk, F-number ownership, and replacement plan; `opencut/_generated/cep_uxp_parity.json` provides the machine-readable artifact for F260; and `tests/test_cep_uxp_parity_catalogue.py` fails if `host/index.jsx` gains a new CEP host function without an explicit migration disposition. The pinned CEP-only surface remains **2 functions**: `ocAddNativeCaptionTrack` and `ocQeReflect`.
 >
 > **v4.46 status (2026-05-18, forty-third pass)**: closed **F194** by adding an opt-in generated extended MCP route-tool catalogue. The curated MCP surface remains **39** default tools, while `opencut/_generated/mcp_extended_tools.json` now exposes **1,307** lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response-schema map. `opencut-mcp-server --extended-tools` or `OPENCUT_MCP_EXTENDED_TOOLS=1` enables the generated tools for clients that deliberately want full route-level coverage, and `tests/test_mcp_extended_tools.py` pins manifest drift, opt-in behavior, generated metadata, and dispatch for GET query/body/path-parameter routes.
+>
+> **v4.47 status (2026-05-18, forty-fourth pass)**: closed **F201** by building the recommended WPF installer on Windows tag/manual CI. `.github/workflows/build.yml` now runs `scripts/build_wpf_installer_ci.ps1` after PyInstaller and before the Inno fallback, copies FFmpeg/ffprobe from PATH into the payload folder, invokes `installer/InstallerBuilder.ps1`, and archives the WPF output separately as `OpenCut-WPF-Setup-X.Y.Z.exe` so the later Inno build cannot overwrite it. `tests/test_wpf_installer_ci.py` pins the workflow ordering, artifact path, payload prerequisites, and policy-doc status.
 
 ---
+
+## 2026-05-18 v4.47 WPF Installer CI Build (F201)
+
+One Next-tier installer automation item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F201 workflow | DONE — Windows tag/manual builds run the WPF installer builder after PyInstaller and before the Inno fallback. |
+| CI wrapper | `scripts/build_wpf_installer_ci.ps1` verifies `dist/OpenCut-Server`, stages `ffmpeg.exe`/`ffprobe.exe` from PATH, runs `installer/InstallerBuilder.ps1`, and archives the WPF binary under `installer/dist/wpf/OpenCut-WPF-Setup-*.exe`. |
+| Artifact separation | `.github/workflows/build.yml` uploads `OpenCut-Setup-WPF-Windows` separately, preserving the recommended WPF installer even though the legacy Inno build uses the same `OpenCut-Setup-X.Y.Z.exe` filename. |
+| Policy update | `docs/INSTALLER_POLICY.md` now marks F201 complete and narrows Inno-retirement blockers to F203 signing and F212 WPF tests. |
+| Guard tests | `tests/test_wpf_installer_ci.py` pins the wrapper script, FFmpeg staging, workflow ordering before Inno, artifact path, and policy-doc status. Release smoke includes the new test. |
+| Validation | `python -m pytest tests/test_wpf_installer_ci.py tests/test_installer_policy.py tests/test_inno_installer_smoke.py -q` -> `16 passed`; focused Ruff -> clean. |
 
 ## 2026-05-18 v4.46 Extended MCP Route Tools (F194)
 
@@ -898,8 +913,8 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Flagship review-bundle extensions: **F225-F229** OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, F242 ICU4X CJK line breaking
-- Packaging: F200-F213 installer rationalisation + macOS notarisation tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
-- Tests: F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + F217 UXP contract test
+- Packaging: [x] F200 installer policy + [x] F201 WPF CI build + F203 signing + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
+- Tests: [x] F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + [x] F217 UXP contract test
 - Local LAN review: F231 mDNS+Caddy+HMAC portal + F232 Headscale + F233 Atom feed + webhook + F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 

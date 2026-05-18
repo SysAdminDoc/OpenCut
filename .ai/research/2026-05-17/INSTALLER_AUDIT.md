@@ -67,7 +67,7 @@ Source: `installer/src/OpenCut.Installer/` (.NET 9, ~2,326 lines of C# across se
 - **Why two installers?** The Inno Setup script is the proven legacy path used for older releases; the WPF installer is the "premium UX" replacement. Both currently ship in parallel.
 
 **Recommendation:**
-- **F200** — Document the WPF-vs-Inno divergence policy. Which is the canonical recommendation for end users? `README.md` Option A "installer (recommended)" mentions `OpenCut-Setup-1.28.0.exe` without specifying which build path produced it.
+- **F200** — **DONE in Pass 33.** `docs/INSTALLER_POLICY.md` designates WPF as recommended, Inno as deprecated-but-supported, and pins lockstep invariants with tests.
 
 ---
 
@@ -129,7 +129,7 @@ Evaluated in `docs/WINDOWS_ARM64_PACKAGING.md` with the F101 commit (`706c1c3`):
 16. Upload installer to release (Windows + tag only)
 
 ### Gaps in CI:
-- **No WPF installer build in CI** — only Inno Setup runs. The premium WPF installer must be built manually via `installer/InstallerBuilder.ps1` and committed to releases. **F201 — automate WPF installer build in CI**.
+- **WPF installer build in CI** — **DONE in Pass 44.** Windows tag/manual builds run `scripts/build_wpf_installer_ci.ps1` after PyInstaller and archive `OpenCut-WPF-Setup-*.exe` before the Inno fallback build.
 - **macOS notarisation step added in Pass 10** — tagged/manual macOS release builds now call `scripts/notarize_macos.sh`, sign Mach-O files with hardened runtime, submit `OpenCut-Server-macOS.zip` via `xcrun notarytool`, and upload the notarized ZIP on tag releases. **F202 repository-side tooling is done; first live acceptance still needs GitHub secrets.**
 - **No SmartScreen/Authenticode signing for Windows** — Inno Setup output is unsigned. **F203 — code-signing for Windows installer**.
 - **SBOM upload added in Pass 11** — Linux tagged/manual release builds now run `scripts/sbom.py`, archive `OpenCut-SBOM-CycloneDX`, and upload `dist/opencut-sbom.cyclonedx.json` to tagged GitHub Releases. **F204 is done; Pass 16 later closed F219's deeper completeness test.**
@@ -165,8 +165,8 @@ Per the wave I I1.4 plan (shipped in v1.26.0):
 
 | F# | Title | Priority | Effort |
 |---|---|---|---|
-| F200 | Document WPF-vs-Inno installer policy + retire one or formalise both | Next | S |
-| F201 | Automate WPF installer build in CI | Next | M |
+| F200 | Document WPF-vs-Inno installer policy + retire one or formalise both | Done in Pass 33 | S |
+| F201 | Automate WPF installer build in CI | Done in Pass 44 | M |
 | F202 | Apple notarisation for macOS PyInstaller bundle | Done in Pass 10; live acceptance requires configured secrets | M |
 | F203 | Authenticode code-signing for Windows installer | Next | M |
 | F204 | Auto-attach SBOM (from `scripts/sbom.py`) to GitHub releases | Done in Pass 11 | S |
