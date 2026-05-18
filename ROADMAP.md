@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.39
+**Version**: 4.40
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -86,8 +86,22 @@
 > **v4.38 status (2026-05-18, thirty-fifth pass)**: closed the low-risk dependency-security batch **F121/F122/F127a/F130/F133/F135**. PyPI metadata forced the runtime decision: Pillow 12.2 and WhisperX 3.8.5 require Python >=3.10, while onnxruntime 1.25+ requires Python >=3.11, so OpenCut source installs now advertise **Python 3.11+**. `pyproject.toml` and `requirements.txt` now pin `flask-cors>=6,<7`, `opencv-python-headless>=4.13,<5`, `Pillow>=12.2,<13`, `onnxruntime>=1.25,<2`, `onnxruntime-gpu>=1.25,<2`, and `whisperx>=3.8.5,<4`; the F123 pydub retirement is also reflected in `requirements.txt`. Guard tests in `tests/test_dependency_surface.py`, `tests/test_bootstrap_check.py`, and `tests/test_mcp_registry_manifest.py` pin the dependency floor and generated MCP metadata.
 >
 > **v4.39 status (2026-05-18, thirty-sixth pass)**: closed **F180** by adding the canonical Wave N-T / F-number governance bridge at [`.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md`](.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md). The ledger walks every Wave N, O, P, Q, R, S, and T row, assigns it to an existing F-number where one already owns the governance surface, keeps pure model-route work wave-only, and calls out the shared model-card/eval/license/UXP gates that future wave implementations must satisfy. `tests/test_wave_f_number_ledger.py` now extracts Wave N-T rows from this roadmap and fails if the ledger drifts.
+>
+> **v4.40 status (2026-05-18, thirty-seventh pass)**: closed **F213** by adding a CI-only Inno install/uninstall smoke at `scripts/smoke_inno_installer.ps1`, wiring it immediately after the Windows Inno build step in `.github/workflows/build.yml`, and pinning the destructive-script guardrails with `tests/test_inno_installer_smoke.py`. The smoke installs the generated setup EXE to a temp directory with silent/no-task flags, verifies the payload, registry key, and `~/.opencut/installer.json`, runs the generated uninstaller, and verifies cleanup. The script refuses to run outside CI unless explicitly overridden because the Inno uninstaller deletes `~/.opencut`.
 
 ---
+
+## 2026-05-18 v4.40 Inno Install/Uninstall Smoke (F213)
+
+One Next-tier installer coverage item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F213 Inno CI smoke | DONE — `scripts/smoke_inno_installer.ps1` installs the generated `OpenCut-Setup-*.exe` into a temp directory, verifies the installed payload, `HKCU:\Software\OpenCut`, and `~/.opencut/installer.json`, then runs the generated uninstaller and verifies cleanup. |
+| CI wiring | `.github/workflows/build.yml` now runs `./scripts/smoke_inno_installer.ps1` immediately after the Windows Inno build step and before archiving the setup executable on tag/manual builds. |
+| Safety guard | The smoke refuses to run outside CI unless `-AllowLocalProfileMutation` is passed because the Inno uninstaller intentionally deletes `~/.opencut`. Recursive cleanup is constrained to the temp install root. |
+| Guard tests | `tests/test_inno_installer_smoke.py` pins the script's silent install/uninstall flags, profile-mutation guard, workflow wiring, and release-smoke inclusion. |
+| Validation | `python -m pytest tests/test_inno_installer_smoke.py tests/test_installer_policy.py -q` -> `11 passed`; focused Ruff -> clean; PowerShell script parse -> OK; `python scripts/release_smoke.py --skip pip-audit --skip npm-advisory --skip pytest-fast --json` -> OK. |
 
 ## 2026-05-18 v4.39 Wave N-T F-Number Governance Ledger (F180)
 
@@ -798,8 +812,8 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Flagship review-bundle extensions: **F225-F229** OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, F242 ICU4X CJK line breaking
-- Packaging: F200-F213 installer rationalisation + macOS notarisation tooling + Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
-- Tests: F211 launcher smoke + F213 Inno smoke + F214 ML/TTS perf benchmarks + F215 fuzz extend + F216 race test + F217 UXP contract test
+- Packaging: F200-F213 installer rationalisation + macOS notarisation tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
+- Tests: F211 launcher smoke + [x] F213 Inno smoke + F214 ML/TTS perf benchmarks + F215 fuzz extend + F216 race test + F217 UXP contract test
 - Local LAN review: F231 mDNS+Caddy+HMAC portal + F232 Headscale + F233 Atom feed + webhook + F234 croc/rclone delivery
 - Docs: F198 CEP-only route catalogue + F260 UXP migration risk dashboard
 
