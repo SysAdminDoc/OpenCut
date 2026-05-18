@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Review Bundle Threads
+
+- Added `review_threads.json` to F105 review bundles, grouping root comments and replies with per-thread completion status and aggregate open/resolved/wontfix counts.
+- Extended bundle manifests and `POST /review/bundle` responses with thread counts, open-thread counts, and overall review completion status.
+
 ### Added — Review Bundle SVG Annotations
 
 - Added deterministic SVG drawing overlays to F105 review bundles for `drawing_rect`, `drawing_circle`, and `drawing_arrow` review comments, plus an `annotations/index.json` manifest.

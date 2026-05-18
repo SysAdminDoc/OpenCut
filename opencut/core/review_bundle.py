@@ -44,13 +44,15 @@ from opencut.core.marker_metadata import denormalise_color, normalise_color
 
 logger = logging.getLogger("opencut")
 
-BUNDLE_VERSION = 2
+BUNDLE_VERSION = 3
 DEFAULT_OTIO_RATE = 30.0
 OTIO_MARKERS_BASENAME = "markers.otio"
 ANNOTATIONS_INDEX_BASENAME = "annotations/index.json"
+THREADS_BASENAME = "review_threads.json"
 DEFAULT_ANNOTATION_WIDTH = 1920
 DEFAULT_ANNOTATION_HEIGHT = 1080
 DRAWING_ANNOTATION_TYPES = frozenset({"drawing_rect", "drawing_circle", "drawing_arrow"})
+CLOSED_REVIEW_STATUSES = frozenset({"resolved", "wontfix"})
 
 
 @dataclass
@@ -77,6 +79,10 @@ class ReviewBundleResult:
     otio_markers_path: str = ""
     annotations_path: str = ""
     annotation_count: int = 0
+    threads_path: str = ""
+    thread_count: int = 0
+    open_thread_count: int = 0
+    completion_status: str = ""
     generated_at: float = field(default_factory=time.time)
     job_label: str = ""
 
@@ -91,6 +97,10 @@ class ReviewBundleResult:
             "otio_markers_path": self.otio_markers_path,
             "annotations_path": self.annotations_path,
             "annotation_count": self.annotation_count,
+            "threads_path": self.threads_path,
+            "thread_count": self.thread_count,
+            "open_thread_count": self.open_thread_count,
+            "completion_status": self.completion_status,
             "generated_at": self.generated_at,
             "job_label": self.job_label,
             "entries": [e.as_dict() for e in self.entries],
@@ -205,6 +215,43 @@ def _marker_metadata(marker: Dict[str, Any]) -> Dict[str, Any]:
     if isinstance(annotation_data, dict) and annotation_data:
         metadata["annotation_data"] = annotation_data
     return metadata
+
+
+def _marker_id(marker: Dict[str, Any], idx: int) -> str:
+    raw = _first_present(marker, ("id", "comment_id", "marker_id"))
+    value = str(raw or "").strip()
+    return value or f"comment-{idx + 1}"
+
+
+def _truthy(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return value != 0
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on", "done", "complete", "completed", "resolved"}
+    return False
+
+
+def _review_status(marker: Dict[str, Any]) -> str:
+    raw = str(_first_present(marker, ("status", "state", "review_status")) or "").strip().lower()
+    status = raw.replace("-", "_").replace(" ", "_")
+    if status in {"resolved", "resolve", "done", "closed", "complete", "completed", "approved", "accepted"}:
+        return "resolved"
+    if status in {"wontfix", "wont_fix", "won't_fix", "rejected", "declined", "not_applicable"}:
+        return "wontfix"
+    if _truthy(_first_present(marker, ("completed", "complete", "is_complete", "is_resolved", "resolved"))):
+        return "resolved"
+    return "open"
+
+
+def _comment_tags(marker: Dict[str, Any]) -> List[str]:
+    tags = marker.get("tags")
+    if isinstance(tags, list):
+        return [str(tag).strip() for tag in tags if str(tag).strip()]
+    if isinstance(tags, str):
+        return [tag.strip() for tag in re.split(r"[;,]", tags) if tag.strip()]
+    return []
 
 
 def normalise_review_markers(markers_payload: Any, *, framerate: float = DEFAULT_OTIO_RATE) -> List[Dict[str, Any]]:
@@ -503,6 +550,135 @@ def build_review_annotation_svgs(
     return index, files
 
 
+def build_review_threads(markers_payload: Any, *, framerate: float = DEFAULT_OTIO_RATE) -> Dict[str, Any]:
+    """Build a stable threaded-comment sidecar with review completion status."""
+    rate = max(1.0, _safe_float(framerate, DEFAULT_OTIO_RATE))
+    comments: List[Dict[str, Any]] = []
+    used_ids: set[str] = set()
+
+    for idx, marker in enumerate(_marker_rows(markers_payload)):
+        start_seconds = _marker_start_seconds(marker, rate)
+        raw_id = _marker_id(marker, idx)
+        comment_id = raw_id
+        if comment_id in used_ids:
+            comment_id = f"{comment_id}-{idx + 1}"
+        used_ids.add(comment_id)
+        parent_id = str(_first_present(marker, ("parent_id", "parentId", "reply_to", "replyTo")) or "").strip()
+        frame_number = _safe_int(marker.get("frame_number"), int(round(start_seconds * rate)))
+        comment = {
+            "id": comment_id,
+            "parent_id": parent_id,
+            "timestamp_sec": start_seconds,
+            "frame_number": max(0, frame_number),
+            "duration_seconds": _marker_duration_seconds(marker, start_seconds),
+            "author": str(marker.get("author") or marker.get("owner") or "").strip(),
+            "text": _annotation_label(marker) or _marker_comment(marker),
+            "status": _review_status(marker),
+            "annotation_type": str(marker.get("annotation_type") or marker.get("type") or "text").strip() or "text",
+            "tags": _comment_tags(marker),
+            "created_at": _safe_float(marker.get("created_at") or marker.get("inserted_at")),
+            "updated_at": _safe_float(marker.get("updated_at")),
+        }
+        comments.append(comment)
+
+    by_id = {comment["id"]: comment for comment in comments}
+    for comment in comments:
+        parent_id = comment.get("parent_id") or ""
+        if parent_id and parent_id not in by_id:
+            comment["orphaned_parent_id"] = parent_id
+    children: Dict[str, List[Dict[str, Any]]] = {}
+    roots: List[Dict[str, Any]] = []
+    for comment in comments:
+        parent_id = comment.get("parent_id") or ""
+        if parent_id and parent_id in by_id and parent_id != comment["id"]:
+            children.setdefault(parent_id, []).append(comment)
+        else:
+            roots.append(comment)
+
+    def sort_key(comment: Dict[str, Any]) -> tuple[float, float, str]:
+        return (
+            _safe_float(comment.get("timestamp_sec")),
+            _safe_float(comment.get("created_at")),
+            str(comment.get("id") or ""),
+        )
+
+    def public_comment(comment: Dict[str, Any], visited: set[str]) -> Dict[str, Any]:
+        comment_id = str(comment["id"])
+        next_visited = set(visited)
+        next_visited.add(comment_id)
+        replies = [
+            public_comment(child, next_visited)
+            for child in sorted(children.get(comment_id, []), key=sort_key)
+            if child["id"] not in next_visited
+        ]
+        payload = {
+            key: comment[key]
+            for key in (
+                "id",
+                "parent_id",
+                "timestamp_sec",
+                "frame_number",
+                "duration_seconds",
+                "author",
+                "text",
+                "status",
+                "annotation_type",
+                "tags",
+                "created_at",
+                "updated_at",
+            )
+        }
+        if "orphaned_parent_id" in comment:
+            payload["orphaned_parent_id"] = comment["orphaned_parent_id"]
+        payload["reply_count"] = len(replies)
+        payload["replies"] = replies
+        return payload
+
+    def flatten_thread(comment: Dict[str, Any], visited: set[str]) -> List[Dict[str, Any]]:
+        if comment["id"] in visited:
+            return []
+        next_visited = set(visited)
+        next_visited.add(comment["id"])
+        items = [comment]
+        for child in children.get(comment["id"], []):
+            items.extend(flatten_thread(child, next_visited))
+        return items
+
+    threads: List[Dict[str, Any]] = []
+    for root in sorted(roots, key=sort_key):
+        thread_comments = flatten_thread(root, set())
+        is_complete = all(comment["status"] in CLOSED_REVIEW_STATUSES for comment in thread_comments)
+        public = public_comment(root, set())
+        public["completion_status"] = "complete" if is_complete else "changes_requested"
+        public["comment_count"] = len(thread_comments)
+        threads.append(public)
+
+    status_counts: Dict[str, int] = {}
+    for comment in comments:
+        status = str(comment["status"])
+        status_counts[status] = status_counts.get(status, 0) + 1
+    open_thread_count = sum(1 for thread in threads if thread["completion_status"] != "complete")
+    completion_status = "empty" if not comments else ("complete" if open_thread_count == 0 else "changes_requested")
+
+    return {
+        "schema": "opencut.review-threads.v1",
+        "bundle_version": BUNDLE_VERSION,
+        "framerate": rate,
+        "completion_status": completion_status,
+        "thread_count": len(threads),
+        "open_thread_count": open_thread_count,
+        "completed_thread_count": len(threads) - open_thread_count,
+        "comment_count": len(comments),
+        "reply_count": max(0, len(comments) - len(threads)),
+        "status_counts": {
+            "open": status_counts.get("open", 0),
+            "resolved": status_counts.get("resolved", 0),
+            "wontfix": status_counts.get("wontfix", 0),
+        },
+        "threads": threads,
+    }
+
+
 def _render_summary_html(
     *,
     job_label: str,
@@ -510,6 +686,10 @@ def _render_summary_html(
     captions_basename: str,
     markers_basename: str,
     otio_markers_basename: str,
+    threads_basename: str,
+    thread_count: int,
+    open_thread_count: int,
+    completion_status: str,
     annotations_basename: str,
     annotation_count: int,
     entries: Sequence[BundleEntry],
@@ -551,6 +731,8 @@ def _render_summary_html(
         f"<strong>Captions:</strong> <code>{captions_basename or '(none)'}</code><br>"
         f"<strong>Markers:</strong> <code>{markers_basename or '(none)'}</code><br>"
         f"<strong>OTIO markers:</strong> <code>{otio_markers_basename or '(none)'}</code><br>"
+        f"<strong>Threads:</strong> <code>{threads_basename or '(none)'}</code> "
+        f"({thread_count} threads, {open_thread_count} open, {completion_status or 'n/a'})<br>"
         f"<strong>Annotations:</strong> <code>{annotations_basename or '(none)'}</code> ({annotation_count})</p>\n"
         "  <h2>Notes</h2>\n"
         f"  <pre>{notes_block}</pre>\n"
@@ -596,6 +778,10 @@ def build_review_bundle(
     otio_markers_basename = ""
     annotations_basename = ""
     annotation_count = 0
+    threads_basename = ""
+    thread_count = 0
+    open_thread_count = 0
+    completion_status = ""
     pre_entries: List[BundleEntry] = []
     queued_files: List[tuple] = []  # (arcname, source_path, note)
 
@@ -635,6 +821,7 @@ def build_review_bundle(
     if markers_payload is not None:
         markers_basename = "markers.json"
         otio_markers_basename = OTIO_MARKERS_BASENAME
+        threads_basename = THREADS_BASENAME
         annotations_basename = ANNOTATIONS_INDEX_BASENAME
 
     # Deterministic ordering — alphabetical by arcname.
@@ -671,6 +858,11 @@ def build_review_bundle(
             duration_seconds=duration_seconds,
         )
         otio_markers_text = json.dumps(otio_payload, indent=2, sort_keys=True).encode("utf-8")
+        threads_payload = build_review_threads(markers_payload, framerate=framerate)
+        thread_count = int(threads_payload["thread_count"])
+        open_thread_count = int(threads_payload["open_thread_count"])
+        completion_status = str(threads_payload["completion_status"])
+        threads_text = json.dumps(threads_payload, indent=2, sort_keys=True).encode("utf-8")
         annotations_index, annotation_files = build_review_annotation_svgs(
             markers_payload,
             framerate=framerate,
@@ -695,6 +887,14 @@ def build_review_bundle(
                 sha256=hashlib.sha256(otio_markers_text).hexdigest(),
                 bytes=len(otio_markers_text),
                 note="OpenTimelineIO marker timeline",
+            )
+        )
+        entries.append(
+            BundleEntry(
+                arcname=THREADS_BASENAME,
+                sha256=hashlib.sha256(threads_text).hexdigest(),
+                bytes=len(threads_text),
+                note="threaded comments and review completion status",
             )
         )
         if annotation_count:
@@ -722,6 +922,10 @@ def build_review_bundle(
         captions_basename=captions_basename,
         markers_basename=markers_basename,
         otio_markers_basename=otio_markers_basename,
+        threads_basename=threads_basename,
+        thread_count=thread_count,
+        open_thread_count=open_thread_count,
+        completion_status=completion_status,
         annotations_basename=annotations_basename,
         annotation_count=annotation_count,
         entries=entries,
@@ -744,6 +948,10 @@ def build_review_bundle(
         "captions_basename": captions_basename,
         "markers_basename": markers_basename,
         "otio_markers_basename": otio_markers_basename,
+        "threads_basename": threads_basename,
+        "thread_count": thread_count,
+        "open_thread_count": open_thread_count,
+        "completion_status": completion_status,
         "annotations_basename": annotations_basename,
         "annotation_count": annotation_count,
         "annotation_width": _annotation_dimension(annotation_width, DEFAULT_ANNOTATION_WIDTH),
@@ -773,6 +981,9 @@ def build_review_bundle(
             zi = zipfile.ZipInfo(filename=OTIO_MARKERS_BASENAME, date_time=(2024, 1, 1, 0, 0, 0))
             zi.compress_type = zipfile.ZIP_DEFLATED
             zf.writestr(zi, otio_markers_text)
+            zi = zipfile.ZipInfo(filename=THREADS_BASENAME, date_time=(2024, 1, 1, 0, 0, 0))
+            zi.compress_type = zipfile.ZIP_DEFLATED
+            zf.writestr(zi, threads_text)
             if annotation_count:
                 zi = zipfile.ZipInfo(filename=ANNOTATIONS_INDEX_BASENAME, date_time=(2024, 1, 1, 0, 0, 0))
                 zi.compress_type = zipfile.ZIP_DEFLATED
@@ -800,4 +1011,8 @@ def build_review_bundle(
     bundle.otio_markers_path = otio_markers_basename
     bundle.annotations_path = annotations_basename
     bundle.annotation_count = annotation_count
+    bundle.threads_path = threads_basename
+    bundle.thread_count = thread_count
+    bundle.open_thread_count = open_thread_count
+    bundle.completion_status = completion_status
     return bundle
