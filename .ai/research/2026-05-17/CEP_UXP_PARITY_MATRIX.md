@@ -3,7 +3,7 @@
 **Audit date:** 2026-05-17 (Pass 3)
 **Source:** `extension/com.opencut.panel/host/index.jsx` (2,736 lines, 18 `ocXxx` JSX host functions) ↔ `@adobe/premierepro@26.3.0-beta.67` typings (per Pass-2 UXP subagent deep walk) ↔ `extension/com.opencut.uxp/main.js` (`PProBridge` class).
 
-This file completes the **F198** (CEP-only route catalogue) work that Pass 2 flagged as deferred.
+This file completed the initial **F198** (CEP-only route catalogue) analysis that Pass 2 flagged as deferred. Pass 42 promoted it into the enforced code catalogue at `opencut/core/cep_uxp_parity.py` plus generated artifact `opencut/_generated/cep_uxp_parity.json`.
 
 ---
 
@@ -142,7 +142,7 @@ Given the Pass 3 risk reclassification:
 
 | F# | Title | Priority | Effort | Notes |
 |---|---|---|---|---|
-| (existing) F198 | CEP-only route catalogue | — | — | **This file is the deliverable.** |
+| (existing) F198 | CEP-only route catalogue | Done in Pass 42 | M | Code-owned catalogue + generated JSON now pin this matrix against `host/index.jsx`. |
 | (existing) F252 | Bolt UXP + WebView UI migration | Next | revised L | Subdivided into F252.1-F252.5 |
 | (existing) F253 | UXP Hybrid Plugin sidecar | Next/Later | revised L | Subdivided into F253.1-F253.4 |
 | F266 | Document the 2-function CEP residual + drop-QE-features plan | Done in Pass 6 | S | Documented in `docs/UXP_MIGRATION.md` |
