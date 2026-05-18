@@ -20,6 +20,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
 from opencut.core.url_safety import validate_public_http_url
+from opencut.core.webhook_signature import sign_webhook_body
 
 logger = logging.getLogger("opencut")
 
@@ -35,6 +36,7 @@ _MAX_DELIVERIES = 100
 VALID_EVENTS = frozenset({
     "job_complete", "job_failed", "render_complete",
     "export_ready", "error",
+    "review.comment_added", "review.status_changed",
 })
 
 # Retry backoff delays in seconds
@@ -54,10 +56,16 @@ class WebhookConfig:
     events: List[str] = field(default_factory=list)
     enabled: bool = True
     description: str = ""
+    secret: str = ""
     created: float = field(default_factory=time.time)
 
-    def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+    def to_dict(self, *, include_secret: bool = False) -> Dict[str, Any]:
+        data = asdict(self)
+        if include_secret:
+            return data
+        data.pop("secret", None)
+        data["has_secret"] = bool(self.secret)
+        return data
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> "WebhookConfig":
@@ -67,6 +75,7 @@ class WebhookConfig:
             events=data.get("events", []),
             enabled=data.get("enabled", True),
             description=data.get("description", ""),
+            secret=str(data.get("secret", "") or ""),
             created=data.get("created", time.time()),
         )
 
@@ -139,7 +148,7 @@ def _load_configs() -> List[WebhookConfig]:
 def _save_configs(configs: List[WebhookConfig]) -> None:
     """Persist webhook configs to disk."""
     with _config_lock:
-        _atomic_write_json(_WEBHOOKS_FILE, [c.to_dict() for c in configs])
+        _atomic_write_json(_WEBHOOKS_FILE, [c.to_dict(include_secret=True) for c in configs])
         logger.debug("Saved %d webhook config(s)", len(configs))
 
 
@@ -188,6 +197,7 @@ def register_webhook(
     events: Optional[List[str]] = None,
     description: str = "",
     webhook_id: Optional[str] = None,
+    secret: Optional[str] = None,
     on_progress: Optional[Callable] = None,
 ) -> WebhookConfig:
     """Register or update a webhook endpoint.
@@ -198,6 +208,8 @@ def register_webhook(
                 If empty, subscribes to all events.
         description: Optional description.
         webhook_id: Optional ID for updating an existing webhook.
+        secret: Optional HMAC signing secret. ``None`` preserves an existing
+                secret during updates; an empty string clears it.
         on_progress: Optional progress callback (int).
 
     Returns:
@@ -226,6 +238,8 @@ def register_webhook(
                     cfg.url = url
                     cfg.events = events or []
                     cfg.description = description
+                    if secret is not None:
+                        cfg.secret = str(secret or "").strip()
                     _save_configs(configs)
                     if on_progress:
                         on_progress(100)
@@ -239,6 +253,7 @@ def register_webhook(
             url=url,
             events=events or [],
             description=description,
+            secret=str(secret or "").strip() if secret is not None else "",
         )
         configs.append(webhook)
         _save_configs(configs)
@@ -330,6 +345,7 @@ def _send_payload(
     event_type: str,
     payload: Dict[str, Any],
     timeout: int = 10,
+    secret: str = "",
 ) -> tuple:
     """Send a single HTTP POST request.
 
@@ -341,13 +357,16 @@ def _send_payload(
     except ValueError as exc:
         return 0, False, str(exc)
 
+    body = json.dumps(payload).encode("utf-8")
     headers = {
         "Content-Type": "application/json",
         "X-OpenCut-Event": event_type,
         "X-OpenCut-Timestamp": time.strftime(
             "%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
     }
-    body = json.dumps(payload).encode("utf-8")
+    if secret:
+        headers["X-OpenCut-Signature"] = sign_webhook_body(secret, body)
+        headers["X-OpenCut-Signature-Algorithm"] = "HMAC-SHA256"
 
     try:
         req = urllib.request.Request(
@@ -426,7 +445,7 @@ def fire_event(
         success = False
         for attempt in range(MAX_RETRIES):
             status_code, ok, error_msg = _send_payload(
-                webhook.url, event_type, payload)
+                webhook.url, event_type, payload, secret=webhook.secret)
             delivery.attempts = attempt + 1
             delivery.status_code = status_code
 
@@ -507,7 +526,7 @@ def test_webhook(
         on_progress(50)
 
     status_code, ok, error_msg = _send_payload(
-        webhook.url, "test", test_payload)
+        webhook.url, "test", test_payload, secret=webhook.secret)
     delivery.status_code = status_code
     delivery.success = ok
     delivery.error = error_msg
