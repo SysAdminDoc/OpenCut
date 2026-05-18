@@ -1,7 +1,7 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.37
-**Updated**: 2026-05-17
+**Version**: 4.38
+**Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
@@ -82,8 +82,27 @@
 > **v4.36 status (2026-05-17, thirty-third pass)**: closed **F200** (Windows installer policy + lockstep tests) and **F211** (cross-platform launcher smoke tests). F200 ships `docs/INSTALLER_POLICY.md` designating the WPF / .NET 9 installer as the recommended path and the Inno Setup script as a deprecated-but-supported fallback, with a milestone-gated retirement plan keyed to F201 / F212 / F213 (no calendar date). `tests/test_installer_policy.py` pins the policy doc presence + 4 lockstep invariants (bundled FFmpeg version string, install root, display name, CEP extension folder) so both installers can't drift on user-visible state. F211 ships `tests/test_launcher_scripts.py` covering all 5 launcher entry points (`.bat`, two `.vbs`, `.command`, `.sh`) — existence, shebang shape, LF line endings on POSIX, `python -m opencut(.server)` entry, path-quoting that survives `Program Files`, the `OPENCUT_HOME` + bundled-FFmpeg env propagation contract, and the 100755 git-index executable bit (with VMware shared-folder fallback via `git ls-files --stage`). 23 new tests; release smoke green (16 chained gates, lint clean).
 >
 > **v4.37 status (2026-05-17, thirty-fourth pass)**: closed **F217** (UXP BackendClient HTTP-shape contract test). New `tests/test_uxp_backend_client_contract.py` (15 tests) pins both sides of the contract: (a) the JS-side BackendClient module in `extension/com.opencut.uxp/main.js` must export `call`/`get`/`post`/`del`/`checkHealth`/`fetchCsrf`, must send `X-OpenCut-Token`, must carry a 120-second fetch timeout, must refresh CSRF from response headers, must return `{ok, data, error, status}` objects, must surface timeouts as a normal `{ok: false}` result (not an unhandled rejection), must poll `/status/<job_id>` for terminal statuses `complete`/`error`/`cancelled`, and must accept either `job_id` or legacy `id` as the job identifier; (b) the server-side must keep `GET /health` returning a `csrf_token` field for panel bootstrap, must keep `/status/<id>` returning JSON for unknown jobs, must require CSRF on mutating routes (so the wrapper's 403-refresh path fires), and must keep `capabilities` as a dict if present. Release smoke green (16 chained gates, lint clean).
+>
+> **v4.38 status (2026-05-18, thirty-fifth pass)**: closed the low-risk dependency-security batch **F121/F122/F127a/F130/F133/F135**. PyPI metadata forced the runtime decision: Pillow 12.2 and WhisperX 3.8.5 require Python >=3.10, while onnxruntime 1.25+ requires Python >=3.11, so OpenCut source installs now advertise **Python 3.11+**. `pyproject.toml` and `requirements.txt` now pin `flask-cors>=6,<7`, `opencv-python-headless>=4.13,<5`, `Pillow>=12.2,<13`, `onnxruntime>=1.25,<2`, `onnxruntime-gpu>=1.25,<2`, and `whisperx>=3.8.5,<4`; the F123 pydub retirement is also reflected in `requirements.txt`. Guard tests in `tests/test_dependency_surface.py`, `tests/test_bootstrap_check.py`, and `tests/test_mcp_registry_manifest.py` pin the dependency floor and generated MCP metadata.
 
 ---
+
+## 2026-05-18 v4.38 Dependency Security Floor (F121, F122, F127a, F130, F133, F135)
+
+Six Now-tier dependency/security items closed in one batch.
+
+| Surface | Status |
+|---|---|
+| F127a Python floor decision | DONE — the dependency refresh cannot stay on Python 3.9. PyPI metadata shows Pillow 12.2 and WhisperX 3.8.5 require Python >=3.10, and onnxruntime 1.25+ requires Python >=3.11, so the source-install floor is now Python 3.11+. |
+| F121 Pillow | DONE — install surfaces now require `Pillow>=12.2,<13` for standard, captions, video, and all extras. |
+| F122 flask-cors | DONE — core dependency surfaces now require `flask-cors>=6.0,<7`; `requirements-lock.txt` already carried 6.0.2. |
+| F130 OpenCV | DONE — source install surfaces now require `opencv-python-headless>=4.13,<5`. |
+| F133 onnxruntime | DONE — CPU and GPU AI extras now require `onnxruntime>=1.25,<2` / `onnxruntime-gpu>=1.25,<2`. |
+| F135 WhisperX | DONE — `captions-whisperx` and `all` now require `whisperx>=3.8.5,<4`. |
+| F123 drift cleanup | DONE — `requirements.txt` no longer lists `pydub>=0.25`, matching the previously closed pyproject extras. |
+| Guard tests | `tests/test_dependency_surface.py` now pins the Python floor, core/optional dependency ranges, and `requirements.txt` drift. `tests/test_bootstrap_check.py` pins `MIN_PYTHON == (3, 11)`. `tests/test_mcp_registry_manifest.py` pins the MCP registry `python_min` field. |
+| Generated metadata | `opencut/_generated/mcp_server_registry.json` regenerated with `python_min: 3.11`. |
+| Validation | `python -m pytest tests/test_dependency_surface.py tests/test_bootstrap_check.py tests/test_mcp_registry_manifest.py -q` -> `25 passed`; focused Ruff check -> clean; `python scripts/bootstrap_check.py --metadata-only --json` -> OK; `python -m opencut.tools.dump_mcp_registry_manifest --check` -> in sync; `python scripts/release_smoke.py --skip pip-audit --skip npm-advisory --skip pytest-fast --json` -> OK; pip resolver dry-runs selected the requested CPU/GPU dependency floors on Python 3.12. |
 
 ## 2026-05-17 v4.37 UXP BackendClient HTTP-Shape Contract (F217)
 
@@ -820,7 +839,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 Full backlog with effort / risk / fit / source in [`.ai/research/2026-05-17/FEATURE_BACKLOG.md`](.ai/research/2026-05-17/FEATURE_BACKLOG.md). Tier placement and sequencing in [`.ai/research/2026-05-17/PRIORITIZATION_MATRIX.md`](.ai/research/2026-05-17/PRIORITIZATION_MATRIX.md). Summary tiers:
 
-**Now (target v1.33 — v1.34, ~3-4 weeks):** F138 (commit dirty hardening), F121 Pillow 12.2, F122 flask-cors 6.x, F123 pydub/audioop-lts, F126 OTIO-Plugins, F127a Python 3.10 floor RFC, F128 FFmpeg filter regression suite, F130 OpenCV refresh, F131 esbuild CI assertion, F133 ORT ≥1.25, F135 whisperx 3.8.5, F137 MCP pin `<2`, **F139 caption translation endpoint (NLLB-200)**, **F140 C2PA 2.3 bump**, F147 register MCP server upstream, **F149 fill K3.5 Slate ID**, **F162 SAM 2 → SAM 3.1**, **F163 Depth Anything 3**, **F167 OmniVoice fill**, F169 Qwen3-TTS, F176 eval dataset bundle, F177 model cards 2026-Q2 sweep, F178 eval harness v2, F181 bootstrap fix, F182 gh issue seeder run, F183 logs cleanup, F185 features.md aspirational banner.
+**Now (target v1.33 — v1.34, ~3-4 weeks):** F138 (commit dirty hardening), [x] F121 Pillow 12.2, [x] F122 flask-cors 6.x, [x] F123 pydub/audioop-lts, [x] F126 OTIO-Plugins, [x] F127a Python floor decision (resolved to 3.11+), [x] F128 FFmpeg filter regression suite, [x] F130 OpenCV refresh, [x] F131 esbuild CI assertion, [x] F133 ORT ≥1.25, [x] F135 whisperx 3.8.5, [x] F137 MCP pin `<2`, [x] **F139 caption translation endpoint (NLLB-200)**, [x] **F140 C2PA 2.3 bump**, [x] F147 register MCP server upstream, **F149 fill K3.5 Slate ID**, **F162 SAM 2 → SAM 3.1**, **F163 Depth Anything 3**, **F167 OmniVoice fill**, F169 Qwen3-TTS, [x] F176 eval dataset bundle, [x] F177 model cards 2026-Q2 sweep, [x] F178 eval harness v2, [x] F181 bootstrap fix, F182 gh issue seeder run, [x] F183 logs cleanup, [x] F185 features.md aspirational banner.
 
 **Next (target v1.35 — v1.42, ~6 months):**
 - Flagship: **F143 `/agent/chat` conductor + timeline diff**, **F144 post-turn self-review**, **F145 Skills SDK + MCP packaging**.
