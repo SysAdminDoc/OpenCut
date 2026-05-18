@@ -18,6 +18,7 @@ Layouts, state, and walkthrough completion are stored under
 import json
 import logging
 import os
+import threading
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Dict, List, Optional
@@ -48,8 +49,11 @@ class DropAction:
     timestamp: float = field(default_factory=time.time)
 
 
-# In-memory registry of recent drop actions
+# In-memory registry of recent drop actions. Capped to prevent unbounded
+# growth from repeated POSTs (every call appends a new entry).
+_DROP_REGISTRY_MAX = 200
 _drop_registry: List[DropAction] = []
+_drop_registry_lock = threading.Lock()
 
 
 def register_drop_handler(file_path: str, operation: str) -> DropAction:
@@ -57,24 +61,34 @@ def register_drop_handler(file_path: str, operation: str) -> DropAction:
 
     Returns the created DropAction.
     """
-    if not file_path:
+    if not isinstance(file_path, str) or not file_path:
         raise ValueError("file_path is required")
-    if not operation:
+    if not isinstance(operation, str) or not operation:
         raise ValueError("operation is required")
+    # Cap lengths to defend against accidental or malicious payloads that
+    # would pin memory via a few thousand large strings.
+    file_path = file_path[:2048]
+    operation = operation[:128]
     action = DropAction(file_path=file_path, operation=operation)
-    _drop_registry.append(action)
+    with _drop_registry_lock:
+        _drop_registry.append(action)
+        # Trim FIFO so the registry never exceeds _DROP_REGISTRY_MAX entries.
+        if len(_drop_registry) > _DROP_REGISTRY_MAX:
+            del _drop_registry[:-_DROP_REGISTRY_MAX]
     logger.info("Drop handler: %s -> %s", file_path, operation)
     return action
 
 
 def get_drop_registry() -> List[DropAction]:
     """Return all registered drop actions."""
-    return list(_drop_registry)
+    with _drop_registry_lock:
+        return list(_drop_registry)
 
 
 def clear_drop_registry() -> None:
     """Clear the drop action registry (for testing)."""
-    _drop_registry.clear()
+    with _drop_registry_lock:
+        _drop_registry.clear()
 
 
 # ===================================================================

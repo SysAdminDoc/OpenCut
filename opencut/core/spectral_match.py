@@ -49,10 +49,12 @@ def _decode_to_float(path: str) -> List[float]:
         "pipe:1",
     ]
     try:
-        raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+        raw = subprocess.run(cmd, capture_output=True, check=True, timeout=300).stdout
     except subprocess.CalledProcessError as e:
         stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
         raise RuntimeError(f"FFmpeg decode failed (exit {e.returncode}): {stderr_msg[:500]}") from e
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"FFmpeg decode timed out after {e.timeout}s for {path}") from e
     n = len(raw) // 4
     return list(struct.unpack(f"{n}f", raw))
 
@@ -118,10 +120,12 @@ def match(
     if on_progress:
         on_progress(70, "Applying spectral correction")
     try:
-        subprocess.run(cmd, capture_output=True, check=True)
+        subprocess.run(cmd, capture_output=True, check=True, timeout=1800)
     except subprocess.CalledProcessError as e:
         stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
         raise RuntimeError(f"FFmpeg EQ apply failed (exit {e.returncode}): {stderr_msg[:500]}") from e
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"FFmpeg EQ apply timed out after {e.timeout}s") from e
     if on_progress:
         on_progress(100, "Done")
     return SpectralMatchResult(output=output, filter_db=filter_db, notes=[])

@@ -18,6 +18,7 @@ import logging
 import os
 import subprocess as _sp
 import tempfile
+import threading
 import time
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional
@@ -38,6 +39,7 @@ PREVIEW_QUALITY = 5  # JPEG quality param for FFmpeg (2=best, 31=worst)
 # ---------------------------------------------------------------------------
 _preview_cache: Dict[str, str] = {}  # hash -> file path
 _preview_cache_order: list = []
+_preview_cache_lock = threading.Lock()
 _CACHE_MAX_ENTRIES = 100
 _CACHE_MAX_BYTES = 500 * 1024 * 1024  # 500 MB
 
@@ -61,30 +63,41 @@ def _cache_key(input_path: str, timestamp: float, effect: str,
 
 
 def _cache_get(key: str) -> Optional[str]:
-    """Return cached preview path if it exists on disk, else None."""
-    path = _preview_cache.get(key)
-    if path and os.path.isfile(path):
-        # Move to end (most-recently used)
+    """Return cached preview path if it exists on disk, else None.
+
+    Lock-guarded so concurrent Flask worker threads don't see a key in
+    ``_preview_cache`` whose mate disappeared from ``_preview_cache_order``
+    mid-rotation (or trigger a ``dict changed size during iteration``
+    while another thread is evicting).
+    """
+    with _preview_cache_lock:
+        path = _preview_cache.get(key)
+        if path and os.path.isfile(path):
+            # Move to end (most-recently used)
+            if key in _preview_cache_order:
+                _preview_cache_order.remove(key)
+            _preview_cache_order.append(key)
+            return path
+        # Stale entry
+        _preview_cache.pop(key, None)
         if key in _preview_cache_order:
             _preview_cache_order.remove(key)
-        _preview_cache_order.append(key)
-        return path
-    # Stale entry
-    _preview_cache.pop(key, None)
-    if key in _preview_cache_order:
-        _preview_cache_order.remove(key)
-    return None
+        return None
 
 
 def _cache_put(key: str, path: str) -> None:
     """Store a preview result in the cache, evicting old entries as needed."""
-    _preview_cache[key] = path
-    _preview_cache_order.append(key)
-    _evict_cache()
+    with _preview_cache_lock:
+        _preview_cache[key] = path
+        _preview_cache_order.append(key)
+        _evict_cache_locked()
 
 
-def _evict_cache() -> None:
-    """Evict oldest entries when count or size limits are exceeded."""
+def _evict_cache_locked() -> None:
+    """Evict oldest entries when count or size limits are exceeded.
+
+    Caller MUST hold ``_preview_cache_lock``.
+    """
     # Count-based eviction
     while len(_preview_cache_order) > _CACHE_MAX_ENTRIES:
         old_key = _preview_cache_order.pop(0)
@@ -114,31 +127,41 @@ def _evict_cache() -> None:
                 pass
 
 
+# Backward-compat alias for the previous public-looking name.
+def _evict_cache() -> None:
+    with _preview_cache_lock:
+        _evict_cache_locked()
+
+
 def clear_preview_cache() -> int:
     """Remove all cached preview files.  Returns count removed."""
     count = 0
-    for path in list(_preview_cache.values()):
-        try:
-            if os.path.isfile(path):
-                os.unlink(path)
-                count += 1
-        except OSError:
-            pass
-    _preview_cache.clear()
-    _preview_cache_order.clear()
+    with _preview_cache_lock:
+        for path in list(_preview_cache.values()):
+            try:
+                if os.path.isfile(path):
+                    os.unlink(path)
+                    count += 1
+            except OSError:
+                pass
+        _preview_cache.clear()
+        _preview_cache_order.clear()
     return count
 
 
 def preview_cache_stats() -> dict:
     """Return current in-memory preview cache statistics."""
     total_bytes = 0
-    for p in _preview_cache.values():
+    with _preview_cache_lock:
+        paths = list(_preview_cache.values())
+        entry_count = len(_preview_cache)
+    for p in paths:
         try:
             total_bytes += os.path.getsize(p)
         except OSError:
             pass
     return {
-        "entry_count": len(_preview_cache),
+        "entry_count": entry_count,
         "total_size_mb": round(total_bytes / (1024 * 1024), 2),
         "max_entries": _CACHE_MAX_ENTRIES,
         "max_size_mb": round(_CACHE_MAX_BYTES / (1024 * 1024), 2),

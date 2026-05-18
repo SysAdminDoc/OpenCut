@@ -10,6 +10,7 @@ in ``~/.opencut/schedule_history.json``.
 import json
 import logging
 import os
+import tempfile
 import threading
 import time
 import uuid
@@ -256,17 +257,35 @@ def _load_schedules() -> List[dict]:
         return []
 
 
+def _atomic_write_json(target_path: str, payload) -> None:
+    """Atomic JSON write: mkstemp + fsync + os.replace + cleanup-on-failure."""
+    parent = os.path.dirname(target_path) or "."
+    os.makedirs(parent, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(
+        dir=parent,
+        prefix=os.path.basename(target_path) + ".",
+        suffix=".tmp",
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(payload, f, indent=2)
+            f.flush()
+            try:
+                os.fsync(f.fileno())
+            except OSError:
+                pass
+        os.replace(tmp_path, target_path)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 def _save_schedules(schedules: List[dict]) -> None:
     """Save schedules to JSON file."""
-    os.makedirs(_OPENCUT_DIR, exist_ok=True)
-    tmp_path = _SCHEDULES_FILE + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(schedules, f, indent=2)
-    # Atomic rename (Windows: replace if exists)
-    if os.path.exists(_SCHEDULES_FILE):
-        os.replace(tmp_path, _SCHEDULES_FILE)
-    else:
-        os.rename(tmp_path, _SCHEDULES_FILE)
+    _atomic_write_json(_SCHEDULES_FILE, schedules)
 
 
 def _load_history() -> List[dict]:
@@ -284,15 +303,7 @@ def _load_history() -> List[dict]:
 
 def _save_history(history: List[dict]) -> None:
     """Save job history to JSON file, keeping last 1000 entries."""
-    os.makedirs(_OPENCUT_DIR, exist_ok=True)
-    history = history[-1000:]  # cap at 1000 entries
-    tmp_path = _HISTORY_FILE + ".tmp"
-    with open(tmp_path, "w", encoding="utf-8") as f:
-        json.dump(history, f, indent=2)
-    if os.path.exists(_HISTORY_FILE):
-        os.replace(tmp_path, _HISTORY_FILE)
-    else:
-        os.rename(tmp_path, _HISTORY_FILE)
+    _atomic_write_json(_HISTORY_FILE, history[-1000:])
 
 
 # ---------------------------------------------------------------------------

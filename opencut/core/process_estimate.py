@@ -250,7 +250,7 @@ def _detect_gpu() -> bool:
         return True
     # Check via torch
     try:
-        import torch  # noqa: lazy
+        import torch
         return torch.cuda.is_available()
     except ImportError:
         pass

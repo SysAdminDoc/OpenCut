@@ -137,10 +137,12 @@ def render(
                 "-c:v", "libvpx-vp9", "-pix_fmt", "yuva420p", "-b:v", "0", "-crf", "30", output,
             ]
         try:
-            subprocess.run(cmd, capture_output=True, check=True)
+            subprocess.run(cmd, capture_output=True, check=True, timeout=1800)
         except subprocess.CalledProcessError as e:
             stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
             raise RuntimeError(f"FFmpeg encode failed (exit {e.returncode}): {stderr_msg[:500]}") from e
+        except subprocess.TimeoutExpired as e:
+            raise RuntimeError(f"FFmpeg encode timed out after {e.timeout}s") from e
     finally:
         shutil.rmtree(frame_dir, ignore_errors=True)
 

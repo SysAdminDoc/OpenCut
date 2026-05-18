@@ -78,12 +78,20 @@ def resolve_ffmpeg_binary(
 def _run(cmd: Sequence[str], runner: Optional[Runner] = None) -> subprocess.CompletedProcess:
     if runner is not None:
         return runner(cmd)
-    return subprocess.run(
-        list(cmd),
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        return subprocess.run(
+            list(cmd),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=30,
+        )
+    except subprocess.TimeoutExpired as exc:
+        # Surface a synthetic non-zero result instead of propagating the timeout
+        # — callers branch on ``returncode`` and treat 124 as a generic failure.
+        stderr = f"command timed out after {exc.timeout}s"
+        return subprocess.CompletedProcess(args=list(cmd), returncode=124,
+                                           stdout="", stderr=stderr)
 
 
 def parse_ffmpeg_configuration(output: str) -> Dict[str, bool]:

@@ -9,6 +9,8 @@ layout adaptation for touch-first editing.
 import json
 import logging
 import os
+import tempfile
+import threading
 from dataclasses import asdict, dataclass, field
 from typing import Any, Callable, Dict, List, Optional
 
@@ -16,6 +18,7 @@ logger = logging.getLogger("opencut")
 
 _OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
 _TOUCH_CONFIG_FILE = os.path.join(_OPENCUT_DIR, "touch_config.json")
+_TOUCH_CONFIG_LOCK = threading.Lock()
 
 
 @dataclass
@@ -196,10 +199,28 @@ def save_touch_config(
     if on_progress:
         on_progress(30, "Saving touch config...")
 
-    os.makedirs(_OPENCUT_DIR, exist_ok=True)
-
-    with open(_TOUCH_CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2)
+    with _TOUCH_CONFIG_LOCK:
+        os.makedirs(_OPENCUT_DIR, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(
+            dir=_OPENCUT_DIR,
+            prefix=os.path.basename(_TOUCH_CONFIG_FILE) + ".",
+            suffix=".tmp",
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError:
+                    pass
+            os.replace(tmp_path, _TOUCH_CONFIG_FILE)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
     if on_progress:
         on_progress(100, "Touch config saved")
