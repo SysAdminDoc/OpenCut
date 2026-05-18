@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.50
+**Version**: 4.51
 **Updated**: 2026-05-18
-**Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Baseline**: v1.32.0 (1,365 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
 > **⚡ Active work** lives in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
@@ -108,8 +108,24 @@
 > **v4.49 status (2026-05-18, forty-sixth pass)**: closed **F223** with a deterministic caption Unicode validation gate. `opencut/core/caption_unicode_validation.py` now validates Arabic RTL, Hebrew/Latin mixed bidi, Hindi Devanagari, Japanese no-space CJK, and Chinese no-space CJK fixtures across SRT, ASS, and burn-in ASS export paths. `opencut.tools.caption_unicode_validation --json --check` is wired into release smoke as `caption-unicode`, and `tests/test_caption_unicode_validation.py` pins script classification, UTF-8/no-BOM preservation, and the explicit F242 follow-up for CJK line breaking.
 >
 > **v4.50 status (2026-05-18, forty-seventh pass)**: closed **F242** by replacing whitespace-only caption wrapping with a Unicode-aware CJK line breaker. `opencut/core/caption_line_breaks.py` now provides ICU4X/UAX14-compatible break candidates, no-space CJK wrapping, and styled-overlay layout tokens. SRT/VTT export, proportional no-word timestamp cue splitting, styled captions, and shot-aware subtitle wrapping all use the shared breaker. `docs/CAPTION_LINE_BREAKING.md` records the dependency decision and references; `tests/test_caption_line_breaks.py` is wired into release smoke.
+>
+> **v4.51 status (2026-05-18, forty-eighth pass)**: closed **F225** by anchoring F105 review bundles on OpenTimelineIO Marker schema. `build_review_bundle()` now emits `markers.otio` next to the legacy `markers.json` whenever marker/comment payloads are bundled. The OTIO sidecar is a `Timeline.1` with `Marker.2` objects carrying `marked_range`, canonical OTIO colors, and an `opencut` metadata namespace for comment/thread/status data. `docs/REVIEW_BUNDLES.md` records the schema contract and older-OTIO compatibility decision; `tests/test_review_bundle.py` pins the zip, manifest, route, and marker-timing behavior.
 
 ---
+
+## 2026-05-18 v4.51 Review Bundle OTIO Marker Anchor (F225)
+
+One Next-tier review-bundle item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F225 marker anchor | DONE — F105 review bundles now include `markers.otio`, an OpenTimelineIO `Timeline.1` sidecar with review notes serialized as `Marker.2` objects. |
+| Compatibility | `markers.json` remains unchanged for existing OpenCut automation; comments stay inside `metadata.opencut.comment` instead of the newer top-level OTIO `comment` property to preserve the repository's `opentimelineio>=0.15` floor. |
+| Timing model | Marker timestamps accept `start_seconds`, `timestamp_sec`, `time`, `timestamp`, `start`, or frame-based inputs and serialize to `marked_range` using caller-supplied `framerate` and optional `duration_seconds`. |
+| Route integration | `POST /review/bundle` now accepts `framerate` and `duration_seconds` options and returns `otio_markers_path` when markers are bundled. |
+| Documentation | `docs/REVIEW_BUNDLES.md` records the bundle marker surfaces, OTIO references, and metadata namespace policy. |
+| Guard tests | `tests/test_review_bundle.py` pins OTIO sidecar inclusion, `Marker.2` timing/color/metadata shape, manifest entries, and route response behavior. Release smoke already includes this test file. |
+| Validation | `python -m pytest tests/test_review_bundle.py tests/test_marker_metadata.py tests/test_marker_import.py tests/test_otio_aaf_adapter_pin.py -q` -> `45 passed`; focused Ruff and `py_compile` -> clean; release smoke without pip-audit/npm-advisory/pytest-fast -> OK. |
 
 ## 2026-05-18 v4.50 CJK Caption Line Breaking (F242)
 
@@ -956,7 +972,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
-- Flagship review-bundle extensions: **F225-F229** OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
+- Flagship review-bundle extensions: **[x] F225**, F226-F229 OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: [x] F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
 - Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
@@ -970,7 +986,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 ### Phase 3 — Top three strategic moves Pass 1 understated
 
-1. **OTIO Marker schema is the right review-bundle interchange anchor** (F225). Pass 1 proposed F105 extensions but didn't pin them to a standard. Adopting OTIO Marker (Apache-2, file-based, ASWF-blessed) means every OpenCut review bundle is automatically importable into any OTIO-aware NLE — Premiere, Resolve, FCP, Avid. That's the kind of leverage Pass 1's competitor matrix called for but didn't name.
+1. **OTIO Marker schema is now the review-bundle interchange anchor** (F225). Pass 48 added a `markers.otio` sidecar to F105 bundles while preserving `markers.json`, giving downstream OTIO-aware tools a standard `Marker.2` timing/color surface for review notes.
 2. **WebView UI in Bolt UXP (March 2026) is the correct CEP→UXP migration target for OpenCut's 8,500-line vanilla JS panel** (F252). The alternative — rewriting to Spectrum UXP widgets — is months of work for negligible end-user benefit. Pass 1 proposed F160a as a spike; Pass 2 promotes it to the canonical migration plan.
 3. **Hybrid Plugins (.uxpaddon, C++) are the only path for 5 CEP-blocked features** (drag-out, QE DOM, FCPXML/OTIO **import**, createCaptionTrack, exportAsProject sub-selection). For end-of-2026 CEP-retirement viability, OpenCut needs **F253** even if it's XL effort. The Bolt UXP `public-hybrid/` template (Hyper Brew, MIT) cuts the work substantially.
 
@@ -994,7 +1010,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 ### Phase 0 — What the v4.3 audit missed or changed since
 
-- **Live route manifest** is now **1,362 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's "1,344" badge is stale — keep the F099 manifest as canonical truth.
+- **Live route manifest** is now **1,365 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's "1,344" badge is stale — keep the F099 manifest as canonical truth.
 - **F-numbered Now-tier work shipped quickly** between 2026-05-16 and 2026-05-17: F006, F010, F011, F066, F095, F097, F098, F099, F100, F101, F102, F103, F104, F105, F106, F109, F110, F111, F112, F115, F116, F117, F118, F120 (22 of 27 *Now* items landed). F093 (hermetic bootstrap) is partially shipped — UV trampoline path still fails. F094 lockfile audit is partially shipped — `deep-translator` removed, requires recurring `release_smoke` gate.
 - **Wave M (v1.30.0)** added the MCP sidecar (27 tools) — closes `research.md` §1.1 ("MCP server interface — HIGH priority") which is now stale.
 - **Wave L (v1.29.0)** shipped AI face reshape + skin retouch — closes `research.md` §1.3/§1.4 which are now stale.
@@ -1040,7 +1056,7 @@ Full backlog with effort / risk / fit / source in [`.ai/research/2026-05-17/FEAT
 
 ### Phase 3 — Top three strategic moves the v4.3 audit understated
 
-1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,362 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
+1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,365 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
 2. **UXP MCP transport (F146) is the only path through Sept 2026 CEP EOL.** Every competing PPro MCP server today (ayushozha 1,060 tools, leancoderkavy 269, hetpatel-11 97) is CEP-bound and will break when Adobe enforces the cutoff. First UXP-native MCP wins post-EOL.
 3. **StreamDiffusionV2 (F158) unlocks real-time editor-loop preview** on existing LTX-2.3 / Wan / Open-Sora backends — the single biggest UX leap vs CapCut / Runway / Captions, all of whom charge subscriptions for the real-time path.
 

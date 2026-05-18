@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Review Bundle OTIO Markers
+
+- Anchored F105 review bundles on OpenTimelineIO Marker schema by adding a `markers.otio` sidecar timeline whenever marker/comment payloads are bundled.
+- Added `docs/REVIEW_BUNDLES.md` and extended `tests/test_review_bundle.py` to pin OTIO `Marker.2` timing, color, metadata, manifest, and route response behavior.
+
 ### Added — Caption Unicode Validation
 
 - Added `opencut/core/caption_unicode_validation.py` and `opencut.tools.caption_unicode_validation` to validate RTL, mixed bidi, Indic, Japanese, and Chinese caption fixtures across SRT, ASS, and burn-in ASS export paths.
