@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Threading;
+using OpenCut.Installer.CommandLine;
 
 namespace OpenCut.Installer;
 
@@ -14,11 +15,25 @@ public partial class App : Application
 
         base.OnStartup(e);
 
-        // Check for --uninstall flag
-        var args = Environment.GetCommandLineArgs();
-        bool uninstallMode = args.Length > 1 &&
-            args[1].Equals("--uninstall", StringComparison.OrdinalIgnoreCase);
+        InstallerCommandLineOptions options;
+        try
+        {
+            options = InstallerCommandLineOptions.Parse(Environment.GetCommandLineArgs().Skip(1));
+        }
+        catch (Exception ex)
+        {
+            WriteCrashLog("CommandLine", ex);
+            Shutdown(2);
+            return;
+        }
 
+        if (options.IsQuiet)
+        {
+            Shutdown(HeadlessInstallerRunner.Run(options));
+            return;
+        }
+
+        var uninstallMode = options.Mode == InstallerCommandMode.InteractiveUninstall;
         var mainWindow = new MainWindow(uninstallMode);
         mainWindow.Show();
     }

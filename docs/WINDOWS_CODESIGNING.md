@@ -25,10 +25,11 @@ The release workflow:
 
 1. Builds `dist/OpenCut-Server` with PyInstaller on `windows-latest`.
 2. Builds the WPF installer and archives `installer/dist/wpf/OpenCut-WPF-Setup-*.exe`.
-3. Builds the Inno fallback installer at `installer/dist/OpenCut-Setup-*.exe`.
-4. Runs `scripts/sign_windows_artifacts.ps1` over both installer paths.
-5. Verifies each signed artifact with `signtool verify /pa /v`.
-6. Uploads the WPF and Inno artifacts to the workflow run; tag releases still publish the release-facing installer path.
+3. Runs the WPF quiet install/uninstall smoke against the self-extracting artifact.
+4. Builds the Inno fallback installer at `installer/dist/OpenCut-Setup-*.exe`.
+5. Runs `scripts/sign_windows_artifacts.ps1` over both installer paths.
+6. Verifies each signed artifact with `signtool verify /pa /v`.
+7. Uploads the WPF and Inno artifacts to the workflow run; tag releases still publish the release-facing installer path.
 
 If the signing secrets are absent, the signing step exits successfully with a
 warning and leaves artifacts unsigned. That keeps fork builds and dry-run
@@ -50,6 +51,7 @@ On a Windows machine with the Windows SDK and secrets exported:
 ```powershell
 pyinstaller opencut_server.spec
 ./scripts/build_wpf_installer_ci.ps1
+./scripts/smoke_wpf_installer.ps1 -AllowLocalProfileMutation
 ./scripts/sign_windows_artifacts.ps1 -FailOnExpiringCert
 ```
 

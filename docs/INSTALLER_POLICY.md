@@ -18,11 +18,15 @@
 > Inno installer outputs when signing secrets are configured. See
 > `docs/WINDOWS_CODESIGNING.md`.
 >
+> **F212 status (2026-05-18):** the recommended WPF installer now has
+> `installer/tests/OpenCut.Installer.Tests` xUnit coverage plus CI-only
+> quiet install/uninstall smoke wiring via `scripts/smoke_wpf_installer.ps1`.
+>
 > **Tracking F-number:** F200 (Now-tier doc deliverable).
 > Related F-numbers: **F201** (CI for the recommended path, DONE),
 > **F203** (Authenticode code-signing renewal, DONE tooling), **F207** (bundled
 > FFmpeg version embedded in installer manifest, DONE Pass 12),
-> **F212** (WPF installer xUnit test suite, deferred to Later).
+> **F212** (WPF installer xUnit + headless smoke, DONE).
 
 ---
 
@@ -80,13 +84,14 @@ Only one binary is published per release.
 | Milestone | Trigger | Action |
 |---|---|---|
 | **Now** | (this document) | Designate WPF as recommended; Inno as deprecated-but-supported fallback. |
-| **F201 close** | WPF in CI | DONE — WPF builds in Windows tag/manual CI and archives `OpenCut-WPF-Setup-X.Y.Z.exe`; Inno stays deprecated-but-supported until F212 decides retirement. |
-| **F213 close** | Inno install/uninstall smoke in CI | DONE — keep Inno as a deprecated-but-supported fallback with CI smoke coverage until F212 decides retirement. |
-| **F212 close** | WPF xUnit test suite | If WPF coverage meets the bar set in `TEST_COVERAGE_GAPS.md §3.6`, formally retire Inno (move `OpenCut.iss` to `archive/`). |
+| **F201 close** | WPF in CI | DONE — WPF builds in Windows tag/manual CI and archives `OpenCut-WPF-Setup-X.Y.Z.exe`; Inno stays deprecated-but-supported until signed WPF release verification is complete. |
+| **F213 close** | Inno install/uninstall smoke in CI | DONE — keep Inno as a deprecated-but-supported fallback with CI smoke coverage until signed WPF release verification is complete. |
+| **F212 close** | WPF xUnit + headless smoke | DONE — WPF now has xUnit coverage and CI-only quiet install/uninstall smoke. Keep Inno as an emergency fallback until at least one signed WPF release completes with the smoke green. |
 
 The retirement gate is **not** a calendar date — it is the WPF
-coverage milestone. Don't retire the Inno script until WPF can
-catch the regressions the Inno path historically caught.
+coverage milestone plus one signed-release verification. Don't retire
+the Inno script until WPF can catch the regressions the Inno path
+historically caught and the signed artifact path has been exercised.
 
 ---
 
@@ -113,21 +118,20 @@ When you add a fifth invariant, document it here and add a test in
 
 ---
 
-## 4. Why we didn't retire Inno yet
+## 4. Why Inno still remains as fallback
 
-Two risks force keeping the fallback for now:
+One risk forces keeping the fallback for now:
 
 1. **Operational signing credentials** — F203 tooling is wired, but
    production releases still require valid `WINDOWS_CODESIGN_*`
    GitHub secrets and timely certificate renewal. A botched renewal
    would block signed WPF releases; the Inno path stays as a fallback.
-2. **No WPF tests yet** — F212 (WPF xUnit suite) is Later-tier.
-   Inno's behaviour is now covered by the F213 install/uninstall
-   smoke on disposable Windows CI workers, while WPF still relies on
-   build-only CI, manual QA, and lockstep invariant tests.
+   F212 now covers the WPF behavior gap with xUnit tests and quiet
+   install/uninstall smoke wiring, but a signed WPF release still needs
+   live GitHub secrets to validate the final production path.
 
-When either remaining risk resolves, reassess the retirement
-schedule in §2.
+When the signed WPF release path completes cleanly, reassess the
+retirement schedule in §2.
 
 ---
 

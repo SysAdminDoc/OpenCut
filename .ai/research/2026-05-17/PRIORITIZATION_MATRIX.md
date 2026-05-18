@@ -183,7 +183,7 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 
 **Next (32 items):** [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1 scaffold and F252.2 dispatcher done; UDT/live WebView cutover remains), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, [x] F260. Includes the **F143 conductor + F252 UXP/WebView migration + F225-F229/F231/F233/F234 collaboration extensions** as parallel flagship tracks.
 
-**Later (14 open items + F193/F196/F206/F210 closed):** [x] F193, [x] F196, [x] F206, [x] F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253. Includes deferred OSS-quality items (Dolby Vision pipeline, ADM BWF Atmos, IMF builders) that wait on F215 fuzz + F218 import-order regression coverage.
+**Later (13 open items + F193/F196/F206/F210/F212 closed):** [x] F193, [x] F196, [x] F206, [x] F210, [x] F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253. Includes deferred OSS-quality items (Dolby Vision pipeline, ADM BWF Atmos, IMF builders) that wait on F215 fuzz + F218 import-order regression coverage.
 
 **Two regulatory deadlines bumped to Now:**
 - F202 Apple notarisation (Homebrew Cask mandatory Sept 1, 2026)

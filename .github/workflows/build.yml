@@ -98,6 +98,11 @@ jobs:
           python -c "from opencut.cli import cli; print(f'CLI: {len(cli.commands)} commands')"
           python -c "from opencut.schemas import WorkflowResult; print('Schemas OK')"
 
+      - name: Test WPF installer contracts
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./scripts/test_wpf_installer.ps1
+
       - name: Build with PyInstaller
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         run: pyinstaller opencut_server.spec
@@ -119,6 +124,13 @@ jobs:
         if: runner.os == 'Windows' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
         shell: pwsh
         run: ./scripts/build_wpf_installer_ci.ps1
+
+      - name: Smoke test Windows installer (WPF)
+        if: runner.os == 'Windows' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem installer/dist/wpf/OpenCut-WPF-Setup-*.exe | Sort-Object LastWriteTimeUtc -Descending | Select-Object -First 1
+          ./scripts/smoke_wpf_installer.ps1 -InstallerPath $installer.FullName
 
       - name: Notarize macOS bundle
         if: runner.os == 'macOS' && (startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch')

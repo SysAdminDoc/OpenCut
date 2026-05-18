@@ -67,9 +67,9 @@ Pass 74 closed **F210 — Vitest unit tests for CEP/UXP utility functions**. `cl
 
 ### 3.6 Installer
 
-The WPF .NET 9 installer (~2,326 lines of C#) has no automated tests. The Inno Setup output is functional-tested only by manual install. The PyInstaller spec is import-smoke-tested only.
+The WPF .NET 9 installer now has a focused xUnit suite plus CI-only headless install/uninstall smoke wiring. The Inno Setup output has a separate CI-only install/uninstall smoke. The PyInstaller spec is import-smoke-tested only.
 
-This is the **largest single coverage gap** in the project. **F212 — WPF installer test suite** (XL — would need xUnit project + headless install in a Windows runner). **F213 — Inno Setup install/uninstall smoke** (M — install to temp dir, check shortcut creation, uninstall, check cleanup).
+Pass 75 closed **F212 — WPF installer test suite**. `installer/tests/OpenCut.Installer.Tests/` covers command-line parsing, path derivation, file copy behavior, progress math, and payload substream reads. `scripts/smoke_wpf_installer.ps1` runs the built WPF installer in quiet mode on Windows runners, installs to a temp root with temp user data, verifies payload/manifest/registry state, and runs quiet uninstall cleanup. Pass 37 closed **F213 — Inno Setup install/uninstall smoke**.
 
 ### 3.7 Performance / regression benchmarks
 
@@ -135,7 +135,7 @@ This is a single F number: **F205**, already on the Now tier.
 | F209 | MCP tool ↔ route consistency test | Done in Pass 14 | S |
 | [x] F210 | Vitest unit tests for CEP/UXP utility functions | Closed Pass 74 | M |
 | F211 | Cross-platform launcher script smoke tests in CI | Next | S |
-| F212 | WPF installer test suite (xUnit + headless install) | Later | XL |
+| [x] F212 | WPF installer test suite (xUnit + headless install) | Closed Pass 75 | XL |
 | [x] F213 | Inno Setup install/uninstall smoke in CI | Closed Pass 37 | M |
 | [x] F214 | Extend F128 with ML + TTS perf benchmarks | Closed Pass 40 | M |
 | [x] F215 | Extend fuzz harness with 8 additional targets | Closed Pass 38 | M |

@@ -51,7 +51,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F209 | MCP tool ↔ route consistency test | DONE in Pass 14 — fixed `opencut_chat_edit` to shipped `POST /chat` and added a live Flask route-consistency gate for all MCP default and special action routes | TEST_COVERAGE §3.3 | S | Done |
 | [x] F210 | Vitest unit tests for CEP/UXP utility functions | Closed in Pass 74 — CEP `esc()`, `escPath()`, command-palette indexing, and lazy DOM proxy seams plus UXP escaping/id normalization now have Vitest coverage and CI/release-smoke wiring | TEST_COVERAGE §3.4 | M | Later |
 | [x] F211 | Cross-platform launcher script smoke tests in CI | Closed in Pass 33 — 5 launcher entry points covered and wired into release smoke | TEST_COVERAGE §3.5 | S | Next |
-| F212 | WPF installer xUnit test suite + headless install in Windows runner | Largest single coverage gap | TEST_COVERAGE §3.6 | XL | Later |
+| [x] F212 | WPF installer xUnit test suite + headless install in Windows runner | Closed in Pass 75 — WPF quiet install/uninstall mode, xUnit contract tests, Windows runner headless smoke wiring, and installer icon build fix | TEST_COVERAGE §3.6 | XL | Later |
 | [x] F213 | Inno Setup install/uninstall smoke in CI | Closed in Pass 37 with CI-only install/uninstall smoke script + workflow wiring + static guard tests | TEST_COVERAGE §3.6 | M | Next |
 | [x] F214 | Extend F128 with ML + TTS perf benchmarks | Closed in Pass 40 — performance benchmark registry pins ASR/upscaler/compose/TTS throughput specs, backend matrix, opt-in execution gate, and wall-clock normalization primitive | TEST_COVERAGE §3.7 | M | Next |
 | [x] F215 | Extend fuzz harness with 8 targets | Closed in Pass 38 — 13 total fuzz targets now cover path validation, OTIO parse, FCPXML parse, marker import, C2PA sidecars, plugin manifests, webhook HMAC signatures, and `safe_pip_install` package validation | TEST_COVERAGE §3.8 | M | Next |
@@ -130,7 +130,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
 | **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, [x] F260 | 32 |
-| **Later** | [x] F193, [x] F196, [x] F206, [x] F210, F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 14 open + F193/F196/F206/F210 closed |
+| **Later** | [x] F193, [x] F196, [x] F206, [x] F210, [x] F212, F220, F221, F222, F224, F228, F230, F232, F235, F245, F246, F247, F248, F253 | 13 open + F193/F196/F206/F210/F212 closed |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
 **Total project F-numbers: 140** (F121-F260 from Pass 1 + Pass 2; plus the pre-existing F001-F120 from v4.3).
