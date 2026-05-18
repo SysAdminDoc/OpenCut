@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import json
-import os
 import zipfile
 from pathlib import Path
 
@@ -45,6 +44,7 @@ def test_bundle_contains_expected_files(sample_assets):
     assert "manifest.json" in names
     assert "summary.html" in names
     assert "markers.json" in names
+    assert "markers.otio" in names
     assert "captions/captions.srt" in names
     assert "media/render.mp4" in names
     assert "extras/lut.cube" in names
@@ -67,9 +67,71 @@ def test_bundle_manifest_records_per_file_hashes(sample_assets):
     # everything else must be present with a sha-256.
     assert "summary.html" in arcnames
     assert "markers.json" in arcnames
+    assert "markers.otio" in arcnames
     assert "media/render.mp4" in arcnames
     assert "captions/captions.srt" in arcnames
     assert all(len(entry["sha256"]) == 64 for entry in payload["entries"])
+    assert payload["otio_markers_basename"] == "markers.otio"
+
+
+def test_bundle_writes_otio_marker_timeline(sample_assets):
+    bundle = rb.build_review_bundle(
+        output_path=sample_assets["out"],
+        job_label="Client Review",
+        media_path=str(sample_assets["media"]),
+        markers_payload={
+            "comments": [
+                {
+                    "id": "c1",
+                    "text": "Brighten this shot",
+                    "author": "Client",
+                    "status": "open",
+                    "timestamp_sec": 2.5,
+                    "duration_seconds": 0.5,
+                    "color": "Rose",
+                    "annotation_type": "text",
+                }
+            ]
+        },
+        framerate=24.0,
+        duration_seconds=12.0,
+    )
+
+    assert bundle.otio_markers_path == "markers.otio"
+    with zipfile.ZipFile(bundle.output_path) as zf:
+        otio = json.loads(zf.read("markers.otio").decode("utf-8"))
+
+    assert otio["OTIO_SCHEMA"] == "Timeline.1"
+    assert otio["metadata"]["opencut"]["schema"] == "review-bundle-markers.v1"
+    assert otio["metadata"]["opencut"]["marker_count"] == 1
+    gap = otio["tracks"]["children"][0]["children"][0]
+    marker = gap["markers"][0]
+    assert marker["OTIO_SCHEMA"] == "Marker.2"
+    assert marker["name"] == "Brighten this shot"
+    assert marker["color"] == "PINK"
+    assert marker["marked_range"]["start_time"]["rate"] == 24.0
+    assert marker["marked_range"]["start_time"]["value"] == 60
+    assert marker["marked_range"]["duration"]["value"] == 12
+    assert marker["metadata"]["opencut"]["status"] == "open"
+    assert marker["metadata"]["opencut"]["comment"] == "Brighten this shot"
+
+
+def test_normalise_review_markers_accepts_single_marker_payload():
+    markers = rb.normalise_review_markers(
+        {"name": "Hook", "frame_number": 48, "comment": "Check title", "color": "Yellow"},
+        framerate=24.0,
+    )
+
+    assert markers == [
+        {
+            "name": "Hook",
+            "start_seconds": 2.0,
+            "duration_seconds": 0.0,
+            "color": "yellow",
+            "comment": "Check title",
+            "metadata": {"frame_number": 48},
+        }
+    ]
 
 
 def test_bundle_omits_media_when_include_media_false(sample_assets):
@@ -157,6 +219,8 @@ def test_review_bundle_route(client, csrf_token, tmp_path):
             "notes": "demo",
             "markers_payload": {"markers": []},
             "include_media": True,
+            "framerate": 24.0,
+            "duration_seconds": 10.0,
         },
         headers=csrf_headers(csrf_token),
     )
@@ -164,6 +228,7 @@ def test_review_bundle_route(client, csrf_token, tmp_path):
     assert resp.status_code == 200, resp.get_json()
     payload = resp.get_json()
     assert payload["bundle_sha256"]
+    assert payload["otio_markers_path"] == "markers.otio"
     assert Path(payload["output_path"]).exists()
 
 

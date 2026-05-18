@@ -569,11 +569,14 @@ def review_bundle():
             "markers_payload": {...},                  # arbitrary JSON
             "notes": "Free-form notes for the reviewer",
             "extra_files": ["/abs/path/to/lut.cube"],
-            "include_media": true
+            "include_media": true,
+            "framerate": 30.0,
+            "duration_seconds": 90.0
         }
 
     Returns the manifest of the produced bundle (sha-256, byte count,
-    contained entries).
+    contained entries). When markers are supplied, the zip also includes
+    ``markers.otio`` with an OpenTimelineIO Marker timeline.
     """
     from opencut.core.review_bundle import build_review_bundle
 
@@ -615,6 +618,8 @@ def review_bundle():
             notes=str(data.get("notes") or ""),
             extra_files=extra_files or None,
             include_media=safe_bool(data.get("include_media"), default=True),
+            framerate=safe_float(data.get("framerate"), default=30.0, min_val=1.0, max_val=240.0),
+            duration_seconds=safe_float(data.get("duration_seconds"), default=0.0, min_val=0.0),
         )
         return jsonify(bundle.as_dict())
     except FileNotFoundError as exc:
