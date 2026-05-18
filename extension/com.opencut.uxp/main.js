@@ -799,6 +799,30 @@ const PProBridge = (() => {
     }
   }
 
+  async function getObjectMaskState(payload) {
+    if (!available || !ppro?.ObjectMaskUtils?.hasObjectMask) {
+      return { ok: false, reason: "Premiere Object Mask APIs are unavailable.", hasObjectMask: false };
+    }
+    const parsed = _parseHostPayload(payload, {});
+    const requestedTarget = String(parsed.target ?? parsed.scope ?? "sequence").toLowerCase();
+    const targetType = requestedTarget === "project" ? "project" : "sequence";
+    try {
+      let target = null;
+      if (targetType === "project") {
+        const context = await _projectRoot();
+        target = context?.proj ?? null;
+      } else {
+        target = await getActiveSequence();
+      }
+      if (!target) return { ok: false, reason: `No active ${targetType}.`, target: targetType, hasObjectMask: false };
+      const hasObjectMask = Boolean(ppro.ObjectMaskUtils.hasObjectMask(target));
+      return { ok: true, target: targetType, hasObjectMask };
+    } catch (e) {
+      console.warn("[PProBridge] getObjectMaskState failed:", e.message);
+      return { ok: false, reason: e.message, target: targetType, hasObjectMask: false };
+    }
+  }
+
   async function setSequencePlayhead(payload) {
     const parsed = _parseHostPayload(payload, {});
     const seconds = Number(parsed.seconds ?? parsed.time ?? parsed.value ?? payload ?? NaN);
@@ -990,6 +1014,7 @@ const PProBridge = (() => {
     removeImportedProjectItem,
     querySupportedTranscriptLanguages,
     getTranscriptState,
+    getObjectMaskState,
     setSequencePlayhead,
     createSubsequenceFromRange,
     exportSubsequenceWithEncoder,
@@ -1004,6 +1029,7 @@ if (typeof window !== "undefined") {
     getHostActionStatus: () => PProBridge.hostActionStatus(),
     querySupportedTranscriptLanguages: () => PProBridge.querySupportedTranscriptLanguages(),
     getTranscriptState: (payload) => PProBridge.getTranscriptState(payload),
+    getObjectMaskState: (payload) => PProBridge.getObjectMaskState(payload),
   });
 }
 

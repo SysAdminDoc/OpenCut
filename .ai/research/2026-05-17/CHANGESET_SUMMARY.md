@@ -12,6 +12,14 @@ Added `tests/test_uxp_transcript_api_integration.py` and registered it in releas
 
 ---
 
+## Pass 64 addendum (2026-05-18)
+
+Pass 64 closed **F257** by adding UXP Object Mask state helpers to `extension/com.opencut.uxp/main.js`. The bridge wraps `ObjectMaskUtils.hasObjectMask(projectOrSequence)`, supports active-sequence and project scopes, returns explicit unavailable/no-target responses, and exposes `getObjectMaskState(payload)` through `window.OpenCutUXPHost`.
+
+Added `tests/test_uxp_object_mask_api_integration.py` and registered it in release-smoke `pytest-fast`. Updated ROADMAP.md v4.67, CHANGELOG.md, PROJECT_CONTEXT.md, docs/UXP_MIGRATION.md, and the Pass-2 backlog/state files. Validation passed: focused F257 tests (`5 passed`), focused UXP/release-smoke slice (`42 passed`), `py_compile`, focused Ruff, `node --check`, and release-smoke `pytest-fast` (`647 passed`).
+
+---
+
 ## 1. Files created
 
 ### Repo root (1 file)
