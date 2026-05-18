@@ -529,6 +529,44 @@ def route_visualizer_styles():
 # Audio Description Track Generator
 # ===========================================================================
 
+@audio_adv_bp.route("/audio/description/microsoft-draft", methods=["POST"])
+@require_csrf
+@async_job("audio_description_draft", filepath_required=False)
+def route_microsoft_audio_description_draft(job_id, filepath, data):
+    """Create a Microsoft ai-audio-descriptions style draft for AD review."""
+    from opencut.core.audio_description import build_microsoft_audio_description_draft
+
+    video_path = filepath or str(data.get("video_path", "")).strip()
+    if video_path:
+        video_path = validate_filepath(video_path)
+
+    timestamps = data.get("scene_timestamps", data.get("timestamps"))
+    if isinstance(timestamps, list):
+        scene_timestamps = [
+            float(ts) for ts in timestamps
+            if isinstance(ts, (int, float))
+        ]
+    else:
+        scene_timestamps = None
+
+    result = build_microsoft_audio_description_draft(
+        video_path=video_path,
+        scene_descriptions=data.get("scene_descriptions", data.get("descriptions")),
+        scene_timestamps=scene_timestamps,
+        transcript=data.get("transcript"),
+        gaps=data.get("gaps", data.get("silence_gaps")),
+        min_gap_seconds=safe_float(data.get("min_gap_seconds", 1.0), 1.0, min_val=0.1, max_val=30.0),
+        max_gap_seconds=safe_float(data.get("max_gap_seconds", 15.0), 15.0, min_val=0.5, max_val=60.0),
+        context_seconds=safe_float(data.get("context_seconds", 6.0), 6.0, min_val=0.0, max_val=60.0),
+        words_per_second=safe_float(data.get("words_per_second", 3.0), 3.0, min_val=1.0, max_val=5.0),
+        tts_backend_hint=data.get("tts_backend_hint", "indextts2"),
+        llm_config=data.get("llm_config"),
+        on_progress=lambda pct, msg: None,
+    )
+
+    return result.to_dict()
+
+
 @audio_adv_bp.route("/audio/description/generate", methods=["POST"])
 @require_csrf
 @async_job("audio_description")
