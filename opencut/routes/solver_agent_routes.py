@@ -506,6 +506,44 @@ def agent_plan_status(plan_id):
 
 
 # ---------------------------------------------------------------------------
+# Agent — List built-in skills
+# ---------------------------------------------------------------------------
+@solver_agent_bp.route("/agent/skills", methods=["GET"])
+def agent_list_skills():
+    """List built-in agent skills."""
+    try:
+        from opencut.core.agent_skills import list_builtin_skills
+
+        category = request.args.get("category", "")
+        skills = [skill.summary() for skill in list_builtin_skills(category=category)]
+        return jsonify({
+            "skills": skills,
+            "count": len(skills),
+        })
+
+    except Exception as e:
+        return safe_error(e, "agent_list_skills")
+
+
+# ---------------------------------------------------------------------------
+# Agent — Get built-in skill detail
+# ---------------------------------------------------------------------------
+@solver_agent_bp.route("/agent/skills/<skill_id>", methods=["GET"])
+def agent_skill_detail(skill_id):
+    """Return a built-in agent skill manifest and structured plan."""
+    try:
+        from opencut.core.agent_skills import get_builtin_skill
+
+        skill = get_builtin_skill(skill_id)
+        if skill is None:
+            return jsonify({"error": f"Skill not found: {skill_id}", "skill_id": skill_id}), 404
+        return jsonify(skill.to_dict())
+
+    except Exception as e:
+        return safe_error(e, "agent_skill_detail")
+
+
+# ---------------------------------------------------------------------------
 # Agent — List available tools
 # ---------------------------------------------------------------------------
 @solver_agent_bp.route("/agent/tools", methods=["GET"])

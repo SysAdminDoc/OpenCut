@@ -60,6 +60,14 @@ The CEP panel helper now exposes `hardwareFor(featureId)` and annotates `data-fe
 
 ---
 
+## Pass 70 addendum (2026-05-18)
+
+Pass 70 closed **F272** by adding the first concrete built-in agent skill package. `opencut/data/builtin_skills/wedding-cinematic-reel/` now ships a SKILL.md front-matter manifest plus `plan.json` for a 240-second wedding reel workflow that chains color match, music beat markers, highlight extraction, beat-synced assembly, and review-master export planning.
+
+`opencut.core.agent_skills` parses and validates built-in skill packages, while `GET /agent/skills` and `GET /agent/skills/<skill_id>` expose compact and full skill payloads to the agent surface. Generated artifacts were refreshed to 1,376 routes and 1,319 opt-in extended MCP tools. Validation passed: focused F272 tests (`4 passed`), focused route/skill tests (`17 passed`), focused Ruff, `py_compile`, generated route/MCP checks, roadmap lint, and release-smoke `pytest-fast` (`691 passed`).
+
+---
+
 ## 1. Files created
 
 ### Repo root (1 file)
@@ -402,7 +410,7 @@ Pass 3 added 4 new artefacts + updated PROJECT_CONTEXT.md (§9.4 live verificati
 | F269 | Premium model-pack bundling format | Later |
 | F270 | README "$1,400/yr" marketing copy refresh | Now |
 | F271 | Per-feature VRAM requirement UI surface | Done in Pass 69 |
-| F272 | Wedding-specific Skill (color match + beat sync + 4-min reel) | Next |
+| F272 | Wedding-specific Skill (color match + beat sync + 4-min reel) | Done in Pass 70 |
 
 ### Cumulative impact (Pass 1 + Pass 2 + Pass 3)
 

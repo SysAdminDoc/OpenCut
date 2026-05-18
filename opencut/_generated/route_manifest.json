@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T18:38:18Z",
-  "total_routes": 1374,
+  "generated_at": "2026-05-18T21:33:02Z",
+  "total_routes": 1376,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 305,
+    "GET": 307,
     "PATCH": 1,
     "POST": 1055,
     "PUT": 2
@@ -776,9 +776,9 @@
       ]
     },
     "solver_agent": {
-      "route_count": 10,
+      "route_count": 12,
       "method_counts": {
-        "GET": 2,
+        "GET": 4,
         "POST": 8
       },
       "sample_rules": [
@@ -1309,6 +1309,22 @@
       ],
       "endpoint": "wave_h.route_agent_search",
       "blueprint": "wave_h"
+    },
+    {
+      "rule": "/agent/skills",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "solver_agent.agent_list_skills",
+      "blueprint": "solver_agent"
+    },
+    {
+      "rule": "/agent/skills/<skill_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "solver_agent.agent_skill_detail",
+      "blueprint": "solver_agent"
     },
     {
       "rule": "/agent/storyboard",

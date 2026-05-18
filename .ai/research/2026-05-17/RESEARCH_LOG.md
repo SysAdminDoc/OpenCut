@@ -63,6 +63,14 @@ Implementation details: `dump_feature_readiness` parses model-card hardware stri
 
 ---
 
+## Pass 70 implementation note (2026-05-18)
+
+F272 was closed by shipping the wedding workflow as a built-in agent skill instead of waiting for the full F145 runtime. The package lives at `opencut/data/builtin_skills/wedding-cinematic-reel/` and contains both SKILL.md instructions and a schema-versioned plan for color match, beat markers, highlight extraction, beat-synced assembly, and four-minute review-master export planning.
+
+Implementation details: `opencut.core.agent_skills` provides the built-in skill loader and plan validator, `solver_agent_routes.py` exposes read-only `/agent/skills` catalogue routes, and generated route/MCP artifacts were refreshed to 1,376 routes and 1,319 opt-in route tools. Validation evidence for the pass: focused F272 tests (`4 passed`), focused route/skill tests (`17 passed`), touched Python compile, focused Ruff, generated route/MCP checks, roadmap lint, and release-smoke `pytest-fast` (`691 passed`).
+
+---
+
 ## 1. Phases executed
 
 | Phase | What | Output |
