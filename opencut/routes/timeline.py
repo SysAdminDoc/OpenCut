@@ -293,8 +293,16 @@ def timeline_srt_to_captions():
 
 def _parse_srt(path: str) -> list:
     """Parse an SRT subtitle file into a list of segment dicts."""
+    _max_srt_bytes = 16 * 1024 * 1024  # 16 MB
+    try:
+        if os.path.getsize(path) > _max_srt_bytes:
+            raise ValueError(f"SRT file exceeds {_max_srt_bytes} byte cap: {path}")
+    except OSError as exc:
+        raise ValueError(f"Cannot stat SRT file: {exc}") from exc
     with open(path, encoding="utf-8", errors="replace") as f:
-        content = f.read()
+        content = f.read(_max_srt_bytes + 1)
+    if len(content) > _max_srt_bytes:
+        raise ValueError(f"SRT file exceeds {_max_srt_bytes} byte cap: {path}")
 
     segments = []
     import re as _re
