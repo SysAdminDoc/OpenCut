@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-17T21:37:09Z",
-  "total_routes": 1362,
+  "generated_at": "2026-05-18T03:18:58Z",
+  "total_routes": 1363,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 297,
+    "GET": 298,
     "PATCH": 1,
     "POST": 1050,
     "PUT": 2
@@ -822,9 +822,9 @@
       ]
     },
     "system": {
-      "route_count": 60,
+      "route_count": 61,
       "method_counts": {
-        "GET": 28,
+        "GET": 29,
         "POST": 33
       },
       "sample_rules": [
@@ -9003,6 +9003,14 @@
         "GET"
       ],
       "endpoint": "system.system_ai_eval",
+      "blueprint": "system"
+    },
+    {
+      "rule": "/system/ai-eval/<feature_id>/compare-backends",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "system.system_ai_eval_compare_backends",
       "blueprint": "system"
     },
     {
