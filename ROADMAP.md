@@ -1,8 +1,8 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.72
+**Version**: 4.73
 **Updated**: 2026-05-18
-**Baseline**: v1.32.0 (1,371 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
+**Baseline**: v1.32.0 (1,376 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
 
 > **⚡ Active work** lives in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
@@ -152,8 +152,25 @@
 > **v4.71 status (2026-05-18, sixty-eighth pass)**: closed **F263** by expanding the Python dependency advisory gate from `requirements.txt` only to `requirements.txt` plus `pyproject[all]`. `opencut.tools.pip_audit_extras` now builds structured audit targets, isolates pip/pip-audit caches, reports allowed vs unallowed vulnerabilities, and release smoke fails only on unlisted Python advisories. The pass also refreshed the full optional dependency set so `[all]` resolves: `transnetv2-pytorch`, `auto-editor>=29.3`, `otio-aaf-adapter>=2.0`, and `pyannote.audio>=4.0`; AudioCraft/MusicGen and Resemble Enhance remain explicit Python 3.11 extras because they hard-pin older Torch stacks.
 >
 > **v4.72 status (2026-05-18, sixty-ninth pass)**: closed **F271** by carrying per-feature hardware and minimum-VRAM metadata from model cards into the generated feature-readiness manifest and `/system/feature-state`. The CEP panel feature-state helper now annotates `data-feature-id` controls with `data-feature-hardware`, `data-feature-min-vram-mb`, and tooltip hardware summaries, so model-heavy features can show requirements before a user starts a job.
+>
+> **v4.73 status (2026-05-18, seventieth pass)**: closed **F272** by adding the first concrete built-in agent skill package: `wedding-cinematic-reel`. The skill ships with a `SKILL.md` front-matter manifest plus structured `plan.json` that chains color match, music beat markers, highlight extraction, beat-synced assembly, and a four-minute review-master export plan. `GET /agent/skills` and `GET /agent/skills/<id>` expose the catalogue, and the route manifest / extended MCP catalogue now report 1,376 routes and 1,319 opt-in route tools.
 
 ---
+
+## 2026-05-18 v4.73 Wedding Cinematic Reel Skill (F272)
+
+One agent-skill orchestration item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Built-in skill package | `opencut/data/builtin_skills/wedding-cinematic-reel/` now contains a `SKILL.md` manifest and structured `plan.json`. |
+| Skill loader | `opencut.core.agent_skills` parses the front matter, validates schema-versioned plans, and exposes compact and full skill payloads. |
+| Wedding plan | The default plan uses `/video/color-match`, `/audio/beat-markers`, `/video/highlights`, `/video/merge`, and `/export-video` to describe a 240-second wedding reel workflow without inventing media paths. |
+| Agent routes | `GET /agent/skills` lists built-in skills; `GET /agent/skills/<skill_id>` returns instructions and the structured plan. Unknown skills return a 404 payload. |
+| Generated artifacts | Route manifest regenerated to 1,376 routes / 101 blueprints; opt-in extended MCP catalogue regenerated to 1,319 tools. |
+| Release gate | `tests/test_agent_skills.py` is now part of the focused release-smoke pytest gate. |
+
+Validation after the batch: `python -m pytest tests/test_agent_skills.py -q` passed (`4 passed`), focused route/skill tests passed (`17 passed`), touched Python files compile, focused Ruff passed, generated route/MCP checks passed, `python scripts\release_smoke.py --json --only roadmap-lint` passed, and `python scripts\release_smoke.py --json --only pytest-fast` passed (`691 passed`).
 
 ## 2026-05-18 v4.72 Per-Feature VRAM UI Surface (F271)
 
@@ -1246,7 +1263,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 **Now (5 closed locally by v4.9):** [x] F261 (ship missing macOS `.command` + Linux `.sh` launchers — closes Wave I I1.4 ledger discrepancy), [x] F262 (fix uxp-api-notes URL typo), [x] F264 (CI npm-audit machine-parseable assertion), [x] F266 (document 2-function CEP residual + drop-QE plan), [x] F270 (README "$1,400/yr" marketing copy refresh).
 
-**Next (5 items):** [x] F263 (pip-audit full `[all]` extras), [x] F267 (UDT test harness for 14 low-risk JSX→UXP ports), F268 (Adobe Exchange storefront listing), [x] F271 (per-feature VRAM requirement UI), F272 (wedding-specific Skill).
+**Next (5 items):** [x] F263 (pip-audit full `[all]` extras), [x] F267 (UDT test harness for 14 low-risk JSX→UXP ports), F268 (Adobe Exchange storefront listing), [x] F271 (per-feature VRAM requirement UI), [x] F272 (wedding-specific Skill).
 
 **Later (2 items):** F265 (UDT harness for all 18 JSX functions), F269 (premium model-pack bundling format).
 
@@ -1348,7 +1365,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 ### Phase 0 — What the v4.3 audit missed or changed since
 
-- **Live route manifest** is now **1,371 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's "1,344" badge is stale — keep the F099 manifest as canonical truth.
+- **Live route manifest** is now **1,376 routes / 101 blueprints** (regenerate via `python -m opencut.tools.dump_route_manifest`). README's stale marketing badge is not the source of truth — keep the F099 manifest canonical.
 - **F-numbered Now-tier work shipped quickly** between 2026-05-16 and 2026-05-17: F006, F010, F011, F066, F095, F097, F098, F099, F100, F101, F102, F103, F104, F105, F106, F109, F110, F111, F112, F115, F116, F117, F118, F120 (22 of 27 *Now* items landed). F093 (hermetic bootstrap) is partially shipped — UV trampoline path still fails. F094 lockfile audit is partially shipped — `deep-translator` removed, requires recurring `release_smoke` gate.
 - **Wave M (v1.30.0)** added the MCP sidecar (27 tools) — closes `research.md` §1.1 ("MCP server interface — HIGH priority") which is now stale.
 - **Wave L (v1.29.0)** shipped AI face reshape + skin retouch — closes `research.md` §1.3/§1.4 which are now stale.
@@ -1394,7 +1411,7 @@ Full backlog with effort / risk / fit / source in [`.ai/research/2026-05-17/FEAT
 
 ### Phase 3 — Top three strategic moves the v4.3 audit understated
 
-1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,371 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
+1. **Chat-conductor agent (F143-F145) is the single highest-leverage gap.** Descript Underlord and FireRed-OpenStoryline have proven the UX pattern (sidebar chat + timeline diff + post-turn self-review + reusable skills library). OpenCut has every building block (1,376 routes, MCP sidecar with 39 tools, `core/llm.py` LLM abstraction) — the conductor is the missing 10% that turns the breadth into a product.
 2. **UXP MCP transport (F146) is the only path through Sept 2026 CEP EOL.** Every competing PPro MCP server today (ayushozha 1,060 tools, leancoderkavy 269, hetpatel-11 97) is CEP-bound and will break when Adobe enforces the cutoff. First UXP-native MCP wins post-EOL.
 3. **StreamDiffusionV2 (F158) unlocks real-time editor-loop preview** on existing LTX-2.3 / Wan / Open-Sora backends — the single biggest UX leap vs CapCut / Runway / Captions, all of whom charge subscriptions for the real-time path.
 

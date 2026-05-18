@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Wedding Cinematic Reel Skill
+
+- Added the F272 built-in `wedding-cinematic-reel` agent skill package with SKILL.md metadata and a structured 240-second color-match, beat-sync, highlight, assembly, and review-master plan.
+- Added read-only `/agent/skills` catalogue routes plus release-smoke coverage for the built-in skill loader and wedding plan.
+
 ### Added — Per-Feature VRAM UI Surface
 
 - Added F271 hardware metadata to feature readiness records: `/system/feature-state` now carries `hardware`, `requires_gpu`, and `minimum_vram_mb` for model-backed features.
