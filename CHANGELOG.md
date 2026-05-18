@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Roadmap Governance
+
+- Added the F180 Wave N-T / F-number governance ledger at `.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md`.
+- Added `tests/test_wave_f_number_ledger.py` so future Wave N-T roadmap rows must stay mapped to an F-number disposition.
+
 ### Changed — Dependency Security Floor
 
 - Raised source installs to Python 3.11+ so OpenCut can consume current security-fix dependency lines.
