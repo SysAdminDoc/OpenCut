@@ -13,8 +13,8 @@ Uses FFmpeg for audio processing and gap detection.
 import logging
 import os
 import tempfile
-from dataclasses import dataclass
-from typing import Callable, Dict, List, Optional
+from dataclasses import asdict, dataclass, field
+from typing import Any, Callable, Dict, List, Optional
 
 from opencut.helpers import get_ffmpeg_path, output_path, run_ffmpeg
 
@@ -51,6 +51,71 @@ class ADResult:
     descriptions_added: int = 0
     total_description_duration: float = 0.0
     original_duration: float = 0.0
+
+
+@dataclass
+class AudioDescriptionCue:
+    """Human-reviewable AD cue compatible with Microsoft AD authoring flow."""
+
+    cue_id: str
+    scene_index: int
+    scene_start: float
+    scene_end: float
+    target_start: float
+    target_end: float
+    available_gap_seconds: float
+    max_words: int
+    estimated_duration: float
+    fits_gap: bool
+    script: str
+    source_description: str
+    dialogue_context: str = ""
+    transcript_segments: List[Dict[str, Any]] = field(default_factory=list)
+    priority: str = "normal"
+    needs_review: bool = True
+    review_reason: str = "draft-ai-description"
+    tts_backend_hint: str = "indextts2"
+
+
+@dataclass
+class AudioDescriptionReviewDraft:
+    """Draft AD package for review before TTS insertion/rendering."""
+
+    cues: List[AudioDescriptionCue] = field(default_factory=list)
+    transcript_segments: List[Dict[str, Any]] = field(default_factory=list)
+    gaps: List[DescriptionGap] = field(default_factory=list)
+    source: str = "microsoft/ai-audio-descriptions"
+    source_url: str = "https://github.com/microsoft/ai-audio-descriptions"
+    draft_format: str = "opencut.microsoft-ad-draft.v1"
+    method: str = "scene-description-plus-transcript"
+    tts_backend_hint: str = "indextts2"
+    review_required: bool = True
+    notes: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        """Return a JSON-safe response body."""
+        return {
+            "draft_format": self.draft_format,
+            "source": self.source,
+            "source_url": self.source_url,
+            "method": self.method,
+            "tts_backend_hint": self.tts_backend_hint,
+            "review_required": self.review_required,
+            "cue_count": len(self.cues),
+            "transcript_segment_count": len(self.transcript_segments),
+            "gap_count": len(self.gaps),
+            "notes": list(self.notes),
+            "cues": [asdict(c) for c in self.cues],
+            "transcript_segments": list(self.transcript_segments),
+            "gaps": [asdict(g) for g in self.gaps],
+            "workflow": [
+                "per-scene descriptions",
+                "dialogue transcript alignment",
+                "silence-gap assignment",
+                "human AD editor review",
+                "TTS insertion",
+            ],
+        }
 
 
 # ---------------------------------------------------------------------------
@@ -352,6 +417,381 @@ def describe_scene_llm(
     if len(words) > max_words + 4:
         text = " ".join(words[:max_words + 4])
     return text
+
+
+# ---------------------------------------------------------------------------
+# Microsoft ai-audio-descriptions Review Draft
+# ---------------------------------------------------------------------------
+
+def _as_float(value, default: float = 0.0) -> float:
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _clean_ad_text(text: str) -> str:
+    cleaned = " ".join(str(text or "").replace("\n", " ").split())
+    return cleaned.strip(" \t\r\n\"'")
+
+
+def _cap_words(text: str, max_words: int) -> str:
+    """Cap AD copy to a word budget without returning an unterminated phrase."""
+    cleaned = _clean_ad_text(text)
+    words = cleaned.split()
+    if not words:
+        return ""
+    if max_words <= 0 or len(words) <= max_words:
+        return cleaned
+    clipped = " ".join(words[:max(1, max_words)])
+    return clipped.rstrip(" ,;:") + "."
+
+
+def _normalize_transcript_segments(transcript) -> List[Dict[str, Any]]:
+    """Normalize common caption/Whisper transcript shapes."""
+    if not transcript:
+        return []
+
+    if isinstance(transcript, dict):
+        if isinstance(transcript.get("segments"), list):
+            raw_segments = transcript["segments"]
+        elif isinstance(transcript.get("words"), list):
+            raw_segments = transcript["words"]
+        else:
+            raw_segments = [transcript]
+    elif isinstance(transcript, list):
+        raw_segments = transcript
+    else:
+        return []
+
+    segments: List[Dict[str, Any]] = []
+    for entry in raw_segments:
+        if not isinstance(entry, dict):
+            continue
+        start = _as_float(
+            entry.get("start", entry.get("start_time", entry.get("time", 0.0))),
+            0.0,
+        )
+        end = _as_float(
+            entry.get("end", entry.get("end_time", entry.get("stop", start))),
+            start,
+        )
+        if end < start:
+            start, end = end, start
+        text = _clean_ad_text(
+            entry.get("text")
+            or entry.get("word")
+            or entry.get("line")
+            or entry.get("caption")
+            or ""
+        )
+        speaker = _clean_ad_text(entry.get("speaker") or entry.get("speaker_id") or "")
+        if not text and end <= start:
+            continue
+        item = {
+            "start": round(max(0.0, start), 3),
+            "end": round(max(0.0, end), 3),
+            "text": text,
+        }
+        if speaker:
+            item["speaker"] = speaker
+        segments.append(item)
+
+    return sorted(segments, key=lambda s: (s["start"], s["end"]))
+
+
+def _normalize_description_gaps(gaps) -> List[DescriptionGap]:
+    if not gaps:
+        return []
+    normalized: List[DescriptionGap] = []
+    for entry in gaps:
+        if isinstance(entry, DescriptionGap):
+            gap = entry
+        elif isinstance(entry, dict):
+            start = _as_float(entry.get("start", entry.get("start_time", 0.0)), 0.0)
+            end_default = start + _as_float(entry.get("duration", 0.0), 0.0)
+            end = _as_float(entry.get("end", entry.get("end_time", end_default)), end_default)
+            if end < start:
+                start, end = end, start
+            duration = max(0.0, _as_float(entry.get("duration", end - start), end - start))
+            gap = DescriptionGap(
+                start=round(max(0.0, start), 3),
+                end=round(max(0.0, end), 3),
+                duration=round(duration, 3),
+                suitable=bool(entry.get("suitable", True)),
+                max_words=int(entry.get("max_words", max(0, int(duration * 3.0)))),
+            )
+        else:
+            continue
+        if gap.duration <= 0:
+            gap.duration = max(0.0, gap.end - gap.start)
+        normalized.append(gap)
+    return sorted(normalized, key=lambda g: (g.start, g.end))
+
+
+def _normalize_scene_descriptions(scene_descriptions) -> List[Dict[str, Any]]:
+    if not scene_descriptions:
+        return []
+    if isinstance(scene_descriptions, dict):
+        if isinstance(scene_descriptions.get("descriptions"), list):
+            raw_scenes = scene_descriptions["descriptions"]
+        elif isinstance(scene_descriptions.get("scenes"), list):
+            raw_scenes = scene_descriptions["scenes"]
+        else:
+            raw_scenes = [scene_descriptions]
+    else:
+        raw_scenes = scene_descriptions
+
+    scenes: List[Dict[str, Any]] = []
+    for idx, entry in enumerate(raw_scenes):
+        if isinstance(entry, VisualDescription):
+            timestamp = entry.timestamp
+            description = entry.description
+            importance = entry.importance
+        elif hasattr(entry, "timestamp") and hasattr(entry, "description"):
+            timestamp = _as_float(getattr(entry, "timestamp"), float(idx) * 5.0)
+            description = _clean_ad_text(getattr(entry, "description", ""))
+            importance = _clean_ad_text(getattr(entry, "importance", "normal")) or "normal"
+        elif isinstance(entry, dict):
+            timestamp = _as_float(
+                entry.get("timestamp", entry.get("time", entry.get("start", float(idx) * 5.0))),
+                float(idx) * 5.0,
+            )
+            description = _clean_ad_text(
+                entry.get("description")
+                or entry.get("text")
+                or entry.get("alt_text")
+                or entry.get("script")
+                or ""
+            )
+            importance = _clean_ad_text(entry.get("importance") or entry.get("priority") or "normal")
+        else:
+            continue
+        if not description:
+            description = f"Visual scene at {timestamp:.1f} seconds."
+        scenes.append({
+            "timestamp": round(max(0.0, timestamp), 3),
+            "description": description,
+            "importance": importance or "normal",
+        })
+    return sorted(scenes, key=lambda s: s["timestamp"])
+
+
+def _scene_descriptions_from_video(
+    video_path: str,
+    scene_timestamps: Optional[List[float]],
+    llm_config,
+    on_progress: Optional[Callable],
+) -> List[Dict[str, Any]]:
+    from opencut.core.scene_description import describe_all_scenes
+
+    result = describe_all_scenes(
+        video_path,
+        scene_timestamps=scene_timestamps,
+        llm_config=llm_config,
+        on_progress=on_progress,
+    )
+    return [
+        {
+            "timestamp": desc.timestamp,
+            "description": desc.description or desc.alt_text,
+            "importance": "normal",
+        }
+        for desc in result.descriptions
+    ]
+
+
+def _dialogue_context(
+    transcript_segments: List[Dict[str, Any]],
+    start: float,
+    end: float,
+    context_seconds: float,
+) -> tuple[str, List[Dict[str, Any]]]:
+    window_start = max(0.0, start - context_seconds)
+    window_end = end + context_seconds
+    selected = [
+        seg for seg in transcript_segments
+        if seg["end"] >= window_start and seg["start"] <= window_end
+    ]
+    parts = []
+    for seg in selected[:12]:
+        speaker = f"{seg.get('speaker')}: " if seg.get("speaker") else ""
+        parts.append(
+            f"[{seg['start']:.1f}-{seg['end']:.1f}] "
+            f"{speaker}{seg.get('text', '')}"
+        )
+    return " ".join(parts)[:800], selected[:12]
+
+
+def _choose_gap_for_scene(
+    scene_start: float,
+    scene_end: float,
+    gaps: List[DescriptionGap],
+    used_indices: set[int],
+) -> tuple[Optional[int], Optional[DescriptionGap]]:
+    candidates: List[tuple[float, int, DescriptionGap]] = []
+    for idx, gap in enumerate(gaps):
+        if idx in used_indices or not gap.suitable:
+            continue
+        overlap = min(scene_end, gap.end) - max(scene_start, gap.start)
+        if overlap > 0:
+            score = -overlap
+        elif gap.start >= scene_start:
+            score = gap.start - scene_start
+        else:
+            score = scene_start - gap.end + 30.0
+        candidates.append((score, idx, gap))
+    if not candidates:
+        return None, None
+    _, idx, gap = min(candidates, key=lambda item: item[0])
+    return idx, gap
+
+
+def build_microsoft_audio_description_draft(
+    video_path: str = "",
+    *,
+    scene_descriptions: Optional[List[Dict]] = None,
+    scene_timestamps: Optional[List[float]] = None,
+    transcript: Optional[Any] = None,
+    gaps: Optional[List[Dict]] = None,
+    min_gap_seconds: float = 1.0,
+    max_gap_seconds: float = 15.0,
+    context_seconds: float = 6.0,
+    words_per_second: float = 3.0,
+    tts_backend_hint: str = "indextts2",
+    llm_config=None,
+    on_progress: Optional[Callable] = None,
+) -> AudioDescriptionReviewDraft:
+    """Build a Microsoft-style AD draft for human review.
+
+    Microsoft `ai-audio-descriptions` documents an authoring flow that
+    generates per-scene visual descriptions, aligns them with dialogue
+    transcript and silence gaps, presents a draft to a human AD editor, and
+    only then inserts TTS into the video. This function implements that local
+    review contract without requiring Azure credentials or model downloads.
+    """
+    min_gap_seconds = max(0.1, float(min_gap_seconds))
+    max_gap_seconds = max(min_gap_seconds, float(max_gap_seconds))
+    context_seconds = max(0.0, float(context_seconds))
+    words_per_second = max(1.0, min(5.0, float(words_per_second)))
+    tts_backend_hint = _clean_ad_text(tts_backend_hint or "indextts2").lower()
+
+    if on_progress:
+        on_progress(5, "Preparing transcript and scene descriptions...")
+
+    transcript_segments = _normalize_transcript_segments(transcript)
+    scenes = _normalize_scene_descriptions(scene_descriptions)
+
+    if not scenes:
+        if not video_path or not os.path.isfile(video_path):
+            raise ValueError("scene_descriptions or a valid video_path is required")
+        scenes = _scene_descriptions_from_video(video_path, scene_timestamps, llm_config, on_progress)
+
+    if on_progress:
+        on_progress(35, "Finding dialogue gaps for AD placement...")
+
+    normalized_gaps = _normalize_description_gaps(gaps)
+    if not normalized_gaps and transcript_segments:
+        normalized_gaps = _gaps_from_transcript(
+            transcript_segments,
+            min_gap_seconds,
+            max_gap_seconds,
+        )
+    if not normalized_gaps and video_path and os.path.isfile(video_path):
+        normalized_gaps = find_description_gaps(
+            video_path,
+            transcript=transcript_segments,
+            min_gap_seconds=min_gap_seconds,
+            max_gap_seconds=max_gap_seconds,
+            on_progress=None,
+        )
+
+    notes: List[str] = []
+    if not normalized_gaps:
+        notes.append("No dialogue gaps were available; cues need editor timing.")
+
+    if on_progress:
+        on_progress(60, "Assigning scene descriptions to review cues...")
+
+    cues: List[AudioDescriptionCue] = []
+    used_gaps: set[int] = set()
+    for idx, scene in enumerate(scenes):
+        scene_start = float(scene["timestamp"])
+        if idx + 1 < len(scenes):
+            scene_end = max(scene_start, float(scenes[idx + 1]["timestamp"]))
+        else:
+            scene_end = scene_start + 5.0
+
+        gap_idx, gap = _choose_gap_for_scene(scene_start, scene_end, normalized_gaps, used_gaps)
+        if gap_idx is not None:
+            used_gaps.add(gap_idx)
+
+        description = _clean_ad_text(scene["description"])
+        if gap is not None:
+            target_start = gap.start
+            target_end = gap.end
+            available = max(0.0, gap.duration or gap.end - gap.start)
+            max_words = max(1, int(available * words_per_second))
+        else:
+            target_start = scene_start
+            target_end = scene_start
+            available = 0.0
+            max_words = max(3, int(words_per_second * 2))
+
+        script = _cap_words(description, max_words)
+        estimated_duration = round(len(script.split()) / words_per_second, 3) if script else 0.0
+        fits_gap = bool(gap is not None and estimated_duration <= available)
+        if gap is None:
+            priority = "needs-timing"
+            review_reason = "no-dialogue-gap"
+        elif fits_gap:
+            priority = _clean_ad_text(scene.get("importance", "normal")) or "normal"
+            review_reason = "draft-ai-description"
+        else:
+            priority = "needs-rewrite"
+            review_reason = "description-may-overrun-gap"
+
+        context, context_segments = _dialogue_context(
+            transcript_segments,
+            scene_start,
+            scene_end,
+            context_seconds,
+        )
+        cues.append(AudioDescriptionCue(
+            cue_id=f"AD-{idx + 1:04d}",
+            scene_index=idx,
+            scene_start=round(scene_start, 3),
+            scene_end=round(scene_end, 3),
+            target_start=round(target_start, 3),
+            target_end=round(target_end, 3),
+            available_gap_seconds=round(available, 3),
+            max_words=max_words,
+            estimated_duration=estimated_duration,
+            fits_gap=fits_gap,
+            script=script,
+            source_description=description,
+            dialogue_context=context,
+            transcript_segments=context_segments,
+            priority=priority,
+            needs_review=True,
+            review_reason=review_reason,
+            tts_backend_hint=tts_backend_hint,
+        ))
+
+    unplaced_gap_count = max(0, len(normalized_gaps) - len(used_gaps))
+    if unplaced_gap_count:
+        notes.append(f"{unplaced_gap_count} dialogue gaps were left unused.")
+
+    if on_progress:
+        on_progress(100, f"Prepared {len(cues)} audio-description cues")
+
+    return AudioDescriptionReviewDraft(
+        cues=cues,
+        transcript_segments=transcript_segments,
+        gaps=normalized_gaps,
+        tts_backend_hint=tts_backend_hint,
+        notes=notes,
+    )
 
 
 # ---------------------------------------------------------------------------
