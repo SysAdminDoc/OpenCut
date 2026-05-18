@@ -257,6 +257,70 @@ def build_manifest() -> dict:
     }
 
 
+def build_dashboard_manifest() -> dict:
+    """Return the F260 UXP migration dashboard derived from the catalogue."""
+
+    source = build_manifest()
+    entries = source["functions"]
+    risk_counts: dict[str, int] = {}
+    for entry in entries:
+        risk_counts[entry["risk"]] = risk_counts.get(entry["risk"], 0) + 1
+
+    hybrid_candidates = [
+        entry["name"]
+        for entry in entries
+        if "F253" in entry.get("f_numbers", ()) or entry["status"] == "cep_only"
+    ]
+    priority = [
+        {
+            "name": entry["name"],
+            "status": entry["status"],
+            "risk": entry["risk"],
+            "role": entry["role"],
+            "replacement_plan": entry["replacement_plan"],
+        }
+        for entry in entries
+        if entry["risk"] == "high" or entry["status"] in {"cep_only", "partial_uxp"}
+    ]
+    rows = [
+        {
+            "name": entry["name"],
+            "status": entry["status"],
+            "risk": entry["risk"],
+            "role": entry["role"],
+            "uxp_path": entry["uxp_path"],
+            "replacement_plan": entry["replacement_plan"],
+            "f_numbers": entry["f_numbers"],
+            "needs_hybrid": entry["name"] in hybrid_candidates,
+            "cep_only": entry["cep_only"],
+        }
+        for entry in entries
+    ]
+    return {
+        "dashboard_version": 1,
+        "source_catalogue_version": source["catalogue_version"],
+        "source": source["source"],
+        "uxp_typings": source["uxp_typings"],
+        "summary": {
+            "function_count": source["function_count"],
+            "direct_uxp": source["status_counts"].get("direct_uxp", 0),
+            "partial_uxp": source["status_counts"].get("partial_uxp", 0),
+            "different_mechanism": source["status_counts"].get("different_mechanism", 0),
+            "cep_only": source["cep_only_count"],
+            "hybrid_candidates": len(hybrid_candidates),
+            "high_risk": risk_counts.get("high", 0),
+            "medium_risk": risk_counts.get("medium", 0),
+            "low_risk": risk_counts.get("low", 0),
+        },
+        "status_counts": source["status_counts"],
+        "risk_counts": dict(sorted(risk_counts.items())),
+        "cep_only": source["cep_only"],
+        "hybrid_candidates": hybrid_candidates,
+        "priority": priority,
+        "rows": rows,
+    }
+
+
 def validate_catalogue(
     host_function_names: Iterable[str],
     entries: Sequence[CepUxpParityEntry] = CEP_UXP_PARITY,
