@@ -104,6 +104,7 @@ UXP Architecture (target):
 - [x] F252.1 WebView manifest/config template in `extension/com.opencut.uxp/bolt-webview/uxp.config.ts`
 - [x] F252.2 UXP host-action dispatcher maps the 14 direct-UXP `ocXxx` actions into `PProBridge.executeHostAction`
 - [x] F254 `Sequence.createSubsequence(ignoreTrackTargeting?)` range integration behind `ocExportSequenceRange`
+- [x] F255 `EncoderManager.launchEncoder` / `exportSequence` / `startBatchEncode` handoff for range exports
 - [ ] Live manifest switch to the WebView entrypoint after an in-Premiere UDT smoke pass
 - [ ] Test CSInterface shim with CEP main.js in WebView
 - [ ] Replace `cep_node.require("child_process")` calls with UXP alternatives
@@ -124,6 +125,7 @@ UXP Architecture (target):
 - `tests/test_uxp_webview_scaffold.py` — Static guardrails for the scaffold contract
 - `tests/test_uxp_host_action_dispatch.py` — Static guardrails that keep the F252.2 host-action dispatcher aligned with the CEP/UXP parity catalogue
 - `tests/test_uxp_create_subsequence_integration.py` — Static guardrails for the F254 subsequence range handoff and F255 encoder boundary
+- `tests/test_uxp_encoder_manager_integration.py` — Static guardrails for the F255 EncoderManager export handoff
 
 ## Risk Assessment
 - **Low risk:** Backend communication (fetch works natively in UXP)

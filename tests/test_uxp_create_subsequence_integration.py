@@ -45,13 +45,13 @@ def test_f254_range_restore_uses_project_transaction():
     assert "A valid start/end range in seconds is required." in source
 
 
-def test_f254_export_dispatch_uses_subsequence_but_leaves_encoder_to_f255():
+def test_f254_export_dispatch_passes_subsequence_to_encoder():
     source = _read(MAIN_JS)
 
     assert "const subsequence = await createSubsequenceFromRange(parsed)" in source
-    assert "subsequence," in source
-    assert "requiresF255: true" in source
-    assert "encoder handoff remains F255" in source
+    assert "const exportResult = await exportSubsequenceWithEncoder(subsequence.sequence, parsed)" in source
+    assert "sequenceName: subsequence.sequenceName" in source
+    assert "ignoreTrackTargeting: subsequence.ignoreTrackTargeting" in source
     assert "createSubsequenceFromRange" in source
 
 

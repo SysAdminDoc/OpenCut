@@ -800,6 +800,7 @@ const PProBridge = (() => {
       const name = await subsequence?.getName?.() ?? "";
       return {
         ok: true,
+        sequence: subsequence,
         sequenceName: name,
         range: { start: startSeconds, end: endSeconds },
         ignoreTrackTargeting,
@@ -813,16 +814,69 @@ const PProBridge = (() => {
     }
   }
 
+  function _encoderManager() {
+    const manager = ppro?.EncoderManager?.getManager?.();
+    return manager || null;
+  }
+
+  function _encoderExportType(queueToAme) {
+    if (queueToAme) {
+      return ppro?.Constants?.ExportType?.QUEUE_TO_AME ?? ppro?.EncoderManager?.EXPORT_QUEUE_TO_AME;
+    }
+    return ppro?.Constants?.ExportType?.IMMEDIATELY ?? ppro?.EncoderManager?.EXPORT_IMMEDIATELY;
+  }
+
+  async function exportSubsequenceWithEncoder(sequence, payload) {
+    const parsed = _parseHostPayload(payload, {});
+    const manager = _encoderManager();
+    if (!manager) return { ok: false, reason: "Premiere EncoderManager is unavailable in this UXP runtime." };
+    if (!sequence) return { ok: false, reason: "No subsequence was created for export." };
+    const outputPath = String(parsed.outputPath ?? parsed.path ?? "").trim();
+    if (!outputPath) return { ok: false, reason: "An output path is required for UXP encoder export." };
+
+    const queueToAme = parsed.queueToAme !== false && parsed.exportType !== "immediate";
+    if (queueToAme && manager.isAMEInstalled === false) {
+      return { ok: false, reason: "Adobe Media Encoder is not installed.", outputPath };
+    }
+
+    let encoderLaunched = false;
+    if (queueToAme && manager.launchEncoder) {
+      encoderLaunched = Boolean(await manager.launchEncoder());
+    }
+
+    const presetFile = String(parsed.presetFile ?? parsed.presetPath ?? "").trim() || undefined;
+    const exportType = _encoderExportType(queueToAme);
+    const exportFull = parsed.exportFull !== false;
+    const queued = await manager.exportSequence(sequence, exportType, outputPath, presetFile, exportFull);
+
+    let batchStarted = false;
+    if (queueToAme && parsed.startBatch !== false && manager.startBatchEncode) {
+      batchStarted = Boolean(await manager.startBatchEncode());
+    }
+
+    return {
+      ok: Boolean(queued),
+      outputPath,
+      presetFile: presetFile ?? "",
+      exportFull,
+      queueToAme,
+      encoderLaunched,
+      batchStarted,
+    };
+  }
+
   async function exportSequenceRange(payload) {
     const parsed = _parseHostPayload(payload, {});
     const subsequence = await createSubsequenceFromRange(parsed);
     if (!subsequence.ok) return subsequence;
+    const exportResult = await exportSubsequenceWithEncoder(subsequence.sequence, parsed);
     return {
-      ok: false,
-      reason: "Sequence range dispatch is registered; encoder handoff remains F255.",
-      outputPath: parsed.outputPath ?? parsed.path ?? "",
-      subsequence,
-      requiresF255: true,
+      ...exportResult,
+      subsequence: {
+        sequenceName: subsequence.sequenceName,
+        range: subsequence.range,
+        ignoreTrackTargeting: subsequence.ignoreTrackTargeting,
+      },
     };
   }
 
@@ -882,6 +936,7 @@ const PProBridge = (() => {
     removeImportedProjectItem,
     setSequencePlayhead,
     createSubsequenceFromRange,
+    exportSubsequenceWithEncoder,
     executeHostAction,
     hostActionStatus,
   };
