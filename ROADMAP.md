@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.30
+**Version**: 4.31
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -68,6 +68,23 @@
 > **v4.29 status (2026-05-17, twenty-sixth pass)**: closed three more cleanup items: **F126** (`opencut[otio]` and `opencut[all]` now pin `otio-aaf-adapter>=0.6,<1` so the AAF export path keeps working after the OTIO 0.15+ adapter split), **F181** (`scripts/bootstrap_check.py` now has a `_resolve_python_for_subprocess()` helper that detects broken UV-style trampolines and falls back to a working system Python on PATH; `check_version_sync` translates the `FileNotFoundError`/`OSError`/`TimeoutExpired` paths into actionable remediation hints), and **F185** (`features.md` now opens with an "Aspirational catalogue — not a ship promise" banner that cross-links ROADMAP.md and FEATURES_RECONCILIATION.md and codifies the "ROADMAP.md wins / the code wins" precedence rule). 13 new tests across `tests/test_otio_aaf_adapter_pin.py` (5), `tests/test_bootstrap_check.py` (+4), and `tests/test_features_md_banner.py` (4). Release smoke green (15 chained gates, `51 gate tests passed`).
 >
 > **v4.30 status (2026-05-17, twenty-seventh pass)**: closed two more Now-tier items: **F140** (C2PA 2.3 alignment — sidecar manifests now record `c2pa_spec_version="2.3"`, the action vocabulary tuple covers the C2PA 2.3 documented set, unknown actions tolerate-but-warn, optional `cloud_trust_list` and `live`/`software_agent` fields ship, default `CLAIM_GENERATOR_DEFAULT` advertises the spec version) and **F123** (audioop / pydub Python 3.13 compat — `opencut.core.audioop_shim.install_audioop_shim()` returns a structured status and aliases `audioop_lts` into `sys.modules["audioop"]` when needed; pydub dropped from `[standard]`/`[audio]`/`[all]` extras because the OpenCut tree has zero pydub imports). 17 new/extended tests across `tests/test_c2pa_sidecar.py` (+8) and `tests/test_audioop_shim.py` (9). Release smoke green (15 chained gates, `52 gate tests passed`).
+>
+> **v4.31 status (2026-05-17, twenty-eighth pass)**: closed **F128** (FFmpeg filter-graph regression suite). `tests/test_ffmpeg_filter_regression.py` (41 tests) covers a curated `REQUIRED_FILTERS` tuple of 24 filter names OpenCut emits and 13 representative filter graphs (9 video, 4 audio). Each filter must exist in `ffmpeg -filters` output; each graph is piped through a synthetic `lavfi color=`/`sine=` source with `-f null -` so syntax regressions surface without needing real media. The test auto-discovers the bundled FFmpeg via `OPENCUT_FFMPEG` / PATH / bundled `ffmpeg/` dir (same precedence as `opencut.server._setup_ffmpeg_path`). When F129 lands and the bundled FFmpeg bumps to 8.1, this is the first gate to flip. Release smoke green (15 chained gates, `53 gate tests passed`).
+
+---
+
+## 2026-05-17 v4.31 FFmpeg Filter Regression Suite (F128)
+
+One Now-tier item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F128 FFmpeg filter regression | DONE — `tests/test_ffmpeg_filter_regression.py` (41 tests). |
+| Filter registry probe | A curated `REQUIRED_FILTERS` tuple lists 24 filter names OpenCut emits (`amix`, `anullsrc`, `ass`, `atempo`, `color`, `concat`, `crop`, `drawtext`, `eq`, `fade`, `format`, `hstack`, `loudnorm`, `minterpolate`, `null`, `overlay`, `pan`, `scale`, `setpts`, `silencedetect`, `subtitles`, `trim`, `vstack`, `xfade`). The probe parses `ffmpeg -filters` output and asserts each name is present. F129 (FFmpeg 8.1 bump) will fire this gate first if any filter is renamed or removed. |
+| Shipped graph parser | 13 representative filter graphs (9 video, 4 audio) are piped through `lavfi color=`/`sine=` synthetic sources with `-f null -` so syntax regressions surface without writing any output file. Includes scale/crop/eq/fade/drawtext/overlay video graphs and atempo/loudnorm/silencedetect/pan audio graphs. |
+| Specialised gates | `silencedetect` emits the `silence_start` marker line `opencut.core.silence` regex parses against; `loudnorm` accepts the F237 preset target shape; an FFmpeg version floor of `>=4.x` is enforced. |
+| Bundled-FFmpeg autodiscovery | The test resolves FFmpeg via `OPENCUT_FFMPEG` / `FFMPEG_BINARY` / `PATH` / repo-bundled `ffmpeg/` dir, mirroring `opencut.server._setup_ffmpeg_path`. Skips cleanly when no FFmpeg is available (e.g. Python-only CI legs). |
+| Validation | `python -m pytest tests/test_ffmpeg_filter_regression.py -q` → `41 passed`. `python scripts/release_smoke.py --skip pip-audit --skip npm-advisory` → all 15 chained gates `PASS`, `53 gate tests passed`. Ruff `opencut/` scope clean. |
 
 ---
 
