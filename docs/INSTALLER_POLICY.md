@@ -5,6 +5,10 @@
 > and the retirement plan so future contributors don't add work to
 > both pipelines by accident.
 >
+> **F213 status (2026-05-18):** the Inno fallback now has a CI-only
+> install/uninstall smoke script (`scripts/smoke_inno_installer.ps1`)
+> wired after the Windows Inno build step.
+>
 > **Tracking F-number:** F200 (Now-tier doc deliverable).
 > Related F-numbers: **F201** (CI for the recommended path),
 > **F203** (Authenticode code-signing renewal), **F207** (bundled
@@ -57,9 +61,10 @@ Only one binary is published per release.
   user-visible behaviour must have a matching entry in
   `OpenCut.iss`. Test `tests/test_installer_policy.py` enforces
   this for the items the policy contract names.
-* CI (`F201`) covers the WPF path. The Inno path is *not* covered
-  by CI; it's a fallback that the maintainer builds locally on
-  demand.
+* CI (`F201`) covers the WPF path. The Inno path has F213
+  install/uninstall smoke coverage on tag/manual Windows builds, but
+  remains a deprecated fallback rather than the recommended release
+  path.
 
 ### Retirement timeline
 
@@ -67,7 +72,7 @@ Only one binary is published per release.
 |---|---|---|
 | **Now** | (this document) | Designate WPF as recommended; Inno as deprecated-but-supported fallback. |
 | **F201 close** | WPF in CI | Mark Inno as "deprecated; build locally only" in the release-notes template. |
-| **F213 close** | Inno install/uninstall smoke in CI | Reassess: keep Inno as a parallel CI matrix leg, or proceed with full retirement. |
+| **F213 close** | Inno install/uninstall smoke in CI | DONE — keep Inno as a deprecated-but-supported fallback with CI smoke coverage until F212 decides retirement. |
 | **F212 close** | WPF xUnit test suite | If WPF coverage meets the bar set in `TEST_COVERAGE_GAPS.md §3.6`, formally retire Inno (move `OpenCut.iss` to `archive/`). |
 
 The retirement gate is **not** a calendar date — it is the WPF
@@ -112,9 +117,9 @@ Three risks force keeping the fallback for now:
    renewal would block WPF releases; the Inno path stays as a
    self-signed fallback.
 3. **No WPF tests yet** — F212 (WPF xUnit suite) is Later-tier.
-   Inno's behaviour is implicitly covered by the wider OpenCut
-   integration tests because the install tree is the same; WPF
-   currently relies on manual QA.
+   Inno's behaviour is now covered by the F213 install/uninstall
+   smoke on disposable Windows CI workers, while WPF still relies on
+   manual QA plus lockstep invariant tests.
 
 When any one of those three resolves, reassess the retirement
 schedule in §2.
