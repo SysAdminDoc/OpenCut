@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Bolt UXP WebView Scaffold
+
+- Added a dormant F252.1 Bolt/WebView scaffold under `extension/com.opencut.uxp/bolt-webview/`, including a least-privilege UXP config template, host API wrappers, and WebView-side message bridge files.
+- Added `tests/test_uxp_webview_scaffold.py` and release-smoke wiring to pin the scaffold contract while the shipped UXP manifest continues to load the existing `index.html` panel.
+
 ### Added — Aptabase Opt-In Telemetry
 
 - Added disabled-by-default Aptabase telemetry as the default opt-in desktop analytics provider, with persisted local settings, environment overrides, privacy scrubbing, and best-effort background event delivery.

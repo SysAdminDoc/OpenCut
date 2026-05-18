@@ -801,3 +801,29 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P58-L09 | Validation commands — focused Aptabase tests, focused Ruff, `py_compile`, route/MCP/API-alias/feature-readiness drift checks, and reduced release smoke passed locally. |
 
 **Source coverage assessment (Pass 58):** Pass 58 claims in `ROADMAP.md` v4.61, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `README.md`, `docs/TELEMETRY.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P58-E01 through R-P58-E05 and R-P58-L01 through R-P58-L09.
+
+---
+
+## Pass 59 — F252.1 Bolt UXP WebView scaffold (2026-05-18 fifty-ninth pass)
+
+### External source evidence
+
+| ID | Source |
+|---|---|
+| R-P59-E01 | Bolt UXP repository — https://github.com/hyperbrew/bolt-uxp — source reference for the Bolt UXP scaffold shape and config conventions. |
+| R-P59-E02 | Bolt UXP sample config — https://raw.githubusercontent.com/hyperbrew/bolt-uxp/master/uxp.config.ts — confirms the `uxp.config.ts` export pattern used by the dormant scaffold. |
+| R-P59-E03 | Adobe Developer Blog, "Introducing WebView UI in Bolt UXP" — https://blog.developer.adobe.com/en/publish/2026/03/introducing-webview-ui-in-bolt-uxp-build-richer-adobe-plugins-faster — supports the WebView UI migration direction for Bolt UXP panels. |
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P59-L01 | `extension/com.opencut.uxp/bolt-webview/uxp.config.ts` — new least-privilege Bolt/WebView config template that inherits the live plugin identity, preserves Premiere `PPRO` minVersion 25.6, enables WebView UI/local rendering/message bridge, and keeps the loopback backend allowlist. |
+| R-P59-L02 | `extension/com.opencut.uxp/bolt-webview/src/api/` — new generic UXP and Premiere host wrappers returning plain data across the WebView boundary. |
+| R-P59-L03 | `extension/com.opencut.uxp/bolt-webview/webview-ui/` — new dormant WebView shell and `window.uxpHost.postMessage` bridge helpers. |
+| R-P59-L04 | `docs/UXP_MIGRATION.md` and `extension/com.opencut.uxp/bolt-webview/README.md` — document the scaffold posture, cutover boundary, and remaining live-switch work. |
+| R-P59-L05 | `tests/test_uxp_webview_scaffold.py` — focused guardrails for scaffold files, config permissions, host API exports, WebView bridge tokens, and docs. |
+| R-P59-L06 | `scripts/release_smoke.py` — adds the F252.1 scaffold test to the release gate. |
+| R-P59-L07 | Validation commands — focused F252.1 scaffold tests, focused release-smoke unit coverage, focused Ruff, `py_compile`, and release-smoke `pytest-fast` (`623 passed`) passed locally. |
+
+**Source coverage assessment (Pass 59):** Pass 59 claims in `ROADMAP.md` v4.62, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `docs/UXP_MIGRATION.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P59-E01 through R-P59-E03 and R-P59-L01 through R-P59-L07.
