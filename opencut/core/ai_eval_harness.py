@@ -65,7 +65,24 @@ class EvalSample:
 
 @dataclass
 class EvalResult:
-    """Outcome of running an evaluation."""
+    """Outcome of running an evaluation.
+
+    F178 extends the F120 result shape with:
+
+    * ``vram_peak_mb`` — peak GPU memory used while the runner was on
+      the GPU. ``0`` when the runner was CPU-only or torch wasn't
+      available.
+    * ``reference_score`` — caller-supplied expected/baseline score so
+      ``quality_score`` is comparable across runs even when models
+      drift.
+    * ``backend`` — concrete inference backend ("cpu", "cuda", "mps",
+      "rocm", "directml"); set by the runner via the returned
+      payload's ``backend`` key, otherwise inferred from
+      ``environment["device"]``.
+    * ``backend_choice_reason`` — operator-facing rationale for why
+      the chosen backend won (e.g. "no CUDA available — fell back to
+      CPU"). Powers the cross-backend comparison endpoint.
+    """
 
     feature_id: str
     sample_id: str
@@ -77,6 +94,11 @@ class EvalResult:
     environment: dict = field(default_factory=dict)
     error: str = ""
     timestamp: float = field(default_factory=time.time)
+    # F178 additions
+    vram_peak_mb: float = 0.0
+    reference_score: float = 0.0
+    backend: str = ""
+    backend_choice_reason: str = ""
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -168,6 +190,45 @@ def _environment_snapshot() -> dict:
     return snapshot
 
 
+def _reset_vram_counter() -> None:
+    """Reset the torch CUDA peak-memory counter before a run, if torch is loaded."""
+    try:
+        import torch  # type: ignore
+
+        if torch.cuda.is_available():  # pragma: no cover - device-dependent
+            torch.cuda.reset_peak_memory_stats()
+    except Exception:
+        pass
+
+
+def _vram_peak_mb() -> float:
+    """Return peak GPU memory in MB since the last reset, or ``0.0``."""
+    try:
+        import torch  # type: ignore
+
+        if torch.cuda.is_available():  # pragma: no cover - device-dependent
+            peak_bytes = int(torch.cuda.max_memory_allocated())
+            return round(peak_bytes / (1024 * 1024), 2)
+    except Exception:
+        pass
+    return 0.0
+
+
+def _infer_backend(payload: dict, environment: dict) -> str:
+    """Resolve the backend name from runner payload, falling back to env."""
+    backend = str(payload.get("backend") or "").strip().lower()
+    if backend:
+        return backend
+    device = str(environment.get("device") or "").strip().lower()
+    if device:
+        # Normalise common device strings the gpu module returns.
+        if device.startswith("cuda"):
+            return "cuda"
+        if device in {"cpu", "mps", "rocm", "directml", "xpu"}:
+            return device
+    return "cpu"
+
+
 def run_evaluation(
     feature_id: str,
     sample: EvalSample,
@@ -181,6 +242,7 @@ def run_evaluation(
         raise KeyError(f"no evaluation registered for {feature_id!r}")
 
     env = _environment_snapshot()
+    _reset_vram_counter()
     start = time.perf_counter()
     success = False
     payload: dict = {}
@@ -193,6 +255,24 @@ def run_evaluation(
         logger.warning("ai_eval %s failed on sample %s: %s", feature_id, sample.sample_id, exc)
 
     elapsed = int((time.perf_counter() - start) * 1000)
+    # F178 — pick up the new fields from the runner payload (the runner
+    # is the only thing that knows the actual backend / VRAM ceiling /
+    # baseline reference score).
+    payload_vram = payload.get("vram_peak_mb")
+    if payload_vram is None:
+        vram_peak_mb = _vram_peak_mb()
+    else:
+        try:
+            vram_peak_mb = max(0.0, float(payload_vram))
+        except (TypeError, ValueError):
+            vram_peak_mb = 0.0
+    try:
+        reference_score = max(0.0, float(payload.get("reference_score", 0.0) or 0.0))
+    except (TypeError, ValueError):
+        reference_score = 0.0
+    backend = _infer_backend(payload, env)
+    backend_choice_reason = str(payload.get("backend_choice_reason", "")).strip()
+
     result = EvalResult(
         feature_id=feature_id,
         sample_id=sample.sample_id,
@@ -203,6 +283,10 @@ def run_evaluation(
         notes=str(payload.get("notes", "")),
         environment=env,
         error=error_str,
+        vram_peak_mb=vram_peak_mb,
+        reference_score=reference_score,
+        backend=backend,
+        backend_choice_reason=backend_choice_reason,
     )
     if persist:
         _append_result(result, eval_dir=eval_dir)
@@ -267,3 +351,101 @@ def _percentile(values, pct):
     s = sorted(values)
     k = max(0, min(len(s) - 1, int(round(pct * (len(s) - 1)))))
     return s[k]
+
+
+# ---------------------------------------------------------------------------
+# F178 — cross-backend comparison
+# ---------------------------------------------------------------------------
+
+
+def compare_backends(
+    feature_id: str,
+    *,
+    eval_dir: Optional[Path] = None,
+) -> dict:
+    """Group persisted evaluations by backend and emit relative scores.
+
+    Returns ``{"feature_id", "backends": [...], "best_latency", "best_quality"}``.
+    Each backend entry carries the runs / success count / latency
+    p50/p95 / mean quality / VRAM peak / and a normalised
+    ``quality_vs_reference`` ratio (quality_mean / reference_score
+    mean, capped at 1.5 for display sanity).
+
+    The harness intentionally **never** picks a "winner" because the
+    user knows whether they care about latency or quality. We emit the
+    summary; the UI / panel renders the recommendation.
+    """
+    base = Path(eval_dir) if eval_dir else EVAL_DIR
+    target = base / f"{feature_id}.json"
+    if not target.exists():
+        return {
+            "feature_id": feature_id,
+            "backends": [],
+            "best_latency": None,
+            "best_quality": None,
+            "note": "no persisted results",
+        }
+    try:
+        history = json.loads(target.read_text(encoding="utf-8"))
+        if not isinstance(history, list):
+            history = []
+    except (OSError, json.JSONDecodeError):
+        history = []
+
+    by_backend: Dict[str, List[dict]] = {}
+    for entry in history:
+        backend = str(entry.get("backend") or "unknown") or "unknown"
+        by_backend.setdefault(backend, []).append(entry)
+
+    backends_summary: List[dict] = []
+    for backend, runs in sorted(by_backend.items()):
+        success_runs = [r for r in runs if r.get("success")]
+        latencies = [int(r.get("latency_ms", 0) or 0) for r in success_runs]
+        quality = [float(r.get("quality_score", 0.0) or 0.0) for r in success_runs]
+        vram = [float(r.get("vram_peak_mb", 0.0) or 0.0) for r in success_runs]
+        reference = [
+            float(r.get("reference_score", 0.0) or 0.0)
+            for r in success_runs
+            if float(r.get("reference_score", 0.0) or 0.0) > 0
+        ]
+        quality_mean = (statistics.fmean(quality) if quality else None)
+        reference_mean = (statistics.fmean(reference) if reference else None)
+        ratio = None
+        if quality_mean is not None and reference_mean and reference_mean > 0:
+            ratio = round(min(1.5, quality_mean / reference_mean), 4)
+        backends_summary.append({
+            "backend": backend,
+            "runs": len(runs),
+            "successes": len(success_runs),
+            "failures": len(runs) - len(success_runs),
+            "latency_ms_p50": int(statistics.median(latencies)) if latencies else None,
+            "latency_ms_p95": int(_percentile(latencies, 0.95)) if latencies else None,
+            "quality_mean": quality_mean,
+            "reference_mean": reference_mean,
+            "quality_vs_reference": ratio,
+            "vram_peak_mb_max": max(vram) if vram else 0.0,
+            "vram_peak_mb_mean": (
+                round(statistics.fmean(vram), 2) if vram else 0.0
+            ),
+            "latest_reason": (
+                str(success_runs[-1].get("backend_choice_reason", ""))
+                if success_runs else ""
+            ),
+        })
+
+    best_latency = None
+    best_quality = None
+    if backends_summary:
+        with_latency = [b for b in backends_summary if b["latency_ms_p50"] is not None]
+        if with_latency:
+            best_latency = min(with_latency, key=lambda b: b["latency_ms_p50"])["backend"]
+        with_quality = [b for b in backends_summary if b["quality_mean"] is not None]
+        if with_quality:
+            best_quality = max(with_quality, key=lambda b: b["quality_mean"])["backend"]
+
+    return {
+        "feature_id": feature_id,
+        "backends": backends_summary,
+        "best_latency": best_latency,
+        "best_quality": best_quality,
+    }
