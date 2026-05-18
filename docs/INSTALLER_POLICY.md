@@ -9,8 +9,12 @@
 > install/uninstall smoke script (`scripts/smoke_inno_installer.ps1`)
 > wired after the Windows Inno build step.
 >
+> **F201 status (2026-05-18):** the recommended WPF installer is now
+> built on Windows tag/manual CI via `scripts/build_wpf_installer_ci.ps1`
+> and archived separately from the Inno fallback.
+>
 > **Tracking F-number:** F200 (Now-tier doc deliverable).
-> Related F-numbers: **F201** (CI for the recommended path),
+> Related F-numbers: **F201** (CI for the recommended path, DONE),
 > **F203** (Authenticode code-signing renewal), **F207** (bundled
 > FFmpeg version embedded in installer manifest, DONE Pass 12),
 > **F212** (WPF installer xUnit test suite, deferred to Later).
@@ -40,8 +44,8 @@ repo for two specific use cases:
 1. **No-.NET-9 build environments.** A contributor who only has the
    PyInstaller dist available can still produce an installer
    binary with Inno Setup 6, which is single-binary, no-SDK.
-   F201 (WPF in CI) closes the gap; until then the Inno path is the
-   fallback.
+   F201 now closes the official CI build gap; the Inno path remains
+   a local fallback for contributors without the .NET SDK.
 2. **Emergency hot-fix releases.** If an issue blocks the WPF path
    (e.g. signing cert expiry, F203 not renewed yet), the Inno path
    can still produce a self-signed installer for users who already
@@ -61,7 +65,7 @@ Only one binary is published per release.
   user-visible behaviour must have a matching entry in
   `OpenCut.iss`. Test `tests/test_installer_policy.py` enforces
   this for the items the policy contract names.
-* CI (`F201`) covers the WPF path. The Inno path has F213
+* CI (`F201`) covers the WPF path on tag/manual Windows builds. The Inno path has F213
   install/uninstall smoke coverage on tag/manual Windows builds, but
   remains a deprecated fallback rather than the recommended release
   path.
@@ -71,7 +75,7 @@ Only one binary is published per release.
 | Milestone | Trigger | Action |
 |---|---|---|
 | **Now** | (this document) | Designate WPF as recommended; Inno as deprecated-but-supported fallback. |
-| **F201 close** | WPF in CI | Mark Inno as "deprecated; build locally only" in the release-notes template. |
+| **F201 close** | WPF in CI | DONE — WPF builds in Windows tag/manual CI and archives `OpenCut-WPF-Setup-X.Y.Z.exe`; Inno stays deprecated-but-supported until F212 decides retirement. |
 | **F213 close** | Inno install/uninstall smoke in CI | DONE — keep Inno as a deprecated-but-supported fallback with CI smoke coverage until F212 decides retirement. |
 | **F212 close** | WPF xUnit test suite | If WPF coverage meets the bar set in `TEST_COVERAGE_GAPS.md §3.6`, formally retire Inno (move `OpenCut.iss` to `archive/`). |
 
@@ -106,22 +110,19 @@ When you add a fifth invariant, document it here and add a test in
 
 ## 4. Why we didn't retire Inno yet
 
-Three risks force keeping the fallback for now:
+Two risks force keeping the fallback for now:
 
-1. **No WPF CI** — F201 (WPF in CI) is still Next-tier. Until then
-   only the maintainer's local Windows machine builds the WPF
-   installer.
-2. **Authenticode renewal cliff** — F203 flags that the OpenCut
+1. **Authenticode renewal cliff** — F203 flags that the OpenCut
    signing cert validity drops to 458 days starting March 2026,
    and SmartScreen no longer auto-trusts new certs. A botched
    renewal would block WPF releases; the Inno path stays as a
    self-signed fallback.
-3. **No WPF tests yet** — F212 (WPF xUnit suite) is Later-tier.
+2. **No WPF tests yet** — F212 (WPF xUnit suite) is Later-tier.
    Inno's behaviour is now covered by the F213 install/uninstall
    smoke on disposable Windows CI workers, while WPF still relies on
-   manual QA plus lockstep invariant tests.
+   build-only CI, manual QA, and lockstep invariant tests.
 
-When any one of those three resolves, reassess the retirement
+When either remaining risk resolves, reassess the retirement
 schedule in §2.
 
 ---
@@ -154,6 +155,9 @@ schedule in §2.
 ## 6. References
 
 * `installer/InstallerBuilder.ps1` — WPF build orchestrator.
+* `scripts/build_wpf_installer_ci.ps1` — F201 CI wrapper that prepares
+  the PyInstaller + FFmpeg payload and archives the WPF output before
+  the Inno fallback can overwrite the legacy filename.
 * `installer/src/OpenCut.Installer/AppConstants.cs` — WPF constants;
   shipped FFmpeg version (F207) lives here.
 * `OpenCut.iss` — Inno Setup script.
