@@ -22,6 +22,10 @@ from opencut.helpers import ensure_package
 
 logger = logging.getLogger("opencut")
 
+# Cap on SD API responses. api_url is user-configurable so a hostile/misbehaving
+# endpoint could return arbitrary bytes; a single 768x512 PNG is ~1 MB base64.
+_MAX_SD_RESPONSE_BYTES = 100 * 1024 * 1024  # 100 MB
+
 
 # ---------------------------------------------------------------------------
 # Data Structures
@@ -900,7 +904,12 @@ def _generate_sd_panel(
             method="POST",
         )
         resp = urllib.request.urlopen(req, timeout=60)
-        result = json.loads(resp.read().decode("utf-8"))
+        raw = resp.read(_MAX_SD_RESPONSE_BYTES + 1)
+        if len(raw) > _MAX_SD_RESPONSE_BYTES:
+            raise RuntimeError(
+                f"SD API response exceeds {_MAX_SD_RESPONSE_BYTES} byte cap"
+            )
+        result = json.loads(raw.decode("utf-8"))
 
         if "images" in result and result["images"]:
             img_data = base64.b64decode(result["images"][0])
