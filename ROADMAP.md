@@ -128,8 +128,25 @@
 > **v4.59 status (2026-05-18, fifty-sixth pass)**: closed **F239** by adding a Microsoft `ai-audio-descriptions` compatible review-draft route. `POST /audio/description/microsoft-draft` now builds human-reviewable AD cues from per-scene descriptions, transcript timing, and dialogue/silence gaps, carries dialogue context and fit/word-budget metadata, and emits an IndexTTS2-ready TTS backend hint without forcing Azure credentials or TTS rendering into the draft path. The route manifest now has 1,371 routes; the opt-in extended MCP catalogue now has 1,313 tools.
 
 > **v4.60 status (2026-05-18, fifty-seventh pass)**: closed **F249** by adding Linux Flatpak/AppImage release packaging. The repo now carries the `io.github.sysadmindoc.opencut` Flatpak manifest, desktop file, MetaInfo, Flathub architecture policy, AppImage/Flatpak launchers, `scripts/build_linux_packages.sh`, Linux release workflow upload wiring, and `docs/LINUX_DISTRIBUTION.md` with the Flathub build-from-source boundary documented.
+>
+> **v4.61 status (2026-05-18, fifty-eighth pass)**: closed **F250** by replacing the speculative Plausible default with disabled-by-default Aptabase telemetry. `opencut/core/telemetry_aptabase.py` now implements the Aptabase `/api/v0/events` batch contract without a new dependency, persists opt-in settings through `user_data.py`, masks app keys in API responses, scrubs media paths/transcripts/prompts/secrets from event props, and exposes `GET /telemetry/aptabase/info`, `GET/POST /telemetry/aptabase/settings`, and `POST /telemetry/aptabase/track`. `docs/TELEMETRY.md` records the privacy boundary and legacy Plausible remains available for older self-hosted deployments. The route manifest now has 1,374 routes; the opt-in extended MCP catalogue now has 1,317 tools.
 
 ---
+
+## 2026-05-18 v4.61 Aptabase Opt-In Telemetry (F250)
+
+One Next-tier telemetry item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Default provider | Aptabase is now the documented default telemetry provider, replacing the earlier speculative Plausible default while preserving the legacy Plausible route for older operators. |
+| Opt-in posture | Fresh installs still emit no telemetry. Settings persist locally in `~/.opencut/telemetry_settings.json`; env overrides require explicit `OPENCUT_TELEMETRY_ENABLED=1`. |
+| API surface | Added `GET /telemetry/aptabase/info`, `GET/POST /telemetry/aptabase/settings`, and `POST /telemetry/aptabase/track`, all using the existing CSRF model for mutating requests. |
+| Privacy guardrails | Event props drop media paths, filenames, transcript/prompt text, URL/email-looking values, and secrets; app keys are masked in route responses. |
+| Wire contract | The stdlib client posts max-25 event batches to Aptabase `/api/v0/events` with `App-Key`, region-derived EU/US hosts, self-hosted `A-SH-*` support through validated public `base_url`, and best-effort background delivery. |
+| Tests/docs | `tests/test_telemetry_aptabase.py` covers disabled defaults, settings validation, masking, payload scrubbing, sync POST shape, and route CSRF behavior; release smoke now includes it. |
+
+Validation after the batch: focused Aptabase telemetry tests passed (`7 passed`), touched Python files compile, focused Ruff passed, generated route manifest regenerated to 1,374 routes, generated extended MCP tools regenerated to 1,317 tools, and feature-readiness remained in sync (`58 generated records / 67 route bindings`).
 
 ## 2026-05-18 v4.60 Linux Distribution Packaging (F249)
 
@@ -1119,7 +1136,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Flagship review-bundle extensions: **[x] F225**, **[x] F226**, **[x] F227**, **[x] F229**, F228 voice notes + F230 HLS rendition remain later
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: [x] F223 RTL/CJK validation suite, [x] F238 PSE hue checker, [x] F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
-- Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + [x] F249 Flatpak primary Linux + Aptabase opt-in telemetry
+- Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + [x] F249 Flatpak primary Linux + [x] F250 Aptabase opt-in telemetry
 - Tests: [x] F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + [x] F217 UXP contract test
 - Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)

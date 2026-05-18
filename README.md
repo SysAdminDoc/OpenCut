@@ -477,7 +477,7 @@ A: Most AI features are optional. Install them individually or use `pip install 
 A: Yes. The server runs standalone with a REST API. Call any route with curl, use the CLI, or build your own frontend. DaVinci Resolve is also supported via the Resolve Bridge.
 
 **Q: Does this send data to the cloud?**
-A: No. Everything runs locally. No telemetry, no API keys for core features. Edge-TTS requires internet for voice synthesis; LLM features can use local Ollama or cloud providers. Social media upload is opt-in and requires explicit OAuth connection.
+A: No by default. Everything core runs locally, and fresh installs emit no telemetry. Optional Aptabase telemetry is available only after explicit opt-in; see [docs/TELEMETRY.md](docs/TELEMETRY.md). Edge-TTS requires internet for voice synthesis; LLM features can use local Ollama or cloud providers. Social media upload is opt-in and requires explicit OAuth connection.
 
 **Q: Can I export edits to DaVinci Resolve or Final Cut Pro?**
 A: Yes. Use the OTIO (OpenTimelineIO) export in the Timeline tab. OTIO files can be imported into Resolve, FCP, Avid, and any OTIO-compatible editor. Resolve also has a direct Python scripting bridge.

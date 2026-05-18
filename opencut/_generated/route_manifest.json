@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T18:03:03Z",
-  "total_routes": 1371,
+  "generated_at": "2026-05-18T18:38:18Z",
+  "total_routes": 1374,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 303,
+    "GET": 305,
     "PATCH": 1,
-    "POST": 1053,
+    "POST": 1055,
     "PUT": 2
   },
   "blueprints": {
@@ -1094,10 +1094,10 @@
       ]
     },
     "wave_e": {
-      "route_count": 12,
+      "route_count": 15,
       "method_counts": {
-        "GET": 4,
-        "POST": 8
+        "GET": 6,
+        "POST": 10
       },
       "sample_rules": [
         "/delivery/shaka/info",
@@ -9397,6 +9397,31 @@
       ],
       "endpoint": "utility.team_sync",
       "blueprint": "utility"
+    },
+    {
+      "rule": "/telemetry/aptabase/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_e.route_aptabase_info",
+      "blueprint": "wave_e"
+    },
+    {
+      "rule": "/telemetry/aptabase/settings",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "endpoint": "wave_e.route_aptabase_settings",
+      "blueprint": "wave_e"
+    },
+    {
+      "rule": "/telemetry/aptabase/track",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_e.route_aptabase_track",
+      "blueprint": "wave_e"
     },
     {
       "rule": "/telemetry/overlay",

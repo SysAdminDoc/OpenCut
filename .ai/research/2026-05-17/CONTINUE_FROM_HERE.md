@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 58)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 59)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-18 (after Pass 57; Passes 1-34 all ran on 2026-05-17)
-**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, Pass 33 closed F200 + F211, Pass 34 closed F217 (UXP BackendClient HTTP-shape contract), Pass 35 closed F121/F122/F127a/F130/F133/F135 (dependency security floor + Python 3.11 source-install floor), Pass 36 closed F180 (Wave N-T / F-number governance ledger), Pass 37 closed F213 (Inno install/uninstall smoke in CI), Pass 38 closed F215 (fuzz harness expansion + parser hardening), Pass 39 closed F216 (concurrent job-cancellation race coverage + process termination fix), Pass 40 closed F214 (ML / compose / TTS performance benchmark contract), Pass 41 closed F192 (legacy OpenAPI typed response schemas expanded to 100 routes), Pass 42 closed F198 (code-owned CEP↔UXP parity catalogue + generated JSON artifact), Pass 43 closed F194 (opt-in generated extended MCP route-tool catalogue), Pass 44 closed F201 (WPF installer build in Windows tag/manual CI), Pass 45 closed F203 (Windows Authenticode signing workflow/tooling + renewal docs), Pass 46 closed F223 (RTL/CJK/bidi caption Unicode validation gate), Pass 47 closed F242 (Unicode-aware CJK line breaking), Pass 48 closed F225 (OTIO Marker sidecar for review bundles), Pass 49 closed F226 (SVG drawing annotation overlays in review bundles), Pass 50 closed F227 (threaded review comments and completion status in review bundles), Pass 51 closed F229 (Premiere marker CSV and EDL review-comment exports), Pass 52 closed F231 (HMAC-signed LAN review portal URLs with Caddy/mDNS descriptors), Pass 53 closed F233 (per-project Atom review feeds plus optional HMAC-signed review webhooks), Pass 54 closed F234 (croc/rclone delivery transfer bundles), Pass 55 closed F238 (BT.1702/WCAG photosensitive flash checker upgrade), Pass 56 closed F239 (Microsoft `ai-audio-descriptions` compatible AD review drafts), and Pass 57 closed F249 (Flatpak/AppImage Linux release packaging). This file documents deferred research/product work for a future Pass 58+, not a broken or incomplete research run.
+**Last update:** 2026-05-18 (after Pass 58; Passes 1-34 all ran on 2026-05-17)
+**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, Pass 33 closed F200 + F211, Pass 34 closed F217 (UXP BackendClient HTTP-shape contract), Pass 35 closed F121/F122/F127a/F130/F133/F135 (dependency security floor + Python 3.11 source-install floor), Pass 36 closed F180 (Wave N-T / F-number governance ledger), Pass 37 closed F213 (Inno install/uninstall smoke in CI), Pass 38 closed F215 (fuzz harness expansion + parser hardening), Pass 39 closed F216 (concurrent job-cancellation race coverage + process termination fix), Pass 40 closed F214 (ML / compose / TTS performance benchmark contract), Pass 41 closed F192 (legacy OpenAPI typed response schemas expanded to 100 routes), Pass 42 closed F198 (code-owned CEP↔UXP parity catalogue + generated JSON artifact), Pass 43 closed F194 (opt-in generated extended MCP route-tool catalogue), Pass 44 closed F201 (WPF installer build in Windows tag/manual CI), Pass 45 closed F203 (Windows Authenticode signing workflow/tooling + renewal docs), Pass 46 closed F223 (RTL/CJK/bidi caption Unicode validation gate), Pass 47 closed F242 (Unicode-aware CJK line breaking), Pass 48 closed F225 (OTIO Marker sidecar for review bundles), Pass 49 closed F226 (SVG drawing annotation overlays in review bundles), Pass 50 closed F227 (threaded review comments and completion status in review bundles), Pass 51 closed F229 (Premiere marker CSV and EDL review-comment exports), Pass 52 closed F231 (HMAC-signed LAN review portal URLs with Caddy/mDNS descriptors), Pass 53 closed F233 (per-project Atom review feeds plus optional HMAC-signed review webhooks), Pass 54 closed F234 (croc/rclone delivery transfer bundles), Pass 55 closed F238 (BT.1702/WCAG photosensitive flash checker upgrade), Pass 56 closed F239 (Microsoft `ai-audio-descriptions` compatible AD review drafts), Pass 57 closed F249 (Flatpak/AppImage Linux release packaging), and Pass 58 closed F250 (Aptabase opt-in telemetry). This file documents deferred research/product work for a future Pass 59+, not a broken or incomplete research run.
 
 ---
 
@@ -11,13 +11,13 @@
 
 - **Repo branch:** `main`; the Pass 35 dependency-floor commit pushed to `origin/main` successfully from this machine. Continue to verify `git status --short --branch` at session start before assuming the working tree is clean.
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
-- **Live counts:** 1,371 routes / 101 blueprints / 528 core modules / 147 test files / 47 model cards / 117 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 curated MCP tools / 1,313 opt-in extended MCP tools / 100 OpenAPI-typed endpoints / 18 CEP host functions (2 CEP-only).
+- **Live counts:** 1,374 routes / 101 blueprints / 536 core modules / 174 test files / 47 model cards / 118 public `check_*` probes (86 `check_*_available`) / 84 `FeatureRecord` entries / 39 curated MCP tools / 1,317 opt-in extended MCP tools / 100 OpenAPI-typed endpoints / 18 CEP host functions (2 CEP-only).
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md and now F-number-tiered by `.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md` (F180).
 
-### Pass 58 entry point
+### Pass 59 entry point
 
-1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F192, F194, F198, F200, F201, F203, F211, F213, F214, F215, F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F251, F259 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. The next small Next-tier candidate is F250 (Aptabase opt-in telemetry) and should get fresh privacy/telemetry source verification before implementation. F193 remains the larger schema-introspection follow-up to F192/F194. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
+1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F192, F194, F198, F200, F201, F203, F211, F213, F214, F215, F216, F217, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F251, F259 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. The next local-verifiable Next-tier candidates are F252 (XL UXP WebView scaffold), F254-F258 (UXP API migrations), and F260 (Adobe bug report pack); F193 remains the larger schema-introspection follow-up to F192/F194. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
 2. **F198 is now enforced, not only documented.** `CEP_UXP_PARITY_MATRIX.md` maps all 18 `ocXxx` JSX functions and identifies only two truly CEP-only calls; `opencut/_generated/cep_uxp_parity.json` plus `tests/test_cep_uxp_parity_catalogue.py` keep that claim in sync with `host/index.jsx`.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.11/3.12/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
@@ -44,6 +44,18 @@
 | Docs/tests | `docs/LINUX_DISTRIBUTION.md` records the Flathub build-from-source boundary; `tests/test_linux_distribution_packaging.py` pins manifest, metadata, script, workflow, and release-smoke wiring. |
 | Validation | PASS — focused Linux-packaging tests, `bash -n` syntax check, focused Ruff, `py_compile`, and reduced release smoke. |
 | Files to review | `io.github.sysadmindoc.opencut.yml`, `flathub.json`, `packaging/linux/*`, `scripts/build_linux_packages.sh`, `.github/workflows/build.yml`, `tests/test_linux_distribution_packaging.py`, `docs/LINUX_DISTRIBUTION.md`, README, ROADMAP.md v4.60, PROJECT_CONTEXT.md, CHANGELOG.md, and this file. |
+
+### Pass 58 checkpoint
+
+| Item | Status |
+|---|---|
+| F250 | **DONE** — OpenCut now has disabled-by-default Aptabase telemetry as the documented opt-in provider. |
+| Aptabase client | `opencut.core.telemetry_aptabase` implements the `/api/v0/events` batch contract with `App-Key`, region host resolution for `A-EU-*` / `A-US-*`, custom public self-host URLs for `A-SH-*`, max-25 batching, offline queuing, and failure-isolation. |
+| Opt-in settings | `~/.opencut/telemetry_settings.json`, env overrides, masked app-key responses, and `/telemetry/aptabase/info`, `/telemetry/aptabase/settings`, `/telemetry/aptabase/track` routes keep fresh installs silent unless the user opts in. |
+| Privacy posture | Event props are allowlisted by sanitation rather than sent raw: sensitive keys, emails, URLs, Windows paths, UNC paths, and common media-file paths are dropped before queueing. |
+| Generated artifacts | Route manifest regenerated to 1,374 routes / 101 blueprints; opt-in extended MCP catalogue regenerated to 1,317 tools. |
+| Validation | PASS — focused Aptabase telemetry tests, focused Ruff, `py_compile`, generated route/MCP checks, API-alias check, feature-readiness check, and reduced release smoke. |
+| Files to review | `opencut/core/telemetry_aptabase.py`, `opencut/user_data.py`, `opencut/routes/wave_e_routes.py`, `opencut/checks.py`, `tests/test_telemetry_aptabase.py`, `docs/TELEMETRY.md`, generated route/MCP artifacts, README, ROADMAP.md v4.61, PROJECT_CONTEXT.md, CHANGELOG.md, and this file. |
 
 ### Pass 55 checkpoint
 
@@ -187,7 +199,7 @@
 | Item | Status |
 |---|---|
 | F194 | **DONE** — opt-in generated MCP route tools now extend the curated MCP surface without changing the default tool list. |
-| Generated catalogue | `opencut/_generated/mcp_extended_tools.json` contains 1,313 `opencut_route_*` tools generated from `opencut/_generated/route_manifest.json`, `opencut/_generated/api_aliases.json`, and the OpenAPI response-schema map. |
+| Generated catalogue | `opencut/_generated/mcp_extended_tools.json` contains 1,317 `opencut_route_*` tools generated from `opencut/_generated/route_manifest.json`, `opencut/_generated/api_aliases.json`, and the OpenAPI response-schema map. |
 | Runtime opt-in | `opencut-mcp-server --extended-tools` or `OPENCUT_MCP_EXTENDED_TOOLS=1` exposes generated tools; default `tools/list` remains the 39 curated tools. |
 | Dispatch | Generated tools route through `mcp_extended_tools.invoke_extended_tool()`: path params are top-level arguments, GET query params use `query`, mutating JSON payloads use `body`, and generated metadata is tagged lower-priority. |
 | Guard tests | `tests/test_mcp_extended_tools.py` pins committed-vs-live generation, opt-in behavior, generated metadata, disabled-call errors, and generated dispatch for query/body/path-param routes. |
@@ -456,7 +468,7 @@ This section is preserved because Pass 3/4 used it as the checklist. See §7 and
 
 ### 3.1 Quick wins (S effort)
 
-1. **Run `python -m opencut.tools.dump_route_manifest --check`** to verify the cached 1,371-route figure against live `url_map`. Possible drift after future route commits.
+1. **Run `python -m opencut.tools.dump_route_manifest --check`** to verify the cached 1,374-route figure against live `url_map`. Possible drift after future route commits.
 2. **Run `python scripts/release_smoke.py --json`** end-to-end and capture which steps actually fail. The v4.3 audit listed several failing steps that may have been fixed by the F099/F098/F112 commits.
 3. **Verify cross-platform launcher files exist**: `OpenCut-Server.command` (macOS), `OpenCut-Server.sh` (Linux). Pass 2 inferred from Wave I but did not list them. Run `ls Z:/repos/OpenCut | grep Server` and `chmod +x` if needed.
 4. **Read `extension/com.opencut.uxp/uxp-api-notes.md`** — internal CEP-vs-UXP comparison the team maintains. Cross-reference against Pass 2 UXP subagent §1-§10 findings.
@@ -747,7 +759,7 @@ Pass 8 closed the route/check readiness generation item and the registry-owned a
 
 ### Live correction
 
-`/system/feature-state` now exposes 84 feature records. The generated F191 manifest covers direct route functions that visibly call public `checks.py` probes. It is not a full per-route readiness matrix for all 1,371 routes; deeper core-only gates still belong to F196/F209.
+`/system/feature-state` now exposes 84 feature records. The generated F191 manifest covers direct route functions that visibly call public `checks.py` probes. It is not a full per-route readiness matrix for all 1,374 routes; deeper core-only gates still belong to F196/F209.
 
 ### Remaining immediate work
 

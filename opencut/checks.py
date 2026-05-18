@@ -433,6 +433,14 @@ def check_plausible_configured() -> bool:
         return False
 
 
+def check_aptabase_configured() -> bool:
+    try:
+        from opencut.core.telemetry_aptabase import check_aptabase_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
 # --- v1.23.0 Wave F (cross-cutting infrastructure) ---
 
 def check_openapi_available() -> bool:

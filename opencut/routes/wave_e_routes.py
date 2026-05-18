@@ -12,6 +12,9 @@ Delivery packaging + live-production + cloud-dispatch + telemetry:
 - ``GET  /cloud/runpod/status/<endpoint>/<job_id>`` — poll a job
 - ``POST /cloud/runpod/cancel``          — cancel a pending job
 - ``GET  /cloud/runpod/info``            — availability + SDK state
+- ``GET  /telemetry/aptabase/info``      — default opt-in telemetry status
+- ``GET/POST /telemetry/aptabase/settings`` — persisted opt-in settings
+- ``POST /telemetry/aptabase/track``     — emit an Aptabase event
 - ``POST /telemetry/plausible/track``    — emit a Plausible event
 - ``GET  /telemetry/plausible/info``     — telemetry wiring status
 """
@@ -24,7 +27,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, validate_filepath, validate_path
+from opencut.security import get_json_dict, require_csrf, validate_filepath, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -296,7 +299,77 @@ def route_runpod_cancel():
 
 
 # ---------------------------------------------------------------------------
-# Plausible telemetry
+# Aptabase telemetry
+# ---------------------------------------------------------------------------
+
+@wave_e_bp.route("/telemetry/aptabase/info", methods=["GET"])
+def route_aptabase_info():
+    from opencut.core import telemetry_aptabase
+
+    return jsonify(telemetry_aptabase.telemetry_info())
+
+
+@wave_e_bp.route("/telemetry/aptabase/settings", methods=["GET", "POST"])
+@require_csrf
+def route_aptabase_settings():
+    from opencut.core import telemetry_aptabase
+
+    if request.method == "GET":
+        return jsonify(telemetry_aptabase.public_settings())
+    try:
+        data = get_json_dict()
+        settings = telemetry_aptabase.update_settings(data)
+        info = telemetry_aptabase.telemetry_info()
+        return jsonify({
+            "success": True,
+            "settings": telemetry_aptabase.public_settings(settings),
+            "enabled": info["enabled"],
+            "configured": info["configured"],
+            "disabled_reason": info["disabled_reason"],
+        })
+    except ValueError as exc:
+        return jsonify({
+            "error": str(exc),
+            "code": "INVALID_INPUT",
+        }), 400
+    except Exception as exc:  # noqa: BLE001
+        return safe_error(exc, "aptabase_settings")
+
+
+@wave_e_bp.route("/telemetry/aptabase/track", methods=["POST"])
+@require_csrf
+def route_aptabase_track():
+    try:
+        from opencut.core import telemetry_aptabase
+
+        data = get_json_dict()
+        event_name = str(data.get("event_name") or "").strip()
+        if not event_name:
+            return jsonify({
+                "error": "'event_name' is required",
+                "code": "INVALID_INPUT",
+            }), 400
+        props = data.get("props") if isinstance(data.get("props"), dict) else None
+        queued = telemetry_aptabase.track(event_name, props=props, sync=False)
+        info = telemetry_aptabase.telemetry_info()
+        return jsonify({
+            "queued": bool(queued),
+            "enabled": info["enabled"],
+            "configured": info["configured"],
+            "queue_depth": info["queue_depth"],
+            "provider": "aptabase",
+        })
+    except ValueError as exc:
+        return jsonify({
+            "error": str(exc),
+            "code": "INVALID_INPUT",
+        }), 400
+    except Exception as exc:  # noqa: BLE001
+        return safe_error(exc, "aptabase_track")
+
+
+# ---------------------------------------------------------------------------
+# Plausible telemetry (legacy)
 # ---------------------------------------------------------------------------
 
 @wave_e_bp.route("/telemetry/plausible/info", methods=["GET"])

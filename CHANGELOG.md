@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Aptabase Opt-In Telemetry
+
+- Added disabled-by-default Aptabase telemetry as the default opt-in desktop analytics provider, with persisted local settings, environment overrides, privacy scrubbing, and best-effort background event delivery.
+- Added `GET /telemetry/aptabase/info`, `GET/POST /telemetry/aptabase/settings`, `POST /telemetry/aptabase/track`, and `docs/TELEMETRY.md`; legacy Plausible telemetry remains available for older self-hosted deployments.
+
 ### Added — Linux Distribution Packaging
 
 - Added Flatpak/AppImage Linux packaging assets for `io.github.sysadmindoc.opencut`, including desktop metadata, AppStream MetaInfo, `flathub.json`, Flatpak/AppImage launchers, and `docs/LINUX_DISTRIBUTION.md`.

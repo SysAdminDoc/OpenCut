@@ -118,6 +118,11 @@ cd Z:/repos/OpenCut && git status --short
 
 1. There is a single `PROJECT_CONTEXT.md` at the repo root that an agent or contributor can open first and route from.
 2. The wave-letter vs F-number distinction is named.
+3. The dirty working tree is documented as a coherent security batch (F138), not random in-flight noise.
+4. Post-2026-05-16 model surfaces (daVinci-MagiHuman, LTX-2.3, etc.), standards (C2PA 2.3, IMSC 1.3, OCIO 2.5), and dependency exposures (Pillow CVEs, audiocraft cascade) are tracked.
+5. The Now-tier security debt is explicit: Pillow 12.2, flask-cors 6.x, pydub-on-3.13, OpenTimelineIO-Plugins migration.
+6. The Next-tier flagship is named: `/agent/chat` conductor + UXP MCP transport + StreamDiffusionV2 real-time preview.
+7. ROADMAP.md self-cites the v4.4 audit; future v4.5 audits know to read this run.
 
 ---
 
@@ -139,11 +144,29 @@ cd Z:/repos/OpenCut && git status --short
 
 **Validation:** focused packaging tests, Bash syntax check, focused Ruff,
 `py_compile`, and reduced release smoke passed locally.
-3. The dirty working tree is documented as a coherent security batch (F138), not random in-flight noise.
-4. Post-2026-05-16 model surfaces (daVinci-MagiHuman, LTX-2.3, etc.), standards (C2PA 2.3, IMSC 1.3, OCIO 2.5), and dependency exposures (Pillow CVEs, audiocraft cascade) are tracked.
-5. The Now-tier security debt is explicit: Pillow 12.2, flask-cors 6.x, pydub-on-3.13, OpenTimelineIO-Plugins migration.
-6. The Next-tier flagship is named: `/agent/chat` conductor + UXP MCP transport + StreamDiffusionV2 real-time preview.
-7. ROADMAP.md self-cites the v4.4 audit; future v4.5 audits know to read this run.
+
+---
+
+## 2026-05-18 Pass 58 Addendum — F250 Aptabase Opt-In Telemetry
+
+**Functional changes:** Added disabled-by-default Aptabase telemetry as the
+documented opt-in telemetry provider while preserving the legacy Plausible
+route for older self-hosted deployments.
+
+| Path | Change |
+|---|---|
+| `opencut/core/telemetry_aptabase.py` | Implements the Aptabase `/api/v0/events` batch contract with `App-Key`, region/self-host resolution, bounded queueing, app-key masking, and prop scrubbing. |
+| `opencut/user_data.py` | Adds atomic persisted `telemetry_settings.json` helpers with Aptabase defaults. |
+| `opencut/routes/wave_e_routes.py` | Adds `GET /telemetry/aptabase/info`, `GET/POST /telemetry/aptabase/settings`, and `POST /telemetry/aptabase/track` with CSRF on mutating calls. |
+| `opencut/checks.py` | Adds the `check_aptabase_configured` readiness probe. |
+| `tests/test_telemetry_aptabase.py` | Covers disabled defaults, settings validation, app-key masking, public self-host URL enforcement, sensitive-prop scrubbing, sync POST shape, and route CSRF behavior. |
+| `scripts/release_smoke.py` | Adds the Aptabase telemetry test file to the focused release gate. |
+| `docs/TELEMETRY.md` | Documents the opt-in posture, environment overrides, Aptabase SDK contract, privacy boundaries, and legacy Plausible status. |
+| `README.md`, `CHANGELOG.md`, `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CONTINUE_FROM_HERE.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md` | Synced roadmap/state/docs for F250 closure. |
+
+**Validation:** focused Aptabase tests, focused Ruff, `py_compile`, generated
+route/MCP/API-alias/feature-readiness checks, and reduced release smoke passed
+locally.
 
 ---
 

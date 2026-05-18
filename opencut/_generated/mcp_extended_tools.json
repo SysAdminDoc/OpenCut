@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 12,
-    "GET": 294,
+    "GET": 296,
     "PATCH": 1,
-    "POST": 1004,
+    "POST": 1006,
     "PUT": 2
   },
   "response_schema_count": 93,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1313,
+  "tool_count": 1317,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -7759,6 +7759,66 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_team_status"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /telemetry/aptabase/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /telemetry/aptabase/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_e",
+        "endpoint": "wave_e.route_aptabase_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/telemetry/aptabase/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_telemetry_aptabase_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /telemetry/aptabase/settings"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /telemetry/aptabase/settings.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_e",
+        "endpoint": "wave_e.route_aptabase_settings",
+        "generated": true,
+        "method": "GET",
+        "path": "/telemetry/aptabase/settings",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_telemetry_aptabase_settings"
     },
     {
       "annotations": {
@@ -31566,6 +31626,66 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_team_sync"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /telemetry/aptabase/settings"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /telemetry/aptabase/settings.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_e",
+        "endpoint": "wave_e.route_aptabase_settings",
+        "generated": true,
+        "method": "POST",
+        "path": "/telemetry/aptabase/settings",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_telemetry_aptabase_settings"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /telemetry/aptabase/track"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /telemetry/aptabase/track.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_e",
+        "endpoint": "wave_e.route_aptabase_track",
+        "generated": true,
+        "method": "POST",
+        "path": "/telemetry/aptabase/track",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_telemetry_aptabase_track"
     },
     {
       "annotations": {
