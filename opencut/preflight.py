@@ -135,10 +135,35 @@ def run_preflight(pipeline: str, filepath: str = "", output_dir: str = "") -> di
     warnings: List[dict] = []
 
     # File check — not in the declarative list because it's argument-driven.
+    # Reject the obviously-malicious path shapes (null bytes, UNC literals,
+    # ``..`` traversal) at the perimeter so a crafted preflight call cannot
+    # be used as a filesystem-existence oracle. We deliberately skip the
+    # realpath confinement step of full ``validate_path``: it would reject
+    # legitimate paths mounted via UNC-backed drives (e.g. VMware shared
+    # folders) and replaces a clean "file not found" with a hard 400.
+    def _is_obviously_unsafe(path: str) -> bool:
+        if not isinstance(path, str):
+            return True
+        if "\x00" in path:
+            return True
+        normalized = path.replace("/", "\\")
+        if normalized.startswith("\\\\"):
+            return True
+        parts = os.path.normpath(path).replace("\\", "/").split("/")
+        return ".." in parts
+
     file_ok = True
     file_detail = ""
     if filepath:
-        if not os.path.isfile(filepath):
+        if _is_obviously_unsafe(filepath):
+            file_ok = False
+            file_detail = "Path rejected by safety check."
+            blocking.append({"label": "Input file",
+                             "ok": False,
+                             "detail": file_detail,
+                             "fix": "Use a plain absolute path with no UNC prefix, "
+                                    "null bytes, or '..' traversal components."})
+        elif not os.path.isfile(filepath):
             file_ok = False
             file_detail = "File not found."
             blocking.append({"label": "Input file",
@@ -151,6 +176,16 @@ def run_preflight(pipeline: str, filepath: str = "", output_dir: str = "") -> di
                 file_detail = f"{size_mb:.1f} MB"
             except OSError:
                 file_detail = "readable"
+
+    # Drop obviously-unsafe output dirs onto the same blocking lane so the
+    # call shape stays consistent for the panel.
+    if output_dir and _is_obviously_unsafe(output_dir):
+        output_dir = ""
+        blocking.append({"label": "Output directory",
+                         "ok": False,
+                         "detail": "Path rejected by safety check.",
+                         "fix": "Use a plain absolute path with no UNC prefix, "
+                                "null bytes, or '..' traversal components."})
 
     for key, required in spec["checks"]:
         if key == "disk_space_mb":

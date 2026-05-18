@@ -60,10 +60,12 @@ def embed(
     ffmpeg = get_ffmpeg_path()
     cmd = [ffmpeg, "-y", "-i", audio_path, "-f", "f32le", "-ar", "16000", "-ac", "1", "pipe:1"]
     try:
-        raw = subprocess.run(cmd, capture_output=True, check=True).stdout
+        raw = subprocess.run(cmd, capture_output=True, check=True, timeout=1800).stdout
     except subprocess.CalledProcessError as e:
         stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
         raise RuntimeError(f"FFmpeg decode failed: {stderr_msg[:500]}") from e
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"FFmpeg decode timed out after {e.timeout}s for {audio_path}") from e
     n = len(raw) // 4
     samples = struct.unpack(f"{n}f", raw)
     wav = torch.tensor(samples).unsqueeze(0).unsqueeze(0)
@@ -84,10 +86,12 @@ def embed(
     raw_out = (watermarked.squeeze().numpy() * 32767).astype("int16").tobytes()
     enc_cmd = [ffmpeg, "-y", "-f", "s16le", "-ar", "16000", "-ac", "1", "-i", "pipe:0", output]
     try:
-        subprocess.run(enc_cmd, input=raw_out, capture_output=True, check=True)
+        subprocess.run(enc_cmd, input=raw_out, capture_output=True, check=True, timeout=1800)
     except subprocess.CalledProcessError as e:
         stderr_msg = e.stderr.decode(errors="replace") if e.stderr else ""
         raise RuntimeError(f"FFmpeg encode failed: {stderr_msg[:500]}") from e
+    except subprocess.TimeoutExpired as e:
+        raise RuntimeError(f"FFmpeg encode timed out after {e.timeout}s for {output}") from e
 
     if on_progress:
         on_progress(100, "Done")

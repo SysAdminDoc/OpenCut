@@ -12,6 +12,8 @@ or stored in ``~/.opencut/notion_config.json``.
 import json
 import logging
 import os
+import tempfile
+import threading
 import urllib.error
 import urllib.request
 from dataclasses import dataclass, field
@@ -21,6 +23,7 @@ logger = logging.getLogger("opencut")
 
 _OPENCUT_DIR = os.path.join(os.path.expanduser("~"), ".opencut")
 _CONFIG_FILE = os.path.join(_OPENCUT_DIR, "notion_config.json")
+_CONFIG_LOCK = threading.Lock()
 _NOTION_API_BASE = "https://api.notion.com/v1"
 _NOTION_VERSION = "2022-06-28"
 
@@ -41,20 +44,44 @@ class NotionSyncResult:
 
 def load_notion_config() -> Dict[str, Any]:
     """Load Notion configuration from disk."""
-    if not os.path.isfile(_CONFIG_FILE):
-        return {}
-    try:
-        with open(_CONFIG_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return {}
+    with _CONFIG_LOCK:
+        if not os.path.isfile(_CONFIG_FILE):
+            return {}
+        try:
+            with open(_CONFIG_FILE, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (json.JSONDecodeError, OSError):
+            return {}
 
 
 def save_notion_config(config: Dict[str, Any]) -> None:
-    """Persist Notion configuration to disk."""
-    os.makedirs(_OPENCUT_DIR, exist_ok=True)
-    with open(_CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2)
+    """Persist Notion configuration to disk.
+
+    Atomic write so a crash mid-rename never leaves a zero-byte config
+    that would lock the user out of their saved Notion integration.
+    """
+    with _CONFIG_LOCK:
+        os.makedirs(_OPENCUT_DIR, exist_ok=True)
+        fd, tmp_path = tempfile.mkstemp(
+            dir=_OPENCUT_DIR,
+            prefix=os.path.basename(_CONFIG_FILE) + ".",
+            suffix=".tmp",
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(config, f, indent=2)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError:
+                    pass
+            os.replace(tmp_path, _CONFIG_FILE)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
 
 # ---------------------------------------------------------------------------
