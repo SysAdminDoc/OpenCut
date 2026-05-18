@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T03:36:35Z",
-  "total_routes": 1365,
+  "generated_at": "2026-05-18T17:13:59Z",
+  "total_routes": 1367,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 300,
+    "GET": 301,
     "PATCH": 1,
-    "POST": 1050,
+    "POST": 1051,
     "PUT": 2
   },
   "blueprints": {
@@ -609,10 +609,10 @@
       ]
     },
     "platform_infra": {
-      "route_count": 53,
+      "route_count": 55,
       "method_counts": {
-        "GET": 16,
-        "POST": 37
+        "GET": 17,
+        "POST": 38
       },
       "sample_rules": [
         "/review/comment",
@@ -8115,6 +8115,22 @@
         "POST"
       ],
       "endpoint": "platform_infra.review_create",
+      "blueprint": "platform_infra"
+    },
+    {
+      "rule": "/review/portal/<review_id>",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "platform_infra.review_portal_view",
+      "blueprint": "platform_infra"
+    },
+    {
+      "rule": "/review/portal/share",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "platform_infra.review_portal_share",
       "blueprint": "platform_infra"
     },
     {

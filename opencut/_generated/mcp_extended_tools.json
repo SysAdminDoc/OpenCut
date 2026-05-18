@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 12,
-    "GET": 291,
+    "GET": 292,
     "PATCH": 1,
-    "POST": 1001,
+    "POST": 1002,
     "PUT": 2
   },
   "response_schema_count": 93,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1307,
+  "tool_count": 1309,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -6253,6 +6253,47 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_resolve_timeline_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /review/portal/<review_id>"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /review/portal/<review_id>.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          },
+          "review_id": {
+            "description": "Path parameter `review_id` for `/review/portal/<review_id>`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "review_id"
+        ],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "platform_infra",
+        "endpoint": "platform_infra.review_portal_view",
+        "generated": true,
+        "method": "GET",
+        "path": "/review/portal/<review_id>",
+        "path_params": [
+          {
+            "converter": "string",
+            "name": "review_id"
+          }
+        ],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_review_portal_by_review_id"
     },
     {
       "annotations": {
@@ -28465,6 +28506,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_review_create"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /review/portal/share"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /review/portal/share.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "platform_infra",
+        "endpoint": "platform_infra.review_portal_share",
+        "generated": true,
+        "method": "POST",
+        "path": "/review/portal/share",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_review_portal_share"
     },
     {
       "annotations": {

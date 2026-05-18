@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — LAN Review Portal
+
+- Added HMAC-signed local review portal share links through `POST /review/portal/share` and signed browser access through `GET /review/portal/<review_id>`.
+- Added deterministic Caddy reverse-proxy and mDNS descriptors for LAN review sidecars, plus route/manifest tests covering signed URL creation and validation.
+
 ### Added — Review Bundle Marker Exports
 
 - Added Premiere-importable marker CSV and CMX3600 marker-only EDL sidecars to F105 review bundles, generated from review comment payloads.
@@ -44,7 +49,7 @@
 
 ### Added — Extended MCP Route Tools
 
-- Added opt-in F194 extended MCP route-tool generation: `opencut/_generated/mcp_extended_tools.json` now exposes 1,307 lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response schemas.
+- Added opt-in F194 extended MCP route-tool generation: `opencut/_generated/mcp_extended_tools.json` now exposes 1,309 lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response schemas.
 - Added `opencut-mcp-server --extended-tools` / `OPENCUT_MCP_EXTENDED_TOOLS=1` support while preserving the 39 curated MCP tools as the default surface.
 - Added `tests/test_mcp_extended_tools.py` and release-smoke wiring to pin manifest drift, opt-in listing, generated metadata, and generated-tool dispatch.
 

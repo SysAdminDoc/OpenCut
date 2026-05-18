@@ -10,7 +10,7 @@ Frame.io integration, waveform timeline, and preview server.
 import logging
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, Response, jsonify, request
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir, _unique_output_path
@@ -128,6 +128,62 @@ def review_update_status():
         })
     except Exception as exc:
         return safe_error(exc, "review_status")
+
+
+@platform_infra_bp.route("/review/portal/share", methods=["POST"])
+@require_csrf
+def review_portal_share():
+    """Create an HMAC-signed LAN review portal URL plus Caddy/mDNS descriptors."""
+    try:
+        data = get_json_dict()
+        review_id = str(data.get("review_id") or "").strip()
+        if not review_id:
+            return jsonify({"error": "review_id is required"}), 400
+        host = str(data.get("host") or request.host.split(":", 1)[0] or "127.0.0.1").strip()
+        port = safe_int(data.get("port"), default=5679, min_val=1, max_val=65535)
+        ttl_seconds = safe_int(data.get("ttl_seconds"), default=86400, min_val=60, max_val=604800)
+        scheme = str(data.get("scheme") or "http").strip().lower()
+        service_name = str(data.get("service_name") or "OpenCut Review").strip()
+
+        from opencut.core.review_portal import build_portal_share
+
+        share = build_portal_share(
+            review_id=review_id,
+            host=host,
+            port=port,
+            scheme=scheme,
+            ttl_seconds=ttl_seconds,
+            service_name=service_name,
+        )
+        return jsonify(share.as_dict())
+    except KeyError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return safe_error(exc, "review_portal_share")
+
+
+@platform_infra_bp.route("/review/portal/<review_id>", methods=["GET"])
+def review_portal_view(review_id):
+    """Serve a signed browser review portal page."""
+    try:
+        expires_at = safe_int(request.args.get("expires"), default=0, min_val=0)
+        signature = request.args.get("sig", "")
+        from opencut.core.review_portal import render_portal_html, resolve_portal_review
+
+        payload = resolve_portal_review(review_id, expires_at, signature)
+        if request.args.get("format") == "json":
+            return jsonify(payload)
+        return Response(render_portal_html(payload), mimetype="text/html")
+    except PermissionError as exc:
+        return jsonify({"error": str(exc)}), 403
+    except KeyError as exc:
+        return jsonify({"error": str(exc)}), 404
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    except Exception as exc:
+        return safe_error(exc, "review_portal_view")
 
 
 # ===================================================================
