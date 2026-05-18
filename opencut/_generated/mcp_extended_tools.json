@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 12,
-    "GET": 298,
+    "GET": 300,
     "PATCH": 1,
     "POST": 1006,
     "PUT": 2
   },
   "response_schema_count": 100,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1319,
+  "tool_count": 1321,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -717,6 +717,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /ai/color-intents"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /ai/color-intents.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "ai_content",
+        "endpoint": "ai_content.ai_color_intents",
+        "generated": true,
+        "method": "GET",
+        "path": "/ai/color-intents",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_ai_color_intents"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /ai/mood-presets"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /ai/mood-presets. Response schema: ListEnvelopeResult.",
@@ -742,6 +772,36 @@
         "response_schema": "ListEnvelopeResult"
       },
       "name": "opencut_route_get_ai_mood_presets"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /ai/pacing-genres"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /ai/pacing-genres.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "ai_content",
+        "endpoint": "ai_content.ai_pacing_genres",
+        "generated": true,
+        "method": "GET",
+        "path": "/ai/pacing-genres",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_ai_pacing_genres"
     },
     {
       "annotations": {

@@ -36,14 +36,14 @@ For each sampled entry from `features.md`:
 | 1.2 | AI Eye Contact Correction | ✅ SHIPPED | CLAUDE.md Wave H gotcha: *"Eye-contact already existed — Wave H1.3 was planned as a new module but the existing `core/eye_contact.py` + routes at `/ai/eye-contact` and `/api/video/eye-contact` already cover the feature"* |
 | 1.3 | AI Overdub / Voice Correction | ✅ SHIPPED | `/api/audio/overdub` + `/api/audio/overdub/clone-voice` in route manifest |
 | 1.4 | AI Lip Sync | ✅ SHIPPED (Wave M v1.30.0) | `core/lipsync_echomimic.py` shipped per CHANGELOG; also stub `lipsync_advanced.py` (K2 Tier 3) for GaussianHeadTalk / FantasyTalking2 |
-| 1.5 | AI Voice Conversion / RVC | ❓ UNCLEAR | Not found in CHANGELOG; not in F-ledger. Needs PR. → New backlog: **F220** |
-| 1.6 | AI Auto-Color Grading | ❓ UNCLEAR | Color match exists (`color_match.py`); LLM-driven mood grading is unclear. → **F221** |
+| 1.5 | AI Voice Conversion / RVC | ✅ SHIPPED | Pass 76 closed **F220**: external RVC CLI/script backend execution + FFmpeg fallback are wired into `voice_conversion.py`. |
+| 1.6 | AI Auto-Color Grading | ✅ SHIPPED | Pass 76 closed **F221**: `/ai/auto-grade` accepts natural-language color `intent` + `intensity` via `ai_color_intent.py`. |
 | 1.7 | AI Content Moderation / Compliance | ✅ SHIPPED (partial) | Profanity censor (K1.7) shipped; visual NSFW classifier (SafeVision / NudeNet) is Wave J2.6 stub |
 | 1.8 | AI Scene Description / Alt-Text | ✅ SHIPPED | `describe_scene_llm()` in `core/audio_description.py` per v1.20.0 changelog; also `/api/ai/scene-describe` route in `ai_intel` blueprint |
 | 1.9 | AI Video Summarization | ✅ SHIPPED | `core/highlights.py` LLM-powered summary; `core/shorts_pipeline.py` |
 | 1.10 | AI Talking Head / Avatar Generation | 🛑 STUB | Wave H Tier 3 `lipsync_advanced.py` (GaussianHeadTalk / FantasyTalking2); full avatar pipeline = **F148-style** new item |
 | 1.11 | AI B-Roll Suggestion & Insertion | ✅ SHIPPED | `core/broll_insert.py` + `core/broll_generate.py` exist per CLAUDE.md |
-| 1.12 | AI Pacing & Rhythm Analysis | ❓ UNCLEAR | Not in F-ledger; could become **F222** |
+| 1.12 | AI Pacing & Rhythm Analysis | ✅ SHIPPED | Pass 76 closed **F222**: `/ai/pacing-analysis` supports file and cut-point pacing with genre templates. |
 
 **Category 1 takeaway:** of 12 sampled, 8 SHIPPED, 1 STUB, 0 explicitly PLANNED, 3 UNCLEAR (new F-number candidates).
 
@@ -121,7 +121,7 @@ Sampled 21.x items — most map directly to **Wave R/S/T** in ROADMAP.md (lip-sy
 | 78.2 | AI Eye Contact Correction | ✅ SHIPPED (= cat 1.2) |
 | 78.3 | AI Voice Overdub | ✅ SHIPPED (= cat 1.3) |
 | 78.4 | AI Lip Sync | ✅ SHIPPED (Wave M v1.30.0) |
-| 78.5 | Voice-to-Voice Conversion | ❓ UNCLEAR (= cat 1.5) → **F220** |
+| 78.5 | Voice-to-Voice Conversion | ✅ SHIPPED (= cat 1.5) — Pass 76 closed **F220** |
 
 (Duplication: cat 78.x is essentially cat 1.x; the features.md aspirational catalogue has duplicates across categories.)
 
@@ -162,9 +162,9 @@ The high SHIPPED rate validates that OpenCut has executed against its 2026-04 pl
 
 | F# | features.md entry | Title |
 |---|---|---|
-| F220 | 1.5 / 78.5 | AI Voice Conversion / RVC backend |
-| F221 | 1.6 | AI Auto-Color Grading (LLM-driven mood map → LUT + adjustments) |
-| F222 | 1.12 | AI Pacing & Rhythm Analysis (genre-template comparison) |
+| [x] F220 | 1.5 / 78.5 | AI Voice Conversion / RVC backend (closed Pass 76) |
+| [x] F221 | 1.6 | AI Auto-Color Grading (LLM-driven mood map → LUT + adjustments) (closed Pass 76) |
+| [x] F222 | 1.12 | AI Pacing & Rhythm Analysis (genre-template comparison) (closed Pass 76) |
 | F223 | 20.6 | RTL / CJK / Bidi caption rendering validation suite |
 | F224 | 27.3 | Deepfake / fake-video detector (adjacent to J2.6 SafeVision) |
 

@@ -100,6 +100,24 @@ class TestAutoColor(unittest.TestCase):
             os.unlink(path)
 
     @patch("opencut.core.auto_color.run_ffmpeg")
+    def test_auto_grade_intent_calls_ffmpeg(self, mock_ffmpeg):
+        """auto_grade with intent should resolve natural-language color grading."""
+        from opencut.core.auto_color import auto_grade
+        mock_ffmpeg.return_value = ""
+        with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as f:
+            f.write(b"fake")
+            path = f.name
+        try:
+            result = auto_grade(path, intent="noir", intensity=0.75)
+            mock_ffmpeg.assert_called_once()
+            self.assertEqual(result["grading_method"], "intent")
+            self.assertEqual(result["resolved_name"], "noir")
+            self.assertEqual(result["intent_source"], "library")
+            self.assertIn("applied_filters", result)
+        finally:
+            os.unlink(path)
+
+    @patch("opencut.core.auto_color.run_ffmpeg")
     def test_auto_grade_reference_calls_ffmpeg(self, mock_ffmpeg):
         """auto_grade with reference_image should produce reference grading."""
         from opencut.core.auto_color import auto_grade
@@ -229,6 +247,16 @@ class TestPacingAnalysis(unittest.TestCase):
             self.assertIn(genre, GENRE_PROFILES)
             self.assertIn("target_cpm", GENRE_PROFILES[genre])
             self.assertIn("target_avg", GENRE_PROFILES[genre])
+
+    def test_list_pacing_genres(self):
+        """list_pacing_genres should expose route-friendly genre templates."""
+        from opencut.core.pacing_analysis import list_pacing_genres
+        genres = list_pacing_genres()
+        self.assertTrue(len(genres) >= 4)
+        first = genres[0]
+        self.assertIn("name", first)
+        self.assertIn("target_cpm", first)
+        self.assertIn("target_avg", first)
 
     def test_analyze_pacing_missing_file(self):
         """analyze_pacing should raise FileNotFoundError."""
@@ -601,6 +629,15 @@ class TestAIContentRoutes(unittest.TestCase):
         self.assertIn("count", data)
         self.assertTrue(data["count"] >= 5)
 
+    def test_color_intents_endpoint(self):
+        """GET /ai/color-intents should return natural-language color looks."""
+        resp = self.client.get("/ai/color-intents")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertIn("intents", data)
+        self.assertIn("categories", data)
+        self.assertTrue(data["count"] >= 30)
+
     def test_auto_grade_no_file(self):
         """POST /ai/auto-grade without filepath should return 400."""
         resp = self.client.post("/ai/auto-grade",
@@ -621,6 +658,28 @@ class TestAIContentRoutes(unittest.TestCase):
                                 headers=self.headers,
                                 data=json.dumps({"genre": "trailer"}))
         self.assertEqual(resp.status_code, 400)
+
+    def test_pacing_analysis_from_cuts_starts_job(self):
+        """POST /ai/pacing-analysis should accept cut points without a file."""
+        resp = self.client.post("/ai/pacing-analysis",
+                                headers=self.headers,
+                                data=json.dumps({
+                                    "cut_points": [5, 10, 15, 20],
+                                    "total_duration": 25.0,
+                                    "genre": "trailer",
+                                }))
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertIn("job_id", data)
+
+    def test_pacing_genres_endpoint(self):
+        """GET /ai/pacing-genres should expose genre templates."""
+        resp = self.client.get("/ai/pacing-genres")
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertIn("genres", data)
+        self.assertIn("count", data)
+        self.assertTrue(data["count"] >= 4)
 
     def test_seo_optimize_no_transcript(self):
         """POST /ai/seo-optimize without transcript should start job then error."""
