@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T23:21:02Z",
-  "total_routes": 1378,
+  "generated_at": "2026-05-18T23:33:09Z",
+  "total_routes": 1379,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
     "GET": 309,
     "PATCH": 1,
-    "POST": 1055,
+    "POST": 1056,
     "PUT": 2
   },
   "blueprints": {
@@ -1011,9 +1011,9 @@
       ]
     },
     "video_vfx": {
-      "route_count": 19,
+      "route_count": 20,
       "method_counts": {
-        "POST": 19
+        "POST": 20
       },
       "sample_rules": [
         "/video/annotate-tracked",
@@ -1477,6 +1477,14 @@
       ],
       "endpoint": "ai_content.ai_content_scan",
       "blueprint": "ai_content"
+    },
+    {
+      "rule": "/ai/deepfake-detect",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "video_vfx.detect_deepfake_route",
+      "blueprint": "video_vfx"
     },
     {
       "rule": "/ai/detect-edges",

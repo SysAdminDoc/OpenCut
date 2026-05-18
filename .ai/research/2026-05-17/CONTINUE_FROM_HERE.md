@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 77)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 78)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-18 (after Pass 76; Passes 1-34 all ran on 2026-05-17)
-**Session state:** all mandated artefacts exist; Passes 4-75 are summarized in ROADMAP.md and PROJECT_CONTEXT.md. Pass 76 closed F220-F222 (RVC backend execution, natural-language AI auto-color grading, and cut-point pacing/genre-template analysis). This file documents deferred research/product work for a future Pass 77+, not a broken or incomplete research run.
+**Last update:** 2026-05-18 (after Pass 77; Passes 1-34 all ran on 2026-05-17)
+**Session state:** all mandated artefacts exist; Passes 4-75 are summarized in ROADMAP.md and PROJECT_CONTEXT.md. Pass 76 closed F220-F222 (RVC backend execution, natural-language AI auto-color grading, and cut-point pacing/genre-template analysis). Pass 77 closed F224 (AI-facing deepfake detector alias plus evidence/report metadata). This file documents deferred research/product work for a future Pass 78+, not a broken or incomplete research run.
 
 ---
 
@@ -11,13 +11,13 @@
 
 - **Repo branch:** `main`; the Pass 35 dependency-floor commit pushed to `origin/main` successfully from this machine. Continue to verify `git status --short --branch` at session start before assuming the working tree is clean.
 - **Last shipped version:** v1.32.0 (light theme + appearance toggle, 2026-05-09).
-- **Live counts:** 1,378 routes / 101 blueprints / 537 core modules / 189 Python test files / 2 Vitest panel test files / 47 model cards / 118 public `check_*` probes (86 `check_*_available`) / 100 `FeatureRecord` entries / 39 curated MCP tools / 1,321 opt-in extended MCP tools / 110 OpenAPI-typed endpoints / 18 CEP host functions (2 CEP-only).
+- **Live counts:** 1,379 routes / 101 blueprints / 537 core modules / 189 Python test files / 2 Vitest panel test files / 47 model cards / 118 public `check_*` probes (86 `check_*_available`) / 100 `FeatureRecord` entries / 39 curated MCP tools / 1,322 opt-in extended MCP tools / 110 OpenAPI-typed endpoints / 18 CEP host functions (2 CEP-only).
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md and now F-number-tiered by `.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md` (F180).
 
-### Pass 77 entry point
+### Pass 78 entry point
 
-1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F192, F193, F194, F196, F198, F200, F201, F203, F206, F210, F211, F212, F213, F214, F215, F216, F217, F220, F221, F222, F223, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F251, F254, F255, F256, F257, F258, F259, F260, F263, F267, F271, F272 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. F252.1 and the F252.2 dispatcher slice are complete but F252 remains open for live WebView/in-Premiere UDT result capture. The next local-verifiable Later candidate is F224 (deepfake detector) unless a model-integration item needs fresh external research first. F268 requires an Adobe developer account/storefront process. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
+1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F192, F193, F194, F196, F198, F200, F201, F203, F206, F210, F211, F212, F213, F214, F215, F216, F217, F220, F221, F222, F223, F224, F225, F226, F227, F229, F231, F233, F234, F238, F239, F242, F249, F250, F251, F254, F255, F256, F257, F258, F259, F260, F263, F267, F271, F272 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. F252.1 and the F252.2 dispatcher slice are complete but F252 remains open for live WebView/in-Premiere UDT result capture. The next local-verifiable Later candidates are F228/F230 (review-bundle voice notes and HLS rendition) unless a model-integration item needs fresh external research first. F268 requires an Adobe developer account/storefront process. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
 2. **F198 is now enforced, not only documented.** `CEP_UXP_PARITY_MATRIX.md` maps all 18 `ocXxx` JSX functions and identifies only two truly CEP-only calls; `opencut/_generated/cep_uxp_parity.json` plus `tests/test_cep_uxp_parity_catalogue.py` keep that claim in sync with `host/index.jsx`.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.11/3.12/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
@@ -236,6 +236,18 @@
 | Validation | PASS — `py_compile` for touched modules/tests and focused AI editing/content tests (`32 passed`). |
 | Files to review | `opencut/core/voice_conversion.py`, `opencut/core/voice_convert.py`, `opencut/core/auto_color.py`, `opencut/core/pacing_analysis.py`, `opencut/routes/ai_content_routes.py`, `opencut/_generated/route_manifest.json`, `tests/test_ai_editing.py`, `tests/test_ai_content.py`, and roadmap/state docs. |
 
+### Pass 77 checkpoint
+
+| Item | Status |
+|---|---|
+| F224 | **DONE** — deepfake detection is now reconciled with the AI command surface and authenticity-report contract. |
+| AI route | `/ai/deepfake-detect` aliases the existing `/video/detect-deepfake` route, matching the command-palette route. |
+| Detection metadata | Segment output now includes `faces_detected` and evidence tags; top-level output includes detector version, methods, threshold, segment duration, flagged-segment count, and review guidance. |
+| Report metadata | Authenticity reports now persist detector version, methods, flagged count, and review recommendation. |
+| Generated artifacts | Route manifest regenerated to 1,379 routes / 101 blueprints; opt-in extended MCP catalogue regenerated to 1,322 tools. |
+| Validation | PASS — `py_compile`, focused deepfake tests (`12 passed`), focused Ruff, and route/MCP generated checks. |
+| Files to review | `opencut/core/deepfake_detect.py`, `opencut/routes/video_vfx_routes.py`, `opencut/_generated/route_manifest.json`, `opencut/_generated/mcp_extended_tools.json`, `tests/test_video_vfx.py`, and roadmap/state docs. |
+
 ### Pass 75 checkpoint
 
 | Item | Status |
@@ -402,7 +414,7 @@
 | Item | Status |
 |---|---|
 | F194 | **DONE** — opt-in generated MCP route tools now extend the curated MCP surface without changing the default tool list. |
-| Generated catalogue | `opencut/_generated/mcp_extended_tools.json` contains 1,321 `opencut_route_*` tools generated from `opencut/_generated/route_manifest.json`, `opencut/_generated/api_aliases.json`, and the OpenAPI response-schema map. |
+| Generated catalogue | `opencut/_generated/mcp_extended_tools.json` contains 1,322 `opencut_route_*` tools generated from `opencut/_generated/route_manifest.json`, `opencut/_generated/api_aliases.json`, and the OpenAPI response-schema map. |
 | Runtime opt-in | `opencut-mcp-server --extended-tools` or `OPENCUT_MCP_EXTENDED_TOOLS=1` exposes generated tools; default `tools/list` remains the 39 curated tools. |
 | Dispatch | Generated tools route through `mcp_extended_tools.invoke_extended_tool()`: path params are top-level arguments, GET query params use `query`, mutating JSON payloads use `body`, and generated metadata is tagged lower-priority. |
 | Guard tests | `tests/test_mcp_extended_tools.py` pins committed-vs-live generation, opt-in behavior, generated metadata, disabled-call errors, and generated dispatch for query/body/path-param routes. |
@@ -671,7 +683,7 @@ This section is preserved because Pass 3/4 used it as the checklist. See §7 and
 
 ### 3.1 Quick wins (S effort)
 
-1. **Run `python -m opencut.tools.dump_route_manifest --check`** to verify the cached 1,378-route figure against live `url_map`. Possible drift after future route commits.
+1. **Run `python -m opencut.tools.dump_route_manifest --check`** to verify the cached 1,379-route figure against live `url_map`. Possible drift after future route commits.
 2. **Run `python scripts/release_smoke.py --json`** end-to-end and capture which steps actually fail. The v4.3 audit listed several failing steps that may have been fixed by the F099/F098/F112 commits.
 3. **Verify cross-platform launcher files exist**: `OpenCut-Server.command` (macOS), `OpenCut-Server.sh` (Linux). Pass 2 inferred from Wave I but did not list them. Run `ls Z:/repos/OpenCut | grep Server` and `chmod +x` if needed.
 4. **Read `extension/com.opencut.uxp/uxp-api-notes.md`** — internal CEP-vs-UXP comparison the team maintains. Cross-reference against Pass 2 UXP subagent §1-§10 findings.
@@ -962,7 +974,7 @@ Pass 8 closed the route/check readiness generation item and the registry-owned a
 
 ### Live correction
 
-`/system/feature-state` now exposes 100 feature records. The generated F191 manifest covers direct route functions that visibly call public `checks.py` probes, and F196 adds curated registry rows plus contract tests for the model-card/check surfaces the scanner cannot infer. It is still not a full per-route readiness matrix for all 1,378 routes.
+`/system/feature-state` now exposes 100 feature records. The generated F191 manifest covers direct route functions that visibly call public `checks.py` probes, and F196 adds curated registry rows plus contract tests for the model-card/check surfaces the scanner cannot infer. It is still not a full per-route readiness matrix for all 1,379 routes.
 
 ### Remaining immediate work
 
