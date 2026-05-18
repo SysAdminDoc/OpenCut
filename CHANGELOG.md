@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — UXP AAF Export Helper
+
+- Added F258 UXP `ProjectConverter.exportAAF()` wiring for active-sequence AAF export with optional `AAFExportOptions`.
+- Exposed `exportAafSequence()` through `window.OpenCutUXPHost` and added `tests/test_uxp_aaf_export_integration.py` plus release-smoke registration to pin the beta API assumption.
+
 ### Added — UXP Object Mask State Helpers
 
 - Added F257 UXP `ObjectMaskUtils.hasObjectMask()` wiring for active-sequence or project-level AI Object Mask detection.

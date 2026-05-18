@@ -23,6 +23,14 @@ Validation evidence for the pass: focused F257 tests (`5 passed`), focused UXP/r
 
 ---
 
+## Pass 65 implementation note (2026-05-18)
+
+F258 was closed from local evidence plus the unpacked `@adobe/premierepro@26.3.0-beta.67` typings. The beta package confirms `ProjectConverter.exportAAF(sequence, filePath, aafExportOptions?)`, `AAFExportOptions`, and `Constants.AAFExportAudioFormat`. Implementation stayed inside `extension/com.opencut.uxp/main.js`, added static guardrails in `tests/test_uxp_aaf_export_integration.py`, and extended release-smoke `pytest-fast`.
+
+Validation evidence for the pass: focused F258 tests (`6 passed`), focused UXP/release-smoke slice (`48 passed`), touched Python compile, focused Ruff, UXP JS syntax check, and release-smoke `pytest-fast` (`653 passed`).
+
+---
+
 ## 1. Phases executed
 
 | Phase | What | Output |
@@ -929,5 +937,5 @@ EncoderManager APIs.
 
 F255 is complete for repository-side UXP EncoderManager dispatch and covered by
 the local release-smoke `pytest-fast` gate. Pass 63 later closed F256
-Transcript APIs, and Pass 64 closed F257 Object Mask detection. The remaining
-small UXP API migration candidate is F258 AAF export.
+Transcript APIs, Pass 64 closed F257 Object Mask detection, and Pass 65 closed
+F258 AAF export.

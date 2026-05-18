@@ -107,6 +107,7 @@ UXP Architecture (target):
 - [x] F255 `EncoderManager.launchEncoder` / `exportSequence` / `startBatchEncode` handoff for range exports
 - [x] F256 `Transcript.hasTranscript` / `querySupportedLanguages` helpers for caption-QC host context
 - [x] F257 `ObjectMaskUtils.hasObjectMask` helpers for active-sequence and project-level mask detection
+- [x] F258 `ProjectConverter.exportAAF` active-sequence export helper with `AAFExportOptions`
 - [ ] Live manifest switch to the WebView entrypoint after an in-Premiere UDT smoke pass
 - [ ] Test CSInterface shim with CEP main.js in WebView
 - [ ] Replace `cep_node.require("child_process")` calls with UXP alternatives
@@ -130,6 +131,7 @@ UXP Architecture (target):
 - `tests/test_uxp_encoder_manager_integration.py` — Static guardrails for the F255 EncoderManager export handoff
 - `tests/test_uxp_transcript_api_integration.py` — Static guardrails for the F256 Transcript API helper contract
 - `tests/test_uxp_object_mask_api_integration.py` — Static guardrails for the F257 ObjectMaskUtils helper contract
+- `tests/test_uxp_aaf_export_integration.py` — Static guardrails for the F258 ProjectConverter AAF export contract
 
 ## Risk Assessment
 - **Low risk:** Backend communication (fetch works natively in UXP)
