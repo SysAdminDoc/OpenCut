@@ -1,0 +1,111 @@
+{
+  "schema_version": 1,
+  "skill_id": "wedding-cinematic-reel",
+  "default_target_duration_seconds": 240,
+  "inputs": [
+    {
+      "name": "primary_sequence_path",
+      "type": "media_path",
+      "required": true,
+      "description": "Flattened wedding select reel or active sequence export."
+    },
+    {
+      "name": "reference_clip_path",
+      "type": "media_path",
+      "required": true,
+      "description": "Hero clip whose color grade should be matched."
+    },
+    {
+      "name": "music_path",
+      "type": "media_path",
+      "required": true,
+      "description": "Licensed music bed used for beat sync."
+    },
+    {
+      "name": "target_duration_seconds",
+      "type": "number",
+      "required": false,
+      "default": 240,
+      "description": "Final reel duration target."
+    }
+  ],
+  "steps": [
+    {
+      "id": "color_match_footage",
+      "label": "Color-match selects to the hero reference",
+      "method": "POST",
+      "endpoint": "/video/color-match",
+      "params": {
+        "source": "{{primary_sequence_path}}",
+        "reference": "{{reference_clip_path}}",
+        "strength": 0.72
+      },
+      "produces": "color_matched_sequence"
+    },
+    {
+      "id": "detect_music_beats",
+      "label": "Detect music beat grid for edit points",
+      "method": "POST",
+      "endpoint": "/audio/beat-markers",
+      "params": {
+        "filepath": "{{music_path}}",
+        "subdivisions": 2,
+        "offset": 0.0
+      },
+      "produces": "beat_grid"
+    },
+    {
+      "id": "extract_wedding_highlights",
+      "label": "Extract wedding highlight candidates",
+      "method": "POST",
+      "endpoint": "/video/highlights",
+      "params": {
+        "filepath": "{{color_matched_sequence}}",
+        "max_highlights": 24,
+        "min_duration": 8.0,
+        "max_duration": 28.0,
+        "target_duration_seconds": "{{target_duration_seconds}}",
+        "tone": "warm_cinematic_wedding",
+        "beat_grid": "{{beat_grid}}"
+      },
+      "produces": "highlight_segments"
+    },
+    {
+      "id": "assemble_beat_synced_reel",
+      "label": "Assemble beat-synced highlight reel",
+      "method": "POST",
+      "endpoint": "/video/merge",
+      "params": {
+        "files": "{{highlight_segments}}",
+        "mode": "concat_filter",
+        "quality": "high",
+        "transition": "soft_crossfade",
+        "music_path": "{{music_path}}",
+        "beat_sync": true,
+        "target_duration_seconds": "{{target_duration_seconds}}"
+      },
+      "produces": "reel_sequence"
+    },
+    {
+      "id": "export_review_master",
+      "label": "Export four-minute review master",
+      "method": "POST",
+      "endpoint": "/export-video",
+      "params": {
+        "filepath": "{{reel_sequence}}",
+        "segments": "{{highlight_segments}}",
+        "video_codec": "libx264",
+        "audio_codec": "aac",
+        "quality": "high",
+        "output_format": "mp4"
+      },
+      "produces": "review_master"
+    }
+  ],
+  "review_checklist": [
+    "Confirm the reference grade does not over-warm skin tones.",
+    "Confirm the song is licensed for the delivery channel.",
+    "Confirm vows and speeches are intelligible under music.",
+    "Confirm the exported reel is close to the 240-second target."
+  ]
+}

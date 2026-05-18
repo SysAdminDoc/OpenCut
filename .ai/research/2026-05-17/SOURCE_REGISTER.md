@@ -117,6 +117,16 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R69-L03 | `C:\Users\--\repos\OpenCut\extension\com.opencut.panel\client\feature-state.js` — CEP helper `hardwareFor()` API and per-control hardware annotations | 2026-05-18 |
 | R69-L04 | `C:\Users\--\repos\OpenCut\tests\test_feature_registry.py`, `tests\test_feature_readiness_generator.py`, `tests\test_feature_state_panel_helper.py` — registry/generator/panel guardrails for F271 | 2026-05-18 |
 
+### Pass 70 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R70-L01 | `C:\Users\--\repos\OpenCut\opencut\core\agent_skills.py` — built-in agent skill loader, front-matter parser, and plan validator | 2026-05-18 |
+| R70-L02 | `C:\Users\--\repos\OpenCut\opencut\data\builtin_skills\wedding-cinematic-reel\SKILL.md` and `plan.json` — F272 wedding cinematic reel skill package | 2026-05-18 |
+| R70-L03 | `C:\Users\--\repos\OpenCut\opencut\routes\solver_agent_routes.py` — `/agent/skills` and `/agent/skills/<skill_id>` catalogue routes | 2026-05-18 |
+| R70-L04 | `C:\Users\--\repos\OpenCut\tests\test_agent_skills.py` and `scripts\release_smoke.py` — F272 route/plan guardrails and release-smoke registration | 2026-05-18 |
+| R70-L05 | `C:\Users\--\repos\OpenCut\opencut\_generated\route_manifest.json` and `opencut\_generated\mcp_extended_tools.json` — regenerated 1,376-route / 1,319-tool artifacts | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP
