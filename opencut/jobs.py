@@ -364,16 +364,15 @@ def _kill_job_process(job_id: str):
         proc.terminate()
     except OSError as e:
         logger.debug("Failed to terminate process for job %s: %s", job_id, e)
-    # Drop our end of stdin so the child isn't blocked waiting for input.
+    # Drop our pipe ends immediately so any worker thread blocked on stdout or
+    # stderr wakes up while we wait for the child to exit.
     _close_pipe(getattr(proc, "stdin", None))
+    _close_pipe(getattr(proc, "stdout", None))
+    _close_pipe(getattr(proc, "stderr", None))
 
     # Wait up to 3 seconds for graceful exit
     try:
         proc.wait(timeout=3)
-        # On clean exit, we still drain output pipes so the OS can
-        # release the file descriptors.
-        _close_pipe(getattr(proc, "stdout", None))
-        _close_pipe(getattr(proc, "stderr", None))
         return
     except Exception as e:
         logger.debug("Process for job %s did not exit gracefully: %s", job_id, e)
@@ -407,6 +406,8 @@ def _cancel_job(job_id: str, *, message: str = "Cancelled by user",
         job["message"] = message
         job["progress"] = 0
         cancelled_job = job.copy()
+
+    _kill_job_process(job_id)
 
     try:
         from opencut.workers import cancel_job as _cancel_queued_job

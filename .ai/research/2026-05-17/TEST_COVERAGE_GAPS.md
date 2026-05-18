@@ -99,7 +99,7 @@ Previously missing fuzz targets that were **high value** for an HTTP server hand
 
 ### 3.9 Concurrency / race conditions
 
-The dirty working tree's `helpers.py` change (re-architecting `_run_ffmpeg_with_progress` with a `finally` block) suggests there are or have been concurrency bugs in the FFmpeg progress monitoring path. There's no dedicated race-condition test. **F216 — concurrent job-cancellation race test** (M).
+Pass 39 closed **F216 — concurrent job-cancellation race test** (M). `_cancel_job()` now terminates registered child processes, closes parent pipe handles so blocked FFmpeg progress reads wake up, and `tests/test_job_cancellation_race.py` verifies cancellation during an active `_run_ffmpeg_with_progress()` run cleans up the process registry.
 
 ### 3.10 UXP panel ↔ backend integration
 
@@ -139,7 +139,7 @@ This is a single F number: **F205**, already on the Now tier.
 | [x] F213 | Inno Setup install/uninstall smoke in CI | Closed Pass 37 | M |
 | F214 | Extend F128 with ML + TTS perf benchmarks | Next | M |
 | [x] F215 | Extend fuzz harness with 8 additional targets | Closed Pass 38 | M |
-| F216 | Concurrent job-cancellation race test | Next | M |
+| [x] F216 | Concurrent job-cancellation race test | Closed Pass 39 | M |
 | F217 | UXP backend-client contract test | Next | S |
 | F218 | Import-order stability test for blueprint registration | Done in Pass 15 | S |
 | F219 | SBOM completeness test | Done in Pass 16 | S |
