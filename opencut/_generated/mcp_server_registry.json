@@ -18,13 +18,13 @@
       }
     }
   },
-  "generated_at": "2026-05-18T01:28:19Z",
+  "generated_at": "2026-05-18T14:46:21Z",
   "homepage": "https://github.com/SysAdminDoc/OpenCut",
   "install": {
     "command": "pip install \"opencut[mcp]\"",
     "executable": "opencut-mcp-server",
     "language": "python",
-    "python_min": "3.9"
+    "python_min": "3.11"
   },
   "license": "MIT",
   "manifest_version": 1,

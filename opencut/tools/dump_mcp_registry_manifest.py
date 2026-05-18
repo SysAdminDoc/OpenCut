@@ -86,7 +86,7 @@ def build_manifest() -> dict:
         "install": {
             "language": "python",
             "command": INSTALL_COMMAND,
-            "python_min": "3.9",
+            "python_min": "3.11",
             "executable": "opencut-mcp-server",
         },
         "run": {

@@ -51,7 +51,7 @@ def test_jobs_module_uses_env_overrides_for_limits():
 
 
 def test_runtime_boot_modules_avoid_pep604_annotations_for_python39():
-    """Python 3.9 evaluates annotations unless postponed; keep boot modules importable."""
+    """Keep boot modules importable before optional dependencies are installed."""
     repo_root = Path(__file__).resolve().parents[1]
     checked = [
         repo_root / "opencut" / "config.py",

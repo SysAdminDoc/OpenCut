@@ -55,6 +55,7 @@ def test_committed_manifest_shape():
     assert "stdio" in data["transports"]
     assert "http" in data["transports"]
     assert data["install"]["command"].startswith("pip install")
+    assert data["install"]["python_min"] == "3.11"
     assert data["run"]["stdio"] == "opencut-mcp-server"
 
 

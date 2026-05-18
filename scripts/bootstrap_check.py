@@ -27,9 +27,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
-MIN_PYTHON = (3, 9)
+MIN_PYTHON = (3, 11)
 
 
 def _resolve_python_for_subprocess() -> str:
@@ -134,7 +133,7 @@ def check_python_version() -> CheckResult:
     return _fail(
         "python-version",
         f"Python {current_text} is below required >= {required_text}",
-        "Install Python 3.9 or newer before running OpenCut.",
+        "Install Python 3.11 or newer before running OpenCut.",
     )
 
 

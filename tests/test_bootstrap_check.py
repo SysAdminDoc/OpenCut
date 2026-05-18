@@ -3,7 +3,6 @@ import json
 import sys
 from pathlib import Path
 
-
 REPO_ROOT = Path(__file__).resolve().parents[1]
 SCRIPT_PATH = REPO_ROOT / "scripts" / "bootstrap_check.py"
 
@@ -59,6 +58,11 @@ def test_runtime_import_check_reports_missing_modules(monkeypatch):
     assert result.ok is False
     assert result.name == "runtime-imports"
     assert "flask" in result.detail
+
+
+def test_python_version_floor_is_3_11():
+    bootstrap_check = load_bootstrap_check()
+    assert bootstrap_check.MIN_PYTHON == (3, 11)
 
 
 def test_json_output_uses_aggregate_status(monkeypatch, capsys):

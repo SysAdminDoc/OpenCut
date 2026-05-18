@@ -1,5 +1,13 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed — Dependency Security Floor
+
+- Raised source installs to Python 3.11+ so OpenCut can consume current security-fix dependency lines.
+- Updated install floors for `flask-cors>=6,<7`, `opencv-python-headless>=4.13,<5`, `Pillow>=12.2,<13`, `onnxruntime>=1.25,<2`, `onnxruntime-gpu>=1.25,<2`, and `whisperx>=3.8.5,<4`.
+- Removed the stale `pydub` entry from `requirements.txt`, matching the previously shipped F123 pyproject extras.
+
 ## [1.32.0] - 2026-05-09
 
 ### Added — Light Theme & Appearance Toggle (CEP Panel)

@@ -174,7 +174,7 @@ def edge_tts_generate(
         await communicate.save(output_path)
 
     # Run async in sync context — use asyncio.run() which works in all
-    # Python 3.9+ versions.  If called from an existing event loop thread,
+    # Python 3.11+ versions.  If called from an existing event loop thread,
     # fall back to a new thread with its own loop.
     _run_async_sync(_generate(), timeout=120)
 
