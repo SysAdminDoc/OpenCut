@@ -793,3 +793,34 @@ Aptabase's SDK contract, Python client source, and privacy/product materials.
 F250 is complete for repository-side, disabled-by-default Aptabase telemetry.
 It intentionally does not add UI controls yet; the route/settings contract and
 docs give the UXP/CEP settings surfaces a stable integration target.
+
+---
+
+## Pass 59 (2026-05-18 — F252.1 Bolt UXP WebView scaffold)
+
+Pass 59 advanced the F252 UXP migration by implementing the first bounded,
+locally-verifiable sub-phase: a dormant Bolt-shaped WebView scaffold beside the
+current shipped UXP panel.
+
+### Pass 59 external checks
+
+| Probe | Result |
+|---|---|
+| Bolt UXP repository | Confirms the project shape and UXP config pattern used for the scaffold. |
+| Bolt UXP WebView UI announcement | Confirms WebView UI is the intended Bolt UXP path for richer UI surfaces without immediately rewriting the whole panel into native widgets. |
+| Existing OpenCut parity matrix | Confirms the low-risk UXP/Premiere wrappers are a safe first scaffold layer while the CEP-only functions remain out of this slice. |
+
+### Pass 59 phases executed
+
+| Phase | What | Output |
+|---|---|---|
+| Pass 59.1 | Verified the F252 sub-phase boundary. | Chose F252.1 scaffold work instead of claiming full F252 migration closure. |
+| Pass 59.2 | Added the dormant Bolt/WebView tree. | Created `extension/com.opencut.uxp/bolt-webview/` with a least-privilege `uxp.config.ts`, host API wrappers, WebView shell, and message bridge helpers. |
+| Pass 59.3 | Wired docs and release guardrails. | Updated `docs/UXP_MIGRATION.md`, ROADMAP/state files, added `tests/test_uxp_webview_scaffold.py` to release smoke, and verified the curated `pytest-fast` release gate (`623 passed`). |
+
+### Pass 59 saturation note
+
+F252.1 is complete as a repository-side scaffold and is covered by the local
+release-smoke `pytest-fast` gate. F252 remains open until the live manifest is
+switched after an in-Premiere UDT smoke pass and the UI/API migration is
+validated against the real host.

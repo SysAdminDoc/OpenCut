@@ -170,6 +170,28 @@ locally.
 
 ---
 
+## 2026-05-18 Pass 59 Addendum — F252.1 Bolt UXP WebView Scaffold
+
+**Functional changes:** Added the first safe F252 migration slice: a dormant
+Bolt-shaped WebView scaffold that can be iterated beside the shipped UXP panel
+without changing the live manifest entrypoint.
+
+| Path | Change |
+|---|---|
+| `extension/com.opencut.uxp/bolt-webview/README.md` | Documents the dormant scaffold posture, current file map, and cutover sequence. |
+| `extension/com.opencut.uxp/bolt-webview/uxp.config.ts` | Adds a least-privilege Bolt/WebView config template that inherits the live plugin identity, keeps `PPRO` minVersion 25.6, enables WebView UI/message bridge/local rendering, and preserves the loopback backend allowlist. |
+| `extension/com.opencut.uxp/bolt-webview/src/api/*.ts` | Adds generic UXP helpers and Premiere host wrappers that return plain data across the WebView boundary. |
+| `extension/com.opencut.uxp/bolt-webview/webview-ui/` | Adds the WebView shell plus `window.uxpHost.postMessage` bridge helpers for host calls and host-to-WebView callbacks. |
+| `tests/test_uxp_webview_scaffold.py` | Pins scaffold files, config permissions, host API exports, bridge envelope tokens, and migration documentation. |
+| `scripts/release_smoke.py` | Adds the scaffold guardrail test to the focused release gate. |
+| `docs/UXP_MIGRATION.md`, `CHANGELOG.md`, `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CONTINUE_FROM_HERE.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md` | Synced roadmap/state/docs for F252.1 completion while leaving F252 open. |
+
+**Validation:** focused F252.1 scaffold tests, focused release-smoke unit
+coverage, focused Ruff, `py_compile`, and release-smoke `pytest-fast`
+(`623 passed`) passed locally.
+
+---
+
 ## 7.5 Pass 2 additions (same day, second autonomous research run)
 
 Pass 2 added 5 new artefacts + extended 6 existing ones + appended ROADMAP.md v4.5 section + updated PROJECT_CONTEXT.md + wrote CONTINUE_FROM_HERE.md.
