@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.47
+**Version**: 4.48
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -102,8 +102,23 @@
 > **v4.46 status (2026-05-18, forty-third pass)**: closed **F194** by adding an opt-in generated extended MCP route-tool catalogue. The curated MCP surface remains **39** default tools, while `opencut/_generated/mcp_extended_tools.json` now exposes **1,307** lower-priority `opencut_route_*` tools generated from the route manifest and OpenAPI response-schema map. `opencut-mcp-server --extended-tools` or `OPENCUT_MCP_EXTENDED_TOOLS=1` enables the generated tools for clients that deliberately want full route-level coverage, and `tests/test_mcp_extended_tools.py` pins manifest drift, opt-in behavior, generated metadata, and dispatch for GET query/body/path-parameter routes.
 >
 > **v4.47 status (2026-05-18, forty-fourth pass)**: closed **F201** by building the recommended WPF installer on Windows tag/manual CI. `.github/workflows/build.yml` now runs `scripts/build_wpf_installer_ci.ps1` after PyInstaller and before the Inno fallback, copies FFmpeg/ffprobe from PATH into the payload folder, invokes `installer/InstallerBuilder.ps1`, and archives the WPF output separately as `OpenCut-WPF-Setup-X.Y.Z.exe` so the later Inno build cannot overwrite it. `tests/test_wpf_installer_ci.py` pins the workflow ordering, artifact path, payload prerequisites, and policy-doc status.
+>
+> **v4.48 status (2026-05-18, forty-fifth pass)**: closed the repository-tooling portion of **F203** by adding Windows Authenticode signing to the release workflow. `scripts/sign_windows_artifacts.ps1` signs WPF and Inno installer artifacts with a secret-backed `.pfx`, timestamps with RFC3161, verifies with `signtool verify /pa /v`, and warns inside a 90-day renewal window when `WINDOWS_CODESIGN_CERT_EXPIRES_AT` is configured. `.github/workflows/build.yml` now runs signing after both Windows installers are built and before artifacts are archived. `docs/WINDOWS_CODESIGNING.md` documents the required secrets and renewal policy; live signed-release validation still requires configured repository secrets.
 
 ---
+
+## 2026-05-18 v4.48 Windows Authenticode Signing (F203)
+
+One Next-tier Windows signing item closed for repository tooling.
+
+| Surface | Status |
+|---|---|
+| F203 signing helper | DONE — `scripts/sign_windows_artifacts.ps1` signs installer artifacts with `signtool sign`, SHA-256 digesting, RFC3161 timestamping, and post-sign `signtool verify`. |
+| Workflow wiring | `.github/workflows/build.yml` signs both `installer/dist/wpf/OpenCut-WPF-Setup-*.exe` and `installer/dist/OpenCut-Setup-*.exe` after WPF/Inno builds and before archive/upload steps. |
+| Secrets | `docs/WINDOWS_CODESIGNING.md` documents `WINDOWS_CODESIGN_PFX_BASE64`, `WINDOWS_CODESIGN_PFX_PASSWORD`, optional timestamp URL, and `WINDOWS_CODESIGN_CERT_EXPIRES_AT`. Missing signing secrets skip signing with a warning for fork/dry-run builds. |
+| Renewal policy | The helper warns when `WINDOWS_CODESIGN_CERT_EXPIRES_AT` is inside the default 90-day renewal window; `-FailOnExpiringCert` can make that fatal during release freezes. |
+| Guard tests | `tests/test_windows_codesigning.py` pins SignTool usage, secret names, timestamping, renewal warning logic, workflow step ordering, and docs/policy references. Release smoke includes the new test. |
+| Validation | `python -m pytest tests/test_windows_codesigning.py tests/test_wpf_installer_ci.py tests/test_installer_policy.py -q` -> `17 passed`; focused Ruff -> clean; PowerShell parser -> clean. |
 
 ## 2026-05-18 v4.47 WPF Installer CI Build (F201)
 
@@ -913,7 +928,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Flagship review-bundle extensions: **F225-F229** OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, F242 ICU4X CJK line breaking
-- Packaging: [x] F200 installer policy + [x] F201 WPF CI build + F203 signing + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
+- Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
 - Tests: [x] F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + [x] F217 UXP contract test
 - Local LAN review: F231 mDNS+Caddy+HMAC portal + F232 Headscale + F233 Atom feed + webhook + F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)

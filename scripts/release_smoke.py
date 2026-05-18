@@ -542,6 +542,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_installer_policy.py",
     "tests/test_inno_installer_smoke.py",
     "tests/test_wpf_installer_ci.py",
+    "tests/test_windows_codesigning.py",
     "tests/test_fuzz_harness_targets.py",
     "tests/test_job_cancellation_race.py",
     "tests/test_launcher_scripts.py",
