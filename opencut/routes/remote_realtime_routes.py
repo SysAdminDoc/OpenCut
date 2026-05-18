@@ -168,6 +168,16 @@ def create_realtime_session():
 
         if not video_path:
             return jsonify({"error": "video_path is required"}), 400
+        # Cheap perimeter checks (path validation lives in create_session()
+        # so test mocks can stub os.path.isfile cleanly). Reject the only
+        # two payload shapes that would slip past ffprobe / isfile and
+        # cause an opaque crash later.
+        if "\x00" in video_path:
+            return jsonify({"error": "Null byte in video_path",
+                            "code": "INVALID_INPUT"}), 400
+        if video_path.startswith("\\\\") or video_path.startswith("//"):
+            return jsonify({"error": "UNC paths are not allowed in video_path",
+                            "code": "INVALID_INPUT"}), 400
 
         config = None
         if any(k in data for k in ("resolution_scale", "target_fps", "device", "params")):
