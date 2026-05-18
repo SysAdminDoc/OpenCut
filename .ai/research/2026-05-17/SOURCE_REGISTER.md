@@ -844,3 +844,26 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P60-L06 | Validation commands — focused dispatcher tests, focused release-smoke unit coverage, `py_compile`, focused Ruff, `node --check extension\com.opencut.uxp\main.js`, and release-smoke `pytest-fast` (`627 passed`) passed locally. |
 
 **Source coverage assessment (Pass 60):** Pass 60 claims in `ROADMAP.md` v4.63, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `docs/UXP_MIGRATION.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P60-L01 through R-P60-L06.
+
+---
+
+## Pass 61 — F254 UXP createSubsequence integration (2026-05-18 sixty-first pass)
+
+### External/package source evidence
+
+| ID | Source |
+|---|---|
+| R-P61-E01 | npm metadata for `@adobe/premierepro` — `npm view @adobe/premierepro dist-tags version versions --json` reported `latest=26.2.0` and `beta=26.3.0-beta.67`. |
+| R-P61-E02 | `@adobe/premierepro@26.3.0-beta.67` package typings from npm pack — `package/src/premierepro.d.ts` exposes `Sequence.createSubsequence(ignoreTrackTargeting?)`, `TickTime.createWithSeconds`, sequence in/out actions, and `Project.executeTransaction`. |
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P61-L01 | `extension/com.opencut.uxp/main.js` — new TickTime conversion, project transaction helper, `createSubsequenceFromRange()`, range restoration, and F255 handoff metadata. |
+| R-P61-L02 | `tests/test_uxp_create_subsequence_integration.py` — focused guardrails for the F254 beta assumption, UXP range action wiring, transaction use, restore behavior, and release-smoke registration. |
+| R-P61-L03 | `scripts/release_smoke.py` — adds the F254 test to the release gate. |
+| R-P61-L04 | `docs/UXP_MIGRATION.md`, `CHANGELOG.md`, and `ROADMAP.md` — migration docs, release notes, and roadmap status synchronized for F254. |
+| R-P61-L05 | Validation commands — focused F254 tests, focused UXP/release-smoke unit coverage, `py_compile`, focused Ruff, `node --check extension\com.opencut.uxp\main.js`, and release-smoke `pytest-fast` (`632 passed`) passed locally. |
+
+**Source coverage assessment (Pass 61):** Pass 61 claims in `ROADMAP.md` v4.64, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `docs/UXP_MIGRATION.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P61-E01 through R-P61-E02 and R-P61-L01 through R-P61-L05.

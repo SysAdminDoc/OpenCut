@@ -347,6 +347,25 @@ const PProBridge = (() => {
     return Math.round(Number(seconds || 0) * 254016000000);
   }
 
+  function _tickTimeFromSeconds(seconds) {
+    const numeric = Number(seconds || 0);
+    if (ppro?.TickTime?.createWithSeconds) return ppro.TickTime.createWithSeconds(numeric);
+    if (ppro?.TickTime?.createWithTicks) return ppro.TickTime.createWithTicks(String(_secondsToTicks(numeric)));
+    return { seconds: numeric, ticks: String(_secondsToTicks(numeric)) };
+  }
+
+  async function _executeProjectActions(actions, undoString) {
+    const usableActions = (actions || []).filter(Boolean);
+    if (!usableActions.length) return false;
+    const context = await _projectRoot();
+    if (!context?.proj?.executeTransaction) return false;
+    return Boolean(context.proj.executeTransaction((compoundAction) => {
+      for (const action of usableActions) {
+        compoundAction.addAction(action);
+      }
+    }, undoString));
+  }
+
   /**
    * Adds an array of sequence markers.
    * @param {Array<{time: number, label: string, color: string}>} markers
@@ -752,18 +771,57 @@ const PProBridge = (() => {
     };
   }
 
-  async function exportSequenceRange(payload) {
+  async function createSubsequenceFromRange(payload) {
     const parsed = _parseHostPayload(payload, {});
     const seq = await getActiveSequence();
     if (!seq) return { ok: false, reason: "No active sequence or UXP API unavailable." };
     if (!seq.createSubsequence) {
       return { ok: false, reason: "Sequence.createSubsequence is unavailable in this Premiere UXP runtime." };
     }
+    const startSeconds = Number(parsed.startSeconds ?? parsed.start ?? 0);
+    const endSeconds = Number(parsed.endSeconds ?? parsed.end ?? 0);
+    if (!Number.isFinite(startSeconds) || !Number.isFinite(endSeconds) || endSeconds <= startSeconds) {
+      return { ok: false, reason: "A valid start/end range in seconds is required." };
+    }
+    const ignoreTrackTargeting = parsed.ignoreTrackTargeting !== false;
+    const originalIn = await seq.getInPoint?.();
+    const originalOut = await seq.getOutPoint?.();
+    const startTick = _tickTimeFromSeconds(startSeconds);
+    const endTick = _tickTimeFromSeconds(endSeconds);
+    const setActions = [
+      seq.createSetInPointAction?.(startTick),
+      seq.createSetOutPointAction?.(endTick),
+    ];
+    const rangeSet = await _executeProjectActions(setActions, "OpenCut set subsequence range");
+    if (!rangeSet) return { ok: false, reason: "Premiere did not accept the sequence in/out range actions." };
+
+    try {
+      const subsequence = await seq.createSubsequence(ignoreTrackTargeting);
+      const name = await subsequence?.getName?.() ?? "";
+      return {
+        ok: true,
+        sequenceName: name,
+        range: { start: startSeconds, end: endSeconds },
+        ignoreTrackTargeting,
+      };
+    } finally {
+      const restoreActions = [
+        originalIn ? seq.createSetInPointAction?.(originalIn) : null,
+        originalOut ? seq.createSetOutPointAction?.(originalOut) : null,
+      ];
+      await _executeProjectActions(restoreActions, "OpenCut restore sequence range");
+    }
+  }
+
+  async function exportSequenceRange(payload) {
+    const parsed = _parseHostPayload(payload, {});
+    const subsequence = await createSubsequenceFromRange(parsed);
+    if (!subsequence.ok) return subsequence;
     return {
       ok: false,
       reason: "Sequence range dispatch is registered; encoder handoff remains F255.",
       outputPath: parsed.outputPath ?? parsed.path ?? "",
-      range: { start: parsed.startSeconds ?? parsed.start, end: parsed.endSeconds ?? parsed.end },
+      subsequence,
       requiresF255: true,
     };
   }
@@ -823,6 +881,7 @@ const PProBridge = (() => {
     createSmartBins,
     removeImportedProjectItem,
     setSequencePlayhead,
+    createSubsequenceFromRange,
     executeHostAction,
     hostActionStatus,
   };
