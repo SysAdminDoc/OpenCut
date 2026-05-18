@@ -570,11 +570,15 @@ def review_bundle():
             "markers_payload": {...},                  # arbitrary JSON
             "notes": "Free-form notes for the reviewer",
             "extra_files": ["/abs/path/to/lut.cube"],
+            "voice_notes": [{"path": "/abs/path/to/note.wav", "comment_id": "c1"}],
             "include_media": true,
+            "include_hls": false,
             "framerate": 30.0,
             "duration_seconds": 90.0,
             "annotation_width": 1920,
-            "annotation_height": 1080
+            "annotation_height": 1080,
+            "hls_segment_seconds": 4.0,
+            "hls_width": 960
         }
 
     Returns the manifest of the produced bundle (sha-256, byte count,
@@ -582,7 +586,9 @@ def review_bundle():
     ``markers.otio`` with an OpenTimelineIO Marker timeline,
     ``review_threads.json`` with threaded comments plus completion state,
     Premiere/EDL marker export sidecars, and, when drawing annotations exist,
-    SVG overlays under ``annotations/``.
+    SVG overlays under ``annotations/``. Optional voice notes are copied under
+    ``voice_notes/`` with an index sidecar, and optional HLS renditions are
+    copied under ``hls/`` for browser scrubbing without downloading the source.
     """
     from opencut.core.review_bundle import build_review_bundle
 
@@ -615,6 +621,38 @@ def review_bundle():
             except ValueError as exc:
                 return jsonify({"error": f"extra_files: {exc}"}), 400
 
+        voice_notes_raw = data.get("voice_notes")
+        voice_notes = None
+        if voice_notes_raw is not None:
+            if isinstance(voice_notes_raw, dict):
+                voice_note_rows = voice_notes_raw.get("voice_notes") or voice_notes_raw.get("notes") or voice_notes_raw.get("attachments")
+                if voice_note_rows is None:
+                    voice_note_rows = [voice_notes_raw]
+            else:
+                voice_note_rows = voice_notes_raw
+            if not isinstance(voice_note_rows, list):
+                return jsonify({"error": "voice_notes must be a list"}), 400
+            voice_notes = []
+            for idx, raw in enumerate(voice_note_rows):
+                if not isinstance(raw, dict):
+                    return jsonify({"error": f"voice_notes[{idx}] must be an object"}), 400
+                note = dict(raw)
+                note_path = (
+                    note.get("path")
+                    or note.get("file_path")
+                    or note.get("filepath")
+                    or note.get("audio_path")
+                    or note.get("voice_note_path")
+                    or note.get("attachment_path")
+                )
+                if not note_path:
+                    return jsonify({"error": f"voice_notes[{idx}].path required"}), 400
+                try:
+                    note["path"] = validate_filepath(str(note_path))
+                except ValueError as exc:
+                    return jsonify({"error": f"voice_notes[{idx}]: {exc}"}), 400
+                voice_notes.append(note)
+
         bundle = build_review_bundle(
             output_path=output_path,
             job_label=str(data.get("job_label") or "").strip(),
@@ -623,11 +661,15 @@ def review_bundle():
             markers_payload=data.get("markers_payload"),
             notes=str(data.get("notes") or ""),
             extra_files=extra_files or None,
+            voice_notes=voice_notes,
             include_media=safe_bool(data.get("include_media"), default=True),
+            include_hls=safe_bool(data.get("include_hls"), default=False),
             framerate=safe_float(data.get("framerate"), default=30.0, min_val=1.0, max_val=240.0),
             duration_seconds=safe_float(data.get("duration_seconds"), default=0.0, min_val=0.0),
             annotation_width=safe_int(data.get("annotation_width"), default=1920, min_val=1, max_val=16384),
             annotation_height=safe_int(data.get("annotation_height"), default=1080, min_val=1, max_val=16384),
+            hls_segment_seconds=safe_float(data.get("hls_segment_seconds"), default=4.0, min_val=1.0, max_val=30.0),
+            hls_width=safe_int(data.get("hls_width"), default=960, min_val=160, max_val=3840),
         )
         return jsonify(bundle.as_dict())
     except FileNotFoundError as exc:
