@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.32
+**Version**: 4.33
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -72,6 +72,23 @@
 > **v4.31 status (2026-05-17, twenty-eighth pass)**: closed **F128** (FFmpeg filter-graph regression suite). `tests/test_ffmpeg_filter_regression.py` (41 tests) covers a curated `REQUIRED_FILTERS` tuple of 24 filter names OpenCut emits and 13 representative filter graphs (9 video, 4 audio). Each filter must exist in `ffmpeg -filters` output; each graph is piped through a synthetic `lavfi color=`/`sine=` source with `-f null -` so syntax regressions surface without needing real media. The test auto-discovers the bundled FFmpeg via `OPENCUT_FFMPEG` / PATH / bundled `ffmpeg/` dir (same precedence as `opencut.server._setup_ffmpeg_path`). When F129 lands and the bundled FFmpeg bumps to 8.1, this is the first gate to flip. Release smoke green (15 chained gates, `53 gate tests passed`).
 >
 > **v4.32 status (2026-05-17, twenty-ninth pass)**: closed **F184** (collapsed `docs/ROADMAP.md` and `docs/ROADMAP-COMPLETED.md` into ~25-line pointer stubs that redirect to the canonical files; release smoke gains a `roadmap-mirror` step that fails closed when either stub grows past 60 lines or loses the "Moved"/canonical-path language; `tests/test_roadmap_mirror.py` pins the contract) and **F178** (AI eval harness v2 — `EvalResult` carries `vram_peak_mb` / `reference_score` / `backend` / `backend_choice_reason`; `run_evaluation` auto-resets the torch CUDA peak counter, picks up runner-supplied VRAM if provided, and falls back to the gpu-module device; new `compare_backends()` aggregator groups persisted runs by backend and emits latency p50/p95, quality mean vs reference ratio (capped at 1.5), peak/mean VRAM, and "best for latency / best for quality" hints; new `GET /system/ai-eval/<feature_id>/compare-backends` route). Route manifest bumped to 1,363 routes / 101 blueprints. 13 new tests: 8 extending `tests/test_ai_eval_harness.py` for the F178 fields + the comparison aggregator, 5 in `tests/test_roadmap_mirror.py`. Release smoke green (16 chained gates including the new `roadmap-mirror` step, `54 gate tests passed`).
+>
+> **v4.33 status (2026-05-17, thirtieth pass)**: closed **F177** (model_cards.py 2026-Q2 sweep). Existing model-card coverage was already complete (47 cards, every `check_*_available` covered or on `NON_AI_CHECKS`), so F177 closed by adding **6 forward-looking sweep gates** to `tests/test_model_cards.py`: per-category coverage floor (every documented category must keep at least one card), license-prefix allowlist (catches typos and new license families before they merge), privacy-prefix allowlist (`local-only` / `local + optional cloud` / `cloud`), hardware-prefix allowlist (`cpu` / `gpu` / `cpu/gpu` / `cloud`), 40-card baseline floor (catches accidental mass deletion), and feature_id uniqueness gate. The allowlist prefixes are deliberately permissive (allow free-text suffix for nuance) but block new uncategorised license families from sneaking in via a docstring change. All 13 model_cards tests pass; release smoke green (16 chained gates, lint clean).
+
+---
+
+## 2026-05-17 v4.33 model_cards.py 2026-Q2 Sweep Gates (F177)
+
+One Now-tier item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F177 model card sweep | DONE — existing 47-card coverage was already complete; F177 adds forward-looking sweep gates that block license/privacy/hardware typos before they merge. |
+| Category-coverage floor | New `test_each_category_has_at_least_one_card` asserts every documented category (audio, captions, editing, generation, lipsync, llm, video) keeps at least one card. A refactor that drains a whole category trips the test. |
+| License-prefix allowlist | New `test_each_license_starts_with_known_prefix` accepts SPDX-friendly tokens (Apache-2.0, MIT, BSD, GPL-3.0, AGPL-3.0, LGPL-3.0, CC-BY, OpenRAIL, Unlicense) plus the documented in-house markers (Commercial API, proprietary, varies-per-backend, NTU S-Lab License, Tencent territory). New license families need a deliberate prefix addition. |
+| Privacy + hardware prefix gates | `test_each_privacy_token_starts_with_known_prefix` requires `local-only` / `local + optional cloud` / `cloud` as the leading token. `test_each_hardware_field_starts_with_known_shape` requires `cpu` / `gpu` / `cpu/gpu` / `cloud` as the leading token. Free-text suffix allowed for nuance. |
+| Baseline floor + dedup | `test_card_count_meets_2026_q2_floor` requires ≥40 cards so an accidental mass deletion fails fast. `test_no_two_feature_ids_are_duplicated` keeps the feature_id namespace unique. |
+| Validation | `python -m pytest tests/test_model_cards.py -q` → `13 passed` (7 original + 6 new F177 sweep gates). `python scripts/release_smoke.py --skip pip-audit --skip npm-advisory --skip pytest-fast` → all 15 non-pytest gates `PASS`. Ruff `opencut/` scope clean. |
 
 ---
 

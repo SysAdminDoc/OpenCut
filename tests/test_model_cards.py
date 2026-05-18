@@ -103,3 +103,129 @@ def test_dumper_check_mode_passes_against_committed_artefacts():
 
     rc = dump_model_cards.cli(["--check"])
     assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# F177 — 2026-Q2 sweep gates
+# ---------------------------------------------------------------------------
+
+
+def test_each_category_has_at_least_one_card():
+    """A category accidentally drained to zero rows is a regression signal —
+    it means a refactor wiped a whole feature surface without filing an
+    F-number. The current expected categories: audio, captions, editing,
+    generation, lipsync, llm, video.
+    """
+    cats = {card.category for card in model_cards.CARDS}
+    expected = {"audio", "captions", "editing", "generation", "lipsync", "llm", "video"}
+    missing = expected - cats
+    assert not missing, (
+        f"F177 — these documented categories have no model cards left: "
+        f"{sorted(missing)}. If this is intentional, update the expected "
+        f"set in tests/test_model_cards.py with the F-number authorising "
+        f"the removal."
+    )
+
+
+def test_each_license_starts_with_known_prefix():
+    """License strings must start with a documented prefix so casual
+    skim-reads catch new license families immediately. Free-text after
+    the prefix is allowed for nuance (e.g. ``MIT (client only)``)."""
+    # SPDX-friendly tokens + the in-house markers used for hosted
+    # services and multi-license aggregators.
+    known_prefixes = (
+        "Apache-2.0", "Apache 2.0",
+        "MIT",
+        "BSD-3-Clause", "BSD-2-Clause", "BSD",
+        "GPL-3.0", "AGPL-3.0",
+        "LGPL-3.0",
+        "Microsoft Edge TTS terms",
+        "Commercial API",
+        "CC-BY",                         # covers CC-BY-NC, CC-BY-4.0, etc.
+        "OpenRAIL-M", "OpenRAIL",
+        "Custom",
+        "Tencent",                       # HunyuanVideo-family carve-outs
+        "Public Domain",
+        "NTU S-Lab License",             # ProPainter, MatAnyone
+        "Unlicense",                     # auto-editor (public domain)
+        "proprietary",                   # ElevenLabs, Hailuo, Seedance, Edge TTS
+        "varies per backend",            # multi-backend LLM aggregators
+        "varies per model",              # HF model hub passthroughs
+        "MIT (orchestration",            # OpenCut wrappers over commercial APIs
+    )
+    offenders: list = []
+    for card in model_cards.CARDS:
+        if not card.license.startswith(known_prefixes):
+            offenders.append(f"{card.label!r}: license={card.license!r}")
+    assert not offenders, (
+        "F177 — model cards carry unknown license prefixes. Add the "
+        "prefix to known_prefixes in tests/test_model_cards.py after "
+        "verifying the licence is OK to ship under:\n  - "
+        + "\n  - ".join(offenders)
+    )
+
+
+def test_each_privacy_token_starts_with_known_prefix():
+    """Privacy posture must begin with one of: 'local-only', 'local +
+    optional cloud', 'cloud'. Free-text qualifier after the prefix is
+    allowed for nuance (e.g. ``cloud — text is sent to ElevenLabs``)."""
+    prefixes = ("local-only", "local + optional cloud", "cloud")
+    offenders = [
+        f"{card.label!r}: privacy={card.privacy!r}"
+        for card in model_cards.CARDS
+        if not card.privacy.startswith(prefixes)
+    ]
+    assert not offenders, (
+        "F177 — model cards carry unknown privacy prefixes. Privacy must "
+        "begin with 'local-only', 'local + optional cloud', or 'cloud':\n  - "
+        + "\n  - ".join(offenders)
+    )
+
+
+def test_each_hardware_field_starts_with_known_shape():
+    """Hardware must start with one of the documented shapes so the
+    panel can render a consistent chip. Free-text qualifier in
+    parentheses is allowed for nuance (e.g. ``gpu (recommended)``,
+    ``cpu (client)``, ``gpu (>= 16 GB VRAM for VRT)``)."""
+    prefixes = ("cpu", "gpu", "cpu/gpu", "cloud")
+    offenders = [
+        f"{card.label!r}: hardware={card.hardware!r}"
+        for card in model_cards.CARDS
+        if not card.hardware.startswith(prefixes)
+    ]
+    assert not offenders, (
+        "F177 — model cards carry off-prefix hardware strings. Use "
+        "'cpu', 'gpu', 'cpu/gpu', or 'cloud' as the leading token:\n  - "
+        + "\n  - ".join(offenders)
+    )
+
+
+def test_card_count_meets_2026_q2_floor():
+    """F177 sweep baseline — fewer than 40 cards means a regression dropped
+    a major feature surface. Bump this number deliberately when a card is
+    intentionally retired."""
+    assert len(model_cards.CARDS) >= 40, (
+        f"F177 — model card count dropped below the 2026-Q2 floor "
+        f"(got {len(model_cards.CARDS)}, expected >= 40). If a feature "
+        f"was intentionally retired, update the floor in "
+        f"tests/test_model_cards.py."
+    )
+
+
+def test_no_two_feature_ids_are_duplicated():
+    """Multiple cards can point at the same check_name (different
+    backends), but `feature_id` should be unique per card so the
+    registry can dedupe."""
+    seen: dict = {}
+    duplicates: list = []
+    for card in model_cards.CARDS:
+        if card.feature_id in seen:
+            duplicates.append(
+                f"{card.label!r} reuses feature_id={card.feature_id!r} (also: {seen[card.feature_id]!r})"
+            )
+        else:
+            seen[card.feature_id] = card.label
+    assert not duplicates, (
+        "F177 — feature_id collisions across model cards:\n  - "
+        + "\n  - ".join(duplicates)
+    )
