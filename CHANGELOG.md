@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed — Job Cancellation
+
+- `_cancel_job()` now terminates a registered child process immediately and closes parent pipe handles so blocked FFmpeg progress readers unblock during cancellation.
+- Added `tests/test_job_cancellation_race.py` to cover the concurrent cancellation race and wired it into release smoke.
+
 ### Added — Fuzz Harness Coverage
 
 - Extended the Atheris fuzz harness from 5 to 13 targets, adding coverage for path validation, OTIO parsing, FCPXML parsing, marker import, C2PA sidecars, plugin manifests, webhook HMAC signatures, and `safe_pip_install` package-spec validation.
