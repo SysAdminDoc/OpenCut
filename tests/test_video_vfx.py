@@ -548,10 +548,17 @@ class TestDeepfakeDetect(unittest.TestCase):
         """DeepfakeResult should serialise to dict."""
         from opencut.core.deepfake_detect import DeepfakeResult
 
-        r = DeepfakeResult(start_time=0.0, end_time=5.0, confidence=0.8, label="suspicious")
+        r = DeepfakeResult(
+            start_time=0.0,
+            end_time=5.0,
+            confidence=0.8,
+            evidence=["face_boundary_blending"],
+            label="suspicious",
+        )
         d = asdict(r)
         self.assertIn("confidence", d)
         self.assertIn("face_consistency", d)
+        self.assertEqual(d["evidence"], ["face_boundary_blending"])
 
     def test_detect_deepfake_missing_file(self):
         """detect_deepfake should raise for missing file."""
@@ -566,6 +573,31 @@ class TestDeepfakeDetect(unittest.TestCase):
 
         with self.assertRaises(FileNotFoundError):
             analyze_face_consistency("/nonexistent.mp4")
+
+    @patch("opencut.core.deepfake_detect.analyze_face_consistency")
+    def test_detect_deepfake_returns_evidence_metadata(self, mock_analyze):
+        """detect_deepfake should return segment evidence and detector metadata."""
+        from opencut.core.deepfake_detect import ANALYSIS_METHODS, DETECTOR_VERSION, detect_deepfake
+
+        mock_analyze.return_value = [{
+            "start_time": 0.0,
+            "end_time": 5.0,
+            "face_consistency": 0.2,
+            "edge_sharpness": 0.4,
+            "texture_anomaly": 0.6,
+            "faces_detected": 3,
+        }]
+
+        result = detect_deepfake(self.tmp.name, threshold=0.5)
+        self.assertEqual(result["detector_version"], DETECTOR_VERSION)
+        self.assertEqual(result["analysis_methods"], ANALYSIS_METHODS)
+        self.assertEqual(result["flagged_segments"], 1)
+        self.assertEqual(result["verdict"], "suspicious")
+        self.assertIn("review_recommendation", result)
+        segment = result["results"][0]
+        self.assertEqual(segment["faces_detected"], 3)
+        self.assertIn("face_temporal_inconsistency", segment["evidence"])
+        self.assertIn("frequency_artifact_pattern", segment["evidence"])
 
     def test_generate_authenticity_report_empty(self):
         """generate_authenticity_report should raise on empty results."""
@@ -593,6 +625,8 @@ class TestDeepfakeDetect(unittest.TestCase):
                 report = json.load(f)
             self.assertEqual(report["verdict"], "likely_authentic")
             self.assertIn("summary", report)
+            self.assertIn("detector_version", report)
+            self.assertIn("review_recommendation", report)
         finally:
             os.unlink(out.name)
 
@@ -967,6 +1001,14 @@ class TestVideoVfxRoutes(unittest.TestCase):
         if self.app is None:
             self.skipTest("App not available")
         resp = self.client.post("/video/detect-deepfake",
+                                json={}, headers=self._headers())
+        self.assertIn(resp.status_code, (400, 429))
+
+    def test_detect_deepfake_ai_alias_no_filepath(self):
+        """POST /ai/deepfake-detect should be registered for command palette routing."""
+        if self.app is None:
+            self.skipTest("App not available")
+        resp = self.client.post("/ai/deepfake-detect",
                                 json={}, headers=self._headers())
         self.assertIn(resp.status_code, (400, 429))
 

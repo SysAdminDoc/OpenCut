@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Deepfake Detection Reconciliation
+
+- Closed F224 by registering `/ai/deepfake-detect` as the AI-facing route for the existing deepfake detector.
+- Added detector/report metadata for evidence tags, face counts, detector version, analysis methods, flagged segments, and review guidance.
+
 ### Added — AI Feature Reconciliation
 
 - Closed F220-F222 by wiring the previously unclear AI voice/color/pacing features into primary APIs.
