@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.51
+**Version**: 4.52
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,365 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -110,8 +110,24 @@
 > **v4.50 status (2026-05-18, forty-seventh pass)**: closed **F242** by replacing whitespace-only caption wrapping with a Unicode-aware CJK line breaker. `opencut/core/caption_line_breaks.py` now provides ICU4X/UAX14-compatible break candidates, no-space CJK wrapping, and styled-overlay layout tokens. SRT/VTT export, proportional no-word timestamp cue splitting, styled captions, and shot-aware subtitle wrapping all use the shared breaker. `docs/CAPTION_LINE_BREAKING.md` records the dependency decision and references; `tests/test_caption_line_breaks.py` is wired into release smoke.
 >
 > **v4.51 status (2026-05-18, forty-eighth pass)**: closed **F225** by anchoring F105 review bundles on OpenTimelineIO Marker schema. `build_review_bundle()` now emits `markers.otio` next to the legacy `markers.json` whenever marker/comment payloads are bundled. The OTIO sidecar is a `Timeline.1` with `Marker.2` objects carrying `marked_range`, canonical OTIO colors, and an `opencut` metadata namespace for comment/thread/status data. `docs/REVIEW_BUNDLES.md` records the schema contract and older-OTIO compatibility decision; `tests/test_review_bundle.py` pins the zip, manifest, route, and marker-timing behavior.
+>
+> **v4.52 status (2026-05-18, forty-ninth pass)**: closed **F226** by adding SVG drawing annotation overlays to F105 review bundles. `build_review_bundle()` now emits `annotations/index.json` plus deterministic `annotations/*.svg` files for `drawing_rect`, `drawing_circle`, and `drawing_arrow` review comments. The route accepts annotation canvas dimensions, bundle responses expose `annotations_path` and `annotation_count`, and `tests/test_review_bundle.py` pins SVG geometry, color mapping, index metadata, route response behavior, and manifest entries.
 
 ---
+
+## 2026-05-18 v4.52 Review Bundle SVG Annotations (F226)
+
+One Next-tier review-bundle item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F226 SVG annotations | DONE — F105 review bundles now include deterministic SVG overlays under `annotations/` for `drawing_rect`, `drawing_circle`, and `drawing_arrow` review comments. |
+| Annotation index | `annotations/index.json` records schema, framerate, canvas size, timestamp, frame number, duration, status, text, annotation type, and SVG path for each drawing. |
+| Route integration | `POST /review/bundle` accepts `annotation_width` and `annotation_height`; responses expose `annotations_path` and `annotation_count`. |
+| Manifest integration | `manifest.json` records `annotations_basename`, `annotation_count`, annotation canvas dimensions, and per-SVG SHA-256 entries. |
+| Documentation | `docs/REVIEW_BUNDLES.md` documents the marker surfaces plus SVG overlay naming and canvas policy. |
+| Guard tests | `tests/test_review_bundle.py` pins SVG geometry/color/index output and route metadata while preserving the F225 OTIO marker tests. |
+| Validation | `python -m pytest tests/test_review_bundle.py tests/test_marker_metadata.py tests/test_marker_import.py -q` -> `42 passed`; focused Ruff, `py_compile`, and reduced release smoke -> clean. |
 
 ## 2026-05-18 v4.51 Review Bundle OTIO Marker Anchor (F225)
 
@@ -972,7 +988,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
-- Flagship review-bundle extensions: **[x] F225**, F226-F229 OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
+- Flagship review-bundle extensions: **[x] F225**, **[x] F226**, F227-F229 OTIO Marker anchor + SVG annotations + threaded comments + voice notes + EDL/OTIO comment round-trip
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: [x] F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
 - Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
