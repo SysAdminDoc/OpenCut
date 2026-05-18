@@ -53,6 +53,234 @@ class JobResult:
 
 
 # ---------------------------------------------------------------------------
+# Common API envelopes
+# ---------------------------------------------------------------------------
+
+@dataclass
+class HealthResult:
+    """Result from /health."""
+    status: str = "ok"
+    version: str = ""
+    csrf_token: str = ""
+    capabilities: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class ActionResult:
+    """Generic acknowledgement for routes that perform one action."""
+    success: bool = True
+    ok: bool = True
+    message: str = ""
+    output: Optional[str] = None
+    output_path: Optional[str] = None
+    job_id: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class SettingsResult:
+    """Generic settings payload for GET/POST settings routes."""
+    settings: Dict[str, Any] = field(default_factory=dict)
+    ok: bool = True
+    message: str = ""
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class ListEnvelopeResult:
+    """Generic list payload used by catalogue routes."""
+    items: List[dict] = field(default_factory=list)
+    total: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class CapabilityResult:
+    """Availability / capability payload for backend-info routes."""
+    available: bool = False
+    status: str = ""
+    reason: str = ""
+    capabilities: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class FileOutputResult:
+    """Payload for routes that write one or more files."""
+    output: str = ""
+    output_path: str = ""
+    outputs: List[str] = field(default_factory=list)
+    count: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class JobStatusResult:
+    """Result from job status and diagnostics routes."""
+    job_id: str = ""
+    status: str = ""
+    progress: int = 0
+    message: str = ""
+    result: Optional[dict] = None
+    error: Optional[str] = None
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class JobListResult:
+    """Result from job listing routes."""
+    jobs: List[dict] = field(default_factory=list)
+    total: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class JobStatsResult:
+    """Result from /jobs/stats."""
+    total: int = 0
+    running: int = 0
+    complete: int = 0
+    cancelled: int = 0
+    error: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class ModelListResult:
+    """Result from model catalogue / installed-model routes."""
+    models: List[dict] = field(default_factory=list)
+    installed: List[dict] = field(default_factory=list)
+    available: List[dict] = field(default_factory=list)
+    total: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class ModelProgressResult:
+    """Result from model-download progress routes."""
+    downloads: List[dict] = field(default_factory=list)
+    active: int = 0
+    completed: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class GpuStatusResult:
+    """Result from GPU status routes."""
+    available: bool = False
+    device: str = ""
+    devices: List[dict] = field(default_factory=list)
+    models: List[dict] = field(default_factory=list)
+    vram_total_mb: int = 0
+    vram_free_mb: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class ToolListResult:
+    """Result from tool-catalogue routes."""
+    tools: List[dict] = field(default_factory=list)
+    count: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class CaptionPreviewResult:
+    """Result from caption/style preview routes."""
+    css: str = ""
+    ass: str = ""
+    preview: Dict[str, Any] = field(default_factory=dict)
+    warnings: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class CaptionProfilesResult:
+    """Result from caption profile / token catalogue routes."""
+    profiles: List[dict] = field(default_factory=list)
+    tokens: Dict[str, Any] = field(default_factory=dict)
+    defaults: Dict[str, Any] = field(default_factory=dict)
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class CaptionTranslationResult:
+    """Result from /captions/translate."""
+    segments: List[dict] = field(default_factory=list)
+    srt: str = ""
+    output_path: Optional[str] = None
+    language: str = ""
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class CaptionQcResult:
+    """Result from caption quality-control routes."""
+    issues: List[dict] = field(default_factory=list)
+    summary: Dict[str, Any] = field(default_factory=dict)
+    passed: bool = False
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class VoiceListResult:
+    """Result from TTS voice listing routes."""
+    voices: List[dict] = field(default_factory=list)
+    backends: Dict[str, Any] = field(default_factory=dict)
+    total: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+@dataclass
+class AnalyticsResult:
+    """Result from analytics summary/report routes."""
+    events: List[dict] = field(default_factory=list)
+    report: Dict[str, Any] = field(default_factory=dict)
+    usage: Dict[str, Any] = field(default_factory=dict)
+    total: int = 0
+
+    def to_dict(self) -> dict:
+        return _strip_none(asdict(self))
+
+
+# ---------------------------------------------------------------------------
 # Audio results
 # ---------------------------------------------------------------------------
 

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — OpenAPI Schemas
+
+- Expanded the legacy `/openapi.json` typed response-schema map to 100 entries, covering high-traffic system, jobs, captions, audio/TTS, settings, analytics, annotation, model/GPU, and tool-catalogue routes.
+- Added reusable response envelope dataclasses in `opencut/schemas.py` and F192 contract assertions in `tests/test_openapi_contract.py`.
+
 ### Added — Performance Benchmark Contract
 
 - Added `opencut/core/performance_benchmarks.py` with F214 throughput specs for Whisper-family ASR, AI upscalers, declarative compose, and TTS backends.

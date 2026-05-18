@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.43
+**Version**: 4.44
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -94,8 +94,22 @@
 > **v4.42 status (2026-05-18, thirty-ninth pass)**: closed **F216** by adding a live concurrent job-cancellation regression test for the FFmpeg progress path. `_cancel_job()` now terminates the registered child process immediately, closes parent pipe handles so worker reads unblock, and still unregisters the process through the existing `finally` path. `tests/test_job_cancellation_race.py` launches a long-running subprocess through `_run_ffmpeg_with_progress()`, cancels the job while the process is registered, and asserts the child exits, the worker thread returns, and `_job_processes` is clean. Release smoke now includes this race test.
 >
 > **v4.43 status (2026-05-18, fortieth pass)**: closed **F214** with a deterministic performance-benchmark contract for the ML / compose / TTS surfaces that F128 could not cover. `opencut/core/performance_benchmarks.py` now pins throughput specs for Whisper-family ASR, Real-ESRGAN / FlashVSR / SeedVR upscalers, declarative compose, and TTS backends, all normalized to wall-clock seconds per source or synthesised unit. `tests/test_performance_benchmark_registry.py` pins the benchmark inventory, backend matrix, opt-in env gate, validation rules, and measurement primitive; release smoke includes the registry gate while heavyweight model execution remains explicitly opt-in through `OPENCUT_RUN_PERF_BENCHMARKS=1`.
+>
+> **v4.44 status (2026-05-18, forty-first pass)**: closed **F192** by expanding the legacy `/openapi.json` typed response-schema map from 30 to **100** entries. `opencut/schemas.py` now provides reusable envelopes for jobs, settings, lists, capabilities, files, model/GPU state, tool catalogues, caption previews/profiles/QC/translation, TTS voices, and analytics. `opencut/openapi.py` maps the next high-traffic system/jobs/captions/audio/settings/analytics/tool routes onto those schemas, and `tests/test_openapi_contract.py` now pins the F192 threshold plus representative property sets in the generated OpenAPI 3.0.3 spec.
 
 ---
+
+## 2026-05-18 v4.44 OpenAPI Response Schema Expansion (F192)
+
+One Next-tier route-readiness item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F192 schema map | DONE — `_ENDPOINT_SCHEMAS` now has 100 typed entries, up from the previous 30-route hand table. |
+| New schema envelopes | Added typed dataclasses for health, action acknowledgements, settings, list/catalogue responses, capability responses, file outputs, job status/lists/stats, model progress/catalogues, GPU status, tool lists, caption previews/profiles/translations/QC, TTS voice lists, and analytics summaries. |
+| Route coverage | The new map covers high-traffic jobs, system/model/GPU, MCP/tool, analytics, annotations, captions, audio/TTS, settings, and AI catalogue routes while preserving existing route behavior. |
+| Guard tests | `tests/test_openapi_contract.py` now asserts the typed map stays above 80 entries and verifies representative generated response properties for `/health`, `/jobs`, `/api/gpu/status`, `/captions/qc/reading-profiles`, `/audio/tts/voices`, `/settings/llm`, and `/ai/mood-presets`. |
+| Validation | `python -m pytest tests/test_openapi_contract.py -q` -> `5 passed`; focused Ruff -> clean. |
 
 ## 2026-05-18 v4.43 ML/TTS Performance Benchmark Contract (F214)
 
@@ -817,7 +831,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 ### Phase 0 — What Pass 1 (v4.4) missed or what surfaced on deeper inspection
 
-1. **Route readiness coverage gap is larger than reported.** F100 registry covers **29** of ~1,362 routes with explicit readiness state; F115 model cards cover 47; OpenAPI typed schemas cover 30; MCP tool array covers 27. The remaining ~1,250+ routes have no machine-readable readiness state or typed response. This drives **F191** (auto-derive `FeatureRecord` from check functions) and **F192-F197** (OpenAPI / MCP / model-card coverage uplift).
+1. **Route readiness coverage gap is larger than reported.** F100/F191 registry coverage exposes **84** feature-readiness records with **67** direct route/check bindings; F115 model cards cover 47 model surfaces; F192 raises legacy OpenAPI typed response schemas to **100** route entries; MCP tool coverage is **39** curated tools after F195. The remaining ~1,200+ routes still have no machine-readable readiness state or typed response. This drives the remaining **F193-F197** OpenAPI / MCP / model-card coverage uplift.
 2. **`createSubsequence` is exposed in UXP** — Pass 1's UXP-API-gap list inferred it was missing. The deeper `@adobe/premierepro@26.3.0-beta.67` walk in Pass 2 confirmed it ships with an `ignoreTrackTargeting?` parameter. **F254** uses it.
 3. **`ProjectConverter.importFromFinalCutProXML` and `importFromOpenTimelineIO` were REMOVED in the 26.3.0-beta typings.** Export still works; round-trip import via UXP is currently impossible. This is a **new** Adobe gap report — **F261** (replacement for F186-F190 set).
 4. **UXP Hybrid Plugins** (.uxpaddon, C++ bundled per-platform) are the **only** path for some CEP-blocked features post-Sept 2026. Bolt UXP 1.3.0 (May 2026) added a win-arm64 hybrid template. **F253** is the implementation; **F251** is the per-week `@adobe/premierepro@beta` diff tracker that catches new APIs the moment Adobe ships them.
