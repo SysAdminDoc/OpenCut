@@ -16,6 +16,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Callable, Dict, List, Optional
 
+from opencut.core.caption_line_breaks import wrap_caption_text
+
 logger = logging.getLogger("opencut")
 
 # ---------------------------------------------------------------------------
@@ -146,41 +148,7 @@ def _wrap_text(text: str, max_chars: int, max_lines: int) -> str:
     """Wrap subtitle text to fit within character and line constraints."""
     if not text:
         return text
-    existing_lines = text.split("\n")
-    all_words: List[str] = []
-    for line in existing_lines:
-        all_words.extend(line.split())
-    if not all_words:
-        return text
-    lines: List[str] = []
-    current_line = ""
-    for word in all_words:
-        test = f"{current_line} {word}".strip() if current_line else word
-        if len(test) <= max_chars:
-            current_line = test
-        else:
-            if current_line:
-                lines.append(current_line)
-            current_line = word
-    if current_line:
-        lines.append(current_line)
-    if len(lines) > max_lines:
-        merged = " ".join(lines)
-        lines = []
-        chunk_size = max(1, len(merged) // max_lines)
-        pos = 0
-        for i in range(max_lines):
-            if i == max_lines - 1:
-                lines.append(merged[pos:].strip())
-            else:
-                end = pos + chunk_size
-                space_pos = merged.rfind(" ", pos, end + 10)
-                if space_pos > pos:
-                    end = space_pos
-                lines.append(merged[pos:end].strip())
-                pos = end
-        lines = [ln for ln in lines if ln]
-    return "\n".join(lines)
+    return wrap_caption_text(text, max_chars, max_lines, ellipsis=False)
 
 
 # ---------------------------------------------------------------------------

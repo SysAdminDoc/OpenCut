@@ -25,6 +25,7 @@ from pathlib import Path
 from typing import Iterable, List, Sequence
 
 from opencut.core.caption_burnin import _write_ass_file as _write_burnin_ass_file
+from opencut.core.caption_line_breaks import all_lines_within, wrap_caption_text
 from opencut.core.captions import CaptionSegment, TranscriptionResult
 from opencut.export.srt import export_ass, export_srt, has_utf8_bom
 
@@ -70,6 +71,7 @@ class CaptionScriptReport:
     burnin_ass_roundtrip: bool
     utf8_without_bom: bool
     cjk_line_break_required: bool
+    cjk_line_break_supported: bool
     warnings: List[str] = field(default_factory=list)
     failures: List[str] = field(default_factory=list)
 
@@ -272,8 +274,22 @@ def validate_caption_script_case(
         case.text,
         max_line_length=max_cjk_line_length,
     )
+    wrapped_cjk_lines = wrap_caption_text(
+        case.text,
+        max_cjk_line_length,
+        3,
+        ellipsis=False,
+    ).splitlines()
+    cjk_line_break_supported = (
+        not cjk_line_break_required
+        or (
+            len(wrapped_cjk_lines) > 1
+            and all_lines_within(wrapped_cjk_lines, max_cjk_line_length)
+        )
+    )
     if cjk_line_break_required:
-        warnings.append("CJK cue has no whitespace breakpoints; F242 owns line breaking")
+        if not cjk_line_break_supported:
+            failures.append("CJK cue has no whitespace breakpoints and F242 line breaking failed")
 
     return CaptionScriptReport(
         case_id=case.case_id,
@@ -286,6 +302,7 @@ def validate_caption_script_case(
         burnin_ass_roundtrip=burnin_ass_ok,
         utf8_without_bom=utf8_without_bom,
         cjk_line_break_required=cjk_line_break_required,
+        cjk_line_break_supported=cjk_line_break_supported,
         warnings=warnings,
         failures=failures,
     )
@@ -313,7 +330,7 @@ def build_caption_unicode_report(
         "cases": [report.as_dict() for report in case_reports],
         "known_followups": {
             "F241": "FFmpeg/libass HarfBuzz and FriBidi linkage gate",
-            "F242": "CJK no-space line breaking beyond text-preservation validation",
+            "F242": "CJK no-space line breaking handled before export/rendering",
         },
     }
 
