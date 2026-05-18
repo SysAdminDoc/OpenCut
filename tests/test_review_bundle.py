@@ -8,6 +8,7 @@ from pathlib import Path
 
 import pytest
 
+from opencut.core import marker_import as mi
 from opencut.core import review_bundle as rb
 
 
@@ -46,6 +47,8 @@ def test_bundle_contains_expected_files(sample_assets):
     assert "markers.json" in names
     assert "markers.otio" in names
     assert "review_threads.json" in names
+    assert "premiere_markers.csv" in names
+    assert "review_markers.edl" in names
     assert "captions/captions.srt" in names
     assert "media/render.mp4" in names
     assert "extras/lut.cube" in names
@@ -70,11 +73,15 @@ def test_bundle_manifest_records_per_file_hashes(sample_assets):
     assert "markers.json" in arcnames
     assert "markers.otio" in arcnames
     assert "review_threads.json" in arcnames
+    assert "premiere_markers.csv" in arcnames
+    assert "review_markers.edl" in arcnames
     assert "media/render.mp4" in arcnames
     assert "captions/captions.srt" in arcnames
     assert all(len(entry["sha256"]) == 64 for entry in payload["entries"])
     assert payload["otio_markers_basename"] == "markers.otio"
     assert payload["threads_basename"] == "review_threads.json"
+    assert payload["premiere_markers_basename"] == "premiere_markers.csv"
+    assert payload["edl_markers_basename"] == "review_markers.edl"
 
 
 def test_bundle_writes_otio_marker_timeline(sample_assets):
@@ -191,6 +198,68 @@ def test_bundle_writes_threaded_comments_and_completion_status(sample_assets):
     assert manifest["thread_count"] == 3
     assert manifest["open_thread_count"] == 1
     assert manifest["completion_status"] == "changes_requested"
+
+
+def test_bundle_writes_premiere_marker_csv_and_edl_exports(sample_assets):
+    bundle = rb.build_review_bundle(
+        output_path=sample_assets["out"],
+        job_label="Round Trip Review",
+        markers_payload={
+            "comments": [
+                {
+                    "id": "c1",
+                    "text": "Brighten this shot",
+                    "author": "Client",
+                    "timestamp_sec": 2.5,
+                    "duration_seconds": 0.5,
+                    "status": "open",
+                    "color": "Rose",
+                },
+                {
+                    "id": "c2",
+                    "parent_id": "c1",
+                    "text": "Fixed in v4",
+                    "author": "Editor",
+                    "timestamp_sec": 3.0,
+                    "status": "resolved",
+                    "color": "Green",
+                },
+            ]
+        },
+        framerate=24.0,
+    )
+
+    assert bundle.premiere_markers_path == "premiere_markers.csv"
+    assert bundle.edl_markers_path == "review_markers.edl"
+    assert bundle.marker_export_count == 2
+
+    with zipfile.ZipFile(bundle.output_path) as zf:
+        premiere_csv = zf.read("premiere_markers.csv").decode("utf-8")
+        edl = zf.read("review_markers.edl").decode("utf-8")
+        manifest = json.loads(zf.read("manifest.json").decode("utf-8"))
+
+    assert "Marker Name,Description,In,Out,Duration,Marker Color" in premiere_csv
+    assert "00:00:02:12" in premiere_csv
+    assert "Rose" in premiere_csv
+    assert "Status: open" in premiere_csv
+    assert "Parent ID: c1" in premiere_csv
+    assert "TITLE: Round Trip Review" in edl
+    assert "FCM: NON-DROP FRAME" in edl
+    assert "M: AX     ROSE     00:00:02:12 Brighten this shot" in edl
+    assert "* LOC: Brighten this shot | Status: open | Author: Client | Comment ID: c1" in edl
+    assert manifest["premiere_markers_basename"] == "premiere_markers.csv"
+    assert manifest["edl_markers_basename"] == "review_markers.edl"
+    assert manifest["marker_export_count"] == 2
+
+    csv_roundtrip = mi.parse_premiere_csv(premiere_csv, fps=24.0)
+    edl_roundtrip = mi.parse_edl(edl, fps=24.0)
+    assert [m.name for m in csv_roundtrip.markers] == ["Brighten this shot", "Fixed in v4"]
+    assert csv_roundtrip.markers[0].start_seconds == pytest.approx(2.5)
+    assert csv_roundtrip.markers[0].duration_seconds == pytest.approx(0.5)
+    assert csv_roundtrip.markers[0].color == "rose"
+    assert [m.name for m in edl_roundtrip.markers] == ["Brighten this shot", "Fixed in v4"]
+    assert edl_roundtrip.markers[0].start_seconds == pytest.approx(2.5)
+    assert edl_roundtrip.markers[0].comment.startswith("Brighten this shot")
 
 
 def test_bundle_writes_svg_drawing_annotations(sample_assets):
@@ -373,6 +442,8 @@ def test_review_bundle_route(client, csrf_token, tmp_path):
     payload = resp.get_json()
     assert payload["bundle_sha256"]
     assert payload["otio_markers_path"] == "markers.otio"
+    assert payload["premiere_markers_path"] == "premiere_markers.csv"
+    assert payload["edl_markers_path"] == "review_markers.edl"
     assert Path(payload["output_path"]).exists()
 
 
@@ -431,6 +502,9 @@ def test_review_bundle_route_reports_thread_completion(client, csrf_token, tmp_p
     assert payload["thread_count"] == 1
     assert payload["open_thread_count"] == 1
     assert payload["completion_status"] == "changes_requested"
+    assert payload["premiere_markers_path"] == "premiere_markers.csv"
+    assert payload["edl_markers_path"] == "review_markers.edl"
+    assert payload["marker_export_count"] == 2
 
 
 def test_review_bundle_route_requires_output_path(client, csrf_token):

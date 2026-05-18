@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Review Bundle Marker Exports
+
+- Added Premiere-importable marker CSV and CMX3600 marker-only EDL sidecars to F105 review bundles, generated from review comment payloads.
+- Extended bundle manifests and responses with `premiere_markers_path`, `edl_markers_path`, and `marker_export_count`; tests now round-trip those exports through the existing marker import parser.
+
 ### Added — Review Bundle Threads
 
 - Added `review_threads.json` to F105 review bundles, grouping root comments and replies with per-thread completion status and aggregate open/resolved/wontfix counts.

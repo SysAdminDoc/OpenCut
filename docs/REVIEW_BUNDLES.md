@@ -2,12 +2,16 @@
 
 OpenCut review bundles are local-first zip archives built by
 `POST /review/bundle` and `opencut.core.review_bundle.build_review_bundle`.
-They now carry three review metadata surfaces:
+They now carry five review metadata surfaces:
 
 - `markers.json` preserves the original OpenCut marker/comment payload for
   backward compatibility with existing automation.
 - `markers.otio` is an OpenTimelineIO `Timeline.1` sidecar whose review notes
   are serialized as `Marker.2` objects on a timeline gap.
+- `premiere_markers.csv` is a Premiere-importable marker CSV with review
+  comment text, status, author, IDs, timecode anchors, duration, and color.
+- `review_markers.edl` is a CMX3600 marker-only EDL subset for tools that
+  prefer EDL marker transfer.
 - `review_threads.json` normalizes root comments and replies into a stable
   thread tree with per-thread and aggregate review completion status.
 - `annotations/index.json` and `annotations/*.svg` carry frame-accurate drawing
@@ -27,6 +31,13 @@ summary exposes `thread_count`, `open_thread_count`, `completed_thread_count`,
 `comment_count`, `reply_count`, and `status_counts`, so recipients can tell
 whether a bundle is ready or still has open changes without parsing the legacy
 payload shape.
+
+The Premiere/EDL sidecars are generated from the same normalized comment list
+as `markers.otio`. `premiere_markers.csv` uses `Marker Name`, `Description`,
+`In`, `Out`, `Duration`, and `Marker Color` headers that OpenCut's F102 marker
+importer already understands. `review_markers.edl` writes `M:` marker rows and
+`* LOC:` comments so the marker names and review descriptions survive a
+CSV/EDL round trip.
 
 SVG annotation overlays are deterministic bundle assets. Filenames start with
 the target frame number, for example `annotations/00000030_rect-1.svg`, and the
