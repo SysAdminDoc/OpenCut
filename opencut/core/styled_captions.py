@@ -21,6 +21,7 @@ from typing import Callable, Dict, List, Optional, Set, Tuple
 
 from opencut.helpers import get_ffmpeg_path
 
+from .caption_line_breaks import caption_layout_tokens
 from .captions import TranscriptionResult, Word
 
 logger = logging.getLogger("opencut.styled_captions")
@@ -1161,7 +1162,7 @@ def render_styled_caption_video(
         seg = transcription.segments[seg_idx]
         seg_start_global = seg_word_map[seg_idx][0]
         words_text = ([w.text for w in seg.words]
-                      if seg.words else seg.text.strip().split())
+                      if seg.words else caption_layout_tokens(seg.text))
 
         layouts = layout_caption_text(
             words_text, font, max_text_width, video_width, y_base,
