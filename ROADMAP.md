@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.40
+**Version**: 4.41
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -88,8 +88,22 @@
 > **v4.39 status (2026-05-18, thirty-sixth pass)**: closed **F180** by adding the canonical Wave N-T / F-number governance bridge at [`.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md`](.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md). The ledger walks every Wave N, O, P, Q, R, S, and T row, assigns it to an existing F-number where one already owns the governance surface, keeps pure model-route work wave-only, and calls out the shared model-card/eval/license/UXP gates that future wave implementations must satisfy. `tests/test_wave_f_number_ledger.py` now extracts Wave N-T rows from this roadmap and fails if the ledger drifts.
 >
 > **v4.40 status (2026-05-18, thirty-seventh pass)**: closed **F213** by adding a CI-only Inno install/uninstall smoke at `scripts/smoke_inno_installer.ps1`, wiring it immediately after the Windows Inno build step in `.github/workflows/build.yml`, and pinning the destructive-script guardrails with `tests/test_inno_installer_smoke.py`. The smoke installs the generated setup EXE to a temp directory with silent/no-task flags, verifies the payload, registry key, and `~/.opencut/installer.json`, runs the generated uninstaller, and verifies cleanup. The script refuses to run outside CI unless explicitly overridden because the Inno uninstaller deletes `~/.opencut`.
+>
+> **v4.41 status (2026-05-18, thirty-eighth pass)**: closed **F215** by extending `tests/fuzz/test_parser_fuzz.py` from 5 to 13 targets: SRT time/file, CUBE LUT, voice grammar, event-moment spikes, `validate_path`/`validate_filepath`, OTIO JSON/adapter parsing, FCPXML parsing, marker CSV/Premiere CSV/EDL import, C2PA sidecar verification, plugin manifest validation, webhook HMAC signature verification, and `safe_pip_install` package-spec validation. `tests/test_fuzz_harness_targets.py` now pins the target inventory in ordinary CI, `RUN_FUZZ=1` deterministic smoke runs every target, and the pass also hardened non-object C2PA/plugin manifests plus surfaced the CUBE parser as a module-level helper.
 
 ---
+
+## 2026-05-18 v4.41 Fuzz Harness Expansion (F215)
+
+One Next-tier test-coverage item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F215 fuzz targets | DONE — `tests/fuzz/test_parser_fuzz.py` now exposes 13 targets, adding the 8 documented surfaces: `validate_path`, `otio_parse`, `fcpxml_parse`, `marker_import`, `c2pa_sidecar`, `plugin_manifest`, `webhook_signature`, and `safe_pip_install`. |
+| Parser hardening | C2PA sidecar verification now rejects non-object manifests, ignores path components in asset titles, and avoids hashing directories; plugin manifest validation now rejects non-object manifest/lock JSON. The `.cube` parser used by LUT blending is now module-level so the fuzz target exercises the actual user-supplied LUT parser. |
+| Signature/package helpers | Added `opencut/core/webhook_signature.py` for pure HMAC signing/verification and `security.validate_safe_pip_package()` so fuzzing the runtime install guard never invokes pip. |
+| Guard tests | `tests/test_fuzz_harness_targets.py` pins the 13-target inventory, pure webhook signature round-trip, safe package-spec validation, and the new non-object manifest guards. The test is wired into release smoke. |
+| Validation | `python -m pytest tests/test_fuzz_harness_targets.py tests/fuzz/test_parser_fuzz.py tests/test_c2pa_sidecar.py tests/test_plugin_manifest.py -q` -> `37 passed, 13 skipped`; `RUN_FUZZ=1 python -m pytest tests/fuzz/test_parser_fuzz.py -q` -> `13 passed`; focused Ruff -> clean. |
 
 ## 2026-05-18 v4.40 Inno Install/Uninstall Smoke (F213)
 
@@ -813,7 +827,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: F223 RTL/CJK validation suite, F238 PSE hue checker, F239 Microsoft ai-audio-descriptions, F242 ICU4X CJK line breaking
 - Packaging: F200-F213 installer rationalisation + macOS notarisation tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
-- Tests: F211 launcher smoke + [x] F213 Inno smoke + F214 ML/TTS perf benchmarks + F215 fuzz extend + F216 race test + F217 UXP contract test
+- Tests: F211 launcher smoke + [x] F213 Inno smoke + F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + F216 race test + F217 UXP contract test
 - Local LAN review: F231 mDNS+Caddy+HMAC portal + F232 Headscale + F233 Atom feed + webhook + F234 croc/rclone delivery
 - Docs: F198 CEP-only route catalogue + F260 UXP migration risk dashboard
 

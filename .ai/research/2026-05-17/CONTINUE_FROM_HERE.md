@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 38)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 39)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-18 (after Pass 37; Passes 1-34 all ran on 2026-05-17)
-**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, Pass 33 closed F200 + F211, Pass 34 closed F217 (UXP BackendClient HTTP-shape contract), Pass 35 closed F121/F122/F127a/F130/F133/F135 (dependency security floor + Python 3.11 source-install floor), Pass 36 closed F180 (Wave N-T / F-number governance ledger), and Pass 37 closed F213 (Inno install/uninstall smoke in CI). This file documents deferred research/product work for a future Pass 38+, not a broken or incomplete research run.
+**Last update:** 2026-05-18 (after Pass 38; Passes 1-34 all ran on 2026-05-17)
+**Session state:** all mandated artefacts exist, Passes 4-29 closed F261/F262/F270/F264/F266/F199/F191/F197/F195/F202-tooling/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F259/F251/F147/F131/F137/F139/F126/F181/F185/F140/F123/F128/F184/F178, Pass 30 closed F177 model_cards sweep gates, Pass 31 closed F176 eval-dataset catalogue, Pass 32 added the F176 follow-up download runner, Pass 33 closed F200 + F211, Pass 34 closed F217 (UXP BackendClient HTTP-shape contract), Pass 35 closed F121/F122/F127a/F130/F133/F135 (dependency security floor + Python 3.11 source-install floor), Pass 36 closed F180 (Wave N-T / F-number governance ledger), Pass 37 closed F213 (Inno install/uninstall smoke in CI), and Pass 38 closed F215 (fuzz harness expansion + parser hardening). This file documents deferred research/product work for a future Pass 39+, not a broken or incomplete research run.
 
 ---
 
@@ -15,12 +15,22 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md and now F-number-tiered by `.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md` (F180).
 
-### Pass 38 entry point
+### Pass 39 entry point
 
-1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F200, F211, F213, F217, F251, F259 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. The next no-network items to consider: **F215** fuzz harness extensions (M-effort, 8 documented targets including `validate_path`, OTIO parse, FCP XML, marker import, C2PA sidecar, plugin manifest, webhook sig, `safe_pip_install`), **F216** concurrent job-cancellation race test (M-effort). Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
+1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F200, F211, F213, F215, F217, F251, F259 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. The next no-network item to consider is **F216** concurrent job-cancellation race test (M-effort). Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
 2. **F198 is already effectively closed by Pass 3 artefacts.** `CEP_UXP_PARITY_MATRIX.md` maps all 18 `ocXxx` JSX functions and identifies only two truly CEP-only calls; avoid redoing that pass unless Adobe typings changed.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.11/3.12/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
+
+### Pass 38 checkpoint
+
+| Item | Status |
+|---|---|
+| F215 | **DONE** — `tests/fuzz/test_parser_fuzz.py` now exposes 13 targets, adding `validate_path`, OTIO parse, FCPXML parse, marker import, C2PA sidecar, plugin manifest, webhook signature, and `safe_pip_install` package validation to the existing SRT/CUBE/voice/event targets. |
+| Parser hardening | C2PA verify rejects non-object manifests and avoids path-component asset titles; plugin manifest validation rejects non-object manifest/lock JSON; the `.cube` parser used by LUT blending is now module-level for the fuzz target. |
+| Guard tests | `tests/test_fuzz_harness_targets.py` pins target inventory, safe package validation, webhook HMAC helper round-trip, and non-object manifest guards; wired into `scripts/release_smoke.py`. |
+| Validation | PASS — focused pytest `37 passed, 13 skipped`; `RUN_FUZZ=1` deterministic fuzz smoke `13 passed`; focused Ruff clean. |
+| Files to review | `tests/fuzz/test_parser_fuzz.py`, `tests/test_fuzz_harness_targets.py`, `opencut/core/webhook_signature.py`, `opencut/security.py`, `opencut/core/c2pa_sidecar.py`, `opencut/core/plugin_manifest.py`, `opencut/core/lut_library.py`, `scripts/release_smoke.py`, ROADMAP.md v4.41, PROJECT_CONTEXT.md, CHANGELOG.md, and this file. |
 
 ### Pass 37 checkpoint
 
@@ -234,7 +244,7 @@ This section is preserved because Pass 3/4 used it as the checklist. See §7 and
 2. **Run `python scripts/release_smoke.py --json`** end-to-end and capture which steps actually fail. The v4.3 audit listed several failing steps that may have been fixed by the F099/F098/F112 commits.
 3. **Verify cross-platform launcher files exist**: `OpenCut-Server.command` (macOS), `OpenCut-Server.sh` (Linux). Pass 2 inferred from Wave I but did not list them. Run `ls Z:/repos/OpenCut | grep Server` and `chmod +x` if needed.
 4. **Read `extension/com.opencut.uxp/uxp-api-notes.md`** — internal CEP-vs-UXP comparison the team maintains. Cross-reference against Pass 2 UXP subagent §1-§10 findings.
-5. **Walk `tests/fuzz/test_parser_fuzz.py`** — audit which validators have fuzz coverage vs F215's 8 proposed targets.
+5. **Walk `tests/fuzz/test_parser_fuzz.py`** — DONE in Pass 38; F215 expanded the harness to 13 targets and added an inventory gate.
 6. **Inspect `opencut/preflight.py`** (180 lines) and **`opencut/workers.py`** — Pass 2 didn't read these. Likely covers the GPU semaphore + WorkerPool architecture.
 7. **Inspect `opencut/journal.py`** — Operation Journal feature referenced in CLAUDE.md, not deeply understood. Has its own blueprint (`journal` — 5 routes per manifest).
 8. **Inspect `tests/conftest.py`** to understand the Flask test fixture pattern + CSRF fixture.

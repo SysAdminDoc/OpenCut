@@ -83,9 +83,9 @@ These guard against silent perf regressions that the 50% coverage floor cannot c
 
 ### 3.8 Fuzz coverage
 
-`tests/fuzz/test_parser_fuzz.py` already covers SRT time, SRT file, CUBE LUT, voice grammar, event-moment spike parsers (5 targets). Atheris-gated, opt-in via `RUN_FUZZ=1`.
+Pass 38 closed F215: `tests/fuzz/test_parser_fuzz.py` now covers SRT time, SRT file, CUBE LUT, voice grammar, event-moment spike parsers, `validate_path` / `validate_filepath`, OTIO JSON/adapter parsing, FCPXML parsing, marker import, C2PA sidecar verification, plugin manifest validation, webhook HMAC signature verification, and `safe_pip_install` package-spec validation (13 targets). Atheris-gated, opt-in via `RUN_FUZZ=1`, with `tests/test_fuzz_harness_targets.py` pinning the inventory in normal CI.
 
-Missing fuzz targets that would be **high value** for an HTTP server handling user file paths:
+Previously missing fuzz targets that were **high value** for an HTTP server handling user file paths:
 - `validate_path` / `validate_filepath` (the F069/F070 hardening surface — explicitly noted in v4.3 audit)
 - OTIO XML/JSON parsing (F104 / F126 OTIO-Plugins-related)
 - FCP XML transition writer (F104)
@@ -95,7 +95,7 @@ Missing fuzz targets that would be **high value** for an HTTP server handling us
 - Webhook signature verifier
 - safe_pip_install URL/path checker
 
-**F215 — extend fuzz harness with 8 additional targets** (M).
+**[x] F215 — extend fuzz harness with 8 additional targets** (M). Closed in Pass 38.
 
 ### 3.9 Concurrency / race conditions
 
@@ -138,7 +138,7 @@ This is a single F number: **F205**, already on the Now tier.
 | F212 | WPF installer test suite (xUnit + headless install) | Later | XL |
 | [x] F213 | Inno Setup install/uninstall smoke in CI | Closed Pass 37 | M |
 | F214 | Extend F128 with ML + TTS perf benchmarks | Next | M |
-| F215 | Extend fuzz harness with 8 additional targets | Next | M |
+| [x] F215 | Extend fuzz harness with 8 additional targets | Closed Pass 38 | M |
 | F216 | Concurrent job-cancellation race test | Next | M |
 | F217 | UXP backend-client contract test | Next | S |
 | F218 | Import-order stability test for blueprint registration | Done in Pass 15 | S |

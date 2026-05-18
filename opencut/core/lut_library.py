@@ -761,6 +761,34 @@ def _apply_cdf_transfer(value, ref_cdf, strength):
     return _clamp(result)
 
 
+def _parse_cube(path):
+    """Parse a .cube LUT file into ``(values, lut_size)``.
+
+    Kept as a module-level helper so the fuzz harness can exercise malformed
+    user-provided LUT files without going through the blending workflow.
+    """
+    values = []
+    lut_size = 0
+    with open(path, "r", encoding="utf-8") as f:
+        for line in f:
+            line = line.strip()
+            if line.startswith("LUT_SIZE"):
+                parts = line.split()
+                if len(parts) >= 2:
+                    try:
+                        lut_size = int(parts[-1])
+                    except ValueError:
+                        pass
+            elif line and not line.startswith("#") and not line.startswith("TITLE") and not line.startswith("DOMAIN"):
+                parts = line.split()
+                if len(parts) == 3:
+                    try:
+                        values.append((float(parts[0]), float(parts[1]), float(parts[2])))
+                    except ValueError:
+                        pass
+    return values, lut_size
+
+
 # ---------------------------------------------------------------------------
 # LUT Blending (mix any two LUTs with a slider)
 # ---------------------------------------------------------------------------
@@ -802,29 +830,6 @@ def blend_luts(
 
     if on_progress:
         on_progress(10, "Loading LUTs...")
-
-    # Parse both .cube files
-    def _parse_cube(path):
-        values = []
-        lut_size = 0
-        with open(path, "r", encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("LUT_SIZE"):
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        try:
-                            lut_size = int(parts[-1])
-                        except ValueError:
-                            pass
-                elif line and not line.startswith("#") and not line.startswith("TITLE") and not line.startswith("DOMAIN"):
-                    parts = line.split()
-                    if len(parts) == 3:
-                        try:
-                            values.append((float(parts[0]), float(parts[1]), float(parts[2])))
-                        except ValueError:
-                            pass
-        return values, lut_size
 
     vals_a, size_a = _parse_cube(cube_a)
     vals_b, size_b = _parse_cube(cube_b)
