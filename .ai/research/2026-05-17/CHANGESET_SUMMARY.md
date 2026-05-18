@@ -192,6 +192,25 @@ coverage, focused Ruff, `py_compile`, and release-smoke `pytest-fast`
 
 ---
 
+## 2026-05-18 Pass 60 Addendum — F252.2 UXP Host Action Dispatcher
+
+**Functional changes:** Added the next bounded F252 migration slice: a live UXP
+host-action dispatcher for the catalogued direct `ocXxx` actions, exposed for
+the upcoming WebView bridge without switching the production manifest.
+
+| Path | Change |
+|---|---|
+| `extension/com.opencut.uxp/main.js` | Adds `UXP_DIRECT_HOST_ACTIONS`, `CEP_FALLBACK_HOST_ACTIONS`, `PProBridge.executeHostAction()`, `PProBridge.hostActionStatus()`, marker/project/bin/playhead helper methods, and `window.OpenCutUXPHost`. |
+| `tests/test_uxp_host_action_dispatch.py` | Pins the direct action map against `opencut/_generated/cep_uxp_parity.json`, verifies every direct action is dispatched, preserves explicit CEP fallback handling, and prevents the direct dispatcher from drifting back to `evalScript`/`CSInterface`. |
+| `scripts/release_smoke.py` | Adds the dispatcher guardrail test to the focused release gate. |
+| `docs/UXP_MIGRATION.md`, `CHANGELOG.md`, `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CONTINUE_FROM_HERE.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md` | Synced roadmap/state/docs for F252.2 dispatcher progress while leaving F252 open for UDT/live cutover. |
+
+**Validation:** focused dispatcher tests, focused release-smoke unit coverage,
+`py_compile`, focused Ruff, `node --check extension\com.opencut.uxp\main.js`,
+and release-smoke `pytest-fast` (`627 passed`) passed locally.
+
+---
+
 ## 7.5 Pass 2 additions (same day, second autonomous research run)
 
 Pass 2 added 5 new artefacts + extended 6 existing ones + appended ROADMAP.md v4.5 section + updated PROJECT_CONTEXT.md + wrote CONTINUE_FROM_HERE.md.
