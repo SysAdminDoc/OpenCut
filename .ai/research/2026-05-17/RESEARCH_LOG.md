@@ -31,6 +31,14 @@ Validation evidence for the pass: focused F258 tests (`6 passed`), focused UXP/r
 
 ---
 
+## Pass 66 implementation note (2026-05-18)
+
+F260 was closed from local F198 parity catalogue evidence. `build_dashboard_manifest()` derives the dashboard from `CEP_UXP_PARITY`, `dump_uxp_migration_dashboard` writes repository and panel artifacts, and the UXP Settings tab loads the bundled JSON to show direct UXP, fallback, high-risk, and per-action replacement-plan status.
+
+Validation evidence for the pass: focused F260 tests (`7 passed`), focused UXP/release-smoke slice (`55 passed`), touched Python compile, focused Ruff, dashboard sync check, UXP JS syntax check, and release-smoke `pytest-fast` (`660 passed`).
+
+---
+
 ## 1. Phases executed
 
 | Phase | What | Output |
@@ -938,4 +946,5 @@ EncoderManager APIs.
 F255 is complete for repository-side UXP EncoderManager dispatch and covered by
 the local release-smoke `pytest-fast` gate. Pass 63 later closed F256
 Transcript APIs, Pass 64 closed F257 Object Mask detection, and Pass 65 closed
-F258 AAF export.
+F258 AAF export. Pass 66 closed the F260 migration risk dashboard that tracks
+the remaining CEP fallback and UDT/hybrid work.

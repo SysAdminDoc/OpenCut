@@ -4745,6 +4745,7 @@ function bindEvents() {
 
   // ── Settings: Engine Registry ──
   document.getElementById("uxpRefreshEnginesBtn")?.addEventListener("click", uxpLoadEngines);
+  document.getElementById("uxpRefreshMigrationRiskBtn")?.addEventListener("click", uxpLoadMigrationRisk);
 }
 
 // ─────────────────────────────────────────────────────────────
@@ -5242,6 +5243,100 @@ async function uxpLoadEngines() {
 }
 
 // ─────────────────────────────────────────────────────────────
+// UXP Migration Risk Dashboard
+// ─────────────────────────────────────────────────────────────
+function migrationStatusLabel(status) {
+  return ({
+    direct_uxp: "Direct UXP",
+    partial_uxp: "Partial UXP",
+    cep_only: "CEP fallback",
+    different_mechanism: "Different mechanism",
+  })[status] || status;
+}
+
+function migrationStateClass(row) {
+  if (row.risk === "high" || row.status === "cep_only") return "warning";
+  if (row.status === "partial_uxp" || row.risk === "medium") return "manual";
+  return "auto";
+}
+
+async function uxpLoadMigrationRisk() {
+  const grid = document.getElementById("uxpMigrationRiskGrid");
+  if (!grid) return;
+  setTextAndTitle("settingsMigrationDirectValue", "Loading…", "Loading direct UXP host-action coverage.");
+  setTextAndTitle("settingsMigrationFallbackValue", "Loading…", "Loading CEP fallback count.");
+  setTextAndTitle("settingsMigrationRiskValue", "Loading…", "Loading high-risk migration count.");
+  setSettingsStatus("settingsMigrationStatus", "Loading UXP migration risk data…", "working");
+  grid.innerHTML = `
+    <div class="oc-empty-state oc-empty-state-inline">
+      <div class="oc-empty-state-kicker">Migration risk</div>
+      <p>Loading CEP and UXP host-action coverage…</p>
+    </div>`;
+
+  try {
+    const response = await fetch(`uxp-migration-dashboard.json?ts=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const manifest = await response.json();
+    const summary = manifest.summary || {};
+    const rows = Array.isArray(manifest.rows) ? manifest.rows : [];
+    const direct = Number(summary.direct_uxp ?? 0);
+    const partial = Number(summary.partial_uxp ?? 0);
+    const fallback = Number(summary.cep_only ?? 0);
+    const highRisk = Number(summary.high_risk ?? 0);
+
+    setTextAndTitle("settingsMigrationDirectValue", `${direct} direct`, `${direct} host actions are covered by direct UXP APIs.`);
+    setTextAndTitle("settingsMigrationFallbackValue", `${fallback} fallback`, `${fallback} host actions still require CEP or hybrid handling.`);
+    setTextAndTitle("settingsMigrationRiskValue", `${highRisk} high`, `${highRisk} host actions are high-risk migration items.`);
+
+    if (!rows.length) {
+      grid.innerHTML = `
+        <div class="oc-empty-state oc-empty-state-inline">
+          <div class="oc-empty-state-kicker">Migration data empty</div>
+          <p>The generated migration dashboard did not contain host-action rows.</p>
+        </div>`;
+      setSettingsStatus("settingsMigrationStatus", "Migration dashboard is empty. Regenerate the F260 dashboard artifact.", "warning");
+      return;
+    }
+
+    grid.innerHTML = rows.map((row) => {
+      const statusLabel = migrationStatusLabel(row.status);
+      const stateClass = migrationStateClass(row);
+      const tags = [
+        row.risk ? `Risk: ${row.risk}` : "",
+        row.needs_hybrid ? "Hybrid candidate" : "",
+        Array.isArray(row.f_numbers) && row.f_numbers.length ? row.f_numbers.join(", ") : "",
+      ].filter(Boolean).join(" | ");
+      const summaryText = `${row.role || "Host action"} ${row.replacement_plan || row.uxp_path || ""}`.trim();
+      return `<div class="oc-engine-row">
+        <div class="oc-engine-copy">
+          <div class="oc-engine-title-row">
+            <span class="oc-engine-domain">${UIController.escapeHtml(row.name || "Unknown action")}</span>
+            <span class="oc-engine-state is-${UIController.escapeHtml(stateClass)}">${UIController.escapeHtml(statusLabel)}</span>
+          </div>
+          <p class="oc-engine-meta">${UIController.escapeHtml(summaryText)}</p>
+          <p class="oc-engine-meta">${UIController.escapeHtml(tags)}</p>
+        </div>
+      </div>`;
+    }).join("");
+
+    const status = fallback || partial || highRisk
+      ? `${fallback} CEP fallback and ${partial} partial UXP host actions remain.`
+      : "All catalogued host actions are direct UXP or resolved through non-CEP mechanisms.";
+    setSettingsStatus("settingsMigrationStatus", status, fallback || highRisk ? "warning" : "success");
+  } catch (e) {
+    setTextAndTitle("settingsMigrationDirectValue", "Unavailable", "OpenCut could not load the generated UXP migration dashboard.");
+    setTextAndTitle("settingsMigrationFallbackValue", "Unavailable", "OpenCut could not load CEP fallback count.");
+    setTextAndTitle("settingsMigrationRiskValue", "Refresh needed", "Refresh after regenerating or packaging the dashboard artifact.");
+    setSettingsStatus("settingsMigrationStatus", "Migration dashboard could not be loaded. Regenerate the F260 dashboard artifact, then refresh.", "error");
+    grid.innerHTML = `
+      <div class="oc-empty-state oc-empty-state-inline">
+        <div class="oc-empty-state-kicker">Migration data unavailable</div>
+        <p>OpenCut could not load the bundled UXP migration dashboard right now.</p>
+      </div>`;
+  }
+}
+
+// ─────────────────────────────────────────────────────────────
 // Application init
 // ─────────────────────────────────────────────────────────────
 async function loadLlmSettings() {
@@ -5399,6 +5494,7 @@ async function initApp() {
   updateWorkspaceOverview();
   updateDeliverablesSummary();
   updateTimelineReadiness();
+  await uxpLoadMigrationRisk();
 
   // Initial connection check
   const alive = await checkConnection();

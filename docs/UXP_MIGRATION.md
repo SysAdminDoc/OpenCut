@@ -108,6 +108,7 @@ UXP Architecture (target):
 - [x] F256 `Transcript.hasTranscript` / `querySupportedLanguages` helpers for caption-QC host context
 - [x] F257 `ObjectMaskUtils.hasObjectMask` helpers for active-sequence and project-level mask detection
 - [x] F258 `ProjectConverter.exportAAF` active-sequence export helper with `AAFExportOptions`
+- [x] F260 generated UXP migration risk dashboard in Settings, sourced from the F198 CEP/UXP parity catalogue
 - [ ] Live manifest switch to the WebView entrypoint after an in-Premiere UDT smoke pass
 - [ ] Test CSInterface shim with CEP main.js in WebView
 - [ ] Replace `cep_node.require("child_process")` calls with UXP alternatives
@@ -132,6 +133,8 @@ UXP Architecture (target):
 - `tests/test_uxp_transcript_api_integration.py` — Static guardrails for the F256 Transcript API helper contract
 - `tests/test_uxp_object_mask_api_integration.py` — Static guardrails for the F257 ObjectMaskUtils helper contract
 - `tests/test_uxp_aaf_export_integration.py` — Static guardrails for the F258 ProjectConverter AAF export contract
+- `opencut/_generated/uxp_migration_dashboard.json` and `extension/com.opencut.uxp/uxp-migration-dashboard.json` — F260 generated migration dashboard artifacts
+- `tests/test_uxp_migration_dashboard.py` — Static guardrails for the F260 dashboard generator, bundled panel JSON, and Settings UI surface
 
 ## Risk Assessment
 - **Low risk:** Backend communication (fetch works natively in UXP)

@@ -78,6 +78,16 @@ Every source consulted during this research pass. Local sources have absolute pa
 | R65-L03 | `C:\Users\--\repos\OpenCut\scripts\release_smoke.py` — `pytest-fast` registration for the AAF export guardrail | 2026-05-18 |
 | R65-L04 | `@adobe/premierepro@26.3.0-beta.67` npm package, unpacked `package/src/premierepro.d.ts` — `ProjectConverter.exportAAF`, `AAFExportOptions`, and `Constants.AAFExportAudioFormat` typing evidence | 2026-05-18 |
 
+### Pass 66 local evidence (2026-05-18)
+
+| ID | Source | Inspected |
+|---|---|---|
+| R66-L01 | `C:\Users\--\repos\OpenCut\opencut\core\cep_uxp_parity.py` — F260 dashboard builder derived from the F198 parity catalogue | 2026-05-18 |
+| R66-L02 | `C:\Users\--\repos\OpenCut\opencut\tools\dump_uxp_migration_dashboard.py` — generator and sync-check CLI | 2026-05-18 |
+| R66-L03 | `C:\Users\--\repos\OpenCut\opencut\_generated\uxp_migration_dashboard.json` and `C:\Users\--\repos\OpenCut\extension\com.opencut.uxp\uxp-migration-dashboard.json` — generated dashboard artifacts | 2026-05-18 |
+| R66-L04 | `C:\Users\--\repos\OpenCut\extension\com.opencut.uxp\index.html` and `main.js` — Settings-tab dashboard surface | 2026-05-18 |
+| R66-L05 | `C:\Users\--\repos\OpenCut\tests\test_uxp_migration_dashboard.py` — static and CLI F260 guardrails | 2026-05-18 |
+
 ---
 
 ## External evidence — Premiere / UXP / CEP
