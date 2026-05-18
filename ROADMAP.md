@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.29
+**Version**: 4.30
 **Updated**: 2026-05-17
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -66,6 +66,21 @@
 > **v4.28 status (2026-05-17, twenty-fifth pass)**: closed two more Now-tier items in one batch: **F137** (pinned the `mcp` extra to `>=1.26,<2` in `pyproject.toml` so the pre-alpha MCP 2.x rewrite cannot be pulled in by transitive resolution; pinned by `tests/test_mcp_sdk_pin.py`) and the SRT-in / SRT-out completion of **F139** (`POST /captions/translate` now accepts `srt_path` and `srt_content` as alternatives to a raw `segments` list, emits translated SRT when the caller passes `srt_path` or `output_srt=true`, writes to disk when `srt_output_path` is supplied, and honours the F243 `srt_legacy_bom` toggle). 19 new tests across `tests/test_mcp_sdk_pin.py` (3) and `tests/test_captions_translate_srt.py` (16). Release smoke green (`50 gate tests passed`).
 >
 > **v4.29 status (2026-05-17, twenty-sixth pass)**: closed three more cleanup items: **F126** (`opencut[otio]` and `opencut[all]` now pin `otio-aaf-adapter>=0.6,<1` so the AAF export path keeps working after the OTIO 0.15+ adapter split), **F181** (`scripts/bootstrap_check.py` now has a `_resolve_python_for_subprocess()` helper that detects broken UV-style trampolines and falls back to a working system Python on PATH; `check_version_sync` translates the `FileNotFoundError`/`OSError`/`TimeoutExpired` paths into actionable remediation hints), and **F185** (`features.md` now opens with an "Aspirational catalogue — not a ship promise" banner that cross-links ROADMAP.md and FEATURES_RECONCILIATION.md and codifies the "ROADMAP.md wins / the code wins" precedence rule). 13 new tests across `tests/test_otio_aaf_adapter_pin.py` (5), `tests/test_bootstrap_check.py` (+4), and `tests/test_features_md_banner.py` (4). Release smoke green (15 chained gates, `51 gate tests passed`).
+>
+> **v4.30 status (2026-05-17, twenty-seventh pass)**: closed two more Now-tier items: **F140** (C2PA 2.3 alignment — sidecar manifests now record `c2pa_spec_version="2.3"`, the action vocabulary tuple covers the C2PA 2.3 documented set, unknown actions tolerate-but-warn, optional `cloud_trust_list` and `live`/`software_agent` fields ship, default `CLAIM_GENERATOR_DEFAULT` advertises the spec version) and **F123** (audioop / pydub Python 3.13 compat — `opencut.core.audioop_shim.install_audioop_shim()` returns a structured status and aliases `audioop_lts` into `sys.modules["audioop"]` when needed; pydub dropped from `[standard]`/`[audio]`/`[all]` extras because the OpenCut tree has zero pydub imports). 17 new/extended tests across `tests/test_c2pa_sidecar.py` (+8) and `tests/test_audioop_shim.py` (9). Release smoke green (15 chained gates, `52 gate tests passed`).
+
+---
+
+## 2026-05-17 v4.30 C2PA 2.3 Alignment + audioop/pydub Python 3.13 Compat (F140, F123)
+
+Two Now-tier items closed in one batch.
+
+| Surface | Status |
+|---|---|
+| F140 C2PA 2.3 | DONE — `opencut/core/c2pa_sidecar.py` now records `c2pa_spec_version="2.3"` and `manifest_spec="0.2-sidecar"` on every emitted sidecar. New `C2PA_ACTION_VOCABULARY` tuple covers the C2PA 2.3 documented action set (`c2pa.created`, `c2pa.captioned`, `c2pa.transcribed`, `c2pa.translated`, `c2pa.cropped`, `c2pa.dubbed`, `c2pa.published`, etc.). Unknown action strings still serialise but get flagged under `warnings`. New optional fields: `cloud_trust_list` (URL propagated for downstream verifiers; OpenCut never resolves it), `live` (livestream provenance), `software_agent` (per-action tool identity). `CLAIM_GENERATOR_DEFAULT` now advertises `OpenCut/1.32.0 (sidecar; c2pa-spec 2.3)`. 8 new tests in `tests/test_c2pa_sidecar.py` pin the spec version, action vocabulary contract, warning emission, cloud-trust-list propagation, and claim-generator string. |
+| F123 audioop / pydub 3.13 | DONE — `opencut/core/audioop_shim.py` exposes `install_audioop_shim()` that no-ops on Python <3.13, detects already-present stdlib audioop on 3.13, aliases `audioop_lts` into `sys.modules["audioop"]` when present, and surfaces an actionable `needs_install` hint otherwise. `pydub>=0.25,<1` removed from `[standard]`, `[audio]`, and `[all]` extras (the OpenCut tree has zero `import pydub` calls — the dependency was vestigial). `routes/system.py` keeps the pydub availability probe as informational metadata for the UI. `tests/test_audioop_shim.py` (9) covers the shim contract, the pyproject.toml retirement, and an AST guard against new pydub imports. |
+| Test coverage | 17 new tests; both files wired into release-smoke `pytest-fast`. |
+| Validation | `python -m pytest tests/test_c2pa_sidecar.py tests/test_audioop_shim.py -q` → `27 passed`. `python scripts/release_smoke.py --skip pip-audit --skip npm-advisory` → all 15 chained gates `PASS`, `52 gate tests passed`. Ruff `opencut/` scope clean. |
 
 ---
 
