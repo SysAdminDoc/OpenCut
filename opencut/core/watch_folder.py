@@ -126,12 +126,44 @@ def load_watch_configs() -> List[WatchFolderConfig]:
         return []
 
 
+_configs_io_lock = threading.Lock()
+
+
 def save_watch_configs(configs: List[WatchFolderConfig]):
-    """Persist watch folder configurations to ~/.opencut/watch_folders.json."""
+    """Persist watch folder configurations to ~/.opencut/watch_folders.json.
+
+    Uses an atomic mkstemp + fsync + os.replace cycle under a
+    module-level lock so concurrent register/unregister calls cannot
+    interleave partial writes (the file is small but a crash mid-flush
+    would still leave a zero-byte config that locks the user out of
+    their saved hot folders on next startup).
+    """
+    import tempfile
+
     _ensure_opencut_dir()
     data = [asdict(c) for c in configs]
-    with open(_CONFIGS_PATH, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2)
+    with _configs_io_lock:
+        parent = os.path.dirname(_CONFIGS_PATH) or OPENCUT_DIR
+        fd, tmp_path = tempfile.mkstemp(
+            dir=parent,
+            prefix=os.path.basename(_CONFIGS_PATH) + ".",
+            suffix=".tmp",
+        )
+        try:
+            with os.fdopen(fd, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+                f.flush()
+                try:
+                    os.fsync(f.fileno())
+                except OSError:
+                    pass
+            os.replace(tmp_path, _CONFIGS_PATH)
+        except BaseException:
+            try:
+                os.unlink(tmp_path)
+            except OSError:
+                pass
+            raise
 
 
 # ---------------------------------------------------------------------------

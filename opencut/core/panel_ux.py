@@ -451,11 +451,42 @@ def _load_completed_walkthroughs() -> Dict[str, float]:
     return {}
 
 
+_walkthrough_io_lock = threading.Lock()
+
+
+def _atomic_json_write(target_path: str, payload) -> None:
+    """Atomic JSON write — mkstemp + fsync + os.replace + cleanup-on-failure."""
+    import tempfile
+
+    parent = os.path.dirname(target_path) or "."
+    os.makedirs(parent, exist_ok=True)
+    fd, tmp_path = tempfile.mkstemp(
+        dir=parent,
+        prefix=os.path.basename(target_path) + ".",
+        suffix=".tmp",
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
+            fh.flush()
+            try:
+                os.fsync(fh.fileno())
+            except OSError:
+                pass
+        os.replace(tmp_path, target_path)
+    except BaseException:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
+        raise
+
+
 def _save_completed_walkthroughs(completed: Dict[str, float]) -> None:
     """Persist walkthrough completion records."""
     _ensure_dir(PANEL_DIR)
-    with open(WALKTHROUGH_FILE, "w", encoding="utf-8") as fh:
-        json.dump(completed, fh, indent=2)
+    with _walkthrough_io_lock:
+        _atomic_json_write(WALKTHROUGH_FILE, completed)
 
 
 def get_walkthrough(feature_id: str) -> Optional[Dict]:
@@ -503,6 +534,9 @@ def mark_walkthrough_completed(feature_id: str) -> bool:
 # 37.2 — Session State Persistence
 # ===================================================================
 
+_session_state_io_lock = threading.Lock()
+
+
 def save_session_state(state_json: Dict) -> Dict:
     """Save panel session state to disk."""
     _ensure_dir(PANEL_DIR)
@@ -510,8 +544,8 @@ def save_session_state(state_json: Dict) -> Dict:
         "state": state_json,
         "saved_at": time.time(),
     }
-    with open(STATE_FILE, "w", encoding="utf-8") as fh:
-        json.dump(state_record, fh, indent=2)
+    with _session_state_io_lock:
+        _atomic_json_write(STATE_FILE, state_record)
     logger.info("Session state saved")
     return state_record
 
