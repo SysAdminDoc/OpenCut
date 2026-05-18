@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Review Bundle Voice Notes and HLS Renditions
+
+- Closed F228-F230 by adding explicit voice-note attachments and optional HLS browser-scrubbing renditions to F105 review bundles.
+- Added `voice_notes/index.json`, copied voice-note audio files, `hls/index.json`, and `hls/master.m3u8` bundle surfaces, plus route response fields and docs for both.
+
 ### Added — Deepfake Detection Reconciliation
 
 - Closed F224 by registering `/ai/deepfake-detect` as the AI-facing route for the existing deepfake detector.

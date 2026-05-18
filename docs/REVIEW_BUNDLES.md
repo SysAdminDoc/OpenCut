@@ -2,7 +2,7 @@
 
 OpenCut review bundles are local-first zip archives built by
 `POST /review/bundle` and `opencut.core.review_bundle.build_review_bundle`.
-They now carry five review metadata surfaces:
+They now carry these review metadata surfaces:
 
 - `markers.json` preserves the original OpenCut marker/comment payload for
   backward compatibility with existing automation.
@@ -16,6 +16,10 @@ They now carry five review metadata surfaces:
   thread tree with per-thread and aggregate review completion status.
 - `annotations/index.json` and `annotations/*.svg` carry frame-accurate drawing
   overlays for `drawing_rect`, `drawing_circle`, and `drawing_arrow` comments.
+- `voice_notes/index.json` and `voice_notes/*` carry optional audio attachments
+  tied to review comments, timestamps, authors, and transcripts.
+- `hls/index.json`, `hls/master.m3u8`, and `hls/*.ts` carry an optional
+  browser-scrubbable proxy rendition so reviewers do not need the source file.
 
 The OTIO sidecar uses `marked_range`, `color`, and an `opencut` metadata
 namespace so downstream NLE or pipeline tools can import the timing anchor
@@ -44,6 +48,19 @@ the target frame number, for example `annotations/00000030_rect-1.svg`, and the
 index records the timestamp, frame, annotation type, status, text, and SVG path.
 The canvas defaults to 1920x1080 and can be set per bundle with
 `annotation_width` and `annotation_height`.
+
+Voice-note attachments are explicit request inputs, not paths scraped from the
+free-form marker payload. `POST /review/bundle` accepts `voice_notes` as a list
+of objects with a validated `path` plus optional `id`, `comment_id`, `author`,
+`timestamp_sec`, `duration_seconds`, and transcript `text`. The bundle stores
+only the source basename, hash, byte count, timing metadata, and in-zip audio
+path, avoiding absolute local path disclosure.
+
+HLS renditions are opt-in with `include_hls: true` and require `media_path`.
+OpenCut packages the generated VOD playlist and segments under `hls/`, plus an
+index with rendition settings and file hashes. This can be combined with
+`include_media: false` to ship a lightweight browser review bundle without
+embedding the full source render.
 
 Reference contracts:
 
