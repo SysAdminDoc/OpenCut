@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.44
+**Version**: 4.45
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,362 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -96,8 +96,22 @@
 > **v4.43 status (2026-05-18, fortieth pass)**: closed **F214** with a deterministic performance-benchmark contract for the ML / compose / TTS surfaces that F128 could not cover. `opencut/core/performance_benchmarks.py` now pins throughput specs for Whisper-family ASR, Real-ESRGAN / FlashVSR / SeedVR upscalers, declarative compose, and TTS backends, all normalized to wall-clock seconds per source or synthesised unit. `tests/test_performance_benchmark_registry.py` pins the benchmark inventory, backend matrix, opt-in env gate, validation rules, and measurement primitive; release smoke includes the registry gate while heavyweight model execution remains explicitly opt-in through `OPENCUT_RUN_PERF_BENCHMARKS=1`.
 >
 > **v4.44 status (2026-05-18, forty-first pass)**: closed **F192** by expanding the legacy `/openapi.json` typed response-schema map from 30 to **100** entries. `opencut/schemas.py` now provides reusable envelopes for jobs, settings, lists, capabilities, files, model/GPU state, tool catalogues, caption previews/profiles/QC/translation, TTS voices, and analytics. `opencut/openapi.py` maps the next high-traffic system/jobs/captions/audio/settings/analytics/tool routes onto those schemas, and `tests/test_openapi_contract.py` now pins the F192 threshold plus representative property sets in the generated OpenAPI 3.0.3 spec.
+>
+> **v4.45 status (2026-05-18, forty-second pass)**: closed **F198** by promoting the CEP↔UXP parity matrix into a code-owned catalogue and generated artifact. `opencut/core/cep_uxp_parity.py` now records all **18** `ocXxx` JSX host functions, their UXP path, migration risk, F-number ownership, and replacement plan; `opencut/_generated/cep_uxp_parity.json` provides the machine-readable artifact for F260; and `tests/test_cep_uxp_parity_catalogue.py` fails if `host/index.jsx` gains a new CEP host function without an explicit migration disposition. The pinned CEP-only surface remains **2 functions**: `ocAddNativeCaptionTrack` and `ocQeReflect`.
 
 ---
+
+## 2026-05-18 v4.45 CEP/UXP Parity Catalogue (F198)
+
+One Next-tier UXP migration visibility item closed in this pass.
+
+| Surface | Status |
+|---|---|
+| F198 catalogue | DONE — `opencut/core/cep_uxp_parity.py` records all 18 `ocXxx` JSX host functions from `extension/com.opencut.panel/host/index.jsx`. |
+| Generated artifact | `opencut/_generated/cep_uxp_parity.json` captures function count, status counts, CEP-only names, UXP path, replacement plan, risk, and F-number ownership for the F260 dashboard. |
+| CEP-only surface | Still exactly 2 functions: `ocAddNativeCaptionTrack` (blocked on native caption-track write API / F253 Hybrid Plugin) and `ocQeReflect` (retire/replace QE use cases with documented UXP APIs). |
+| Guard tests | `tests/test_cep_uxp_parity_catalogue.py` compares the catalogue against the live JSX function set, pins the two CEP-only entries, verifies docs mention both residuals, and checks the generator CLI. Release smoke includes the new test. |
+| Validation | `python -m pytest tests/test_cep_uxp_parity_catalogue.py tests/test_uxp_migration_docs.py -q` -> `7 passed`; focused Ruff -> clean. |
 
 ## 2026-05-18 v4.44 OpenAPI Response Schema Expansion (F192)
 
@@ -872,7 +886,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Packaging: F200-F213 installer rationalisation + macOS notarisation tooling + [x] F213 Inno smoke + Flatpak primary Linux + Aptabase opt-in telemetry
 - Tests: F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + F217 UXP contract test
 - Local LAN review: F231 mDNS+Caddy+HMAC portal + F232 Headscale + F233 Atom feed + webhook + F234 croc/rclone delivery
-- Docs: F198 CEP-only route catalogue + F260 UXP migration risk dashboard
+- Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 
 **Later (18 items):** F193 (OpenAPI introspection), F196 (registry as primary), F206 (PR-fast/release-full CI split), F210 (Vitest CEP/UXP utilities), F212 (WPF installer xUnit), F220-F222 (RVC + AI color grading + pacing analysis), F224 (deepfake detector), F228 (voice notes in bundles), F230 (HLS rendition), F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops).
 
