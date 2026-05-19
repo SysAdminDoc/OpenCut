@@ -46,7 +46,7 @@ def shot_aware_timing(job_id, filepath, data):
     export_format = str(data.get("format", "")).strip().lower()
     output_dir = str(data.get("output_dir", "")).strip()
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"Processing ({pct}%)")
 
     result = process_shot_aware_dicts(
@@ -211,7 +211,7 @@ def multilang_export(job_id, filepath, data):
     if not output_dir:
         output_dir = tempfile.mkdtemp(prefix="opencut_multilang_")
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"Exporting ({pct}%)")
 
     result = export_language_files(
@@ -303,7 +303,7 @@ def broadcast_export(job_id, filepath, data):
 
     segments = segments_from_dicts(segments_data)
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"Exporting ({pct}%)")
 
     result = export_broadcast(
@@ -370,7 +370,7 @@ def sdh_format(job_id, filepath, data):
         ),
     )
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"Formatting ({pct}%)")
 
     result = format_sdh(
@@ -425,7 +425,7 @@ def auto_position(job_id, filepath, data):
     export_format = str(data.get("format", "")).strip().lower()
     output_dir = str(data.get("output_dir", "")).strip()
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"Positioning ({pct}%)")
 
     result = position_subtitles(
