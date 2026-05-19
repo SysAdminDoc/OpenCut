@@ -1200,3 +1200,11 @@ Renamed `.github/workflows/build.yml` to **Release Full** and removed its `pull_
 Pass 74 closed **F210** by adding Vitest coverage around CEP/UXP panel utility seams. Added `extension/com.opencut.panel/client/panel-utils.js` for production-loaded CEP HTML escaping, ExtendScript path escaping, lazy DOM proxying, and command-palette indexing, then routed `main.js` through those helpers. Added `extension/com.opencut.uxp/uxp-utils.js` for UXP HTML escaping and safe DOM-id normalization.
 
 Added `extension/com.opencut.panel/vitest.config.mjs`, `npm test`, Vitest 4.x, and 8 tests across `extension/com.opencut.panel/tests/panel-utils.test.mjs` and `uxp-utils.test.mjs`. Release smoke now has a `panel-unit` step, Release Full runs `npm test`, PR Fast installs panel dependencies before release smoke, and `tests/test_panel_vitest_gate.py` pins the wiring. Validation passed: `npm test` (`8 passed`), npm advisory check, focused F210 Python guard tests (`3 passed`), `py_compile`, focused Ruff, release-smoke `panel-unit`, `npm run build:verify`, `npm run build`, and the PR-fast release-smoke command (`pytest-fast` 705 passed + `panel-unit`).
+
+---
+
+## Pass 81 addendum (2026-05-19)
+
+Pass 81 closed **F245-F248** by adding deterministic delivery-standard planning presets instead of executing external authoring/certification tooling from Flask. `opencut/core/delivery_standards.py` now covers Netflix IMF/Dolby Vision, DPP/broadcaster IMF, Dolby Vision Profile 5/8.1 OSS review packaging, and ADM BW64 Atmos-master preparation.
+
+Added `GET /delivery/mastering-presets` and `GET/POST /delivery/mastering-plan`, documented the contracts in `docs/DELIVERY_STANDARDS.md`, registered `tests/test_delivery_standards.py` in release smoke, and regenerated route/MCP artifacts to 1,381 routes and 1,325 opt-in route tools. Validation passed: focused delivery-standard tests (`6 passed`), focused generated-surface tests (`20 passed`), `py_compile`, and focused Ruff.

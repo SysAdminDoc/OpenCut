@@ -4,14 +4,14 @@
   "manifest_version": 1,
   "method_counts": {
     "DELETE": 12,
-    "GET": 300,
+    "GET": 302,
     "PATCH": 1,
-    "POST": 1007,
+    "POST": 1008,
     "PUT": 2
   },
   "response_schema_count": 100,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1322,
+  "tool_count": 1325,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -4185,6 +4185,66 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_context_features"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /delivery/mastering-plan"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /delivery/mastering-plan.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "delivery_master",
+        "endpoint": "delivery_master.delivery_mastering_plan",
+        "generated": true,
+        "method": "GET",
+        "path": "/delivery/mastering-plan",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_delivery_mastering_plan"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /delivery/mastering-presets"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /delivery/mastering-presets.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "delivery_master",
+        "endpoint": "delivery_master.delivery_mastering_presets",
+        "generated": true,
+        "method": "GET",
+        "path": "/delivery/mastering-presets",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_delivery_mastering_presets"
     },
     {
       "annotations": {
@@ -21843,6 +21903,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_delivery_hls"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /delivery/mastering-plan"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /delivery/mastering-plan.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "delivery_master",
+        "endpoint": "delivery_master.delivery_mastering_plan",
+        "generated": true,
+        "method": "POST",
+        "path": "/delivery/mastering-plan",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_delivery_mastering_plan"
     },
     {
       "annotations": {

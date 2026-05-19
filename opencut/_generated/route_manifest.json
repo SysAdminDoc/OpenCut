@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-19T00:06:33Z",
-  "total_routes": 1379,
+  "generated_at": "2026-05-19T00:19:04Z",
+  "total_routes": 1381,
   "blueprint_count": 101,
   "method_counts": {
     "DELETE": 13,
-    "GET": 309,
+    "GET": 311,
     "PATCH": 1,
-    "POST": 1056,
+    "POST": 1057,
     "PUT": 2
   },
   "blueprints": {
@@ -292,10 +292,10 @@
       ]
     },
     "delivery_master": {
-      "route_count": 9,
+      "route_count": 11,
       "method_counts": {
-        "GET": 2,
-        "POST": 7
+        "GET": 4,
+        "POST": 8
       },
       "sample_rules": [
         "/delivery/validate",
@@ -5701,6 +5701,23 @@
       ],
       "endpoint": "delivery.hls_package_route",
       "blueprint": "delivery"
+    },
+    {
+      "rule": "/delivery/mastering-plan",
+      "methods": [
+        "GET",
+        "POST"
+      ],
+      "endpoint": "delivery_master.delivery_mastering_plan",
+      "blueprint": "delivery_master"
+    },
+    {
+      "rule": "/delivery/mastering-presets",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "delivery_master.delivery_mastering_presets",
+      "blueprint": "delivery_master"
     },
     {
       "rule": "/delivery/news-ticker",
