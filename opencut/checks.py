@@ -935,6 +935,11 @@ def check_acestep_available() -> bool:
     return _try_import("acestep") is not None
 
 
+def check_framepack_available() -> bool:
+    """L2.1 — FramePack image-to-video (Apache-2, 6 GB VRAM)."""
+    return _try_import("framepack") is not None
+
+
 def check_wave_l(verbose=False):
     """Run all Wave L availability checks and print a summary."""
     checks = [

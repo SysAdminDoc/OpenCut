@@ -257,6 +257,7 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/audio/transcribe/moonshine",
     "/audio/music/acestep",
     "/audio/music/acestep/edit",
+    "/generate/framepack",
     "/video/upscale/smart",
     "/video/face/reshape",
     "/video/face/retouch",

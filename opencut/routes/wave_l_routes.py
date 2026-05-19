@@ -7,6 +7,7 @@ Wave L modules:
   L1.3  AI Face Reshape     — /video/face/reshape
   L1.4  AI Skin Retouch     — /video/face/retouch
   L2.3  Spark-TTS           — /audio/tts/spark
+  L2.1  FramePack I2V       — /generate/framepack
   L2.2  ACE-Step Music      — /audio/music/acestep
   L2.6  Moonshine ASR       — /audio/transcribe/moonshine
 """
@@ -526,3 +527,76 @@ def route_music_acestep_info():
         })
     except Exception as exc:
         return safe_error(exc, "music_acestep_info")
+
+
+# =============================================================
+# L2.1 — FramePack Image-to-Video
+# =============================================================
+
+@wave_l_bp.route("/generate/framepack", methods=["POST"])
+@require_csrf
+@async_job("framepack_i2v", filepath_required=True, filepath_param="image_path")
+def route_framepack_generate(job_id, filepath, data):
+    """Generate video from a single image using FramePack (6 GB VRAM).
+
+    Body params:
+      image_path       str    Path to source image (required).
+      prompt           str    Text description of motion/action.
+      duration         float  Target seconds, max 60 (default 5).
+      fps              float  Output frame rate (default 24).
+      model            str    framepack-standard or framepack-fast.
+      negative_prompt  str    Things to avoid.
+      seed             int    Random seed (-1 for random).
+      output           str    Output MP4 path (optional).
+    """
+    from opencut.core import gen_video_framepack
+    if not gen_video_framepack.check_framepack_available():
+        raise RuntimeError(
+            "FramePack is not installed. " + gen_video_framepack.INSTALL_HINT
+        )
+
+    model = str(data.get("model") or "framepack-standard").strip()
+    if model not in gen_video_framepack.FRAMEPACK_MODELS:
+        model = "framepack-standard"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_framepack.generate(
+        image_path=filepath,
+        prompt=str(data.get("prompt") or ""),
+        duration=safe_float(data.get("duration"), 5.0, min_val=1.0, max_val=60.0),
+        fps=safe_float(data.get("fps"), 24.0, min_val=8.0, max_val=60.0),
+        model=model,
+        negative_prompt=str(data.get("negative_prompt") or ""),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "duration_seconds": result.duration_seconds,
+        "fps": result.fps,
+        "width": result.width,
+        "height": result.height,
+        "model": result.model,
+        "generation_seconds": result.generation_seconds,
+        "prompt": result.prompt,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/generate/framepack/info", methods=["GET"])
+def route_framepack_info():
+    """Return FramePack availability and model catalogue."""
+    try:
+        from opencut.core import gen_video_framepack
+        return jsonify({
+            "available": gen_video_framepack.check_framepack_available(),
+            "models": gen_video_framepack.FRAMEPACK_MODELS,
+            "licence": "Apache-2.0",
+            "min_vram_gb": 6,
+            "max_duration_seconds": 60,
+            "install_hint": gen_video_framepack.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "framepack_info")
