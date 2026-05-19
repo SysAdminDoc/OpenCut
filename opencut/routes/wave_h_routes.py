@@ -49,7 +49,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.errors import error_response, safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_bool, safe_int, validate_path
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_path
 
 logger = logging.getLogger("opencut")
 
@@ -507,15 +507,54 @@ def route_reezsynth():
 
 @wave_h_bp.route("/audio/music/vidmuse", methods=["POST"])
 @require_csrf
-def route_vidmuse():
+@async_job("vidmuse")
+def route_vidmuse(job_id, filepath, data):
+    """Generate background music synchronised to video via VidMuse (CVPR 2025)."""
     from opencut.core import music_vidmuse
     if not music_vidmuse.check_vidmuse_available():
-        return _stub_503("VidMuse", music_vidmuse.INSTALL_HINT)
-    return error_response(
-        "NOT_IMPLEMENTED",
-        "VidMuse wiring ships in a future release.",
-        status=501,
+        raise RuntimeError(
+            "VidMuse is not installed. " + music_vidmuse.INSTALL_HINT
+        )
+
+    style = str(data.get("style") or data.get("style_hint") or "auto").strip().lower()
+    if style not in music_vidmuse.VIDMUSE_STYLES:
+        style = "auto"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = music_vidmuse.generate(
+        video_path=filepath,
+        duration=safe_float(data.get("duration"), 30.0, min_val=5.0, max_val=180.0),
+        style_hint=style,
+        output=str(data.get("output") or "") or None,
+        on_progress=_prog,
     )
+    return {
+        "output": result.output,
+        "bpm": result.bpm,
+        "duration": result.duration,
+        "mood": result.mood,
+        "model": result.model,
+        "generation_seconds": result.generation_seconds,
+        "notes": result.notes,
+    }
+
+
+@wave_h_bp.route("/audio/music/vidmuse/info", methods=["GET"])
+def route_vidmuse_info():
+    """Return VidMuse availability and style catalogue."""
+    try:
+        from opencut.core import music_vidmuse
+        return jsonify({
+            "available": music_vidmuse.check_vidmuse_available(),
+            "model": "vidmuse",
+            "licence": "MIT",
+            "styles": music_vidmuse.VIDMUSE_STYLES,
+            "max_duration_seconds": 180,
+            "install_hint": music_vidmuse.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "vidmuse_info")
 
 
 # ===========================================================================

@@ -264,6 +264,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     # v1.30.0 additions — Wave M (K-stubs filled)
     "/video/dub",
     "/video/highlights/sports",
+    # v1.33.0 additions — L2.4 VidMuse + L3.2/L3.5 promotions
+    "/audio/music/vidmuse",
 })
 
 
