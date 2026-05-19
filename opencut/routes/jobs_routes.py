@@ -280,6 +280,16 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/pipeline/digital_twin",
     # N2.1 — SAM 2.1 video segmentation
     "/video/segment/sam2",
+    # Wave N — inference accel + scene intel + content intel
+    "/generate/wan2.2/fast",
+    "/generate/wan2.2/i2v/quantized",
+    "/video/depth/estimate-v2",
+    "/video/depth/parallax-v2",
+    "/video/compose/depth_segment",
+    "/generate/cogvideox",
+    "/generate/cogvideox/i2v",
+    "/analyze/video/vl",
+    "/audio/speech/csm",
 })
 
 

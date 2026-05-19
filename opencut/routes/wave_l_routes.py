@@ -19,6 +19,13 @@ Wave L modules:
   M2.4  FLUX Kontext Edit   — /image/edit/kontext
   M3.2  Digital Twin        — /pipeline/digital_twin
   N2.1  SAM 2.1 Segment    — /video/segment/sam2
+  N1.1  FastVideo           — /generate/wan2.2/fast
+  N1.2  LightX2V            — /generate/wan2.2/i2v/quantized
+  N2.2  Depth-Anything-V2   — /video/depth/estimate-v2, /video/depth/parallax-v2
+  N2.3  Depth+Segment Comp  — /video/compose/depth_segment
+  N3.1  CogVideoX           — /generate/cogvideox
+  N3.2  Qwen2.5-VL          — /analyze/video/vl
+  N3.4  CSM-1B Speech       — /audio/speech/csm
 """
 from __future__ import annotations
 
@@ -1417,3 +1424,391 @@ def route_sam2_info():
         })
     except Exception as exc:
         return safe_error(exc, "sam2_info")
+
+
+# =============================================================
+# N1.1 — FastVideo Inference Acceleration
+# =============================================================
+
+@wave_l_bp.route("/generate/wan2.2/fast", methods=["POST"])
+@require_csrf
+@async_job("fastvideo", filepath_required=False)
+def route_fastvideo(job_id, filepath, data):
+    """Generate video using FastVideo distilled Wan2.2 (>50x speedup)."""
+    from opencut.core import gen_video_fastvideo
+    if not gen_video_fastvideo.check_fastvideo_available():
+        raise RuntimeError("FastVideo not installed. " + gen_video_fastvideo.INSTALL_HINT)
+
+    prompt = str(data.get("prompt") or "").strip()
+    if not prompt:
+        raise ValueError("prompt is required")
+
+    model = str(data.get("model") or "FastWan2.2-TI2V-5B").strip()
+    if model not in gen_video_fastvideo.FAST_MODELS:
+        model = "FastWan2.2-TI2V-5B"
+
+    image = str(data.get("image_path") or "").strip()
+    if image:
+        from opencut.security import validate_filepath
+        image = validate_filepath(image)
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_fastvideo.generate(
+        prompt=prompt, model=model, image_path=image,
+        duration=safe_float(data.get("duration"), 5.0, min_val=1.0, max_val=10.0),
+        negative_prompt=str(data.get("negative_prompt") or ""),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/wan2.2/fast/info", methods=["GET"])
+def route_fastvideo_info():
+    try:
+        from opencut.core import gen_video_fastvideo
+        return jsonify({
+            "available": gen_video_fastvideo.check_fastvideo_available(),
+            "models": gen_video_fastvideo.FAST_MODELS,
+            "licence": "Apache-2.0",
+            "install_hint": gen_video_fastvideo.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "fastvideo_info")
+
+
+# =============================================================
+# N1.2 — LightX2V Quantized I2V
+# =============================================================
+
+@wave_l_bp.route("/generate/wan2.2/i2v/quantized", methods=["POST"])
+@require_csrf
+@async_job("lightx2v", filepath_required=True, filepath_param="image_path")
+def route_lightx2v(job_id, filepath, data):
+    """Generate I2V with quantized/distilled Wan2.2 A14B (24 GB VRAM)."""
+    from opencut.core import gen_video_lightx2v
+    if not gen_video_lightx2v.check_lightx2v_available():
+        raise RuntimeError("LightX2V not installed. " + gen_video_lightx2v.INSTALL_HINT)
+
+    quant = str(data.get("quant") or "fp8").strip()
+    if quant not in gen_video_lightx2v.QUANT_MODES:
+        quant = "fp8"
+
+    steps = safe_int(data.get("steps"), 4)
+    if steps not in gen_video_lightx2v.STEP_PRESETS:
+        steps = 4
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_lightx2v.generate_i2v(
+        image_path=filepath, prompt=str(data.get("prompt") or ""),
+        duration=safe_float(data.get("duration"), 5.0, min_val=1.0, max_val=16.0),
+        quant=quant, steps=steps, seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/wan2.2/i2v/quantization/info", methods=["GET"])
+def route_lightx2v_info():
+    try:
+        from opencut.core import gen_video_lightx2v
+        return jsonify({
+            "available": gen_video_lightx2v.check_lightx2v_available(),
+            "quant_modes": gen_video_lightx2v.QUANT_MODES,
+            "step_presets": {str(k): v for k, v in gen_video_lightx2v.STEP_PRESETS.items()},
+            "licence": "Apache-2.0",
+            "install_hint": gen_video_lightx2v.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "lightx2v_info")
+
+
+# =============================================================
+# N2.2 — Depth-Anything-V2 Depth Estimation
+# =============================================================
+
+@wave_l_bp.route("/video/depth/estimate-v2", methods=["POST"])
+@require_csrf
+@async_job("depth_estimate_v2")
+def route_depth_estimate(job_id, filepath, data):
+    """Estimate per-frame depth maps using Depth-Anything-V2."""
+    from opencut.core import depth_anything_v2
+    if not depth_anything_v2.check_depth_anything_v2_available():
+        raise RuntimeError("Depth deps not installed. " + depth_anything_v2.INSTALL_HINT)
+
+    model = str(data.get("model") or "small").strip()
+    if model not in depth_anything_v2.DA2_MODELS:
+        model = "small"
+
+    fmt = str(data.get("output_format") or "video").strip()
+    if fmt not in ("video", "numpy"):
+        fmt = "video"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = depth_anything_v2.estimate_depth(
+        video_path=filepath, model=model, output_format=fmt,
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/video/depth/parallax-v2", methods=["POST"])
+@require_csrf
+@async_job("depth_parallax_v2")
+def route_depth_parallax(job_id, filepath, data):
+    """Generate 2.5D parallax via Depth-Anything-V2 layer separation."""
+    from opencut.core import depth_anything_v2
+    if not depth_anything_v2.check_depth_anything_v2_available():
+        raise RuntimeError("Depth deps not installed. " + depth_anything_v2.INSTALL_HINT)
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = depth_anything_v2.generate_parallax(
+        video_path=filepath,
+        shift_x=safe_float(data.get("shift_x"), 20.0, min_val=-100.0, max_val=100.0),
+        shift_y=safe_float(data.get("shift_y"), 0.0, min_val=-100.0, max_val=100.0),
+        model=str(data.get("model") or "small"),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/video/depth/info", methods=["GET"])
+def route_depth_info():
+    try:
+        from opencut.core import depth_anything_v2
+        return jsonify({
+            "available": depth_anything_v2.check_depth_anything_v2_available(),
+            "models": depth_anything_v2.DA2_MODELS,
+            "licence": "Apache-2.0",
+            "install_hint": depth_anything_v2.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "depth_info")
+
+
+# =============================================================
+# N2.3 — SAM2 + Depth Compositor Pipeline
+# =============================================================
+
+@wave_l_bp.route("/video/compose/depth_segment", methods=["POST"])
+@require_csrf
+@async_job("depth_segment_compose")
+def route_depth_segment_compose(job_id, filepath, data):
+    """SAM2 segmentation + Depth estimation + layered compositing."""
+    from opencut.core import compose_depth_segment
+    if not compose_depth_segment.check_composite_available():
+        raise RuntimeError("Pipeline deps not installed. " + compose_depth_segment.INSTALL_HINT)
+
+    prompts = data.get("prompts", [])
+    if not isinstance(prompts, list) or not prompts:
+        raise ValueError("prompts must be a non-empty list")
+
+    effects = data.get("effects", ["blur_background"])
+    if not isinstance(effects, list):
+        effects = ["blur_background"]
+
+    bg_img = str(data.get("background_image") or "").strip()
+    if bg_img:
+        from opencut.security import validate_filepath
+        bg_img = validate_filepath(bg_img)
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = compose_depth_segment.compose(
+        video_path=filepath, prompts=prompts, effects=effects,
+        background_color=str(data.get("background_color") or ""),
+        background_image=bg_img,
+        blur_strength=safe_float(data.get("blur_strength"), 15.0, min_val=1.0, max_val=99.0),
+        parallax_shift=safe_float(data.get("parallax_shift"), 20.0, min_val=-100.0, max_val=100.0),
+        sam_model=str(data.get("sam_model") or "small"),
+        depth_model=str(data.get("depth_model") or "small"),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/video/compose/depth_segment/info", methods=["GET"])
+def route_compose_info():
+    try:
+        from opencut.core import compose_depth_segment
+        return jsonify({
+            "available": compose_depth_segment.check_composite_available(),
+            "effects": compose_depth_segment.COMPOSITE_EFFECTS,
+            "install_hint": compose_depth_segment.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "compose_info")
+
+
+# =============================================================
+# N3.1 — CogVideoX T2V + I2V
+# =============================================================
+
+@wave_l_bp.route("/generate/cogvideox", methods=["POST"])
+@require_csrf
+@async_job("cogvideox_t2v", filepath_required=False)
+def route_cogvideox_t2v(job_id, filepath, data):
+    """Generate video from text using CogVideoX (12 GB VRAM)."""
+    from opencut.core import gen_video_cogvideox
+    if not gen_video_cogvideox.check_cogvideox_available():
+        raise RuntimeError("CogVideoX deps not installed. " + gen_video_cogvideox.INSTALL_HINT)
+
+    prompt = str(data.get("prompt") or "").strip()
+    if not prompt:
+        raise ValueError("prompt is required")
+
+    model = str(data.get("model") or "CogVideoX-5B").strip()
+    if model not in gen_video_cogvideox.COGVIDEOX_MODELS:
+        model = "CogVideoX-5B"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_cogvideox.generate_t2v(
+        prompt=prompt, model=model,
+        num_frames=safe_int(data.get("num_frames"), 49, min_val=8, max_val=81),
+        guidance_scale=safe_float(data.get("guidance_scale"), 6.0, min_val=1.0, max_val=15.0),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/cogvideox/i2v", methods=["POST"])
+@require_csrf
+@async_job("cogvideox_i2v", filepath_required=True, filepath_param="image_path")
+def route_cogvideox_i2v(job_id, filepath, data):
+    """Generate video from image using CogVideoX I2V."""
+    from opencut.core import gen_video_cogvideox
+    if not gen_video_cogvideox.check_cogvideox_available():
+        raise RuntimeError("CogVideoX deps not installed. " + gen_video_cogvideox.INSTALL_HINT)
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_cogvideox.generate_i2v(
+        image_path=filepath, prompt=str(data.get("prompt") or ""),
+        model=str(data.get("model") or "CogVideoX1.5-5B"),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/cogvideox/info", methods=["GET"])
+def route_cogvideox_info():
+    try:
+        from opencut.core import gen_video_cogvideox
+        return jsonify({
+            "available": gen_video_cogvideox.check_cogvideox_available(),
+            "models": gen_video_cogvideox.COGVIDEOX_MODELS,
+            "licence": "Apache-2.0",
+            "min_vram_gb": 12,
+            "install_hint": gen_video_cogvideox.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "cogvideox_info")
+
+
+# =============================================================
+# N3.2 — Qwen2.5-VL Smart Timeline Analysis
+# =============================================================
+
+@wave_l_bp.route("/analyze/video/vl", methods=["POST"])
+@require_csrf
+@async_job("qwen_vl_analyze")
+def route_vl_analyze(job_id, filepath, data):
+    """Analyze video content using Qwen2.5-VL vision-language model."""
+    from opencut.core import analyze_vl_qwen
+    if not analyze_vl_qwen.check_qwen_vl_available():
+        raise RuntimeError("Qwen VL deps not installed. " + analyze_vl_qwen.INSTALL_HINT)
+
+    analysis_type = str(data.get("analysis_type") or "describe_scenes").strip()
+    if analysis_type not in analyze_vl_qwen.ANALYSIS_TYPES:
+        analysis_type = "describe_scenes"
+
+    model = str(data.get("model") or "Qwen2.5-VL-7B").strip()
+    if model not in analyze_vl_qwen.VL_MODELS:
+        model = "Qwen2.5-VL-7B"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = analyze_vl_qwen.analyze_video(
+        video_path=filepath, analysis_type=analysis_type,
+        custom_query=str(data.get("query") or data.get("custom_query") or ""),
+        model=model,
+        max_frames=safe_int(data.get("max_frames"), 16, min_val=1, max_val=64),
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/analyze/video/vl/info", methods=["GET"])
+def route_vl_info():
+    try:
+        from opencut.core import analyze_vl_qwen
+        return jsonify({
+            "available": analyze_vl_qwen.check_qwen_vl_available(),
+            "models": analyze_vl_qwen.VL_MODELS,
+            "analysis_types": analyze_vl_qwen.ANALYSIS_TYPES,
+            "licence": "Apache-2.0",
+            "install_hint": analyze_vl_qwen.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "vl_info")
+
+
+# =============================================================
+# N3.4 — CSM-1B Conversational Speech
+# =============================================================
+
+@wave_l_bp.route("/audio/speech/csm", methods=["POST"])
+@require_csrf
+@async_job("csm_speech", filepath_required=False)
+def route_csm_speech(job_id, filepath, data):
+    """Generate contextual conversational speech using CSM-1B."""
+    from opencut.core import tts_csm
+    if not tts_csm.check_csm_available():
+        raise RuntimeError("CSM-1B not available. " + tts_csm.INSTALL_HINT)
+
+    text = str(data.get("text") or "").strip()
+    if not text:
+        raise ValueError("text is required")
+
+    context = data.get("context", [])
+    if not isinstance(context, list):
+        context = []
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = tts_csm.generate(
+        text=text, context=context,
+        speaker_id=safe_int(data.get("speaker_id"), 0, min_val=0, max_val=1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/audio/speech/csm/info", methods=["GET"])
+def route_csm_info():
+    try:
+        from opencut.core import tts_csm
+        return jsonify({
+            "available": tts_csm.check_csm_available(),
+            "model": "CSM-1B",
+            "licence": "Apache-2.0 (code); Meta Llama Community License (backbone)",
+            "requires_ack": True,
+            "install_hint": tts_csm.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "csm_info")
