@@ -920,10 +920,16 @@ def check_skin_retouch_available() -> bool:
         return False
 
 
+def check_sparktts_available() -> bool:
+    """L2.3 — Spark-TTS CPU-native zero-shot TTS (sparktts package)."""
+    return _try_import("sparktts") is not None
+
+
 def check_wave_l(verbose=False):
     """Run all Wave L availability checks and print a summary."""
     checks = [
         ("elevenlabs_tts", check_elevenlabs_available),
+        ("sparktts", check_sparktts_available),
         ("upscale_hub", check_upscale_hub_available),
         ("face_reshape", check_face_reshape_available),
         ("skin_retouch", check_skin_retouch_available),
