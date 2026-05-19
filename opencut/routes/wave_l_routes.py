@@ -7,6 +7,7 @@ Wave L modules:
   L1.3  AI Face Reshape     — /video/face/reshape
   L1.4  AI Skin Retouch     — /video/face/retouch
   L2.3  Spark-TTS           — /audio/tts/spark
+  L2.2  ACE-Step Music      — /audio/music/acestep
   L2.6  Moonshine ASR       — /audio/transcribe/moonshine
 """
 from __future__ import annotations
@@ -416,3 +417,112 @@ def route_moonshine_info():
         })
     except Exception as exc:
         return safe_error(exc, "moonshine_info")
+
+
+# =============================================================
+# L2.2 — ACE-Step Full-Song Music Generation
+# =============================================================
+
+@wave_l_bp.route("/audio/music/acestep", methods=["POST"])
+@require_csrf
+@async_job("music_acestep", filepath_required=False)
+def route_music_acestep(job_id, filepath, data):
+    """Generate full-length music (up to 4 min) with optional lyrics.
+
+    Body params:
+      prompt           str    Music description (e.g., "upbeat indie pop").
+      lyrics           str    Lyrics to align (optional).
+      genre            str    Genre hint (pop/rock/electronic/...).
+      mood             str    Mood hint (happy/sad/energetic/...).
+      duration         float  Target seconds, max 240 (default 60).
+      reference_audio  str    Style reference path (optional).
+      output           str    Output WAV path (optional).
+    """
+    from opencut.core import music_acestep
+    if not music_acestep.check_acestep_available():
+        raise RuntimeError(
+            "ACE-Step is not installed. " + music_acestep.INSTALL_HINT
+        )
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    genre = str(data.get("genre") or "pop").strip().lower()
+    mood = str(data.get("mood") or "happy").strip().lower()
+
+    ref_audio = str(data.get("reference_audio") or "").strip()
+    if ref_audio:
+        from opencut.security import validate_filepath
+        ref_audio = validate_filepath(ref_audio)
+
+    result = music_acestep.generate(
+        prompt=str(data.get("prompt") or ""),
+        lyrics=str(data.get("lyrics") or ""),
+        genre=genre,
+        mood=mood,
+        duration=safe_float(data.get("duration"), 60.0, min_val=5.0, max_val=240.0),
+        reference_audio=ref_audio,
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "duration_seconds": result.duration_seconds,
+        "genre": result.genre,
+        "mood": result.mood,
+        "has_lyrics": result.has_lyrics,
+        "model": result.model,
+        "generation_seconds": result.generation_seconds,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/audio/music/acestep/edit", methods=["POST"])
+@require_csrf
+@async_job("music_acestep_edit")
+def route_music_acestep_edit(job_id, filepath, data):
+    """Edit lyrics in an ACE-Step generated track via flow-edit."""
+    from opencut.core import music_acestep
+    if not music_acestep.check_acestep_available():
+        raise RuntimeError(
+            "ACE-Step is not installed. " + music_acestep.INSTALL_HINT
+        )
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    new_lyrics = str(data.get("lyrics") or data.get("new_lyrics") or "")
+    if not new_lyrics.strip():
+        raise ValueError("lyrics (or new_lyrics) field is required")
+
+    result = music_acestep.edit_lyrics(
+        audio_path=filepath,
+        new_lyrics=new_lyrics,
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "has_lyrics": result.has_lyrics,
+        "model": result.model,
+        "generation_seconds": result.generation_seconds,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/audio/music/acestep/info", methods=["GET"])
+def route_music_acestep_info():
+    """Return ACE-Step availability and capabilities."""
+    try:
+        from opencut.core import music_acestep
+        return jsonify({
+            "available": music_acestep.check_acestep_available(),
+            "model": "ace-step",
+            "licence": "Apache-2.0",
+            "max_duration_seconds": 240,
+            "genres": music_acestep.ACESTEP_GENRES,
+            "moods": music_acestep.ACESTEP_MOODS,
+            "features": ["text-to-music", "lyrics-alignment",
+                         "voice-cloning", "lyric-editing"],
+            "install_hint": music_acestep.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "music_acestep_info")
