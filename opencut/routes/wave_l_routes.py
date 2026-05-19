@@ -30,6 +30,13 @@ Wave L modules:
   O1.2  Parler-TTS          — /audio/speech/parler
   O2.1  LTX-Video           — /generate/ltxv/*
   O3.1  YuE Music           — /audio/music/yue
+  P1.1  ConsisID            — /generate/consisid
+  P1.2  Allegro             — /generate/allegro
+  P2.1  HiDream-I1          — /image/generate/hidream
+  P2.2  HiDream-E1          — /image/edit/hidream
+  P2.3  CogView4            — /image/generate/cogview4
+  P3.1  Qwen2.5-Omni        — /analyze/video/narrate, /analyze/video/qa
+  P3.2  Open-Sora 2.0       — /generate/opensora2
 """
 from __future__ import annotations
 
@@ -2082,3 +2089,311 @@ def route_yue_info():
         })
     except Exception as exc:
         return safe_error(exc, "yue_info")
+
+
+# =============================================================
+# P1.1 — ConsisID Identity-Preserving T2V
+# =============================================================
+
+@wave_l_bp.route("/generate/consisid", methods=["POST"])
+@require_csrf
+@async_job("consisid", filepath_required=True, filepath_param="face_image")
+def route_consisid(job_id, filepath, data):
+    """Generate identity-preserving video from face + prompt."""
+    from opencut.core import gen_video_consisid
+    if not gen_video_consisid.check_consisid_available():
+        raise RuntimeError("ConsisID not installed. " + gen_video_consisid.INSTALL_HINT)
+    prompt = str(data.get("prompt") or "").strip()
+    if not prompt:
+        raise ValueError("prompt is required")
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+    result = gen_video_consisid.generate(
+        face_image=filepath, prompt=prompt,
+        duration=safe_float(data.get("duration"), 6.0, min_val=2.0, max_val=12.0),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/consisid/info", methods=["GET"])
+def route_consisid_info():
+    try:
+        from opencut.core import gen_video_consisid
+        return jsonify({"available": gen_video_consisid.check_consisid_available(),
+                        "licence": "Apache-2.0", "min_vram_gb": 18,
+                        "install_hint": gen_video_consisid.INSTALL_HINT})
+    except Exception as exc:
+        return safe_error(exc, "consisid_info")
+
+
+# =============================================================
+# P1.2 — Allegro Lightweight T2V + TI2V
+# =============================================================
+
+@wave_l_bp.route("/generate/allegro/t2v", methods=["POST"])
+@require_csrf
+@async_job("allegro_t2v", filepath_required=False)
+def route_allegro_t2v(job_id, filepath, data):
+    """Generate video using Allegro (9.3 GB VRAM)."""
+    from opencut.core import gen_video_allegro
+    if not gen_video_allegro.check_allegro_available():
+        raise RuntimeError("Allegro not installed. " + gen_video_allegro.INSTALL_HINT)
+    prompt = str(data.get("prompt") or "").strip()
+    if not prompt:
+        raise ValueError("prompt is required")
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+    result = gen_video_allegro.generate_t2v(
+        prompt=prompt, seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/allegro/ti2v", methods=["POST"])
+@require_csrf
+@async_job("allegro_ti2v", filepath_required=True, filepath_param="first_frame")
+def route_allegro_ti2v(job_id, filepath, data):
+    """Generate video from first+last frame interpolation."""
+    from opencut.core import gen_video_allegro
+    if not gen_video_allegro.check_allegro_available():
+        raise RuntimeError("Allegro not installed. " + gen_video_allegro.INSTALL_HINT)
+    last = str(data.get("last_frame") or "").strip()
+    if last:
+        from opencut.security import validate_filepath
+        last = validate_filepath(last)
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+    result = gen_video_allegro.generate_ti2v(
+        first_frame=filepath, last_frame=last,
+        prompt=str(data.get("prompt") or ""),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/allegro/info", methods=["GET"])
+def route_allegro_info():
+    try:
+        from opencut.core import gen_video_allegro
+        return jsonify({"available": gen_video_allegro.check_allegro_available(),
+                        "models": gen_video_allegro.ALLEGRO_MODELS,
+                        "licence": "Apache-2.0", "min_vram_gb": 9.3,
+                        "install_hint": gen_video_allegro.INSTALL_HINT})
+    except Exception as exc:
+        return safe_error(exc, "allegro_info")
+
+
+# =============================================================
+# P2.1 — HiDream-I1 SOTA T2I
+# =============================================================
+
+@wave_l_bp.route("/image/generate/hidream", methods=["POST"])
+@require_csrf
+@async_job("hidream_t2i", filepath_required=False)
+def route_hidream_t2i(job_id, filepath, data):
+    """Generate SOTA image using HiDream-I1 (17B)."""
+    from opencut.core import t2i_hidream
+    if not t2i_hidream.check_hidream_available():
+        raise RuntimeError("HiDream deps not installed. " + t2i_hidream.INSTALL_HINT)
+    prompt = str(data.get("prompt") or "").strip()
+    if not prompt:
+        raise ValueError("prompt is required")
+    variant = str(data.get("variant") or "fast").strip()
+    if variant not in t2i_hidream.HIDREAM_VARIANTS:
+        variant = "fast"
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+    result = t2i_hidream.generate(
+        prompt=prompt, variant=variant,
+        width=safe_int(data.get("width"), 1024, min_val=256, max_val=2048),
+        height=safe_int(data.get("height"), 1024, min_val=256, max_val=2048),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/image/generate/hidream/info", methods=["GET"])
+def route_hidream_info():
+    try:
+        from opencut.core import t2i_hidream
+        return jsonify({"available": t2i_hidream.check_hidream_available(),
+                        "variants": t2i_hidream.HIDREAM_VARIANTS,
+                        "licence": "MIT + Meta Community Licence (Llama backbone)",
+                        "install_hint": t2i_hidream.INSTALL_HINT})
+    except Exception as exc:
+        return safe_error(exc, "hidream_info")
+
+
+# =============================================================
+# P2.2 — HiDream-E1 Instruction Image Editing
+# =============================================================
+
+@wave_l_bp.route("/image/edit/hidream", methods=["POST"])
+@require_csrf
+@async_job("hidream_edit", filepath_required=True, filepath_param="image_path")
+def route_hidream_edit(job_id, filepath, data):
+    """Edit image using natural language instruction via HiDream-E1."""
+    from opencut.core import img_edit_hidream
+    if not img_edit_hidream.check_hidream_edit_available():
+        raise RuntimeError("HiDream-E1 not installed. " + img_edit_hidream.INSTALL_HINT)
+    instruction = str(data.get("instruction") or "").strip()
+    if not instruction:
+        raise ValueError("instruction is required")
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+    result = img_edit_hidream.edit(
+        image_path=filepath, instruction=instruction,
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/image/edit/hidream/info", methods=["GET"])
+def route_hidream_edit_info():
+    try:
+        from opencut.core import img_edit_hidream
+        return jsonify({"available": img_edit_hidream.check_hidream_edit_available(),
+                        "licence": "MIT", "install_hint": img_edit_hidream.INSTALL_HINT})
+    except Exception as exc:
+        return safe_error(exc, "hidream_edit_info")
+
+
+# =============================================================
+# P2.3 — CogView4-6B Bilingual T2I
+# =============================================================
+
+@wave_l_bp.route("/image/generate/cogview4", methods=["POST"])
+@require_csrf
+@async_job("cogview4_t2i", filepath_required=False)
+def route_cogview4_t2i(job_id, filepath, data):
+    """Generate bilingual (EN+ZH) image using CogView4-6B."""
+    from opencut.core import t2i_cogview4
+    if not t2i_cogview4.check_cogview4_available():
+        raise RuntimeError("CogView4 not installed. " + t2i_cogview4.INSTALL_HINT)
+    prompt = str(data.get("prompt") or "").strip()
+    if not prompt:
+        raise ValueError("prompt is required")
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+    result = t2i_cogview4.generate(
+        prompt=prompt,
+        width=safe_int(data.get("width"), 1024, min_val=256, max_val=2048),
+        height=safe_int(data.get("height"), 1024, min_val=256, max_val=2048),
+        guidance_scale=safe_float(data.get("guidance_scale"), 3.5, min_val=1.0, max_val=15.0),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/image/generate/cogview4/info", methods=["GET"])
+def route_cogview4_info():
+    try:
+        from opencut.core import t2i_cogview4
+        return jsonify({"available": t2i_cogview4.check_cogview4_available(),
+                        "licence": "Apache-2.0", "min_vram_gb": 13,
+                        "languages": ["en", "zh"],
+                        "install_hint": t2i_cogview4.INSTALL_HINT})
+    except Exception as exc:
+        return safe_error(exc, "cogview4_info")
+
+
+# =============================================================
+# P3.1 — Qwen2.5-Omni Multimodal Video Narrator
+# =============================================================
+
+@wave_l_bp.route("/analyze/video/narrate", methods=["POST"])
+@require_csrf
+@async_job("omni_narrate")
+def route_omni_narrate(job_id, filepath, data):
+    """Watch video and generate written + spoken narration."""
+    from opencut.core import multimodal_omni
+    if not multimodal_omni.check_omni_available():
+        raise RuntimeError("Qwen2.5-Omni not installed. " + multimodal_omni.INSTALL_HINT)
+    style = str(data.get("style") or "documentary").strip()
+    if style not in multimodal_omni.NARRATION_STYLES:
+        style = "documentary"
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+    result = multimodal_omni.narrate_video(
+        video_path=filepath, style=style,
+        output_audio=str(data.get("output_audio") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/analyze/video/qa", methods=["POST"])
+@require_csrf
+@async_job("omni_qa")
+def route_omni_qa(job_id, filepath, data):
+    """Ask a question about a video."""
+    from opencut.core import multimodal_omni
+    if not multimodal_omni.check_omni_available():
+        raise RuntimeError("Qwen2.5-Omni not installed. " + multimodal_omni.INSTALL_HINT)
+    question = str(data.get("question") or "").strip()
+    if not question:
+        raise ValueError("question is required")
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+    result = multimodal_omni.video_qa(
+        video_path=filepath, question=question, on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/analyze/video/omni/info", methods=["GET"])
+def route_omni_info():
+    try:
+        from opencut.core import multimodal_omni
+        return jsonify({"available": multimodal_omni.check_omni_available(),
+                        "narration_styles": multimodal_omni.NARRATION_STYLES,
+                        "licence": "Apache-2.0",
+                        "install_hint": multimodal_omni.INSTALL_HINT})
+    except Exception as exc:
+        return safe_error(exc, "omni_info")
+
+
+# =============================================================
+# P3.2 — Open-Sora 2.0 High-Quality T2V
+# =============================================================
+
+@wave_l_bp.route("/generate/opensora2", methods=["POST"])
+@require_csrf
+@async_job("opensora2_t2v", filepath_required=False)
+def route_opensora2(job_id, filepath, data):
+    """Generate SOTA quality video using Open-Sora 2.0 (11B)."""
+    from opencut.core import gen_video_opensora2
+    if not gen_video_opensora2.check_opensora2_available():
+        raise RuntimeError("Open-Sora not installed. " + gen_video_opensora2.INSTALL_HINT)
+    prompt = str(data.get("prompt") or "").strip()
+    if not prompt:
+        raise ValueError("prompt is required")
+    model = str(data.get("model") or "11b").strip()
+    if model not in gen_video_opensora2.OPENSORA_MODELS:
+        model = "11b"
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+    result = gen_video_opensora2.generate(
+        prompt=prompt, model=model,
+        duration=safe_float(data.get("duration"), 5.0, min_val=1.0, max_val=10.0),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/opensora2/info", methods=["GET"])
+def route_opensora2_info():
+    try:
+        from opencut.core import gen_video_opensora2
+        return jsonify({"available": gen_video_opensora2.check_opensora2_available(),
+                        "models": gen_video_opensora2.OPENSORA_MODELS,
+                        "licence": "Apache-2.0",
+                        "install_hint": gen_video_opensora2.INSTALL_HINT})
+    except Exception as exc:
+        return safe_error(exc, "opensora2_info")
