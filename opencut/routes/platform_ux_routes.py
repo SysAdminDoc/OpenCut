@@ -7,12 +7,22 @@ Routes for:
   - Panel UX features (6.1, 6.2, 6.6, 6.7, 6.8, 37.1, 37.2, 37.5)
 """
 
+import base64
+import binascii
 import logging
 
 from flask import Blueprint, Response, jsonify, request
+from werkzeug.exceptions import BadRequest
 
+from opencut.core.web_ui import (
+    WebSessionNotFoundError,
+    WebUploadError,
+    WebUploadTooLargeError,
+    upload_file,
+    upload_stream,
+)
 from opencut.errors import safe_error
-from opencut.security import require_csrf
+from opencut.security import get_json_dict, require_csrf
 
 logger = logging.getLogger("opencut")
 
@@ -43,26 +53,36 @@ def web_ui_create_session():
 def web_ui_upload():
     """Upload a file to a web UI session."""
     try:
-        session_id = request.form.get("session_id") or (
-            request.get_json(force=True, silent=True) or {}
-        ).get("session_id", "")
-        if not session_id:
-            return jsonify({"error": "session_id is required"}), 400
-
         # Handle multipart file upload
         if "file" in request.files:
+            session_id = str(request.form.get("session_id") or "").strip()
+            if not session_id:
+                return jsonify({"error": "session_id is required"}), 400
             f = request.files["file"]
             filename = f.filename or "upload"
-            file_data = f.read()
+            uploaded = upload_stream(
+                session_id,
+                filename,
+                f.stream,
+                content_length=f.content_length or request.content_length,
+            )
         else:
             # Fallback: JSON body with base64 data
-            data = request.get_json(force=True, silent=True) or {}
+            data = get_json_dict()
+            session_id = data.get("session_id", "")
+            if not isinstance(session_id, str) or not session_id.strip():
+                return jsonify({"error": "session_id is required"}), 400
             filename = data.get("filename", "upload")
-            import base64
-            file_data = base64.b64decode(data.get("data", ""))
-
-        from opencut.core.web_ui import upload_file
-        uploaded = upload_file(session_id, filename, file_data)
+            if filename and not isinstance(filename, str):
+                return jsonify({"error": "filename must be a string"}), 400
+            encoded = data.get("data")
+            if not isinstance(encoded, str) or not encoded:
+                return jsonify({"error": "data must be a base64 string"}), 400
+            try:
+                file_data = base64.b64decode(encoded, validate=True)
+            except (binascii.Error, ValueError):
+                return jsonify({"error": "data must be valid base64"}), 400
+            uploaded = upload_file(session_id.strip(), filename or "upload", file_data)
         return jsonify({
             "filename": uploaded.filename,
             "path": uploaded.path,
@@ -70,8 +90,31 @@ def web_ui_upload():
             "mime_type": uploaded.mime_type,
             "uploaded_at": uploaded.uploaded_at,
         })
-    except ValueError as exc:
+    except WebSessionNotFoundError as exc:
         return jsonify({"error": str(exc)}), 404
+    except WebUploadTooLargeError as exc:
+        return jsonify({
+            "error": str(exc),
+            "code": "PAYLOAD_TOO_LARGE",
+            "suggestion": "Choose a smaller file or raise OPENCUT_WEB_UPLOAD_MAX_BYTES for local deployments.",
+        }), 413
+    except WebUploadError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except ValueError as exc:
+        return jsonify({"error": str(exc), "code": "INVALID_INPUT"}), 400
+    except BadRequest as exc:
+        description = getattr(exc, "description", "") or ""
+        if "JSON body must be an object" in description:
+            return jsonify({
+                "error": "JSON body must be an object.",
+                "code": "INVALID_INPUT",
+                "suggestion": "Send a top-level JSON object in the request body.",
+            }), 400
+        return jsonify({
+            "error": "Invalid JSON request body.",
+            "code": "INVALID_JSON",
+            "suggestion": "Fix malformed JSON or use multipart/form-data.",
+        }), 400
     except Exception as exc:
         return safe_error(exc, context="web-ui-upload")
 
