@@ -79,6 +79,8 @@ Pass 77 closed **F224** with focused deepfake detector coverage. `tests/test_vid
 
 Pass 78 closed **F228-F230** with focused review-bundle coverage. `tests/test_review_bundle.py` now pins voice-note attachment indexing/copy behavior, audio-extension rejection, optional HLS rendition packaging, and route responses for both new bundle surfaces.
 
+Pass 79 closed **F232** with focused review-portal coverage. `tests/test_review_portal.py` now pins the optional Headscale descriptor, sanitized command arrays, credential rejection, and `/review/portal/share` response behavior.
+
 ### 3.7 Performance / regression benchmarks
 
 The F128 FFmpeg filter regression suite is *Now* tier but not yet shipped. Once it lands, it should also cover:

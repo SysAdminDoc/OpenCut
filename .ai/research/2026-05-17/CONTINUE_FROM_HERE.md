@@ -1,9 +1,9 @@
-# OpenCut Research — CONTINUE FROM HERE (for Pass 79)
+# OpenCut Research — CONTINUE FROM HERE (for Pass 80)
 
 **This file's purpose:** if a future autonomous research session starts up, **read this first** before re-doing any of the work already on disk.
 
-**Last update:** 2026-05-18 (after Pass 78; Passes 1-34 all ran on 2026-05-17)
-**Session state:** all mandated artefacts exist; Passes 4-75 are summarized in ROADMAP.md and PROJECT_CONTEXT.md. Pass 76 closed F220-F222 (RVC backend execution, natural-language AI auto-color grading, and cut-point pacing/genre-template analysis). Pass 77 closed F224 (AI-facing deepfake detector alias plus evidence/report metadata). Pass 78 closed F228-F230 (review-bundle voice-note attachments and optional HLS browser-scrubbing renditions). This file documents deferred research/product work for a future Pass 79+, not a broken or incomplete research run.
+**Last update:** 2026-05-18 (after Pass 79; Passes 1-34 all ran on 2026-05-17)
+**Session state:** all mandated artefacts exist; Passes 4-75 are summarized in ROADMAP.md and PROJECT_CONTEXT.md. Pass 76 closed F220-F222 (RVC backend execution, natural-language AI auto-color grading, and cut-point pacing/genre-template analysis). Pass 77 closed F224 (AI-facing deepfake detector alias plus evidence/report metadata). Pass 78 closed F228-F230 (review-bundle voice-note attachments and optional HLS browser-scrubbing renditions). Pass 79 closed F232 (Headscale/Tailscale command-plan descriptors for cross-site review portal sharing). This file documents deferred research/product work for a future Pass 80+, not a broken or incomplete research run.
 
 ---
 
@@ -15,9 +15,9 @@
 - **F-numbers in ledger:** F001-F272 (Pass 1 added F121-F190, Pass 2 added F191-F260, Pass 3 added F261-F272).
 - **Wave letters in ledger:** A-M shipped; N-T planned in ROADMAP.md and now F-number-tiered by `.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md` (F180).
 
-### Pass 79 entry point
+### Pass 80 entry point
 
-1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F192, F193, F194, F196, F198, F200, F201, F203, F206, F210, F211, F212, F213, F214, F215, F216, F217, F220, F221, F222, F223, F224, F225, F226, F227, F228, F229, F230, F231, F233, F234, F238, F239, F242, F249, F250, F251, F254, F255, F256, F257, F258, F259, F260, F263, F267, F271, F272 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. F252.1 and the F252.2 dispatcher slice are complete but F252 remains open for live WebView/in-Premiere UDT result capture. The next Later-tier candidates are F232/F235/F245-F248/F253; F232 may be mostly documentation/config scaffolding unless a real Headscale environment is available. F268 requires an Adobe developer account/storefront process. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
+1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F192, F193, F194, F196, F198, F200, F201, F203, F206, F210, F211, F212, F213, F214, F215, F216, F217, F220, F221, F222, F223, F224, F225, F226, F227, F228, F229, F230, F231, F232, F233, F234, F238, F239, F242, F249, F250, F251, F254, F255, F256, F257, F258, F259, F260, F263, F267, F271, F272 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. F252.1 and the F252.2 dispatcher slice are complete but F252 remains open for live WebView/in-Premiere UDT result capture. The next Later-tier candidates are F235/F245-F248/F253. F268 requires an Adobe developer account/storefront process. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
 2. **F198 is now enforced, not only documented.** `CEP_UXP_PARITY_MATRIX.md` maps all 18 `ocXxx` JSX functions and identifies only two truly CEP-only calls; `opencut/_generated/cep_uxp_parity.json` plus `tests/test_cep_uxp_parity_catalogue.py` keep that claim in sync with `host/index.jsx`.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.11/3.12/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
@@ -259,6 +259,17 @@
 | Generated artifacts | Route manifest remains 1,379 routes / 101 blueprints; opt-in extended MCP catalogue remains 1,322 tools with the updated review-bundle response schema. |
 | Validation | PASS — `py_compile`, focused review-bundle tests (`20 passed`), focused generated-surface tests (`34 passed`), focused Ruff, and route/MCP/API-alias generated checks. |
 | Files to review | `opencut/core/review_bundle.py`, `opencut/routes/timeline.py`, `tests/test_review_bundle.py`, `docs/REVIEW_BUNDLES.md`, generated route/MCP artifacts, and roadmap/state docs. |
+
+### Pass 79 checkpoint
+
+| Item | Status |
+|---|---|
+| F232 | **DONE** — review portal share responses now have an optional Headscale/Tailscale operator plan for cross-site review. |
+| Headscale boundary | The descriptor validates the self-hosted control-plane URL, strips query/fragment data, rejects embedded credentials, and returns command arrays without running Headscale or Tailscale from Flask. |
+| Command plan | Responses include `headscale preauthkeys create` and `tailscale up --login-server ...` arrays with sanitized user, machine name, tags, TTL, host, port, and signed portal URL metadata. |
+| Docs/tests | `docs/REVIEW_PORTAL.md` documents the optional cross-site path and `tests/test_review_portal.py` pins core and route behavior. |
+| Validation | PASS — `py_compile`, focused review-portal tests (`8 passed`), focused Ruff, and route/MCP generated checks. |
+| Files to review | `opencut/core/review_portal.py`, `opencut/routes/platform_infra_routes.py`, `tests/test_review_portal.py`, `docs/REVIEW_PORTAL.md`, and roadmap/state docs. |
 
 ### Pass 75 checkpoint
 

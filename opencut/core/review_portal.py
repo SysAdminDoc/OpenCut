@@ -14,9 +14,9 @@ import html
 import os
 import re
 import time
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from typing import Any, Dict, List
-from urllib.parse import urlencode
+from urllib.parse import urlencode, urlparse, urlunparse
 
 from opencut.core.review_links import _load_reviews
 
@@ -34,6 +34,7 @@ class PortalShare:
     hmac_algorithm: str
     caddyfile: str
     mdns: Dict[str, Any]
+    headscale: Dict[str, Any] = field(default_factory=dict)
 
     def as_dict(self) -> dict:
         return asdict(self)
@@ -56,6 +57,25 @@ def _safe_scheme(scheme: str) -> str:
 def _safe_service_name(service_name: str) -> str:
     value = re.sub(r"\s+", " ", str(service_name or "OpenCut Review").strip())
     return value[:63] or "OpenCut Review"
+
+
+def _safe_label(value: str, default: str) -> str:
+    label = re.sub(r"[^A-Za-z0-9_.-]+", "-", str(value or "").strip()).strip("-._")
+    return label[:63] or default
+
+
+def _safe_headscale_url(url: str) -> str:
+    value = str(url or "").strip()
+    if not value:
+        raise ValueError("headscale.url is required")
+    parsed = urlparse(value)
+    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+        raise ValueError("headscale.url must be an http(s) URL")
+    # Do not carry credentials, query strings, or fragments into command plans.
+    if parsed.username or parsed.password:
+        raise ValueError("headscale.url must not include credentials")
+    path = parsed.path.rstrip("/")
+    return urlunparse((parsed.scheme, parsed.netloc, path, "", "", ""))
 
 
 def _review_data(review_id: str) -> dict:
@@ -122,6 +142,79 @@ def build_mdns_descriptor(host: str, port: int, service_name: str = "OpenCut Rev
     }
 
 
+def build_headscale_descriptor(
+    *,
+    review_id: str,
+    portal_url: str,
+    host: str,
+    port: int,
+    headscale_url: str,
+    user: str = "opencut",
+    machine_name: str = "",
+    tags: List[str] | None = None,
+    ttl_hours: int = 24,
+) -> Dict[str, Any]:
+    """Build an operator-run Headscale/Tailscale plan for cross-site review."""
+    control_plane = _safe_headscale_url(headscale_url)
+    safe_user = _safe_label(user, "opencut")
+    safe_machine = _safe_label(machine_name or f"opencut-review-{review_id}", "opencut-review")
+    tag_values = []
+    for raw in tags or ["tag:opencut-review"]:
+        tag = str(raw or "").strip()
+        if not tag:
+            continue
+        if not tag.startswith("tag:"):
+            tag = f"tag:{_safe_label(tag, 'opencut-review')}"
+        tag_values.append(tag)
+    tag_values = tag_values or ["tag:opencut-review"]
+    ttl = max(1, min(168, int(ttl_hours)))
+    tag_csv = ",".join(tag_values)
+    return {
+        "enabled": True,
+        "control_plane_url": control_plane,
+        "user": safe_user,
+        "machine_name": safe_machine,
+        "tags": tag_values,
+        "portal": {
+            "review_id": review_id,
+            "url": portal_url,
+            "host": _safe_host(host),
+            "port": max(1, min(65535, int(port))),
+        },
+        "commands": {
+            "create_preauth_key": [
+                "headscale",
+                "--url",
+                control_plane,
+                "preauthkeys",
+                "create",
+                "--user",
+                safe_user,
+                "--expiration",
+                f"{ttl}h",
+                "--tags",
+                tag_csv,
+            ],
+            "join_tailnet": [
+                "tailscale",
+                "up",
+                "--login-server",
+                control_plane,
+                "--hostname",
+                safe_machine,
+                "--advertise-tags",
+                tag_csv,
+            ],
+        },
+        "operator_notes": [
+            "Run these commands outside OpenCut after explicitly enabling cross-site review.",
+            "Do not paste Headscale preauth keys into OpenCut; keep key creation and rotation in the "
+            "control-plane admin shell.",
+            "Keep the signed portal URL TTL short because it remains the review bearer credential.",
+        ],
+    }
+
+
 def build_portal_share(
     *,
     review_id: str,
@@ -130,6 +223,7 @@ def build_portal_share(
     scheme: str = "http",
     ttl_seconds: int = 86400,
     service_name: str = "OpenCut Review",
+    headscale: Dict[str, Any] | None = None,
     now: float | None = None,
 ) -> PortalShare:
     review = _review_data(review_id)
@@ -145,6 +239,19 @@ def build_portal_share(
     signature = sign_portal_url(review_id, expires_at, token)
     query = urlencode({"expires": expires_at, "sig": signature})
     url = f"{safe_scheme}://{safe_host}:{safe_port}/review/portal/{review_id}?{query}"
+    headscale_descriptor: Dict[str, Any] = {}
+    if headscale:
+        headscale_descriptor = build_headscale_descriptor(
+            review_id=review_id,
+            portal_url=url,
+            host=safe_host,
+            port=safe_port,
+            headscale_url=str(headscale.get("url") or headscale.get("headscale_url") or ""),
+            user=str(headscale.get("user") or "opencut"),
+            machine_name=str(headscale.get("machine_name") or ""),
+            tags=headscale.get("tags") if isinstance(headscale.get("tags"), list) else None,
+            ttl_hours=int(headscale.get("ttl_hours") or 24),
+        )
     return PortalShare(
         review_id=review_id,
         url=url,
@@ -155,6 +262,7 @@ def build_portal_share(
         hmac_algorithm="HMAC-SHA256",
         caddyfile=build_caddyfile(safe_host, safe_port),
         mdns=build_mdns_descriptor(safe_host, safe_port, service_name),
+        headscale=headscale_descriptor,
     )
 
 

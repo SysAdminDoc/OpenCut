@@ -81,7 +81,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | [x] F229 | EDL/OTIO export of review comments → Premiere markers | Closed in Pass 51 — F105 review bundles now include Premiere marker CSV and marker-only EDL sidecars that round-trip through the F102 marker importer while preserving the F225 OTIO sidecar | Frame.io subagent §2 | M | Next |
 | [x] F230 | HLS rendition in F105 bundles for browser scrubbing | Closed in Pass 78 — F105 review bundles can opt into `hls/master.m3u8` browser-scrubbing renditions while omitting the full source media | Frame.io subagent §2 | M | Later |
 | [x] F231 | Local-LAN review portal (embedded Caddy + mDNS + HMAC URL) | Closed in Pass 52 — review links now generate HMAC-signed LAN portal URLs plus Caddy reverse-proxy and mDNS descriptors without requiring an account server | Frame.io subagent §5 | M | Next |
-| F232 | Optional Headscale path for cross-site LAN review | Self-hosted Tailscale control plane | Frame.io subagent §5 | M | Later |
+| [x] F232 | Optional Headscale path for cross-site LAN review | Closed in Pass 79 — review portal share responses can include a sanitized Headscale/Tailscale operator plan without creating keys or enabling networking from Flask | Frame.io subagent §5 | M | Later |
 | [x] F233 | Outbound HMAC-signed webhook + per-project Atom feed | Closed in Pass 53 — `GET /review/feed.atom` emits per-project/per-review Atom entries, `/api/webhooks` accepts non-echoed HMAC secrets, and review comment/status routes emit signed-webhook-capable events | Frame.io subagent §6 | M | Next |
 | [x] F234 | croc + rclone bundle in delivery menu | Closed in Pass 54 — delivery routes now create local zip transfer bundles with embedded/sibling JSON manifests and return croc/rclone command plans without executing external transfer tools | Frame.io subagent §7 | S | Next |
 
@@ -130,7 +130,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
 | **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, [x] F260 | 32 |
-| **Later** | [x] F193, [x] F196, [x] F206, [x] F210, [x] F212, [x] F220, [x] F221, [x] F222, [x] F224, [x] F228, [x] F230, F232, F235, F245, F246, F247, F248, F253 | 7 open + F193/F196/F206/F210/F212/F220/F221/F222/F224/F228/F230 closed |
+| **Later** | [x] F193, [x] F196, [x] F206, [x] F210, [x] F212, [x] F220, [x] F221, [x] F222, [x] F224, [x] F228, [x] F230, [x] F232, F235, F245, F246, F247, F248, F253 | 6 open + F193/F196/F206/F210/F212/F220/F221/F222/F224/F228/F230/F232 closed |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
 **Total project F-numbers: 140** (F121-F260 from Pass 1 + Pass 2; plus the pre-existing F001-F120 from v4.3).

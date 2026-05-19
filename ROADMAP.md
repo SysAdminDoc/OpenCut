@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.81
+**Version**: 4.82
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,379 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -170,8 +170,22 @@
 > **v4.80 status (2026-05-18, seventy-seventh pass)**: closed **F224** by reconciling the shipped deepfake detector with the AI command surface and report contract. `/ai/deepfake-detect` now aliases the existing `/video/detect-deepfake` route, detector results include stable evidence tags, face counts, detector version, analysis methods, flagged-segment counts, and review guidance, and authenticity reports carry the same metadata. The route manifest is regenerated to **1,379 routes** and the opt-in extended MCP catalogue to **1,322 tools**.
 >
 > **v4.81 status (2026-05-18, seventy-eighth pass)**: closed **F228-F230** by extending F105 review bundles with explicit voice-note attachments and optional HLS browser-scrubbing renditions. `build_review_bundle()` now accepts validated `voice_notes` entries, writes `voice_notes/index.json` plus copied audio files, and can generate an opt-in `hls/master.m3u8` VOD proxy under `hls/` even when `include_media=false`. Bundle manifests and route responses expose voice-note and HLS counts/paths, `docs/REVIEW_BUNDLES.md` documents both contracts, and the generated route/MCP manifests stay at **1,379 routes** and **1,322 tools**.
+>
+> **v4.82 status (2026-05-18, seventy-ninth pass)**: closed **F232** by adding an optional Headscale/Tailscale operator plan to local review portal share responses. `POST /review/portal/share` now accepts a `headscale` object, validates the self-hosted control-plane URL without storing credentials, and returns deterministic `headscale` command arrays for preauth-key creation and `tailscale up` while preserving the existing Caddy/mDNS/HMAC bearer URL contract. `docs/REVIEW_PORTAL.md` documents the cross-site boundary and `tests/test_review_portal.py` pins the descriptor shape.
 
 ---
+
+## 2026-05-18 v4.82 Review Portal Headscale Plan (F232)
+
+One Later-tier review portal item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Headscale descriptor | `build_portal_share()` can include `headscale` metadata with a sanitized control-plane URL, Headscale user, machine name, tags, and portal URL. |
+| Operator commands | Responses include command arrays for `headscale preauthkeys create` and `tailscale up --login-server ...`; OpenCut does not run the commands, create preauth keys, store keys, or enable networking from request handling. |
+| Route/docs/tests | `POST /review/portal/share` accepts a `headscale` object or flat `headscale_*` fields; `docs/REVIEW_PORTAL.md` documents the flow and focused tests pin route and core behavior. |
+
+Validation after the batch: `python -m py_compile` passed for touched review-portal files, focused review-portal tests passed (`8 passed`), Ruff passed on touched files, and generated route/MCP checks passed.
 
 ## 2026-05-18 v4.81 Review Bundle Voice Notes + HLS Rendition (F228-F230)
 
@@ -1453,10 +1467,10 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Caption / accessibility: [x] F223 RTL/CJK validation suite, [x] F238 PSE hue checker, [x] F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
 - Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + [x] F249 Flatpak primary Linux + [x] F250 Aptabase opt-in telemetry
 - Tests: [x] F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + [x] F217 UXP contract test
-- Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
+- Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + [x] F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 
-**Later (7 items):** F232 (Headscale), F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76; F210 closed in v4.77; F212 closed in v4.78; F220-F222 closed in v4.79; F224 closed in v4.80; F228-F230 closed in v4.81.
+**Later (6 items):** F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76; F210 closed in v4.77; F212 closed in v4.78; F220-F222 closed in v4.79; F224 closed in v4.80; F228-F230 closed in v4.81; F232 closed in v4.82.
 
 **Newly explicit rejects (none in Pass 2)** — all Pass-1 rejects stand; Pass 2 did not propose anything that required new rejection.
 
