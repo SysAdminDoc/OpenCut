@@ -274,6 +274,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/image/edit/kontext",
     "/generate/wan2.2/t2v",
     "/generate/wan2.2/i2v",
+    "/generate/wan2.2/s2v",
+    "/generate/wan2.2/animate",
 })
 
 
