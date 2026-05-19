@@ -930,6 +930,11 @@ def check_moonshine_available() -> bool:
     return _try_import("moonshine") is not None
 
 
+def check_acestep_available() -> bool:
+    """L2.2 — ACE-Step full-song music generation (Apache-2, GPU)."""
+    return _try_import("acestep") is not None
+
+
 def check_wave_l(verbose=False):
     """Run all Wave L availability checks and print a summary."""
     checks = [

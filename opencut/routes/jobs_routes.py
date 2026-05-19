@@ -255,6 +255,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/audio/tts/elevenlabs",
     "/audio/tts/spark",
     "/audio/transcribe/moonshine",
+    "/audio/music/acestep",
+    "/audio/music/acestep/edit",
     "/video/upscale/smart",
     "/video/face/reshape",
     "/video/face/retouch",
