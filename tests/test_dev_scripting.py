@@ -818,6 +818,16 @@ class TestWebhookSystemCore:
         assert wh.events == ["job_complete"]
         assert wh.id
 
+    def test_register_webhook_accepts_dotted_job_events(self, tmp_opencut_dir):
+        from opencut.core.webhook_system import register_webhook
+
+        wh = register_webhook(
+            "https://example.com/hook",
+            events=["job.complete", "job.error", "job.cancelled"],
+        )
+
+        assert wh.events == ["job.complete", "job.error", "job.cancelled"]
+
     def test_register_review_webhook_with_secret(self, tmp_opencut_dir):
         from opencut.core.webhook_system import get_webhook, list_webhooks, register_webhook
 
@@ -947,6 +957,30 @@ class TestWebhookSystemCore:
         from opencut.core.webhook_system import fire_event
         deliveries = fire_event("job_complete", {"status": "ok"})
         assert len(deliveries) == 0
+
+    def test_fire_event_matches_dotted_job_event_to_legacy_subscription(
+        self,
+        tmp_opencut_dir,
+        monkeypatch,
+    ):
+        from opencut.core.webhook_system import fire_event, register_webhook
+
+        register_webhook("https://example.com/hook", events=["job_complete"])
+        calls = []
+
+        def fake_send_payload(url, event_type, payload, timeout=10, secret=""):
+            calls.append((url, event_type, payload, timeout, secret))
+            return 202, True, ""
+
+        monkeypatch.setattr("opencut.core.webhook_system._send_payload", fake_send_payload)
+
+        deliveries = fire_event("job.complete", {"status": "ok"}, job_id="job-1")
+
+        assert len(deliveries) == 1
+        assert deliveries[0].success is True
+        assert deliveries[0].event_type == "job.complete"
+        assert calls[0][1] == "job.complete"
+        assert calls[0][2]["job_id"] == "job-1"
 
     def test_test_webhook_not_found(self, tmp_opencut_dir):
         from opencut.core.webhook_system import test_webhook
