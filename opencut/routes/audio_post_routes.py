@@ -171,11 +171,14 @@ def route_adr_cuesheet():
 def route_adr_record(job_id, filepath, data):
     """Process an ADR replacement recording and sync to original timecode."""
     from opencut.core.adr_cue_system import process_replacement
+    from opencut.security import validate_path
 
     session_id = str(data.get("session_id", "")).strip()
     cue_id = str(data.get("cue_id", "")).strip()
     sync_method = str(data.get("sync_method", "align")).strip()
     output_dir = str(data.get("output_dir", "")).strip()
+    if output_dir:
+        output_dir = validate_path(output_dir)
 
     if not session_id or not cue_id:
         raise ValueError("session_id and cue_id are required")
