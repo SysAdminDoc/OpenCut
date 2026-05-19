@@ -627,6 +627,39 @@ class TestAudioDescription(unittest.TestCase):
         self.assertTrue(cue["fits_gap"])
         self.assertNotEqual(cue["script"], cue["source_description"])
 
+    def test_microsoft_audio_description_draft_wcag3_hooks(self):
+        from opencut.core.audio_description import build_microsoft_audio_description_draft
+
+        draft = build_microsoft_audio_description_draft(
+            scene_descriptions=[{
+                "timestamp": 2.0,
+                "description": (
+                    "A courier runs across a crowded platform, dodges a suitcase, "
+                    "and waves urgently toward a departing train."
+                ),
+            }],
+            transcript=[
+                {"speaker": "Announcer", "text": "Now boarding.", "start": 0.0, "end": 1.0},
+            ],
+            gaps=[{"start": 2.5, "end": 3.5, "duration": 1.0}],
+            words_per_second=2.0,
+            include_wcag3_hooks=True,
+        )
+        body = draft.to_dict()
+        cue = body["cues"][0]
+
+        self.assertEqual(cue["timing_mode"], "extended")
+        self.assertGreater(cue["extended_pause_seconds"], 0.0)
+        self.assertEqual(cue["review_reason"], "extended-audio-description")
+        self.assertEqual(cue["script"], cue["source_description"])
+        self.assertTrue(body["wcag3_compatibility"]["descriptive_transcript_available"])
+        self.assertTrue(body["wcag3_compatibility"]["extended_audio_description_available"])
+        self.assertEqual(body["extended_timing_plan"][0]["cue_id"], "AD-0001")
+        event_types = [event["type"] for event in body["descriptive_transcript"]]
+        self.assertIn("dialogue", event_types)
+        self.assertIn("visual_description", event_types)
+        self.assertIn("Visual description", body["descriptive_transcript"][-1]["display_text"])
+
     def test_microsoft_audio_description_route_exists(self):
         from opencut.routes.audio_advanced_routes import route_microsoft_audio_description_draft
 
