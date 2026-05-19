@@ -253,6 +253,7 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/lottie/render", "/search/ai", "/search/ai/index",
     # v1.29.0 additions — Wave L async_job routes
     "/audio/tts/elevenlabs",
+    "/audio/tts/spark",
     "/video/upscale/smart",
     "/video/face/reshape",
     "/video/face/retouch",
