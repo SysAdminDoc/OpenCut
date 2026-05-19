@@ -254,6 +254,7 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     # v1.29.0 additions — Wave L async_job routes
     "/audio/tts/elevenlabs",
     "/audio/tts/spark",
+    "/audio/transcribe/moonshine",
     "/video/upscale/smart",
     "/video/face/reshape",
     "/video/face/retouch",
