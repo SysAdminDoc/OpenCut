@@ -805,6 +805,22 @@ The partial 52.12% number is intentionally treated as unusable for policy. A com
 
 ---
 
+## Pass 82 (2026-05-19 — F205 completed coverage measurement)
+
+Pass 82 resumed F205 now that the full pytest+coverage command could finish locally.
+
+| Step | Action | Result |
+|---|---|---|
+| Pass 82.1 | Installed missing local coverage/xdist tooling. | `pytest-cov` 5.0.0, `pytest-xdist` 3.8.0, `coverage` 7.14.0, and `execnet` 2.1.2 were available for the run. |
+| Pass 82.2 | Ran the CI-style coverage command with `--cov-fail-under=0`. | PASS — `8,540 passed`, `16 skipped`, 7 warnings in 132.73 seconds. |
+| Pass 82.3 | Parsed `dist\coverage-f205.json`. | 131,130 statements, 70,935 covered lines, 60,195 missing lines, 54.09517272935255% coverage; SHA256 `C3044F261073964E868FED338B7B09114F0115DA16F6EAF0C34005146576F318`. |
+| Pass 82.4 | Raised Release Full CI coverage policy. | `.github/workflows/build.yml` now uses `--cov-fail-under=54`. |
+| Pass 82.5 | Updated roadmap and state files. | F205 marked closed; Pass 12 and Pass 23 attempts remain historical invalid/partial evidence. |
+
+The completed measurement invalidates the older 75-80% estimate in the planning notes. The new floor uses the integer-safe measured baseline, not a speculative target.
+
+---
+
 ## Pass 57 (2026-05-18 — F249 Linux distribution packaging)
 
 Pass 57 closed the Next-tier Linux packaging item after fresh official-source

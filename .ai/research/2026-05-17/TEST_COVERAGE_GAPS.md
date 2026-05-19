@@ -14,10 +14,10 @@
 | README claim | "5,742+ tests across 77 test files" |
 | CHANGELOG claim | "7,551 tests" |
 | ROADMAP claim | "7,600+ tests" |
-| CI coverage floor | **50%** (`--cov-fail-under=50`) |
+| CI coverage floor | **54%** (`--cov-fail-under=54`) |
 | Skip / skipif markers | **36 occurrences** across 10 files (all gated on `ffmpeg` PATH or optional `flask_cors`) |
 
-The marketing test count and the file count diverge; pytest's actual collected count is somewhere in the thousands once parameterised tests + class-based tests fan out. The **CI coverage floor of 50% is the real ground truth**, and it's a generous floor.
+The marketing test count and the file count diverge; pytest's actual collected count is somewhere in the thousands once parameterised tests + class-based tests fan out. Pass 82's complete CI-style run collected **8,540 passing tests** and measured **54.095%** line coverage. The **CI coverage floor of 54% is the real ground truth** after F205.
 
 ---
 
@@ -91,7 +91,7 @@ The F128 FFmpeg filter regression suite is *Now* tier but not yet shipped. Once 
 - **Compose / declarative_compose** wall-clock per 30s clip
 - **TTS** wall-clock per second of synthesised audio per backend
 
-These guard against silent perf regressions that the 50% coverage floor cannot catch. Pass 40 closed **F214 — extend F128 to cover ML + TTS perf benchmarks** (M) with `opencut/core/performance_benchmarks.py`, a release-smoke registry gate, and an explicit `OPENCUT_RUN_PERF_BENCHMARKS=1` opt-in for heavyweight model/cloud runs.
+These guard against silent perf regressions that the 54% coverage floor cannot catch. Pass 40 closed **F214 — extend F128 to cover ML + TTS perf benchmarks** (M) with `opencut/core/performance_benchmarks.py`, a release-smoke registry gate, and an explicit `OPENCUT_RUN_PERF_BENCHMARKS=1` opt-in for heavyweight model/cloud runs.
 
 ### 3.8 Fuzz coverage
 
@@ -129,13 +129,13 @@ Pass 16 closed **F219 — SBOM completeness test**. `scripts/sbom.py` now emits 
 
 ## 4. Coverage floor uplift plan
 
-Current: `--cov-fail-under=50`. CHANGELOG / ROADMAP claim 7,551+ tests, which would imply much higher actual coverage. A pragmatic uplift sequence:
+Current: `--cov-fail-under=54`. Pass 82 replaced the earlier estimate with a completed measurement: 131,130 statements, 70,935 covered lines, 60,195 missing lines, and 54.09517272935255% reported coverage.
 
-1. **F205** (already proposed in INSTALLER_AUDIT.md) — measure actual coverage today, then floor at `actual - 5%` to absorb noise. Pass 23's interrupted 36m46s local run produced partial ignored JSON reporting 52.12% coverage, but pytest did not complete, so the number is not usable for this decision.
+1. **[x] F205** — completed in Pass 82. The Release Full workflow now uses the integer-safe measured baseline, `--cov-fail-under=54`; the interrupted Pass 23 partial 52.12% JSON remains historical only.
 2. After F176 (eval dataset bundle) + F215 (fuzz extend) + F218 (import-order test) ship: re-measure and re-floor.
 3. Target: 75-80% actual coverage with a 70% floor by v1.40.
 
-This is a single F number: **F205**, already on the Now tier.
+This is a single F number: **F205**, now closed from the Now tier.
 
 ---
 

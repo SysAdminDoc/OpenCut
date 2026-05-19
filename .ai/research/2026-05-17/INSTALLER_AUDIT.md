@@ -116,7 +116,7 @@ Evaluated in `docs/WINDOWS_ARM64_PACKAGING.md` with the F101 commit (`706c1c3`):
 3. Install FFmpeg per-OS (brew / apt / choco)
 4. `pip install pyinstaller` + `pip install -e ".[standard]"`
 5. ruff check (selectors `E,F,I --ignore E501,E402`)
-6. `pytest tests/ -v --tb=short --cov=opencut --cov-report=term-missing --cov-fail-under=50 -n auto --dist worksteal` — **50% coverage floor**
+6. `pytest tests/ -v --tb=short --cov=opencut --cov-report=term-missing --cov-fail-under=54 -n auto --dist worksteal` — **54% coverage floor**
 7. `python scripts/sync_version.py --check`
 8. CEP panel (Linux only): `npm ci --omit=optional` + `npm run audit:check` + `npm run build:verify` + `npm run build`
 9. Release smoke matrix (Linux only): `python scripts/release_smoke.py --json --skip ruff --skip pytest-fast`
@@ -133,7 +133,7 @@ Evaluated in `docs/WINDOWS_ARM64_PACKAGING.md` with the F101 commit (`706c1c3`):
 - **macOS notarisation step added in Pass 10** — tagged/manual macOS release builds now call `scripts/notarize_macos.sh`, sign Mach-O files with hardened runtime, submit `OpenCut-Server-macOS.zip` via `xcrun notarytool`, and upload the notarized ZIP on tag releases. **F202 repository-side tooling is done; first live acceptance still needs GitHub secrets.**
 - **Windows SmartScreen/Authenticode signing** — **DONE in Pass 45 for repository tooling.** `scripts/sign_windows_artifacts.ps1` signs WPF/Inno installer outputs when `WINDOWS_CODESIGN_*` secrets are configured, verifies with SignTool, and warns inside the certificate-renewal window.
 - **SBOM upload added in Pass 11** — Linux tagged/manual release builds now run `scripts/sbom.py`, archive `OpenCut-SBOM-CycloneDX`, and upload `dist/opencut-sbom.cyclonedx.json` to tagged GitHub Releases. **F204 is done; Pass 16 later closed F219's deeper completeness test.**
-- **50% coverage floor is the minimum** — actual coverage still needs a complete measurement before policy changes. **F205 — raise CI coverage floor to current actual level once measured**. Pass 12 timed out before producing JSON; Pass 23 wrote partial ignored JSON at 52.12% after an interrupted 36m46s run, so neither attempt is valid for setting a new floor.
+- **54% coverage floor is the measured baseline** — Pass 82 completed the CI-style coverage run with 8,540 passed, 16 skipped, 54.095% line coverage, and raised Release Full to `--cov-fail-under=54`. **F205 is done**; Pass 12 and Pass 23 remain historical failed/partial attempts only.
 - **PR-only quick CI now exists** — Pass 73 closed F206 with `.github/workflows/pr-fast.yml` for Linux-only pull-request checks and left `.github/workflows/build.yml` as the Release Full push/tag/manual matrix.
 
 ---
@@ -170,6 +170,6 @@ Per the wave I I1.4 plan (shipped in v1.26.0):
 | F202 | Apple notarisation for macOS PyInstaller bundle | Done in Pass 10; live acceptance requires configured secrets | M |
 | F203 | Authenticode code-signing for Windows installer | Done in Pass 45 | M |
 | F204 | Auto-attach SBOM (from `scripts/sbom.py`) to GitHub releases | Done in Pass 11 | S |
-| F205 | Raise CI coverage floor from 50% to current actual (~75-80% est.) | Now | S |
+| F205 | Raise CI coverage floor from 50% to current actual | Done in Pass 82 | S |
 | F206 | Split CI into PR-fast and release-full workflows | Done in Pass 73 | M |
 | F207 | Embed bundled FFmpeg version in `AppConstants.cs` + installer manifest | Done in Pass 12 | S |
