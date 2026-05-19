@@ -143,7 +143,7 @@ class TestOverdubTTSFallback:
 
 
 class TestOverdubValidation:
-    @patch("opencut.core.overdub.ensure_package", return_value=True)
+    @patch("opencut.core.overdub.require_package")
     @patch("opencut.core.overdub.run_ffmpeg")
     @patch("opencut.core.overdub.get_video_info", return_value={"duration": 60})
     def test_empty_text_raises(self, _info, _ffmpeg, _pkg):
@@ -151,7 +151,7 @@ class TestOverdubValidation:
         with pytest.raises(ValueError, match="empty"):
             overdub_segment("/video.mp4", 5.0, 10.0, "")
 
-    @patch("opencut.core.overdub.ensure_package", return_value=True)
+    @patch("opencut.core.overdub.require_package")
     @patch("opencut.core.overdub.run_ffmpeg")
     @patch("opencut.core.overdub.get_video_info", return_value={"duration": 60})
     def test_start_gte_end_raises(self, _info, _ffmpeg, _pkg):
@@ -209,7 +209,7 @@ class TestDetectMouthRegion:
 
 
 class TestExtractAudioEnergy:
-    @patch("opencut.core.lip_sync_gen.ensure_package", return_value=True)
+    @patch("opencut.core.lip_sync_gen.require_package")
     def test_returns_list(self, _pkg):
         from opencut.core.lip_sync_gen import _extract_audio_energy
         # Non-existent file returns empty list

@@ -15,9 +15,9 @@ from typing import Callable, Dict, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
-    ensure_package,
     get_video_info,
     output_path,
+    require_package,
     run_ffmpeg,
 )
 
@@ -261,8 +261,8 @@ def preview_eye_contact(
     Returns:
         Dict with preview_path, face_detected, gaze_estimate.
     """
-    ensure_package("cv2", "opencv-python-headless")
-    ensure_package("mediapipe")
+    require_package("cv2", "opencv-python-headless")
+    require_package("mediapipe")
 
     import cv2  # noqa: F401
     import mediapipe as mp  # noqa: F401
@@ -364,8 +364,8 @@ def fix_eye_contact(
     Returns:
         EyeContactResult with output path and statistics.
     """
-    ensure_package("cv2", "opencv-python-headless")
-    ensure_package("mediapipe")
+    require_package("cv2", "opencv-python-headless")
+    require_package("mediapipe")
 
     import cv2  # noqa: F401
     import mediapipe as mp  # noqa: F401

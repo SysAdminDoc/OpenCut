@@ -23,8 +23,8 @@ from typing import Callable, List, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
-    ensure_package,
     get_video_info,
+    require_package,
     run_ffmpeg,
 )
 
@@ -285,7 +285,7 @@ def _generate_placeholder_image(prompt: str, width: int, height: int,
 
     Used when no AI image generator is available.
     """
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw, ImageFont
 
     # Gradient background based on prompt hash

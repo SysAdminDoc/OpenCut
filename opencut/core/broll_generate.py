@@ -135,10 +135,10 @@ def _generate_wan21(
         quality: "default" uses 1.3B model (fits 8GB VRAM),
                  "high" uses 14B model (requires significant VRAM).
     """
-    from opencut.helpers import ensure_package
+    from opencut.helpers import require_package
 
-    ensure_package("diffusers", pip_name="diffusers>=0.32")
-    ensure_package("torch")
+    require_package("diffusers", pip_name="diffusers>=0.32")
+    require_package("torch")
 
     import torch
     from diffusers import WanPipeline

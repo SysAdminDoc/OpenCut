@@ -18,7 +18,7 @@ import textwrap
 from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
-from opencut.helpers import ensure_package
+from opencut.helpers import ensure_package, require_package
 
 logger = logging.getLogger("opencut")
 
@@ -219,7 +219,7 @@ def _generate_panel_image(
     output_path: str = "",
 ) -> str:
     """Generate a single storyboard panel image."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw, ImageFont
 
     # Create base image with film-like gray background
@@ -438,7 +438,7 @@ def render_storyboard_grid(
     Returns:
         Path to the grid image.
     """
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw, ImageFont
 
     if not images:
@@ -516,7 +516,7 @@ def export_storyboard_pdf(
     Returns:
         Path to the PDF file.
     """
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image
 
     if not storyboard.panels:
