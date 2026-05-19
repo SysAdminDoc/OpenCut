@@ -7,6 +7,7 @@ Wave L modules:
   L1.3  AI Face Reshape     — /video/face/reshape
   L1.4  AI Skin Retouch     — /video/face/retouch
   L2.3  Spark-TTS           — /audio/tts/spark
+  L2.6  Moonshine ASR       — /audio/transcribe/moonshine
 """
 from __future__ import annotations
 
@@ -355,3 +356,63 @@ def route_tts_spark_info():
         })
     except Exception as exc:
         return safe_error(exc, "tts_spark_info")
+
+
+# =============================================================
+# L2.6 — Moonshine Real-Time ASR
+# =============================================================
+
+@wave_l_bp.route("/audio/transcribe/moonshine", methods=["POST"])
+@require_csrf
+@async_job("moonshine_asr")
+def route_moonshine_transcribe(job_id, filepath, data):
+    """Transcribe audio/video via Moonshine ASR (CPU-optimized, 10x realtime).
+
+    Body params:
+      model  str  moonshine-tiny or moonshine-base (default: moonshine-base).
+    """
+    from opencut.core import asr_moonshine
+    if not asr_moonshine.check_moonshine_available():
+        raise RuntimeError(
+            "Moonshine ASR is not installed. " + asr_moonshine.INSTALL_HINT
+        )
+
+    model = str(data.get("model") or "moonshine-base").strip()
+    if model not in asr_moonshine.MOONSHINE_MODELS:
+        model = "moonshine-base"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = asr_moonshine.transcribe(
+        audio_path=filepath,
+        model=model,
+        on_progress=_prog,
+    )
+    return {
+        "text": result.text,
+        "segments": result.segments,
+        "language": result.language,
+        "model": result.model,
+        "duration_seconds": result.duration_seconds,
+        "processing_seconds": result.processing_seconds,
+        "realtime_factor": result.realtime_factor,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/audio/transcribe/moonshine/info", methods=["GET"])
+def route_moonshine_info():
+    """Return Moonshine ASR availability and model catalogue."""
+    try:
+        from opencut.core import asr_moonshine
+        return jsonify({
+            "available": asr_moonshine.check_moonshine_available(),
+            "models": asr_moonshine.MOONSHINE_MODELS,
+            "licence": "MIT (English models)",
+            "cpu_native": True,
+            "streaming": True,
+            "languages": ["en"],
+            "install_hint": asr_moonshine.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "moonshine_info")

@@ -925,6 +925,11 @@ def check_sparktts_available() -> bool:
     return _try_import("sparktts") is not None
 
 
+def check_moonshine_available() -> bool:
+    """L2.6 — Moonshine real-time ASR (CPU-optimized, MIT for English)."""
+    return _try_import("moonshine") is not None
+
+
 def check_wave_l(verbose=False):
     """Run all Wave L availability checks and print a summary."""
     checks = [
