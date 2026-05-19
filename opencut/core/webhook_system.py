@@ -36,8 +36,17 @@ _MAX_DELIVERIES = 100
 VALID_EVENTS = frozenset({
     "job_complete", "job_failed", "render_complete",
     "export_ready", "error",
+    "job.complete", "job.error", "job.cancelled",
     "review.comment_added", "review.status_changed",
 })
+
+_EVENT_ALIASES = {
+    "job.complete": frozenset({"job.complete", "job_complete"}),
+    "job.error": frozenset({"job.error", "job_failed", "error"}),
+    "job.cancelled": frozenset({"job.cancelled"}),
+    "job_complete": frozenset({"job_complete", "job.complete"}),
+    "job_failed": frozenset({"job_failed", "job.error"}),
+}
 
 # Retry backoff delays in seconds
 RETRY_DELAYS = (1, 5, 15)
@@ -382,6 +391,13 @@ def _send_payload(
         return 0, False, str(exc)
 
 
+def _event_matches_subscription(event_type: str, subscriptions: List[str]) -> bool:
+    if not subscriptions:
+        return True
+    accepted = _EVENT_ALIASES.get(event_type, frozenset({event_type}))
+    return any(event in accepted for event in subscriptions)
+
+
 def fire_event(
     event_type: str,
     details: Dict[str, Any],
@@ -412,7 +428,7 @@ def fire_event(
         # Filter to enabled webhooks subscribing to this event
         targets = [
             c for c in configs
-            if c.enabled and (not c.events or event_type in c.events)
+            if c.enabled and _event_matches_subscription(event_type, c.events)
         ]
 
     if not targets:
