@@ -1006,3 +1006,25 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P62-L06 | Validation commands — focused F255/F254 tests, focused UXP/release-smoke unit coverage, `py_compile`, focused Ruff, `node --check extension\com.opencut.uxp\main.js`, and release-smoke `pytest-fast` (`637 passed`) passed locally. |
 
 **Source coverage assessment (Pass 62):** Pass 62 claims in `ROADMAP.md` v4.65, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `CHANGELOG.md`, `docs/UXP_MIGRATION.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P62-E01 and R-P62-L01 through R-P62-L06.
+
+---
+
+## Pass 81 sources (2026-05-19, F245-F248 delivery-standard plans)
+
+| ID | Source |
+|---|---|
+| R-P81-E01 | https://partnerhelp.netflixstudios.com/hc/en-us/articles/360000599948-Dolby-Vision-HDR-Mastering-Guidelines — Netflix Dolby Vision IMF mastering guidance, including Dolby Vision IMF delivery boundary |
+| R-P81-E02 | https://partnerhelp.netflixstudios.com/hc/en-us/articles/115000614752-Backlot-Delivery-Instructions-for-IMF — Netflix Backlot IMF upload and validation flow |
+| R-P81-E03 | https://github.com/quietvoid/dovi_tool — dovi_tool Dolby Vision RPU inspect/generate/export/convert command surface |
+| R-P81-E04 | https://github.com/shaka-project/shaka-packager — Shaka Packager DASH/HLS packaging capabilities |
+| R-P81-E05 | https://www.bento4.com/documentation/ and https://www.bento4.com/documentation/mp4dash/ — Bento4 DASH/HLS/CMAF tooling reference |
+| R-P81-E06 | https://www.thedpp.com/specs/imf — DPP AS-11 and IMF delivery-requirements guidance |
+| R-P81-E07 | https://adm.ebu.io/reference/excursions/bw64_and_adm.html — EBU ADM BW64 axml/chna guidance |
+| R-P81-E08 | https://adm.ebu.io/background/rendering.html and https://github.com/ebu/ebu_adm_renderer — EBU ADM Renderer/EAR reference and open QC boundary |
+| R-P81-L01 | `opencut/core/delivery_standards.py` — new deterministic preset inventory and command-plan builder |
+| R-P81-L02 | `opencut/routes/delivery_master_routes.py` — `/delivery/mastering-presets` and `/delivery/mastering-plan` route wiring |
+| R-P81-L03 | `docs/DELIVERY_STANDARDS.md` — user-facing route, source, and commercial-boundary documentation |
+| R-P81-L04 | `tests/test_delivery_standards.py` and `scripts/release_smoke.py` — release-gate coverage for preset inventory, route behavior, and plan constraints |
+| R-P81-L05 | Generated artifacts — `opencut/_generated/route_manifest.json` now records 1,381 routes / 101 blueprints and `opencut/_generated/mcp_extended_tools.json` now records 1,325 opt-in route tools |
+
+**Source coverage assessment (Pass 81):** Pass 81 claims in `ROADMAP.md` v4.84, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `docs/DELIVERY_STANDARDS.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P81-E01 through R-P81-E08 and R-P81-L01 through R-P81-L05.

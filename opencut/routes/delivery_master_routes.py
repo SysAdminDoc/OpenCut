@@ -11,7 +11,14 @@ import os
 from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_path
+from opencut.security import (
+    get_json_dict,
+    require_csrf,
+    safe_bool,
+    safe_float,
+    safe_int,
+    validate_path,
+)
 
 logger = logging.getLogger("opencut")
 
@@ -284,6 +291,59 @@ def delivery_spec_compare():
     try:
         result = compare_specs(spec_a, spec_b)
         return jsonify({"success": True, "comparison": result})
+    except ValueError as e:
+        return jsonify({"error": str(e)}), 400
+
+
+# ===========================================================================
+# Delivery Standards Planning (Synchronous)
+# ===========================================================================
+
+def _optional_plan_path(value):
+    text = str(value or "").strip()
+    return validate_path(text) if text else ""
+
+
+@delivery_master_bp.route("/delivery/mastering-presets", methods=["GET"])
+def delivery_mastering_presets():
+    """List delivery-standard planning presets."""
+    from opencut.core.delivery_standards import (
+        count_required_tools,
+        delivery_standard_f_numbers,
+        list_delivery_standard_presets,
+    )
+
+    presets = list_delivery_standard_presets()
+    return jsonify({
+        "presets": presets,
+        "count": len(presets),
+        "f_numbers": list(delivery_standard_f_numbers()),
+        "tool_counts": count_required_tools(),
+        "runs_external_tools": False,
+    })
+
+
+@delivery_master_bp.route("/delivery/mastering-plan", methods=["GET", "POST"])
+@require_csrf
+def delivery_mastering_plan():
+    """Build an operator plan for a delivery-standard preset."""
+    from opencut.core.delivery_standards import build_delivery_standard_plan
+
+    if request.method == "POST":
+        data = get_json_dict()
+    else:
+        data = request.args.to_dict()
+
+    try:
+        result = build_delivery_standard_plan(
+            data.get("preset", data.get("preset_id", "")),
+            source_path=_optional_plan_path(data.get("source_path", "")),
+            output_dir=_optional_plan_path(data.get("output_dir", "")),
+            title=data.get("title", ""),
+            dolby_profile=str(data.get("dolby_profile", "8.1")),
+            adm_render_layout=str(data.get("adm_render_layout", "0+5+0")),
+        )
+        return jsonify({"success": True, "plan": result})
     except ValueError as e:
         return jsonify({"error": str(e)}), 400
 

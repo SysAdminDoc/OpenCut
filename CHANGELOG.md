@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Delivery Standards Planning Presets
+
+- Closed F245-F248 by adding read-only planning presets for Netflix IMF/Dolby Vision, DPP/broadcaster IMF, Dolby Vision Profile 5/8.1 OSS review packaging, and ADM BW64 Atmos-master preparation.
+- Added `/delivery/mastering-presets` and `/delivery/mastering-plan`, with deterministic command arrays, validation notes, source links, and explicit platform/broadcaster/Dolby commercial boundaries.
+
 ### Added — WCAG 3 Draft Audio-Description Hooks
 
 - Closed F235 by adding optional descriptive-transcript and extended-audio-description timing metadata to `/audio/description/microsoft-draft`.
