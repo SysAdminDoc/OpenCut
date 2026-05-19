@@ -1427,3 +1427,8 @@ route/MCP generated-surface tests (`20 passed`), `py_compile`, and focused Ruff.
 Remaining open Pass-2 work after this update: F205 remains blocked on a complete
 coverage run, F252 remains open for live UXP WebView cutover/UDT validation, and
 F253 remains open for the Hybrid Plugin `.uxpaddon` path.
+
+Pass-2 state sync after Pass 81: `FEATURE_BACKLOG_ADDENDUM.md` and the ROADMAP
+Now summary now mark F251 and F259 closed, matching the v4.27 implementation,
+tests, and `PROJECT_CONTEXT.md`. The remaining open Pass-2 items are F205,
+F252, and F253.
