@@ -170,7 +170,7 @@ def review_update_status():
 @platform_infra_bp.route("/review/portal/share", methods=["POST"])
 @require_csrf
 def review_portal_share():
-    """Create an HMAC-signed LAN review portal URL plus Caddy/mDNS descriptors."""
+    """Create an HMAC-signed LAN review portal URL plus sidecar descriptors."""
     try:
         data = get_json_dict()
         review_id = str(data.get("review_id") or "").strip()
@@ -181,6 +181,17 @@ def review_portal_share():
         ttl_seconds = safe_int(data.get("ttl_seconds"), default=86400, min_val=60, max_val=604800)
         scheme = str(data.get("scheme") or "http").strip().lower()
         service_name = str(data.get("service_name") or "OpenCut Review").strip()
+        headscale = data.get("headscale")
+        if headscale is None and (data.get("headscale_url") or data.get("headscale_user")):
+            headscale = {
+                "url": data.get("headscale_url"),
+                "user": data.get("headscale_user"),
+                "machine_name": data.get("headscale_machine_name"),
+                "tags": data.get("headscale_tags"),
+                "ttl_hours": data.get("headscale_ttl_hours"),
+            }
+        if headscale is not None and not isinstance(headscale, dict):
+            return jsonify({"error": "headscale must be an object"}), 400
 
         from opencut.core.review_portal import build_portal_share
 
@@ -191,6 +202,7 @@ def review_portal_share():
             scheme=scheme,
             ttl_seconds=ttl_seconds,
             service_name=service_name,
+            headscale=headscale,
         )
         return jsonify(share.as_dict())
     except KeyError as exc:

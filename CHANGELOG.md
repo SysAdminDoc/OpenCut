@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — Review Portal Headscale Plan
+
+- Closed F232 by adding an optional Headscale/Tailscale command-plan descriptor to local review portal share responses.
+- Documented that OpenCut returns operator-run command arrays only and does not create preauth keys, store keys, or enable cross-site networking from request handling.
+
 ### Added — Review Bundle Voice Notes and HLS Renditions
 
 - Closed F228-F230 by adding explicit voice-note attachments and optional HLS browser-scrubbing renditions to F105 review bundles.
