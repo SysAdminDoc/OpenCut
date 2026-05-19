@@ -3,6 +3,8 @@
 **Date:** 2026-05-17  
 **Purpose:** preserve the wrap-up evidence for the interrupted F205 coverage-floor measurement attempt.
 
+**Superseded:** Pass 82 completed the full F205 coverage command on 2026-05-19 and raised the CI floor to `--cov-fail-under=54`; see `F205_COVERAGE_FLOOR_SUCCESS.md`. This file remains as historical evidence for the earlier interrupted run.
+
 ## Attempted Command
 
 ```powershell

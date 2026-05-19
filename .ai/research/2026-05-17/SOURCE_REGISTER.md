@@ -1028,3 +1028,20 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P81-L05 | Generated artifacts — `opencut/_generated/route_manifest.json` now records 1,381 routes / 101 blueprints and `opencut/_generated/mcp_extended_tools.json` now records 1,325 opt-in route tools |
 
 **Source coverage assessment (Pass 81):** Pass 81 claims in `ROADMAP.md` v4.84, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `docs/DELIVERY_STANDARDS.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` trace to R-P81-E01 through R-P81-E08 and R-P81-L01 through R-P81-L05.
+
+---
+
+## Pass 82 — F205 coverage floor uplift (2026-05-19 eighty-second pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P82-L01 | F205 coverage command completed: `python -m pytest tests/ -q --tb=short --cov=opencut --cov-report=term-missing --cov-report=json:dist\coverage-f205.json --cov-fail-under=0 -n auto --dist worksteal`; result `8,540 passed`, `16 skipped`, 7 warnings in 132.73 seconds |
+| R-P82-L02 | `dist\coverage-f205.json` inspection — coverage.py 7.14.0; 131,130 statements, 70,935 covered lines, 60,195 missing lines, 30 excluded lines, 54.09517272935255% reported coverage |
+| R-P82-L03 | `Get-FileHash -Algorithm SHA256 dist\coverage-f205.json` — SHA256 `C3044F261073964E868FED338B7B09114F0115DA16F6EAF0C34005146576F318`; file length 5,736,478 bytes |
+| R-P82-L04 | `.github/workflows/build.yml` — Release Full coverage gate raised from `--cov-fail-under=50` to `--cov-fail-under=54` |
+| R-P82-L05 | `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` — durable summary of the completed run, floor decision, and cleanup boundary |
+| R-P82-L06 | Roadmap/state files — `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGELOG.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `TEST_COVERAGE_GAPS.md`, `INSTALLER_AUDIT.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` now mark F205 closed from the completed measurement |
+
+**Source coverage assessment (Pass 82):** Pass 82 claims in `ROADMAP.md` v4.85, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `TEST_COVERAGE_GAPS.md`, `INSTALLER_AUDIT.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md`, and `F205_COVERAGE_FLOOR_SUCCESS.md` trace to R-P82-L01 through R-P82-L06. No external source was used.

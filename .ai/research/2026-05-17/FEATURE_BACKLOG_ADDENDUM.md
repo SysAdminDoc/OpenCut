@@ -39,7 +39,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | F202 | Apple notarisation for macOS PyInstaller bundle | DONE in Pass 10 — macOS release workflow signs with Developer ID, submits `OpenCut-Server-macOS.zip` through `xcrun notarytool`, and documents required secrets; first live acceptance still needs configured GitHub secrets | INSTALLER_AUDIT §7 + niche AI §5 | M | Done |
 | [x] F203 | Authenticode code-signing for Windows installer + signing-cert renewal policy | Closed in Pass 45 — Windows signing helper, workflow step, secrets docs, verification, and renewal-warning policy added; first live signed release needs configured secrets | INSTALLER_AUDIT §7 + niche AI §5 | M | Next |
 | F204 | Auto-attach SBOM (CycloneDX 1.5) to GitHub release | DONE in Pass 11 — Linux release job generates, archives, and uploads `dist/opencut-sbom.cyclonedx.json` | INSTALLER_AUDIT §7 | S | Done |
-| F205 | Raise CI coverage floor from 50% to current actual | Still open — Pass 12 timed out after 20 minutes without output; Pass 23 reattempt was interrupted after 36m46s and produced only partial ignored coverage JSON (52.12%), which is invalid for setting a floor. Do not raise the floor until a complete measurement exists | INSTALLER_AUDIT §7 + TEST_COVERAGE §4 + F205_INTERRUPTED_COVERAGE_NOTE | S | Now |
+| [x] F205 | Raise CI coverage floor from 50% to current actual | Closed in Pass 82 — complete CI-style coverage run finished with 8,540 passed, 16 skipped, and 54.095% reported line coverage; Release Full now enforces `--cov-fail-under=54` | INSTALLER_AUDIT §7 + TEST_COVERAGE §4 + F205_COVERAGE_FLOOR_SUCCESS | S | Now |
 | [x] F206 | Split CI into PR-fast and release-full workflows | Closed in Pass 73 — PRs now run `.github/workflows/pr-fast.yml` on Linux only, while `.github/workflows/build.yml` remains the Release Full push/tag/manual three-OS matrix | INSTALLER_AUDIT §7 | M | Later |
 | F207 | Embed bundled FFmpeg version in `AppConstants.cs` + installer manifest | DONE in Pass 12 — current bundled build `8.0.1-essentials_build-www.gyan.dev` is in `AppConstants.cs` and WPF/Inno `~/.opencut/installer.json` manifests | INSTALLER_AUDIT §9 | S | Done |
 
@@ -127,8 +127,8 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | Tier | Pass-2 F-numbers added | Total (cumulative) |
 |---|---|---|
-| **Now** | F205, [x] F251, [x] F259 | 1 open + F251/F259 closed |
-| **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
+| **Now** | [x] F205, [x] F251, [x] F259 | 0 open; F205/F251/F259 closed |
+| **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F205, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 18 |
 | **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, [x] F260 | 32 |
 | **Later** | [x] F193, [x] F196, [x] F206, [x] F210, [x] F212, [x] F220, [x] F221, [x] F222, [x] F224, [x] F228, [x] F230, [x] F232, [x] F235, [x] F245, [x] F246, [x] F247, [x] F248, F253 | 1 open + F193/F196/F206/F210/F212/F220/F221/F222/F224/F228/F230/F232/F235/F245/F246/F247/F248 closed |
 

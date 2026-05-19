@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.84
+**Version**: 4.85
 **Updated**: 2026-05-19
 **Baseline**: v1.32.0 (1,381 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -176,6 +176,25 @@
 > **v4.83 status (2026-05-18, eightieth pass)**: closed **F235** by adding WCAG 3 Working Draft compatibility hooks to the audio-description draft contract. `/audio/description/microsoft-draft` now accepts `include_wcag3_hooks`, `descriptive_transcript`, and `extended_timing`; draft cues expose `timing_mode`, `extended_pause_seconds`, and `descriptive_transcript_text`; responses can include a combined descriptive transcript plus machine-readable extended-audio-description pause plan. `docs/AUDIO_DESCRIPTIONS.md` records the draft/non-normative boundary and W3C references.
 >
 > **v4.84 status (2026-05-19, eighty-first pass)**: closed **F245-F248** by adding delivery-standard planning presets for Netflix IMF/Dolby Vision, DPP/broadcaster IMF, Dolby Vision Profile 5/8.1 OSS review packaging, and ADM BW64 Atmos-master preparation. `opencut/core/delivery_standards.py` now returns deterministic operator command arrays, source links, validation notes, and explicit commercial/certification boundaries; `/delivery/mastering-presets` and `/delivery/mastering-plan` expose the plans without running external tools. `docs/DELIVERY_STANDARDS.md` records the standards/tooling references and constraints. The route manifest is regenerated to **1,381 routes** and the opt-in extended MCP catalogue to **1,325 tools**.
+>
+> **v4.85 status (2026-05-19, eighty-second pass)**: closed **F205** after a complete CI-style coverage run finished locally: `8,540 passed`, `16 skipped`, 7 warnings, 131,130 statements, 70,935 covered lines, 60,195 missing lines, and **54.09517272935255%** reported line coverage. `.github/workflows/build.yml` now raises Release Full from `--cov-fail-under=50` to `--cov-fail-under=54`, and `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` records the command, totals, SHA256, and cleanup boundary. All Pass-2 Now items are now closed locally; remaining Pass-2 open work is F252 live UXP WebView/UDT cutover and F253 Hybrid Plugin `.uxpaddon`.
+
+---
+
+## 2026-05-19 v4.85 F205 Coverage Floor Uplift
+
+F205 is closed. The first two F205 attempts were invalid for policy (Pass 12 timed out without JSON, Pass 23 was interrupted with partial JSON), but Pass 82 completed the full command and produced a valid floor-setting measurement.
+
+| Surface | Status |
+|---|---|
+| Completed command | `python -m pytest tests/ -q --tb=short --cov=opencut --cov-report=term-missing --cov-report=json:dist\coverage-f205.json --cov-fail-under=0 -n auto --dist worksteal` |
+| Pytest result | `8,540 passed`, `16 skipped`, 7 warnings in 132.73 seconds. |
+| Coverage totals | coverage.py 7.14.0; 131,130 statements, 70,935 covered lines, 60,195 missing lines, 30 excluded lines, 54.09517272935255% reported line coverage. |
+| Artifact evidence | Ignored `dist\coverage-f205.json`, 5,736,478 bytes, SHA256 `C3044F261073964E868FED338B7B09114F0115DA16F6EAF0C34005146576F318`; removed after evidence capture. |
+| CI policy | Release Full now uses `--cov-fail-under=54`, the conservative integer floor of the completed measurement. |
+| Evidence note | `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` records the exact command, totals, decision, and cleanup. |
+
+No production source-code behavior changed in this pass; the tracked code change is the Release Full CI coverage threshold.
 
 ---
 
@@ -1463,7 +1482,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 5. **Two regulatory deadlines** (Apple notarisation 2026-09-01, FCC caption 2026-08-17) escalated F202 and F236 from "Next" to "Now"; both now have repository-side implementations, with live acceptance still dependent on release secrets / downstream UI packaging.
 6. **The `/api/*` surface is 233 routes, but not 233 alias pairs** — Pass 7 corrected the earlier wording. F199 now ships `opencut/_generated/api_aliases.json`: 15 true aliases and 218 canonical `/api` routes.
 7. **basicsr is dead and gfpgan/realesrgan depend on it** — Pass 1 flagged this; Pass 2's UXP work confirmed it's a torch-cascade blocker that compounds the audiocraft `torch==2.1.0` pin. **F124** (basicsr replacement) is on the critical path for any torch ≥2.6 bump.
-8. **Test coverage floor is 50%** (`--cov-fail-under=50`). Actual coverage is much higher per the 7,551-test claim — but nobody has measured it precisely. **F205** floors at actual - 5%.
+8. **Test coverage floor is 54%** (`--cov-fail-under=54`). Pass 82 completed the CI-style F205 measurement at 54.09517272935255% line coverage; the older 75-80% estimate was not supported by the completed run.
 
 ### Phase 1 — Research coverage delta vs v4.4
 
@@ -1487,7 +1506,7 @@ Full ledger in the three Pass-3 artefacts. Tier summary:
 
 Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_BACKLOG_ADDENDUM.md). Tier summary:
 
-**Now (1 open + F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F251/F259 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), F205 (CI coverage floor uplift; Pass 23 reattempt interrupted after 36m46s with only partial 52.12% JSON), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, [x] **F240 (caption reading-speed profiles)**, [x] **F241 (HarfBuzz CI gate)**, [x] **F243 (UTF-8 no-BOM SRT)**, [x] F244 (Whisper confidence + low-confidence flag), [x] F251 (beta typings diff tracker), [x] F259 (UXP HTTPS-on-mac sidecar workaround).
+**Now (0 open; F191/F195/F197/F199/F202/F204/F205/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F251/F259 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), [x] F205 (CI coverage floor raised to 54 from a completed 54.095% measurement), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, [x] **F240 (caption reading-speed profiles)**, [x] **F241 (HarfBuzz CI gate)**, [x] **F243 (UTF-8 no-BOM SRT)**, [x] F244 (Whisper confidence + low-confidence flag), [x] F251 (beta typings diff tracker), [x] F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
@@ -2730,7 +2749,7 @@ All Wave 7 features + FastAPI migration + TypeScript + niche items (~40 features
 - **Rate limiting covers 4% of async routes.** Security audit found 597 async route handlers but only 23 rate-limit calls. The `require_rate_limit()` decorator exists and works, but was only applied to model-install and a handful of AI routes. All 574 unprotected async routes accept concurrent requests limited only by `MAX_CONCURRENT_JOBS=10`. A single client can trivially exhaust all 10 job slots with expensive operations (batch rendering, video processing, ML inference), starving other requests.
   - *Recommended action*: Introduce rate-limit categories (`gpu_heavy`, `cpu_heavy`, `io_bound`, `light`) and apply to all async routes. GPU-heavy operations should share a pool of 2-3 concurrent slots. CPU-heavy should cap at 4-6.
 
-- **Test coverage is broad but shallow.** 87 test files exist with 6,925 test functions, but the architecture audit reveals 97% of the 408 core modules lack dedicated behavioral tests — they're only exercised indirectly through route smoke tests. The smoke tests in `test_route_smoke.py` use broad status code assertions like `assert resp.status_code in (200, 400, 429)` which pass regardless of whether the feature works correctly. CI enforces only 50% line coverage (`--cov-fail-under=50` in `build.yml`), which is insufficient for a codebase of this size and complexity.
+- **Test coverage is broad but shallow.** 87 test files exist with 6,925 test functions, but the architecture audit reveals 97% of the 408 core modules lack dedicated behavioral tests — they're only exercised indirectly through route smoke tests. The smoke tests in `test_route_smoke.py` use broad status code assertions like `assert resp.status_code in (200, 400, 429)` which pass regardless of whether the feature works correctly. At this audit point CI enforced only 50% line coverage; Pass 82/F205 later raised the measured baseline gate to 54% (`--cov-fail-under=54`), which is still modest for a codebase of this size and complexity.
   - *Recommended action*: Raise CI coverage threshold to 65% (target 80% over 2 sprints). Add schema validation for route responses (JSON structure, not just "is JSON"). Prioritize integration tests for the 40 GPU-model-loading modules — these are the highest-risk code paths with the least coverage.
 
 - **Roadmap growth projections are 3x out of date.** The "Route Growth Projection" table estimates 393 routes after all 7 waves. Actual count is 1,088 — a 2.8x overshoot. The "Success Metrics" table, "Completed Work" section, and wave feature lists don't reflect v1.10-v1.14 additions (categories 63-77, 155 new core modules, 20 new route blueprints). The roadmap should be rebased to reflect current reality so it can be trusted for planning.

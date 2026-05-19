@@ -1208,3 +1208,32 @@ Added `extension/com.opencut.panel/vitest.config.mjs`, `npm test`, Vitest 4.x, a
 Pass 81 closed **F245-F248** by adding deterministic delivery-standard planning presets instead of executing external authoring/certification tooling from Flask. `opencut/core/delivery_standards.py` now covers Netflix IMF/Dolby Vision, DPP/broadcaster IMF, Dolby Vision Profile 5/8.1 OSS review packaging, and ADM BW64 Atmos-master preparation.
 
 Added `GET /delivery/mastering-presets` and `GET/POST /delivery/mastering-plan`, documented the contracts in `docs/DELIVERY_STANDARDS.md`, registered `tests/test_delivery_standards.py` in release smoke, and regenerated route/MCP artifacts to 1,381 routes and 1,325 opt-in route tools. Validation passed: focused delivery-standard tests (`6 passed`), focused generated-surface tests (`20 passed`), `py_compile`, and focused Ruff.
+
+---
+
+## Pass 82 addendum (2026-05-19)
+
+Pass 82 closed **F205** after the full CI-style coverage command completed locally.
+
+### Files added or edited in Pass 82
+
+| Path | Change |
+|---|---|
+| `.github/workflows/build.yml` | Raised Release Full from `--cov-fail-under=50` to `--cov-fail-under=54`. |
+| `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` | Added the completed command, pytest result, coverage totals, SHA256, floor decision, and cleanup boundary. |
+| `.ai/research/2026-05-17/F205_INTERRUPTED_COVERAGE_NOTE.md` | Marked the old interrupted attempt as superseded by Pass 82. |
+| `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGELOG.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `TEST_COVERAGE_GAPS.md`, `INSTALLER_AUDIT.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Updated current roadmap/state files so F205 is closed and the valid floor-setting run is the latest source of truth. |
+
+### F205 measurement facts
+
+| Item | Result |
+|---|---|
+| Coverage command | Completed in 132.73 seconds. |
+| Pytest | `8,540 passed`, `16 skipped`, 7 warnings. |
+| Coverage totals | 131,130 statements, 70,935 covered lines, 60,195 missing lines, 30 excluded lines, 54.09517272935255% coverage. |
+| Artifact hash | `dist\coverage-f205.json` SHA256 `C3044F261073964E868FED338B7B09114F0115DA16F6EAF0C34005146576F318` (ignored, not committed). |
+| Decision | CI coverage floor is now `--cov-fail-under=54`. |
+
+### Remaining immediate work
+
+F252 remains open for live UXP WebView cutover / captured UDT validation, and F253 remains open for the Hybrid Plugin `.uxpaddon` path.

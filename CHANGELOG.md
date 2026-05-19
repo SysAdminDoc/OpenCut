@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Changed — CI Coverage Floor
+
+- Closed F205 after a complete CI-style pytest+coverage run finished with 8,540 passed, 16 skipped, and 54.095% line coverage.
+- Raised the Release Full workflow coverage gate from `--cov-fail-under=50` to `--cov-fail-under=54`, with the completed measurement recorded in `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md`.
+
 ### Added — Delivery Standards Planning Presets
 
 - Closed F245-F248 by adding read-only planning presets for Netflix IMF/Dolby Vision, DPP/broadcaster IMF, Dolby Vision Profile 5/8.1 OSS review packaging, and ADM BW64 Atmos-master preparation.
@@ -1201,7 +1206,7 @@ Full 3-agent audit (routes, core modules, frontend+infra). Results:
 
 ### Added
 - **JSON Structured Logging** (Phase 0.3) — File handler now outputs JSON via `python-json-logger`. Each log line includes `timestamp`, `level`, `module`, `job_id`, `message`. Console handler stays plain text. Graceful fallback if `python-json-logger` not installed.
-- **CI Coverage Enforcement** (Phase 0.1) — `.github/workflows/build.yml` now runs `pytest-cov` with `--cov-fail-under=50` threshold. CI also triggers on PRs and pushes to main. PyInstaller build skipped for non-release runs.
+- **CI Coverage Enforcement** (Phase 0.1) — `.github/workflows/build.yml` now runs `pytest-cov` with an enforced threshold, introduced at `--cov-fail-under=50` and later raised to `--cov-fail-under=54` by F205. CI also triggers on PRs and pushes to main. PyInstaller build skipped for non-release runs.
 - **Structured Error Migration** (Phase 0.2) — All route error handlers migrated from bare `{"error": str(e)}` to `safe_error()` from `opencut/errors.py`. Zero bare 500 error patterns remain across all 13 route files. Every API error returns `{error, code, suggestion}`.
 - **Smart Tab Reordering** (Phase 3.2) — Sub-tabs now physically reorder in the DOM based on contextual relevance scores. Highest-scoring features move to front within each tab group. `resetTabOrder()` restores original order on clip deselection.
 - **Frontend Error Code Mapper** (Phase 0.2) — `enhanceError()` now reads `data.code` field before regex fallbacks. Code-to-action mapping for GPU_OOM, MISSING_DEPENDENCY, FILE_NOT_FOUND, etc. with navigable settings links.

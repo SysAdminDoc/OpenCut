@@ -17,7 +17,7 @@
 
 ### Pass 81 entry point
 
-1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F192, F193, F194, F196, F198, F200, F201, F203, F206, F210, F211, F212, F213, F214, F215, F216, F217, F220, F221, F222, F223, F224, F225, F226, F227, F228, F229, F230, F231, F232, F233, F234, F235, F238, F239, F242, F249, F250, F251, F254, F255, F256, F257, F258, F259, F260, F263, F267, F271, F272 are closed. F205 still needs a runner where coverage can finish. F182 (issue seeder) may still depend on a working `gh` auth context. F252.1 and the F252.2 dispatcher slice are complete but F252 remains open for live WebView/in-Premiere UDT result capture. The next Later-tier candidates are F245-F248/F253. F268 requires an Adobe developer account/storefront process. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
+1. **Continue the remaining queue.** F121/F122/F127a/F130/F133/F135, F123, F126, F128, F137, F139, F140, F147, F176 (+follow-up), F177, F178, F180, F181, F184, F185, F192, F193, F194, F196, F198, F200, F201, F203, F205, F206, F210, F211, F212, F213, F214, F215, F216, F217, F220, F221, F222, F223, F224, F225, F226, F227, F228, F229, F230, F231, F232, F233, F234, F235, F238, F239, F242, F245, F246, F247, F248, F249, F250, F251, F254, F255, F256, F257, F258, F259, F260, F263, F267, F271, F272 are closed. F182 (issue seeder) may still depend on a working `gh` auth context. F252.1 and the F252.2 dispatcher slice are complete but F252 remains open for live WebView/in-Premiere UDT result capture. F253 remains open for the Hybrid Plugin `.uxpaddon` path. F268 requires an Adobe developer account/storefront process. Larger Pass-1 Now items still requiring model integration: F149/F162/F163/F167/F169.
 2. **F198 is now enforced, not only documented.** `CEP_UXP_PARITY_MATRIX.md` maps all 18 `ocXxx` JSX functions and identifies only two truly CEP-only calls; `opencut/_generated/cep_uxp_parity.json` plus `tests/test_cep_uxp_parity_catalogue.py` keep that claim in sync with `host/index.jsx`.
 3. **Complete F179** full `features.md` reconciliation; this remains the largest knowledge debt.
 4. **Run a Python 3.11/3.12/3.13 install matrix** for `[all]`; this cannot be fully proven from this VM's single Python 3.12 runtime.
@@ -1432,3 +1432,19 @@ Pass-2 state sync after Pass 81: `FEATURE_BACKLOG_ADDENDUM.md` and the ROADMAP
 Now summary now mark F251 and F259 closed, matching the v4.27 implementation,
 tests, and `PROJECT_CONTEXT.md`. The remaining open Pass-2 items are F205,
 F252, and F253.
+
+---
+
+## Pass 82 update (2026-05-19, F205 closed)
+
+Pass 82 closed F205 with a completed CI-style coverage measurement.
+
+| Item | Status |
+|---|---|
+| Command | `python -m pytest tests/ -q --tb=short --cov=opencut --cov-report=term-missing --cov-report=json:dist\coverage-f205.json --cov-fail-under=0 -n auto --dist worksteal` |
+| Result | PASS — `8,540 passed`, `16 skipped`, 7 warnings in 132.73 seconds |
+| Coverage | 131,130 statements, 70,935 covered lines, 60,195 missing lines, 54.09517272935255% reported coverage |
+| CI floor | `.github/workflows/build.yml` now enforces `--cov-fail-under=54` |
+| Evidence | `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` records the command, totals, SHA256, and cleanup boundary |
+
+Remaining open Pass-2 work after this update: F252 remains open for live UXP WebView cutover / captured UDT validation, and F253 remains open for the Hybrid Plugin `.uxpaddon` path.
