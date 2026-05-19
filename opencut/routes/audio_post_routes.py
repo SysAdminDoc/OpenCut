@@ -205,8 +205,12 @@ def route_me_mix(job_id, filepath, data):
     """Generate an M&E (Music & Effects) mix by removing dialogue."""
     from opencut.core.me_mix import generate_me_mix
 
-    method = str(data.get("method", "auto")).strip()
-    output_format = str(data.get("output_format", "wav")).strip()
+    method = str(data.get("method", "auto")).strip().lower()
+    if method not in ("auto", "demucs", "ffmpeg", "mute"):
+        method = "auto"
+    output_format = str(data.get("output_format", "wav")).strip().lower()
+    if output_format not in ("wav", "mp3", "flac", "aac", "ogg"):
+        output_format = "wav"
     target_lufs = safe_float(data.get("target_lufs", -23.0), -23.0,
                              min_val=-36.0, max_val=-10.0)
     dialogue_tracks = data.get("dialogue_tracks")
