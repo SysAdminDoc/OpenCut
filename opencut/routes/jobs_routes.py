@@ -290,6 +290,13 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/generate/cogvideox/i2v",
     "/analyze/video/vl",
     "/audio/speech/csm",
+    # Wave O — TTS expansion + LTX-Video + YuE music
+    "/audio/speech/dia",
+    "/audio/speech/parler",
+    "/generate/ltxv/t2v",
+    "/generate/ltxv/i2v",
+    "/generate/ltxv/extend",
+    "/audio/music/yue",
 })
 
 
