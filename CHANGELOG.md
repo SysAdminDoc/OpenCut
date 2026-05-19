@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — UXP UDT Result Capture Validation
+
+- Advanced F252 with a strict validator for JSON captured from `window.OpenCutUXPUdtHarness.run({ includeMutating: true })` inside Premiere UDT.
+- Added `opencut.core.uxp_udt_results`, `python -m opencut.tools.validate_uxp_udt_results`, and release-smoke tests so the future live WebView manifest switch has a concrete pass/fail gate.
+
 ### Changed — CI Coverage Floor
 
 - Closed F205 after a complete CI-style pytest+coverage run finished with 8,540 passed, 16 skipped, and 54.095% line coverage.
