@@ -156,7 +156,7 @@ These are not OpenCut work but should be tracked in the same ledger.
 
 The second autonomous research pass on 2026-05-17 added 70 more F-numbers across four sources: route audit, installer audit, test coverage, features.md reconciliation, plus three subagents (Frame.io review, niche AI / accessibility / standards, UXP migration deep-dive). Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](FEATURE_BACKLOG_ADDENDUM.md). Tier deltas:
 
-**Now (priority bumps + new): 3 open items; F191/F195/F197/F199/F202/F204/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244 closed locally after Pass 23 wrap-up**
+**Now (priority bumps + new): 0 open items; F191/F195/F197/F199/F202/F204/F205/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F251/F259 closed locally after Pass 82**
 
 | F# | Title | Why priority |
 |---|---|---|
@@ -166,7 +166,7 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 | [x] F199 | Document `/api/*` alias policy | Closed in Pass 7; 15 aliases + 218 canonical `/api` routes |
 | [x] **F202** | **Apple notarisation for macOS PyInstaller bundle** | Closed locally in Pass 10 with Developer ID signing + notarytool release wiring; first live acceptance requires configured GitHub secrets |
 | [x] F204 | Auto-attach SBOM to GitHub release | Closed in Pass 11 with Linux release generation, artifact archive, and tag release upload |
-| F205 | Raise CI coverage floor from 50% to actual | Still open; Pass 12 timed out after 20 minutes and Pass 23 was interrupted after 36m46s with only partial 52.12% coverage JSON |
+| [x] F205 | Raise CI coverage floor from 50% to actual | Closed in Pass 82 after a complete 8,540-test coverage run measured 54.095% line coverage and raised Release Full to `--cov-fail-under=54` |
 | [x] F207 | Embed bundled FFmpeg version in installer manifest | Closed in Pass 12 with WPF/Inno installer manifests |
 | [x] F208 | OpenAPI spec validity test | Closed in Pass 13 with `/openapi.json` path-parameter normalization, unique operation IDs, mutating-method 400/403 responses, and release-smoke contract tests |
 | [x] F209 | MCP tool ↔ route consistency test | Closed in Pass 14 with live Flask route checks for all MCP routes and special action dispatch paths |
@@ -178,8 +178,8 @@ The second autonomous research pass on 2026-05-17 added 70 more F-numbers across
 | [x] F241 | HarfBuzz-mandatory CI gate | Closed in Pass 20 with a release-smoke/CI text-shaping gate for FFmpeg/libass HarfBuzz/FriBidi plus Pillow RAQM and optional Skia capability reporting |
 | [x] F243 | UTF-8 (no BOM) SRT writer + opt-in legacy toggle | Closed in Pass 21 with UTF-8/no-BOM default SRT output plus opt-in `utf-8-sig` route/CLI/file-writer support |
 | [x] F244 | Language confidence per Whisper segment | Closed in Pass 22 with ASR/language confidence metadata, Hindi/Arabic review flags, low-confidence review reasons, route/export/cache/state preservation, and release-smoke coverage |
-| F251 | Track `@adobe/premierepro@beta` per-week diff in CI | Catch UXP-gap-closing APIs early |
-| F259 | UXP HTTP-on-macOS workaround documentation | Known 25.6.3 bug affects MCP sidecar |
+| [x] F251 | Track `@adobe/premierepro@beta` per-week diff in CI | Closed in Pass 24; weekly tracker + release-smoke warn-tier drift gate now catch UXP-gap-closing APIs early |
+| [x] F259 | UXP HTTP-on-macOS workaround documentation | Closed in Pass 24; macOS HTTP workaround docs and manifest port-allowlist tests cover the known 25.6.3 sidecar bug |
 
 **Next (32 items):** [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1 scaffold and F252.2 dispatcher done; UDT/live WebView cutover remains), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, [x] F260. Includes the **F143 conductor + F252 UXP/WebView migration + F225-F229/F231/F233/F234 collaboration extensions** as parallel flagship tracks.
 
