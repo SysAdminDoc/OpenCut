@@ -13,7 +13,9 @@ Wave L modules:
   M1.1  Chatterbox TTS      — /audio/tts/chatterbox
   M1.2  Kokoro TTS          — /audio/tts/kokoro
   M1.3  DiffRhythm Music    — /audio/music/diffrhythm
-  M2.1  Wan2.2 T2V/I2V      — /generate/wan2.2/*
+  M2.1  Wan2.2 T2V/I2V      — /generate/wan2.2/t2v, /generate/wan2.2/i2v
+  M2.2  Wan2.2-S2V          — /generate/wan2.2/s2v
+  M2.3  Wan2.2-Animate      — /generate/wan2.2/animate
   M2.4  FLUX Kontext Edit   — /image/edit/kontext
 """
 from __future__ import annotations
@@ -1059,3 +1061,150 @@ def route_wan22_info():
         })
     except Exception as exc:
         return safe_error(exc, "wan22_info")
+
+
+# =============================================================
+# M2.2 — Wan2.2-S2V Speech-to-Video (talking head)
+# =============================================================
+
+@wave_l_bp.route("/generate/wan2.2/s2v", methods=["POST"])
+@require_csrf
+@async_job("wan22_s2v", filepath_required=True, filepath_param="audio_path")
+def route_wan22_s2v(job_id, filepath, data):
+    """Generate talking-head video from audio + portrait image.
+
+    Body params:
+      audio_path     str   Path to speech audio (required).
+      portrait_path  str   Path to reference portrait (required).
+      prompt         str   Optional scene context.
+      offload_model  bool  CPU offload (default true).
+      half_body      bool  Upper-body mode (default false).
+      seed           int   Random seed.
+      output         str   Output MP4 path.
+    """
+    from opencut.core import gen_video_wan22_s2v
+    if not gen_video_wan22_s2v.check_s2v_available():
+        raise RuntimeError(
+            "Wan2.2-S2V not installed. " + gen_video_wan22_s2v.INSTALL_HINT
+        )
+
+    portrait = str(data.get("portrait_path") or data.get("portrait") or "").strip()
+    if not portrait:
+        raise ValueError("portrait_path is required")
+    from opencut.security import validate_filepath
+    portrait = validate_filepath(portrait)
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_wan22_s2v.generate(
+        audio_path=filepath,
+        portrait_path=portrait,
+        prompt=str(data.get("prompt") or ""),
+        offload_model=safe_bool(data.get("offload_model"), True),
+        half_body=safe_bool(data.get("half_body"), False),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "duration_seconds": result.duration_seconds,
+        "fps": result.fps,
+        "width": result.width,
+        "height": result.height,
+        "model": result.model,
+        "generation_seconds": result.generation_seconds,
+        "audio_source": result.audio_source,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/generate/wan2.2/s2v/info", methods=["GET"])
+def route_wan22_s2v_info():
+    """Return Wan2.2-S2V availability."""
+    try:
+        from opencut.core import gen_video_wan22_s2v
+        return jsonify({
+            "available": gen_video_wan22_s2v.check_s2v_available(),
+            "model": "wan2.2-s2v-14b",
+            "licence": "Apache-2.0",
+            "min_vram_gb": 80,
+            "offload_supported": True,
+            "install_hint": gen_video_wan22_s2v.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "wan22_s2v_info")
+
+
+# =============================================================
+# M2.3 — Wan2.2-Animate Character Animation/Replacement
+# =============================================================
+
+@wave_l_bp.route("/generate/wan2.2/animate", methods=["POST"])
+@require_csrf
+@async_job("wan22_animate", filepath_required=True, filepath_param="motion_video")
+def route_wan22_animate(job_id, filepath, data):
+    """Animate character or replace character in video.
+
+    Body params:
+      character_image  str   Path to character/appearance image (required).
+      motion_video     str   Path to motion reference video (required).
+      mode             str   motion_transfer or character_replace.
+      offload_model    bool  CPU offload (default true).
+      seed             int   Random seed.
+      output           str   Output MP4 path.
+    """
+    from opencut.core import gen_video_wan22_animate
+    if not gen_video_wan22_animate.check_animate_available():
+        raise RuntimeError(
+            "Wan2.2-Animate not installed. " + gen_video_wan22_animate.INSTALL_HINT
+        )
+
+    char_img = str(data.get("character_image") or data.get("character") or "").strip()
+    if not char_img:
+        raise ValueError("character_image is required")
+    from opencut.security import validate_filepath
+    char_img = validate_filepath(char_img)
+
+    mode = str(data.get("mode") or "motion_transfer").strip().lower()
+    if mode not in gen_video_wan22_animate.ANIMATE_MODES:
+        mode = "motion_transfer"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_wan22_animate.animate(
+        character_image=char_img,
+        motion_video=filepath,
+        mode=mode,
+        offload_model=safe_bool(data.get("offload_model"), True),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "mode": result.mode,
+        "duration_seconds": result.duration_seconds,
+        "fps": result.fps,
+        "width": result.width,
+        "height": result.height,
+        "model": result.model,
+        "generation_seconds": result.generation_seconds,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/generate/wan2.2/animate/info", methods=["GET"])
+def route_wan22_animate_info():
+    """Return Wan2.2-Animate availability and modes."""
+    try:
+        from opencut.core import gen_video_wan22_animate
+        return jsonify({
+            "available": gen_video_wan22_animate.check_animate_available(),
+            "model": "wan2.2-animate-14b",
+            "modes": gen_video_wan22_animate.ANIMATE_MODES,
+            "licence": "Apache-2.0",
+            "install_hint": gen_video_wan22_animate.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "wan22_animate_info")
