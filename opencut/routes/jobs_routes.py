@@ -276,6 +276,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/generate/wan2.2/i2v",
     "/generate/wan2.2/s2v",
     "/generate/wan2.2/animate",
+    # M3.2 — Digital twin pipeline
+    "/pipeline/digital_twin",
 })
 
 
