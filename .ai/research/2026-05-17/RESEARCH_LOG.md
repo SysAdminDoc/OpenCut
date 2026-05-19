@@ -1049,3 +1049,24 @@ allow-list check, focused F210 Python guard tests (`3 passed`), touched Python
 compile, focused Ruff, release-smoke `panel-unit`, `npm run build:verify`,
 `npm run build`, and the PR-fast release-smoke command (`pytest-fast` 705
 passed plus `panel-unit`) passed locally.
+
+---
+
+## Pass 81 implementation note (2026-05-19)
+
+F245-F248 were closed as local-first delivery-standard planning surfaces. Fresh
+source checks confirmed the right boundary for this repo: OpenCut can assemble
+operator command arrays and metadata/checklist plans for Netflix IMF/Dolby
+Vision, DPP/broadcaster IMF, Dolby Vision Profile 5/8.1 review packages, and ADM
+BW64 Atmos-master preparation, but it should not claim platform certification,
+broadcaster acceptance, or licensed Dolby `.ec3`/DD+JOC encode output.
+
+The pass added `opencut/core/delivery_standards.py`, two delivery-master routes,
+`docs/DELIVERY_STANDARDS.md`, generated route/MCP artifacts, and
+`tests/test_delivery_standards.py` in release smoke. The route manifest now
+reports 1,381 routes and the opt-in extended MCP catalogue reports 1,325 route
+tools.
+
+Validation evidence for the pass: touched Python compile, focused
+delivery-standard tests (`6 passed`), focused generated-surface tests (`20
+passed`), and focused Ruff passed locally.

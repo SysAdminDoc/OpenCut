@@ -99,10 +99,10 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | [x] F242 | ICU4X-based CJK line breaking | Closed in Pass 47 — shared ICU4X/UAX14-compatible CJK breaker now drives SRT/VTT export, no-word timestamp cue splitting, styled-caption layout tokens, and shot-aware subtitle wrapping without a mandatory binary ICU dependency | Niche AI §3 | M | Next |
 | F243 | UTF-8 (no BOM) SRT writer + opt-in Windows-legacy BOM toggle | DONE in Pass 21 — primary SRT export defaults to UTF-8 without BOM, `legacy_windows_bom=True` / `--srt-legacy-bom` opts into `utf-8-sig`, and route aliases expose/report the encoding policy | Niche AI §3 + R-P21-L01/R-P21-L08 | S | Done |
 | F244 | Language confidence per Whisper segment + Hindi/Arabic human-review flag | DONE in Pass 22 — Whisper segment metadata now carries ASR confidence, language confidence, Hindi/Arabic review flags, low-confidence review reasons, and survives transcript cache/state, JSON export, edited transcript export, and CLI output | Niche AI §3 + R-N17 + R-P22-L01/R-P22-L08 | S | Done |
-| F245 | Netflix IMF builder macro (Bento4 + dovi_tool) | Apache-2 + open OSS chain | Niche AI §4 | L | Later |
-| F246 | DPP IMF (BBC / ARD / EBU) preset | Public-broadcaster delivery | Niche AI §4 | L | Later |
-| F247 | Dolby Vision Profile 5/8.1 OSS pipeline (dovi_tool + Shaka) | Profile 7 still painful; document constraints | Niche AI §4 | L | Later |
-| F248 | ADM BWF (Audio Definition Model in BW64) Atmos master | EBU TR 045 — fully OSS up to final encode; .ec3 needs DEE (commercial) | Niche AI §4 | L | Later |
+| [x] F245 | Netflix IMF builder macro (Bento4 + dovi_tool) | Closed in Pass 81 — `netflix_imf_dolby_vision` returns deterministic IMF App 2E/Dolby Vision operator commands, source links, validation notes, and commercial acceptance boundaries without running external tools | Niche AI §4 | L | Later |
+| [x] F246 | DPP IMF (BBC / ARD / EBU) preset | Closed in Pass 81 — `dpp_imf_broadcast` returns a broadcaster IMF plus DPP metadata-sidecar plan with receiver-specific warnings for DPP/BBC/ARD/EBU handoffs | Niche AI §4 | L | Later |
+| [x] F247 | Dolby Vision Profile 5/8.1 OSS pipeline (dovi_tool + Shaka) | Closed in Pass 81 — `dolby_vision_profile_5_8_1` returns dovi_tool plus Shaka/Bento4 review-package plans and explicitly documents Profile 7/FEL limitations | Niche AI §4 | L | Later |
+| [x] F248 | ADM BWF (Audio Definition Model in BW64) Atmos master | Closed in Pass 81 — `adm_bwf_atmos_master` returns ADM BW64 axml/chna inspection and EAR QC-render plans while keeping final .ec3/DD+JOC Dolby encode commercial | Niche AI §4 | L | Later |
 | [x] F249 | Flatpak (Flathub) primary Linux distribution + AppImage fallback | Closed in Pass 57 — Linux releases now carry Flatpak/AppImage metadata, `io.github.sysadmindoc.opencut` manifest, AppImage/Flatpak launchers, package-build script, release workflow upload wiring, and Flathub boundary docs | Niche AI §5 | M | Next |
 | [x] F250 | Aptabase as default opt-in telemetry (privacy-first desktop) | Closed in Pass 58 — disabled-by-default Aptabase telemetry is now the documented opt-in provider with local settings, env overrides, app-key masking, prop scrubbing, and `/telemetry/aptabase/*` routes | Niche AI §6 | M | Next |
 
@@ -130,7 +130,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | **Now** | F205, F251, F259 | 3 |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
 | **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, [x] F260 | 32 |
-| **Later** | [x] F193, [x] F196, [x] F206, [x] F210, [x] F212, [x] F220, [x] F221, [x] F222, [x] F224, [x] F228, [x] F230, [x] F232, [x] F235, F245, F246, F247, F248, F253 | 5 open + F193/F196/F206/F210/F212/F220/F221/F222/F224/F228/F230/F232/F235 closed |
+| **Later** | [x] F193, [x] F196, [x] F206, [x] F210, [x] F212, [x] F220, [x] F221, [x] F222, [x] F224, [x] F228, [x] F230, [x] F232, [x] F235, [x] F245, [x] F246, [x] F247, [x] F248, F253 | 1 open + F193/F196/F206/F210/F212/F220/F221/F222/F224/F228/F230/F232/F235/F245/F246/F247/F248 closed |
 
 **Total Pass-2 F-numbers: 70** (F191-F260).
 **Total project F-numbers: 140** (F121-F260 from Pass 1 + Pass 2; plus the pre-existing F001-F120 from v4.3).

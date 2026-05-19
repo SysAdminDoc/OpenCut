@@ -1,7 +1,7 @@
 # OpenCut — Project Context
 
 **Canonical, cross-tool source of truth for project memory, architecture, shipping cadence, and entry points.**
-**Last consolidated:** 2026-05-18 (eighty autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Pass 77 closed F224 by adding `/ai/deepfake-detect`, deepfake evidence metadata, and authenticity-report review guidance. Pass 78 closed F228-F230 by adding review-bundle voice-note attachments and optional HLS browser-scrubbing renditions. Pass 79 closed F232 by adding optional Headscale/Tailscale command-plan descriptors for cross-site review portal sharing. Pass 80 closed F235 by adding WCAG 3 draft descriptive transcript and extended AD timing hooks; route manifest now reports 1,379 routes and the opt-in extended MCP catalogue reports 1,322 tools.
+**Last consolidated:** 2026-05-19 (eighty-one autonomous research/verification/implementation/wrap-up passes, with Passes 1-34 on 2026-05-17 — see `.ai/research/2026-05-17/`). Pass 3 verified the live state, walked `host/index.jsx`, drafted the F143-F145 agent-conductor RFC, and quantified the market-fit story. Pass 4 ran the full release-smoke gate, fixed release-gate lint drift, and prepared the local research + hardening commit. Passes 5-75 are recorded in ROADMAP.md and the pass update notes below. Pass 76 closed F220-F222 by adding external RVC backend execution/fallback handling, natural-language color-intent grading on `/ai/auto-grade`, cut-point pacing analysis on `/ai/pacing-analysis`, and route/catalogue tests. Pass 77 closed F224 by adding `/ai/deepfake-detect`, deepfake evidence metadata, and authenticity-report review guidance. Pass 78 closed F228-F230 by adding review-bundle voice-note attachments and optional HLS browser-scrubbing renditions. Pass 79 closed F232 by adding optional Headscale/Tailscale command-plan descriptors for cross-site review portal sharing. Pass 80 closed F235 by adding WCAG 3 draft descriptive transcript and extended AD timing hooks. Pass 81 closed F245-F248 by adding deterministic Netflix IMF/Dolby Vision, DPP IMF, Dolby Vision Profile 5/8.1, and ADM BW64 delivery-standard planning routes; route manifest now reports 1,381 routes and the opt-in extended MCP catalogue reports 1,325 tools.
 **Live version:** v1.32.0.
 
 > This file is the place to land first. It is intentionally **smaller** than `CLAUDE.md` and `ROADMAP.md` and **does not duplicate** their granular content. It tells you what each other file is for and where to look next.
@@ -18,17 +18,17 @@ OpenCut is a **local-first, MIT-licensed automation backend for Adobe Premiere P
 
 | Surface | Count | Source of truth |
 |---|---|---|
-| API routes | **1,379** | `opencut/_generated/route_manifest.json` (F099) |
+| API routes | **1,381** | `opencut/_generated/route_manifest.json` (F099) |
 | Blueprints | **101** | same |
-| Core processing modules (`opencut/core/`) | **537** Python files | `ls opencut/core` |
+| Core processing modules (`opencut/core/`) | **538** Python files | `ls opencut/core` |
 | Route files (`opencut/routes/`) | **101** | `ls opencut/routes` |
-| Tests | **189 test_*.py files** + **2 Vitest panel test files** (≥7,600 tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
+| Tests | **190 test_*.py files** + **2 Vitest panel test files** (≥7,600 tests claimed) | `ls tests/`, `extension/com.opencut.panel/tests/` |
 | Optional AI/model cards | **47** | `opencut/_generated/model_cards.json` + `docs/MODELS.md` (F115) |
 | `/api/*` routes | **233** total; **15** true aliases; **218** canonical `/api` routes | `opencut/_generated/api_aliases.json` (F199) |
 | Feature readiness records | **100** total; **58** route-derived records / **67** route bindings | `opencut/registry.py` + `opencut/_generated/feature_readiness.json` + `opencut.catalog_contract` (F100/F191/F196/F197) |
 | OpenAPI typed response endpoints | **110** | `opencut.openapi_registry` + `opencut/openapi.py` (F192/F193) |
 | MCP curated tools | **39** | `opencut/mcp_server.py` (F195) |
-| MCP extended route tools | **1,322 opt-in** | `opencut/_generated/mcp_extended_tools.json` (F194) |
+| MCP extended route tools | **1,325 opt-in** | `opencut/_generated/mcp_extended_tools.json` (F194) |
 | CEP JSX host functions | **18 total; 2 CEP-only** | `opencut/_generated/cep_uxp_parity.json` (F198) |
 | CEP locale keys (English) | 417 | `extension/com.opencut.panel/client/locales/en.json` |
 | Current version | **1.32.0** | `pyproject.toml`, `python scripts/sync_version.py --check` |
@@ -55,7 +55,7 @@ Hold both in your head. When a new piece of work arrives, ask: "is this a model 
 ```
 Premiere CEP panel ─┐
 Premiere UXP panel ─┼─► HTTP localhost:5679  ─► Flask app (create_app() factory)
-DaVinci Resolve ────┤   WebSocket :5680           ├─ routes/* (101 blueprints) ─► core/* (537 modules) ─► FFmpeg / Whisper / Demucs / Torch / ONNX
+DaVinci Resolve ────┤   WebSocket :5680           ├─ routes/* (101 blueprints) ─► core/* (538 modules) ─► FFmpeg / Whisper / Demucs / Torch / ONNX
 MCP client     ─────┘   MCP HTTP :5681            ├─ jobs.py (@async_job decorator, SQLite persistence, GPU rate limit)
                                                   ├─ security.py (CSRF, path-traversal, SSRF guards, safe_pip_install)
                                                   ├─ auth.py (loopback bypass + 256-bit token for non-loopback)
@@ -101,6 +101,7 @@ For module-level patterns and the deep gotcha list (~270 entries), see **[`CLAUD
 | LAN review portal contract | `docs/REVIEW_PORTAL.md` |
 | Review notification feeds and signed webhooks | `docs/REVIEW_NOTIFICATIONS.md` |
 | Audio-description draft/review workflow | `docs/AUDIO_DESCRIPTIONS.md` |
+| IMF, Dolby Vision, DPP, and ADM delivery-standard planning | `docs/DELIVERY_STANDARDS.md` |
 
 When two roadmap files disagree, **ROADMAP.md v4.3 wins**. When ROADMAP.md and the live code disagree, **the code wins** (and ROADMAP.md drifted — open an F-number).
 
@@ -277,7 +278,7 @@ Both deadlines fall before the next Wave (~v1.35) is expected to ship. F202's re
 
 These deserve explicit attention because they are not currently owned by any single document:
 
-1. **Chat-conductor agent (F143)** — Descript Underlord and FireRed-OpenStoryline have proven sidebar-chat + timeline-diff + post-turn self-review is the converging UX. OpenCut has every building block (1,379 routes, MCP sidecar, LLM abstraction) but no conductor. Highest-leverage gap.
+1. **Chat-conductor agent (F143)** — Descript Underlord and FireRed-OpenStoryline have proven sidebar-chat + timeline-diff + post-turn self-review is the converging UX. OpenCut has every building block (1,381 routes, MCP sidecar, LLM abstraction) but no conductor. Highest-leverage gap.
 2. **UXP MCP transport (F146)** — every competing PPro MCP server today is CEP-bound and will break Sept 2026. The first UXP-MCP wins post-EOL.
 3. **Real-time editor-loop preview (F158)** — StreamDiffusionV2 + Diffusion Templates (Apr 2026, MIT) unlock real-time on existing LTX-2.3 / Wan backends. CapCut / Runway / Captions charge for this.
 4. **Caption translation standalone (F139)** — every commercial editor ships it; OpenCut has full dubbing but no SRT-in-SRT-out path.
@@ -287,7 +288,7 @@ These deserve explicit attention because they are not currently owned by any sin
 8. **`features.md` (402 features) ↔ F-number reconciliation** is overdue (F179). Currently ~250 of the 402 items live in implicit limbo. Pass 2 sample-walk (40 entries) found ~60% SHIPPED, ~27% UNCLEAR → 5 new F-numbers graduated (F220-F224).
 9. **OpenTimelineIO Marker schema is now the F105 review-bundle interchange anchor** (Pass 48, F225; extended in Passes 49-54 with F226/F227/F229/F231/F233/F234, Pass 78 with F228/F230, and Pass 79 with F232). Review bundles include `markers.otio`, deterministic SVG drawing overlays, `annotations/index.json`, `review_threads.json`, `premiere_markers.csv`, `review_markers.edl`, `voice_notes/index.json`, optional copied voice-note audio, and optional `hls/master.m3u8` browser-scrubbing renditions while preserving `markers.json`; LAN share links use HMAC-signed review portal URLs with Caddy/mDNS descriptors and optional Headscale/Tailscale command-plan descriptors, review activity emits Atom feed entries plus optional HMAC-signed webhooks, and delivery transfer bundles provide croc/rclone handoff plans.
 10. **WebView UI in Bolt UXP (March 2026, MIT) is the correct CEP→UXP migration target for the 7,730-line vanilla JS main.js** (Pass 2, F252). Rewriting to Spectrum widgets is months of work for negligible end-user benefit. Pass 59 added the dormant F252.1 Bolt/WebView scaffold at `extension/com.opencut.uxp/bolt-webview/`; Pass 60 added `PProBridge.executeHostAction()` plus `window.OpenCutUXPHost` for the 14 direct-UXP actions; Pass 61 closed F254 by adding `createSubsequenceFromRange()` for UXP range exports; Pass 62 closed F255 with `exportSubsequenceWithEncoder()`; Pass 63 closed F256 with Transcript API helpers for caption-QC context; Pass 64 closed F257 with Object Mask state helpers; Pass 65 closed F258 with UXP AAF export helpers; Pass 66 closed F260 with generated migration-risk dashboard artifacts in Settings; Pass 67 closed F267 with generated UDT smoke-harness artifacts plus a bundled `window.OpenCutUXPUdtHarness` runner for the 14 direct-UXP actions. Live WebView cutover, captured in-Premiere UDT results, and UI migration remain open. Bolt UXP 1.3 also ships a `public-hybrid/` template for the C++ `.uxpaddon` path (F253) that covers the 5 truly CEP-blocked features (file drag-out, QE DOM, FCPXML/OTIO **import**, `createCaptionTrack`, `exportAsProject` sub-selection save).
-11. **The route-readiness and MCP surfaces are better but still not complete** (Pass 43, updated Pass 78): F191 now adds `opencut/_generated/feature_readiness.json` with **58** route-derived readiness records across **67** direct route/check bindings, F196 adds registry-primary model-card/check cross-validation, `/system/feature-state` exposes **100** records, F192/F193 raise legacy `/openapi.json` typed response schemas from **30** to **110** dataclass-discovered route entries, F195 raises the curated MCP tool surface from **27** to **39** tools, F194 adds **1,322** opt-in generated extended MCP route tools with **100** response-schema annotations, F208 pins `/openapi.json` route coverage + path-parameter validity, and F209 pins every curated MCP tool/special action route against the live Flask app. Remaining visibility work is route-level coverage, not model-card/check drift.
+11. **The route-readiness and MCP surfaces are better but still not complete** (Pass 43, updated Pass 81): F191 now adds `opencut/_generated/feature_readiness.json` with **58** route-derived readiness records across **67** direct route/check bindings, F196 adds registry-primary model-card/check cross-validation, `/system/feature-state` exposes **100** records, F192/F193 raise legacy `/openapi.json` typed response schemas from **30** to **110** dataclass-discovered route entries, F195 raises the curated MCP tool surface from **27** to **39** tools, F194 adds **1,325** opt-in generated extended MCP route tools with **100** response-schema annotations, F208 pins `/openapi.json` route coverage + path-parameter validity, and F209 pins every curated MCP tool/special action route against the live Flask app. Remaining visibility work is route-level coverage, not model-card/check drift.
 12. **`/agent/chat` conductor design is converged** (Pass 3, [AGENT_UX_RFC.md](.ai/research/2026-05-17/AGENT_UX_RFC.md)) — Copilot Workspace editable-plan + Cursor checkpoint+rollback + Underlord post-turn self-review + Aider snapshot-discipline + Claude Code Skills format. **Adopt**, don't invent. F143 (L) + F144 (S) + F145 (M) = ~6-8 weeks at 1 maintainer, ships v1.36 inside the F252 UXP shell. Three patterns deliberately **NOT** copied: Cursor's "accept all" button (render-cost dominates attention), Aider's auto-commit-before-preview (user must see the render first), Claude Code's atomic multi-file apply (even Claude users file per-hunk-accept requests).
 13. **OpenCut has a quantified market-positioning story** (Pass 3, [MARKET_POSITIONING.md](.ai/research/2026-05-17/MARKET_POSITIONING.md); README lead shipped in Pass 5) — replaces ~**$1,400/yr** of competitor subscriptions: ~$720/yr (AutoCut + AutoPod + Submagic bundle) + ~$288/yr (Descript Creator) + ~$299-699/yr (Topaz Video AI new subscription, perpetual killed Oct 3 2025). **Mister Horse Animation Composer ~900k installs proves free-shell + paid-packs is the scale-without-VC model for the Premiere ecosystem.** Three categories to deprioritise (weak WTP): avatar generation, OpusClip-virality-as-pillar, sports-highlights-as-headline.
 
@@ -342,6 +343,9 @@ This file is the **canonical project context**. It is intentionally small. The s
 
 **Pass 80 update (no standalone research file):**
 - F235 WCAG 3 draft AD hooks live in `opencut/core/audio_description.py`, `opencut/routes/audio_advanced_routes.py`, `docs/AUDIO_DESCRIPTIONS.md`, generated route manifest, and `tests/test_audio_advanced.py`. Draft output can now include descriptive transcript events, extended-audio-description timing metadata, and non-normative W3C draft compatibility metadata.
+
+**Pass 81 update (no standalone research file):**
+- F245-F248 delivery-standard planning lives in `opencut/core/delivery_standards.py`, `opencut/routes/delivery_master_routes.py`, `docs/DELIVERY_STANDARDS.md`, generated route/MCP manifests, and `tests/test_delivery_standards.py`. OpenCut now exposes read-only plans for Netflix IMF/Dolby Vision, DPP/broadcaster IMF, Dolby Vision Profile 5/8.1 OSS review packaging, and ADM BW64 Atmos-master preparation, while keeping external tools, streamer acceptance, broadcaster QC, and Dolby commercial encoding outside request handling.
 
 **Pass 42 update (no standalone research file):**
 - F198 CEP/UXP parity catalogue lives in `opencut/core/cep_uxp_parity.py`, generated `opencut/_generated/cep_uxp_parity.json`, and `tests/test_cep_uxp_parity_catalogue.py`; the pinned CEP-only surface remains `ocAddNativeCaptionTrack` and `ocQeReflect`

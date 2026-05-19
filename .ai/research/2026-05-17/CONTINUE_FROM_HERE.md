@@ -1401,3 +1401,29 @@ Pass 23 did not close an F-number. It was a wrap-up pass after the autonomous lo
 - F205 should resume only on a local or CI runner where the full coverage command can finish cleanly.
 - F251 and F259 remain the other Now items and need fresh Adobe/UXP verification before implementation.
 - Push remains blocked by the `SysAdminDoc/OpenCut` vs local GitHub-account mismatch.
+
+---
+
+## Pass 81 update (2026-05-19, F245-F248 closed)
+
+F245-F248 are now closed as deterministic delivery-standard planning surfaces.
+The implementation lives in `opencut/core/delivery_standards.py`,
+`opencut/routes/delivery_master_routes.py`, `docs/DELIVERY_STANDARDS.md`,
+generated route/MCP artifacts, and `tests/test_delivery_standards.py`.
+
+The new routes are:
+
+- `GET /delivery/mastering-presets`
+- `GET/POST /delivery/mastering-plan`
+
+They return command arrays and certification/commercial boundaries for Netflix
+IMF/Dolby Vision, DPP/broadcaster IMF, Dolby Vision Profile 5/8.1 review
+packaging, and ADM BW64 Atmos-master preparation. They do not run external
+tools, create credentials, or claim platform/broadcaster/Dolby acceptance.
+
+Validation passed locally: focused delivery-standard tests (`6 passed`), focused
+route/MCP generated-surface tests (`20 passed`), `py_compile`, and focused Ruff.
+
+Remaining open Pass-2 work after this update: F205 remains blocked on a complete
+coverage run, F252 remains open for live UXP WebView cutover/UDT validation, and
+F253 remains open for the Hybrid Plugin `.uxpaddon` path.
