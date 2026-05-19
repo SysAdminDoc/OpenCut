@@ -1045,3 +1045,20 @@ Wherever this research run cites a fact, it should reference the relevant ID abo
 | R-P82-L06 | Roadmap/state files — `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGELOG.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `TEST_COVERAGE_GAPS.md`, `INSTALLER_AUDIT.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, and `CONTINUE_FROM_HERE.md` now mark F205 closed from the completed measurement |
 
 **Source coverage assessment (Pass 82):** Pass 82 claims in `ROADMAP.md` v4.85, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `TEST_COVERAGE_GAPS.md`, `INSTALLER_AUDIT.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md`, and `F205_COVERAGE_FLOOR_SUCCESS.md` trace to R-P82-L01 through R-P82-L06. No external source was used.
+
+---
+
+## Pass 83 — F252.3 UDT result capture validation (2026-05-19 eighty-third pass)
+
+### Local source evidence
+
+| ID | Source |
+|---|---|
+| R-P83-L01 | `opencut/core/uxp_udt_results.py` — new capture template and strict validator for `window.OpenCutUXPUdtHarness.run({ includeMutating: true })` result JSON |
+| R-P83-L02 | `opencut/tools/validate_uxp_udt_results.py` — CLI for emitting a template and validating saved UDT capture files |
+| R-P83-L03 | `tests/test_uxp_udt_results.py` — F252.3 guardrails for template metadata, strict cutover readiness, blocked diagnostic capture, summary drift, CLI behavior, and release-smoke wiring |
+| R-P83-L04 | `scripts/release_smoke.py` — adds `tests/test_uxp_udt_results.py` to `pytest-fast` |
+| R-P83-L05 | `docs/UXP_MIGRATION.md` — documents the validator command, the F252.3 checklist item, and the remaining live UDT capture requirement |
+| R-P83-L06 | Validation commands — touched Python compile and focused F252.3 tests passed locally |
+
+**Source coverage assessment (Pass 83):** Pass 83 claims in `ROADMAP.md` v4.86, `PROJECT_CONTEXT.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `docs/UXP_MIGRATION.md`, `CHANGESET_SUMMARY.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md`, and `tests/test_uxp_udt_results.py` trace to R-P83-L01 through R-P83-L06. No external source was used.

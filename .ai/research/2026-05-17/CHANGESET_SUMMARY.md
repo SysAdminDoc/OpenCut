@@ -1237,3 +1237,30 @@ Pass 82 closed **F205** after the full CI-style coverage command completed local
 ### Remaining immediate work
 
 F252 remains open for live UXP WebView cutover / captured UDT validation, and F253 remains open for the Hybrid Plugin `.uxpaddon` path.
+
+---
+
+## Pass 83 addendum (2026-05-19)
+
+Pass 83 advanced **F252** with the missing UDT result-capture validation contract. It does not close F252 because the actual Premiere UDT run and live WebView manifest switch remain external/tooling-locked.
+
+### Files added or edited in Pass 83
+
+| Path | Change |
+|---|---|
+| `opencut/core/uxp_udt_results.py` | Added a JSON-safe capture template and strict validator for `window.OpenCutUXPUdtHarness.run({ includeMutating: true })` results. |
+| `opencut/tools/validate_uxp_udt_results.py` | Added CLI template output and validation reports for saved UDT capture JSON. |
+| `tests/test_uxp_udt_results.py` | Added F252.3 guardrails for template shape, strict cutover readiness, blocked diagnostic captures, summary drift, CLI behavior, and release-smoke wiring. |
+| `scripts/release_smoke.py` | Added `tests/test_uxp_udt_results.py` to `pytest-fast`. |
+| `docs/UXP_MIGRATION.md`, `ROADMAP.md`, `PROJECT_CONTEXT.md`, `CHANGELOG.md`, `FEATURE_BACKLOG_ADDENDUM.md`, `PRIORITIZATION_MATRIX.md`, `SOURCE_REGISTER.md`, `RESEARCH_LOG.md`, `CONTINUE_FROM_HERE.md` | Documented F252.3 and the remaining live-UDT/WebView-cutover blocker. |
+
+### Validation after Pass 83
+
+| Command | Result |
+|---|---|
+| `python -m py_compile opencut\core\uxp_udt_results.py opencut\tools\validate_uxp_udt_results.py tests\test_uxp_udt_results.py` | PASS |
+| `python -m pytest tests\test_uxp_udt_results.py -q` | PASS — `7 passed` |
+
+### Remaining immediate work
+
+F252 remains open for a real in-Premiere UDT capture that passes the strict validator and for the live WebView manifest switch. F253 remains open for the Hybrid Plugin `.uxpaddon` path.

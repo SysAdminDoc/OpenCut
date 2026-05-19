@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.85
+**Version**: 4.86
 **Updated**: 2026-05-19
 **Baseline**: v1.32.0 (1,381 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -178,6 +178,24 @@
 > **v4.84 status (2026-05-19, eighty-first pass)**: closed **F245-F248** by adding delivery-standard planning presets for Netflix IMF/Dolby Vision, DPP/broadcaster IMF, Dolby Vision Profile 5/8.1 OSS review packaging, and ADM BW64 Atmos-master preparation. `opencut/core/delivery_standards.py` now returns deterministic operator command arrays, source links, validation notes, and explicit commercial/certification boundaries; `/delivery/mastering-presets` and `/delivery/mastering-plan` expose the plans without running external tools. `docs/DELIVERY_STANDARDS.md` records the standards/tooling references and constraints. The route manifest is regenerated to **1,381 routes** and the opt-in extended MCP catalogue to **1,325 tools**.
 >
 > **v4.85 status (2026-05-19, eighty-second pass)**: closed **F205** after a complete CI-style coverage run finished locally: `8,540 passed`, `16 skipped`, 7 warnings, 131,130 statements, 70,935 covered lines, 60,195 missing lines, and **54.09517272935255%** reported line coverage. `.github/workflows/build.yml` now raises Release Full from `--cov-fail-under=50` to `--cov-fail-under=54`, and `.ai/research/2026-05-17/F205_COVERAGE_FLOOR_SUCCESS.md` records the command, totals, SHA256, and cleanup boundary. All Pass-2 Now items are now closed locally; remaining Pass-2 open work is F252 live UXP WebView/UDT cutover and F253 Hybrid Plugin `.uxpaddon`.
+>
+> **v4.86 status (2026-05-19, eighty-third pass)**: advanced **F252.3** by adding a repository-side UDT result-capture contract. `opencut/core/uxp_udt_results.py` validates JSON captured from `window.OpenCutUXPUdtHarness.run({ includeMutating: true })`, `python -m opencut.tools.validate_uxp_udt_results` emits templates and strict readiness reports, and `tests/test_uxp_udt_results.py` is in release smoke. F252 still cannot close until a real Premiere UDT run is captured and passes the validator, then the live manifest can switch to the WebView entrypoint.
+
+---
+
+## 2026-05-19 v4.86 UXP UDT Result Capture Validation (F252.3)
+
+F252 advanced with the missing result-capture gate for the existing F267 UDT harness. This is repository-side infrastructure only; it does **not** claim live Premiere verification.
+
+| Surface | Status |
+|---|---|
+| Capture template | `python -m opencut.tools.validate_uxp_udt_results --template` prints a JSON wrapper for the UDT result plus Premiere/UDT environment metadata. |
+| Strict validator | `validate_udt_result_capture(..., require_mutating=True)` requires `includeMutating=true`, all 14 direct-UXP scenarios, matching summary counts, no skipped scenarios, no blocked scenarios, and no failures before `ready_for_webview_cutover` can become true. |
+| Diagnostic mode | `--allow-blocked` can record accepted environment blockers without marking the capture ready for WebView cutover. |
+| Release gate | `tests/test_uxp_udt_results.py` is wired into `pytest-fast`, alongside the F267 harness generator tests. |
+| Remaining blocker | Capture a real in-Premiere UDT `window.OpenCutUXPUdtHarness.run({ includeMutating: true })` result from a disposable project and pass the strict validator before switching `extension/com.opencut.uxp/manifest.json` to the WebView entrypoint. |
+
+Validation after the batch: focused F252.3 tests passed (`7 passed`), touched Python files compile, and `python -m pytest tests/test_uxp_udt_results.py tests/test_uxp_udt_harness.py tests/test_uxp_webview_scaffold.py tests/test_release_smoke.py -q` passed locally.
 
 ---
 
@@ -1509,7 +1527,7 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 **Now (0 open; F191/F195/F197/F199/F202/F204/F205/F207/F208/F209/F218/F219/F236/F237/F240/F241/F243/F244/F251/F259 closed locally):** [x] F191 (auto-derive registry), [x] F195 (12 missing MCP tools), [x] F197 (NON_AI_CHECKS allowlist), [x] F199 (/api/* alias policy), [x] F202 (Apple notarisation release wiring; secrets required for live acceptance), [x] F204 (auto-attach SBOM to release), [x] F205 (CI coverage floor raised to 54 from a completed 54.095% measurement), [x] F207 (bundled FFmpeg version manifest), [x] F208 (OpenAPI validity test), [x] F209 (MCP ↔ route consistency), [x] F218 (import-order stability), [x] F219 (SBOM completeness), [x] **F236 (FCC caption tokens, regulatory)**, [x] **F237 (R128 v5.0 + BS.1770-5 correction)**, [x] **F240 (caption reading-speed profiles)**, [x] **F241 (HarfBuzz CI gate)**, [x] **F243 (UTF-8 no-BOM SRT)**, [x] F244 (Whisper confidence + low-confidence flag), [x] F251 (beta typings diff tracker), [x] F259 (UXP HTTPS-on-mac sidecar workaround).
 
 **Next (32 items):** see FEATURE_BACKLOG_ADDENDUM §A-§G + PRIORITIZATION_MATRIX §6.5. Includes:
-- Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
+- Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML (F252.1/F252.2/F252.3 repository-side slices done; live UDT capture + WebView manifest switch still open)
 - Flagship review-bundle extensions: **[x] F225**, **[x] F226**, **[x] F227**, **[x] F228**, **[x] F229**, **[x] F230**
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
 - Caption / accessibility: [x] F223 RTL/CJK validation suite, [x] F235 WCAG 3 AD hooks, [x] F238 PSE hue checker, [x] F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking

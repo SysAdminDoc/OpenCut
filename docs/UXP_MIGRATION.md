@@ -2,9 +2,10 @@
 
 > **Deadline:** CEP support removed from Premiere Pro ~September 2026
 > **Current state:** Dual CEP + UXP panels. Pass-3 audit found 16/18 JSX host functions have a UXP path; 2 remain CEP-only.
-> **Last updated:** 2026-05-18
+> **Last updated:** 2026-05-19
 > **Machine-readable catalogue:** `opencut/_generated/cep_uxp_parity.json` (generated from `opencut/core/cep_uxp_parity.py`)
 > **UDT smoke harness:** `opencut/_generated/uxp_udt_harness.json` and bundled panel copy `extension/com.opencut.uxp/uxp-udt-harness.json`
+> **UDT result validation:** `python -m opencut.tools.validate_uxp_udt_results <capture.json> --json`
 
 ## Migration Strategy
 
@@ -111,7 +112,8 @@ UXP Architecture (target):
 - [x] F258 `ProjectConverter.exportAAF` active-sequence export helper with `AAFExportOptions`
 - [x] F260 generated UXP migration risk dashboard in Settings, sourced from the F198 CEP/UXP parity catalogue
 - [x] F267 UDT smoke harness for the 14 direct-UXP `ocXxx` actions, exposed as `window.OpenCutUXPUdtHarness`
-- [ ] Live manifest switch to the WebView entrypoint after an in-Premiere UDT smoke run is captured from the harness
+- [x] F252.3 UDT result-capture validator for strict WebView cutover readiness checks
+- [ ] Live manifest switch to the WebView entrypoint after an in-Premiere `window.OpenCutUXPUdtHarness.run({ includeMutating: true })` capture passes `python -m opencut.tools.validate_uxp_udt_results`
 - [ ] Test CSInterface shim with CEP main.js in WebView
 - [ ] Replace `cep_node.require("child_process")` calls with UXP alternatives
 
@@ -120,7 +122,8 @@ UXP Architecture (target):
 - [x] `getSelectedClips()` — selection via `Sequence.getSelection()`
 - [x] `importFiles()` — import via `Project.importFiles()` with optional bin
 - [x] Generated UDT smoke coverage for direct UXP host actions (`ocBatchRenameProjectItems()`, `ocCreateSmartBins()`, marker operations, range export, playhead, and import cleanup)
-- [ ] Capture the F267 harness results in Premiere UDT before treating the direct-action set as live-verified
+- [x] Repository-side validator for captured F267 harness results (`validate_uxp_udt_results`)
+- [ ] Capture the F267 harness results in Premiere UDT and pass the strict validator before treating the direct-action set as live-verified
 - [ ] Residual CEP-only paths: native caption-track creation and QE reflection (documented in F266 above)
 - [ ] Full timeline write-back without ExtendScript for advanced trim edge cases (blocked on UXP API maturity)
 
@@ -141,6 +144,8 @@ UXP Architecture (target):
 - `opencut/_generated/uxp_udt_harness.json` and `extension/com.opencut.uxp/uxp-udt-harness.json` — F267 generated UDT smoke harness artifacts for the 14 direct-UXP actions
 - `extension/com.opencut.uxp/udt-smoke.js` — Panel-side UDT runner exposed as `window.OpenCutUXPUdtHarness`; read-only actions run by default, project-changing cases require `includeMutating: true`
 - `tests/test_uxp_udt_harness.py` — Static guardrails for the F267 generator, bundled JSON, panel runner, and release-smoke wiring
+- `opencut/core/uxp_udt_results.py` and `opencut/tools/validate_uxp_udt_results.py` — F252.3 capture-template and strict result validator for WebView cutover readiness
+- `tests/test_uxp_udt_results.py` — Static guardrails for the F252.3 capture validator and release-smoke wiring
 
 ## Risk Assessment
 - **Low risk:** Backend communication (fetch works natively in UXP)
