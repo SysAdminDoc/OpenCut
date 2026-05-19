@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed — Web UI Upload Hardening
+
+- Switched standalone Web UI multipart uploads to streamed writes instead of reading the entire file into memory.
+- Added an `OPENCUT_WEB_UPLOAD_MAX_BYTES` boundary with 413 responses and partial-file cleanup when uploads exceed the limit.
+- Tightened JSON upload fallback validation for malformed base64, non-object bodies, non-string filenames, and missing payloads.
+
 ### Fixed — Job Runtime Hardening
 
 - Redacted API keys, tokens, authorization headers, passwords, and nested credentials before persisting async-job request payloads into job history.

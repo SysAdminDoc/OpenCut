@@ -16,6 +16,8 @@ Covers:
   - Route smoke tests for all endpoints
 """
 
+import base64
+import io
 import json
 import os
 import shutil
@@ -145,6 +147,24 @@ class TestWebUIUpload(unittest.TestCase):
             self.assertEqual(uploaded.size, 100)
             self.assertEqual(uploaded.mime_type, "video/mp4")
             self.assertTrue(os.path.isfile(uploaded.path))
+
+    @patch("opencut.core.web_ui.WEB_UPLOADS_DIR")
+    def test_upload_file_rejects_too_large_payload_and_cleans_partial(self, mock_dir):
+        mock_dir.__str__ = lambda s: self.tmp
+        with patch("opencut.core.web_ui.WEB_UPLOADS_DIR", self.tmp), \
+                patch("opencut.core.web_ui.MAX_UPLOAD_BYTES", 3):
+            from opencut.core.web_ui import (
+                WebUploadTooLargeError,
+                create_session,
+                upload_file,
+            )
+            session = create_session()
+
+            with self.assertRaises(WebUploadTooLargeError):
+                upload_file(session.session_id, "large.mp4", b"1234")
+
+            session_dir = os.path.join(self.tmp, session.session_id)
+            self.assertFalse(os.path.exists(os.path.join(session_dir, "large.mp4")))
 
     @patch("opencut.core.web_ui.WEB_UPLOADS_DIR")
     def test_upload_file_session_not_found(self, mock_dir):
@@ -968,6 +988,71 @@ class TestPlatformUXRoutes(unittest.TestCase):
         # Delete
         resp = self.client.delete(f"/web-ui/session/{sid}", headers=self.headers)
         self.assertEqual(resp.status_code, 200)
+
+    def test_route_upload_multipart_success(self):
+        with patch("opencut.core.web_ui.WEB_UPLOADS_DIR", self.tmp):
+            resp = self.client.post("/web-ui/session/create", headers=self.headers, data="{}")
+            sid = resp.get_json()["session_id"]
+
+            resp = self.client.post(
+                "/web-ui/upload",
+                headers={"X-OpenCut-Token": self.csrf},
+                data={
+                    "session_id": sid,
+                    "file": (io.BytesIO(b"video"), "clip.mp4"),
+                },
+                content_type="multipart/form-data",
+            )
+
+        self.assertEqual(resp.status_code, 200)
+        data = resp.get_json()
+        self.assertEqual(data["filename"], "clip.mp4")
+        self.assertEqual(data["size"], 5)
+
+    def test_route_upload_rejects_invalid_base64(self):
+        resp = self.client.post("/web-ui/session/create", headers=self.headers, data="{}")
+        sid = resp.get_json()["session_id"]
+
+        resp = self.client.post(
+            "/web-ui/upload",
+            headers=self.headers,
+            data=json.dumps({
+                "session_id": sid,
+                "filename": "clip.mp4",
+                "data": "not valid base64!",
+            }),
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertIn("valid base64", resp.get_json()["error"])
+
+    def test_route_upload_rejects_non_object_json(self):
+        resp = self.client.post(
+            "/web-ui/upload",
+            headers=self.headers,
+            data=json.dumps(["not", "an", "object"]),
+        )
+
+        self.assertEqual(resp.status_code, 400)
+        self.assertEqual(resp.get_json()["code"], "INVALID_INPUT")
+
+    @patch("opencut.core.web_ui.MAX_UPLOAD_BYTES", 3)
+    def test_route_upload_rejects_json_payload_over_limit(self):
+        resp = self.client.post("/web-ui/session/create", headers=self.headers, data="{}")
+        sid = resp.get_json()["session_id"]
+
+        resp = self.client.post(
+            "/web-ui/upload",
+            headers=self.headers,
+            data=json.dumps({
+                "session_id": sid,
+                "filename": "clip.mp4",
+                "data": base64.b64encode(b"1234").decode("ascii"),
+            }),
+        )
+
+        self.assertEqual(resp.status_code, 413)
+        self.assertEqual(resp.get_json()["code"], "PAYLOAD_TOO_LARGE")
 
     # -- AE routes --
 

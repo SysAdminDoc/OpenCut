@@ -17,6 +17,7 @@ import threading
 import time
 import uuid
 from dataclasses import asdict, dataclass, field
+from io import BytesIO
 from typing import Dict, List, Optional
 
 from werkzeug.utils import secure_filename
@@ -26,6 +27,18 @@ from opencut.helpers import OPENCUT_DIR
 logger = logging.getLogger("opencut")
 
 WEB_UPLOADS_DIR = os.path.join(OPENCUT_DIR, "web_uploads")
+_UPLOAD_CHUNK_BYTES = 1024 * 1024
+
+
+def _env_upload_limit() -> int:
+    try:
+        value = int(os.environ.get("OPENCUT_WEB_UPLOAD_MAX_BYTES", "") or 8 * 1024 * 1024 * 1024)
+    except (TypeError, ValueError):
+        value = 8 * 1024 * 1024 * 1024
+    return max(1, value)
+
+
+MAX_UPLOAD_BYTES = _env_upload_limit()
 
 # In-memory session store  {session_id: WebSession}
 _sessions: Dict[str, "WebSession"] = {}
@@ -67,6 +80,18 @@ class OperationCard:
     description: str
     params_schema: Dict = field(default_factory=dict)
     endpoint: str = ""
+
+
+class WebSessionNotFoundError(ValueError):
+    """Raised when a web UI upload references a missing or expired session."""
+
+
+class WebUploadError(ValueError):
+    """Raised when upload input is invalid."""
+
+
+class WebUploadTooLargeError(WebUploadError):
+    """Raised when upload data exceeds ``MAX_UPLOAD_BYTES``."""
 
 
 # ---------------------------------------------------------------------------
@@ -134,9 +159,30 @@ def cleanup_session(session_id: str) -> bool:
 
 def upload_file(session_id: str, filename: str, file_data: bytes) -> UploadedFile:
     """Save uploaded file data to the session's temp directory."""
+    if not isinstance(file_data, (bytes, bytearray, memoryview)):
+        raise WebUploadError("file_data must be bytes")
+    if len(file_data) > MAX_UPLOAD_BYTES:
+        raise WebUploadTooLargeError(
+            f"Upload exceeds the {MAX_UPLOAD_BYTES} byte limit"
+        )
+    return upload_stream(session_id, filename, BytesIO(file_data), content_length=len(file_data))
+
+
+def upload_stream(
+    session_id: str,
+    filename: str,
+    file_stream,
+    *,
+    content_length: Optional[int] = None,
+) -> UploadedFile:
+    """Save an uploaded file stream without buffering it all in memory."""
     session = get_session(session_id)
     if session is None:
-        raise ValueError(f"Session not found: {session_id}")
+        raise WebSessionNotFoundError(f"Session not found: {session_id}")
+    if content_length is not None and content_length > MAX_UPLOAD_BYTES:
+        raise WebUploadTooLargeError(
+            f"Upload exceeds the {MAX_UPLOAD_BYTES} byte limit"
+        )
 
     # Sanitize filename. Browsers usually submit a basename, but callers and
     # tests can pass path-shaped names; normalize both slash styles first.
@@ -156,8 +202,25 @@ def upload_file(session_id: str, filename: str, file_data: bytes) -> UploadedFil
         dest = f"{base}_{counter}{ext}"
         counter += 1
 
-    with open(dest, "wb") as fh:
-        fh.write(file_data)
+    total = 0
+    try:
+        with open(dest, "wb") as fh:
+            while True:
+                chunk = file_stream.read(_UPLOAD_CHUNK_BYTES)
+                if not chunk:
+                    break
+                total += len(chunk)
+                if total > MAX_UPLOAD_BYTES:
+                    raise WebUploadTooLargeError(
+                        f"Upload exceeds the {MAX_UPLOAD_BYTES} byte limit"
+                    )
+                fh.write(chunk)
+    except Exception:
+        try:
+            os.remove(dest)
+        except OSError:
+            pass
+        raise
 
     mime_type = mimetypes.guess_type(safe_name)[0] or "application/octet-stream"
 
@@ -165,7 +228,7 @@ def upload_file(session_id: str, filename: str, file_data: bytes) -> UploadedFil
         session_id=session_id,
         filename=safe_name,
         path=dest,
-        size=len(file_data),
+        size=total,
         mime_type=mime_type,
     )
     with _session_lock:
@@ -173,7 +236,7 @@ def upload_file(session_id: str, filename: str, file_data: bytes) -> UploadedFil
         if s is not None:
             s.uploaded_files.append(uploaded)
     logger.info("File uploaded: %s (%d bytes) to session %s",
-                safe_name, len(file_data), session_id)
+                safe_name, total, session_id)
     return uploaded
 
 
