@@ -26,6 +26,10 @@ Wave L modules:
   N3.1  CogVideoX           — /generate/cogvideox
   N3.2  Qwen2.5-VL          — /analyze/video/vl
   N3.4  CSM-1B Speech       — /audio/speech/csm
+  O1.1  Dia Dialogue TTS    — /audio/speech/dia
+  O1.2  Parler-TTS          — /audio/speech/parler
+  O2.1  LTX-Video           — /generate/ltxv/*
+  O3.1  YuE Music           — /audio/music/yue
 """
 from __future__ import annotations
 
@@ -1812,3 +1816,269 @@ def route_csm_info():
         })
     except Exception as exc:
         return safe_error(exc, "csm_info")
+
+
+# =============================================================
+# O1.1 — Dia 1.6B Dialogue TTS
+# =============================================================
+
+@wave_l_bp.route("/audio/speech/dia", methods=["POST"])
+@require_csrf
+@async_job("dia_dialogue", filepath_required=False)
+def route_dia_speech(job_id, filepath, data):
+    """Generate multi-speaker dialogue with nonverbal sounds via Dia."""
+    from opencut.core import tts_dia
+    if not tts_dia.check_dia_available():
+        raise RuntimeError("Dia not installed. " + tts_dia.INSTALL_HINT)
+
+    turns = data.get("turns", [])
+    if not isinstance(turns, list) or not turns:
+        raise ValueError("turns must be a non-empty list of {speaker, text}")
+
+    ref = str(data.get("reference_audio") or "").strip()
+    if ref:
+        from opencut.security import validate_filepath
+        ref = validate_filepath(ref)
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = tts_dia.generate_dialogue(
+        turns=turns, reference_audio=ref,
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/audio/speech/dia/info", methods=["GET"])
+def route_dia_info():
+    try:
+        from opencut.core import tts_dia
+        return jsonify({
+            "available": tts_dia.check_dia_available(),
+            "nonverbals": tts_dia.NONVERBALS,
+            "licence": "Apache-2.0",
+            "install_hint": tts_dia.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "dia_info")
+
+
+# =============================================================
+# O1.2 — Parler-TTS Voice Description
+# =============================================================
+
+@wave_l_bp.route("/audio/speech/parler", methods=["POST"])
+@require_csrf
+@async_job("parler_tts", filepath_required=False)
+def route_parler_speech(job_id, filepath, data):
+    """Synthesize speech from natural language voice description."""
+    from opencut.core import tts_parler
+    if not tts_parler.check_parler_available():
+        raise RuntimeError("parler-tts not installed. " + tts_parler.INSTALL_HINT)
+
+    text = str(data.get("text") or "").strip()
+    if not text:
+        raise ValueError("text is required")
+
+    model = str(data.get("model") or "mini").strip()
+    if model not in tts_parler.PARLER_MODELS:
+        model = "mini"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = tts_parler.synthesize(
+        text=text,
+        description=str(data.get("description") or ""),
+        speaker=str(data.get("speaker") or ""),
+        model=model,
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/audio/speech/parler/speakers", methods=["GET"])
+def route_parler_speakers():
+    try:
+        from opencut.core import tts_parler
+        return jsonify({
+            "available": tts_parler.check_parler_available(),
+            "speakers": tts_parler.list_speakers(),
+            "models": tts_parler.PARLER_MODELS,
+            "install_hint": tts_parler.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "parler_speakers")
+
+
+@wave_l_bp.route("/audio/speech/parler/info", methods=["GET"])
+def route_parler_info():
+    try:
+        from opencut.core import tts_parler
+        return jsonify({
+            "available": tts_parler.check_parler_available(),
+            "models": tts_parler.PARLER_MODELS,
+            "licence": "Apache-2.0",
+            "install_hint": tts_parler.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "parler_info")
+
+
+# =============================================================
+# O2.1 — LTX-Video T2V + I2V + Extension
+# =============================================================
+
+@wave_l_bp.route("/generate/ltxv/t2v", methods=["POST"])
+@require_csrf
+@async_job("ltxv_t2v", filepath_required=False)
+def route_ltxv_t2v(job_id, filepath, data):
+    """Generate video from text using LTX-Video (fastest Apache-2 DiT)."""
+    from opencut.core import gen_video_ltxv
+    if not gen_video_ltxv.check_ltxv_available():
+        raise RuntimeError("LTX-Video deps not installed. " + gen_video_ltxv.INSTALL_HINT)
+
+    prompt = str(data.get("prompt") or "").strip()
+    if not prompt:
+        raise ValueError("prompt is required")
+
+    model = str(data.get("model") or "LTXV-2B").strip()
+    if model not in gen_video_ltxv.LTXV_MODELS:
+        model = "LTXV-2B"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_ltxv.generate_t2v(
+        prompt=prompt, model=model,
+        duration=safe_float(data.get("duration"), 5.0, min_val=1.0, max_val=60.0),
+        negative_prompt=str(data.get("negative_prompt") or ""),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/ltxv/i2v", methods=["POST"])
+@require_csrf
+@async_job("ltxv_i2v", filepath_required=True, filepath_param="image_path")
+def route_ltxv_i2v(job_id, filepath, data):
+    """Generate video from image using LTX-Video I2V."""
+    from opencut.core import gen_video_ltxv
+    if not gen_video_ltxv.check_ltxv_available():
+        raise RuntimeError("LTX-Video deps not installed. " + gen_video_ltxv.INSTALL_HINT)
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_ltxv.generate_i2v(
+        image_path=filepath, prompt=str(data.get("prompt") or ""),
+        model=str(data.get("model") or "LTXV-2B"),
+        duration=safe_float(data.get("duration"), 5.0, min_val=1.0, max_val=60.0),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/ltxv/extend", methods=["POST"])
+@require_csrf
+@async_job("ltxv_extend")
+def route_ltxv_extend(job_id, filepath, data):
+    """Extend a video forward or backward in time via LTX-Video."""
+    from opencut.core import gen_video_ltxv
+    if not gen_video_ltxv.check_ltxv_available():
+        raise RuntimeError("LTX-Video deps not installed. " + gen_video_ltxv.INSTALL_HINT)
+
+    direction = str(data.get("direction") or "forward").strip()
+    if direction not in ("forward", "backward"):
+        direction = "forward"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_ltxv.extend_video(
+        video_path=filepath, direction=direction,
+        duration_sec=safe_float(data.get("duration"), 3.0, min_val=1.0, max_val=30.0),
+        model=str(data.get("model") or "LTXV-2B"),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/generate/ltxv/info", methods=["GET"])
+def route_ltxv_info():
+    try:
+        from opencut.core import gen_video_ltxv
+        return jsonify({
+            "available": gen_video_ltxv.check_ltxv_available(),
+            "models": gen_video_ltxv.LTXV_MODELS,
+            "licence": "Apache-2.0",
+            "max_duration_seconds": 60,
+            "install_hint": gen_video_ltxv.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "ltxv_info")
+
+
+# =============================================================
+# O3.1 — YuE Lyrics-to-Full-Song
+# =============================================================
+
+@wave_l_bp.route("/audio/music/yue", methods=["POST"])
+@require_csrf
+@async_job("yue_music", filepath_required=False)
+def route_yue_music(job_id, filepath, data):
+    """Generate complete song from structured lyrics via YuE."""
+    from opencut.core import music_yue
+    if not music_yue.check_yue_available():
+        raise RuntimeError("YuE not installed. " + music_yue.INSTALL_HINT)
+
+    lyrics = str(data.get("lyrics") or "").strip()
+    if not lyrics:
+        raise ValueError("lyrics is required (use [verse]/[chorus] tags)")
+
+    genre = str(data.get("genre") or "pop").strip().lower()
+    if genre not in music_yue.YUE_GENRES:
+        genre = "pop"
+
+    language = str(data.get("language") or "en").strip().lower()
+    if language not in music_yue.YUE_LANGUAGES:
+        language = "en"
+
+    ref_vocal = str(data.get("reference_vocal") or "").strip()
+    if ref_vocal:
+        from opencut.security import validate_filepath
+        ref_vocal = validate_filepath(ref_vocal)
+
+    ref_backing = str(data.get("reference_backing") or "").strip()
+    if ref_backing:
+        from opencut.security import validate_filepath
+        ref_backing = validate_filepath(ref_backing)
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = music_yue.generate(
+        lyrics=lyrics, genre=genre, language=language,
+        instrumental_only=safe_bool(data.get("instrumental_only"), False),
+        reference_vocal=ref_vocal, reference_backing=ref_backing,
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {k: getattr(result, k) for k in result.keys()}
+
+
+@wave_l_bp.route("/audio/music/yue/info", methods=["GET"])
+def route_yue_info():
+    try:
+        from opencut.core import music_yue
+        return jsonify({
+            "available": music_yue.check_yue_available(),
+            "genres": music_yue.YUE_GENRES,
+            "languages": music_yue.YUE_LANGUAGES,
+            "licence": "Apache-2.0",
+            "install_hint": music_yue.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "yue_info")
