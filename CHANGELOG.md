@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Fixed — Webhook Job Event Compatibility
+
+- Added dotted async-job webhook events (`job.complete`, `job.error`, `job.cancelled`) to the registered event catalogue.
+- Preserved legacy subscriptions by matching `job.complete` deliveries to existing `job_complete` webhooks and `job.error` deliveries to `job_failed` / `error` subscriptions.
+
 ### Fixed — Web UI Upload Hardening
 
 - Switched standalone Web UI multipart uploads to streamed writes instead of reading the entire file into memory.
