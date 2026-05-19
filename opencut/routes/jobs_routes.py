@@ -270,8 +270,10 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/audio/tts/chatterbox",
     "/audio/tts/kokoro",
     "/audio/music/diffrhythm",
-    # M2.4 — FLUX Kontext image editing
+    # M2 — FLUX Kontext + Wan2.2 video generation
     "/image/edit/kontext",
+    "/generate/wan2.2/t2v",
+    "/generate/wan2.2/i2v",
 })
 
 

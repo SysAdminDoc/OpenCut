@@ -13,6 +13,7 @@ Wave L modules:
   M1.1  Chatterbox TTS      — /audio/tts/chatterbox
   M1.2  Kokoro TTS          — /audio/tts/kokoro
   M1.3  DiffRhythm Music    — /audio/music/diffrhythm
+  M2.1  Wan2.2 T2V/I2V      — /generate/wan2.2/*
   M2.4  FLUX Kontext Edit   — /image/edit/kontext
 """
 from __future__ import annotations
@@ -926,3 +927,135 @@ def route_kontext_info():
         return jsonify(image_edit_kontext.get_model_info())
     except Exception as exc:
         return safe_error(exc, "kontext_info")
+
+
+# =============================================================
+# M2.1 — Wan2.2 T2V / I2V / TI2V Video Generation
+# =============================================================
+
+@wave_l_bp.route("/generate/wan2.2/t2v", methods=["POST"])
+@require_csrf
+@async_job("wan22_t2v", filepath_required=False)
+def route_wan22_t2v(job_id, filepath, data):
+    """Generate video from text using Wan2.2 (MoE, cinematic aesthetics).
+
+    Body params:
+      prompt           str    Video description (required).
+      duration         float  Target seconds, max 16 (default 5).
+      model            str    ti2v-5b (consumer) / t2v-14b / i2v-14b.
+      negative_prompt  str    Things to avoid.
+      fps              float  Frame rate (default 24).
+      width            int    Output width (default 1280).
+      height           int    Output height (default 720).
+      seed             int    Random seed (-1 for random).
+      offload_model    bool   CPU offload for VRAM savings (default true).
+      output           str    Output MP4 path (optional).
+    """
+    from opencut.core import gen_video_wan22
+    if not gen_video_wan22.check_wan22_available():
+        raise RuntimeError(
+            "Wan2.2 not installed. " + gen_video_wan22.INSTALL_HINT
+        )
+
+    prompt = str(data.get("prompt") or "").strip()
+    if not prompt:
+        raise ValueError("prompt is required")
+
+    model = str(data.get("model") or "ti2v-5b").strip()
+    if model not in gen_video_wan22.WAN22_MODELS:
+        model = "ti2v-5b"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_wan22.generate_t2v(
+        prompt=prompt,
+        duration=safe_float(data.get("duration"), 5.0, min_val=1.0, max_val=16.0),
+        model=model,
+        negative_prompt=str(data.get("negative_prompt") or ""),
+        fps=safe_float(data.get("fps"), 24.0, min_val=8.0, max_val=60.0),
+        width=safe_int(data.get("width"), 1280, min_val=256, max_val=2048),
+        height=safe_int(data.get("height"), 720, min_val=256, max_val=2048),
+        seed=safe_int(data.get("seed"), -1),
+        offload_model=safe_bool(data.get("offload_model"), True),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "mode": result.mode,
+        "model": result.model,
+        "duration_seconds": result.duration_seconds,
+        "fps": result.fps,
+        "width": result.width,
+        "height": result.height,
+        "generation_seconds": result.generation_seconds,
+        "prompt": result.prompt,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/generate/wan2.2/i2v", methods=["POST"])
+@require_csrf
+@async_job("wan22_i2v", filepath_required=True, filepath_param="image_path")
+def route_wan22_i2v(job_id, filepath, data):
+    """Generate video from image + optional text using Wan2.2.
+
+    Body params:
+      image_path     str    Source image (required).
+      prompt         str    Optional motion description.
+      duration       float  Target seconds, max 16.
+      model          str    Model variant.
+      seed           int    Random seed.
+      offload_model  bool   CPU offload.
+      output         str    Output MP4 path.
+    """
+    from opencut.core import gen_video_wan22
+    if not gen_video_wan22.check_wan22_available():
+        raise RuntimeError(
+            "Wan2.2 not installed. " + gen_video_wan22.INSTALL_HINT
+        )
+
+    model = str(data.get("model") or "ti2v-5b").strip()
+    if model not in gen_video_wan22.WAN22_MODELS:
+        model = "ti2v-5b"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = gen_video_wan22.generate_i2v(
+        image_path=filepath,
+        prompt=str(data.get("prompt") or ""),
+        duration=safe_float(data.get("duration"), 5.0, min_val=1.0, max_val=16.0),
+        model=model,
+        seed=safe_int(data.get("seed"), -1),
+        offload_model=safe_bool(data.get("offload_model"), True),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "mode": result.mode,
+        "model": result.model,
+        "duration_seconds": result.duration_seconds,
+        "fps": result.fps,
+        "generation_seconds": result.generation_seconds,
+        "prompt": result.prompt,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/generate/wan2.2/info", methods=["GET"])
+def route_wan22_info():
+    """Return Wan2.2 model availability and variants."""
+    try:
+        from opencut.core import gen_video_wan22
+        return jsonify({
+            "available": gen_video_wan22.check_wan22_available(),
+            "models": gen_video_wan22.WAN22_MODELS,
+            "modes": gen_video_wan22.WAN22_MODES,
+            "licence": "Apache-2.0",
+            "max_duration_seconds": 16,
+            "consumer_model": "ti2v-5b",
+            "install_hint": gen_video_wan22.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "wan22_info")
