@@ -297,6 +297,16 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/generate/ltxv/i2v",
     "/generate/ltxv/extend",
     "/audio/music/yue",
+    # Wave P — identity video + SOTA T2I + multimodal intel
+    "/generate/consisid",
+    "/generate/allegro/t2v",
+    "/generate/allegro/ti2v",
+    "/image/generate/hidream",
+    "/image/edit/hidream",
+    "/image/generate/cogview4",
+    "/analyze/video/narrate",
+    "/analyze/video/qa",
+    "/generate/opensora2",
 })
 
 
