@@ -940,6 +940,20 @@ def check_framepack_available() -> bool:
     return _try_import("framepack") is not None
 
 
+def check_kokoro_available() -> bool:
+    """M1.2 — Kokoro ultralight TTS (82M, CPU-only, Apache-2)."""
+    return _try_import("kokoro") is not None
+
+
+def check_diffrhythm_available() -> bool:
+    """M1.3 — DiffRhythm full-song generation (Apache-2, 8 GB VRAM)."""
+    try:
+        from opencut.core.music_diffrhythm import check_diffrhythm_available as _c
+        return _c()
+    except Exception:
+        return False
+
+
 def check_wave_l(verbose=False):
     """Run all Wave L availability checks and print a summary."""
     checks = [

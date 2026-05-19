@@ -10,6 +10,8 @@ Wave L modules:
   L2.1  FramePack I2V       — /generate/framepack
   L2.2  ACE-Step Music      — /audio/music/acestep
   L2.6  Moonshine ASR       — /audio/transcribe/moonshine
+  M1.2  Kokoro TTS          — /audio/tts/kokoro
+  M1.3  DiffRhythm Music    — /audio/music/diffrhythm
 """
 from __future__ import annotations
 
@@ -600,3 +602,183 @@ def route_framepack_info():
         })
     except Exception as exc:
         return safe_error(exc, "framepack_info")
+
+
+# =============================================================
+# M1.2 — Kokoro Ultralight TTS (82M, CPU-only)
+# =============================================================
+
+@wave_l_bp.route("/audio/tts/kokoro", methods=["POST"])
+@require_csrf
+@async_job("tts_kokoro", filepath_required=False)
+def route_tts_kokoro(job_id, filepath, data):
+    """Synthesize speech via Kokoro TTS (82M, CPU-only, 9 languages).
+
+    Body params:
+      text      str    Text to synthesize (required).
+      voice     str    Voice preset ID (default: af_heart).
+      language  str    Language code: en-us, en-gb, es, fr, hi, it, ja, pt-br, zh.
+      speed     float  Speed 0.5-2.0 (default 1.0).
+      output    str    Output WAV path (optional).
+    """
+    from opencut.core import tts_kokoro
+    if not tts_kokoro.check_kokoro_available():
+        raise RuntimeError(
+            "Kokoro TTS is not installed. " + tts_kokoro.INSTALL_HINT
+        )
+
+    text = str(data.get("text") or "").strip()
+    if not text:
+        raise ValueError("text is required")
+
+    language = str(data.get("language") or "en-us").strip().lower()
+    if language not in tts_kokoro.KOKORO_LANGUAGES:
+        language = "en-us"
+
+    voice = str(data.get("voice") or "af_heart").strip()
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = tts_kokoro.synthesize(
+        text=text,
+        voice=voice,
+        language=language,
+        speed=safe_float(data.get("speed"), 1.0, min_val=0.5, max_val=2.0),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "voice": result.voice,
+        "language": result.language,
+        "model": result.model,
+        "duration_seconds": result.duration_seconds,
+        "sample_rate": result.sample_rate,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/audio/tts/kokoro/voices", methods=["GET"])
+def route_tts_kokoro_voices():
+    """Return Kokoro TTS voice catalogue."""
+    try:
+        from flask import request as _req
+
+        from opencut.core import tts_kokoro
+        lang = _req.args.get("language", "")
+        return jsonify({
+            "available": tts_kokoro.check_kokoro_available(),
+            "voices": tts_kokoro.list_voices(lang),
+            "languages": tts_kokoro.KOKORO_LANGUAGES,
+            "install_hint": tts_kokoro.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "tts_kokoro_voices")
+
+
+@wave_l_bp.route("/audio/tts/kokoro/info", methods=["GET"])
+def route_tts_kokoro_info():
+    """Return Kokoro TTS availability."""
+    try:
+        from opencut.core import tts_kokoro
+        return jsonify({
+            "available": tts_kokoro.check_kokoro_available(),
+            "model": "kokoro",
+            "params": "82M",
+            "licence": "Apache-2.0",
+            "cpu_native": True,
+            "languages": list(tts_kokoro.KOKORO_LANGUAGES.keys()),
+            "sample_rate": 24000,
+            "install_hint": tts_kokoro.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "tts_kokoro_info")
+
+
+# =============================================================
+# M1.3 — DiffRhythm Full-Song Generation
+# =============================================================
+
+@wave_l_bp.route("/audio/music/diffrhythm", methods=["POST"])
+@require_csrf
+@async_job("diffrhythm", filepath_required=False)
+def route_music_diffrhythm(job_id, filepath, data):
+    """Generate a full-length song from style prompt + optional LRC lyrics.
+
+    Body params:
+      style_prompt     str    Style description (e.g., "Jazzy Nightclub Vibe").
+      lyrics_lrc       str    LRC-format lyrics (optional).
+      style_reference  str    Path to audio style reference (optional).
+      model            str    base (95s max) or full (285s max, default).
+      chunked          bool   Use chunked mode for lower VRAM (default true).
+      output           str    Output WAV path (optional).
+    """
+    from opencut.core import music_diffrhythm
+    if not music_diffrhythm.check_diffrhythm_available():
+        raise RuntimeError(
+            "DiffRhythm is not installed. " + music_diffrhythm.INSTALL_HINT
+        )
+
+    model_variant = str(data.get("model") or "full").strip().lower()
+    if model_variant not in music_diffrhythm.DIFFRHYTHM_MODELS:
+        model_variant = "full"
+
+    ref_audio = str(data.get("style_reference") or "").strip()
+    if ref_audio:
+        from opencut.security import validate_filepath
+        ref_audio = validate_filepath(ref_audio)
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = music_diffrhythm.generate(
+        style_prompt=str(data.get("style_prompt") or data.get("prompt") or ""),
+        lyrics_lrc=str(data.get("lyrics_lrc") or data.get("lyrics") or ""),
+        style_reference=ref_audio,
+        model_variant=model_variant,
+        chunked=safe_bool(data.get("chunked"), True),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "duration_seconds": result.duration_seconds,
+        "style": result.style,
+        "has_lyrics": result.has_lyrics,
+        "model_variant": result.model_variant,
+        "generation_seconds": result.generation_seconds,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/audio/music/diffrhythm/styles", methods=["GET"])
+def route_music_diffrhythm_styles():
+    """Return DiffRhythm style catalogue."""
+    try:
+        from opencut.core import music_diffrhythm
+        return jsonify({
+            "available": music_diffrhythm.check_diffrhythm_available(),
+            "styles": music_diffrhythm.DIFFRHYTHM_STYLES,
+            "models": music_diffrhythm.DIFFRHYTHM_MODELS,
+            "install_hint": music_diffrhythm.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "diffrhythm_styles")
+
+
+@wave_l_bp.route("/audio/music/diffrhythm/info", methods=["GET"])
+def route_music_diffrhythm_info():
+    """Return DiffRhythm availability and capabilities."""
+    try:
+        from opencut.core import music_diffrhythm
+        return jsonify({
+            "available": music_diffrhythm.check_diffrhythm_available(),
+            "licence": "Apache-2.0",
+            "models": music_diffrhythm.DIFFRHYTHM_MODELS,
+            "max_duration": {"base": 95, "full": 285},
+            "min_vram_gb": 8,
+            "features": ["text-to-song", "lyrics-alignment",
+                         "style-reference", "continuation", "instrumental"],
+            "install_hint": music_diffrhythm.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "diffrhythm_info")
