@@ -53,7 +53,11 @@ def route_vvc_encode(job_id, filepath, data):
     from opencut.security import safe_int
 
     preset = str(data.get("preset") or "balanced").lower()
+    if preset not in ("balanced", "quality", "speed", "lossless"):
+        preset = "balanced"
     container = str(data.get("container") or ".mp4").lower()
+    if container.lstrip(".") not in ("mp4", "mkv", "ts"):
+        container = ".mp4"
     if not container.startswith("."):
         container = "." + container
     output = (data.get("output") or "").strip()
