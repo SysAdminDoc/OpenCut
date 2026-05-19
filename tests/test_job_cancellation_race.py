@@ -76,3 +76,69 @@ def test_cancel_job_terminates_registered_progress_process(monkeypatch):
         with job_lock:
             _job_processes.pop(job_id, None)
             jobs.pop(job_id, None)
+
+
+def test_cleanup_old_jobs_kills_process_for_timed_out_job(monkeypatch):
+    import opencut.jobs as jobs_mod
+
+    class FakeProcess:
+        stdin = None
+        stdout = None
+        stderr = None
+
+        def __init__(self):
+            self.terminated = False
+            self.killed = False
+            self.wait_timeouts = []
+
+        def poll(self):
+            return None
+
+        def terminate(self):
+            self.terminated = True
+
+        def wait(self, timeout=None):
+            self.wait_timeouts.append(timeout)
+            return 0
+
+        def kill(self):
+            self.killed = True
+
+    job_id = "stuck-process"
+    proc = FakeProcess()
+    persisted = []
+
+    monkeypatch.setattr(jobs_mod, "_JOB_STUCK_TIMEOUT", 1)
+    monkeypatch.setattr(
+        jobs_mod,
+        "_persist_job",
+        lambda job_dict, **_kwargs: persisted.append(job_dict.copy()),
+    )
+
+    with jobs_mod.job_lock:
+        jobs_mod.jobs[job_id] = {
+            "id": job_id,
+            "type": "render",
+            "filepath": "clip.mp4",
+            "status": "running",
+            "progress": 10,
+            "created": time.time() - 10,
+        }
+        jobs_mod._job_processes[job_id] = proc
+
+    try:
+        jobs_mod._cleanup_old_jobs()
+
+        assert proc.terminated is True
+        assert proc.killed is False
+        with jobs_mod.job_lock:
+            assert job_id not in jobs_mod._job_processes
+            assert jobs_mod.jobs[job_id]["status"] == "error"
+            assert jobs_mod.jobs[job_id]["message"] == "Timed out"
+        assert persisted
+        assert persisted[0]["id"] == job_id
+        assert persisted[0]["status"] == "error"
+    finally:
+        with jobs_mod.job_lock:
+            jobs_mod._job_processes.pop(job_id, None)
+            jobs_mod.jobs.pop(job_id, None)

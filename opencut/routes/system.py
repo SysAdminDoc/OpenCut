@@ -1786,8 +1786,22 @@ def list_models():
 @require_csrf
 def delete_model():
     """Delete a downloaded model."""
-    data = request.get_json(force=True)
-    path = data.get("path", "").strip()
+    try:
+        data = get_json_dict()
+    except ValueError as e:
+        return jsonify({
+            "error": str(e),
+            "code": "INVALID_INPUT",
+            "suggestion": "Send a top-level JSON object in the request body.",
+        }), 400
+    path = data.get("path", "")
+    if path and not isinstance(path, str):
+        return jsonify({
+            "error": "path must be a string",
+            "code": "INVALID_INPUT",
+            "suggestion": "Pass the exact model cache file or directory path as a string.",
+        }), 400
+    path = path.strip()
     if not path:
         return jsonify({"error": "No path provided"}), 400
 

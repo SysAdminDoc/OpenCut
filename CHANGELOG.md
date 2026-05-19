@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Fixed — Job Runtime Hardening
+
+- Redacted API keys, tokens, authorization headers, passwords, and nested credentials before persisting async-job request payloads into job history.
+- Hardened job cleanup so timed-out jobs terminate registered child processes, and job-time recording falls back to synchronous recording if the I/O executor is already shutting down.
+- Tightened `/models/delete` input validation for non-string model paths.
+
 ### Added — UXP UDT Result Capture Validation
 
 - Advanced F252 with a strict validator for JSON captured from `window.OpenCutUXPUdtHarness.run({ includeMutating: true })` inside Premiere UDT.
