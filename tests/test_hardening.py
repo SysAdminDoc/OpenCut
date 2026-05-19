@@ -354,6 +354,55 @@ def test_jobs_sanitize_payload_caps_large_dicts():
     big = {f"key_{i}": f"val_{i}" for i in range(500)}
     result = _sanitize_payload_for_storage(big)
     assert isinstance(result, dict)
+    assert result["_keys_trimmed"] is True
+
+
+def test_jobs_sanitize_payload_redacts_sensitive_values():
+    """Persisted job payloads keep diagnostics but never store credentials."""
+    from opencut.jobs import _sanitize_payload_for_storage
+
+    payload = {
+        "filepath": "/tmp/clip.mp4",
+        "api_key": "sk-live-secret",
+        "headers": {"Authorization": "Bearer super-secret"},
+        "nested": [{"refresh_token": "rt-secret", "label": "keep"}],
+        "metadata": {"tokenizer": "not-a-secret-key"},
+    }
+
+    result = _sanitize_payload_for_storage(payload)
+    encoded = json.dumps(result)
+
+    assert result["filepath"] == "/tmp/clip.mp4"
+    assert result["api_key"] == "[REDACTED]"
+    assert result["headers"]["Authorization"] == "[REDACTED]"
+    assert result["nested"][0]["refresh_token"] == "[REDACTED]"
+    assert result["nested"][0]["label"] == "keep"
+    assert result["metadata"]["tokenizer"] == "not-a-secret-key"
+    assert "sk-live-secret" not in encoded
+    assert "super-secret" not in encoded
+    assert "rt-secret" not in encoded
+    assert payload["api_key"] == "sk-live-secret"
+
+
+def test_schedule_record_time_runs_sync_when_io_pool_closed(monkeypatch):
+    import opencut.jobs as jobs_mod
+
+    calls = []
+
+    class ClosedPool:
+        def submit(self, fn):
+            raise RuntimeError("cannot schedule new futures after shutdown")
+
+    monkeypatch.setattr(jobs_mod, "_io_pool", ClosedPool())
+    monkeypatch.setattr("opencut.helpers._get_file_duration", lambda _path: 99)
+    monkeypatch.setattr(
+        "opencut.helpers._record_job_time",
+        lambda job_type, elapsed, file_dur: calls.append((job_type, elapsed, file_dur)),
+    )
+
+    jobs_mod._schedule_record_time("render", 1.25, "")
+
+    assert calls == [("render", 1.25, 0)]
 
 
 def test_is_path_within_uses_component_boundaries(tmp_path):
@@ -424,6 +473,19 @@ def test_models_delete_allows_custom_model_cache_file(client, csrf_token, tmp_pa
     assert resp.status_code == 200
     assert resp.get_json()["success"] is True
     assert not model_file.exists()
+
+
+def test_models_delete_rejects_non_string_path(client, csrf_token):
+    resp = client.post(
+        "/models/delete",
+        data=json.dumps({"path": ["/tmp/model.bin"]}),
+        headers=csrf_headers(csrf_token),
+    )
+
+    assert resp.status_code == 400
+    data = resp.get_json()
+    assert data["code"] == "INVALID_INPUT"
+    assert "path must be a string" in data["error"]
 
 
 def test_open_path_blocks_executable_extensions(client, csrf_token):

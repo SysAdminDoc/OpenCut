@@ -7,6 +7,7 @@ Shared job tracking state and helper functions used across all route modules.
 import atexit
 import json
 import logging
+import re
 import threading
 import time
 import uuid
@@ -75,6 +76,18 @@ JOB_MAX_AGE = _JOB_CONFIG.job_max_age
 MAX_CONCURRENT_JOBS = _JOB_CONFIG.max_concurrent_jobs
 MAX_BATCH_FILES = _JOB_CONFIG.max_batch_files
 MAX_PERSISTED_JOB_PAYLOAD_BYTES = 64 * 1024
+_MAX_PERSISTED_PAYLOAD_ITEMS = 200
+_MAX_PERSISTED_PAYLOAD_DEPTH = 8
+_SENSITIVE_PAYLOAD_VALUE = "[REDACTED]"
+_SENSITIVE_PAYLOAD_KEY_RE = re.compile(
+    r"(^|[_\-\s.])("
+    r"api[_\-\s]?key|authorization|auth[_\-\s]?token|bearer|credential|"
+    r"client[_\-\s]?secret|secret|password|passwd|passphrase|"
+    r"access[_\-\s]?token|refresh[_\-\s]?token|id[_\-\s]?token|token|"
+    r"private[_\-\s]?key|webhook[_\-\s]?secret|signing[_\-\s]?key"
+    r")([_\-\s.]|$)",
+    re.IGNORECASE,
+)
 
 
 class JobRegistry:
@@ -285,22 +298,84 @@ def _schedule_record_time(job_type, elapsed, filepath):
             _record_job_time(job_type, elapsed, file_dur)
         except Exception as e:
             logger.debug("Failed to record job time for %s: %s", job_type, e)
-    _io_pool.submit(_record)
+    try:
+        _io_pool.submit(_record)
+    except RuntimeError:
+        # Match _persist_job(): during interpreter shutdown the executor may
+        # already be closed, but the final timing sample is still cheap to save.
+        _record()
+
+
+def _payload_key_is_sensitive(key) -> bool:
+    return bool(_SENSITIVE_PAYLOAD_KEY_RE.search(str(key)))
+
+
+def _redact_payload_for_storage(value, *, depth: int = 0, seen=None):
+    if seen is None:
+        seen = set()
+    if depth > _MAX_PERSISTED_PAYLOAD_DEPTH:
+        return {"_truncated": True, "_reason": "max_depth"}
+
+    if isinstance(value, dict):
+        obj_id = id(value)
+        if obj_id in seen:
+            return {"_truncated": True, "_reason": "circular_reference"}
+        seen.add(obj_id)
+        try:
+            items = list(value.items())
+            result = {}
+            for key, child in items[:_MAX_PERSISTED_PAYLOAD_ITEMS]:
+                key_str = str(key)
+                if _payload_key_is_sensitive(key_str):
+                    result[key_str] = _SENSITIVE_PAYLOAD_VALUE
+                else:
+                    result[key_str] = _redact_payload_for_storage(
+                        child,
+                        depth=depth + 1,
+                        seen=seen,
+                    )
+            if len(items) > _MAX_PERSISTED_PAYLOAD_ITEMS:
+                result["_keys_trimmed"] = True
+                result["_omitted_keys"] = len(items) - _MAX_PERSISTED_PAYLOAD_ITEMS
+            return result
+        finally:
+            seen.discard(obj_id)
+
+    if isinstance(value, (list, tuple, set)):
+        obj_id = id(value)
+        if obj_id in seen:
+            return [{"_truncated": True, "_reason": "circular_reference"}]
+        seen.add(obj_id)
+        try:
+            items = list(value)
+            result = [
+                _redact_payload_for_storage(item, depth=depth + 1, seen=seen)
+                for item in items[:_MAX_PERSISTED_PAYLOAD_ITEMS]
+            ]
+            if len(items) > _MAX_PERSISTED_PAYLOAD_ITEMS:
+                result.append({
+                    "_items_trimmed": True,
+                    "_omitted_items": len(items) - _MAX_PERSISTED_PAYLOAD_ITEMS,
+                })
+            return result
+        finally:
+            seen.discard(obj_id)
+
+    return value
 
 
 def _sanitize_payload_for_storage(payload):
-    """Cap persisted request payloads so job history stays useful but bounded."""
+    """Redact and cap persisted request payloads.
+
+    Job history is useful for diagnostics, but request payloads may contain
+    LLM/API credentials. Redaction runs before size checks so even small
+    payloads cannot persist secrets into ``~/.opencut/jobs.db``.
+    """
     if not isinstance(payload, dict):
         return {}
     try:
-        # check_circular=True (default) catches circular references;
-        # cap key count to prevent CPU waste on massive dicts.
-        if len(payload) > 200:
-            trimmed = {k: payload[k] for k in list(payload)[:200]}
-            trimmed["_keys_trimmed"] = True
-            encoded = json.dumps(trimmed, ensure_ascii=False, default=str)
-        else:
-            encoded = json.dumps(payload, ensure_ascii=False, default=str)
+        redacted = _redact_payload_for_storage(payload)
+        encoded = json.dumps(redacted, ensure_ascii=False, default=str)
     except (TypeError, ValueError, OverflowError, RecursionError):
         return {
             "_truncated": True,
@@ -309,7 +384,7 @@ def _sanitize_payload_for_storage(payload):
         }
     encoded_bytes = len(encoded.encode("utf-8"))
     if encoded_bytes <= MAX_PERSISTED_JOB_PAYLOAD_BYTES:
-        return payload
+        return redacted
     return {
         "_truncated": True,
         "_reason": "payload_too_large",
@@ -476,12 +551,13 @@ def _start_periodic_cleanup():
 def _cleanup_old_jobs():
     """Mark stuck running jobs, purge old terminal jobs, and reap dead procs.
 
-    All three passes run under ``job_lock`` so we never interleave with
-    workers that are mid-update. Persistence of newly-timed-out jobs
-    happens *after* releasing the lock because SQLite writes are I/O-bound.
+    State mutation runs under ``job_lock`` so we never interleave with workers
+    that are mid-update. Process termination and persistence happen after
+    releasing the lock because both can block.
     """
     now = time.time()
     jobs_to_persist = []
+    processes_to_kill = set()
     stuck_hrs = _JOB_STUCK_TIMEOUT / 3600
     with job_lock:
         expired = []
@@ -495,11 +571,14 @@ def _cleanup_old_jobs():
                 j["message"] = "Timed out"
                 logger.warning("Marking stuck job %s as error (created %.0fs ago)", jid, age)
                 jobs_to_persist.append(j.copy())
+                if jid in _job_processes:
+                    processes_to_kill.add(jid)
             elif status in ("complete", "error", "cancelled") and age > JOB_MAX_AGE:
                 expired.append(jid)
         for jid in expired:
             del jobs[jid]
-            _job_processes.pop(jid, None)
+            if jid in _job_processes:
+                processes_to_kill.add(jid)
         # Reap _job_processes entries whose process has already terminated
         stale_procs = []
         for jid, proc in _job_processes.items():
@@ -509,7 +588,10 @@ def _cleanup_old_jobs():
             except Exception:
                 stale_procs.append(jid)
         for jid in stale_procs:
-            _job_processes.pop(jid, None)
+            if jid not in processes_to_kill:
+                _job_processes.pop(jid, None)
+    for job_id in processes_to_kill:
+        _kill_job_process(job_id)
     for job_dict in jobs_to_persist:
         _persist_job(job_dict)
 
