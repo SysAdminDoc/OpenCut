@@ -281,7 +281,13 @@ def _find_system_python() -> Optional[str]:
     return None
 
 
-_SAFE_PACKAGE_RE = re.compile(r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?(\[.+\])?(==.+|>=.+|<=.+|~=.+|!=.+)?$")
+_SAFE_PACKAGE_RE = re.compile(
+    r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?"
+    r"(\[[A-Za-z0-9_,\s-]+\])?"                   # extras: [all], [dev,test]
+    r"(==|>=|<=|~=|!=)[A-Za-z0-9.*+!_-]+$|"       # version: ==1.0, >=2.0.1
+    r"^[A-Za-z0-9]([A-Za-z0-9._-]*[A-Za-z0-9])?"
+    r"(\[[A-Za-z0-9_,\s-]+\])?$"                   # no version spec
+)
 
 
 def validate_safe_pip_package(package: str) -> str:
