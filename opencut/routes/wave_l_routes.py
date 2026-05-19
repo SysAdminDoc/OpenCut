@@ -1,11 +1,12 @@
 """
-OpenCut Wave L Routes v1.29.0
+OpenCut Wave L Routes v1.33.0
 
 Wave L modules:
   L1.1  ElevenLabs TTS      — /audio/tts/elevenlabs
   L1.2  Smart Upscaling Hub — /video/upscale/smart
   L1.3  AI Face Reshape     — /video/face/reshape
   L1.4  AI Skin Retouch     — /video/face/retouch
+  L2.3  Spark-TTS           — /audio/tts/spark
 """
 from __future__ import annotations
 
@@ -266,3 +267,91 @@ def route_skin_retouch_info():
         })
     except Exception as exc:
         return safe_error(exc, "skin_retouch_info")
+
+
+# =============================================================
+# L2.3 — Spark-TTS (CPU-native zero-shot TTS)
+# =============================================================
+
+@wave_l_bp.route("/audio/tts/spark", methods=["POST"])
+@require_csrf
+@async_job("tts_spark", filepath_required=False)
+def route_tts_spark(job_id, filepath, data):
+    """Synthesize speech via Spark-TTS (CPU-native, Apache-2, zero-shot voice clone).
+
+    Body params:
+      text             str    Text to synthesize (required).
+      voice            str    Preset voice: default|warm|bright|calm|deep.
+      reference_audio  str    Path to 3-10s reference clip for voice cloning (optional).
+      speed            float  Playback speed 0.5-2.0 (default 1.0).
+      output           str    Output WAV path (optional, auto-generated).
+    """
+    from opencut.core import tts_sparktts
+    if not tts_sparktts.check_sparktts_available():
+        raise RuntimeError(
+            "Spark-TTS is not installed. " + tts_sparktts.INSTALL_HINT
+        )
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    text = str(data.get("text") or "").strip()
+    if not text:
+        raise ValueError("text is required")
+
+    voice = str(data.get("voice") or "default").strip().lower()
+    if voice not in tts_sparktts.SPARK_VOICE_PRESETS:
+        voice = "default"
+
+    ref_audio = str(data.get("reference_audio") or "").strip()
+    if ref_audio:
+        from opencut.security import validate_filepath
+        ref_audio = validate_filepath(ref_audio)
+
+    result = tts_sparktts.synthesize(
+        text=text,
+        voice=voice,
+        reference_audio=ref_audio,
+        speed=safe_float(data.get("speed"), 1.0, min_val=0.5, max_val=2.0),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "voice": result.voice,
+        "model": result.model,
+        "duration_seconds": result.duration_seconds,
+        "sample_rate": result.sample_rate,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/audio/tts/spark/voices", methods=["GET"])
+def route_tts_spark_voices():
+    """Return available Spark-TTS voice presets."""
+    try:
+        from opencut.core import tts_sparktts
+        return jsonify({
+            "available": tts_sparktts.check_sparktts_available(),
+            "voices": tts_sparktts.list_voices(),
+            "install_hint": tts_sparktts.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "tts_spark_voices")
+
+
+@wave_l_bp.route("/audio/tts/spark/info", methods=["GET"])
+def route_tts_spark_info():
+    """Return Spark-TTS availability and capabilities."""
+    try:
+        from opencut.core import tts_sparktts
+        return jsonify({
+            "available": tts_sparktts.check_sparktts_available(),
+            "model": "spark-tts",
+            "licence": "Apache-2.0",
+            "cpu_native": True,
+            "voice_cloning": True,
+            "presets": list(tts_sparktts.SPARK_VOICE_PRESETS.keys()),
+            "install_hint": tts_sparktts.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "tts_spark_info")
