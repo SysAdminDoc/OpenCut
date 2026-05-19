@@ -84,11 +84,9 @@ def route_audio_watermark_info():
 @wave_k_bp.route("/settings/brand-kit", methods=["GET"])
 def route_brand_kit_get():
     try:
-        if os.path.isfile(_BK_SETTINGS_PATH):
-            with open(_BK_SETTINGS_PATH, encoding="utf-8") as f:
-                data = json.load(f)
-            return jsonify(data)
-        return jsonify({})
+        from opencut.user_data import read_user_file
+        data = read_user_file("brand_kit_settings.json", default={})
+        return jsonify(data)
     except Exception as exc:
         return safe_error(exc, "brand_kit_get")
 
@@ -97,10 +95,9 @@ def route_brand_kit_get():
 @require_csrf
 def route_brand_kit_save():
     try:
+        from opencut.user_data import write_user_file
         data = request.get_json(force=True, silent=True) or {}
-        os.makedirs(os.path.dirname(_BK_SETTINGS_PATH), exist_ok=True)
-        with open(_BK_SETTINGS_PATH, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        write_user_file("brand_kit_settings.json", data)
         return jsonify({"saved": True})
     except Exception as exc:
         return safe_error(exc, "brand_kit_save")

@@ -236,49 +236,49 @@ def generate_zoom_keyframes(
 
     frame_interval = max(1, int(fps / sample_rate))
     total_samples = max(1, total_frames // frame_interval)
-    sample_times = []
     raw_keyframes = []
 
-    frame_idx = 0
-    sample_idx = 0
     try:
-        while True:
+        for sample_idx in range(total_samples):
+            target_frame = sample_idx * frame_interval
+            if target_frame >= total_frames:
+                break
+
+            # Seek directly to the target frame instead of decoding every
+            # intermediate frame.  For a 30-min 30fps video at 2 samples/s
+            # this avoids ~53,100 unnecessary frame decodes.
+            cap.set(cv2.CAP_PROP_POS_FRAMES, target_frame)
             ret, bgr = cap.read()
             if not ret:
                 break
 
-            if frame_idx % frame_interval == 0:
-                t = frame_idx / fps
-                gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
-                face = _detect_face_centre(gray)
+            t = target_frame / fps
+            gray = cv2.cvtColor(bgr, cv2.COLOR_BGR2GRAY)
+            face = _detect_face_centre(gray)
 
-                if face is not None:
-                    cx, cy = face
-                    # Clamp anchor so face stays within frame after zoom
-                    margin = face_padding
-                    ax = max(margin, min(1.0 - margin, cx))
-                    ay = max(margin, min(1.0 - margin, cy))
-                else:
-                    # No face — use centre crop
-                    ax, ay = 0.5, 0.5
+            if face is not None:
+                cx, cy = face
+                # Clamp anchor so face stays within frame after zoom
+                margin = face_padding
+                ax = max(margin, min(1.0 - margin, cx))
+                ay = max(margin, min(1.0 - margin, cy))
+            else:
+                # No face — use centre crop
+                ax, ay = 0.5, 0.5
 
-                # Compute eased scale: ramp from 1.0 at start to zoom_amount
-                t_normalised = t / duration if duration > 0 else 0.0
-                scale = 1.0 + (zoom_amount - 1.0) * _ease(t_normalised, easing)
+            # Compute eased scale: ramp from 1.0 at start to zoom_amount
+            t_normalised = t / duration if duration > 0 else 0.0
+            scale = 1.0 + (zoom_amount - 1.0) * _ease(t_normalised, easing)
 
-                raw_keyframes.append({
-                    "time": round(t, 4),
-                    "scale": round(scale, 4),
-                    "anchor_x": round(ax, 4),
-                    "anchor_y": round(ay, 4),
-                })
-                sample_times.append(t)
+            raw_keyframes.append({
+                "time": round(t, 4),
+                "scale": round(scale, 4),
+                "anchor_x": round(ax, 4),
+                "anchor_y": round(ay, 4),
+            })
 
-                if on_progress and total_samples > 0:
-                    on_progress(int(sample_idx / total_samples * 100))
-                sample_idx += 1
-
-            frame_idx += 1
+            if on_progress and total_samples > 0:
+                on_progress(int(sample_idx / total_samples * 100))
     finally:
         cap.release()
 
