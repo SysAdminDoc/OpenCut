@@ -481,7 +481,9 @@ def export_video(job_id, filepath, data):
     audio_codec = data.get("audio_codec", "aac")
     if audio_codec not in _VALID_AUDIO_CODECS:
         audio_codec = "aac"
-    quality = data.get("quality", "medium")  # low, medium, high, lossless
+    quality = data.get("quality", "medium")
+    if quality not in ("low", "medium", "high", "lossless"):
+        quality = "medium"
     output_format = data.get("output_format", "mp4")
     audio_only = safe_bool(data.get("audio_only", False), False)
     audio_format_ext = data.get("audio_format", "mp3")  # mp3, wav, flac
@@ -1367,7 +1369,9 @@ def video_trim(job_id, filepath, data):
     """Trim a video to a start/end time range."""
     start_time = data.get("start", "00:00:00")
     end_time = data.get("end", "")
-    quality = data.get("quality", "high")  # low, medium, high, copy
+    quality = data.get("quality", "high")
+    if quality not in ("low", "medium", "high", "copy"):
+        quality = "high"
     output_dir = data.get("output_dir", "")
     if output_dir:
         output_dir = validate_path(output_dir)

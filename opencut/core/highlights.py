@@ -152,8 +152,8 @@ def _parse_highlights_json(text: str) -> List[Highlight]:
                 except (TypeError, ValueError):
                     continue
             return highlights
-    except (json.JSONDecodeError, TypeError, ValueError):
-        pass
+    except (json.JSONDecodeError, TypeError, ValueError) as exc:
+        logger.debug("Direct JSON parse failed for highlights, trying regex fallback: %s", exc)
 
     # Fallback: find JSON array in response
     match = re.search(r"\[\s*\{[\s\S]*?\}\s*\]", text)
