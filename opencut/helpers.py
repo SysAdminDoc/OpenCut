@@ -15,7 +15,6 @@ import sys as _sys
 import tempfile
 import threading
 import time
-import uuid
 
 logger = logging.getLogger("opencut")
 
@@ -175,7 +174,11 @@ def check_disk_space(path: str, min_bytes: int = 500 * 1024 * 1024) -> dict:
         }
     except Exception as e:
         logger.debug("Disk space check failed for %s: %s", path, e)
-        return {"ok": True, "free_bytes": 0, "free_mb": 0, "required_mb": 0}
+        # Return ok=True on check failure to avoid blocking operations when
+        # disk_usage can't probe the path (network drives, restricted dirs).
+        # Log the warning so it's visible in diagnostics.
+        return {"ok": True, "free_bytes": 0, "free_mb": 0, "required_mb": 0,
+                "check_error": str(e)}
 
 
 # ---------------------------------------------------------------------------
@@ -313,7 +316,12 @@ def get_video_info(filepath: str) -> dict:
             return _defaults
         s = streams[0]
         fps_p = s.get("r_frame_rate", "30/1").split("/")
-        fps = (float(fps_p[0]) / float(fps_p[1])) if len(fps_p) == 2 and float(fps_p[1]) else 30.0
+        try:
+            num = float(fps_p[0])
+            den = float(fps_p[1]) if len(fps_p) == 2 else 1.0
+            fps = num / den if den > 0 else 30.0
+        except (ValueError, ZeroDivisionError, IndexError):
+            fps = 30.0
         duration = float(s.get("duration", 0))
         if duration <= 0:
             duration = float(data.get("format", {}).get("duration", 0))
@@ -395,21 +403,11 @@ def _resolve_output_dir(filepath: str, requested_dir: str = "") -> str:
                 except OSError as e:
                     logger.debug("Failed to create output dir %s: %s", requested_dir, e)
 
-    # Try source file's directory
+    # Try source file's directory — use os.access instead of creating a
+    # test file, which can leave artifacts if the process is killed.
     source_dir = os.path.dirname(os.path.abspath(filepath))
-    if source_dir and os.path.isdir(source_dir):
-        test_file = os.path.join(source_dir, f".opencut_test_{uuid.uuid4().hex[:6]}")
-        try:
-            with open(test_file, "w") as f:
-                f.write("")
-            return source_dir
-        except (OSError, PermissionError) as e:
-            logger.debug("Source dir %s not writable: %s", source_dir, e)
-        finally:
-            try:
-                os.unlink(test_file)
-            except OSError:
-                pass  # test file may not have been created
+    if source_dir and os.path.isdir(source_dir) and os.access(source_dir, os.W_OK):
+        return source_dir
 
     # Fallback to temp directory
     fallback = os.path.join(tempfile.gettempdir(), "opencut_output")

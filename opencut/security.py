@@ -220,8 +220,15 @@ def validate_path(path: str, allowed_base: str = None) -> str:
     if any(p.startswith("\\\\") for p in prefix_checks):
         raise ValueError("UNC/network paths are not allowed")
 
+    # Block Windows Alternate Data Streams (e.g. "file.txt:hidden" or
+    # "file.txt::$DATA").  ADS names are invisible in Explorer and can
+    # be used to hide data or bypass basename-based checks.
+    basename = os.path.basename(path)
+    if ":" in basename and not re.match(r"^[A-Za-z]:$", basename):
+        raise ValueError("Alternate data stream references are not allowed")
+
     # Block Windows reserved device names (CON, PRN, AUX, NUL, COM1-9, LPT1-9)
-    stem = os.path.splitext(os.path.basename(path))[0].upper()
+    stem = os.path.splitext(basename)[0].upper()
     if stem in {"CON", "PRN", "AUX", "NUL"} or re.match(r"^(COM|LPT)\d$", stem):
         raise ValueError("Windows reserved device name in path")
 
