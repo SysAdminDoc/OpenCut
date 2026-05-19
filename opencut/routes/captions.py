@@ -2041,7 +2041,11 @@ def captions_qc():
         srt_path = (data.get("srt_path") or "").strip() or None
         srt_text = data.get("srt_text")
         standard = (data.get("standard") or "accessibility").strip()
+        if standard not in ("accessibility", "broadcast", "ebu-tt-d"):
+            standard = "accessibility"
         mode = (data.get("mode") or "strict").strip()
+        if mode not in ("strict", "advisory"):
+            mode = "strict"
         reading_profile = (
             data.get("reading_profile")
             or data.get("profile")

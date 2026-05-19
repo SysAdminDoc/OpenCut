@@ -83,6 +83,8 @@ def route_karaoke_render():
 
         data = get_json_dict()
         preset = str(data.get("preset") or "fill")
+        if preset not in ("fill", "bounce", "color_wave", "typewriter", "karaoke_glow", "highlight_word"):
+            preset = "fill"
         output = str(data.get("output") or "").strip()
         if not output:
             return jsonify({
@@ -148,6 +150,8 @@ def route_svtav1_psy_encode(job_id, filepath, data):
     from opencut.security import safe_int
 
     preset = str(data.get("preset") or "web").lower()
+    if preset not in ("web", "professional", "broadcast", "archive"):
+        preset = "web"
     output = (data.get("output") or "").strip()
     if output:
         output = validate_path(output)

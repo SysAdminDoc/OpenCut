@@ -262,6 +262,8 @@ def route_vmaf_encode(job_id, filepath, data):
         data.get("target_vmaf", 95.0), 95.0, min_val=20.0, max_val=99.5,
     )
     encoder = str(data.get("encoder") or "libsvtav1").strip().lower()
+    if encoder not in ("libsvtav1", "libx265", "libx264", "libvpx-vp9"):
+        encoder = "libsvtav1"
     preset = data.get("preset")
     if preset is not None:
         preset = safe_int(preset, 8, min_val=0, max_val=13)
