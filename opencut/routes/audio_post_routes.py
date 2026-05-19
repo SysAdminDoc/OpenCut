@@ -180,7 +180,7 @@ def route_adr_record(job_id, filepath, data):
     if not session_id or not cue_id:
         raise ValueError("session_id and cue_id are required")
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"ADR record {pct}%")
 
     result = process_replacement(
@@ -214,7 +214,7 @@ def route_me_mix(job_id, filepath, data):
         dialogue_tracks = None
     output_path = str(data.get("output_path", "")).strip() or None
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"M&E mix {pct}%")
 
     result = generate_me_mix(
@@ -250,7 +250,7 @@ def route_dialogue_premix(job_id, filepath, data):
         diarization = None
     output_path = str(data.get("output_path", "")).strip() or None
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"Dialogue premix {pct}%")
 
     result = premix_dialogue(
@@ -290,7 +290,7 @@ def route_surround_upmix(job_id, filepath, data):
     export_format = str(data.get("export_format", "wav")).strip()
     output_path = str(data.get("output_path", "")).strip() or None
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"Surround upmix {pct}%")
 
     result = upmix_surround(
@@ -332,7 +332,7 @@ def route_foley_analyze(job_id, filepath, data):
                              min_val=0.0, max_val=1.0)
     max_cues = safe_int(data.get("max_cues", 500), 500, min_val=1, max_val=2000)
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"Foley analysis {pct}%")
 
     session = detect_foley_cues(
@@ -388,7 +388,7 @@ def route_foley_place(job_id, filepath, data):
         total_duration=safe_float(data.get("total_duration", 0), 0),
     )
 
-    def _on_progress(pct):
+    def _on_progress(pct, msg=""):
         _update_job(job_id, progress=pct, message=f"SFX placement {pct}%")
 
     result = place_sfx(

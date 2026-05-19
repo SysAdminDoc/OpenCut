@@ -229,6 +229,9 @@ def search_footage_db():
     if not query:
         return jsonify({"error": "query is required"}), 400
 
+    if len(query) > 500:
+        return jsonify({"error": "query too long (max 500 characters)"}), 400
+
     limit = safe_int(data.get("limit", 50), 50, min_val=1, max_val=200)
 
     try:

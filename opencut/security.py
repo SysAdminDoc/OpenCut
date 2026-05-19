@@ -474,7 +474,7 @@ def safe_float(value, default: float = 0.0, min_val: float = None, max_val: floa
     """Convert *value* to float, returning *default* on failure.
 
     If *min_val* or *max_val* are given, clamp the result to that range.
-    Rejects inf/nan values.
+    Rejects inf/nan values in both the input and the bounds.
     """
     try:
         result = float(value)
@@ -482,10 +482,22 @@ def safe_float(value, default: float = 0.0, min_val: float = None, max_val: floa
             return default
     except (TypeError, ValueError):
         return default
-    if min_val is not None and result < min_val:
-        result = min_val
-    if max_val is not None and result > max_val:
-        result = max_val
+    # Guard against NaN/inf bounds — NaN comparisons silently return False,
+    # which would bypass clamping entirely.
+    if min_val is not None:
+        try:
+            min_f = float(min_val)
+            if min_f == min_f and result < min_f:  # skip if min_val is NaN
+                result = min_f
+        except (TypeError, ValueError):
+            pass
+    if max_val is not None:
+        try:
+            max_f = float(max_val)
+            if max_f == max_f and result > max_f:  # skip if max_val is NaN
+                result = max_f
+        except (TypeError, ValueError):
+            pass
     return result
 
 
