@@ -110,7 +110,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | F# | Title | What | Source | Effort | Tier |
 |---|---|---|---|---|---|
-| F251 | Track `@adobe/premierepro@beta` per-week diff via CI | Catch new APIs that close UXP gaps (e.g. `startDrag`, `createCaptionTrack`) the moment they ship | UXP subagent §3 | S | Now |
+| [x] F251 | Track `@adobe/premierepro@beta` per-week diff via CI | Closed in Pass 24 — `opencut.tools.adobe_premierepro_versions`, committed snapshot JSON, weekly GitHub Action, and release-smoke warn-tier drift gate track beta/latest API movement | UXP subagent §3 | S | Now |
 | F252 | UXP migration sequence: Bolt UXP scaffold + WebView UI for 3,210-line HTML | Partially advanced in Passes 59-60: F252.1 added a dormant `extension/com.opencut.uxp/bolt-webview/` scaffold, and F252.2 added a `PProBridge.executeHostAction()` dispatcher for the 14 direct-UXP `ocXxx` actions plus explicit CEP fallback responses. F252 remains open for in-Premiere UDT validation, live WebView cutover, and UI migration. | UXP subagent §6 + §10 | XL | Next |
 | F253 | UXP Hybrid Plugin (.uxpaddon) for file drag-out + QE-equivalent ops | C++ DLL/dylib bundled with mac x64/arm64 + win x64/arm64 (Bolt 1.3.0 has the template) | UXP subagent §4 + §10 | XL | Later |
 | [x] F254 | UXP `createSubsequence` integration (already exposed — correct Pass 1 claim) | Closed in Pass 61 — `PProBridge.createSubsequenceFromRange()` now sets sequence in/out points with UXP actions, calls `Sequence.createSubsequence(ignoreTrackTargeting?)`, restores the prior range, and hands the subsequence to F255 encoder export | UXP subagent §2 + §3 | S | Next |
@@ -118,7 +118,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 | [x] F256 | UXP `Transcript.hasTranscript` / `querySupportedLanguages` integration | Closed in Pass 63 — UXP host helpers now query supported transcript languages, resolve clip project items, check transcript availability, and optionally export transcript JSON | UXP subagent §3 | S | Next |
 | [x] F257 | UXP `ObjectMaskUtils.hasObjectMask` integration | Closed in Pass 64 — UXP host helpers now check AI Object Mask availability for active sequences or whole projects | UXP subagent §3 | S | Next |
 | [x] F258 | UXP `ProjectConverter.exportAAF` migration (replaces CEP+ExtendScript path) | Closed in Pass 65 — UXP host helpers now export the active sequence through `ProjectConverter.exportAAF()` with optional `AAFExportOptions` | UXP subagent §3 | M | Next |
-| F259 | UXP HTTP-on-macOS workaround documentation + auto-HTTPS sidecar | Known 25.6.3 bug; affects MCP sidecar (F146) on Mac | UXP subagent §5 | S | Now |
+| [x] F259 | UXP HTTP-on-macOS workaround documentation + auto-HTTPS sidecar | Closed in Pass 24 — `docs/UXP_MACOS_HTTP.md` documents shipped UXP macOS HTTP workarounds, manifest port allowlist invariants, and the deferred auto-HTTPS sidecar boundary | UXP subagent §5 | S | Now |
 | [x] F260 | UXP migration risk dashboard: per-route CEP-vs-UXP-vs-Hybrid status | Closed in Pass 66 — generated dashboard artifacts now derive from the F198 catalogue and surface direct UXP, fallback, hybrid, and risk status in UXP Settings | UXP subagent §10 | M | Next |
 
 ---
@@ -127,7 +127,7 @@ Format: ID — title — what — source(s) — effort (S/M/L/XL) — fit (yes/c
 
 | Tier | Pass-2 F-numbers added | Total (cumulative) |
 |---|---|---|
-| **Now** | F205, F251, F259 | 3 |
+| **Now** | F205, [x] F251, [x] F259 | 1 open + F251/F259 closed |
 | **Done locally after Pass 23 wrap-up** | F191, F195, F197, F199, F202, F204, F207, F208, F209, F218, F219, F236, F237, F240, F241, F243, F244 | 17 |
 | **Next** | [x] F192, [x] F194, [x] F198, [x] F200, [x] F201, [x] F203, [x] F211, [x] F213, [x] F214, [x] F215, [x] F216, [x] F217, [x] F223, [x] F225, [x] F226, [x] F227, [x] F229, [x] F231, [x] F233, [x] F234, [x] F238, [x] F239, [x] F242, [x] F249, [x] F250, F252 (F252.1/F252.2 dispatcher done), [x] F254, [x] F255, [x] F256, [x] F257, [x] F258, [x] F260 | 32 |
 | **Later** | [x] F193, [x] F196, [x] F206, [x] F210, [x] F212, [x] F220, [x] F221, [x] F222, [x] F224, [x] F228, [x] F230, [x] F232, [x] F235, [x] F245, [x] F246, [x] F247, [x] F248, F253 | 1 open + F193/F196/F206/F210/F212/F220/F221/F222/F224/F228/F230/F232/F235/F245/F246/F247/F248 closed |
