@@ -266,7 +266,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/video/highlights/sports",
     # v1.33.0 additions — L2.4 VidMuse + L3.2/L3.5 promotions
     "/audio/music/vidmuse",
-    # M1.2/M1.3 additions — Kokoro TTS + DiffRhythm music
+    # M1 additions — Chatterbox + Kokoro TTS + DiffRhythm music
+    "/audio/tts/chatterbox",
     "/audio/tts/kokoro",
     "/audio/music/diffrhythm",
 })
