@@ -19,8 +19,8 @@ from typing import Callable, Optional
 
 from opencut.helpers import (
     FFmpegCmd,
-    ensure_package,
     get_video_info,
+    require_package,
     run_ffmpeg,
 )
 
@@ -210,7 +210,7 @@ def blend_audio_boundaries(
 def _generate_tts_edge(text: str, output_wav: str, language: str = "en",
                        speed: float = 1.0) -> str:
     """Generate speech via edge-tts (Microsoft Edge free TTS)."""
-    ensure_package("edge_tts", "edge-tts")
+    require_package("edge_tts", "edge-tts")
 
     import asyncio
 

@@ -18,7 +18,7 @@ import tempfile
 from dataclasses import dataclass
 from typing import Callable, Dict, Optional, Tuple
 
-from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
+from opencut.helpers import ensure_package, get_video_info, require_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -697,7 +697,7 @@ def outpaint_aspect_ratio(
     # Attempt AI inpainting if requested
     if ai_enhance and actual_method in ("auto", "inpaint"):
         try:
-            ensure_package("cv2", "opencv-python-headless")
+            require_package("cv2", "opencv-python-headless")
             actual_method = "inpaint"
             ai_used = True
         except Exception:

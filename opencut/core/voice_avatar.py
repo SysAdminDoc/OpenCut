@@ -23,9 +23,9 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
-    ensure_package,
     get_video_info,
     output_path,
+    require_package,
     run_ffmpeg,
 )
 
@@ -255,7 +255,7 @@ def _get_audio_duration(audio_path: str) -> float:
 # ---------------------------------------------------------------------------
 def _create_background(config: AvatarConfig) -> "Image.Image":  # noqa: F821
     """Create a background image based on config settings."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageFilter
 
     if config.background_mode == "custom" and config.background_image:
@@ -286,7 +286,7 @@ def _create_gradient_overlay(width: int, height: int,
                               color_bottom: Tuple[int, int, int] = (10, 10, 15),
                               ) -> "Image.Image":  # noqa: F821
     """Create a vertical gradient overlay."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image
 
     img = Image.new("RGBA", (width, height))
@@ -307,7 +307,7 @@ def _create_gradient_overlay(width: int, height: int,
 def _draw_cartoon_frame(face_image: "Image.Image", amplitude: float,  # noqa: F821
                          config: AvatarConfig, bg: "Image.Image") -> "Image.Image":  # noqa: F821
     """Draw a cartoon-style avatar frame with mouth animation."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw
 
     frame = bg.copy()
@@ -344,7 +344,7 @@ def _draw_cartoon_frame(face_image: "Image.Image", amplitude: float,  # noqa: F8
 def _draw_silhouette_frame(face_image: "Image.Image", amplitude: float,  # noqa: F821
                             config: AvatarConfig, bg: "Image.Image") -> "Image.Image":  # noqa: F821
     """Draw a silhouette avatar with animated mouth gap."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import ImageDraw
 
     frame = bg.copy()
@@ -378,7 +378,7 @@ def _draw_silhouette_frame(face_image: "Image.Image", amplitude: float,  # noqa:
 def _draw_minimal_frame(face_image: "Image.Image", amplitude: float,  # noqa: F821
                          config: AvatarConfig, bg: "Image.Image") -> "Image.Image":  # noqa: F821
     """Draw a minimal circular waveform avatar."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import ImageDraw
 
     frame = bg.copy()
@@ -433,7 +433,7 @@ def _draw_minimal_frame(face_image: "Image.Image", amplitude: float,  # noqa: F8
 def _draw_sketch_frame(face_image: "Image.Image", amplitude: float,  # noqa: F821
                         config: AvatarConfig, bg: "Image.Image") -> "Image.Image":  # noqa: F821
     """Draw a sketch-style avatar with edge-detected face."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw, ImageFilter, ImageOps
 
     frame = bg.copy()
@@ -638,7 +638,7 @@ def generate_avatar(
     if on_progress:
         on_progress(20, f"Rendering {total_frames} frames...")
 
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image
 
     # Load face image

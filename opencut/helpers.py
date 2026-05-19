@@ -285,6 +285,22 @@ def ensure_package(pkg: str, pip_name: str = None, on_progress=None) -> bool:
             return False
 
 
+def require_package(pkg: str, pip_name: str = None, on_progress=None) -> None:
+    """Like ``ensure_package`` but raises on failure instead of returning False.
+
+    Use this instead of bare ``ensure_package(...)`` calls that ignore the
+    return value — a subsequent ``import`` would crash with an unhelpful
+    ``ImportError`` anyway.  This produces a clear ``RuntimeError`` with
+    install instructions.
+    """
+    if not ensure_package(pkg, pip_name=pip_name, on_progress=on_progress):
+        display = pip_name or pkg
+        raise RuntimeError(
+            f"{display} is required but could not be installed. "
+            f"Install manually: pip install {display}"
+        )
+
+
 # ---------------------------------------------------------------------------
 # Shared Video Info Helper
 # ---------------------------------------------------------------------------

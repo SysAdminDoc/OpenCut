@@ -19,7 +19,7 @@ import os
 from dataclasses import asdict, dataclass, field
 from typing import Callable, Dict, List, Optional, Tuple
 
-from opencut.helpers import ensure_package
+from opencut.helpers import require_package
 
 logger = logging.getLogger("opencut")
 
@@ -241,7 +241,7 @@ def _analyze_composition(img: "Image.Image") -> Tuple[float, Tuple[float, float]
 
     Returns (thirds_score, weight_center, edge_density).
     """
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import ImageFilter
 
     gray = img.convert("L")
@@ -377,7 +377,7 @@ def _estimate_text_presence(img: "Image.Image") -> Tuple[int, float, float]:  # 
 
     Returns (text_region_count, text_area_ratio, text_contrast).
     """
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import ImageFilter
 
     gray = img.convert("L")
@@ -461,7 +461,7 @@ def extract_features(image_path: str) -> ThumbnailFeatures:
     if not os.path.isfile(image_path):
         raise FileNotFoundError(f"Image not found: {image_path}")
 
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image
 
     img = Image.open(image_path).convert("RGB")

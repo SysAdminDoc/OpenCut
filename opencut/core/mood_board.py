@@ -19,7 +19,7 @@ import tempfile
 from dataclasses import asdict, dataclass, field
 from typing import Callable, List, Optional
 
-from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info
+from opencut.helpers import ensure_package, get_ffmpeg_path, get_video_info, require_package
 
 logger = logging.getLogger("opencut")
 
@@ -243,7 +243,7 @@ def _analyze_colors_pillow(image_path: str, num_colors: int = 5) -> List[ColorIn
     Returns:
         List of ColorInfo objects.
     """
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image
 
     try:
@@ -277,7 +277,7 @@ def _analyze_colors_pillow(image_path: str, num_colors: int = 5) -> List[ColorIn
 
 def _analyze_frame(image_path: str, timestamp: float = 0.0) -> FrameAnalysis:
     """Analyze a single frame for brightness, contrast, saturation, and colors."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageStat
 
     analysis = FrameAnalysis(frame_path=image_path, timestamp=timestamp)
@@ -331,7 +331,7 @@ def render_mood_board(
     Returns:
         Path to the mood board image.
     """
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw, ImageFont
 
     board = Image.new("RGB", (board_width, board_height), (25, 25, 30))

@@ -21,8 +21,8 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
-    ensure_package,
     get_video_info,
+    require_package,
     run_ffmpeg,
 )
 
@@ -290,7 +290,7 @@ def _auto_title_from_transcript(transcript: str, max_length: int = 50) -> str:
 # ---------------------------------------------------------------------------
 def _load_font(brand_kit: Optional[BrandKit], size: int):
     """Load font from brand kit or fall back to system defaults."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import ImageFont
 
     if brand_kit and brand_kit.font_path and os.path.isfile(brand_kit.font_path):
@@ -311,7 +311,7 @@ def _load_font(brand_kit: Optional[BrandKit], size: int):
 
 def _add_logo(frame: "Image.Image", brand_kit: BrandKit) -> "Image.Image":  # noqa: F821
     """Overlay brand logo onto the card frame."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image
 
     if not brand_kit.logo_path or not os.path.isfile(brand_kit.logo_path):
@@ -341,7 +341,7 @@ def _add_logo(frame: "Image.Image", brand_kit: BrandKit) -> "Image.Image":  # no
 def _render_card_minimal(key_frame: "Image.Image", title: str, chapter_idx: int,  # noqa: F821
                           config: ChapterArtConfig, style_def: Dict) -> "Image.Image":  # noqa: F821
     """Render a minimal-style chapter card."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw, ImageFilter
 
     w, h = config.width, config.height
@@ -414,7 +414,7 @@ def _render_card_minimal(key_frame: "Image.Image", title: str, chapter_idx: int,
 def _render_card_bold(key_frame: "Image.Image", title: str, chapter_idx: int,  # noqa: F821
                        config: ChapterArtConfig, style_def: Dict) -> "Image.Image":  # noqa: F821
     """Render a bold-style chapter card with accent bar."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw, ImageFilter
 
     w, h = config.width, config.height
@@ -470,7 +470,7 @@ def _render_card_bold(key_frame: "Image.Image", title: str, chapter_idx: int,  #
 def _render_card_gradient(key_frame: "Image.Image", title: str, chapter_idx: int,  # noqa: F821
                            config: ChapterArtConfig, style_def: Dict) -> "Image.Image":  # noqa: F821
     """Render a gradient-style chapter card with bottom fade."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw
 
     w, h = config.width, config.height
@@ -512,7 +512,7 @@ def _render_card_gradient(key_frame: "Image.Image", title: str, chapter_idx: int
 def _render_card_cinematic(key_frame: "Image.Image", title: str, chapter_idx: int,  # noqa: F821
                             config: ChapterArtConfig, style_def: Dict) -> "Image.Image":  # noqa: F821
     """Render a cinematic letterboxed chapter card."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw, ImageFilter
 
     w, h = config.width, config.height
@@ -556,7 +556,7 @@ def _render_card_cinematic(key_frame: "Image.Image", title: str, chapter_idx: in
 def _render_card_split(key_frame: "Image.Image", title: str, chapter_idx: int,  # noqa: F821
                         config: ChapterArtConfig, style_def: Dict) -> "Image.Image":  # noqa: F821
     """Render a split-screen chapter card: image left, text right."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw
 
     w, h = config.width, config.height
@@ -726,7 +726,7 @@ def generate_chapter_art(
     style_def = CARD_STYLES[config.style]
     renderer = _CARD_RENDERERS[config.style]
 
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image
 
     chapter_objects = []

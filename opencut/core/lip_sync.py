@@ -18,9 +18,9 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
-    ensure_package,
     get_video_info,
     output_path,
+    require_package,
     run_ffmpeg,
 )
 
@@ -80,7 +80,7 @@ def _extract_audio_features(
     Returns:
         Dict with 'amplitudes' (per-frame), 'duration', 'frame_count'.
     """
-    ensure_package("numpy", "numpy")
+    require_package("numpy", "numpy")
 
     import numpy as np  # noqa: F401
 
@@ -352,9 +352,9 @@ def preview_lip_sync(
     Returns:
         Dict with preview_path, face_detected, mouth_openness.
     """
-    ensure_package("cv2", "opencv-python-headless")
-    ensure_package("mediapipe")
-    ensure_package("numpy", "numpy")
+    require_package("cv2", "opencv-python-headless")
+    require_package("mediapipe")
+    require_package("numpy", "numpy")
 
     import cv2  # noqa: F401
     import mediapipe as mp  # noqa: F401
@@ -493,9 +493,9 @@ def _builtin_lip_sync(
     on_progress: Optional[Callable] = None,
 ) -> LipSyncResult:
     """Built-in amplitude-driven lip sync."""
-    ensure_package("cv2", "opencv-python-headless")
-    ensure_package("mediapipe")
-    ensure_package("numpy", "numpy")
+    require_package("cv2", "opencv-python-headless")
+    require_package("mediapipe")
+    require_package("numpy", "numpy")
 
     import cv2  # noqa: F401
     import mediapipe as mp  # noqa: F401
