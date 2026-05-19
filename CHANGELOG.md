@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — WCAG 3 Draft Audio-Description Hooks
+
+- Closed F235 by adding optional descriptive-transcript and extended-audio-description timing metadata to `/audio/description/microsoft-draft`.
+- Documented the WCAG 3 Working Draft boundary and WAI media references without claiming final compliance.
+
 ### Added — Review Portal Headscale Plan
 
 - Closed F232 by adding an optional Headscale/Tailscale command-plan descriptor to local review portal share responses.

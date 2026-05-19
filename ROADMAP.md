@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.82
+**Version**: 4.83
 **Updated**: 2026-05-18
 **Baseline**: v1.32.0 (1,379 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -172,8 +172,22 @@
 > **v4.81 status (2026-05-18, seventy-eighth pass)**: closed **F228-F230** by extending F105 review bundles with explicit voice-note attachments and optional HLS browser-scrubbing renditions. `build_review_bundle()` now accepts validated `voice_notes` entries, writes `voice_notes/index.json` plus copied audio files, and can generate an opt-in `hls/master.m3u8` VOD proxy under `hls/` even when `include_media=false`. Bundle manifests and route responses expose voice-note and HLS counts/paths, `docs/REVIEW_BUNDLES.md` documents both contracts, and the generated route/MCP manifests stay at **1,379 routes** and **1,322 tools**.
 >
 > **v4.82 status (2026-05-18, seventy-ninth pass)**: closed **F232** by adding an optional Headscale/Tailscale operator plan to local review portal share responses. `POST /review/portal/share` now accepts a `headscale` object, validates the self-hosted control-plane URL without storing credentials, and returns deterministic `headscale` command arrays for preauth-key creation and `tailscale up` while preserving the existing Caddy/mDNS/HMAC bearer URL contract. `docs/REVIEW_PORTAL.md` documents the cross-site boundary and `tests/test_review_portal.py` pins the descriptor shape.
+>
+> **v4.83 status (2026-05-18, eightieth pass)**: closed **F235** by adding WCAG 3 Working Draft compatibility hooks to the audio-description draft contract. `/audio/description/microsoft-draft` now accepts `include_wcag3_hooks`, `descriptive_transcript`, and `extended_timing`; draft cues expose `timing_mode`, `extended_pause_seconds`, and `descriptive_transcript_text`; responses can include a combined descriptive transcript plus machine-readable extended-audio-description pause plan. `docs/AUDIO_DESCRIPTIONS.md` records the draft/non-normative boundary and W3C references.
 
 ---
+
+## 2026-05-18 v4.83 WCAG 3 Draft AD Hooks (F235)
+
+One Later-tier accessibility item closed in this pass.
+
+| Area | Status |
+|---|---|
+| Descriptive transcript | `build_microsoft_audio_description_draft()` can emit ordered transcript events combining dialogue and visual-description text for assistive-technology review. |
+| Extended AD timing | Opt-in `extended_timing`/`include_wcag3_hooks` preserves full AD text when normal dialogue gaps are too short and emits `extended_timing_plan` pause/resume metadata. |
+| Route/docs/tests | `/audio/description/microsoft-draft` exposes the flags, docs cite W3C WCAG 3/WAI media guidance, and focused tests pin the new draft fields. |
+
+Validation after the batch: `python -m py_compile` passed for touched audio-description files, focused audio-description tests passed (`13 passed`), focused generated-surface tests passed (`27 passed`), Ruff passed on touched files, and generated route/MCP checks passed.
 
 ## 2026-05-18 v4.82 Review Portal Headscale Plan (F232)
 
@@ -1464,13 +1478,13 @@ Full ledger in [`FEATURE_BACKLOG_ADDENDUM.md`](.ai/research/2026-05-17/FEATURE_B
 - Flagship UXP migration: **F252** Bolt UXP scaffold + WebView UI for 3,210-line HTML
 - Flagship review-bundle extensions: **[x] F225**, **[x] F226**, **[x] F227**, **[x] F228**, **[x] F229**, **[x] F230**
 - Flagship UXP API migrations: F254-F258 (createSubsequence, launchEncoder/startBatchEncode, Transcript.*, ObjectMaskUtils, exportAAF)
-- Caption / accessibility: [x] F223 RTL/CJK validation suite, [x] F238 PSE hue checker, [x] F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
+- Caption / accessibility: [x] F223 RTL/CJK validation suite, [x] F235 WCAG 3 AD hooks, [x] F238 PSE hue checker, [x] F239 Microsoft ai-audio-descriptions, [x] F242 ICU4X CJK line breaking
 - Packaging: [x] F200 installer policy + [x] F201 WPF CI build + [x] F203 signing tooling + [x] F213 Inno smoke + [x] F249 Flatpak primary Linux + [x] F250 Aptabase opt-in telemetry
 - Tests: [x] F211 launcher smoke + [x] F213 Inno smoke + [x] F214 ML/TTS perf benchmarks + [x] F215 fuzz extend + [x] F216 race test + [x] F217 UXP contract test
 - Local LAN review: [x] F231 mDNS+Caddy+HMAC portal + [x] F232 Headscale + [x] F233 Atom feed + webhook + [x] F234 croc/rclone delivery
 - Docs: F260 UXP migration risk dashboard (F198 catalogue closed in v4.45)
 
-**Later (6 items):** F235 (WCAG 3.0 hooks), F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76; F210 closed in v4.77; F212 closed in v4.78; F220-F222 closed in v4.79; F224 closed in v4.80; F228-F230 closed in v4.81; F232 closed in v4.82.
+**Later (5 items):** F245-F248 (Netflix IMF / DPP IMF / Dolby Vision / ADM BWF Atmos pipelines), F253 (Hybrid Plugin .uxpaddon for drag-out + QE-equivalent ops). F196 closed in v4.75; F206 closed in v4.76; F210 closed in v4.77; F212 closed in v4.78; F220-F222 closed in v4.79; F224 closed in v4.80; F228-F230 closed in v4.81; F232 closed in v4.82; F235 closed in v4.83.
 
 **Newly explicit rejects (none in Pass 2)** — all Pass-1 rejects stand; Pass 2 did not propose anything that required new rejection.
 
