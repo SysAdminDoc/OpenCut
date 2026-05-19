@@ -560,6 +560,9 @@ def route_microsoft_audio_description_draft(job_id, filepath, data):
         context_seconds=safe_float(data.get("context_seconds", 6.0), 6.0, min_val=0.0, max_val=60.0),
         words_per_second=safe_float(data.get("words_per_second", 3.0), 3.0, min_val=1.0, max_val=5.0),
         tts_backend_hint=data.get("tts_backend_hint", "indextts2"),
+        include_wcag3_hooks=safe_bool(data.get("include_wcag3_hooks"), False),
+        include_descriptive_transcript=safe_bool(data.get("descriptive_transcript"), False),
+        extended_timing=safe_bool(data.get("extended_timing"), False),
         llm_config=data.get("llm_config"),
         on_progress=lambda pct, msg: None,
     )

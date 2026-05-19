@@ -81,6 +81,8 @@ Pass 78 closed **F228-F230** with focused review-bundle coverage. `tests/test_re
 
 Pass 79 closed **F232** with focused review-portal coverage. `tests/test_review_portal.py` now pins the optional Headscale descriptor, sanitized command arrays, credential rejection, and `/review/portal/share` response behavior.
 
+Pass 80 closed **F235** with focused audio-description coverage. `tests/test_audio_advanced.py` now pins WCAG 3 draft metadata, descriptive transcript events, extended AD timing plans, and full-script preservation when foreground-audio gaps are too short.
+
 ### 3.7 Performance / regression benchmarks
 
 The F128 FFmpeg filter regression suite is *Now* tier but not yet shipped. Once it lands, it should also cover:

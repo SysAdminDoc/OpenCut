@@ -77,6 +77,9 @@ class AudioDescriptionCue:
     needs_review: bool = True
     review_reason: str = "draft-ai-description"
     tts_backend_hint: str = "indextts2"
+    timing_mode: str = "standard"
+    extended_pause_seconds: float = 0.0
+    descriptive_transcript_text: str = ""
 
 
 @dataclass
@@ -87,6 +90,9 @@ class AudioDescriptionCue:
         "transcript_segment_count": {"type": "integer"},
         "gap_count": {"type": "integer"},
         "workflow": {"type": "array", "items": {"type": "string"}},
+        "wcag3_compatibility": {"type": "object"},
+        "descriptive_transcript": {"type": "array", "items": {"type": "object"}},
+        "extended_timing_plan": {"type": "array", "items": {"type": "object"}},
     },
 )
 class AudioDescriptionReviewDraft:
@@ -102,6 +108,9 @@ class AudioDescriptionReviewDraft:
     tts_backend_hint: str = "indextts2"
     review_required: bool = True
     notes: List[str] = field(default_factory=list)
+    wcag3_compatibility: Dict[str, Any] = field(default_factory=dict)
+    descriptive_transcript: List[Dict[str, Any]] = field(default_factory=list)
+    extended_timing_plan: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> dict:
         """Return a JSON-safe response body."""
@@ -112,6 +121,7 @@ class AudioDescriptionReviewDraft:
             "method": self.method,
             "tts_backend_hint": self.tts_backend_hint,
             "review_required": self.review_required,
+            "wcag3_compatibility": dict(self.wcag3_compatibility),
             "cue_count": len(self.cues),
             "transcript_segment_count": len(self.transcript_segments),
             "gap_count": len(self.gaps),
@@ -119,6 +129,8 @@ class AudioDescriptionReviewDraft:
             "cues": [asdict(c) for c in self.cues],
             "transcript_segments": list(self.transcript_segments),
             "gaps": [asdict(g) for g in self.gaps],
+            "descriptive_transcript": list(self.descriptive_transcript),
+            "extended_timing_plan": list(self.extended_timing_plan),
             "workflow": [
                 "per-scene descriptions",
                 "dialogue transcript alignment",
@@ -634,6 +646,78 @@ def _dialogue_context(
     return " ".join(parts)[:800], selected[:12]
 
 
+def _format_transcript_time(seconds: float) -> str:
+    value = max(0.0, float(seconds))
+    millis = int(round((value - int(value)) * 1000))
+    total_seconds = int(value)
+    secs = total_seconds % 60
+    mins = (total_seconds // 60) % 60
+    hours = total_seconds // 3600
+    return f"{hours:02d}:{mins:02d}:{secs:02d}.{millis:03d}"
+
+
+def _build_descriptive_transcript(
+    cues: List[AudioDescriptionCue],
+    transcript_segments: List[Dict[str, Any]],
+) -> List[Dict[str, Any]]:
+    events: List[Dict[str, Any]] = []
+    for seg in transcript_segments:
+        speaker = str(seg.get("speaker") or "").strip()
+        text = _clean_ad_text(seg.get("text") or "")
+        if not text:
+            continue
+        events.append(
+            {
+                "type": "dialogue",
+                "start": seg["start"],
+                "end": seg["end"],
+                "speaker": speaker,
+                "text": text,
+            }
+        )
+    for cue in cues:
+        text = cue.descriptive_transcript_text or cue.script
+        if not text:
+            continue
+        events.append(
+            {
+                "type": "visual_description",
+                "cue_id": cue.cue_id,
+                "start": cue.scene_start,
+                "end": cue.scene_end,
+                "target_start": cue.target_start,
+                "target_end": cue.target_end,
+                "timing_mode": cue.timing_mode,
+                "text": text,
+            }
+        )
+    events.sort(key=lambda item: (float(item.get("start", 0.0)), item.get("type", ""), item.get("cue_id", "")))
+    for event in events:
+        start = _format_transcript_time(float(event.get("start", 0.0)))
+        end = _format_transcript_time(float(event.get("end", event.get("start", 0.0))))
+        label = "Visual description" if event["type"] == "visual_description" else "Dialogue"
+        speaker = f" {event.get('speaker')}:" if event.get("speaker") else ":"
+        event["display_text"] = f"[{start} - {end}] {label}{speaker} {event['text']}"
+    return events
+
+
+def _build_extended_timing_plan(cues: List[AudioDescriptionCue]) -> List[Dict[str, Any]]:
+    plan = []
+    for cue in cues:
+        if cue.timing_mode != "extended":
+            continue
+        plan.append(
+            {
+                "cue_id": cue.cue_id,
+                "pause_at": cue.target_start,
+                "resume_at": cue.target_end,
+                "pause_seconds": cue.extended_pause_seconds,
+                "reason": cue.review_reason,
+            }
+        )
+    return plan
+
+
 def _choose_gap_for_scene(
     scene_start: float,
     scene_end: float,
@@ -670,6 +754,9 @@ def build_microsoft_audio_description_draft(
     context_seconds: float = 6.0,
     words_per_second: float = 3.0,
     tts_backend_hint: str = "indextts2",
+    include_wcag3_hooks: bool = False,
+    include_descriptive_transcript: bool = False,
+    extended_timing: bool = False,
     llm_config=None,
     on_progress: Optional[Callable] = None,
 ) -> AudioDescriptionReviewDraft:
@@ -686,6 +773,9 @@ def build_microsoft_audio_description_draft(
     context_seconds = max(0.0, float(context_seconds))
     words_per_second = max(1.0, min(5.0, float(words_per_second)))
     tts_backend_hint = _clean_ad_text(tts_backend_hint or "indextts2").lower()
+    include_wcag3_hooks = bool(include_wcag3_hooks)
+    include_descriptive_transcript = bool(include_descriptive_transcript or include_wcag3_hooks)
+    extended_timing = bool(extended_timing or include_wcag3_hooks)
 
     if on_progress:
         on_progress(5, "Preparing transcript and scene descriptions...")
@@ -749,9 +839,12 @@ def build_microsoft_audio_description_draft(
             available = 0.0
             max_words = max(3, int(words_per_second * 2))
 
-        script = _cap_words(description, max_words)
+        script_budget = len(description.split()) if extended_timing else max_words
+        script = _cap_words(description, script_budget)
         estimated_duration = round(len(script.split()) / words_per_second, 3) if script else 0.0
         fits_gap = bool(gap is not None and estimated_duration <= available)
+        timing_mode = "standard"
+        extended_pause_seconds = 0.0
         if gap is None:
             priority = "needs-timing"
             review_reason = "no-dialogue-gap"
@@ -761,6 +854,12 @@ def build_microsoft_audio_description_draft(
         else:
             priority = "needs-rewrite"
             review_reason = "description-may-overrun-gap"
+        if extended_timing and (gap is None or not fits_gap):
+            timing_mode = "extended"
+            extended_pause_seconds = max(0.0, estimated_duration - available)
+            target_end = round(target_start + max(estimated_duration, available), 3)
+            priority = "extended-ad-review"
+            review_reason = "extended-audio-description"
 
         context, context_segments = _dialogue_context(
             transcript_segments,
@@ -787,6 +886,9 @@ def build_microsoft_audio_description_draft(
             needs_review=True,
             review_reason=review_reason,
             tts_backend_hint=tts_backend_hint,
+            timing_mode=timing_mode,
+            extended_pause_seconds=round(extended_pause_seconds, 3),
+            descriptive_transcript_text=script,
         ))
 
     unplaced_gap_count = max(0, len(normalized_gaps) - len(used_gaps))
@@ -796,12 +898,36 @@ def build_microsoft_audio_description_draft(
     if on_progress:
         on_progress(100, f"Prepared {len(cues)} audio-description cues")
 
+    descriptive_transcript = (
+        _build_descriptive_transcript(cues, transcript_segments)
+        if include_descriptive_transcript
+        else []
+    )
+    extended_timing_plan = _build_extended_timing_plan(cues) if extended_timing else []
+    wcag3_compatibility = {}
+    if include_wcag3_hooks:
+        wcag3_compatibility = {
+            "draft": "WCAG 3.0 Working Draft media alternatives hooks",
+            "status": "draft-not-normative",
+            "descriptive_transcript_available": bool(descriptive_transcript),
+            "extended_audio_description_available": bool(extended_timing_plan),
+            "review_required": True,
+            "source_urls": [
+                "https://www.w3.org/TR/wcag-3.0/",
+                "https://www.w3.org/WAI/media/av/transcripts/",
+                "https://www.w3.org/WAI/media/av/description/",
+            ],
+        }
+
     return AudioDescriptionReviewDraft(
         cues=cues,
         transcript_segments=transcript_segments,
         gaps=normalized_gaps,
         tts_backend_hint=tts_backend_hint,
         notes=notes,
+        wcag3_compatibility=wcag3_compatibility,
+        descriptive_transcript=descriptive_transcript,
+        extended_timing_plan=extended_timing_plan,
     )
 
 
