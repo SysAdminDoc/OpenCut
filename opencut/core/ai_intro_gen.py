@@ -22,8 +22,8 @@ from typing import Callable, Dict, List, Optional, Tuple
 
 from opencut.helpers import (
     FFmpegCmd,
-    ensure_package,
     output_path,
+    require_package,
     run_ffmpeg,
 )
 
@@ -179,7 +179,7 @@ class IntroResult:
 # ---------------------------------------------------------------------------
 def _load_font(brand_kit: BrandKit, size: int):
     """Load font from brand kit or fall back to defaults."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import ImageFont
 
     if brand_kit.font_path and os.path.isfile(brand_kit.font_path):
@@ -202,7 +202,7 @@ def _load_font(brand_kit: BrandKit, size: int):
 # ---------------------------------------------------------------------------
 def _create_bg(config: IntroConfig, brand: BrandKit) -> "Image.Image":  # noqa: F821
     """Create background frame based on config."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageFilter
 
     w, h = config.width, config.height
@@ -274,7 +274,7 @@ def _render_logo_reveal(frame_idx: int, total_frames: int,
                          brand: BrandKit, config: IntroConfig,
                          bg: "Image.Image") -> "Image.Image":  # noqa: F821
     """Render a single frame of the logo reveal intro."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw
 
     frame = bg.copy()
@@ -365,7 +365,7 @@ def _render_text_sweep(frame_idx: int, total_frames: int,
                         brand: BrandKit, config: IntroConfig,
                         bg: "Image.Image") -> "Image.Image":  # noqa: F821
     """Render a single frame of the text sweep intro."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import ImageDraw
 
     frame = bg.copy()
@@ -438,7 +438,7 @@ def _render_particles(frame_idx: int, total_frames: int,
                        brand: BrandKit, config: IntroConfig,
                        bg: "Image.Image") -> "Image.Image":  # noqa: F821
     """Render a single frame of the particle convergence intro."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import ImageDraw
 
     frame = bg.copy()
@@ -517,7 +517,7 @@ def _render_minimal_fade(frame_idx: int, total_frames: int,
                           brand: BrandKit, config: IntroConfig,
                           bg: "Image.Image") -> "Image.Image":  # noqa: F821
     """Render a single frame of the minimal fade intro."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import Image, ImageDraw
 
     frame = bg.copy()
@@ -577,7 +577,7 @@ def _render_kinetic(frame_idx: int, total_frames: int,
                      brand: BrandKit, config: IntroConfig,
                      bg: "Image.Image") -> "Image.Image":  # noqa: F821
     """Render a single frame of the kinetic motion intro."""
-    ensure_package("PIL", "Pillow")
+    require_package("PIL", "Pillow")
     from PIL import ImageDraw
 
     frame = bg.copy()

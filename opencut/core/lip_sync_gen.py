@@ -16,7 +16,7 @@ import tempfile
 from dataclasses import dataclass
 from typing import Callable, Dict, List, Optional
 
-from opencut.helpers import ensure_package, get_video_info, run_ffmpeg
+from opencut.helpers import ensure_package, get_video_info, require_package, run_ffmpeg
 
 logger = logging.getLogger("opencut")
 
@@ -138,7 +138,7 @@ def detect_mouth_region(frame, face_mesh=None) -> Dict:
 # ---------------------------------------------------------------------------
 def _extract_audio_energy(audio_path: str, fps: float) -> List[float]:
     """Extract per-frame audio energy levels from a WAV file."""
-    ensure_package("numpy", "numpy")
+    require_package("numpy", "numpy")
     import struct
     import wave
 
