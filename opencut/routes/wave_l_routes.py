@@ -10,6 +10,7 @@ Wave L modules:
   L2.1  FramePack I2V       — /generate/framepack
   L2.2  ACE-Step Music      — /audio/music/acestep
   L2.6  Moonshine ASR       — /audio/transcribe/moonshine
+  M1.1  Chatterbox TTS      — /audio/tts/chatterbox
   M1.2  Kokoro TTS          — /audio/tts/kokoro
   M1.3  DiffRhythm Music    — /audio/music/diffrhythm
 """
@@ -782,3 +783,85 @@ def route_music_diffrhythm_info():
         })
     except Exception as exc:
         return safe_error(exc, "diffrhythm_info")
+
+
+# =============================================================
+# M1.1 — Chatterbox TTS (emotional + voice clone)
+# =============================================================
+
+@wave_l_bp.route("/audio/tts/chatterbox", methods=["POST"])
+@require_csrf
+@async_job("tts_chatterbox", filepath_required=False)
+def route_tts_chatterbox(job_id, filepath, data):
+    """Synthesize emotional speech via Chatterbox TTS (MIT, 350M-500M).
+
+    Body params:
+      text             str    Text with optional emotion tags [laugh] [sigh] etc.
+      reference_audio  str    Path to 10s clip for voice cloning (optional).
+      model            str    turbo (English) or multilingual (23 langs).
+      language         str    Language code for multilingual model.
+      exaggeration     float  Emotion intensity 0-1 (default 0.5).
+      speed            float  Speed 0.5-2.0 (default 1.0).
+      output           str    Output WAV path (optional).
+    """
+    from opencut.core import tts_chatterbox
+    if not tts_chatterbox.check_chatterbox_available():
+        raise RuntimeError(
+            "Chatterbox TTS is not installed. " + tts_chatterbox.INSTALL_HINT
+        )
+
+    text = str(data.get("text") or "").strip()
+    if not text:
+        raise ValueError("text is required")
+
+    model = str(data.get("model") or "turbo").strip().lower()
+    if model not in tts_chatterbox.CHATTERBOX_MODELS:
+        model = "turbo"
+
+    ref_audio = str(data.get("reference_audio") or "").strip()
+    if ref_audio:
+        from opencut.security import validate_filepath
+        ref_audio = validate_filepath(ref_audio)
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = tts_chatterbox.synthesize(
+        text=text,
+        reference_audio=ref_audio,
+        model=model,
+        language=str(data.get("language") or "en").strip().lower(),
+        exaggeration=safe_float(data.get("exaggeration"), 0.5, min_val=0.0, max_val=1.0),
+        speed=safe_float(data.get("speed"), 1.0, min_val=0.5, max_val=2.0),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "voice": result.voice,
+        "model": result.model,
+        "language": result.language,
+        "duration_seconds": result.duration_seconds,
+        "sample_rate": result.sample_rate,
+        "has_emotion_tags": result.has_emotion_tags,
+        "voice_cloned": result.voice_cloned,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/audio/tts/chatterbox/info", methods=["GET"])
+def route_tts_chatterbox_info():
+    """Return Chatterbox TTS availability and capabilities."""
+    try:
+        from opencut.core import tts_chatterbox
+        return jsonify({
+            "available": tts_chatterbox.check_chatterbox_available(),
+            "multilingual_available": tts_chatterbox.check_chatterbox_multilingual_available(),
+            "models": tts_chatterbox.CHATTERBOX_MODELS,
+            "languages": tts_chatterbox.CHATTERBOX_LANGUAGES,
+            "emotion_tags": tts_chatterbox.EMOTION_TAGS,
+            "licence": "MIT",
+            "voice_cloning": True,
+            "install_hint": tts_chatterbox.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "tts_chatterbox_info")
