@@ -13,6 +13,7 @@ Wave L modules:
   M1.1  Chatterbox TTS      — /audio/tts/chatterbox
   M1.2  Kokoro TTS          — /audio/tts/kokoro
   M1.3  DiffRhythm Music    — /audio/music/diffrhythm
+  M2.4  FLUX Kontext Edit   — /image/edit/kontext
 """
 from __future__ import annotations
 
@@ -865,3 +866,63 @@ def route_tts_chatterbox_info():
         })
     except Exception as exc:
         return safe_error(exc, "tts_chatterbox_info")
+
+
+# =============================================================
+# M2.4 — FLUX.1 Kontext Image Editing
+# =============================================================
+
+@wave_l_bp.route("/image/edit/kontext", methods=["POST"])
+@require_csrf
+@async_job("kontext_edit", filepath_required=True, filepath_param="image_path")
+def route_kontext_edit(job_id, filepath, data):
+    """Edit image using FLUX.1 Kontext natural language instructions.
+
+    Body params:
+      image_path           str    Path to source image (required).
+      instruction          str    Edit instruction (required).
+      num_inference_steps  int    Diffusion steps 4-100 (default 28).
+      guidance_scale       float  CFG scale 1-15 (default 7.5).
+      seed                 int    Random seed (-1 for random).
+      output               str    Output path (optional).
+    """
+    from opencut.core import image_edit_kontext
+    if not image_edit_kontext.check_kontext_available():
+        raise RuntimeError(
+            "FLUX Kontext not available. " + image_edit_kontext.INSTALL_HINT
+        )
+
+    instruction = str(data.get("instruction") or "").strip()
+    if not instruction:
+        raise ValueError("instruction is required")
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = image_edit_kontext.edit_image(
+        image_path=filepath,
+        instruction=instruction,
+        num_inference_steps=safe_int(data.get("num_inference_steps"), 28, min_val=4, max_val=100),
+        guidance_scale=safe_float(data.get("guidance_scale"), 7.5, min_val=1.0, max_val=15.0),
+        seed=safe_int(data.get("seed"), -1),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "instruction": result.instruction,
+        "width": result.width,
+        "height": result.height,
+        "model": result.model,
+        "generation_seconds": result.generation_seconds,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/image/edit/kontext/info", methods=["GET"])
+def route_kontext_info():
+    """Return FLUX Kontext model availability and download status."""
+    try:
+        from opencut.core import image_edit_kontext
+        return jsonify(image_edit_kontext.get_model_info())
+    except Exception as exc:
+        return safe_error(exc, "kontext_info")

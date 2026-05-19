@@ -954,6 +954,18 @@ def check_diffrhythm_available() -> bool:
         return False
 
 
+def check_chatterbox_tts_available() -> bool:
+    """M1.1 — Chatterbox emotional TTS (MIT, voice cloning)."""
+    return _try_import("chatterbox") is not None
+
+
+def check_kontext_available() -> bool:
+    """M2.4 — FLUX.1 Kontext image editing (Apache-2, 24 GB model)."""
+    return (_try_import("diffusers") is not None
+            and _try_import("torch") is not None
+            and _try_import("transformers") is not None)
+
+
 def check_wave_l(verbose=False):
     """Run all Wave L availability checks and print a summary."""
     checks = [
