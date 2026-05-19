@@ -278,6 +278,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/generate/wan2.2/animate",
     # M3.2 — Digital twin pipeline
     "/pipeline/digital_twin",
+    # N2.1 — SAM 2.1 video segmentation
+    "/video/segment/sam2",
 })
 
 

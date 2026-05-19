@@ -18,6 +18,7 @@ Wave L modules:
   M2.3  Wan2.2-Animate      — /generate/wan2.2/animate
   M2.4  FLUX Kontext Edit   — /image/edit/kontext
   M3.2  Digital Twin        — /pipeline/digital_twin
+  N2.1  SAM 2.1 Segment    — /video/segment/sam2
 """
 from __future__ import annotations
 
@@ -1341,3 +1342,78 @@ def route_digital_twin_stages():
         })
     except Exception as exc:
         return safe_error(exc, "digital_twin_stages")
+
+
+# =============================================================
+# N2.1 — SAM 2.1 Video Object Segmentation
+# =============================================================
+
+@wave_l_bp.route("/video/segment/sam2", methods=["POST"])
+@require_csrf
+@async_job("sam2_segment")
+def route_sam2_segment(job_id, filepath, data):
+    """Segment objects in video using SAM 2.1 with prompt propagation.
+
+    Body params:
+      prompts         list   Prompt objects with type/frame/coordinates.
+      model           str    tiny / small / base_plus / large.
+      output_format   str    alpha_video / matted_video / mask_frames / coco_json.
+      propagate       bool   Propagate across all frames (default true).
+      output          str    Output path (optional).
+    """
+    from opencut.core import segment_sam2
+    if not segment_sam2.check_sam2_available():
+        raise RuntimeError(
+            "SAM 2.1 not installed. " + segment_sam2.INSTALL_HINT
+        )
+
+    prompts = data.get("prompts", [])
+    if not isinstance(prompts, list) or not prompts:
+        raise ValueError("prompts must be a non-empty list")
+
+    model = str(data.get("model") or "small").strip()
+    if model not in segment_sam2.SAM2_MODELS:
+        model = "small"
+
+    output_format = str(data.get("output_format") or "alpha_video").strip()
+    if output_format not in segment_sam2.SAM2_OUTPUT_FORMATS:
+        output_format = "alpha_video"
+
+    def _prog(p, m=""): _update_job(job_id, progress=int(p), message=str(m))
+
+    result = segment_sam2.segment_video(
+        video_path=filepath,
+        prompts=prompts,
+        model=model,
+        output_format=output_format,
+        propagate=safe_bool(data.get("propagate"), True),
+        output_path=str(data.get("output") or "") or "",
+        on_progress=_prog,
+    )
+    return {
+        "output": result.output,
+        "output_format": result.output_format,
+        "frames_processed": result.frames_processed,
+        "objects_tracked": result.objects_tracked,
+        "model": result.model,
+        "processing_seconds": result.processing_seconds,
+        "mask_count": result.mask_count,
+        "notes": result.notes,
+    }
+
+
+@wave_l_bp.route("/video/segment/sam2/info", methods=["GET"])
+def route_sam2_info():
+    """Return SAM 2.1 availability and model catalogue."""
+    try:
+        from opencut.core import segment_sam2
+        return jsonify({
+            "available": segment_sam2.check_sam2_available(),
+            "models": segment_sam2.SAM2_MODELS,
+            "prompt_types": segment_sam2.SAM2_PROMPT_TYPES,
+            "output_formats": segment_sam2.SAM2_OUTPUT_FORMATS,
+            "licence": "Apache-2.0",
+            "install_hint": segment_sam2.INSTALL_HINT,
+        })
+    except Exception as exc:
+        return safe_error(exc, "sam2_info")
