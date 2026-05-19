@@ -77,7 +77,7 @@ def video_auto_detect_watermark():
         result = detect_watermark_region(filepath, prompt=prompt)
         if result:
             return jsonify(result)
-        return jsonify({"error": "No watermark detected", "suggestion": "Try adjusting the prompt or manually specify the region"}), 200
+        return jsonify({"detected": False, "message": "No watermark detected", "suggestion": "Try adjusting the prompt or manually specify the region"})
     except ImportError as e:
         return jsonify({"error": str(e), "suggestion": "Install: pip install transformers torch opencv-python-headless"}), 400
     except Exception as exc:

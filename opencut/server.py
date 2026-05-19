@@ -525,6 +525,8 @@ def _show_startup_notification(port):
     """Show a Windows toast notification so user knows the server started."""
     if sys.platform != "win32":
         return
+    # Coerce to int to prevent injection into the PowerShell command string
+    safe_port = int(port)
     with suppress(Exception):
         # Use PowerShell to show a native Windows toast (no extra deps needed)
         _sp.run(
@@ -533,8 +535,8 @@ def _show_startup_notification(port):
              "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom, ContentType = WindowsRuntime] | Out-Null; "
              "$xml = [Windows.Data.Xml.Dom.XmlDocument]::new(); "
              "$xml.LoadXml('<toast><visual><binding template=\"ToastText02\">"
-             f"<text id=\"1\">OpenCut Server Running</text>"
-             f"<text id=\"2\">Listening on port {port}. Open Premiere Pro to connect.</text>"
+             "<text id=\"1\">OpenCut Server Running</text>"
+             f"<text id=\"2\">Listening on port {safe_port}. Open Premiere Pro to connect.</text>"
              "</binding></visual></toast>'); "
              "$toast = [Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('OpenCut'); "
              "$toast.Show([Windows.UI.Notifications.ToastNotification]::new($xml))"],

@@ -72,10 +72,9 @@ class _FileLock:
                 self._fh.close()
             except Exception:
                 pass
-            try:
-                os.unlink(self._path)
-            except Exception:
-                pass
+            # Do NOT delete the lock file here — another process may be
+            # waiting on it.  Stale .lock files are harmless (zero bytes)
+            # and will be re-opened on the next acquire.
 
 
 # ---------------------------------------------------------------------------
@@ -162,9 +161,24 @@ def index_file(filepath: str, segments: List[dict]) -> None:
         "full_text": full_text,
     }
 
-    index = load_index()
-    index[filepath] = entry
-    save_index(index)
+    # Hold the file lock for the entire read-modify-write cycle to prevent
+    # lost updates when two concurrent index_file() calls race.
+    os.makedirs(_INDEX_DIR, exist_ok=True)
+    with _FileLock(_INDEX_PATH):
+        index = load_index()
+        index[filepath] = entry
+        tmp_path = _INDEX_PATH + ".tmp"
+        try:
+            with open(tmp_path, "w", encoding="utf-8") as fh:
+                json.dump(index, fh, ensure_ascii=False, indent=2)
+            os.replace(tmp_path, _INDEX_PATH)
+        except OSError as exc:
+            logger.error("Failed to save footage index: %s", exc)
+            try:
+                os.unlink(tmp_path)
+            except Exception:
+                pass
+            raise
     logger.info("Indexed %d segments for %s", len(entry["segments"]), filepath)
 
 
@@ -304,15 +318,19 @@ def clear_index() -> dict:
     Returns:
         dict with keys: removed_files (int), success (bool)
     """
-    index_path = _INDEX_PATH
     removed = 0
     try:
-        if os.path.exists(index_path):
-            current = load_index()
-            removed = len(current)
-            save_index({})
-            logger.info(f"Cleared footage index: {removed} entries removed")
+        # Hold the file lock for the entire read-then-write cycle to
+        # prevent a concurrent index_file() from inserting between the
+        # read and the overwrite.
+        os.makedirs(_INDEX_DIR, exist_ok=True)
+        with _FileLock(_INDEX_PATH):
+            if os.path.exists(_INDEX_PATH):
+                current = load_index()
+                removed = len(current)
+                save_index({})
+                logger.info("Cleared footage index: %d entries removed", removed)
         return {"removed_files": removed, "success": True}
     except Exception as e:
-        logger.error(f"clear_index error: {e}")
+        logger.error("clear_index error: %s", e)
         return {"removed_files": 0, "success": False, "error": str(e)}

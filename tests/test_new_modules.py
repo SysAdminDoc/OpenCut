@@ -268,13 +268,17 @@ class TestFootageSearch(unittest.TestCase):
         self.clear = clear_index
 
     def test_index_and_search_basic(self):
-        """Indexing a file and searching should call save_index."""
+        """Indexing a file should persist to the index (via atomic write)."""
+        from unittest.mock import mock_open
         with patch("opencut.core.footage_search.load_index", return_value={}), \
-             patch("opencut.core.footage_search.save_index") as mock_save, \
+             patch("opencut.core.footage_search._FileLock"), \
+             patch("opencut.core.footage_search.os.makedirs"), \
+             patch("opencut.core.footage_search.os.replace") as mock_replace, \
+             patch("builtins.open", mock_open()), \
              patch("os.path.getmtime", return_value=12345.0):
             segments = [{"start": 0.0, "end": 5.0, "text": "hello world cameras lenses"}]
             self.index_file("/fake/video.mp4", segments)
-            mock_save.assert_called_once()
+            mock_replace.assert_called_once()
 
     def test_search_returns_correct_structure(self):
         """Search results should have path, start, end, text, score keys."""

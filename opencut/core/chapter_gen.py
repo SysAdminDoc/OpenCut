@@ -83,8 +83,9 @@ def _parse_llm_chapters(llm_text: str) -> List[dict]:
 
     Returns list of {"time": "M:SS", "title": str} dicts, or empty list.
     """
-    # Try to find a JSON array anywhere in the response
-    match = re.search(r"\[\s*\{[\s\S]*\}\s*\]", llm_text)
+    # Try to find a JSON array anywhere in the response (non-greedy to
+    # stop at the first closing bracket instead of consuming trailing text)
+    match = re.search(r"\[\s*\{[\s\S]*?\}\s*\]", llm_text)
     if not match:
         logger.warning("No JSON array found in LLM chapter response")
         return []

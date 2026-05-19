@@ -37,6 +37,7 @@ class LLMResponse:
     provider: str = ""
     model: str = ""
     tokens_used: int = 0
+    error: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -289,10 +290,12 @@ def query_llm(prompt, config=None, system_prompt="", on_progress=None):
     provider = config.provider.lower().strip()
     handler = _PROVIDERS.get(provider)
     if handler is None:
+        msg = f"Unknown LLM provider: '{provider}'. Use 'ollama', 'openai', 'anthropic', or 'gemini'."
         return LLMResponse(
-            text=f"Unknown LLM provider: '{provider}'. Use 'ollama', 'openai', 'anthropic', or 'gemini'.",
+            text=msg,
             provider=provider,
             model=config.model,
+            error=msg,
         )
 
     if on_progress:
@@ -306,6 +309,7 @@ def query_llm(prompt, config=None, system_prompt="", on_progress=None):
             text=f"LLM error: {exc}",
             provider=provider,
             model=config.model,
+            error=str(exc),
         )
 
     if on_progress:

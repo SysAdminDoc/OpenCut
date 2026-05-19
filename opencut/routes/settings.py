@@ -323,8 +323,19 @@ def import_settings():
         save_presets(existing)
         imported.append("presets")
     if "favorites" in data and isinstance(data["favorites"], list):
-        favs = data["favorites"][:200]  # Cap at 200 favorites
-        save_favorites(favs)
+        # Validate each favorite is a string (endpoint path) and within size limits
+        valid_favs = []
+        for fav in data["favorites"][:200]:
+            if isinstance(fav, str) and len(fav) <= 200:
+                valid_favs.append(fav)
+            elif isinstance(fav, dict) and isinstance(fav.get("id"), str):
+                # Structured favorites with id + optional label
+                valid_favs.append({
+                    k: v for k, v in fav.items()
+                    if isinstance(k, str) and len(str(k)) <= 100
+                    and isinstance(v, (str, int, float, bool))
+                })
+        save_favorites(valid_favs)
         imported.append("favorites")
     if "workflows" in data and isinstance(data["workflows"], list):
         wfs = data["workflows"][:100]  # Cap at 100 workflows

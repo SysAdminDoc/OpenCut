@@ -403,7 +403,7 @@ def _match_sections_llm(
         # Parse JSON from response
         text = response.text.strip()
         # Extract JSON block if wrapped in markdown
-        json_match = re.search(r"\{[\s\S]*\}", text)
+        json_match = re.search(r"\{[\s\S]*?\}", text)
         if not json_match:
             return {}
 
