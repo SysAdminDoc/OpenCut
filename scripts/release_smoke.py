@@ -631,6 +631,7 @@ RELEASE_GATE_TESTS: List[str] = [
     "tests/test_uxp_aaf_export_integration.py",
     "tests/test_uxp_migration_dashboard.py",
     "tests/test_uxp_udt_harness.py",
+    "tests/test_uxp_udt_results.py",
     "tests/test_esbuild_pin.py",
     "tests/test_caption_qc.py",
     "tests/test_caption_reading_profiles.py",

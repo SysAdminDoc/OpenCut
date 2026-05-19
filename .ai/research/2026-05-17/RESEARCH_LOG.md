@@ -821,6 +821,21 @@ The completed measurement invalidates the older 75-80% estimate in the planning 
 
 ---
 
+## Pass 83 (2026-05-19 — F252.3 UDT result-capture validator)
+
+Pass 83 advanced F252 after checking that the existing F267 UDT harness had no repository-side contract for validating pasted UDT results before a WebView manifest switch.
+
+| Step | Action | Result |
+|---|---|---|
+| Pass 83.1 | Read the F252/F267 scaffold, harness, docs, and tests. | Confirmed the harness can run in UDT but no saved-result validator existed. |
+| Pass 83.2 | Added result-template and validation primitives. | `opencut.core.uxp_udt_results` now validates raw or wrapped UDT harness JSON. |
+| Pass 83.3 | Added CLI and tests. | `python -m opencut.tools.validate_uxp_udt_results` emits templates and strict JSON reports; `tests/test_uxp_udt_results.py` covers readiness and diagnostic cases. |
+| Pass 83.4 | Updated roadmap and state files. | F252 now records F252.1/F252.2/F252.3 repository-side slices, while the real Premiere UDT capture and WebView cutover remain open. |
+
+F252 remains external/tooling-locked until a disposable Premiere project can run `window.OpenCutUXPUdtHarness.run({ includeMutating: true })`, save the returned JSON, and pass `python -m opencut.tools.validate_uxp_udt_results <capture.json> --json` with `ready_for_webview_cutover=true`.
+
+---
+
 ## Pass 57 (2026-05-18 — F249 Linux distribution packaging)
 
 Pass 57 closed the Next-tier Linux packaging item after fresh official-source
