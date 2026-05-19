@@ -202,6 +202,13 @@ def run_ffmpeg(cmd: list, timeout: int = 3600, stderr_cap: int = 0,
     if cmd and cmd[0] == "ffmpeg":
         cmd = [get_ffmpeg_path()] + cmd[1:]
 
+    # Log the full command at DEBUG so failed FFmpeg jobs can be
+    # reproduced from ~/.opencut/server.log without guessing the args.
+    if logger.isEnabledFor(logging.DEBUG):
+        safe_cmd = " ".join(str(c) for c in cmd)
+        tag = f"[{job_id}] " if job_id else ""
+        logger.debug("%sFFmpeg cmd: %s", tag, safe_cmd)
+
     # Fast path: no job tracking requested — preserve the original
     # subprocess.run semantics so existing callers see no behaviour
     # change.
@@ -643,6 +650,9 @@ def _run_ffmpeg_with_progress(job_id: str, cmd: list, duration_sec: float):
     from opencut.jobs import _is_cancelled, _register_job_process, _unregister_job_process, _update_job
 
     full_cmd = list(cmd) + ["-progress", "pipe:1"]
+    if logger.isEnabledFor(logging.DEBUG):
+        logger.debug("[%s] FFmpeg progress cmd: %s", job_id,
+                     " ".join(str(c) for c in full_cmd))
     proc = _sp.Popen(full_cmd, stdout=_sp.PIPE, stderr=_sp.PIPE, text=True)
     _register_job_process(job_id, proc)
 

@@ -516,10 +516,20 @@ def safe_int(value, default: int = 0, min_val: int = None, max_val: int = None) 
         result = int(float(value))
     except (TypeError, ValueError, OverflowError):
         return default
-    if min_val is not None and result < min_val:
-        result = min_val
-    if max_val is not None and result > max_val:
-        result = max_val
+    if min_val is not None:
+        try:
+            min_i = int(min_val)
+            if result < min_i:
+                result = min_i
+        except (TypeError, ValueError, OverflowError):
+            pass
+    if max_val is not None:
+        try:
+            max_i = int(max_val)
+            if result > max_i:
+                result = max_i
+        except (TypeError, ValueError, OverflowError):
+            pass
     return result
 
 
