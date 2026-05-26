@@ -3,11 +3,66 @@ OpenCut Dependency Availability Checks
 
 Centralized check functions so route files don't duplicate definitions.
 Each function returns True/False indicating if the dependency is usable.
+
+When a check raises (corrupted install, missing C library, network
+timeout on a probe), the exception is captured in ``_CHECK_FAILURES``
+instead of being silently swallowed — see ``record_check_failure``.
+``get_check_failures()`` is exposed via ``GET /system/check-failures``
+for support diagnostics (RESEARCH_FEATURE_PLAN_2026-05-25 E5).
 """
 
+from __future__ import annotations
+
+import sys
 import threading
+import time
+from typing import Any
 
 from opencut.helpers import _try_import
+
+
+# ---------------------------------------------------------------------------
+# Structured failure registry (E5)
+# ---------------------------------------------------------------------------
+_CHECK_FAILURES_LOCK = threading.Lock()
+_CHECK_FAILURES: dict[str, dict[str, Any]] = {}
+
+
+def record_check_failure(name: str, exc: BaseException) -> None:
+    """Capture the exception type + message + timestamp under ``name``.
+
+    Replaces the historic bare ``except Exception: return False`` pattern.
+    Routes can query the failure reasons via ``GET /system/check-failures``
+    so users see *why* a feature is unavailable instead of a silent 503.
+    """
+    with _CHECK_FAILURES_LOCK:
+        _CHECK_FAILURES[str(name)] = {
+            "exception": type(exc).__name__,
+            "message": str(exc)[:500],  # cap to prevent log-stuffing
+            "ts": time.time(),
+        }
+
+
+def _record_caller_failure(exc: BaseException) -> None:
+    """Helper for ``except`` blocks — uses ``sys._getframe`` to grab the
+    enclosing function's name. Keeps the call sites a one-liner."""
+    try:
+        name = sys._getframe(1).f_code.co_name
+    except Exception:
+        name = "<unknown>"
+    record_check_failure(name, exc)
+
+
+def get_check_failures() -> dict[str, dict[str, Any]]:
+    """Return a thread-safe copy of the failure registry."""
+    with _CHECK_FAILURES_LOCK:
+        return {k: dict(v) for k, v in _CHECK_FAILURES.items()}
+
+
+def clear_check_failures() -> None:
+    """Clear the registry (used by tests + ``DELETE /system/check-failures``)."""
+    with _CHECK_FAILURES_LOCK:
+        _CHECK_FAILURES.clear()
 
 
 def check_demucs_available():
@@ -174,7 +229,8 @@ def check_resolve_available() -> bool:
     try:
         from opencut.core.resolve_bridge import check_resolve_available as _check
         return _check()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -217,7 +273,8 @@ def check_neural_interp_available() -> bool:
     try:
         from opencut.core.neural_interp import check_neural_interp_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -250,7 +307,8 @@ def check_clip_iqa_available() -> bool:
     try:
         from opencut.core.clip_quality import check_clip_iqa_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -259,7 +317,8 @@ def check_hsemotion_available() -> bool:
     try:
         from opencut.core.emotion_arc import check_hsemotion_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -274,7 +333,8 @@ def check_aaf_adapter_available() -> bool:
     try:
         from opencut.export.otio_export import check_aaf_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -290,7 +350,8 @@ def check_birefnet_available() -> bool:
     try:
         from opencut.core.matte_birefnet import check_birefnet_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -302,7 +363,8 @@ def check_svtav1_psy_available() -> bool:
     try:
         from opencut.core.svtav1_psy import check_svtav1_psy_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -310,7 +372,8 @@ def check_ddcolor_available() -> bool:
     try:
         from opencut.core.colorize_ddcolor import check_ddcolor_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -318,7 +381,8 @@ def check_vrt_available() -> bool:
     try:
         from opencut.core.restore_vrt import check_vrt_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -326,7 +390,8 @@ def check_neural_deflicker_available() -> bool:
     try:
         from opencut.core.deflicker_neural import check_neural_deflicker_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -336,7 +401,8 @@ def check_otio_diff_available() -> bool:
     try:
         from opencut.export.otio_diff import check_otio_diff_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -344,7 +410,8 @@ def check_quality_metrics_available() -> bool:
     try:
         from opencut.core.quality_metrics import check_quality_metrics_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -352,7 +419,8 @@ def check_vmaf_available() -> bool:
     try:
         from opencut.core.quality_metrics import check_vmaf_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -367,7 +435,8 @@ def check_vvc_available() -> bool:
     try:
         from opencut.core.vvc_export import check_vvc_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -375,7 +444,8 @@ def check_srt_available() -> bool:
     try:
         from opencut.core.srt_streaming import check_srt_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -388,7 +458,8 @@ def check_voice_grammar_available() -> bool:
     try:
         from opencut.core.voice_command_grammar import parse  # noqa: F401
         return True
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -403,7 +474,8 @@ def check_shaka_available() -> bool:
     try:
         from opencut.core.shaka_pkg import check_shaka_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -411,7 +483,8 @@ def check_obs_bridge_available() -> bool:
     try:
         from opencut.core.obs_bridge import check_obs_bridge_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -429,7 +502,8 @@ def check_plausible_configured() -> bool:
     try:
         from opencut.core.telemetry_plausible import check_plausible_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -437,7 +511,8 @@ def check_aptabase_configured() -> bool:
     try:
         from opencut.core.telemetry_aptabase import check_aptabase_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -462,7 +537,8 @@ def check_temp_cleanup_available() -> bool:
     try:
         from opencut.core.temp_cleanup import check_temp_cleanup_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -472,7 +548,8 @@ def check_disk_monitor_available() -> bool:
     try:
         from opencut.core.disk_monitor import check_disk_monitor_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -480,7 +557,8 @@ def check_request_correlation_available() -> bool:
     try:
         from opencut.core.request_correlation import check_request_correlation_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -488,7 +566,8 @@ def check_deprecation_registry_available() -> bool:
     try:
         from opencut.core.deprecation import check_deprecation_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -498,7 +577,8 @@ def check_virality_score_available() -> bool:
     try:
         from opencut.core.virality_score import check_virality_score_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -506,7 +586,8 @@ def check_cursor_zoom_available() -> bool:
     try:
         from opencut.core.cursor_zoom import check_cursor_zoom_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -524,7 +605,8 @@ def check_demo_bundle_available() -> bool:
     try:
         from opencut.core.demo_bundle import check_demo_bundle_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -542,7 +624,8 @@ def check_flashvsr_available() -> bool:
     try:
         from opencut.core.upscale_flashvsr import check_flashvsr_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -550,7 +633,8 @@ def check_rose_available() -> bool:
     try:
         from opencut.core.inpaint_rose import check_rose_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -558,7 +642,8 @@ def check_sammie_available() -> bool:
     try:
         from opencut.core.matte_sammie import check_sammie_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -566,7 +651,8 @@ def check_omnivoice_available() -> bool:
     try:
         from opencut.core.tts_omnivoice import check_omnivoice_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -574,7 +660,8 @@ def check_reezsynth_available() -> bool:
     try:
         from opencut.core.style_reezsynth import check_reezsynth_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -582,7 +669,8 @@ def check_vidmuse_available() -> bool:
     try:
         from opencut.core.music_vidmuse import check_vidmuse_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -591,7 +679,8 @@ def check_video_agent_available() -> bool:
     try:
         from opencut.core.video_agent import check_video_agent_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -600,7 +689,8 @@ def check_gen_video_cloud_available() -> bool:
     try:
         from opencut.core.gen_video_cloud import check_gen_video_cloud_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -609,7 +699,8 @@ def check_lipsync_advanced_available() -> bool:
     try:
         from opencut.core.lipsync_advanced import check_lipsync_advanced_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -893,7 +984,8 @@ def check_elevenlabs_available() -> bool:
     try:
         from opencut.core.tts_elevenlabs import check_elevenlabs_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -907,7 +999,8 @@ def check_face_reshape_available() -> bool:
     try:
         from opencut.core.face_reshape import check_face_reshape_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -916,7 +1009,8 @@ def check_skin_retouch_available() -> bool:
     try:
         from opencut.core.skin_retouch import check_skin_retouch_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
@@ -950,7 +1044,8 @@ def check_diffrhythm_available() -> bool:
     try:
         from opencut.core.music_diffrhythm import check_diffrhythm_available as _c
         return _c()
-    except Exception:
+    except Exception as _check_exc:
+        _record_caller_failure(_check_exc)
         return False
 
 
