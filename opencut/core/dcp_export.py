@@ -186,9 +186,14 @@ def _generate_uuid() -> str:
 
 
 def _sha1_file(filepath: str) -> str:
-    """Compute SHA-1 hash of a file, returned as base64."""
+    """Compute SHA-1 hash of a file, returned as base64.
+
+    SHA-1 is mandated by the DCP/IMF spec (SMPTE 429) for asset map and
+    PKL hashes; ``usedforsecurity=False`` signals we are computing an
+    interoperability hash, not a security primitive.
+    """
     import base64
-    sha = hashlib.sha1()
+    sha = hashlib.sha1(usedforsecurity=False)
     with open(filepath, "rb") as f:
         while True:
             chunk = f.read(65536)
