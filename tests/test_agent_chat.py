@@ -164,6 +164,228 @@ class TestSelfReview(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             self.mod.review("never_existed")
 
+    def test_drift_score_decreases_per_failure(self):
+        """Heuristic score must drop 25 per failed step, 15 per rejected."""
+        r = self.mod.plan("Cut silences then add captions", session_id="dscore1")
+        # Two-step plan; mark both as failed.
+        for s in r.plan:
+            self.mod.mark_step_status("dscore1", s.step_id, "failed")
+        review = self.mod.review("dscore1")
+        self.assertFalse(review.matched)
+        # 100 - 25 * 2 = 50.
+        self.assertEqual(review.drift_score, 50)
+
+    def test_drift_score_clean_plan_is_100(self):
+        r = self.mod.plan("Cut silences", session_id="dscore_clean")
+        for s in r.plan:
+            self.mod.mark_step_status("dscore_clean", s.step_id, "ok")
+        review = self.mod.review("dscore_clean")
+        self.assertEqual(review.drift_score, 100)
+        self.assertTrue(review.matched)
+
+    def test_drift_score_floored_at_zero(self):
+        """Many failures must clamp the score at 0, not go negative."""
+        # 5 fragments → 5 keyword candidates, but plan dedupes by route.
+        r = self.mod.plan(
+            "Cut silences and denoise audio and add captions and zoom in and color match",
+            session_id="dscore_floor",
+        )
+        for s in r.plan:
+            self.mod.mark_step_status("dscore_floor", s.step_id, "failed")
+        review = self.mod.review("dscore_floor")
+        self.assertGreaterEqual(review.drift_score, 0)
+        self.assertEqual(review.drift_score, max(0, 100 - 25 * len(r.plan)))
+
+    def test_review_result_to_dict_contains_new_fields(self):
+        r = self.mod.plan("Cut silences", session_id="newfields")
+        review = self.mod.review("newfields")
+        d = review.to_dict()
+        self.assertIn("drift_score", d)
+        self.assertIn("suggested_retry", d)
+        # heuristic path → suggested_retry is None.
+        self.assertIsNone(d["suggested_retry"])
+
+
+class TestStructuredReviewParser(unittest.TestCase):
+    """The structured-JSON parser must tolerate the same cruft as the
+    plan parser (markdown fences, leading prose, etc.)."""
+
+    def setUp(self):
+        from opencut.core import agent_chat
+        self.mod = agent_chat
+
+    def test_parse_strict_json_object(self):
+        text = (
+            '{"matched": false, "drift_score": 45, '
+            '"drift_notes": ["caption step skipped"], "suggested_retry": null}'
+        )
+        parsed = self.mod._parse_structured_review(text)
+        self.assertIsInstance(parsed, dict)
+        self.assertFalse(parsed["matched"])
+        self.assertEqual(parsed["drift_score"], 45)
+
+    def test_parse_markdown_fenced_object(self):
+        text = (
+            "```json\n"
+            '{"matched": true, "drift_score": 100, '
+            '"drift_notes": [], "suggested_retry": null}\n'
+            "```"
+        )
+        parsed = self.mod._parse_structured_review(text)
+        self.assertTrue(parsed["matched"])
+
+    def test_parse_with_leading_prose(self):
+        text = (
+            "Here's the review:\n\n"
+            '{"matched": false, "drift_score": 60, '
+            '"drift_notes": ["x"], "suggested_retry": null}'
+        )
+        parsed = self.mod._parse_structured_review(text)
+        self.assertEqual(parsed["drift_score"], 60)
+
+    def test_parse_returns_none_on_nonsense(self):
+        self.assertIsNone(self.mod._parse_structured_review("not json"))
+        self.assertIsNone(self.mod._parse_structured_review(""))
+
+
+class TestSuggestedRetryCoercion(unittest.TestCase):
+    def setUp(self):
+        from opencut.core import agent_chat
+        self.mod = agent_chat
+
+    def test_coerce_well_formed_retry(self):
+        retry = self.mod._coerce_suggested_retry({
+            "label": "Add captions",
+            "endpoint": "/captions/transcribe",
+            "payload": {"model": "base"},
+            "rationale": "user asked for captions, none were added",
+        })
+        self.assertIsNotNone(retry)
+        self.assertEqual(retry["endpoint"], "/captions/transcribe")
+
+    def test_coerce_endpoint_missing_leading_slash(self):
+        retry = self.mod._coerce_suggested_retry({
+            "label": "x",
+            "endpoint": "captions/transcribe",
+            "payload": {},
+        })
+        self.assertEqual(retry["endpoint"], "/captions/transcribe")
+
+    def test_coerce_rejects_non_dict(self):
+        self.assertIsNone(self.mod._coerce_suggested_retry(None))
+        self.assertIsNone(self.mod._coerce_suggested_retry("not a dict"))
+        self.assertIsNone(self.mod._coerce_suggested_retry([]))
+
+    def test_coerce_rejects_missing_endpoint(self):
+        self.assertIsNone(self.mod._coerce_suggested_retry({"label": "x"}))
+        self.assertIsNone(self.mod._coerce_suggested_retry({"endpoint": ""}))
+
+    def test_coerce_rationale_truncated(self):
+        long = "x" * 500
+        retry = self.mod._coerce_suggested_retry({
+            "label": "x",
+            "endpoint": "/foo",
+            "rationale": long,
+        })
+        self.assertEqual(len(retry["rationale"]), 240)
+
+
+class TestStructuredReviewLLMPath(unittest.TestCase):
+    """End-to-end: mock query_llm so we can drive the structured branch
+    deterministically without a real LLM."""
+
+    def setUp(self):
+        self.tmp = tempfile.mkdtemp(prefix="agent_chat_struct_")
+        from opencut.core import agent_chat
+        self.mod = agent_chat
+        self._orig = agent_chat._session_dir
+        agent_chat._session_dir = lambda: self.tmp
+
+    def tearDown(self):
+        self.mod._session_dir = self._orig
+        shutil.rmtree(self.tmp, ignore_errors=True)
+
+    def _fake_llm_resp(self, payload_json: str):
+        class _Resp:
+            def __init__(self, text):
+                self.text = text
+        return _Resp(payload_json)
+
+    def test_structured_response_sets_source_and_score(self):
+        r = self.mod.plan("Cut silences and add captions", session_id="struct1")
+        for s in r.plan:
+            self.mod.mark_step_status("struct1", s.step_id, "ok")
+        llm_config = {"provider": "ollama", "model": "fake"}  # value not used
+        fake_text = json.dumps({
+            "matched": False,
+            "drift_score": 70,
+            "drift_notes": ["captions were transcribed in English but user wanted Spanish"],
+            "suggested_retry": {
+                "label": "Translate captions to Spanish",
+                "endpoint": "/captions/translate",
+                "payload": {"target_lang": "es"},
+                "rationale": "intent specified Spanish translation",
+            },
+        })
+        with patch("opencut.core.llm.query_llm", return_value=self._fake_llm_resp(fake_text)):
+            review = self.mod.review("struct1", llm_config=llm_config)
+        self.assertEqual(review.source, "llm_structured")
+        self.assertEqual(review.drift_score, 70)
+        self.assertFalse(review.matched)
+        self.assertIsNotNone(review.suggested_retry)
+        self.assertEqual(review.suggested_retry["endpoint"], "/captions/translate")
+
+    def test_appended_retry_added_to_session_plan(self):
+        r = self.mod.plan("Cut silences", session_id="struct_append")
+        sid = r.plan[0].step_id
+        self.mod.mark_step_status("struct_append", sid, "failed")
+        llm_config = {"provider": "ollama", "model": "fake"}
+        fake_text = json.dumps({
+            "matched": False,
+            "drift_score": 40,
+            "drift_notes": ["retry silence detection with stricter threshold"],
+            "suggested_retry": {
+                "label": "Retry silence detection",
+                "endpoint": "/silence",
+                "payload": {"threshold_db": -35},
+                "rationale": "previous threshold was too lenient",
+            },
+        })
+        with patch("opencut.core.llm.query_llm", return_value=self._fake_llm_resp(fake_text)):
+            self.mod.review("struct_append", llm_config=llm_config, append_retry=True)
+        sess = self.mod.load_session("struct_append")
+        # Plan grew from 1 to 2 steps.
+        self.assertEqual(len(sess["plan"]), 2)
+        new_step = sess["plan"][-1]
+        self.assertEqual(new_step["endpoint"], "/silence")
+        self.assertEqual(new_step["status"], "planned")
+        self.assertIn("F144 self-review", new_step["reason"])
+
+    def test_append_retry_false_does_not_grow_plan(self):
+        r = self.mod.plan("Cut silences", session_id="struct_noappend")
+        sid = r.plan[0].step_id
+        self.mod.mark_step_status("struct_noappend", sid, "failed")
+        llm_config = {"provider": "ollama", "model": "fake"}
+        fake_text = json.dumps({
+            "matched": False, "drift_score": 30,
+            "drift_notes": ["x"],
+            "suggested_retry": {"label": "y", "endpoint": "/silence", "payload": {}, "rationale": ""},
+        })
+        with patch("opencut.core.llm.query_llm", return_value=self._fake_llm_resp(fake_text)):
+            self.mod.review("struct_noappend", llm_config=llm_config, append_retry=False)
+        sess = self.mod.load_session("struct_noappend")
+        self.assertEqual(len(sess["plan"]), 1)
+
+    def test_structured_parse_failure_falls_back_to_free_text(self):
+        r = self.mod.plan("Cut silences", session_id="struct_fallback")
+        for s in r.plan:
+            self.mod.mark_step_status("struct_fallback", s.step_id, "ok")
+        llm_config = {"provider": "ollama", "model": "fake"}
+        with patch("opencut.core.llm.query_llm", return_value=self._fake_llm_resp("not parseable JSON")):
+            review = self.mod.review("struct_fallback", llm_config=llm_config)
+        # Source falls through structured -> llm (free text).
+        self.assertIn(review.source, ("llm", "heuristic"))
+
 
 class TestAgentChatRoutes(unittest.TestCase):
     @classmethod

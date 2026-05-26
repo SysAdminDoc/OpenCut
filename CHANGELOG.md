@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Changed — F144 Self-Review Polish (structured JSON + drift score + suggested-retry append)
+
+- `opencut/core/agent_chat.review()` now defaults to the structured-JSON LLM critique path. Schema: `{matched, drift_score: 0..100, drift_notes: [str], suggested_retry: null | {label, endpoint, payload, rationale}}`. Markdown fences and leading prose are tolerated; structured parse failure transparently falls back to the legacy free-text prompt; both fall back to the heuristic when no LLM is configured.
+- New `ReviewResult.drift_score` (0..100; heuristic: −25 per failed step, −15 per rejected, floored at 0) and `ReviewResult.suggested_retry` (sanitized via `_coerce_suggested_retry`: rejects non-dict, requires endpoint, normalizes missing leading slash, truncates rationale to 240 chars).
+- `append_retry=True` (default) writes the LLM-proposed remediation step into the session's plan as a new `planned` step with a "F144 self-review suggested retry" reason. UI surfaces it as "Agent proposes…" for accept/reject.
+- `POST /agent/chat/review` accepts `append_retry` and `structured` flags (both default true). Existing callers see no breaking change — added fields are additive.
+- `tests/test_agent_chat.py` grew from 25 to 42 cases (+17): drift-score math (clean / failures / floored), structured-JSON parser (strict / fenced / leading prose / nonsense), suggested-retry coercion (well-formed / missing slash / non-dict / missing endpoint / rationale truncation), and four end-to-end LLM-mocked review paths (structured-success, append-retry-on, append-retry-off, structured-parse-fallback).
+
 ### Added — F143 Chat-Conductor Backend Scaffold (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q2)
 
 - `opencut/core/agent_chat.py` lands the backend conductor surface designed in `.ai/research/2026-05-17/AGENT_UX_RFC.md` (the UXP UI lands under F252; this commit is the backend foundation).
