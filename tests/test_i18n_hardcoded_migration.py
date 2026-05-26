@@ -35,12 +35,17 @@ MIGRATED_KEYS = (
     "toast.update_available",
     "toast.refreshing_media",
     "toast.save_first",
-    # Second batch (high-impact missing-input alerts; followed E6 in the
-    # same loop after the original four landed).
+    # Second batch (high-impact missing-input alerts).
     "toast.no_clip_selected",
     "toast.choose_source_first",
     "toast.cancel_failed",
     "toast.select_clip_first",
+    # Third batch (selection-failure + missing-input prompts).
+    "toast.clip_path_unavailable",
+    "toast.selection_unreadable",
+    "toast.choose_stem_types",
+    "toast.enter_broll_prompt",
+    "toast.enter_tts_text",
 )
 
 
@@ -94,6 +99,32 @@ EXPECTED_CALLS = (
         "toast.select_clip_first",
         re.compile(r't\(\s*"toast\.select_clip_first"'),
         re.compile(r'showAlert\(\s*"Select a clip first\."\s*\)'),
+    ),
+    # --- Third batch ------------------------------------------------
+    (
+        "toast.clip_path_unavailable",
+        re.compile(r't\(\s*"toast\.clip_path_unavailable"'),
+        re.compile(r'showAlert\(\s*"Could not get clip path\."\s*\)'),
+    ),
+    (
+        "toast.selection_unreadable",
+        re.compile(r't\(\s*"toast\.selection_unreadable"'),
+        re.compile(r'showAlert\(\s*"Could not read selection\."\s*\)'),
+    ),
+    (
+        "toast.choose_stem_types",
+        re.compile(r't\(\s*"toast\.choose_stem_types"'),
+        re.compile(r'showAlert\(\s*"Choose at least one stem type to extract'),
+    ),
+    (
+        "toast.enter_broll_prompt",
+        re.compile(r't\(\s*"toast\.enter_broll_prompt"'),
+        re.compile(r'showAlert\(\s*"Enter a description for the B-roll clip\."\s*\)'),
+    ),
+    (
+        "toast.enter_tts_text",
+        re.compile(r't\(\s*"toast\.enter_tts_text"'),
+        re.compile(r'showAlert\(\s*"Enter text to generate speech\."\s*\)'),
     ),
 )
 
