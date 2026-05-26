@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added — Subprocess Timeout AST Linter (closes RESEARCH_FEATURE_PLAN_2026-05-25 E4)
+
+- `scripts/lint_subprocess_timeouts.py` walks every `subprocess.run` / `subprocess.Popen` (incl. `_sp` aliases) under `opencut/` and asserts each is bounded by an explicit `timeout=`. `Popen` calls must have a downstream `.wait(timeout=)` or `.communicate(timeout=)` on the bound name within the same function. File-manager spawns (`explorer /select,`, `open -R`, `xdg-open`, `start_new_session=True`) are allow-listed.
+- The live tree is currently clean — the prior audit batches (1-8) had already closed every remaining hit. The linter is now a durable guardrail.
+- New release-smoke `subprocess-timeouts` step after `doc-sizes`.
+- `tests/test_lint_subprocess_timeouts.py` self-tests the linter against synthetic clean/dirty/allow-listed inputs.
+
 ### Removed — 951 Tracked .NET Build Artifacts (closes RESEARCH_FEATURE_PLAN_2026-05-25 E2)
 
 - `git rm --cached -r installer/src/OpenCut.Installer/bin installer/src/OpenCut.Installer/obj` — 951 files of DLLs, PDBs, BAML, generated C#, NuGet caches, and intermediate build outputs are no longer tracked. Working-copy files are preserved; clones shrink and PR diffs no longer collect compiler noise.
