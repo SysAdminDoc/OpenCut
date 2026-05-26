@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added — CEP/UXP Tab Parity Gate (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q5)
+
+- Added `extension/PANEL_PARITY.json` — the durable ledger of CEP-only and UXP-only tabs with justification fields. CEP has `export` + `nlp` (legacy; superseded by UXP `deliverables` + the F143 chat sidebar after CEP EOL). UXP has `search` + `deliverables` (UXP-first surfaces).
+- Added `tests/test_panel_tab_parity.py` — parses `data-nav` (CEP) and `data-tab` (UXP) attributes from each panel's `index.html` and asserts every divergence is annotated in the ledger. Adding a tab without updating the ledger fails CI.
+- Added release-smoke `panel-parity` step after `subprocess-timeouts`.
+
 ### Added — Structured Check-Failure Registry + /system/check-failures (closes RESEARCH_FEATURE_PLAN_2026-05-25 E5)
 
 - `opencut.checks` gained `record_check_failure(name, exc)`, `_record_caller_failure(exc)`, `get_check_failures()`, and `clear_check_failures()`. 40 historic bare `except Exception: return False` sites now capture the exception type + message + timestamp under the calling probe's name.
