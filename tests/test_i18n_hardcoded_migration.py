@@ -30,10 +30,17 @@ MAIN_JS = REPO_ROOT / "extension" / "com.opencut.panel" / "client" / "main.js"
 
 
 MIGRATED_KEYS = (
+    # First batch (the explicit RESEARCH_FEATURE_PLAN E6 list)
     "toast.server_reconnected",
     "toast.update_available",
     "toast.refreshing_media",
     "toast.save_first",
+    # Second batch (high-impact missing-input alerts; followed E6 in the
+    # same loop after the original four landed).
+    "toast.no_clip_selected",
+    "toast.choose_source_first",
+    "toast.cancel_failed",
+    "toast.select_clip_first",
 )
 
 
@@ -64,6 +71,29 @@ EXPECTED_CALLS = (
         "toast.update_available",
         re.compile(r't\(\s*"toast\.update_available"'),
         None,
+    ),
+    # --- Second batch -----------------------------------------------
+    (
+        "toast.no_clip_selected",
+        re.compile(r't\(\s*"toast\.no_clip_selected"'),
+        re.compile(r'showAlert\(\s*"No clip selected in timeline\."\s*\)'),
+    ),
+    (
+        "toast.choose_source_first",
+        re.compile(r't\(\s*"toast\.choose_source_first"'),
+        re.compile(r'showAlert\(\s*"Choose a source in Media before running this tool\."\s*\)'),
+    ),
+    (
+        "toast.cancel_failed",
+        re.compile(r't\(\s*"toast\.cancel_failed"'),
+        # Use a relaxed bare-form check because the smart quote in the
+        # i18n value won't match the original ASCII apostrophe.
+        re.compile(r"showToast\(\s*\"Couldn't cancel "),
+    ),
+    (
+        "toast.select_clip_first",
+        re.compile(r't\(\s*"toast\.select_clip_first"'),
+        re.compile(r'showAlert\(\s*"Select a clip first\."\s*\)'),
     ),
 )
 
