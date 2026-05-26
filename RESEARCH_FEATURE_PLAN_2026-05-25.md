@@ -25,14 +25,18 @@
 > | Q3 — One-click Enhance macro | ✅ shipped | `be2ba41` |
 > | Q8 — Shorts A/B variant generator | ✅ shipped | `a4e8906` |
 > | Q7 / F273 — Sequence Index panel backend | ✅ shipped | `304cad6` |
-> | Q2 / F143 — Chat-conductor backend scaffold | ✅ shipped | (this commit) |
+> | Q2 / F143 — Chat-conductor backend scaffold | ✅ shipped | `777bc28` |
+> | F144 — LLM self-review polish (structured JSON + drift score + retry append) | ✅ shipped | `3424e19` |
+> | F146 — UXP MCP bridge | ✅ shipped | `e81a1d9` |
+> | UXP Agent tab (UI for F143/Q3/Q7/Q8/F146) | ✅ shipped | `1e51521` |
+> | E6 follow-on — i18n migration (4 E6 strings) | ✅ shipped | `79866b3` |
+> | E6 extended — i18n migration (4 more high-impact alerts) | ✅ shipped | `71cc3fd` |
 >
 > **Remaining work (deferred to dedicated passes):**
 >
-> - **F252 UXP UI surfacing** for Q3 / Q7 / Q8 / Q2 (their backend ships; the editable plan + thumb-strip diff + spreadsheet table render in the UXP panel).
-> - **Phase 3 deadline-gated** items remain on PROJECT_CONTEXT.md `Now` tier: F202 macOS notarization first signed release (2026-09-01), F236 FCC caption display-settings discoverability (2026-08-17), F252 UXP WebView cutover (CEP EOL ~2026-09), F146 UXP MCP transport.
-> - **F144 LLM-driven post-turn self-review polish** — the heuristic path ships; the LLM critique path is wired but needs prompt-tuning sessions.
-> - **Hardcoded English → i18n migration** (E6 follow-on) — drift gate prevents new drift; reducing the 142 dead-key floor needs a focused pass.
+> - **Phase 3 deadline-gated** items remain on PROJECT_CONTEXT.md `Now` tier: F202 macOS notarization first signed release (2026-09-01, needs GitHub Secrets), F236 FCC caption display-settings discoverability (2026-08-17, repository-side already in place per PROJECT_CONTEXT), F252 UXP WebView cutover (CEP EOL ~2026-09, months of UI work).
+> - **i18n migration breadth** — 8 strings migrated this loop; ~100+ bare-English `showAlert/showToast` sites remain in `main.js`. The drift gate prevents new drift; reducing the 142 dead-key floor needs targeted cleanup. Tackle in rolling small batches rather than one mega-PR.
+> - **F144 prompt-tuning sessions** — structured-JSON path is wired and tested; the prompt itself can be tuned against real LLM outputs in a focused session with a live Ollama instance.
 
 ---
 
