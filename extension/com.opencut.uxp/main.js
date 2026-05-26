@@ -5566,6 +5566,13 @@ async function initApp() {
   // -------------------------------------------------------------
   initAgentTab();
 
+  // -------------------------------------------------------------
+  // F236 FCC caption display-settings card (effective 2026-08-17).
+  // Lazy-init: fetches the token catalogue on first paint, builds
+  // the dropdown options, wires Preview + Reset.
+  // -------------------------------------------------------------
+  initCaptionDisplaySettingsCard();
+
   console.log("[OpenCut UXP] Ready.");
 }
 
@@ -5856,6 +5863,149 @@ function initAgentTab() {
       setStatus("mcpBridgeStatus", "List failed: " + (err?.message || err));
     }
   });
+}
+
+// =============================================================
+// F236 FCC caption display-settings card
+// Effective 2026-08-17 (47 CFR § 79.103); users must be able to
+// readily access these controls. Backend contract:
+//   GET  /captions/display-settings/tokens
+//   POST /captions/display-settings/preview {settings, sample_text}
+// =============================================================
+function initCaptionDisplaySettingsCard() {
+  const $ = (id) => document.getElementById(id);
+  const card = $("captionDisplaySettingsCard");
+  if (!card) return;
+
+  // Selector → token-category mapping (mirrors token_schema()).
+  const SELECT_MAP = [
+    { id: "capDispFont", category: "font", labelFn: (o) => `${o.id} (${o.font_family})` },
+    { id: "capDispSize", category: "size", labelFn: (o) => `${o.id} (${o.font_size})` },
+    { id: "capDispTextColor", category: "color", labelFn: (o) => `${o.id} (${o.hex})`, key: "text_color" },
+    { id: "capDispTextOpacity", category: "opacity", labelFn: (o) => `${o.id} (${o.alpha})`, key: "text_opacity" },
+    { id: "capDispBgColor", category: "color", labelFn: (o) => `${o.id} (${o.hex})`, key: "background_color" },
+    { id: "capDispBgOpacity", category: "opacity", labelFn: (o) => `${o.id} (${o.alpha})`, key: "background_opacity" },
+    { id: "capDispEdge", category: "edge_style", labelFn: (o) => `${o.id}` },
+  ];
+
+  let cachedSchema = null;
+
+  const setStatus = (text) => {
+    const el = $("capDispStatus");
+    if (el) el.textContent = text;
+  };
+
+  function populateSelects(schema) {
+    cachedSchema = schema;
+    const tokens = schema.tokens || {};
+    const defaults = schema.defaults || {};
+    for (const spec of SELECT_MAP) {
+      const sel = $(spec.id);
+      if (!sel) continue;
+      const opts = tokens[spec.category] || [];
+      sel.innerHTML = "";
+      for (const opt of opts) {
+        const option = document.createElement("option");
+        option.value = String(opt.id);
+        option.textContent = spec.labelFn(opt);
+        sel.appendChild(option);
+      }
+      const settingKey = spec.key || spec.category;
+      const def = defaults[settingKey] || (opts[0] && opts[0].id);
+      if (def) sel.value = def;
+    }
+  }
+
+  function readSettings() {
+    const out = {};
+    for (const spec of SELECT_MAP) {
+      const sel = $(spec.id);
+      if (!sel) continue;
+      out[spec.key || spec.category] = sel.value;
+    }
+    return out;
+  }
+
+  function applyPreviewStyles(payload) {
+    const area = $("capDispPreviewArea");
+    const sample = $("capDispPreviewSample");
+    const box = $("capDispPreviewBox");
+    if (!area || !sample || !box) return;
+    box.hidden = false;
+    sample.textContent = payload.sample_text || "Caption preview";
+    const styles = payload.preview_css || {};
+    // The /captions/display-settings/preview payload returns ready-to-use
+    // CSS strings keyed by attribute name. Apply directly.
+    for (const [key, value] of Object.entries(styles)) {
+      try {
+        sample.style[key] = value;
+      } catch (_e) { /* hostile UXP CSS prop name — skip */ }
+    }
+  }
+
+  async function refreshPreview() {
+    const btn = $("capDispPreviewBtn");
+    if (btn) btn.disabled = true;
+    setStatus("Rendering preview…");
+    try {
+      const resp = await BackendClient.post("/captions/display-settings/preview", {
+        settings: readSettings(),
+        sample_text: "The quick brown fox jumps over the lazy dog.",
+      });
+      if (!resp || resp.error) {
+        setStatus("Preview failed: " + (resp?.error || "unknown"));
+        return;
+      }
+      applyPreviewStyles(resp);
+      setStatus("Preview updated. These are the FCC display tokens applied to burn-in.");
+    } catch (err) {
+      setStatus("Preview error: " + (err?.message || err));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  function resetDefaults() {
+    if (!cachedSchema) return;
+    const defaults = cachedSchema.defaults || {};
+    for (const spec of SELECT_MAP) {
+      const sel = $(spec.id);
+      if (!sel) continue;
+      const settingKey = spec.key || spec.category;
+      if (defaults[settingKey]) sel.value = defaults[settingKey];
+    }
+    setStatus("Reset to FCC defaults. Click Preview to re-render.");
+  }
+
+  // Lazy-load the token catalogue once the card is first painted.
+  // (The Captions tab may not be the user's first stop, so don't block
+  // initApp() on this network call.)
+  async function lazyLoadTokens() {
+    try {
+      const schema = await BackendClient.get("/captions/display-settings/tokens");
+      if (!schema || schema.error) {
+        setStatus("Could not load FCC token schema. The card will stay empty.");
+        return;
+      }
+      populateSelects(schema);
+      // Surface the compliance-date string in the hint if the backend supplies one.
+      const notice = document.getElementById("fccComplianceNotice");
+      if (notice && schema.compliance_date) {
+        notice.textContent = notice.textContent.replace("2026-08-17", schema.compliance_date);
+      }
+      setStatus("Defaults loaded. Adjust tokens then Preview.");
+    } catch (err) {
+      setStatus("Token-schema fetch failed: " + (err?.message || err));
+    }
+  }
+
+  // Wire buttons.
+  $("capDispPreviewBtn")?.addEventListener("click", refreshPreview);
+  $("capDispResetBtn")?.addEventListener("click", resetDefaults);
+
+  // Kick off the lazy load; intentionally fire-and-forget so the rest
+  // of the panel finishes painting first.
+  setTimeout(lazyLoadTokens, 600);
 }
 
 // Bootstrap
