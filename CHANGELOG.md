@@ -2,11 +2,12 @@
 
 ## [Unreleased]
 
-### Changed — i18n Hardcoded-English Migration (E6 follow-on)
+### Changed — i18n Hardcoded-English Migration (E6 + high-impact alerts)
 
-- Migrated the four user-visible toast strings called out in `RESEARCH_FEATURE_PLAN_2026-05-25` E6 from bare English to i18n keys: `toast.server_reconnected`, `toast.update_available` (with `{version}` interpolation), `toast.refreshing_media`, `toast.save_first`.
-- `client/locales/en.json` grows from 426 → 430 keys; `i18n-drift` gate reports 288 consumers (was 284; +4 new JS consumers).
-- `tests/test_i18n_hardcoded_migration.py` is the regression guard: confirms each key exists in `en.json`, that `main.js` invokes `t("toast.…", fallback)` at each site, and that the bare-English `showToast("...")` form is no longer present (catches an accidental revert).
+- Migrated the four toast strings called out in `RESEARCH_FEATURE_PLAN_2026-05-25` E6 from bare English to i18n keys: `toast.server_reconnected`, `toast.update_available` (with `{version}` interpolation), `toast.refreshing_media`, `toast.save_first`.
+- Follow-on batch in the same loop migrated four more high-impact missing-input alerts: `toast.no_clip_selected`, `toast.choose_source_first`, `toast.cancel_failed`, `toast.select_clip_first`. The last one was bulk-replaced across 19 occurrences in `main.js`.
+- `client/locales/en.json` grows from 426 → 434 keys; `i18n-drift` gate reports **292 consumers** (was 284; +8 new JS consumers). Dead-key floor unchanged at 142.
+- `tests/test_i18n_hardcoded_migration.py` is the regression guard: 2 cases + 16 subtests asserting each of the 8 keys exists in `en.json`, that `main.js` invokes `t("toast.…", fallback)` at each site, and that the bare-English form is no longer present (catches an accidental revert).
 
 ### Added — UXP Agent Tab (UI for F143 / Q3 / Q7 / Q8 / F146)
 

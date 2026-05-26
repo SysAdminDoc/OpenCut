@@ -2594,7 +2594,7 @@
     function useTimelineSelection() {
         if (!inPremiere) return;
         PremiereBridge.getTimelineSelection(function (result) {
-            if (!result || result === "null") { showAlert("No clip selected in timeline."); return; }
+            if (!result || result === "null") { showAlert(t("toast.no_clip_selected", "No clip selected in timeline.")); return; }
             try {
                 var data = JSON.parse(result);
                 if (data.path) selectFile(data.path, data.name || data.path.split(/[/\\]/).pop());
@@ -3699,7 +3699,7 @@
             return false;
         }
         if (!selectedPath && payload && !payload.filepath && !payload.no_input) {
-            showAlert("Choose a source in Media before running this tool.");
+            showAlert(t("toast.choose_source_first", "Choose a source in Media before running this tool."));
             runStartJobErrorHook(opts, { reason: "missing-input" });
             return false;
         }
@@ -4194,7 +4194,7 @@
             // Fire cancel to backend (best-effort, UI already updated)
             api("POST", "/cancel/" + cancellingJob, {}, function (err) {
                 if (err) {
-                    showToast("Couldn't cancel — server not responding", "error");
+                    showToast(t("toast.cancel_failed", "Couldn’t cancel — server not responding"), "error");
                 }
             });
         }
@@ -4251,7 +4251,7 @@
     }
 
     function runFull() {
-        if (!selectedPath) { showAlert("Select a clip first."); return; }
+        if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
         preflightPipeline("full", selectedPath, projectFolder, function (go) {
             if (!go) return;
             startJob("/full", {
@@ -7720,7 +7720,7 @@
     }
 
     function _sessionCtxApplyToSelection(job) {
-        if (!selectedPath) { showAlert("Select a clip first."); return; }
+        if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
         if (!job.endpoint || !job.payload) {
             showToast("Job params aren't recorded — can't replay.", "warn");
             return;
@@ -7930,7 +7930,7 @@
     function _journalApplyToSelection(entry) {
         var fwd = entry && entry.forward;
         if (!fwd) return;
-        if (!selectedPath) { showAlert("Select a clip first."); return; }
+        if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
         // ExtendScript-dispatch actions get a special pseudo-endpoint.
         if (fwd.endpoint === "__jsx_add_markers__") {
             if (!inPremiere) {
@@ -8158,7 +8158,7 @@
 
     function runInterviewPolish() {
         if (_polishActive) return;
-        if (!selectedPath) { showAlert("Select a clip first."); return; }
+        if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
 
         // v1.9.33 (G): preflight — catches missing Whisper / no disk space
         // / bad path before the user waits minutes for failure.
@@ -8334,7 +8334,7 @@
     function initAudioPreviewButtons() {
         if (el.denoisePreviewBtn && el.denoisePreviewPlayer) {
             el.denoisePreviewBtn.addEventListener("click", function () {
-                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
                 var strength = parseFloat(el.denoiseStrength ? el.denoiseStrength.value : 0.7);
                 renderAudioPreview({
                     filepath: selectedPath, start: 0, duration: 10,
@@ -8344,7 +8344,7 @@
         }
         if (el.normalizePreviewBtn && el.normalizePreviewPlayer) {
             el.normalizePreviewBtn.addEventListener("click", function () {
-                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
                 // Derive LUFS target from the existing preset dropdown
                 var preset = el.normalizePreset ? el.normalizePreset.value : "youtube";
                 var target = {
@@ -8359,7 +8359,7 @@
         }
         if (el.silencePreviewBtn && el.silencePreviewPlayer) {
             el.silencePreviewBtn.addEventListener("click", function () {
-                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
                 // Use the current threshold / min-silence params if exposed,
                 // otherwise default to the FFmpeg-friendly -30 dB / 400 ms.
                 var thr = el.silenceThreshold ? parseFloat(el.silenceThreshold.value) : -30;
@@ -8624,7 +8624,7 @@
         // clip so the next run re-transcribes.
         if (el.polishClearCacheBtn) {
             el.polishClearCacheBtn.addEventListener("click", function () {
-                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
                 api("DELETE", "/interview-polish/state",
                     { filepath: selectedPath }, function (err, data) {
                         if (err) {
@@ -9245,7 +9245,7 @@
             }
             if (!entry.endpoint || !entry.payload) return;
             if (applyBtn) {
-                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
                 // Clone so we don't mutate the stored payload
                 var payload = JSON.parse(JSON.stringify(entry.payload));
                 payload.filepath = selectedPath;
@@ -12669,7 +12669,7 @@
 
     // --- Shorts Pipeline ---
     function runShorts() {
-        if (!selectedPath) { showAlert("Select a clip first."); return; }
+        if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
         preflightPipeline("shorts-pipeline", selectedPath, projectFolder, function (go) {
             if (!go) return;
             var llm = getLLMConfig();
@@ -13837,7 +13837,7 @@
         // OTIO export
         var otioBtn = document.getElementById("exportOtioBtn");
         if (otioBtn) otioBtn.addEventListener("click", function () {
-            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
             var mode = (document.getElementById("otioExportMode") || {}).value || "cuts";
             var payload = { filepath: selectedPath, output_dir: projectFolder, mode: mode };
             if (mode === "cuts") {
@@ -14791,7 +14791,7 @@
 
         // Quick action buttons (one-click workflows on Cut tab)
         function _quickWorkflow(workflowName) {
-            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
             // Find the workflow by name from loaded presets
             for (var qi = 0; qi < _workflowPresets.length; qi++) {
                 if (_workflowPresets[qi].name === workflowName) {
@@ -14816,11 +14816,11 @@
         var qSub = document.getElementById("quickAutoSubtitle");
         var qTrans = document.getElementById("quickTranslate");
         if (qSub) qSub.addEventListener("click", function () {
-            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
             startJob("/transcript", { filepath: selectedPath, model: "base", export_format: "srt", output_dir: projectFolder });
         });
         if (qTrans) qTrans.addEventListener("click", function () {
-            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
             startJob("/transcript", { filepath: selectedPath, model: "base", output_dir: projectFolder });
         });
 
@@ -14829,7 +14829,7 @@
         var qDen = document.getElementById("quickDenoise");
         if (qStudio) qStudio.addEventListener("click", function () { _quickWorkflow("Studio Audio"); });
         if (qDen) qDen.addEventListener("click", function () {
-            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
             startJob("/audio/denoise", { filepath: selectedPath, output_dir: projectFolder });
         });
 
@@ -14837,11 +14837,11 @@
         var qColor = document.getElementById("quickAutoColor");
         var qReframe = document.getElementById("quickSocialReframe");
         if (qColor) qColor.addEventListener("click", function () {
-            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
             startJob("/video/color/correct", { filepath: selectedPath, auto: true, output_dir: projectFolder });
         });
         if (qReframe) qReframe.addEventListener("click", function () {
-            if (!selectedPath) { showAlert("Select a clip first."); return; }
+            if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
             startJob("/video/reframe", { filepath: selectedPath, aspect: "9:16", method: "face", output_dir: projectFolder });
         });
 
@@ -15149,7 +15149,7 @@
             // H1.1 — Virality score quick action
             // --------------------------------------------------------------
             function runViralityScore() {
-                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
                 startJob("/analyze/virality", {
                     filepath: selectedPath,
                     skip_visual: false
@@ -15160,7 +15160,7 @@
             // H1.2 — Cursor-zoom resolve (screen-recording auto-zoom)
             // --------------------------------------------------------------
             function runCursorZoomResolve(sidecarPath) {
-                if (!selectedPath) { showAlert("Select a clip first."); return; }
+                if (!selectedPath) { showAlert(t("toast.select_clip_first", "Select a clip first.")); return; }
                 startJob("/video/cursor-zoom/resolve", {
                     filepath: selectedPath,
                     sidecar_path: sidecarPath || "",
