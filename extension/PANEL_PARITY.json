@@ -1,0 +1,39 @@
+{
+  "$comment": "CEP <-> UXP tab parity ledger (RESEARCH_FEATURE_PLAN_2026-05-25 Q5).",
+  "$generated_by": "manual; enforced by tests/test_panel_tab_parity.py",
+  "$updated": "2026-05-25",
+  "$adobe_cep_eol": "approximately 2026-09",
+  "common_tabs": [
+    "cut",
+    "captions",
+    "audio",
+    "video",
+    "timeline",
+    "settings"
+  ],
+  "cep_only": {
+    "export": {
+      "tab_id": "export",
+      "justification": "Legacy multi-platform export wizard. Superseded in UXP by 'deliverables' which folds OTIO + AAF + IMF + Dolby Vision planning into one tab. CEP 'export' tab will be retired with CEP at ~2026-09; do not invest further. F252 migration consideration.",
+      "uxp_replacement": "deliverables"
+    },
+    "nlp": {
+      "tab_id": "nlp",
+      "justification": "Legacy natural-language command tab. The F143 chat-conductor RFC (AGENT_UX_RFC.md) replaces this with a side-panel '/agent/chat' surface that ships first in UXP (F143/F252 sequencing). CEP 'nlp' tab will be retired with CEP at ~2026-09.",
+      "uxp_replacement": "agent_chat_sidebar (F143; pending)"
+    }
+  },
+  "uxp_only": {
+    "search": {
+      "tab_id": "search",
+      "justification": "UXP got the FTS5 transcript-index search surface as a dedicated tab; CEP keeps the same backend via the 'nlp' command palette. After CEP EOL the UXP 'search' tab becomes the canonical surface.",
+      "cep_equivalent": "command palette + nlp tab"
+    },
+    "deliverables": {
+      "tab_id": "deliverables",
+      "justification": "UXP-first replacement for CEP 'export'. Hosts OTIO/AAF/FCPXML interchange, IMF/Dolby Vision/ADM BW64 planning presets (F245-F248), VFX sheets, ADR, music cues, asset inventories.",
+      "cep_equivalent": "export tab + Timeline -> Export menu items"
+    }
+  },
+  "$policy": "When a new tab is added to either panel, update this file AND tests/test_panel_tab_parity.py. The test fails CI on un-annotated divergence."
+}

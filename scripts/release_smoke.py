@@ -442,6 +442,37 @@ def step_version_sync(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_panel_parity(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    test_file = REPO_ROOT / "tests" / "test_panel_tab_parity.py"
+    if not test_file.exists():
+        return StepResult(
+            "panel-parity",
+            "skipped",
+            skipped_reason="tests/test_panel_tab_parity.py missing",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    result = _run(
+        [sys.executable, "-m", "pytest", "-q", "tests/test_panel_tab_parity.py"],
+        cwd=REPO_ROOT,
+    )
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "panel-parity",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "CEP/UXP tab parity ledger up to date"
+            if status == "ok"
+            else "CEP/UXP tab drift detected — update extension/PANEL_PARITY.json"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_subprocess_timeouts(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     script = REPO_ROOT / "scripts" / "lint_subprocess_timeouts.py"
@@ -992,6 +1023,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("badges", step_badges, "Check README badges match live counts"),
     StepDefinition("doc-sizes", step_doc_sizes, "Check CLAUDE.md/PROJECT_CONTEXT.md sizes within ±15% of filesystem"),
     StepDefinition("subprocess-timeouts", step_subprocess_timeouts, "AST lint: every subprocess call must be bounded by a timeout"),
+    StepDefinition("panel-parity", step_panel_parity, "CEP <-> UXP tab parity ledger up to date"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
     StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),
