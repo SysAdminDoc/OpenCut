@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed — PR-Fast Now Runs the Supply-Chain Triad (closes RESEARCH_FEATURE_PLAN_2026-05-25 E3)
+
+- `pip-audit`, `npm-advisory`, and `esbuild-pin` now run on every pull request, not just Release Full. A vulnerable dep introduced in a PR now fails CI in seconds instead of waiting for tag push.
+- Only `panel-source` and `adobe-premierepro-versions` remain skipped on PR-fast (they need cross-platform runners or external services).
+- `tests/test_ci_workflow_split.py::test_pr_fast_workflow_runs_fast_release_smoke_subset` now asserts the supply-chain triad is NOT skipped (positive guardrail), and that the two cross-OS gates ARE skipped (existing guardrail).
+
 ### Added — Generated README Badges (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q4/E8)
 
 - Added `scripts/sync_badges.py` that reads `opencut/_generated/route_manifest.json` and the live `tests/test_*.py` count and rewrites the README "API Routes" and "Tests" badges in place. `--check` exits 1 on drift; `--json` is for CI.
