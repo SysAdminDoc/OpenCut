@@ -5,7 +5,7 @@
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux-0078D4)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white)
 ![Premiere Pro](https://img.shields.io/badge/Premiere%20Pro-2019+-9999FF?logo=adobepremierepro&logoColor=white)
-![Routes](https://img.shields.io/badge/API%20Routes-1509-orange)
+![Routes](https://img.shields.io/badge/API%20Routes-1514-orange)
 ![Tests](https://img.shields.io/badge/Tests-8200+-brightgreen)
 
 > Route count is generated from `opencut/_generated/route_manifest.json`; run
