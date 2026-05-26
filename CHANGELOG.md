@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added — Sequence Index Panel Backend (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q7 / F273)
+
+- `opencut/core/sequence_index.py` converts the JSON returned by `ocGetSequenceInfo()` into a flat row list (video + audio clips) with `HH:MM:SS:FF` timecodes, durations, effects, ratings, tags, and transcript excerpts (clipped to overlapping segments). Mirrors Adobe Premiere 26.x's "Sequence Index" panel.
+- Sort + filter helpers (`sort_rows`, `filter_rows`) on top of the built index so the panel can re-paginate without re-walking the sequence. Sort-key allowlist (`SORT_KEYS`) prevents frontend drift.
+- New routes: `POST /timeline/sequence-index` (build), `POST /timeline/sequence-index/filter` (sort + filter), `GET /timeline/sequence-index/info`. All CSRF-protected.
+- `SequenceIndexResult` is subscriptable for Flask jsonify (same pattern as `EnhanceResult` / `VariantsResult`).
+- Manifest now reports **1,509 routes / 105 blueprints**.
+- `tests/test_sequence_index.py` — 27 cases covering timecode formatting, payload coercion + partial-payload tolerance, row construction + transcript-excerpt overlap, sort+filter helpers (allowlist, query, track_type, has_effects), the jsonify protocol, and all three new routes (incl. error paths).
+
 ### Added — Shorts A/B Variant Generator (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q8)
 
 - `opencut/core/shorts_variants.py` renders N (2..6) variants of a single short-form window. Variants differ along three axes: **hook tightness** (`hook_offset = i * 0.5`s — variant 0 keeps the full window, later variants trim faster), **caption style** (cycles through `default` / `bold_yellow` / `boxed_dark` / `neon_cyan` / `cinematic_serif` / `top_center`), and **focal point** (alternates `face_track=True` with a fixed top-third crop).
