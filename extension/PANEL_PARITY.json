@@ -33,6 +33,11 @@
       "tab_id": "deliverables",
       "justification": "UXP-first replacement for CEP 'export'. Hosts OTIO/AAF/FCPXML interchange, IMF/Dolby Vision/ADM BW64 planning presets (F245-F248), VFX sheets, ADR, music cues, asset inventories.",
       "cep_equivalent": "export tab + Timeline -> Export menu items"
+    },
+    "agent": {
+      "tab_id": "agent",
+      "justification": "UXP-first surface for the 2026-05-25 backend batch: F143 chat conductor + F144 self-review, Q3 one-click Enhance, Q7/F273 Sequence Index, Q8 shorts A/B variants, and F146 MCP bridge. Lands in UXP only because the F252 WebView migration story routes all new conductor + agent work post-CEP-EOL through UXP. CEP users reach equivalent functionality via the command palette + NLP tab.",
+      "cep_equivalent": "command palette + nlp tab"
     }
   },
   "$policy": "When a new tab is added to either panel, update this file AND tests/test_panel_tab_parity.py. The test fails CI on un-annotated divergence."

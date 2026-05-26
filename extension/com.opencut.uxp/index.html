@@ -73,6 +73,10 @@
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M9.293.879A1 1 0 0110 1.586V4h2.5A1.5 1.5 0 0114 5.5v9a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 012 14.5v-13A1.5 1.5 0 013.5 0H9a1 1 0 01.293.293L9.293.879zM9 1.586L3.5 1a.5.5 0 00-.5.5v13a.5.5 0 00.5.5h9a.5.5 0 00.5-.5v-9H10a1 1 0 01-1-1V1.586zM5 7.5a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5a.5.5 0 01-.5-.5zm0 2.5a.5.5 0 01.5-.5h5a.5.5 0 010 1h-5A.5.5 0 015 10zm0 2.5a.5.5 0 01.5-.5h3a.5.5 0 010 1h-3a.5.5 0 01-.5-.5z"/></svg>
         <span>Deliverables</span>
       </button>
+      <button type="button" class="oc-tab" data-tab="agent" role="tab" aria-selected="false" aria-controls="tab-agent" id="tabBtnAgent">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M8 16A8 8 0 108 0a8 8 0 000 16zM6 5.5a.5.5 0 011 0v3a.5.5 0 01-1 0v-3zm3 0a.5.5 0 011 0v3a.5.5 0 01-1 0v-3zM5.5 11a2.5 2.5 0 005 0 .5.5 0 011 0 3.5 3.5 0 11-7 0 .5.5 0 011 0z"/></svg>
+        <span>Agent</span>
+      </button>
       <button type="button" class="oc-tab" data-tab="settings" role="tab" aria-selected="false" aria-controls="tab-settings" id="tabBtnSettings">
         <svg width="13" height="13" viewBox="0 0 16 16" fill="currentColor"><path d="M7.068.727c.243-.97 1.62-.97 1.864 0l.071.286a.96.96 0 001.622.434l.205-.211c.695-.719 1.888-.03 1.613.931l-.084.303a.96.96 0 001.187 1.187l.303-.084c.961-.275 1.65.918.931 1.613l-.211.205a.96.96 0 00.434 1.622l.286.071c.97.243.97 1.62 0 1.864l-.286.071a.96.96 0 00-.434 1.622l.211.205c.719.695.03 1.888-.931 1.613l-.303-.084a.96.96 0 00-1.187 1.187l.084.303c.275.961-.918 1.65-1.613.931l-.205-.211a.96.96 0 00-1.622.434l-.071.286c-.243.97-1.62.97-1.864 0l-.071-.286a.96.96 0 00-1.622-.434l-.205.211c-.695.719-1.888.03-1.613-.931l.084-.303a.96.96 0 00-1.187-1.187l-.303.084c-.961.275-1.65-.918-.931-1.613l.211-.205a.96.96 0 00-.434-1.622l-.286-.071c-.97-.243-.97-1.62 0-1.864l.286-.071A.96.96 0 001.39 4.22l-.211-.205c-.719-.695-.03-1.888.931-1.613l.303.084a.96.96 0 001.187-1.187l-.084-.303C3.241.035 4.434-.654 5.13.065l.205.211A.96.96 0 006.997.71l.071-.286zM8 11a3 3 0 100-6 3 3 0 000 6z"/></svg>
         <span>Settings</span>
@@ -1315,6 +1319,109 @@
             <button type="button" class="oc-btn oc-btn-primary oc-btn-full" id="runFullReportBtn">Generate Full Report</button>
           </div>
         </div>
+      </div>
+
+      <!-- ==================== AGENT TAB ==================== -->
+      <!-- F143 conductor + the Q3/Q7/Q8 backend surfaces shipped in
+           the 2026-05-25 autonomous loop. UXP-only by design (CEP
+           uses the command palette + NLP tab; see PANEL_PARITY.json). -->
+      <div class="oc-tab-panel" id="tab-agent" role="tabpanel" aria-labelledby="tabBtnAgent">
+
+        <div class="oc-section-title">Chat Conductor (F143)</div>
+        <div class="oc-card">
+          <p class="oc-hint">Describe an edit in plain language. The conductor turns it into a step-by-step plan you can review before any work runs.</p>
+          <div class="oc-field-row">
+            <label class="oc-label" for="agentChatIntent">Intent</label>
+            <textarea class="oc-input" id="agentChatIntent" rows="3" placeholder="e.g. Cut silences then add captions in Spanish"></textarea>
+          </div>
+          <div class="oc-btn-row">
+            <button type="button" class="oc-btn oc-btn-primary" id="agentChatPlanBtn">Plan</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="agentChatReviewBtn" disabled>Self-Review</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="agentChatClearBtn">Clear</button>
+          </div>
+          <div class="oc-status-line" id="agentChatStatus" role="status" aria-live="polite">No active session.</div>
+          <div class="oc-card oc-card--nested" id="agentChatPlanBox" hidden>
+            <div class="oc-card-header"><span>Planned Steps</span></div>
+            <ol class="oc-step-list" id="agentChatPlanList" aria-label="Conductor plan steps"></ol>
+          </div>
+          <div class="oc-card oc-card--nested" id="agentChatReviewBox" hidden>
+            <div class="oc-card-header"><span>Self-Review</span></div>
+            <p class="oc-hint" id="agentChatReviewSummary"></p>
+            <ul id="agentChatReviewNotes" aria-label="Drift notes"></ul>
+          </div>
+        </div>
+
+        <div class="oc-section-title">One-Click Enhance (Q3)</div>
+        <div class="oc-card">
+          <p class="oc-hint">Loudness, denoise, stabilize, deflicker, and grade in one pass. Pick a style — Social, Speech, or Cinematic.</p>
+          <div class="oc-field-row">
+            <label class="oc-label" for="enhanceClipPath">Clip Path</label>
+            <input type="text" class="oc-input" id="enhanceClipPath" placeholder="Paste a clip path…">
+          </div>
+          <div class="oc-field-row">
+            <label class="oc-label" for="enhanceStyle">Style</label>
+            <select class="oc-input" id="enhanceStyle">
+              <option value="social">Social (-16 LUFS, vibrant grade)</option>
+              <option value="speech">Speech (-16 LUFS, no grade)</option>
+              <option value="cinematic">Cinematic (-23 LUFS, full chain)</option>
+            </select>
+          </div>
+          <div class="oc-btn-row">
+            <button type="button" class="oc-btn oc-btn-secondary" id="enhanceDryRunBtn">Preview Plan</button>
+            <button type="button" class="oc-btn oc-btn-primary" id="enhanceRunBtn">Run Enhance</button>
+          </div>
+          <div class="oc-status-line" id="enhanceStatus" role="status" aria-live="polite">Pick a clip, pick a style, then Preview Plan to see what will run.</div>
+        </div>
+
+        <div class="oc-section-title">Shorts A/B Variants (Q8)</div>
+        <div class="oc-card">
+          <p class="oc-hint">Render 2–6 short-form variants of the same window with different hook tightness, caption style, and focal point. A/B test before posting.</p>
+          <div class="oc-field-row">
+            <label class="oc-label" for="variantsClipPath">Clip Path</label>
+            <input type="text" class="oc-input" id="variantsClipPath" placeholder="Paste a clip path…">
+          </div>
+          <div class="oc-slider-row">
+            <label class="oc-label" for="variantsStart">Start (s)</label>
+            <input type="number" class="oc-input" id="variantsStart" value="0" min="0" step="0.1">
+          </div>
+          <div class="oc-slider-row">
+            <label class="oc-label" for="variantsEnd">End (s)</label>
+            <input type="number" class="oc-input" id="variantsEnd" value="15" min="0.1" step="0.1">
+          </div>
+          <div class="oc-slider-row">
+            <label class="oc-label" for="variantsN">Variants</label>
+            <input type="number" class="oc-input" id="variantsN" value="3" min="2" max="6" step="1">
+          </div>
+          <div class="oc-btn-row">
+            <button type="button" class="oc-btn oc-btn-secondary" id="variantsDryRunBtn">Preview Variants</button>
+            <button type="button" class="oc-btn oc-btn-primary" id="variantsRunBtn">Generate</button>
+          </div>
+          <div class="oc-status-line" id="variantsStatus" role="status" aria-live="polite">2–6 variants per source window.</div>
+        </div>
+
+        <div class="oc-section-title">Sequence Index (Q7 / F273)</div>
+        <div class="oc-card">
+          <p class="oc-hint">Spreadsheet-style read of the active Premiere sequence — clip name, timecode, duration, effects, ratings, transcript excerpts. Sort + filter without re-walking the timeline.</p>
+          <div class="oc-btn-row">
+            <button type="button" class="oc-btn oc-btn-primary" id="sequenceIndexBuildBtn">Build Index</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="sequenceIndexInfoBtn">Capability</button>
+          </div>
+          <div class="oc-status-line" id="sequenceIndexStatus" role="status" aria-live="polite">No index yet.</div>
+          <div class="oc-card oc-card--nested" id="sequenceIndexBox" hidden>
+            <div class="oc-status-line" id="sequenceIndexSummary"></div>
+          </div>
+        </div>
+
+        <div class="oc-section-title">MCP Bridge (F146)</div>
+        <div class="oc-card">
+          <p class="oc-hint">UXP-native bridge to the MCP tool catalogue (survives Adobe's CEP EOL). 39 curated tools plus 1,325 opt-in extended tools.</p>
+          <div class="oc-btn-row">
+            <button type="button" class="oc-btn oc-btn-secondary" id="mcpBridgeInfoBtn">Capability</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="mcpBridgeListBtn">List Tools</button>
+          </div>
+          <div class="oc-status-line" id="mcpBridgeStatus" role="status" aria-live="polite">Bridge ready.</div>
+        </div>
+
       </div>
 
       <!-- ==================== SETTINGS TAB ==================== -->

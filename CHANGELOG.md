@@ -2,6 +2,18 @@
 
 ## [Unreleased]
 
+### Added — UXP Agent Tab (UI for F143 / Q3 / Q7 / Q8 / F146)
+
+- New `agent` tab in `extension/com.opencut.uxp/` surfaces the four backends shipped on 2026-05-25 in a single panel:
+  - **Chat Conductor** (F143/F144): intent → plan → self-review with drift-score rendering and suggested-retry preview.
+  - **One-Click Enhance** (Q3): clip path + style dropdown (Social / Speech / Cinematic) + Preview Plan / Run buttons.
+  - **Shorts A/B Variants** (Q8): clip + start/end/N inputs + Preview Variants / Generate buttons.
+  - **Sequence Index** (Q7/F273): "Build Index" calls `PProBridge.getSequenceInfo()` then `POST /timeline/sequence-index`, renders count + duration + marker summary.
+  - **MCP Bridge** (F146): capability + list-tools buttons.
+- `initAgentTab()` is a self-contained module in `main.js` (~250 lines) appended at the end of `initApp()`. No collisions with the existing tab system; uses the same `BackendClient` + `PProBridge` patterns already in `main.js`.
+- `extension/PANEL_PARITY.json` extended with the `agent` UXP-only annotation (cep_equivalent = "command palette + nlp tab"). Panel-parity gate stays green.
+- `tests/test_uxp_agent_tab.py` — 10 cases (HTML button presence, JS event-handler wiring per button, endpoint references per route, every endpoint resolves on the live Flask app, parity-ledger annotation).
+
 ### Added — F146 UXP MCP Bridge
 
 - `opencut/routes/mcp_bridge_routes.py` exposes the MCP sidecar's catalogue + dispatcher onto the main Flask app on `:5679` so UXP panels keep MCP functionality after Adobe's ~Sept-2026 CEP EOL. Three routes:
