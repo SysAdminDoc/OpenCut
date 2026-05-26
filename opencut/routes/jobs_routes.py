@@ -307,6 +307,30 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/analyze/video/narrate",
     "/analyze/video/qa",
     "/generate/opensora2",
+    # Wave Q — compositing, voice gen, infinite video
+    "/video/compose/vace",
+    "/audio/tts/cosyvoice",
+    "/audio/tts/maskgct",
+    "/image/generate/omnigen2",
+    "/generate/skyreels2/t2v",
+    "/generate/skyreels3/avatar",
+    # Wave R — foley + lip sync + camera-controlled I2V + T2V
+    "/audio/foley/ezaudio",
+    "/lipsync/musetalk",
+    "/generate/videox-fun",
+    "/generate/mochi",
+    "/generate/stepvideo",
+    # Wave S — relighting, VSR, ASR, VLM, face tools
+    "/video/relight/iclight",
+    "/video/relight/lav",
+    "/video/relight/diffrenderer",
+    "/video/upscale/seedvr2",
+    "/audio/transcribe/parakeet",
+    "/audio/transcribe/canary",
+    "/analyze/video/qwen3vl",
+    "/analyze/video/internvl3",
+    "/video/face/reage",
+    "/audio/music/heartmula",
 })
 
 
