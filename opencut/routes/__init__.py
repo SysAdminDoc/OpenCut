@@ -138,6 +138,7 @@ def get_core_blueprints():
     from .wave_h_routes import wave_h_bp
     from .wave_k_routes import wave_k_bp
     from .enhance_routes import enhance_bp
+    from .shorts_variants_routes import shorts_variants_bp
     from .wave_l_routes import wave_l_bp
     from .wave_qrs_routes import wave_qrs_bp
     from .workflow import workflow_bp
@@ -241,6 +242,7 @@ def get_core_blueprints():
         wave_h_bp,
         wave_k_bp,
         enhance_bp,
+        shorts_variants_bp,
         wave_l_bp,
         wave_qrs_bp,
         workflow_bp,

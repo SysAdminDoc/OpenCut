@@ -333,6 +333,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/audio/music/heartmula",
     # Enhance macro (RESEARCH_FEATURE_PLAN_2026-05-25 Q3)
     "/enhance/auto",
+    # Shorts A/B variants (RESEARCH_FEATURE_PLAN_2026-05-25 Q8)
+    "/shorts/variants",
 })
 
 

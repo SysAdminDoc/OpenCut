@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added — Shorts A/B Variant Generator (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q8)
+
+- `opencut/core/shorts_variants.py` renders N (2..6) variants of a single short-form window. Variants differ along three axes: **hook tightness** (`hook_offset = i * 0.5`s — variant 0 keeps the full window, later variants trim faster), **caption style** (cycles through `default` / `bold_yellow` / `boxed_dark` / `neon_cyan` / `cinematic_serif` / `top_center`), and **focal point** (alternates `face_track=True` with a fixed top-third crop).
+- `plan_variants(...)` returns the descriptor list without invoking FFmpeg; `generate_variants(...)` performs the actual trim → reframe → caption-burn pipeline per variant. Graceful fallback to a fixed crop when `face_reframe` isn't available.
+- New routes: `POST /shorts/variants` (async via `@async_job`), `POST /shorts/variants/dry-run` (sync, plan-only), `GET /shorts/variants/info`. Added `/shorts/variants` to the queue allowlist.
+- `VariantsResult` is subscriptable (same Flask-jsonify pattern as `EnhanceResult`).
+- Manifest now reports **1,506 routes / 104 blueprints**.
+- `tests/test_shorts_variants.py` covers descriptor math (clamping, hook growth, face-track alternation, caption-style cycle, short-window clamp), window validation, plan-variants shape, the `VariantsResult` subscript protocol, and all three routes (info, dry-run happy + error, queue-allowlist guard).
+
 ### Added — One-Click Enhance Macro (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q3)
 
 - `opencut/core/enhance_auto.py` orchestrates the existing loudness-match → DeepFilter denoise → vidstab stabilize → deflicker → auto-grade chain behind one `enhance(input_path, style=…)` call. Style presets: `social` (-16 LUFS + vibrant grade), `speech` (-16 LUFS, denoise-heavy, no grade), `cinematic` (-23 LUFS + balanced cinematic grade + stabilize + deflicker).
