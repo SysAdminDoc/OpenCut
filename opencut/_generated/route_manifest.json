@@ -1,11 +1,11 @@
 {
   "version": 1,
-  "generated_at": "2026-05-26T00:43:44Z",
-  "total_routes": 1499,
+  "generated_at": "2026-05-26T01:02:55Z",
+  "total_routes": 1500,
   "blueprint_count": 102,
   "method_counts": {
-    "DELETE": 13,
-    "GET": 369,
+    "DELETE": 14,
+    "GET": 370,
     "PATCH": 1,
     "POST": 1117,
     "PUT": 2
@@ -823,9 +823,10 @@
       ]
     },
     "system": {
-      "route_count": 63,
+      "route_count": 64,
       "method_counts": {
-        "GET": 31,
+        "DELETE": 1,
+        "GET": 32,
         "POST": 33
       },
       "sample_rules": [
@@ -9954,6 +9955,15 @@
       ],
       "endpoint": "wave_h.route_changelog_unseen",
       "blueprint": "wave_h"
+    },
+    {
+      "rule": "/system/check-failures",
+      "methods": [
+        "DELETE",
+        "GET"
+      ],
+      "endpoint": "system.check_failures",
+      "blueprint": "system"
     },
     {
       "rule": "/system/crash-packet",

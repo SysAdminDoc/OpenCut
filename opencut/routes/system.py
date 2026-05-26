@@ -2916,6 +2916,29 @@ def system_capabilities():
         return safe_error(exc, "system_capabilities")
 
 
+@system_bp.route("/system/check-failures", methods=["GET", "DELETE"])
+@require_csrf
+def check_failures():
+    """Structured failure reasons for ``check_X_available()`` probes (E5).
+
+    GET: returns ``{check_name: {exception, message, ts}}`` for every
+    probe that raised since process start (or since last DELETE). Empty
+    `{}` when all probes have returned cleanly. Useful for support
+    triage — users can see *why* a feature is unavailable instead of a
+    silent 503.
+
+    DELETE: clears the registry (CSRF-protected).
+    """
+    try:
+        from opencut import checks as _checks
+        if request.method == "DELETE":
+            _checks.clear_check_failures()
+            return jsonify({"ok": True, "cleared": True})
+        return jsonify({"failures": _checks.get_check_failures()})
+    except Exception as e:
+        return safe_error(e, "check_failures")
+
+
 @system_bp.route("/system/feature-state", methods=["GET"])
 def feature_state():
     """Return the feature readiness manifest (F100).
