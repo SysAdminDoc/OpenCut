@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Removed — 951 Tracked .NET Build Artifacts (closes RESEARCH_FEATURE_PLAN_2026-05-25 E2)
+
+- `git rm --cached -r installer/src/OpenCut.Installer/bin installer/src/OpenCut.Installer/obj` — 951 files of DLLs, PDBs, BAML, generated C#, NuGet caches, and intermediate build outputs are no longer tracked. Working-copy files are preserved; clones shrink and PR diffs no longer collect compiler noise.
+- `.gitignore` now blocks `installer/src/*/{bin,obj}/` and `installer/tests/*/{bin,obj}/` (was: only `installer/src/*/obj/`).
+- `tests/test_gitignore_installer_artifacts.py` is the durable guardrail — fails if a future contributor `dotnet build`s and accidentally `git add -A`'s the outputs.
+
 ### Added — Doc-vs-Reality Size Drift Gate (closes RESEARCH_FEATURE_PLAN_2026-05-25 E1)
 
 - Added `scripts/check_doc_sizes.py` enforcing that CLAUDE.md and PROJECT_CONTEXT.md size claims stay within ±15% of the live filesystem.
