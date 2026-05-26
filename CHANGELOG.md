@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added — Wave Q + R + S Route Surface (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q1)
+
+- Routed every Wave Q (compositing, voice gen, infinite video), Wave R (foley, lip-sync, control I2V, consumer/HPC T2V), and Wave S (relighting, VSR, ASR, VLM, face tools) core module behind 503-stub blueprints in `opencut/routes/wave_qrs_routes.py`.
+- 42 new endpoints registered (21 POST processing + 21 GET `/info`); manifest now reports **1,499 routes / 102 blueprints**.
+- Extended `_ALLOWED_QUEUE_ENDPOINTS` so every new POST is queueable.
+- Added `tests/test_wave_qrs_routes.py` with route-registration, `/info` smoke, and queue-allowlist subtests so future Wave additions cannot regress the routing gap.
+
 ### Fixed — Webhook Job Event Compatibility
 
 - Added dotted async-job webhook events (`job.complete`, `job.error`, `job.cancelled`) to the registered event catalogue.

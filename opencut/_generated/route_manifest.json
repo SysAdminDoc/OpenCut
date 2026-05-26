@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-19T00:19:04Z",
-  "total_routes": 1381,
-  "blueprint_count": 101,
+  "generated_at": "2026-05-26T00:43:44Z",
+  "total_routes": 1499,
+  "blueprint_count": 102,
   "method_counts": {
     "DELETE": 13,
-    "GET": 311,
+    "GET": 369,
     "PATCH": 1,
-    "POST": 1057,
+    "POST": 1117,
     "PUT": 2
   },
   "blueprints": {
@@ -1130,9 +1130,9 @@
       ]
     },
     "wave_h": {
-      "route_count": 34,
+      "route_count": 35,
       "method_counts": {
-        "GET": 13,
+        "GET": 14,
         "POST": 21
       },
       "sample_rules": [
@@ -1155,15 +1155,27 @@
       ]
     },
     "wave_l": {
-      "route_count": 9,
+      "route_count": 84,
       "method_counts": {
-        "GET": 5,
-        "POST": 4
+        "GET": 41,
+        "POST": 43
       },
       "sample_rules": [
         "/audio/tts/elevenlabs",
         "/audio/tts/elevenlabs/info",
         "/audio/tts/elevenlabs/voices"
+      ]
+    },
+    "wave_qrs": {
+      "route_count": 42,
+      "method_counts": {
+        "GET": 21,
+        "POST": 21
+      },
+      "sample_rules": [
+        "/audio/tts/cosyvoice",
+        "/video/compose/vace",
+        "/video/compose/vace/info"
       ]
     },
     "workflow": {
@@ -1789,6 +1801,78 @@
       ],
       "endpoint": "content.analytics_usage",
       "blueprint": "content"
+    },
+    {
+      "rule": "/analyze/video/internvl3",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_internvl3_analyze",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/analyze/video/internvl3/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_internvl3_info",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/analyze/video/narrate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_omni_narrate",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/analyze/video/omni/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_omni_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/analyze/video/qa",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_omni_qa",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/analyze/video/qwen3vl",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_qwen3vl_analyze",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/analyze/video/qwen3vl/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_qwen3vl_info",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/analyze/video/vl",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_vl_analyze",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/analyze/video/vl/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_vl_info",
+      "blueprint": "wave_l"
     },
     {
       "rule": "/analyze/virality",
@@ -4111,6 +4195,22 @@
       "blueprint": "audio_post"
     },
     {
+      "rule": "/audio/foley/ezaudio",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_ezaudio_foley",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/audio/foley/ezaudio/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_ezaudio_info",
+      "blueprint": "wave_qrs"
+    },
+    {
       "rule": "/audio/foley/place",
       "methods": [
         "POST"
@@ -4287,12 +4387,100 @@
       "blueprint": "audio"
     },
     {
+      "rule": "/audio/music/acestep",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_music_acestep",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/music/acestep/edit",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_music_acestep_edit",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/music/acestep/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_music_acestep_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/music/diffrhythm",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_music_diffrhythm",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/music/diffrhythm/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_music_diffrhythm_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/music/diffrhythm/styles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_music_diffrhythm_styles",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/music/heartmula",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_heartmula",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/audio/music/heartmula/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_heartmula_info",
+      "blueprint": "wave_qrs"
+    },
+    {
       "rule": "/audio/music/vidmuse",
       "methods": [
         "POST"
       ],
       "endpoint": "wave_h.route_vidmuse",
       "blueprint": "wave_h"
+    },
+    {
+      "rule": "/audio/music/vidmuse/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_h.route_vidmuse_info",
+      "blueprint": "wave_h"
+    },
+    {
+      "rule": "/audio/music/yue",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_yue_music",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/music/yue/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_yue_info",
+      "blueprint": "wave_l"
     },
     {
       "rule": "/audio/normalize",
@@ -4447,6 +4635,62 @@
       "blueprint": "processing"
     },
     {
+      "rule": "/audio/speech/csm",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_csm_speech",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/speech/csm/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_csm_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/speech/dia",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_dia_speech",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/speech/dia/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_dia_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/speech/parler",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_parler_speech",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/speech/parler/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_parler_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/speech/parler/speakers",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_parler_speakers",
+      "blueprint": "wave_l"
+    },
+    {
       "rule": "/audio/stem-remix",
       "methods": [
         "POST"
@@ -4511,6 +4755,86 @@
       "blueprint": "audio_adv"
     },
     {
+      "rule": "/audio/transcribe/canary",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_canary_transcribe",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/audio/transcribe/canary/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_canary_info",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/audio/transcribe/moonshine",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_moonshine_transcribe",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/transcribe/moonshine/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_moonshine_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/transcribe/parakeet",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_parakeet_transcribe",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/audio/transcribe/parakeet/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_parakeet_info",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/audio/tts/chatterbox",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_tts_chatterbox",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/tts/chatterbox/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_tts_chatterbox_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/tts/cosyvoice",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_cosyvoice_tts",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/audio/tts/cosyvoice/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_cosyvoice_info",
+      "blueprint": "wave_qrs"
+    },
+    {
       "rule": "/audio/tts/elevenlabs",
       "methods": [
         "POST"
@@ -4567,6 +4891,46 @@
       "blueprint": "audio"
     },
     {
+      "rule": "/audio/tts/kokoro",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_tts_kokoro",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/tts/kokoro/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_tts_kokoro_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/tts/kokoro/voices",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_tts_kokoro_voices",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/tts/maskgct",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_maskgct_tts",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/audio/tts/maskgct/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_maskgct_info",
+      "blueprint": "wave_qrs"
+    },
+    {
       "rule": "/audio/tts/omnivoice",
       "methods": [
         "POST"
@@ -4581,6 +4945,30 @@
       ],
       "endpoint": "wave_h.route_omnivoice_models",
       "blueprint": "wave_h"
+    },
+    {
+      "rule": "/audio/tts/spark",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_tts_spark",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/tts/spark/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_tts_spark_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/audio/tts/spark/voices",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_tts_spark_voices",
+      "blueprint": "wave_l"
     },
     {
       "rule": "/audio/tts/subtitled",
@@ -6400,6 +6788,30 @@
       "blueprint": "generative"
     },
     {
+      "rule": "/generate/allegro/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_allegro_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/allegro/t2v",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_allegro_t2v",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/allegro/ti2v",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_allegro_ti2v",
+      "blueprint": "wave_l"
+    },
+    {
       "rule": "/generate/cloud/backends",
       "methods": [
         "GET"
@@ -6424,6 +6836,62 @@
       "blueprint": "wave_h"
     },
     {
+      "rule": "/generate/cogvideox",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_cogvideox_t2v",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/cogvideox/i2v",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_cogvideox_i2v",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/cogvideox/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_cogvideox_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/consisid",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_consisid",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/consisid/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_consisid_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/framepack",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_framepack_generate",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/framepack/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_framepack_info",
+      "blueprint": "wave_l"
+    },
+    {
       "rule": "/generate/ltx/backends",
       "methods": [
         "GET"
@@ -6440,6 +6908,54 @@
       "blueprint": "wave_k"
     },
     {
+      "rule": "/generate/ltxv/extend",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_ltxv_extend",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/ltxv/i2v",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_ltxv_i2v",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/ltxv/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_ltxv_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/ltxv/t2v",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_ltxv_t2v",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/mochi",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_mochi",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/generate/mochi/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_mochi_info",
+      "blueprint": "wave_qrs"
+    },
+    {
       "rule": "/generate/opensora",
       "methods": [
         "POST"
@@ -6448,12 +6964,180 @@
       "blueprint": "wave_k"
     },
     {
+      "rule": "/generate/opensora2",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_opensora2",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/opensora2/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_opensora2_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/skyreels2/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_skyreels2_info",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/generate/skyreels2/t2v",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_skyreels2_t2v",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/generate/skyreels3/avatar",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_skyreels3_avatar",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/generate/skyreels3/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_skyreels3_info",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/generate/stepvideo",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_stepvideo",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/generate/stepvideo/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_stepvideo_info",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/generate/videox-fun",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_videox_fun",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/generate/videox-fun/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_videox_fun_info",
+      "blueprint": "wave_qrs"
+    },
+    {
       "rule": "/generate/wan-vace",
       "methods": [
         "POST"
       ],
       "endpoint": "wave_k.route_gen_video_wan_vace",
       "blueprint": "wave_k"
+    },
+    {
+      "rule": "/generate/wan2.2/animate",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_wan22_animate",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/wan2.2/animate/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_wan22_animate_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/wan2.2/fast",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_fastvideo",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/wan2.2/fast/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_fastvideo_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/wan2.2/i2v",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_wan22_i2v",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/wan2.2/i2v/quantization/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_lightx2v_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/wan2.2/i2v/quantized",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_lightx2v",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/wan2.2/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_wan22_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/wan2.2/s2v",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_wan22_s2v",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/wan2.2/s2v/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_wan22_s2v_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/generate/wan2.2/t2v",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_wan22_t2v",
+      "blueprint": "wave_l"
     },
     {
       "rule": "/guest/compile",
@@ -6534,6 +7218,86 @@
       ],
       "endpoint": "production.image_sequence_detect",
       "blueprint": "production"
+    },
+    {
+      "rule": "/image/edit/hidream",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_hidream_edit",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/image/edit/hidream/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_hidream_edit_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/image/edit/kontext",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_kontext_edit",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/image/edit/kontext/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_kontext_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/image/generate/cogview4",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_cogview4_t2i",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/image/generate/cogview4/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_cogview4_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/image/generate/hidream",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_hidream_t2i",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/image/generate/hidream/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_hidream_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/image/generate/omnigen2",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_omnigen2",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/image/generate/omnigen2/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_omnigen2_info",
+      "blueprint": "wave_qrs"
     },
     {
       "rule": "/info",
@@ -6766,6 +7530,22 @@
       ],
       "endpoint": "wave_h.route_lipsync_gaussian",
       "blueprint": "wave_h"
+    },
+    {
+      "rule": "/lipsync/musetalk",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_musetalk_lipsync",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/lipsync/musetalk/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_musetalk_info",
+      "blueprint": "wave_qrs"
     },
     {
       "rule": "/llm/status",
@@ -7342,6 +8122,30 @@
       ],
       "endpoint": "editing_wf.paper_edit_export",
       "blueprint": "editing_wf"
+    },
+    {
+      "rule": "/pipeline/digital_twin",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_digital_twin",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/pipeline/digital_twin/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_digital_twin_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/pipeline/digital_twin/stages",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_digital_twin_stages",
+      "blueprint": "wave_l"
     },
     {
       "rule": "/planar-track/export",
@@ -10321,6 +11125,38 @@
       "blueprint": "creative"
     },
     {
+      "rule": "/video/compose/depth_segment",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_depth_segment_compose",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/video/compose/depth_segment/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_compose_info",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/video/compose/vace",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_vace_compose",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/video/compose/vace/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_vace_info",
+      "blueprint": "wave_qrs"
+    },
+    {
       "rule": "/video/cursor-zoom/resolve",
       "methods": [
         "POST"
@@ -10457,6 +11293,22 @@
       "blueprint": "wave_k"
     },
     {
+      "rule": "/video/depth/estimate-v2",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_depth_estimate",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/video/depth/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_depth_info",
+      "blueprint": "wave_l"
+    },
+    {
       "rule": "/video/depth/install",
       "methods": [
         "POST"
@@ -10479,6 +11331,14 @@
       ],
       "endpoint": "video_specialty.video_depth_parallax",
       "blueprint": "video_specialty"
+    },
+    {
+      "rule": "/video/depth/parallax-v2",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_depth_parallax",
+      "blueprint": "wave_l"
     },
     {
       "rule": "/video/detect-deepfake",
@@ -10703,6 +11563,22 @@
       ],
       "endpoint": "video_ai.install_mediapipe",
       "blueprint": "video_ai"
+    },
+    {
+      "rule": "/video/face/reage",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_face_reage",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/video/face/reage/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_face_reage_info",
+      "blueprint": "wave_qrs"
     },
     {
       "rule": "/video/face/reshape",
@@ -11385,6 +12261,54 @@
       "blueprint": "video_vfx"
     },
     {
+      "rule": "/video/relight/diffrenderer",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_diffrenderer",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/video/relight/diffrenderer/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_diffrenderer_info",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/video/relight/iclight",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_iclight_relight",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/video/relight/iclight/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_iclight_info",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/video/relight/lav",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_lav_relight",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/video/relight/lav/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_lav_info",
+      "blueprint": "wave_qrs"
+    },
+    {
       "rule": "/video/remove/capabilities",
       "methods": [
         "GET"
@@ -11535,6 +12459,22 @@
       ],
       "endpoint": "video_vfx.search_face_route",
       "blueprint": "video_vfx"
+    },
+    {
+      "rule": "/video/segment/sam2",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_l.route_sam2_segment",
+      "blueprint": "wave_l"
+    },
+    {
+      "rule": "/video/segment/sam2/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_l.route_sam2_info",
+      "blueprint": "wave_l"
     },
     {
       "rule": "/video/shape-animation/fill-transition",
@@ -11863,6 +12803,22 @@
       ],
       "endpoint": "video_ai.upscale_run",
       "blueprint": "video_ai"
+    },
+    {
+      "rule": "/video/upscale/seedvr2",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "wave_qrs.route_seedvr2_upscale",
+      "blueprint": "wave_qrs"
+    },
+    {
+      "rule": "/video/upscale/seedvr2/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "wave_qrs.route_seedvr2_info",
+      "blueprint": "wave_qrs"
     },
     {
       "rule": "/video/upscale/smart",
