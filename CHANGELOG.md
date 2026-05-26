@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added — Generated README Badges (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q4/E8)
+
+- Added `scripts/sync_badges.py` that reads `opencut/_generated/route_manifest.json` and the live `tests/test_*.py` count and rewrites the README "API Routes" and "Tests" badges in place. `--check` exits 1 on drift; `--json` is for CI.
+- Synced the visible badges: `API Routes-1344` → `1499` and `Tests-7600+` → `7700+`.
+- New `badges` step in `scripts/release_smoke.py` (between `version-sync` and `route-manifest`) so README drift fails CI.
+- `tests/test_sync_badges.py` covers regex matching, idempotent replacement, and an end-to-end `--check` drift test against a mutated README copy.
+
 ### Added — Wave Q + R + S Route Surface (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q1)
 
 - Routed every Wave Q (compositing, voice gen, infinite video), Wave R (foley, lip-sync, control I2V, consumer/HPC T2V), and Wave S (relighting, VSR, ASR, VLM, face tools) core module behind 503-stub blueprints in `opencut/routes/wave_qrs_routes.py`.

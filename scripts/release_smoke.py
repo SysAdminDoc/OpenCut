@@ -442,6 +442,34 @@ def step_version_sync(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_badges(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    script = REPO_ROOT / "scripts" / "sync_badges.py"
+    if not script.exists():
+        return StepResult(
+            "badges",
+            "skipped",
+            skipped_reason="scripts/sync_badges.py missing",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    result = _run([sys.executable, str(script), "--check"], cwd=REPO_ROOT)
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "badges",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "README badges match live counts"
+            if status == "ok"
+            else "README badge drift detected (run: python scripts/sync_badges.py)"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_text_shaping(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     result = _run(
@@ -905,6 +933,7 @@ def step_panel_source(_args: argparse.Namespace) -> StepResult:
 STEPS: List[StepDefinition] = [
     StepDefinition("bootstrap", step_bootstrap, "Run scripts/bootstrap_check.py"),
     StepDefinition("version-sync", step_version_sync, "Check version surfaces"),
+    StepDefinition("badges", step_badges, "Check README badges match live counts"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
     StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),
