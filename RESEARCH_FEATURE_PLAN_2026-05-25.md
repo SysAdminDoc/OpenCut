@@ -31,12 +31,17 @@
 > | UXP Agent tab (UI for F143/Q3/Q7/Q8/F146) | ✅ shipped | `1e51521` |
 > | E6 follow-on — i18n migration (4 E6 strings) | ✅ shipped | `79866b3` |
 > | E6 extended — i18n migration (4 more high-impact alerts) | ✅ shipped | `71cc3fd` |
+> | UI-1 — UXP Agent tab CSS polish (oc-step-list, oc-card--nested) | ✅ shipped | `6142e17` |
+> | UI-2 — F236 FCC caption display-settings UI (UXP Captions tab) | ✅ shipped | `8d7ebd2` |
+> | UI-3 — i18n migration round 3 (5 more bare-English prompts) | ✅ shipped | `8844191` |
 >
 > **Remaining work (deferred to dedicated passes):**
 >
-> - **Phase 3 deadline-gated** items remain on PROJECT_CONTEXT.md `Now` tier: F202 macOS notarization first signed release (2026-09-01, needs GitHub Secrets), F236 FCC caption display-settings discoverability (2026-08-17, repository-side already in place per PROJECT_CONTEXT), F252 UXP WebView cutover (CEP EOL ~2026-09, months of UI work).
-> - **i18n migration breadth** — 8 strings migrated this loop; ~100+ bare-English `showAlert/showToast` sites remain in `main.js`. The drift gate prevents new drift; reducing the 142 dead-key floor needs targeted cleanup. Tackle in rolling small batches rather than one mega-PR.
-> - **F144 prompt-tuning sessions** — structured-JSON path is wired and tested; the prompt itself can be tuned against real LLM outputs in a focused session with a live Ollama instance.
+> - **F202 macOS notarization** — needs `APPLE_ID` / `APPLE_TEAM_ID` GitHub Secrets before first signed release (deadline 2026-09-01).
+> - **F252 UXP WebView cutover** — months-scale Bolt UXP migration (CEP EOL ~2026-09). The new UXP Agent tab + Captions display-settings card already use the modern UXP pattern; the broader CEP→UXP cutover work continues.
+> - **F236 in CEP** — UXP got the display-settings card in UI-2; the same card can be replicated in the CEP captions tab in a follow-on pass.
+> - **i18n migration breadth** — 13 keys migrated across three rounds; ~85+ bare-English sites remain in `main.js`. Continue in rolling 5-string batches per loop.
+> - **F144 prompt-tuning** — structured-JSON path is wired and tested with mocked LLM; the prompt itself benefits from real Ollama runs in a focused session.
 
 ---
 
