@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-26T02:01:44Z",
-  "total_routes": 1503,
-  "blueprint_count": 103,
+  "generated_at": "2026-05-26T02:06:03Z",
+  "total_routes": 1506,
+  "blueprint_count": 104,
   "method_counts": {
     "DELETE": 14,
-    "GET": 371,
+    "GET": 372,
     "PATCH": 1,
-    "POST": 1119,
+    "POST": 1121,
     "PUT": 2
   },
   "blueprints": {
@@ -785,6 +785,18 @@
         "/presets",
         "/presets/delete",
         "/presets/save"
+      ]
+    },
+    "shorts_variants": {
+      "route_count": 3,
+      "method_counts": {
+        "GET": 1,
+        "POST": 2
+      },
+      "sample_rules": [
+        "/shorts/variants",
+        "/shorts/variants/dry-run",
+        "/shorts/variants/info"
       ]
     },
     "solver_agent": {
@@ -9471,6 +9483,30 @@
       ],
       "endpoint": "wave_h.route_onboarding_post",
       "blueprint": "wave_h"
+    },
+    {
+      "rule": "/shorts/variants",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "shorts_variants.route_shorts_variants",
+      "blueprint": "shorts_variants"
+    },
+    {
+      "rule": "/shorts/variants/dry-run",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "shorts_variants.route_shorts_variants_dry_run",
+      "blueprint": "shorts_variants"
+    },
+    {
+      "rule": "/shorts/variants/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "shorts_variants.route_shorts_variants_info",
+      "blueprint": "shorts_variants"
     },
     {
       "rule": "/shutdown",
