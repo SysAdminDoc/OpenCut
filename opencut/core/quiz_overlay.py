@@ -304,9 +304,10 @@ def generate_quiz_questions(
         distractors = _generate_distractors(kw, all_keyword_strings)
         correct_answer = kw
 
-        # Shuffle options: place correct answer at a deterministic position
+        # Shuffle options: place correct answer at a deterministic position.
+        # MD5 here is a deterministic shuffle seed, not a security primitive.
         import hashlib
-        hash_val = int(hashlib.md5(kw.encode()).hexdigest()[:8], 16)
+        hash_val = int(hashlib.md5(kw.encode(), usedforsecurity=False).hexdigest()[:8], 16)
         correct_idx = hash_val % 4
 
         options = list(distractors[:3])

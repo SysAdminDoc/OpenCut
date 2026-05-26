@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added — Bandit Static Security Lint on PR (closes RESEARCH_FEATURE_PLAN_2026-05-25 E3 follow-on)
+
+- Added `bandit -r opencut/ --severity-level high` to the PR-fast workflow. SSRF, eval(), shell=True, weak hash (B324), and path-traversal patterns now fail CI on every PR.
+- Cleared the 8 pre-existing high-severity findings (all B324 weak MD5/SHA1 in non-security contexts — fingerprints, IDs, DCP/IMF spec hashes). Each call site now passes `usedforsecurity=False` and carries a comment explaining the non-security use.
+- Files touched: `audio_fingerprint.py`, `dcp_export.py`, `imf_package.py`, `quiz_overlay.py`, `realtime_ai.py`, `review_links.py`.
+
 ### Added — CEP/UXP Tab Parity Gate (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q5)
 
 - Added `extension/PANEL_PARITY.json` — the durable ledger of CEP-only and UXP-only tabs with justification fields. CEP has `export` + `nlp` (legacy; superseded by UXP `deliverables` + the F143 chat sidebar after CEP EOL). UXP has `search` + `deliverables` (UXP-first surfaces).

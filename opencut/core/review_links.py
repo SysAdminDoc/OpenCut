@@ -75,7 +75,8 @@ def _generate_token(video_path: str) -> str:
 
 def _generate_id(video_path: str) -> str:
     raw = f"review-{video_path}-{time.time()}"
-    return hashlib.md5(raw.encode()).hexdigest()[:16]
+    # MD5 here is an internal ID generator, not a security primitive.
+    return hashlib.md5(raw.encode(), usedforsecurity=False).hexdigest()[:16]
 
 
 # ------------------------------------------------------------------
@@ -162,8 +163,10 @@ def add_review_comment(
     if review_id not in reviews:
         raise KeyError(f"Review not found: {review_id}")
 
+    # MD5 here is an internal ID generator, not a security primitive.
     comment_id = hashlib.md5(
-        f"{review_id}-{timestamp}-{time.time()}".encode()
+        f"{review_id}-{timestamp}-{time.time()}".encode(),
+        usedforsecurity=False,
     ).hexdigest()[:12]
 
     comment = ReviewComment(

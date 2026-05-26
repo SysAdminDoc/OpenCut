@@ -226,9 +226,13 @@ def _imf_uuid() -> str:
 
 
 def _sha1_file(filepath: str) -> str:
-    """Compute SHA-1 hash of a file as base64."""
+    """Compute SHA-1 hash of a file as base64.
+
+    SHA-1 is mandated by the IMF / SMPTE 2067 spec for PKL and AssetMap
+    hashes; ``usedforsecurity=False`` signals interoperability use.
+    """
     import base64
-    sha = hashlib.sha1()
+    sha = hashlib.sha1(usedforsecurity=False)
     with open(filepath, "rb") as f:
         while True:
             chunk = f.read(65536)

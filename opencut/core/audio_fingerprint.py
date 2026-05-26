@@ -116,7 +116,8 @@ def _hash_chunk(bins: List[int]) -> str:
     """Hash a spectral bin vector into a compact hex fingerprint."""
     # Binarize: each bin above median = 1, below = 0
     if not bins:
-        return hashlib.md5(b"empty").hexdigest()[:16]
+        # MD5 here is a fingerprint, not a security primitive.
+        return hashlib.md5(b"empty", usedforsecurity=False).hexdigest()[:16]
 
     sorted_bins = sorted(bins)
     median = sorted_bins[len(sorted_bins) // 2]
@@ -127,7 +128,8 @@ def _hash_chunk(bins: List[int]) -> str:
             bits |= (1 << i)
 
     raw = struct.pack(">I", bits & 0xFFFFFFFF)
-    return hashlib.md5(raw).hexdigest()[:16]
+    # MD5 here is a fingerprint, not a security primitive.
+    return hashlib.md5(raw, usedforsecurity=False).hexdigest()[:16]
 
 
 # ---------------------------------------------------------------------------

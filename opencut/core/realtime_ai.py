@@ -175,7 +175,8 @@ def _cache_key(session_id: str, timestamp: float, params: dict) -> str:
     ts_rounded = round(timestamp, 2)
     params_str = json.dumps(params, sort_keys=True) if params else ""
     raw = f"{session_id}:{ts_rounded}:{params_str}"
-    return hashlib.md5(raw.encode()).hexdigest()
+    # MD5 here is a cache-key hash, not a security primitive.
+    return hashlib.md5(raw.encode(), usedforsecurity=False).hexdigest()
 
 
 def _cache_get(key: str) -> Optional[PreviewFrame]:
