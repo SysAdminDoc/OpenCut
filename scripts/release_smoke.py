@@ -442,6 +442,34 @@ def step_version_sync(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_test_breadth(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    script = REPO_ROOT / "scripts" / "test_breadth_gate.py"
+    if not script.exists():
+        return StepResult(
+            "test-breadth",
+            "skipped",
+            skipped_reason="scripts/test_breadth_gate.py missing",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    result = _run([sys.executable, str(script), "--check"], cwd=REPO_ROOT)
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "test-breadth",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "core-module test reference ratio within floor"
+            if status == "ok"
+            else "core-module test reference ratio below floor"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_i18n_drift(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     script = REPO_ROOT / "scripts" / "i18n_lint.py"
@@ -1053,6 +1081,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("subprocess-timeouts", step_subprocess_timeouts, "AST lint: every subprocess call must be bounded by a timeout"),
     StepDefinition("panel-parity", step_panel_parity, "CEP <-> UXP tab parity ledger up to date"),
     StepDefinition("i18n-drift", step_i18n_drift, "CEP locale: no missing keys, dead-key floor not exceeded"),
+    StepDefinition("test-breadth", step_test_breadth, "opencut/core/ test-reference ratio within floor"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
     StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),
