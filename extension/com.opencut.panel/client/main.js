@@ -2598,8 +2598,8 @@
             try {
                 var data = JSON.parse(result);
                 if (data.path) selectFile(data.path, data.name || data.path.split(/[/\\]/).pop());
-                else showAlert("Could not get clip path.");
-            } catch (e) { showAlert("Could not read selection."); }
+                else showAlert(t("toast.clip_path_unavailable", "Could not get clip path."));
+            } catch (e) { showAlert(t("toast.selection_unreadable", "Could not read selection.")); }
         });
     }
 
@@ -4340,7 +4340,7 @@
         if (el.stemOther.checked) stems.push("other");
         
         if (stems.length === 0) {
-            showAlert("Choose at least one stem type to extract (Vocals, Drums, etc.)");
+            showAlert(t("toast.choose_stem_types", "Choose at least one stem type to extract (Vocals, Drums, etc.)"));
             return;
         }
         
@@ -4580,7 +4580,7 @@
 
     function runBrollGenerate() {
         var prompt = (document.getElementById("brollGenPrompt") || {}).value || "";
-        if (!prompt.trim()) { showAlert("Enter a description for the B-roll clip."); return; }
+        if (!prompt.trim()) { showAlert(t("toast.enter_broll_prompt", "Enter a description for the B-roll clip.")); return; }
         var backend = (document.getElementById("brollGenBackend") || {}).value || "auto";
         var seedEl = document.getElementById("brollGenSeed");
         var seed = seedEl && seedEl.value ? parseInt(seedEl.value) : null;
@@ -5827,7 +5827,7 @@
     function runTts() {
         var text = el.ttsText.value.trim();
         if (!text) {
-            showAlert("Enter text to generate speech.");
+            showAlert(t("toast.enter_tts_text", "Enter text to generate speech."));
             return;
         }
         var rateVal = parseInt(el.ttsRate.value);

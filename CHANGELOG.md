@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Changed — i18n Migration Round 3 (selection-failure + missing-input prompts)
+
+- Migrated 5 more bare-English alerts in `main.js` to i18n keys: `toast.clip_path_unavailable`, `toast.selection_unreadable`, `toast.choose_stem_types`, `toast.enter_broll_prompt`, `toast.enter_tts_text`.
+- `client/locales/en.json` grows from 434 → 439 keys; `i18n-drift` gate reports **297 consumers** (was 292; +5 new JS consumers). Dead-key floor unchanged at 142.
+- `tests/test_i18n_hardcoded_migration.py` extended to 13 keys (was 8); 26 subtests now assert each `t("…", fallback)` call site exists and the bare-English form is gone.
+- Migration breadth across all three rounds: 13 keys migrated, ~85+ bare-English sites remaining in `main.js` for future rolling batches.
+
 ### Added — F236 FCC Caption Display-Settings UI (UXP)
 
 - New "Caption Display Settings (FCC)" card at the end of the Captions tab in `extension/com.opencut.uxp/`. Surfaces the 7 user-overridable token dropdowns (font, size, text color/opacity, background color/opacity, edge style) plus Preview + Reset buttons and a live preview area. Compliance-date string (currently `2026-08-17`) is overlaid from the backend's `compliance_date` field at runtime so the UI stays accurate if the regulation moves.
