@@ -30,18 +30,20 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pytest
+          pip install ruff pytest pip-audit
           pip install -e ".[standard]"
 
       - name: Install CEP panel dependencies
         working-directory: extension/com.opencut.panel
         run: npm ci
 
+      # PR-fast runs the supply-chain triad (pip-audit, npm-advisory, esbuild-pin)
+      # so a vulnerable dep introduced in a PR fails fast on every push.
+      # Cross-OS / heavyweight gates (panel-source, adobe-premierepro-versions)
+      # stay on Release Full where they have time + cross-platform runners.
+      # (RESEARCH_FEATURE_PLAN_2026-05-25.md E3.)
       - name: Run fast release smoke
         run: |
           python scripts/release_smoke.py --json \
-            --skip pip-audit \
-            --skip npm-advisory \
-            --skip esbuild-pin \
             --skip panel-source \
             --skip adobe-premierepro-versions
