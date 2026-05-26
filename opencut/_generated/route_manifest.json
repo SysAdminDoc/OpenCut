@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-26T02:16:26Z",
-  "total_routes": 1514,
-  "blueprint_count": 106,
+  "generated_at": "2026-05-26T02:26:13Z",
+  "total_routes": 1517,
+  "blueprint_count": 107,
   "method_counts": {
     "DELETE": 14,
-    "GET": 375,
+    "GET": 377,
     "PATCH": 1,
-    "POST": 1126,
+    "POST": 1127,
     "PUT": 2
   },
   "blueprints": {
@@ -514,6 +514,18 @@
         "/journal/list",
         "/journal/mark-reverted/<int:entry_id>",
         "/journal/record"
+      ]
+    },
+    "mcp_bridge": {
+      "route_count": 3,
+      "method_counts": {
+        "GET": 2,
+        "POST": 1
+      },
+      "sample_rules": [
+        "/mcp/call",
+        "/mcp/info",
+        "/mcp/tools"
       ]
     },
     "motion_design": {
@@ -7723,6 +7735,30 @@
       ],
       "endpoint": "timeline.markers_import",
       "blueprint": "timeline"
+    },
+    {
+      "rule": "/mcp/call",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "mcp_bridge.route_mcp_call",
+      "blueprint": "mcp_bridge"
+    },
+    {
+      "rule": "/mcp/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "mcp_bridge.route_mcp_info",
+      "blueprint": "mcp_bridge"
+    },
+    {
+      "rule": "/mcp/tools",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "mcp_bridge.route_mcp_tools",
+      "blueprint": "mcp_bridge"
     },
     {
       "rule": "/media/find-duplicates",
