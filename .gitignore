@@ -27,7 +27,11 @@ htmlcov/
 !tests/**/*.xml
 installer/dist/
 installer/publish/
+# .NET build outputs (RESEARCH_FEATURE_PLAN_2026-05-25 E2)
 installer/src/*/obj/
+installer/src/*/bin/
+installer/tests/*/obj/
+installer/tests/*/bin/
 ffmpeg/
 node_modules/
 extension/**/client/dist/
