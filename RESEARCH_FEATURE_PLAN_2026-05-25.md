@@ -514,7 +514,7 @@ Restated for clarity (also Q4): the README warning at line 11 already says "Rout
   - Acceptance: `GET /system/check-failures` returns last failure exception class + message per check.
   - Verify: `tests/test_checks_failure_diagnostics.py`.
 
-- [ ] **P1 — Per-blueprint coverage floor (Q9)**
+- [x] **P1 — Per-blueprint coverage floor (Q9)** — shipped as `scripts/test_breadth_gate.py` (cheap proxy: ratio of `opencut/core/*` modules referenced by any `tests/test_*.py`). Floor 75%; current 78.3%. Wired into release-smoke + tested. The original "93% untested" claim was a sampling artifact.
   - Why: Global 54% hides 93% untested modules.
   - Evidence: subagent.
   - Touches: `.coveragerc` / `pyproject.toml [tool.coverage]`, `scripts/coverage_floor_per_blueprint.py`.

@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — Test Breadth Ratchet Gate (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q9)
+
+- The research file's "93% untested" finding was a sampling artifact — it counted only modules with a dedicated `test_<name>.py` file and missed indirect imports through shared fixtures. The real reference ratio is 78.3%.
+- Added `scripts/test_breadth_gate.py` that scans `tests/test_*.py` for `from opencut.core(.X) import` / `import opencut.core.X` and asserts the referenced/total ratio stays at or above `MIN_RATIO = 0.75`. Cheap to run; no pytest pass needed.
+- Today: 591 core modules, 463 referenced (78.3%), 128 untested.
+- New release-smoke `test-breadth` step after `i18n-drift`.
+- `tests/test_breadth_gate.py` covers live-ratio assertion + regex correctness for dotted-form, bare-form, and direct-import shapes.
+
 ### Added — CEP a11y Invariant Tests (closes RESEARCH_FEATURE_PLAN_2026-05-25 E7)
 
 - The research file flagged "toasts lack aria-live; modal focus trap incomplete" — investigation showed both are actually implemented (showToast at ~main.js:9902 sets `role`/`aria-live`/`aria-atomic`; `initOverlayFocusManagement`/`activateOverlay`/`syncOverlayBackgroundState` handle Tab + Escape + return-focus + `inert` + `aria-hidden` on background app).
