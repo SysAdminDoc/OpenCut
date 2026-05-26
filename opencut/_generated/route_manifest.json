@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-26T01:02:55Z",
-  "total_routes": 1500,
-  "blueprint_count": 102,
+  "generated_at": "2026-05-26T02:01:44Z",
+  "total_routes": 1503,
+  "blueprint_count": 103,
   "method_counts": {
     "DELETE": 14,
-    "GET": 370,
+    "GET": 371,
     "PATCH": 1,
-    "POST": 1117,
+    "POST": 1119,
     "PUT": 2
   },
   "blueprints": {
@@ -371,6 +371,18 @@
         "/captions/style/preview",
         "/captions/styles",
         "/engagement/predict"
+      ]
+    },
+    "enhance": {
+      "route_count": 3,
+      "method_counts": {
+        "GET": 1,
+        "POST": 2
+      },
+      "sample_rules": [
+        "/enhance/auto",
+        "/enhance/auto/dry-run",
+        "/enhance/auto/styles"
       ]
     },
     "enhanced_media": {
@@ -6339,6 +6351,30 @@
       ],
       "endpoint": "system.engine_resolve",
       "blueprint": "system"
+    },
+    {
+      "rule": "/enhance/auto",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "enhance.route_enhance_auto",
+      "blueprint": "enhance"
+    },
+    {
+      "rule": "/enhance/auto/dry-run",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "enhance.route_enhance_auto_dry_run",
+      "blueprint": "enhance"
+    },
+    {
+      "rule": "/enhance/auto/styles",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "enhance.route_enhance_auto_styles",
+      "blueprint": "enhance"
     },
     {
       "rule": "/events/moments",
