@@ -442,6 +442,34 @@ def step_version_sync(_args: argparse.Namespace) -> StepResult:
     )
 
 
+def step_doc_sizes(_args: argparse.Namespace) -> StepResult:
+    start = time.time()
+    script = REPO_ROOT / "scripts" / "check_doc_sizes.py"
+    if not script.exists():
+        return StepResult(
+            "doc-sizes",
+            "skipped",
+            skipped_reason="scripts/check_doc_sizes.py missing",
+            duration_ms=int((time.time() - start) * 1000),
+        )
+    result = _run([sys.executable, str(script), "--check"], cwd=REPO_ROOT)
+    duration = int((time.time() - start) * 1000)
+    status = "ok" if result.returncode == 0 else "fail"
+    return StepResult(
+        "doc-sizes",
+        status,
+        exit_code=result.returncode,
+        duration_ms=duration,
+        message=(
+            "documented sizes match live filesystem"
+            if status == "ok"
+            else "CLAUDE.md / PROJECT_CONTEXT.md size drift > 15% (run: python scripts/check_doc_sizes.py)"
+        ),
+        stdout_tail=_tail(result.stdout),
+        stderr_tail=_tail(result.stderr),
+    )
+
+
 def step_badges(_args: argparse.Namespace) -> StepResult:
     start = time.time()
     script = REPO_ROOT / "scripts" / "sync_badges.py"
@@ -934,6 +962,7 @@ STEPS: List[StepDefinition] = [
     StepDefinition("bootstrap", step_bootstrap, "Run scripts/bootstrap_check.py"),
     StepDefinition("version-sync", step_version_sync, "Check version surfaces"),
     StepDefinition("badges", step_badges, "Check README badges match live counts"),
+    StepDefinition("doc-sizes", step_doc_sizes, "Check CLAUDE.md/PROJECT_CONTEXT.md sizes within ±15% of filesystem"),
     StepDefinition("route-manifest", step_route_manifest, "Check route manifest is in sync"),
     StepDefinition("api-aliases", step_api_aliases, "Check /api alias manifest is in sync"),
     StepDefinition("feature-readiness", step_feature_readiness, "Check route/check readiness manifest is in sync"),

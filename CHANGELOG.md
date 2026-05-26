@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — Doc-vs-Reality Size Drift Gate (closes RESEARCH_FEATURE_PLAN_2026-05-25 E1)
+
+- Added `scripts/check_doc_sizes.py` enforcing that CLAUDE.md and PROJECT_CONTEXT.md size claims stay within ±15% of the live filesystem.
+- Refreshed stale claims: `client/main.js` (~7,730 → ~15,263 lines), `client/index.html` (~3,210 → ~4,061), `client/style.css` (~4,100 → ~17,870), `host/index.jsx` (~2,230 → ~2,736), UXP `main.js` (~1,523 → ~5,568), UXP `index.html` (~771 → ~1,466), UXP `style.css` (~909 → ~3,863).
+- Refreshed §2 PROJECT_CONTEXT counts to live filesystem: routes 1,381 → 1,499, blueprints 101 → 102, core modules 538 → 592, test files 190 → 194.
+- New `doc-sizes` release-smoke step (after `badges`) so future drift fails CI.
+- `tests/test_check_doc_sizes.py` covers regex matching against legacy `(~N lines)` and dated `(~N lines as of YYYY; was ~M lines through v1.9.x)` forms, plus end-to-end `--check` drift detection.
+
 ### Changed — PR-Fast Now Runs the Supply-Chain Triad (closes RESEARCH_FEATURE_PLAN_2026-05-25 E3)
 
 - `pip-audit`, `npm-advisory`, and `esbuild-pin` now run on every pull request, not just Release Full. A vulnerable dep introduced in a PR now fails CI in seconds instead of waiting for tag push.
