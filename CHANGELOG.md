@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — UXP Agent Tab CSS Polish
+
+- `extension/com.opencut.uxp/style.css` gained four selectors that the Agent-tab HTML (commit `1e51521`) referenced but were missing: `.oc-card--nested`, `.oc-step-list` (with nested `li.oc-step-error` variant using the existing `--error` color token), `#agentChatReviewNotes`, `#agentChatReviewSummary`. Step list uses the existing `--accent` / `--accent-dim` tokens for the normal state, `--error` / `--error-dim` for failed/rejected steps — matches the rest of the design language.
+- `tests/test_uxp_agent_tab_css.py` is the regression guard: asserts required selectors exist, the brace count stays balanced, and the error state consumes the `--error` CSS variable (not a hard-coded hex).
+
 ### Changed — i18n Hardcoded-English Migration (E6 + high-impact alerts)
 
 - Migrated the four toast strings called out in `RESEARCH_FEATURE_PLAN_2026-05-25` E6 from bare English to i18n keys: `toast.server_reconnected`, `toast.update_available` (with `{version}` interpolation), `toast.refreshing_media`, `toast.save_first`.
