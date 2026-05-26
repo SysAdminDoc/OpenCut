@@ -442,13 +442,29 @@ SYSTEM_PROMPT_REVIEW = (
 )
 
 
+SYSTEM_PROMPT_REVIEW_STRUCTURED = (
+    "You are a quality reviewer for an automated video editor. "
+    "Compare the user's intent against the steps the conductor ran. "
+    "Reply with STRICT JSON only (no prose, no markdown fences). "
+    "Schema: {\"matched\": bool, \"drift_score\": int 0-100 "
+    "(100 = perfect match), \"drift_notes\": [string], "
+    "\"suggested_retry\": null | {\"label\": string, "
+    "\"endpoint\": string (an OpenCut REST route like /silence), "
+    "\"payload\": object, \"rationale\": string}}. "
+    "Use suggested_retry to propose ONE remediation step that would "
+    "close the most important drift; use null when matched is true."
+)
+
+
 @dataclass
 class ReviewResult:
     session_id: str
     intent: str
     drift_notes: List[str] = field(default_factory=list)
     matched: bool = False
-    source: str = "heuristic"   # "llm" or "heuristic"
+    source: str = "heuristic"   # "llm" or "llm_structured" or "heuristic"
+    drift_score: int = 100      # 0..100 — 100 means matched
+    suggested_retry: Optional[dict] = None  # remediation step the LLM proposed
 
     def to_dict(self) -> dict:
         return {
@@ -457,24 +473,139 @@ class ReviewResult:
             "drift_notes": list(self.drift_notes),
             "matched": self.matched,
             "source": self.source,
+            "drift_score": int(self.drift_score),
+            "suggested_retry": dict(self.suggested_retry) if isinstance(self.suggested_retry, dict) else None,
         }
 
     def __getitem__(self, key: str) -> Any:
         return self.to_dict()[key]
 
     def keys(self):
-        return ("session_id", "intent", "drift_notes", "matched", "source")
+        return (
+            "session_id", "intent", "drift_notes", "matched", "source",
+            "drift_score", "suggested_retry",
+        )
 
     def __contains__(self, key: str) -> bool:
         return key in self.keys()
 
 
-def review(session_id: str, llm_config=None) -> ReviewResult:
-    """Compare the executed plan against the original intent.
+def _summarise_steps(steps: List[dict]) -> str:
+    """Build a compact ``[{label, endpoint, status, reason?}, …]`` summary
+    that the LLM can reason about. Bounded length so the prompt stays
+    short on small models."""
+    out: list = []
+    for s in steps:
+        item = {
+            "label": str(s.get("label", ""))[:80],
+            "endpoint": str(s.get("endpoint", "")),
+            "status": str(s.get("status", "")),
+        }
+        reason = str(s.get("reason", "")).strip()
+        if reason:
+            item["reason"] = reason[:80]
+        out.append(item)
+    text = json.dumps(out, separators=(",", ":"))
+    return text[:1500]
 
-    With an LLM provider the model writes the drift notes; without one,
-    a heuristic reports any failed or rejected steps as drift signals
-    so the user still gets a status summary.
+
+def _parse_structured_review(text: str) -> Optional[dict]:
+    """Parse the strict-JSON structured-review response.
+
+    Tolerates leading/trailing prose and markdown fences (same approach
+    as ``_parse_llm_plan``). Returns ``None`` when no parseable object
+    is found.
+    """
+    if not text:
+        return None
+    candidate = text.strip()
+    if candidate.startswith("```"):
+        candidate = re.sub(r"^```(?:json)?\n", "", candidate)
+        candidate = re.sub(r"\n```\s*$", "", candidate)
+    try:
+        parsed = json.loads(candidate)
+        if isinstance(parsed, dict):
+            return parsed
+    except (ValueError, TypeError):
+        pass
+    # Last-resort regex: first {...} block.
+    m = re.search(r"\{.*\}", text, flags=re.DOTALL)
+    if not m:
+        return None
+    try:
+        parsed = json.loads(m.group(0))
+        if isinstance(parsed, dict):
+            return parsed
+    except (ValueError, TypeError):
+        return None
+    return None
+
+
+def _coerce_suggested_retry(raw: Any) -> Optional[dict]:
+    """Sanitize the LLM's suggested_retry shape. Returns ``None`` for
+    anything that can't safely be appended to the plan."""
+    if not isinstance(raw, dict):
+        return None
+    endpoint = str(raw.get("endpoint") or "").strip()
+    if not endpoint:
+        return None
+    if not endpoint.startswith("/"):
+        endpoint = "/" + endpoint
+    payload = raw.get("payload") if isinstance(raw.get("payload"), dict) else {}
+    label = str(raw.get("label") or endpoint)[:120]
+    rationale = str(raw.get("rationale") or "").strip()[:240]
+    return {
+        "label": label,
+        "endpoint": endpoint,
+        "payload": payload,
+        "rationale": rationale,
+    }
+
+
+def _append_retry_step(sess: dict, retry: dict) -> None:
+    """Append a sanitized ``suggested_retry`` to the session plan as a
+    new ``planned`` step. Mutates ``sess`` in place; caller is
+    responsible for persisting."""
+    new_step = {
+        "step_id": uuid.uuid4().hex[:12],
+        "label": retry["label"],
+        "endpoint": retry["endpoint"],
+        "payload": dict(retry["payload"]),
+        "skill": "",
+        "status": "planned",
+        "job_id": "",
+        "reason": "F144 self-review suggested retry: " + retry.get("rationale", ""),
+    }
+    sess.setdefault("plan", []).append(new_step)
+
+
+def review(
+    session_id: str,
+    llm_config=None,
+    *,
+    append_retry: bool = True,
+    structured: bool = True,
+) -> ReviewResult:
+    """Compare the executed plan against the original intent (F144).
+
+    With an LLM provider the model writes structured drift notes (and
+    optionally proposes a remediation step). Without one, a heuristic
+    reports failed/rejected steps as drift signals so the user still
+    gets a status summary.
+
+    Args:
+        session_id: Session to review.
+        llm_config: Optional ``LLMConfig`` — when provided, try the
+            structured LLM critique first; fall back to the original
+            free-text prompt on parse failure, then to the heuristic.
+        append_retry: When True (default), append any ``suggested_retry``
+            the LLM proposed to the session's plan as a new
+            ``planned`` step. Use ``append_retry=False`` for a
+            "review-only" call when the UI hasn't yet asked the user
+            to accept the retry.
+        structured: When True (default) and an LLM is configured, try
+            the strict-JSON structured prompt first. Set False to fall
+            back to the legacy free-text prompt.
     """
     sess = load_session(session_id)
     if sess is None:
@@ -483,39 +614,101 @@ def review(session_id: str, llm_config=None) -> ReviewResult:
     steps = sess.get("plan", [])
     failed = [s for s in steps if s.get("status") == "failed"]
     rejected = [s for s in steps if s.get("status") == "rejected"]
-    drift: List[str] = []
+    total = len(steps) or 1
+
+    # Heuristic baseline: drift_score drops 25 points per failed step,
+    # 15 points per rejected step. Floors at 0.
     matched = True
+    drift: List[str] = []
+    drift_score = 100
     if failed:
         matched = False
+        drift_score -= 25 * len(failed)
         drift.append(f"{len(failed)} step(s) failed: " + ", ".join(s.get("label", "") for s in failed))
     if rejected:
         matched = False
+        drift_score -= 15 * len(rejected)
         drift.append(f"{len(rejected)} step(s) rejected: " + ", ".join(s.get("label", "") for s in rejected))
+    drift_score = max(0, min(100, drift_score))
     source = "heuristic"
+    suggested_retry: Optional[dict] = None
+
     if llm_config is not None and intent:
         try:
             from opencut.core.llm import query_llm
-            prompt = SYSTEM_PROMPT_REVIEW.format(
-                intent=intent,
-                steps=json.dumps([s.get("label", "") for s in steps])[:1000],
-            )
-            resp = query_llm(prompt, config=llm_config, system_prompt="You are a careful reviewer.")
-            text = getattr(resp, "text", None) or (resp if isinstance(resp, str) else "")
-            if text:
-                source = "llm"
-                if "matched intent" in text.lower() and not failed and not rejected:
-                    matched = True
+
+            if structured:
+                prompt = (
+                    f"User intent: {intent}\n"
+                    f"Executed steps: {_summarise_steps(steps)}\n"
+                    "Reply with the strict JSON schema described in the "
+                    "system prompt."
+                )
+                resp = query_llm(
+                    prompt,
+                    config=llm_config,
+                    system_prompt=SYSTEM_PROMPT_REVIEW_STRUCTURED,
+                )
+                text = getattr(resp, "text", None) or (resp if isinstance(resp, str) else "")
+                parsed = _parse_structured_review(text)
+                if parsed is not None:
+                    source = "llm_structured"
+                    matched = bool(parsed.get("matched", matched))
+                    score_raw = parsed.get("drift_score")
+                    try:
+                        drift_score = int(score_raw)
+                    except (TypeError, ValueError):
+                        pass
+                    drift_score = max(0, min(100, drift_score))
+                    notes = parsed.get("drift_notes")
+                    if isinstance(notes, list):
+                        # Replace heuristic notes with the LLM's when the
+                        # structured parse succeeded — the LLM has more
+                        # context. Cap each note to keep the UI legible.
+                        drift = [str(n)[:300] for n in notes if isinstance(n, str)]
+                        if not drift:
+                            drift = ["Plan matched intent." if matched else "Drift detected."]
+                    suggested_retry = _coerce_suggested_retry(parsed.get("suggested_retry"))
                 else:
-                    matched = matched and "matched intent" in text.lower()
-                drift.append(text.strip()[:400])
-        except Exception as exc:  # pragma: no cover
-            drift.append(f"LLM review unavailable: {exc}")
+                    # Structured parse failed — fall back to free text.
+                    structured = False
+
+            if not structured:
+                prompt = SYSTEM_PROMPT_REVIEW.format(
+                    intent=intent,
+                    steps=_summarise_steps(steps),
+                )
+                resp = query_llm(prompt, config=llm_config, system_prompt="You are a careful reviewer.")
+                text = getattr(resp, "text", None) or (resp if isinstance(resp, str) else "")
+                if text:
+                    source = "llm"
+                    if "matched intent" in text.lower() and not failed and not rejected:
+                        matched = True
+                        drift_score = 100
+                    else:
+                        matched = matched and "matched intent" in text.lower()
+                    drift.append(text.strip()[:400])
+        except Exception as exc:  # pragma: no cover — never crash on LLM failure
+            drift.append(f"LLM review unavailable: {type(exc).__name__}: {exc}")
+
     if not drift:
         drift.append("Plan matched intent.")
+
+    # Append the suggested retry as a new planned step (F144 closes the
+    # self-correcting loop the RFC calls out). The UI surfaces it as
+    # "Agent proposes…" pending user accept/reject.
+    appended = False
+    if append_retry and suggested_retry and not matched:
+        _append_retry_step(sess, suggested_retry)
+        appended = True
+
     sess["review"] = {
         "drift_notes": drift,
         "matched": matched,
         "source": source,
+        "drift_score": drift_score,
+        "suggested_retry": suggested_retry,
+        "appended_retry_step": appended,
         "ts": time.time(),
     }
     sess["updated_ts"] = time.time()
@@ -526,6 +719,8 @@ def review(session_id: str, llm_config=None) -> ReviewResult:
         drift_notes=drift,
         matched=matched,
         source=source,
+        drift_score=drift_score,
+        suggested_retry=suggested_retry,
     )
 
 

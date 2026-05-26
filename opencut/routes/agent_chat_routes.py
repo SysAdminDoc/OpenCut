@@ -116,22 +116,37 @@ def route_agent_chat_step_status():
 @agent_chat_bp.route("/agent/chat/review", methods=["POST"])
 @require_csrf
 def route_agent_chat_review():
-    """Self-review the executed plan vs the original intent.
+    """Self-review the executed plan vs the original intent (F144).
 
     Body params:
-      session_id  str   required
-      llm         dict  optional — when supplied, model writes drift notes;
-                       absent, the heuristic reports failed/rejected steps.
+      session_id     str   required
+      llm            dict  optional — when supplied, run the structured
+                          LLM critique; absent, the heuristic reports
+                          failed/rejected steps.
+      append_retry   bool  default true — append the LLM's suggested
+                          remediation step to the plan as ``planned``.
+                          Set false for a "review-only" call (UI hasn't
+                          yet asked the user to accept the retry).
+      structured     bool  default true — try the strict-JSON prompt
+                          first; falls back to free-text on parse fail.
     """
     try:
         from opencut.core import agent_chat
+        from opencut.security import safe_bool
 
         data = request.get_json(silent=True) or {}
         session_id = str(data.get("session_id") or "").strip()
         if not session_id:
             raise ValueError("'session_id' is required")
         llm_config = _build_llm_config(data)
-        result = agent_chat.review(session_id, llm_config=llm_config)
+        append_retry = safe_bool(data.get("append_retry", True), True)
+        structured = safe_bool(data.get("structured", True), True)
+        result = agent_chat.review(
+            session_id,
+            llm_config=llm_config,
+            append_retry=append_retry,
+            structured=structured,
+        )
         return jsonify({k: result[k] for k in result.keys()})
     except FileNotFoundError as exc:
         return jsonify({"error": str(exc)}), 404
