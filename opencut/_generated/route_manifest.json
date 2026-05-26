@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-26T02:06:03Z",
-  "total_routes": 1506,
-  "blueprint_count": 104,
+  "generated_at": "2026-05-26T02:10:33Z",
+  "total_routes": 1509,
+  "blueprint_count": 105,
   "method_counts": {
     "DELETE": 14,
-    "GET": 372,
+    "GET": 373,
     "PATCH": 1,
-    "POST": 1121,
+    "POST": 1123,
     "PUT": 2
   },
   "blueprints": {
@@ -773,6 +773,18 @@
         "/search/footage",
         "/search/index",
         "/search/index"
+      ]
+    },
+    "sequence_index": {
+      "route_count": 3,
+      "method_counts": {
+        "GET": 1,
+        "POST": 2
+      },
+      "sample_rules": [
+        "/timeline/sequence-index",
+        "/timeline/sequence-index/filter",
+        "/timeline/sequence-index/info"
       ]
     },
     "settings": {
@@ -10557,6 +10569,30 @@
       ],
       "endpoint": "timeline.install_otio",
       "blueprint": "timeline"
+    },
+    {
+      "rule": "/timeline/sequence-index",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "sequence_index.route_build_sequence_index",
+      "blueprint": "sequence_index"
+    },
+    {
+      "rule": "/timeline/sequence-index/filter",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "sequence_index.route_filter_sequence_index",
+      "blueprint": "sequence_index"
+    },
+    {
+      "rule": "/timeline/sequence-index/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "sequence_index.route_sequence_index_info",
+      "blueprint": "sequence_index"
     },
     {
       "rule": "/timeline/smart-bins",
