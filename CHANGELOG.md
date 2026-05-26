@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+### Added — F236 FCC Caption Display-Settings UI (UXP)
+
+- New "Caption Display Settings (FCC)" card at the end of the Captions tab in `extension/com.opencut.uxp/`. Surfaces the 7 user-overridable token dropdowns (font, size, text color/opacity, background color/opacity, edge style) plus Preview + Reset buttons and a live preview area. Compliance-date string (currently `2026-08-17`) is overlaid from the backend's `compliance_date` field at runtime so the UI stays accurate if the regulation moves.
+- `initCaptionDisplaySettingsCard()` in `main.js` lazy-loads the schema 600ms after `initApp()` completes (non-blocking — the Captions tab isn't usually the user's first stop), populates each dropdown from `/captions/display-settings/tokens`, applies the live CSS via `/captions/display-settings/preview`.
+- `style.css` gained `.oc-caption-preview-area`, `.oc-caption-preview-sample`, and `#fccComplianceNotice` rules — the preview sits on a subtle 45° hatch pattern so users can see how the FCC tokens render against a non-uniform background.
+- Backend contract has been in place since Pass 17 (PROJECT_CONTEXT §9.5); this commit closes the user-facing "discoverability" half. CEP captions tab can get the same treatment in a follow-on pass.
+- `tests/test_uxp_caption_display_settings_ui.py` — 12 cases + 19 subtests covering: HTML card + 7 selects + 3 status elements + compliance date in hint; JS init function + initApp wiring + both endpoint refs + button handlers; CSS braces balanced + preview-area selectors present; backend contract still ships the schema shape the UI assumes.
+
 ### Added — UXP Agent Tab CSS Polish
 
 - `extension/com.opencut.uxp/style.css` gained four selectors that the Agent-tab HTML (commit `1e51521`) referenced but were missing: `.oc-card--nested`, `.oc-step-list` (with nested `li.oc-step-error` variant using the existing `--error` color token), `#agentChatReviewNotes`, `#agentChatReviewSummary`. Step list uses the existing `--accent` / `--accent-dim` tokens for the normal state, `--error` / `--error-dim` for failed/rejected steps — matches the rest of the design language.

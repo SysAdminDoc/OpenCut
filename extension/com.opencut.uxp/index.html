@@ -401,6 +401,55 @@
             <button type="button" class="oc-btn oc-btn-secondary oc-btn-sm" id="importSrtBtn" disabled>Open SRT Prep</button>
           </div>
         </div>
+
+        <!-- F236 FCC caption display settings (effective 2026-08-17). -->
+        <div class="oc-section-title">Caption Display Settings (FCC)</div>
+        <div class="oc-card" id="captionDisplaySettingsCard">
+          <p class="oc-hint" id="fccComplianceNotice">
+            Per FCC 47 CFR § 79.103 (effective 2026-08-17), users must be able to readily access caption display controls. Pick a preset or override individual tokens.
+            <a href="https://www.ecfr.gov/current/title-47/section-79.103" target="_blank" rel="noopener">FCC source</a>
+          </p>
+          <div class="oc-field-row">
+            <label class="oc-label" for="capDispFont">Font</label>
+            <select class="oc-input" id="capDispFont"></select>
+          </div>
+          <div class="oc-field-row">
+            <label class="oc-label" for="capDispSize">Size</label>
+            <select class="oc-input" id="capDispSize"></select>
+          </div>
+          <div class="oc-field-row">
+            <label class="oc-label" for="capDispTextColor">Text Color</label>
+            <select class="oc-input" id="capDispTextColor"></select>
+          </div>
+          <div class="oc-field-row">
+            <label class="oc-label" for="capDispTextOpacity">Text Opacity</label>
+            <select class="oc-input" id="capDispTextOpacity"></select>
+          </div>
+          <div class="oc-field-row">
+            <label class="oc-label" for="capDispBgColor">Background Color</label>
+            <select class="oc-input" id="capDispBgColor"></select>
+          </div>
+          <div class="oc-field-row">
+            <label class="oc-label" for="capDispBgOpacity">Background Opacity</label>
+            <select class="oc-input" id="capDispBgOpacity"></select>
+          </div>
+          <div class="oc-field-row">
+            <label class="oc-label" for="capDispEdge">Edge Style</label>
+            <select class="oc-input" id="capDispEdge"></select>
+          </div>
+          <div class="oc-btn-row">
+            <button type="button" class="oc-btn oc-btn-primary" id="capDispPreviewBtn">Preview</button>
+            <button type="button" class="oc-btn oc-btn-secondary" id="capDispResetBtn">Reset Defaults</button>
+          </div>
+          <div class="oc-status-line" id="capDispStatus" role="status" aria-live="polite">Loading tokens…</div>
+          <!-- Live preview rendered via the /captions/display-settings/preview payload. -->
+          <div class="oc-card oc-card--nested" id="capDispPreviewBox" hidden>
+            <div class="oc-card-header"><span>Live Preview</span></div>
+            <div class="oc-caption-preview-area" id="capDispPreviewArea">
+              <span class="oc-caption-preview-sample" id="capDispPreviewSample">Caption preview</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <!-- ==================== AUDIO TAB ==================== -->
