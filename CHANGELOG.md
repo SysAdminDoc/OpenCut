@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed — i18n Hardcoded-English Migration (E6 follow-on)
+
+- Migrated the four user-visible toast strings called out in `RESEARCH_FEATURE_PLAN_2026-05-25` E6 from bare English to i18n keys: `toast.server_reconnected`, `toast.update_available` (with `{version}` interpolation), `toast.refreshing_media`, `toast.save_first`.
+- `client/locales/en.json` grows from 426 → 430 keys; `i18n-drift` gate reports 288 consumers (was 284; +4 new JS consumers).
+- `tests/test_i18n_hardcoded_migration.py` is the regression guard: confirms each key exists in `en.json`, that `main.js` invokes `t("toast.…", fallback)` at each site, and that the bare-English `showToast("...")` form is no longer present (catches an accidental revert).
+
 ### Added — UXP Agent Tab (UI for F143 / Q3 / Q7 / Q8 / F146)
 
 - New `agent` tab in `extension/com.opencut.uxp/` surfaces the four backends shipped on 2026-05-25 in a single panel:

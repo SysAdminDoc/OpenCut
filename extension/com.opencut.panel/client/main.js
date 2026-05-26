@@ -2097,7 +2097,7 @@
                 }
                 if (!connected && el.serverStatusBanner) {
                     el.serverStatusBanner.classList.add("hidden");
-                    showToast("Server reconnected", "success");
+                    showToast(t("toast.server_reconnected", "Server reconnected"), "success");
                 }
                 connected = true;
                 setConnectionBadge("online", "Connected");
@@ -2122,7 +2122,13 @@
                     _updateCheckDone = true;
                     api("GET", "/system/update-check", null, function (uerr, udata) {
                         if (!uerr && udata && udata.update_available) {
-                            showToast("OpenCut v" + udata.latest_version + " available \u2014 visit GitHub to update", "info");
+                            var _fallback = "OpenCut v" + udata.latest_version + " available \u2014 visit GitHub to update";
+                            var _template = t("toast.update_available", _fallback);
+                            // {version} interpolation if the locale supplies the templated form.
+                            var _msg = _template.indexOf("{version}") >= 0
+                                ? _template.replace("{version}", udata.latest_version)
+                                : _fallback;
+                            showToast(_msg, "info");
                         }
                     });
                     // Surface last-session history + interrupted jobs in a
@@ -2261,7 +2267,7 @@
         setProjectMediaPlaceholder("Scanning Premiere project media…");
         }
         if (!_projectMediaRetryNoticeShown && _projectMediaRetryCount > 1) {
-        showToast("Refreshing Premiere project media…", "info");
+        showToast(t("toast.refreshing_media", "Refreshing Premiere project media…"), "info");
             _projectMediaRetryNoticeShown = true;
         }
         console.warn("[OpenCut] Retrying project media scan in " + delay + "ms:", reason || "pending");
@@ -2551,7 +2557,7 @@
                 try {
                     var info = JSON.parse(res);
                     if (!info.saved) {
-                        showToast("Tip: Save your project before processing", "info");
+                        showToast(t("toast.save_first", "Tip: Save your project before processing"), "info");
                     }
                     _projectSaveWarned = true;
                 } catch (e) {}
