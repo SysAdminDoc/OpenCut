@@ -5559,7 +5559,303 @@ async function initApp() {
     stopMediaScanInterval();
   });
 
+  // -------------------------------------------------------------
+  // Agent tab — F143 conductor + Q3/Q7/Q8 + F146 MCP bridge
+  // Surfaces the four 2026-05-25 backends in a single UXP-only tab.
+  // CEP equivalent: command palette + NLP tab (see PANEL_PARITY.json).
+  // -------------------------------------------------------------
+  initAgentTab();
+
   console.log("[OpenCut UXP] Ready.");
+}
+
+// =============================================================
+// Agent tab module (F143 / Q3 / Q7 / Q8 / F146 surfacing)
+// =============================================================
+function initAgentTab() {
+  const $ = (id) => document.getElementById(id);
+  let activeSessionId = "";
+
+  const setStatus = (id, text) => {
+    const el = $(id);
+    if (el) el.textContent = text;
+  };
+
+  const showBox = (id, show) => {
+    const el = $(id);
+    if (el) el.hidden = !show;
+  };
+
+  function renderPlan(plan) {
+    const list = $("agentChatPlanList");
+    if (!list) return;
+    list.innerHTML = "";
+    if (!Array.isArray(plan) || plan.length === 0) {
+      const li = document.createElement("li");
+      li.textContent = "No steps matched — try a more specific intent.";
+      list.appendChild(li);
+      return;
+    }
+    plan.forEach((step) => {
+      const li = document.createElement("li");
+      li.dataset.stepId = step.step_id || "";
+      const status = String(step.status || "planned");
+      const tag = status === "ok" ? "✓"
+                : status === "failed" ? "✗"
+                : status === "rejected" ? "✗"
+                : "·";
+      li.textContent = `${tag} ${step.label || step.endpoint} (${step.endpoint})`;
+      if (step.status === "failed" || step.status === "rejected") {
+        li.classList.add("oc-step-error");
+      }
+      list.appendChild(li);
+    });
+  }
+
+  function renderReview(review) {
+    const box = $("agentChatReviewBox");
+    const summary = $("agentChatReviewSummary");
+    const notes = $("agentChatReviewNotes");
+    if (!box || !summary || !notes) return;
+    box.hidden = false;
+    const score = typeof review.drift_score === "number" ? review.drift_score : 100;
+    const matched = review.matched ? "Matched" : "Drift detected";
+    summary.textContent = `${matched} (drift score ${score}/100, source: ${review.source || "heuristic"})`;
+    notes.innerHTML = "";
+    (review.drift_notes || []).forEach((n) => {
+      const li = document.createElement("li");
+      li.textContent = String(n);
+      notes.appendChild(li);
+    });
+    if (review.suggested_retry && review.suggested_retry.endpoint) {
+      const li = document.createElement("li");
+      li.textContent = `↻ Suggested retry: ${review.suggested_retry.label} (${review.suggested_retry.endpoint})`;
+      notes.appendChild(li);
+    }
+  }
+
+  // --- Chat Conductor wiring -------------------------------------
+  const planBtn = $("agentChatPlanBtn");
+  if (planBtn) {
+    planBtn.addEventListener("click", async () => {
+      const intent = ($("agentChatIntent")?.value || "").trim();
+      if (!intent) {
+        setStatus("agentChatStatus", "Enter an intent first.");
+        return;
+      }
+      planBtn.disabled = true;
+      setStatus("agentChatStatus", "Building plan…");
+      try {
+        const resp = await BackendClient.post("/agent/chat/plan", { intent });
+        if (!resp || resp.error) {
+          setStatus("agentChatStatus", "Plan failed: " + (resp?.error || "unknown"));
+          return;
+        }
+        activeSessionId = resp.session_id || "";
+        renderPlan(resp.plan);
+        showBox("agentChatPlanBox", true);
+        showBox("agentChatReviewBox", false);
+        setStatus("agentChatStatus",
+          `Plan: ${resp.plan?.length || 0} step(s) via ${resp.source}. Session ${activeSessionId.slice(0, 8)}.`);
+        const reviewBtn = $("agentChatReviewBtn");
+        if (reviewBtn) reviewBtn.disabled = false;
+      } catch (err) {
+        setStatus("agentChatStatus", "Plan error: " + (err?.message || err));
+      } finally {
+        planBtn.disabled = false;
+      }
+    });
+  }
+
+  const reviewBtn = $("agentChatReviewBtn");
+  if (reviewBtn) {
+    reviewBtn.addEventListener("click", async () => {
+      if (!activeSessionId) {
+        setStatus("agentChatStatus", "Run Plan first to start a session.");
+        return;
+      }
+      reviewBtn.disabled = true;
+      setStatus("agentChatStatus", "Running self-review…");
+      try {
+        const resp = await BackendClient.post("/agent/chat/review", {
+          session_id: activeSessionId,
+        });
+        if (!resp || resp.error) {
+          setStatus("agentChatStatus", "Review failed: " + (resp?.error || "unknown"));
+          return;
+        }
+        renderReview(resp);
+        setStatus("agentChatStatus",
+          `Reviewed (${resp.source}). Drift score ${resp.drift_score}/100.`);
+      } catch (err) {
+        setStatus("agentChatStatus", "Review error: " + (err?.message || err));
+      } finally {
+        reviewBtn.disabled = false;
+      }
+    });
+  }
+
+  const clearBtn = $("agentChatClearBtn");
+  if (clearBtn) {
+    clearBtn.addEventListener("click", () => {
+      activeSessionId = "";
+      const ta = $("agentChatIntent");
+      if (ta) ta.value = "";
+      showBox("agentChatPlanBox", false);
+      showBox("agentChatReviewBox", false);
+      const rb = $("agentChatReviewBtn");
+      if (rb) rb.disabled = true;
+      setStatus("agentChatStatus", "Cleared.");
+    });
+  }
+
+  // --- Enhance wiring -------------------------------------------
+  async function runEnhance(dryRun) {
+    const filepath = ($("enhanceClipPath")?.value || "").trim();
+    const style = $("enhanceStyle")?.value || "social";
+    if (!filepath) {
+      setStatus("enhanceStatus", "Enter a clip path first.");
+      return;
+    }
+    const btnId = dryRun ? "enhanceDryRunBtn" : "enhanceRunBtn";
+    const btn = $(btnId);
+    if (btn) btn.disabled = true;
+    setStatus("enhanceStatus", dryRun ? "Building plan…" : "Running Enhance…");
+    try {
+      const endpoint = dryRun ? "/enhance/auto/dry-run" : "/enhance/auto";
+      const resp = await BackendClient.post(endpoint, { filepath, style });
+      if (!resp || resp.error) {
+        setStatus("enhanceStatus", "Failed: " + (resp?.error || "unknown"));
+        return;
+      }
+      if (dryRun) {
+        const steps = resp.steps || [];
+        const skipped = steps.filter((s) => s.status === "skipped").length;
+        setStatus("enhanceStatus",
+          `Plan: ${steps.length - skipped} step(s) will run, ${skipped} skipped.`);
+      } else {
+        setStatus("enhanceStatus", "Job queued — watch the progress bar above.");
+      }
+    } catch (err) {
+      setStatus("enhanceStatus", "Error: " + (err?.message || err));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+  $("enhanceDryRunBtn")?.addEventListener("click", () => runEnhance(true));
+  $("enhanceRunBtn")?.addEventListener("click", () => runEnhance(false));
+
+  // --- Variants wiring -------------------------------------------
+  async function runVariants(dryRun) {
+    const filepath = ($("variantsClipPath")?.value || "").trim();
+    const start = Number($("variantsStart")?.value || 0);
+    const end = Number($("variantsEnd")?.value || 0);
+    const n_variants = Math.max(2, Math.min(6, Number($("variantsN")?.value || 3)));
+    if (!filepath) {
+      setStatus("variantsStatus", "Enter a clip path first.");
+      return;
+    }
+    if (end <= start) {
+      setStatus("variantsStatus", "End must be greater than start.");
+      return;
+    }
+    const btnId = dryRun ? "variantsDryRunBtn" : "variantsRunBtn";
+    const btn = $(btnId);
+    if (btn) btn.disabled = true;
+    setStatus("variantsStatus", dryRun ? "Planning variants…" : "Rendering variants…");
+    try {
+      const endpoint = dryRun ? "/shorts/variants/dry-run" : "/shorts/variants";
+      const resp = await BackendClient.post(endpoint, {
+        filepath, start, end, n_variants,
+      });
+      if (!resp || resp.error) {
+        setStatus("variantsStatus", "Failed: " + (resp?.error || "unknown"));
+        return;
+      }
+      const variants = resp.variants || [];
+      setStatus("variantsStatus",
+        dryRun
+          ? `Plan: ${variants.length} variant(s) will be generated.`
+          : `Generated ${variants.length} variant(s).`);
+    } catch (err) {
+      setStatus("variantsStatus", "Error: " + (err?.message || err));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  }
+  $("variantsDryRunBtn")?.addEventListener("click", () => runVariants(true));
+  $("variantsRunBtn")?.addEventListener("click", () => runVariants(false));
+
+  // --- Sequence Index wiring -------------------------------------
+  $("sequenceIndexBuildBtn")?.addEventListener("click", async () => {
+    const btn = $("sequenceIndexBuildBtn");
+    if (btn) btn.disabled = true;
+    setStatus("sequenceIndexStatus", "Reading active sequence…");
+    try {
+      // PProBridge.getSequenceInfo() returns the same JSON shape that
+      // host/index.jsx::ocGetSequenceInfo() produces, which is exactly
+      // what /timeline/sequence-index expects.
+      const sequence = await PProBridge.getSequenceInfo();
+      if (!sequence || sequence.error) {
+        setStatus("sequenceIndexStatus", "No active sequence: " + (sequence?.error || "unknown"));
+        return;
+      }
+      const resp = await BackendClient.post("/timeline/sequence-index", { sequence });
+      if (!resp || resp.error) {
+        setStatus("sequenceIndexStatus", "Failed: " + (resp?.error || "unknown"));
+        return;
+      }
+      const summary = $("sequenceIndexSummary");
+      const box = $("sequenceIndexBox");
+      if (summary && box) {
+        box.hidden = false;
+        summary.textContent =
+          `${resp.sequence_name || "Sequence"} — ${resp.total_rows} clips ` +
+          `(${resp.duration_s?.toFixed?.(1) || 0}s @ ${resp.fps}fps), ` +
+          `${resp.marker_count} markers.`;
+      }
+      setStatus("sequenceIndexStatus",
+        `Index built: ${resp.total_rows} rows across ${resp.width}×${resp.height} sequence.`);
+    } catch (err) {
+      setStatus("sequenceIndexStatus", "Error: " + (err?.message || err));
+    } finally {
+      if (btn) btn.disabled = false;
+    }
+  });
+
+  $("sequenceIndexInfoBtn")?.addEventListener("click", async () => {
+    try {
+      const info = await BackendClient.get("/timeline/sequence-index/info");
+      setStatus("sequenceIndexStatus",
+        info?.available
+          ? `Capability OK — sort keys: ${(info.sort_keys || []).join(", ")}`
+          : "Sequence Index unavailable");
+    } catch (err) {
+      setStatus("sequenceIndexStatus", "Capability check failed: " + (err?.message || err));
+    }
+  });
+
+  // --- MCP Bridge wiring -----------------------------------------
+  $("mcpBridgeInfoBtn")?.addEventListener("click", async () => {
+    try {
+      const info = await BackendClient.get("/mcp/info");
+      setStatus("mcpBridgeStatus",
+        `v${info.version}: ${info.curated_count} curated + ${info.extended_count} extended ` +
+        `(extended ${info.extended_enabled_by_default ? "on" : "off"} by default).`);
+    } catch (err) {
+      setStatus("mcpBridgeStatus", "Capability check failed: " + (err?.message || err));
+    }
+  });
+  $("mcpBridgeListBtn")?.addEventListener("click", async () => {
+    try {
+      const resp = await BackendClient.get("/mcp/tools?include_extended=false");
+      const names = (resp.tools || []).map((t) => t.name).slice(0, 5);
+      setStatus("mcpBridgeStatus",
+        `${resp.count} tool(s). First 5: ${names.join(", ")}`);
+    } catch (err) {
+      setStatus("mcpBridgeStatus", "List failed: " + (err?.message || err));
+    }
+  });
 }
 
 // Bootstrap
