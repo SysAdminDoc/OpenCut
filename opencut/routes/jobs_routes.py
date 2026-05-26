@@ -331,6 +331,8 @@ _ALLOWED_QUEUE_ENDPOINTS = frozenset({
     "/analyze/video/internvl3",
     "/video/face/reage",
     "/audio/music/heartmula",
+    # Enhance macro (RESEARCH_FEATURE_PLAN_2026-05-25 Q3)
+    "/enhance/auto",
 })
 
 

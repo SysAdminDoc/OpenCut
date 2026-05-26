@@ -2,6 +2,15 @@
 
 ## [Unreleased]
 
+### Added — One-Click Enhance Macro (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q3)
+
+- `opencut/core/enhance_auto.py` orchestrates the existing loudness-match → DeepFilter denoise → vidstab stabilize → deflicker → auto-grade chain behind one `enhance(input_path, style=…)` call. Style presets: `social` (-16 LUFS + vibrant grade), `speech` (-16 LUFS, denoise-heavy, no grade), `cinematic` (-23 LUFS + balanced cinematic grade + stabilize + deflicker).
+- The planner skips steps that don't apply (audio-only input → no stabilize/deflicker/grade; source LUFS already within ±0.5 of target → no normalisation). Each step records `status`/`reason`/`duration_ms`/`output` so the panel can render the "what ran, what didn't, why" surface.
+- New routes: `POST /enhance/auto` (async via `@async_job`), `POST /enhance/auto/dry-run` (sync — returns the plan only), `GET /enhance/auto/styles`. `/enhance/auto` added to the queue allowlist.
+- `EnhanceResult` is subscriptable so Flask `jsonify` works directly (same pattern as `InterpResult` / `ComposeResult` / `MEMixResult`).
+- Manifest now reports **1,503 routes / 103 blueprints**.
+- `tests/test_enhance_auto.py` covers style presets, the EnhanceResult subscript protocol, dry-run planning (audio-only skips, speech-skips-grade, missing-file / invalid-style errors), and the three new routes via the Flask test client.
+
 ### Added — Test Breadth Ratchet Gate (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q9)
 
 - The research file's "93% untested" finding was a sampling artifact — it counted only modules with a dedicated `test_<name>.py` file and missed indirect imports through shared fixtures. The real reference ratio is 78.3%.
