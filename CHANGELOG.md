@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added — F143 Chat-Conductor Backend Scaffold (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q2)
+
+- `opencut/core/agent_chat.py` lands the backend conductor surface designed in `.ai/research/2026-05-17/AGENT_UX_RFC.md` (the UXP UI lands under F252; this commit is the backend foundation).
+- Three modes: `plan(intent, llm_config?)` produces a structured step list (LLM-first with strict JSON parsing and markdown-fence tolerance, falling back to a `COMMAND_MAP`-based keyword planner that handles plurals and conjunctions); `mark_step_status(session, step, status, …)` records per-step execution result; `review(session, llm_config?)` writes a drift report (LLM critique or heuristic on failed/rejected steps).
+- Sessions persist at `~/.opencut/agent_chat_sessions/<id>.json` via tempfile-in-same-dir + `os.replace`. Session IDs are strictly alphanumeric/dash/underscore — path traversal attempts fail fast with `ValueError`.
+- New routes: `POST /agent/chat/plan`, `POST /agent/chat/step-status`, `POST /agent/chat/review`, `GET /agent/chat/session`, `GET /agent/chat/info`. All CSRF-protected (except read-only `GET /session` and `GET /info`).
+- Subscriptable `PlanResult` and `ReviewResult` dataclasses for Flask jsonify (matches the `EnhanceResult` / `VariantsResult` / `SequenceIndexResult` pattern).
+- Manifest now reports **1,514 routes / 106 blueprints**.
+- `tests/test_agent_chat.py` — 25 cases covering LLM JSON-parser tolerance (strict, fenced, leading prose, nonsense), keyword planner (multi-step, plural stripping, unknown intents, empty intent), session persistence round-trip + step-status updates + traversal protection, heuristic self-review on clean / failed steps, and all five new routes incl. error paths.
+
 ### Added — Sequence Index Panel Backend (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q7 / F273)
 
 - `opencut/core/sequence_index.py` converts the JSON returned by `ocGetSequenceInfo()` into a flat row list (video + audio clips) with `HH:MM:SS:FF` timecodes, durations, effects, ratings, tags, and transcript excerpts (clipped to overlapping segments). Mirrors Adobe Premiere 26.x's "Sequence Index" panel.

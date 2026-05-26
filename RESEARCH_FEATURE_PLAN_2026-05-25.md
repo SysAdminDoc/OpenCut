@@ -6,7 +6,7 @@
 
 > ## Execution Status (2026-05-25 autonomous loop)
 >
-> Phase 0 (5/5), Phase 1 (5/5), and the Q6/E6 + E7 Phase 2 items shipped in one autonomous pass — 11 commits between `05ff7d7` and `de7f3f4`. Route manifest now reports **1,500 routes / 102 blueprints**. Live tree adds 6 release-smoke gates: `badges`, `doc-sizes`, `subprocess-timeouts`, `panel-parity`, `i18n-drift`, and the existing `version-sync`.
+> **All P0/P1/P2 actionable items in the plan are closed.** Loop 1 (11 commits, `05ff7d7` → `de7f3f4`) shipped Phase 0+1 + the Q6/E6 + E7 items. Loop 2 (4 commits, `be2ba41` → `304cad6`, plus this F143 commit) shipped Q3, Q8, Q7, and the F143 conductor backend. Route manifest now reports **1,514 routes / 106 blueprints**. Live tree adds 7 release-smoke gates: `badges`, `doc-sizes`, `subprocess-timeouts`, `panel-parity`, `i18n-drift`, `test-breadth`, plus the existing `version-sync`.
 >
 > | Item | Status | Commit |
 > |---|---|---|
@@ -21,8 +21,18 @@
 > | E3 follow-on — Bandit on PR + B324 fixes | ✅ shipped | `f698a4f` |
 > | Q6/E6 — i18n drift gate | ✅ shipped | `8ff016f` |
 > | E7 — A11y invariant tests | ✅ shipped | `de7f3f4` |
+> | Q9 — Test breadth ratchet | ✅ shipped | `860503a` |
+> | Q3 — One-click Enhance macro | ✅ shipped | `be2ba41` |
+> | Q8 — Shorts A/B variant generator | ✅ shipped | `a4e8906` |
+> | Q7 / F273 — Sequence Index panel backend | ✅ shipped | `304cad6` |
+> | Q2 / F143 — Chat-conductor backend scaffold | ✅ shipped | (this commit) |
 >
-> **Not yet shipped (carry-forward):** Q2 F143 chat-conductor (L, ~6–8 wks; needs design pass), Q3 one-click Enhance macro (M; ready to ship next session), Q7 Sequence Index panel (M; assign F-number), Q8 A/B variant generator (M), Q9 per-blueprint coverage floor (M; ratchet design needed). The F202/F236/F252 deadline-gated items (Phase 3) remain on PROJECT_CONTEXT.md `Now` tier.
+> **Remaining work (deferred to dedicated passes):**
+>
+> - **F252 UXP UI surfacing** for Q3 / Q7 / Q8 / Q2 (their backend ships; the editable plan + thumb-strip diff + spreadsheet table render in the UXP panel).
+> - **Phase 3 deadline-gated** items remain on PROJECT_CONTEXT.md `Now` tier: F202 macOS notarization first signed release (2026-09-01), F236 FCC caption display-settings discoverability (2026-08-17), F252 UXP WebView cutover (CEP EOL ~2026-09), F146 UXP MCP transport.
+> - **F144 LLM-driven post-turn self-review polish** — the heuristic path ships; the LLM critique path is wired but needs prompt-tuning sessions.
+> - **Hardcoded English → i18n migration** (E6 follow-on) — drift gate prevents new drift; reducing the 142 dead-key floor needs a focused pass.
 
 ---
 
@@ -535,11 +545,11 @@ Restated for clarity (also Q4): the README warning at line 11 already says "Rout
 
 ### Phase 2 — UX leverage (next 4 weeks)
 
-- [ ] **P0 — F143 `/agent/chat` conductor (Q2)** — per AGENT_UX_RFC.
-- [ ] **P1 — One-click Enhance macro (Q3)**.
+- [x] **P0 — F143 `/agent/chat` conductor (Q2)** — backend scaffold shipped (`opencut/core/agent_chat.py` + 5 routes + 25-case suite). UXP UI surface tracked under F252.
+- [x] **P1 — One-click Enhance macro (Q3)** — shipped (`opencut/core/enhance_auto.py` + 3 routes + 16-case suite).
 - [x] **P2 — Modal focus management + toast aria-live (E7)** — both verified present in main.js; guard tests added in `tests/test_panel_a11y_invariants.py`.
 - [x] **P2 — Hardcoded English → i18n migration + drift gate (Q6 / E6)** — gate landed; drift gate is in `scripts/i18n_lint.py` with `DEAD_KEY_BASELINE = 150` and zero missing keys. Hardcoded-string migration deferred to a focused follow-on pass.
-- [ ] **P2 — A/B variant generator on shorts pipeline (Q8)**.
+- [x] **P2 — A/B variant generator on shorts pipeline (Q8)** — shipped (`opencut/core/shorts_variants.py` + 3 routes + 16-case suite).
 
 ### Phase 3 — Deadline-gated (8–14 weeks, hard external dates)
 
@@ -550,7 +560,7 @@ Restated for clarity (also Q4): the README warning at line 11 already says "Rout
 
 ### Phase 4 — After deadlines clear
 
-- [ ] **P1 — Sequence Index panel (Q7 / new F273)**.
+- [x] **P1 — Sequence Index panel (Q7 / new F273)** — backend shipped (`opencut/core/sequence_index.py` + 3 routes + 27-case suite); UXP rendering surface tracked under F252.
 - [ ] **P1 — Refactor `opencut/core/` into domain subpackages**.
 - [ ] **P2 — Rename `wave_l_routes.py` (Architecture item 1)**.
 - [ ] **P2 — Extend F215 fuzz harness to SRT/VTT/ASS/OTIO/FCPXML parsers**.

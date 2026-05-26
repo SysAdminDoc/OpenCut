@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "generated_at": "2026-05-26T02:10:33Z",
-  "total_routes": 1509,
-  "blueprint_count": 105,
+  "generated_at": "2026-05-26T02:16:26Z",
+  "total_routes": 1514,
+  "blueprint_count": 106,
   "method_counts": {
     "DELETE": 14,
-    "GET": 373,
+    "GET": 375,
     "PATCH": 1,
-    "POST": 1123,
+    "POST": 1126,
     "PUT": 2
   },
   "blueprints": {
@@ -18,6 +18,18 @@
       },
       "sample_rules": [
         "/static/<path:filename>"
+      ]
+    },
+    "agent_chat": {
+      "route_count": 5,
+      "method_counts": {
+        "GET": 2,
+        "POST": 3
+      },
+      "sample_rules": [
+        "/agent/chat/plan",
+        "/agent/chat/review",
+        "/agent/chat/step-status"
       ]
     },
     "ai_content": {
@@ -1326,6 +1338,46 @@
       ],
       "endpoint": "solver_agent.agent_auto_edit",
       "blueprint": "solver_agent"
+    },
+    {
+      "rule": "/agent/chat/info",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "agent_chat.route_agent_chat_info",
+      "blueprint": "agent_chat"
+    },
+    {
+      "rule": "/agent/chat/plan",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "agent_chat.route_agent_chat_plan",
+      "blueprint": "agent_chat"
+    },
+    {
+      "rule": "/agent/chat/review",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "agent_chat.route_agent_chat_review",
+      "blueprint": "agent_chat"
+    },
+    {
+      "rule": "/agent/chat/session",
+      "methods": [
+        "GET"
+      ],
+      "endpoint": "agent_chat.route_agent_chat_session",
+      "blueprint": "agent_chat"
+    },
+    {
+      "rule": "/agent/chat/step-status",
+      "methods": [
+        "POST"
+      ],
+      "endpoint": "agent_chat.route_agent_chat_step_status",
+      "blueprint": "agent_chat"
     },
     {
       "rule": "/agent/create-plan",
