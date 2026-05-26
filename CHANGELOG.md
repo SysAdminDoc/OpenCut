@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added — Structured Check-Failure Registry + /system/check-failures (closes RESEARCH_FEATURE_PLAN_2026-05-25 E5)
+
+- `opencut.checks` gained `record_check_failure(name, exc)`, `_record_caller_failure(exc)`, `get_check_failures()`, and `clear_check_failures()`. 40 historic bare `except Exception: return False` sites now capture the exception type + message + timestamp under the calling probe's name.
+- Added `/system/check-failures` (GET returns registry; DELETE clears, CSRF-protected). Users seeing a 503 for a missing dependency can now query *why* — install error, network probe timeout, corrupted package.
+- Route manifest bumped to **1,500 routes / 102 blueprints**.
+- `tests/test_check_failures.py` covers registry shape, message capping, thread-safe copies, frame-aware caller-name detection, and end-to-end GET/DELETE routing.
+
 ### Added — Subprocess Timeout AST Linter (closes RESEARCH_FEATURE_PLAN_2026-05-25 E4)
 
 - `scripts/lint_subprocess_timeouts.py` walks every `subprocess.run` / `subprocess.Popen` (incl. `_sp` aliases) under `opencut/` and asserts each is bounded by an explicit `timeout=`. `Popen` calls must have a downstream `.wait(timeout=)` or `.communicate(timeout=)` on the bound name within the same function. File-manager spawns (`explorer /select,`, `open -R`, `xdg-open`, `start_new_session=True`) are allow-listed.
