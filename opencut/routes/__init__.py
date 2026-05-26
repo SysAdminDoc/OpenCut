@@ -139,6 +139,7 @@ def get_core_blueprints():
     from .wave_k_routes import wave_k_bp
     from .agent_chat_routes import agent_chat_bp
     from .enhance_routes import enhance_bp
+    from .mcp_bridge_routes import mcp_bridge_bp
     from .sequence_index_routes import sequence_index_bp
     from .shorts_variants_routes import shorts_variants_bp
     from .wave_l_routes import wave_l_bp
@@ -245,6 +246,7 @@ def get_core_blueprints():
         wave_k_bp,
         agent_chat_bp,
         enhance_bp,
+        mcp_bridge_bp,
         sequence_index_bp,
         shorts_variants_bp,
         wave_l_bp,

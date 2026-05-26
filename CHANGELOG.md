@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+### Added — F146 UXP MCP Bridge
+
+- `opencut/routes/mcp_bridge_routes.py` exposes the MCP sidecar's catalogue + dispatcher onto the main Flask app on `:5679` so UXP panels keep MCP functionality after Adobe's ~Sept-2026 CEP EOL. Three routes:
+  - `GET /mcp/tools?include_extended=true|false` — full catalogue (39 curated + 1,325 opt-in extended).
+  - `POST /mcp/call` — `{tool, arguments}` → invokes `opencut.mcp_server.handle_tool_call`. CSRF-protected. Tool-name allowlist enforced before dispatch. Per-tool rate-limit via the existing `rate_limit(key="mcp_bridge::<tool>")` machinery; slot released in `finally`.
+  - `GET /mcp/info` — capability report (version, curated_count, extended_count, extended_enabled_by_default, transport tag, endpoints).
+- In-process — no extra socket hop. Bridge dispatches directly through `handle_tool_call`; the sidecar's own `_api()` still hits `:5679` for REST proxying, same as the JSON-RPC stdio path.
+- Manifest now reports **1,517 routes / 107 blueprints**.
+- `tests/test_mcp_bridge.py` — 10 cases: info shape, curated vs extended catalogue counts, unknown-tool rejection, missing-tool / non-dict-arguments rejection, dispatch routes through `handle_tool_call` (mocked), CSRF guard, rate-limit slot released after exception, tool index keyed by name.
+
 ### Changed — F144 Self-Review Polish (structured JSON + drift score + suggested-retry append)
 
 - `opencut/core/agent_chat.review()` now defaults to the structured-JSON LLM critique path. Schema: `{matched, drift_score: 0..100, drift_notes: [str], suggested_retry: null | {label, endpoint, payload, rationale}}`. Markdown fences and leading prose are tolerated; structured parse failure transparently falls back to the legacy free-text prompt; both fall back to the heuristic when no LLM is configured.
