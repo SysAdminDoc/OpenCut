@@ -30,12 +30,23 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install ruff pytest pip-audit
+          pip install ruff pytest pip-audit bandit
           pip install -e ".[standard]"
 
       - name: Install CEP panel dependencies
         working-directory: extension/com.opencut.panel
         run: npm ci
+
+      # Static security scan (RESEARCH_FEATURE_PLAN_2026-05-25.md E3 follow-on).
+      # Bandit catches SSRF, path-traversal, eval(), shell=True, weak hash
+      # patterns the audit batches still find by hand. --severity-level high
+      # keeps the gate actionable (low-severity B404/B603 are noisy in a repo
+      # with this many subprocess calls).
+      - name: Bandit security lint
+        run: |
+          bandit -r opencut/ \
+            --severity-level high \
+            --exclude opencut/core/__pycache__
 
       # PR-fast runs the supply-chain triad (pip-audit, npm-advisory, esbuild-pin)
       # so a vulnerable dep introduced in a PR fails fast on every push.
