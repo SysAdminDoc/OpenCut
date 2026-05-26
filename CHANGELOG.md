@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+### Added — CEP a11y Invariant Tests (closes RESEARCH_FEATURE_PLAN_2026-05-25 E7)
+
+- The research file flagged "toasts lack aria-live; modal focus trap incomplete" — investigation showed both are actually implemented (showToast at ~main.js:9902 sets `role`/`aria-live`/`aria-atomic`; `initOverlayFocusManagement`/`activateOverlay`/`syncOverlayBackgroundState` handle Tab + Escape + return-focus + `inert` + `aria-hidden` on background app).
+- What was missing was a regression guard. Added `tests/test_panel_a11y_invariants.py` with 5 cases asserting the a11y attributes the panel relies on. Any refactor that drops `aria-live`, `aria-atomic`, `aria-hidden`, `inert`, Escape/Tab handling, or focus-restoration silently is now caught by CI.
+
 ### Added — CEP i18n Drift Gate (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q6/E6)
 
 - Added `scripts/i18n_lint.py` enforcing the CEP locale contract: zero missing keys (consumed but not in en.json) is a hard fail; dead-key count > `DEAD_KEY_BASELINE` (currently 150) is a soft fail meant to be ratcheted down over time.
