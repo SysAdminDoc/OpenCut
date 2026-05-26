@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+### Added — CEP i18n Drift Gate (closes RESEARCH_FEATURE_PLAN_2026-05-25 Q6/E6)
+
+- Added `scripts/i18n_lint.py` enforcing the CEP locale contract: zero missing keys (consumed but not in en.json) is a hard fail; dead-key count > `DEAD_KEY_BASELINE` (currently 150) is a soft fail meant to be ratcheted down over time.
+- Today: 426 total keys, 284 consumers, 142 dead keys (under baseline), 0 missing.
+- New release-smoke `i18n-drift` step after `panel-parity`.
+- `tests/test_i18n_drift.py` covers live-tree missing/dead counts and the HTML + JS extraction regexes.
+
 ### Added — Bandit Static Security Lint on PR (closes RESEARCH_FEATURE_PLAN_2026-05-25 E3 follow-on)
 
 - Added `bandit -r opencut/ --severity-level high` to the PR-fast workflow. SSRF, eval(), shell=True, weak hash (B324), and path-traversal patterns now fail CI on every PR.
