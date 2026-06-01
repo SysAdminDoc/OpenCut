@@ -4,6 +4,7 @@
 **Updated**: 2026-05-19
 **Baseline**: v1.32.0 (1,381 routes, 101 blueprints, 460+ core modules, 7,600+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
+**Root summaries**: [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work, and [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes the current research direction. Detailed research plans are archived in [docs/archive/research/](docs/archive/research/).
 
 > **⚡ Active work** lives in [ROADMAP-NEXT.md](ROADMAP-NEXT.md) (Waves A–K, mostly shipped through v1.28.x)
 > and the wave sections in this file (L through T). Wave R (v1.52→v1.55) is the most recent committed plan.
