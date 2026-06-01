@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed — Documentation consolidation
+
+- Added root `COMPLETED.md` and `RESEARCH_REPORT.md` summaries while preserving `ROADMAP.md`, `ROADMAP-NEXT.md`, and `ROADMAP-COMPLETED.md` in place for the release-smoke and roadmap-lint gates.
+- Archived tracked May 25 and May 26 research plans under `docs/archive/research/`.
+- Left ignored local `research.md` untouched.
+
 ### Changed — i18n Migration Round 3 (selection-failure + missing-input prompts)
 
 - Migrated 5 more bare-English alerts in `main.js` to i18n keys: `toast.clip_path_unavailable`, `toast.selection_unreadable`, `toast.choose_stem_types`, `toast.enter_broll_prompt`, `toast.enter_tts_text`.

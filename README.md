@@ -16,6 +16,15 @@
 
 ---
 
+## Project planning
+
+- [ROADMAP.md](ROADMAP.md) remains the detailed F-number and wave-letter implementation ledger.
+- [ROADMAP-NEXT.md](ROADMAP-NEXT.md) keeps the older wave-letter worksheet referenced by code and tests.
+- [COMPLETED.md](COMPLETED.md) summarizes shipped roadmap work.
+- [RESEARCH_REPORT.md](RESEARCH_REPORT.md) summarizes current research direction and points to archived research inputs.
+
+---
+
 ## Quick Start
 
 ### Prerequisites

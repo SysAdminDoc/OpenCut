@@ -82,7 +82,9 @@ For module-level patterns and the deep gotcha list (~270 entries), see **[`CLAUD
 | What features ship today, with examples | `README.md` |
 | Module-level patterns, every async-job rule, every safe_bool / UXP / CEP convention | `CLAUDE.md` |
 | What's planned, in what tier, with sources | `ROADMAP.md` (v4.3 sections — F001-F120 + Wave 1-7 + Wave N-T) |
+| Shipped roadmap summary | `COMPLETED.md` + `ROADMAP-COMPLETED.md` |
 | What shipped in each release | `CHANGELOG.md` (v1.0 → v1.32.0) |
+| Current research synthesis | `RESEARCH_REPORT.md` |
 | Wave-letter detail (Apr 2026 plan) | `ROADMAP-NEXT.md` |
 | Per-dependency / per-model upgrade ledger | `MODERNIZATION.md` + `docs/MODELS.md` (auto-generated, F115) |
 | Threat model + responsible disclosure | `SECURITY.md` |
@@ -93,7 +95,8 @@ For module-level patterns and the deep gotcha list (~270 entries), see **[`CLAUD
 | Linux Flatpak/AppImage distribution | `docs/LINUX_DISTRIBUTION.md` (F249) |
 | Optional Aptabase telemetry | `docs/TELEMETRY.md` (F250) |
 | Node advisories disposition | `docs/NODE_ADVISORIES.md` (F095) |
-| 2026-04 competitive analysis | `AUDIT.md` (v1.11) + `research.md` (v1.28.2) — both predate ROADMAP v4.3 |
+| 2026-04 competitive analysis | `AUDIT.md` (v1.11) + `docs/RESEARCH.md` — both predate ROADMAP v4.3 |
+| 2026-05-25/26 feature research plans | `docs/archive/research/` |
 | 402-feature aspirational catalogue | `features.md` — *aspirational; not a ship promise* |
 | 2026-05-17 research run | `.ai/research/2026-05-17/` (20 research artefacts + implementation handoff updates) |
 | 2026-05-18 F180 governance bridge | `.ai/research/2026-05-18/WAVE_N_T_F_NUMBER_LEDGER.md` (Wave N-T rows mapped to F-number disposition) |
@@ -116,7 +119,7 @@ When two roadmap files disagree, **ROADMAP.md v4.3 wins**. When ROADMAP.md and t
 | How do I write an async route? | `CLAUDE.md` → `@async_job` decorator section. |
 | What's the SQLite job store schema? | `opencut/job_store.py` (~200 lines). |
 | How do I add a new optional AI extra? | `opencut/checks.py` (add `check_X_available()`), `opencut/model_cards.py` (add card), `opencut/registry.py` (add `FeatureRecord`), then a route in the appropriate wave file. |
-| What's planned for the next release? | `ROADMAP.md` → Now / Next tier tables; `gh issue list` once F182 (issue seeder run) is executed. |
+| What's planned for the next release? | `ROADMAP.md` → Now / Next tier tables, plus `RESEARCH_REPORT.md` for the current synthesis; `gh issue list` once F182 (issue seeder run) is executed. |
 | What shipped in the last release? | `CHANGELOG.md`. |
 | Why was X rejected? | `ROADMAP.md` → Rejected tier (F043, F078-F086) + this file § 9 for newly explicit rejects. |
 | How does the CEP panel call ExtendScript? | `extension/com.opencut.panel/host/index.jsx` + `PremiereBridge` abstraction in `main.js`. |
