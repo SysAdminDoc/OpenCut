@@ -12,10 +12,11 @@ Endpoints for AI-powered content analysis and optimization:
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     validate_filepath,
@@ -282,7 +283,7 @@ def ai_suggest():
     """Get context-aware command suggestions based on clip metadata."""
     from opencut.core.context_suggest import get_suggestions
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     clip_metadata = data.get("clip_metadata")
     if not clip_metadata or not isinstance(clip_metadata, dict):
         return jsonify({"error": "clip_metadata dict is required"}), 400
@@ -308,7 +309,7 @@ def ai_score_title():
     """Score a video title for SEO effectiveness."""
     from opencut.core.seo_optimizer import score_title
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     title = data.get("title", "").strip()
     if not title:
         return jsonify({"error": "title is required"}), 400

@@ -13,11 +13,12 @@ Routes:
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -152,7 +153,7 @@ def metadata_read_route():
     from opencut.core.metadata_tools import get_metadata
     from opencut.errors import safe_error
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     filepath = data.get("filepath", "").strip()
 
     if not filepath:

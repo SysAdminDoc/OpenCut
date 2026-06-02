@@ -7,12 +7,13 @@ gaming highlights, deepfake detection, face tagging, and holy grail timelapse.
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -113,7 +114,7 @@ def export_track_route():
     try:
         from opencut.core.motion_tracking import export_track_data
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         track_data = data.get("track_data", [])
         if not track_data:
             return jsonify({"error": "No track_data provided"}), 400
@@ -183,7 +184,7 @@ def detect_360_route():
     try:
         from opencut.core.video_360 import detect_360_format
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -513,7 +514,7 @@ def cluster_faces_route():
 
         from opencut.core.face_tagging import cluster_faces
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         embeddings = data.get("embeddings", [])
         if not embeddings:
             return jsonify({"error": "No embeddings provided"}), 400
@@ -544,7 +545,7 @@ def tag_face_route():
     try:
         from opencut.core.face_tagging import tag_face_cluster
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         cluster_id = safe_int(data.get("cluster_id", -1), -1)
         name = data.get("name", "").strip()
 
@@ -569,7 +570,7 @@ def search_face_route():
     try:
         from opencut.core.face_tagging import search_by_face
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         name = data.get("name", "").strip()
         if not name:
             return jsonify({"error": "Search name is required"}), 400
@@ -631,7 +632,7 @@ def analyze_exposure_route():
     try:
         from opencut.core.holy_grail_timelapse import analyze_exposure_ramp
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         image_paths = data.get("image_paths", [])
         if not image_paths:
             return jsonify({"error": "No image_paths provided"}), 400

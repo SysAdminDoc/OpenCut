@@ -7,7 +7,7 @@ Effects, speed, LUT, transitions, particles, compositing, color grading.
 import logging
 import re
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import (
@@ -19,6 +19,7 @@ from opencut.jobs import (
     async_job,
 )
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -667,7 +668,7 @@ def video_lut_ai(job_id, filepath, data):
 @require_csrf
 def video_lut_blend():
     """Blend two LUTs into a new LUT with a single slider."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     lut_a = data.get("lut_a", "").strip()
     lut_b = data.get("lut_b", "").strip()
     blend_val = safe_float(data.get("blend", 0.5), 0.5, min_val=0.0, max_val=1.0)

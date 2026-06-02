@@ -217,7 +217,7 @@ def ae_project_info():
 def panel_save_layout():
     """Save a workspace layout."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         name = data.get("name", "").strip()
         state = data.get("state", {})
         if not name:
@@ -264,7 +264,7 @@ def panel_list_layouts():
 def panel_drop_handler():
     """Register a drag-and-drop file-to-operation mapping."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         file_path = data.get("file_path", "")
         operation = data.get("operation", "")
         if not file_path or not operation:
@@ -366,7 +366,7 @@ def panel_complete_walkthrough(feature_id):
 def panel_save_state():
     """Save panel session state."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         state = data.get("state", data)
         from opencut.core.panel_ux import save_session_state
         result = save_session_state(state)

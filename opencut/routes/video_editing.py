@@ -24,6 +24,7 @@ from opencut.jobs import (
     async_job,
 )
 from opencut.security import (
+    get_json_dict,
     rate_limit,
     rate_limit_release,
     require_csrf,
@@ -534,7 +535,7 @@ def video_auto_zoom(job_id, filepath, data):
 @require_csrf
 def video_multicam_cuts():
     """Generate multicam cut points from speaker diarization data."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     filepath = data.get("filepath", data.get("file", "")).strip()
     diarization_file = data.get("diarization_file", "").strip()
     segments = data.get("segments", None)

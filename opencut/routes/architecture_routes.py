@@ -7,10 +7,11 @@ process isolation.
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.security import require_csrf, safe_int
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -144,7 +145,7 @@ def worker_pool_create():
     try:
         from opencut.core.process_isolation import create_worker_pool
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         max_workers = safe_int(data.get("max_workers", 2), default=2, min_val=1, max_val=16)
         vram_budget_mb = safe_int(
             data.get("vram_budget_mb", 8192), default=8192, min_val=512, max_val=65536
@@ -217,7 +218,7 @@ def worker_pool_submit():
                 "suggestion": "Create a pool first via POST /architecture/worker-pool/create",
             }), 404
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         model_name = data.get("model_name", "").strip()
         function_path = data.get("function_path", "").strip()
 
@@ -289,7 +290,7 @@ def worker_pool_kill():
                 "code": "POOL_NOT_INITIALIZED",
             }), 404
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         worker_id = data.get("worker_id", "").strip()
         if not worker_id:
             return jsonify({

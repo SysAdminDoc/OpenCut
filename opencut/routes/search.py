@@ -16,6 +16,7 @@ from opencut.jobs import (
     async_job,
 )
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_int,
     validate_filepath,
@@ -115,7 +116,7 @@ def search_index(job_id, filepath, data):
 @require_csrf
 def search_footage():
     """Search the indexed footage for a text query."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     query = data.get("query", "").strip()
     top_k = safe_int(data.get("top_k", 10), 10, min_val=1, max_val=100)
 

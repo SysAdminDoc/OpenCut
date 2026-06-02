@@ -13,11 +13,12 @@ Two new feature surfaces pulled from the OSS research:
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, validate_path
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -144,7 +145,7 @@ def compose_validate():
     """
     try:
         from opencut.core import declarative_compose as dc
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         spec = data.get("spec") or data
         cleaned = dc.validate_spec(spec)
         return jsonify({"valid": True, "spec": cleaned})

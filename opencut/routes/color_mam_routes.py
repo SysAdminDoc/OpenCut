@@ -9,11 +9,12 @@ Data Animation (26.2), and Shape Animation (26.3).
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -38,7 +39,7 @@ def color_scope_waveform():
     try:
         from opencut.core.color_scopes import generate_waveform
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -73,7 +74,7 @@ def color_scope_vectorscope():
     try:
         from opencut.core.color_scopes import generate_vectorscope
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -101,7 +102,7 @@ def color_scope_rgb_parade():
     try:
         from opencut.core.color_scopes import generate_rgb_parade
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -129,7 +130,7 @@ def color_scope_histogram():
     try:
         from opencut.core.color_scopes import generate_histogram
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -159,7 +160,7 @@ def color_scopes_all():
     try:
         from opencut.core.color_scopes import generate_all_scopes
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -218,7 +219,7 @@ def color_wheels_preview():
     try:
         from opencut.core.color_wheels import preview_color_wheels
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -280,7 +281,7 @@ def hsl_matte_preview():
     try:
         from opencut.core.hsl_qualifier import preview_matte
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -344,7 +345,7 @@ def power_window_create():
     try:
         from opencut.core.power_windows import create_power_window
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         shape = data.get("shape", "circle")
         position = data.get("position", (0.5, 0.5))
         if isinstance(position, list):
@@ -435,7 +436,7 @@ def aces_detect_idt():
     try:
         from opencut.core.aces_pipeline import detect_camera_idt
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -563,7 +564,7 @@ def proxy_relink():
     try:
         from opencut.core.proxy_gen import relink_proxy_to_original
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         proxy_path = data.get("proxy_path", "").strip()
         if not proxy_path:
             return jsonify({"error": "No proxy path provided"}), 400
@@ -632,7 +633,7 @@ def ai_metadata_detect_objects():
     try:
         from opencut.core.ai_metadata import detect_objects
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         frame = data.get("frame", data.get("filepath", "")).strip()
         if not frame:
             return jsonify({"error": "No frame path provided"}), 400
@@ -653,7 +654,7 @@ def ai_metadata_classify_scene():
     try:
         from opencut.core.ai_metadata import classify_scene
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         frame = data.get("frame", data.get("filepath", "")).strip()
         if not frame:
             return jsonify({"error": "No frame path provided"}), 400

@@ -8,12 +8,13 @@ detection/conversion.
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -32,7 +33,7 @@ video_proc_bp = Blueprint("video_proc", __name__)
 @require_csrf
 def hdr_detect():
     """Detect HDR metadata in a video file (synchronous)."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     filepath = data.get("filepath", "").strip()
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -222,7 +223,7 @@ def stabilize_advanced_route(job_id, filepath, data):
 @require_csrf
 def colorspace_detect():
     """Detect color space metadata in a video file (synchronous)."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     filepath = data.get("filepath", "").strip()
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400

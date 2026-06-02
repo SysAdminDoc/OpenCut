@@ -160,7 +160,7 @@ def route_obs_status():
 def route_obs_switch_scene():
     try:
         from opencut.core import obs_bridge
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         scene = str(data.get("scene_name") or "").strip()
         if not scene:
             return jsonify({
@@ -180,7 +180,7 @@ def route_obs_switch_scene():
 def route_obs_recording():
     try:
         from opencut.core import obs_bridge
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         action = str(data.get("action") or "status").lower()
         host, port, password, timeout = _obs_connect_params(data)
         return jsonify(obs_bridge.recording(action, host, port, password, timeout))
@@ -196,7 +196,7 @@ def route_obs_screenshot():
     try:
         from opencut.core import obs_bridge
         from opencut.security import safe_int
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         scene = data.get("scene_name")
         if scene is not None and not isinstance(scene, str):
             scene = None
@@ -243,7 +243,7 @@ def route_runpod_submit():
     try:
         from opencut.core import runpod_render
         from opencut.security import safe_bool, safe_float
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         endpoint_id = str(data.get("endpoint_id") or "").strip()
         payload = data.get("payload")
         if not isinstance(payload, dict):
@@ -286,7 +286,7 @@ def route_runpod_status(endpoint_id: str, job_id: str):
 def route_runpod_cancel():
     try:
         from opencut.core import runpod_render
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         endpoint_id = str(data.get("endpoint_id") or "").strip()
         job_id = str(data.get("job_id") or "").strip()
         api_key = data.get("api_key") if isinstance(data.get("api_key"), str) else None
@@ -394,7 +394,7 @@ def route_plausible_info():
 def route_plausible_track():
     try:
         from opencut.core import telemetry_plausible
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         event_name = str(data.get("event_name") or "").strip()
         if not event_name:
             return jsonify({

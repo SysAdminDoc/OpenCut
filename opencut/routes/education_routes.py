@@ -9,11 +9,12 @@ and auto-quiz overlays.
 import logging
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_bool,
     safe_float,
@@ -108,7 +109,7 @@ def keystroke_overlay(job_id, filepath, data):
 @require_csrf
 def parse_click_log_route():
     """Parse a click/keystroke log file (sync)."""
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     log_path = (data.get("log_path") or "").strip()
     if not log_path:
         return jsonify({"error": "No log_path provided"}), 400
@@ -237,7 +238,7 @@ def create_spotlight_route(job_id, filepath, data):
 @require_csrf
 def create_step_callout_route():
     """Create a step callout configuration (sync, no job)."""
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     text = (data.get("text") or "").strip()
     if not text:
         return jsonify({"error": "No text provided"}), 400
@@ -319,7 +320,7 @@ def screenshot_video(job_id, filepath, data):
 @require_csrf
 def detect_roi_route():
     """Detect regions of interest in an image (sync)."""
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     image_path = (data.get("image_path") or "").strip()
     if not image_path:
         return jsonify({"error": "No image_path provided"}), 400
@@ -343,7 +344,7 @@ def detect_roi_route():
 @require_csrf
 def ken_burns_keyframes_route():
     """Generate Ken Burns keyframes from ROIs (sync)."""
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     rois = data.get("rois", [])
     if not rois:
         return jsonify({"error": "No rois provided"}), 400
@@ -427,7 +428,7 @@ def slide_extract(job_id, filepath, data):
 @require_csrf
 def slide_chapters_route():
     """Generate chapter markers from slide timestamps (sync)."""
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     timestamps = data.get("timestamps", [])
     if not timestamps:
         return jsonify({"error": "No timestamps provided"}), 400
@@ -557,7 +558,7 @@ def pip_side_by_side(job_id, filepath, data):
 @require_csrf
 def quiz_generate_route():
     """Generate quiz questions from a transcript (sync)."""
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     transcript = (data.get("transcript") or "").strip()
     if not transcript:
         return jsonify({"error": "No transcript provided"}), 400

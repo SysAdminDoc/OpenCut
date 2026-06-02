@@ -15,6 +15,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -36,7 +37,7 @@ def route_adr_create():
     """Create a new ADR session for a project."""
     from opencut.core.adr_cue_system import create_session
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     project_name = str(data.get("project_name", "Untitled")).strip()
     source_path = str(data.get("source_path", "")).strip()
     reel = str(data.get("reel", "R1")).strip()
@@ -67,7 +68,7 @@ def route_adr_cue():
     """Add or update an ADR cue in a session."""
     from opencut.core.adr_cue_system import add_cue, update_cue
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     session_id = str(data.get("session_id", "")).strip()
     if not session_id:
         return jsonify({"error": "session_id is required"}), 400
@@ -138,7 +139,7 @@ def route_adr_cuesheet():
     """Export ADR cue sheet as CSV or JSON."""
     from opencut.core.adr_cue_system import export_cue_sheet_csv, export_cue_sheet_json
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     session_id = str(data.get("session_id", "")).strip()
     if not session_id:
         return jsonify({"error": "session_id is required"}), 400

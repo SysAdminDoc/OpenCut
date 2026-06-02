@@ -8,12 +8,13 @@ Endpoints for AI talking head generation and 3D Gaussian splat rendering:
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_bool,
     safe_float,
@@ -163,7 +164,7 @@ def talking_head_detect_face():
     try:
         from opencut.core.talking_head import detect_face_in_image
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         image_path = data.get("image_path", "").strip()
         if not image_path:
             return jsonify({"error": "No image_path provided"}), 400
@@ -208,7 +209,7 @@ def gaussian_splat_load():
     try:
         from opencut.core.gaussian_splat import load_splat, validate_splat
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         ply_path = data.get("ply_path", "").strip()
         if not ply_path:
             return jsonify({"error": "No ply_path provided"}), 400
@@ -322,7 +323,7 @@ def gaussian_splat_orbit():
     try:
         from opencut.core.gaussian_splat import create_orbit_path
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
 
         center = data.get("center", [0, 0, 0])
         if not isinstance(center, (list, tuple)) or len(center) != 3:
@@ -379,7 +380,7 @@ def gaussian_splat_preview_frame():
     try:
         from opencut.core.gaussian_splat import CameraKeyframe, render_splat_frame
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         ply_path = data.get("ply_path", "").strip()
         if not ply_path:
             return jsonify({"error": "No ply_path provided"}), 400

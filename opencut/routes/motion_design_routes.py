@@ -7,12 +7,13 @@ shape animation, expression evaluation, and particle systems.
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_bool,
     safe_float,
@@ -203,7 +204,7 @@ def data_animation_validate():
     try:
         from opencut.core.data_animation import load_data, validate_template
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         template = data.get("template")
         if not template:
             return jsonify({"error": "Template is required"}), 400

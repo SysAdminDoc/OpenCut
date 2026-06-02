@@ -14,10 +14,11 @@ Endpoints for AI-powered editing features:
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_bool,
     safe_float,
@@ -492,7 +493,7 @@ def ai_detect_edges():
     """Analyze frame edge regions for extension suitability."""
     from opencut.helpers import ensure_package
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     filepath = data.get("filepath", "").strip()
     if not filepath:
         return jsonify({"error": "filepath is required"}), 400
@@ -534,7 +535,7 @@ def ai_parse_script():
     """Parse script text into shot descriptions (preview before generating)."""
     from opencut.core.ai_storyboard import parse_shot_descriptions
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     script_text = data.get("script_text", "").strip()
     if not script_text:
         return jsonify({"error": "script_text is required"}), 400

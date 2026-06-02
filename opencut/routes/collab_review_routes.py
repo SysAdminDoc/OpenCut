@@ -14,6 +14,7 @@ from flask import Blueprint, jsonify, request
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath, validate_path
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -45,7 +46,7 @@ def add_review_comment():
     """
     from opencut.core.review_comments import add_comment
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     project_path = data.get("project_path", "")
     text = data.get("text", "")
 
@@ -134,7 +135,7 @@ def resolve_review_comment(comment_id):
     """
     from opencut.core.review_comments import resolve_comment
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     project_path = data.get("project_path", "")
     if not project_path:
         return jsonify({"error": "project_path is required"}), 400
@@ -167,7 +168,7 @@ def delete_review_comment(comment_id):
     """
     from opencut.core.review_comments import delete_comment
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     project_path = data.get("project_path", "")
     if not project_path:
         return jsonify({"error": "project_path is required"}), 400
@@ -200,7 +201,7 @@ def export_review_comments():
     """
     from opencut.core.review_comments import export_comments
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     project_path = data.get("project_path", "")
     if not project_path:
         return jsonify({"error": "project_path is required"}), 400
@@ -319,7 +320,7 @@ def approval_advance():
         request_changes_workflow,
     )
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     workflow_id = data.get("workflow_id", "")
     action = data.get("action", "")
     actor = data.get("actor", "")
@@ -369,7 +370,7 @@ def approval_create():
     """
     from opencut.core.approval_workflow import create_workflow
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     project_id = data.get("project_id", "")
     if not project_id:
         return jsonify({"error": "project_id is required"}), 400
@@ -411,7 +412,7 @@ def upload_shared_preset():
     """
     from opencut.core.shared_presets import add_preset
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     name = data.get("name", "")
     if not name:
         return jsonify({"error": "Preset name is required"}), 400
@@ -492,7 +493,7 @@ def export_edit_history():
     """
     from opencut.core.edit_history import export_history, get_statistics
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     project_id = data.get("project_id", "")
     if not project_id:
         return jsonify({"error": "project_id is required"}), 400

@@ -8,7 +8,7 @@ style transfer.
 import logging
 import re
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import (
@@ -20,6 +20,7 @@ from opencut.jobs import (
     make_install_route,
 )
 from opencut.security import (
+    get_json_dict,
     rate_limit,
     rate_limit_release,
     require_csrf,
@@ -247,7 +248,7 @@ def face_capabilities():
 @require_csrf
 def face_detect():
     """Detect faces in image or first frame of video."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     filepath = data.get("filepath", "").strip()
     detector = data.get("detector", "mediapipe")
     if detector not in ("insightface", "mediapipe", "haar"):

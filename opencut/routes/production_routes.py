@@ -9,12 +9,13 @@ import logging
 import os
 import tempfile
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -100,7 +101,7 @@ def credits_generate(job_id, filepath, data):
 def credits_parse():
     """Parse a credits text file into structured data (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -126,7 +127,7 @@ def credits_parse():
 def image_sequence_detect():
     """Detect an image sequence in a folder (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         folder = data.get("folder_path", "").strip()
         if not folder:
             return jsonify({"error": "No folder_path provided"}), 400

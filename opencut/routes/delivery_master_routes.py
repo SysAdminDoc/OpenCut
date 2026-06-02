@@ -242,7 +242,7 @@ def delivery_spec_create():
     """
     from opencut.core.delivery_spec import create_custom_spec
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     name = data.get("name", "").strip()
     if not name:
         return jsonify({"error": "name is required"}), 400
@@ -281,7 +281,7 @@ def delivery_spec_compare():
     """
     from opencut.core.delivery_spec import compare_specs
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     spec_a = data.get("spec_a", "").strip()
     spec_b = data.get("spec_b", "").strip()
 
@@ -452,7 +452,7 @@ def render_multi_cancel():
     """
     from opencut.core.multi_render import cancel_render
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     render_id = data.get("render_id", "").strip()
 
     if not render_id:

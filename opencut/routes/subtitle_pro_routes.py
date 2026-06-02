@@ -14,6 +14,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, safe_float, safe_int, validate_filepath
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -476,7 +477,7 @@ def position_preview():
     """Preview subtitle positioning for a single frame."""
     from opencut.core.subtitle_position import preview_position
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     text = str(data.get("text", "")).strip()
     if not text:
         return jsonify({"error": "text is required"}), 400

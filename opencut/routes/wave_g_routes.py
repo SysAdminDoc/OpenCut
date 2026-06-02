@@ -14,10 +14,11 @@ from __future__ import annotations
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.security import require_csrf, validate_path
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -47,7 +48,7 @@ def route_disk_preflight():
         from opencut.core import disk_monitor
         from opencut.security import safe_int
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         path = str(data.get("path") or "").strip()
         if not path:
             return jsonify({
@@ -73,7 +74,7 @@ def route_disk_track():
     """Register an additional path to track in future reports."""
     try:
         from opencut.core import disk_monitor
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         path = str(data.get("path") or "").strip()
         if not path:
             return jsonify({
