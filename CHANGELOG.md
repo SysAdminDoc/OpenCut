@@ -2,6 +2,24 @@
 
 ## [Unreleased]
 
+### Security — SSRF guard hardening
+
+- `opencut.core.url_safety.validate_public_http_url` now rejects alternate IPv4 encodings — decimal (`http://2130706433/`), octal (`http://0177.0.0.1/`), hex (`http://0x7f.0.0.1/`) and short-form (`http://127.1/`). `ipaddress.ip_address` rejects these forms, so they previously fell through the guard and were accepted, while the OS resolver and HTTP clients still expand them to loopback/private targets. The guard now normalises them with `socket.inet_aton` (offline, no DNS) before the loopback/private check. Genuine public hosts and IPs are unaffected. This helper backs every user-configured outbound fetch (webhooks, plugin/model downloads, stock/TTS URLs). Regression test added in `tests/test_hardening.py`.
+
+### Fixed — Request-body robustness (HTTP 500 → 400)
+
+- Routes that read the JSON body with a raw `request.get_json(force=True)` and then called `.get(...)` returned an HTTP 500 (`AttributeError: 'NoneType'`/list has no `.get`) when a client sent a `null` or non-object JSON body (e.g. an array). Converted 160 such call sites across 47 route modules to the existing `opencut.security.get_json_dict()` helper.
+- `get_json_dict()` now raises `werkzeug.BadRequest` (instead of a bare `ValueError`) for non-object bodies, so the centralized error handler returns a structured `400 INVALID_INPUT` even when the helper is called without a local `try`/`except` — matching the helper's documented contract. A `null`/empty body normalizes to `{}`; malformed JSON still returns `400 INVALID_JSON`.
+
+### Fixed — Pre-existing test failures on a clean checkout
+
+- `wave_qrs_routes.cosyvoice_tts` used `bool(data.get("stream"))`, which coerces `"false"`/`"0"` to `True`; switched to `safe_bool` (`test_boolean_coercion`).
+- Added registry features + model cards for 8 shipped AI models that had `check_*_available` probes but no metadata (ACE-Step, Chatterbox TTS, DiffRhythm, FramePack, Kokoro, Spark-TTS, Moonshine ASR, FLUX.1 Kontext), resolving `test_model_cards`/`test_catalog_contract` drift and refreshing `model_cards.json`/`docs/MODELS.md`/`feature_readiness.json`.
+- `depth_effects.estimate_depth_map` (and two sibling functions) now validate the input path **before** attempting heavy dependency resolution, so a missing file fails fast with `FileNotFoundError` instead of pointless install attempts — also makes `test_estimate_depth_map_requires_file` deterministic under the full suite.
+- Regenerated the stale committed API-alias and extended-MCP manifests; relaxed the extended-MCP response-schema canary (count drifts with route curation; schema discovery is healthy at 110 bindings, 0 orphaned).
+- Made `test_sync_badges` derive the route count from the README (was hardcoded `1499`, now self-updating) and refreshed `EXPECTED_CORE_BLUEPRINT_ORDER` for the current blueprint set.
+- Removed dead code flagged by ruff (`agent_chat` unused `total`, `enhance_auto` unused `tempfile`).
+
 ### Changed — Documentation consolidation
 
 - Added root `COMPLETED.md` and `RESEARCH_REPORT.md` summaries while preserving `ROADMAP.md`, `ROADMAP-NEXT.md`, and `ROADMAP-COMPLETED.md` in place for the release-smoke and roadmap-lint gates.

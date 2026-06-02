@@ -93,11 +93,17 @@ class TestBadgeCheckCLI(unittest.TestCase):
                 tmp_path / "opencut" / "_generated" / "route_manifest.json",
             )
             # tests/ optional but its presence affects test-count math; skip.
-            # Mutate the route badge to a wrong number.
+            # Mutate the route badge to a wrong number. Derive the current
+            # count from the README itself so this stays correct as routes are
+            # added (hardcoding it makes the test re-stale on every route bump).
             readme_path = tmp_path / "README.md"
             readme = readme_path.read_text(encoding="utf-8")
+            match = _load_module().ROUTE_BADGE_RE.search(readme)
+            self.assertIsNotNone(match, "Route badge not found in README (format changed?)")
+            current = match.group(2)
+            self.assertNotEqual(current, "99", "Test sentinel collides with live route count")
             mutated = readme.replace(
-                "/API%20Routes-1499-orange",
+                f"/API%20Routes-{current}-orange",
                 "/API%20Routes-99-orange",
             )
             self.assertNotEqual(mutated, readme, "Could not mutate badge (README format changed?)")

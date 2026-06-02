@@ -56,6 +56,12 @@ def estimate_depth_map(
     Returns:
         Path to the depth map video.
     """
+    # Validate the input before resolving heavy optional dependencies: a bad
+    # path should fail fast with a clear FileNotFoundError instead of triggering
+    # several pip-install attempts (and a confusing "Failed to install" error).
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
     if not ensure_package("cv2", "opencv-python-headless"):
         raise RuntimeError("Failed to install opencv-python-headless")
     if not ensure_package("numpy", "numpy"):
@@ -72,9 +78,6 @@ def estimate_depth_map(
     import torch
     from PIL import Image
     from transformers import pipeline
-
-    if not os.path.isfile(input_path):
-        raise FileNotFoundError(f"Input file not found: {input_path}")
 
     if output_path is None:
         base = os.path.splitext(os.path.basename(input_path))[0]
@@ -194,6 +197,12 @@ def apply_bokeh_effect(
     Returns:
         Path to the output video with bokeh effect.
     """
+    # Validate the input before resolving heavy optional dependencies: a bad
+    # path should fail fast with a clear FileNotFoundError instead of triggering
+    # several pip-install attempts (and a confusing "Failed to install" error).
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
     if not ensure_package("cv2", "opencv-python-headless"):
         raise RuntimeError("Failed to install opencv-python-headless")
     if not ensure_package("numpy", "numpy"):
@@ -210,9 +219,6 @@ def apply_bokeh_effect(
     import torch
     from PIL import Image
     from transformers import pipeline
-
-    if not os.path.isfile(input_path):
-        raise FileNotFoundError(f"Input file not found: {input_path}")
 
     if output_path is None:
         base = os.path.splitext(os.path.basename(input_path))[0]
@@ -336,6 +342,12 @@ def apply_parallax_zoom(
     Returns:
         Path to output video with parallax effect.
     """
+    # Validate the input before resolving heavy optional dependencies: a bad
+    # path should fail fast with a clear FileNotFoundError instead of triggering
+    # several pip-install attempts (and a confusing "Failed to install" error).
+    if not os.path.isfile(input_path):
+        raise FileNotFoundError(f"Input file not found: {input_path}")
+
     if not ensure_package("cv2", "opencv-python-headless"):
         raise RuntimeError("Failed to install opencv-python-headless")
     if not ensure_package("numpy", "numpy"):
@@ -352,9 +364,6 @@ def apply_parallax_zoom(
     import torch
     from PIL import Image
     from transformers import pipeline
-
-    if not os.path.isfile(input_path):
-        raise FileNotFoundError(f"Input file not found: {input_path}")
 
     if output_path is None:
         base = os.path.splitext(os.path.basename(input_path))[0]

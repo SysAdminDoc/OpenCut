@@ -614,7 +614,6 @@ def review(
     steps = sess.get("plan", [])
     failed = [s for s in steps if s.get("status") == "failed"]
     rejected = [s for s in steps if s.get("status") == "rejected"]
-    total = len(steps) or 1
 
     # Heuristic baseline: drift_score drops 25 points per failed step,
     # 15 points per rejected step. Floors at 0.

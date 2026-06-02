@@ -2,21 +2,26 @@
 
 Generated from `opencut/model_cards.py`. **Do not hand-edit** — regenerate with `python -m opencut.tools.dump_model_cards`.
 
-Total optional AI/model surfaces: **47**. Each row carries license, hardware, install hint, privacy posture, and (where relevant) an advisory note. Backends not listed here are infrastructure guards on the explicit `NON_AI_CHECKS` allowlist.
+Total optional AI/model surfaces: **55**. Each row carries license, hardware, install hint, privacy posture, and (where relevant) an advisory note. Backends not listed here are infrastructure guards on the explicit `NON_AI_CHECKS` allowlist.
 
 ## Audio
 
 | Backend | License | Hardware | Privacy | Install |
 |---|---|---|---|---|
+| [ACE-Step (full-song music with lyrics)](https://github.com/ACEStudio/ACE-Step) | Apache-2.0 | gpu (>= 8 GB VRAM) | local-only | `pip install acestep` |
 | [AudioCraft / MusicGen](https://github.com/facebookresearch/audiocraft) | MIT | gpu (>= 8 GB VRAM) | local-only | `pip install "opencut[music]" (Python 3.11; Torch 2.1 stack)` |
 | [BeatNet beat/downbeat tracker](https://github.com/mjhydri/BeatNet) | MIT | cpu | local-only | `pip install BeatNet` |
+| [Chatterbox TTS (emotional voice clone)](https://github.com/resemble-ai/chatterbox) | MIT | gpu | local-only | `pip install chatterbox-tts` |
 | [Demucs (htdemucs / hdemucs)](https://github.com/facebookresearch/demucs) | MIT | cpu/gpu | local-only | `pip install demucs` |
+| [DiffRhythm (diffusion full-song generator)](https://github.com/ASLP-lab/DiffRhythm) | Apache-2.0 | gpu (>= 8 GB VRAM) | local-only | `git clone https://github.com/ASLP-lab/DiffRhythm && pip install -r DiffRhythm/requirements.txt` |
 | [Edge TTS (Microsoft cloud voices)](https://github.com/rany2/edge-tts) | MIT (client) | cpu | cloud — text is sent to Microsoft's Speech API | `pip install edge-tts` |
 | [ElevenLabs cloud TTS](https://github.com/elevenlabs/elevenlabs-python) | proprietary client SDK; cloud service | cpu (client) | cloud — text is sent to ElevenLabs | `pip install elevenlabs + ELEVENLABS_API_KEY` |
 | [F5-TTS (zero-shot voice clone)](https://github.com/SWivid/F5-TTS) | MIT | gpu (>= 6 GB VRAM) | local-only | `pip install f5-tts` |
+| [Kokoro TTS (82M, CPU-only)](https://github.com/hexgrad/kokoro) | Apache-2.0 | cpu | local-only | `pip install kokoro (needs espeak-ng for some languages)` |
 | [OmniVoice TTS](https://github.com/k2-fsa/OmniVoice) | Apache-2.0 | gpu | local-only | `pip install omnivoice` |
 | [Resemble Enhance](https://github.com/resemble-ai/resemble-enhance) | MIT | gpu | local-only | `pip install "opencut[enhance]" (Python 3.11; Torch 2.1 stack)` |
 | [Silero VAD](https://github.com/snakers4/silero-vad) | MIT | cpu | local-only | `pip install silero-vad` |
+| [Spark-TTS (CPU-native zero-shot)](https://github.com/SparkAudio/Spark-TTS) | Apache-2.0 | cpu | local-only | `pip install sparktts` |
 | [VidMuse video-to-music](https://vidmuse.github.io/) | Apache-2.0 | gpu | local-only | `pip install vidmuse (stub — roadmap H2.6)` |
 | [WhisperX voice-command grammar](https://github.com/linto-ai/whisper-timestamped) | MIT | cpu/gpu | local-only | `pip install whisperx + faster-whisper` |
 
@@ -30,10 +35,12 @@ Total optional AI/model surfaces: **47**. Each row carries license, hardware, in
 | Backend | License | Hardware | Privacy | Install |
 |---|---|---|---|---|
 | [CrisperWhisper](https://github.com/nyrahealth/CrisperWhisper) | Apache-2.0 | gpu | local-only | `pip install ctranslate2 + crisper-whisper` |
+| [Moonshine ASR (CPU-optimized STT)](https://github.com/usefulsensors/moonshine) | MIT (English models) | cpu | local-only | `pip install moonshine` |
 | [Multimodal diarisation pipeline](https://github.com/m-bain/whisperX) | MIT | gpu | local-only (HF token used for weights download only) | `pip install whisperx + pyannote.audio (HF token required)` |
 | [pyonfx ASS karaoke](https://github.com/CoffeeStraw/PyonFX) | LGPL-3.0 | cpu | local-only | `pip install pyonfx` |
 
 **Advisory notes**:
+- *Moonshine ASR (CPU-optimized STT)* — Multilingual models use a community (non-commercial) license and are gated separately.
 - *Multimodal diarisation pipeline* — pyannote checkpoints are gated by Hugging Face acceptance — set HUGGINGFACE_HUB_TOKEN.
 - *pyonfx ASS karaoke* — LGPL — using as a library inside a proprietary distribution requires legal review.
 
@@ -50,9 +57,12 @@ Total optional AI/model surfaces: **47**. Each row carries license, hardware, in
 | Backend | License | Hardware | Privacy | Install |
 |---|---|---|---|---|
 | [Cloud gen-video (Hailuo / Seedance)](https://hailuo-02.com) | proprietary cloud service | cpu (client) | cloud — prompts + reference frames leave the machine | `API key required — opt-in only` |
+| [FLUX.1 Kontext-dev (image editing)](https://huggingface.co/black-forest-labs/FLUX.1-Kontext-dev) | Apache-2.0 (dev variant) | gpu | local-only | `pip install diffusers>=0.29 torch transformers accelerate` |
+| [FramePack (image-to-video diffusion)](https://github.com/lllyasviel/FramePack) | Apache-2.0 | gpu (>= 6 GB VRAM) | local-only | `pip install framepack` |
 
 **Advisory notes**:
 - *Cloud gen-video (Hailuo / Seedance)* — Disabled by default. Set HAILUO_API_KEY / SEEDANCE_API_KEY to enable.
+- *FLUX.1 Kontext-dev (image editing)* — Kontext-dev weights (~24 GB) download on first use; the pro variant is commercial and is not used.
 
 ## Lipsync
 

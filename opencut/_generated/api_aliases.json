@@ -1,10 +1,10 @@
 {
   "version": 1,
-  "generated_at": "2026-05-18T03:36:36Z",
+  "generated_at": "2026-06-02T00:36:04Z",
   "source": "opencut/_generated/route_manifest.json",
   "total_api_routes": 233,
-  "alias_count": 15,
-  "api_only_count": 218,
+  "alias_count": 16,
+  "api_only_count": 217,
   "method_counts": {
     "DELETE": 5,
     "GET": 56,
@@ -27,6 +27,17 @@
       "canonical_endpoint": "sound_music.route_stem_remix",
       "alias_blueprint": "audio_expand",
       "canonical_blueprint": "sound_music"
+    },
+    {
+      "alias_rule": "/api/mcp/tools",
+      "canonical_rule": "/mcp/tools",
+      "methods": [
+        "GET"
+      ],
+      "alias_endpoint": "infra.mcp_tools",
+      "canonical_endpoint": "mcp_bridge.route_mcp_tools",
+      "alias_blueprint": "infra",
+      "canonical_blueprint": "mcp_bridge"
     },
     {
       "alias_rule": "/api/motion/data-animation",
@@ -1056,15 +1067,6 @@
       "endpoint": "infra.mcp_compound",
       "blueprint": "infra",
       "canonical_candidate": "/mcp/compound"
-    },
-    {
-      "rule": "/api/mcp/tools",
-      "methods": [
-        "GET"
-      ],
-      "endpoint": "infra.mcp_tools",
-      "blueprint": "infra",
-      "canonical_candidate": "/mcp/tools"
     },
     {
       "rule": "/api/models/download",
