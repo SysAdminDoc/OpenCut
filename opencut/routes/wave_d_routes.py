@@ -22,6 +22,7 @@ from flask import Blueprint, jsonify
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, validate_path
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -145,12 +146,11 @@ def route_srt_start(job_id, filepath, data):
 @require_csrf
 def route_srt_stop():
     try:
-        from flask import request
 
         from opencut.core import srt_streaming
         from opencut.security import safe_float, safe_int
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         pid = safe_int(data.get("pid"), 0, min_val=1, max_val=2**31 - 1)
         if not pid:
             return jsonify({
@@ -229,12 +229,11 @@ def route_grammar_parse():
     Synchronous — parsing is pure-Python microseconds.
     """
     try:
-        from flask import request
 
         from opencut.core import voice_command_grammar as vcg
         from opencut.security import safe_float
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         utterance = str(data.get("utterance") or "").strip()
         if not utterance:
             return jsonify({

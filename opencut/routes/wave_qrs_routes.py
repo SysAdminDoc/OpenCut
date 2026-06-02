@@ -44,7 +44,7 @@ from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
-from opencut.security import require_csrf, safe_float, safe_int
+from opencut.security import require_csrf, safe_bool, safe_float, safe_int
 
 logger = logging.getLogger("opencut")
 wave_qrs_bp = Blueprint("wave_qrs", __name__)
@@ -117,7 +117,7 @@ def route_cosyvoice_tts(job_id, filepath, data):
         language=str(data.get("language") or "en"),
         reference_audio=str(data.get("reference_audio") or "") or None,
         speaker=str(data.get("speaker") or "") or None,
-        stream=bool(data.get("stream")),
+        stream=safe_bool(data.get("stream")),
         output=str(data.get("output") or "") or None,
         on_progress=_prog_factory(job_id),
     )

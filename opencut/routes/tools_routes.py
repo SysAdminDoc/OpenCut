@@ -7,11 +7,12 @@ vertical reframing, and telemetry overlay endpoints.
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -366,7 +367,7 @@ def reframe_vertical_route(job_id, filepath, data):
 def telemetry_parse_srt():
     """Parse a DJI SRT file into telemetry data (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400

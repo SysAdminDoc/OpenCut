@@ -7,12 +7,13 @@ color blindness simulation, and photosensitive flash detection.
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -80,7 +81,7 @@ def video_compare_frame():
     try:
         from opencut.core.video_compare import compare_frames
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         input_a = data.get("filepath", "").strip()
         input_b = data.get("input_b", "").strip()
 

@@ -8,12 +8,13 @@ exports and batch transcode operations.
 import logging
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir, _unique_output_path
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_bool,
     validate_filepath,
@@ -226,7 +227,7 @@ def batch_transcode_route(job_id, filepath, data):
 def batch_transcode_estimate_route():
     """Estimate output size and time for a batch transcode job."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         file_paths = data.get("file_paths", [])
         preset_names = data.get("preset_names", [])
 

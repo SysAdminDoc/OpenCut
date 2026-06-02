@@ -7,12 +7,13 @@ fit-to-fill, wide gamut workflow, MXF container support.
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     validate_filepath,
@@ -222,7 +223,7 @@ def fit_to_fill_route(job_id, filepath, data):
 def detect_gamut_route():
     """Detect color gamut of a video file (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400
@@ -296,7 +297,7 @@ def check_gamut_clipping_route(job_id, filepath, data):
 def probe_mxf_route():
     """Probe an MXF file for metadata (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No file path provided"}), 400

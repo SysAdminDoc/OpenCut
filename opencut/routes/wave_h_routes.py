@@ -50,6 +50,7 @@ from flask import Blueprint, jsonify, request
 from opencut.errors import error_response, safe_error
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_path
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -236,7 +237,7 @@ def route_changelog_unseen():
 def route_changelog_mark_seen():
     try:
         from opencut.core import changelog_feed
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         tag = str(data.get("tag") or "").strip()
         if not tag:
             return error_response("INVALID_INPUT", "'tag' is required", status=400)
@@ -322,7 +323,7 @@ def route_demo_download():
 def route_gist_push():
     try:
         from opencut.core import gist_sync
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         files = data.get("files")
         if not isinstance(files, dict) or not files:
             return error_response(
@@ -349,7 +350,7 @@ def route_gist_push():
 def route_gist_pull():
     try:
         from opencut.core import gist_sync
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         url_or_id = str(data.get("gist") or data.get("url") or data.get("id") or "")
         if not url_or_id:
             return error_response(
@@ -648,7 +649,7 @@ def route_qe_reflect_write():
     """Cache a QE reflection probe result from the panel."""
     try:
         from opencut.user_data import write_user_file
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         methods = data.get("methods") or []
         if not isinstance(methods, list):
             return error_response(

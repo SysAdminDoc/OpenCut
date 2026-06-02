@@ -148,14 +148,18 @@ def get_json_dict(*, force: bool = True, silent: bool = False) -> dict:
     normalizes the happy path and turns non-object JSON into a clear 400-level
     validation error instead.
 
-    Malformed JSON is still raised by Flask/Werkzeug so the app's centralized
-    error handlers can return a structured ``INVALID_JSON`` response.
+    Both malformed JSON and non-object JSON raise ``werkzeug.BadRequest`` so the
+    app's centralized error handlers return a structured 400 response. The
+    handler in :func:`opencut.errors.register_error_handlers` recognises the
+    ``"JSON body must be an object"`` sentinel and maps it to ``INVALID_INPUT``,
+    so callers can use ``get_json_dict()`` directly without a local ``try`` —
+    a bare ``ValueError`` would otherwise escape to the generic 500 handler.
     """
     data = request.get_json(force=force, silent=silent)
     if data is None:
         return {}
     if not isinstance(data, dict):
-        raise ValueError("JSON body must be an object")
+        raise BadRequest("JSON body must be an object")
     return data
 
 

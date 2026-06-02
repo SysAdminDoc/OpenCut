@@ -12,6 +12,7 @@ from flask import Blueprint, jsonify, request
 from opencut.errors import safe_error
 from opencut.jobs import async_job
 from opencut.security import require_csrf, safe_int, validate_output_path
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -117,7 +118,7 @@ def podcast_generate_rss():
     try:
         from opencut.core.podcast_rss import generate_podcast_rss
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
 
         episodes = data.get("episodes", [])
         feed_metadata = data.get("feed_metadata", {})

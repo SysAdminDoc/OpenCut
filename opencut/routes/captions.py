@@ -19,6 +19,7 @@ from opencut.errors import safe_error
 from opencut.helpers import _make_sequence_name, _resolve_output_dir
 from opencut.jobs import _is_cancelled, _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     VALID_WHISPER_MODELS,
     rate_limit,
     rate_limit_release,
@@ -400,7 +401,7 @@ def caption_display_setting_preview():
     try:
         from opencut.core.caption_display_settings import build_preview_payload
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         settings = data.get("settings") or {}
         sample_text = str(data.get("sample_text") or "Caption preview")
         return jsonify(build_preview_payload(settings=settings, sample_text=sample_text))
@@ -608,7 +609,7 @@ def get_transcript(job_id, filepath, data):
 @require_csrf
 def export_edited_transcript():
     """Export an edited transcript to SRT/VTT/ASS/JSON."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     filepath = data.get("filepath", "").strip()
     output_dir = data.get("output_dir", "")
     if output_dir:
@@ -1606,7 +1607,7 @@ def captions_karaoke(job_id, filepath, data):
 @require_csrf
 def captions_convert():
     """Convert subtitle file between formats."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     filepath = data.get("filepath", "").strip()
     target_format = data.get("format", "srt")
     if target_format not in _VALID_SUBTITLE_FORMATS:
@@ -2031,13 +2032,13 @@ def captions_qc():
 
     Returns ``{ overall_pass, error_count, warning_count, diagnostics: [...] }``.
     """
-    from flask import jsonify, request
+    from flask import jsonify
 
     from opencut.core.caption_qc import qc_captions
     from opencut.errors import safe_error
 
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         srt_path = (data.get("srt_path") or "").strip() or None
         srt_text = data.get("srt_text")
         standard = (data.get("standard") or "accessibility").strip()

@@ -8,11 +8,12 @@ operations, and template-based assembly.
 import logging
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_filepath
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -398,7 +399,7 @@ def validate_template_route():
     """Validate a custom template definition."""
     from opencut.core.template_assembly_adv import validate_template
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     template_data = data.get("template", data)
 
     if not template_data or not isinstance(template_data, dict):

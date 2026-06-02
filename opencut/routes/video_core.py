@@ -14,7 +14,7 @@ import threading
 import time
 import uuid
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.checks import check_watermark_available
 from opencut.errors import safe_error
@@ -35,6 +35,7 @@ from opencut.jobs import (
     async_job,
 )
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_bool,
     safe_float,
@@ -61,7 +62,7 @@ LAMA_MODEL_DIR = os.environ.get("OPENCUT_LAMA_DIR", None)
 @require_csrf
 def video_auto_detect_watermark():
     """Auto-detect watermark region using Florence-2 vision model (or edge fallback)."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     filepath = data.get("filepath", "").strip()
     prompt = data.get("prompt", "watermark")[:200]
 
@@ -806,7 +807,7 @@ def generate_thumbnails_route(job_id, filepath, data):
 @require_csrf
 def batch_create():
     """Create a batch processing job."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     operation = data.get("operation", "")
     filepaths = data.get("filepaths", [])
     params = data.get("params", {})
@@ -967,7 +968,7 @@ def batch_parallel():
     from opencut.core.batch_executor import BatchExecutor, OperationSpec
     from opencut.jobs import TooManyJobsError
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     operations = data.get("operations", [])
     max_workers = safe_int(data.get("max_workers", 2), 2, min_val=1, max_val=8)
 

@@ -13,6 +13,7 @@ from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -152,7 +153,7 @@ def camera_place_object():
             place_object_on_plane,
         )
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
 
         solve_data = data.get("solve_result")
         if not solve_data or not isinstance(solve_data, dict):

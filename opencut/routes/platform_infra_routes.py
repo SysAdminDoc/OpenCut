@@ -85,7 +85,7 @@ def _fire_review_notification(event_type, review_id, *, comment=None, status="")
 def review_add_comment():
     """Add a timestamped comment to a review."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         review_id = data.get("review_id", "")
         timestamp = safe_float(data.get("timestamp"), default=0)
         text = data.get("text", "")
@@ -121,7 +121,7 @@ def review_add_comment():
 def review_get_comments():
     """Get all comments for a review."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         review_id = data.get("review_id", "")
 
         from opencut.core.review_links import get_review_comments
@@ -148,7 +148,7 @@ def review_get_comments():
 def review_update_status():
     """Update review approval status."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         review_id = data.get("review_id", "")
         status = data.get("status", "")
 
@@ -264,7 +264,7 @@ def review_feed_atom():
 def resolve_add_marker_route():
     """Add a marker to the Resolve timeline."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         timestamp = safe_float(data.get("timestamp"), default=0)
         name = data.get("name", "Marker")
         color = data.get("color", "Blue")
@@ -290,7 +290,7 @@ def resolve_add_marker_route():
 def resolve_apply_cuts_route():
     """Apply cuts to the Resolve timeline."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         cut_list = data.get("cuts", [])
 
         from opencut.core.resolve_integration import resolve_apply_cuts
@@ -345,7 +345,7 @@ def resolve_timeline_info():
 def resolve_render_route():
     """Start a Resolve render."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         settings = data.get("settings", {})
 
         from opencut.core.resolve_integration import resolve_render
@@ -708,7 +708,7 @@ def stock_download(job_id, filepath, data):
 def filter_build():
     """Build a filter_complex string from a node graph."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         nodes = data.get("nodes", [])
         connections = data.get("connections")
 
@@ -724,7 +724,7 @@ def filter_build():
 def filter_validate():
     """Validate a filter graph."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         from opencut.core.ffmpeg_builder import validate_filter_graph
         result = validate_filter_graph(data)
         return jsonify(result)
@@ -767,7 +767,7 @@ def filter_presets_list():
 def filter_presets_save():
     """Save a filter chain as a preset."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         chain = data.get("chain", "")
         name = data.get("name", "")
         description = data.get("description", "")
@@ -825,7 +825,7 @@ def smart_render_route(job_id, filepath, data):
 def smart_render_estimate():
     """Estimate smart render savings."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         filepath = validate_filepath(data.get("filepath", ""))
         changes = data.get("changes", [])
 
@@ -856,7 +856,7 @@ def cache_stats():
 def cache_cleanup():
     """Clean up the render cache."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         max_size = safe_float(data.get("max_size_gb"), default=5.0, min_val=0.1)
 
         from opencut.core.render_cache import cleanup_cache
@@ -871,7 +871,7 @@ def cache_cleanup():
 def cache_invalidate():
     """Invalidate downstream cache entries."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         input_hash = data.get("input_hash", "")
         operation = data.get("operation", "")
 
@@ -891,7 +891,7 @@ def cache_invalidate():
 def timeline_diff_route():
     """Compare two timeline snapshots."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         snapshot_a = data.get("snapshot_a", {})
         snapshot_b = data.get("snapshot_b", {})
 
@@ -923,7 +923,7 @@ def timeline_diff_route():
 def timeline_diff_export():
     """Export a timeline diff report."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         snapshot_a = data.get("snapshot_a", {})
         snapshot_b = data.get("snapshot_b", {})
         fmt = data.get("format", "json")
@@ -945,7 +945,7 @@ def timeline_diff_export():
 def branch_create():
     """Create a new edit branch."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         name = data.get("name", "")
         snapshot = data.get("snapshot", {})
         project_id = data.get("project_id", "default")
@@ -967,7 +967,7 @@ def branch_create():
 def branch_switch():
     """Switch to a named branch."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         name = data.get("name", "")
         project_id = data.get("project_id", "default")
 
@@ -987,7 +987,7 @@ def branch_switch():
 def branch_merge():
     """Merge two branches."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         source = data.get("source", "")
         target = data.get("target", "")
         project_id = data.get("project_id", "default")
@@ -1082,7 +1082,7 @@ def frameio_upload(job_id, filepath, data):
 def frameio_comments():
     """Get comments from a Frame.io asset."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         asset_id = data.get("asset_id", "")
         api_key = data.get("api_key", "")
 
@@ -1109,7 +1109,7 @@ def frameio_comments():
 def frameio_resolve_comment():
     """Resolve a Frame.io comment."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         comment_id = data.get("comment_id", "")
         api_key = data.get("api_key", "")
 
@@ -1125,7 +1125,7 @@ def frameio_resolve_comment():
 def frameio_sync():
     """Two-way sync Frame.io comments."""
     try:
-        data = request.get_json(force=True)
+        data = get_json_dict()
         asset_id = data.get("asset_id", "")
         api_key = data.get("api_key", "")
         local_comments = data.get("local_comments", [])
