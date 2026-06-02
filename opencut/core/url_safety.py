@@ -1,6 +1,7 @@
 """Shared URL validation helpers for outbound network calls."""
 
 import ipaddress
+import socket
 from urllib.parse import urlparse
 
 
@@ -48,10 +49,21 @@ def validate_public_http_url(url: str, *, label: str = "URL") -> str:
     try:
         addr = ipaddress.ip_address(hostname)
     except ValueError:
-        # Regular hostnames are allowed here. Resolving them would make
-        # validation dependent on network access and still would not fully
-        # prevent DNS rebinding between validation and the actual request.
-        return cleaned
+        # Not a canonical IP literal. Before treating it as a regular hostname,
+        # catch the alternate IPv4 encodings that ``ipaddress`` rejects but the
+        # OS resolver and most HTTP clients still expand to a real address:
+        # decimal (``2130706433``), octal (``0177.0.0.1``), hex (``0x7f.0.0.1``)
+        # and short forms (``127.1``). ``socket.inet_aton`` performs exactly
+        # this expansion offline, so the SSRF guard stays deterministic and
+        # network-free while no longer being bypassable by a numeric literal.
+        try:
+            packed = socket.inet_aton(hostname)
+        except OSError:
+            # Genuine DNS hostname. Resolving it would make validation depend on
+            # network access and still would not fully prevent DNS rebinding
+            # between validation and the actual request, so accept it as-is.
+            return cleaned
+        addr = ipaddress.ip_address(packed)
 
     reason = _blocked_ip_reason(addr)
     if reason == "localhost":

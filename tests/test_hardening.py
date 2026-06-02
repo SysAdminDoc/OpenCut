@@ -291,6 +291,31 @@ def test_public_url_validation_rejects_malformed_inputs():
         validate_public_http_url("https://[::1")
 
 
+def test_public_url_validation_rejects_numeric_ip_ssrf_bypass():
+    """Alternate IPv4 encodings (decimal/octal/hex/short-form) must not slip
+    past the SSRF guard: ``ipaddress.ip_address`` rejects them, but the OS
+    resolver and HTTP clients still expand them to loopback/private targets.
+    """
+    import pytest as _pt
+
+    from opencut.core.url_safety import validate_public_http_url
+
+    # All of these expand to 127.0.0.1 / a private address via inet_aton.
+    for value, match in (
+        ("http://2130706433/", "localhost"),       # decimal 127.0.0.1
+        ("http://0177.0.0.1/", "localhost"),        # octal 127.0.0.1
+        ("http://0x7f.0.0.1/", "localhost"),        # hex 127.0.0.1
+        ("http://127.1/", "localhost"),             # short-form 127.0.0.1
+        ("http://3232235521/", "private"),          # decimal 192.168.0.1
+    ):
+        with _pt.raises(ValueError, match=match):
+            validate_public_http_url(value)
+
+    # Genuine public hosts and IPs must still pass unchanged.
+    for value in ("http://example.com/x", "https://api.github.com/", "http://8.8.8.8/"):
+        assert validate_public_http_url(value) == value
+
+
 def test_webhook_system_url_rejects_local_and_private_targets():
     import pytest as _pt
 
