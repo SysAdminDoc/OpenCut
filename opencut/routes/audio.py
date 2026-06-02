@@ -13,7 +13,7 @@ import subprocess as _sp
 import sys
 import tempfile
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.checks import check_demucs_available
 from opencut.errors import safe_error
@@ -1125,7 +1125,7 @@ def audio_gen_sfx(job_id, filepath, data):
 @require_csrf
 def audio_gen_silence():
     """Generate silence/padding audio."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     output_dir = data.get("output_dir", "")
     if output_dir:
         try:

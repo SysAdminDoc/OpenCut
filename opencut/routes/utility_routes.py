@@ -12,6 +12,7 @@ from flask import Blueprint, jsonify, request
 
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, safe_float, safe_int, validate_output_path, validate_path
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -108,7 +109,7 @@ def webhook_test():
     """Send a test webhook to a given URL (sync)."""
     from opencut.core.webhooks import _validate_webhook_url, send_webhook
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     url = data.get("url", "").strip()
     if not url:
         return jsonify({"error": "No URL provided"}), 400
@@ -146,7 +147,7 @@ def webhook_config_save():
     """Save webhook configuration."""
     from opencut.core.webhooks import save_webhook_config
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     configs = data.get("webhooks", [])
     if not isinstance(configs, list):
         return jsonify({"error": "webhooks must be a list"}), 400
@@ -224,7 +225,7 @@ def notes_add():
     """Add a timestamped note to a project."""
     from opencut.core.project_notes import add_note
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     project_id = data.get("project_id", "").strip()
     if not project_id:
         return jsonify({"error": "project_id is required"}), 400
@@ -262,7 +263,7 @@ def notes_update():
     """Update an existing note."""
     from opencut.core.project_notes import update_note
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     note_id = data.get("note_id", "").strip()
     if not note_id:
         return jsonify({"error": "note_id is required"}), 400
@@ -285,7 +286,7 @@ def notes_export():
     """Export project notes as text, csv, or markdown."""
     from opencut.core.project_notes import export_notes
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     project_id = data.get("project_id", "").strip()
     if not project_id:
         return jsonify({"error": "project_id is required"}), 400
@@ -305,7 +306,7 @@ def license_record():
     """Record usage of a third-party asset with license info."""
     from opencut.core.license_tracker import record_asset_usage
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     source_url = data.get("source_url", "").strip()
     filename = data.get("filename", "").strip()
     license_type = data.get("license_type", "").strip()
@@ -343,7 +344,7 @@ def license_export():
     """Export attribution document for a project."""
     from opencut.core.license_tracker import export_attribution
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     project_id = data.get("project_id", "").strip()
     if not project_id:
         return jsonify({"error": "project_id is required"}), 400
@@ -429,7 +430,7 @@ def annotations_add():
     """Add an annotation to a project snapshot."""
     from opencut.core.annotations import add_annotation
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     snapshot_id = data.get("snapshot_id", "").strip()
     if not snapshot_id:
         return jsonify({"error": "snapshot_id is required"}), 400
@@ -467,7 +468,7 @@ def annotations_export():
     """Export revision history for one or more snapshots."""
     from opencut.core.annotations import export_revision_history
 
-    data = request.get_json(force=True)
+    data = get_json_dict()
     snapshot_ids = data.get("snapshot_ids", [])
     if not snapshot_ids or not isinstance(snapshot_ids, list):
         return jsonify({"error": "snapshot_ids must be a non-empty list"}), 400

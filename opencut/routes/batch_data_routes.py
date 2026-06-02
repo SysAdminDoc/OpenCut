@@ -10,12 +10,13 @@ import logging
 import os
 import tempfile
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import MAX_BATCH_FILES, _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_bool,
     safe_float,
@@ -99,7 +100,7 @@ def ingest_run(job_id, filepath, data):
 def ingest_verify_checksum():
     """Verify checksum of a single file (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filepath = data.get("filepath", "").strip()
         if not filepath:
             return jsonify({"error": "No filepath provided"}), 400
@@ -125,7 +126,7 @@ def ingest_verify_checksum():
 def ingest_rename_preview():
     """Preview rename-by-pattern result (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         filename = str(data.get("filename", ""))[:500]
         pattern = str(data.get("pattern", ""))[:500]
         metadata = data.get("metadata", {})
@@ -217,7 +218,7 @@ def storage_restore(job_id, filepath, data):
 def storage_manifest():
     """Get the archive manifest (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         archive_path = data.get("archive_path", "").strip()
 
         from opencut.core.storage_tiering import get_archive_manifest
@@ -236,7 +237,7 @@ def storage_manifest():
 def metadata_read():
     """Read metadata from multiple files (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         file_paths = _validate_file_list(data)
 
         from opencut.core.batch_metadata import read_batch_metadata
@@ -291,7 +292,7 @@ def metadata_template(job_id, filepath, data):
 def metadata_export_csv():
     """Export metadata from multiple files to CSV (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         file_paths = _validate_file_list(data)
 
         output_path = data.get("output_path", "").strip()
@@ -318,7 +319,7 @@ def metadata_export_csv():
 def conform_analyze():
     """Analyze conformance of multiple files against target spec (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         file_paths = _validate_file_list(data)
         target_spec = data.get("target_spec", {})
         if not isinstance(target_spec, dict):
@@ -558,7 +559,7 @@ def construction_timelapse_fill(job_id, filepath, data):
 def expression_validate():
     """Validate an expression (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         expr = str(data.get("expression", ""))[:2000]
         if not expr:
             return jsonify({"error": "expression is required"}), 400
@@ -575,7 +576,7 @@ def expression_validate():
 def expression_evaluate():
     """Evaluate an expression with context (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         expr = str(data.get("expression", ""))[:2000]
         if not expr:
             return jsonify({"error": "expression is required"}), 400
@@ -621,7 +622,7 @@ def expression_evaluate():
 def expression_evaluate_batch():
     """Evaluate an expression across multiple frames (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         expr = str(data.get("expression", ""))[:2000]
         if not expr:
             return jsonify({"error": "expression is required"}), 400
@@ -671,7 +672,7 @@ def expression_evaluate_batch():
 def subtitle_position_analyze_frame():
     """Analyze a frame for obstructions (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         frame_path = data.get("frame_path", "").strip()
         if not frame_path:
             return jsonify({"error": "frame_path is required"}), 400
@@ -713,7 +714,7 @@ def subtitle_position_analyze_frame():
 def subtitle_position_compute():
     """Compute subtitle position from obstructions (sync)."""
     try:
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         obstructions_raw = data.get("obstructions", [])
         frame_width = safe_int(data.get("frame_width", 1920), 1920, min_val=1)
         frame_height = safe_int(data.get("frame_height", 1080), 1080, min_val=1)

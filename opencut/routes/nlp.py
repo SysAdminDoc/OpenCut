@@ -7,10 +7,11 @@ route + params for the frontend to execute.
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.security import require_csrf
+from opencut.security import get_json_dict
 
 try:
     from ..core.llm import LLMConfig
@@ -32,7 +33,7 @@ nlp_bp = Blueprint("nlp", __name__)
 @require_csrf
 def nlp_command():
     """Parse a natural-language command and return the matching route + params."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     command = data.get("command", "").strip()
     file_path = data.get("filepath", data.get("file", "")).strip()
     llm_provider = data.get("llm_provider", "ollama").strip()

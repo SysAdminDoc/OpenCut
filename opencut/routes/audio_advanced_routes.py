@@ -13,10 +13,11 @@ Blueprint for advanced audio features:
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.jobs import async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_bool,
     safe_float,
@@ -666,7 +667,7 @@ def route_parse_voice_command():
     """Parse raw voice text into a structured command."""
     from opencut.core.voice_commands import parse_voice_command
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     text = data.get("text", "")
     if not text:
         return jsonify({"error": "No text provided"}), 400

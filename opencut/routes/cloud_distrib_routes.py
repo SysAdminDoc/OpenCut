@@ -13,6 +13,7 @@ from opencut.errors import safe_error
 from opencut.helpers import _resolve_output_dir
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, safe_float, safe_int, validate_filepath, validate_path
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -100,7 +101,7 @@ def cloud_nodes_add():
     try:
         from opencut.core.cloud_render import RenderNode, add_node
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         name = (data.get("name", "") or "").strip()
         host = (data.get("host", "") or "").strip()
 
@@ -204,7 +205,7 @@ def publish_validate():
     try:
         from opencut.core.platform_publish import validate_metadata, validate_video_for_platform
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         platform = data.get("platform", "")
         metadata = data.get("metadata", {})
         filepath = data.get("filepath", "")
@@ -380,7 +381,7 @@ def analytics_record():
             record_metrics,
         )
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
         action = data.get("action", "metrics")
 
         if action == "publish":

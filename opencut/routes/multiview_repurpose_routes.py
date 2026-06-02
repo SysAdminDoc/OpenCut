@@ -18,11 +18,12 @@ Endpoints:
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.jobs import async_job
 from opencut.security import require_csrf, safe_bool, safe_float, safe_int, validate_output_path, validate_path
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -382,7 +383,7 @@ def repurpose_content_calendar():
     try:
         from opencut.core.content_calendar import generate_content_calendar
 
-        data = request.get_json(force=True) or {}
+        data = get_json_dict() or {}
 
         clips = data.get("clips", [])
         if not clips:

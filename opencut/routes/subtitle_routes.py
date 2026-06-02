@@ -12,10 +12,11 @@ Blueprint providing endpoints for:
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.jobs import _update_job, async_job
 from opencut.security import require_csrf, safe_bool, safe_float, validate_output_path
+from opencut.security import get_json_dict
 
 logger = logging.getLogger("opencut")
 
@@ -68,7 +69,7 @@ def subtitle_tracks():
     from opencut.core.soft_subtitles import list_subtitle_tracks
     from opencut.security import validate_filepath
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     filepath = data.get("filepath", "").strip()
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -266,7 +267,7 @@ def timecode_detect():
     from opencut.core.timecode_utils import detect_timecode_format
     from opencut.security import validate_filepath
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     filepath = data.get("filepath", "").strip()
     if not filepath:
         return jsonify({"error": "No file path provided"}), 400
@@ -293,7 +294,7 @@ def timecode_convert():
     """Convert timecode between frame rates / formats (synchronous)."""
     from opencut.core.timecode_utils import convert_timecode
 
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     tc = data.get("timecode", "").strip()
     if not tc:
         return jsonify({"error": "No timecode provided"}), 400

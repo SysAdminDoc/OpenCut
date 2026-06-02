@@ -1415,7 +1415,7 @@ def whisper_settings():
         return jsonify(settings)
 
     # POST - update settings
-    data = request.get_json(force=True) if request.data else {}
+    data = get_json_dict() if request.data else {}
     settings = load_whisper_settings()
 
     if "cpu_mode" in data:
@@ -1864,7 +1864,7 @@ def llm_status():
 @require_csrf
 def llm_test():
     """Test LLM connectivity with a simple prompt."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
 
     _VALID_LLM_PROVIDERS = {"ollama", "openai", "anthropic", "gemini"}
     provider = data.get("provider", "ollama").strip().lower()
@@ -2075,7 +2075,7 @@ def resolve_import():
 @require_csrf
 def resolve_markers():
     """Add markers to the current Resolve timeline."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     markers = data.get("markers", [])
     if not markers:
         return jsonify({"error": "No markers provided"}), 400
@@ -2117,7 +2117,7 @@ def chat_message():
     Maintains conversation context across messages. Returns the assistant's
     response with any editing actions to execute.
     """
-    data = request.get_json(force=True)
+    data = get_json_dict()
     message = data.get("message", "").strip()
     session_id = data.get("session_id", "default")
     filepath = data.get("filepath", "")
@@ -2166,7 +2166,7 @@ def chat_message():
 @require_csrf
 def chat_clear():
     """Clear a chat session's history."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     session_id = data.get("session_id", "default")
     try:
         from opencut.core.chat_editor import clear_session
@@ -2354,7 +2354,7 @@ def social_platforms():
 @require_csrf
 def social_auth_url():
     """Get OAuth authorization URL for a platform."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     platform = data.get("platform", "").strip().lower()
 
     if platform not in ("youtube", "tiktok", "instagram"):
@@ -2374,7 +2374,7 @@ def social_auth_url():
 @require_csrf
 def social_connect():
     """Store OAuth credentials after authorization callback."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     platform = data.get("platform", "").strip().lower()
     access_token = data.get("access_token", "").strip()
 
@@ -2403,7 +2403,7 @@ def social_connect():
 @require_csrf
 def social_disconnect():
     """Remove stored credentials for a platform."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     platform = data.get("platform", "").strip().lower()
 
     if not platform:
@@ -2493,7 +2493,7 @@ def ws_start():
         from opencut.core.ws_bridge import check_websocket_available, init_bridge
         if not check_websocket_available():
             return jsonify({"error": "websockets package not installed. pip install websockets"}), 400
-        data = request.get_json(force=True) if request.is_json else {}
+        data = get_json_dict() if request.is_json else {}
         port = safe_int(data.get("port", 5680), 5680, min_val=1024, max_val=65535)
         init_bridge(port=port)
         return jsonify({"success": True, "message": f"WebSocket bridge started on port {port}"})
@@ -2531,7 +2531,7 @@ def engine_list():
 @require_csrf
 def engine_set_preference():
     """Set the preferred engine for a feature domain."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     domain = data.get("domain", "").strip()
     engine = str(data.get("engine", "") or "").strip()
 
@@ -2586,7 +2586,7 @@ def engine_get_preferences():
 @require_csrf
 def engine_resolve():
     """Resolve which engine to use for a domain, considering availability and preferences."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     domain = data.get("domain", "").strip()
     requested = data.get("engine", "")
 

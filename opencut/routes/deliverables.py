@@ -7,10 +7,11 @@ VFX sheet, ADR list, music cue sheet, asset list generation.
 import logging
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     validate_path,
 )
@@ -43,7 +44,7 @@ def _resolve_deliverable_output_dir(output_dir: str, fallback_dir: str = None) -
 @require_csrf
 def deliverables_vfx_sheet():
     """Generate a VFX shot sheet from sequence data."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     sequence_data = data.get("sequence_data", {})
     output_dir = data.get("output_dir", "").strip()
     if output_dir:
@@ -78,7 +79,7 @@ def deliverables_vfx_sheet():
 @require_csrf
 def deliverables_adr_list():
     """Generate an ADR (Additional Dialogue Recording) list from sequence data."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     sequence_data = data.get("sequence_data", {})
     output_dir = data.get("output_dir", "").strip()
     if output_dir:
@@ -113,7 +114,7 @@ def deliverables_adr_list():
 @require_csrf
 def deliverables_music_cue_sheet():
     """Generate a music cue sheet from sequence data."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     sequence_data = data.get("sequence_data", {})
     output_dir = data.get("output_dir", "").strip()
     if output_dir:
@@ -148,7 +149,7 @@ def deliverables_music_cue_sheet():
 @require_csrf
 def deliverables_asset_list():
     """Generate an asset list from sequence data."""
-    data = request.get_json(force=True)
+    data = get_json_dict()
     sequence_data = data.get("sequence_data", {})
     output_dir = data.get("output_dir", "").strip()
     if output_dir:

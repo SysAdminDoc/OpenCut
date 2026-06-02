@@ -6,11 +6,12 @@ Platform safe zone overlay, timecode burn-in, countdown/elapsed timer.
 
 import logging
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, jsonify
 
 from opencut.errors import safe_error
 from opencut.jobs import _update_job, async_job
 from opencut.security import (
+    get_json_dict,
     require_csrf,
     safe_float,
     safe_int,
@@ -64,7 +65,7 @@ def overlay_safe_zones(job_id, filepath, data):
 @require_csrf
 def overlay_safe_zones_data():
     """Return safe zone coordinates for a platform and resolution (no FFmpeg)."""
-    data = request.get_json(force=True) or {}
+    data = get_json_dict() or {}
     platform = (data.get("platform") or "").strip().lower()
     if not platform:
         return jsonify({"error": "Missing required field: platform"}), 400
