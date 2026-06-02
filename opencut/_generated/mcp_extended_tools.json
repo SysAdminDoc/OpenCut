@@ -3,15 +3,15 @@
   "enabled_by": "OPENCUT_MCP_EXTENDED_TOOLS=1 or opencut-mcp-server --extended-tools",
   "manifest_version": 1,
   "method_counts": {
-    "DELETE": 12,
-    "GET": 302,
+    "DELETE": 13,
+    "GET": 367,
     "PATCH": 1,
-    "POST": 1008,
+    "POST": 1078,
     "PUT": 2
   },
-  "response_schema_count": 100,
+  "response_schema_count": 99,
   "source": "opencut/_generated/route_manifest.json",
-  "tool_count": 1325,
+  "tool_count": 1461,
   "tool_prefix": "opencut_route_",
   "tools": [
     {
@@ -384,6 +384,36 @@
       "annotations": {
         "destructiveHint": true,
         "readOnlyHint": false,
+        "title": "DELETE /system/check-failures"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: DELETE /system/check-failures.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "system",
+        "endpoint": "system.check_failures",
+        "generated": true,
+        "method": "DELETE",
+        "path": "/system/check-failures",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_delete_system_check_failures"
+    },
+    {
+      "annotations": {
+        "destructiveHint": true,
+        "readOnlyHint": false,
         "title": "DELETE /web-ui/session/<session_id>"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: DELETE /web-ui/session/<session_id>.",
@@ -540,6 +570,66 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_ae_supported_operations"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /agent/chat/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /agent/chat/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "agent_chat",
+        "endpoint": "agent_chat.route_agent_chat_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/agent/chat/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_agent_chat_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /agent/chat/session"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /agent/chat/session.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "agent_chat",
+        "endpoint": "agent_chat.route_agent_chat_session",
+        "generated": true,
+        "method": "GET",
+        "path": "/agent/chat/session",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_agent_chat_session"
     },
     {
       "annotations": {
@@ -1083,6 +1173,126 @@
         "response_schema": "AnalyticsResult"
       },
       "name": "opencut_route_get_analytics_usage"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /analyze/video/internvl3/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /analyze/video/internvl3/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_internvl3_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/analyze/video/internvl3/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_analyze_video_internvl3_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /analyze/video/omni/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /analyze/video/omni/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_omni_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/analyze/video/omni/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_analyze_video_omni_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /analyze/video/qwen3vl/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /analyze/video/qwen3vl/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_qwen3vl_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/analyze/video/qwen3vl/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_analyze_video_qwen3vl_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /analyze/video/vl/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /analyze/video/vl/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_vl_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/analyze/video/vl/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_analyze_video_vl_info"
     },
     {
       "annotations": {
@@ -1653,36 +1863,6 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_api_macro_list"
-    },
-    {
-      "annotations": {
-        "destructiveHint": false,
-        "readOnlyHint": true,
-        "title": "GET /api/mcp/tools"
-      },
-      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /api/mcp/tools. Response schema: ToolListResult.",
-      "inputSchema": {
-        "properties": {
-          "query": {
-            "additionalProperties": true,
-            "description": "Optional query-string parameters to append to the route.",
-            "type": "object"
-          }
-        },
-        "required": [],
-        "type": "object"
-      },
-      "metadata": {
-        "blueprint": "infra",
-        "endpoint": "infra.mcp_tools",
-        "generated": true,
-        "method": "GET",
-        "path": "/api/mcp/tools",
-        "path_params": [],
-        "priority": "extended",
-        "response_schema": "ToolListResult"
-      },
-      "name": "opencut_route_get_api_mcp_tools"
     },
     {
       "annotations": {
@@ -2929,6 +3109,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /audio/foley/ezaudio/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/foley/ezaudio/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_ezaudio_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/foley/ezaudio/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_foley_ezaudio_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /audio/gen/capabilities"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/gen/capabilities.",
@@ -2989,6 +3199,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /audio/music/acestep/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/music/acestep/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_music_acestep_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/music/acestep/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_music_acestep_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /audio/music-ai/capabilities"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/music-ai/capabilities.",
@@ -3014,6 +3254,156 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_audio_music_ai_capabilities"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/music/diffrhythm/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/music/diffrhythm/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_music_diffrhythm_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/music/diffrhythm/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_music_diffrhythm_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/music/diffrhythm/styles"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/music/diffrhythm/styles.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_music_diffrhythm_styles",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/music/diffrhythm/styles",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_music_diffrhythm_styles"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/music/heartmula/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/music/heartmula/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_heartmula_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/music/heartmula/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_music_heartmula_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/music/vidmuse/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/music/vidmuse/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_h",
+        "endpoint": "wave_h.route_vidmuse_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/music/vidmuse/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_music_vidmuse_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/music/yue/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/music/yue/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_yue_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/music/yue/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_music_yue_info"
     },
     {
       "annotations": {
@@ -3169,6 +3559,126 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /audio/speech/csm/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/speech/csm/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_csm_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/speech/csm/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_speech_csm_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/speech/dia/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/speech/dia/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_dia_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/speech/dia/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_speech_dia_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/speech/parler/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/speech/parler/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_parler_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/speech/parler/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_speech_parler_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/speech/parler/speakers"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/speech/parler/speakers.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_parler_speakers",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/speech/parler/speakers",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_speech_parler_speakers"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /audio/surround-layouts"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/surround-layouts.",
@@ -3194,6 +3704,156 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_audio_surround_layouts"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/transcribe/canary/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/transcribe/canary/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_canary_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/transcribe/canary/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_transcribe_canary_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/transcribe/moonshine/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/transcribe/moonshine/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_moonshine_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/transcribe/moonshine/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_transcribe_moonshine_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/transcribe/parakeet/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/transcribe/parakeet/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_parakeet_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/transcribe/parakeet/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_transcribe_parakeet_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/tts/chatterbox/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/tts/chatterbox/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_tts_chatterbox_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/tts/chatterbox/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_tts_chatterbox_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/tts/cosyvoice/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/tts/cosyvoice/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_cosyvoice_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/tts/cosyvoice/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_tts_cosyvoice_info"
     },
     {
       "annotations": {
@@ -3289,6 +3949,96 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /audio/tts/kokoro/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/tts/kokoro/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_tts_kokoro_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/tts/kokoro/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_tts_kokoro_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/tts/kokoro/voices"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/tts/kokoro/voices.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_tts_kokoro_voices",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/tts/kokoro/voices",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_tts_kokoro_voices"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/tts/maskgct/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/tts/maskgct/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_maskgct_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/tts/maskgct/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_tts_maskgct_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /audio/tts/omnivoice/models"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/tts/omnivoice/models. Response schema: ModelListResult.",
@@ -3314,6 +4064,66 @@
         "response_schema": "ModelListResult"
       },
       "name": "opencut_route_get_audio_tts_omnivoice_models"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/tts/spark/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/tts/spark/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_tts_spark_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/tts/spark/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_tts_spark_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /audio/tts/spark/voices"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /audio/tts/spark/voices.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_tts_spark_voices",
+        "generated": true,
+        "method": "GET",
+        "path": "/audio/tts/spark/voices",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_audio_tts_spark_voices"
     },
     {
       "annotations": {
@@ -4471,6 +5281,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /enhance/auto/styles"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /enhance/auto/styles.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "enhance",
+        "endpoint": "enhance.route_enhance_auto_styles",
+        "generated": true,
+        "method": "GET",
+        "path": "/enhance/auto/styles",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_enhance_auto_styles"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /export/av1/encoders"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /export/av1/encoders.",
@@ -4741,6 +5581,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /generate/allegro/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/allegro/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_allegro_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/allegro/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_allegro_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /generate/cloud/backends"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/cloud/backends.",
@@ -4812,6 +5682,96 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /generate/cogvideox/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/cogvideox/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_cogvideox_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/cogvideox/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_cogvideox_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/consisid/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/consisid/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_consisid_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/consisid/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_consisid_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/framepack/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/framepack/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_framepack_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/framepack/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_framepack_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /generate/ltx/backends"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/ltx/backends.",
@@ -4837,6 +5797,366 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_generate_ltx_backends"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/ltxv/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/ltxv/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_ltxv_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/ltxv/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_ltxv_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/mochi/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/mochi/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_mochi_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/mochi/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_mochi_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/opensora2/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/opensora2/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_opensora2_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/opensora2/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_opensora2_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/skyreels2/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/skyreels2/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_skyreels2_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/skyreels2/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_skyreels2_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/skyreels3/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/skyreels3/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_skyreels3_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/skyreels3/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_skyreels3_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/stepvideo/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/stepvideo/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_stepvideo_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/stepvideo/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_stepvideo_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/videox-fun/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/videox-fun/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_videox_fun_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/videox-fun/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_videox_fun_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/wan2.2/animate/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/wan2.2/animate/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_wan22_animate_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/wan2.2/animate/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_wan2_2_animate_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/wan2.2/fast/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/wan2.2/fast/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_fastvideo_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/wan2.2/fast/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_wan2_2_fast_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/wan2.2/i2v/quantization/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/wan2.2/i2v/quantization/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_lightx2v_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/wan2.2/i2v/quantization/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_wan2_2_i2v_quantization_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/wan2.2/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/wan2.2/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_wan22_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/wan2.2/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_wan2_2_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /generate/wan2.2/s2v/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /generate/wan2.2/s2v/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_wan22_s2v_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/generate/wan2.2/s2v/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_generate_wan2_2_s2v_info"
     },
     {
       "annotations": {
@@ -4927,6 +6247,156 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_hw_presets"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /image/edit/hidream/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /image/edit/hidream/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_hidream_edit_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/image/edit/hidream/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_image_edit_hidream_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /image/edit/kontext/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /image/edit/kontext/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_kontext_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/image/edit/kontext/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_image_edit_kontext_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /image/generate/cogview4/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /image/generate/cogview4/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_cogview4_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/image/generate/cogview4/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_image_generate_cogview4_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /image/generate/hidream/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /image/generate/hidream/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_hidream_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/image/generate/hidream/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_image_generate_hidream_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /image/generate/omnigen2/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /image/generate/omnigen2/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_omnigen2_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/image/generate/omnigen2/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_image_generate_omnigen2_info"
     },
     {
       "annotations": {
@@ -5224,6 +6694,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /lipsync/musetalk/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /lipsync/musetalk/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_musetalk_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/lipsync/musetalk/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_lipsync_musetalk_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /llm/status"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /llm/status.",
@@ -5309,6 +6809,66 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_logs_tail"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /mcp/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /mcp/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "mcp_bridge",
+        "endpoint": "mcp_bridge.route_mcp_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/mcp/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_mcp_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /mcp/tools"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /mcp/tools.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "mcp_bridge",
+        "endpoint": "mcp_bridge.route_mcp_tools",
+        "generated": true,
+        "method": "GET",
+        "path": "/mcp/tools",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_mcp_tools"
     },
     {
       "annotations": {
@@ -5953,6 +7513,66 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_panel_walkthrough_by_feature_id"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /pipeline/digital_twin/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /pipeline/digital_twin/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_digital_twin_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/pipeline/digital_twin/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_pipeline_digital_twin_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /pipeline/digital_twin/stages"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /pipeline/digital_twin/stages.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_digital_twin_stages",
+        "generated": true,
+        "method": "GET",
+        "path": "/pipeline/digital_twin/stages",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_pipeline_digital_twin_stages"
     },
     {
       "annotations": {
@@ -6850,6 +8470,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /shorts/variants/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /shorts/variants/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "shorts_variants",
+        "endpoint": "shorts_variants.route_shorts_variants_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/shorts/variants/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_shorts_variants_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /social/platforms"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /social/platforms.",
@@ -7309,6 +8959,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_system_changelog_unseen"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /system/check-failures"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /system/check-failures.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "system",
+        "endpoint": "system.check_failures",
+        "generated": true,
+        "method": "GET",
+        "path": "/system/check-failures",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_system_check_failures"
     },
     {
       "annotations": {
@@ -8105,6 +9785,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /timeline/sequence-index/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /timeline/sequence-index/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "sequence_index",
+        "endpoint": "sequence_index.route_sequence_index_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/timeline/sequence-index/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_timeline_sequence_index_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /tts/gptsovits/voices"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /tts/gptsovits/voices.",
@@ -8405,6 +10115,66 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /video/compose/depth_segment/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/compose/depth_segment/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_compose_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/compose/depth_segment/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_compose_depth_segment_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /video/compose/vace/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/compose/vace/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_vace_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/compose/vace/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_compose_vace_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /video/deblur/backends"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/deblur/backends.",
@@ -8460,6 +10230,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_video_depth_depthpro_backends"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /video/depth/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/depth/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_depth_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/depth/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_depth_info"
     },
     {
       "annotations": {
@@ -8580,6 +10380,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_video_face_capabilities"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /video/face/reage/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/face/reage/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_face_reage_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/face/reage/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_face_reage_info"
     },
     {
       "annotations": {
@@ -9035,6 +10865,96 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": true,
+        "title": "GET /video/relight/diffrenderer/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/relight/diffrenderer/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_diffrenderer_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/relight/diffrenderer/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_relight_diffrenderer_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /video/relight/iclight/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/relight/iclight/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_iclight_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/relight/iclight/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_relight_iclight_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /video/relight/lav/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/relight/lav/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_lav_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/relight/lav/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_relight_lav_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
         "title": "GET /video/remove/capabilities"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/remove/capabilities.",
@@ -9150,6 +11070,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_video_scopes_pro_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /video/segment/sam2/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/segment/sam2/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_sam2_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/segment/sam2/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_segment_sam2_info"
     },
     {
       "annotations": {
@@ -9360,6 +11310,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_get_video_upscale_flashvsr_info"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": true,
+        "title": "GET /video/upscale/seedvr2/info"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: GET /video/upscale/seedvr2/info.",
+      "inputSchema": {
+        "properties": {
+          "query": {
+            "additionalProperties": true,
+            "description": "Optional query-string parameters to append to the route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_seedvr2_info",
+        "generated": true,
+        "method": "GET",
+        "path": "/video/upscale/seedvr2/info",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_get_video_upscale_seedvr2_info"
     },
     {
       "annotations": {
@@ -9971,6 +11951,96 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_agent_auto_edit"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /agent/chat/plan"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /agent/chat/plan.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "agent_chat",
+        "endpoint": "agent_chat.route_agent_chat_plan",
+        "generated": true,
+        "method": "POST",
+        "path": "/agent/chat/plan",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_agent_chat_plan"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /agent/chat/review"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /agent/chat/review.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "agent_chat",
+        "endpoint": "agent_chat.route_agent_chat_review",
+        "generated": true,
+        "method": "POST",
+        "path": "/agent/chat/review",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_agent_chat_review"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /agent/chat/step-status"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /agent/chat/step-status.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "agent_chat",
+        "endpoint": "agent_chat.route_agent_chat_step_status",
+        "generated": true,
+        "method": "POST",
+        "path": "/agent/chat/step-status",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_agent_chat_step_status"
     },
     {
       "annotations": {
@@ -11381,6 +13451,156 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_analytics_record"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /analyze/video/internvl3"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /analyze/video/internvl3.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_internvl3_analyze",
+        "generated": true,
+        "method": "POST",
+        "path": "/analyze/video/internvl3",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_analyze_video_internvl3"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /analyze/video/narrate"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /analyze/video/narrate.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_omni_narrate",
+        "generated": true,
+        "method": "POST",
+        "path": "/analyze/video/narrate",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_analyze_video_narrate"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /analyze/video/qa"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /analyze/video/qa.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_omni_qa",
+        "generated": true,
+        "method": "POST",
+        "path": "/analyze/video/qa",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_analyze_video_qa"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /analyze/video/qwen3vl"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /analyze/video/qwen3vl.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_qwen3vl_analyze",
+        "generated": true,
+        "method": "POST",
+        "path": "/analyze/video/qwen3vl",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_analyze_video_qwen3vl"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /analyze/video/vl"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /analyze/video/vl.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_vl_analyze",
+        "generated": true,
+        "method": "POST",
+        "path": "/analyze/video/vl",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_analyze_video_vl"
     },
     {
       "annotations": {
@@ -17506,6 +19726,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /audio/foley/ezaudio"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/foley/ezaudio.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_ezaudio_foley",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/foley/ezaudio",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_foley_ezaudio"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /audio/foley/place"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/foley/place.",
@@ -17926,6 +20176,66 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /audio/music/acestep"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/music/acestep.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_music_acestep",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/music/acestep",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_music_acestep"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/music/acestep/edit"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/music/acestep/edit.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_music_acestep_edit",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/music/acestep/edit",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_music_acestep_edit"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /audio/music-ai/ace-step"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/music-ai/ace-step.",
@@ -18016,6 +20326,66 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /audio/music/diffrhythm"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/music/diffrhythm.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_music_diffrhythm",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/music/diffrhythm",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_music_diffrhythm"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/music/heartmula"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/music/heartmula.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_heartmula",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/music/heartmula",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_music_heartmula"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /audio/music/vidmuse"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/music/vidmuse.",
@@ -18041,6 +20411,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_audio_music_vidmuse"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/music/yue"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/music/yue.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_yue_music",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/music/yue",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_music_yue"
     },
     {
       "annotations": {
@@ -18406,6 +20806,96 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /audio/speech/csm"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/speech/csm.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_csm_speech",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/speech/csm",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_speech_csm"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/speech/dia"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/speech/dia.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_dia_speech",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/speech/dia",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_speech_dia"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/speech/parler"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/speech/parler.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_parler_speech",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/speech/parler",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_speech_parler"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /audio/stem-remix"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/stem-remix.",
@@ -18616,6 +21106,156 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /audio/transcribe/canary"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/transcribe/canary.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_canary_transcribe",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/transcribe/canary",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_transcribe_canary"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/transcribe/moonshine"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/transcribe/moonshine.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_moonshine_transcribe",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/transcribe/moonshine",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_transcribe_moonshine"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/transcribe/parakeet"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/transcribe/parakeet.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_parakeet_transcribe",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/transcribe/parakeet",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_transcribe_parakeet"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/tts/chatterbox"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/tts/chatterbox.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_tts_chatterbox",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/tts/chatterbox",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_tts_chatterbox"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/tts/cosyvoice"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/tts/cosyvoice.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_cosyvoice_tts",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/tts/cosyvoice",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_tts_cosyvoice"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /audio/tts/f5"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/tts/f5. Response schema: JobResponse.",
@@ -18676,6 +21316,66 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /audio/tts/kokoro"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/tts/kokoro.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_tts_kokoro",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/tts/kokoro",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_tts_kokoro"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/tts/maskgct"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/tts/maskgct.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_maskgct_tts",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/tts/maskgct",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_tts_maskgct"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /audio/tts/omnivoice"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/tts/omnivoice. Response schema: JobResponse.",
@@ -18701,6 +21401,36 @@
         "response_schema": "JobResponse"
       },
       "name": "opencut_route_post_audio_tts_omnivoice"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /audio/tts/spark"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /audio/tts/spark.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_tts_spark",
+        "generated": true,
+        "method": "POST",
+        "path": "/audio/tts/spark",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_audio_tts_spark"
     },
     {
       "annotations": {
@@ -22598,6 +25328,66 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /enhance/auto"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /enhance/auto.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "enhance",
+        "endpoint": "enhance.route_enhance_auto",
+        "generated": true,
+        "method": "POST",
+        "path": "/enhance/auto",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_enhance_auto"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /enhance/auto/dry-run"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /enhance/auto/dry-run.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "enhance",
+        "endpoint": "enhance.route_enhance_auto_dry_run",
+        "generated": true,
+        "method": "POST",
+        "path": "/enhance/auto/dry-run",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_enhance_auto_dry_run"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /events/moments"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /events/moments.",
@@ -23978,6 +26768,66 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /generate/allegro/t2v"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/allegro/t2v.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_allegro_t2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/allegro/t2v",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_allegro_t2v"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/allegro/ti2v"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/allegro/ti2v.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_allegro_ti2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/allegro/ti2v",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_allegro_ti2v"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /generate/cloud/submit"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/cloud/submit.",
@@ -24003,6 +26853,126 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_generate_cloud_submit"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/cogvideox"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/cogvideox.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_cogvideox_t2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/cogvideox",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_cogvideox"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/cogvideox/i2v"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/cogvideox/i2v.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_cogvideox_i2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/cogvideox/i2v",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_cogvideox_i2v"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/consisid"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/consisid.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_consisid",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/consisid",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_consisid"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/framepack"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/framepack.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_framepack_generate",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/framepack",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_framepack"
     },
     {
       "annotations": {
@@ -24038,6 +27008,126 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /generate/ltxv/extend"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/ltxv/extend.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_ltxv_extend",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/ltxv/extend",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_ltxv_extend"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/ltxv/i2v"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/ltxv/i2v.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_ltxv_i2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/ltxv/i2v",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_ltxv_i2v"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/ltxv/t2v"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/ltxv/t2v.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_ltxv_t2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/ltxv/t2v",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_ltxv_t2v"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/mochi"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/mochi.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_mochi",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/mochi",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_mochi"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /generate/opensora"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/opensora.",
@@ -24063,6 +27153,336 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_generate_opensora"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/opensora2"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/opensora2.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_opensora2",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/opensora2",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_opensora2"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/skyreels2/t2v"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/skyreels2/t2v.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_skyreels2_t2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/skyreels2/t2v",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_skyreels2_t2v"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/skyreels3/avatar"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/skyreels3/avatar.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_skyreels3_avatar",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/skyreels3/avatar",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_skyreels3_avatar"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/stepvideo"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/stepvideo.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_stepvideo",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/stepvideo",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_stepvideo"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/videox-fun"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/videox-fun.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_videox_fun",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/videox-fun",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_videox_fun"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/wan2.2/animate"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/wan2.2/animate.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_wan22_animate",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/wan2.2/animate",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_wan2_2_animate"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/wan2.2/fast"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/wan2.2/fast.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_fastvideo",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/wan2.2/fast",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_wan2_2_fast"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/wan2.2/i2v"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/wan2.2/i2v.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_wan22_i2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/wan2.2/i2v",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_wan2_2_i2v"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/wan2.2/i2v/quantized"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/wan2.2/i2v/quantized.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_lightx2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/wan2.2/i2v/quantized",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_wan2_2_i2v_quantized"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/wan2.2/s2v"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/wan2.2/s2v.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_wan22_s2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/wan2.2/s2v",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_wan2_2_s2v"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /generate/wan2.2/t2v"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /generate/wan2.2/t2v.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_wan22_t2v",
+        "generated": true,
+        "method": "POST",
+        "path": "/generate/wan2.2/t2v",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_generate_wan2_2_t2v"
     },
     {
       "annotations": {
@@ -24243,6 +27663,156 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_hw_encoders_refresh"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /image/edit/hidream"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /image/edit/hidream.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_hidream_edit",
+        "generated": true,
+        "method": "POST",
+        "path": "/image/edit/hidream",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_image_edit_hidream"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /image/edit/kontext"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /image/edit/kontext.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_kontext_edit",
+        "generated": true,
+        "method": "POST",
+        "path": "/image/edit/kontext",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_image_edit_kontext"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /image/generate/cogview4"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /image/generate/cogview4.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_cogview4_t2i",
+        "generated": true,
+        "method": "POST",
+        "path": "/image/generate/cogview4",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_image_generate_cogview4"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /image/generate/hidream"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /image/generate/hidream.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_hidream_t2i",
+        "generated": true,
+        "method": "POST",
+        "path": "/image/generate/hidream",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_image_generate_hidream"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /image/generate/omnigen2"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /image/generate/omnigen2.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_omnigen2",
+        "generated": true,
+        "method": "POST",
+        "path": "/image/generate/omnigen2",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_image_generate_omnigen2"
     },
     {
       "annotations": {
@@ -24870,6 +28440,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /lipsync/musetalk"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /lipsync/musetalk.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_musetalk_lipsync",
+        "generated": true,
+        "method": "POST",
+        "path": "/lipsync/musetalk",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_lipsync_musetalk"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /llm/test"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /llm/test.",
@@ -24985,6 +28585,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_lower_thirds_generate"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /mcp/call"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /mcp/call.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "mcp_bridge",
+        "endpoint": "mcp_bridge.route_mcp_call",
+        "generated": true,
+        "method": "POST",
+        "path": "/mcp/call",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_mcp_call"
     },
     {
       "annotations": {
@@ -26316,6 +29946,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_paper_edit_export"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /pipeline/digital_twin"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /pipeline/digital_twin.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_digital_twin",
+        "generated": true,
+        "method": "POST",
+        "path": "/pipeline/digital_twin",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_pipeline_digital_twin"
     },
     {
       "annotations": {
@@ -29932,6 +33592,66 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /shorts/variants"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /shorts/variants.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "shorts_variants",
+        "endpoint": "shorts_variants.route_shorts_variants",
+        "generated": true,
+        "method": "POST",
+        "path": "/shorts/variants",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_shorts_variants"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /shorts/variants/dry-run"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /shorts/variants/dry-run.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "shorts_variants",
+        "endpoint": "shorts_variants.route_shorts_variants_dry_run",
+        "generated": true,
+        "method": "POST",
+        "path": "/shorts/variants/dry-run",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_shorts_variants_dry_run"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /shutdown"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /shutdown.",
@@ -32572,6 +36292,66 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /timeline/sequence-index"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /timeline/sequence-index.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "sequence_index",
+        "endpoint": "sequence_index.route_build_sequence_index",
+        "generated": true,
+        "method": "POST",
+        "path": "/timeline/sequence-index",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_timeline_sequence_index"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /timeline/sequence-index/filter"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /timeline/sequence-index/filter.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "sequence_index",
+        "endpoint": "sequence_index.route_filter_sequence_index",
+        "generated": true,
+        "method": "POST",
+        "path": "/timeline/sequence-index/filter",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_timeline_sequence_index_filter"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /timeline/smart-bins"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /timeline/smart-bins.",
@@ -34612,6 +38392,66 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /video/compose/depth_segment"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/compose/depth_segment.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_depth_segment_compose",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/compose/depth_segment",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_compose_depth_segment"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /video/compose/vace"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/compose/vace.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_vace_compose",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/compose/vace",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_compose_vace"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /video/cursor-zoom/resolve"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/cursor-zoom/resolve.",
@@ -35032,6 +38872,36 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /video/depth/estimate-v2"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/depth/estimate-v2.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_depth_estimate",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/depth/estimate-v2",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_depth_estimate_v2"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /video/depth-flow"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/depth-flow.",
@@ -35117,6 +38987,36 @@
         "response_schema": "DepthMapResult"
       },
       "name": "opencut_route_post_video_depth_parallax"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /video/depth/parallax-v2"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/depth/parallax-v2.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_depth_parallax",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/depth/parallax-v2",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_depth_parallax_v2"
     },
     {
       "annotations": {
@@ -35687,6 +39587,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_video_face_install"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /video/face/reage"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/face/reage.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_face_reage",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/face/reage",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_face_reage"
     },
     {
       "annotations": {
@@ -37702,6 +41632,96 @@
       "annotations": {
         "destructiveHint": false,
         "readOnlyHint": false,
+        "title": "POST /video/relight/diffrenderer"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/relight/diffrenderer.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_diffrenderer",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/relight/diffrenderer",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_relight_diffrenderer"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /video/relight/iclight"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/relight/iclight.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_iclight_relight",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/relight/iclight",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_relight_iclight"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /video/relight/lav"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/relight/lav.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_lav_relight",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/relight/lav",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_relight_lav"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
         "title": "POST /video/remove/watermark"
       },
       "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/remove/watermark.",
@@ -38117,6 +42137,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_video_search_face"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /video/segment/sam2"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/segment/sam2.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_l",
+        "endpoint": "wave_l.route_sam2_segment",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/segment/sam2",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_segment_sam2"
     },
     {
       "annotations": {
@@ -39077,6 +43127,36 @@
         "response_schema": ""
       },
       "name": "opencut_route_post_video_upscale_run"
+    },
+    {
+      "annotations": {
+        "destructiveHint": false,
+        "readOnlyHint": false,
+        "title": "POST /video/upscale/seedvr2"
+      },
+      "description": "Auto-generated lower-priority route tool. Prefer a curated opencut_* tool when one exists for the same workflow. Route: POST /video/upscale/seedvr2.",
+      "inputSchema": {
+        "properties": {
+          "body": {
+            "additionalProperties": true,
+            "description": "Optional JSON request body for the backend route.",
+            "type": "object"
+          }
+        },
+        "required": [],
+        "type": "object"
+      },
+      "metadata": {
+        "blueprint": "wave_qrs",
+        "endpoint": "wave_qrs.route_seedvr2_upscale",
+        "generated": true,
+        "method": "POST",
+        "path": "/video/upscale/seedvr2",
+        "path_params": [],
+        "priority": "extended",
+        "response_schema": ""
+      },
+      "name": "opencut_route_post_video_upscale_seedvr2"
     },
     {
       "annotations": {
