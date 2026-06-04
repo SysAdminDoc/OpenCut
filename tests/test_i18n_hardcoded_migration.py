@@ -353,6 +353,21 @@ HTML_STATIC_SHELL_CALLS = (
     ("captions.style_documentary", "data-i18n"),
     ("captions.style_sports", "data-i18n"),
     ("forms.font_size", "data-i18n"),
+    # One-hundred-eleventh batch (Styled Captions preview/action-word shell HTML).
+    ("captions.preview_word_this", "data-i18n"),
+    ("captions.preview_word_is", "data-i18n"),
+    ("captions.preview_word_how", "data-i18n"),
+    ("captions.preview_word_your", "data-i18n"),
+    ("captions.preview_word_captions", "data-i18n"),
+    ("captions.preview_word_look", "data-i18n"),
+    ("captions.legend_current_word", "data-i18n"),
+    ("captions.legend_action_word", "data-i18n"),
+    ("captions.custom_action_words", "data-i18n"),
+    ("common.comma_separated", "data-i18n"),
+    ("captions.action_words_placeholder", "data-i18n-placeholder"),
+    ("captions.whisper_not_installed", "data-i18n"),
+    ("whisper.install_now", "data-i18n"),
+    ("common.or_manually", "data-i18n"),
 )
 
 
@@ -1779,6 +1794,21 @@ MIGRATED_KEYS = (
     "captions.style_subtitle_classic",
     "captions.style_typewriter",
     "captions.style_youtube_bold",
+    # One-hundred-eleventh batch (Styled Captions preview/action-word shell HTML).
+    "captions.action_words_placeholder",
+    "captions.custom_action_words",
+    "captions.legend_action_word",
+    "captions.legend_current_word",
+    "captions.preview_word_captions",
+    "captions.preview_word_how",
+    "captions.preview_word_is",
+    "captions.preview_word_look",
+    "captions.preview_word_this",
+    "captions.preview_word_your",
+    "captions.whisper_not_installed",
+    "common.comma_separated",
+    "common.or_manually",
+    "whisper.install_now",
 )
 
 

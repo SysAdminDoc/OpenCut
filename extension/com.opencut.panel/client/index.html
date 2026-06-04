@@ -841,16 +841,16 @@
                         </div>
                         <div class="style-preview" id="stylePreview">
                             <div class="style-preview-bg">
-                                <span class="sp-word" id="spW1">This</span>
-                                <span class="sp-word" id="spW2">is</span>
-                                <span class="sp-word sp-highlight" id="spW3">how</span>
-                                <span class="sp-word" id="spW4">your</span>
-                                <span class="sp-word sp-action" id="spW5">captions</span>
-                                <span class="sp-word" id="spW6">look</span>
+                                <span class="sp-word" id="spW1" data-i18n="captions.preview_word_this">This</span>
+                                <span class="sp-word" id="spW2" data-i18n="captions.preview_word_is">is</span>
+                                <span class="sp-word sp-highlight" id="spW3" data-i18n="captions.preview_word_how">how</span>
+                                <span class="sp-word" id="spW4" data-i18n="captions.preview_word_your">your</span>
+                                <span class="sp-word sp-action" id="spW5" data-i18n="captions.preview_word_captions">captions</span>
+                                <span class="sp-word" id="spW6" data-i18n="captions.preview_word_look">look</span>
                             </div>
                             <div class="sp-legend">
-                                <span class="sp-legend-item"><span class="sp-dot sp-dot-hl"></span> Current word</span>
-                                <span class="sp-legend-item"><span class="sp-dot sp-dot-act"></span> Action word</span>
+                                <span class="sp-legend-item"><span class="sp-dot sp-dot-hl"></span> <span data-i18n="captions.legend_current_word">Current word</span></span>
+                                <span class="sp-legend-item"><span class="sp-dot sp-dot-act"></span> <span data-i18n="captions.legend_action_word">Action word</span></span>
                             </div>
                         </div>
                         <div class="form-group">
@@ -861,14 +861,14 @@
                         <label class="checkbox-row"><input type="checkbox" id="captionAutoAction" checked> <span data-i18n="captions.auto_action">Auto-detect action words</span></label>
                         <label class="checkbox-row"><input type="checkbox" id="captionAutoEmoji"> <span data-i18n="captions.auto_emoji">Auto-insert emoji</span></label>
                         <div class="form-group">
-                            <label for="actionWordsInput">Custom Action Words <span class="hint-inline">(comma-separated)</span></label>
-                            <input type="text" id="actionWordsInput" placeholder="e.g. amazing, subscribe, click" class="text-input">
+                            <label for="actionWordsInput"><span data-i18n="captions.custom_action_words">Custom Action Words</span> <span class="hint-inline" data-i18n="common.comma_separated">(comma-separated)</span></label>
+                            <input type="text" id="actionWordsInput" placeholder="e.g. amazing, subscribe, click" data-i18n-placeholder="captions.action_words_placeholder" class="text-input">
                         </div>
                         <button type="button" class="btn-primary" id="runStyledCaptionsBtn" disabled title="Ctrl+Shift+C" data-i18n="captions.generate_styled">Generate Styled Captions</button>
                         <div class="hint hidden" id="captionsHint">
-                            Whisper not installed.
-                            <button type="button" class="btn-install" id="installWhisperBtn">Install Whisper Now</button>
-                            <div class="install-alt">Or manually: <code>pip install faster-whisper</code></div>
+                            <span data-i18n="captions.whisper_not_installed">Whisper not installed.</span>
+                            <button type="button" class="btn-install" id="installWhisperBtn" data-i18n="whisper.install_now">Install Whisper Now</button>
+                            <div class="install-alt"><span data-i18n="common.or_manually">Or manually:</span> <code>pip install faster-whisper</code></div>
                         </div>
                     </section>
                 </div>
