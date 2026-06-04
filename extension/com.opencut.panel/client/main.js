@@ -5835,7 +5835,7 @@
             )
                 .replace("{count}", availableCount)
                 .replace("{plural}", availableCount === 1 ? "" : "s")
-                .replace("{verb}", availableCount === 1 ? "is" : "are");
+                .replace("{verb}", availableCount === 1 ? t("common.verb_is", "is") : t("common.verb_are", "are"));
         } else {
             queueLabel = t("batch.queue_empty", "No clips queued");
             queueTitle = t(
@@ -6064,7 +6064,7 @@
         return t("workflow.saved_count_title", "{count} saved custom workflow{plural} {verb} available.")
             .replace("{count}", count)
             .replace("{plural}", count === 1 ? "" : "s")
-            .replace("{verb}", count === 1 ? "is" : "are");
+            .replace("{verb}", count === 1 ? t("common.verb_is", "is") : t("common.verb_are", "are"));
     }
 
     function describeWorkflowStepGroup(endpoint) {
@@ -8594,8 +8594,8 @@
             revertibleCount
                 ? t("journal.revertible_ready_title", "{count} recent journal {entryWord} {verb} ready to revert automatically.")
                     .replace("{count}", revertibleCount)
-                    .replace("{entryWord}", revertibleCount === 1 ? "entry" : "entries")
-                    .replace("{verb}", revertibleCount === 1 ? "is" : "are")
+                    .replace("{entryWord}", revertibleCount === 1 ? t("journal.entry_word", "entry") : t("journal.entries_word", "entries"))
+                    .replace("{verb}", revertibleCount === 1 ? t("common.verb_is", "is") : t("common.verb_are", "are"))
                 : (recentCount
                     ? t("journal.context_only_title", "The recent journal entries are recorded for context, but none can be reverted automatically.")
                     : t("journal.rollback_waiting_title", "Automatic rollback will appear here when supported actions are recorded."))
@@ -8618,7 +8618,7 @@
                 t("journal.undo_ready_status", "{count} recent action{plural} {verb} still undo-ready. Review them before manual timeline edits drift too far.")
                     .replace("{count}", revertibleCount)
                     .replace("{plural}", revertibleCount === 1 ? "" : "s")
-                    .replace("{verb}", revertibleCount === 1 ? "is" : "are"),
+                    .replace("{verb}", revertibleCount === 1 ? t("common.verb_is", "is") : t("common.verb_are", "are")),
                 "success"
             );
         } else {
@@ -11847,11 +11847,11 @@
                     ? t("settings.deps_missing_status", "{count} dependency check{plural} {verb} attention. Related features may stay disabled until those packages are installed.")
                         .replace("{count}", missingCount)
                         .replace("{plural}", missingCount === 1 ? "" : "s")
-                        .replace("{verb}", missingCount === 1 ? "needs" : "need")
+                        .replace("{verb}", missingCount === 1 ? t("common.verb_needs", "needs") : t("common.verb_need", "need"))
                     : t("settings.deps_healthy_status", "{count} dependency check{plural} {verb} healthy for this machine.")
                         .replace("{count}", installedCount)
                         .replace("{plural}", installedCount === 1 ? "" : "s")
-                        .replace("{verb}", installedCount === 1 ? "looks" : "look"),
+                        .replace("{verb}", installedCount === 1 ? t("common.verb_looks", "looks") : t("common.verb_look", "look")),
                 missingCount ? "warning" : "success"
             );
         });
