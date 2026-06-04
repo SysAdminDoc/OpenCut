@@ -199,6 +199,11 @@ HTML_STATIC_SHELL_CALLS = (
     ("nav.search_aria", "data-i18n-aria-label"),
     ("headers.settings", "data-i18n-title"),
     ("headers.settings", "data-i18n-aria-label"),
+    # One-hundredth batch (media action button title/ARIA shell HTML).
+    ("media.use_selection_title", "data-i18n-title"),
+    ("media.use_selection_aria", "data-i18n-aria-label"),
+    ("media.browse_title", "data-i18n-title"),
+    ("media.browse_aria", "data-i18n-aria-label"),
 )
 
 
@@ -1486,6 +1491,11 @@ MIGRATED_KEYS = (
     # Ninety-ninth batch (main navigation title/ARIA shell HTML).
     "nav.main_navigation",
     "nav.search_aria",
+    # One-hundredth batch (media action button title/ARIA shell HTML).
+    "media.browse_aria",
+    "media.browse_title",
+    "media.use_selection_aria",
+    "media.use_selection_title",
 )
 
 
