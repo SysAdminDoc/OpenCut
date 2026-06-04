@@ -398,6 +398,10 @@ opencut deliverables --sequence-json sequence.json --type all
 
 # Natural language editing
 opencut nlp "remove silence and add captions in Spanish" --file video.mp4
+
+# Call any generated backend route from scripts
+opencut route GET /system/check-failures
+opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepath":"C:/clip.mp4"}}'
 ```
 
 ---
