@@ -478,6 +478,19 @@ MIGRATED_KEYS = (
     "onboarding.finish",
     "onboarding.next",
     "onboarding.ready",
+    # Thirty-seventh batch (Wave H changelog/issue/gist feedback).
+    "toast.changelog_released",
+    "prompt.issue_description",
+    "issue.report_title",
+    "toast.issue_bundle_failed",
+    "gist.confirm_public",
+    "gist.export_description",
+    "gist.push_failed",
+    "gist.unknown_error",
+    "gist.created",
+    "gist.pull_prompt",
+    "gist.pull_failed",
+    "gist.pulled_files",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -2397,6 +2410,67 @@ EXPECTED_CALLS = (
         "onboarding.ready",
         re.compile(r't\(\s*"onboarding\.ready"'),
         re.compile(r'showToast\(\s*"Ready to go'),
+    ),
+    # --- Thirty-seventh batch ---------------------------------------
+    (
+        "toast.changelog_released",
+        re.compile(r't\(\s*"toast\.changelog_released"'),
+        re.compile(r'showToast\(\s*"OpenCut "\s*\+'),
+    ),
+    (
+        "prompt.issue_description",
+        re.compile(r't\(\s*"prompt\.issue_description"'),
+        re.compile(r'prompt\(\s*"What went wrong\?'),
+    ),
+    (
+        "issue.report_title",
+        re.compile(r't\(\s*"issue\.report_title"'),
+        re.compile(r'title:\s*"OpenCut issue report from panel"'),
+    ),
+    (
+        "toast.issue_bundle_failed",
+        re.compile(r't\(\s*"toast\.issue_bundle_failed"'),
+        re.compile(r'showToast\(\s*"Could not assemble issue bundle"'),
+    ),
+    (
+        "gist.confirm_public",
+        re.compile(r't\(\s*"gist\.confirm_public"'),
+        re.compile(r'confirm\(\s*"Push as a PUBLIC gist\?'),
+    ),
+    (
+        "gist.export_description",
+        re.compile(r't\(\s*"gist\.export_description"'),
+        re.compile(r'description:\s*"OpenCut presets export"'),
+    ),
+    (
+        "gist.push_failed",
+        re.compile(r't\(\s*"gist\.push_failed"'),
+        re.compile(r'showAlert\(\s*"Gist push failed: "'),
+    ),
+    (
+        "gist.unknown_error",
+        re.compile(r't\(\s*"gist\.unknown_error"'),
+        re.compile(r'\?\s*err\.message\s*:\s*"unknown"'),
+    ),
+    (
+        "gist.created",
+        re.compile(r't\(\s*"gist\.created"'),
+        re.compile(r'showAlert\(\s*"Gist created:'),
+    ),
+    (
+        "gist.pull_prompt",
+        re.compile(r't\(\s*"gist\.pull_prompt"'),
+        re.compile(r'prompt\(\s*"Paste gist URL or ID:"'),
+    ),
+    (
+        "gist.pull_failed",
+        re.compile(r't\(\s*"gist\.pull_failed"'),
+        re.compile(r'showAlert\(\s*"Gist pull failed: "'),
+    ),
+    (
+        "gist.pulled_files",
+        re.compile(r't\(\s*"gist\.pulled_files"'),
+        re.compile(r'showAlert\(\s*"Pulled "\s*\+'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
