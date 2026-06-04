@@ -182,6 +182,23 @@ HTML_STATIC_SHELL_CALLS = (
     ("assistant.refresh_title", "data-i18n-title"),
     ("assistant.refresh_aria", "data-i18n-aria-label"),
     ("assistant.empty_sequence", "data-i18n"),
+    # Ninety-ninth batch (main navigation title/ARIA shell HTML).
+    ("nav.main_navigation", "data-i18n-aria-label"),
+    ("headers.cut", "data-i18n-title"),
+    ("headers.captions", "data-i18n-title"),
+    ("headers.captions", "data-i18n-aria-label"),
+    ("headers.audio", "data-i18n-title"),
+    ("headers.audio", "data-i18n-aria-label"),
+    ("headers.video", "data-i18n-title"),
+    ("headers.video", "data-i18n-aria-label"),
+    ("headers.export", "data-i18n-title"),
+    ("headers.export", "data-i18n-aria-label"),
+    ("headers.timeline", "data-i18n-title"),
+    ("headers.timeline", "data-i18n-aria-label"),
+    ("headers.search", "data-i18n-title"),
+    ("nav.search_aria", "data-i18n-aria-label"),
+    ("headers.settings", "data-i18n-title"),
+    ("headers.settings", "data-i18n-aria-label"),
 )
 
 
@@ -1466,6 +1483,9 @@ MIGRATED_KEYS = (
     "quick_actions.preset_tag",
     "quick_actions.youtube_meta",
     "quick_actions.youtube_title",
+    # Ninety-ninth batch (main navigation title/ARIA shell HTML).
+    "nav.main_navigation",
+    "nav.search_aria",
 )
 
 

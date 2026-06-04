@@ -619,6 +619,8 @@
   "models.scanning_title": "Scanning local models…",
   "models.unknown_model": "Unknown model",
   "models.unknown_source": "Unknown source",
+  "nav.main_navigation": "Main navigation",
+  "nav.search_aria": "Search and AI Commands",
   "nlp.confidence_label": "Confidence: {percent}%",
   "nlp.enter_command": "Enter a command.",
   "nlp.processing_button": "Processing…",
