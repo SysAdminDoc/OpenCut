@@ -918,12 +918,12 @@
                 <div class="sub-panel" id="sub-cap-transcript">
                     <section class="card">
                         <div class="form-group">
-                            <label for="transcriptModel">Model</label>
+                            <label for="transcriptModel" data-i18n="forms.model">Model</label>
                             <select id="transcriptModel">
-                                <option value="tiny">Tiny (fastest)</option>
-                                <option value="base" selected>Base (balanced)</option>
-                                <option value="small">Small (good)</option>
-                                <option value="medium">Medium (great)</option>
+                                <option value="tiny" data-i18n="captions.model_tiny">Tiny (fastest)</option>
+                                <option value="base" selected data-i18n="captions.model_base">Base (balanced)</option>
+                                <option value="small" data-i18n="captions.model_small">Small (good)</option>
+                                <option value="medium" data-i18n="captions.model_medium">Medium (great)</option>
                             </select>
                         </div>
                         <button type="button" class="btn-primary" id="runTranscriptBtn" disabled data-i18n="captions.transcribe">Transcribe</button>
@@ -931,45 +931,45 @@
                             <div class="transcript-header">
                                 <span class="transcript-info" id="transcriptInfo"></span>
                                 <div class="transcript-actions">
-                                    <button type="button" class="btn-sm btn-secondary" id="transcriptUndoBtn" disabled title="Undo" aria-label="Undo transcript edit">&#8630;</button>
-                                    <button type="button" class="btn-sm btn-secondary" id="transcriptRedoBtn" disabled title="Redo" aria-label="Redo transcript edit">&#8631;</button>
-                                    <select id="transcriptExportFormat" class="inline-select" aria-label="Transcript export format">
-                                        <option value="srt">SRT</option>
-                                        <option value="vtt">VTT</option>
-                                        <option value="ass">ASS</option>
-                                        <option value="json">JSON</option>
+                                    <button type="button" class="btn-sm btn-secondary" id="transcriptUndoBtn" disabled title="Undo" aria-label="Undo transcript edit" data-i18n-title="common.undo" data-i18n-aria-label="transcript.undo_aria">&#8630;</button>
+                                    <button type="button" class="btn-sm btn-secondary" id="transcriptRedoBtn" disabled title="Redo" aria-label="Redo transcript edit" data-i18n-title="common.redo" data-i18n-aria-label="transcript.redo_aria">&#8631;</button>
+                                    <select id="transcriptExportFormat" class="inline-select" aria-label="Transcript export format" data-i18n-aria-label="transcript.export_format_aria">
+                                        <option value="srt" data-i18n="formats.srt">SRT</option>
+                                        <option value="vtt" data-i18n="formats.vtt">VTT</option>
+                                        <option value="ass" data-i18n="formats.ass">ASS</option>
+                                        <option value="json" data-i18n="formats.json">JSON</option>
                                     </select>
-                                    <button type="button" class="btn-sm" id="exportTranscriptBtn">Export</button>
-                                    <button type="button" class="btn-sm" id="summarizeTranscriptBtn">Summarize</button>
+                                    <button type="button" class="btn-sm" id="exportTranscriptBtn" data-i18n="common.export">Export</button>
+                                    <button type="button" class="btn-sm" id="summarizeTranscriptBtn" data-i18n="common.summarize">Summarize</button>
                                 </div>
                             </div>
                             <div class="transcript-search" id="transcriptSearch">
-                                <input type="text" id="transcriptSearchInput" class="text-input" placeholder="Search transcript…" aria-label="Search transcript" autocomplete="off" spellcheck="false">
+                                <input type="text" id="transcriptSearchInput" class="text-input" placeholder="Search transcript…" aria-label="Search transcript" data-i18n-placeholder="transcript.search_placeholder" data-i18n-aria-label="transcript.search_aria" autocomplete="off" spellcheck="false">
                                 <span class="transcript-search-count" id="transcriptSearchCount"></span>
-                                <button type="button" class="btn-sm" id="transcriptSearchPrev" title="Previous" aria-label="Previous transcript search result">&uarr;</button>
-                                <button type="button" class="btn-sm" id="transcriptSearchNext" title="Next" aria-label="Next transcript search result">&darr;</button>
+                                <button type="button" class="btn-sm" id="transcriptSearchPrev" title="Previous" aria-label="Previous transcript search result" data-i18n-title="common.previous" data-i18n-aria-label="transcript.search_previous_aria">&uarr;</button>
+                                <button type="button" class="btn-sm" id="transcriptSearchNext" title="Next" aria-label="Next transcript search result" data-i18n-title="common.next" data-i18n-aria-label="transcript.search_next_aria">&darr;</button>
                             </div>
                             <div class="transcript-workspace">
                                 <section class="transcript-timeline-panel" aria-labelledby="transcriptTimelineHeading">
                                     <div class="transcript-timeline-header">
                                         <div class="transcript-timeline-copy">
-                                            <span class="transcript-timeline-kicker">Edit Timeline</span>
-                                            <span class="transcript-timeline-heading" id="transcriptTimelineHeading">Transcript rhythm overview</span>
+                                            <span class="transcript-timeline-kicker" data-i18n="transcript.timeline_edit">Edit Timeline</span>
+                                            <span class="transcript-timeline-heading" id="transcriptTimelineHeading" data-i18n="transcript.timeline_heading">Transcript rhythm overview</span>
                                         </div>
-                                        <span class="transcript-timeline-status" id="transcriptTimelineStatus">Select a segment to focus the edit.</span>
+                                        <span class="transcript-timeline-status" id="transcriptTimelineStatus" data-i18n="transcript.timeline_select_segment">Select a segment to focus the edit.</span>
                                     </div>
-                                    <div class="transcript-timeline-meta" id="transcriptTimelineMeta" aria-label="Transcript timeline stats"></div>
+                                    <div class="transcript-timeline-meta" id="transcriptTimelineMeta" aria-label="Transcript timeline stats" data-i18n-aria-label="transcript.timeline_stats_aria"></div>
                                     <div class="transcript-timeline-ruler" id="transcriptTimelineRuler" aria-hidden="true"></div>
-                                    <div class="transcript-timeline" id="transcriptTimeline" role="listbox" aria-label="Transcript timeline"></div>
-                                    <p class="transcript-timeline-hint">Arrow keys move between segments. Press Enter to jump into the current text.</p>
+                                    <div class="transcript-timeline" id="transcriptTimeline" role="listbox" aria-label="Transcript timeline" data-i18n-aria-label="transcript.timeline_aria"></div>
+                                    <p class="transcript-timeline-hint" data-i18n="transcript.timeline_hint">Arrow keys move between segments. Press Enter to jump into the current text.</p>
                                 </section>
                                 <div class="transcript-segments" id="transcriptSegments"></div>
                             </div>
                         </div>
                         <div class="result-area hidden" id="summaryResult">
-                            <div class="card-header"><div class="card-title">Summary</div></div>
+                            <div class="card-header"><div class="card-title" data-i18n="transcript.summary_title">Summary</div></div>
                             <div id="summaryContent" class="summary-content"></div>
-                            <button type="button" class="btn-sm mt-xs" id="copySummaryBtn">Copy</button>
+                            <button type="button" class="btn-sm mt-xs" id="copySummaryBtn" data-i18n="common.copy">Copy</button>
                         </div>
                     </section>
                 </div>
