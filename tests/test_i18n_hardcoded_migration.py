@@ -517,6 +517,20 @@ MIGRATED_KEYS = (
     "ws.listener_count_ready",
     "ws.hint_start_bridge",
     "ws.overview_limited",
+    # Thirty-ninth batch (engine registry availability feedback).
+    "engines.checking_availability",
+    "engines.checking_installed_title",
+    "engines.checking_status",
+    "engines.loading_title",
+    "engines.loading_body",
+    "engines.inventory_reconnect",
+    "engines.routing_unavailable",
+    "engines.routing_unavailable_title",
+    "engines.unavailable_title",
+    "engines.settings_refresh_label",
+    "engines.settings_refresh_title",
+    "engines.overview_ready",
+    "engines.overview_warning",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -2623,6 +2637,72 @@ EXPECTED_CALLS = (
         "ws.overview_limited",
         re.compile(r't\(\s*"ws\.overview_limited"'),
         re.compile(r'lineMessage\s*=\s*"Most features still run'),
+    ),
+    # --- Thirty-ninth batch ----------------------------------------
+    (
+        "engines.checking_availability",
+        re.compile(r't\(\s*"engines\.checking_availability"'),
+        re.compile(r'setSettingsStudioState\(\s*"engines",\s*"Checking availability\.\.\."'),
+    ),
+    (
+        "engines.checking_installed_title",
+        re.compile(r't\(\s*"engines\.checking_installed_title"'),
+        None,
+    ),
+    (
+        "engines.checking_status",
+        re.compile(r't\(\s*"engines\.checking_status"'),
+        re.compile(r'setStatusLine\(\s*"engineRegistryStatus",\s*"Checking which local engines'),
+    ),
+    (
+        "engines.loading_title",
+        re.compile(r't\(\s*"engines\.loading_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Loading engine routing'),
+    ),
+    (
+        "engines.loading_body",
+        re.compile(r't\(\s*"engines\.loading_body"'),
+        None,
+    ),
+    (
+        "engines.inventory_reconnect",
+        re.compile(r't\(\s*"engines\.inventory_reconnect"'),
+        None,
+    ),
+    (
+        "engines.routing_unavailable",
+        re.compile(r't\(\s*"engines\.routing_unavailable"'),
+        re.compile(r'setSettingsStudioState\(\s*"engines",\s*"Routing unavailable"'),
+    ),
+    (
+        "engines.routing_unavailable_title",
+        re.compile(r't\(\s*"engines\.routing_unavailable_title"'),
+        None,
+    ),
+    (
+        "engines.unavailable_title",
+        re.compile(r't\(\s*"engines\.unavailable_title"'),
+        re.compile(r'buildEmptyHintMarkup\(\s*"Engine routing is unavailable right now\."'),
+    ),
+    (
+        "engines.settings_refresh_label",
+        re.compile(r't\(\s*"engines\.settings_refresh_label"'),
+        re.compile(r'label:\s*"Refresh availability"'),
+    ),
+    (
+        "engines.settings_refresh_title",
+        re.compile(r't\(\s*"engines\.settings_refresh_title"'),
+        re.compile(r'title:\s*"Refresh engine availability to review Auto routing'),
+    ),
+    (
+        "engines.overview_ready",
+        re.compile(r't\(\s*"engines\.overview_ready"'),
+        re.compile(r'var lineMessage = "The local studio is ready'),
+    ),
+    (
+        "engines.overview_warning",
+        re.compile(r't\(\s*"engines\.overview_warning"'),
+        re.compile(r'lineMessage = "Refresh engine routing after installs finish'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
