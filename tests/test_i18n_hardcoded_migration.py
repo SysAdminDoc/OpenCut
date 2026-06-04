@@ -46,6 +46,15 @@ MIGRATED_KEYS = (
     "toast.choose_stem_types",
     "toast.enter_broll_prompt",
     "toast.enter_tts_text",
+    # Fourth batch (install/status feedback).
+    "toast.demucs_installed",
+    "toast.depth_installed",
+    "toast.emotion_installed",
+    "toast.crisper_whisper_installed",
+    "toast.broll_generation_installed",
+    "toast.multimodal_diarization_installed",
+    "toast.watermark_remover_installed",
+    "toast.watermark_region_autofilled",
 )
 
 
@@ -125,6 +134,47 @@ EXPECTED_CALLS = (
         "toast.enter_tts_text",
         re.compile(r't\(\s*"toast\.enter_tts_text"'),
         re.compile(r'showAlert\(\s*"Enter text to generate speech\."\s*\)'),
+    ),
+    # --- Fourth batch -----------------------------------------------
+    (
+        "toast.demucs_installed",
+        re.compile(r't\(\s*"toast\.demucs_installed"'),
+        re.compile(r'showAlert\(\s*"Demucs installed successfully!"\s*\)'),
+    ),
+    (
+        "toast.depth_installed",
+        re.compile(r't\(\s*"toast\.depth_installed"'),
+        re.compile(r'showAlert\(\s*"Depth Anything V2 installed successfully!"\s*\)'),
+    ),
+    (
+        "toast.emotion_installed",
+        re.compile(r't\(\s*"toast\.emotion_installed"'),
+        re.compile(r'showAlert\(\s*"Emotion analysis installed successfully!"\s*\)'),
+    ),
+    (
+        "toast.crisper_whisper_installed",
+        re.compile(r't\(\s*"toast\.crisper_whisper_installed"'),
+        re.compile(r'showAlert\(\s*"CrisperWhisper installed successfully!"\s*\)'),
+    ),
+    (
+        "toast.broll_generation_installed",
+        re.compile(r't\(\s*"toast\.broll_generation_installed"'),
+        re.compile(r'showAlert\(\s*"AI B-roll generation installed successfully!"\s*\)'),
+    ),
+    (
+        "toast.multimodal_diarization_installed",
+        re.compile(r't\(\s*"toast\.multimodal_diarization_installed"'),
+        re.compile(r'showAlert\(\s*"Multimodal diarization installed successfully!"\s*\)'),
+    ),
+    (
+        "toast.watermark_remover_installed",
+        re.compile(r't\(\s*"toast\.watermark_remover_installed"'),
+        re.compile(r'showAlert\(\s*"Watermark remover installed successfully!"\s*\)'),
+    ),
+    (
+        "toast.watermark_region_autofilled",
+        re.compile(r't\(\s*"toast\.watermark_region_autofilled"'),
+        re.compile(r'showToast\(\s*"Watermark detected'),
     ),
 )
 
