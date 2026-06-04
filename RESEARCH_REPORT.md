@@ -8,7 +8,7 @@ Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-04.
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
 subprocess propagation, E12 manifest-derived workflow allowlist, and E13 CLI
-route escape hatch are now represented as shipped in the live v4.204 docs; E15
+route escape hatch are now represented as shipped in the live v4.205 docs; E15
 also has its fourth through one-hundred-second rolling i18n batches recorded there, and `TODO.md`
 is now the compact active execution queue. No new duplicate
 extensibility/accessibility/observability/workflow/scripting rows were promoted.
@@ -29,7 +29,7 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The compact open queue
-in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-22 research items below. Cycles 2
+in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-23 research items below. Cycles 2
 through 4 added UXP packaging-trust guardrails from Adobe's current manifest,
 filesystem, API-reference, changelog, Hybrid Plugin, external-process, and
 WebView docs. Cycle 5 then re-ran the optional-extra Python advisory gate and
@@ -45,7 +45,8 @@ follow-ups. Cycle 9 repeated those two UXP findings and promoted no new rows.
 Cycle 10 checked the advertised Python 3.13 classifier against committed CI
 coverage; RA-21 captures the release-metadata proof/retraction follow-up. Cycle
 11 checked Release Full CEP panel Node runtime determinism; RA-22 captures the
-Node pin follow-up.
+Node pin follow-up. Cycle 12 checked GitHub Actions immutable-reference posture;
+RA-23 captures the workflow action SHA-pin follow-up.
 
 ## Executive Summary
 
@@ -128,6 +129,10 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 22. **Pin Node explicitly in Release Full panel gates** (RA-22) — PR Fast pins
     Node 22 before panel npm install/test work, while Release Full runs the
     panel npm gate without any `setup-node` step. [Verified]
+23. **Pin GitHub Actions workflow actions to full-length SHAs** (RA-23) —
+    release/signing workflows still reference `actions/*` by mutable tags even
+    though GitHub documents full-length commit SHA pins as the immutable Action
+    release option. [Verified]
 
 ## Evidence Reviewed
 
@@ -382,6 +387,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **RA-22 Release Full Node determinism** needs a Release Full `setup-node`
   step before panel npm commands and a workflow-shape test that keeps PR Fast
   and Release Full on the same supported Node major.
+- **RA-23 GitHub Actions SHA pins** needs full-length commit SHA workflow action
+  references, version/update comments, and a workflow-security test that rejects
+  mutable action tags or branches.
 
 ## Research Inputs (archived)
 
@@ -392,8 +400,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE9.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE9.md) — duplicate UXP clipboard/confirmation recheck; no new RA row promoted.
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE10.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE10.md) — Python 3.13 classifier-vs-CI support proof follow-up (RA-21).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE11.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE11.md) — Release Full CEP panel Node runtime pin follow-up (RA-22).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE12.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE12.md) — GitHub Actions full-SHA pinning follow-up (RA-23).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-22 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-23 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes
