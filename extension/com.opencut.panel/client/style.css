@@ -14118,6 +14118,96 @@ body[data-active-nav="captions"] {
     --workspace-secondary-solid: #ada0ff;
 }
 
+/* ============================================================
+   F236 CEP caption display-settings card
+   ============================================================ */
+.caption-display-card {
+    margin-bottom: var(--sp-md);
+}
+
+.caption-display-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: var(--sp-sm) var(--sp-md);
+}
+
+.caption-display-card .form-group {
+    margin-bottom: 0;
+}
+
+.caption-display-card .btn-row {
+    margin-top: var(--sp-md);
+}
+
+.caption-display-status {
+    margin-top: var(--sp-sm);
+}
+
+#fccComplianceNotice {
+    border-left: 3px solid var(--workspace-accent-solid, var(--neon-cyan));
+    padding-left: var(--sp-sm);
+}
+
+#fccComplianceNotice a {
+    color: var(--workspace-accent-solid, var(--neon-cyan));
+    text-decoration: underline;
+}
+
+.caption-display-preview {
+    margin-top: var(--sp-md);
+    padding: var(--sp-sm);
+    border: 1px solid var(--border);
+    border-radius: var(--r-sm);
+    background: var(--bg-input);
+}
+
+.caption-display-preview-label {
+    color: var(--text-secondary);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    margin-bottom: var(--sp-sm);
+    text-transform: uppercase;
+}
+
+.caption-display-preview-area {
+    min-height: 92px;
+    padding: var(--sp-lg) var(--sp-sm);
+    border-radius: var(--r-sm);
+    background:
+        repeating-linear-gradient(
+            45deg,
+            rgba(255, 255, 255, 0.03) 0,
+            rgba(255, 255, 255, 0.03) 8px,
+            rgba(255, 255, 255, 0.06) 8px,
+            rgba(255, 255, 255, 0.06) 16px
+        ),
+        var(--bg-surface);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.caption-display-preview-sample {
+    display: inline-block;
+    max-width: 100%;
+    padding: 6px 14px;
+    border-radius: 4px;
+    background: rgba(0, 0, 0, 0.65);
+    color: #fff;
+    font-family: var(--font-mono);
+    font-size: 16px;
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+}
+
+@media (max-width: 420px) {
+    .caption-display-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
 body[data-active-nav="audio"] {
     --workspace-accent-rgb: 112, 214, 164;
     --workspace-secondary-rgb: 143, 184, 255;
