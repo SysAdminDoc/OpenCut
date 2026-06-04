@@ -1069,6 +1069,16 @@ MIGRATED_KEYS = (
     "nlp.processing_button",
     "toolbar.more_tools",
     "toolbar.previous_tools",
+    # Seventy-fourth batch (journal and media metadata labels).
+    "error.start_request_failed",
+    "journal.marker_label",
+    "journal.marker_label_clip",
+    "journal.renamed_project_items",
+    "media.meta_audio",
+    "media.meta_file_size",
+    "media.meta_resolution",
+    "media.meta_transcript_cached",
+    "media.meta_video",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5812,6 +5822,52 @@ EXPECTED_CALLS = (
         "toolbar.previous_tools",
         re.compile(r't\(\s*"toolbar\.previous_tools"'),
         re.compile(r':\s*"Previous tools"'),
+    ),
+    # --- Seventy-fourth batch -------------------------------------
+    (
+        "error.start_request_failed",
+        re.compile(r't\(\s*"error\.start_request_failed"'),
+        re.compile(r'error:\s*"Failed to start request"'),
+    ),
+    (
+        "journal.marker_label",
+        re.compile(r't\(\s*"journal\.marker_label"'),
+        re.compile(r'return\s+n\s*\+\s*" marker"'),
+    ),
+    (
+        "journal.marker_label_clip",
+        re.compile(r't\(\s*"journal\.marker_label_clip"'),
+        re.compile(r'clipName\s*\?\s*" on \'" \+ clipName'),
+    ),
+    (
+        "journal.renamed_project_items",
+        re.compile(r't\(\s*"journal\.renamed_project_items"'),
+        re.compile(r'return\s+"Renamed "\s*\+\s*n\s*\+\s*" project item"'),
+    ),
+    (
+        "media.meta_audio",
+        re.compile(r't\(\s*"media\.meta_audio"'),
+        re.compile(r'safeFixed\(data\.audio\.sample_rate / 1000,\s*1\)\s*\+\s*" kHz"'),
+    ),
+    (
+        "media.meta_file_size",
+        re.compile(r't\(\s*"media\.meta_file_size"'),
+        re.compile(r'safeFixed\(data\.file_size_mb,\s*1\)\s*\+\s*" MB"'),
+    ),
+    (
+        "media.meta_resolution",
+        re.compile(r't\(\s*"media\.meta_resolution"'),
+        re.compile(r'data\.video\.width\s*\+\s*"x"\s*\+\s*data\.video\.height'),
+    ),
+    (
+        "media.meta_transcript_cached",
+        re.compile(r't\(\s*"media\.meta_transcript_cached"'),
+        re.compile(r'" \| Transcript cached"'),
+    ),
+    (
+        "media.meta_video",
+        re.compile(r't\(\s*"media\.meta_video"'),
+        re.compile(r'data\.video\.width\s*\+\s*"x"\s*\+\s*data\.video\.height\s*\+\s*" @ "'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
