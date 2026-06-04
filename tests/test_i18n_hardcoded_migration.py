@@ -862,6 +862,24 @@ MIGRATED_KEYS = (
     "deliverables.status_loaded_disconnected",
     "deliverables.status_ready",
     "deliverables.status_reconnect_load",
+    # Fifty-eighth batch (deliverables load/generate feedback).
+    "deliverables.cached_sequence_info",
+    "deliverables.file_generated",
+    "deliverables.generate_failed_status",
+    "deliverables.generated_toast",
+    "deliverables.generating_button",
+    "deliverables.generating_status",
+    "deliverables.generation_failed_alert",
+    "deliverables.load_connection_required",
+    "deliverables.network_error",
+    "deliverables.ready_status",
+    "deliverables.sequence_info_loaded_toast",
+    "deliverables.sequence_load_error_alert",
+    "deliverables.sequence_load_failed_hint",
+    "deliverables.sequence_load_failed_status",
+    "deliverables.sequence_loaded_summary",
+    "deliverables.sequence_required_alert",
+    "deliverables.sequence_required_status",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4626,6 +4644,92 @@ EXPECTED_CALLS = (
         "deliverables.status_reconnect_load",
         re.compile(r't\(\s*"deliverables\.status_reconnect_load"'),
         re.compile(r':\s*"Reconnect the backend, then load sequence info to generate handoff docs\."'),
+    ),
+    # --- Fifty-eighth batch ---------------------------------------
+    (
+        "deliverables.cached_sequence_info",
+        re.compile(r't\(\s*"deliverables\.cached_sequence_info"'),
+        re.compile(r'setHintState\(statusEl,\s*"Using cached sequence info for \'"'),
+    ),
+    (
+        "deliverables.file_generated",
+        re.compile(r't\(\s*"deliverables\.file_generated"'),
+        re.compile(r'data\.output\s*\|\|\s*data\.output_path\s*\|\|\s*"File generated\."'),
+    ),
+    (
+        "deliverables.generate_failed_status",
+        re.compile(r't\(\s*"deliverables\.generate_failed_status"'),
+        re.compile(r'setStatusLine\("deliverablesStatus",\s*"Couldn\'t generate "\s*\+'),
+    ),
+    (
+        "deliverables.generated_toast",
+        re.compile(r't\(\s*"deliverables\.generated_toast"'),
+        re.compile(r'showToast\(label\s*\+\s*" generated"'),
+    ),
+    (
+        "deliverables.generating_button",
+        re.compile(r't\(\s*"deliverables\.generating_button"'),
+        re.compile(r'setButtonText\(btn,\s*"Generating…"'),
+    ),
+    (
+        "deliverables.generating_status",
+        re.compile(r't\(\s*"deliverables\.generating_status"'),
+        re.compile(r'setStatusLine\("deliverablesStatus",\s*"Generating "\s*\+'),
+    ),
+    (
+        "deliverables.generation_failed_alert",
+        re.compile(r't\(\s*"deliverables\.generation_failed_alert"'),
+        re.compile(r'showAlert\("Generation failed: "\s*\+'),
+    ),
+    (
+        "deliverables.load_connection_required",
+        re.compile(r't\(\s*"deliverables\.load_connection_required"'),
+        re.compile(r'setStatusLine\(\s*"deliverablesStatus",\s*"Premiere Pro connection required to load sequence info\."'),
+    ),
+    (
+        "deliverables.network_error",
+        re.compile(r't\(\s*"deliverables\.network_error"'),
+        re.compile(r'data\s*\?\s*data\.error\s*:\s*"Network error"'),
+    ),
+    (
+        "deliverables.ready_status",
+        re.compile(r't\(\s*"deliverables\.ready_status"'),
+        re.compile(r'setStatusLine\("deliverablesStatus",\s*label\s*\+\s*" ready\. Review the generated file or open its folder\."'),
+    ),
+    (
+        "deliverables.sequence_info_loaded_toast",
+        re.compile(r't\(\s*"deliverables\.sequence_info_loaded_toast"'),
+        re.compile(r'showToast\("Sequence info loaded"'),
+    ),
+    (
+        "deliverables.sequence_load_error_alert",
+        re.compile(r't\(\s*"deliverables\.sequence_load_error_alert"'),
+        re.compile(r'showAlert\("Error loading sequence info: "\s*\+'),
+    ),
+    (
+        "deliverables.sequence_load_failed_hint",
+        re.compile(r't\(\s*"deliverables\.sequence_load_failed_hint"'),
+        re.compile(r'setHintState\(statusEl,\s*"Couldn\'t load the active Premiere sequence\."'),
+    ),
+    (
+        "deliverables.sequence_load_failed_status",
+        re.compile(r't\(\s*"deliverables\.sequence_load_failed_status"'),
+        re.compile(r'setStatusLine\("deliverablesStatus",\s*"Couldn\'t load the active sequence\. Make sure a Premiere sequence is active and try again\."'),
+    ),
+    (
+        "deliverables.sequence_loaded_summary",
+        re.compile(r't\(\s*"deliverables\.sequence_loaded_summary"'),
+        re.compile(r'setHintState\(\s*statusEl,\s*"Loaded \'"'),
+    ),
+    (
+        "deliverables.sequence_required_alert",
+        re.compile(r't\(\s*"deliverables\.sequence_required_alert"'),
+        re.compile(r'showAlert\("Load sequence info first\."'),
+    ),
+    (
+        "deliverables.sequence_required_status",
+        re.compile(r't\(\s*"deliverables\.sequence_required_status"'),
+        re.compile(r'setStatusLine\("deliverablesStatus",\s*"Load sequence info before generating handoff docs\."'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
