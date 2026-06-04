@@ -108,6 +108,17 @@ MIGRATED_KEYS = (
     "toast.unknown_error",
     "toast.imported_sequence",
     "toast.import_failed",
+    # Tenth batch (session replay/journal apply feedback).
+    "toast.job_rerun_missing_params",
+    "toast.job_rerunning",
+    "toast.job_rerun_failed",
+    "toast.job_replay_missing_params",
+    "toast.applying_to_selection",
+    "toast.selection_target",
+    "toast.premiere_connection_required",
+    "toast.no_markers_to_replay",
+    "toast.apply_failed",
+    "toast.markers_readded",
 )
 
 
@@ -473,6 +484,57 @@ EXPECTED_CALLS = (
         "toast.import_failed",
         re.compile(r't\(\s*"toast\.import_failed"'),
         re.compile(r'showAlert\(\s*"Import failed: "'),
+    ),
+    # --- Tenth batch ------------------------------------------------
+    (
+        "toast.job_rerun_missing_params",
+        re.compile(r't\(\s*"toast\.job_rerun_missing_params"'),
+        re.compile(r'showToast\(\s*"Nothing to re-run'),
+    ),
+    (
+        "toast.job_rerunning",
+        re.compile(r't\(\s*"toast\.job_rerunning"'),
+        re.compile(r'showToast\(\s*"Re-running "'),
+    ),
+    (
+        "toast.job_rerun_failed",
+        re.compile(r't\(\s*"toast\.job_rerun_failed"'),
+        re.compile(r'showAlert\(\s*"Re-run failed: "'),
+    ),
+    (
+        "toast.job_replay_missing_params",
+        re.compile(r't\(\s*"toast\.job_replay_missing_params"'),
+        re.compile(r'showToast\(\s*"Job params aren\'t recorded'),
+    ),
+    (
+        "toast.applying_to_selection",
+        re.compile(r't\(\s*"toast\.applying_to_selection"'),
+        re.compile(r'showToast\(\s*"Applying "\s*\+\s*_(?:sessionCtxOpText|journalActionLabel)'),
+    ),
+    (
+        "toast.selection_target",
+        re.compile(r't\(\s*"toast\.selection_target"'),
+        None,
+    ),
+    (
+        "toast.premiere_connection_required",
+        re.compile(r't\(\s*"toast\.premiere_connection_required"'),
+        re.compile(r'showAlert\(\s*"Premiere connection required\."\s*\)'),
+    ),
+    (
+        "toast.no_markers_to_replay",
+        re.compile(r't\(\s*"toast\.no_markers_to_replay"'),
+        re.compile(r'showAlert\(\s*"No markers to replay\."\s*\)'),
+    ),
+    (
+        "toast.apply_failed",
+        re.compile(r't\(\s*"toast\.apply_failed"'),
+        re.compile(r'showAlert\(\s*"Apply failed: "'),
+    ),
+    (
+        "toast.markers_readded",
+        re.compile(r't\(\s*"toast\.markers_readded"'),
+        re.compile(r'showToast\(\s*"Re-added "'),
     ),
 )
 
