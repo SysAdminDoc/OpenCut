@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 120
+
+- Migrated the Audio tab quick-action copy and AI Stem Separation form shell to static locale hooks while preserving nested icons, checkbox inputs, model names, and literal package-install commands.
+- `client/locales/en.json` grows from 1,842 to 1,865 keys; `i18n-drift` reports 1,772 consumers, 93 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Audio quick-action and stem-separation static HTML hooks plus the matching locale keys.
+
 ### Security — SSRF guard hardening
 
 - `opencut.core.url_safety.validate_public_http_url` now rejects alternate IPv4 encodings — decimal (`http://2130706433/`), octal (`http://0177.0.0.1/`), hex (`http://0x7f.0.0.1/`) and short-form (`http://127.1/`). `ipaddress.ip_address` rejects these forms, so they previously fell through the guard and were accepted, while the OS resolver and HTTP clients still expand them to loopback/private targets. The guard now normalises them with `socket.inet_aton` (offline, no DNS) before the loopback/private check. Genuine public hosts and IPs are unaffected. This helper backs every user-configured outbound fetch (webhooks, plugin/model downloads, stock/TTS URLs). Regression test added in `tests/test_hardening.py`.
