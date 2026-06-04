@@ -29,7 +29,7 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The compact open queue
-in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-20 research items below. Cycles 2
+in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-21 research items below. Cycles 2
 through 4 added UXP packaging-trust guardrails from Adobe's current manifest,
 filesystem, API-reference, changelog, Hybrid Plugin, external-process, and
 WebView docs. Cycle 5 then re-ran the optional-extra Python advisory gate and
@@ -42,6 +42,8 @@ schema and deprecated API notes; RA-17/RA-18 capture the manifest-version and
 deprecation-sentinel follow-ups. Cycle 8 checked UXP clipboard permission and
 beta alert/confirmation behavior; RA-19/RA-20 capture those runtime permission
 follow-ups. Cycle 9 repeated those two UXP findings and promoted no new rows.
+Cycle 10 checked the advertised Python 3.13 classifier against committed CI
+coverage; RA-21 captures the release-metadata proof/retraction follow-up.
 
 ## Executive Summary
 
@@ -118,6 +120,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
     moved `alert`, `prompt`, and `confirm` back behind the beta `enableAlerts`
     feature flag, but OpenCut still has a raw UXP `window.confirm` call.
     [Verified]
+21. **Prove or retract the advertised Python 3.13 classifier** (RA-21) —
+    `pyproject.toml` advertises Python 3.13 while the committed build,
+    PR-fast, and Adobe-version workflows still run only 3.12. [Verified]
 
 ## Evidence Reviewed
 
@@ -139,6 +144,13 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   `requirements.txt` clean; `pyproject[all]` failed with unwaived
   `torch==2.8.0` PYSEC-2025-203/204/206/PYSEC-2026-139 and
   `transformers==4.57.6` PYSEC-2025-217).
+- **Python support metadata:** `pyproject.toml` advertises
+  `Programming Language :: Python :: 3.13`, while
+  `.github/workflows/build.yml`, `.github/workflows/pr-fast.yml`, and
+  `.github/workflows/adobe-premierepro-versions.yml` still set
+  `python-version` to 3.12. GitHub's current Python Actions guide includes
+  3.13 in matrix examples, and Python's current 3.13 documentation confirms
+  the active release line.
 - **Extensibility:** `opencut/core/agent_skills.py` (N8 user loader now scans
   validated `~/.opencut/skills/<id>/` packages), `opencut/routes/plugins.py` (install requires
   restart to load routes; uninstall `shutil.rmtree` with no backup).
@@ -351,6 +363,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   retained.
 - **RA-20 confirmation behavior** needs either an in-panel confirmation modal or
   an explicit beta-alert manifest decision backed by UDT evidence.
+- **RA-21 Python 3.13 support proof** needs either a CI matrix lane covering
+  dependency install plus fast manifest/smoke checks under 3.13, or removal of
+  the classifier until that lane passes.
 
 ## Research Inputs (archived)
 
@@ -359,8 +374,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE7.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE7.md) — UXP manifest schema drift and deprecated API sentinel follow-up (RA-17/RA-18).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE8.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE8.md) — UXP clipboard permission and beta alert/confirmation follow-ups (RA-19/RA-20).
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE9.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE9.md) — duplicate UXP clipboard/confirmation recheck; no new RA row promoted.
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE10.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE10.md) — Python 3.13 classifier-vs-CI support proof follow-up (RA-21).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-20 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-21 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes
