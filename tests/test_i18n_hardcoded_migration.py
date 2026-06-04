@@ -1155,6 +1155,11 @@ MIGRATED_KEYS = (
     "common.verb_needs",
     "journal.entries_word",
     "journal.entry_word",
+    # Eighty-second batch (fallback labels and Premiere bin names).
+    "common.not_available",
+    "premiere.bin_output",
+    "premiere.bin_stems",
+    "status.gpu_fallback",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6301,6 +6306,27 @@ EXPECTED_CALLS = (
         "journal.entry_word",
         re.compile(r't\(\s*"journal\.entry_word"'),
         re.compile(r'\?\s*"entry"\s*:\s*"entries"'),
+    ),
+    # --- Eighty-second batch --------------------------------------
+    (
+        "common.not_available",
+        re.compile(r't\(\s*"common\.not_available"'),
+        re.compile(r'\|\|\s*"N/A"'),
+    ),
+    (
+        "premiere.bin_output",
+        re.compile(r't\(\s*"premiere\.bin_output"'),
+        re.compile(r'bin\s*\|\|\s*"OpenCut Output"|PremiereBridge\.importFile\(outputPath,\s*"OpenCut Output"'),
+    ),
+    (
+        "premiere.bin_stems",
+        re.compile(r't\(\s*"premiere\.bin_stems"'),
+        re.compile(r'PremiereBridge\.importFiles\(outputPaths,\s*"OpenCut Stems"'),
+    ),
+    (
+        "status.gpu_fallback",
+        re.compile(r't\(\s*"status\.gpu_fallback"'),
+        re.compile(r'data\.gpu\.name\s*\|\|\s*"GPU"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
