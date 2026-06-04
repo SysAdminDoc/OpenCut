@@ -1227,6 +1227,9 @@ MIGRATED_KEYS = (
     # Ninetieth batch (final command palette tool names).
     "palette.tool_job_history",
     "palette.tool_keyboard_shortcuts",
+    # Ninety-first batch (preset selector placeholders).
+    "settings.no_presets_saved",
+    "settings.select_preset_placeholder",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6697,6 +6700,17 @@ EXPECTED_CALLS = (
         "palette.tool_keyboard_shortcuts",
         re.compile(r't\(\s*"palette\.tool_keyboard_shortcuts"'),
         re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    # --- Ninety-first batch ---------------------------------------
+    (
+        "settings.no_presets_saved",
+        re.compile(r't\(\s*"settings\.no_presets_saved"'),
+        re.compile(r'<option value="" disabled selected>No presets saved</option>'),
+    ),
+    (
+        "settings.select_preset_placeholder",
+        re.compile(r't\(\s*"settings\.select_preset_placeholder"'),
+        re.compile(r'<option value="" disabled selected>Select preset'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

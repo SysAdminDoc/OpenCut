@@ -10284,9 +10284,9 @@
             var keys = Object.keys(data);
             var html = "";
             if (keys.length === 0) {
-                html = '<option value="" disabled selected>No presets saved</option>';
+                html = '<option value="" disabled selected>' + esc(t("settings.no_presets_saved", "No presets saved")) + '</option>';
             } else {
-                    html = '<option value="" disabled selected>Select preset…</option>';
+                html = '<option value="" disabled selected>' + esc(t("settings.select_preset_placeholder", "Select preset…")) + '</option>';
                 for (var i = 0; i < keys.length; i++) {
                     html += '<option value="' + esc(keys[i]) + '">' + esc(keys[i]) + '</option>';
                 }
