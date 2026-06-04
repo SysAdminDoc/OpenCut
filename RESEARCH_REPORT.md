@@ -29,7 +29,7 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The compact open queue
-in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-16 research items below. Cycles 2
+in `TODO.md` remains E15 plus external F202/F252 and the RA-01..RA-18 research items below. Cycles 2
 through 4 added UXP packaging-trust guardrails from Adobe's current manifest,
 filesystem, API-reference, changelog, Hybrid Plugin, external-process, and
 WebView docs. Cycle 5 then re-ran the optional-extra Python advisory gate and
@@ -37,7 +37,9 @@ found `pyproject[all]` failing on five unwaived Torch/Transformers advisories
 while `requirements.txt` remained clean; RA-15 captures the build-lane
 follow-up. Cycle 6 re-ran the Adobe Premiere Pro npm package drift check and
 found a stable `release-26.2` dist-tag newer than `latest`; RA-16 captures the
-F251 release-channel tracker follow-up.
+F251 release-channel tracker follow-up. Cycle 7 rechecked Adobe UXP manifest
+schema and deprecated API notes; RA-17/RA-18 capture the manifest-version and
+deprecation-sentinel follow-ups.
 
 ## Executive Summary
 
@@ -47,7 +49,7 @@ silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, CLI route scripting, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
 (N1-N10, E11, E12, E13, E14) is now shipped through v4.100, and E15 is actively
-rolling in v4.192; the strongest remaining direction is **not** another wave of
+rolling in v4.194; the strongest remaining direction is **not** another wave of
 model surfaces but making the existing surface easier to run, debug, resume,
 extend, and trust.
 
@@ -100,6 +102,13 @@ opportunities it surfaced — all net-new versus the open continuation queue:
     dormant Bolt/WebView scaffold currently requires `localAndRemote` message
     bridging and dev localhost domains even though release cutover should use
     packaged local WebView content. [Verified]
+17. **Add UXP manifest schema drift guard and explicit `manifestVersion`**
+    (RA-17) — the live UXP manifest omits Adobe's required manifestVersion
+    while the dormant WebView scaffold declares v6 despite Premiere docs
+    naming v5 support. [Verified]
+18. **Add a UXP API deprecation sentinel before F252 cutover** (RA-18) — current
+    source avoids deprecated Clipboard and legacy `uxpvideo*` APIs, but the
+    cutover path needs a static regression guard. [Verified]
 
 ## Evidence Reviewed
 
@@ -217,6 +226,12 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **Release-signal gap — Adobe stable release-channel tags are not first-class.**
   F251 currently tracks only `latest` and `beta`, but the live npm registry now
   exposes `release-26.2: 26.2.1` newer than `latest: 26.2.0`. → RA-16.
+- **Packaging trust — UXP manifest schema version is implicit or inconsistent.**
+  The live manifest omits `manifestVersion`, while the WebView scaffold emits
+  version 6 despite current Premiere docs naming version 5 support. → RA-17.
+- **Packaging trust — deprecated UXP APIs have no sentinel.** Current UXP source
+  does not use deprecated Clipboard APIs or legacy `uxpvideo*` events, but
+  F252/WebView work can regress without a static guard. → RA-18.
 - **Packaging trust — base UXP requests broad filesystem access.** Adobe
   recommends `request` for user-selected files and warns users may deny
   `fullAccess`; OpenCut should reserve broad/direct path access for justified
@@ -317,13 +332,17 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **RA-16 release-channel policy** needs the F251 tracker to decide how many
   Adobe `release-*` streams to retain in generated snapshots when npm publishes
   multiple stable branches at once.
+- **RA-17 manifest-version policy** needs a documented UDT/Premiere smoke before
+  any package claims a schema version newer than the Premiere-supported v5
+  listed in current docs.
 
 ## Research Inputs (archived)
 
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md) — governance, route-surface, agent, UXP, i18n, a11y, CI, supply-chain loop.
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md) — performance, observability, crash-recovery, plugin extensibility, resource-preflight, trust-signals pass (N1–N10/E11–E15).
+- [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE7.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-06-04_CYCLE7.md) — UXP manifest schema drift and deprecated API sentinel follow-up (RA-17/RA-18).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-16 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-18 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes
