@@ -802,6 +802,15 @@ MIGRATED_KEYS = (
     "llm.saved",
     "transcript.summarizing",
     "video.select_reference_image",
+    # Fifty-second batch (timeline write-back feedback).
+    "timeline.add_markers_failed",
+    "timeline.apply_cuts_failed",
+    "timeline.beat_marker_summary",
+    "timeline.cuts_applied",
+    "timeline.cuts_applied_status",
+    "timeline.markers_added",
+    "timeline.no_beat_markers",
+    "timeline.premiere_required",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4290,6 +4299,47 @@ EXPECTED_CALLS = (
         "video.select_reference_image",
         re.compile(r't\(\s*"video\.select_reference_image"'),
         re.compile(r'showAlert\("Select a reference image\."'),
+    ),
+    # --- Fifty-second batch ----------------------------------------
+    (
+        "timeline.add_markers_failed",
+        re.compile(r't\(\s*"timeline\.add_markers_failed"'),
+        re.compile(r'showAlert\("Error adding markers: "'),
+    ),
+    (
+        "timeline.apply_cuts_failed",
+        re.compile(r't\(\s*"timeline\.apply_cuts_failed"'),
+        re.compile(r'showAlert\("Error applying cuts: "'),
+    ),
+    (
+        "timeline.beat_marker_summary",
+        re.compile(r't\(\s*"timeline\.beat_marker_summary"'),
+        re.compile(r'sum\.textContent\s*=\s*beatMarkerTimes\.length\s*\+\s*" beat markers detected'),
+    ),
+    (
+        "timeline.cuts_applied",
+        re.compile(r't\(\s*"timeline\.cuts_applied"'),
+        re.compile(r'showToast\("Applied "\s*\+\s*\(r\.applied \|\| 0\)\s*\+\s*" cuts to sequence"'),
+    ),
+    (
+        "timeline.cuts_applied_status",
+        re.compile(r't\(\s*"timeline\.cuts_applied_status"'),
+        re.compile(r'statusEl\.textContent\s*=\s*"Applied "\s*\+\s*\(r\.applied \|\| 0\)'),
+    ),
+    (
+        "timeline.markers_added",
+        re.compile(r't\(\s*"timeline\.markers_added"'),
+        re.compile(r'showToast\("Added "\s*\+\s*\(r\.added \|\| beatMarkerTimes\.length\)\s*\+\s*" markers"'),
+    ),
+    (
+        "timeline.no_beat_markers",
+        re.compile(r't\(\s*"timeline\.no_beat_markers"'),
+        re.compile(r'showAlert\("No beat markers detected\."'),
+    ),
+    (
+        "timeline.premiere_required",
+        re.compile(r't\(\s*"timeline\.premiere_required"'),
+        re.compile(r'showAlert\("Premiere Pro connection required\."'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

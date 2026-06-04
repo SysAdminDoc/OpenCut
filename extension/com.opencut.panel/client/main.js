@@ -13527,15 +13527,20 @@
     // ================================================================
 
     function applySequenceCuts(cuts) {
-        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         var payload = JSON.stringify(cuts);
         cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
-                showToast("Applied " + (r.applied || 0) + " cuts to sequence", "success");
+                showToast(t("timeline.cuts_applied", "Applied {count} cuts to sequence")
+                    .replace("{count}", r.applied || 0), "success");
                 var statusEl = document.getElementById("tlWritebackStatus");
-                if (statusEl) statusEl.textContent = "Applied " + (r.applied || 0) + " cuts to sequence.";
-            } catch (e) { showAlert("Error applying cuts: " + (result || e.message)); }
+                if (statusEl) statusEl.textContent = t("timeline.cuts_applied_status", "Applied {count} cuts to sequence.")
+                    .replace("{count}", r.applied || 0);
+            } catch (e) {
+                showAlert(t("timeline.apply_cuts_failed", "Error applying cuts: {error}")
+                    .replace("{error}", result || e.message));
+            }
         });
     }
 
@@ -13553,18 +13558,21 @@
         var res = document.getElementById("beatMarkersResult");
         var sum = document.getElementById("beatMarkersSummary");
         if (res) res.classList.remove("hidden");
-        if (sum) sum.textContent = beatMarkerTimes.length + " beat markers detected. BPM: " + safeFixed(r.bpm || 0, 1);
+        if (sum) sum.textContent = t("timeline.beat_marker_summary", "{count} beat markers detected. BPM: {bpm}")
+            .replace("{count}", beatMarkerTimes.length)
+            .replace("{bpm}", safeFixed(r.bpm || 0, 1));
     });
 
     function addBeatMarkersToSequence() {
-        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
-        if (!beatMarkerTimes || !beatMarkerTimes.length) { showAlert("No beat markers detected."); return; }
+        if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
+        if (!beatMarkerTimes || !beatMarkerTimes.length) { showAlert(t("timeline.no_beat_markers", "No beat markers detected.")); return; }
         var markers = beatMarkerTimes.map(function(t) { return { time: t, name: "Beat", type: "Chapter" }; });
         var payload = JSON.stringify(markers);
         cs.evalScript("ocAddSequenceMarkers('" + escSingleQuote(payload) + "')", function (result) {
             try {
                 var r = JSON.parse(result);
-                showToast("Added " + (r.added || beatMarkerTimes.length) + " markers", "success");
+                showToast(t("timeline.markers_added", "Added {count} markers")
+                    .replace("{count}", r.added || beatMarkerTimes.length), "success");
                 if (!r.error) {
                     // Journal the op for one-click rollback. Fingerprint each
                     // marker by its {time, comment} pair so the inverse can
@@ -13587,7 +13595,10 @@
                           payload: { markers: markers } }
                     );
                 }
-            } catch (e) { showAlert("Error adding markers: " + (result || e.message)); }
+            } catch (e) {
+                showAlert(t("timeline.add_markers_failed", "Error adding markers: {error}")
+                    .replace("{error}", result || e.message));
+            }
         });
     }
 
@@ -13618,7 +13629,7 @@
     });
 
     function applyMulticamCuts() {
-        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         if (!multicamCutsData) { showAlert("No multicam cuts available."); return; }
         var payload = JSON.stringify(multicamCutsData);
         cs.evalScript("ocApplySequenceCuts('" + escSingleQuote(payload) + "')", function (result) {
@@ -13645,7 +13656,7 @@
     }
 
     function getSeqMarkers() {
-        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         cs.evalScript('ocGetSequenceMarkers()', function (result) {
             var listEl = document.getElementById("markerExportList");
             try {
@@ -13707,7 +13718,7 @@
     });
 
     function loadProjectItems() {
-        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         // Return cached project media if still fresh
         if (Array.isArray(_pproCache.clips) && (Date.now() - _pproCache.clipsTs < _pproCache.ttl)) {
             renameItemsData = _pproCache.clips;
@@ -13997,7 +14008,7 @@
     }
 
     function addChaptersAsMarkers() {
-        if (!inPremiere) { showAlert("Premiere Pro connection required."); return; }
+        if (!inPremiere) { showAlert(t("timeline.premiere_required", "Premiere Pro connection required.")); return; }
         if (!chaptersData || !chaptersData.length) { showAlert("No chapters available."); return; }
         var markers = chaptersData.map(function(c) { return { time: c.seconds || c.start || c.time || 0, name: c.title || c.label || "Chapter", type: "Chapter" }; });
         var payload = JSON.stringify(markers);
@@ -14209,7 +14220,7 @@
         var statusEl = document.getElementById("seqInfoStatus");
         if (!inPremiere) {
             setStatusLine("deliverablesStatus", "Premiere Pro connection required to load sequence info.", "warning");
-            showAlert("Premiere Pro connection required.");
+            showAlert(t("timeline.premiere_required", "Premiere Pro connection required."));
             return;
         }
         // Return cached sequence info if still fresh
