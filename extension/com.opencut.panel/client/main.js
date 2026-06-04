@@ -15671,11 +15671,36 @@
             // H1.8 — Onboarding wizard
             // --------------------------------------------------------------
             var ONBOARDING_STEPS = [
-                { title: "Welcome to OpenCut", body: "AI-powered video editing automation, local-first, no cloud." },
-                { title: "Pick a clip", body: "Choose any clip from your Premiere project or the media list above." },
-                { title: "Cut silences + fillers", body: "The Cut tab removes pauses and filler words in one click." },
-                { title: "Caption + enhance", body: "Captions and stems both run locally via faster-whisper and Demucs." },
-                { title: "Export", body: "Export to 13 social presets or hand off to Premiere via OTIO/AAF." }
+                {
+                    title: function () { return t("onboarding.welcome_title", "Welcome to OpenCut"); },
+                    body: function () {
+                        return t("onboarding.welcome_body", "AI-powered video editing automation, local-first, no cloud.");
+                    }
+                },
+                {
+                    title: function () { return t("onboarding.pick_clip_title", "Pick a clip"); },
+                    body: function () {
+                        return t("onboarding.pick_clip_body", "Choose any clip from your Premiere project or the media list above.");
+                    }
+                },
+                {
+                    title: function () { return t("onboarding.cut_title", "Cut silences + fillers"); },
+                    body: function () {
+                        return t("onboarding.cut_body", "The Cut tab removes pauses and filler words in one click.");
+                    }
+                },
+                {
+                    title: function () { return t("onboarding.caption_title", "Caption + enhance"); },
+                    body: function () {
+                        return t("onboarding.caption_body", "Captions and stems both run locally via faster-whisper and Demucs.");
+                    }
+                },
+                {
+                    title: function () { return t("onboarding.export_title", "Export"); },
+                    body: function () {
+                        return t("onboarding.export_body", "Export to 13 social presets or hand off to Premiere via OTIO/AAF.");
+                    }
+                }
             ];
 
             function maybeRunOnboarding() {
@@ -15716,22 +15741,30 @@
                 var step = ONBOARDING_STEPS[idx];
                 card.innerHTML = "";
                 card.appendChild(h("div", { className: "oc-onboarding-step" },
-                    ["Step " + (idx + 1) + " of " + ONBOARDING_STEPS.length]));
-                card.appendChild(h("h2", { className: "oc-onboarding-title" }, [step.title]));
-                card.appendChild(h("p", { className: "oc-onboarding-body" }, [step.body]));
+                    [t("onboarding.step_count", "Step {current} of {total}")
+                        .replace("{current}", idx + 1)
+                        .replace("{total}", ONBOARDING_STEPS.length)]));
+                card.appendChild(h("h2", { className: "oc-onboarding-title" }, [
+                    step.title()
+                ]));
+                card.appendChild(h("p", { className: "oc-onboarding-body" }, [
+                    step.body()
+                ]));
 
                 var row = h("div", { className: "oc-onboarding-actions" }, []);
                 if (idx > 0) {
                     row.appendChild(h("button", {
                         className: "btn btn-secondary oc-onboarding-btn",
                         onclick: function () { renderOnboardingStep(overlay, idx - 1); }
-                    }, ["Back"]));
+                    }, [t("onboarding.back", "Back")]));
                 }
                 row.appendChild(h("button", {
                     className: "btn btn-ghost oc-onboarding-btn",
                     onclick: function () { finishOnboarding(overlay, false); }
-                }, ["Skip"]));
-                var nextLabel = (idx + 1 >= ONBOARDING_STEPS.length) ? "Finish" : "Next";
+                }, [t("onboarding.skip", "Skip")]));
+                var nextLabel = (idx + 1 >= ONBOARDING_STEPS.length)
+                    ? t("onboarding.finish", "Finish")
+                    : t("onboarding.next", "Next");
                 row.appendChild(h("button", {
                     className: "btn btn-primary oc-onboarding-btn",
                     onclick: function () {
@@ -15752,7 +15785,7 @@
                     overlay.style.display = "none";
                 }
                 if (completed) {
-                    showToast("Ready to go — explore any tab", "success");
+                    showToast(t("onboarding.ready", "Ready to go — explore any tab"), "success");
                 }
             }
 
