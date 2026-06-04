@@ -7847,9 +7847,13 @@
     function _sessionCtxOpenPath(path, mode) {
         api("POST", "/system/open-path", { path: path, mode: mode }, function (err, data) {
             if (err) {
-                showToast("Couldn't " + mode + ": " + (err.error || err.message || err), "error");
+                showToast(t("toast.path_action_failed", "Couldn't {mode}: {error}")
+                    .replace("{mode}", mode)
+                    .replace("{error}", err.error || err.message || err), "error");
             } else if (data && data.ok) {
-                showToast(mode === "reveal" ? "Revealed in file manager" : "Opened", "success");
+                showToast(mode === "reveal"
+                    ? t("toast.path_revealed", "Revealed in file manager")
+                    : t("toast.path_opened", "Opened"), "success");
             }
         });
     }
@@ -8121,7 +8125,7 @@
     }
 
     function _journalRevert(entry, btn) {
-        if (!inPremiere) { showAlert("Premiere Pro connection required to revert."); return; }
+        if (!inPremiere) { showAlert(t("toast.premiere_revert_connection_required", "Premiere Pro connection required to revert.")); return; }
         if (!entry.revertible) { return; }
 
         btn.disabled = true;
@@ -8137,25 +8141,25 @@
         if (!dispatch) {
             btn.disabled = false;
             btn.textContent = "Revert";
-            showAlert("This action can't be reverted automatically.");
+            showAlert(t("toast.action_not_revertible", "This action can't be reverted automatically."));
             return;
         }
 
         dispatch(entry.inverse || {}, function (result) {
             var r;
-            try { r = JSON.parse(result || "{}"); } catch (e) { r = { error: result || "Parse error" }; }
+            try { r = JSON.parse(result || "{}"); } catch (e) { r = { error: result || t("toast.parse_error", "Parse error") }; }
             if (r.error) {
                 btn.disabled = false;
                 btn.textContent = "Revert";
-                showAlert("Revert failed: " + r.error);
+                showAlert(t("toast.revert_failed", "Revert failed: {error}").replace("{error}", r.error));
                 return;
             }
             // Mark server-side so the UI reflects the new state.
             api("POST", "/journal/mark-reverted/" + entry.id, {}, function (err) {
                 if (err) {
-                    showToast("Reverted in Premiere but couldn't update the journal", "warn");
+                    showToast(t("toast.journal_revert_update_failed", "Reverted in Premiere but couldn't update the journal"), "warn");
                 } else {
-                    showToast("Reverted: " + _journalActionLabel(entry.action), "success");
+                    showToast(t("toast.reverted_action", "Reverted: {action}").replace("{action}", _journalActionLabel(entry.action)), "success");
                 }
                 renderJournalList();
             });
