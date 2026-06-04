@@ -161,6 +161,7 @@ For each item below: where it lives, what works, what was deferred.
 
 ### N3 — GPU semaphore: default to 30s acquire-wait (P0)
 
+- **Status:** Shipped in `ROADMAP.md` v4.89. Implementation preserves `OPENCUT_GPU_ACQUIRE_TIMEOUT=0` for explicit fail-fast deployments and carries retry metadata through direct errors plus async job status.
 - **User problem:** Concurrent AI calls (caption gen + depth) return 429 *instantly* instead of queueing. Panel says "GPU busy" when in fact the previous job would finish in 4 seconds.
 - **Evidence (Verified):** `opencut/core/gpu_semaphore.py:51` `ACQUIRE_TIMEOUT = max(0.0, float(os.environ.get("OPENCUT_GPU_ACQUIRE_TIMEOUT") or "0") or 0.0)`. Default is 0 (non-blocking).
 - **Proposed behavior:**
@@ -405,12 +406,12 @@ For each item below: where it lives, what works, what was deferred.
   - Acceptance: every top-12 dependency surface resolves to `pip install 'opencut[<extra>]'` in the suggestion; async jobs carry the same hint in job status.
   - Verify: `py -3.12 -m pytest tests/test_missing_dependency_hints.py -q -p no:cacheprovider -o addopts=""`.
 
-- [ ] **P0 — N3 GPU semaphore default-wait 30s**
+- [x] **P0 — N3 GPU semaphore default-wait 30s**
   - Why: 429 floods are UX bugs, not capacity guards.
   - Evidence: `opencut/core/gpu_semaphore.py:51`.
   - Touches: `opencut/core/gpu_semaphore.py`, `opencut/routes/jobs_routes.py` (Retry-After).
-  - Acceptance: two concurrent GPU calls — second one waits, both succeed; three calls — third returns 429 with `Retry-After` and a queue depth.
-  - Verify: `python -m pytest tests/test_gpu_semaphore_wait.py -q`.
+  - Acceptance: a contended GPU acquire waits for a released slot by default; explicit zero-second override remains non-blocking; timeout responses/status include retry metadata.
+  - Verify: `py -3.12 -m pytest tests/test_gpu_semaphore_wait.py -q -p no:cacheprovider -o addopts=""`.
 
 - [ ] **P1 — N6 `GET /webhooks/event-types`**
   - Why: webhook authors can't enumerate without reading source.

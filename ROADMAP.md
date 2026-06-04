@@ -1,6 +1,6 @@
 # OpenCut — Implementation Roadmap
 
-**Version**: 4.88
+**Version**: 4.89
 **Updated**: 2026-06-04
 **Baseline**: v1.32.0 (1,519 routes, 107 blueprints, 598 core modules, 8,400+ tests, light theme + premium UX shipped). Route/blueprint counts are now generated from `opencut/_generated/route_manifest.json` — regenerate with `python -m opencut.tools.dump_route_manifest` before each release.
 **Feature Plan**: 302 features across 62 categories (see `features.md`)
@@ -185,6 +185,8 @@
 > **v4.87 status (2026-06-04, continuation pass)**: closed **N1** from the May 26 continuation queue by replacing the route-only path/mtime transcript cache with a persistent content-addressed cache in `opencut/core/transcript_cache.py`. `transcribe()` now keys cached results by source SHA-256, backend/version, and caption settings, writes atomic JSON entries under `~/.opencut/transcript_cache/`, exposes cache hit metadata on returned `TranscriptionResult`s, and adds `GET /captions/cache/stats` plus CSRF-protected `DELETE /captions/cache/clear`. Route manifest now reports **1,519 routes / 107 blueprints**, `/system/feature-state` exposes **108** records, and extended MCP exposes **1,463** opt-in route tools.
 >
 > **v4.88 status (2026-06-04, continuation pass)**: closed **N2** from the May 26 continuation queue by adding `opencut/core/install_hints.py`, extending `missing_dependency(name, extra=None, gpu=False, vram_mb=0)`, and routing generic missing-dependency responses plus async job error status through the same install-hint registry. The top-12 dependency failures now resolve to actionable `pip install 'opencut[...]'` suggestions with package hints and GPU/VRAM notes where relevant.
+>
+> **v4.89 status (2026-06-04, continuation pass)**: closed **N3** from the May 26 continuation queue by changing the GPU semaphore default acquire wait from 0 seconds to 30 seconds while preserving `OPENCUT_GPU_ACQUIRE_TIMEOUT=0` for fail-fast behavior. GPU contention that still times out now carries `GPU_BUSY` retry metadata through direct structured errors and async job status.
 
 ---
 
@@ -236,11 +238,27 @@ Validation after the batch: `py -3.12 -m pytest tests/test_missing_dependency_hi
 
 ---
 
+## 2026-06-04 v4.89 GPU Semaphore Wait (N3)
+
+N3 is closed. The default GPU contention behavior now waits for a short-running active job to finish instead of rejecting immediately, while explicit fail-fast deployments can keep the old behavior by setting `OPENCUT_GPU_ACQUIRE_TIMEOUT=0`.
+
+| Surface | Status |
+|---|---|
+| Default wait | `opencut/core/gpu_semaphore.py` now defaults `ACQUIRE_TIMEOUT` to 30 seconds and bounds env overrides to 0-600 seconds. |
+| Retry metadata | `GpuBusyError` carries `code=GPU_BUSY`, `status_code=429`, `retry_after`, and `queue_depth`; `safe_error()` maps it to a 429 response with a `Retry-After` header. |
+| Async jobs | Job status now preserves `code`, `retry_after`, and `queue_depth` when worker-body exceptions carry those attributes. |
+| Operations | `/system/gpu-semaphore` status includes `queue_depth` alongside active/available/rejected/acquired counters. |
+| Coverage | `tests/test_gpu_semaphore_wait.py` pins the 30-second default, explicit zero override, wait-then-acquire behavior, structured timeout metadata, and `Retry-After` response mapping. |
+
+Validation after the batch: `py -3.12 -m pytest tests/test_gpu_semaphore_wait.py -q -p no:cacheprovider -o addopts=""` passed (`5 passed`), touched Python files compile, generated-surface regression tests passed (`18 passed`), `git diff --check` passed, and `py -3.12 -m pytest tests/test_job_store.py tests/test_job_diagnostics.py tests/test_job_cancellation_race.py tests/test_route_smoke.py tests/test_missing_dependency_hints.py -q -p no:cacheprovider -o addopts=""` passed (`349 passed`, 1 existing warning).
+
+---
+
 ## Active Continuation Queue (May 26 Plan)
 
 - [x] **P0 — N1 transcript content-addressable cache** — closed in v4.87 with persistent SHA-256 keyed transcript entries, core `transcribe()` integration, cache stats/clear routes, generated manifest refresh, and focused tests.
 - [x] **P0 — N2 `missing_dependency()` includes pip extra name** — closed in v4.88 with a shared install-hint registry, helper metadata, generic route error inference, async job status suggestions, and top-12 dependency coverage.
-- [ ] **P0 — N3 GPU semaphore default-wait 30s** — change instant-contention behavior to bounded waiting while preserving env overrides.
+- [x] **P0 — N3 GPU semaphore default-wait 30s** — closed in v4.89 with a 30-second default wait, zero-second env override, `GPU_BUSY` retry metadata, async job status propagation, and focused wait tests.
 - [ ] **P1 — N6 `GET /webhooks/event-types`** — expose the webhook event catalogue and legacy aliases through the API.
 - [ ] **P1 — E11 webhook signatures mandatory by default** — require explicit opt-out for unsigned webhook delivery.
 - [ ] **P1 — N4 disk preflight in heavy routes** — wire `disk_monitor.preflight()` into the most disk-intensive async jobs.

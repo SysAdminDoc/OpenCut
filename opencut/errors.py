@@ -99,6 +99,17 @@ def safe_error(exc, context=""):
     if isinstance(exc, OpenCutError):
         return exc.to_response()
 
+    if getattr(exc, "code", "") == "GPU_BUSY":
+        response, status_code = error_response(
+            "GPU_BUSY",
+            str(exc),
+            status=getattr(exc, "status_code", 429) or 429,
+            suggestion="Wait for the active GPU job to finish, then retry.",
+        )
+        retry_after = int(getattr(exc, "retry_after", 1) or 1)
+        response.headers["Retry-After"] = str(max(1, retry_after))
+        return response, status_code
+
     if isinstance(exc, MemoryError) or "out of memory" in lower or "cuda out of memory" in lower or "cuda error: out of memory" in lower:
         code = "GPU_OUT_OF_MEMORY"
         user_msg = "Ran out of memory during processing."
