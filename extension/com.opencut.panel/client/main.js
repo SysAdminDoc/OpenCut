@@ -14204,39 +14204,51 @@
         setTextAndTitle("deliverablesOutputSummary", output.label, output.title);
 
         if (info) {
-            var summaryBits = [info.name || "Active Sequence"];
+            var summaryBits = [info.name || t("deliverables.active_sequence", "Active Sequence")];
             if (info.clip_count != null) {
                 var clipCount = Number(info.clip_count) || 0;
-                summaryBits.push(clipCount + " clip" + (clipCount === 1 ? "" : "s"));
+                summaryBits.push(t("deliverables.clip_count", "{count} clip{plural}")
+                    .replace("{count}", clipCount)
+                    .replace("{plural}", clipCount === 1 ? "" : "s"));
             }
             if (info.duration != null) {
                 summaryBits.push(formatTimecode(info.duration));
             }
             var summary = summaryBits.join(" • ");
-            setStatusPill("deliverablesSeqPill", "Loaded", "success", "Sequence info is ready for deliverables.");
+            setStatusPill(
+                "deliverablesSeqPill",
+                t("deliverables.seq_loaded", "Loaded"),
+                "success",
+                t("deliverables.seq_ready_title", "Sequence info is ready for deliverables.")
+            );
             setTextAndTitle("deliverablesSeqSummary", summary, summary);
             if (!_lastDeliverablesActivity) {
                 setStatusLine(
                     "deliverablesStatus",
                     connected
-                        ? "Sequence info is ready. Choose a destination if needed, then generate the docs you need."
-                        : "Sequence info is loaded, but the backend is disconnected.",
+                        ? t("deliverables.status_ready", "Sequence info is ready. Choose a destination if needed, then generate the docs you need.")
+                        : t("deliverables.status_loaded_disconnected", "Sequence info is loaded, but the backend is disconnected."),
                     connected ? "ready" : "warning"
                 );
             }
         } else {
-            setStatusPill("deliverablesSeqPill", "Not loaded", "empty", "Load the active sequence before generating deliverables.");
+            setStatusPill(
+                "deliverablesSeqPill",
+                t("deliverables.seq_not_loaded", "Not loaded"),
+                "empty",
+                t("deliverables.seq_load_title", "Load the active sequence before generating deliverables.")
+            );
             setTextAndTitle(
                 "deliverablesSeqSummary",
-                "Load the active sequence before generating handoff docs.",
-                "Load the active sequence before generating handoff docs."
+                t("deliverables.seq_load_summary", "Load the active sequence before generating handoff docs."),
+                t("deliverables.seq_load_summary", "Load the active sequence before generating handoff docs.")
             );
             if (!_lastDeliverablesActivity) {
                 setStatusLine(
                     "deliverablesStatus",
                     connected
-                        ? "Load sequence info, choose a destination if needed, then generate the docs you need."
-                        : "Reconnect the backend, then load sequence info to generate handoff docs.",
+                        ? t("deliverables.status_load_prompt", "Load sequence info, choose a destination if needed, then generate the docs you need.")
+                        : t("deliverables.status_reconnect_load", "Reconnect the backend, then load sequence info to generate handoff docs."),
                     connected ? "idle" : "warning"
                 );
             }
