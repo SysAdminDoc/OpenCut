@@ -1914,13 +1914,13 @@
         },
         importFiles: function (paths, bin, cb) {
             var pathsJson = JSON.stringify(paths);
-            jsx("importFilesToProject('" + pathsJson.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "', \"" + (bin || "OpenCut Output") + "\")", cb);
+            jsx("importFilesToProject('" + pathsJson.replace(/\\/g, "\\\\").replace(/'/g, "\\'") + "', \"" + escPath(bin || t("premiere.bin_output", "OpenCut Output")) + "\")", cb);
         },
         importCaptions: function (path, cb) {
             jsx('importCaptions("' + escPath(path) + '")', cb);
         },
         importFile: function (path, bin, cb) {
-            jsx('importFileToProject("' + escPath(path) + '", "' + (bin || "OpenCut Output") + '")', cb);
+            jsx('importFileToProject("' + escPath(path) + '", "' + escPath(bin || t("premiere.bin_output", "OpenCut Output")) + '")', cb);
         },
         autoImport: function (path, type) {
             if (!cs || typeof cs.evalScript !== "function") return;
@@ -4254,7 +4254,7 @@
             // Multiple output files (stem separation)
             var outputPaths = job.result.output_paths;
             if (outputPaths && outputPaths.length > 0) {
-                PremiereBridge.importFiles(outputPaths, "OpenCut Stems", function (result) {
+                PremiereBridge.importFiles(outputPaths, t("premiere.bin_stems", "OpenCut Stems"), function (result) {
                     try {
                         var r = JSON.parse(result);
                         if (r.error) {
@@ -4291,7 +4291,7 @@
                 // Audio/video files - generic import to project
                 else if (ext === "wav" || ext === "mp3" || ext === "flac" || ext === "aac" || ext === "ogg" ||
                          ext === "mp4" || ext === "mov" || ext === "avi" || ext === "mkv" || ext === "webm" || ext === "png" || ext === "jpg") {
-                    PremiereBridge.importFile(outputPath, "OpenCut Output", function (result) {
+                    PremiereBridge.importFile(outputPath, t("premiere.bin_output", "OpenCut Output"), function (result) {
                         try {
                             var r = JSON.parse(result);
                             if (r.error) {
@@ -10705,9 +10705,9 @@
                 setButtonText(el.getGpuRecBtn, originalBtnText);
                 el.getGpuRecBtn.disabled = false;
                 if (err || !data) { showAlert(t("gpu.recommendation_failed", "Failed to get GPU recommendation.")); return; }
-                if (el.gpuRecModel) el.gpuRecModel.textContent = data.whisper_model || "N/A";
-                if (el.gpuRecQuality) el.gpuRecQuality.textContent = data.caption_quality || "N/A";
-                if (el.gpuRecDevice) el.gpuRecDevice.textContent = data.whisper_device || "N/A";
+                if (el.gpuRecModel) el.gpuRecModel.textContent = data.whisper_model || t("common.not_available", "N/A");
+                if (el.gpuRecQuality) el.gpuRecQuality.textContent = data.caption_quality || t("common.not_available", "N/A");
+                if (el.gpuRecDevice) el.gpuRecDevice.textContent = data.whisper_device || t("common.not_available", "N/A");
                 if (el.gpuRecNotes) {
                     el.gpuRecNotes.textContent = (data.notes || []).join(" ");
                 }
@@ -12266,7 +12266,7 @@
 
             // GPU
             if (data.gpu && data.gpu.available) {
-                var gpuLabel = data.gpu.name || "GPU";
+                var gpuLabel = data.gpu.name || t("status.gpu_fallback", "GPU");
                 // Shorten long GPU names
                 gpuLabel = gpuLabel.replace("NVIDIA ", "").replace("GeForce ", "");
                 if (data.gpu.vram_total_mb > 0) {
