@@ -11573,25 +11573,25 @@
     function refreshDeps() {
         if (!el.depGrid) return;
         el.depGrid.innerHTML = buildEmptyHintMarkup(
-            "Checking dependencies…",
-            "Reviewing local packages for captions, audio, search, and timeline tooling.",
+            t("settings.deps_checking_title", "Checking dependencies…"),
+            t("settings.deps_checking_body", "Reviewing local packages for captions, audio, search, and timeline tooling."),
             "info"
         );
         setStatusLine(
             "depsStatusLine",
-            "Checking local dependencies for AI, captions, and timeline tooling.",
+            t("settings.deps_checking_status", "Checking local dependencies for AI, captions, and timeline tooling."),
             "working"
         );
         api("GET", "/system/dependencies", null, function (err, data) {
             if (err || !data) {
                 el.depGrid.innerHTML = buildEmptyHintMarkup(
-                    "Dependency health unavailable",
-                    "Reconnect the backend or try again to inspect local packages.",
+                    t("settings.deps_unavailable_title", "Dependency health unavailable"),
+                    t("settings.deps_unavailable_body", "Reconnect the backend or try again to inspect local packages."),
                     "error"
                 );
                 setStatusLine(
                     "depsStatusLine",
-                    "Couldn't read dependency health. Reconnect the backend or run the check again.",
+                    t("settings.deps_unavailable_status", "Couldn't read dependency health. Reconnect the backend or run the check again."),
                     "error"
                 );
                 return;
@@ -11599,13 +11599,13 @@
             var keys = Object.keys(data);
             if (!keys.length) {
                 el.depGrid.innerHTML = buildEmptyHintMarkup(
-                    "No dependency results yet",
-                    "The backend returned an empty dependency report for this machine.",
+                    t("settings.deps_empty_title", "No dependency results yet"),
+                    t("settings.deps_empty_body", "The backend returned an empty dependency report for this machine."),
                     "warning"
                 );
                 setStatusLine(
                     "depsStatusLine",
-                    "No dependency results were returned. Try the check again after the backend settles.",
+                    t("settings.deps_empty_status", "No dependency results were returned. Try the check again after the backend settles."),
                     "warning"
                 );
                 return;
@@ -11623,8 +11623,8 @@
                 if (isInstalled) installedCount++;
                 else missingCount++;
                 var versionText = isInstalled
-                    ? ((info && info.version ? info.version : "OK").toString().substring(0, 12))
-                    : "missing";
+                    ? ((info && info.version ? info.version : t("settings.deps_ok_version", "OK")).toString().substring(0, 12))
+                    : t("settings.deps_missing_version", "missing");
                 var div = document.createElement("div");
                 div.className = "dep-item";
                 div.innerHTML = '<span class="dep-dot ' + (isInstalled ? "installed" : "missing") + '"></span>' +
@@ -11637,8 +11637,14 @@
             setStatusLine(
                 "depsStatusLine",
                 missingCount
-                    ? missingCount + " dependency check" + (missingCount === 1 ? " needs" : "s need") + " attention. Related features may stay disabled until those packages are installed."
-                    : installedCount + " dependency check" + (installedCount === 1 ? " looks" : "s look") + " healthy for this machine.",
+                    ? t("settings.deps_missing_status", "{count} dependency check{plural} {verb} attention. Related features may stay disabled until those packages are installed.")
+                        .replace("{count}", missingCount)
+                        .replace("{plural}", missingCount === 1 ? "" : "s")
+                        .replace("{verb}", missingCount === 1 ? "needs" : "need")
+                    : t("settings.deps_healthy_status", "{count} dependency check{plural} {verb} healthy for this machine.")
+                        .replace("{count}", installedCount)
+                        .replace("{plural}", installedCount === 1 ? "" : "s")
+                        .replace("{verb}", installedCount === 1 ? "looks" : "look"),
                 missingCount ? "warning" : "success"
             );
         });
@@ -11651,7 +11657,7 @@
         if (el.exportSettingsBtn) {
             el.exportSettingsBtn.addEventListener("click", function () {
                 api("GET", "/settings/export", null, function (err, data) {
-                    if (err || !data) { showToast("Couldn't export settings", "error"); return; }
+                    if (err || !data) { showToast(t("settings.export_failed", "Couldn't export settings"), "error"); return; }
                     // Also include localStorage settings
                     try { data.localStorage = JSON.parse(localStorage.getItem("opencut_settings") || "{}"); } catch (e) {}
                     var blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -11662,7 +11668,7 @@
                     a.click();
                     // Defer revocation so browser has time to start the download
                     setTimeout(function () { URL.revokeObjectURL(url); }, 5000);
-                    showToast("Settings exported", "success");
+                    showToast(t("settings.exported", "Settings exported"), "success");
                 });
             });
         }
@@ -11678,16 +11684,16 @@
                     try {
                         var data = JSON.parse(e.target.result);
                         api("POST", "/settings/import", data, function (err, result) {
-                            if (err) { showToast("Couldn't import settings", "error"); return; }
+                            if (err) { showToast(t("settings.import_failed", "Couldn't import settings"), "error"); return; }
                             if (data.localStorage) {
                                 localStorage.setItem("opencut_settings", JSON.stringify(data.localStorage));
                                 loadLocalSettings();
                             }
-                            showToast("Settings imported: " + (result.imported || []).join(", "), "success");
+                            showToast(t("settings.imported", "Settings imported: {items}").replace("{items}", (result.imported || []).join(", ")), "success");
                             if (typeof initPresets === "function") initPresets();
                         });
                     } catch (ex) {
-                        showToast("This file doesn't contain valid OpenCut settings", "error");
+                        showToast(t("settings.import_invalid_file", "This file doesn't contain valid OpenCut settings"), "error");
                     }
                 };
                 reader.readAsText(file);
@@ -11709,8 +11715,8 @@
         if (clearLogsBtn) {
             clearLogsBtn.addEventListener("click", function () {
                 api("POST", "/logs/clear", {}, function (err, data) {
-                    if (err) { showToast("Couldn't clear the log file", "error"); return; }
-                    showToast("Crash log cleared", "success");
+                    if (err) { showToast(t("settings.clear_log_failed", "Couldn't clear the log file"), "error"); return; }
+                    showToast(t("settings.crash_log_cleared", "Crash log cleared"), "success");
                 });
             });
         }
