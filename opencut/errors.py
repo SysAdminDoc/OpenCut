@@ -72,6 +72,15 @@ def error_response(code: str, message: str, status: int = 400,
 # safe_error — replaces _safe_error from jobs.py
 # ---------------------------------------------------------------------------
 
+def _missing_dependency_suggestion(exc, context: str, fallback: str) -> str:
+    try:
+        from opencut.core.install_hints import suggestion_for_exception
+
+        return suggestion_for_exception(exc, context=context) or fallback
+    except Exception:  # noqa: BLE001 - error handling must never fail closed
+        return fallback
+
+
 def safe_error(exc, context=""):
     """Log the real exception and return a structured error response.
 
@@ -109,10 +118,20 @@ def safe_error(exc, context=""):
         user_msg = "Permission denied when accessing a file."
         suggestion = "Check that the file is not locked by another program and that you have write access."
         status = 403
-    elif isinstance(exc, ImportError) or "no module named" in lower or "not installed" in lower:
+    elif (
+        isinstance(exc, ImportError)
+        or "no module named" in lower
+        or "not installed" in lower
+        or "missing package" in lower
+        or "dependencies not installed" in lower
+    ):
         code = "MISSING_DEPENDENCY"
         user_msg = "A required package is not installed."
-        suggestion = "Install the missing package from the Settings tab."
+        suggestion = _missing_dependency_suggestion(
+            exc,
+            context,
+            "Install the missing package from the Settings tab.",
+        )
         status = 503
     elif isinstance(exc, FileNotFoundError) or "no such file" in lower or "file not found" in lower:
         code = "FILE_NOT_FOUND"
@@ -141,12 +160,29 @@ def safe_error(exc, context=""):
 # Predefined error constructors — raise these from routes
 # ---------------------------------------------------------------------------
 
-def missing_dependency(name: str) -> OpenCutError:
+def missing_dependency(
+    name: str,
+    *,
+    extra: str = "",
+    gpu: bool = False,
+    vram_mb: int = 0,
+) -> OpenCutError:
     """Raised when an optional dependency is not installed."""
+    try:
+        from opencut.core.install_hints import build_install_suggestion
+
+        suggestion = build_install_suggestion(
+            name,
+            extra=extra or None,
+            gpu=gpu,
+            vram_mb=vram_mb,
+        )
+    except Exception:  # noqa: BLE001 - preserve existing fallback behavior
+        suggestion = "Install it from the Settings tab under Dependencies."
     return OpenCutError(
         code="MISSING_DEPENDENCY",
         message=f"{name} is not installed.",
-        suggestion="Install it from the Settings tab under Dependencies.",
+        suggestion=suggestion,
         status=503,
     )
 

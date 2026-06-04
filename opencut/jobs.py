@@ -759,8 +759,20 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                                     result=result, message="Done")
                 except Exception as e:
                     logger.exception("Job %s error in %s", job_id, job_type)
-                    _update_job(job_id, status="error", error=str(e),
-                                message=f"Error: {e}")
+                    update = {
+                        "status": "error",
+                        "error": str(e),
+                        "message": f"Error: {e}",
+                    }
+                    try:
+                        from opencut.core.install_hints import suggestion_for_exception
+
+                        suggestion = suggestion_for_exception(e, context=job_type)
+                        if suggestion:
+                            update["suggestion"] = suggestion
+                    except Exception:  # noqa: BLE001 - job finalisation must not fail
+                        pass
+                    _update_job(job_id, **update)
                 finally:
                     _thread_local.job_id = ""
                     try:

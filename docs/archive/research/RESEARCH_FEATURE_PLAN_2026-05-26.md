@@ -145,6 +145,7 @@ For each item below: where it lives, what works, what was deferred.
 
 ### N2 — `missing_dependency()` includes the pip extra name (P0)
 
+- **Status:** Shipped in `ROADMAP.md` v4.88. Live code had no production call sites of `missing_dependency()`, so the closure covers the helper plus the existing generic `safe_error()` and async-job error paths.
 - **User problem:** A 503 says "Install the missing package from the Settings tab" but doesn't say which extra (`opencut[tts]`? `opencut[depth]`?) or which CUDA tier.
 - **Evidence (Verified):** `opencut/errors.py:144-150` constructor returns `"Install it from the Settings tab under Dependencies."` — no extra-name interpolation.
 - **Proposed behavior:**
@@ -397,12 +398,12 @@ For each item below: where it lives, what works, what was deferred.
   - Acceptance: same source bytes/settings hit a persisted SHA-256 cache entry; cache stats endpoint returns hit/miss/write counters.
   - Verify: `py -3.12 -m pytest tests/test_transcript_cache.py -q -p no:cacheprovider -o addopts=""`.
 
-- [ ] **P0 — N2 `missing_dependency()` includes pip extra name**
+- [x] **P0 — N2 `missing_dependency()` includes pip extra name**
   - Why: 30-minute install-fumbling sessions disappear.
   - Evidence: `opencut/errors.py:144-150`.
   - Touches: `opencut/errors.py`, `opencut/core/install_hints.py` (new), ~12 high-traffic call sites.
-  - Acceptance: every top-12 site returns a 503 with `pip install 'opencut[<extra>]'` in the suggestion.
-  - Verify: `python -m pytest tests/test_missing_dependency_hints.py -q`.
+  - Acceptance: every top-12 dependency surface resolves to `pip install 'opencut[<extra>]'` in the suggestion; async jobs carry the same hint in job status.
+  - Verify: `py -3.12 -m pytest tests/test_missing_dependency_hints.py -q -p no:cacheprovider -o addopts=""`.
 
 - [ ] **P0 — N3 GPU semaphore default-wait 30s**
   - Why: 429 floods are UX bugs, not capacity guards.
