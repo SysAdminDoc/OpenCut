@@ -1314,13 +1314,9 @@ EXPECTED_CALLS = (
         re.compile(r'showToast\(\s*"Tip: Save your project before processing"'),
     ),
     (
-        # The update-available site interpolates {version}; we only assert
-        # the i18n lookup happens — the bare form check is loose because
-        # the fallback path still uses the English literal as a safety
-        # net when the locale lacks the templated form.
         "toast.update_available",
         re.compile(r't\(\s*"toast\.update_available"'),
-        None,
+        re.compile(r'"OpenCut v"\s*\+\s*udata\.latest_version\s*\+\s*" available'),
     ),
     # --- Second batch -----------------------------------------------
     (

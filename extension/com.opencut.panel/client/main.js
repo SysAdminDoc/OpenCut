@@ -2211,12 +2211,8 @@
                     _updateCheckDone = true;
                     api("GET", "/system/update-check", null, function (uerr, udata) {
                         if (!uerr && udata && udata.update_available) {
-                            var _fallback = "OpenCut v" + udata.latest_version + " available \u2014 visit GitHub to update";
-                            var _template = t("toast.update_available", _fallback);
-                            // {version} interpolation if the locale supplies the templated form.
-                            var _msg = _template.indexOf("{version}") >= 0
-                                ? _template.replace("{version}", udata.latest_version)
-                                : _fallback;
+                            var _template = t("toast.update_available", "OpenCut v{version} available — visit GitHub to update");
+                            var _msg = _template.replace("{version}", udata.latest_version || "");
                             showToast(_msg, "info");
                         }
                     });
