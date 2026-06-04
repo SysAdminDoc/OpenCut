@@ -6068,15 +6068,15 @@
     }
 
     function describeWorkflowStepGroup(endpoint) {
-        if (!endpoint) return "Workflow step";
+        if (!endpoint) return t("workflow.step_group_default", "Workflow step");
         var clean = String(endpoint).replace(/^\/+/, "");
         var root = clean.split("/")[0] || clean;
         return ({
-            cut: "Cut cleanup",
-            audio: "Audio polish",
-            captions: "Captioning",
-            video: "Video finishing",
-            export: "Delivery"
+            cut: t("workflow.step_group_cut", "Cut cleanup"),
+            audio: t("workflow.step_group_audio", "Audio polish"),
+            captions: t("workflow.step_group_captions", "Captioning"),
+            video: t("workflow.step_group_video", "Video finishing"),
+            export: t("workflow.step_group_export", "Delivery")
         })[root] || humanizeEngineDomain(root);
     }
 
