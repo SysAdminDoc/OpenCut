@@ -5263,10 +5263,11 @@
     }
 
     function engineCountText(template, count) {
+        var verb = count === 1 ? t("engines.verb_is", "is") : t("engines.verb_are", "are");
         return template
             .replace("{count}", count)
             .replace("{plural}", count === 1 ? "" : "s")
-            .replace("{verb}", count === 1 ? "is" : "are");
+            .replace("{verb}", verb);
     }
 
     function engineTemplateText(template, values) {
@@ -5427,7 +5428,7 @@
                     {
                         pinned: pinnedCount,
                         plural: pinnedCount === 1 ? "" : "s",
-                        verb: pinnedCount === 1 ? "is" : "are",
+                        verb: pinnedCount === 1 ? t("engines.verb_is", "is") : t("engines.verb_are", "are"),
                         auto: autoCount
                     }
                 );
@@ -5458,7 +5459,7 @@
                     var dom = this.getAttribute("data-domain");
                     var eng = this.value;
                     var domainLabel = humanizeEngineDomain(dom);
-                    var selectedLabel = this.options[this.selectedIndex] ? this.options[this.selectedIndex].textContent : "Auto";
+                    var selectedLabel = this.options[this.selectedIndex] ? this.options[this.selectedIndex].textContent : t("engines.state_auto", "Auto");
                     api("POST", "/engines/preference", { domain: dom, engine: eng }, function (perr, r) {
                         if (perr) { showAlert(t("toast.engine_preference_error", "Error: {error}").replace("{error}", perr.message)); loadEngineRegistry(); return; }
                         if (r && r.success) {
