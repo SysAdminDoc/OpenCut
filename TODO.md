@@ -4,7 +4,7 @@ This is the compact active execution queue. Keep detailed implementation history
 in `ROADMAP.md`, shipped-work summaries in `COMPLETED.md` and
 `ROADMAP-COMPLETED.md`, and release-facing notes in `CHANGELOG.md`.
 
-Last synced: 2026-06-04 during the v4.213 continuation pass.
+Last synced: 2026-06-04 during the v4.214 research queue consolidation.
 
 ## Execution Order
 
@@ -22,6 +22,7 @@ Last synced: 2026-06-04 during the v4.213 continuation pass.
 - [ ] **RA-23 GitHub Actions SHA pins** - pin workflow action references to full-length SHAs and guard against mutable action tags.
 - [ ] **RA-24 Release Full token permissions** - scope Release Full `GITHUB_TOKEN` permissions by job so only release uploads receive write access.
 - [ ] **RA-25 Docker dependency surface** - align Docker dependency installs with tracked Python install surfaces so retired packages cannot return through the container path.
+- [ ] **RA-26 Docker runtime parity** - align Docker runtime docs, non-root volume paths, and explicit HTTP/WebSocket container posture.
 - [ ] **RA-04 request ID in typed error bodies** - expose correlation IDs consistently in JSON errors.
 - [ ] **RA-05 SQLite `PRAGMA user_version`** - add explicit schema versioning for local SQLite stores.
 - [ ] **RA-06 destructive wipe backup/confirm** - harden destructive maintenance paths with backups and confirmation metadata.
