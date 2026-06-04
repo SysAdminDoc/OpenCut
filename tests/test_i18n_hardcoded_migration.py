@@ -985,6 +985,25 @@ MIGRATED_KEYS = (
     "journal.unavailable_body",
     "journal.unavailable_status",
     "journal.unavailable_title",
+    # Sixty-eighth batch (interview polish result and controls).
+    "interview.batch_button",
+    "interview.compressed_summary",
+    "interview.detail_chapters",
+    "interview.detail_fillers",
+    "interview.detail_repeats",
+    "interview.detail_segments",
+    "interview.detail_words",
+    "interview.failed_step",
+    "interview.open_chapters",
+    "interview.open_srt",
+    "interview.polish_button",
+    "interview.polishing",
+    "interview.step_detect_speech",
+    "interview.step_find_repeats",
+    "interview.step_generate_chapters",
+    "interview.step_identify_speakers",
+    "interview.step_remove_fillers",
+    "interview.step_transcribe_audio",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5327,6 +5346,102 @@ EXPECTED_CALLS = (
         "journal.unavailable_title",
         re.compile(r't\(\s*"journal\.unavailable_title"'),
         re.compile(r'buildEmptyHintMarkup\(\s*"Journal unavailable"'),
+    ),
+    # --- Sixty-eighth batch ----------------------------------------
+    (
+        "interview.batch_button",
+        re.compile(r't\(\s*"interview\.batch_button"'),
+        re.compile(r'el\.polishInterviewBtn\.textContent\s*=\s*"Batch "\s*\+'),
+    ),
+    (
+        "interview.compressed_summary",
+        re.compile(r't\(\s*"interview\.compressed_summary"'),
+        re.compile(r'header\.textContent\s*=\s*"Compressed to "\s*\+'),
+    ),
+    (
+        "interview.detail_chapters",
+        re.compile(r't\(\s*"interview\.detail_chapters"'),
+        re.compile(r'entry\.count\s*\+\s*" chapters"'),
+    ),
+    (
+        "interview.detail_fillers",
+        re.compile(r't\(\s*"interview\.detail_fillers"'),
+        re.compile(r'entry\.removed_fillers\s*\+\s*" fillers"'),
+    ),
+    (
+        "interview.detail_repeats",
+        re.compile(r't\(\s*"interview\.detail_repeats"'),
+        re.compile(r'entry\.removed_ranges\s*\+\s*" repeats"'),
+    ),
+    (
+        "interview.detail_segments",
+        re.compile(r't\(\s*"interview\.detail_segments"'),
+        re.compile(r'entry\.kept_segments\s*\+\s*" segments"'),
+    ),
+    (
+        "interview.detail_words",
+        re.compile(r't\(\s*"interview\.detail_words"'),
+        re.compile(r'entry\.word_count\s*\+\s*" words"'),
+    ),
+    (
+        "interview.failed_step",
+        re.compile(r't\(\s*"interview\.failed_step"'),
+        re.compile(r'entry\.reason\s*\|\|\s*"Failed"'),
+    ),
+    (
+        "interview.open_chapters",
+        re.compile(r't\(\s*"interview\.open_chapters"'),
+        re.compile(r'chapBtn\.textContent\s*=\s*"Open Chapters"'),
+    ),
+    (
+        "interview.open_srt",
+        re.compile(r't\(\s*"interview\.open_srt"'),
+        re.compile(r'srtBtn\.textContent\s*=\s*"Open SRT"'),
+    ),
+    (
+        "interview.polish_button",
+        re.compile(r't\(\s*"interview\.polish_button"'),
+        re.compile(r'el\.polishInterviewBtn\.textContent\s*=\s*"Polish this interview"'),
+    ),
+    (
+        "interview.polishing",
+        re.compile(r't\(\s*"interview\.polishing"'),
+        re.compile(r'el\.polishInterviewBtn\.textContent\s*=\s*"Polishing…"'),
+    ),
+    (
+        "interview.step_detect_speech",
+        re.compile(r't\(\s*"interview\.step_detect_speech"'),
+        re.compile(r'label:\s*"Detect speech segments"'),
+    ),
+    (
+        "interview.step_find_repeats",
+        re.compile(r't\(\s*"interview\.step_find_repeats"'),
+        re.compile(r'label:\s*"Find repeated takes"'),
+    ),
+    (
+        "interview.step_generate_chapters",
+        re.compile(r't\(\s*"interview\.step_generate_chapters"'),
+        re.compile(r'label:\s*"Generate chapters"'),
+    ),
+    (
+        "interview.step_identify_speakers",
+        re.compile(r't\(\s*"interview\.step_identify_speakers"'),
+        re.compile(r'label:\s*"Identify speakers"'),
+    ),
+    (
+        "interview.step_remove_fillers",
+        re.compile(r't\(\s*"interview\.step_remove_fillers"'),
+        re.compile(r'label:\s*"Remove filler words"'),
+    ),
+    (
+        "interview.step_transcribe_audio",
+        re.compile(r't\(\s*"interview\.step_transcribe_audio"'),
+        re.compile(r'label:\s*"Transcribe audio"'),
+    ),
+    (
+        "output.import_to_premiere",
+        re.compile(r'importBtn\.textContent\s*=\s*t\(\s*"output\.import_to_premiere"'),
+        re.compile(r'importBtn\.textContent\s*=\s*"Import to Premiere"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

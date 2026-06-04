@@ -8737,13 +8737,32 @@
     // ================================================================
     var _polishActive = false;
     var _polishStepDefs = [
-        { key: "silence",    label: "Detect speech segments" },
-        { key: "transcribe", label: "Transcribe audio" },
-        { key: "repeats",    label: "Find repeated takes" },
-        { key: "fillers",    label: "Remove filler words" },
-        { key: "diarize",    label: "Identify speakers" },
-        { key: "chapters",   label: "Generate chapters" }
+        { key: "silence",    labelKey: "interview.step_detect_speech", labelFallback: "Detect speech segments" },
+        { key: "transcribe", labelKey: "interview.step_transcribe_audio", labelFallback: "Transcribe audio" },
+        { key: "repeats",    labelKey: "interview.step_find_repeats", labelFallback: "Find repeated takes" },
+        { key: "fillers",    labelKey: "interview.step_remove_fillers", labelFallback: "Remove filler words" },
+        { key: "diarize",    labelKey: "interview.step_identify_speakers", labelFallback: "Identify speakers" },
+        { key: "chapters",   labelKey: "interview.step_generate_chapters", labelFallback: "Generate chapters" }
     ];
+
+    function _polishStepLabel(def) {
+        switch (def && def.key) {
+            case "silence":
+                return t("interview.step_detect_speech", "Detect speech segments");
+            case "transcribe":
+                return t("interview.step_transcribe_audio", "Transcribe audio");
+            case "repeats":
+                return t("interview.step_find_repeats", "Find repeated takes");
+            case "fillers":
+                return t("interview.step_remove_fillers", "Remove filler words");
+            case "diarize":
+                return t("interview.step_identify_speakers", "Identify speakers");
+            case "chapters":
+                return t("interview.step_generate_chapters", "Generate chapters");
+            default:
+                return def && def.labelFallback ? def.labelFallback : "";
+        }
+    }
 
     function _polishStepRow(def, status, detail) {
         var li = document.createElement("li");
@@ -8764,7 +8783,7 @@
 
         var label = document.createElement("span");
         label.className = "polish-step-label";
-        label.textContent = def.label;
+        label.textContent = _polishStepLabel(def);
 
         var meta = document.createElement("span");
         meta.className = "polish-step-meta";
@@ -8789,13 +8808,13 @@
             if (entry) {
                 status = entry.ok ? "ok" : (entry.reason ? "skipped" : "fail");
                 if (entry.ok) {
-                    if (entry.removed_fillers != null) detail = entry.removed_fillers + " fillers";
-                    else if (entry.removed_ranges != null) detail = entry.removed_ranges + " repeats";
-                    else if (entry.kept_segments != null) detail = entry.kept_segments + " segments";
-                    else if (entry.word_count) detail = entry.word_count + " words";
-                    else if (entry.count != null) detail = entry.count + " chapters";
+                    if (entry.removed_fillers != null) detail = t("interview.detail_fillers", "{count} fillers").replace("{count}", entry.removed_fillers);
+                    else if (entry.removed_ranges != null) detail = t("interview.detail_repeats", "{count} repeats").replace("{count}", entry.removed_ranges);
+                    else if (entry.kept_segments != null) detail = t("interview.detail_segments", "{count} segments").replace("{count}", entry.kept_segments);
+                    else if (entry.word_count) detail = t("interview.detail_words", "{count} words").replace("{count}", entry.word_count);
+                    else if (entry.count != null) detail = t("interview.detail_chapters", "{count} chapters").replace("{count}", entry.count);
                 } else {
-                    detail = entry.reason || "Failed";
+                    detail = entry.reason || t("interview.failed_step", "Failed");
                 }
             }
             frag.appendChild(_polishStepRow(def, status, detail));
@@ -8832,8 +8851,9 @@
         var header = document.createElement("div");
         header.className = "polish-result-title";
         var ratio = r.compression_ratio ? Math.round(r.compression_ratio * 100) : 0;
-        header.textContent = "Compressed to " + ratio + "% of original" +
-            (r.speech_duration ? " (" + fmtDur(r.speech_duration) + ")" : "");
+        header.textContent = t("interview.compressed_summary", "Compressed to {ratio}% of original{duration}")
+            .replace("{ratio}", ratio)
+            .replace("{duration}", r.speech_duration ? " (" + fmtDur(r.speech_duration) + ")" : "");
         el.polishResult.appendChild(header);
 
         var actions = document.createElement("div");
@@ -8843,7 +8863,7 @@
             var importBtn = document.createElement("button");
             importBtn.type = "button";
             importBtn.className = "btn btn-primary btn-sm";
-            importBtn.textContent = "Import to Premiere";
+            importBtn.textContent = t("output.import_to_premiere", "Import to Premiere");
             importBtn.addEventListener("click", function () {
                 PremiereBridge.importXML(r.xml_path, function (result) {
                     try {
@@ -8865,7 +8885,7 @@
             var srtBtn = document.createElement("button");
             srtBtn.type = "button";
             srtBtn.className = "btn btn-secondary btn-sm";
-            srtBtn.textContent = "Open SRT";
+            srtBtn.textContent = t("interview.open_srt", "Open SRT");
             srtBtn.addEventListener("click", function () {
                 api("POST", "/system/open-path", { path: r.srt_path, mode: "open" }, function () {});
             });
@@ -8875,7 +8895,7 @@
             var chapBtn = document.createElement("button");
             chapBtn.type = "button";
             chapBtn.className = "btn btn-secondary btn-sm";
-            chapBtn.textContent = "Open Chapters";
+            chapBtn.textContent = t("interview.open_chapters", "Open Chapters");
             chapBtn.addEventListener("click", function () {
                 api("POST", "/system/open-path", { path: r.chapters_path, mode: "open" }, function () {});
             });
@@ -8898,7 +8918,7 @@
     function _runInterviewPolishInner() {
         _polishActive = true;
         el.polishInterviewBtn.disabled = true;
-        el.polishInterviewBtn.textContent = "Polishing…";
+        el.polishInterviewBtn.textContent = t("interview.polishing", "Polishing…");
         if (el.polishResult) el.polishResult.classList.add("hidden");
         _renderPolishRunning();
 
@@ -8930,7 +8950,7 @@
             onFinally: function () {
                 _polishActive = false;
                 el.polishInterviewBtn.disabled = !selectedPath;
-                el.polishInterviewBtn.textContent = "Polish this interview";
+                el.polishInterviewBtn.textContent = t("interview.polish_button", "Polish this interview");
             }
         });
     }
@@ -9414,7 +9434,9 @@
 
         _polishActive = true;
         el.polishInterviewBtn.disabled = true;
-        el.polishInterviewBtn.textContent = "Batch " + (idx + 1) + "/" + total + "…";
+        el.polishInterviewBtn.textContent = t("interview.batch_button", "Batch {current}/{total}…")
+            .replace("{current}", idx + 1)
+            .replace("{total}", total);
         if (el.polishBatchBtn) el.polishBatchBtn.disabled = true;
         if (el.polishResult) el.polishResult.classList.add("hidden");
         _renderPolishRunning();
@@ -9438,7 +9460,7 @@
             },
             onError: function (job) {
                 _polishBatchResults.push({ filepath: filepath, ok: false,
-                    error: (job && job.error) || "Unknown error" });
+                    error: (job && job.error) || t("toast.unknown_error", "Unknown error") });
             },
             onFinally: function () {
                 _polishActive = false;
@@ -9455,7 +9477,7 @@
             if (_polishBatchResults[i].ok) ok++; else failed++;
         }
         el.polishInterviewBtn.disabled = !selectedPath;
-        el.polishInterviewBtn.textContent = "Polish this interview";
+        el.polishInterviewBtn.textContent = t("interview.polish_button", "Polish this interview");
         if (el.polishBatchBtn) el.polishBatchBtn.disabled = false;
         var failedPart = failed
             ? t("toast.polish_batch_failed_part", ", {count} failed").replace("{count}", failed)
