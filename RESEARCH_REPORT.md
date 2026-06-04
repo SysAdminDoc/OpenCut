@@ -8,8 +8,8 @@ Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-04.
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
 subprocess propagation, E12 manifest-derived workflow allowlist, and E13 CLI
-route escape hatch are now represented as shipped in the live v4.133 docs; E15
-also has its fourth through thirty-sixth rolling i18n batches recorded there. No new duplicate
+route escape hatch are now represented as shipped in the live v4.134 docs; E15
+also has its fourth through thirty-seventh rolling i18n batches recorded there. No new duplicate
 extensibility/accessibility/observability/workflow/scripting rows were promoted.
 Focused
 verification passed for the N8 skill tests, E14 CEP/UXP caption display-setting
@@ -28,9 +28,10 @@ Generative Extend remains a current Premiere feature
 (`https://helpx.adobe.com/premiere/desktop/edit-projects/edit-with-generative-ai/generative-extend-overview.html`),
 FFmpeg 8.1 is current upstream (`https://ffmpeg.org/`), and active OSS
 comparators include MLT v7.38.0 and LosslessCut v3.68.0. The open queue remains
-E15 plus external F202/F252 and the RA-01..RA-12 research items below.
-Cycle 2 added UXP packaging-trust guardrails from Adobe's current manifest,
-filesystem, API-reference, changelog, and Hybrid Plugin build docs.
+E15 plus external F202/F252 and the RA-01..RA-13 research items below.
+Cycles 2 and 3 added UXP packaging-trust guardrails from Adobe's current
+manifest, filesystem, API-reference, changelog, Hybrid Plugin, and
+external-process docs.
 
 ## Executive Summary
 
@@ -40,7 +41,7 @@ silence/filler removal, transcription and captions, audio cleanup, video
 effects, export, review bundles, CLI route scripting, an MCP bridge, and CEP + UXP panels. It is
 already extremely broad. The May 26 performance/recovery research pass
 (N1-N10, E11, E12, E13, E14) is now shipped through v4.100, and E15 is actively
-rolling in v4.133; the strongest remaining direction is **not** another wave of
+rolling in v4.134; the strongest remaining direction is **not** another wave of
 model surfaces but making the existing surface easier to run, debug, resume,
 extend, and trust.
 
@@ -77,12 +78,16 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 12. **Add F253 Hybrid Plugin package validation** (RA-12) — Adobe now documents
     Premiere 26.2 `.uxpaddon` support; OpenCut should validate package layout and
     platform binaries before treating native add-ons as distribution-ready. [Verified]
+13. **Declare and harden UXP external-launch permissions** (RA-13) — the UXP
+    OAuth browser handoff uses `shell.openExternal` without a manifest
+    `launchProcess` scheme allowlist, consent-dialog developer text, or denial
+    result handling. [Verified]
 
 ## Evidence Reviewed
 
 - **Git range:** `git log -30 --oneline`; 39 commits since 2026-05-20 at the
   start of this pass. The N1-N10/E11/E12/E13/E14 continuation queue is now closed
-  through v4.100, E15 has v4.101-v4.133 rolling batches, and the earlier checkpoints include `b228e42`, `ae25c96`,
+  through v4.100, E15 has v4.101-v4.134 rolling batches, and the earlier checkpoints include `b228e42`, `ae25c96`,
   `ead2a3d`, `40e43cb`, `9c13b9a`, and `58d0781`.
 - **Persistence:** `opencut/job_store.py` (SQLite jobs, WAL, no `user_version`,
   unbounded `result_json`, no `VACUUM`), `opencut/journal.py` (rollback ledger,
@@ -99,9 +104,11 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   restart to load routes; uninstall `shutil.rmtree` with no backup).
 - **UXP packaging:** `extension/com.opencut.uxp/manifest.json`
   (`localFileSystem: "fullAccess"`), `extension/com.opencut.uxp/main.js`
-  picker helpers, `docs/UXP_MIGRATION.md` F253 residual plan, and Adobe's UXP
-  manifest/filesystem/Hybrid Plugin docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`,
+  picker helpers and `shell.openExternal` OAuth handoff,
+  `docs/UXP_MIGRATION.md` F253 residual plan, and Adobe's UXP
+  manifest/filesystem/external-process/Hybrid Plugin docs (`https://developer.adobe.com/premiere-pro/uxp/plugins/concepts/manifest/`,
   `https://developer.adobe.com/premiere-pro/uxp/resources/recipes/filesystem-operations/`,
+  `https://developer.adobe.com/premiere-pro/uxp/resources/recipes/external-process/`,
   `https://developer.adobe.com/premiere-pro/uxp/changelog/`,
   `https://developer.adobe.com/premiere-pro/uxp/plugins/hybrid-plugins/build/`).
 - **Security/bind:** `opencut/server.py` loopback default + `OPENCUT_ALLOW_REMOTE`
@@ -144,7 +151,7 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 | Plugins | `/plugins/*` | `routes/plugins.py`, `core/plugins.py` | install needs restart; background jobs now use the core async-job tracker; no hot-reload, no backup on uninstall | partial |
 | Agent skills | built-in + validated user packages | `core/agent_skills.py` | user loader shipped (N8); no marketplace UI | tested |
 | Webhooks | `/webhooks/*` | `core/webhook_system.py` | discovery + signed-by-default (N6/E11) | tested |
-| UXP packaging trust | manifest + release gates | `extension/com.opencut.uxp/manifest.json`, `bolt-webview/uxp.config.ts`, `docs/UXP_MIGRATION.md` | new RA-11/RA-12 guardrail work | planned |
+| UXP packaging trust | manifest + release gates | `extension/com.opencut.uxp/manifest.json`, `bolt-webview/uxp.config.ts`, `docs/UXP_MIGRATION.md` | new RA-11/RA-12/RA-13 guardrail work | planned |
 
 ## Competitive Landscape
 
@@ -189,6 +196,11 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **Packaging trust — F253 lacks a pre-native package validator.** Hybrid
   `.uxpaddon` work now has official Premiere 26.2 documentation; CI should catch
   broken addon folder/architecture layouts before distribution. → RA-12.
+- **Packaging trust — UXP external launches lack a declared permission/consent
+  guard.** Adobe's Premiere UXP docs require `launchProcess.schemes` for
+  `shell.openExternal`, clear developer text in the consent dialog, and denial
+  handling; the OAuth handoff currently relies on a bare `openExternal` call. →
+  RA-13.
 
 ## Architecture & Technical Findings
 
@@ -207,8 +219,8 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   release smoke with 16 chained gates, signing/notarization wiring).
 - **UXP distribution posture** should split base-package trust from optional
   Hybrid Plugin power: the base panel can likely use picker-scoped filesystem
-  access, while F253 native add-ons need a stricter package validator and host
-  version/capability gate.
+  access and explicit external-launch permissions, while F253 native add-ons need
+  a stricter package validator and host version/capability gate.
 
 ## Security / Privacy / Data Safety
 
@@ -221,6 +233,8 @@ opportunities it surfaced — all net-new versus the open continuation queue:
   the top safety item in this pass.
 - **Install-trust gap** [Verified]: broad UXP `fullAccess` is avoidable if
   picker-scoped access covers current import/export browse flows (RA-11).
+- **Consent-trust gap** [Verified]: OAuth browser launches should be constrained
+  to declared URL schemes and expose a graceful denial/manual-copy path (RA-13).
 
 ## UX & Accessibility
 
@@ -232,6 +246,9 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - The distribution UX gap is trust at install time: a least-privilege UXP
   manifest and validated optional Hybrid Plugin package make the post-CEP path
   easier to accept in Adobe Marketplace or enterprise installs (RA-11/RA-12).
+- The external-launch UX gap is consent clarity: OAuth handoff should explain why
+  the browser opens and give editors a manual path when they deny the UXP consent
+  dialog (RA-13).
 
 ## Explicit Non-Goals
 
@@ -258,13 +275,16 @@ opportunities it surfaced — all net-new versus the open continuation queue:
 - **RA-11 live permission behavior** needs a UDT smoke after switching to
   `request`, because picker token persistence and project-folder export behavior
   must be validated in Premiere rather than inferred from docs alone.
+- **RA-13 OAuth launch behavior** needs UDT capture for both consent approval and
+  denial, because Adobe documents user consent as part of the `openExternal`
+  contract and static tests can only prove manifest/source alignment.
 
 ## Research Inputs (archived)
 
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-25.md) — governance, route-surface, agent, UXP, i18n, a11y, CI, supply-chain loop.
 - [docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md](docs/archive/research/RESEARCH_FEATURE_PLAN_2026-05-26.md) — performance, observability, crash-recovery, plugin extensibility, resource-preflight, trust-signals pass (N1–N10/E11–E15).
 - [docs/RESEARCH.md](docs/RESEARCH.md) — earlier tracked research summary.
-- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-12 items.
+- [ROADMAP.md](ROADMAP.md) — canonical detailed F-number and wave-letter ledger; "Active Continuation Queue (May 26 Plan)" tracks the shipped and remaining continuation items, and the "Research-Driven Additions" section holds this pass's RA-01..RA-13 items.
 - [ROADMAP-NEXT.md](ROADMAP-NEXT.md) — older active-wave worksheet.
 
 ## Archive Notes
