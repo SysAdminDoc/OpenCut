@@ -12651,8 +12651,8 @@
         { name: "Auto Shorts", displayName: function () { return t("palette.tool_auto_shorts", "Auto Shorts"); }, tab: "export",   sub: "exp-shorts",       keywords: "shorts tiktok reels auto highlight clip vertical" },
         { name: "Workflow Presets", displayName: function () { return t("palette.tool_workflow_presets", "Workflow Presets"); }, tab: "export",   sub: "exp-workflow",     keywords: "workflow preset pipeline chain steps auto" },
         { name: "Project Templates", displayName: function () { return t("palette.tool_project_templates", "Project Templates"); }, tab: "settings", sub: "set-prefs",       keywords: "template project youtube podcast broadcast cinema preset" },
-        { name: "Keyboard Shortcuts", tab: "settings", sub: "set-prefs",       keywords: "keyboard shortcut hotkey keybind" },
-        { name: "Job History",        tab: "settings", sub: "set-system",      keywords: "job history log past completed failed" },
+        { name: "Keyboard Shortcuts", displayName: function () { return t("palette.tool_keyboard_shortcuts", "Keyboard Shortcuts"); }, tab: "settings", sub: "set-prefs",       keywords: "keyboard shortcut hotkey keybind" },
+        { name: "Job History", displayName: function () { return t("palette.tool_job_history", "Job History"); }, tab: "settings", sub: "set-system",      keywords: "job history log past completed failed" },
     ];
 
     var PALETTE_HISTORY_KEY = "opencut_palette_history";

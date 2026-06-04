@@ -1224,6 +1224,9 @@ MIGRATED_KEYS = (
     "palette.tool_multicam_switcher",
     "palette.tool_project_templates",
     "palette.tool_workflow_presets",
+    # Ninetieth batch (final command palette tool names).
+    "palette.tool_job_history",
+    "palette.tool_keyboard_shortcuts",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6682,6 +6685,17 @@ EXPECTED_CALLS = (
     (
         "palette.tool_workflow_presets",
         re.compile(r't\(\s*"palette\.tool_workflow_presets"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    # --- Ninetieth batch ------------------------------------------
+    (
+        "palette.tool_job_history",
+        re.compile(r't\(\s*"palette\.tool_job_history"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_keyboard_shortcuts",
+        re.compile(r't\(\s*"palette\.tool_keyboard_shortcuts"'),
         re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
     ),
     # --- Twenty-second batch ----------------------------------------
