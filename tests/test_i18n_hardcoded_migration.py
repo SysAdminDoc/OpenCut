@@ -376,6 +376,17 @@ MIGRATED_KEYS = (
     "media.no_project_media",
     "media.untitled_clip",
     "media.read_failed",
+    # Thirtieth batch (central job lifecycle feedback).
+    "progress.busy",
+    "progress.step_prefix",
+    "progress.preparing",
+    "progress.start_failed",
+    "progress.start_failed_prefix",
+    "progress.processing",
+    "progress.run_failed",
+    "progress.unknown_error",
+    "progress.finished",
+    "progress.success_summary",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -1800,6 +1811,60 @@ EXPECTED_CALLS = (
         "media.read_failed",
         re.compile(r't\(\s*"media\.read_failed"'),
         re.compile(r'showAlert\("Couldn\'t read project media\. Make sure a project is open'),
+    ),
+    # --- Thirtieth batch -------------------------------------------
+    (
+        "progress.busy",
+        re.compile(r't\(\s*"progress\.busy"'),
+        re.compile(r'showAlert\("OpenCut is already processing another task\.'),
+    ),
+    (
+        "progress.step_prefix",
+        re.compile(r't\(\s*"progress\.step_prefix"'),
+        re.compile(r'"Step "\s*\+\s*jobStepCurrent\s*\+\s*"/"\s*\+\s*jobStepTotal'),
+    ),
+    (
+        "progress.preparing",
+        re.compile(r't\(\s*"progress\.preparing"'),
+        re.compile(r'textContent\s*=\s*stepPrefix\s*\+\s*"Preparing run'),
+    ),
+    (
+        "progress.start_failed",
+        re.compile(r't\(\s*"progress\.start_failed"'),
+        re.compile(r'data\s*\?\s*data\.error\s*:\s*"Failed to start job"'),
+    ),
+    (
+        "progress.start_failed_prefix",
+        re.compile(r't\(\s*"progress\.start_failed_prefix"'),
+        re.compile(r'showAlert\("Failed to start job: "\s*\+\s*e\.message'),
+    ),
+    (
+        "progress.processing",
+        re.compile(r't\(\s*"progress\.processing"'),
+        re.compile(r'job\.message\s*\|\|\s*"Processing'),
+    ),
+    (
+        "progress.run_failed",
+        re.compile(r't\(\s*"progress\.run_failed"'),
+        re.compile(r'resultsTitle\.textContent\s*=\s*"Run failed"'),
+    ),
+    (
+        "progress.unknown_error",
+        re.compile(r't\(\s*"progress\.unknown_error"'),
+        re.compile(
+            r'resultsStats\.textContent\s*=\s*enhanceError\(\s*'
+            r'job\.error\s*\|\|\s*job\.message\s*\|\|\s*"Unknown error"'
+        ),
+    ),
+    (
+        "progress.finished",
+        re.compile(r't\(\s*"progress\.finished"'),
+        re.compile(r'resultsTitle\.textContent\s*=\s*"Finished"'),
+    ),
+    (
+        "progress.success_summary",
+        re.compile(r't\(\s*"progress\.success_summary"'),
+        re.compile(r'stats\s*\|\|\s*"The run finished successfully\."'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
