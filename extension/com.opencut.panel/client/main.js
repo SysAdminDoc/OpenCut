@@ -10914,43 +10914,45 @@
 
                 var metaEl = document.createElement("div");
                 metaEl.className = "output-item-meta";
-                metaEl.textContent = getOutputItemMetaBits(item).join(" • ") || "Ready in recent outputs";
+                metaEl.textContent = getOutputItemMetaBits(item).join(" • ")
+                    || t("output.ready_recent", "Ready in recent outputs");
                 header.appendChild(metaEl);
 
                 var pathEl = document.createElement("div");
                 pathEl.className = "output-item-path";
-                pathEl.textContent = path || "Path unavailable";
+                pathEl.textContent = path || t("output.path_unavailable", "Path unavailable");
                 header.appendChild(pathEl);
 
                 var actions = document.createElement("div");
                 actions.className = "output-item-actions";
 
                 if (path) {
-                    actions.appendChild(createOutputActionButton("Open", "output-item-btn", "Open output file", (function (outputPath) {
+                    actions.appendChild(createOutputActionButton(t("output.open", "Open"), "output-item-btn", t("output.open_title", "Open output file"), (function (outputPath) {
                         return function () {
                             _sessionCtxOpenPath(outputPath, "open");
                         };
                     })(path)));
 
-                    actions.appendChild(createOutputActionButton("Reveal", "output-item-btn", "Reveal in file manager", (function (outputPath) {
+                    actions.appendChild(createOutputActionButton(t("output.reveal", "Reveal"), "output-item-btn", t("output.reveal_title", "Reveal in file manager"), (function (outputPath) {
                         return function () {
                             _sessionCtxOpenPath(outputPath, "reveal");
                         };
                     })(path)));
                 }
 
-                var importBtn = createOutputActionButton("Import to Premiere", "output-item-btn output-item-btn-primary", "Import into the current Premiere project", (function (outputPath) {
+                var importBtn = createOutputActionButton(t("output.import_to_premiere", "Import to Premiere"), "output-item-btn output-item-btn-primary", t("output.import_title", "Import into the current Premiere project"), (function (outputPath) {
                     return function () {
                         if (!outputPath) {
-                            showToast("This output is missing a file path.", "error");
+                            showToast(t("output.missing_path", "This output is missing a file path."), "error");
                             return;
                         }
                         if (!inPremiere || !cs) {
-                            showToast("Premiere isn't connected right now, so import is unavailable.", "warning");
+                            showToast(t("output.import_unavailable", "Premiere isn't connected right now, so import is unavailable."), "warning");
                             return;
                         }
                         PremiereBridge.autoImport(outputPath, "output");
-                        showToast("Imported " + outputPath.split(/[\\/]/).pop(), "success");
+                        showToast(t("output.imported", "Imported {name}")
+                            .replace("{name}", outputPath.split(/[\\/]/).pop()), "success");
                     };
                 })(path));
                 importBtn.disabled = !path || !inPremiere || !cs;
@@ -10978,7 +10980,7 @@
         }
         if (el.batchAddSelectedBtn) {
             el.batchAddSelectedBtn.addEventListener("click", function () {
-                if (!selectedPath) { showToast("Select a clip first", "warning"); return; }
+                if (!selectedPath) { showToast(t("toast.select_clip_first", "Select a clip first."), "warning"); return; }
                 if (_batchFiles.indexOf(selectedPath) !== -1) return;
                 _batchFiles.push(selectedPath);
                 renderBatchFiles();
@@ -11020,7 +11022,10 @@
         if (typeof updatePolishBatchButton === "function") updatePolishBatchButton();
         if (!el.batchFileList) return;
         if (_batchFiles.length === 0) {
-            el.batchFileList.innerHTML = buildEmptyHintMarkup("No files added", 'Use "Add Selected" or drag files.');
+            el.batchFileList.innerHTML = buildEmptyHintMarkup(
+                t("batch.no_files", "No files added"),
+                t("batch.add_hint", 'Use "Add Selected" or drag files.')
+            );
             if (typeof updateButtons === "function") updateButtons();
             updateBatchSummary();
             return;
@@ -11034,7 +11039,7 @@
                 '<span class="batch-file-index">' + (i + 1) + '</span>' +
                 '<span class="batch-file-name">' + esc(name) + '</span>' +
                 '</div>' +
-                '<button type="button" class="batch-file-remove" data-idx="' + i + '">Remove</button>';
+                '<button type="button" class="batch-file-remove" data-idx="' + i + '">' + esc(t("batch.remove", "Remove")) + '</button>';
             frag.appendChild(item);
         }
         el.batchFileList.innerHTML = "";
