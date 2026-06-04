@@ -241,6 +241,21 @@ MIGRATED_KEYS = (
     "gpu.recommendations_applied",
     "queue.cleared",
     "queue.status",
+    # Twenty-first batch (recent output browser and batch picker feedback).
+    "output.ready_recent",
+    "output.path_unavailable",
+    "output.open",
+    "output.open_title",
+    "output.reveal",
+    "output.reveal_title",
+    "output.import_to_premiere",
+    "output.import_title",
+    "output.missing_path",
+    "output.import_unavailable",
+    "output.imported",
+    "batch.no_files",
+    "batch.add_hint",
+    "batch.remove",
 )
 
 
@@ -1232,6 +1247,83 @@ EXPECTED_CALLS = (
         "queue.status",
         re.compile(r't\(\s*"queue\.status"'),
         re.compile(r'textContent\s*=\s*"Queue: "\s*\+'),
+    ),
+    # --- Twenty-first batch -----------------------------------------
+    (
+        "output.ready_recent",
+        re.compile(r't\(\s*"output\.ready_recent"'),
+        re.compile(r'\|\|\s*"Ready in recent outputs"'),
+    ),
+    (
+        "output.path_unavailable",
+        re.compile(r't\(\s*"output\.path_unavailable"'),
+        re.compile(r'pathEl\.textContent\s*=\s*path\s*\|\|\s*"Path unavailable"'),
+    ),
+    (
+        "output.open",
+        re.compile(r't\(\s*"output\.open"'),
+        re.compile(r'createOutputActionButton\("Open",\s*"output-item-btn",\s*"Open output file"'),
+    ),
+    (
+        "output.open_title",
+        re.compile(r't\(\s*"output\.open_title"'),
+        re.compile(r'createOutputActionButton\("Open",\s*"output-item-btn",\s*"Open output file"'),
+    ),
+    (
+        "output.reveal",
+        re.compile(r't\(\s*"output\.reveal"'),
+        re.compile(r'createOutputActionButton\("Reveal",\s*"output-item-btn",\s*"Reveal in file manager"'),
+    ),
+    (
+        "output.reveal_title",
+        re.compile(r't\(\s*"output\.reveal_title"'),
+        re.compile(r'createOutputActionButton\("Reveal",\s*"output-item-btn",\s*"Reveal in file manager"'),
+    ),
+    (
+        "output.import_to_premiere",
+        re.compile(r't\(\s*"output\.import_to_premiere"'),
+        re.compile(r'createOutputActionButton\("Import to Premiere"'),
+    ),
+    (
+        "output.import_title",
+        re.compile(r't\(\s*"output\.import_title"'),
+        re.compile(
+            r'createOutputActionButton\("Import to Premiere",'
+            r'\s*"output-item-btn output-item-btn-primary",'
+            r'\s*"Import into the current Premiere project"'
+        ),
+    ),
+    (
+        "output.missing_path",
+        re.compile(r't\(\s*"output\.missing_path"'),
+        re.compile(r'showToast\("This output is missing a file path\."'),
+    ),
+    (
+        "output.import_unavailable",
+        re.compile(r't\(\s*"output\.import_unavailable"'),
+        re.compile(r'showToast\("Premiere isn\'t connected right now, so import is unavailable\."'),
+    ),
+    (
+        "output.imported",
+        re.compile(r't\(\s*"output\.imported"'),
+        re.compile(r'showToast\("Imported "\s*\+\s*outputPath'),
+    ),
+    (
+        "batch.no_files",
+        re.compile(r't\(\s*"batch\.no_files"'),
+        re.compile(r'buildEmptyHintMarkup\("No files added"'),
+    ),
+    (
+        "batch.add_hint",
+        re.compile(r't\(\s*"batch\.add_hint"'),
+        re.compile(r'buildEmptyHintMarkup\("No files added",\s*\'Use "Add Selected" or drag files\.\''),
+    ),
+    (
+        "batch.remove",
+        re.compile(r't\(\s*"batch\.remove"'),
+        re.compile(
+            r'class="batch-file-remove"\s+data-idx="\'\s*\+\s*i\s*\+\s*\'">Remove</button>'
+        ),
     ),
 )
 
