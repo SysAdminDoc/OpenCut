@@ -1191,6 +1191,17 @@ MIGRATED_KEYS = (
     "palette.tool_translate",
     "palette.tool_trim_clip",
     "palette.tool_voice_generation",
+    # Eighty-seventh batch (command palette audio/video tool names).
+    "palette.tool_audio_ducking",
+    "palette.tool_compositing_keying",
+    "palette.tool_merge_clips",
+    "palette.tool_music_ai",
+    "palette.tool_reframe",
+    "palette.tool_sound_effects",
+    "palette.tool_speed_ramp",
+    "palette.tool_transitions",
+    "palette.tool_upscale",
+    "palette.tool_video_effects",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6496,6 +6507,57 @@ EXPECTED_CALLS = (
     (
         "palette.tool_voice_generation",
         re.compile(r't\(\s*"palette\.tool_voice_generation"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    # --- Eighty-seventh batch --------------------------------------
+    (
+        "palette.tool_audio_ducking",
+        re.compile(r't\(\s*"palette\.tool_audio_ducking"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_compositing_keying",
+        re.compile(r't\(\s*"palette\.tool_compositing_keying"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_merge_clips",
+        re.compile(r't\(\s*"palette\.tool_merge_clips"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_music_ai",
+        re.compile(r't\(\s*"palette\.tool_music_ai"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_reframe",
+        re.compile(r't\(\s*"palette\.tool_reframe"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_sound_effects",
+        re.compile(r't\(\s*"palette\.tool_sound_effects"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_speed_ramp",
+        re.compile(r't\(\s*"palette\.tool_speed_ramp"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_transitions",
+        re.compile(r't\(\s*"palette\.tool_transitions"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_upscale",
+        re.compile(r't\(\s*"palette\.tool_upscale"'),
+        re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
+    ),
+    (
+        "palette.tool_video_effects",
+        re.compile(r't\(\s*"palette\.tool_video_effects"'),
         re.compile(r'name\.textContent\s*=\s*entry\.item\.name|replace\("\{name\}",\s*entry\.item\.name\)'),
     ),
     # --- Twenty-second batch ----------------------------------------
