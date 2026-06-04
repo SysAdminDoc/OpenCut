@@ -578,31 +578,31 @@
                         <p class="card-desc" data-i18n="cut.trim_desc">Set in/out points to extract a portion of your clip. Use timecodes or seconds.</p>
 
                         <div class="form-group">
-                            <label for="trimStart">Start Time</label>
+                            <label for="trimStart" data-i18n="trim.start_time">Start Time</label>
                             <input type="text" id="trimStart" placeholder="00:00:00" value="00:00:00">
-                            <span class="hint-inline">HH:MM:SS or seconds (e.g. 5.5)</span>
+                            <span class="hint-inline" data-i18n="trim.start_hint">HH:MM:SS or seconds (e.g. 5.5)</span>
                         </div>
 
                         <div class="form-group">
-                            <label for="trimEnd">End Time</label>
+                            <label for="trimEnd" data-i18n="trim.end_time">End Time</label>
                             <input type="text" id="trimEnd" placeholder="00:00:30" value="00:00:30">
-                            <span class="hint-inline">HH:MM:SS or seconds</span>
+                            <span class="hint-inline" data-i18n="trim.end_hint">HH:MM:SS or seconds</span>
                         </div>
 
                         <div class="form-group">
-                            <label for="trimMode">Mode</label>
+                            <label for="trimMode" data-i18n="forms.mode">Mode</label>
                             <select id="trimMode">
-                                <option value="copy">Fast (instant, may be off by a few frames)</option>
-                                <option value="reencode">Precise (frame-accurate, slower)</option>
+                                <option value="copy" data-i18n="trim.mode_copy">Fast (instant, may be off by a few frames)</option>
+                                <option value="reencode" data-i18n="trim.mode_reencode">Precise (frame-accurate, slower)</option>
                             </select>
                         </div>
 
                         <div class="form-group" id="trimQualityGroup">
-                            <label for="trimQuality">Quality</label>
+                            <label for="trimQuality" data-i18n="forms.quality">Quality</label>
                             <select id="trimQuality">
-                                <option value="high" selected>High (CRF 18)</option>
-                                <option value="medium">Medium (CRF 23)</option>
-                                <option value="low">Low (CRF 28)</option>
+                                <option value="high" selected data-i18n="trim.quality_high">High (CRF 18)</option>
+                                <option value="medium" data-i18n="trim.quality_medium">Medium (CRF 23)</option>
+                                <option value="low" data-i18n="trim.quality_low">Low (CRF 28)</option>
                             </select>
                         </div>
 
