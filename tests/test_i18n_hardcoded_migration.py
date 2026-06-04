@@ -65,6 +65,17 @@ MIGRATED_KEYS = (
     "toast.live_updates_bridge_started",
     "toast.live_updates_bridge_start_failed",
     "toast.live_updates_bridge_stopped",
+    # Sixth batch (clip/workflow input prompts).
+    "toast.enter_lut_path",
+    "toast.transcribing_then_translating",
+    "toast.no_project_clips",
+    "toast.batch_requires_two_clips",
+    "toast.select_preset_and_clip",
+    "toast.invalid_workflow_preset",
+    "toast.transcribing_then_burnin",
+    "toast.enter_music_file",
+    "toast.enter_pip_video",
+    "toast.enter_overlay_path",
 )
 
 
@@ -231,6 +242,57 @@ EXPECTED_CALLS = (
         "toast.live_updates_bridge_stopped",
         re.compile(r't\(\s*"toast\.live_updates_bridge_stopped"'),
         re.compile(r'showToast\(\s*"Live-updates bridge stopped"'),
+    ),
+    # --- Sixth batch ------------------------------------------------
+    (
+        "toast.enter_lut_path",
+        re.compile(r't\(\s*"toast\.enter_lut_path"'),
+        re.compile(r'showAlert\(\s*"Please enter a LUT file path"\s*\)'),
+    ),
+    (
+        "toast.transcribing_then_translating",
+        re.compile(r't\(\s*"toast\.transcribing_then_translating"'),
+        re.compile(r'showAlert\(\s*"Step 1/2: Transcribing first, then translating'),
+    ),
+    (
+        "toast.no_project_clips",
+        re.compile(r't\(\s*"toast\.no_project_clips"'),
+        re.compile(r'showAlert\(\s*"No clips found in project\. Load clips first\."\s*\)'),
+    ),
+    (
+        "toast.batch_requires_two_clips",
+        re.compile(r't\(\s*"toast\.batch_requires_two_clips"'),
+        re.compile(r'showAlert\(\s*"Only 1 clip found\. Batch requires 2\+ files\."\s*\)'),
+    ),
+    (
+        "toast.select_preset_and_clip",
+        re.compile(r't\(\s*"toast\.select_preset_and_clip"'),
+        re.compile(r'showAlert\(\s*"Select a preset and a clip first\."\s*\)'),
+    ),
+    (
+        "toast.invalid_workflow_preset",
+        re.compile(r't\(\s*"toast\.invalid_workflow_preset"'),
+        re.compile(r'showAlert\(\s*"Invalid workflow preset\."\s*\)'),
+    ),
+    (
+        "toast.transcribing_then_burnin",
+        re.compile(r't\(\s*"toast\.transcribing_then_burnin"'),
+        re.compile(r'showAlert\(\s*"Step 1/2: Transcribing first, then burning'),
+    ),
+    (
+        "toast.enter_music_file",
+        re.compile(r't\(\s*"toast\.enter_music_file"'),
+        re.compile(r'showAlert\(\s*"Enter a music file path\."\s*\)'),
+    ),
+    (
+        "toast.enter_pip_video",
+        re.compile(r't\(\s*"toast\.enter_pip_video"'),
+        re.compile(r'showAlert\(\s*"Enter PiP video path\."\s*\)'),
+    ),
+    (
+        "toast.enter_overlay_path",
+        re.compile(r't\(\s*"toast\.enter_overlay_path"'),
+        re.compile(r'showAlert\(\s*"Enter overlay path\."\s*\)'),
     ),
 )
 

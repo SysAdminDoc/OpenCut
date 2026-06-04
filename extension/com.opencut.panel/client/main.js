@@ -5115,7 +5115,7 @@
         } else if (effect === "lut") {
             params.lut_path = el.vfxLutPath.value.trim();
             params.intensity = parseFloat(el.vfxLutIntensity.value);
-            if (!params.lut_path) { showAlert("Please enter a LUT file path"); return; }
+            if (!params.lut_path) { showAlert(t("toast.enter_lut_path", "Please enter a LUT file path")); return; }
         }
         startJob("/video/fx/apply", {
             filepath: selectedPath,
@@ -5322,7 +5322,7 @@
             });
         } else {
             // Need to transcribe first, then auto-chain into translation
-        showAlert("Step 1/2: Transcribing first, then translating…");
+            showAlert(t("toast.transcribing_then_translating", "Step 1/2: Transcribing first, then translating…"));
             pendingTranslate = true;
             jobStepCurrent = 1;
             jobStepTotal = 2;
@@ -5483,11 +5483,11 @@
             }
         }
         if (paths.length === 0) {
-            showAlert("No clips found in project. Load clips first.");
+            showAlert(t("toast.no_project_clips", "No clips found in project. Load clips first."));
             return;
         }
         if (paths.length === 1) {
-            showAlert("Only 1 clip found. Batch requires 2+ files.");
+            showAlert(t("toast.batch_requires_two_clips", "Only 1 clip found. Batch requires 2+ files."));
             return;
         }
 
@@ -5824,13 +5824,13 @@
     function runWorkflowPreset() {
         var sel = el.workflowPreset;
         if (!sel || !sel.value || !selectedPath) {
-            showAlert("Select a preset and a clip first.");
+            showAlert(t("toast.select_preset_and_clip", "Select a preset and a clip first."));
             return;
         }
         var idx = _getWorkflowPresetIndex(sel.value);
         var preset = _workflowPresets[idx];
         if (!preset || !preset.steps || !preset.steps.length) {
-            showAlert("Invalid workflow preset.");
+            showAlert(t("toast.invalid_workflow_preset", "Invalid workflow preset."));
             return;
         }
         _lastWorkflowRunContext = {
@@ -5918,7 +5918,7 @@
             });
         } else {
             // Transcribe first
-        showAlert("Step 1/2: Transcribing first, then burning in captions…");
+            showAlert(t("toast.transcribing_then_burnin", "Step 1/2: Transcribing first, then burning in captions…"));
             pendingBurnin = true;
             jobStepCurrent = 1;
             jobStepTotal = 2;
@@ -5982,7 +5982,7 @@
     function runDuck() {
         var musicPath = el.duckMusicPath.value.trim();
         if (!musicPath) {
-            showAlert("Enter a music file path.");
+            showAlert(t("toast.enter_music_file", "Enter a music file path."));
             return;
         }
         startJob("/audio/duck-video", {
@@ -6005,12 +6005,12 @@
         var m = el.chromaMode.value;
         if (m === "pip") {
             var pp = el.pipPath.value.trim();
-            if (!pp) { showAlert("Enter PiP video path."); return; }
+            if (!pp) { showAlert(t("toast.enter_pip_video", "Enter PiP video path.")); return; }
             startJob("/video/pip", { filepath: selectedPath, pip_path: pp, output_dir: projectFolder,
                 position: el.pipPosition.value, scale: parseFloat(el.pipScale.value) });
         } else if (m === "blend") {
             var ov = el.blendOverlay.value.trim();
-            if (!ov) { showAlert("Enter overlay path."); return; }
+            if (!ov) { showAlert(t("toast.enter_overlay_path", "Enter overlay path.")); return; }
             startJob("/video/blend", { filepath: selectedPath, overlay_path: ov, output_dir: projectFolder,
                 mode: el.blendMode.value, opacity: parseFloat(el.blendOpacity.value) });
         } else {
