@@ -1153,12 +1153,12 @@
                     <section class="card">
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.animated">Animated Captions</div></div>
                         <p class="card-desc" data-i18n="captions.animated_desc">CapCut-style animated word-by-word captions with pop, fade, bounce, and glow effects.</p>
-                        <div class="form-group"><label for="animCapPreset">Animation</label>
-                            <select id="animCapPreset"><option value="pop">Pop (CapCut style)</option><option value="fade">Fade</option><option value="slide_up">Slide Up</option><option value="typewriter">Typewriter</option><option value="bounce">Bounce</option><option value="glow">Glow</option><option value="highlight_box">Highlight Box</option></select></div>
-                        <div class="form-group"><label for="animCapFontSize">Font Size</label><div class="slider-row"><input type="range" id="animCapFontSize" min="28" max="96" value="56" step="2"><span class="slider-val" id="animCapFontSizeVal">56</span></div></div>
-                        <div class="form-group"><label for="animCapWpl">Words Per Line</label><div class="slider-row"><input type="range" id="animCapWpl" min="2" max="10" value="6" step="1"><span class="slider-val" id="animCapWplVal">6</span></div></div>
-                        <div class="form-group"><label for="animCapModel">Whisper Model</label>
-                            <select id="animCapModel"><option value="tiny">Tiny (fastest)</option><option value="base" selected>Base (balanced)</option><option value="small">Small (accurate)</option></select></div>
+                        <div class="form-group"><label for="animCapPreset" data-i18n="forms.animation">Animation</label>
+                            <select id="animCapPreset"><option value="pop" data-i18n="captions.animation_pop_capcut">Pop (CapCut style)</option><option value="fade" data-i18n="captions.animation_fade">Fade</option><option value="slide_up" data-i18n="captions.animation_slide_up">Slide Up</option><option value="typewriter" data-i18n="captions.animation_typewriter">Typewriter</option><option value="bounce" data-i18n="captions.animation_bounce">Bounce</option><option value="glow" data-i18n="captions.animation_glow">Glow</option><option value="highlight_box" data-i18n="captions.animation_highlight_box">Highlight Box</option></select></div>
+                        <div class="form-group"><label for="animCapFontSize" data-i18n="forms.font_size">Font Size</label><div class="slider-row"><input type="range" id="animCapFontSize" min="28" max="96" value="56" step="2"><span class="slider-val" id="animCapFontSizeVal">56</span></div></div>
+                        <div class="form-group"><label for="animCapWpl" data-i18n="forms.words_per_line">Words Per Line</label><div class="slider-row"><input type="range" id="animCapWpl" min="2" max="10" value="6" step="1"><span class="slider-val" id="animCapWplVal">6</span></div></div>
+                        <div class="form-group"><label for="animCapModel" data-i18n="forms.model">Whisper Model</label>
+                            <select id="animCapModel"><option value="tiny" data-i18n="captions.model_tiny">Tiny (fastest)</option><option value="base" selected data-i18n="captions.model_base">Base (balanced)</option><option value="small" data-i18n="captions.model_small_accurate">Small (accurate)</option></select></div>
                         <button type="button" class="btn-primary" id="runAnimCapBtn" disabled data-i18n="captions.render_animated">Render Animated Captions</button>
                     </section>
                 </div>
