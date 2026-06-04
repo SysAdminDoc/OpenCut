@@ -1059,6 +1059,16 @@ MIGRATED_KEYS = (
     "progress.result_segments",
     "progress.result_stems",
     "progress.result_style",
+    # Seventy-third batch (helper/status tone and loading feedback).
+    "audio.waveform_loading",
+    "cut.filler_backend_missing",
+    "hint.tone_attention",
+    "hint.tone_checking",
+    "hint.tone_needs_review",
+    "hint.tone_ready",
+    "nlp.processing_button",
+    "toolbar.more_tools",
+    "toolbar.previous_tools",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5756,6 +5766,52 @@ EXPECTED_CALLS = (
         "progress.result_style",
         re.compile(r't\(\s*"progress\.result_style"'),
         re.compile(r'" \| Style: "\s*\+\s*esc\(r\.style\)'),
+    ),
+    # --- Seventy-third batch -------------------------------------
+    (
+        "audio.waveform_loading",
+        re.compile(r't\(\s*"audio\.waveform_loading"'),
+        re.compile(r'setButtonText\(el\.loadWaveformBtn,\s*"Loading…"'),
+    ),
+    (
+        "cut.filler_backend_missing",
+        re.compile(r't\(\s*"cut\.filler_backend_missing"'),
+        re.compile(r'fillersHintMessage\s*=\s*"No filler detection backend is installed yet\.'),
+    ),
+    (
+        "hint.tone_attention",
+        re.compile(r't\(\s*"hint\.tone_attention"'),
+        re.compile(r'resolvedTone\s*===\s*"error"\s*\?\s*"Attention"'),
+    ),
+    (
+        "hint.tone_checking",
+        re.compile(r't\(\s*"hint\.tone_checking"'),
+        re.compile(r'resolvedTone\s*===\s*"loading"\s*\?\s*"Checking"'),
+    ),
+    (
+        "hint.tone_needs_review",
+        re.compile(r't\(\s*"hint\.tone_needs_review"'),
+        re.compile(r'resolvedTone\s*===\s*"warning"\s*\?\s*"Needs review"'),
+    ),
+    (
+        "hint.tone_ready",
+        re.compile(r't\(\s*"hint\.tone_ready"'),
+        re.compile(r':\s*"Ready when you are"'),
+    ),
+    (
+        "nlp.processing_button",
+        re.compile(r't\(\s*"nlp\.processing_button"'),
+        re.compile(r'setButtonText\(btn,\s*"Processing…"'),
+    ),
+    (
+        "toolbar.more_tools",
+        re.compile(r't\(\s*"toolbar\.more_tools"'),
+        re.compile(r'canScrollRight\s*\?\s*"More tools"'),
+    ),
+    (
+        "toolbar.previous_tools",
+        re.compile(r't\(\s*"toolbar\.previous_tools"'),
+        re.compile(r':\s*"Previous tools"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
