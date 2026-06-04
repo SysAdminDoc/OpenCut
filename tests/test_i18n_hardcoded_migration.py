@@ -76,6 +76,16 @@ MIGRATED_KEYS = (
     "toast.enter_music_file",
     "toast.enter_pip_video",
     "toast.enter_overlay_path",
+    # Seventh batch (media/caption chain prompts).
+    "toast.enter_background_path",
+    "toast.enter_second_clip_path",
+    "toast.enter_title_text",
+    "toast.enter_reference_face_path",
+    "toast.transcribing_with_word_timing",
+    "toast.enter_music_prompt",
+    "toast.burning_in_captions_step",
+    "toast.rendering_animated_captions_step",
+    "toast.translating_captions_step",
 )
 
 
@@ -293,6 +303,52 @@ EXPECTED_CALLS = (
         "toast.enter_overlay_path",
         re.compile(r't\(\s*"toast\.enter_overlay_path"'),
         re.compile(r'showAlert\(\s*"Enter overlay path\."\s*\)'),
+    ),
+    # --- Seventh batch ----------------------------------------------
+    (
+        "toast.enter_background_path",
+        re.compile(r't\(\s*"toast\.enter_background_path"'),
+        re.compile(r'showAlert\(\s*"Enter background path\."\s*\)'),
+    ),
+    (
+        "toast.enter_second_clip_path",
+        re.compile(r't\(\s*"toast\.enter_second_clip_path"'),
+        re.compile(r'showAlert\(\s*"Enter second clip path\."\s*\)'),
+    ),
+    (
+        "toast.enter_title_text",
+        re.compile(r't\(\s*"toast\.enter_title_text"'),
+        re.compile(r'showAlert\(\s*"Enter title text\."\s*\)'),
+    ),
+    (
+        "toast.enter_reference_face_path",
+        re.compile(r't\(\s*"toast\.enter_reference_face_path"'),
+        re.compile(r'showAlert\(\s*"Enter reference face image path\."\s*\)'),
+    ),
+    (
+        "toast.transcribing_with_word_timing",
+        re.compile(r't\(\s*"toast\.transcribing_with_word_timing"'),
+        re.compile(r'showAlert\(\s*"Step 1/2: Transcribing with word-level timing'),
+    ),
+    (
+        "toast.enter_music_prompt",
+        re.compile(r't\(\s*"toast\.enter_music_prompt"'),
+        re.compile(r'showAlert\(\s*"Enter a music prompt\."\s*\)'),
+    ),
+    (
+        "toast.burning_in_captions_step",
+        re.compile(r't\(\s*"toast\.burning_in_captions_step"'),
+        re.compile(r'showAlert\(\s*"Step 2/2: Burning in captions'),
+    ),
+    (
+        "toast.rendering_animated_captions_step",
+        re.compile(r't\(\s*"toast\.rendering_animated_captions_step"'),
+        re.compile(r'showAlert\(\s*"Step 2/2: Rendering animated captions'),
+    ),
+    (
+        "toast.translating_captions_step",
+        re.compile(r't\(\s*"toast\.translating_captions_step"'),
+        re.compile(r'showAlert\(\s*"Step 2/2: Translating captions'),
     ),
 )
 

@@ -6015,7 +6015,7 @@
                 mode: el.blendMode.value, opacity: parseFloat(el.blendOpacity.value) });
         } else {
             var bg = el.chromaBgPath.value.trim();
-            if (!bg) { showAlert("Enter background path."); return; }
+            if (!bg) { showAlert(t("toast.enter_background_path", "Enter background path.")); return; }
             startJob("/video/chromakey", { filepath: selectedPath, background: bg, output_dir: projectFolder,
                 color: el.chromaColor.value, tolerance: parseFloat(el.chromaTol.value) });
         }
@@ -6024,7 +6024,7 @@
     // --- TRANSITIONS ---
     function runTransition() {
         var cb = el.transClipB.value.trim();
-        if (!cb) { showAlert("Enter second clip path."); return; }
+        if (!cb) { showAlert(t("toast.enter_second_clip_path", "Enter second clip path.")); return; }
         startJob("/video/transitions/apply", { clip_a: selectedPath, clip_b: cb, output_dir: projectFolder,
             transition: el.transType.value, duration: parseFloat(el.transDur.value) });
     }
@@ -6038,14 +6038,14 @@
     // --- TITLES ---
     function runTitleOverlay() {
         var t = el.titleText.value.trim();
-        if (!t) { showAlert("Enter title text."); return; }
+        if (!t) { showAlert(t("toast.enter_title_text", "Enter title text.")); return; }
         startJob("/video/title/overlay", { filepath: selectedPath, text: t, output_dir: projectFolder,
             preset: el.titlePreset.value, duration: parseFloat(el.titleDur.value),
             font_size: parseInt(el.titleFontSize.value), subtitle: el.titleSubtext.value.trim() });
     }
     function runTitleCard() {
         var t = el.titleText.value.trim();
-        if (!t) { showAlert("Enter title text."); return; }
+        if (!t) { showAlert(t("toast.enter_title_text", "Enter title text.")); return; }
         startJob("/video/title/render", { text: t, output_dir: projectFolder, no_input: true,
             preset: el.titlePreset.value, duration: parseFloat(el.titleDur.value),
             font_size: parseInt(el.titleFontSize.value), subtitle: el.titleSubtext.value.trim() });
@@ -6133,7 +6133,7 @@
     function runFaceAi() {
         if (el.faceAiMode.value === "swap") {
             var ref = el.faceRefPath.value.trim();
-            if (!ref) { showAlert("Enter reference face image path."); return; }
+            if (!ref) { showAlert(t("toast.enter_reference_face_path", "Enter reference face image path.")); return; }
             startJob("/video/face/swap", { filepath: selectedPath, reference_face: ref, output_dir: projectFolder });
         } else {
             startJob("/video/face/enhance", { filepath: selectedPath, output_dir: projectFolder });
@@ -6154,7 +6154,7 @@
             });
         } else {
             // Transcribe first with word-level timing
-        showAlert("Step 1/2: Transcribing with word-level timing first…");
+            showAlert(t("toast.transcribing_with_word_timing", "Step 1/2: Transcribing with word-level timing first…"));
             pendingAnimCap = true;
             jobStepCurrent = 1;
             jobStepTotal = 2;
@@ -6169,7 +6169,7 @@
     // --- AI MUSIC GENERATION ---
     function runMusicAi() {
         var prompt = el.musicAiPrompt.value.trim();
-        if (!prompt) { showAlert("Enter a music prompt."); return; }
+        if (!prompt) { showAlert(t("toast.enter_music_prompt", "Enter a music prompt.")); return; }
         startJob("/audio/music-ai/generate", { prompt: prompt, output_dir: projectFolder, no_input: true,
             model: el.musicAiModel.value, duration: parseFloat(el.musicAiDur.value),
             temperature: parseFloat(el.musicAiTemp.value) });
@@ -6225,7 +6225,7 @@
         if (pendingBurnin && job.result.segments) {
             pendingBurnin = false;
             jobStepCurrent = 2;
-        showAlert("Step 2/2: Burning in captions…");
+            showAlert(t("toast.burning_in_captions_step", "Step 2/2: Burning in captions…"));
             startJob("/captions/burnin/segments", {
                 filepath: selectedPath,
                 segments: job.result.segments,
@@ -6239,7 +6239,7 @@
         if (pendingAnimCap && job.result.segments) {
             pendingAnimCap = false;
             jobStepCurrent = 2;
-        showAlert("Step 2/2: Rendering animated captions…");
+            showAlert(t("toast.rendering_animated_captions_step", "Step 2/2: Rendering animated captions…"));
             startJob("/captions/animated/render", {
                 filepath: selectedPath,
                 word_segments: extractWordSegments(job.result.segments),
@@ -6255,7 +6255,7 @@
         if (pendingTranslate && job.result.segments) {
             pendingTranslate = false;
             jobStepCurrent = 2;
-        showAlert("Step 2/2: Translating captions…");
+            showAlert(t("toast.translating_captions_step", "Step 2/2: Translating captions…"));
             startJob("/captions/translate", {
                 filepath: selectedPath,
                 segments: job.result.segments,
