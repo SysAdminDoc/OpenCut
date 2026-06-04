@@ -467,6 +467,19 @@ HTML_STATIC_SHELL_CALLS = (
     ("captions.enable_speaker_labels", "data-i18n"),
     ("captions.whisperx_not_installed", "data-i18n"),
     ("install.whisperx", "data-i18n"),
+    # One-hundred-sixteenth batch (Caption Burn-in form shell HTML).
+    ("forms.burnin_style", "data-i18n"),
+    ("captions.burnin_style_default_white", "data-i18n"),
+    ("captions.burnin_style_bold_yellow", "data-i18n"),
+    ("captions.burnin_style_dark_box", "data-i18n"),
+    ("captions.burnin_style_neon_cyan", "data-i18n"),
+    ("captions.burnin_style_cinematic_serif", "data-i18n"),
+    ("captions.burnin_style_top_center", "data-i18n"),
+    ("forms.model", "data-i18n"),
+    ("captions.model_tiny", "data-i18n"),
+    ("captions.model_base", "data-i18n"),
+    ("captions.model_small_accurate", "data-i18n"),
+    ("common.auto_import_result", "data-i18n"),
 )
 
 
@@ -1955,6 +1968,15 @@ MIGRATED_KEYS = (
     "captions.model_small_best_timing",
     "captions.whisperx_not_installed",
     "install.whisperx",
+    # One-hundred-sixteenth batch (Caption Burn-in form shell HTML).
+    "captions.burnin_style_bold_yellow",
+    "captions.burnin_style_cinematic_serif",
+    "captions.burnin_style_dark_box",
+    "captions.burnin_style_default_white",
+    "captions.burnin_style_neon_cyan",
+    "captions.burnin_style_top_center",
+    "captions.model_small_accurate",
+    "common.auto_import_result",
 )
 
 
