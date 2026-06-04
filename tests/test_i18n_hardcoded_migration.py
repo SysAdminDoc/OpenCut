@@ -436,6 +436,20 @@ MIGRATED_KEYS = (
     "video.rembg_not_installed",
     "video.watermark_detected_region",
     "video.watermark_not_detected",
+    # Thirty-fourth batch (shortcut labels and numeric validation).
+    "silence.detect",
+    "shortcuts.captions",
+    "shortcuts.normalize",
+    "shortcuts.denoise",
+    "shortcuts.export",
+    "shortcuts.command_palette",
+    "shortcuts.cancel",
+    "shortcuts.workflow",
+    "common.value",
+    "forms.highlight_duration",
+    "forms.short_duration",
+    "toast.number_adjusted",
+    "toast.number_kept_in_range",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -2157,6 +2171,72 @@ EXPECTED_CALLS = (
         "video.watermark_not_detected",
         re.compile(r't\(\s*"video\.watermark_not_detected"'),
         re.compile(r'setHintState\(resEl,\s*"No watermark detected'),
+    ),
+    # --- Thirty-fourth batch ----------------------------------------
+    (
+        "silence.detect",
+        re.compile(r't\(\s*"silence\.detect"'),
+        re.compile(r'"silence-detect"[^\n]*label:\s*"Detect Silence"'),
+    ),
+    (
+        "shortcuts.captions",
+        re.compile(r't\(\s*"shortcuts\.captions"'),
+        re.compile(r'"caption-generate"[^\n]*label:\s*"Generate Captions"'),
+    ),
+    (
+        "shortcuts.normalize",
+        re.compile(r't\(\s*"shortcuts\.normalize"'),
+        re.compile(r'"audio-normalize"[^\n]*label:\s*"Normalize Audio"'),
+    ),
+    (
+        "shortcuts.denoise",
+        re.compile(r't\(\s*"shortcuts\.denoise"'),
+        re.compile(r'"audio-denoise"[^\n]*label:\s*"Denoise Audio"'),
+    ),
+    (
+        "shortcuts.export",
+        re.compile(r't\(\s*"shortcuts\.export"'),
+        re.compile(r'"export-video"[^\n]*label:\s*"Export Video"'),
+    ),
+    (
+        "shortcuts.command_palette",
+        re.compile(r't\(\s*"shortcuts\.command_palette"'),
+        re.compile(r'"command-palette"[^\n]*label:\s*"Command Palette"'),
+    ),
+    (
+        "shortcuts.cancel",
+        re.compile(r't\(\s*"shortcuts\.cancel"'),
+        re.compile(r'"cancel-job"[^\n]*label:\s*"Cancel Current Job"'),
+    ),
+    (
+        "shortcuts.workflow",
+        re.compile(r't\(\s*"shortcuts\.workflow"'),
+        re.compile(r'"quick-workflow"[^\n]*label:\s*"Run Quick Workflow"'),
+    ),
+    (
+        "common.value",
+        re.compile(r't\(\s*"common\.value"'),
+        re.compile(r'normalized\.label\s*\|\|\s*"Value"'),
+    ),
+    (
+        "forms.highlight_duration",
+        re.compile(r't\(\s*"forms\.highlight_duration"'),
+        re.compile(r'label:\s*"Highlight duration"'),
+    ),
+    (
+        "forms.short_duration",
+        re.compile(r't\(\s*"forms\.short_duration"'),
+        re.compile(r'label:\s*"Short duration"'),
+    ),
+    (
+        "toast.number_adjusted",
+        re.compile(r't\(\s*"toast\.number_adjusted"'),
+        re.compile(r'showToast\(\s*\(normalized\.label'),
+    ),
+    (
+        "toast.number_kept_in_range",
+        re.compile(r't\(\s*"toast\.number_kept_in_range"'),
+        re.compile(r'showToast\(\s*paired\.label\s*\+'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
