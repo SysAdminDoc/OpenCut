@@ -8,8 +8,8 @@ Last consolidated: 2026-06-04. Research-driven additions refreshed: 2026-06-04.
 2026-06-04 freshness refresh: the N8 third-party skill loader, E14 CEP
 caption display-settings parity work, N9 enriched job metadata, N10 request-ID
 subprocess propagation, E12 manifest-derived workflow allowlist, and E13 CLI
-route escape hatch are now represented as shipped in the live v4.193 docs; E15
-also has its fourth through ninety-fourth rolling i18n batches recorded there, and `TODO.md`
+route escape hatch are now represented as shipped in the live v4.194 docs; E15
+also has its fourth through ninety-fifth rolling i18n batches recorded there, and `TODO.md`
 is now the compact active execution queue. No new duplicate
 extensibility/accessibility/observability/workflow/scripting rows were promoted.
 Focused
