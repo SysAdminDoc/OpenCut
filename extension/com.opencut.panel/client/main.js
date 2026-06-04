@@ -13662,13 +13662,13 @@
             try {
                 var markers = JSON.parse(result);
                 if (!Array.isArray(markers)) {
-                    throw new Error((markers && markers.error) || "Unexpected Premiere response");
+                    throw new Error((markers && markers.error) || t("timeline.unexpected_response", "Unexpected Premiere response"));
                 }
                 seqMarkersData = markers;
                 if (listEl) {
                     listEl.classList.remove("hidden");
                     if (!markers || !markers.length) {
-                        listEl.innerHTML = '<div class="hint">No markers found in sequence.</div>';
+                        listEl.innerHTML = '<div class="hint">' + esc(t("timeline.no_markers_found", "No markers found in sequence.")) + '</div>';
                     } else {
                         var html = "";
                         for (var i = 0; i < markers.length; i++) {
@@ -13690,16 +13690,17 @@
                 seqMarkersData = null;
                 if (listEl) {
                     listEl.classList.remove("hidden");
-                    listEl.innerHTML = '<div class="hint">Could not read sequence markers.</div>';
+                    listEl.innerHTML = '<div class="hint">' + esc(t("timeline.markers_read_failed", "Could not read sequence markers.")) + '</div>';
                 }
                 updateButtons();
-                showAlert("Error reading markers: " + (result || e.message));
+                showAlert(t("timeline.read_markers_failed", "Error reading markers: {error}")
+                    .replace("{error}", result || e.message));
             }
         });
     }
 
     function exportMarkedClips() {
-        if (!seqMarkersData || !seqMarkersData.length) { showAlert("Get sequence markers first."); return; }
+        if (!seqMarkersData || !seqMarkersData.length) { showAlert(t("timeline.get_markers_first", "Get sequence markers first.")); return; }
         var outDir = (document.getElementById("markerExportDir") || {}).value || projectFolder;
         startJob("/timeline/export-from-markers", {
             filepath: selectedPath,
@@ -13714,7 +13715,8 @@
         var res = document.getElementById("markerExportResult");
         var sum = document.getElementById("markerExportSummary");
         if (res) res.classList.remove("hidden");
-        if (sum) sum.textContent = "Exported " + (r.count || r.exported || 0) + " clips.";
+        if (sum) sum.textContent = t("timeline.exported_clips", "Exported {count} clips.")
+            .replace("{count}", r.count || r.exported || 0);
     });
 
     function loadProjectItems() {
@@ -13730,7 +13732,8 @@
             try {
                 var items = JSON.parse(result);
                 if (!Array.isArray(items)) {
-                    showAlert("Error loading items: " + ((items && items.error) || "Unexpected Premiere response"));
+                    showAlert(t("timeline.items_load_failed", "Error loading items: {error}")
+                        .replace("{error}", (items && items.error) || t("timeline.unexpected_response", "Unexpected Premiere response")));
                     return;
                 }
                 renameItemsData = items;
@@ -13741,7 +13744,8 @@
             } catch (e) {
                 renameItemsData = [];
                 updateButtons();
-                showAlert("Error loading items: " + (result || e.message));
+                showAlert(t("timeline.items_load_failed", "Error loading items: {error}")
+                    .replace("{error}", result || e.message));
             }
         });
     }
@@ -13750,7 +13754,7 @@
         var container = document.getElementById("renameItemsList");
         if (!container) return;
         if (!renameItemsData.length) {
-            container.innerHTML = '<div class="hint">No items loaded.</div>';
+            container.innerHTML = '<div class="hint">' + esc(t("timeline.no_items_loaded", "No items loaded.")) + '</div>';
             return;
         }
         var html = "";
@@ -14236,7 +14240,7 @@
             try {
                 sequenceInfo = JSON.parse(result);
                 if (!sequenceInfo || typeof sequenceInfo !== "object" || sequenceInfo.error) {
-                    throw new Error((sequenceInfo && sequenceInfo.error) || "Unexpected Premiere response");
+                    throw new Error((sequenceInfo && sequenceInfo.error) || t("timeline.unexpected_response", "Unexpected Premiere response"));
                 }
                 _pproCache.seq = sequenceInfo;
                 _pproCache.seqTs = Date.now();
