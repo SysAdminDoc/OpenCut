@@ -293,7 +293,8 @@ For each item below: where it lives, what works, what was deferred.
 
 ### E13 — CLI surface parity with HTTP API (P2)
 
-- **Current behavior:** `opencut/cli.py` exposes ~10 commands; HTTP API has 1,517 routes.
+- **Status:** Shipped in `ROADMAP.md` v4.100. `opencut route METHOD PATH` now validates against the generated route manifest, shapes query and JSON request bodies, fetches CSRF tokens automatically for mutating calls, and prints formatted or raw backend responses.
+- **Original behavior:** `opencut/cli.py` exposed ~10 commands; HTTP API had 1,517 routes.
 - **Problem:** Power users who want to script OpenCut outside Premiere have a CLI-shaped hole. Many ops (queue management, MCP, plugins, workflows) are HTTP-only.
 - **Recommendation:** Auto-generate `opencut route GET /system/check-failures` style escape hatch from `route_manifest.json` — same pattern as F194 extended MCP tools.
 - **Code locations:** `opencut/cli.py`.
@@ -474,7 +475,8 @@ For each item below: where it lives, what works, what was deferred.
   - Status: closed in ROADMAP v4.99 with per-route workflow metadata, explicit async POST opt-ins, manifest-derived validation, and metadata drift checks.
   - Touches: `opencut/core/workflow.py`, `opencut/routes/__init__.py`.
 
-- [ ] **P2 — E13 CLI surface parity escape hatch**
+- [x] **P2 — E13 CLI surface parity escape hatch**
+  - Status: closed in ROADMAP v4.100 with a manifest-validated `opencut route METHOD PATH` client, JSON/query request shaping, automatic CSRF handling, and focused CLI tests.
   - Touches: `opencut/cli.py`.
 
 - [ ] **P2 — E15 i18n migration rolling batches**

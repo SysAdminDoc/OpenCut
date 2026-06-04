@@ -9,9 +9,15 @@ Usage:
     opencut info     input.mp4                      # Show media info
 """
 
+import json
 import os
 import sys
 import time
+import urllib.error
+import urllib.parse
+import urllib.request
+from pathlib import Path
+from typing import Any, Mapping, Optional
 
 import click
 from rich import box
@@ -23,6 +29,9 @@ from rich.table import Table
 from opencut import __version__
 
 console = Console()
+ROUTE_MANIFEST_PATH = Path(__file__).resolve().parent / "_generated" / "route_manifest.json"
+_CLI_ROUTE_METHODS = {"GET", "POST", "PUT", "PATCH", "DELETE"}
+_CLI_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
 
 BANNER = r"""
   ___                    ____      _
@@ -41,6 +50,177 @@ def print_banner():
         box=box.ROUNDED,
         padding=(0, 2),
     ))
+
+
+def _load_cli_route_manifest(path: Path = ROUTE_MANIFEST_PATH) -> Mapping[str, Any]:
+    try:
+        manifest = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        raise click.ClickException(f"Cannot load route manifest: {exc}") from exc
+    routes = manifest.get("routes")
+    if not isinstance(routes, list):
+        raise click.ClickException("Route manifest is malformed: routes must be a list")
+    return manifest
+
+
+def _normalize_cli_route_path(path: str) -> str:
+    clean = str(path or "").strip()
+    if not clean.startswith("/") or clean.startswith("//"):
+        raise click.ClickException("Route path must start with a single '/'")
+    if "\x00" in clean or "://" in clean:
+        raise click.ClickException("Route path must be an internal OpenCut path")
+    if "?" in clean:
+        raise click.ClickException("Pass query parameters with --query key=value")
+    return clean
+
+
+def _match_manifest_route(
+    method: str,
+    path: str,
+    *,
+    manifest: Optional[Mapping[str, Any]] = None,
+) -> Mapping[str, Any]:
+    """Return the manifest route matching ``method path`` or raise."""
+    from werkzeug.exceptions import MethodNotAllowed, NotFound
+    from werkzeug.routing import Map, Rule
+
+    method = str(method or "").upper()
+    if method not in _CLI_ROUTE_METHODS:
+        raise click.ClickException(
+            f"Unsupported method {method!r}. Use one of: {', '.join(sorted(_CLI_ROUTE_METHODS))}"
+        )
+    path = _normalize_cli_route_path(path)
+    manifest = manifest or _load_cli_route_manifest()
+
+    endpoint_to_route: dict[str, Mapping[str, Any]] = {}
+    rules = []
+    for index, route in enumerate(manifest.get("routes", [])):
+        if not isinstance(route, Mapping):
+            continue
+        rule = str(route.get("rule") or "")
+        methods = [str(item).upper() for item in route.get("methods") or []]
+        if not rule or not methods:
+            continue
+        endpoint = f"route-{index}"
+        endpoint_to_route[endpoint] = route
+        rules.append(Rule(rule, methods=methods, endpoint=endpoint))
+
+    try:
+        endpoint, _values = Map(rules).bind("").match(path, method=method)
+    except MethodNotAllowed as exc:
+        allowed = ", ".join(sorted(exc.valid_methods or []))
+        suffix = f" Available methods: {allowed}." if allowed else ""
+        raise click.ClickException(f"Route exists but does not allow {method}: {path}.{suffix}") from exc
+    except NotFound as exc:
+        raise click.ClickException(f"Route not found in manifest: {method} {path}") from exc
+    return endpoint_to_route[endpoint]
+
+
+def _parse_key_value_pairs(values, *, option_name: str) -> list[tuple[str, str]]:
+    pairs: list[tuple[str, str]] = []
+    for raw in values or ():
+        item = str(raw)
+        if "=" not in item:
+            raise click.ClickException(f"{option_name} expects key=value, got {item!r}")
+        key, value = item.split("=", 1)
+        key = key.strip()
+        if not key:
+            raise click.ClickException(f"{option_name} requires a non-empty key")
+        pairs.append((key, value))
+    return pairs
+
+
+def _parse_cli_json_value(value: str) -> Any:
+    text = str(value)
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        return text
+
+
+def _load_cli_json_body(data: str, data_file: Optional[str], fields) -> Optional[Any]:
+    if data and data_file:
+        raise click.ClickException("Use either --data or --data-file, not both")
+    if data_file:
+        text = Path(data_file).read_text(encoding="utf-8")
+        body: Any = json.loads(text)
+    elif data:
+        text = sys.stdin.read() if data == "-" else data
+        body = json.loads(text)
+    else:
+        body = None
+
+    field_pairs = _parse_key_value_pairs(fields, option_name="--field")
+    if field_pairs:
+        if body is None:
+            body = {}
+        if not isinstance(body, dict):
+            raise click.ClickException("--field can only extend a JSON object body")
+        for key, value in field_pairs:
+            body[key] = _parse_cli_json_value(value)
+    return body
+
+
+def _validated_backend_base(host: str, port: int) -> str:
+    clean_host = str(host or "").strip()
+    if not clean_host or "://" in clean_host or "/" in clean_host or "\\" in clean_host:
+        raise click.ClickException("Backend host must be a hostname or IP address, not a URL")
+    if not (1 <= int(port) <= 65535):
+        raise click.ClickException("Backend port must be between 1 and 65535")
+    display_host = clean_host
+    if ":" in display_host and not display_host.startswith("["):
+        display_host = f"[{display_host}]"
+    return f"http://{display_host}:{int(port)}"
+
+
+def _read_json_http_response(response) -> tuple[str, Any]:
+    text = response.read().decode("utf-8", errors="replace")
+    try:
+        return text, json.loads(text) if text else None
+    except json.JSONDecodeError:
+        return text, None
+
+
+def _fetch_cli_csrf_token(base_url: str, timeout: float) -> str:
+    with urllib.request.urlopen(f"{base_url}/health", timeout=timeout) as response:
+        _text, data = _read_json_http_response(response)
+    if isinstance(data, dict):
+        return str(data.get("csrf_token") or "")
+    return ""
+
+
+def _request_cli_route(
+    method: str,
+    path: str,
+    *,
+    base_url: str,
+    query_pairs: list[tuple[str, str]],
+    body: Optional[Any],
+    timeout: float,
+) -> tuple[int, str, Any]:
+    query = urllib.parse.urlencode(query_pairs, doseq=True)
+    url = f"{base_url}{path}{'?' + query if query else ''}"
+    headers = {"Accept": "application/json"}
+    data = None
+    if method in _CLI_MUTATING_METHODS:
+        headers["Content-Type"] = "application/json"
+        csrf_token = _fetch_cli_csrf_token(base_url, timeout)
+        if csrf_token:
+            headers["X-OpenCut-Token"] = csrf_token
+        data = json.dumps(body if body is not None else {}).encode("utf-8")
+
+    request = urllib.request.Request(url, data=data, headers=headers, method=method)
+    try:
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            text, decoded = _read_json_http_response(response)
+            return getattr(response, "status", 200), text, decoded
+    except urllib.error.HTTPError as exc:
+        text = exc.read().decode("utf-8", errors="replace")
+        try:
+            decoded = json.loads(text) if text else None
+        except json.JSONDecodeError:
+            decoded = None
+        return exc.code, text, decoded
 
 
 @click.group()
@@ -451,6 +631,63 @@ def server(host, port, debug):
     """
     from .server import run_server
     run_server(host=host, port=port, debug=debug)
+
+
+@cli.command("route")
+@click.argument("method")
+@click.argument("path")
+@click.option("--host", default="127.0.0.1", show_default=True, help="Backend host.")
+@click.option("--port", type=click.IntRange(1, 65535), default=5679, show_default=True, help="Backend port.")
+@click.option("--query", multiple=True, help="Query parameter as key=value. May be repeated.")
+@click.option("--data", default="", help="JSON request body. Use '-' to read JSON from stdin.")
+@click.option("--data-file", type=click.Path(exists=True), default=None, help="Read JSON request body from a file.")
+@click.option("--field", multiple=True, help="Add/override a JSON object body field as key=value.")
+@click.option("--timeout", type=float, default=120.0, show_default=True, help="HTTP timeout in seconds.")
+@click.option("--raw", is_flag=True, help="Print the raw response body instead of formatted JSON.")
+def route(method, path, host, port, query, data, data_file, field, timeout, raw):
+    """Call a backend API route after validating it against route_manifest.json.
+
+    Examples:
+
+      opencut route GET /system/check-failures
+
+      opencut route POST /queue/add --data '{"endpoint":"/captions","payload":{"filepath":"C:/clip.mp4"}}'
+    """
+    method = str(method or "").upper()
+    matched = _match_manifest_route(method, path)
+    path = _normalize_cli_route_path(path)
+    query_pairs = _parse_key_value_pairs(query, option_name="--query")
+    if method == "GET" and (data or data_file or field):
+        raise click.ClickException("GET routes do not send a JSON body; use --query instead")
+    try:
+        body = _load_cli_json_body(data, data_file, field)
+    except json.JSONDecodeError as exc:
+        raise click.ClickException(f"Invalid JSON body: {exc}") from exc
+
+    base_url = _validated_backend_base(host, port)
+    try:
+        status, text, decoded = _request_cli_route(
+            method,
+            path,
+            base_url=base_url,
+            query_pairs=query_pairs,
+            body=body,
+            timeout=max(0.1, float(timeout)),
+        )
+    except urllib.error.URLError as exc:
+        raise click.ClickException(
+            f"Backend unreachable at {base_url}. Start it with `opencut server` or `opencut-server`. ({exc})"
+        ) from exc
+
+    if raw or decoded is None:
+        click.echo(text)
+    else:
+        console.print_json(json.dumps(decoded, ensure_ascii=False))
+
+    if status >= 400:
+        raise click.ClickException(
+            f"{method} {matched.get('rule', path)} returned HTTP {status}"
+        )
 
 
 def _resolve_output_dir(input_file, output_dir):
