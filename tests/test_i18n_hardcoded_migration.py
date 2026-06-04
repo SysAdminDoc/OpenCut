@@ -1143,6 +1143,9 @@ MIGRATED_KEYS = (
     "timeline.smart_bin_rule_starts_with",
     "timeline.smart_bin_rule_type_is",
     "timeline.smart_bin_value_placeholder",
+    # Eightieth batch (engine summary grammar fragments).
+    "engines.verb_are",
+    "engines.verb_is",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6232,6 +6235,22 @@ EXPECTED_CALLS = (
         "timeline.smart_bin_value_placeholder",
         re.compile(r't\(\s*"timeline\.smart_bin_value_placeholder"'),
         re.compile(r'placeholder="Value"'),
+    ),
+    # --- Eightieth batch ------------------------------------------
+    (
+        "engines.verb_are",
+        re.compile(r't\(\s*"engines\.verb_are"'),
+        re.compile(r'verb:\s*pinnedCount === 1\s*\?\s*"is"\s*:\s*"are"'),
+    ),
+    (
+        "engines.verb_is",
+        re.compile(r't\(\s*"engines\.verb_is"'),
+        re.compile(r'function engineCountText\(template, count\)[\s\S]{0,260}?\.replace\("\{verb\}",\s*count === 1\s*\?\s*"is"\s*:\s*"are"\)'),
+    ),
+    (
+        "engines.state_auto",
+        re.compile(r'selectedLabel\s*=\s*this\.options\[this\.selectedIndex\].*t\(\s*"engines\.state_auto"'),
+        re.compile(r'selectedLabel\s*=\s*this\.options\[this\.selectedIndex\]\s*\?\s*this\.options\[this\.selectedIndex\]\.textContent\s*:\s*"Auto"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
