@@ -13771,7 +13771,7 @@
     function applyRenamePattern() {
         var find = (document.getElementById("renameFindText") || {}).value || "";
         var replace = (document.getElementById("renameReplaceText") || {}).value || "";
-        if (!find) { showAlert("Enter find text."); return; }
+        if (!find) { showAlert(t("timeline.enter_find_text", "Enter find text.")); return; }
         var inputs = document.querySelectorAll(".rename-name-input");
         for (var i = 0; i < inputs.length; i++) {
             inputs[i].value = inputs[i].value.split(find).join(replace);
@@ -13788,15 +13788,20 @@
                 renames.push({ nodeId: orig.nodeId || orig.id || orig.path, newName: inputs[i].value });
             }
         }
-        if (!renames.length) { showAlert("No changes to apply."); return; }
+        if (!renames.length) { showAlert(t("timeline.no_changes_to_apply", "No changes to apply.")); return; }
         api("POST", "/timeline/batch-rename", { renames: renames }, function (err, data) {
-            if (err || (data && data.error)) { showAlert("Validation failed: " + (data ? data.error : "Network error")); return; }
-            if (!inPremiere) { showToast("Rename validated (no Premiere connection)", "info"); return; }
+            if (err || (data && data.error)) {
+                showAlert(t("timeline.validation_failed", "Validation failed: {error}")
+                    .replace("{error}", data ? data.error : t("timeline.network_error", "Network error")));
+                return;
+            }
+            if (!inPremiere) { showToast(t("timeline.rename_validated_no_premiere", "Rename validated (no Premiere connection)"), "info"); return; }
             var payload = JSON.stringify(renames);
             cs.evalScript("ocBatchRenameProjectItems('" + escSingleQuote(payload) + "')", function (result) {
                 try {
                     var r = JSON.parse(result);
-                    showToast("Renamed " + (r.renamed || renames.length) + " items", "success");
+                    showToast(t("timeline.renamed_items", "Renamed {count} items")
+                        .replace("{count}", r.renamed || renames.length), "success");
                     if (!r.error) {
                         // Journal each (nodeId -> oldName) pair so Unrename
                         // can restore the previous names.
@@ -13828,7 +13833,10 @@
                             null
                         );
                     }
-                } catch (e) { showAlert("Error: " + (result || e.message)); }
+                } catch (e) {
+                    showAlert(t("timeline.action_failed", "Error: {error}")
+                        .replace("{error}", result || e.message));
+                }
             });
         });
     }
@@ -13898,17 +13906,25 @@
     }
 
     function createSmartBins() {
-        if (!smartBinRules.length) { showAlert("Add at least one rule."); return; }
+        if (!smartBinRules.length) { showAlert(t("timeline.add_rule_first", "Add at least one rule.")); return; }
         api("POST", "/timeline/smart-bins", { rules: smartBinRules }, function (err, data) {
-            if (err || (data && data.error)) { showAlert("Validation failed: " + (data ? data.error : "Network error")); return; }
-            if (!inPremiere) { showToast("Rules validated (no Premiere connection)", "info"); return; }
+            if (err || (data && data.error)) {
+                showAlert(t("timeline.validation_failed", "Validation failed: {error}")
+                    .replace("{error}", data ? data.error : t("timeline.network_error", "Network error")));
+                return;
+            }
+            if (!inPremiere) { showToast(t("timeline.rules_validated_no_premiere", "Rules validated (no Premiere connection)"), "info"); return; }
             var jsxRules = smartBinRules.map(function(r) { return { binName: r.bin_name, rule: r.rule_type, field: r.field, value: r.value }; });
             var payload = JSON.stringify(jsxRules);
             cs.evalScript("ocCreateSmartBins('" + escSingleQuote(payload) + "')", function (result) {
                 try {
                     var r = JSON.parse(result);
-                    showToast("Created " + (r.created || smartBinRules.length) + " bins", "success");
-                } catch (e) { showAlert("Error: " + (result || e.message)); }
+                    showToast(t("timeline.bins_created", "Created {count} bins")
+                        .replace("{count}", r.created || smartBinRules.length), "success");
+                } catch (e) {
+                    showAlert(t("timeline.action_failed", "Error: {error}")
+                        .replace("{error}", result || e.message));
+                }
             });
         });
     }

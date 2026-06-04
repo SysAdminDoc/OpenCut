@@ -820,6 +820,17 @@ MIGRATED_KEYS = (
     "timeline.no_markers_found",
     "timeline.read_markers_failed",
     "timeline.unexpected_response",
+    # Fifty-fourth batch (timeline rename/smart-bin feedback).
+    "timeline.action_failed",
+    "timeline.add_rule_first",
+    "timeline.bins_created",
+    "timeline.enter_find_text",
+    "timeline.network_error",
+    "timeline.no_changes_to_apply",
+    "timeline.rename_validated_no_premiere",
+    "timeline.renamed_items",
+    "timeline.rules_validated_no_premiere",
+    "timeline.validation_failed",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -4390,6 +4401,57 @@ EXPECTED_CALLS = (
         "timeline.unexpected_response",
         re.compile(r't\(\s*"timeline\.unexpected_response"'),
         re.compile(r'\|\|\s*"Unexpected Premiere response"'),
+    ),
+    # --- Fifty-fourth batch ----------------------------------------
+    (
+        "timeline.action_failed",
+        re.compile(r't\(\s*"timeline\.action_failed"'),
+        None,
+    ),
+    (
+        "timeline.add_rule_first",
+        re.compile(r't\(\s*"timeline\.add_rule_first"'),
+        re.compile(r'showAlert\("Add at least one rule\."'),
+    ),
+    (
+        "timeline.bins_created",
+        re.compile(r't\(\s*"timeline\.bins_created"'),
+        re.compile(r'showToast\("Created "\s*\+\s*\(r\.created \|\| smartBinRules\.length\)\s*\+\s*" bins"'),
+    ),
+    (
+        "timeline.enter_find_text",
+        re.compile(r't\(\s*"timeline\.enter_find_text"'),
+        re.compile(r'showAlert\("Enter find text\."'),
+    ),
+    (
+        "timeline.network_error",
+        re.compile(r't\(\s*"timeline\.network_error"'),
+        None,
+    ),
+    (
+        "timeline.no_changes_to_apply",
+        re.compile(r't\(\s*"timeline\.no_changes_to_apply"'),
+        re.compile(r'showAlert\("No changes to apply\."'),
+    ),
+    (
+        "timeline.rename_validated_no_premiere",
+        re.compile(r't\(\s*"timeline\.rename_validated_no_premiere"'),
+        re.compile(r'showToast\("Rename validated \(no Premiere connection\)"'),
+    ),
+    (
+        "timeline.renamed_items",
+        re.compile(r't\(\s*"timeline\.renamed_items"'),
+        re.compile(r'showToast\("Renamed "\s*\+\s*\(r\.renamed \|\| renames\.length\)\s*\+\s*" items"'),
+    ),
+    (
+        "timeline.rules_validated_no_premiere",
+        re.compile(r't\(\s*"timeline\.rules_validated_no_premiere"'),
+        re.compile(r'showToast\("Rules validated \(no Premiere connection\)"'),
+    ),
+    (
+        "timeline.validation_failed",
+        re.compile(r't\(\s*"timeline\.validation_failed"'),
+        re.compile(r'showAlert\("Validation failed: "'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
