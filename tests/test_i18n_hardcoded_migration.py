@@ -1230,6 +1230,10 @@ MIGRATED_KEYS = (
     # Ninety-first batch (preset selector placeholders).
     "settings.no_presets_saved",
     "settings.select_preset_placeholder",
+    # Ninety-second batch (generic API request errors).
+    "error.http_status",
+    "error.network",
+    "error.timeout",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6711,6 +6715,22 @@ EXPECTED_CALLS = (
         "settings.select_preset_placeholder",
         re.compile(r't\(\s*"settings\.select_preset_placeholder"'),
         re.compile(r'<option value="" disabled selected>Select preset'),
+    ),
+    # --- Ninety-second batch --------------------------------------
+    (
+        "error.http_status",
+        re.compile(r't\(\s*"error\.http_status"'),
+        re.compile(r'"HTTP 403"|"HTTP "\s*\+\s*xhr\.status'),
+    ),
+    (
+        "error.network",
+        re.compile(r't\(\s*"error\.network"'),
+        re.compile(r'new Error\("Network error"\)'),
+    ),
+    (
+        "error.timeout",
+        re.compile(r't\(\s*"error\.timeout"'),
+        re.compile(r'new Error\("Timeout"\)'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
