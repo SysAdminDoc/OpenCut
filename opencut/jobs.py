@@ -207,6 +207,8 @@ def _new_job(job_type: str, filepath: str, *,
             "peak_cpu_pct": None,
             "peak_rss_mb": None,
             "exit_reason": "",
+            "request_id": "",
+            "client_request_id": "",
             "_thread": None,
         }
     _start_periodic_cleanup()
@@ -311,6 +313,8 @@ def _emit_job_webhook(job_dict):
             "peak_vram_mb": job_dict.get("peak_vram_mb"),
             "peak_cpu_pct": job_dict.get("peak_cpu_pct"),
             "peak_rss_mb": job_dict.get("peak_rss_mb"),
+            "request_id": job_dict.get("request_id"),
+            "client_request_id": job_dict.get("client_request_id"),
         }
         try:
             fire_event(event_type, details, job_id=str(job_dict.get("id") or ""))
@@ -734,7 +738,7 @@ def async_job(job_type: str, *, filepath_required: bool = True,
     """
     import functools
 
-    from flask import jsonify, request
+    from flask import g, jsonify, request
 
     def decorator(f):
         @functools.wraps(f)
@@ -873,11 +877,23 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     "suggestion": "Wait for a job to finish or cancel one from the processing bar.",
                 }), 429
 
+            request_id = ""
+            client_request_id = ""
+            try:
+                from opencut.core.request_correlation import get_request_id
+
+                request_id = get_request_id()
+                client_request_id = str(getattr(g, "client_request_id", "") or "")
+            except Exception:  # noqa: BLE001 - request metadata is optional
+                pass
+
             job_to_persist = None
             with job_lock:
                 if job_id in jobs:
                     jobs[job_id]["_endpoint"] = request.path
                     jobs[job_id]["_payload"] = _sanitize_payload_for_storage(data)
+                    jobs[job_id]["request_id"] = request_id
+                    jobs[job_id]["client_request_id"] = client_request_id
                     job_to_persist = jobs[job_id].copy()
             if job_to_persist is not None:
                 _persist_job(job_to_persist, sync=True)
@@ -885,6 +901,16 @@ def async_job(job_type: str, *, filepath_required: bool = True,
             def _process():
                 _thread_local.job_id = job_id
                 resource_sampler = None
+                worker_request_id = ""
+                try:
+                    from opencut.core.request_correlation import set_request_id
+
+                    with job_lock:
+                        worker_request_id = str(jobs.get(job_id, {}).get("request_id") or "")
+                    if worker_request_id:
+                        set_request_id(worker_request_id)
+                except Exception:  # noqa: BLE001 - logging correlation is optional
+                    worker_request_id = ""
                 try:
                     from opencut.server import _log_thread_local
                     _log_thread_local.job_id = job_id
@@ -947,6 +973,14 @@ def async_job(job_type: str, *, filepath_required: bool = True,
                     resource_update = _stop_resource_sampler(resource_sampler)
                     if resource_update:
                         _update_job(job_id, **resource_update)
+                    if worker_request_id:
+                        try:
+                            from opencut.core.request_correlation import clear_request_id, get_request_id
+
+                            if get_request_id() == worker_request_id:
+                                clear_request_id()
+                        except Exception:  # noqa: BLE001
+                            pass
                     _thread_local.job_id = ""
                     try:
                         from opencut.server import _log_thread_local
