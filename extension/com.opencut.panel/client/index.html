@@ -654,26 +654,26 @@
                         <div class="card-header"><div class="card-title" data-i18n="subtabs.highlights">AI Highlight Extraction</div></div>
                         <p class="card-desc" data-i18n="cut.highlights_desc">Use AI to find the most interesting/viral moments in your video.</p>
                         <div class="form-group">
-                            <label for="highlightMax">Max Highlights</label>
+                            <label for="highlightMax" data-i18n="forms.max_highlights">Max Highlights</label>
                             <div class="slider-row">
-                                <input type="range" id="highlightMax" min="1" max="20" value="5" step="1" title="Maximum number of highlights to extract">
+                                <input type="range" id="highlightMax" min="1" max="20" value="5" step="1" title="Maximum number of highlights to extract" data-i18n-title="highlights.max_title">
                                 <span class="slider-val" id="highlightMaxVal">5</span>
                             </div>
                         </div>
                         <div class="form-group">
-                            <label for="highlightMinDur">Duration Range (sec)</label>
+                            <label for="highlightMinDur" data-i18n="forms.duration_range">Duration Range (sec)</label>
                             <div class="input-pair">
-                                <input type="number" id="highlightMinDur" value="15" min="5" max="300" step="5" aria-label="Minimum highlight duration">
-                                <span>to</span>
-                                <input type="number" id="highlightMaxDur" value="60" min="10" max="600" step="5" aria-label="Maximum highlight duration">
+                                <input type="number" id="highlightMinDur" value="15" min="5" max="300" step="5" aria-label="Minimum highlight duration" data-i18n-aria-label="highlights.min_duration_aria">
+                                <span data-i18n="highlights.range_to">to</span>
+                                <input type="number" id="highlightMaxDur" value="60" min="10" max="600" step="5" aria-label="Maximum highlight duration" data-i18n-aria-label="highlights.max_duration_aria">
                             </div>
                         </div>
                         <button type="button" class="btn-primary" id="runHighlightsBtn" disabled data-i18n="cut.highlights_extract">Extract Highlights (LLM)</button>
-                        <button type="button" class="btn-outline btn-sm mt-xs" id="runEmotionHighlightsBtn" disabled aria-label="Detect emotion-based highlights" data-i18n="cut.highlights_emotion">Emotion Highlights (Face AI)</button>
+                        <button type="button" class="btn-outline btn-sm mt-xs" id="runEmotionHighlightsBtn" disabled aria-label="Detect emotion-based highlights" data-i18n="cut.highlights_emotion" data-i18n-aria-label="highlights.emotion_aria">Emotion Highlights (Face AI)</button>
                         <div class="hint hidden" id="emotionHint">
-                            Emotion analysis (deepface) not installed.
-                            <button type="button" class="btn-install" id="installEmotionBtn">Install Now</button>
-                            <div class="install-alt">Requires: <code>pip install deepface</code></div>
+                            <span data-i18n="highlights.emotion_missing">Emotion analysis (deepface) not installed.</span>
+                            <button type="button" class="btn-install" id="installEmotionBtn" data-i18n="common.install_now">Install Now</button>
+                            <div class="install-alt"><span data-i18n="install.requires">Requires:</span> <code>pip install deepface</code></div>
                         </div>
                         <div class="result-area hidden" id="highlightResult">
                             <div id="highlightList"></div>
