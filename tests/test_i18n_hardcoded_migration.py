@@ -271,6 +271,22 @@ MIGRATED_KEYS = (
     "batch.processing_summary",
     "batch.finished_summary",
     "batch.complete",
+    # Twenty-sixth batch (batch summary default-state feedback).
+    "batch.choose_operation",
+    "batch.selected_operation",
+    "batch.queue_count",
+    "batch.queue_count_title",
+    "batch.queue_available",
+    "batch.queue_available_title",
+    "batch.queue_empty",
+    "batch.queue_empty_title",
+    "batch.operation_ready_title",
+    "batch.operation_choose_title",
+    "batch.status_reconnect",
+    "batch.status_load_clips",
+    "batch.status_add_clips",
+    "batch.status_add_one_more",
+    "batch.status_ready",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -1464,6 +1480,82 @@ EXPECTED_CALLS = (
         "batch.complete",
         re.compile(r't\(\s*"batch\.complete"'),
         re.compile(r'showAlert\("Batch complete: "\s*\+'),
+    ),
+    # --- Twenty-sixth batch ----------------------------------------
+    (
+        "batch.choose_operation",
+        re.compile(r't\(\s*"batch\.choose_operation"'),
+        re.compile(r'getSelectOptionLabel\(el\.batchOperation,\s*"Choose an operation"\)'),
+    ),
+    (
+        "batch.selected_operation",
+        re.compile(r't\(\s*"batch\.selected_operation"'),
+        re.compile(r'\|\|\s*"the selected operation"'),
+    ),
+    (
+        "batch.queue_count",
+        re.compile(r't\(\s*"batch\.queue_count"'),
+        re.compile(r'queueLabel\s*=\s*queuedCount\s*\+\s*" clip"'),
+    ),
+    (
+        "batch.queue_count_title",
+        re.compile(r't\(\s*"batch\.queue_count_title"'),
+        re.compile(r'queueTitle\s*=\s*queueLabel\s*\+\s*" for the next batch run\."'),
+    ),
+    (
+        "batch.queue_available",
+        re.compile(r't\(\s*"batch\.queue_available"'),
+        re.compile(r'queueLabel\s*=\s*"0 queued • "\s*\+\s*availableCount'),
+    ),
+    (
+        "batch.queue_available_title",
+        re.compile(r't\(\s*"batch\.queue_available_title"'),
+        re.compile(r'queueTitle\s*=\s*availableCount\s*\+\s*" project clip"'),
+    ),
+    (
+        "batch.queue_empty",
+        re.compile(r't\(\s*"batch\.queue_empty"'),
+        re.compile(r'queueLabel\s*=\s*"No clips queued"'),
+    ),
+    (
+        "batch.queue_empty_title",
+        re.compile(r't\(\s*"batch\.queue_empty_title"'),
+        re.compile(r'queueTitle\s*=\s*"Load clips into the project, then add the ones you want'),
+    ),
+    (
+        "batch.operation_ready_title",
+        re.compile(r't\(\s*"batch\.operation_ready_title"'),
+        re.compile(r'opLabel\s*\?\s*opLabel\s*\+\s*" will run across the queued clips\."'),
+    ),
+    (
+        "batch.operation_choose_title",
+        re.compile(r't\(\s*"batch\.operation_choose_title"'),
+        re.compile(r':\s*"Choose the process you want to apply across the queue\."'),
+    ),
+    (
+        "batch.status_reconnect",
+        re.compile(r't\(\s*"batch\.status_reconnect"'),
+        re.compile(r'setStatusLine\(\s*"batchStatusLine",\s*"Reconnect the backend before running'),
+    ),
+    (
+        "batch.status_load_clips",
+        re.compile(r't\(\s*"batch\.status_load_clips"'),
+        re.compile(r'setStatusLine\(\s*"batchStatusLine",\s*"Load clips into the project, then add two'),
+    ),
+    (
+        "batch.status_add_clips",
+        re.compile(r't\(\s*"batch\.status_add_clips"'),
+        re.compile(r'"Add clips to the queue, then run "\s*\+\s*\(opLabel\s*\|\|\s*"the selected operation"\)'),
+    ),
+    (
+        "batch.status_add_one_more",
+        re.compile(r't\(\s*"batch\.status_add_one_more"'),
+        re.compile(r'"Add one more clip to enable batch processing for "\s*\+\s*\(opLabel\s*\|\|\s*"the selected operation"\)'),
+    ),
+    (
+        "batch.status_ready",
+        re.compile(r't\(\s*"batch\.status_ready"'),
+        re.compile(r'"Batch is ready to run "\s*\+\s*\(opLabel\s*\|\|\s*"the selected operation"\)'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (

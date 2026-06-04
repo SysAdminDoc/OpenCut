@@ -5414,26 +5414,49 @@
     function updateBatchSummary(statusMessage, statusState, statusTitle) {
         var queuedCount = (_batchFiles && _batchFiles.length) || 0;
         var availableCount = Array.isArray(projectMedia) ? projectMedia.length : 0;
-        var opLabel = getSelectOptionLabel(el.batchOperation, "Choose an operation");
+        var opLabel = getSelectOptionLabel(
+            el.batchOperation,
+            t("batch.choose_operation", "Choose an operation")
+        );
+        var selectedOperationLabel = opLabel || t("batch.selected_operation", "the selected operation");
         var queueLabel = "";
         var queueTitle = "";
 
         if (queuedCount > 0) {
-            queueLabel = queuedCount + " clip" + (queuedCount === 1 ? "" : "s") + " queued";
-            queueTitle = queueLabel + " for the next batch run.";
+            queueLabel = t("batch.queue_count", "{count} clip{plural} queued")
+                .replace("{count}", queuedCount)
+                .replace("{plural}", queuedCount === 1 ? "" : "s");
+            queueTitle = t("batch.queue_count_title", "{queue} for the next batch run.")
+                .replace("{queue}", queueLabel);
         } else if (availableCount > 0) {
-            queueLabel = "0 queued • " + availableCount + " available";
-            queueTitle = availableCount + " project clip" + (availableCount === 1 ? " is" : "s are") + " available to add to the batch queue.";
+            queueLabel = t("batch.queue_available", "0 queued • {count} available")
+                .replace("{count}", availableCount);
+            queueTitle = t(
+                "batch.queue_available_title",
+                "{count} project clip{plural} {verb} available to add to the batch queue."
+            )
+                .replace("{count}", availableCount)
+                .replace("{plural}", availableCount === 1 ? "" : "s")
+                .replace("{verb}", availableCount === 1 ? "is" : "are");
         } else {
-            queueLabel = "No clips queued";
-            queueTitle = "Load clips into the project, then add the ones you want to process together.";
+            queueLabel = t("batch.queue_empty", "No clips queued");
+            queueTitle = t(
+                "batch.queue_empty_title",
+                "Load clips into the project, then add the ones you want to process together."
+            );
         }
 
         setTextAndTitle("batchQueueSummary", queueLabel, queueTitle);
         setTextAndTitle(
             "batchOperationSummary",
-            opLabel || "Choose an operation",
-            opLabel ? opLabel + " will run across the queued clips." : "Choose the process you want to apply across the queue."
+            opLabel || t("batch.choose_operation", "Choose an operation"),
+            opLabel
+                ? t("batch.operation_ready_title", "{operation} will run across the queued clips.")
+                    .replace("{operation}", opLabel)
+                : t(
+                    "batch.operation_choose_title",
+                    "Choose the process you want to apply across the queue."
+                )
         );
 
         if (statusMessage) {
@@ -5444,31 +5467,41 @@
         if (!connected) {
             setStatusLine(
                 "batchStatusLine",
-                "Reconnect the backend before running batch processing across multiple clips.",
+                t(
+                    "batch.status_reconnect",
+                    "Reconnect the backend before running batch processing across multiple clips."
+                ),
                 "warning"
             );
         } else if (!availableCount && !queuedCount) {
             setStatusLine(
                 "batchStatusLine",
-                "Load clips into the project, then add two or more to the queue for batch processing.",
+                t(
+                    "batch.status_load_clips",
+                    "Load clips into the project, then add two or more to the queue for batch processing."
+                ),
                 "idle"
             );
         } else if (queuedCount === 0) {
             setStatusLine(
                 "batchStatusLine",
-                "Add clips to the queue, then run " + (opLabel || "the selected operation") + " across the whole batch.",
+                t("batch.status_add_clips", "Add clips to the queue, then run {operation} across the whole batch.")
+                    .replace("{operation}", selectedOperationLabel),
                 "idle"
             );
         } else if (queuedCount === 1) {
             setStatusLine(
                 "batchStatusLine",
-                "Add one more clip to enable batch processing for " + (opLabel || "the selected operation") + ".",
+                t("batch.status_add_one_more", "Add one more clip to enable batch processing for {operation}.")
+                    .replace("{operation}", selectedOperationLabel),
                 "warning"
             );
         } else {
             setStatusLine(
                 "batchStatusLine",
-                "Batch is ready to run " + (opLabel || "the selected operation") + " across " + queuedCount + " queued clips.",
+                t("batch.status_ready", "Batch is ready to run {operation} across {count} queued clips.")
+                    .replace("{operation}", selectedOperationLabel)
+                    .replace("{count}", queuedCount),
                 "ready"
             );
         }
