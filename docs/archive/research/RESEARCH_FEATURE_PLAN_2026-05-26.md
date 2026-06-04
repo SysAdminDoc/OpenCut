@@ -309,7 +309,7 @@ For each item below: where it lives, what works, what was deferred.
 
 ### E15 — i18n migration continuation (P2)
 
-- **Current state:** 13 keys migrated across 3 rounds in the prior plan. `i18n-drift` gate reports 142 dead keys, 297 consumers, 0 missing.
+- **Current state:** Advanced in `ROADMAP.md` v4.101 to 21 guarded keys across 4 rounds. `i18n-drift` reports 447 keys, 305 consumers, 142 dead keys, and 0 missing.
 - **Recommendation:** Continue rolling 5–10-string batches per loop. ~85 bare-English sites remain.
 - **Complexity:** S per batch.
 
@@ -480,6 +480,7 @@ For each item below: where it lives, what works, what was deferred.
   - Touches: `opencut/cli.py`.
 
 - [ ] **P2 — E15 i18n migration rolling batches**
+  - Status: advanced in ROADMAP v4.101 with an 8-string install/status feedback batch; keep open for the next 5-10 string batch.
   - Touches: `extension/com.opencut.panel/client/{main.js,locales/en.json}`, `tests/test_i18n_hardcoded_migration.py`.
 
 ### Phase 3 — Deadline-gated (unchanged from prior plan)

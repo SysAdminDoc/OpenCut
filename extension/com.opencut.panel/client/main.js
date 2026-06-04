@@ -4389,7 +4389,7 @@
                 hideHintState(el.separateHint, el.installDemucsBtn);
                 capabilities.separation = true;
                 updateButtons();
-                showAlert("Demucs installed successfully!");
+                showAlert(t("toast.demucs_installed", "Demucs installed successfully!"));
             }
         }, 300000);
     }
@@ -4458,7 +4458,7 @@
             onSuccess: function() {
                 capabilities.depth_effects = true;
                 updateButtons();
-                showAlert("Depth Anything V2 installed successfully!");
+                showAlert(t("toast.depth_installed", "Depth Anything V2 installed successfully!"));
             }
         });
     }
@@ -4472,7 +4472,7 @@
             onSuccess: function() {
                 capabilities.deepface = true;
                 updateButtons();
-                showAlert("Emotion analysis installed successfully!");
+                showAlert(t("toast.emotion_installed", "Emotion analysis installed successfully!"));
             }
         });
     }
@@ -4490,7 +4490,7 @@
                     if (el.fillerBackend._customDropdown) el.fillerBackend._customDropdown.updateText();
                 }
                 updateButtons();
-                showAlert("CrisperWhisper installed successfully!");
+                showAlert(t("toast.crisper_whisper_installed", "CrisperWhisper installed successfully!"));
             }
         });
     }
@@ -4504,7 +4504,7 @@
             onSuccess: function() {
                 capabilities.broll_generate = true;
                 updateButtons();
-                showAlert("AI B-roll generation installed successfully!");
+                showAlert(t("toast.broll_generation_installed", "AI B-roll generation installed successfully!"));
             }
         });
     }
@@ -4518,7 +4518,7 @@
             onSuccess: function() {
                 capabilities.multimodal_diarize = true;
                 updateButtons();
-                showAlert("Multimodal diarization installed successfully!");
+                showAlert(t("toast.multimodal_diarization_installed", "Multimodal diarization installed successfully!"));
             }
         });
     }
@@ -4533,7 +4533,7 @@
                 hideHintState(el.watermarkHint, el.installWatermarkBtn);
                 capabilities.watermark_removal = true;
                 updateButtons();
-                showAlert("Watermark remover installed successfully!");
+                showAlert(t("toast.watermark_remover_installed", "Watermark remover installed successfully!"));
             }
         }, 300000);
     }
@@ -4561,7 +4561,7 @@
                 if (el.removeW) el.removeW.value = data.width;
                 if (el.removeH) el.removeH.value = data.height;
                 setHintState(resEl, "Detected at (" + data.x + ", " + data.y + ") — " + data.width + "×" + data.height + " px (" + (data.method || "auto") + ", " + safeFixed((data.confidence || 0) * 100, 0) + "% confidence)", "success");
-                showToast("Watermark detected — region auto-filled", "success");
+                showToast(t("toast.watermark_region_autofilled", "Watermark detected — region auto-filled"), "success");
             } else {
                 setHintState(resEl, "No watermark detected. Try adjusting the prompt.", "warning");
             }
