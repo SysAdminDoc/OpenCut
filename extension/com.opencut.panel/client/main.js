@@ -6313,10 +6313,11 @@
             text = r.text;
         }
         if (r.topics && r.topics.length) {
-            text += "\nTopics: " + r.topics.join(", ");
+            text += "\n" + t("transcript.summary_topics", "Topics: {topics}")
+                .replace("{topics}", r.topics.join(", "));
         }
         if (el.summaryResult) el.summaryResult.classList.remove("hidden");
-        if (el.summaryContent) el.summaryContent.textContent = text || "No summary generated.";
+        if (el.summaryContent) el.summaryContent.textContent = text || t("transcript.summary_empty", "No summary generated.");
     });
 
     // ================================================================
@@ -6348,7 +6349,8 @@
                     var r = JSON.parse(result);
                     if (r && r.error) {
                         _playheadSyncWarned = true;
-                        showToast("Playhead sync unavailable: " + r.error, "warn");
+                        showToast(t("toast.playhead_sync_unavailable", "Playhead sync unavailable: {error}")
+                            .replace("{error}", r.error), "warn");
                     }
                 } catch (e) {}
             }
@@ -6371,8 +6373,8 @@
         if (!segments.length) {
             el.transcriptTimelineMeta.innerHTML =
                 '<div class="transcript-timeline-stat is-empty">' +
-                '<span class="transcript-timeline-stat-label">Editor</span>' +
-                '<span class="transcript-timeline-stat-value">Awaiting transcript segments</span>' +
+                '<span class="transcript-timeline-stat-label">' + esc(t("transcript.timeline_editor", "Editor")) + '</span>' +
+                '<span class="transcript-timeline-stat-value">' + esc(t("transcript.timeline_awaiting_segments", "Awaiting transcript segments")) + '</span>' +
                 '</div>';
             return;
         }
@@ -6385,19 +6387,19 @@
         var avgDuration = segments.length ? (totalDuration / segments.length) : 0;
         el.transcriptTimelineMeta.innerHTML =
             '<div class="transcript-timeline-stat">' +
-            '<span class="transcript-timeline-stat-label">Segments</span>' +
+            '<span class="transcript-timeline-stat-label">' + esc(t("transcript.timeline_segments", "Segments")) + '</span>' +
             '<span class="transcript-timeline-stat-value">' + segments.length + '</span>' +
             '</div>' +
             '<div class="transcript-timeline-stat">' +
-            '<span class="transcript-timeline-stat-label">Runtime</span>' +
+            '<span class="transcript-timeline-stat-label">' + esc(t("transcript.timeline_runtime", "Runtime")) + '</span>' +
             '<span class="transcript-timeline-stat-value">' + fmtDur(totalDuration) + '</span>' +
             '</div>' +
             '<div class="transcript-timeline-stat">' +
-            '<span class="transcript-timeline-stat-label">Pace</span>' +
-            '<span class="transcript-timeline-stat-value">' + safeFixed(avgDuration, 1) + 's avg</span>' +
+            '<span class="transcript-timeline-stat-label">' + esc(t("transcript.timeline_pace", "Pace")) + '</span>' +
+            '<span class="transcript-timeline-stat-value">' + esc(t("transcript.timeline_avg_seconds", "{seconds}s avg").replace("{seconds}", safeFixed(avgDuration, 1))) + '</span>' +
             '</div>' +
             '<div class="transcript-timeline-stat">' +
-            '<span class="transcript-timeline-stat-label">Longest</span>' +
+            '<span class="transcript-timeline-stat-label">' + esc(t("transcript.timeline_longest", "Longest")) + '</span>' +
             '<span class="transcript-timeline-stat-value">' + safeFixed(longest, 1) + 's</span>' +
             '</div>';
     }
@@ -6406,19 +6408,23 @@
         if (!el.transcriptTimelineStatus) return;
         var segments = getTranscriptSegments();
         if (idx == null || idx < 0 || idx >= segments.length) {
-            el.transcriptTimelineStatus.textContent = "Select a segment to focus the edit.";
+            el.transcriptTimelineStatus.textContent = t("transcript.timeline_select_segment", "Select a segment to focus the edit.");
             return;
         }
         var seg = segments[idx];
         var duration = Math.max(0, Number(seg.end || 0) - Number(seg.start || 0));
-        el.transcriptTimelineStatus.textContent = "Segment " + (idx + 1) + " · " + fmtDur(seg.start || 0) + " to " + fmtDur(seg.end || 0) + " · " + safeFixed(duration, 1) + "s";
+        el.transcriptTimelineStatus.textContent = t("transcript.timeline_segment_status", "Segment {index} · {start} to {end} · {duration}s")
+            .replace("{index}", idx + 1)
+            .replace("{start}", fmtDur(seg.start || 0))
+            .replace("{end}", fmtDur(seg.end || 0))
+            .replace("{duration}", safeFixed(duration, 1));
     }
 
     function setTranscriptTimelineEmptyState(message) {
         if (!el.transcriptTimeline) return;
         el.transcriptTimeline.removeAttribute("aria-activedescendant");
         el.transcriptTimeline.innerHTML =
-            '<div class="transcript-timeline-empty">' + esc(message || "Transcript segments will appear here.") + '</div>';
+            '<div class="transcript-timeline-empty">' + esc(message || t("transcript.timeline_empty", "Transcript segments will appear here.")) + '</div>';
     }
 
     function updateTranscriptTimelinePlayhead(idx) {
@@ -6446,7 +6452,7 @@
         renderTranscriptTimelineMeta(data);
         if (!segments.length || totalDuration <= 0) {
             el.transcriptTimelineRuler.innerHTML = '<span>0:00</span><span>0:00</span><span>0:00</span>';
-            setTranscriptTimelineEmptyState("Transcript segments will appear here once the clip is ready.");
+            setTranscriptTimelineEmptyState(t("transcript.timeline_empty_ready", "Transcript segments will appear here once the clip is ready."));
             updateTranscriptTimelineStatus(-1);
             return;
         }
@@ -6467,12 +6473,17 @@
             if (left + width > 100) width = Math.max(2.8, 100 - left);
             var preview = String(seg.text || "").replace(/\s+/g, " ").trim();
             if (preview.length > 72) preview = preview.substring(0, 72) + "…";
+            var segmentLabel = t("transcript.segment_label", "Segment {index}").replace("{index}", i + 1);
+            var segmentAria = t("transcript.segment_time_label", "Segment {index}, {start} to {end}")
+                .replace("{index}", i + 1)
+                .replace("{start}", fmtDur(start))
+                .replace("{end}", fmtDur(end));
             html += '<button type="button" class="transcript-timeline-seg" data-idx="' + i + '" ' +
                 'id="transcriptTimelineSeg' + i + '" role="option" tabindex="-1" ' +
                 'style="left:' + left.toFixed(3) + '%;width:' + width.toFixed(3) + '%;" ' +
                 'aria-selected="false" ' +
-                'aria-label="Segment ' + (i + 1) + ', ' + fmtDur(start) + ' to ' + fmtDur(end) + (preview ? ', ' + esc(preview) : '') + '" ' +
-                'title="' + esc(preview || ('Segment ' + (i + 1))) + '">' +
+                'aria-label="' + esc(segmentAria + (preview ? ', ' + preview : '')) + '" ' +
+                'title="' + esc(preview || segmentLabel) + '">' +
                 '<span class="transcript-timeline-chip">' + (i + 1) + '</span>' +
                 '</button>';
         }
@@ -6599,9 +6610,13 @@
         var segCount = data.segments ? data.segments.length : 0;
         var runtime = getTranscriptTotalDuration(data);
         var lang = (data.language || "en").toUpperCase();
-        el.transcriptInfo.textContent = wordCount + " words · " + segCount + " segments · " + fmtDur(runtime) + " runtime · " + lang;
+        el.transcriptInfo.textContent = t("transcript.editor_info", "{words} words · {segments} segments · {runtime} runtime · {language}")
+            .replace("{words}", wordCount)
+            .replace("{segments}", segCount)
+            .replace("{runtime}", fmtDur(runtime))
+            .replace("{language}", lang);
         if (!data.segments || !data.segments.length) {
-            el.transcriptSegments.innerHTML = '<div class="transcript-empty-state">Transcribe a clip to start shaping dialogue, timing, and cut decisions.</div>';
+            el.transcriptSegments.innerHTML = '<div class="transcript-empty-state">' + esc(t("transcript.editor_empty", "Transcribe a clip to start shaping dialogue, timing, and cut decisions.")) + '</div>';
             renderTranscriptTimeline(data);
             transcriptHistory = [];
             transcriptHistoryIdx = -1;
@@ -6626,7 +6641,7 @@
                 + '</div>'
                 + '<span class="transcript-seg-duration">' + safeFixed(duration, 1) + 's</span>'
                 + '</div>'
-                + '<textarea class="transcript-seg-text" data-idx="' + i + '" rows="1" aria-label="Transcript segment ' + (i + 1) + '">' + esc(seg.text) + '</textarea>'
+                + '<textarea class="transcript-seg-text" data-idx="' + i + '" rows="1" aria-label="' + esc(t("transcript.segment_textarea_label", "Transcript segment {index}").replace("{index}", i + 1)) + '">' + esc(seg.text) + '</textarea>'
                 + '</article>';
         }
         el.transcriptSegments.innerHTML = html;
