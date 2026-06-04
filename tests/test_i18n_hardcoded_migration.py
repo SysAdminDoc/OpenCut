@@ -1004,6 +1004,19 @@ MIGRATED_KEYS = (
     "interview.step_identify_speakers",
     "interview.step_remove_fillers",
     "interview.step_transcribe_audio",
+    # Sixty-ninth batch (preflight modal feedback).
+    "common.cancel",
+    "preflight.aria_label",
+    "preflight.blocking_section",
+    "preflight.file_label",
+    "preflight.file_not_found",
+    "preflight.fix_before_running",
+    "preflight.input_file_section",
+    "preflight.ready_with_warnings",
+    "preflight.run_anyway",
+    "preflight.run_anyway_may_fail",
+    "preflight.title",
+    "preflight.warning_section",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5442,6 +5455,67 @@ EXPECTED_CALLS = (
         "output.import_to_premiere",
         re.compile(r'importBtn\.textContent\s*=\s*t\(\s*"output\.import_to_premiere"'),
         re.compile(r'importBtn\.textContent\s*=\s*"Import to Premiere"'),
+    ),
+    # --- Sixty-ninth batch ----------------------------------------
+    (
+        "common.cancel",
+        re.compile(r'cancel\.textContent\s*=\s*t\(\s*"common\.cancel"'),
+        re.compile(r'cancel\.textContent\s*=\s*"Cancel"'),
+    ),
+    (
+        "preflight.aria_label",
+        re.compile(r't\(\s*"preflight\.aria_label"'),
+        re.compile(r'overlay\.setAttribute\("aria-label",\s*"Preflight check for "\s*\+'),
+    ),
+    (
+        "preflight.blocking_section",
+        re.compile(r't\(\s*"preflight\.blocking_section"'),
+        re.compile(r'addSection\("Fix before running"'),
+    ),
+    (
+        "preflight.file_label",
+        re.compile(r't\(\s*"preflight\.file_label"'),
+        re.compile(r'label:\s*"File"'),
+    ),
+    (
+        "preflight.file_not_found",
+        re.compile(r't\(\s*"preflight\.file_not_found"'),
+        re.compile(r'report\.file\.detail\s*\|\|\s*"not found"'),
+    ),
+    (
+        "preflight.fix_before_running",
+        re.compile(r't\(\s*"preflight\.fix_before_running"'),
+        re.compile(r':\s*"Fix the items below before running\."'),
+    ),
+    (
+        "preflight.input_file_section",
+        re.compile(r't\(\s*"preflight\.input_file_section"'),
+        re.compile(r'addSection\("Input file"'),
+    ),
+    (
+        "preflight.ready_with_warnings",
+        re.compile(r't\(\s*"preflight\.ready_with_warnings"'),
+        re.compile(r'\?\s*"Ready to run\. Some optional checks won\'t be available\."'),
+    ),
+    (
+        "preflight.run_anyway",
+        re.compile(r't\(\s*"preflight\.run_anyway"'),
+        re.compile(r'report\.pass\s*\?\s*"Run anyway"\s*:\s*"Run anyway \(may fail\)"'),
+    ),
+    (
+        "preflight.run_anyway_may_fail",
+        re.compile(r't\(\s*"preflight\.run_anyway_may_fail"'),
+        re.compile(r'report\.pass\s*\?\s*"Run anyway"\s*:\s*"Run anyway \(may fail\)"'),
+    ),
+    (
+        "preflight.title",
+        re.compile(r't\(\s*"preflight\.title"'),
+        re.compile(r'h\.textContent\s*=\s*"Preflight: "\s*\+'),
+    ),
+    (
+        "preflight.warning_section",
+        re.compile(r't\(\s*"preflight\.warning_section"'),
+        re.compile(r'addSection\("Heads-up"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
