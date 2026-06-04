@@ -310,47 +310,47 @@
                 <svg width="10" height="10" viewBox="0 0 16 16" fill="currentColor"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
                 <span data-i18n="favorites.title">Favorites</span>
             </div>
-            <div class="favorites-items" id="favoritesItems" aria-label="Favorite tools"></div>
+            <div class="favorites-items" id="favoritesItems" aria-label="Favorite tools" data-i18n-aria-label="favorites.tools_region"></div>
         </div>
 
             <!-- ======== TAB: CUT ======== -->
-            <div class="nav-panel active" id="panel-cut" role="tabpanel" aria-label="Cut & Clean">
+            <div class="nav-panel active" id="panel-cut" role="tabpanel" aria-label="Cut & Clean" data-i18n-aria-label="headers.cut">
                 <div class="quick-actions" id="quickActionsCut">
-                    <button type="button" class="quick-action-btn" id="quickCleanInterview" disabled title="Remove silence + normalize audio" data-i18n="cut.clean_up">
+                    <button type="button" class="quick-action-btn" id="quickCleanInterview" disabled title="Remove silence + normalize audio" data-i18n="cut.clean_up" data-i18n-title="quick_actions.clean_up_title">
                         <span class="quick-action-head">
                             <span class="quick-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 10.25h3l1.7-4.25 2.1 8.5 1.45-4.25h2.75"/></svg>
                             </span>
                             <span class="quick-action-copy">
-                                <span class="btn-label">Clean Up</span>
-                                <span class="quick-action-meta">Silence trim plus balanced loudness</span>
+                                <span class="btn-label" data-i18n="cut.clean_up">Clean Up</span>
+                                <span class="quick-action-meta" data-i18n="quick_actions.clean_up_meta">Silence trim plus balanced loudness</span>
                             </span>
                         </span>
-                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                        <span class="quick-action-tag" aria-hidden="true" data-i18n="quick_actions.preset_tag">Preset</span>
                     </button>
-                    <button type="button" class="quick-action-btn" id="quickYouTube" disabled title="Silence removal + normalize + loudness match" data-i18n="cut.youtube_ready">
+                    <button type="button" class="quick-action-btn" id="quickYouTube" disabled title="Silence removal + normalize + loudness match" data-i18n="cut.youtube_ready" data-i18n-title="quick_actions.youtube_title">
                         <span class="quick-action-head">
                             <span class="quick-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="13" height="11" rx="2.5"/><path d="m8.5 8 4 2-4 2z"/></svg>
                             </span>
                             <span class="quick-action-copy">
-                                <span class="btn-label">YouTube Ready</span>
-                                <span class="quick-action-meta">Fast cleanup for creator delivery</span>
+                                <span class="btn-label" data-i18n="cut.youtube_ready">YouTube Ready</span>
+                                <span class="quick-action-meta" data-i18n="quick_actions.youtube_meta">Fast cleanup for creator delivery</span>
                             </span>
                         </span>
-                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                        <span class="quick-action-tag" aria-hidden="true" data-i18n="quick_actions.preset_tag">Preset</span>
                     </button>
-                    <button type="button" class="quick-action-btn" id="quickPodcast" disabled title="Denoise + normalize + loudness match" data-i18n="cut.podcast_polish">
+                    <button type="button" class="quick-action-btn" id="quickPodcast" disabled title="Denoise + normalize + loudness match" data-i18n="cut.podcast_polish" data-i18n-title="quick_actions.podcast_title">
                         <span class="quick-action-head">
                             <span class="quick-action-icon" aria-hidden="true">
                                 <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="7.25" y="3.5" width="5.5" height="8.5" rx="2.75"/><path d="M5.25 9.5a4.75 4.75 0 0 0 9.5 0"/><path d="M10 14.25v2.25"/><path d="M7.75 16.5h4.5"/></svg>
                             </span>
                             <span class="quick-action-copy">
-                                <span class="btn-label">Podcast Polish</span>
-                                <span class="quick-action-meta">Dialogue-first cleanup for spoken edits</span>
+                                <span class="btn-label" data-i18n="cut.podcast_polish">Podcast Polish</span>
+                                <span class="quick-action-meta" data-i18n="quick_actions.podcast_meta">Dialogue-first cleanup for spoken edits</span>
                             </span>
                         </span>
-                        <span class="quick-action-tag" aria-hidden="true">Preset</span>
+                        <span class="quick-action-tag" aria-hidden="true" data-i18n="quick_actions.preset_tag">Preset</span>
                     </button>
                 </div>
 
@@ -358,38 +358,38 @@
                 <section class="card interview-polish-card" id="interviewPolishCard" aria-labelledby="interviewPolishTitle">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="card-title" id="interviewPolishTitle">Interview Polish</div>
-                            <div class="card-subtitle">One click: silence trim → repeated-take detection → filler cut → captions → chapters → Premiere XML</div>
+                            <div class="card-title" id="interviewPolishTitle" data-i18n="interview.title">Interview Polish</div>
+                            <div class="card-subtitle" data-i18n="interview.subtitle">One click: silence trim → repeated-take detection → filler cut → captions → chapters → Premiere XML</div>
                         </div>
                     </div>
                     <div class="interview-polish-options">
                         <label class="checkbox-row">
                             <input type="checkbox" id="polishDetectRepeats" checked>
-                            <span>Detect &amp; remove repeated takes</span>
+                            <span data-i18n="interview.detect_repeats">Detect &amp; remove repeated takes</span>
                         </label>
                         <label class="checkbox-row">
                             <input type="checkbox" id="polishRemoveFillers" checked>
-                            <span>Cut filler words ("um", "uh", "like")</span>
+                            <span data-i18n="interview.cut_fillers">Cut filler words ("um", "uh", "like")</span>
                         </label>
                         <label class="checkbox-row">
                             <input type="checkbox" id="polishGenerateChapters" checked>
-                            <span>Generate YouTube chapters</span>
+                            <span data-i18n="interview.generate_chapters">Generate YouTube chapters</span>
                         </label>
                     </div>
                     <div class="interview-polish-run">
-                        <button type="button" class="btn btn-primary btn-lg" id="polishInterviewBtn" disabled>
+                        <button type="button" class="btn btn-primary btn-lg" id="polishInterviewBtn" disabled data-i18n="interview.polish_button">
                             Polish this interview
                         </button>
-                        <button type="button" class="btn btn-secondary btn-lg hidden" id="polishBatchBtn" title="Polish every file in the batch picker, one after another">
-                            Polish batch (<span id="polishBatchCount">0</span>)
+                        <button type="button" class="btn btn-secondary btn-lg hidden" id="polishBatchBtn" title="Polish every file in the batch picker, one after another" data-i18n-title="interview.batch_title">
+                            <span data-i18n="interview.polish_batch_button">Polish batch</span> (<span id="polishBatchCount">0</span>)
                         </button>
-                        <span class="interview-polish-hint" id="interviewPolishHint">Choose a source clip to unlock the full polish pass.</span>
+                        <span class="interview-polish-hint" id="interviewPolishHint" data-i18n="interview.source_required_hint">Choose a source clip to unlock the full polish pass.</span>
                     </div>
                     <!-- v1.10.5 (Q): clear the cached transcript if the user wants Whisper to re-run -->
                     <div class="interview-polish-footer">
-                        <button type="button" class="btn btn-ghost btn-sm" id="polishClearCacheBtn" title="Force a fresh Whisper transcription on the next run">Re-transcribe next run</button>
+                        <button type="button" class="btn btn-ghost btn-sm" id="polishClearCacheBtn" title="Force a fresh Whisper transcription on the next run" data-i18n="interview.retranscribe_next" data-i18n-title="interview.retranscribe_title">Re-transcribe next run</button>
                     </div>
-                    <ul class="polish-steps hidden" id="polishSteps" aria-live="polite" aria-label="Pipeline progress">
+                    <ul class="polish-steps hidden" id="polishSteps" aria-live="polite" aria-label="Pipeline progress" data-i18n-aria-label="interview.pipeline_progress">
                         <!-- populated by renderPolishSteps() -->
                     </ul>
                     <div class="polish-result hidden" id="polishResult"></div>
@@ -399,15 +399,15 @@
                 <section class="card assistant-card" id="assistantCard" aria-labelledby="assistantCardTitle">
                     <div class="card-header">
                         <div class="card-title-group">
-                            <div class="card-title" id="assistantCardTitle">Sequence Assistant</div>
-                            <div class="card-subtitle">Scan the active sequence and surface the highest-leverage next move before you commit changes.</div>
+                            <div class="card-title" id="assistantCardTitle" data-i18n="assistant.sequence_title">Sequence Assistant</div>
+                            <div class="card-subtitle" data-i18n="assistant.sequence_subtitle">Scan the active sequence and surface the highest-leverage next move before you commit changes.</div>
                         </div>
-                        <button type="button" class="icon-btn" id="assistantRefreshBtn" title="Re-scan the current sequence" aria-label="Refresh assistant suggestions">
+                        <button type="button" class="icon-btn" id="assistantRefreshBtn" title="Re-scan the current sequence" aria-label="Refresh assistant suggestions" data-i18n-title="assistant.refresh_title" data-i18n-aria-label="assistant.refresh_aria">
                             <svg width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M2.5 8a5.5 5.5 0 019.3-4h-2a.75.75 0 000 1.5h3.5a.75.75 0 00.75-.75V1.5a.75.75 0 00-1.5 0v1.7A7 7 0 101 8a.75.75 0 001.5 0z"/></svg>
                         </button>
                     </div>
                     <div class="assistant-body" id="assistantBody" aria-live="polite">
-                        <div class="assistant-empty">Open a Premiere sequence, then refresh to surface cleanup, caption, and write-back suggestions.</div>
+                        <div class="assistant-empty" data-i18n="assistant.empty_sequence">Open a Premiere sequence, then refresh to surface cleanup, caption, and write-back suggestions.</div>
                     </div>
                 </section>
 
