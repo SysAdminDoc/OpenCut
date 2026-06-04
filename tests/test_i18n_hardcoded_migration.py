@@ -226,6 +226,21 @@ HTML_STATIC_SHELL_CALLS = (
     ("silence.speed_title", "data-i18n-title"),
     ("silence.preview_10s", "data-i18n"),
     ("silence.preview_10s_title", "data-i18n-title"),
+    # One-hundred-second batch (Fillers form static shell HTML).
+    ("cut.filler_backend", "data-i18n"),
+    ("cut.filler_backend_aria", "data-i18n-aria-label"),
+    ("cut.filler_backend_whisper", "data-i18n"),
+    ("cut.filler_backend_crisper", "data-i18n"),
+    ("cut.whisper_model", "data-i18n"),
+    ("cut.filler_model_tiny", "data-i18n"),
+    ("cut.filler_model_base", "data-i18n"),
+    ("cut.filler_model_small", "data-i18n"),
+    ("cut.filler_model_medium", "data-i18n"),
+    ("cut.custom_fillers", "data-i18n"),
+    ("cut.comma_separated", "data-i18n"),
+    ("cut.custom_fillers_placeholder", "data-i18n-placeholder"),
+    ("cut.filler_backend_missing", "data-i18n"),
+    ("install.crisper_whisper", "data-i18n"),
 )
 
 
@@ -1540,6 +1555,19 @@ MIGRATED_KEYS = (
     "silence.threshold_title",
     "silence.vad_hint",
     "silence.waveform_label",
+    # One-hundred-second batch (Fillers form static shell HTML).
+    "cut.comma_separated",
+    "cut.custom_fillers_placeholder",
+    "cut.filler_backend",
+    "cut.filler_backend_aria",
+    "cut.filler_backend_crisper",
+    "cut.filler_backend_whisper",
+    "cut.filler_model_base",
+    "cut.filler_model_medium",
+    "cut.filler_model_small",
+    "cut.filler_model_tiny",
+    "cut.whisper_model",
+    "install.crisper_whisper",
 )
 
 
