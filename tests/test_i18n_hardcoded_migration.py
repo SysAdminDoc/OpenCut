@@ -1173,6 +1173,13 @@ MIGRATED_KEYS = (
     "journal.action_import_captions",
     "journal.action_import_overlay",
     "journal.action_import_sequence",
+    # Eighty-fifth batch (workflow step group labels).
+    "workflow.step_group_audio",
+    "workflow.step_group_captions",
+    "workflow.step_group_cut",
+    "workflow.step_group_default",
+    "workflow.step_group_export",
+    "workflow.step_group_video",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -6397,6 +6404,37 @@ EXPECTED_CALLS = (
         "journal.action_import_sequence",
         re.compile(r't\(\s*"journal\.action_import_sequence"'),
         re.compile(r'import_sequence:\s*"Import sequence"'),
+    ),
+    # --- Eighty-fifth batch --------------------------------------
+    (
+        "workflow.step_group_audio",
+        re.compile(r't\(\s*"workflow\.step_group_audio"'),
+        re.compile(r'audio:\s*"Audio polish"'),
+    ),
+    (
+        "workflow.step_group_captions",
+        re.compile(r't\(\s*"workflow\.step_group_captions"'),
+        re.compile(r'captions:\s*"Captioning"'),
+    ),
+    (
+        "workflow.step_group_cut",
+        re.compile(r't\(\s*"workflow\.step_group_cut"'),
+        re.compile(r'cut:\s*"Cut cleanup"'),
+    ),
+    (
+        "workflow.step_group_default",
+        re.compile(r't\(\s*"workflow\.step_group_default"'),
+        re.compile(r'if\s*\(!endpoint\)\s*return\s*"Workflow step"'),
+    ),
+    (
+        "workflow.step_group_export",
+        re.compile(r't\(\s*"workflow\.step_group_export"'),
+        re.compile(r'export:\s*"Delivery"'),
+    ),
+    (
+        "workflow.step_group_video",
+        re.compile(r't\(\s*"workflow\.step_group_video"'),
+        re.compile(r'video:\s*"Video finishing"'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
