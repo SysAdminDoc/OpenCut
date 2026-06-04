@@ -936,6 +936,11 @@ MIGRATED_KEYS = (
     "history.rerun_original_title",
     "history.rerun_same_job_title",
     "history.reveal_output_title",
+    # Sixty-third batch (media drop and waveform feedback).
+    "audio.waveform_load_failed",
+    "audio.waveform_load_failed_detail",
+    "media.drop_path_unavailable",
+    "media.file_loaded",
     # Twenty-second batch (custom workflow builder feedback).
     "workflow.step_count",
     "workflow.enter_name",
@@ -5050,6 +5055,27 @@ EXPECTED_CALLS = (
         "history.reveal_output_title",
         re.compile(r't\(\s*"history\.reveal_output_title"'),
         re.compile(r'revealBtn\.title\s*=\s*"Reveal output in file manager"'),
+    ),
+    # --- Sixty-third batch -----------------------------------------
+    (
+        "audio.waveform_load_failed",
+        re.compile(r't\(\s*"audio\.waveform_load_failed"'),
+        re.compile(r'showToast\("Failed to load waveform"'),
+    ),
+    (
+        "audio.waveform_load_failed_detail",
+        re.compile(r't\(\s*"audio\.waveform_load_failed_detail"'),
+        re.compile(r'"Failed to load waveform: "\s*\+'),
+    ),
+    (
+        "media.drop_path_unavailable",
+        re.compile(r't\(\s*"media\.drop_path_unavailable"'),
+        re.compile(r'showAlert\("File dropped, but path not available in this environment\."'),
+    ),
+    (
+        "media.file_loaded",
+        re.compile(r't\(\s*"media\.file_loaded"'),
+        re.compile(r'showToast\("File loaded: "\s*\+'),
     ),
     # --- Twenty-second batch ----------------------------------------
     (
