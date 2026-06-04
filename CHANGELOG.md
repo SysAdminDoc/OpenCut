@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Changed - CEP i18n Migration Batch 124
+
+- Migrated the Audio TTS form shell to static locale hooks for engine/voice labels, textarea placeholder, auto-import copy, and Edge TTS install hints while preserving backend engine and voice IDs.
+- `client/locales/en.json` grows from 1,895 to 1,913 keys; `i18n-drift` reports 1,828 consumers, 85 dead keys, and 0 missing keys.
+- `tests/test_i18n_hardcoded_migration.py` now asserts the Audio TTS static HTML hooks plus matching locale keys.
+
 ### Changed - CEP i18n Migration Batch 123
 
 - Migrated the Audio Effects form shell to static locale hooks for the effect selector options and Apply Effect action while preserving backend effect values.
