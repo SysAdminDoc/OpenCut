@@ -12443,13 +12443,13 @@
     var PALETTE_HISTORY_KEY = "opencut_palette_history";
     var MAX_PALETTE_HISTORY = 8;
     var PALETTE_DESCRIPTION_MAP = {
-        "Silence Removal::cut::silence": "Strip dead air and tighten spoken takes.",
-        "Styled Captions::captions::cap-styled": "Create branded subtitles with faster review passes.",
-        "Denoise::audio::aud-denoise": "Clean dialogue and reduce room noise before finishing.",
-        "Reframe::video::vid-reframe": "Recompose shots for vertical, square, and alternate aspect ratios.",
-        "Export Presets::export::exp-platform": "Package platform-ready outputs without rebuilding settings.",
-        "Footage Search::nlp::nlp-search": "Find usable shots from transcripts and semantic matches.",
-        "AI Command::nlp::nlp-command": "Jump to tools and edit actions from natural-language prompts."
+        "Silence Removal::cut::silence": function () { return t("palette.description_silence", "Strip dead air and tighten spoken takes."); },
+        "Styled Captions::captions::cap-styled": function () { return t("palette.description_styled_captions", "Create branded subtitles with faster review passes."); },
+        "Denoise::audio::aud-denoise": function () { return t("palette.description_denoise", "Clean dialogue and reduce room noise before finishing."); },
+        "Reframe::video::vid-reframe": function () { return t("palette.description_reframe", "Recompose shots for vertical, square, and alternate aspect ratios."); },
+        "Export Presets::export::exp-platform": function () { return t("palette.description_export_presets", "Package platform-ready outputs without rebuilding settings."); },
+        "Footage Search::nlp::nlp-search": function () { return t("palette.description_footage_search", "Find usable shots from transcripts and semantic matches."); },
+        "AI Command::nlp::nlp-command": function () { return t("palette.description_ai_command", "Jump to tools and edit actions from natural-language prompts."); }
     };
 
     var _paletteSelectedIdx = -1;
@@ -12551,27 +12551,27 @@
 
     function getPaletteItemDescription(item) {
         var itemKey = getPaletteItemKey(item);
-        if (PALETTE_DESCRIPTION_MAP[itemKey]) return PALETTE_DESCRIPTION_MAP[itemKey];
-        if (!item) return "Open tools across the editing workflow.";
+        if (PALETTE_DESCRIPTION_MAP[itemKey]) return PALETTE_DESCRIPTION_MAP[itemKey]();
+        if (!item) return t("palette.description_default", "Open tools across the editing workflow.");
         switch (item.tab) {
         case "cut":
-            return "Tighten pacing, trims, and spoken edits from one focused cut workflow.";
+            return t("palette.description_cut", "Tighten pacing, trims, and spoken edits from one focused cut workflow.");
         case "captions":
-            return "Transcribe, translate, and shape subtitle deliverables without leaving the panel.";
+            return t("palette.description_captions", "Transcribe, translate, and shape subtitle deliverables without leaving the panel.");
         case "audio":
-            return "Polish dialogue, stems, loudness, and generated sound from one audio surface.";
+            return t("palette.description_audio", "Polish dialogue, stems, loudness, and generated sound from one audio surface.");
         case "video":
-            return "Repair, reframe, and finish image work with cleaner visual controls.";
+            return t("palette.description_video", "Repair, reframe, and finish image work with cleaner visual controls.");
         case "export":
-            return "Build deliverables, thumbnails, and repeatable output presets faster.";
+            return t("palette.description_export", "Build deliverables, thumbnails, and repeatable output presets faster.");
         case "timeline":
-            return "Write sequence edits and timeline metadata back into Premiere with more control.";
+            return t("palette.description_timeline", "Write sequence edits and timeline metadata back into Premiere with more control.");
         case "nlp":
-            return "Use search and language-driven tools to find footage or trigger edit actions.";
+            return t("palette.description_nlp", "Use search and language-driven tools to find footage or trigger edit actions.");
         case "settings":
-            return "Adjust workspace defaults, templates, and system-level behavior.";
+            return t("palette.description_settings", "Adjust workspace defaults, templates, and system-level behavior.");
         default:
-            return "Open this tool and jump directly to the matching workspace.";
+            return t("palette.description_generic", "Open this tool and jump directly to the matching workspace.");
         }
     }
 
@@ -12704,28 +12704,28 @@
                 return a.name.localeCompare(b.name);
             });
 
-            addPaletteSection(sections, "Recent", recentItems, function (item) {
+            addPaletteSection(sections, t("palette.section_recent", "Recent"), recentItems, function (item) {
                 return {
                     isRecent: true,
                     isCurrent: item.tab === activeTab
                 };
             }, seen);
 
-            addPaletteSection(sections, "Favorites", favoriteItems, function (item, key) {
+            addPaletteSection(sections, t("palette.section_favorites", "Favorites"), favoriteItems, function (item, key) {
                 return {
                     isRecent: !!historyLookup[key],
                     isCurrent: item.tab === activeTab
                 };
             }, seen);
 
-            addPaletteSection(sections, activeTab ? "Current Workspace" : "Suggested Tools", currentItems, function (item, key) {
+            addPaletteSection(sections, activeTab ? t("palette.section_current_workspace", "Current Workspace") : t("palette.section_suggested_tools", "Suggested Tools"), currentItems, function (item, key) {
                 return {
                     isRecent: !!historyLookup[key],
                     isCurrent: true
                 };
             }, seen);
 
-            addPaletteSection(sections, "Browse All", browseItems, function (item, key) {
+            addPaletteSection(sections, t("palette.section_browse_all", "Browse All"), browseItems, function (item, key) {
                 return {
                     isRecent: !!historyLookup[key],
                     isCurrent: item.tab === activeTab
@@ -12753,7 +12753,7 @@
             return a.item.name.localeCompare(b.item.name);
         });
 
-        if (matches.length) sections.push({ label: "Matching Tools", entries: matches });
+        if (matches.length) sections.push({ label: t("palette.section_matching_tools", "Matching Tools"), entries: matches });
         return sections;
     }
 
@@ -12775,7 +12775,13 @@
         itemNode.setAttribute("data-key", entry.key);
         itemNode.setAttribute("data-tab", entry.item.tab);
         itemNode.setAttribute("data-sub", entry.item.sub);
-        itemNode.setAttribute("aria-label", entry.item.name + ". " + entry.description + ". " + entry.location + ".");
+        itemNode.setAttribute(
+            "aria-label",
+            t("palette.item_aria", "{name}. {description}. {location}.")
+                .replace("{name}", entry.item.name)
+                .replace("{description}", entry.description)
+                .replace("{location}", entry.location)
+        );
 
         var main = document.createElement("div");
         main.className = "command-palette-item-main";
@@ -12790,9 +12796,9 @@
 
         var badges = document.createElement("span");
         badges.className = "command-palette-badges";
-        if (entry.isFavorite) badges.appendChild(createPaletteBadge("Pinned", "is-favorite"));
-        if (entry.isRecent) badges.appendChild(createPaletteBadge("Recent", "is-recent"));
-        if (entry.isCurrent) badges.appendChild(createPaletteBadge("Current", "is-current"));
+        if (entry.isFavorite) badges.appendChild(createPaletteBadge(t("palette.badge_pinned", "Pinned"), "is-favorite"));
+        if (entry.isRecent) badges.appendChild(createPaletteBadge(t("palette.badge_recent", "Recent"), "is-recent"));
+        if (entry.isCurrent) badges.appendChild(createPaletteBadge(t("palette.badge_current", "Current"), "is-current"));
         top.appendChild(badges);
 
         var desc = document.createElement("div");
@@ -12810,7 +12816,7 @@
         var chevron = document.createElement("span");
         chevron.className = "command-palette-chevron";
         chevron.setAttribute("aria-hidden", "true");
-        chevron.textContent = "Open";
+        chevron.textContent = t("palette.open", "Open");
         meta.appendChild(chevron);
 
         main.appendChild(top);
@@ -12824,19 +12830,22 @@
         if (!el.commandPaletteStatus) return;
         if (!query) {
             var activeTab = getActivePaletteTabName();
-            var activeLabel = activeTab ? getPaletteTabLabel(activeTab) : "All Tools";
+            var activeLabel = activeTab ? getPaletteTabLabel(activeTab) : t("palette.all_tools", "All Tools");
             el.commandPaletteStatus.textContent = _paletteResults.length ?
-                (activeLabel + " tools, recent runs, and pinned shortcuts are ready.") :
-                "Run tools or pin favorites to shape this launcher around your workflow.";
+                t("palette.status_ready", "{label} tools, recent runs, and pinned shortcuts are ready.").replace("{label}", activeLabel) :
+                t("palette.status_empty", "Run tools or pin favorites to shape this launcher around your workflow.");
             return;
         }
 
         if (_paletteResults.length === 0) {
-            el.commandPaletteStatus.textContent = 'No matches for "' + query + '"';
+            el.commandPaletteStatus.textContent = t("palette.status_no_matches", "No matches for \"{query}\"").replace("{query}", query);
             return;
         }
 
-        el.commandPaletteStatus.textContent = _paletteResults.length + (_paletteResults.length === 1 ? ' match for "' : ' matches for "') + query + '"';
+        el.commandPaletteStatus.textContent = t("palette.status_matches", "{count} match{plural} for \"{query}\"")
+            .replace("{count}", _paletteResults.length)
+            .replace("{plural}", _paletteResults.length === 1 ? "" : "es")
+            .replace("{query}", query);
     }
 
     function renderPaletteEmptyState(query) {
@@ -12846,14 +12855,14 @@
 
         var title = document.createElement("div");
         title.className = "command-palette-empty-title";
-        title.textContent = query ? "No Matching Tools" : "Launcher Ready";
+        title.textContent = query ? t("palette.empty_no_matches_title", "No Matching Tools") : t("palette.empty_ready_title", "Launcher Ready");
         empty.appendChild(title);
 
         var copy = document.createElement("div");
         copy.className = "command-palette-empty-copy";
         copy.textContent = query ?
-            'Try a broader term like "audio", "captions", or "export".' :
-            "Recent runs and pinned favorites will appear here once you start using the workspace.";
+            t("palette.empty_no_matches_body", "Try a broader term like \"audio\", \"captions\", or \"export\".") :
+            t("palette.empty_ready_body", "Recent runs and pinned favorites will appear here once you start using the workspace.");
         empty.appendChild(copy);
 
         el.commandPaletteResults.appendChild(empty);
